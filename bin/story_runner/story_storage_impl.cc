@@ -23,11 +23,11 @@ namespace {
 
 // Retrieves all entries from the given snapshot and calls the given
 // callback with the final status.
-void GetEntries(ledger::PageSnapshotPtr* const snapshot,
+void GetEntries(ledger::PageSnapshot* const snapshot,
                 std::vector<ledger::EntryPtr>* const entries,
                 fidl::Array<uint8_t> token,
                 std::function<void(ledger::Status)> callback) {
-  (*snapshot)->GetEntries(to_array(kModuleKeyPrefix), std::move(token), [
+  snapshot->GetEntries(to_array(kModuleKeyPrefix), std::move(token), [
     snapshot, entries, callback = std::move(callback)
   ](ledger::Status status, auto new_entries, auto next_token) mutable {
     if (status != ledger::Status::OK &&
@@ -57,12 +57,12 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
 class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
-                   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
+                   ledger::Page* const page,
                    const fidl::Array<fidl::String>& module_path,
                    const fidl::String& link_id,
                    ResultCall result_call)
       : Operation(container, std::move(result_call)),
-        page_snapshot_(std::move(page_snapshot)),
+        page_(page),
         link_path_(MakeLinkKey(module_path, link_id)),
         link_id_(link_id) {
     Ready();
@@ -70,37 +70,53 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
 
  private:
   void Run() override {
-    FTL_LOG(INFO) << "ReadLinkDataCall, link_path_ = " << link_path_;
-    (*page_snapshot_)
-        ->Get(to_array(link_path_),
-              [this](ledger::Status status, mx::vmo value) {
-                if (status != ledger::Status::OK) {
-                  if (status != ledger::Status::KEY_NOT_FOUND) {
-                    // It's expected that the key is not found when the link
-                    // is accessed for the first time. Don't log an error
-                    // then.
-                    FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_id_
-                                   << " PageSnapshot.Get() " << status;
-                  }
-                  Done(fidl::String());
-                  return;
-                }
+    page_->GetSnapshot(
+        page_snapshot_.NewRequest(), nullptr,
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_path_
+                           << " Page.GetSnapshot() " << status;
+            Done(nullptr);
+            return;
+          }
 
-                std::string value_as_string;
-                if (value) {
-                  if (!mtl::StringFromVmo(value, &value_as_string)) {
-                    FTL_LOG(ERROR) << "Unable to extract data.";
-                    Done(nullptr);
-                    return;
-                  }
-                }
-                fidl::String result;
-                result.Swap(&value_as_string);
-                Done(result);
-              });
+          Cont();
+        });
   }
 
-  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
+  void Cont() {
+    page_snapshot_->Get(
+        to_array(link_path_),
+        [this](ledger::Status status, mx::vmo value) {
+          if (status != ledger::Status::OK) {
+            if (status != ledger::Status::KEY_NOT_FOUND) {
+              // It's expected that the key is not found when the link is
+              // accessed for the first time. Don't log an error then.
+              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_path_
+                             << " PageSnapshot.Get() " << status;
+            }
+            Done(nullptr);
+            return;
+          }
+
+          std::string value_as_string;
+          if (value) {
+            if (!mtl::StringFromVmo(value, &value_as_string)) {
+              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_path_
+                             << " Unable to extract data.";
+              Done(nullptr);
+              return;
+            }
+          }
+
+          fidl::String result;
+          result.Swap(&value_as_string);
+          Done(result);
+        });
+  }
+
+  ledger::Page* const page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
   const std::string link_path_;
   const fidl::String link_id_;
 
@@ -125,13 +141,13 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
 
  private:
   void Run() override {
-    FTL_LOG(INFO) << "WriteLinkDataCall, link_path_ = " << link_path_;
+    FTL_LOG(INFO) << "WriteLinkDataCall::Run() " << link_path_;
     page_->Put(to_array(link_path_), to_array(data_),
                [this](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR)
-                       << "WriteLinkDataCall() link_path_=" << link_path_
-                       << ", link_id_=" << link_id_ << " Page.Put() " << status;
+                       << "WriteLinkDataCall() " << link_path_
+                       << " Page.Put() " << status;
                  }
                  Done();
                });
@@ -149,47 +165,68 @@ class StoryStorageImpl::ReadModuleDataCall
     : Operation<fidl::Array<ModuleDataPtr>> {
  public:
   ReadModuleDataCall(OperationContainer* const container,
-                     std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot,
+                     ledger::Page* const page,
                      ResultCall result_call)
       : Operation(container, std::move(result_call)),
-        page_snapshot_(std::move(page_snapshot)) {
+        page_(page) {
     data_.resize(0);
     Ready();
   }
 
  private:
   void Run() override {
+    page_->GetSnapshot(
+        page_snapshot_.NewRequest(), nullptr,
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "ReadModuleDataCall() "
+                           << "Page.GetSnapshot() " << status;
+            Done(std::move(data_));
+            return;
+          }
+
+          Cont1();
+        });
+  }
+
+  void Cont1() {
     GetEntries(page_snapshot_.get(), &entries_, nullptr /* next_token */,
                [this](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "ReadModuleDataCall() "
-                                  << " PageSnapshot.GetEntries() " << status;
+                                  << "PageSnapshot.GetEntries() " << status;
                    Done(std::move(data_));
                    return;
                  }
 
-                 for (auto& entry : entries_) {
-                   std::string value_as_string;
-                   if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-                     FTL_LOG(ERROR) << "Unable to extract data.";
-                     continue;
-                   }
-
-                   ModuleDataPtr module_data;
-                   if (!XdrRead(value_as_string, &module_data, XdrModuleData)) {
-                     continue;
-                   }
-
-                   FTL_DCHECK(!module_data.is_null());
-
-                   data_.push_back(std::move(module_data));
-                 }
-
-                 Done(std::move(data_));
+                 Cont2();
                });
   }
 
-  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
+  void Cont2() {
+    for (auto& entry : entries_) {
+      std::string value_as_string;
+      if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
+        FTL_LOG(ERROR) << "ReadModuleDataCall() "
+                       << "Unable to extract data.";
+        continue;
+      }
+
+      ModuleDataPtr module_data;
+      if (!XdrRead(value_as_string, &module_data, XdrModuleData)) {
+        continue;
+      }
+
+      FTL_DCHECK(!module_data.is_null());
+
+      data_.push_back(std::move(module_data));
+    }
+
+    Done(std::move(data_));
+  }
+
+  ledger::Page* page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
   std::vector<ledger::EntryPtr> entries_;
   fidl::Array<ModuleDataPtr> data_;
 
@@ -252,8 +289,8 @@ StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)
-              << "StoryStorageImpl() failed call to Ledger.GetSnapshot() "
-              << status;
+            << "StoryStorageImpl() Ledger.GetSnapshot() "
+            << status;
         }
       });
 }
@@ -264,7 +301,7 @@ void StoryStorageImpl::ReadLinkData(
     const fidl::Array<fidl::String>& module_path,
     const fidl::String& link_id,
     const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, story_client_.page_snapshot(),
+  new ReadLinkDataCall(&operation_queue_, story_page_,
                        module_path, link_id, callback);
 }
 
@@ -278,8 +315,7 @@ void StoryStorageImpl::WriteLinkData(
 }
 
 void StoryStorageImpl::ReadModuleData(const ModuleDataCallback& callback) {
-  new ReadModuleDataCall(&operation_queue_, story_client_.page_snapshot(),
-                         callback);
+  new ReadModuleDataCall(&operation_queue_, story_page_, callback);
 }
 
 void StoryStorageImpl::WriteModuleData(const fidl::String& module_name,
@@ -312,7 +348,8 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
         if (link_id == watcher_entry.first) {
           std::string value_as_string;
           if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-            FTL_LOG(ERROR) << "Unable to extract data.";
+            FTL_LOG(ERROR) << "StoryStorageImpl::OnChange() "
+                           << "Unable to extract data.";
             continue;
           }
           watcher_entry.second(value_as_string);

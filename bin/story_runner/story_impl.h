@@ -16,6 +16,7 @@
 
 #include "application/services/application_controller.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -44,9 +45,9 @@ class StoryStorageImpl;
 constexpr char kRootLink[] = "root";
 constexpr char kRootModuleName[] = "root";
 
-// The actual implementation of the Story service. It also implements
-// the StoryController service to give clients control over the Story
-// instance.
+// The story runner, which holds all the links and runs all the modules as well
+// as the story shell. It also implements the StoryController service to give
+// clients control over the story.
 class StoryImpl : StoryController, StoryContext, ModuleWatcher {
  public:
   StoryImpl(const fidl::String& story_id,
@@ -59,8 +60,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
                   const fidl::String& name,
                   fidl::InterfaceRequest<Link> request);
 
-  // Called by ModuleContextImpl and StartModuleInShell(). Returns the
-  // module instance id so StartModuleInShell() can pass it to the
+  // Called by ModuleContextImpl and StartModuleInShell().
+  //
+  // Returns the module instance id so StartModuleInShell() can pass it to the
   // StoryShell.
   uint64_t StartModule(
       const fidl::Array<fidl::String>& parent_path,
@@ -87,18 +89,32 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Called by ModuleContextImpl.
   const fidl::String& GetStoryId() const;
 
-  // Releases ownership of |controller|.
+  // Called by ModuleControllerImpl.
+  //
+  // Releases ownership of |controller|, which deletes itself after return.
   void ReleaseModule(ModuleControllerImpl* controller);
 
-  // Methods called by StoryProviderImpl.
+  // Called by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> request);
-  void StopForDelete(const StopCallback& callback);
-  void AddLinkDataAndSync(const fidl::String& json,
-                          const std::function<void()>& callback);
-  void AddModuleAndSync(const fidl::String& module_name,
-                        const fidl::String& url,
-                        const fidl::String& link_name,
-                        const std::function<void()>& callback);
+
+  // Called by StoryProviderImpl.
+  //
+  // A variant of Stop() that stops the story because the story is being
+  // deleted. The StoryImpl instance is deleted by StoryProviderImpl and the
+  // story data are deleted from the ledger once the done callback is invoked.
+  //
+  // No further operations invoked after this one are executed. (The Operation
+  // accompishes this by not calling Done() and instead invoking its callback
+  // directly from Run(), such that the OperationQueue stays blocked on it until
+  // it gets deleted.)
+  void StopForDelete(const std::function<void()>& done);
+
+  // Called by StoryProviderImpl.
+  void AddForCreate(const fidl::String& module_name,
+                    const fidl::String& module_url,
+                    const fidl::String& link_name,
+                    const fidl::String& link_json,
+                    const std::function<void()>& done);
 
  private:
   // |StoryController|
@@ -122,19 +138,12 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
                        const fidl::String& url,
                        const fidl::String& link_name);
 
-  // Phases of Stop() broken out into separate methods.
-  void StopModules();
-  void StopStoryShell();
-  void StopLinks();
-  void StopFinish();
-
   // |ModuleWatcher|
   void OnStateChange(ModuleState new_state) override;
 
   // Misc internal helpers.
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
-  LinkPtr& EnsureRoot();
 
   // The ID of the story, its state and the context to obtain it from
   // and persist it to.
@@ -160,14 +169,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   uint64_t next_module_instance_id_{1};
 
   // Needed to hold on to a running story. They get reset on Stop().
-  LinkPtr root_;
-  std::vector<ModuleControllerPtr> module_controllers_;
   fidl::BindingSet<ModuleWatcher> module_watcher_bindings_;
-
-  // State related to asynchronously completing a Stop() operation.
-  bool deleted_{};
-  fidl::InterfaceRequest<mozart::ViewOwner> start_request_;
-  std::vector<std::function<void()>> teardown_;
 
   // The first ingredient of a story: Modules. For each Module in the
   // Story, there is one Connection to it.
@@ -186,6 +188,16 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // details.
   class StoryMarkerImpl;
   std::unique_ptr<StoryMarkerImpl> story_marker_impl_;
+
+  // Asynchronous operations are sequenced in a queue.
+  OperationQueue operation_queue_;
+
+  // Operations implemented here.
+  class AddModuleCall;
+  class AddForCreateCall;
+  class StartCall;
+  class StopCall;
+  class DeleteCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

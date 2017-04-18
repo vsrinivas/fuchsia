@@ -50,28 +50,37 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
 
   void Connect(fidl::InterfaceRequest<StoryProvider> request);
 
-  // Called by empty binding set handler of StoryImpl to remove the
-  // corresponding entry.
+  // Called by StoryImpl.
+  //
+  // When the binding set of StoryImpl becomes empty, it asks its owner to
+  // delete it..
   void PurgeController(const std::string& story_id);
 
-  // Used by StoryImpl.
+  // Called by StoryImpl.
   const Scope* user_scope() const { return user_scope_; }
+
+  // Called by StoryImpl.
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
   }
+
+  // Called by StoryImpl.
   maxwell::UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
   }
+
+  // Called by StoryImpl.
   const AppConfig& story_shell() const { return *story_shell_; }
 
+  // Called by StoryImpl.
   void SetStoryInfoExtra(const fidl::String& story_id,
                          const fidl::String& name,
                          const fidl::String& value,
                          const std::function<void()>& callback);
 
+  // Called by StoryImpl.
   void SetStoryState(const fidl::String& story_id,
-                     bool running,
-                     StoryState state);
+                     bool running, StoryState state);
 
   // |StoryProvider|, also used by StoryImpl.
   void GetStoryInfo(const fidl::String& story_id,
