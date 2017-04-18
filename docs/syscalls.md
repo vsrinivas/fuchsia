@@ -35,7 +35,7 @@
 ## Jobs
 + [job_create](syscalls/job_create.md) - create a new job within a job
 
-## Tasks (Task, Process, or Job)
+## Tasks (Thread, Process, or Job)
 + [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
 + [task_bind_exception_port](syscalls/task_bind_exception_port.md) - attach an exception port to a task
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
