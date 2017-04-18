@@ -161,17 +161,17 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
-  const size_t N = 1000;
+  const size_t N = 100;
   fidl::Array<uint8_t> keys[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
-    keys[i] = RandomArray(20, {static_cast<uint8_t>(i >> 8),
-                               static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(
+        40, {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
   for (size_t i = 0; i < N; ++i) {
-    page->Put(keys[i].Clone(), RandomArray(50),
+    page->Put(keys[i].Clone(), RandomArray(10),
               [](Status status) { EXPECT_EQ(status, Status::OK); });
     ASSERT_TRUE(page.WaitForIncomingResponse());
   }
@@ -271,15 +271,15 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPart) {
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
-  const size_t N = 1000;
+  const size_t N = 100;
   fidl::Array<uint8_t> keys[N];
   fidl::Array<uint8_t> values[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
-    keys[i] = RandomArray(20, {static_cast<uint8_t>(i >> 8),
-                               static_cast<uint8_t>(i & 0xFF)});
-    values[i] = RandomArray(50);
+    keys[i] = RandomArray(
+        20, {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    values[i] = RandomArray(100);
   }
 
   for (size_t i = 0; i < N; ++i) {
