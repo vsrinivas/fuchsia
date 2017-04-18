@@ -52,9 +52,27 @@ static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry) 
     return NO_ERROR;
 }
 
+static mx_status_t read_serial_fifo(mx_handle_t fifo) {
+    static uint8_t buffer[PAGE_SIZE];
+    static uint32_t bytes_read;
+    static uint32_t offset = 0;
+
+    mx_status_t status = mx_fifo_read(fifo, buffer + offset, PAGE_SIZE - offset, &bytes_read);
+    if (status != NO_ERROR)
+        return status;
+
+    uint8_t* linebreak = memchr(buffer + offset, '\r', bytes_read);
+    offset += bytes_read;
+    if (linebreak != NULL || offset == PAGE_SIZE) {
+        printf("%.*s", offset, buffer);
+        offset = 0;
+    }
+    return NO_ERROR;
+}
+
 int main(int argc, char** argv) {
     if (argc != 2) {
-        fprintf(stderr, "usage: %s <path to magenta.bin>\n", basename(argv[0]));
+        fprintf(stderr, "usage: %s <path to kernel.bin>\n", basename(argv[0]));
         return ERR_INVALID_ARGS;
     }
 
@@ -119,12 +137,7 @@ int main(int argc, char** argv) {
 
     do {
         status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
-
-        uint8_t buffer[PAGE_SIZE];
-        uint32_t bytes_read;
-        mx_status_t fifo_status = mx_fifo_read(guest_serial_fifo, buffer, PAGE_SIZE, &bytes_read);
-        if (fifo_status == NO_ERROR && bytes_read > 0)
-            printf("%.*s", bytes_read, buffer);
+        read_serial_fifo(guest_serial_fifo);
     } while(status == NO_ERROR);
     fprintf(stderr, "Failed to enter guest %d\n", status);
     return status;

@@ -35,7 +35,9 @@
 
 extern uint8_t _gdt[];
 
-static const int kUartIoPort = 0x3f8;
+static const int kUartReceiveIoPort = 0x3f8;
+static const int kUartStatusIoPort = 0x3fd;
+static const int kUartStatusIdle = 1u << 6;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -202,27 +204,30 @@ EptInfo::EptInfo() {
 }
 
 ExitInfo::ExitInfo() {
-        exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
-        exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
-        interruption_information = vmcs_read(VmcsField32::INTERRUPTION_INFORMATION);
-        interruption_error_code = vmcs_read(VmcsField32::INTERRUPTION_ERROR_CODE);
-        instruction_length = vmcs_read(VmcsField32::INSTRUCTION_LENGTH);
-        instruction_information = vmcs_read(VmcsField32::INSTRUCTION_INFORMATION);
-        guest_physical_address = vmcs_read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
-        guest_linear_address = vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS);
-        guest_interruptibility_state = vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
-        guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
+    exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
+    exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
+    interruption_information = vmcs_read(VmcsField32::INTERRUPTION_INFORMATION);
+    interruption_error_code = vmcs_read(VmcsField32::INTERRUPTION_ERROR_CODE);
+    instruction_length = vmcs_read(VmcsField32::INSTRUCTION_LENGTH);
+    instruction_information = vmcs_read(VmcsField32::INSTRUCTION_INFORMATION);
+    guest_physical_address = vmcs_read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
+    guest_linear_address = vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS);
+    guest_interruptibility_state = vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
+    guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
 
-        dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
-        dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
-        dprintf(SPEW, "interruption information: %#" PRIx32 "\n", interruption_information);
-        dprintf(SPEW, "interruption error code: %#" PRIx32 "\n", interruption_error_code);
-        dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
-        dprintf(SPEW, "instruction information: %#" PRIx32 "\n", instruction_information);
-        dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
-        dprintf(SPEW, "guest linear address: %#" PRIx64 "\n", guest_linear_address);
-        dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n", guest_interruptibility_state);
-        dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
+    if (exit_reason == ExitReason::IO_INSTRUCTION)
+        return;
+
+    dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
+    dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
+    dprintf(SPEW, "interruption information: %#" PRIx32 "\n", interruption_information);
+    dprintf(SPEW, "interruption error code: %#" PRIx32 "\n", interruption_error_code);
+    dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
+    dprintf(SPEW, "instruction information: %#" PRIx32 "\n", instruction_information);
+    dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
+    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n", guest_linear_address);
+    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n", guest_interruptibility_state);
+    dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
 }
 
 IoInfo::IoInfo(uint64_t qualification) {
@@ -802,6 +807,7 @@ static void next_rip(const ExitInfo& exit_info) {
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
     const uint64_t leaf = guest_state->rax;
     const uint64_t subleaf = guest_state->rcx;
+
     switch (leaf) {
     case X86_CPUID_BASE:
     case X86_CPUID_EXT_BASE:
@@ -866,6 +872,26 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
+static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
+                          FifoDispatcher* serial_fifo) {
+    next_rip(exit_info);
+#if WITH_LIB_MAGENTA
+    IoInfo io_info(exit_info.exit_qualification);
+    if (io_info.input) {
+        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort)
+            guest_state->rax = kUartStatusIdle;
+        return NO_ERROR;
+    }
+    if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
+        return NO_ERROR;
+    uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
+    uint32_t actual;
+    return serial_fifo->Write(data, io_info.bytes, &actual);
+#else // WITH_LIB_MAGENTA
+    return NO_ERROR;
+#endif // WITH_LIB_MAGENTA
+}
+
 static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
     uint64_t guest_cr4 = vmcs_read(VmcsFieldXX::GUEST_CR4);
     if (!(guest_cr4 & X86_CR4_OSXSAVE))
@@ -894,7 +920,8 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
     return NO_ERROR;
 }
 
-static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state, FifoDispatcher* serial_fifo) {
+static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state,
+                               FifoDispatcher* serial_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
@@ -908,18 +935,8 @@ static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_stat
         dprintf(SPEW, "handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::IO_INSTRUCTION: {
-        dprintf(SPEW, "handling IO instruction\n\n");
-        next_rip(exit_info);
-#if WITH_LIB_MAGENTA
-        IoInfo io_info(exit_info.exit_qualification);
-        if (io_info.input || io_info.string || io_info.repeat || io_info.port != kUartIoPort)
-            return NO_ERROR;
-        uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
-        uint32_t actual;
-        return serial_fifo->Write(data, io_info.bytes, &actual);
-#else // WITH_LIB_MAGENTA
-        return NO_ERROR;
-#endif // WITH_LIB_MAGENTA
+        // dprintf(SPEW, "handling IO instruction\n\n");
+        return handle_io(exit_info, guest_state, serial_fifo);
     }
     case ExitReason::RDMSR:
         dprintf(SPEW, "handling RDMSR instruction\n\n");
@@ -977,9 +994,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
         x86_xsetbv(0, vmx_state_.guest_state.xcr0);
     }
 
-    if (do_resume_) {
-        dprintf(SPEW, "re-entering guest\n");
-    } else {
+    if (!do_resume_) {
         vmcs_write(VmcsFieldXX::GUEST_CR3, context.cr3());
         vmcs_write(VmcsFieldXX::GUEST_RIP, context.entry());
     }
