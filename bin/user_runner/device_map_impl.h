@@ -29,6 +29,9 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   // |DeviceMap|
   void Query(const QueryCallback& callback) override;
 
+  // |DeviceMap|
+  void CurrentDeviceName(const CurrentDeviceNameCallback& callback) override;
+
   // |ledger::PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 ledger::ResultState result_state,

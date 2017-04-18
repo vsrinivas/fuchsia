@@ -125,6 +125,10 @@ void DeviceMapImpl::Query(const QueryCallback& callback) {
   new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
 }
 
+void DeviceMapImpl::CurrentDeviceName(const CurrentDeviceNameCallback& callback) {
+  callback(device_name_);
+}
+
 void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
                              ledger::ResultState result_state,
                              const OnChangeCallback& callback) {
