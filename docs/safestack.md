@@ -42,17 +42,17 @@ safe-stack does not need to do anything about this state to keep it
 correct when calling, or being called by, code that does use
 safe-stack.  The only potential exceptions to this are for code that
 is implementing its own kinds of non-local exits or context-switching
-(e.g. coroutines).  The The Magenta C library's `setjmp`/`longjmp`
-code saves and restores this additional state automatically, so
-anything that is based on `longjmp` already handles everything
-correctly even if the code calling `setjmp` and `longjmp` doesn't know
-about safe-stack.
+(e.g. coroutines).  The Magenta C library's `setjmp`/`longjmp` code
+saves and restores this additional state automatically, so anything
+that is based on `longjmp` already handles everything correctly even
+if the code calling `setjmp` and `longjmp` doesn't know about
+safe-stack.
 
 ## Use in Magenta & Fuchsia
 
 This is enabled in the Clang compiler by the `-fsanitize=safe-stack`
 command-line option.  In the near future, this will be the default mode
-of the compiler the `*-fuchsia` targets, and to disable it for a
+of the compiler for `*-fuchsia` targets, and to disable it for a
 specific compilation will require the `-fno-sanitize=safe-stack` option.
 
 Magenta supports safe-stack for both user-mode and kernel code.
