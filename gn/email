@@ -6,34 +6,34 @@
   "binaries": [
     {
       "binary": "content_provider.dartx",
-      "bootfs_path": "apps/email_content_provider"
+      "bootfs_path": "apps/email/content_provider"
     },
     {
       "binary": "gen/apps/modules/email/modules/nav/nav.flx",
-      "bootfs_path": "apps/email_nav"
+      "bootfs_path": "apps/email/nav"
     },
     {
       "binary": "gen/apps/modules/email/modules/session/session.flx",
-      "bootfs_path": "apps/email_session"
+      "bootfs_path": "apps/email/session"
     },
     {
       "binary": "gen/apps/modules/email/modules/story/story.flx",
-      "bootfs_path": "apps/email_story"
+      "bootfs_path": "apps/email/story"
     },
     {
       "binary": "gen/apps/modules/email/modules/thread/thread.flx",
-      "bootfs_path": "apps/email_thread"
+      "bootfs_path": "apps/email/thread"
     },
     {
       "binary": "gen/apps/modules/email/modules/thread_list/thread_list.flx",
-      "bootfs_path": "apps/email_thread_list"
+      "bootfs_path": "apps/email/thread_list"
     }
   ],
   "components": [
-    "apps/modules/email/modules/nav/email_nav_component.json",
-    "apps/modules/email/modules/session/email_session_component.json",
-    "apps/modules/email/modules/story/email_story_component.json",
-    "apps/modules/email/modules/thread/email_thread_component.json",
-    "apps/modules/email/modules/thread_list/email_thread_list_component.json"
+    "apps/modules/email/modules/nav/nav_component.json",
+    "apps/modules/email/modules/session/session_component.json",
+    "apps/modules/email/modules/story/story_component.json",
+    "apps/modules/email/modules/thread/thread_component.json",
+    "apps/modules/email/modules/thread_list/thread_list_component.json"
   ]
 }
