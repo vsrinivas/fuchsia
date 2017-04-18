@@ -116,7 +116,7 @@ mx_status_t port_dispatch(port_t* port) {
     for (;;) {
         mx_port_packet_t packet;
         mx_status_t r;
-        if ((r = mx_port_wait(port->handle, MX_TIME_INFINITE, &packet, 0)) < 0) {
+        if ((r = mx_port_wait(port->handle, MX_TIME_INFINITE, &packet, 0)) != NO_ERROR) {
             printf("port_dispatch: port wait failed %d\n", r);
             return r;
         }

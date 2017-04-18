@@ -224,8 +224,8 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
-                                        devhost_iostate_t* ios, bool* should_free_ios) {
+mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
+                                 devhost_iostate_t* ios, bool* should_free_ios) {
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;

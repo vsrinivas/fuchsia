@@ -26,7 +26,7 @@
 
 #define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
-static mx_status_t dh_handle_rpc(port_handler_t* ph, mx_signals_t signals);
+static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals);
 
 static port_t dh_port;
 
@@ -35,7 +35,7 @@ typedef struct devhost_iostate iostate_t;
 static iostate_t root_ios = {
     .ph = {
         .waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-        .func = dh_handle_rpc,
+        .func = dh_handle_dc_rpc,
     },
 };
 
@@ -125,9 +125,23 @@ done:
     return rec->status;
 }
 
-static mx_status_t dh_handle_open(mxrio_msg_t* msg, size_t len,
-                                  mx_handle_t h, iostate_t* ios) {
-    return ERR_NOT_SUPPORTED;
+static void dh_handle_open(mxrio_msg_t* msg, size_t len,
+                           mx_handle_t h, iostate_t* ios) {
+    if ((msg->hcount != 1) ||
+        (msg->datalen != (len - MXRIO_HDR_SZ))) {
+        mx_handle_close(h);
+        printf("devhost: malformed OPEN reques\n");
+        return;
+    }
+    msg->handle[0] = h;
+
+    bool free_ios = false;
+    mx_status_t r;
+    if ((r = _devhost_rio_handler(msg, 0, ios, &free_ios)) < 0) {
+        if (r != ERR_DISPATCHER_INDIRECT) {
+            printf("devhost: OPEN failed: %d\n", r);
+        }
+    }
 }
 
 static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
@@ -148,11 +162,11 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
     // handle remoteio open messages only
     if ((msize >= MXRIO_HDR_SZ) && (MXRIO_OP(msg.op) == MXRIO_OPEN)) {
         if (hcount != 1) {
-            r = ERR_INVALID_ARGS;
             goto fail;
         }
         printf("devhost[%s] remoteio OPEN\n", path);
-        return dh_handle_open((void*) &msg, msize, hin[0], ios);
+        dh_handle_open((void*) &msg, msize, hin[0], ios);
+        return NO_ERROR;
     }
 
     const void* data;
@@ -197,7 +211,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
 
         newios->ph.handle = hin[0];
         newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-        newios->ph.func = dh_handle_rpc;
+        newios->ph.func = dh_handle_dc_rpc;
         if ((r = port_watch(&dh_port, &newios->ph)) < 0) {
             free(newios);
             break;
@@ -237,7 +251,8 @@ fail:
     return r;
 }
 
-static mx_status_t dh_handle_rpc(port_handler_t* ph, mx_signals_t signals) {
+// handles devcoordinator rpc
+static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals) {
     iostate_t* ios = ios_from_ph(ph);
 
     if (signals & MX_CHANNEL_READABLE) {
@@ -254,6 +269,42 @@ static mx_status_t dh_handle_rpc(port_handler_t* ph, mx_signals_t signals) {
     }
     printf("devhost: no work? %08x\n", signals);
     return NO_ERROR;
+}
+
+
+static mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t h, void* cookie) {
+    iostate_t* ios = cookie;
+    bool free_ios = false;
+    mx_status_t r = _devhost_rio_handler(msg, 0, ios, &free_ios);
+    return r;
+};
+
+// handles remoteio rpc
+static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals) {
+    iostate_t* ios = ios_from_ph(ph);
+
+    mx_status_t r;
+    const char* msg;
+    if (signals & MX_CHANNEL_READABLE) {
+        if ((r = mxrio_handle_rpc(ph->handle, rio_handler, ios)) == NO_ERROR) {
+            return NO_ERROR;
+        }
+        msg = (r > 0) ? "closed-by-rpc" : "rpc error";
+    } else if (signals & MX_CHANNEL_PEER_CLOSED) {
+        mxrio_handle_close(rio_handler, ios);
+        r = 1;
+        msg = "closed-by-disconnect";
+    } else {
+        return NO_ERROR;
+    }
+
+    char buffer[512];
+    const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
+    printf("devhost[%s] %s: %d\n", path, msg, r);
+
+    //TODO: downref device under lock
+    free(ios);
+    return r;
 }
 
 
@@ -330,7 +381,7 @@ fail_write:
         ios->dev = child;
         ios->ph.handle = h1;
         ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-        ios->ph.func = dh_handle_rpc;
+        ios->ph.func = dh_handle_dc_rpc;
         if ((r = port_watch(&dh_port, &ios->ph)) == NO_ERROR) {
             child->rpc = h1;
             return NO_ERROR;
@@ -393,11 +444,21 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
     return ERR_NOT_SUPPORTED;
 }
 
+mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
+    return ERR_NOT_SUPPORTED;
+}
+
 extern driver_api_t devhost_api;
 
 mx_handle_t root_resource_handle;
 
 
+mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
+    ios->ph.handle = h;
+    ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    ios->ph.func = dh_handle_rio_rpc;
+    return port_watch(&dh_port, &ios->ph);
+}
 
 int main(int argc, char** argv) {
     devhost_io_init();

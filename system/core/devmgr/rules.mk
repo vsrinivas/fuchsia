@@ -122,6 +122,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/devhost-api.c \
     $(LOCAL_DIR)/devhost-core.c \
     $(LOCAL_DIR)/devhost-v2.c \
+    $(LOCAL_DIR)/devhost-rpc-server.c \
     $(LOCAL_DIR)/devhost-shared.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
