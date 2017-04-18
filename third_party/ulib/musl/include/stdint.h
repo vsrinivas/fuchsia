@@ -58,27 +58,17 @@
 #define __INT_LEAST64_FMT_MODIFIER__ __INT64_FMT_MODIFIER__
 
 // The *-elf and arm-eabi GCC targets use 'int' for the fast{8,16,32}
-// types. On LP64 systems, 'long' is used for the fast64 type, and
-// 'long long' on non-LP64 systems.
+// types. On LP64 systems, 'long' is used for the fast64 type.
 #define __INT_FAST8_FMT_MODIFIER__ ""
 #define __INT_FAST16_FMT_MODIFIER__ ""
 #define __INT_FAST32_FMT_MODIFIER__ ""
-#if _LP64
 #define __INT_FAST64_FMT_MODIFIER__ "l"
-#else
-#define __INT_FAST64_FMT_MODIFIER__ "ll"
-#endif
 
 // On machines where 'long' types are 64 bits, the compiler defines
 // __INT64_TYPE__ et al using 'long', not 'long long', though both are
 // 64-bit types.
-#ifdef _LP64
 #define __INT64_FMT_MODIFIER__ "l"
 #define __INTPTR_FMT_MODIFIER__ "l"
-#else
-#define __INT64_FMT_MODIFIER__ "ll"
-#define __INTPTR_FMT_MODIFIER__ ""
-#endif
 
 #define __INTMAX_FMT_MODIFIER__ __INT64_FMT_MODIFIER__
 
@@ -224,11 +214,7 @@
 
 #define SIZE_MAX __SIZE_MAX__
 
-#ifdef _LP64
 #define PTRDIFF_MAX 0x7fffffffffffffff
-#else
-#define PTRDIFF_MAX 0x7fffffff
-#endif
 #define PTRDIFF_MIN (-(PTRDIFF_MAX)-1)
 
 #define SIG_ATOMIC_MAX __SIG_ATOMIC_MAX__

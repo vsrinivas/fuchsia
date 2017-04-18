@@ -193,11 +193,7 @@ typedef __builtin_va_list __isoc_va_list;
 #endif
 
 #if defined(__NEED_ssize_t) && !defined(__DEFINED_ssize_t)
-#if _LP64
 typedef long ssize_t;
-#else
-typedef int ssize_t;
-#endif
 #define __DEFINED_ssize_t
 #endif
 
