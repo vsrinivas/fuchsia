@@ -27,6 +27,12 @@ source_set("main") {
     "main.cc",
   ]
 
+  deps = [
+    "//application/lib/app",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/mtl",
+  ]
+
   public_deps = [
     "//third_party/gtest",
   ]
