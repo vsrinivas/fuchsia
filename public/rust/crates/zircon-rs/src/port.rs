@@ -191,8 +191,14 @@ mod tests {
         );
         assert_eq!(read_packet, expected_packet);
 
-        // Calling wait_async then cancel should mean we don't get the packet,
-        // as long as the event is signalled after the cancel.
+        // Calling wait_async then cancel, we should still get the packet as it will have been sent
+        // before the cancel call.
+        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
+        assert!(port.cancel(&event, key).is_ok());
+        let read_packet = port.wait(ten_ms).unwrap();
+        assert_eq!(read_packet, expected_packet);
+
+        // However if the event is signalled after the cancel, we shouldn't get a packet.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
@@ -229,6 +235,10 @@ mod tests {
         );
         assert_eq!(read_packet, expected_packet);
 
+        // Should not get any more packets, as MX_WAIT_ASYNC_REPEATING is edge triggered rather than
+        // level triggered.
+        assert_eq!(port.wait(ten_ms), Err(Status::ErrTimedOut));
+
         // If we clear and resignal, we should get the same packet again,
         // even though we didn't call event.wait_async again.
         assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
@@ -236,9 +246,11 @@ mod tests {
         let read_packet = port.wait(ten_ms).unwrap();
         assert_eq!(read_packet, expected_packet);
 
-        // Canceling the notifications should mean we don't get the packet.
-        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
+        // Cancelling the wait should stop us getting packets...
         assert!(port.cancel(&event, key).is_ok());
+        assert_eq!(port.wait(ten_ms), Err(Status::ErrTimedOut));
+        // ... even if we clear and resignal
+        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
         assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         assert_eq!(port.wait(ten_ms), Err(Status::ErrTimedOut));
 
