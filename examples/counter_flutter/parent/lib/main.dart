@@ -65,14 +65,13 @@ class _ParentCounterModule extends Module implements LinkWatcher {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('Module.initialize()');
 
     // A module is initialized with a ModuleContext and a Link.
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _link.ctrl.bind(linkHandle);
+    _moduleContext.createLink(null, _link.ctrl.request());
 
     // On the link, we can declare that values stored in the link adhere
     // to a schema. If an update violates the schema, this only created
@@ -81,9 +80,6 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
     // If the value in the link changes, we notice this.
     _link.watchAll(_linkWatcherBinding.wrap(this));
-
-    final LinkProxy linkForChild = new LinkProxy();
-    _link.dup(linkForChild.ctrl.request());
 
     // If we would retain the module controller for the child module, we
     // could later stop it.
@@ -96,7 +92,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     _moduleContext.startModule(
         'child',
         'file:///system/apps/example_flutter_counter_child',
-        linkForChild.ctrl.unbind(),
+        null,  // Pass our default link to our child.
         null,
         null,
         moduleControllerPair.passRequest(),

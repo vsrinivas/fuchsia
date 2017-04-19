@@ -10,6 +10,7 @@
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
+#include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -39,41 +40,52 @@ class ModuleContextImpl : ModuleContext {
   // modules that have ended up starting this module. The last item in this list
   // is this module's name. |module_path| can be used to internally name
   // resources that belong to this module (message queues, Links).
-  ModuleContextImpl(fidl::Array<fidl::String> module_path,
+  ModuleContextImpl(const fidl::Array<fidl::String>& module_path,
                     const ModuleContextInfo& info,
                     const uint64_t id,
                     const std::string& module_url,
+                    const LinkPathPtr& default_link_path,
                     ModuleControllerImpl* module_controller_impl,
                     fidl::InterfaceRequest<ModuleContext> module_context);
 
   ~ModuleContextImpl() override;
 
  private:
-  // |Story|
+  // |ModuleContext|
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> link) override;
+  // |ModuleContext|
+  void GetLink(const fidl::String& name,
+               fidl::InterfaceRequest<Link> link) override;
+  // |ModuleContext|
   void StartModule(
       const fidl::String& name,
       const fidl::String& query,
-      fidl::InterfaceHandle<Link> link,
+      const fidl::String& link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+  // |ModuleContext|
   void StartModuleInShell(
       const fidl::String& name,
       const fidl::String& query,
-      fidl::InterfaceHandle<Link> link,
+      const fidl::String& link,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       const fidl::String& view_type) override;
+  // |ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> request) override;
+  // |ModuleContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+  // |ModuleContext|
   void GetStoryId(const GetStoryIdCallback& callback) override;
+  // |ModuleContext|
   void Ready() override;
+  // |ModuleContext|
   void Done() override;
 
   // The path of the modules that have started this module (ie.,
@@ -94,6 +106,9 @@ class ModuleContextImpl : ModuleContext {
 
   // This ID is used to namespace a module's ledger.
   const std::string module_url_;
+
+  // The link path this module was started with.
+  LinkPathPtr default_link_path_;
 
   // Not owned. Used to notify module watchers and request tear down.
   ModuleControllerImpl* const module_controller_impl_;

@@ -36,7 +36,6 @@ class ModuleImpl extends Module {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('ModuleImpl::initialize call');
@@ -46,7 +45,7 @@ class ModuleImpl extends Module {
     // collected before the pipe is properly closed or unbound, the app will
     // crash due to the leaked handle.
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _link.ctrl.bind(linkHandle);
+    _moduleContext.createLink(null, _link.ctrl.request());
 
     // Do something with the story and link services.
   }

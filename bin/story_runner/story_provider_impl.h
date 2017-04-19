@@ -32,10 +32,6 @@ namespace modular {
 class Resolver;
 class StoryImpl;
 
-// The link name under which the user runner link is stored in the
-// root page of the user.
-constexpr char kUserShellKey[] = "user-shell-link";
-
 class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(

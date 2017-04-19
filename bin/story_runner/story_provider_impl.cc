@@ -369,8 +369,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
 
     // We ensure that root data has been written before this operation is
     // done.
-    controller_->AddForCreate(
-        kRootModuleName, url_, kRootLink, root_json_,
+    controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
         [this] { Done(); });
   }
 

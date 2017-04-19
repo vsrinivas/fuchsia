@@ -7,6 +7,7 @@
 
 #include "apps/modular/lib/fidl/bottleneck.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -50,8 +51,7 @@ class LinkImpl {
   // the last element is the module that created this Link) that this
   // Link is namespaced under.
   LinkImpl(StoryStorageImpl* story_storage,
-           const fidl::Array<fidl::String>& module_path,
-           const fidl::String& name);
+           const LinkPathPtr& link_path);
 
   ~LinkImpl();
 
@@ -76,8 +76,7 @@ class LinkImpl {
   void Sync(const std::function<void()>& callback);
 
   // Used by StoryImpl.
-  const fidl::String& name() const { return name_; }
-  const fidl::Array<fidl::String>& module_path() const { return module_path_; }
+  const LinkPathPtr& link_path() const { return link_path_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;
   }
@@ -104,8 +103,7 @@ class LinkImpl {
 
   CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;
-  const fidl::Array<fidl::String> module_path_;
-  const fidl::String name_;
+  const LinkPathPtr link_path_;
   StoryStorageImpl* const story_storage_;
   std::function<void()> orphaned_handler_;
 

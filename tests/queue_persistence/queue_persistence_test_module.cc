@@ -31,11 +31,9 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
     initialized_.Pass();
 
     module_context_->GetComponentContext(component_context_.NewRequest());
@@ -123,7 +121,6 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::LinkPtr link_;
   modular::AgentControllerPtr agent_controller_;
   modular::testing::QueuePersistenceAgentInterfacePtr
       queue_persistence_agent_interface_;

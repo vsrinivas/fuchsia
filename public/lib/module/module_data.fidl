@@ -5,11 +5,6 @@
 module modular;
 
 // Information about modules in a Story.
-//
-// TODO(mesch): This is currently used only for root modules. Soon we use this
-// struct to keep information about all modules in the story page. In order to
-// support this, we must support to store a link name with a non-empty module
-// path.
 struct ModuleData {
   // The URL of the module application.
   string url;
@@ -19,5 +14,13 @@ struct ModuleData {
   array<string> module_path;
 
   // The name of the link the module was started with.
-  string link;
+  LinkPath default_link_path;
+};
+
+// Addresses a Link within a story.
+struct LinkPath {
+  // The module's module_path this link was created under.
+  array<string> module_path;
+  // Name of the link itself.
+  string link_name;
 };

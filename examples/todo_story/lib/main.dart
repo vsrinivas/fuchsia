@@ -41,13 +41,14 @@ class TodoModule extends Module {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('TodoModule::initialize()');
 
     LinkProxy link = new LinkProxy();
-    link.ctrl.bind(linkHandle);
+    ModuleContextProxy moduleContext =
+        new ModuleContextProxy()..ctrl.bind(moduleContextHandle);
+    moduleContext.createLink(null, link.ctrl.request());
     _linkCompleter.complete(link);
   }
 

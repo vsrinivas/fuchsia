@@ -124,10 +124,11 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
+    modular::LinkPtr link;
+    module_context_->GetLink(nullptr, link.NewRequest());
     store_.Initialize(std::move(link));
   }
 

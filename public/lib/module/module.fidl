@@ -28,7 +28,9 @@ interface Module {
   // and to create Link instances to share data with those Module
   // instances. It can also be used to signal that this module wants
   // to stop.
-  Initialize(ModuleContext module_context, Link link,
+  // TODO(vardhan): Move incoming_services/outgoing_services as getters into
+  // ModuleContext.
+  Initialize(ModuleContext module_context,
              app.ServiceProvider? incoming_services,
              app.ServiceProvider&? outgoing_services);
 

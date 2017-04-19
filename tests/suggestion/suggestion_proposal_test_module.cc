@@ -31,11 +31,9 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
     initialized_.Pass();
 
     maxwell::IntelligenceServicesPtr intelligence_services;
@@ -89,7 +87,6 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::LinkPtr link_;
   maxwell::ProposalPublisherPtr proposal_publisher_;
 
   TestPoint initialized_{"Root module initialized"};

@@ -14,18 +14,19 @@ import "apps/mozart/services/views/view_token.fidl";
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
 interface ModuleContext {
-  // Creates a new Link instance. The Link instance can be shared with
-  // a newly created Module instance by passing it to StartModule().
-  // In order to also retain a reference to the same Link instance, a
-  // duplicate must be created using the Dup() method of Link.
+  // DEPRECATED. See GetLink() below.
+  CreateLink(string? name, Link& link);
+
+  // Gets a Link instance with the given name.
   //
   // The link instance has a name so that it can be recognized when
   // the story is resumed. The name is unique in the scope of the
   // Module instance. If the method is called again by the same Module
   // instance, a new connection to the same Link instance is obtained.
   // It's up to the Module instance to ensure the name is unique
-  // within the scope of itself.
-  CreateLink(string name, Link& link);
+  // within the scope of itself. If |name| is null, the link which this
+  // module was started with is obtained.
+  GetLink(string? name, Link& link);
 
   // Starts a new Module instance. The Module to execute is identified
   // by the URL of the application executable, and the Module instance
@@ -33,6 +34,11 @@ interface ModuleContext {
   // The |name|, together with the names of all ancestor modules, is
   // used to identify existing component message queues and links when
   // the Story is resumed.
+  //
+  // If |link_name| is null, then the parent module's default link is
+  // passed to the new module. Otherwise, a reference to the parent
+  // module's |link_name| is passed to the starting module as its
+  // default link.
   //
   // TODO(mesch): If the method is called again with the same name by
   // the same Module instance, the existing Module instance should be
@@ -45,7 +51,7 @@ interface ModuleContext {
   // instance may provide its |outgoing_services|, and the new Module
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
-  StartModule(string name, string module_url, Link link,
+  StartModule(string name, string module_url, string? link_name,
               app.ServiceProvider? outgoing_services,
               app.ServiceProvider&? incoming_services,
               ModuleController& module_controller,
@@ -53,7 +59,7 @@ interface ModuleContext {
 
   // Like StartModule(), but the view of the newly started module is
   // sent to the story shell for display.
-  StartModuleInShell(string name, string module_url, Link link,
+  StartModuleInShell(string name, string module_url, string? link_name,
                      app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller,
@@ -77,6 +83,8 @@ interface ModuleContext {
   // notifies all ModuleWatchers registered on the ModuleController by
   // calling OnStateChange(). See ModuleState for all states and
   // transitions.
+  // TODO(vardhan): Deprecate this in favour of adding a return callback to
+  // Module.Initialize().
   Ready();
 
   // The Module instance holding this handle to the ModuleContext

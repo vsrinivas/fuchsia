@@ -27,29 +27,28 @@ class StoryStorageImpl : ledger::PageWatcher {
  public:
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
-  using ModuleDataCallback = std::function<void(fidl::Array<ModuleDataPtr>)>;
+  using AllModuleDataCallback = std::function<void(fidl::Array<ModuleDataPtr>)>;
+  using ModuleDataCallback = std::function<void(ModuleDataPtr)>;
 
   StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
 
-  void ReadLinkData(const fidl::Array<fidl::String>& module_path,
-                    const fidl::String& link_id,
+  void ReadLinkData(const LinkPathPtr& link_path,
                     const DataCallback& callback);
-  void WriteLinkData(const fidl::Array<fidl::String>& module_path,
-                     const fidl::String& link_id,
+  void WriteLinkData(const LinkPathPtr& link_path,
                      const fidl::String& data,
                      const SyncCallback& callback);
 
-  void ReadModuleData(const ModuleDataCallback& callback);
-  void WriteModuleData(const fidl::String& module_name,
+  void ReadModuleData(const fidl::Array<fidl::String>& module_path,
+                      const ModuleDataCallback& callback);
+  void ReadAllModuleData(const AllModuleDataCallback& callback);
+
+  void WriteModuleData(const fidl::Array<fidl::String>& module_path,
                        const fidl::String& module_url,
-                       const fidl::String& link_name,
+                       const LinkPathPtr& link_path,
                        const SyncCallback& callback);
 
-  void WatchLink(const fidl::Array<fidl::String>& module_path,
-                 const fidl::String& link_name,
-                 const DataCallback& watcher);
-
+  void WatchLink(const LinkPathPtr& link_path, const DataCallback& watcher);
   void Sync(const SyncCallback& callback);
 
  private:
@@ -62,8 +61,8 @@ class StoryStorageImpl : ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   // Clients to notify when the value of a given link changes in the
-  // ledger page. The first element in the pair is the link ID.
-  std::vector<std::pair<fidl::String, DataCallback>> watchers_;
+  // ledger page. The first element in the pair is the key for the link path.
+  std::vector<std::pair<std::string, DataCallback>> watchers_;
 
   // The ledger page the story data is stored in.
   ledger::Page* const story_page_;
@@ -79,6 +78,7 @@ class StoryStorageImpl : ledger::PageWatcher {
   class ReadLinkDataCall;
   class WriteLinkDataCall;
   class ReadModuleDataCall;
+  class ReadAllModuleDataCall;
   class WriteModuleDataCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);

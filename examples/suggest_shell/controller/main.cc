@@ -58,22 +58,18 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
 
-    module_context_->CreateLink("view", view_link_.NewRequest());
+    constexpr char kViewLink[] = "view";
+    module_context_->GetLink(kViewLink, view_link_.NewRequest());
     view_link_->Watch(link_watcher_binding_.NewBinding());
-
-    fidl::InterfaceHandle<modular::Link> view_link;
-    view_link_->Dup(view_link.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> view;
     module_context_->StartModule("suggest_shell_view",
                                  "file:///system/apps/suggest_shell_view",
-                                 std::move(view_link), nullptr, nullptr,
+                                 kViewLink, nullptr, nullptr,
                                  view_module_.NewRequest(), view.NewRequest());
 
     ConnectView(std::move(view));
@@ -135,7 +131,6 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
   std::unique_ptr<modular::ViewHost> view_;
   std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
 
-  modular::LinkPtr link_;
   modular::ModuleContextPtr module_context_;
 
   modular::ModuleControllerPtr view_module_;

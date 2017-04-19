@@ -45,12 +45,14 @@ class _ChildCounterModule extends Module implements LinkWatcher {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('ModuleImpl.initialize()');
 
-    _link.ctrl.bind(linkHandle);
+    ModuleContextProxy moduleContext =
+        new ModuleContextProxy()..ctrl.bind(moduleContextHandle);
+    moduleContext.createLink(null, _link.ctrl.request());
+
     _link.watchAll(_linkWatcherBinding.wrap(this));
   }
 

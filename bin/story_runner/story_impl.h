@@ -19,8 +19,9 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
+#include "apps/modular/services/module/module_data.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
@@ -56,30 +57,30 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   ~StoryImpl() override;
 
   // Called by ModuleContextImpl.
-  void CreateLink(const fidl::Array<fidl::String>& module_path,
-                  const fidl::String& name,
-                  fidl::InterfaceRequest<Link> request);
+  void GetLinkPath(const LinkPathPtr& link_path,
+                   fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl and StartModuleInShell().
   //
   // Returns the module instance id so StartModuleInShell() can pass it to the
   // StoryShell.
-  uint64_t StartModule(
-      const fidl::Array<fidl::String>& parent_path,
+  void StartModule(
+      const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& query,
-      fidl::InterfaceHandle<Link> link,
+      const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      std::function<void(uint32_t)> done);
 
   // Called by ModuleContextImpl.
   void StartModuleInShell(
-      const fidl::Array<fidl::String>& parent_path,
+      const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& query,
-      fidl::InterfaceHandle<Link> link,
+      const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
@@ -197,6 +198,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   class AddModuleCall;
   class AddForCreateCall;
   class StartCall;
+  class StartModuleCall;
   class StopCall;
   class DeleteCall;
   class GetModulesCall;

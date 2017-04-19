@@ -23,11 +23,9 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
     initialized_.Pass();
     modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }
@@ -42,7 +40,6 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::LinkPtr link_;
 
   TestPoint initialized_{"Child module initialized"};
   TestPoint stopped_{"Child module stopped"};

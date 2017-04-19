@@ -15,16 +15,16 @@
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    fidl::Array<fidl::String> module_path,
-    const ModuleContextInfo& info,
-    const uint64_t id,
-    const std::string& module_url,
+    const fidl::Array<fidl::String>& module_path, const ModuleContextInfo& info,
+    const uint64_t id, const std::string& module_url,
+    const LinkPathPtr& default_link_path,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
-    : module_path_(std::move(module_path)),
+    : module_path_(module_path.Clone()),
       id_(id),
       story_impl_(info.story_impl),
       module_url_(module_url),
+      default_link_path_(default_link_path.Clone()),
       module_controller_impl_(module_controller_impl),
       component_context_impl_(
           info.component_context_info,
@@ -35,34 +35,47 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
+void ModuleContextImpl::GetLink(const fidl::String& name,
+                                fidl::InterfaceRequest<Link> link) {
+  LinkPathPtr link_path;
+  if (name)  {
+    link_path = LinkPath::New();
+    link_path->module_path = module_path_.Clone();
+    link_path->link_name = name;
+  } else {
+    link_path = default_link_path_.Clone();
+  }
+  story_impl_->GetLinkPath(std::move(link_path), std::move(link));
+}
+
 void ModuleContextImpl::CreateLink(const fidl::String& name,
                                    fidl::InterfaceRequest<Link> link) {
-  story_impl_->CreateLink(module_path_, name, std::move(link));
+  GetLink(name, std::move(link));
 }
 
 void ModuleContextImpl::StartModule(
-    const fidl::String& name,
-    const fidl::String& query,
-    fidl::InterfaceHandle<Link> link,
+    const fidl::String& name, const fidl::String& query,
+    const fidl::String& link_name,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(module_path_, name, query, std::move(link),
+  story_impl_->StartModule(module_path_, name, query, link_name,
                            std::move(outgoing_services),
                            std::move(incoming_services),
-                           std::move(module_controller), std::move(view_owner));
+                           std::move(module_controller), std::move(view_owner),
+                           [](uint32_t) {});
 }
 
 void ModuleContextImpl::StartModuleInShell(
     const fidl::String& name,
     const fidl::String& query,
-    fidl::InterfaceHandle<Link> link,
+    const fidl::String& link_name,
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     const fidl::String& view_type) {
-  story_impl_->StartModuleInShell(module_path_, name, query, std::move(link),
+  story_impl_->StartModuleInShell(module_path_, name, query, link_name,
                                   std::move(outgoing_services),
                                   std::move(incoming_services),
                                   std::move(module_controller), id_, view_type);

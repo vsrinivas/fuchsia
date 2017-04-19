@@ -74,7 +74,6 @@ void ModuleApp::CreateView(
 
 void ModuleApp::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
-    fidl::InterfaceHandle<modular::Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
 

@@ -206,7 +206,8 @@ class TestUserShellApp : modular::StoryWatcher,
       FTL_LOG(INFO) << "TestUserShell MODULES:";
       for (const auto& module_data : modules) {
         FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->url;
-        FTL_LOG(INFO) << "TestUserShell         link=" << module_data->link;
+        FTL_LOG(INFO) << "TestUserShell         link="
+            << module_data->default_link_path->link_name;
         std::string path;
         for (const auto& path_element : module_data->module_path) {
           path.push_back(' ');

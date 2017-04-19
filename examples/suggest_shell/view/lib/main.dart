@@ -47,10 +47,10 @@ class _Module extends Module implements LinkWatcher {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _link.ctrl.bind(linkHandle);
+    _moduleContext.ctrl.bind(moduleContextHandle);
+    _moduleContext.createLink(null, _link.ctrl.request());
     _link.watchAll(_linkWatcherBinding.wrap(this));
   }
 

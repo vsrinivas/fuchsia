@@ -122,12 +122,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
-    module_context_->CreateLink("module", module_link_.NewRequest());
     SwapModule();
   }
 
@@ -150,11 +147,11 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       });
       return;
     }
-    fidl::InterfaceHandle<modular::Link> module_link_handle;
-    module_link_->Dup(module_link_handle.NewRequest());
+
     // This module is named after its URL.
+    constexpr char kModuleLink[] = "module";
     module_context_->StartModule(
-        module_query, module_query, std::move(module_link_handle), nullptr,
+        module_query, module_query, kModuleLink, nullptr,
         nullptr, module_.NewRequest(), module_view_.NewRequest());
     SetChild();
   }
@@ -166,8 +163,6 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::LinkPtr link_;
-  modular::LinkPtr module_link_;
   modular::ModuleControllerPtr module_;
   mozart::ViewOwnerPtr module_view_;
   std::unique_ptr<RecipeView> view_;

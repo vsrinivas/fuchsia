@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "apps/modular/services/module/module_data.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
 
@@ -63,9 +64,8 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
 std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
-std::string MakeLinkKey(const fidl::Array<fidl::String>& module_path,
-                        const fidl::String& link_name);
-std::string MakeModuleKey(const fidl::String& module_name);
+std::string MakeLinkKey(const LinkPathPtr& link_path);
+std::string MakeModuleKey(const fidl::Array<fidl::String>& module_name);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.
@@ -78,7 +78,8 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
-std::string EncodeModulePath(const fidl::Array<fidl::String>& path);
+std::string EncodeModulePath(const fidl::Array<fidl::String>& module_path);
+std::string EncodeLinkPath(const LinkPathPtr& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:

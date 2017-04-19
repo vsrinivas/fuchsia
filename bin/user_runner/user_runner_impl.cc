@@ -48,6 +48,7 @@ constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/framework/message-queues/v1/";
+constexpr char kUserShellLinkName[] = "user-shell-link";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -318,8 +319,10 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   }
 
   link_storage_.reset(new StoryStorageImpl(root_page_.get()));
-  user_shell_link_.reset(
-      new LinkImpl(link_storage_.get(), nullptr, kUserShellKey));
+  auto link_path = LinkPath::New();
+  link_path->module_path = fidl::Array<fidl::String>::New(0);
+  link_path->link_name = kUserShellLinkName;
+  user_shell_link_.reset(new LinkImpl(link_storage_.get(), link_path));
   user_shell_link_->Connect(std::move(request));
 }
 

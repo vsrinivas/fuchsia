@@ -43,14 +43,23 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(const fidl::Array<fidl::String>& path) {
-  std::vector<std::string> escaped_path;
-  escaped_path.reserve(path.size());
-
-  for (const auto& item : path) {
-    escaped_path.push_back(StringEscape(item.get(), kCharsToEscape, kEscaper));
+std::string EncodeModulePath(const fidl::Array<fidl::String>& module_path) {
+  std::string output;
+  for (size_t i = 0; i < module_path.size(); i++) {
+    output.append(StringEscape(module_path[i].get(), kCharsToEscape, kEscaper));
+    if (i < module_path.size() - 1) {
+      output.append(kSubSeparator);
+    }
   }
-  return ftl::JoinStrings(escaped_path, kSubSeparator);
+  return output;
+}
+
+std::string EncodeLinkPath(const LinkPathPtr& link_path) {
+  std::string output;
+  output.append(EncodeModulePath(link_path->module_path));
+  output.append(kSeparator);
+  output.append(StringEscape(link_path->link_name.get(), kCharsToEscape, kEscaper));
+  return output;
 }
 
 std::string EncodeModuleComponentNamespace(const std::string& story_id) {
@@ -68,21 +77,15 @@ std::string MakeTriggerKey(const std::string& agent_url,
   return key;
 }
 
-std::string MakeLinkKey(const fidl::Array<fidl::String>& module_path,
-                        const fidl::String& link_name) {
+std::string MakeLinkKey(const LinkPathPtr& link_path) {
   std::string key{kLinkKeyPrefix};
-  key.append(EncodeModulePath(module_path));
-  key.append(kSeparator);
-  key.append(StringEscape(link_name.get(), kCharsToEscape, kEscaper));
-
+  key.append(EncodeLinkPath(link_path));
   return key;
 }
 
-// TODO(mesch): In the future, this is keyed by module path rather than just
-// module name.
-std::string MakeModuleKey(const fidl::String& module_name) {
+std::string MakeModuleKey(const fidl::Array<fidl::String>& module_path) {
   std::string key{kModuleKeyPrefix};
-  key.append(StringEscape(module_name.get(), kCharsToEscape, kEscaper));
+  key.append(EncodeModulePath(module_path));
   return key;
 }
 

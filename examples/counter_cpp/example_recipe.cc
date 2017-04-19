@@ -162,11 +162,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
+    module_context_->GetLink(nullptr, link_.NewRequest());
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
@@ -174,17 +173,12 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       FTL_LOG(INFO) << "example_recipe link: " << json;
     });
 
-    module_context_->CreateLink("module1", module1_link_.NewRequest());
-    module_context_->CreateLink("module2", module2_link_.NewRequest());
-
+    constexpr char kModule1Link[] = "module1";
+    constexpr char kModule2Link[] = "module2";
+    module_context_->GetLink(kModule1Link, module1_link_.NewRequest());
+    module_context_->GetLink(kModule2Link, module2_link_.NewRequest());
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
-
-    fidl::InterfaceHandle<modular::Link> module1_link_handle;
-    module1_link_->Dup(module1_link_handle.NewRequest());
-
-    fidl::InterfaceHandle<modular::Link> module2_link_handle;
-    module2_link_->Dup(module2_link_handle.NewRequest());
 
     // Provide services for Module 1.
     app::ServiceProviderPtr services_for_module1;
@@ -197,7 +191,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     app::ServiceProviderPtr services_from_module1;
     module_context_->StartModuleInShell(
         "module1", "file:///system/apps/example_module1",
-        std::move(module1_link_handle), std::move(services_for_module1),
+        kModule1Link, std::move(services_for_module1),
         services_from_module1.NewRequest(), module1_.NewRequest(), "");
 
     // Consume services from Module 1.
@@ -218,7 +212,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     module_context_->StartModuleInShell("module2",
                                         "file:///system/apps/example_module2",
-                                        std::move(module2_link_handle), nullptr,
+                                        kModule2Link, nullptr,
                                         nullptr, module2_.NewRequest(), "");
 
     connections_.emplace_back(

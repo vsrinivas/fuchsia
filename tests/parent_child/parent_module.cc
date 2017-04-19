@@ -30,12 +30,10 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<modular::Link> link,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     initialized_.Pass();
     module_context_.Bind(std::move(module_context));
-    link_.Bind(std::move(link));
 
     StartModule(kChildModule);
 
@@ -61,16 +59,15 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   void StartModule(const std::string& module_query) {
-    modular::LinkPtr child_link;
-    module_context_->CreateLink("child", child_link.NewRequest());
     fidl::InterfaceHandle<mozart::ViewOwner> module_view;
-    module_context_->StartModule("child", module_query, std::move(child_link),
+    constexpr char kChildLink[] = "child";
+    constexpr char kChildModuleName[] = "child";
+    module_context_->StartModule(kChildModuleName, module_query, kChildLink,
                                  nullptr, nullptr, module_.NewRequest(),
                                  module_view.NewRequest());
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::LinkPtr link_;
   modular::ModuleControllerPtr module_;
 
   TestPoint initialized_{"Parent module initialized"};

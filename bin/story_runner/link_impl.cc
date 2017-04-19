@@ -6,6 +6,7 @@
 
 #include <functional>
 
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -39,10 +40,8 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
 }  // namespace
 
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
-                   const fidl::Array<fidl::String>& module_path,
-                   const fidl::String& name)
-    : module_path_(module_path.Clone()),
-      name_(name),
+                   const LinkPathPtr& link_path)
+    : link_path_(link_path.Clone()),
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData([this]() {
@@ -54,8 +53,7 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
   });
 
   story_storage_->WatchLink(
-      module_path_, name_,
-      [this](const fidl::String& json) { OnChange(json); });
+      link_path, [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() = default;
@@ -74,7 +72,7 @@ void LinkImpl::SetSchema(const fidl::String& json_schema) {
   if (doc.HasParseError()) {
     // TODO(jimbe, mesch): This method needs a success status,
     // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << name_
+    FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << doc.GetParseError()
                    << std::endl
                    << json_schema.get();
@@ -102,7 +100,7 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
   if (new_value.HasParseError()) {
     // TODO(jimbe, mesch): This method needs a success status,
     // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::Set() " << name_
+    FTL_LOG(ERROR) << "LinkImpl::Set() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << new_value.GetParseError()
                    << std::endl
                    << json.get();
@@ -138,7 +136,7 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
   if (new_value.HasParseError()) {
     // TODO(jimbe, mesch): This method needs a success status,
     // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::UpdateObject() " << name_
+    FTL_LOG(ERROR) << "LinkImpl::UpdateObject() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << new_value.GetParseError()
                    << std::endl
                    << json.get();
@@ -210,7 +208,7 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
   story_storage_->ReadLinkData(
-      module_path_, name_, [this, done](const fidl::String& json) {
+      link_path_, [this, done](const fidl::String& json) {
         if (!json.is_null()) {
           doc_.Parse(json.get());
           //FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
@@ -226,7 +224,7 @@ void LinkImpl::WriteLinkData(const std::function<void()>& done) {
 }
 
 void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
-  story_storage_->WriteLinkData(module_path_, name_, JsonValueToString(doc_),
+  story_storage_->WriteLinkData(link_path_, JsonValueToString(doc_),
                                 done);
 }
 
@@ -254,8 +252,8 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
       validator.GetInvalidDocumentPointer().StringifyUriFragment(sbdoc);
       rapidjson::StringBuffer sbapipath;
       pointer.StringifyUriFragment(sbapipath);
-      FTL_LOG(ERROR) << "Schema constraint violation in " << name_ << ":"
-                     << std::endl
+      FTL_LOG(ERROR) << "Schema constraint violation in "
+                     << EncodeLinkPath(link_path_) << ":" << std::endl
                      << "  Constraint " << sbpath.GetString() << "/"
                      << validator.GetInvalidSchemaKeyword() << std::endl
                      << "  Doc location: " << sbdoc.GetString() << std::endl
