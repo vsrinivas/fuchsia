@@ -11,11 +11,5 @@
             "binary": "web_view",
             "bootfs_path": "apps/web_view"
         }
-    ],
-    "resources": [
-        {
-            "file": "apps/web_view/fonts.conf",
-            "bootfs_path": "fonts/fonts.conf"
-        }
     ]
 }
