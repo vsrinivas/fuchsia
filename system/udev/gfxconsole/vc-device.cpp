@@ -169,8 +169,16 @@ static void vc_tc_push_scrollback_line(void* cookie, int y) {
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
 
-    if (dev->viewport_y < 0)
+    // If we're displaying only the main console region (and no
+    // scrollback), then keep displaying that (i.e. don't modify
+    // viewport_y).  Otherwise, if we're displaying some of the scrollback
+    // buffer, scroll the viewport to keep displaying the same point
+    // (modifying viewport_y), unless we're at the top of the scrollback
+    // buffer.
+    if (dev->viewport_y < 0 &&
+        dev->viewport_y > -static_cast<int>(dev->scrollback_rows_max)) {
         dev->viewport_y -= 1;
+    }
 }
 
 static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {

@@ -522,6 +522,45 @@ bool test_scroll_viewport_by_large_delta() {
     END_TEST;
 }
 
+// When the console is displaying only the main console region (and no
+// scrollback), the console should keep displaying that as new lines are
+// outputted.
+bool test_viewport_scrolling_follows_bottom() {
+    BEGIN_TEST;
+
+    TextconHelper tc(1, 1);
+    for (unsigned i = 0; i < tc.vc_dev->scrollback_rows_max * 2; ++i) {
+        EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+        tc.PutString("\n");
+    }
+
+    END_TEST;
+}
+
+// When the console is displaying some of the scrollback buffer, then as
+// new lines are outputted, the console should scroll the viewpoint to keep
+// displaying the same point, unless we're at the top of the scrollback
+// buffer.
+bool test_viewport_scrolling_follows_scrollback() {
+    BEGIN_TEST;
+
+    TextconHelper tc(1, 1);
+    // Add 3 lines to the scrollback buffer.
+    tc.PutString("\n\n\n");
+    {
+        mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
+        vc_device_scroll_viewport(tc.vc_dev, -2);
+    }
+    EXPECT_EQ(tc.vc_dev->viewport_y, -2, "");
+    int limit = tc.vc_dev->scrollback_rows_max;
+    for (int line = 3; line < limit * 2; ++line) {
+        tc.PutString("\n");
+        EXPECT_EQ(tc.vc_dev->viewport_y, -MIN(line, limit), "");
+    }
+
+    END_TEST;
+}
+
 // Test that vc_device_get_scrollback_lines() gives the correct results.
 bool test_scrollback_lines_count() {
     BEGIN_TEST;
@@ -598,6 +637,8 @@ RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
 RUN_TEST(test_cursor_scroll_bug)
 RUN_TEST(test_scroll_viewport_by_large_delta)
+RUN_TEST(test_viewport_scrolling_follows_bottom)
+RUN_TEST(test_viewport_scrolling_follows_scrollback)
 RUN_TEST(test_scrollback_lines_count)
 RUN_TEST(test_scrollback_lines_contents)
 END_TEST_CASE(gfxconsole_textbuf_tests)
