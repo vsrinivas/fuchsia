@@ -101,7 +101,7 @@ static mx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, usb_port_stat
     mx_time_t stable = 0;
 
     while (total < timeout) {
-        mx_nanosleep(poll_delay);
+        mx_nanosleep(mx_deadline_after(poll_delay));
         total += poll_delay;
 
         mx_status_t result = usb_hub_get_port_status(hub, port, status);
