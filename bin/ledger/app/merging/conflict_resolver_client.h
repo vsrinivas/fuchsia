@@ -43,8 +43,17 @@ class ConflictResolverClient : public MergeResultProvider {
           waiter);
   void Finalize();
 
+  void GetDiff(
+      const storage::Commit& commit,
+      fidl::Array<uint8_t> token,
+      const std::function<void(Status, PageChangePtr, fidl::Array<uint8_t>)>&
+          callback);
+
   // MergeResultProvider:
-  void GetDiff(fidl::Array<uint8_t> token, const GetDiffCallback& callback);
+  void GetLeftDiff(fidl::Array<uint8_t> token,
+                   const GetLeftDiffCallback& callback);
+  void GetRightDiff(fidl::Array<uint8_t> token,
+                    const GetRightDiffCallback& callback);
   void Merge(fidl::Array<MergedValuePtr> merge_changes,
              const MergeCallback& callback);
   void Done(const DoneCallback& callback);

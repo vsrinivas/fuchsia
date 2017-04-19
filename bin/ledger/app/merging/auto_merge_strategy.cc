@@ -108,7 +108,7 @@ void AutoMergeStrategy::AutoMerger::Start() {
     }
   });
 
-  storage_->GetCommitContentsDiff(*ancestor_, *right_, std::move(on_next),
+  storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),
                                   std::move(on_done));
 }
 
@@ -173,7 +173,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
     }
   });
 
-  storage_->GetCommitContentsDiff(*ancestor_, *left_, std::move(on_next),
+  storage_->GetCommitContentsDiff(*ancestor_, *left_, "", std::move(on_next),
                                   std::move(on_done));
 }
 

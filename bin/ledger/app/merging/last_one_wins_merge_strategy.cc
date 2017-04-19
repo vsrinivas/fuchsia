@@ -114,7 +114,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
           weak_this->Done();
         });
   };
-  storage_->GetCommitContentsDiff(*ancestor_, *right_, std::move(on_next),
+  storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),
                                   std::move(on_diff_done));
 }
 

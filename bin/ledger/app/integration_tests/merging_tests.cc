@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -56,6 +57,23 @@ class Watcher : public PageWatcher {
   ftl::Closure change_callback_;
 };
 
+PageChangePtr NewPageChange() {
+  PageChangePtr change = PageChange::New();
+  change->changes = fidl::Array<EntryPtr>::New(0);
+  change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
+  return change;
+}
+
+void AppendChanges(PageChangePtr* base, PageChangePtr changes) {
+  (*base)->timestamp = changes->timestamp;
+  for (size_t i = 0; i < changes->changes.size(); ++i) {
+    (*base)->changes.push_back(std::move(changes->changes[i]));
+  }
+  for (size_t i = 0; i < changes->deleted_keys.size(); ++i) {
+    (*base)->deleted_keys.push_back(std::move(changes->deleted_keys[i]));
+  }
+}
+
 class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
@@ -82,26 +100,39 @@ class ConflictResolverImpl : public ConflictResolver {
           result_provider(
               MergeResultProviderPtr::Create(std::move(result_provider))) {}
 
+    // Returns the changes from the left and right branch.
     ::testing::AssertionResult GetDiff(PageChangePtr* change_left,
                                        PageChangePtr* change_right) {
-      Status status;
-      result_provider->GetDiff(nullptr, [&status, change_left, change_right](
-                                            Status s, PageChangePtr left,
-                                            PageChangePtr right,
-                                            fidl::Array<uint8_t> next_token) {
-        status = s;
-        *change_left = std::move(left);
-        *change_right = std::move(right);
-        FTL_DCHECK(next_token.is_null()) << "Pagination not implemented, yet.";
-      });
-      if (!result_provider.WaitForIncomingResponse()) {
-        return ::testing::AssertionFailure() << "GetDiff failed.";
+      return GetDiff(change_left, change_right, 0);
+    }
+
+    // Returns the changes from the left and right branch and makes sure that at
+    // least |min_queries| of partial results are returned before retrieving the
+    // complete result for the left and for the right changes.
+    ::testing::AssertionResult GetDiff(PageChangePtr* change_left,
+                                       PageChangePtr* change_right,
+                                       int min_queries) {
+      *change_left = NewPageChange();
+      *change_right = NewPageChange();
+      ::testing::AssertionResult left_result = GetDiff(
+          nullptr, change_left, 0, min_queries,
+          [this](fidl::Array<uint8_t> token,
+                 const std::function<void(Status, PageChangePtr change,
+                                          fidl::Array<uint8_t> next_token)>&
+                     callback) {
+            result_provider->GetLeftDiff(std::move(token), callback);
+          });
+      if (!left_result) {
+        return left_result;
       }
-      if (status != Status::OK) {
-        return ::testing::AssertionFailure()
-               << "GetDiff failed with status " << status;
-      }
-      return ::testing::AssertionSuccess();
+      return GetDiff(
+          nullptr, change_right, 0, min_queries,
+          [this](fidl::Array<uint8_t> token,
+                 const std::function<void(Status, PageChangePtr change,
+                                          fidl::Array<uint8_t> next_token)>&
+                     callback) {
+            result_provider->GetRightDiff(std::move(token), callback);
+          });
     }
 
     ::testing::AssertionResult Merge(fidl::Array<MergedValuePtr> results) {
@@ -122,6 +153,54 @@ class ConflictResolverImpl : public ConflictResolver {
       if (status != Status::OK) {
         return ::testing::AssertionFailure()
                << "Done failed with status " << status;
+      }
+      return ::testing::AssertionSuccess();
+    }
+
+   private:
+    ::testing::AssertionResult GetDiff(
+        fidl::Array<uint8_t> token,
+        PageChangePtr* page_change,
+        int num_queries,
+        int min_queries,
+        std::function<
+            void(fidl::Array<uint8_t>,
+                 const std::function<
+                     void(Status, PageChangePtr, fidl::Array<uint8_t>)>&)>
+            get_left_or_right_diff) {
+      Status status;
+      fidl::Array<uint8_t> next_token;
+      do {
+        get_left_or_right_diff(
+            std::move(token),
+            [&status, page_change, &next_token](Status s, PageChangePtr change,
+                                                fidl::Array<uint8_t> next) {
+              status = s;
+              AppendChanges(page_change, std::move(change));
+              next_token = std::move(next);
+            });
+        if (!result_provider.WaitForIncomingResponse()) {
+          return ::testing::AssertionFailure() << "GetLeftDiff failed.";
+        }
+        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
+          return ::testing::AssertionFailure()
+                 << "GetLeftDiff failed with status " << status;
+        }
+        if (!next_token != (status == Status::OK)) {
+          return ::testing::AssertionFailure()
+                 << "next_token is " << convert::ToString(next_token)
+                 << ", but status is:" << status;
+        }
+        ++num_queries;
+
+        token = std::move(next_token);
+      } while (token);
+
+      if (num_queries < min_queries) {
+        return ::testing::AssertionFailure()
+               << "Only " << num_queries
+               << " partial results were found, but at least "
+               << min_queries << " were expected";
       }
       return ::testing::AssertionSuccess();
     }
@@ -530,6 +609,76 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2]->key));
+}
+
+TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  std::function<void(Status)> status_ok_callback = [](Status status) {
+    EXPECT_EQ(status, Status::OK);
+  };
+  ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr),
+                                         status_ok_callback);
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  page1->StartTransaction(status_ok_callback);
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  int N = 50;
+  std::vector<std::string> page1_keys;
+  for (int i = 0; i < N; ++i) {
+    page1_keys.push_back(ftl::StringPrintf("page1_key_%02d", i));
+    page1->Put(convert::ToArray(page1_keys.back()), convert::ToArray("value"),
+               status_ok_callback);
+    EXPECT_TRUE(page1.WaitForIncomingResponse());
+  }
+
+  page2->StartTransaction(status_ok_callback);
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  std::vector<std::string> page2_keys;
+  for (int i = 0; i < N; ++i) {
+    page2_keys.push_back(ftl::StringPrintf("page1_key_%02d", i));
+    page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"),
+               status_ok_callback);
+    EXPECT_TRUE(page2.WaitForIncomingResponse());
+  }
+
+  page1->Commit(status_ok_callback);
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit(status_ok_callback);
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  PageChangePtr change_left;
+  PageChangePtr change_right;
+  ASSERT_TRUE(
+      resolver_impl->requests[0].GetDiff(&change_left, &change_right, 1));
+
+  std::vector<std::string> values;
+  values.resize(N, "value");
+  // Left change is the most recent, so the one made on |page2|.
+  EXPECT_TRUE(ChangesMatch(page1_keys, values, change_left->changes));
+  // Right change comes from |page1|.
+  EXPECT_TRUE(ChangesMatch(page2_keys, values, change_right->changes));
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
