@@ -20,9 +20,13 @@ def parse_package_file(package_file_path):
     return data
 
 
-def netcp_everything(package_data, out_dir, dst_root):
+def netcp_everything(package_data, out_dir, dst_root, name_filter):
     for binary in package_data['binaries']:
-        src_path = os.path.join(out_dir, binary['binary'])
+        binary_name = binary['binary']
+        if name_filter is not None and name_filter not in binary_name:
+            continue
+
+        src_path = os.path.join(out_dir, binary_name)
         dst_path = os.path.join(dst_root, binary['bootfs_path'])
 
         print 'Copying "%s" to "%s"' % (src_path, dst_path)
@@ -44,13 +48,16 @@ def main():
     parser.add_argument('-d', '--dst-root', metavar='PATH',
                         default=DEFAULT_DST_ROOT,
                         help='Path to the directory to copy package products')
+    parser.add_argument('-f', '--filter', metavar='FILTER',
+                        help='Push products with a name that contains FILTER')
     args = parser.parse_args()
 
     package_data = parse_package_file(args.package_file)
     out_dir = args.out_dir or DEFAULT_OUT_DIR
     dst_root = args.dst_root or DEFAULT_DST_ROOT
+    name_filter = args.filter
 
-    return netcp_everything(package_data, out_dir, dst_root)
+    return netcp_everything(package_data, out_dir, dst_root, name_filter)
 
 
 if __name__ == "__main__":
