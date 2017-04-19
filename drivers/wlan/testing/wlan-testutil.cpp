@@ -45,7 +45,7 @@ int add_wlan() {
         if (devfd >= 0) {
             break;
         }
-        mx::nanosleep(MX_SEC(1));
+        mx::nanosleep(mx_deadline_after(MX_SEC(1)));
     } while (++retry < 100);
 
     if (devfd < 0) {
