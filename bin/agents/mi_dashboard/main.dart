@@ -25,7 +25,7 @@ Directory _webrootDirectory;
 // TODO(jwnichols): Make sure all the relevant topics are listed here
 // Eventually we may want a method to ContextProvider that subscribes to all
 // topics.
-final _topics = ["/modular_state"];
+final _topics = ["/story/visible_count"];
 final _contextCache = new Map<String,String>();
 
 final _contextProvider = new ContextProviderProxy();

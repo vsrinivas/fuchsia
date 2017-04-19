@@ -15,6 +15,10 @@
 namespace maxwell {
 namespace {
 
+// The Context topic which tells us how many Stories are currently visible. If
+// the count is zero, we know the user is on the home screen.
+const std::string kVisibleCountTopic = "/story/visible_count";
+
 struct ProposalContent {
   std::string url;
   uint32_t color;
@@ -108,7 +112,7 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
     binding_.Bind(&listener_handle);
 
     auto query = ContextQuery::New();
-    query->topics.push_back("/modular_state");
+    query->topics.push_back(kVisibleCountTopic);
     provider_->Subscribe(std::move(query), std::move(listener_handle));
 
     fidl::InterfaceHandle<AskHandler> ask_handle;
@@ -117,9 +121,9 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
-    const int modular_state =
-        std::stoi(update->values["/modular_state"].data());
-    if (modular_state == 0) {
+    const int visible_count =
+        std::stoi(update->values[kVisibleCountTopic].data());
+    if (visible_count == 0) {
       for (const auto& entry : kNextStories) {
         out_->Propose(MkProposal(entry.first, entry.second));
       }

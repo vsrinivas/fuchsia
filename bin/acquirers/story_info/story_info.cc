@@ -115,6 +115,9 @@ void StoryInfoAcquirer::Initialize(
 
   // Watch for changes in Story state.
   story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
+
+  // Write initial values for visible stories.
+  OnVisibleStoriesChange({});
 }
 
 void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {

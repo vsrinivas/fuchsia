@@ -50,7 +50,7 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
 
 void ContextRepository::SetInternal(const std::string& topic,
                                     const std::string* json_value) {
-  FTL_VLOG(1) << "SetInternal(): " << topic << " = " << json_value;
+  FTL_VLOG(1) << "SetInternal(): " << topic << " = " << *json_value;
   if (json_value != nullptr) {
     values_[topic] = *json_value;
   } else {

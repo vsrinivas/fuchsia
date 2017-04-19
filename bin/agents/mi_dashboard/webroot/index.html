@@ -12,7 +12,7 @@
   </p>
   <img src="snooty-badge.jpg"/>
   <p>
-    Modular State: <span id="modular_state"></span>
+    Visible stories count: <span id="visible_count"></span>
   </p>
   <script>
     // this is a quick test of the data URLs from the server
@@ -20,12 +20,12 @@
     $(function() {
       // every 1s
       setInterval(function() {
-        // load the modular_state context value from the server and
+        // load the visible_count context value from the server and
         // update it on the page
         $.ajax({
-          url: "/data/context/modular_state",
+          url: "/data/context/story/visible_count",
           success: function( result ) {
-            $( "#modular_state" ).html( result );
+            $( "#visible_count" ).html( result );
           }
       }, 1000);
     })
