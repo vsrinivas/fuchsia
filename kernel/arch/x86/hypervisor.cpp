@@ -35,9 +35,10 @@
 
 extern uint8_t _gdt[];
 
-static const int kUartReceiveIoPort = 0x3f8;
-static const int kUartStatusIoPort = 0x3fd;
-static const int kUartStatusIdle = 1u << 6;
+static const uint16_t kUartReceiveIoPort = 0x3f8;
+static const uint16_t kUartStatusIoPort = 0x3fd;
+static const uint64_t kUartStatusIdle = 1u << 6;
+static const uint64_t kLocalApicAddress = 0xfee00000;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -450,6 +451,10 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     if (status != NO_ERROR)
         return status;
 
+    status = virtual_apic_page_.Alloc(vmx_info, 0);
+    if (status != NO_ERROR)
+        return status;
+
     memset(&vmx_state_, 0, sizeof(vmx_state_));
     return NO_ERROR;
 }
@@ -554,6 +559,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     status = set_vmcs_control(VmcsField32::PROCBASED_CTLS2,
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                               0,
+                              // Enable APIC access virtualization.
+                              PROCBASED_CTLS2_APIC_ACCESS |
                               // Enable use of extended page tables.
                               PROCBASED_CTLS2_EPT |
                               // Enable use of RDTSCP instruction.
@@ -581,6 +588,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     status = set_vmcs_control(VmcsField32::PROCBASED_CTLS,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
+                              // Enable TPR virtualization.
+                              PROCBASED_CTLS_TPR_SHADOW |
                               // Enable VM exit on IO instructions.
                               PROCBASED_CTLS_IO_EXITING |
                               // Enable use of MSR bitmaps.
@@ -590,7 +599,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
                               // Disable VM exit on CR3 load.
                               PROCBASED_CTLS_CR3_LOAD_EXITING |
                               // Disable VM exit on CR3 store.
-                              PROCBASED_CTLS_CR3_STORE_EXITING);
+                              PROCBASED_CTLS_CR3_STORE_EXITING |
+                              // Disable VM exit on CR8 load.
+                              PROCBASED_CTLS_CR8_LOAD_EXITING |
+                              // Disable VM exit on CR8 store.
+                              PROCBASED_CTLS_CR8_STORE_EXITING);
     if (status != NO_ERROR)
         return status;
 
@@ -668,6 +681,10 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     // translated by traversing a set of EPT paging structures to produce
     // physical addresses that are used to access memory.
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
+
+    // Setup APIC handling.
+    vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, kLocalApicAddress);
+    vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS, virtual_apic_page_.PhysicalAddress());
 
     // Setup MSR handling.
     ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_PAT);

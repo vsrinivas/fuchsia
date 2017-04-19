@@ -50,6 +50,8 @@ enum class VmcsField64 : uint64_t {
     EXIT_MSR_STORE_ADDRESS          = 0x2006,   /* VM-exit MSR-store address */
     EXIT_MSR_LOAD_ADDRESS           = 0x2008,   /* VM-exit MSR-load address */
     ENTRY_MSR_LOAD_ADDRESS          = 0x200a,   /* VM-entry MSR-load address */
+    VIRTUAL_APIC_ADDRESS            = 0x2012,   /* Virtual-APIC address */
+    APIC_ACCESS_ADDRESS             = 0x2014,   /* APIC-access address */
     EPT_POINTER                     = 0x201a,   /* EPT pointer */
     GUEST_PHYSICAL_ADDRESS          = 0x2400,   /* Guest physical address */
     LINK_POINTER                    = 0x2800,   /* VMCS link pointer */
@@ -122,6 +124,7 @@ enum class VmcsFieldXX : uint64_t {
 };
 
 /* PROCBASED_CTLS2 flags */
+#define PROCBASED_CTLS2_APIC_ACCESS         (1u << 0)
 #define PROCBASED_CTLS2_EPT                 (1u << 1)
 #define PROCBASED_CTLS2_RDTSCP              (1u << 3)
 #define PROCBASED_CTLS2_VPID                (1u << 5)
@@ -129,6 +132,9 @@ enum class VmcsFieldXX : uint64_t {
 /* PROCBASED_CTLS flags */
 #define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
 #define PROCBASED_CTLS_CR3_STORE_EXITING    (1u << 16)
+#define PROCBASED_CTLS_CR8_LOAD_EXITING     (1u << 19)
+#define PROCBASED_CTLS_CR8_STORE_EXITING    (1u << 20)
+#define PROCBASED_CTLS_TPR_SHADOW           (1u << 21)
 #define PROCBASED_CTLS_IO_EXITING           (1u << 24)
 #define PROCBASED_CTLS_MSR_BITMAPS          (1u << 28)
 #define PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
@@ -282,6 +288,7 @@ private:
     VmxPage msr_bitmaps_page_;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
+    VmxPage virtual_apic_page_;
     VmxState vmx_state_;
 };
 
