@@ -6,7 +6,6 @@
 
 #include <magenta/assert.h>
 #include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
 
 namespace mxtl {
 

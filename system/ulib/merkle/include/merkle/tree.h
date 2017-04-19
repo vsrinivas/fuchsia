@@ -12,6 +12,7 @@
 #ifdef __cplusplus
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
+#include <mxtl/unique_ptr.h>
 
 #include <merkle/digest.h>
 
