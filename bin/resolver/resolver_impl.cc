@@ -19,39 +19,60 @@ namespace {
 
 constexpr char kModuleFacetName[] = "fuchsia:module";
 
-using ConditionTest = bool (*)(const rapidjson::Value& test_args,
-                               const rapidjson::Value& member);
+// higher is better
+// TODO(rosswang): this is a very temporary notion
+using MatchScore = int;
+constexpr MatchScore kDefaultMatch = 0;
+constexpr MatchScore kNumericMatch = 4;  // https://xkcd.com/221/
+
+// match function signature doc:
+//
+// Returns true on match, false otherwise. On match, |score| is populated with
+// the |MatchScore| of the match (its input value is ignored). On no match, the
+// behavior of |score| is undefined and it may or may not be modified.
+//
+// bool (*) (const rapidjson::Value& condition, const rapidjson::Value& member,
+//           MatchScore* score);
 
 bool MatchDataPrecondition(const rapidjson::Value& condition,
-                           const rapidjson::Value& member);
+                           const rapidjson::Value& member,
+                           MatchScore* score);
 
 // See docs/module_manifest.md for details about these test functions.
 
 // Accepts the data_preconditions object of a module facet and a document
 // and returns whether or not the document matches the stated preconditions.
-// Precodnitions map property names to property values in the document.
+// Preconditions map property names to property values in the document.
 bool MatchProperties(const rapidjson::Value& test_args,
-                     const rapidjson::Value& data) {
+                     const rapidjson::Value& data,
+                     MatchScore* score) {
   FTL_CHECK(test_args.IsObject());
   if (!data.IsObject()) {
     return false;
   }
 
+  *score = 0;
+
   for (auto it = test_args.MemberBegin(); test_args.MemberEnd() != it; ++it) {
-    if (!data.HasMember(it->name.GetString()) ||
-        !MatchDataPrecondition(it->value, data[it->name.GetString()])) {
+    MatchScore member_score;
+    if (!(data.HasMember(it->name.GetString()) &&
+          MatchDataPrecondition(it->value, data[it->name.GetString()],
+                                &member_score))) {
       return false;
     }
+
+    *score += member_score;
   }
   return true;
 }
 
 bool MatchAny(const rapidjson::Value& test_args,
-              const rapidjson::Value& member) {
+              const rapidjson::Value& member,
+              MatchScore* score) {
   FTL_CHECK(test_args.IsArray());
 
   for (auto it = test_args.Begin(); it != test_args.End(); ++it) {
-    if (MatchDataPrecondition(*it, member)) {
+    if (MatchDataPrecondition(*it, member, score)) {
       return true;
     }
   }
@@ -59,18 +80,30 @@ bool MatchAny(const rapidjson::Value& test_args,
 }
 
 bool MatchDataPrecondition(const rapidjson::Value& condition,
-                           const rapidjson::Value& member) {
+                           const rapidjson::Value& member,
+                           MatchScore* score) {
   // TODO(rosswang): if we end up supporting more condition types, switch to
   // something more expressive
 
   if (condition.IsObject()) {
-    return MatchProperties(condition, member);
+    return MatchProperties(condition, member, score);
   } else if (condition.IsArray()) {
-    return MatchAny(condition, member);
+    return MatchAny(condition, member, score);
   } else {
-    return condition == member;
+    if (condition == member) {
+      *score =
+          condition.IsString() ? condition.GetStringLength() : kNumericMatch;
+      return true;
+    } else {
+      return false;
+    }
   }
 }
+
+struct ModuleResolution {
+  std::string url;
+  MatchScore score;
+};
 
 }  // namespace
 
@@ -106,7 +139,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
           }
         }
 
-        fidl::Array<ModuleInfoPtr> results(fidl::Array<ModuleInfoPtr>::New(0));
+        std::vector<ModuleResolution> raw_results;
 
         for (auto it = components.begin(); components.end() != it; ++it) {
           rapidjson::Document manifest;
@@ -116,16 +149,32 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
             continue;
           }
 
+          const auto& url = (*it)->component->url;
           if (data.IsNull() ||
-              !manifest[kModuleFacetName].HasMember("data_preconditions") ||
-              MatchProperties(manifest[kModuleFacetName]["data_preconditions"],
-                              data)) {
-            ModuleInfoPtr module(ModuleInfo::New());
-            module->component_id = (*it)->component->url;
-            results.push_back(std::move(module));
+              !manifest[kModuleFacetName].HasMember("data_preconditions")) {
+            raw_results.push_back({url, kDefaultMatch});
+          } else {
+            MatchScore score;
+            if (MatchProperties(
+                    manifest[kModuleFacetName]["data_preconditions"], data,
+                    &score)) {
+              raw_results.push_back({url, score});
+            }
           }
         }
 
+        std::sort(raw_results.begin(), raw_results.end(),
+                  [](const ModuleResolution& a, const ModuleResolution& b) {
+                    // best matches first
+                    return a.score > b.score;
+                  });
+
+        auto results = fidl::Array<ModuleInfoPtr>::New(0);
+        for (const auto& resolution : raw_results) {
+          ModuleInfoPtr module(ModuleInfo::New());
+          module->component_id = resolution.url;
+          results.push_back(std::move(module));
+        }
         callback(std::move(results));
       });
 }
