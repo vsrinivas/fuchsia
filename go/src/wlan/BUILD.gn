@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/gobuild.gni")
 import("//lib/fidl/fidl.gni")
 
 group("wlan") {
@@ -10,32 +11,9 @@ group("wlan") {
   ]
 }
 
-action("wlanstack") {
-  out_path = "$root_out_dir/wlanstack"
-
-  outputs = [
-    out_path,
-  ]
-
-  script = rebase_path("//.") + "/build/gobuild.py"
-  depfile_path = "${out_path}.d"
-  depfile = depfile_path
-  console = true
-
-  args = [
-    "--fuchsia-root",
-    rebase_path("//."),
-    "--root-out-dir",
-    rebase_path("$root_out_dir"),
-    "--depfile",
-    rebase_path(depfile_path),
-    "--current-cpu",
-    current_cpu,
-    "apps/wlan/wlanstack",
-  ]
-
+gobuild("wlanstack") {
+  gopackage = "apps/wlan/wlanstack"
   deps = [
     "//apps/wlan/services",
-    "//third_party/go:go_runtime",
   ]
 }
