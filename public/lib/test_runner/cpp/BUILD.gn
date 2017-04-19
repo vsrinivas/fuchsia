@@ -17,3 +17,15 @@ source_set("lib") {
     "//lib/mtl",
   ]
 }
+
+source_set("gtest_reporter") {
+  testonly = true
+  sources = [
+    "gtest_reporter.h",
+    "gtest_reporter.cc",
+  ]
+  public_deps = [
+    ":lib",
+    "//third_party/gtest",
+  ]
+}
