@@ -44,7 +44,7 @@
 #include <pdev/pdev.h>
 #include <libfdt.h>
 
-extern paddr_t device_tree_paddr; // Defined in start.S.
+extern paddr_t boot_structure_paddr; // Defined in start.S.
 
 static paddr_t ramdisk_start_phys = 0;
 static paddr_t ramdisk_end_phys = 0;
@@ -127,7 +127,7 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
     if (ramdisk_size) *ramdisk_size = 0;
     if (mem_size) *mem_size = 0;
 
-    void* fdt = paddr_to_kvaddr(device_tree_paddr);
+    void* fdt = paddr_to_kvaddr(boot_structure_paddr);
     if (!fdt) {
         printf("%s: could not find device tree\n", __FUNCTION__);
         return;
@@ -282,6 +282,25 @@ static void platform_cpu_init(void) {
 }
 #endif // WITH_SMP
 
+static inline bool is_bootdata_container(void* addr) {
+    DEBUG_ASSERT(addr);
+
+    bootdata_t* header = (bootdata_t*)addr;
+
+    return header->type == BOOTDATA_CONTAINER;
+}
+
+static void ramdisk_from_bootdata_container(void* bootdata,
+                                            void** ramdisk_base,
+                                            size_t* ramdisk_size) {
+    bootdata_t* header = (bootdata_t*)bootdata;
+
+    DEBUG_ASSERT(header->type == BOOTDATA_CONTAINER);
+
+    *ramdisk_base = (void*)bootdata;
+    *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
+}
+
 static void platform_mdi_init(void) {
     mdi_node_ref_t  root;
     mdi_node_ref_t  cpu_map;
@@ -331,13 +350,27 @@ void platform_early_init(void)
 {
     // QEMU does not put device tree pointer in the boot-time x2 register,
     // so set it here before calling read_device_tree.
-    if (device_tree_paddr == 0) {
-        device_tree_paddr = MEMBASE;
+    if (boot_structure_paddr == 0) {
+        boot_structure_paddr = MEMBASE;
     }
 
-    // on qemu we read arena size from the device tree
+    void* boot_structure_kvaddr = paddr_to_kvaddr(boot_structure_paddr);
+    if (!boot_structure_kvaddr) {
+        panic("no bootdata structure!\n");
+    }
+
+    // The previous environment passes us a boot structure. It may be a
+    // device tree or a bootdata container. We attempt to detect the type of the
+    // container and handle it appropriately.
     size_t arena_size = 0;
-    read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
+    if (is_bootdata_container(boot_structure_kvaddr)) {
+        // We leave out arena size for now
+        ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
+                                        &ramdisk_size);
+    } else {
+        // on qemu we read arena size from the device tree
+        read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
+    }
 
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");

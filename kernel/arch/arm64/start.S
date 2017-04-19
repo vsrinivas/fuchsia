@@ -41,10 +41,10 @@ FUNCTION(_start)
 #include "fastboot-header.S"
 #endif
 FUNCTION(arm_reset)
-    adrp    tmp, device_tree_paddr
+    adrp    tmp, boot_structure_paddr
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL
-    str     x0, [tmp, #:lo12:device_tree_paddr]
+    str     x0, [tmp, #:lo12:boot_structure_paddr]
     str     x2, [tmp2, #:lo12:arch_boot_el]
 
     bl      arm64_elX_to_el1
@@ -393,9 +393,9 @@ END(arm_reset)
 DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
 END(arch_boot_el)
-DATA(device_tree_paddr)
+DATA(boot_structure_paddr)
     .quad 0x00ff00ffdeadbeef
-END(device_tree_paddr)
+END(boot_structure_paddr)
 
 #if WITH_SMP
 DATA(page_tables_not_ready)
