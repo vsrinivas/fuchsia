@@ -670,6 +670,15 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             return NO_ERROR;
         }
         break;
+    case MXIO_PROTOCOL_SERVICE:
+        if (hcount != 1) {
+            r = ERR_INVALID_ARGS;
+        } else if ((*out = mxio_service_create(handles[0])) == NULL) {
+            r = ERR_NO_RESOURCES;
+        } else {
+            return NO_ERROR;
+        }
+        break;
     case MXIO_PROTOCOL_PIPE:
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;

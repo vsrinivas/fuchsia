@@ -26,6 +26,7 @@
 #define MXIO_PROTOCOL_REMOTE 2
 #define MXIO_PROTOCOL_VMOFILE 3
 #define MXIO_PROTOCOL_SOCKET 4
+#define MXIO_PROTOCOL_SERVICE 5
 
 // events for mxio_wait_fd()
 #define MXIO_EVT_READABLE EPOLLIN

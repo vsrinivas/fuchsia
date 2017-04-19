@@ -19,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vmofile.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/unistd.c \
+    $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/waitable.c \

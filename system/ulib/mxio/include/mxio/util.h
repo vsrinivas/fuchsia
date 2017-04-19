@@ -44,11 +44,20 @@ int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd);
 // returns mxio_t via io_out with refcount 1 on success
 mx_status_t mxio_unbind_from_fd(int fd, mxio_t** io_out);
 
+// If this fd represents a "service" (an rpc channel speaking
+// a non-mxio protocol), this call will return NO_ERROR and
+// return the underlying handle.
+// On both success and failure, the fd is effectively closed.
+mx_status_t mxio_get_service_handle(int fd, mx_handle_t* out);
+
 // creates a do-nothing mxio_t
 mxio_t* mxio_null_create(void);
 
-// wraps a message port with an mxio_t using remote io
+// wraps a channel with an mxio_t using remote io
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
+
+// wraps a channel with an mxio_t using an unknown rpc protocl
+mxio_t* mxio_service_create(mx_handle_t);
 
 // creates a mxio that wraps a log object
 // this will allocate a per-thread buffer (on demand) to assemble
