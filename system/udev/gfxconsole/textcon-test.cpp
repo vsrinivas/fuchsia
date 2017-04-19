@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gfx/gfx.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -494,6 +495,32 @@ bool test_cursor_scroll_bug() {
     END_TEST;
 }
 
+// Test for a bug where scrolling the console viewport by a large delta
+// (e.g. going from the top to the bottom) can crash due to out-of-bounds
+// memory accesses.
+bool test_scroll_viewport_by_large_delta() {
+    BEGIN_TEST;
+
+    TextconHelper tc(2, 2);
+    tc.PutString("\n");
+    for (int lines = 1; lines < 100; ++lines) {
+        tc.PutString("\n");
+
+        // Keep the thread checker happy.
+        mxtl::AutoLock lock(&g_vc_lock);
+
+        // Scroll up, to show older lines.
+        vc_device_scroll_viewport(tc.vc_dev, -10000);
+        EXPECT_EQ(tc.vc_dev->viewport_y, -lines, "");
+
+        // Scroll down, to show newer lines.
+        vc_device_scroll_viewport(tc.vc_dev, 10000);
+        EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -513,6 +540,7 @@ RUN_TEST(test_move_cursor_up_and_scroll)
 RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
 RUN_TEST(test_cursor_scroll_bug)
+RUN_TEST(test_scroll_viewport_by_large_delta)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }

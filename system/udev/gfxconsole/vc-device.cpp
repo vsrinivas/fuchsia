@@ -361,15 +361,22 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
     if (delta == 0)
         return;
     dev->viewport_y = vpy;
-    unsigned rows = vc_device_rows(dev);
-    if (dir > 0) {
-        gfx_copyrect(dev->gfx, 0, delta * dev->charh,
-                     dev->gfx->width, (rows - delta) * dev->charh, 0, 0);
-        vc_device_invalidate(dev, 0, vpy + rows - delta, dev->columns, delta);
+    int rows = vc_device_rows(dev);
+    if (delta >= rows) {
+        // We are scrolling the viewport by a large delta.  Invalidate all
+        // of the visible area of the console.
+        vc_device_invalidate(dev, 0, vpy, dev->columns, rows);
     } else {
-        gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
-                     (rows - delta) * dev->charh, 0, delta * dev->charh);
-        vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
+        if (dir > 0) {
+            gfx_copyrect(dev->gfx, 0, delta * dev->charh,
+                         dev->gfx->width, (rows - delta) * dev->charh, 0, 0);
+            vc_device_invalidate(dev, 0, vpy + rows - delta, dev->columns,
+                                 delta);
+        } else {
+            gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
+                         (rows - delta) * dev->charh, 0, delta * dev->charh);
+            vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
+        }
     }
     gfx_flush(dev->gfx);
     vc_device_render(dev);
