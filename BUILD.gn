@@ -15,3 +15,13 @@ group("tests") {
     "//apps/bluetooth/test:bluetooth_unittests",
   ]
 }
+
+# Enables libc++ thread safety annotations. Use this to enable macros from
+# lib/ftl/synchronization/thread_safety_annotations.h to be used with std::mutex and friends.
+config("cpp_thread_safety") {
+  defines = [
+    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
+  ]
+
+  cflags = [ "-Wthread-safety" ]
+}

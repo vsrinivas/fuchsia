@@ -51,6 +51,7 @@ CommandChannel::~CommandChannel() {
 }
 
 void CommandChannel::Initialize() {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FTL_DCHECK(!is_initialized_);
 
   // We make sure that this method blocks until the I/O handler registration task has run.
@@ -79,6 +80,7 @@ void CommandChannel::Initialize() {
 }
 
 void CommandChannel::ShutDown() {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_initialized_) return;
 
   FTL_LOG(INFO) << "hci: CommandChannel: shutting down";
@@ -93,10 +95,16 @@ void CommandChannel::ShutDown() {
 
   is_initialized_ = false;
 
-  send_queue_ = std::queue<QueuedCommand>();
-  event_handler_id_map_.clear();
-  event_code_handlers_.clear();
-  subevent_code_handlers_.clear();
+  {
+    std::lock_guard<std::mutex> lock(send_queue_mutex_);
+    send_queue_ = std::queue<QueuedCommand>();
+  }
+  {
+    std::lock_guard<std::mutex> lock(event_handler_mutex_);
+    event_handler_id_map_.clear();
+    event_code_handlers_.clear();
+    subevent_code_handlers_.clear();
+  }
   io_task_runner_ = nullptr;
   io_handler_key_ = 0u;
 }

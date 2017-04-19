@@ -11,18 +11,19 @@
 #include <queue>
 #include <unordered_map>
 
+#include <magenta/compiler.h>
 #include <mx/channel.h>
-
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace bluetooth {
 namespace hci {
@@ -211,6 +212,9 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // EventHandlerId counter.
   std::atomic_size_t next_event_handler_id_;
 
+  // Used to assert that certain public functions are only called on the creation thread.
+  ftl::ThreadChecker thread_checker_;
+
   // The Transport object that owns this CommandChannel.
   Transport* transport_;  // weak
 
@@ -226,13 +230,13 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // The task runner used for posting tasks on the HCI transport I/O thread.
   ftl::RefPtr<ftl::TaskRunner> io_task_runner_;
 
-  // The HCI command queue. These are the commands that have been queued to be
-  // sent to the controller.
-  std::queue<QueuedCommand> send_queue_;
-
   // Guards |send_queue_|. |send_queue_| can get accessed by threads that call
   // SendCommand() as well as from |io_thread_|.
   std::mutex send_queue_mutex_;
+
+  // The HCI command queue. These are the commands that have been queued to be
+  // sent to the controller.
+  std::queue<QueuedCommand> send_queue_ __TA_GUARDED(send_queue_mutex_);
 
   // Contains the currently pending HCI command packet. While controllers may
   // allow more than one packet to be pending at a given point in time, we only
@@ -247,20 +251,23 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Buffer where we queue incoming HCI event packets.
   common::StaticByteBuffer<EventPacket::GetMinBufferSize(kMaxEventPacketPayloadSize)> event_buffer_;
 
-  // Mapping from event handler IDs to handler data.
-  std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_;
-
-  // Mapping from event code to the event handler that was registered to handle
-  // that event code.
-  std::unordered_map<EventCode, EventHandlerId> event_code_handlers_;
-
-  // Mapping from LE Meta Event Subevent code to the event handler that was registered to handle
-  // that event code.
-  std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_;
-
   // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
   // accessed by both the public EventHandler methods and |io_thread_|.
   std::mutex event_handler_mutex_;
+
+  // Mapping from event handler IDs to handler data.
+  std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_
+      __TA_GUARDED(event_handler_mutex_);
+
+  // Mapping from event code to the event handler that was registered to handle
+  // that event code.
+  std::unordered_map<EventCode, EventHandlerId> event_code_handlers_
+      __TA_GUARDED(event_handler_mutex_);
+
+  // Mapping from LE Meta Event Subevent code to the event handler that was registered to handle
+  // that event code.
+  std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_
+      __TA_GUARDED(event_handler_mutex_);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandChannel);
 };

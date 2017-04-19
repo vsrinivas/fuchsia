@@ -8,15 +8,16 @@
 #include <mutex>
 #include <queue>
 
+#include <magenta/compiler.h>
 #include <mx/channel.h>
-
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace bluetooth {
 namespace hci {
@@ -104,39 +105,42 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   void TrySendNextQueuedPackets();
 
   // Returns the number of BR/EDR packets for which the controller has available space to buffer.
-  size_t GetNumFreeBREDRPacketsLocked() const;
+  size_t GetNumFreeBREDRPacketsLocked() const __TA_REQUIRES(send_mutex_);
 
   // Returns the number of LE packets for which controller has available space to buffer. Must be
   // called from a locked context.
-  size_t GetNumFreeLEPacketsLocked() const;
+  size_t GetNumFreeLEPacketsLocked() const __TA_REQUIRES(send_mutex_);
 
   // Decreases the total number of sent packets count by the given amount. Must be called from a
   // locked context.
-  void DecrementTotalNumPacketsLocked(size_t count);
+  void DecrementTotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
   // Decreases the total number of sent packets count for LE by the given amount. Must be called
   // from a locked context.
-  void DecrementLETotalNumPacketsLocked(size_t count);
+  void DecrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
   // Increments the total number of sent packets count by the given amount. Must be called from a
   // locked context.
-  void IncrementTotalNumPacketsLocked(size_t count);
+  void IncrementTotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
   // Increments the total number of sent LE packets count by the given amount. Must be called from a
   // locked context.
-  void IncrementLETotalNumPacketsLocked(size_t count);
+  void IncrementLETotalNumPacketsLocked(size_t count) __TA_REQUIRES(send_mutex_);
 
   // Returns true if the maximum number of sent packets has been reached. Must be called from a
   // locked context.
-  bool MaxNumPacketsReachedLocked() const;
+  bool MaxNumPacketsReachedLocked() const __TA_REQUIRES(send_mutex_);
 
   // Returns true if the maximum number of sent LE packets has been reached. Must be called from a
   // locked context.
-  bool MaxLENumPacketsReachedLocked() const;
+  bool MaxLENumPacketsReachedLocked() const __TA_REQUIRES(send_mutex_);
 
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+
+  // Used to assert that certain public functions are only called on the creation thread.
+  ftl::ThreadChecker thread_checker_;
 
   // The Transport object that owns this instance.
   Transport* transport_;  // weak;
@@ -187,8 +191,8 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
 
   // The current count of the number of ACL data packets that have been sent to the controller.
   // |le_num_sent_packets_| is ignored if the controller uses one buffer for LE and BR/EDR.
-  size_t num_sent_packets_;
-  size_t le_num_sent_packets_;
+  size_t num_sent_packets_ __TA_GUARDED(send_mutex_);
+  size_t le_num_sent_packets_ __TA_GUARDED(send_mutex_);
 
   // The ACL data packet queue contains the data packets that are waiting to be sent to the
   // controller.
@@ -196,7 +200,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // can cause a single connection to starve others when there are multiple connections present. We
   // should instead manage data packet priority based on its connection handle and on the result of
   // the HCI Number of Completed Packets events.
-  std::queue<QueuedDataPacket> send_queue_;
+  std::queue<QueuedDataPacket> send_queue_ __TA_GUARDED(send_mutex_);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannel);
 };

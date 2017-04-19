@@ -47,6 +47,7 @@ ACLDataChannel::~ACLDataChannel() {
 
 void ACLDataChannel::Initialize(size_t max_data_len, size_t le_max_data_len, size_t max_num_packets,
                                 size_t le_max_num_packets) {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FTL_DCHECK(!is_initialized_);
   FTL_DCHECK(max_data_len);
   FTL_DCHECK(max_num_packets);
@@ -90,6 +91,7 @@ void ACLDataChannel::Initialize(size_t max_data_len, size_t le_max_data_len, siz
 }
 
 void ACLDataChannel::ShutDown() {
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_initialized_) return;
 
   FTL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
@@ -104,7 +106,11 @@ void ACLDataChannel::ShutDown() {
 
   is_initialized_ = false;
 
-  send_queue_ = std::queue<QueuedDataPacket>();
+  {
+    std::lock_guard<std::mutex> lock(send_mutex_);
+    send_queue_ = std::queue<QueuedDataPacket>();
+  }
+
   io_task_runner_ = nullptr;
   io_handler_key_ = 0u;
   event_handler_id_ = 0u;
