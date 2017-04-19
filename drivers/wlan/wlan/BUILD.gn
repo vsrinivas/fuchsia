@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-shared_library("wlan") {
+static_library("libwlan") {
   sources = [
     "binding.c",
     "device.cpp",
@@ -18,10 +18,16 @@ shared_library("wlan") {
   cflags = [ "-Wthread-safety" ]
 
   deps = [
-    "//magenta/system/ulib/mx(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    "//magenta/system/ulib/mx",
   ]
 
   libs = [
     "ddk",
+  ]
+}
+
+shared_library("wlan") {
+  deps = [
+    ":libwlan(//build/toolchain/fuchsia:${target_cpu}-shared)",
   ]
 }
