@@ -82,17 +82,18 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     assert(y0 + h <= static_cast<int>(dev->rows));
 
     for (int y = y0; y < y0 + h; y++) {
-        int sc = 0;
         if (y < 0) {
-            sc = dev->scrollback_tail + y;
+            // Scrollback row.
+            int sc = dev->scrollback_tail + y;
             if (sc < 0)
                 sc += dev->scrollback_rows;
-        }
-        for (int x = x0; x < x0 + w; x++) {
-            if (y < 0) {
+            for (int x = x0; x < x0 + w; x++) {
                 vc_gfx_draw_char(dev, dev->scrollback_buf[x + sc * dev->columns],
                                  x, y - dev->viewport_y, /* invert= */ false);
-            } else {
+            }
+        } else {
+            // Row in the main console region (non-scrollback).
+            for (int x = x0; x < x0 + w; x++) {
                 // Check whether we should display the cursor at this
                 // position.  Note that it's possible that the cursor is
                 // outside the display area (dev->cursor_x ==
