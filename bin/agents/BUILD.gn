@@ -9,6 +9,7 @@ group("agents") {
     # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
+    ":concerts_dart",
     ":module_suggester",
     ":module_suggester_dart",
     ":mi_dashboard",
@@ -89,5 +90,16 @@ dart_app("module_suggester_dart") {
     "//application/lib/app/dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
     "//apps/web_runner/lib/dart:web_view",
+  ]
+}
+
+dart_app("concerts_dart") {
+  output_name = "agents/concerts.dartx"
+
+  main_dart = "concerts_dart/main.dart"
+
+  deps = [
+    "//application/lib/app/dart",
+    "//apps/maxwell/services/context:context_dart",
   ]
 }

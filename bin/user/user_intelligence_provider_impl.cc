@@ -94,6 +94,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   startAgent("file:///system/apps/acquirers/focus");
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
+  startAgent("file:///system/apps/agents/concerts.dartx");
 
 // TODO(jwnichols): Uncomment this when the dashboard is more functional
 // startAgent("file:///system/apps/agents/mi_dashboard.dartx");
