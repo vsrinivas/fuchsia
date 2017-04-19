@@ -113,6 +113,8 @@ void vc_device_render(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_invalidate_all_for_testing(vc_device_t* dev);
 int vc_device_get_scrollback_lines(vc_device_t* dev);
 void vc_device_scroll_viewport(vc_device_t* dev, int dir) TA_REQ(g_vc_lock);
+void vc_device_scroll_viewport_top(vc_device_t* dev) TA_REQ(g_vc_lock);
+void vc_device_scroll_viewport_bottom(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen)
     TA_REQ(g_vc_lock);
 

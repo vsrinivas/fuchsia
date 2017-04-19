@@ -351,32 +351,47 @@ int vc_device_get_scrollback_lines(vc_device_t* dev) {
     return dev->scrollback_rows - 1;
 }
 
-void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
-    int vpy = MAX(MIN(dev->viewport_y + dir, 0),
-                  -vc_device_get_scrollback_lines(dev));
-    int delta = ABS(dev->viewport_y - vpy);
-    if (delta == 0)
+static void vc_device_scroll_viewport_abs(vc_device_t* dev,
+                                          int vpy) TA_REQ(g_vc_lock) {
+    vpy = MIN(vpy, 0);
+    vpy = MAX(vpy, -vc_device_get_scrollback_lines(dev));
+    int diff = vpy - dev->viewport_y;
+    if (diff == 0)
         return;
+    int diff_abs = ABS(diff);
     dev->viewport_y = vpy;
     int rows = vc_device_rows(dev);
-    if (delta >= rows) {
+    if (diff_abs >= rows) {
         // We are scrolling the viewport by a large delta.  Invalidate all
         // of the visible area of the console.
         vc_device_invalidate(dev, 0, vpy, dev->columns, rows);
     } else {
-        if (dir > 0) {
-            gfx_copyrect(dev->gfx, 0, delta * dev->charh,
-                         dev->gfx->width, (rows - delta) * dev->charh, 0, 0);
-            vc_device_invalidate(dev, 0, vpy + rows - delta, dev->columns,
-                                 delta);
+        if (diff > 0) {
+            gfx_copyrect(dev->gfx, 0, diff_abs * dev->charh,
+                         dev->gfx->width, (rows - diff_abs) * dev->charh, 0, 0);
+            vc_device_invalidate(dev, 0, vpy + rows - diff_abs, dev->columns,
+                                 diff_abs);
         } else {
             gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
-                         (rows - delta) * dev->charh, 0, delta * dev->charh);
-            vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
+                         (rows - diff_abs) * dev->charh, 0,
+                         diff_abs * dev->charh);
+            vc_device_invalidate(dev, 0, vpy, dev->columns, diff_abs);
         }
     }
     gfx_flush(dev->gfx);
     vc_device_render(dev);
+}
+
+void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
+    vc_device_scroll_viewport_abs(dev, dev->viewport_y + dir);
+}
+
+void vc_device_scroll_viewport_top(vc_device_t* dev) {
+    vc_device_scroll_viewport_abs(dev, INT_MIN);
+}
+
+void vc_device_scroll_viewport_bottom(vc_device_t* dev) {
+    vc_device_scroll_viewport_abs(dev, 0);
 }
 
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {

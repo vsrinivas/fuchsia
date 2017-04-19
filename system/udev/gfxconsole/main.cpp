@@ -120,6 +120,18 @@ static bool vc_handle_control_keys(uint8_t keycode,
             return true;
         }
         break;
+    case HID_USAGE_KEY_HOME:
+        if (modifiers & MOD_SHIFT) {
+            vc_device_scroll_viewport_top(g_active_vc);
+            return true;
+        }
+        break;
+    case HID_USAGE_KEY_END:
+        if (modifiers & MOD_SHIFT) {
+            vc_device_scroll_viewport_bottom(g_active_vc);
+            return true;
+        }
+        break;
 
     case HID_USAGE_KEY_DELETE:
         // Provide a CTRL-ALT-DEL reboot sequence
@@ -164,8 +176,7 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
 
         device_state_set(&dev->device, DEV_STATE_READABLE);
 
-        // Scroll the viewport to the bottom.
-        vc_device_scroll_viewport(dev, -dev->viewport_y);
+        vc_device_scroll_viewport_bottom(dev);
     }
 }
 

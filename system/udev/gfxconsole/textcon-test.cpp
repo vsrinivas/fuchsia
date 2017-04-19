@@ -510,11 +510,11 @@ bool test_scroll_viewport_by_large_delta() {
         mxtl::AutoLock lock(&g_vc_lock);
 
         // Scroll up, to show older lines.
-        vc_device_scroll_viewport(tc.vc_dev, -10000);
+        vc_device_scroll_viewport_top(tc.vc_dev);
         EXPECT_EQ(tc.vc_dev->viewport_y, -lines, "");
 
         // Scroll down, to show newer lines.
-        vc_device_scroll_viewport(tc.vc_dev, 10000);
+        vc_device_scroll_viewport_bottom(tc.vc_dev);
         EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
     }
 
