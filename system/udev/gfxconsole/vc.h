@@ -90,7 +90,10 @@ typedef struct vc_device {
 
 #define get_vc_device(dev) containerof(dev, vc_device_t, device)
 
-#define VC_FLAG_HASINPUT    (1 << 0)
+// When VC_FLAG_HASOUTPUT is set, this indicates that there was output to
+// the console that hasn't been displayed yet, because this console isn't
+// visible.
+#define VC_FLAG_HASOUTPUT   (1 << 0)
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
 extern mtx_t g_vc_lock;

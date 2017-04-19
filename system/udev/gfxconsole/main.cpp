@@ -190,7 +190,7 @@ static void __vc_set_active(vc_device_t* dev, unsigned index) TA_REQ(g_vc_lock) 
         g_active_vc->active = false;
     dev->active = true;
     g_active_vc = dev;
-    g_active_vc->flags &= ~VC_FLAG_HASINPUT;
+    g_active_vc->flags &= ~VC_FLAG_HASOUTPUT;
     g_active_vc_index = index;
 }
 
@@ -248,7 +248,7 @@ void vc_get_status_line(char* str, int n) {
                              device->active ? "\033[33m\033[1m" : "",
                              i,
                              device->title,
-                             device->flags & VC_FLAG_HASINPUT ? '*' : ' ',
+                             device->flags & VC_FLAG_HASOUTPUT ? '*' : ' ',
                              lines > 0 && -device->viewport_y < lines ? '<' : ' ',
                              device->viewport_y < 0 ? '>' : ' ');
         ptr += chars;
@@ -334,8 +334,8 @@ ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_
     if (vc->invy1 >= 0) {
         vc_gfx_invalidate(vc, 0, vc->invy0, vc->columns, vc->invy1 - vc->invy0);
     }
-    if (!vc->active && !(vc->flags & VC_FLAG_HASINPUT)) {
-        vc->flags |= VC_FLAG_HASINPUT;
+    if (!vc->active && !(vc->flags & VC_FLAG_HASOUTPUT)) {
+        vc->flags |= VC_FLAG_HASOUTPUT;
         vc_device_write_status(vc);
         vc_gfx_invalidate_status(vc);
     }
