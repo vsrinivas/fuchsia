@@ -5,6 +5,7 @@
 #include <gfx/gfx.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/unique_ptr.h>
+#include <sys/param.h>
 #include <unittest/unittest.h>
 
 #include "textcon.h"
@@ -521,6 +522,62 @@ bool test_scroll_viewport_by_large_delta() {
     END_TEST;
 }
 
+// Test that vc_device_get_scrollback_lines() gives the correct results.
+bool test_scrollback_lines_count() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 3);
+    tc.PutString("\n\n");
+
+    // Reduce the scrollback limit to make the test faster.
+    const int kLimit = 20;
+    EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max, "");
+    tc.vc_dev->scrollback_rows_max = kLimit;
+
+    for (int lines = 1; lines < kLimit * 4; ++lines) {
+        tc.PutString("\n");
+        EXPECT_EQ(MIN(lines, kLimit),
+                  vc_device_get_scrollback_lines(tc.vc_dev), "");
+    }
+
+    END_TEST;
+}
+
+// Test that the scrollback lines have the correct contents.
+bool test_scrollback_lines_contents() {
+    BEGIN_TEST;
+
+    // Use a 1-row-high console, which simplifies this test.
+    TextconHelper tc(3, 1);
+
+    // Reduce the scrollback limit to make the test faster.
+    const int kLimit = 20;
+    EXPECT_LE(kLimit, tc.vc_dev->scrollback_rows_max, "");
+    tc.vc_dev->scrollback_rows_max = kLimit;
+
+    vc_char_t test_val = 0;
+    for (int lines = 1; lines <= kLimit; ++lines) {
+        tc.vc_dev->text_buf[0] = test_val++;
+        tc.PutString("\n");
+
+        EXPECT_EQ(lines, vc_device_get_scrollback_lines(tc.vc_dev), "");
+        for (int i = 0; i < lines; ++i)
+            EXPECT_EQ(i, vc_device_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+    }
+    for (int lines = 0; lines < kLimit * 3; ++lines) {
+        tc.vc_dev->text_buf[0] = test_val++;
+        tc.PutString("\n");
+
+        EXPECT_EQ(kLimit, vc_device_get_scrollback_lines(tc.vc_dev), "");
+        for (int i = 0; i < kLimit; ++i) {
+            EXPECT_EQ(test_val + i - kLimit,
+                      vc_device_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+        }
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
@@ -541,6 +598,8 @@ RUN_TEST(test_move_cursor_down_and_scroll)
 RUN_TEST(test_cursor_hide_and_show)
 RUN_TEST(test_cursor_scroll_bug)
 RUN_TEST(test_scroll_viewport_by_large_delta)
+RUN_TEST(test_scrollback_lines_count)
+RUN_TEST(test_scrollback_lines_contents)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }

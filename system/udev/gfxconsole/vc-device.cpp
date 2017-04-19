@@ -50,7 +50,9 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     // calculate how many rows/columns we have
     dev->rows = dev->gfx->height / dev->charh;
     dev->columns = dev->gfx->width / dev->charw;
-    dev->scrollback_rows = SCROLLBACK_ROWS;
+    dev->scrollback_rows_max = SCROLLBACK_ROWS;
+    dev->scrollback_rows_count = 0;
+    dev->scrollback_offset = 0;
 
     // allocate the text buffer
     dev->text_buf = reinterpret_cast<vc_char_t*>(
@@ -60,7 +62,7 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
 
     // allocate the scrollback buffer
     dev->scrollback_buf = reinterpret_cast<vc_char_t*>(
-        calloc(1, dev->scrollback_rows * dev->columns * sizeof(vc_char_t)));
+        calloc(1, dev->scrollback_rows_max * dev->columns * sizeof(vc_char_t)));
     if (!dev->scrollback_buf) {
         free(dev->text_buf);
         return ERR_NO_MEMORY;
@@ -84,15 +86,15 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     for (int y = y0; y < y0 + h; y++) {
         if (y < 0) {
             // Scrollback row.
-            int sc = dev->scrollback_tail + y;
-            if (sc < 0)
-                sc += dev->scrollback_rows;
+            vc_char_t* row = vc_device_get_scrollback_line_ptr(
+                dev, y + dev->scrollback_rows_count);
             for (int x = x0; x < x0 + w; x++) {
-                vc_gfx_draw_char(dev, dev->scrollback_buf[x + sc * dev->columns],
-                                 x, y - dev->viewport_y, /* invert= */ false);
+                vc_gfx_draw_char(dev, row[x], x, y - dev->viewport_y,
+                                 /* invert= */ false);
             }
         } else {
             // Row in the main console region (non-scrollback).
+            vc_char_t* row = &dev->text_buf[y * dev->columns];
             for (int x = x0; x < x0 + w; x++) {
                 // Check whether we should display the cursor at this
                 // position.  Note that it's possible that the cursor is
@@ -103,8 +105,7 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
                 bool invert = (!dev->hide_cursor &&
                                static_cast<unsigned>(x) == dev->cursor_x &&
                                static_cast<unsigned>(y) == dev->cursor_y);
-                vc_gfx_draw_char(dev, dev->text_buf[x + y * dev->columns],
-                                 x, y - dev->viewport_y, invert);
+                vc_gfx_draw_char(dev, row[x], x, y - dev->viewport_y, invert);
             }
         }
     }
@@ -150,17 +151,26 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
 
 static void vc_tc_push_scrollback_line(void* cookie, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    vc_char_t* dst = &dev->scrollback_buf[dev->scrollback_tail * dev->columns];
+
+    unsigned dest_row;
+    assert(dev->scrollback_rows_count <= dev->scrollback_rows_max);
+    if (dev->scrollback_rows_count < dev->scrollback_rows_max) {
+        // Add a row without dropping any existing rows.
+        assert(dev->scrollback_offset == 0);
+        dest_row = dev->scrollback_rows_count++;
+    } else {
+        // Add a row and drop an existing row.
+        assert(dev->scrollback_offset < dev->scrollback_rows_max);
+        dest_row = dev->scrollback_offset++;
+        if (dev->scrollback_offset == dev->scrollback_rows_max)
+            dev->scrollback_offset = 0;
+    }
+    vc_char_t* dst = &dev->scrollback_buf[dest_row * dev->columns];
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
-    dev->scrollback_tail += 1;
+
     if (dev->viewport_y < 0)
         dev->viewport_y -= 1;
-    if (dev->scrollback_tail >= dev->scrollback_rows) {
-        dev->scrollback_tail -= dev->scrollback_rows;
-        if (dev->scrollback_tail >= dev->scrollback_head)
-            dev->scrollback_head = dev->scrollback_tail + 1;
-    }
 }
 
 static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
@@ -346,9 +356,15 @@ void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
-    if (dev->scrollback_tail >= dev->scrollback_head)
-        return dev->scrollback_tail - dev->scrollback_head;
-    return dev->scrollback_rows - 1;
+    return dev->scrollback_rows_count;
+}
+
+vc_char_t* vc_device_get_scrollback_line_ptr(vc_device_t* dev, unsigned row) {
+    assert(row < dev->scrollback_rows_count);
+    row += dev->scrollback_offset;
+    if (row >= dev->scrollback_rows_max)
+        row -= dev->scrollback_rows_max;
+    return &dev->scrollback_buf[row * dev->columns];
 }
 
 static void vc_device_scroll_viewport_abs(vc_device_t* dev,

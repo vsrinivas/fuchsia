@@ -47,15 +47,20 @@ typedef struct vc_device {
 
     vc_char_t* text_buf;
     // text buffer
+
+    // Buffer containing scrollback lines.  This is a circular buffer.
     vc_char_t* scrollback_buf;
-    // scrollback buffer
+    // Maximum number of rows that may be stored in the scrollback buffer.
+    unsigned scrollback_rows_max;
+    // Number of rows currently stored in the scrollback buffer.
+    unsigned scrollback_rows_count;
+    // Offset, in rows, of the oldest row in the scrollback buffer.
+    unsigned scrollback_offset;
 
     unsigned rows, columns;
     // screen size
     unsigned charw, charh;
     // size of character cell
-    unsigned scrollback_rows;
-    // number of rows in scrollback
 
     int invy0, invy1;
     // offscreen invalid lines, tracked during textcon drawing
@@ -66,8 +71,6 @@ typedef struct vc_device {
     // cursor visibility
     int viewport_y;
     // viewport position, must be <= 0
-    unsigned scrollback_head, scrollback_tail;
-    // offsets into the scrollback buffer in rows
 
     uint32_t palette[16];
     uint8_t front_color;
@@ -112,6 +115,7 @@ void vc_device_write_status(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_render(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_invalidate_all_for_testing(vc_device_t* dev);
 int vc_device_get_scrollback_lines(vc_device_t* dev);
+vc_char_t* vc_device_get_scrollback_line_ptr(vc_device_t* dev, unsigned row);
 void vc_device_scroll_viewport(vc_device_t* dev, int dir) TA_REQ(g_vc_lock);
 void vc_device_scroll_viewport_top(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_scroll_viewport_bottom(vc_device_t* dev) TA_REQ(g_vc_lock);
