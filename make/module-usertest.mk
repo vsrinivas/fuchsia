@@ -4,6 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-MODULE_INSTALL_PATH := test
+ifeq ($(MODULE_USERTEST_GROUP),)
+    MODULE_USERTEST_GROUP := sys
+endif
+
+MODULE_INSTALL_PATH := test/$(MODULE_USERTEST_GROUP)
 
 include make/module-userapp.mk
+
+MODULE_USERTEST_GROUP :=

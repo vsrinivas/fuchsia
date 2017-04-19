@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
+MODULE_USERTEST_GROUP := ddk
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
 

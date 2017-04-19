@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
+MODULE_USERTEST_GROUP := fs
+
 MODULE_NAME := fs-bench-test
 
 MODULE_SRCS := \

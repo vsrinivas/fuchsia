@@ -49,12 +49,18 @@ static int failed_count = 0;
 // provided by the user.
 static int verbosity = -1;
 
-static void run_tests(const char* dirn, const char* test_name) {
+static const char* default_test_groups[] = {
+    "core", "ddk", "sys", "fs"
+};
+#define DEFAULT_NUM_TEST_GROUPS 4
+
+static bool run_tests(const char* dirn, const char* test_name) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
-        return;
+        return false;
     }
 
+    int init_failed_count = failed_count;
     struct dirent* de;
     struct stat stat_buf;
     while ((de = readdir(dir)) != NULL) {
@@ -126,14 +132,17 @@ static void run_tests(const char* dirn, const char* test_name) {
     }
 
     closedir(dir);
+    return (init_failed_count == failed_count);
 }
 
 int usage(char* name) {
     fprintf(stderr,
-            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [test name]\n"
+            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a] [-t test name] [group ...]\n"
             "\n"
-            "If the optional [test name] is supplied, runtests will\n"
-            "only run the [test name] executable.                  \n"
+            "The optional [group ...] is a list of test groups to  \n"
+            "run. Valid groups are \"core\" \"ddk\" \"sys\" \"fs\" \n"
+            "If no optional [group] is supplied, runtests will     \n"
+            "run all tests.                                        \n"
             "\n"
             "options:                                              \n"
             "   -h: See this message                               \n"
@@ -154,6 +163,8 @@ int usage(char* name) {
 int main(int argc, char** argv) {
     test_type_t test_type = TEST_DEFAULT;
     const char* test_name = NULL;
+    int num_test_groups = 0;
+    const char** test_groups = NULL;
 
     int i = 1;
     while (i < argc) {
@@ -182,9 +193,18 @@ int main(int argc, char** argv) {
             test_type |= TEST_ALL;
         } else if (strcmp(argv[i], "-h") == 0) {
             return usage(argv[0]);
-        } else if (i == argc - 1) {
-            // Last argument, not a flag: test name
-            test_name = argv[i];
+        } else if (strcmp(argv[i], "-t") == 0) {
+            if (i + 1 < argc) {
+                test_name = argv[i + 1];
+                i++;
+                break;
+            } else {
+                return usage(argv[0]);
+            }
+        } else if (argv[i][0] != '-') {
+            num_test_groups = argc - i;
+            test_groups = (const char**)&argv[i];
+            break;
         } else {
             return usage(argv[0]);
         }
@@ -201,8 +221,34 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    run_tests("/boot/test", test_name);
-    run_tests("/system/test", test_name);
+    if (test_groups == NULL) {
+        test_groups = default_test_groups;
+        num_test_groups = DEFAULT_NUM_TEST_GROUPS;
+    }
+
+    bool success = true;
+    char test_dir[64];
+    struct stat st;
+    for (i = 0; i < num_test_groups; i++) {
+        snprintf(test_dir, sizeof(test_dir), "/boot/test/%s", test_groups[i]);
+        if (stat(test_dir, &st) < 0) {
+            printf("Failed: Could not open %s\n", test_dir);
+            return -1;
+        }
+        if (!S_ISDIR(st.st_mode)) {
+            printf("Failed: %s is not a directory\n", test_dir);
+            return -1;
+        }
+
+        // Don't continue running tests if one group failed.
+        success = run_tests(test_dir, test_name);
+        if (!success) {
+            break;
+        }
+    }
+    if (success) {
+        run_tests("/system/test", test_name);
+    }
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);

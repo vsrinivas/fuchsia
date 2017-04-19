@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
+MODULE_USERTEST_GROUP := core
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/bad-syscall.c
 
