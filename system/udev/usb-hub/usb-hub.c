@@ -95,13 +95,13 @@ static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_st
 static mx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, usb_port_status_t* status,
                                          uint16_t status_bits, uint16_t status_mask,
                                          mx_time_t stable_time) {
-    const mx_time_t timeout = 2 * 1000 * 1000;  // 2 second total timeout
-    const mx_time_t poll_delay = 25 * 1000;     // poll every 25 milliseconds
+    const mx_time_t timeout = MX_SEC(2);        // 2 second total timeout
+    const mx_time_t poll_delay = MX_MSEC(25);   // poll every 25 milliseconds
     mx_time_t total = 0;
     mx_time_t stable = 0;
 
     while (total < timeout) {
-        usleep(poll_delay);
+        mx_nanosleep(poll_delay);
         total += poll_delay;
 
         mx_status_t result = usb_hub_get_port_status(hub, port, status);
@@ -141,7 +141,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
     // wait for USB_PORT_ENABLE == 1 and USB_PORT_RESET == 0
     if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_ENABLE, USB_PORT_ENABLE | USB_PORT_RESET,
-                              100 * 1000) != NO_ERROR) {
+                              MX_MSEC(100)) != NO_ERROR) {
         printf("usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
         return;
     }
@@ -169,7 +169,7 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 
     // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
     if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
-                              100 * 1000) != NO_ERROR) {
+                              MX_MSEC(100)) != NO_ERROR) {
         printf("usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
         return;
     }
