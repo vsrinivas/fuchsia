@@ -101,6 +101,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
 }
 
 mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t deadline, user_ptr<void> _packet) {
+    magenta_check_deadline("port_wait2", deadline);
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
@@ -120,6 +121,7 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t deadline, user_ptr<void
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
                           user_ptr<void> _packet, size_t size) {
+    magenta_check_deadline("port_wait", deadline);
     LTRACEF("handle %d\n", handle);
 
     if (!_packet)

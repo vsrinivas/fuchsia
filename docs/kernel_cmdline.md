@@ -92,6 +92,12 @@ This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
 
+## magenta.fatal\_small\_deadlines
+
+This option (disabled by default) causes the kernel to kill processes that
+call blocking syscalls with small deadlines.  This is to help detect callers
+that are passing in relative timeouts rather than deadlines.
+
 ## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than

@@ -43,6 +43,7 @@ mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 bool magenta_rights_check(const Handle* handle, mx_rights_t desired);
 
 mx_status_t magenta_sleep(mx_time_t deadline);
+void magenta_check_deadline(const char* name, mx_time_t deadline);
 
 // Determines if this handle is to a Resource object.
 // Used to provide access to privileged syscalls.
