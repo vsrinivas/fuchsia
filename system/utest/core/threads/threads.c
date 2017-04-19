@@ -413,7 +413,7 @@ static bool test_suspend_port_call(void) {
     ASSERT_TRUE(start_thread(test_port_thread_fn, port, &thread), "");
     mx_handle_t thread_h = mxr_thread_get_handle(&thread);
 
-    mx_nanosleep(MX_MSEC(100));
+    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
 
     mx_port_packet_t packet1 = { 100ull, MX_PKT_TYPE_USER, 0u, {} };
@@ -423,7 +423,7 @@ static bool test_suspend_port_call(void) {
     ASSERT_EQ(mx_port_queue(port[0], &packet2, 0u), NO_ERROR, "");
 
     mx_port_packet_t packet;
-    ASSERT_EQ(mx_port_wait(port[1], MX_MSEC(100), &packet, 0u), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_port_wait(port[1], mx_deadline_after(MX_MSEC(100)), &packet, 0u), ERR_TIMED_OUT, "");
 
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
