@@ -4,24 +4,7 @@
 
 group("acquirers") {
   deps = [
-    ":focus",
     "story_info",
-  ]
-}
-
-executable("focus") {
-  output_name = "acquirers/focus"
-
-  sources = [
-    "focus.cc",
-    "focus.h",
-  ]
-
-  deps = [
-    "//application/lib/app",
-    "//apps/maxwell/services/context",
-    "//apps/modular/services/user",
-    "//lib/mtl",
   ]
 }
 
