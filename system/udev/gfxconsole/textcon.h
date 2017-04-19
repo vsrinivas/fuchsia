@@ -37,7 +37,7 @@ struct textcon {
     // callbacks to update visible display
     void (*invalidate)(void* cookie, int x, int y, int w, int h);
     void (*movecursor)(void* cookie, int x, int y);
-    void (*pushline)(void* cookie, int y);
+    void (*push_scrollback_line)(void* cookie, int y);
     void (*copy_lines)(void* cookie, int y_dest, int y_src, int count);
     void (*setparam)(void* cookie, int param, uint8_t* arg, size_t arglen);
     void* cookie;

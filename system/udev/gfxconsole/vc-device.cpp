@@ -151,7 +151,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     }
 }
 
-static void vc_tc_pushline(void* cookie, int y) {
+static void vc_tc_push_scrollback_line(void* cookie, int y) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     vc_char_t* dst = &dev->scrollback_buf[dev->scrollback_tail * dev->columns];
     vc_char_t* src = &dev->text_buf[y * dev->columns];
@@ -238,7 +238,7 @@ static void vc_device_reset(vc_device_t* dev) {
     dev->textcon.cookie = dev;
     dev->textcon.invalidate = vc_tc_invalidate;
     dev->textcon.movecursor = vc_tc_movecursor;
-    dev->textcon.pushline = vc_tc_pushline;
+    dev->textcon.push_scrollback_line = vc_tc_push_scrollback_line;
     dev->textcon.copy_lines = vc_tc_copy_lines;
     dev->textcon.setparam = vc_tc_setparam;
 

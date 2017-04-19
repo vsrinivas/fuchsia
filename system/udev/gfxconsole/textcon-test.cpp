@@ -18,7 +18,7 @@ void invalidate_callback(void* cookie, int x, int y, int w, int h) {
 void movecursor_callback(void* cookie, int x, int y) {
 }
 
-void pushline_callback(void* cookie, int y) {
+void push_scrollback_line_callback(void* cookie, int y) {
 }
 
 void copy_lines_callback(void* cookie, int y_dest, int y_src, int line_count) {
@@ -49,7 +49,7 @@ public:
         textcon.cookie = &textcon;
         textcon.invalidate = invalidate_callback;
         textcon.movecursor = movecursor_callback;
-        textcon.pushline = pushline_callback;
+        textcon.push_scrollback_line = push_scrollback_line_callback;
         textcon.copy_lines = copy_lines_callback;
         textcon.setparam = setparam_callback;
         tc_init(&textcon, size_x, size_y, textbuf, 0, 0);

@@ -16,8 +16,8 @@ static inline void invalidate(textcon_t* tc, int x, int y, int w, int h) {
 static inline void movecursor(textcon_t* tc, int x, int y) {
     tc->movecursor(tc->cookie, x, y);
 }
-static inline void pushline(textcon_t* tc, int y) {
-    tc->pushline(tc->cookie, y);
+static inline void push_scrollback_line(textcon_t* tc, int y) {
+    tc->push_scrollback_line(tc->cookie, y);
 }
 static inline void setparam(textcon_t* tc, int param, uint8_t* arg,
                             size_t arglen) {
@@ -158,7 +158,7 @@ static void scroll_lines(textcon_t* tc, int y0, int y1, int diff) {
     if (diff > 0) {
         // Scroll up.
         for (int i = 0; i < delta; ++i) {
-            pushline(tc, y0 + i);
+            push_scrollback_line(tc, y0 + i);
         }
         tc->copy_lines(tc->cookie, y0, y0 + delta, copy_count);
         clear_lines(tc, y0 + copy_count, delta);
@@ -581,7 +581,7 @@ void tc_seth(textcon_t* tc, int h) {
         vc_char_t* src = dataxy(tc, 0, tc->scroll_y0 + old_h - h);
         vc_char_t* end = dataxy(tc, 0, tc->scroll_y1);
         do {
-            pushline(tc, y);
+            push_scrollback_line(tc, y);
         } while (++y < old_h - h);
         memmove(dst, src, (end - dst) * sizeof(vc_char_t));
         tc->y -= old_h - h;
