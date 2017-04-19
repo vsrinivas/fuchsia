@@ -243,6 +243,9 @@ int devmgr_start_system_init(void* arg) {
 }
 
 int service_starter(void* arg) {
+    // create a directory for sevice rendezvous
+    mkdir("/svc", 0755);
+
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
         const char* args[] = { "/boot/bin/netsvc", NULL };
