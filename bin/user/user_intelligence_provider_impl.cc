@@ -91,7 +91,6 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       startServiceProviderApp("file:///system/apps/resolver_main");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
-  startAgent("file:///system/apps/acquirers/focus");
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
   startAgent("file:///system/apps/agents/concerts.dartx");
