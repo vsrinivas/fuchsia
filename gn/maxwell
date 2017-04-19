@@ -17,6 +17,10 @@
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
         {
+            "binary": "agents/concerts.dartx",
+            "bootfs_path": "apps/agents/concerts.dartx"
+        },
+        {
             "binary": "agents/ideas",
             "bootfs_path": "apps/agents/ideas"
         },
