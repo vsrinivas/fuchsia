@@ -29,10 +29,12 @@ readonly CMAKE_HOST_TOOLS="\
   -DCMAKE_STRIP=false"
 
 readonly CMAKE_SHARED_FLAGS="\
+  -DCMAKE_SYSTEM_NAME=Fuchsia \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_INSTALL_PREFIX='' \
   -DLLVM_PATH=${ROOT_DIR}/third_party/llvm \
-  -DLLVM_ENABLE_LIBCXX=ON"
+  -DLLVM_ENABLE_LIBCXX=ON \
+  -DUNIX=1"
 
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
