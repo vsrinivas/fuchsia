@@ -121,6 +121,14 @@
             "bootfs_path": "apps/modular_tests/parent_module"
         },
         {
+            "binary": "queue_persistence_test_agent",
+            "bootfs_path": "apps/modular_tests/queue_persistence_test_agent"
+        },
+        {
+            "binary": "queue_persistence_test_module",
+            "bootfs_path": "apps/modular_tests/queue_persistence_test_module"
+        },
+        {
             "binary": "run_component",
             "bootfs_path": "apps/run_component"
         },
