@@ -5,10 +5,6 @@
     ],
     "binaries": [
         {
-            "binary": "acquirers/focus",
-            "bootfs_path": "apps/acquirers/focus"
-        },
-        {
             "binary": "acquirers/story_info_main",
             "bootfs_path": "apps/acquirers/story_info_main"
         },
