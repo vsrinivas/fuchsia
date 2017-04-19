@@ -124,10 +124,6 @@ static inline void vc_invalidate_lines(vc_device_t* dev, int y, int h) {
 static void vc_tc_invalidate(void* cookie, int x0, int y0,
                              int w, int h) TA_REQ(g_vc_lock) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    if (dev->flags & VC_FLAG_RESETSCROLL) {
-        dev->flags &= ~VC_FLAG_RESETSCROLL;
-        vc_device_scroll_viewport(dev, -dev->viewport_y);
-    }
     if (dev->viewport_y < 0)
         return;
     vc_device_invalidate(cookie, x0, y0, w, h);

@@ -88,8 +88,7 @@ typedef struct vc_device {
 #define get_vc_device(dev) containerof(dev, vc_device_t, device)
 
 #define VC_FLAG_HASINPUT    (1 << 0)
-#define VC_FLAG_RESETSCROLL (1 << 1)
-#define VC_FLAG_FULLSCREEN  (1 << 2)
+#define VC_FLAG_FULLSCREEN  (1 << 1)
 
 extern mtx_t g_vc_lock;
 

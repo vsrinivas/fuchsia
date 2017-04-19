@@ -150,21 +150,22 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     if (vc_handle_control_keys(keycode, modifiers))
         return;
 
-    if (mx_hid_fifo_size(&g_active_vc->fifo) == 0) {
-        g_active_vc->flags |= VC_FLAG_RESETSCROLL;
-    }
+    vc_device_t* dev = g_active_vc;
     char output[4];
     uint32_t length = hid_key_to_vt100_code(
-        keycode, modifiers, g_active_vc->keymap, output, sizeof(output));
+        keycode, modifiers, dev->keymap, output, sizeof(output));
     if (length > 0) {
         // This writes multi-byte sequences atomically, so that if space
         // isn't available for the full sequence -- if the program running
         // on the console is currently not reading input -- then nothing is
         // written.  This has the nice property that we won't get partial
         // key code sequences in that case.
-        mx_hid_fifo_write(&g_active_vc->fifo, output, length);
+        mx_hid_fifo_write(&dev->fifo, output, length);
 
-        device_state_set(&g_active_vc->device, DEV_STATE_READABLE);
+        device_state_set(&dev->device, DEV_STATE_READABLE);
+
+        // Scroll the viewport to the bottom.
+        vc_device_scroll_viewport(dev, -dev->viewport_y);
     }
 }
 
