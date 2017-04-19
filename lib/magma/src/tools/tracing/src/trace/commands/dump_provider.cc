@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include <mx/socket.h>
+#include <mx/time.h>
 
 #include "dump_provider.h"
 
@@ -56,7 +57,7 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
   for (;;) {
     mx_signals_t pending;
     status = incoming.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                               kReadTimeout.ToNanoseconds(), &pending);
+                               mx::deadline_after(kReadTimeout.ToNanoseconds()), &pending);
     if (status == ERR_TIMED_OUT) {
       err() << "Timed out after " << kReadTimeout.ToSecondsF()
             << " seconds waiting for provider to write data" << std::endl;
