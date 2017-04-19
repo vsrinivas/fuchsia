@@ -4,6 +4,7 @@
         "netstack",
         "network",
         "wlan",
-        "wlanstack"
+        "wlanstack",
+        "wlan_tests"
     ]
 }
