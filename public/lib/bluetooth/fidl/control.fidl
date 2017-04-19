@@ -1,0 +1,144 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module bluetooth.control;
+
+import "apps/bluetooth/service/interfaces/common.fidl";
+
+// Possible values for the LE Appearance property which describes the external appearance of a
+// device at a high level.
+enum Appearance {
+  UNKNOWN,
+  GENERIC_PHONE,
+  GENERIC_COMPUTER,
+  GENERIC_WATCH,
+  GENERIC_CLOCK,
+  GENERIC_DISPLAY,
+  GENERIC_REMOTE_CONTROL,
+  GENERIC_EYE_GLASSES,
+  GENERIC_TAG,
+  GENERIC_KEYRING,
+  GENERIC_MEDIA_PLAYER,
+  GENERIC_BARCODE_SCANNER,
+  GENERIC_THERMOMETER,
+  GENERIC_HEART_RATE_SENSOR,
+  GENERIC_BLOOD_PRESSURE,
+  GENERIC_GLUCOSE_METER,
+  GENERIC_RUNNING_WALKING_SENSOR,
+  GENERIC_CYCLING,
+  GENERIC_PULSE_OXIMETER,
+  GENERIC_WEIGHT_SCALE,
+  GENERIC_PERSONAL_MOBILITY_DEVICE,
+  GENERIC_CONTINUOUS_GLUCOSE_MONITOR,
+  GENERIC_OUTDOOR_SPORTS_ACTIVITY,
+  HID_KEYBOARD,
+  HID_MOUSE,
+  HID_JOYSTICK,
+  HID_GAMEPAD,
+  HID_DIGITIZER_TABLET,
+  HID_CARD_READER,
+  HID_DIGITAL_PEN,
+  HID_BARCODE_SCANNER,
+};
+
+// Contains state information for a particular Bluetooth adapter.
+struct AdapterState {
+  // Whether or not the Bluetooth radio is currently powered and ready to use.
+  Bool? powered;
+
+  // The complete local nae of the local adapter that is visible to other devices when
+  // discoverable.
+  string? local_name;
+
+  // Shortened version of the local name used when discoverable, if available. If this is not
+  // present then |local_name| is used.
+  string? shortened_local_name;
+
+  // Whether or not device discovery is currently being performed.
+  Bool? discovering;
+
+  // Whether or not the local adapter is currently discoverable over BR/EDR and LE physical
+  // channels.
+  Bool? discoverable;
+
+  // Service UUIDs of all local services that are published and available to other
+  // devices via this adapter. These services are usually registered using the GATT 
+  // and the classic profile APIs.
+  array<string>? local_service_uuids;
+};
+
+// Contains static global information about a local Bluetooth adapter, including its current state.
+// Each adapter instance represents a physical Bluetooth controller and its associated
+// host-subsystem state that is present on the current platform.
+struct AdapterInfo {
+  // UUID that uniquely identifies this adapter on the current system.
+  string identifier;
+
+  // 6-octet Bluetooth device address which can be displayed to the user.
+  string address;
+
+  // The LE appearance property.
+  Appearance appearance;
+
+  // The current adapter state. All nullable fields of |statue| will contain a non-null value when
+  // it is a member of AdapterInfo.
+  AdapterState state;
+};
+
+// Delegate interface for receiving notifications from an adapter.
+interface AdapterDelegate {
+  // Called when the adapter state changes. Only the changed fields of |state| will be populated;
+  // unchanged fields will be null.
+  OnAdapterStateChanged(AdapterState state);
+};
+
+// Interface for interacting with a local Bluetooth adapter.
+interface Adapter {
+  // Returns information about this adapter.
+  GetInfo() => (AdapterInfo info);
+
+  // Registers a delegate to receive adapter state notifications.
+  SetDelegate(AdapterDelegate delegate);
+
+  // Sets the complete and optionally the shortened local name for this adapter.
+  SetLocalName(string local_name, string? shortened_local_name) => (Status status);
+
+  // Powers this adapter on or off.
+  SetPowered(bool powered) => (Status status);
+};
+
+// Delegate interface for receiving notifications from an AdapterManager.
+interface AdapterManagerDelegate {
+  // Called when the default adapter has been updated. If |default_adapter| is null, then no adapter
+  // is currently the default.
+  OnDefaultAdapterChanged(AdapterInfo? default_adapter);
+
+  // Called when a new adapter is added to the system.
+  OnAdapterAdded(AdapterInfo adapter);
+
+  // Called when an adapter with the given |identifier| has been removed from the system.
+  OnAdapterRemoved(string identifier);
+};
+
+// Primary Bluetooth control service to access platform definitions.
+[ServiceName="bluetooth::control::AdapterManager"]
+interface AdapterManager {
+  // Returns whether or not any Bluetooth hardware is available on the current platform.
+  IsBluetoothAvailable() => (bool available);
+
+  // Registers a delegate to receive notifications from this AdapterManager.
+  SetDelegate(AdapterManagerDelegate delegate);
+
+  // Returns information about all local adapters that are known to the system.
+  GetAdapters() => (array<AdapterInfo>? adapters);
+
+  // Returns a handle to the local adapter with the given |identifier|, if it exists.
+  GetAdapter(string identifier, Adapter& adapter);
+
+  // Sets the local adapter with the given |identifier| as the system default.
+  SetDefaultAdapter(string identifier) => (Status status);
+
+  // Returns a handle to the current system default local adapter, if it exists.
+  GetDefaultAdapter(Adapter& adapter);
+};
