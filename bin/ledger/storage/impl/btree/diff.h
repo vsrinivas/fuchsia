@@ -23,6 +23,7 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdView base_root_id,
                  ObjectIdView other_root_id,
+                 std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done);
 
