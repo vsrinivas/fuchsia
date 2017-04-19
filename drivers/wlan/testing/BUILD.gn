@@ -1,0 +1,47 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("testing") {
+  deps = [
+    ":wlan-test-driver",
+    ":wlan-test-util",
+  ]
+}
+
+shared_library("wlan-test-driver") {
+  sources = [
+    "binding.c",
+    "driver.cpp",
+    "test-device.cpp",
+    "test-device.h",
+  ]
+
+  defines = [
+    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
+    "MX_DEBUGLEVEL=2",
+  ]
+
+  cflags = [
+    "-Wthread-safety",
+    "-Winconsistent-missing-override",
+  ]
+
+  deps = [
+    "//magenta/system/ulib/mx(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    "//magenta/system/ulib/mxtl(//build/toolchain/fuchsia:${target_cpu}-shared)",
+  ]
+
+  libs = [
+    "ddk",
+  ]
+}
+
+executable("wlan-test-util") {
+  sources = [ "wlan-testutil.cpp" ]
+
+  deps = [
+    "//magenta/system/ulib/mx(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    "//magenta/system/ulib/mxtl(//build/toolchain/fuchsia:${target_cpu}-shared)",
+  ]
+}
