@@ -169,7 +169,7 @@ func upDiv(a, b uint64) uint64 {
 	return uint64(math.Ceil(float64(a) / float64(b)))
 }
 
-func usage() {
+func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Usage %s: disk [partitions]
     partitions: LABEL GUID/NAME SIZE
@@ -181,16 +181,14 @@ func usage() {
     e.g.  EFI ESP 100m \
           SYS FuchsiaSystem 5g \
           DATA FuchsiaData 50%% \
-          BLOB FuchsiaBlob 50%%
-		`, filepath.Base(os.Args[0]))
+          BLOB FuchsiaBlob 50%%\n`,
+		filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
 	}
-}
 
-func main() {
 	flag.Parse()
 
-	plan, err := parseArgs(flag.Args()[1:])
+	plan, err := parseArgs(flag.Args())
 	if err != nil {
 		fatalerr(err)
 	}
