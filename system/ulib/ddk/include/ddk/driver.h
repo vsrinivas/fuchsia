@@ -19,22 +19,28 @@ typedef struct mx_bind_inst mx_bind_inst_t;
 typedef struct mx_driver_binding mx_driver_binding_t;
 
 typedef struct mx_driver_ops {
-    mx_status_t (*init)(mx_driver_t* driver);
     // Opportunity to do on-load work.
     // Called ony once, before any other ops are called.
+    mx_status_t (*init)(mx_driver_t* driver);
 
-    mx_status_t (*bind)(mx_driver_t* driver, mx_device_t* device, void** cookie);
     // Requests that the driver bind to the provided device,
     // initialize it, and publish and children.
     // On success, the cookie is remembered and passed back on unbind.
+    mx_status_t (*bind)(mx_driver_t* driver, mx_device_t* device, void** cookie);
 
-    void (*unbind)(mx_driver_t* driver, mx_device_t* device, void* cookie);
     // Notifies driver that the device which the driver bound to
     // is being removed.  Called after the unbind() op of any devices
     // that are children of that device.
+    void (*unbind)(mx_driver_t* driver, mx_device_t* device, void* cookie);
 
-    mx_status_t (*release)(mx_driver_t* driver);
+    // Only provided by bus manager drivers, create() is invoked to
+    // instantiate a bus device instance in a new device host process
+    mx_status_t (*create)(mx_driver_t* driver,
+                          const char* name, const char* args,
+                          mx_handle_t resource, mx_device_t** out);
+
     // Last call before driver is unloaded.
+    mx_status_t (*release)(mx_driver_t* driver);
 } mx_driver_ops_t;
 
 struct mx_driver {

@@ -69,7 +69,12 @@ mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
     len -= sizeof(dc_msg_t);
     uint8_t* ptr = msg->data;
     if (msg->datalen) {
+        if (msg->datalen > len) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
         *data = ptr;
+        ptr += msg->datalen;
+        len -= msg->datalen;
     } else {
         *data = NULL;
     }
@@ -90,8 +95,6 @@ mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
         }
         *args = (char*) ptr;
         ptr[msg->argslen - 1] = 0;
-        ptr += msg->argslen;
-        len -= msg->argslen;
     } else {
         *args = "";
     }

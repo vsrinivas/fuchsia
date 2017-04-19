@@ -82,6 +82,39 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
+#if NEW_BUS_DRIVER
+static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+    mx_status_t status;
+    mx_device_t* pcidev;
+    if ((status = device_create(&pcidev, drv, "pci", &kpci_device_proto)) < 0) {
+        return status;
+    }
+    if ((status = device_add(pcidev, parent)) < 0) {
+        return status;
+    }
+    for (uint32_t index = 0;; index++) {
+        mx_device_t* dev;
+        if (kpci_init_child(drv, &dev, index) != NO_ERROR) {
+            break;
+        }
+        char args[32];
+        snprintf(args, sizeof(args), "%u", index);
+        device_add_etc(dev, pcidev, args, MX_HANDLE_INVALID);
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t kpci_drv_create(mx_driver_t* drv, const char* name,
+                                   const char* args, mx_handle_t resource,
+                                   mx_device_t** out) {
+    if (resource != MX_HANDLE_INVALID) {
+        mx_handle_close(resource);
+    }
+    uint32_t index = strtoul(args, NULL, 10);
+    return kpci_init_child(drv, out, index);
+}
+
+#else
 static mx_driver_t __driver_kpci = {
     .name = "pci",
 };
@@ -148,10 +181,16 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
         return kpci_init_children(drv, kpci_root_dev);
     }
 }
+#endif
 
 mx_driver_t _driver_kpci = {
     .ops = {
+#if NEW_BUS_DRIVER
+        .bind = kpci_drv_bind,
+        .create = kpci_drv_create,
+#else
         .init = kpci_drv_init,
+#endif
     },
 };
 

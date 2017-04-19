@@ -343,9 +343,15 @@ void coordinator_new_driver(driver_ctx_t* ctx) {
     //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
     list_add_tail(&driver_list, &ctx->node);
 
+    if (!strcmp(ctx->drv.name, "pci")) {
+        printf("driver: %s @ %s is PCI\n", ctx->drv.name, ctx->libname);
+        dc_attempt_bind(ctx, &root_device);
+        return;
+    }
     if (is_misc_driver(&ctx->drv)) {
         printf("driver: %s @ %s is MISC\n", ctx->drv.name, ctx->libname);
         dc_attempt_bind(ctx, &misc_device);
+        return;
     }
 }
 
