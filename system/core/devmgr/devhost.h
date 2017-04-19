@@ -84,7 +84,8 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h);
 
 // routines devhost uses to talk to dev coordinator
-mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child);
+mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child,
+                        const char* businfo, mx_handle_t resource);
 mx_status_t devhost_remove(mx_device_t* dev);
 mx_status_t devhost_add_internal(mx_device_t* parent,
                                  const char* name, uint32_t protocol_id,

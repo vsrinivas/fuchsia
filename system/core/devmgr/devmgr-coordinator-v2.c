@@ -88,20 +88,33 @@ static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
 
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
-static mx_status_t dc_add_device(device_ctx_t* parent, mx_handle_t hdevice,
+// Caller closes handles on error, so we don't have to.
+static mx_status_t dc_add_device(device_ctx_t* parent,
+                                 mx_handle_t* handle, size_t hcount,
                                  dc_msg_t* msg, const char* name,
                                  const char* args, const void* data) {
+    if (hcount == 0) {
+        return ERR_INVALID_ARGS;
+    }
     if (msg->namelen >= MX_DEVICE_NAME_MAX) {
         return ERR_INVALID_ARGS;
     }
+    if (msg->datalen % sizeof(mx_device_prop_t)) {
+        return ERR_INVALID_ARGS;
+    }
     device_ctx_t* dev;
-    if ((dev = calloc(1, sizeof(*dev) + msg->argslen + 1)) == NULL) {
+    // allocate device struct, followed by space for props, followed
+    // by space for bus arguments
+    if ((dev = calloc(1, sizeof(*dev) + msg->datalen + msg->argslen + 1)) == NULL) {
         return ERR_NO_MEMORY;
     }
-    dev->hdevice = hdevice;
+    dev->hdevice = handle[0];
+    dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
     dev->host = parent->host;
     dev->args = (const char*) (dev + 1);
-    memcpy((char*) (dev + 1), args, msg->argslen + 1);
+    dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
+    memcpy(dev->props, data, msg->datalen);
+    memcpy((char*) (dev->props + dev->prop_count), args, msg->argslen + 1);
     memcpy(dev->name, name, msg->namelen + 1);
     dev->protocol_id = msg->protocol_id;
 
@@ -111,7 +124,7 @@ static mx_status_t dc_add_device(device_ctx_t* parent, mx_handle_t hdevice,
         return r;
     }
 
-    dev->ph.handle = hdevice;
+    dev->ph.handle = handle[0];
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
@@ -120,6 +133,8 @@ static mx_status_t dc_add_device(device_ctx_t* parent, mx_handle_t hdevice,
         return r;
     }
 
+    printf("devcoord: publish '%s' props=%u args='%s'\n",
+           dev->name, dev->prop_count, dev->args);
     return NO_ERROR;
 }
 
@@ -160,12 +175,8 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
-        if (hcount != 1) {
-            r = ERR_INVALID_ARGS;
-            goto fail;
-        }
         printf("devcoord: add device '%s'\n", name);
-        if ((r = dc_add_device(dev, hin[0], &msg, name, args, data)) == NO_ERROR) {
+        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) == NO_ERROR) {
             goto done;
         }
         break;

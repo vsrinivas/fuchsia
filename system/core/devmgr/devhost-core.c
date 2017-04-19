@@ -349,15 +349,17 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
                                const char* businfo, mx_handle_t resource) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
-        return status;
+        goto fail;
     }
     if (parent == NULL) {
         printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
-        return ERR_NOT_SUPPORTED;
+        status = ERR_NOT_SUPPORTED;
+        goto fail;
     }
     if (parent->flags & DEV_FLAG_DEAD) {
         printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-        return ERR_BAD_STATE;
+        status = ERR_BAD_STATE;
+        goto fail;
     }
 #if TRACE_ADD_REMOVE
     printf("devhost: device add: %p(%s) parent=%p(%s)\n",
@@ -369,7 +371,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         ((status = mx_event_create(0, &dev->event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
-       return status;
+        goto fail;
     }
 
     dev->flags |= DEV_FLAG_BUSY;
@@ -384,15 +386,23 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         dev->parent = parent;
         list_add_tail(&parent->children, &dev->node);
 
-        mx_status_t r = devhost_add(parent, dev);
-        if (r < 0) {
-            printf("devhost: %p(%s): remote add failed %d\n", dev, dev->name, r);
+        // devhost_add always consumes the handle
+        status = devhost_add(parent, dev, businfo, resource);
+        if (status < 0) {
+            printf("devhost: %p(%s): remote add failed %d\n",
+                   dev, dev->name, status);
             dev_ref_release(dev->parent);
             dev->parent = NULL;
             dev_ref_release(dev);
             list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
-            return r;
+            return status;
+        }
+    } else {
+        // instanced devices are not remoted and resources
+        // attached to them are discarded
+        if (resource != MX_HANDLE_INVALID) {
+            mx_handle_close(resource);
         }
     }
 
@@ -403,6 +413,12 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
 
     dev->flags &= (~DEV_FLAG_BUSY);
     return NO_ERROR;
+
+fail:
+    if (resource != MX_HANDLE_INVALID) {
+        mx_handle_close(resource);
+    }
+    return status;
 }
 
 #define REMOVAL_BAD_FLAGS \

@@ -95,9 +95,14 @@ mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_handle_t h
     return NO_ERROR;
 }
 
-mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
+mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
+                        const char* businfo, mx_handle_t resource) {
     mx_handle_t hdevice, hrpc;
     mx_status_t status;
+    //devhost v1 doesn't use the resource, always consume it
+    if (resource != MX_HANDLE_INVALID) {
+        mx_handle_close(resource);
+    }
     //printf("devhost_add(%p:%s,%p:%s)\n", parent, parent->name, child, child->name);
     if ((status = devhost_add_internal(parent, child->name, child->protocol_id,
                                        &hdevice, &hrpc)) < 0) {

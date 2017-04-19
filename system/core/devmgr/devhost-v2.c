@@ -324,40 +324,41 @@ static void devhost_io_init(void) {
 
 // Send message to devcoordinator asking to add child device to
 // parent device.  Called under devhost api lock.
-mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child) {
+mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
+                        const char* businfo, mx_handle_t resource) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     printf("devhost[%s] add '%s'\n", path, child->name);
+
+    mx_status_t r;
     iostate_t* ios = calloc(1, sizeof(*ios));
     if (ios == NULL) {
-        return ERR_NO_MEMORY;
+        r = ERR_NO_MEMORY;
+        goto fail_alloc;
     }
 
-    mx_handle_t h0, h1;
-    mx_status_t r;
-    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
-        free(ios);
-        return r;
+    // handles: remote endpoint, resource (optional)
+    mx_handle_t hrpc, handle[2];
+    if ((r = mx_channel_create(0, &hrpc, handle)) < 0) {
+        goto fail_create;
     }
+    handle[1] = resource;
 
     dc_msg_t msg;
     dc_status_t rsp;
     mx_channel_call_args_t args = {
         .wr_bytes = &msg,
-        .wr_handles = &h0,
+        .wr_handles = handle,
         .rd_bytes = &rsp,
         .rd_handles = NULL,
-        .wr_num_handles = 1,
+        .wr_num_handles = (resource != MX_HANDLE_INVALID) ? 2 : 1,
         .rd_num_bytes = sizeof(rsp),
         .rd_num_handles = 0,
     };
     if ((r = dc_msg_pack(&msg, &args.wr_num_bytes,
-                         NULL, 0, child->name, NULL)) < 0) {
-fail_write:
-        mx_handle_close(h0);
-        mx_handle_close(h1);
-        free(ios);
-        return r;
+                         child->props, child->prop_count * sizeof(mx_device_prop_t),
+                         child->name, businfo)) < 0) {
+        goto fail_write;
     }
     msg.txid = 1;
     msg.op = DC_OP_ADD_DEVICE;
@@ -379,17 +380,28 @@ fail_write:
         printf("devhost: rpc:device_add remote error: %d\n", r);
     } else {
         ios->dev = child;
-        ios->ph.handle = h1;
+        ios->ph.handle = hrpc;
         ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         ios->ph.func = dh_handle_dc_rpc;
         if ((r = port_watch(&dh_port, &ios->ph)) == NO_ERROR) {
-            child->rpc = h1;
+            child->rpc = hrpc;
             return NO_ERROR;
         }
     }
 
-    mx_handle_close(h1);
+    mx_handle_close(hrpc);
     free(ios);
+    return r;
+
+fail_write:
+    mx_handle_close(hrpc);
+    mx_handle_close(handle[0]);
+fail_create:
+    free(ios);
+fail_alloc:
+    if (resource != MX_HANDLE_INVALID) {
+        mx_handle_close(resource);
+    }
     return r;
 }
 
