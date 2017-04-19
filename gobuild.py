@@ -21,6 +21,7 @@ def main():
                         required=True)
     parser.add_argument('--current-cpu', help='Target arch, x64 or arm64.',
                         required=True)
+    parser.add_argument('--go-tool', help='The go tool to use for builds')
     parser.add_argument('--binname', help='Output file')
     parser.add_argument('package', help='The package name')
     args = parser.parse_args()
@@ -47,7 +48,6 @@ def main():
         'third_party/netstack': 'github.com/google/netstack'
     }
 
-    go_binary = os.path.join(args.root_out_dir, "gen/goroot/bin/go")
     gopath = args.root_out_dir
     for src in sympaths:
         dst = os.path.join(gopath, "src", sympaths[src])
@@ -70,8 +70,6 @@ def main():
 
     os.environ['CGO_ENABLED'] = '1'
     os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
-    # TODO(crawshaw): remove when clangwrap.sh/gccwrap.sh is clever.
-    os.environ['MAGENTA'] = os.path.join(args.fuchsia_root, 'magenta')
     os.environ['GOOS'] = 'fuchsia'
     os.environ['GOARCH'] = goarch
     if 'GOBIN' in os.environ:
@@ -80,7 +78,7 @@ def main():
         del os.environ['GOROOT']
     godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
 
-    retcode = subprocess.call([go_binary, 'install', '-a', args.package],
+    retcode = subprocess.call([args.go_tool, 'install', args.package],
                               env=os.environ)
     if retcode == 0:
         binname = os.path.basename(args.package)
