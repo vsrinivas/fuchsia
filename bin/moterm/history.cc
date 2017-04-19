@@ -126,7 +126,8 @@ void History::DoReadEntries(
     return;
   }
 
-  page_->GetSnapshot(snapshot_.NewRequest(), page_watcher_binding_.NewBinding(),
+  page_->GetSnapshot(snapshot_.NewRequest(), nullptr,
+                     page_watcher_binding_.NewBinding(),
                      LogLedgerErrorCallback("GetSnapshot"));
   GetEntries(snapshot_.get(), [callback = std::move(callback)](
                                   ledger::Status status,
@@ -183,7 +184,7 @@ void History::OnChange(ledger::PageChangePtr page_change,
 
 void History::Trim() {
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+  page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      LogLedgerErrorCallback("GetSnapshot"));
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   GetEntries(snapshot_ptr,
