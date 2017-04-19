@@ -763,7 +763,7 @@ function fmkbootloader() {
 
 go() {
 	if [[ "$GOOS" == "fuchsia" ]]; then
-		"${FUCHSIA_BUILD_DIR}/gen/goroot/bin/go" "$@"
+		"${FUCHSIA_DIR}/buildtools/go" "$@"
 	else
 		# /usr/bin/which avoids cross-shell subtleties, exists on linux & osx.
 		"$(/usr/bin/which go)" "$@"
