@@ -322,11 +322,11 @@ impl<'a> HandleRef<'a> {
         into_result(status, || ())
     }
 
-    fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
+    fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         let handle = self.handle;
         let mut pending = sys::mx_signals_t::empty();
         let status = unsafe {
-            sys::mx_object_wait_one(handle, signals, timeout, &mut pending)
+            sys::mx_object_wait_one(handle, signals, deadline, &mut pending)
         };
         into_result(status, || pending)
     }
@@ -386,8 +386,8 @@ pub trait HandleBase: Sized {
     /// Waits on a handle. Wraps the
     /// [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
     /// syscall.
-    fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
-        self.get_ref().wait(signals, timeout)
+    fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
+        self.get_ref().wait(signals, deadline)
     }
 
     /// Causes packet delivery on the given port when the object changes state and matches signals.
@@ -436,11 +436,11 @@ fn handle_drop(handle: sys::mx_handle_t) {
 /// Wraps the
 /// [mx_object_wait_many](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_many.md)
 /// syscall.
-pub fn object_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, Status>
+pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
 {
     let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
     let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
-    let status = unsafe { sys::mx_object_wait_many( items_ptr, len, timeout) };
+    let status = unsafe { sys::mx_object_wait_many( items_ptr, len, deadline) };
     if status == sys::ERR_HANDLE_CLOSED {
         return Ok((true))
     }

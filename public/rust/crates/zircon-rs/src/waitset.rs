@@ -71,12 +71,12 @@ impl WaitSet {
     /// The caller must make sure `results` has enough capacity. If the length is
     /// equal to the capacity on return, that may be interpreted as a sign that
     /// the capacity should be expanded.
-    pub fn wait(&self, timeout: Time, results: &mut Vec<WaitSetResult>)
+    pub fn wait(&self, deadline: Time, results: &mut Vec<WaitSetResult>)
         -> Result<(), Status>
     {
         unsafe {
             let mut count = size_to_u32_sat(results.capacity());
-            let status = sys::mx_waitset_wait(self.raw_handle(), timeout,
+            let status = sys::mx_waitset_wait(self.raw_handle(), deadline,
                 results.as_mut_ptr() as *mut sys::mx_waitset_result_t,
                 &mut count);
             if status != sys::NO_ERROR {

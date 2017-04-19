@@ -55,10 +55,10 @@ impl Port {
     /// Wraps the
     /// [mx_port_wait](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/port_wait2.md)
     /// syscall.
-    pub fn wait(&self, timeout: Time) -> Result<sys::mx_port_packet_t, Status> {
+    pub fn wait(&self, deadline: Time) -> Result<sys::mx_port_packet_t, Status> {
         let mut packet = Default::default();
         let status = unsafe {
-            sys::mx_port_wait(self.raw_handle(), timeout,
+            sys::mx_port_wait(self.raw_handle(), deadline,
                 &mut packet as *mut sys::mx_port_packet_t as *mut u8, 0)
         };
         into_result(status, || packet)
