@@ -22,10 +22,18 @@ case "$(uname -s)" in
     ;;
 esac
 
+if [[ "$GOROOT" != "" ]]; then
+    echo "buildtools/go: go selection script called with GOROOT set"
+    exit 1
+fi
+
 # Setting GOROOT is a workaround for https://golang.org/issue/18678.
 # Remove this (and switch to exec_tool.sh) when Go 1.9 is released.
 export GOROOT="$SCRIPT_ROOT/$HOST_PLATFORM/go"
 
-export CC="$SCRIPT_ROOT/toolchain/clang+llvm-x86_64-$CCHOST/bin/clang"
+if [[ "$GOOS" == "fuchsia" ]]; then
+	export MAGENTA="$(cd $(dirname ${BASH_SOURCE[0]} )/.. && pwd)/magenta"
+	export CC="$GOROOT/misc/fuchsia/gccwrap.sh"
+fi
 
 exec "$GOROOT/bin/go" "$@"
