@@ -232,12 +232,12 @@ static bool test_resume_suspended(void) {
     // Check that signaling the event while suspended results in the expected
     // behavior
     ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
-    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
     // TODO: Use an exception port to wait for the suspend to take effect
 
     // Since the thread is suspended the signaling should not take effect.
     ASSERT_EQ(mx_object_signal(event, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
-    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
 
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
@@ -268,7 +268,7 @@ static bool test_kill_suspended(void) {
         thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     // make sure the thread did not execute more user code.
-    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_MSEC(100), NULL), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
