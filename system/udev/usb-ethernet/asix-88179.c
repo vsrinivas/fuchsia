@@ -587,7 +587,7 @@ static int ax88179_thread(void* arg) {
     }
 
     // Enable MAC RX
-    data = 0x0398;
+    data = 0x039a;
     status = ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &data);
     if (status < 0) {
         printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
