@@ -2,29 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-action("thinfs") {
-  out_path = "$root_out_dir/thinfs"
+import("//build/gobuild.gni")
 
-  outputs = [ out_path ]
-
-  script = rebase_path("//.") + "/build/gobuild.py"
-  depfile_path = "${out_path}.d"
-  depfile = depfile_path
-  console = true # only run one gobuild.py at once
-
-  args = [
-    "--fuchsia-root",
-    rebase_path("//."),
-    "--root-out-dir",
-    rebase_path("$root_out_dir"),
-    "--depfile",
-    rebase_path(depfile_path),
-    "--current-cpu",
-    current_cpu,
-    "fuchsia.googlesource.com/thinfs/cmd/thinfs",
-  ]
-
-  deps = [
-    "//third_party/go:go_runtime",
-  ]
+gobuild("thinfs") {
+  gopackage = "fuchsia.googlesource.com/thinfs/cmd/thinfs"
 }
