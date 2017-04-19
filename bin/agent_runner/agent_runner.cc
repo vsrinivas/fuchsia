@@ -159,8 +159,8 @@ AgentRunner::AgentRunner(
       watcher_binding_(this),
       page_client_("AgentRunner"),
       terminating_(std::make_shared<bool>(false)) {
-  page_->GetSnapshot(page_client_.NewRequest(), watcher_binding_.NewBinding(),
-                     [](ledger::Status status) {
+  page_->GetSnapshot(page_client_.NewRequest(), nullptr,
+                     watcher_binding_.NewBinding(), [](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR)
                              << "Ledger operation returned status: " << status;

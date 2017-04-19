@@ -87,8 +87,8 @@ class TodoModule extends Module implements PageWatcher {
     _ledger.getRootPage(_page.ctrl.request(), _handleResponse("getRootPage"));
 
     PageSnapshotProxy snapshot = new PageSnapshotProxy();
-    _page.getSnapshot(snapshot.ctrl.request(), _page_watcher_binding.wrap(this),
-        _handleResponse("Watch"));
+    _page.getSnapshot(snapshot.ctrl.request(), null,
+        _page_watcher_binding.wrap(this), _handleResponse("Watch"));
 
     _readItems(snapshot);
     _changeItems();

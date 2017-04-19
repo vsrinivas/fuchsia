@@ -688,7 +688,7 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
   root_page_->GetSnapshot(
-      root_client_.NewRequest(), page_watcher_binding_.NewBinding(),
+      root_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)

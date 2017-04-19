@@ -285,7 +285,7 @@ StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
       story_client_("StoryStorageImpl") {
   FTL_DCHECK(story_page_);
   story_page_->GetSnapshot(
-      story_client_.NewRequest(), page_watcher_binding_.NewBinding(),
+      story_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)

@@ -268,7 +268,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
                 FTL_CHECK(status == ledger::Status::OK);
                 // 3. Get a snapshot of the root page.
                 module_root_page_->GetSnapshot(
-                    page_snapshot_.NewRequest(), nullptr,
+                    page_snapshot_.NewRequest(), nullptr, nullptr,
                     [this](ledger::Status status) {
                       FTL_CHECK(status == ledger::Status::OK);
                       // 4. Read the counter from the root page.

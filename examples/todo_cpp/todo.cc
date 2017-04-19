@@ -121,8 +121,8 @@ void TodoApp::Initialize(
   ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
 
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), page_watcher_binding_.NewBinding(),
-                     HandleResponse("Watch"));
+  page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+      page_watcher_binding_.NewBinding(), HandleResponse("Watch"));
   List(std::move(snapshot));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
@@ -165,7 +165,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
 
 void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+  page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();

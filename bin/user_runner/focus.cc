@@ -105,7 +105,7 @@ FocusHandler::FocusHandler(const fidl::String& device_name,
       page_watcher_binding_(this),
       device_name_(device_name) {
   page_->GetSnapshot(
-      page_client_.NewRequest(), page_watcher_binding_.NewBinding(),
+      page_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;

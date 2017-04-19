@@ -197,7 +197,8 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
  private:
   void Run() override {
     page_->GetSnapshot(
-        snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
+        snapshot_.NewRequest(), nullptr, nullptr,
+            [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Ledger.GetSnapshot() " << status;
             Done(std::move(nullptr));
@@ -270,7 +271,8 @@ class MessageQueueManager::GetMessageSenderCall : Operation<void> {
  private:
   void Run() override {
     page_->GetSnapshot(
-        snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
+        snapshot_.NewRequest(), nullptr, nullptr,
+        [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Failed to get snapshot for page";
             Done();
