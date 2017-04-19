@@ -110,9 +110,9 @@ interface Adapter {
 
 // Delegate interface for receiving notifications from an AdapterManager.
 interface AdapterManagerDelegate {
-  // Called when the default adapter has been updated. If |default_adapter| is null, then no adapter
-  // is currently the default.
-  OnDefaultAdapterChanged(AdapterInfo? default_adapter);
+  // Called when the active adapter has been updated. If |active_adapter| is null, then no adapter
+  // is currently active.
+  OnActiveAdapterChanged(AdapterInfo? active_adapter);
 
   // Called when a new adapter is added to the system.
   OnAdapterAdded(AdapterInfo adapter);
@@ -136,9 +136,10 @@ interface AdapterManager {
   // Returns a handle to the local adapter with the given |identifier|, if it exists.
   GetAdapter(string identifier, Adapter& adapter);
 
-  // Sets the local adapter with the given |identifier| as the system default.
-  SetDefaultAdapter(string identifier) => (Status status);
+  // Sets the local adapter with the given |identifier| to act as the backing adapter for all
+  // Bluetooth interfaces.
+  SetActiveAdapter(string identifier) => (Status status);
 
-  // Returns a handle to the current system default local adapter, if it exists.
-  GetDefaultAdapter(Adapter& adapter);
+  // Returns a handle to the current local adapter, if it exists.
+  GetActiveAdapter(Adapter& adapter);
 };

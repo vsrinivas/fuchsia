@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("service") {
+  output_name = "bluetooth_service"
+
+  sources = [
+    "src/adapter_fidl_impl.cc",
+    "src/adapter_fidl_impl.h",
+    "src/adapter_manager_fidl_impl.cc",
+    "src/adapter_manager_fidl_impl.h",
+    "src/adapter_manager.cc",
+    "src/adapter_manager.h",
+    "src/app.cc",
+    "src/app.h",
+    "src/fidl_helpers.cc",
+    "src/fidl_helpers.h",
+    "src/main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/bluetooth/lib",
+    "//apps/bluetooth/service/interfaces",
+    "//lib/mtl",
+  ]
+}

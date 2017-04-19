@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("lib") {
-  deps = [
+  public_deps = [
     "//apps/bluetooth/lib/common",
     "//apps/bluetooth/lib/gap",
     "//apps/bluetooth/lib/hci",
