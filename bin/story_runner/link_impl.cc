@@ -54,7 +54,8 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
   });
 
   story_storage_->WatchLink(
-      name, [this](const fidl::String& json) { OnChange(json); });
+      module_path_, name_,
+      [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() = default;

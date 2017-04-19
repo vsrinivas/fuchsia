@@ -46,7 +46,10 @@ class StoryStorageImpl : ledger::PageWatcher {
                        const fidl::String& link_name,
                        const SyncCallback& callback);
 
-  void WatchLink(const fidl::String& link_id, const DataCallback& watcher);
+  void WatchLink(const fidl::Array<fidl::String>& module_path,
+                 const fidl::String& link_name,
+                 const DataCallback& watcher);
+
   void Sync(const SyncCallback& callback);
 
  private:

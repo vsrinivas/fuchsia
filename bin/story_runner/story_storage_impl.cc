@@ -290,9 +290,11 @@ void StoryStorageImpl::WriteModuleData(const fidl::String& module_name,
                           module_url, link_name, callback);
 }
 
-void StoryStorageImpl::WatchLink(const fidl::String& link_id,
+void StoryStorageImpl::WatchLink(const fidl::Array<fidl::String>& module_path,
+                                 const fidl::String& link_name,
                                  const DataCallback& watcher) {
-  watchers_.emplace_back(std::make_pair(link_id, watcher));
+  fidl::String key{MakeLinkKey(module_path, link_name)};
+  watchers_.emplace_back(std::make_pair(key, watcher));
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {
