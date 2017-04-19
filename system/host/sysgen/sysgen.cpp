@@ -854,6 +854,7 @@ bool generate_trace_info(std::ofstream& os, const Syscall& sc) {
 const std::map<string, string> user_attrs = {
     {"noreturn", "__attribute__((__noreturn__))"},
     {"const", "__attribute__((const))"},
+    {"deprecated", "__attribute__((deprecated))"},
 
     // All vDSO calls are "leaf" in the sense of the GCC attribute.
     // It just means they can't ever call back into their callers'
