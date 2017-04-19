@@ -213,11 +213,15 @@ static void print_portsc(int port, uint32_t portsc) {
 }
 #endif // DEBUG_PORTSC
 
-static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
+static void xhci_rh_set_bits(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index, uint32_t bits) {
     volatile uint32_t* portsc = &xhci->op_regs->port_regs[rh_port_index].portsc;
     uint32_t temp = XHCI_READ32(portsc);
-    temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PR;
+    temp = (temp & PORTSC_CONTROL_BITS) | bits;
     XHCI_WRITE32(portsc, temp);
+}
+
+static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
+    xhci_rh_set_bits(xhci, rh, rh_port_index, PORTSC_PR);
 
     int port_index = xhci->rh_port_map[rh_port_index];
     usb_port_status_t* status = &rh->port_status[port_index];
@@ -290,17 +294,14 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
     xprintf("xhci_start_root_hubs\n");
 
+#if DEBUG_PORTSC
     // reset all the root hub ports first to make sure we start off with a clean slate
     for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
         volatile uint32_t* portsc = &xhci->op_regs->port_regs[i].portsc;
         uint32_t temp = XHCI_READ32(portsc);
-#if DEBUG_PORTSC
         print_portsc(i, temp);
-#endif
-        // reset the port
-        temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PR;
-        XHCI_WRITE32(portsc, temp);
     }
+#endif
 
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         mx_status_t status = xhci_start_root_hub(xhci, &xhci->root_hubs[i], i);
@@ -402,18 +403,26 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 
             switch (value) {
                 case USB_FEATURE_C_PORT_CONNECTION:
+                    // set PORTSC_CSC to acknowledge
+                    xhci_rh_set_bits(xhci, rh, rh_port_index, PORTSC_CSC);
                     *change_bits &= ~USB_PORT_CONNECTION;
                     break;
                 case USB_FEATURE_C_PORT_ENABLE:
+                    // set PORTSC_PEC to acknowledge
+                    xhci_rh_set_bits(xhci, rh, rh_port_index, PORTSC_PEC);
                     *change_bits &= ~USB_PORT_ENABLE;
                     break;
                 case USB_FEATURE_C_PORT_SUSPEND:
                     *change_bits &= ~USB_PORT_SUSPEND;
                     break;
                 case USB_FEATURE_C_PORT_OVER_CURRENT:
+                    // set PORTSC_OCC to acknowledge
+                    xhci_rh_set_bits(xhci, rh, rh_port_index, PORTSC_OCC);
                     *change_bits &= ~USB_PORT_OVER_CURRENT;
                     break;
                 case USB_FEATURE_C_PORT_RESET:
+                    // set PORTSC_PRC to acknowledge
+                    xhci_rh_set_bits(xhci, rh, rh_port_index, PORTSC_PRC);
                     *change_bits &= ~USB_PORT_RESET;
                     break;
             }
@@ -509,9 +518,6 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
             bool connected = !!(portsc & PORTSC_CCS);
             bool enabled = !!(portsc & PORTSC_PED);
 
-            // set change bits to acknowledge
-            XHCI_WRITE32(&port_regs[i].portsc, (portsc & PORTSC_CONTROL_BITS) | status_bits);
-
             // map index to virtual root hub and port number
             int rh_index = xhci->rh_map[i];
             xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
@@ -548,6 +554,12 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
                         status->wPortStatus |= USB_PORT_HIGH_SPEED;
                     }
                 }
+            }
+
+            // acknowledge status bits that are not cleared via the hub driver
+            status_bits &= ~(PORTSC_CSC | PORTSC_PRC);
+            if (status_bits) {
+                XHCI_WRITE32(&port_regs[i].portsc, (portsc & PORTSC_CONTROL_BITS) | status_bits);
             }
 
             if (status->wPortChange) {
