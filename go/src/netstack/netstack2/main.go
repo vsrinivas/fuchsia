@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"apps/netstack/eth"
+	"apps/netstack/watcher"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
