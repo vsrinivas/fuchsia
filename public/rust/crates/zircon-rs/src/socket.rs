@@ -148,22 +148,22 @@ mod tests {
         // Write in one end and read it back out the other.
         assert_eq!(s1.write(SocketWriteOpts::Default, b"hello").unwrap(), 5);
 
-        let mut read_vec = Vec::with_capacity(8);
+        let mut read_vec = vec![0; 8];
         assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec).unwrap(), 5);
-        assert_eq!(read_vec, b"hello");
+        assert_eq!(&read_vec[0..5], b"hello");
 
         // Try reading when there is nothing to read.
         assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
 
         // Close the socket from one end.
         assert!(s1.half_close().is_ok());
-        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrRemoteClosed));
+        assert_eq!(s2.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrPeerClosed));
         assert_eq!(s1.write(SocketWriteOpts::Default, b"fail"), Err(Status::ErrBadState));
 
         // Writing in the other direction should still work.
         assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec), Err(Status::ErrShouldWait));
         assert_eq!(s2.write(SocketWriteOpts::Default, b"back").unwrap(), 4);
         assert_eq!(s1.read(SocketReadOpts::Default, &mut read_vec).unwrap(), 4);
-        assert_eq!(read_vec, b"back");
+        assert_eq!(&read_vec[0..4], b"back");
     }
 }
