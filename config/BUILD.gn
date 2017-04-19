@@ -63,8 +63,18 @@ config("debug") {
 }
 
 config("release") {
-  cflags = [ "-O2" ]
   defines = [ "NDEBUG=1" ]
+  cflags = [
+    "-O2",
+    "-fdata-sections",
+    "-ffunction-sections",
+  ]
+
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-dead_strip" ]
+  } else {
+    ldflags = [ "-Wl,--gc-sections" ]
+  }
 }
 
 config("no_exceptions") {
