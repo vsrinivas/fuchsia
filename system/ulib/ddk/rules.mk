@@ -31,9 +31,9 @@ MODULE_NAME := iotxn-test
 
 MODULE_TYPE := driver
 
-LOCAL_DIR := $(LOCAL_DIR)/test
+TEST_DIR := $(LOCAL_DIR)/test
 
-MODULE_SRCS := $(LOCAL_DIR)/iotxn-test.c
+MODULE_SRCS := $(TEST_DIR)/iotxn-test.c
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
@@ -43,5 +43,39 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/magenta \
     system/ulib/c
+
+include make/module.mk
+
+#
+# ddktl-test
+#
+
+MODULE := $(LOCAL_DIR).ddktl-test
+
+MODULE_NAME := ddktl-test
+
+MODULE_TYPE := driver
+
+TEST_DIR := $(LOCAL_DIR)/test/ddktl
+
+MODULE_SRCS := \
+    $(TEST_DIR)/ddktl-test.cpp \
+    $(TEST_DIR)/ddktl-test-binding.c \
+    $(TEST_DIR)/device-tests.cpp \
+    $(TEST_DIR)/ethernet-tests.cpp \
+    $(TEST_DIR)/wlan-tests.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/mx \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
+MODULE_LIBS := \
+    system/ulib/unittest \
+    system/ulib/mxio \
+    system/ulib/driver \
+    system/ulib/magenta \
+    system/ulib/c \
 
 include make/module.mk

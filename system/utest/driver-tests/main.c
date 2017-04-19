@@ -16,6 +16,7 @@
 #include <magenta/device/test.h>
 
 static const char* test_drivers[] = {
+    "ddktl_test",
     "iotxn_test",
 };
 

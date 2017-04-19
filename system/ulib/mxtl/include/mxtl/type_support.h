@@ -239,4 +239,36 @@ public:
         decltype(test(make_from_type()))::value;
 };
 
+// Macro for defining a trait that checks if a type T has a method with the
+// given name. This is not as strong as using is_same to check function
+// signatures, but checking this trait first gives a better static_assert
+// message than the compiler warnings from is_same if the function doesn't
+// exist.
+// Note that the resulting trait_name will be in the namespace where the macro
+// is used.
+//
+// Example:
+//
+// DECLARE_HAS_MEMBER_FN(has_bar, Bar);
+// template <typname T>
+// class Foo {
+//   static_assert(has_bar<T>::value, "Foo classes must implement Bar()!");
+//   // TODO: use 'if constexpr' to avoid this next static_assert once c++17
+//   lands.
+//   static_assert(is_same<decltype(&T::Bar), void (T::*)(int)>::value,
+//                 "Bar must be a non-static member function with signature "
+//                 "'void Bar(int)', and must be visible to Foo (either "
+//                 "because it is public, or due to friendship).");
+//  };
+#define DECLARE_HAS_MEMBER_FN(trait_name, fn_name)                                \
+template <typename T>                                                             \
+struct trait_name {                                                               \
+private:                                                                          \
+    template <typename C> static ::mxtl::true_type test( decltype(&C::fn_name) ); \
+    template <typename C> static ::mxtl::false_type test(...);                    \
+                                                                                  \
+public:                                                                           \
+    static constexpr bool value = decltype(test<T>(nullptr))::value;              \
+}
+
 }  // namespace mxtl
