@@ -29,6 +29,7 @@ source_set("main") {
 
   deps = [
     "//application/lib/app",
+    "//apps/test_runner/services:test_runner",
     "//apps/tracing/lib/trace:provider",
     "//lib/mtl",
   ]
