@@ -111,13 +111,8 @@ UserRunnerImpl::UserRunnerImpl(
                                       << LedgerStatusToString(status);
                                 });
 
-  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
-                     << LedgerStatusToString(status);
-    }
-  });
-
+  // This must be the first call after GetLedger, otherwise the Ledger
+  // starts with one reconciliation strategy, then switches to another.
   ledger_->SetConflictResolverFactory(
       conflict_resolver_.AddBinding(), [](ledger::Status status) {
         if (status != ledger::Status::OK) {
@@ -125,6 +120,13 @@ UserRunnerImpl::UserRunnerImpl(
                          << LedgerStatusToString(status);
         }
       });
+
+  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
+                     << LedgerStatusToString(status);
+    }
+  });
 
   // DeviceMap
 
