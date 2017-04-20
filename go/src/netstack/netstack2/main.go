@@ -9,7 +9,6 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"syscall"
 
 	"apps/netstack/eth"
 	"apps/netstack/watcher"
@@ -56,7 +55,7 @@ func main() {
 		log.Fatalf("ethernet: %v", err)
 	}
 	const ethdir = "/dev/class/ethernet"
-	w, err := syscall.NewWatcher(ethdir)
+	w, err := watcher.NewWatcher(ethdir)
 	if err != nil {
 		log.Fatalf("ethernet: %v", err)
 	}

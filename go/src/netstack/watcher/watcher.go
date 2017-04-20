@@ -7,6 +7,7 @@ package watcher
 import (
 	"os"
 
+	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxio"
 )
@@ -17,13 +18,13 @@ type Watcher struct {
 	C   chan string // recieves new file names
 	Err error
 
-	f os.File
+	f *os.File
 	h mx.Channel
 }
 
 // NewWatcher creates a watcher on the directory dir.
 func NewWatcher(dir string) (*Watcher, error) {
-	m, err := openPath(dir, syscall.O_RDONLY, 0)
+	m, err := syscall.OpenPath(dir, syscall.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	}
 	w := &Watcher{
 		C: make(chan string),
-		m: os.NewFile(uintptr(syscallOpenMXIO(m)), dir + " watcher"),
+		f: os.NewFile(uintptr(syscall.OpenMXIO(m)), dir + " watcher"),
 		h: mx.Channel{Handle: h},
 	}
 	go w.start()
@@ -44,12 +45,12 @@ func NewWatcher(dir string) (*Watcher, error) {
 // while watching is in the Err field.
 func (w *Watcher) Stop() {
 	w.h.Close()
-	w.m.Close()
+	w.f.Close()
 	close(w.C)
 }
 
 func (w *Watcher) start() {
-	names, err := readdirnames(w.m, -1)
+	names, err := w.f.Readdirnames(-1)
 	if err != nil {
 		w.Err = err
 		w.Stop()
