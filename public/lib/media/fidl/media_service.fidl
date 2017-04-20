@@ -34,12 +34,8 @@ interface MediaService {
                array<MediaTypeSet>? allowed_media_types,
                MediaSource& source);
 
-  // Creates a sink. Conversions are added to the pipeline as appropriate to
-  // convert a media type supported by the renderer.
-  CreateSink(MediaRenderer? renderer,
-             MediaType media_type,
-             MediaSink& sink,
-             MediaPacketConsumer& packet_consumer);
+  // Creates a sink.
+  CreateSink(MediaRenderer renderer, MediaSink& sink);
 
   // Creates a demux.
   CreateDemux(SeekingReader reader, MediaSource& demux);

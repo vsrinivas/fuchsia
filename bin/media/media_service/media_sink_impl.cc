@@ -14,43 +14,34 @@ namespace media {
 // static
 std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
     fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-    MediaTypePtr media_type,
     fidl::InterfaceRequest<MediaSink> sink_request,
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSinkImpl>(new MediaSinkImpl(
-      std::move(renderer_handle), std::move(media_type),
-      std::move(sink_request), std::move(packet_consumer_request), owner));
+      std::move(renderer_handle), std::move(sink_request), owner));
 }
 
 MediaSinkImpl::MediaSinkImpl(
     fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-    MediaTypePtr media_type,
     fidl::InterfaceRequest<MediaSink> sink_request,
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaSink>(this,
                                            std::move(sink_request),
                                            owner),
-      renderer_(MediaRendererPtr::Create(std::move(renderer_handle))),
-      packet_consumer_request_(std::move(packet_consumer_request)),
-      original_media_type_(std::move(media_type)),
-      stream_type_(original_media_type_.To<std::unique_ptr<StreamType>>()) {
+      renderer_(MediaRendererPtr::Create(std::move(renderer_handle))) {
   FTL_DCHECK(renderer_);
-  FTL_DCHECK(original_media_type_);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
 
-  renderer_->GetSupportedMediaTypes([this](
-      fidl::Array<MediaTypeSetPtr> supported_media_types) {
+  renderer_->GetSupportedMediaTypes([this](fidl::Array<MediaTypeSetPtr>
+                                               supported_media_types) {
     FTL_DCHECK(supported_media_types);
 
     supported_stream_types_ = supported_media_types.To<
         std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>();
 
-    BuildConversionPipeline();
+    got_supported_stream_types_.Occur();
   });
 }
 
@@ -62,13 +53,20 @@ void MediaSinkImpl::GetTimelineControlPoint(
   renderer_->GetTimelineControlPoint(std::move(request));
 }
 
-void MediaSinkImpl::ChangeMediaType(
-    MediaTypePtr media_type,
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
+                                     const ConsumeMediaTypeCallback& callback) {
+  if (consume_media_type_callback_) {
+    FTL_DLOG(ERROR) << "ConsumeMediaType called while already pending.";
+    callback(nullptr);
+    UnbindAndReleaseFromOwner();
+    return;
+  }
+
   original_media_type_ = std::move(media_type);
-  packet_consumer_request_ = std::move(packet_consumer_request);
   stream_type_ = original_media_type_.To<std::unique_ptr<StreamType>>();
-  BuildConversionPipeline();
+  consume_media_type_callback_ = callback;
+
+  got_supported_stream_types_.When([this]() { BuildConversionPipeline(); });
 }
 
 void MediaSinkImpl::BuildConversionPipeline() {
@@ -83,14 +81,13 @@ void MediaSinkImpl::BuildConversionPipeline() {
              std::unique_ptr<StreamType> stream_type,
              std::vector<mx_koid_t> converter_koids) {
         FTL_DCHECK(!producer_getter);
-        FTL_DCHECK(packet_consumer_request_);
+        FTL_DCHECK(consume_media_type_callback_);
 
         if (!succeeded) {
           FTL_LOG(WARNING) << "Failed to create conversion pipeline.";
           // TODO(dalesat): Log this to flog.
-          // TODO(dalesat): Report this to owner somehow.
-          // Break the promised producer/consumer connection.
-          packet_consumer_request_ = nullptr;
+          consume_media_type_callback_(nullptr);
+          consume_media_type_callback_ = nullptr;
           original_media_type_.reset();
           return;
         }
@@ -109,7 +106,10 @@ void MediaSinkImpl::BuildConversionPipeline() {
         // Not needed anymore.
         original_media_type_.reset();
 
-        consumer_getter(std::move(packet_consumer_request_));
+        MediaPacketConsumerPtr consumer;
+        consumer_getter(consumer.NewRequest());
+        consume_media_type_callback_(std::move(consumer));
+        consume_media_type_callback_ = nullptr;
       });
 }
 

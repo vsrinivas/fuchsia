@@ -12,6 +12,7 @@
 #include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
 #include "apps/media/src/media_service/media_service_impl.h"
+#include "apps/media/src/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
@@ -23,9 +24,7 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
  public:
   static std::shared_ptr<MediaSinkImpl> Create(
       fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-      MediaTypePtr media_type,
       fidl::InterfaceRequest<MediaSink> sink_request,
-      fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
       MediaServiceImpl* owner);
 
   ~MediaSinkImpl() override;
@@ -34,28 +33,25 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
   void GetTimelineControlPoint(
       fidl::InterfaceRequest<MediaTimelineControlPoint> req) override;
 
-  void ChangeMediaType(MediaTypePtr media_type,
-                       fidl::InterfaceRequest<MediaPacketConsumer>
-                           packet_consumer_request) override;
+  void ConsumeMediaType(MediaTypePtr media_type,
+                        const ConsumeMediaTypeCallback& callback) override;
 
  private:
-  MediaSinkImpl(
-      fidl::InterfaceHandle<MediaRenderer> renderer_handle,
-      MediaTypePtr media_type,
-      fidl::InterfaceRequest<MediaSink> sink_request,
-      fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
-      MediaServiceImpl* owner);
+  MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+                fidl::InterfaceRequest<MediaSink> sink_request,
+                MediaServiceImpl* owner);
 
   // Builds the conversion pipeline.
   void BuildConversionPipeline();
 
   MediaServicePtr media_service_;
   MediaRendererPtr renderer_;
-  fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request_;
+  ConsumeMediaTypeCallback consume_media_type_callback_;
   MediaTypePtr original_media_type_;
   std::unique_ptr<StreamType> stream_type_;
   std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
       supported_stream_types_;
+  Incident got_supported_stream_types_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaSinkChannel, log_channel_);
 };

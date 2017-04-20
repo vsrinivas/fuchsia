@@ -17,7 +17,10 @@ interface MediaSink {
   // Request the timeline control point for this sink
   GetTimelineControlPoint(MediaTimelineControlPoint& timeline_control_point);
 
-  // Changes the media type and produces a new packet consumer that consumes
-  // that media type.
-  ChangeMediaType(MediaType media_type, MediaPacketConsumer& packet_consumer);
+  // Sets the input media type and produces a new packet consumer that consumes
+  // that media type. Returns a null consumer if the media type could not be
+  // supported. Calling ConsumeMediaType when a ConsumeMediaType call is already
+  // pending will cause the sink to close the connection.
+  ConsumeMediaType(MediaType media_type)
+      => (MediaPacketConsumer? packet_consumer);
 };

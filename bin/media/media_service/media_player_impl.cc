@@ -162,19 +162,10 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     const std::function<void()>& callback) {
   FTL_DCHECK(media_service_);
 
-  MediaPacketProducerPtr producer;
-  source_->GetPacketProducer(index, producer.NewRequest());
-
-  MediaPacketConsumerPtr consumer;
-
-  if (stream->sink_) {
-    stream->sink_->ChangeMediaType(input_media_type.Clone(),
-                                   consumer.NewRequest());
-  } else {
+  if (!stream->sink_) {
     FTL_DCHECK(stream->renderer_handle_);
-    media_service_->CreateSink(
-        std::move(stream->renderer_handle_), input_media_type.Clone(),
-        stream->sink_.NewRequest(), consumer.NewRequest());
+    media_service_->CreateSink(std::move(stream->renderer_handle_),
+                               stream->sink_.NewRequest());
     FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(stream->sink_)));
 
     MediaTimelineControlPointPtr timeline_control_point;
@@ -183,12 +174,27 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     timeline_controller_->AddControlPoint(std::move(timeline_control_point));
   }
 
-  stream->connected_ = true;
+  stream->sink_->ConsumeMediaType(
+      input_media_type.Clone(),
+      [this, stream, index,
+       callback](fidl::InterfaceHandle<MediaPacketConsumer> consumer) {
+        if (!consumer) {
+          // The sink couldn't build a conversion pipeline for the media type.
+          callback();
+          return;
+        }
 
-  // Capture producer so it survives through the callback.
-  producer->Connect(std::move(consumer), ftl::MakeCopyable([
-                      this, callback, producer = std::move(producer)
-                    ]() { callback(); }));
+        stream->connected_ = true;
+
+        MediaPacketProducerPtr producer;
+        source_->GetPacketProducer(index, producer.NewRequest());
+
+        // Capture producer so it survives through the callback.
+        producer->Connect(MediaPacketConsumerPtr::Create(std::move(consumer)),
+                          ftl::MakeCopyable([
+                            this, callback, producer = std::move(producer)
+                          ]() { callback(); }));
+      });
 }
 
 void MediaPlayerImpl::Update() {
