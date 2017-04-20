@@ -35,13 +35,13 @@ executable("tests") {
   testonly = true
 
   sources = [
-    "test/run_all_tests.cc",
     "test/shared_buffer_set_allocator_test.cc",
     "test/shared_buffer_set_test.cc",
   ]
 
   deps = [
     ":transport",
+    "//apps/test_runner/src:gtest_main",
     "//lib/mtl",
     "//third_party/gtest",
   ]

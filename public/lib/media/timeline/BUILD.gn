@@ -23,13 +23,13 @@ executable("tests") {
   testonly = true
 
   sources = [
-    "test/run_all_tests.cc",
     "test/timeline_function_test.cc",
     "test/timeline_rate_test.cc",
   ]
 
   deps = [
     ":timeline",
+    "//apps/test_runner/src:gtest_main",
     "//lib/mtl",
     "//third_party/gtest",
   ]

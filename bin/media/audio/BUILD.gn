@@ -40,13 +40,13 @@ executable("tests") {
     "test/level_test.cc",
     "test/mixdown_table_test.cc",
     "test/mixer_test.cc",
-    "test/run_all_tests.cc",
   ]
 
   deps = [
     ":audio",
     "//apps/media/lib/timeline",
     "//apps/media/src/framework_create",
+    "//apps/test_runner/src:gtest_main",
     "//third_party/gtest",
   ]
 }

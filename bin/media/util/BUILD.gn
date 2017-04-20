@@ -34,11 +34,11 @@ executable("tests") {
   sources = [
     "test/incident_test.cc",
     "test/priority_queue_of_unique_ptr_test.cc",
-    "test/run_all_tests.cc",
   ]
 
   deps = [
     ":util",
+    "//apps/test_runner/src:gtest_main",
     "//third_party/gtest",
   ]
 }
