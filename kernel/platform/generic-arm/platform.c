@@ -273,8 +273,11 @@ static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
-                arm64_set_secondary_sp(cluster, cpu,
-                        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL));
+                void* stack_top =
+                    (char*)pmm_alloc_kpages(
+                        ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL) +
+                    ARCH_DEFAULT_STACK_SIZE;
+                arm64_set_secondary_sp(cluster, cpu, stack_top);
                 platform_start_cpu(cluster, cpu);
             }
         }
