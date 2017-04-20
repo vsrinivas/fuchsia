@@ -49,13 +49,6 @@ static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
     mxrio_txn_handoff(srv, rh, &msg);
 }
 
-void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    msg.op = MXRIO_CLONE;
-    mxrio_txn_handoff(srv, rh, &msg);
-}
-
 // Initializes io state for a vnode and attaches it to a dispatcher.
 void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* path, uint32_t flags,
                   uint32_t mode) {
