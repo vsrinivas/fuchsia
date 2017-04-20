@@ -1,0 +1,23 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_os == "fuchsia")
+
+template("driver_module") {
+  _target_name = target_name
+  _target_module = _target_name + "_module"
+
+  loadable_module(_target_module) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "visibility",
+                           ])
+    visibility = [ ":$_target_name" ]
+  }
+
+  group(_target_name) {
+    deps = [ ":$_target_module(//build/toolchain/fuchsia:${target_cpu}-shared)" ]
+  }
+}
