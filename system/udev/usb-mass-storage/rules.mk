@@ -8,7 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/usb-mass-storage.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/block.c \
+    $(LOCAL_DIR)/usb-mass-storage.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
