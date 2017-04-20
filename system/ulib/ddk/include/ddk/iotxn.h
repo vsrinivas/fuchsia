@@ -171,8 +171,7 @@ ssize_t iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset);
 ssize_t iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset);
 
 // iotxn_physmap() looks up the physical pages backing this iotxn's vm object.
-// the 'phys', 'phys_offset' and 'phys_length' fields are set if this function
-// succeeds.
+// the 'phys' and 'phys_count' fields are set if this function succeeds.
 mx_status_t iotxn_physmap(iotxn_t* txn);
 
 // convenience function to get the physical address of iotxn, taking into
