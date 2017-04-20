@@ -39,12 +39,13 @@ static bool test_resource_actions(void) {
     ASSERT_EQ(rec[0].self.subtype, MX_RREC_SELF_ROOT, "bad root self record");
     ASSERT_EQ(strcmp(rec[0].self.name, "root"), 0, "bad self record name");
 
-    // bind the root resource to a port
+    // test port notifications
     mx_handle_t ph;
-    mx_io_packet_t pkt;
-    ASSERT_EQ(mx_port_create(0, &ph), NO_ERROR, "");
-    ASSERT_EQ(mx_port_bind(ph, 1u, rrh, MX_RESOURCE_CHILD_ADDED), NO_ERROR, "");
-    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), ERR_TIMED_OUT, "");
+    mx_port_packet_t pkt;
+    ASSERT_EQ(mx_port_create(MX_PORT_OPT_V2, &ph), NO_ERROR, "");
+    ASSERT_EQ(mx_object_wait_async(rrh, ph, 0, MX_RESOURCE_CHILD_ADDED,
+                                   MX_WAIT_ASYNC_ONCE), NO_ERROR, "");
+    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, 0), ERR_TIMED_OUT, "");
 
     // verify that our signals are in the expected state after creation
     ASSERT_EQ(check_signals(rrh, MX_RESOURCE_WRITABLE), NO_ERROR, "");
@@ -62,8 +63,8 @@ static bool test_resource_actions(void) {
     ASSERT_EQ(status, NO_ERROR, "cannot create child resource");
 
     // verify that we're notified about the creation
-    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), NO_ERROR, "");
-    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, sizeof(pkt)), ERR_TIMED_OUT, "");
+    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, 0), NO_ERROR, "");
+    ASSERT_EQ(mx_port_wait(ph, 0, &pkt, 0), ERR_TIMED_OUT, "");
 
 
     // create children
