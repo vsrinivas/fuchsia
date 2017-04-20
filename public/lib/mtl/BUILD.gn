@@ -9,6 +9,7 @@ group("mtl") {
     "//lib/mtl/socket",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
+    "//lib/mtl/vfs",
     "//lib/mtl/vmo",
     "//lib/mtl/waiter",
   ]
