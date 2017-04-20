@@ -55,6 +55,11 @@ class App {
       return false;
     }
 
+    if (!config.sync_params.cloud_prefix.empty()) {
+      FTL_LOG(WARNING) << "The cloud_prefix configuration param is deprecated. "
+                       << "Run `configure_ledger` to remove it.";
+    }
+
     if (!configuration::SaveAsLastConfiguration(config)) {
       FTL_LOG(ERROR) << "Failed to save the current configuration for "
                      << "compatibility check, quitting.";

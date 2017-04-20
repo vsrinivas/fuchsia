@@ -101,16 +101,12 @@ service firebase.storage {
 In order to point Ledger to your database, run the configuration script:
 
 ```
-configure_ledger --firebase_id=<DATABASE_ID> [--cloud_prefix=<CLOUD_PREFIX>]
+configure_ledger --firebase_id=<DATABASE_ID>
 ```
 
 `DATABASE_ID` is the identifier of your Firebase database. If you followed the
 setup instructions above, it is your project identifier. It is also your
 firebase ID as in `https://<firebase-id>.firebaseio.com`.
-
-`CLOUD_PREFIX` (optional) is a self-declared namespace for the ledger. You can
-share one instance of the cloud database between multiple ledger declaring
-different identities. This parameter is not mandatory.
 
 ### Diagnose
 

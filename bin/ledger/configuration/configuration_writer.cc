@@ -19,9 +19,13 @@ namespace {
 const char kHelpArg[] = "help";
 const char kConfigPathArg[] = "config_path";
 const char kFirebaseIdArg[] = "firebase_id";
-const char kCloudPrefixArg[] = "cloud_prefix";
+const char kDeprecatedCloudPrefixArg[] = "cloud_prefix";
 const char kSyncArg[] = "sync";
 const char kNoSyncArg[] = "nosync";
+
+const char kCloudPrefixDeprecationMessage[] =
+    "If the Firebase ID is shared with other people, ensure that the usernames "
+    "are different to avoid conflicts.";
 
 void PrintHelp() {
   printf("Updates the configuration file used by Ledger.\n");
@@ -33,7 +37,6 @@ void PrintHelp() {
   printf("Cloud Sync configuration:\n");
   printf("  (passing any implies --sync unless --nosync is passed)\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
-  printf("  --cloud_prefix=<CLOUD_PREFIX>\n");
   printf("Toggle Cloud Sync off and on:\n");
   printf("  --sync\n");
   printf("  --nosync\n");
@@ -50,7 +53,7 @@ int main(int argc, const char** argv) {
 
   const std::unordered_set<std::string> known_options = {
       kHelpArg,        kConfigPathArg, kFirebaseIdArg,
-      kCloudPrefixArg, kSyncArg,       kNoSyncArg,
+      kDeprecatedCloudPrefixArg, kSyncArg,       kNoSyncArg,
   };
 
   for (auto& option : command_line.options()) {
@@ -63,6 +66,13 @@ int main(int argc, const char** argv) {
 
   if (!command_line.positional_args().empty()) {
     printf("%s doesn't take positional args\n", command_line.argv0().c_str());
+    PrintHelp();
+    return 1;
+  }
+
+  if (command_line.HasOption(kDeprecatedCloudPrefixArg)) {
+    printf("--%s is deprecated. %s", kDeprecatedCloudPrefixArg,
+           kCloudPrefixDeprecationMessage);
     PrintHelp();
     return 1;
   }
@@ -93,13 +103,6 @@ int main(int argc, const char** argv) {
     FTL_CHECK(ret);
   }
 
-  if (command_line.HasOption(kCloudPrefixArg)) {
-    config.use_sync = true;
-    bool ret = command_line.GetOptionValue(kCloudPrefixArg,
-                                           &config.sync_params.cloud_prefix);
-    FTL_CHECK(ret);
-  }
-
   if (command_line.HasOption(kSyncArg) && command_line.HasOption(kNoSyncArg)) {
     FTL_LOG(ERROR)
         << "Ledger isn't a Schroedinger notepad, it either syncs or not";
@@ -117,6 +120,14 @@ int main(int argc, const char** argv) {
   if (config.use_sync && config.sync_params.firebase_id.empty()) {
     FTL_LOG(ERROR) << "To enable Cloud Sync pass --firebase_id";
     return 1;
+  }
+
+  if (!config.sync_params.cloud_prefix.empty()) {
+    FTL_LOG(WARNING) << "Removing the deprecated |cloud_prefix| setting. "
+                     << kCloudPrefixDeprecationMessage;
+    FTL_LOG(WARNING) << "Note that you might need to run `cloud_sync clean` "
+                     << "to reset the Ledger state.";
+    config.sync_params.cloud_prefix.clear();
   }
 
   if (!files::CreateDirectory(files::GetDirectoryName(config_path))) {
