@@ -157,24 +157,20 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 
-  // This is a container of all operations that are currently enqueued
-  // to run in a FIFO manner. All operations exposed via
-  // |StoryProvider| interface are queued here.
+  // This is a container of all operations that are currently enqueued to run in
+  // a FIFO manner. All operations exposed via |StoryProvider| interface are
+  // queued here.
   //
-  // The advantage of doing this is that if an operation consists of
-  // multiple asynchronous calls then no state needs to be maintained
-  // for incomplete / pending operations.
+  // The advantage of doing this is that if an operation consists of multiple
+  // asynchronous calls then no state needs to be maintained for incomplete /
+  // pending operations.
   //
-  // TODO(mesch,alhaad): At some point we might want to increase
-  // concurrency and have one operation queue per story for those
-  // operations that only affect one story.
-  //
-  // TODO(mesch): No story provider operation can invoke a story
-  // controller operation that would cause the story controller
-  // updating its story info state, because that would be a nested
-  // operation and it would deadlock. There are no such operations
-  // right now, but we need to establish a pattern that makes it
-  // simply and obvious how to not introduce deadlocks.
+  // TODO(mesch): If a story provider operation invokes a story operation that
+  // causes the story updating its story info state, that update operation gets
+  // scheduled on this queue again, after the current operation. It would be
+  // better to be able to schedule such an operation on the story queue because
+  // it's a per story operation even if it affects the per story key in the root
+  // page, and then the update of story info is bounded by the outer operation.
   OperationQueue operation_queue_;
 
   // Operations implemented here.
