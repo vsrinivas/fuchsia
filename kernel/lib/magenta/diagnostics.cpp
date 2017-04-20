@@ -413,11 +413,21 @@ status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
 void DumpProcessAddressSpace(mx_koid_t id) {
     auto pd = ProcessDispatcher::LookupProcessById(id);
     if (!pd) {
-        printf("process not found!\n");
+        printf("process %" PRIu64 " not found!\n", id);
         return;
     }
 
     pd->aspace()->Dump(true);
+}
+
+// Dumps an address space based on the arg.
+static void DumpAddressSpace(const cmd_args* arg) {
+    if (strncmp(arg->str, "kernel", strlen(arg->str)) == 0) {
+        // The arg is a prefix of "kernel".
+        VmAspace::kernel_aspace()->Dump(true);
+    } else {
+        DumpProcessAddressSpace(arg->u);
+    }
 }
 
 static size_t mwd_limit = 32 * 256;
@@ -449,13 +459,14 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     notenoughargs:
         printf("not enough arguments:\n");
     usage:
-        printf("%s ps         : list processes\n", argv[0].str);
-        printf("%s mwd  <mb>  : memory watchdog\n", argv[0].str);
-        printf("%s ht   <pid> : dump process handles\n", argv[0].str);
-        printf("%s jb   <pid> : list job tree\n", argv[0].str);
-        printf("%s kill <pid> : kill process\n", argv[0].str);
-        printf("%s asd  <pid> : dump process address space\n", argv[0].str);
-        printf("%s htinfo     : handle table info\n", argv[0].str);
+        printf("%s ps                : list processes\n", argv[0].str);
+        printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
+        printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
+        printf("%s jb   <pid>        : list job tree\n", argv[0].str);
+        printf("%s kill <pid>        : kill process\n", argv[0].str);
+        printf("%s asd  <pid>|kernel : dump process/kernel address space\n",
+               argv[0].str);
+        printf("%s htinfo            : handle table info\n", argv[0].str);
         return -1;
     }
 
@@ -491,13 +502,13 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     } else if (strcmp(argv[1].str, "asd") == 0) {
         if (argc < 3)
             goto usage;
-        DumpProcessAddressSpace(argv[2].u);
+        DumpAddressSpace(&argv[2]);
     } else if (strcmp(argv[1].str, "htinfo") == 0) {
         if (argc != 2)
             goto usage;
         internal::DumpHandleTableInfo();
     } else {
-        printf("unrecognized subcommand\n");
+        printf("unrecognized subcommand '%s'\n", argv[1].str);
         goto usage;
     }
     return rc;
