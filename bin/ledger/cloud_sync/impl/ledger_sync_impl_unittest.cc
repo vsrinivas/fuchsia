@@ -19,10 +19,9 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
  public:
   LedgerSyncImplTest()
       : network_service_(mtl::MessageLoop::GetCurrent()->task_runner()),
-        environment_(configuration::Configuration(),
-                     nullptr,
-                     &network_service_),
-        ledger_sync_(&environment_, "test_user", "test_id") {}
+        environment_(nullptr, &network_service_),
+        user_config_({true, "server_id", "", "test_user"}),
+        ledger_sync_(&environment_, &user_config_, "test_id") {}
 
   // ::testing::Test:
   void SetUp() override { ::testing::Test::SetUp(); }
@@ -32,6 +31,7 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
  protected:
   ledger::FakeNetworkService network_service_;
   ledger::Environment environment_;
+  UserConfig user_config_;
   LedgerSyncImpl ledger_sync_;
 
  private:
@@ -46,7 +46,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsRequestUrl) {
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
   const std::string expected_url = ftl::Concatenate(
-      {"https://.firebaseio.com/__default__V/test_userV/",
+      {"https://server_id.firebaseio.com/__default__V/test_userV/",
        storage::kSerializationVersion, "/test_idV/page_idV.json?shallow=true"});
   EXPECT_EQ(expected_url, network_service_.GetRequest()->url);
 }

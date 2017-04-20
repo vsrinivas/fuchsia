@@ -13,8 +13,11 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(const std::string& base_storage_dir,
-                                           Environment* environment)
-    : base_storage_dir_(base_storage_dir), environment_(environment) {
+                                           Environment* environment,
+                                           cloud_sync::UserConfig user_config)
+    : base_storage_dir_(base_storage_dir),
+      environment_(environment),
+      user_config_(std::move(user_config)) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
 }
@@ -46,9 +49,9 @@ void LedgerRepositoryImpl::GetLedger(
             environment_->coroutine_service(), base_storage_dir_,
             name_as_string);
     std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
-    if (environment_->configuration().use_sync) {
+    if (user_config_.use_sync) {
       ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(
-          environment_, GetStorageDirectoryName(), name_as_string);
+          environment_, &user_config_, name_as_string);
     }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
@@ -68,15 +71,6 @@ void LedgerRepositoryImpl::Duplicate(
     const DuplicateCallback& callback) {
   BindRepository(std::move(request));
   callback(Status::OK);
-}
-
-ftl::StringView LedgerRepositoryImpl::GetStorageDirectoryName() {
-  ftl::StringView storage_dir = base_storage_dir_;
-  size_t separator = storage_dir.rfind('/');
-  FTL_DCHECK(separator != std::string::npos);
-  FTL_DCHECK(separator != storage_dir.size() - 1);
-
-  return storage_dir.substr(separator + 1);
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {

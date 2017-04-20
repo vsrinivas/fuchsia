@@ -15,21 +15,23 @@
 namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
-                               ftl::StringView user_id,
+                               const UserConfig* user_config,
                                ftl::StringView app_id)
     : environment_(environment),
-      app_gcs_prefix_(GetGcsPrefixForApp(
-          environment_->configuration().sync_params.cloud_prefix,
-          user_id,
-          app_id)),
-      app_firebase_path_(GetFirebasePathForApp(
-          environment_->configuration().sync_params.cloud_prefix,
-          user_id,
-          app_id)),
+      user_config_(user_config),
+      app_gcs_prefix_(GetGcsPrefixForApp(user_config->cloud_prefix,
+                                         user_config->user_id,
+                                         app_id)),
+      app_firebase_path_(GetFirebasePathForApp(user_config->cloud_prefix,
+                                               user_config->user_id,
+                                               app_id)),
       app_firebase_(std::make_unique<firebase::FirebaseImpl>(
           environment_->network_service(),
-          environment_->configuration().sync_params.firebase_id,
-          app_firebase_path_)) {}
+          user_config->server_id,
+          app_firebase_path_)) {
+  FTL_DCHECK(user_config->use_sync);
+  FTL_DCHECK(!user_config->server_id.empty());
+}
 
 LedgerSyncImpl::~LedgerSyncImpl() {}
 
@@ -67,18 +69,15 @@ void LedgerSyncImpl::RemoteContains(
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     storage::PageStorage* page_storage,
     ftl::Closure error_callback) {
-  FTL_DCHECK(environment_->configuration().use_sync);
-  FTL_DCHECK(!environment_->configuration().sync_params.firebase_id.empty());
   FTL_DCHECK(page_storage);
 
   auto result = std::make_unique<PageSyncContext>();
   result->firebase = std::make_unique<firebase::FirebaseImpl>(
-      environment_->network_service(),
-      environment_->configuration().sync_params.firebase_id,
+      environment_->network_service(), user_config_->server_id,
       GetFirebasePathForPage(app_firebase_path_, page_storage->GetId()));
   result->cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
       environment_->main_runner(), environment_->network_service(),
-      environment_->configuration().sync_params.firebase_id,
+      user_config_->server_id,
       GetGcsPrefixForPage(app_gcs_prefix_, page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get(), result->cloud_storage.get());

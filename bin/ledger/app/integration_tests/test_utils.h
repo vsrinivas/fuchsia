@@ -32,18 +32,18 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   fidl::Array<uint8_t> prefix);
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   fidl::Array<uint8_t> prefix,
-                                                  int *num_queries);
+                                                  int* num_queries);
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> prefix);
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> prefix,
-                                         int *num_queries);
+                                         int* num_queries);
 
 std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
-                               fidl::Array<uint8_t> key,
-                               int64_t offset,
-                               int64_t max_size);
+                                 fidl::Array<uint8_t> key,
+                                 int64_t offset,
+                                 int64_t max_size);
 
 std::string ToString(const mx::vmo& vmo);
 
@@ -55,8 +55,8 @@ class LedgerRepositoryFactoryContainer {
       ftl::RefPtr<ftl::TaskRunner> task_runner,
       const std::string& path,
       fidl::InterfaceRequest<LedgerRepositoryFactory> request)
-      : environment_(configuration, task_runner, nullptr),
-        factory_impl_(&environment_),
+      : environment_(task_runner, nullptr),
+        factory_impl_(configuration, &environment_),
         factory_binding_(&factory_impl_, std::move(request)) {}
   ~LedgerRepositoryFactoryContainer() {}
 

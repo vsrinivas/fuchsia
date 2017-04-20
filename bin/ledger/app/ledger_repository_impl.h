@@ -9,6 +9,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -19,7 +20,8 @@ namespace ledger {
 class LedgerRepositoryImpl : public LedgerRepository {
  public:
   LedgerRepositoryImpl(const std::string& base_storage_dir,
-                       Environment* environment);
+                       Environment* environment,
+                       cloud_sync::UserConfig user_config);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
@@ -37,12 +39,11 @@ class LedgerRepositoryImpl : public LedgerRepository {
   void Duplicate(fidl::InterfaceRequest<LedgerRepository> request,
                  const DuplicateCallback& callback) override;
 
-  ftl::StringView GetStorageDirectoryName();
-
   void CheckEmpty();
 
   const std::string base_storage_dir_;
   Environment* const environment_;
+  const cloud_sync::UserConfig user_config_;
   callback::AutoCleanableMap<std::string,
                              LedgerManager,
                              convert::StringViewComparator>

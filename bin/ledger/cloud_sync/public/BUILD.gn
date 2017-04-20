@@ -6,6 +6,7 @@ source_set("public") {
   sources = [
     "ledger_sync.h",
     "page_sync.h",
+    "user_config.h",
   ]
 
   public_deps = [

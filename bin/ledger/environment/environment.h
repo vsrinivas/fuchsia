@@ -19,13 +19,11 @@ namespace ledger {
 // Environment for the ledger application.
 class Environment {
  public:
-  Environment(configuration::Configuration configuration,
-              ftl::RefPtr<ftl::TaskRunner> main_runner,
+  Environment(ftl::RefPtr<ftl::TaskRunner> main_runner,
               NetworkService* network_service,
               ftl::RefPtr<ftl::TaskRunner> io_runner = nullptr);
   ~Environment();
 
-  const configuration::Configuration& configuration() { return configuration_; }
   const ftl::RefPtr<ftl::TaskRunner> main_runner() { return main_runner_; }
   NetworkService* network_service() { return network_service_; }
   coroutine::CoroutineService* coroutine_service() {
@@ -37,7 +35,6 @@ class Environment {
   const ftl::RefPtr<ftl::TaskRunner> GetIORunner();
 
  private:
-  const configuration::Configuration configuration_;
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
   NetworkService* const network_service_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;

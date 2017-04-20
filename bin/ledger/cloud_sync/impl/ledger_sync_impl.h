@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
@@ -16,7 +17,7 @@ namespace cloud_sync {
 class LedgerSyncImpl : public LedgerSync {
  public:
   LedgerSyncImpl(ledger::Environment* environment,
-                 ftl::StringView user_id,
+                 const UserConfig* user_config,
                  ftl::StringView app_id);
   ~LedgerSyncImpl();
 
@@ -28,7 +29,8 @@ class LedgerSyncImpl : public LedgerSync {
       ftl::Closure error_callback) override;
 
  private:
-  ledger::Environment* environment_;
+  ledger::Environment* const environment_;
+  const UserConfig* const user_config_;
   const std::string app_gcs_prefix_;
   // Firebase path under which the data of this Ledger instance is stored.
   const std::string app_firebase_path_;

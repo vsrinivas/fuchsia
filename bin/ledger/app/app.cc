@@ -73,11 +73,11 @@ class App {
                 ->ConnectToEnvironmentService<network::NetworkService>();
           });
     }
-    environment_ = std::make_unique<Environment>(
-        std::move(config), std::move(main_runner), network_service_.get());
+    environment_ = std::make_unique<Environment>(std::move(main_runner),
+                                                 network_service_.get());
 
-    factory_impl_ =
-        std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
+    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
+        std::move(config), environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(

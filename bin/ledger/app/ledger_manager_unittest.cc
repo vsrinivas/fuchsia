@@ -114,8 +114,7 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
 
 class LedgerManagerTest : public test::TestWithMessageLoop {
  public:
-  LedgerManagerTest()
-      : environment_(configuration::Configuration(), nullptr, nullptr) {}
+  LedgerManagerTest() : environment_(nullptr, nullptr) {}
 
   // test::TestWithMessageLoop:
   void SetUp() override {

@@ -48,8 +48,7 @@ std::function<void(storage::Journal*)> DeleteKeyFromJournal(
 class MergeResolverTest : public test::TestWithMessageLoop {
  public:
   MergeResolverTest()
-      : environment_(configuration::Configuration(),
-                     message_loop_.task_runner(),
+      : environment_(message_loop_.task_runner(),
                      nullptr,
                      message_loop_.task_runner()) {}
   ~MergeResolverTest() override {}

@@ -45,9 +45,7 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
 class PageManagerTest : public test::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(configuration::Configuration(),
-                     mtl::MessageLoop::GetCurrent()->task_runner(),
-                     nullptr) {}
+      : environment_(mtl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}
   ~PageManagerTest() override {}
 
  protected:
