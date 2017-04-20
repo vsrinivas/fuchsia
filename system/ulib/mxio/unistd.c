@@ -301,7 +301,6 @@ static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int 
     if (path[0] == 0) {
         return ERR_INVALID_ARGS;
     }
-
     mxio_t* iodir = mxio_iodir(&path, dirfd);
     if (iodir == NULL) {
         return ERR_BAD_HANDLE;
@@ -505,6 +504,11 @@ void __libc_extensions_init(uint32_t handle_count,
             mxio_fdtab[arg] = mxio_logger_create(h);
             mxio_fdtab[arg]->dupcount++;
             break;
+        case MX_HND_TYPE_SERVICE_ROOT:
+            mxio_svc_root = h;
+            // do not remove handle, so it is available
+            // to higher level service connection code
+            continue;
         default:
             // unknown handle, leave it alone
             continue;

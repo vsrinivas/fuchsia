@@ -528,6 +528,45 @@ static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
     return r;
 }
 
+static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn, const char* name) {
+    size_t len = strlen(name);
+    if (len >= PATH_MAX) {
+        return ERR_BAD_PATH;
+    }
+
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    msg.op = MXRIO_OPEN;
+    msg.datalen = len;
+    msg.arg = MXRIO_OFLAG_PIPELINE | O_RDWR;
+    msg.arg2.mode = 0755;
+    msg.hcount = 1;
+    msg.handle[0] = cnxn;
+    memcpy(msg.data, name, len);
+
+    mx_status_t r;
+    if ((r = mx_channel_write(svc, 0, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, 1)) < 0) {
+        mx_handle_close(cnxn);
+        return r;
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
+    if (svcpath == NULL) {
+        return ERR_INVALID_ARGS;
+    }
+    if (strncmp("/svc/", svcpath, 5)) {
+        return ERR_NOT_FOUND;
+    }
+    mx_handle_t svc = mxio_svc_root;
+    if (svc == MX_HANDLE_INVALID) {
+        return ERR_UNAVAILABLE;
+    }
+    return mxrio_connect(svc, h, svcpath + 5);
+}
+
 static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
@@ -640,7 +679,6 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
 static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
                                    int32_t flags, uint32_t mode,
                                    mxrio_object_t* info) {
-
     if (name == NULL) {
         return ERR_INVALID_ARGS;
     }
@@ -664,6 +702,9 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
 static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
+    if (flags & MXRIO_OFLAG_MASK) {
+        return ERR_INVALID_ARGS;
+    }
     mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, &info);
     if (r < 0) {
         return r;

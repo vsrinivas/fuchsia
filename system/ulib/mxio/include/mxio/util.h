@@ -54,4 +54,9 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
 
+// Attempt to connect a channel to a named service.
+// On success the channel is connected.  On failure
+// an error is returned and the handle is closed.
+mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h);
+
 __END_CDECLS

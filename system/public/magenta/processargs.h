@@ -106,6 +106,14 @@ struct mx_proc_args {
 #define MX_HND_TYPE_BOOTDATA_VMO 0x30
 #define MX_HND_TYPE_BOOTFS_VMO 0x31
 
+// Client endpoint for remoteio "/svc" directory provided
+// to enable outbound connections to services.
+#define MX_HND_TYPE_SERVICE_ROOT 0x40
+
+// Server endpoint for remoteio "/svc" directory provided
+// to enable handling of inbound connections to services
+#define MX_HND_TYPE_SERVICE_REQUEST 0x41
+
 // Handle types used by the application model
 #define MX_HND_TYPE_APPLICATION_REQUEST 0x100 // deprecated
 #define MX_HND_TYPE_APPLICATION_LAUNCHER 0x101
