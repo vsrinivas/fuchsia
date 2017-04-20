@@ -98,7 +98,6 @@ class PageStorageImpl : public PageStorage {
                           std::function<void(Status, Entry)> callback) override;
   void GetCommitContentsDiff(const Commit& base_commit,
                              const Commit& other_commit,
-                             std::string min_key,
                              std::function<bool(EntryChange)> on_next_diff,
                              std::function<void(Status)> on_done) override;
 

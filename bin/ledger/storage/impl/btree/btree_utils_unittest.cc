@@ -849,7 +849,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   // ForEachDiff should return all changes just applied.
   size_t current_change = 0;
   ForEachDiff(
-      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "",
+      &coroutine_service_, &fake_storage_, base_root_id, other_root_id,
       [&changes, &current_change](EntryChange e) {
         EXPECT_EQ(changes[current_change].deleted, e.deleted);
         if (e.deleted) {

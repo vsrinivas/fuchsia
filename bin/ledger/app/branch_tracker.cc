@@ -167,11 +167,9 @@ class BranchTracker::PageWatcherContainer {
 
     // TODO(etiennej): See LE-74: clean object ownership
     diff_utils::ComputePageChange(
-        storage_, *last_commit_, *current_commit_, "",
-        std::numeric_limits<size_t>::max(),
+        storage_, *last_commit_, *current_commit_,
         ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
-            Status status,
-            std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
+            Status status, PageChangePtr page_change_ptr) mutable {
           if (status != Status::OK) {
             // This change notification is abandonned. At the next commit,
             // we will try again (but not before). The next notification
@@ -181,14 +179,14 @@ class BranchTracker::PageWatcherContainer {
             return;
           }
 
-          if (!page_change_ptr.first) {
+          if (!page_change_ptr) {
             change_in_flight_ = false;
             last_commit_.swap(new_commit);
             SendCommit();
             return;
           }
           std::vector<PageChangePtr> paginated_changes =
-              PaginateChanges(std::move(page_change_ptr.first));
+              PaginateChanges(std::move(page_change_ptr));
           if (paginated_changes.size() == 1) {
             SendChange(std::move(paginated_changes[0]), ResultState::COMPLETED,
                        std::move(new_commit), [] {});

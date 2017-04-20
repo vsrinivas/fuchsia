@@ -21,15 +21,9 @@ class IteratorPair {
       : on_next_(on_next), left_(storage), right_(storage) {}
 
   // Initialize the pair with the ids of both roots.
-  Status Init(ObjectIdView left_node_id,
-              ObjectIdView right_node_id,
-              ftl::StringView min_key) {
-    // TODO(nellyv): Optimize this to skip the nodes of the btrees that are
-    // common while searching for the |min_key|.
+  Status Init(ObjectIdView left_node_id, ObjectIdView right_node_id) {
     RETURN_ON_ERROR(left_.Init(left_node_id));
-    RETURN_ON_ERROR(left_.SkipTo(min_key));
     RETURN_ON_ERROR(right_.Init(right_node_id));
-    RETURN_ON_ERROR(right_.SkipTo(min_key));
     Normalize();
     if (!Finished() && !HasDiff()) {
       RETURN_ON_ERROR(Advance());
@@ -232,14 +226,13 @@ class IteratorPair {
 Status ForEachDiffInternal(SynchronousStorage* storage,
                            ObjectIdView left_node_id,
                            ObjectIdView right_node_id,
-                           std::string min_key,
                            const std::function<bool(EntryChange)>& on_next) {
   if (left_node_id == right_node_id) {
     return Status::OK;
   }
 
   IteratorPair iterators(storage, on_next);
-  RETURN_ON_ERROR(iterators.Init(left_node_id, right_node_id, min_key));
+  RETURN_ON_ERROR(iterators.Init(left_node_id, right_node_id));
 
   while (!iterators.Finished()) {
     if (!iterators.SendDiff()) {
@@ -257,17 +250,16 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdView base_root_id,
                  ObjectIdView other_root_id,
-                 std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
   coroutine_service->StartCoroutine([
     page_storage, base_root_id, other_root_id, on_next = std::move(on_next),
-    min_key = std::move(min_key), on_done = std::move(on_done)
+    on_done = std::move(on_done)
   ](coroutine::CoroutineHandler * handler) {
     SynchronousStorage storage(page_storage, handler);
 
-    on_done(ForEachDiffInternal(&storage, base_root_id, other_root_id,
-                                std::move(min_key), on_next));
+    on_done(
+        ForEachDiffInternal(&storage, base_root_id, other_root_id, on_next));
   });
 }
 

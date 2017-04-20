@@ -14,20 +14,11 @@
 namespace ledger {
 namespace diff_utils {
 // Asynchronously creates a PageChange representing the diff of the two provided
-// commits, starting from the given |min_key| and providing as many results as
-// possible, given the |max_fidl_size| constraint. The result, or an error, will
-// be provided in |callback| status. The second argument of the callback is a
-// pair of the PageChangePtr, containing the diff result, and the string
-// representation of the next token, if the result is paginated, or empty, if
-// there are no more results to return.
-void ComputePageChange(
-    storage::PageStorage* storage,
-    const storage::Commit& base,
-    const storage::Commit& other,
-    std::string min_key,
-    size_t max_fidl_size,
-    std::function<void(Status, std::pair<PageChangePtr, std::string>)>
-        callback);
+// commits. The result, or an error, will be provided in |callback|.
+void ComputePageChange(storage::PageStorage* storage,
+                       const storage::Commit& base,
+                       const storage::Commit& other,
+                       std::function<void(Status, PageChangePtr)> callback);
 
 }  // namespace diff_utils
 }  // namespace ledger

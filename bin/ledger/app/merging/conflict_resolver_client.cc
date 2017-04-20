@@ -4,13 +4,11 @@
 
 #include "apps/ledger/src/app/merging/conflict_resolver_client.h"
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "apps/ledger/src/app/diff_utils.h"
-#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
@@ -20,7 +18,6 @@
 #include "lib/mtl/socket/strings.h"
 
 namespace ledger {
-
 ConflictResolverClient::ConflictResolverClient(
     storage::PageStorage* storage,
     PageManager* page_manager,
@@ -143,55 +140,44 @@ void ConflictResolverClient::Finalize() {
   on_done();
 }
 
-// GetLeftDiff(array<uint8>? token)
-//     => (Status status, PageChange? change, array<uint8>? next_token);
-void ConflictResolverClient::GetLeftDiff(fidl::Array<uint8_t> token,
-                                         const GetLeftDiffCallback& callback) {
-  GetDiff(*left_, std::move(token), callback);
-}
+// GetDiff(array<uint8>? token)
+//     => (Status status, PageChange left_change, PageChange right_change,
+//         array<uint8>? next_token);
+void ConflictResolverClient::GetDiff(fidl::Array<uint8_t> token,
+                                     const GetDiffCallback& callback) {
+  // TODO(nellyv): Handle pagination.
+  FTL_DCHECK(token.is_null()) << "Pagination not implemented, yet.";
+  ftl::RefPtr<callback::Waiter<Status, PageChangePtr>> waiter =
+      callback::Waiter<Status, PageChangePtr>::Create(Status::OK);
 
-// GetRightDiff(array<uint8>? token)
-//     => (Status status, PageChange? change, array<uint8>? next_token);
-void ConflictResolverClient::GetRightDiff(
-    fidl::Array<uint8_t> token,
-    const GetRightDiffCallback& callback) {
-  GetDiff(*right_, std::move(token), callback);
-}
+  diff_utils::ComputePageChange(storage_, *ancestor_, *left_,
+                                waiter->NewCallback());
+  diff_utils::ComputePageChange(storage_, *ancestor_, *right_,
+                                waiter->NewCallback());
 
-void ConflictResolverClient::GetDiff(
-    const storage::Commit& commit,
-    fidl::Array<uint8_t> token,
-    const std::function<void(Status, PageChangePtr, fidl::Array<uint8_t>)>&
-        callback) {
-  diff_utils::ComputePageChange(
-      storage_, *ancestor_, commit, convert::ToString(token),
-      fidl_serialization::kMaxInlineDataSize,
-      [
-        weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
-      ](Status status,
-        std::pair<PageChangePtr, std::string> page_change) mutable {
-        if (!weak_this) {
-          callback(Status::INTERNAL_ERROR, nullptr, nullptr);
-          return;
-        }
-        if (weak_this->cancelled_) {
-          callback(Status::INTERNAL_ERROR, nullptr, nullptr);
-          weak_this->Finalize();
-          return;
-        }
-        if (status != Status::OK) {
-          FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
-                         << ", aborting.";
-          callback(status, nullptr, nullptr);
-          weak_this->Finalize();
-          return;
-        }
-
-        const std::string& next_token = page_change.second;
-        status = next_token.empty() ? Status::OK : Status::PARTIAL_RESULT;
-        callback(status, std::move(page_change.first),
-                 next_token.empty() ? nullptr : convert::ToArray(next_token));
-      });
+  waiter->Finalize([
+    weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
+  ](Status status, std::vector<PageChangePtr> page_changes) mutable {
+    if (!weak_this) {
+      callback(Status::INTERNAL_ERROR, nullptr, nullptr, nullptr);
+      return;
+    }
+    if (weak_this->cancelled_) {
+      callback(Status::INTERNAL_ERROR, nullptr, nullptr, nullptr);
+      weak_this->Finalize();
+      return;
+    }
+    if (status != Status::OK) {
+      FTL_LOG(ERROR) << "Unable to compute diff due to error " << status
+                     << ", aborting.";
+      callback(status, nullptr, nullptr, nullptr);
+      weak_this->Finalize();
+      return;
+    }
+    FTL_DCHECK(page_changes.size() == 2);
+    callback(Status::OK, std::move(page_changes[0]), std::move(page_changes[1]),
+             nullptr);
+  });
 }
 
 // Merge(array<MergedValue>? merge_changes) => (Status status);
