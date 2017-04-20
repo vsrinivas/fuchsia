@@ -6,6 +6,7 @@
     ],
     "labels": [
         "//magma:libmagma",
+        "//magma:libvulkan",
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
         "//magma:tests",
