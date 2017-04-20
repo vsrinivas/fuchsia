@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/stack"
 )
 
@@ -35,7 +36,16 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	if r.RemoteLinkAddress == "" && r.RemoteAddress == "\xff\xff\xff\xff" {
 		r.RemoteLinkAddress = "\xff\xff\xff\xff\xff\xff"
 	}
-	copy(ethHdr[0:], r.RemoteLinkAddress)
+	remoteLinkAddr := r.RemoteLinkAddress
+	if header.IsV4MulticastAddress(r.RemoteAddress) {
+		// RFC 1112.6.4
+		remoteLinkAddr = tcpip.LinkAddress([]byte{0x01, 0x00, 0x5e, r.RemoteAddress[1] & 0x7f, r.RemoteAddress[2], r.RemoteAddress[3]})
+	} else if header.IsV6MulticastAddress(r.RemoteAddress) {
+		// RFC 2464.7
+		remoteLinkAddr = tcpip.LinkAddress([]byte{0x33, 0x33, r.RemoteAddress[12], r.RemoteAddress[13], r.RemoteAddress[14], r.RemoteAddress[15]})
+	}
+
+	copy(ethHdr[0:], remoteLinkAddr)
 	copy(ethHdr[6:], ep.linkAddr)
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
