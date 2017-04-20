@@ -42,15 +42,19 @@ def get_target(label):
 # Writes a cargo config file.
 def write_cargo_config(path, vendor_directory):
     create_base_directory(path)
-    config = '''[source.crates-io]
-registry = 'https://github.com/rust-lang/crates.io-index'
-replace-with = 'vendored-sources'
-
-[source.vendored-sources]
-directory = '%s'
-''' % vendor_directory
+    config = {
+        "source": {
+            "crates-io": {
+                "registry": "https://github.com/rust-lang/crates.io-index",
+                "replace-with": "vendored-sources"
+            },
+            "vendored-sources": {
+                "directory": vendor_directory
+            }
+        }
+    }
     with open(path, "w") as config_file:
-        config_file.write(config)
+        toml.dump(config_file, config)
 
 
 # Fixes the target path in the given depfile.
@@ -170,9 +174,10 @@ def main():
         new_path = os.path.join(args.crate_root, relative_path)
         base["path"] = new_path
 
+        # Add or edit dependency sections for local deps.
         if "dependencies" not in config:
             config["dependencies"] = {}
-        # Add dependency sections for local deps.
+        dependencies = config["dependencies"]
         for dep in args.deps:
             path, name = get_target(dep)
             base_path = os.path.join(args.root_gen_dir, path, "%s.rust" % name)
@@ -180,9 +185,9 @@ def main():
             artifact_path = os.path.join(base_path, "%s.rust_name" % name)
             with open(artifact_path, "r") as artifact_file:
                 artifact_name = artifact_file.read()
-            config["dependencies"][artifact_name] = {
-                "path": base_path
-            }
+            if artifact_name not in dependencies:
+                dependencies[artifact_name] = {}
+            dependencies[artifact_name]["path"] = base_path
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
