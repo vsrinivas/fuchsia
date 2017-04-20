@@ -150,7 +150,7 @@ bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev, bool autobind) 
 
 bool dc_is_bindable(mx_driver_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
-                    mx_device_t* dev, bool autobind) {
+                    bool autobind) {
     bpctx_t ctx;
     ctx.props = props;
     ctx.end = props + prop_count;

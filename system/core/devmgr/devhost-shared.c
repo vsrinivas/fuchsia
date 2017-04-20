@@ -115,12 +115,14 @@ mx_status_t port_watch(port_t* port, port_handler_t* ph) {
                                 ph->waitfor, MX_WAIT_ASYNC_ONCE);
 }
 
-mx_status_t port_dispatch(port_t* port) {
+mx_status_t port_dispatch(port_t* port, mx_time_t deadline) {
     for (;;) {
         mx_port_packet_t packet;
         mx_status_t r;
-        if ((r = mx_port_wait(port->handle, MX_TIME_INFINITE, &packet, 0)) != NO_ERROR) {
-            printf("port_dispatch: port wait failed %d\n", r);
+        if ((r = mx_port_wait(port->handle, deadline, &packet, 0)) != NO_ERROR) {
+            if (r != ERR_TIMED_OUT) {
+                printf("port_dispatch: port wait failed %d\n", r);
+            }
             return r;
         }
         port_handler_t* ph = (void*) (uintptr_t) packet.key;
@@ -128,5 +130,6 @@ mx_status_t port_dispatch(port_t* port) {
         if ((r = ph->func(ph, packet.signal.observed)) == NO_ERROR) {
             port_watch(port, ph);
         }
+        return NO_ERROR;
     }
 }

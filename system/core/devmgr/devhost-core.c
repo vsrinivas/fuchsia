@@ -280,6 +280,7 @@ void devhost_device_set_bindable(mx_device_t* dev, bool bindable) {
 
 static mx_status_t device_validate(mx_device_t* dev) {
     if (dev == NULL) {
+        printf("INVAL: NULL!\n");
         return ERR_INVALID_ARGS;
     }
     if (dev->magic != DEV_MAGIC) {
@@ -293,6 +294,7 @@ static mx_status_t device_validate(mx_device_t* dev) {
         // This protocol is only allowed for the special
         // singleton misc parent device.
 #if DEVHOST_V2
+        printf("INVAL: MISC!\n");
         return ERR_INVALID_ARGS;
 #else
         if (dev != driver_get_misc_device()) {
@@ -342,6 +344,22 @@ mx_status_t devhost_device_add_root(mx_device_t* dev) {
     if (dev->protocol_id != 0) {
         list_add_tail(&unmatched_device_list, &dev->unode);
     }
+    return NO_ERROR;
+}
+
+mx_status_t devhost_device_install(mx_device_t* dev) {
+    mx_status_t status;
+    if ((status = device_validate(dev)) < 0) {
+        return status;
+    }
+    // Don't create an event handle if we alredy have one
+    if ((dev->event == MX_HANDLE_INVALID) &&
+        ((status = mx_event_create(0, &dev->event)) < 0)) {
+        printf("device add: %p(%s): cannot create event: %d\n",
+               dev, dev->name, status);
+        return status;
+    }
+    dev_ref_acquire(dev);
     return NO_ERROR;
 }
 

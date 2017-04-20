@@ -22,7 +22,7 @@ typedef struct {
 
 mx_status_t port_init(port_t* port);
 mx_status_t port_watch(port_t* port, port_handler_t* ph);
-mx_status_t port_dispatch(port_t* port);
+mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
 
 #if DEVMGR
 #include <fs/vfs.h>
@@ -32,10 +32,17 @@ mx_status_t port_dispatch(port_t* port);
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+typedef struct {
+    list_node_t node;
+    uint32_t op;
+    uint32_t arg;
+} work_t;
+
 typedef struct devhost_ctx {
     port_handler_t ph;
     mx_handle_t hrpc;
     mx_handle_t proc;
+    mx_koid_t koid;
 } devhost_ctx_t;
 
 typedef struct device_ctx {
@@ -44,8 +51,8 @@ typedef struct device_ctx {
     mx_handle_t hrsrc;
     port_handler_t ph;
     devhost_ctx_t* host;
-    list_node_t node;
     const char* args;
+    work_t work;
 #endif
     uint32_t flags;
     uint32_t protocol_id;
@@ -91,7 +98,7 @@ void enumerate_drivers(void);
 
 bool dc_is_bindable(mx_driver_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
-                    mx_device_t* dev, bool autobind);
+                    bool autobind);
 #endif
 
 #if DEVHOST_V2

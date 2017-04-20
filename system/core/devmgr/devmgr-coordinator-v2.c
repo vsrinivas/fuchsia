@@ -11,12 +11,15 @@
 
 #include <ddk/driver.h>
 #include "devcoordinator.h"
+#include "log.h"
+
+uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
 
 static mx_handle_t devhost_job;
 static port_t dc_port;
-static list_node_t driver_list = LIST_INITIAL_VALUE(driver_list);
+static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 
 static device_ctx_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
@@ -28,9 +31,39 @@ static device_ctx_t misc_device = {
     .name = "misc",
 };
 
+static void dc_handle_new_device(device_ctx_t* dev);
+
+#define WORK_IDLE 0
+#define WORK_DEVICE_ADDED 1
+static list_node_t list_pending_work = LIST_INITIAL_VALUE(list_pending_work);
+static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
+
+static inline void queue_work(work_t* work, uint32_t op, uint32_t arg) {
+    MX_ASSERT(work->op == WORK_IDLE);
+    work->op = op;
+    work->arg = arg;
+    list_add_tail(&list_pending_work, &work->node);
+}
+
+static void process_work(work_t* work) {
+    uint32_t op = work->op;
+    work->op = WORK_IDLE;
+
+    switch (op) {
+    case WORK_DEVICE_ADDED: {
+        device_ctx_t* dev = containerof(work, device_ctx_t, work);
+        dc_handle_new_device(dev);
+        break;
+    }
+    default:
+        log(ERROR, "devcoord: unknown work: op=%u\n", op);
+    }
+}
+
 static const char* devhost_bin = "/boot/bin/devhost2";
 
-static mx_status_t dc_launch_devhost(const char* name, mx_handle_t hrpc) {
+static mx_status_t dc_launch_devhost(devhost_ctx_t* host,
+                                     const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
     launchpad_create(devhost_job, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
@@ -51,14 +84,20 @@ static mx_status_t dc_launch_devhost(const char* name, mx_handle_t hrpc) {
     // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
 
-    printf("devmgr: launch devhost: %s\n", name);
     const char* errmsg;
-    mx_status_t status = launchpad_go(lp, NULL, &errmsg);
+    mx_status_t status = launchpad_go(lp, &host->proc, &errmsg);
     if (status < 0) {
-        printf("devmgr: launch devhost: %s: failed: %d: %s\n",
-               name, status, errmsg);
+        log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n",
+            name, status, errmsg);
         return status;
     }
+    mx_info_handle_basic_t info;
+    if (mx_object_get_info(host->proc, MX_INFO_HANDLE_BASIC, &info,
+                           sizeof(info), NULL, NULL) == NO_ERROR) {
+        host->koid = info.koid;
+    }
+    log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
+        name, host->koid);
 
     return NO_ERROR;
 }
@@ -76,7 +115,7 @@ static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
         return r;
     }
 
-    if ((r = dc_launch_devhost(name, hrpc)) < 0) {
+    if ((r = dc_launch_devhost(ctx, name, hrpc)) < 0) {
         mx_handle_close(ctx->hrpc);
         free(ctx);
         return r;
@@ -110,13 +149,21 @@ static mx_status_t dc_add_device(device_ctx_t* parent,
     }
     dev->hdevice = handle[0];
     dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
-    dev->host = parent->host;
-    dev->args = (const char*) (dev + 1);
     dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
+    dev->args = (const char*) (dev->props + dev->prop_count);
     memcpy(dev->props, data, msg->datalen);
     memcpy((char*) (dev->props + dev->prop_count), args, msg->argslen + 1);
     memcpy(dev->name, name, msg->namelen + 1);
     dev->protocol_id = msg->protocol_id;
+
+    // If we have bus device args or resource handle
+    // we are, by definition a bus device.
+    if (args[0] || (dev->hrsrc != MX_HANDLE_INVALID)) {
+        dev->flags |= DEV_CTX_BUSDEV;
+    } else {
+        //TODO: create shadow instead
+        dev->host = parent->host;
+    }
 
     mx_status_t r;
     if ((r = do_publish(parent, dev)) < 0) {
@@ -133,15 +180,17 @@ static mx_status_t dc_add_device(device_ctx_t* parent,
         return r;
     }
 
-    printf("devcoord: publish '%s' props=%u args='%s'\n",
-           dev->name, dev->prop_count, dev->args);
+    log(DEVFS, "devcoord: publish '%s' props=%u args='%s'\n",
+        dev->name, dev->prop_count, dev->args);
+
+    queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
     return NO_ERROR;
 }
 
 // Remove device from parent
 static mx_status_t dc_remove_device(device_ctx_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
-        printf("devcoord: cannot remove dev %p (immortal)\n", dev);
+        log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
     } else {
         do_unpublish(dev);
         dev->flags |= DEV_CTX_DEAD;
@@ -156,7 +205,7 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
     uint32_t hcount = 2;
 
     if (dev->flags & DEV_CTX_DEAD) {
-        printf("devcoord: dev %p already dead\n", dev);
+        log(ERROR, "devcoord: dev %p already dead (in read)\n", dev);
         return ERR_INTERNAL;
     }
 
@@ -175,7 +224,7 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
-        printf("devcoord: add device '%s'\n", name);
+        log(RPC_IN, "devcoord: add device '%s' args='%s'\n", name, args);
         if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) == NO_ERROR) {
             goto done;
         }
@@ -186,14 +235,14 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
             r = ERR_INVALID_ARGS;
             goto fail;
         }
-        printf("devcoord: remove device '%s'\n", name);
+        log(RPC_IN, "devcoord: remove device '%s'\n", name);
         if ((r = dc_remove_device(dev)) == NO_ERROR) {
             goto done;
         }
         break;
 
     default:
-        printf("devcoord: invalid rpc op %08x\n", msg.op);
+        log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
         r = ERR_NOT_SUPPORTED;
         break;
     }
@@ -216,7 +265,7 @@ done:
 
 void dc_destroy_device(device_ctx_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
-        printf("devcoord: cannot destroy dev %p (immortal)\n", dev);
+        log(ERROR, "devcoord: cannot destroy dev %p (immortal)\n", dev);
         return;
     }
     if (!(dev->flags & DEV_CTX_DEAD)) {
@@ -239,50 +288,62 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
         return r;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
-        printf("devcoord: device disconnected!\n");
+        log(ERROR, "devcoord: device disconnected!\n");
         dc_destroy_device(dev);
         return ERR_PEER_CLOSED;
     }
-    printf("devcoord: no work? %08x\n", signals);
+    log(ERROR, "devcoord: no work? %08x\n", signals);
     return NO_ERROR;
 }
 
 // send message to devhost, requesting the creation of a device
-static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh) {
+static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh,
+                                    const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
-
     mx_status_t r;
-
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, dev->name, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, dev->args)) < 0) {
         return r;
     }
 
-    mx_handle_t h0, h1;
-    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
+    mx_handle_t handle[2], hdevice;
+    if ((r = mx_channel_create(0, handle, &hdevice)) < 0) {
         return r;
+    }
+
+    if (dev->hrsrc != MX_HANDLE_INVALID) {
+        if ((r = mx_handle_duplicate(dev->hrsrc, MX_RIGHT_SAME_RIGHTS, handle + 1)) < 0) {
+            goto fail_duplicate;
+        }
     }
 
     msg.txid = 0;
     msg.op = DC_OP_CREATE_DEVICE;
     msg.protocol_id = dev->protocol_id;
 
-    if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, &h1, 1)) < 0) {
-        mx_handle_close(h0);
-        mx_handle_close(h1);
-        return r;
+    if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, handle,
+                              (dev->hrsrc != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
+        goto fail_write;
     }
 
-    dev->hdevice = h0;
-    dev->ph.handle = h0;
+    dev->hdevice = hdevice;
+    dev->ph.handle = hdevice;
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
-        mx_handle_close(h0);
-        return r;
+        goto fail_watch;
     }
-
     return NO_ERROR;
+
+fail_write:
+    if (dev->hrsrc != MX_HANDLE_INVALID) {
+        mx_handle_close(handle[1]);
+    }
+fail_duplicate:
+    mx_handle_close(handle[0]);
+fail_watch:
+    mx_handle_close(hdevice);
+    return r;
 }
 
 // send message to devhost, requesting the binding of a driver to a device
@@ -306,26 +367,51 @@ static mx_status_t dh_bind_driver(device_ctx_t* dev, const char* libname) {
     return NO_ERROR;
 }
 
-static void dc_attempt_bind(driver_ctx_t* drv, device_ctx_t* dev) {
+static void dc_attempt_bind(driver_ctx_t* drv, device_ctx_t* dev,
+                            const char* devhostname, const char* libname) {
     // cannot bind driver to already bound device
     if (dev->flags & DEV_CTX_BOUND) {
+        return;
+    }
+    if (!(dev->flags & DEV_CTX_BUSDEV)) {
+        //TODO: non-busdev codepath
+        log(ERROR, "devcoord: can't bind non-busdevs yet...\n");
         return;
     }
 
     // if this device has no devhost, first instantiate it
     if (dev->host == NULL) {
         mx_status_t r;
-        if ((r = dc_new_devhost("devhost:misc", &dev->host)) < 0) {
-            printf("devmgr: dh_new_devhost: %d\n", r);
+        if ((r = dc_new_devhost(devhostname, &dev->host)) < 0) {
+            log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
             return;
         }
-        if ((r = dh_create_device(dev, dev->host)) < 0) {
-            printf("devmgr: dh_create_device: %d\n", r);
+        if ((r = dh_create_device(dev, dev->host, libname)) < 0) {
+            log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return;
         }
     }
 
     dh_bind_driver(dev, drv->libname);
+}
+
+static void dc_handle_new_device(device_ctx_t* dev) {
+    driver_ctx_t* drv;
+
+    list_for_every_entry(&list_drivers, drv, driver_ctx_t, node) {
+        if (dc_is_bindable(&drv->drv, dev->protocol_id,
+                           dev->props, dev->prop_count, true)) {
+            log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
+                drv->drv.name, dev->name);
+            if (dev->protocol_id == MX_PROTOCOL_PCI) {
+                dc_attempt_bind(drv, dev, "devhost:pci", "driver/bus-pci.so");
+            } else {
+                log(ERROR, "devcoord: but that is not supported yet\n");
+            }
+            break;
+        }
+    }
+
 }
 
 // device binding program that pure (parentless)
@@ -341,16 +427,16 @@ static bool is_misc_driver(mx_driver_t* drv) {
 
 void coordinator_new_driver(driver_ctx_t* ctx) {
     //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
-    list_add_tail(&driver_list, &ctx->node);
+    list_add_tail(&list_drivers, &ctx->node);
 
     if (!strcmp(ctx->drv.name, "pci")) {
-        printf("driver: %s @ %s is PCI\n", ctx->drv.name, ctx->libname);
-        dc_attempt_bind(ctx, &root_device);
+        log(INFO, "driver: %s @ %s is PCI\n", ctx->drv.name, ctx->libname);
+        dc_attempt_bind(ctx, &root_device, "devhost:pci", "");
         return;
     }
     if (is_misc_driver(&ctx->drv)) {
-        printf("driver: %s @ %s is MISC\n", ctx->drv.name, ctx->libname);
-        dc_attempt_bind(ctx, &misc_device);
+        log(INFO, "driver: %s @ %s is MISC\n", ctx->drv.name, ctx->libname);
+        dc_attempt_bind(ctx, &misc_device, "devhost:misc", "");
         return;
     }
 }
@@ -360,7 +446,7 @@ void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
 
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job);
     if (status < 0) {
-        printf("unable to create devhost job\n");
+        log(ERROR, "devcoord: unable to create devhost job\n");
     }
     mx_object_set_property(devhost_job, MX_PROP_NAME, "magenta-drivers", 15);
 
@@ -386,13 +472,26 @@ static void acpi_init(void) {
 }
 
 void coordinator(void) {
-    printf("devmgr: coordinator()\n");
+    log(INFO, "devmgr: coordinator()\n");
     acpi_init();
 
     do_publish(&root_device, &misc_device);
 
     enumerate_drivers();
 
-    mx_status_t status = port_dispatch(&dc_port);
-    printf("coordinator: port dispatch ended: %d\n", status);
+    for (;;) {
+        mx_status_t status;
+        if (list_is_empty(&list_pending_work)) {
+            status = port_dispatch(&dc_port, MX_TIME_INFINITE);
+        } else {
+            status = port_dispatch(&dc_port, 0);
+            if (status == ERR_TIMED_OUT) {
+                process_work(list_remove_head_type(&list_pending_work, work_t, node));
+                continue;
+            }
+        }
+        if (status != NO_ERROR) {
+            log(ERROR, "devcoord: port dispatch ended: %d\n", status);
+        }
+    }
 }
