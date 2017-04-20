@@ -289,5 +289,37 @@ TEST_F(MergeResolverTest, None) {
   EXPECT_EQ(2u, ids.size());
 }
 
+TEST_F(MergeResolverTest, UpdateMidResolution) {
+  // Set up conflict
+  storage::CommitId commit_1 = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+
+  storage::CommitId commit_2 =
+      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+
+  storage::CommitId commit_3 =
+      CreateCommit(commit_1, AddKeyValueToJournal("key3", "val3.0"));
+
+  std::vector<storage::CommitId> ids;
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(2u, ids.size());
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
+
+  MergeResolver resolver([] {}, &environment_, page_storage_.get());
+  resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
+  resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
+  message_loop_.task_runner()->PostTask([&resolver] {
+    resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
+  });
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(1u, ids.size());
+}
+
 }  // namespace
 }  // namespace ledger

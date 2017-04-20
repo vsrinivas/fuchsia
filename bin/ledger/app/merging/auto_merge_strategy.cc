@@ -300,8 +300,9 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
 }
 
 void AutoMergeStrategy::Cancel() {
-  FTL_DCHECK(in_progress_merge_);
-  in_progress_merge_->Cancel();
+  if (in_progress_merge_) {
+    in_progress_merge_->Cancel();
+  }
 }
 
 }  // namespace ledger

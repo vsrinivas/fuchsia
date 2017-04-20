@@ -52,7 +52,6 @@ class MergeResolver : public storage::CommitWatcher {
   PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;
-  bool switch_strategy_ = false;
   bool merge_in_progress_ = false;
   ftl::Closure on_empty_callback_;
   ftl::Closure on_destroyed_;

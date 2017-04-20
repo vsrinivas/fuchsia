@@ -160,8 +160,9 @@ void LastOneWinsMergeStrategy::Merge(
 }
 
 void LastOneWinsMergeStrategy::Cancel() {
-  FTL_DCHECK(in_progress_merge_);
-  in_progress_merge_->Cancel();
+  if (in_progress_merge_) {
+    in_progress_merge_->Cancel();
+  }
 }
 
 }  // namespace ledger
