@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unittest.h>
 
@@ -200,6 +201,12 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
     size_t chosen = 0;
     size_t passed = 0;
 
+    const size_t num_tests =
+        run_all ? __stop_unittest_testcases - __start_unittest_testcases : 1;
+    // Array of names with a NULL sentinel at the end.
+    const char** failed_names = calloc(num_tests + 1, sizeof(char*));
+    const char** fn = failed_names;
+
     for (testcase = __start_unittest_testcases;
          testcase != __stop_unittest_testcases;
          ++testcase) {
@@ -207,7 +214,11 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
         if (testcase->name) {
             if (run_all || !strcmp(casename, testcase->name)) {
                 chosen++;
-                passed += run_unittest(testcase) ? 1 : 0;
+                if (run_unittest(testcase)) {
+                    passed++;
+                } else {
+                    *fn++ = testcase->name;
+                }
                 printf("\n");
 
                 if (!run_all)
@@ -216,14 +227,25 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
         }
     }
 
+    int ret = 0;
     if (!run_all && !chosen) {
+        ret = -1;
         unittest_printf("Test case \"%s\" not found!\n", casename);
         list_cases();
     } else {
-        unittest_printf("Passed %zu/%zu test case%s\n", passed, chosen, chosen == 1 ? "" : "s");
+        unittest_printf("SUMMARY: Ran %d test case%s: %d failed\n",
+                        chosen, chosen == 1 ? "" : "s", chosen - passed);
+        if (passed < chosen) {
+            ret = -1;
+            unittest_printf("\nThe following test cases failed:\n");
+            for (fn = failed_names; *fn != NULL; fn++) {
+                unittest_printf("%s\n", *fn);
+            }
+        }
     }
 
-    return 0;
+    free(failed_names);
+    return ret;
 }
 
 STATIC_COMMAND_START

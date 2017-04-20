@@ -470,7 +470,6 @@ static int send_dmctl(const char* command, size_t length) {
     close(fd);
 
     if (r < 0) {
-        fprintf(stderr, "error: cannot write dmctl: %d\n", r);
         return r;
     }
 
