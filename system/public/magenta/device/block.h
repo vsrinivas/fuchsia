@@ -49,8 +49,9 @@
 #define BLOCK_FLAG_REMOVABLE 0x00000002
 
 typedef struct {
-    uint64_t block_size; // The size of a single block
     uint64_t block_count; // The number of blocks in this block device
+    uint32_t block_size; // The size of a single block
+    uint32_t max_transfer_size; // Max worst-case size in bytes per transfer, 0 is no maximum
     uint32_t flags;
     uint32_t reserved;
 } block_info_t;

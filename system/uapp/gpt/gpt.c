@@ -63,7 +63,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
         return NULL;
     }
 
-    printf("blocksize=%" PRIu64 " blocks=%" PRIu64 "\n", info.block_size, info.block_count);
+    printf("blocksize=%x blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
     if (warn) {
         printf("WARNING: You are about to permanently alter %s\n\n"

@@ -201,7 +201,7 @@ static int gpt_bind_thread(void* arg) {
 
     // sanity check the default txn size with the block size
     if (TXN_SIZE % block_info.block_size) {
-        xprintf("gpt: default txn size=%d is not aligned to blksize=%" PRIu64 "!\n", TXN_SIZE,
+        xprintf("gpt: default txn size=%d is not aligned to blksize=%u!\n", TXN_SIZE,
                 block_info.block_size);
     }
 

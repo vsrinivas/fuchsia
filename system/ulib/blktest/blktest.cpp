@@ -234,6 +234,73 @@ bool blkdev_test_fifo_basic(void) {
     END_TEST;
 }
 
+bool blkdev_test_fifo_whole_disk(void) {
+    BEGIN_TEST;
+    uint64_t blk_size, blk_count;
+    // Set up the initial handshake connection with the blkdev
+    int fd = get_testdev(&blk_size, &blk_count);
+    mx_handle_t fifo;
+    ssize_t expected = sizeof(fifo);
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
+    txnid_t txnid;
+    expected = sizeof(txnid_t);
+    ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
+
+    // Create an arbitrary VMO, fill it with some stuff
+    uint64_t vmo_size = blk_size * blk_count;
+    mx_handle_t vmo;
+    ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), NO_ERROR, "Failed to create VMO");
+    AllocChecker ac;
+    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
+    ASSERT_TRUE(ac.check(), "");
+    fill_random(buf.get(), vmo_size);
+
+    size_t actual;
+    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(actual, vmo_size, "");
+
+    // Send a handle to the vmo to the block device, get a vmoid which identifies it
+    vmoid_t vmoid;
+    expected = sizeof(vmoid_t);
+    mx_handle_t xfer_vmo;
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), NO_ERROR, "");
+    ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
+              "Failed to attach vmo");
+
+    // Batch write the VMO to the blkdev
+    block_fifo_request_t request;
+    request.txnid      = txnid;
+    request.vmoid      = vmoid;
+    request.opcode     = BLOCKIO_WRITE;
+    request.length     = vmo_size;
+    request.vmo_offset = 0;
+    request.dev_offset = 0;
+
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), NO_ERROR, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+
+    // Empty the vmo, then read the info we just wrote to the disk
+    mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
+    ASSERT_TRUE(ac.check(), "");
+
+    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    request.opcode = BLOCKIO_READ;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), NO_ERROR, "");
+    ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
+
+    // Close the current vmo
+    request.opcode = BLOCKIO_CLOSE_VMO;
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), NO_ERROR, "");
+
+    ASSERT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    block_fifo_release_client(client);
+    ASSERT_EQ(ioctl_block_fifo_close(fd), NO_ERROR, "Failed to close fifo");
+    close(fd);
+    END_TEST;
+}
+
 typedef struct {
     uint64_t vmo_size;
     mx_handle_t vmo;
@@ -837,6 +904,7 @@ RUN_TEST(blkdev_test_multiple)
 #endif
 RUN_TEST(blkdev_test_fifo_no_op)
 RUN_TEST(blkdev_test_fifo_basic)
+RUN_TEST(blkdev_test_fifo_whole_disk)
 RUN_TEST(blkdev_test_fifo_multiple_vmo)
 RUN_TEST(blkdev_test_fifo_multiple_vmo_multithreaded)
 // TODO(smklein): Test ops across different vmos

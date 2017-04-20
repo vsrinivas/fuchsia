@@ -10,7 +10,8 @@
 
 #define AHCI_MAX_PORTS    32
 #define AHCI_MAX_COMMANDS 32
-#define AHCI_MAX_PRDS     128 // just a random choice, hardware max is 64k-1
+#define AHCI_MAX_PRDS     8192 // for 32M max xfer size for fully discontiguous iotxn,
+                               // hardware max is 64k-1
 
 #define AHCI_PRD_MAX_SIZE 0x400000 // 4mb
 

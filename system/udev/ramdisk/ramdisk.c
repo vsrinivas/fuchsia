@@ -64,6 +64,13 @@ static mx_status_t constrain_args(ramdisk_device_t* ramdev,
     return NO_ERROR;
 }
 
+static void ramdisk_get_info(mx_device_t* dev, block_info_t* info) {
+    ramdisk_device_t* ramdev = get_ramdisk(dev);
+    memset(info, 0, sizeof(*info));
+    info->block_size = ramdev->blk_size;
+    info->block_count = sizebytes(ramdev) / ramdev->blk_size;
+}
+
 static void ramdisk_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
     ramdisk_device_t* rdev = get_ramdisk(dev);
     rdev->cb = cb;
@@ -103,6 +110,7 @@ static void ramdisk_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t lengt
 
 static block_ops_t ramdisk_block_ops = {
     .set_callbacks = ramdisk_fifo_set_callbacks,
+    .get_info = ramdisk_get_info,
     .read = ramdisk_fifo_read,
     .write = ramdisk_fifo_write,
 };
@@ -129,9 +137,7 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        memset(info, 0, sizeof(*info));
-        info->block_size = ramdev->blk_size;
-        info->block_count = sizebytes(ramdev) / ramdev->blk_size;
+        ramdisk_get_info(dev, info);
         return sizeof(*info);
     }
     case IOCTL_BLOCK_RR_PART: {

@@ -63,13 +63,11 @@ static iotxn_t* find_in_free_list(uint32_t pflags, uint64_t data_size) {
     //xprintf("find_in_free_list pflags 0x%x data_size 0x%" PRIx64 "\n", pflags, data_size);
     mtx_lock(&free_list_mutex);
     list_for_every_entry (&free_list, txn, iotxn_t, node) {
-        //xprintf("find_in_free_list for_every txn %p\n", txn);
-
         // txn->pflags has IOTXN_ALLOC_CONTIGUOUS set if the txn has a contiguous VMO we allocated,
         // or zero otherwise. And the pflags passed into this function is either zero or
         // IOTXN_ALLOC_CONTIGUOUS. So here we mask txn->pflags with IOTXN_ALLOC_CONTIGUOUS
         // to compare just this bit and not get confused by IOTXN_PFLAG_FREE or other flags.
-        if (((txn->pflags & IOTXN_ALLOC_CONTIGUOUS) == pflags) && (txn->vmo_length == data_size)) {
+        if ((txn->vmo_length == data_size) && (((txn->pflags & IOTXN_ALLOC_CONTIGUOUS) == pflags) || data_size == 0)) {
             found = true;
             break;
         }

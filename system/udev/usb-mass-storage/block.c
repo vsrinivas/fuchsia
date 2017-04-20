@@ -31,6 +31,14 @@ static void ums_block_queue(mx_device_t* device, iotxn_t* txn) {
     ums_block_do_queue(dev, txn);
 }
 
+static void ums_get_info(mx_device_t* device, block_info_t* info) {
+    ums_block_t* dev = device_to_block(device);
+    memset(info, 0, sizeof(*info));
+    info->block_size = dev->block_size;
+    info->block_count = dev->total_blocks;
+    info->flags = dev->flags;
+}
+
 static ssize_t ums_block_ioctl(mx_device_t* device, uint32_t op, const void* cmd, size_t cmdlen,
                                    void* reply, size_t max) {
     ums_block_t* dev = device_to_block(device);
@@ -41,10 +49,7 @@ static ssize_t ums_block_ioctl(mx_device_t* device, uint32_t op, const void* cmd
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        memset(info, 0, sizeof(*info));
-        info->block_size = dev->block_size;
-        info->block_count = dev->total_blocks;
-        info->flags = dev->flags;
+        ums_get_info(device, info);
         return sizeof(*info);
     }
     case IOCTL_DEVICE_SYNC: {
@@ -131,6 +136,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
 
 static block_ops_t ums_block_ops = {
     .set_callbacks = ums_async_set_callbacks,
+    .get_info = ums_get_info,
     .read = ums_async_read,
     .write = ums_async_write,
 };

@@ -38,7 +38,7 @@
 #define AMD_AHCI_VID        (0x1022)
 #define AMD_FCH_AHCI_DID    (0x7801)
 
-#define TRACE 1
+#define TRACE 0
 
 #if TRACE
 #define xprintf(fmt...) printf(fmt)
@@ -264,13 +264,8 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         completion_signal(&dev->worker_completion);
         return status;
     }
-    if (txn->phys_count != 1) {
-        printf("%s scatter/gather not implemented yet\n", __FUNCTION__);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
-        completion_signal(&dev->worker_completion);
-        return ERR_INVALID_ARGS;
-    }
-    mx_paddr_t phys = iotxn_phys(txn);
+    iotxn_phys_iter_t iter;
+    iotxn_phys_iter_init(&iter, txn, AHCI_PRD_MAX_SIZE);
 
     if (dev->cap & AHCI_CAP_NCQ) {
         if (pdata->cmd == SATA_CMD_READ_DMA_EXT) {
@@ -280,21 +275,12 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         }
     }
 
-    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u data_sz=0x%lx offset=0x%lx sgl=0x%x\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, txn->length, txn->offset, sgl);
-#if 0
-    xprintf("sg:\n");
-    for (unsigned u = 0; u < sgl; u++) {
-        xprintf("  [%u]: 0x%lx len 0x%lx" PRIx64 "\n", u, sg[u].paddr, sg[u].length);
-    }
-#endif
-
     // build the command
     ahci_cl_t* cl = port->cl + slot;
     // don't clear the cl since we set up ctba/ctbau at init
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
     cl->w = cmd_is_write(pdata->cmd) ? 1 : 0;
-    cl->prdtl = 1;
     cl->prdbc = 0;
     memset(port->ct[slot], 0, sizeof(ahci_ct_t));
 
@@ -328,17 +314,37 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         cfis[13] = 0; // normal priority
     }
 
-    ahci_prd_t* prd = NULL;
-    uint64_t length = txn->length;
-    for (int i = 0; i < cl->prdtl; i++) {
-        // TODO split this transaction
-        prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t)) + i;
-        prd->dba = LO32(phys);
-        prd->dbau = HI32(phys);
-        prd->dbc = ((length - 1) & 0x3fffff); // 0-based byte count
-        phys += AHCI_PRD_MAX_SIZE;
-        length -= AHCI_PRD_MAX_SIZE;
+    cl->prdtl = 0;
+    ahci_prd_t* prd = (ahci_prd_t*)((void*)port->ct[slot] + sizeof(ahci_ct_t));
+    size_t length;
+    mx_paddr_t paddr;
+    for (;;) {
+        length = iotxn_phys_iter_next(&iter, &paddr);
+        xprintf("chunk %u length %zu\n", cl->prdtl, length);
+        if (length == 0) {
+            break;
+        } else if (length > AHCI_PRD_MAX_SIZE) {
+            printf("ahci.%d: chunk size > %zu is unsupported\n", port->nr, length);
+            status = ERR_NOT_SUPPORTED;
+            iotxn_complete(txn, status, 0);
+            completion_signal(&dev->worker_completion);
+            return status;
+        } else if (cl->prdtl == AHCI_MAX_PRDS) {
+            printf("ahci.%d: txn with more than %d chunks is unsupported\n", port->nr, cl->prdtl);
+            status = ERR_NOT_SUPPORTED;
+            iotxn_complete(txn, status, 0);
+            completion_signal(&dev->worker_completion);
+            return status;
+        }
+
+        prd->dba = LO32(paddr);
+        prd->dbau = HI32(paddr);
+        prd->dbc = ((length - 1) & (AHCI_PRD_MAX_SIZE - 1)); // 0-based byte count
+        cl->prdtl += 1;
+        prd += 1;
     }
+
+    xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u data_sz=0x%lx offset=0x%lx prdtl=%u\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, txn->length, txn->offset, cl->prdtl);
 
     port->running |= (1 << slot);
     port->commands[slot] = txn;

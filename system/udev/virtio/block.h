@@ -24,7 +24,7 @@ public:
     virtual void IrqConfigChange();
 
     uint64_t GetSize() const { return config_.capacity * config_.blk_size; }
-    uint64_t GetBlockSize() const { return config_.blk_size; }
+    uint32_t GetBlockSize() const { return config_.blk_size; }
     uint64_t GetBlockCount() const { return config_.capacity; }
 
 private:

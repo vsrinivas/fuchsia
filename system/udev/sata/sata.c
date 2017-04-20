@@ -190,6 +190,13 @@ static void sata_sync_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
+static void sata_get_info(sata_device_t* dev, block_info_t* info) {
+    memset(info, 0, sizeof(*info));
+    info->block_size = dev->sector_sz;
+    info->block_count = dev->capacity / dev->sector_sz;
+    info->max_transfer_size = AHCI_MAX_PRDS * PAGE_SIZE; // fully discontiguous
+}
+
 static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     sata_device_t* device = get_sata_device(dev);
     // TODO implement other block ioctls
@@ -198,9 +205,7 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        memset(info, 0, sizeof(*info));
-        info->block_size = device->sector_sz;
-        info->block_count = device->capacity / device->sector_sz;
+        sata_get_info(device, info);
         return sizeof(*info);
     }
     case IOCTL_BLOCK_RR_PART: {
@@ -252,7 +257,12 @@ static mx_protocol_device_t sata_device_proto = {
 static void sata_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
     sata_device_t* device = get_sata_device(dev);
     device->callbacks = cb;
-};
+}
+
+static void sata_fifo_get_info(mx_device_t* dev, block_info_t* info) {
+    sata_device_t* device = get_sata_device(dev);
+    sata_get_info(device, info);
+}
 
 static void sata_fifo_complete(iotxn_t* txn, void* cookie) {
     sata_device_t* dev;
@@ -308,6 +318,7 @@ static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
 
 static block_ops_t sata_block_ops = {
     .set_callbacks = sata_fifo_set_callbacks,
+    .get_info = sata_fifo_get_info,
     .read = sata_fifo_read,
     .write = sata_fifo_write,
 };
