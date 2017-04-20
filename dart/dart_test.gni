@@ -4,9 +4,12 @@
 
 import("//build/dart/dart_package.gni")
 
-# Defines a Dart test package
+# Defines a Dart test suite
 #
 # Parameters
+#
+#   source_dir (optional)
+#     Directory containing the test sources. Defaults to "test".
 #
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
@@ -33,18 +36,17 @@ template("dart_test") {
   template_name = target_name
 
   dart_package(template_name) {
-    forward_variables_from(invoker, [ "analysis_options", "disable_analysis" ])
+    forward_variables_from(invoker, [
+      "analysis_options",
+      "deps",
+      "disable_analysis",
+    ])
 
     infer_package_name = true
 
     source_dir = "test"
     if (defined(invoker.source_dir)) {
       source_dir = invoker.source_dir
-    }
-
-    deps = []
-    if (defined(invoker.deps)) {
-      deps = invoker.deps
     }
   }
 }

@@ -17,6 +17,9 @@
 #
 #     NOTE: Either package_name or infer_package_name must be set.
 #
+#   source_dir (optional)
+#     Directory containing the package sources. Defaults to "lib".
+#
 #   deps (optional)
 #     List of labels for Dart packages this package depends on.
 #
@@ -62,7 +65,7 @@ template("dart_package") {
 
   dot_packages_file = "$target_gen_dir/$target_name.packages"
 
-  source_dir = "."
+  source_dir = "lib"
   if (defined(invoker.source_dir)) {
     source_dir = invoker.source_dir
   }
