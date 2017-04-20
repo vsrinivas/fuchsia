@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("libwlan") {
+import("//build/config/fuchsia/rules.gni")
+
+driver_module("wlan") {
   sources = [
     "binding.c",
     "device.cpp",
@@ -23,10 +25,4 @@ static_library("libwlan") {
   ]
 
   libs = [ "driver" ]
-}
-
-shared_library("wlan") {
-  deps = [
-    ":libwlan(//build/toolchain/fuchsia:${target_cpu}-shared)",
-  ]
 }
