@@ -415,50 +415,43 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
                   const fidl::String& story_id,
                   StoryIdSet* const story_ids,
                   ControllerMap* const story_controllers,
-                  PendingDeletion* const pending_deletion,
+                  const bool already_deleted,
                   ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
         story_id_(story_id),
         story_ids_(story_ids),
         story_controllers_(story_controllers),
-        pending_deletion_(pending_deletion) {
+        already_deleted_(already_deleted) {
     Ready();
   }
 
  private:
   void Run() override {
-    if (pending_deletion_ == nullptr) {
-      Complete();
-      return;
-    }
-
     // TODO(mesch): If the order of StopForDelete() and deletion from ledger is
     // reversed, we don't need to bother with suppressing writes to the ledger
     // during StopForDelete(), which could be simpler.
 
-    // There should not be an existing pending_deletion_.
-    FTL_DCHECK(pending_deletion_->first.empty());
-    FTL_DCHECK(pending_deletion_->second == nullptr);
-    *pending_deletion_ = std::make_pair(story_id_, this);
+    if (already_deleted_) {
+      TearDown();
 
-    page_->Delete(to_array(MakeStoryKey(story_id_)),
-                  [this](ledger::Status status) {
-                    if (status != ledger::Status::OK) {
-                      FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
-                                     << " Page.Delete() " << status;
-                      // TODO(mesch): Call done here.
-                    }
-                  });
-    // Complete() is called by PageWatcher::OnChange().
+    } else {
+      page_->Delete(to_array(MakeStoryKey(story_id_)),
+                    [this](ledger::Status status) {
+                      // Deleting a key that doesn't exist is OK, not
+                      // KEY_NOT_FOUND.
+                      if (status != ledger::Status::OK) {
+                        FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
+                                       << " Page.Delete() " << status;
+                      }
+
+                      TearDown();
+                    });
+    }
   }
 
- public:
-  void Complete() {
+  void TearDown() {
     story_ids_->erase(story_id_);
-    if (pending_deletion_) {
-      *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
-    }
 
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
@@ -490,7 +483,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
   const fidl::String story_id_;
   StoryIdSet* const story_ids_;
   ControllerMap* const story_controllers_;
-  PendingDeletion* const pending_deletion_;
+  const bool already_deleted_;  // True if called from OnChange();
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
@@ -803,7 +796,8 @@ void StoryProviderImpl::CreateStoryWithInfo(
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
   new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
-                      &story_controllers_, &pending_deletion_, callback);
+                      &story_controllers_, false /* already_deleted */,
+                      callback);
 }
 
 // |StoryProvider|
@@ -877,16 +871,12 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
         to_string(key).substr(sizeof(kStoryKeyPrefix) - 1);
 
     watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
-      watcher->OnDelete(story_id);
-    });
+        watcher->OnDelete(story_id);
+      });
 
-    if (pending_deletion_.first == story_id) {
-      pending_deletion_.second->Complete();
-    } else {
-      new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
-                          &story_controllers_, nullptr /* pending_deletion */,
-                          [] {});
-    }
+    new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+                        &story_controllers_, true /* already_deleted */,
+                        [] {});
   }
 
   // Every time we receive a group of OnChange notifications, we update the

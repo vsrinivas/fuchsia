@@ -183,17 +183,6 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   class GetControllerCall;
   class PreviousStoriesCall;
 
-  // Represents a delete operation that was started via DeleteStory()
-  // and is awaiting the corresponding PageWatcher::OnChange() call
-  // before the operation is Done(). Because operations run in a
-  // queue, there can be at most one DeleteStoryCall operation pending
-  // at a time at a time.
-  //
-  // Delete operations taking place on remote devices can still
-  // trigger a new delete operation (but those are queued after each
-  // other).
-  std::pair<std::string, DeleteStoryCall*> pending_deletion_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };
 
