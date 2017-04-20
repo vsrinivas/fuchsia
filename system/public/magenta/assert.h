@@ -20,10 +20,10 @@
 #define MX_DEBUGLEVEL LK_DEBUGLEVEL
 
 #else   // #ifdef _KERNEL
-__BEGIN_CDECLS
-extern int printf(const char*, ...) __PRINTFLIKE(1, 2);
-extern void abort(void);
-__END_CDECLS
+
+#include <stdio.h>  // for printf
+#include <stdlib.h> // for abort
+
 #define MX_PANIC(fmt, ...)           \
     do {                             \
         printf(fmt, ##__VA_ARGS__);  \
