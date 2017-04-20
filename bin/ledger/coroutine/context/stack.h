@@ -30,6 +30,7 @@ class Stack {
 
  private:
   friend void MakeContext(context::Context*, Stack*, void (*)(void*), void*);
+  friend char* GetUnsafeStackForTest(const Stack&);
 
   uintptr_t safe_stack() const { return safe_stack_; }
   uintptr_t unsafe_stack() const { return unsafe_stack_; };

@@ -45,7 +45,7 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FTL_DCHECK(status == NO_ERROR);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
-  AllocateStack(vmo_, 0, stack_size_, &unsafe_stack_mapping_, &unsafe_stack_);
+  AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_, &unsafe_stack_);
 
   FTL_DCHECK(safe_stack_);
   FTL_DCHECK(unsafe_stack_);

@@ -6,6 +6,8 @@
 
 #include "lib/ftl/logging.h"
 
+static_assert(__has_feature(safe_stack), "Context code must be compiled with safe stack");
+
 namespace context {
 
 void SwapContext(Context* out_context, Context* in_context) {

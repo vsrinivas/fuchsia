@@ -33,7 +33,8 @@ config("ledger_config") {
   safe_stack_flags = [
     # The coroutine code needs to be correct both with and without safe stack. Keeping this here
     # to easily check until safe stack is enabled globally on fuchsia.
-    # "-fsanitize=safe-stack",
+    "-fsanitize=safe-stack",
+    "-fstack-protector-strong",
   ]
 
   asmflags = safe_stack_flags

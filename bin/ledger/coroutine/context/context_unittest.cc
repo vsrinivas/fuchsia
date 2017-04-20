@@ -4,10 +4,16 @@
 
 #include "apps/ledger/src/coroutine/context/context.h"
 
+#include <string.h>
+
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
 
 namespace context {
+
+char* GetUnsafeStackForTest(const Stack& stack) {
+  return reinterpret_cast<char*>(stack.unsafe_stack());
+}
 
 namespace {
 
@@ -73,7 +79,6 @@ TEST(Context, MakeContext) {
   EXPECT_EQ(10, va_args_result);
 }
 
-#if __has_feature(safe_stack)
 void TrashStack(void* context) {
   char buffer[1024];
   for (size_t i = 0; i < 6; ++i) {
@@ -85,7 +90,7 @@ void TrashStack(void* context) {
 
 TEST(Context, MakeContextUnsafeStack) {
   Stack stack;
-  memset(stack.unsafe_stack(), 0, stack.stack_size());
+  memset(GetUnsafeStackForTest(stack), 0, stack.stack_size());
 
   Context new_context;
   Context old_context;
@@ -96,13 +101,73 @@ TEST(Context, MakeContextUnsafeStack) {
   SwapContext(&old_context, &new_context);
 
   bool found = false;
-  char* ptr = reinterpret_cast<char*>(stack.unsafe_stack());
+  char* ptr = GetUnsafeStackForTest(stack);
   for (size_t i = 0; i < stack.stack_size(); ++i) {
     found = found || *(ptr + i);
   }
   EXPECT_TRUE(found);
 }
-#endif
+
+struct ThreadLocalContext {
+  static thread_local char* thread_local_ptr;
+
+  char* ptr = nullptr;
+  Context old_context;
+};
+
+thread_local char* ThreadLocalContext::thread_local_ptr = nullptr;
+
+void GetThreadLocalPointer(void* context) {
+  auto thread_local_context = reinterpret_cast<ThreadLocalContext*>(context);
+  thread_local_context->ptr = ThreadLocalContext::thread_local_ptr;
+  SetContext(&thread_local_context->old_context);
+}
+
+TEST(Context, ThreadLocal) {
+  Stack stack;
+  ThreadLocalContext context;
+
+  char c = 'a';
+  ThreadLocalContext::thread_local_ptr = &c;
+
+  Context new_context;
+
+  EXPECT_TRUE(GetContext(&new_context));
+  MakeContext(&new_context, &stack, &GetThreadLocalPointer, &context);
+
+  SwapContext(&context.old_context, &new_context);
+
+  EXPECT_EQ(&c, context.ptr);
+}
+
+__NO_SAFESTACK intptr_t GetSafeStackPointer() {
+  char a = 0;
+  return reinterpret_cast<intptr_t>(&a);
+}
+
+void CheckDistinctStack(void* context) {
+  char buff[1];
+  memset(buff, 0, sizeof(buff));
+  // buff is on the unsafe stack, GetSafeStackPointer() returns a value on the
+  // safe stack. This checks that the address of the 2 stacks are separated at
+  // least by 2 PAGE_SIZE, given that each stack has a guard.
+  EXPECT_GE(std::abs(reinterpret_cast<intptr_t>(buff) - GetSafeStackPointer()),
+            2 * PAGE_SIZE);
+
+  SetContext(reinterpret_cast<Context*>(context));
+}
+
+TEST(Context, CheckStacksAreDifferent) {
+  Stack stack;
+
+  Context new_context;
+  Context old_context;
+
+  EXPECT_TRUE(GetContext(&new_context));
+  MakeContext(&new_context, &stack, &CheckDistinctStack, &old_context);
+
+  SwapContext(&old_context, &new_context);
+}
 
 }  // namespace
 }  // namespace context
