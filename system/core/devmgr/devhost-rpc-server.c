@@ -94,18 +94,38 @@ done:
         obj.type = MXIO_PROTOCOL_REMOTE;
         obj.hcount = r;
     }
-    // Response is written to the provided handle.
-    // If that fails there's no further useful action we can take
-    // (it should only fail when the caller closes its side first
-    // in which case it is no longer around to hear about a failure).
-    mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE, obj.handle, obj.hcount);
+    r = mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE,
+                         obj.handle, obj.hcount);
 
-    if (r < 0) {
+    // If we were reporting an error, we've already closed
+    // the device and destroyed the iostate, so no matter
+    // what we close the handle and return
+    if (obj.status < 0) {
         mx_handle_close(rh);
-        return r;
+        return obj.status;
     }
-    mxio_dispatcher_add(devhost_rio_dispatcher, rh, devhost_rio_handler, newios);
+
+    // If we succeeded but the write failed, we have to
+    // tear down because the channel is now dead
+    if (r < 0) {
+        goto fail3;
+    }
+
+    // Similarly, if we can't add the new ios and handle to the
+    // dispatcher our only option is to give up and tear down.
+    // In practice, this should never happen.
+    if ((r = devhost_start_iostate(newios, rh)) < 0) {
+        printf("devhost_get_handles: failed to start iostate\n");
+        goto fail3;
+    }
+
     return NO_ERROR;
+
+fail3:
+    device_close(dev, flags);
+    free(newios);
+    mx_handle_close(rh);
+    return r;
 }
 
 void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
