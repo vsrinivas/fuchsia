@@ -62,6 +62,12 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
     if ((newios = create_devhost_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
+
+    // detect pipeline directive and discard all other
+    // protocol flags
+    bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
+    flags &= (~MXRIO_OFLAG_MASK);
+
     newios->flags = flags;
 
     if ((r = device_openat(dev, &dev, path, flags)) < 0) {
@@ -71,44 +77,46 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
     }
     newios->dev = dev;
 
-    if (dev->event > 0) {
-        //TODO: read only?
-        if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &obj.handle[0])) < 0) {
-            goto fail2;
+    if (!pipeline) {
+        if (dev->event > 0) {
+            //TODO: read only?
+            if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &obj.handle[0])) < 0) {
+                goto fail2;
+            }
+            r = 1;
+        } else {
+            r = 0;
         }
-        r = 1;
-    } else {
-        r = 0;
-    }
-    goto done;
+        goto done;
 fail2:
-    device_close(dev, flags);
+        device_close(dev, flags);
 fail1:
-    free(newios);
+        free(newios);
 done:
-    if (r < 0) {
-        obj.status = r;
-        obj.hcount = 0;
-    } else {
-        obj.status = NO_ERROR;
-        obj.type = MXIO_PROTOCOL_REMOTE;
-        obj.hcount = r;
-    }
-    r = mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE,
-                         obj.handle, obj.hcount);
+        if (r < 0) {
+            obj.status = r;
+            obj.hcount = 0;
+        } else {
+            obj.status = NO_ERROR;
+            obj.type = MXIO_PROTOCOL_REMOTE;
+            obj.hcount = r;
+        }
+        r = mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE,
+                             obj.handle, obj.hcount);
 
-    // If we were reporting an error, we've already closed
-    // the device and destroyed the iostate, so no matter
-    // what we close the handle and return
-    if (obj.status < 0) {
-        mx_handle_close(rh);
-        return obj.status;
-    }
+        // If we were reporting an error, we've already closed
+        // the device and destroyed the iostate, so no matter
+        // what we close the handle and return
+        if (obj.status < 0) {
+            mx_handle_close(rh);
+            return obj.status;
+        }
 
-    // If we succeeded but the write failed, we have to
-    // tear down because the channel is now dead
-    if (r < 0) {
-        goto fail3;
+        // If we succeeded but the write failed, we have to
+        // tear down because the channel is now dead
+        if (r < 0) {
+            goto fail3;
+        }
     }
 
     // Similarly, if we can't add the new ios and handle to the
