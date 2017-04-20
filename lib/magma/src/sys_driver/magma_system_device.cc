@@ -32,7 +32,8 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
 {
     std::unique_lock<std::mutex> lock(page_flip_mutex_);
 
-    msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, 0, 0, nullptr);
+    if (buf)
+        msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, 0, 0, nullptr);
 
     DLOG("PageFlipAndEnable enable %d", enable);
     page_flip_enable_ = enable;
