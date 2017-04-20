@@ -124,55 +124,37 @@ void put_rwbuf(rwbuf_t* bufp) {
   rwbuf_head = bufp;
 }
 
-static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_rio_h,
+static mx_status_t create_handles(iostate_t* ios, mx_handle_t rio_h,
                                   mx_handle_t* peer_data_h, int* hcount) {
-  mx_handle_t rio_h[2];
   mx_status_t r;
-
-  if ((r = mx_channel_create(0u, &rio_h[0], &rio_h[1])) < 0)
-    goto fail_channel_create;
 
   mx_handle_t data_h[2];
   if (ios->handle_type == HANDLE_TYPE_STREAM) {
-    if ((r = mx_socket_create(0u, &data_h[0], &data_h[1])) < 0)
-      goto fail_data_h_create;
-    *hcount = 2;
+    if ((r = mx_socket_create(0u, &data_h[0], &data_h[1])) < 0) {
+      return r;
+    }
+    *hcount = 1;
   } else if (ios->handle_type == HANDLE_TYPE_DGRAM) {
-    if ((r = mx_channel_create(0u, &data_h[0], &data_h[1])) < 0)
-      goto fail_data_h_create;
-    *hcount = 2;
+    if ((r = mx_channel_create(0u, &data_h[0], &data_h[1])) < 0) {
+      return r;
+    }
+    *hcount = 1;
   } else {
     // HANDLE_TYPE_NONE
     data_h[0] = data_h[1] = MX_HANDLE_INVALID;
-    *hcount = 1;
+    *hcount = 0;
   }
 
   ios->data_h = data_h[0];
-
-  // The dispatcher will own and close the handle if the other end
-  // is closed (it also disconnects the handler automatically)
-  if ((r = dispatcher_add(rio_h[0], ios)) < 0) goto fail_watcher_add;
 
   if (ios->data_h != MX_HANDLE_INVALID) {
     // increment the refcount for ios->data_h
     iostate_acquire(ios);
   }
 
-  *peer_rio_h = rio_h[1];
   *peer_data_h = data_h[1];
+
   return NO_ERROR;
-
-fail_watcher_add:
-  ios->data_h = MX_HANDLE_INVALID;
-  mx_handle_close(data_h[0]);
-  mx_handle_close(data_h[1]);
-
-fail_data_h_create:
-  mx_handle_close(rio_h[0]);
-  mx_handle_close(rio_h[1]);
-
-fail_channel_create:
-  return r;
 }
 
 static mx_status_t errno_to_status(int errno_) {
@@ -231,13 +213,13 @@ static const char* match_subdir(const char* path, const char* name,
 #define MATCH_SUBDIR(path, name) match_subdir(path, name, sizeof(name) - 1)
 
 mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
-                    mx_signals_t signals, mx_handle_t* peer_rio_h,
+                    mx_signals_t signals, iostate_t** ios_new,
                     mx_handle_t* peer_data_h, int* hcount);
 mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_signals_t signals, iostate_t** ios_new,
                       mx_handle_t* peer_data_h, int* hcount);
 mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_signals_t signals, iostate_t** ios_new,
                       mx_handle_t* peer_data_h, int* hcount);
 
 mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
@@ -245,7 +227,6 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
   debug("do_open: msg->datalen=%d\n", msg->datalen);
 
   mx_status_t r = NO_ERROR;
-  mx_handle_t peer_rio_h = MX_HANDLE_INVALID;
   mx_handle_t peer_data_h = MX_HANDLE_INVALID;
   int hcount = 0;
 
@@ -258,13 +239,12 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
   debug("do_open: path \"%s\"\n", path);
 
   if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_NONE)) {
-    r = do_none(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
-                &hcount);
+    r = do_none(msg, ios, events, MX_SIGNAL_NONE, &ios, &peer_data_h, &hcount);
   } else if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_SOCKET)) {
-    r = do_socket(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
+    r = do_socket(msg, ios, events, MX_SIGNAL_NONE, &ios, &peer_data_h,
                   &hcount);
   } else if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_ACCEPT)) {
-    r = do_accept(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
+    r = do_accept(msg, ios, events, MX_SIGNAL_NONE, &ios, &peer_data_h,
                   &hcount);
   } else {
     debug("invalid path: %s\n", path);
@@ -272,29 +252,35 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
  reply:
-  debug("do_open: r=%d peer_rio_h=%d peer_data_h=%d hcount=%d\n", r, peer_rio_h,
-        peer_data_h, hcount);
+  debug("do_open: r=%d peer_data_h=%d hcount=%d\n", r, peer_data_h, hcount);
 
   // mxrio_object
   struct {
     mx_status_t status;
     uint32_t type;
   } reply = {r, MXIO_PROTOCOL_SOCKET};
-  mx_handle_t handles[2] = {peer_rio_h, peer_data_h};
+  mx_handle_t handles[1] = {peer_data_h};
   mx_channel_write(msg->handle[0], 0, &reply, sizeof(reply), handles, hcount);
-  mx_handle_close(msg->handle[0]);
 
-  return NO_ERROR;
+  if (r == NO_ERROR) {
+    // The dispatcher will own and close the handle if the other end
+    // is closed (it also disconnects the handler automatically)
+    if ((r = dispatcher_add(msg->handle[0], ios)) < 0) {
+      iostate_release(ios);
+      mx_handle_close(msg->handle[0]);
+    }
+  }
+  return r;
 }
 
 mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
-                    mx_signals_t signals, mx_handle_t* peer_rio_h,
+                    mx_signals_t signals, iostate_t** ios_new,
                     mx_handle_t* peer_data_h, int* hcount) {
   ios = iostate_alloc();  // override
   ios->handle_type = HANDLE_TYPE_NONE;
 
   // ios->data_h is set inside create_handles()
-  mx_status_t r = create_handles(ios, peer_rio_h, peer_data_h, hcount);
+  mx_status_t r = create_handles(ios, msg->handle[0], peer_data_h, hcount);
   if (r < 0) {
     error("do_none: create_handles failed (status=%d)\n", r);
     iostate_release(ios);
@@ -303,11 +289,12 @@ mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
   debug_alloc("do_none: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
               ios->data_h);
 
+  *ios_new = ios;
   return NO_ERROR;
 }
 
 mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_signals_t signals, iostate_t** ios_new,
                       mx_handle_t* peer_data_h, int* hcount) {
   const char* ptr = MATCH_SUBDIR((char*)msg->data, MXRIO_SOCKET_DIR_SOCKET);
   if (ptr == NULL) return ERR_INVALID_ARGS;
@@ -348,7 +335,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
   // ios->data_h is set inside create_handles()
-  mx_status_t r = create_handles(ios, peer_rio_h, peer_data_h, hcount);
+  mx_status_t r = create_handles(ios, msg->handle[0], peer_data_h, hcount);
   if (r < 0) {
     error("do_socket: create_handles failed (status=%d)\n", r);
     iostate_release(ios);
@@ -363,6 +350,8 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (ios->handle_type == HANDLE_TYPE_DGRAM) {
     schedule_w(ios);
   }
+
+  *ios_new = ios;
   return NO_ERROR;
 }
 
@@ -483,7 +472,7 @@ mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
 }
 
 mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_signals_t signals, iostate_t** ios_new_,
                       mx_handle_t* peer_data_h, int* hcount) {
   // we don't return the connected addr at this point.
   // the client will call getpeername later.
@@ -517,7 +506,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_status_t r = create_handles(ios_new, peer_rio_h, peer_data_h, hcount);
+  mx_status_t r = create_handles(ios_new, msg->handle[0], peer_data_h, hcount);
   if (r < 0) {
     error("do_accept: create_handles failed (status=%d)\n", r);
     iostate_release(ios_new);
@@ -531,6 +520,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
 
   schedule_rw(ios_new);
 
+  *ios_new_ = ios_new;
   return NO_ERROR;
 }
 
