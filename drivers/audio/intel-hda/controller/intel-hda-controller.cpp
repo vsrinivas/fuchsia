@@ -212,10 +212,12 @@ mx_status_t IntelHDAController::DeviceRelease() {
     return NO_ERROR;
 }
 
-mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel& channel,
+mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
                                                      const RequestBufferType& req,
                                                      uint32_t req_size,
                                                      mx::handle&& rxed_handle) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
@@ -252,7 +254,7 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel& channel,
         resp.rev_id    = 0;
         resp.step_id   = 0;
 
-        return channel.Write(&resp, sizeof(resp));
+        return channel->Write(&resp, sizeof(resp));
     }
 
     case IHDA_CONTROLLER_CMD_SNAPSHOT_REGS:
@@ -262,7 +264,7 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel& channel,
             return ERR_INVALID_ARGS;
         }
 
-        return SnapshotRegs(channel, req.snapshot_regs);
+        return SnapshotRegs(*channel, req.snapshot_regs);
 
     default:
         return ERR_INVALID_ARGS;

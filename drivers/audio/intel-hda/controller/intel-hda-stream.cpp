@@ -184,16 +184,18 @@ case _ioctl:                                        \
         return ERR_INVALID_ARGS;                    \
     }                                               \
     return _handler(req._payload)
-mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel& channel,
+mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
                                                  const RequestBufferType& req,
                                                  uint32_t req_size,
                                                  mx::handle&& rxed_handle) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     // Is this request from our currently active channel?  If not, make sure the
     // channel has been de-activated and ignore the request.
     mxtl::AutoLock channel_lock(&channel_lock_);
 
-    if (channel_.get() != &channel) {
-        channel.Deactivate(false);
+    if (channel_.get() != channel) {
+        channel->Deactivate(false);
         return NO_ERROR;
     }
 

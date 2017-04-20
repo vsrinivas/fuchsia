@@ -272,14 +272,16 @@ case _ioctl:                                                    \
     }                                                           \
     return _handler(channel, req._payload)
 
-mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
                                                 const RequestBufferType& full_req,
                                                 uint32_t req_size,
                                                 mx::handle&& rxed_handle) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     // Is this a request from a Stream channel?  If so, send it off to the
     // stream for processing (assuming that the stream still exists)
     bool is_stream_channel;
-    auto stream = GetStreamForChannel(channel, &is_stream_channel);
+    auto stream = GetStreamForChannel(*channel, &is_stream_channel);
     if (is_stream_channel) {
         if (stream != nullptr) {
             return stream->ProcessClientRequest(channel,
@@ -331,8 +333,10 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel& channel,
 
 #undef PROCESS_CMD
 
-mx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel* channel,
                                          const ihda_proto::GetIDsReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     ihda_proto::GetIDsResp resp;
     mx_status_t res;
     const auto d = &dev_node_;
@@ -347,11 +351,13 @@ mx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel& channel,
 
     resp.hdr = req.hdr;
 
-    return channel.Write(&resp, sizeof(resp));
+    return channel->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
                                               const ihda_proto::SendCORBCmdReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     CodecVerb verb(req.verb);
 
     // Make sure that the command is well formed.
@@ -362,7 +368,7 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel& channel,
     }
 
     // Only the dedicated driver channel is permitted to execute set verbs.
-    if (verb.is_set() && (channel.owner_ctx() != DRIVER_CHANNEL_ID)) {
+    if (verb.is_set() && (channel->owner_ctx() != DRIVER_CHANNEL_ID)) {
         DEBUG_LOG("SET verbs not allowed from unprivledged connections! [%u, %hu, 0x%05x]\n",
                 id(), req.nid, verb.val);
         return ERR_ACCESS_DENIED;
@@ -370,7 +376,7 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel& channel,
 
     mxtl::RefPtr<DispatcherChannel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
                                              ? nullptr
-                                             : mxtl::WrapRefPtr(&channel);
+                                             : mxtl::WrapRefPtr(channel);
 
     auto job = CodecCmdJobAllocator::New(mxtl::move(chan_ref),
                                          req.hdr.transaction_id,
@@ -388,10 +394,12 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel& channel,
     return res;
 }
 
-mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
                                                 const ihda_proto::RequestStreamReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     // Only the dedicated driver channel is permitted to request DMA streams.
-    if (channel.owner_ctx() != DRIVER_CHANNEL_ID) {
+    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
         return ERR_ACCESS_DENIED;
     }
@@ -421,13 +429,15 @@ mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel& channel,
         resp.stream_tag = 0;
     }
 
-    return channel.Write(&resp, sizeof(resp));
+    return channel->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
                                                 const ihda_proto::ReleaseStreamReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     // Only the dedicated driver channel is permitted to release DMA streams.
-    if (channel.owner_ctx() != DRIVER_CHANNEL_ID) {
+    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
         return ERR_ACCESS_DENIED;
     }
@@ -454,13 +464,15 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel& channel,
 
     ihda_proto::RequestStreamResp resp;
     resp.hdr = req.hdr;
-    return channel.Write(&resp, sizeof(resp));
+    return channel->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel& channel,
+mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
                                                const ihda_proto::SetStreamFmtReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+
     // Only the dedicated driver channel is permitted to release DMA streams.
-    if (channel.owner_ctx() != DRIVER_CHANNEL_ID) {
+    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
         DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
         return ERR_ACCESS_DENIED;
     }
@@ -518,7 +530,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel& channel,
     MX_DEBUG_ASSERT(client_channel.is_valid());
     ihda_proto::SetStreamFmtResp resp;
     resp.hdr = req.hdr;
-    res = channel.Write(&resp, sizeof(resp), mxtl::move(client_channel));
+    res = channel->Write(&resp, sizeof(resp), mxtl::move(client_channel));
 
     if (res != NO_ERROR)
         DEBUG_LOG("Failed to send stream channel back to codec driver (res %d)\n", res);

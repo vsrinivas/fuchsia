@@ -118,7 +118,7 @@ private:
 
     // Implementation of IntelHDADevice<> callback.
     friend class IntelHDADevice<IntelHDAController>;
-    mx_status_t ProcessClientRequest(DispatcherChannel& channel,
+    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
                                      mx::handle&& rxed_handle)
