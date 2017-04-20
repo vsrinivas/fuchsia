@@ -29,7 +29,7 @@ class AppState extends State<App> {
   final AppLauncher _appLauncher;
   EscherDemoProxy _escherDemo = null;
 
-  Point _lastPoint = null;
+  Offset _lastPoint = null;
   int _touchId = 0;
 
   AppState(this._appLauncher);
@@ -64,18 +64,18 @@ class AppState extends State<App> {
     assert(_lastPoint == null);
     _touchId += 1;
     _lastPoint = details.globalPosition * 2.0;
-    _escherDemo.handleTouchBegin(_touchId, _lastPoint.x, _lastPoint.y);
+    _escherDemo.handleTouchBegin(_touchId, _lastPoint.dx, _lastPoint.dy);
   }
 
   void onPanUpdate(DragUpdateDetails details) {
     assert(_lastPoint != null);
     _lastPoint = details.globalPosition * 2.0;
-    _escherDemo.handleTouchContinue(_touchId, _lastPoint.x, _lastPoint.y);
+    _escherDemo.handleTouchContinue(_touchId, _lastPoint.dx, _lastPoint.dy);
   }
 
   void onPanEnd(DragEndDetails details) {
     assert(_lastPoint != null);
-    _escherDemo.handleTouchEnd(_touchId, _lastPoint.x, _lastPoint.y);
+    _escherDemo.handleTouchEnd(_touchId, _lastPoint.dx, _lastPoint.dy);
     _lastPoint = null;
   }
 
