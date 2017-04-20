@@ -26,6 +26,9 @@
     } while (0)
 #endif
 
+// Warn if free list length exceeds a multiple of FREE_LIST_MONITOR_LIMIT
+#define FREE_LIST_MONITOR_LIMIT 100
+
 #define IOTXN_PFLAG_CONTIGUOUS (1 << 0)   // the vmo is contiguous
 #define IOTXN_PFLAG_ALLOC      (1 << 1)   // the vmo is allocated by us
 #define IOTXN_PFLAG_PHYSMAP    (1 << 2)   // we performed physmap() on this vmo
@@ -34,6 +37,10 @@
 
 static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
 static mtx_t free_list_mutex = MTX_INIT;
+#if FREE_LIST_MONITOR_LIMIT
+static size_t free_list_length = 0;
+static size_t free_list_monitor_warned = 0;
+#endif
 
 // This assert will fail if we attempt to access the buffer of a cloned txn after it has been completed
 #define ASSERT_BUFFER_VALID(priv) MX_DEBUG_ASSERT(!(priv->flags & IOTXN_FLAG_DEAD))
@@ -57,7 +64,12 @@ static iotxn_t* find_in_free_list(uint32_t pflags, uint64_t data_size) {
     mtx_lock(&free_list_mutex);
     list_for_every_entry (&free_list, txn, iotxn_t, node) {
         //xprintf("find_in_free_list for_every txn %p\n", txn);
-        if ((txn->pflags & pflags) && (txn->vmo_length == data_size)) {
+
+        // txn->pflags has IOTXN_ALLOC_CONTIGUOUS set if the txn has a contiguous VMO we allocated,
+        // or zero otherwise. And the pflags passed into this function is either zero or
+        // IOTXN_ALLOC_CONTIGUOUS. So here we mask txn->pflags with IOTXN_ALLOC_CONTIGUOUS
+        // to compare just this bit and not get confused by IOTXN_PFLAG_FREE or other flags.
+        if (((txn->pflags & IOTXN_ALLOC_CONTIGUOUS) == pflags) && (txn->vmo_length == data_size)) {
             found = true;
             break;
         }
@@ -65,6 +77,9 @@ static iotxn_t* find_in_free_list(uint32_t pflags, uint64_t data_size) {
     if (found) {
         txn->pflags &= ~IOTXN_PFLAG_FREE;
         list_delete(&txn->node);
+#if FREE_LIST_MONITOR_LIMIT
+        free_list_length--;
+#endif
     }
     mtx_unlock(&free_list_mutex);
     //xprintf("find_in_free_list found %d txn %p\n", found, txn);
@@ -111,6 +126,14 @@ static void iotxn_release_free_list(iotxn_t* txn) {
 
     mtx_lock(&free_list_mutex);
     list_add_head(&free_list, &txn->node);
+#if FREE_LIST_MONITOR_LIMIT
+    free_list_length++;
+    if (free_list_length % FREE_LIST_MONITOR_LIMIT == 0
+        && free_list_length > free_list_monitor_warned) {
+        printf("WARNING: iotxn free_list_length is %zu\n", free_list_length);
+        free_list_monitor_warned = free_list_length;
+    }
+#endif
     mtx_unlock(&free_list_mutex);
 
     xprintf("iotxn_release_free_list released txn %p\n", txn);
@@ -269,15 +292,11 @@ mx_status_t iotxn_mmap(iotxn_t* txn, void** data) {
 
 mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out) {
     xprintf("iotxn_clone txn %p\n", txn);
-    // look in clone list first
-    // TODO if out is set, init into out
-    // need to check the contiguous flag because they have preallocated space
-    // for phys
     iotxn_t* clone = NULL;
     if (*out != NULL) {
         clone = *out;
     } else {
-        clone = find_in_free_list(txn->pflags & IOTXN_PFLAG_CONTIGUOUS, 0);
+        clone = find_in_free_list(0, 0);
         if (clone == NULL) {
             clone = calloc(1, sizeof(iotxn_t));
             if (clone == NULL) {
