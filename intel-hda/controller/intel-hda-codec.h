@@ -125,25 +125,25 @@ private:
     // Implementation of IntelHDADevice<> callback and codec specific request
     // processors.
     friend class IntelHDADevice<IntelHDACodec>;
-    mx_status_t ProcessClientRequest(DispatcherChannel& channel,
+    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
                                      mx::handle&& rxed_handle)
         TA_REQ(process_lock());
 
-    mx_status_t ProcessGetIDs(DispatcherChannel& channel,
+    mx_status_t ProcessGetIDs(DispatcherChannel* channel,
                               const ihda_proto::GetIDsReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessSendCORBCmd(DispatcherChannel& channel,
+    mx_status_t ProcessSendCORBCmd(DispatcherChannel* channel,
                                    const ihda_proto::SendCORBCmdReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessRequestStream(DispatcherChannel& channel,
+    mx_status_t ProcessRequestStream(DispatcherChannel* channel,
                                      const ihda_proto::RequestStreamReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessReleaseStream(DispatcherChannel& channel,
+    mx_status_t ProcessReleaseStream(DispatcherChannel* channel,
                                      const ihda_proto::ReleaseStreamReq& req)
         TA_REQ(process_lock());
-    mx_status_t ProcessSetStreamFmt(DispatcherChannel& channel,
+    mx_status_t ProcessSetStreamFmt(DispatcherChannel* channel,
                                     const ihda_proto::SetStreamFmtReq& req)
         TA_REQ(process_lock());
 

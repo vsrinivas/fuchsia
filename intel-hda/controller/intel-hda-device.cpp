@@ -83,7 +83,7 @@ mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channe
             static_assert(mxtl::is_base_of<IntelHDADevice<DeviceType>, DeviceType>::value,
                           "DeviceType must derive from IntelHDADevice<DeviceType>");
 
-            res = static_cast<DeviceType*>(this)->ProcessClientRequest(*channel,
+            res = static_cast<DeviceType*>(this)->ProcessClientRequest(channel,
                                                                        request_buffer,
                                                                        bytes,
                                                                        mxtl::move(handle));

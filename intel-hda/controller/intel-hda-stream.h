@@ -65,7 +65,7 @@ public:
     void Deactivate() TA_EXCL(channel_lock_);
     void OnChannelClosed(const DispatcherChannel& channel) TA_EXCL(channel_lock_);
 
-    mx_status_t ProcessClientRequest(DispatcherChannel& channel,
+    mx_status_t ProcessClientRequest(DispatcherChannel* channel,
                                      const RequestBufferType& req,
                                      uint32_t req_size,
                                      mx::handle&& rxed_handle) TA_EXCL(channel_lock_);
