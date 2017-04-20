@@ -36,11 +36,6 @@ public:
         return mx_port_wait(get(), deadline, packet, size);
     }
 
-    mx_status_t bind(uint64_t key, mx_handle_t source,
-                     mx_signals_t signals) const {
-        return mx_port_bind(get(), key, source, signals);
-    }
-
     mx_status_t cancel(mx_handle_t source, uint64_t key) const {
         return mx_port_cancel(get(), source, key);
     }

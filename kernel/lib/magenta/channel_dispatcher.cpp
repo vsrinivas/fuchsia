@@ -17,7 +17,6 @@
 
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
-#include <magenta/port_client.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/rights.h>
 #include <magenta/user_thread.h>
@@ -123,9 +122,6 @@ void ChannelDispatcher::OnPeerZeroHandles() {
     AutoLock lock(&lock_);
     other_.reset();
     state_tracker_.UpdateState(MX_CHANNEL_WRITABLE, MX_CHANNEL_PEER_CLOSED);
-    if (iopc_)
-        iopc_->Signal(MX_CHANNEL_PEER_CLOSED, &lock_);
-
     // (3B) Abort any waiting Call operations
     // because we've been canceled by reason
     // of the opposing endpoint going away.
@@ -268,7 +264,6 @@ int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    auto size = msg->data_size();
 
     if (!waiters_.is_empty()) {
         // If the far side is waiting for replies to messages
@@ -288,29 +283,7 @@ int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     messages_.push_back(mxtl::move(msg));
 
     state_tracker_.UpdateState(0u, MX_CHANNEL_READABLE);
-    if (iopc_)
-        iopc_->Signal(MX_CHANNEL_READABLE, size, &lock_);
     return 0;
-}
-
-status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    canary_.Assert();
-
-    AutoLock lock(&lock_);
-    if (iopc_)
-        return MX_ERR_BAD_STATE;
-
-    if ((client->get_trigger_signals() & ~(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) != 0)
-        return MX_ERR_INVALID_ARGS;
-
-    iopc_ = mxtl::move(client);
-
-    // Replay the messages that are pending.
-    for (auto& msg : messages_) {
-        iopc_->Signal(MX_CHANNEL_READABLE, msg.data_size(), &lock_);
-    }
-
-    return MX_OK;
 }
 
 status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
@@ -339,15 +312,6 @@ status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
     canary_.Assert();
 
     AutoLock lock(&lock_);
-
-    if (iopc_) {
-        auto satisfied = state_tracker_.GetSignalsState();
-        auto changed = ~satisfied & set_mask;
-
-        if (changed)
-            iopc_->Signal(changed, 0u, &lock_);
-    }
-
     state_tracker_.UpdateState(clear_mask, set_mask);
     return MX_OK;
 }

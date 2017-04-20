@@ -21,14 +21,10 @@
 #include <kernel/vm/vm_object_paged.h>
 
 #include <magenta/handle.h>
-#include <magenta/port_client.h>
 #include <magenta/rights.h>
 #include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
-
-constexpr mx_signals_t kValidSignalMask =
-    MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_USER_SIGNAL_ALL;
 
 size_t SocketDispatcher::MBuf::rem() const {
     return kMBufDataSize - (off_ + len_);
@@ -117,8 +113,6 @@ void SocketDispatcher::OnPeerZeroHandles() {
     AutoLock lock(&lock_);
     other_.reset();
     state_tracker_.UpdateState(MX_SOCKET_WRITABLE, MX_SOCKET_PEER_CLOSED);
-    if (iopc_)
-        iopc_->Signal(MX_SOCKET_PEER_CLOSED, &lock_);
 }
 
 status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
@@ -147,33 +141,7 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    auto satisfied = state_tracker_.GetSignalsState();
-    auto changed = ~satisfied & set_mask;
-
-    if (changed) {
-        if (iopc_)
-            iopc_->Signal(changed, 0u, &lock_);
-    }
-
     state_tracker_.UpdateState(clear_mask, set_mask);
-    return MX_OK;
-}
-
-status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    canary_.Assert();
-
-    if ((client->get_trigger_signals() & ~kValidSignalMask) != 0)
-        return MX_ERR_INVALID_ARGS;
-
-    AutoLock lock(&lock_);
-    if (iopc_)
-        return MX_ERR_BAD_STATE;
-
-    iopc_ = mxtl::move(client);
-
-    if (!is_empty())
-        iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
-
     return MX_OK;
 }
 
@@ -251,8 +219,6 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     if (st > 0) {
         if (was_empty)
             state_tracker_.UpdateState(0u, MX_SOCKET_READABLE);
-        if (iopc_)
-            iopc_->Signal(MX_SOCKET_READABLE, st, &lock_);
     }
 
     if (is_full())

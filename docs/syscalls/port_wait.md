@@ -44,20 +44,6 @@ typedef struct mx_packet_header {
 
 ```
 
-If using **port_bind**() the dequeued packet is of type **mx_io_packet_t**
-with *hdr.type* set to **MX_PORT_PKT_TYPE_IOSN**.
-
-```
-typedef struct mx_io_packet {
-    mx_packet_header_t hdr;
-    mx_time_t timestamp;
-    size_t bytes;
-    mx_signals_t signals;
-    uint32_t reserved;
-} mx_io_packet_t;
-
-```
-
 The *key* field in the packet header is the *key* that was in the packet as send
 via **mx_port_queue**(), or the *key* that was provided to **mx_port_bind**()
 when the binding was made.

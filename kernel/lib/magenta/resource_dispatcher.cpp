@@ -67,20 +67,6 @@ ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
 ResourceDispatcher::~ResourceDispatcher() {
 }
 
-mx_status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    canary_.Assert();
-
-    AutoLock lock(&lock_);
-    if (iopc_)
-        return MX_ERR_BAD_STATE;
-
-    if ((client->get_trigger_signals() & (~MX_RESOURCE_CHILD_ADDED)) != 0)
-        return MX_ERR_INVALID_ARGS;
-
-    iopc_ = mxtl::move(client);
-    return MX_OK;
-}
-
 mx_status_t ResourceDispatcher::MakeRoot() {
     canary_.Assert();
 
@@ -140,9 +126,6 @@ mx_status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>&
 
     children_.push_back(mxtl::move(child));
     ++num_children_;
-
-    if (iopc_)
-        iopc_->Signal(MX_RESOURCE_CHILD_ADDED, &lock_);
 
     state_tracker_.StrobeState(MX_RESOURCE_CHILD_ADDED);
 

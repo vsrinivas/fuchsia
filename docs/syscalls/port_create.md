@@ -43,7 +43,6 @@ invalid pointer or NULL.
 Differences between ports version 1 and version 2:
 + port_queue : applies to both
 + port_wait  : applies to both
-+ port_bind  : applies to port version 1
 + object_wait_async : applies to port version 2
 
 ## SEE ALSO
@@ -51,7 +50,6 @@ Differences between ports version 1 and version 2:
 [port_queue](port_queue.md),
 [port_wait v1](port_wait.md),
 [port_wait v2](port_wait2.md),
-[port_bind](port_bind.md),
 [object_wait_async](object_wait_async.md),
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),

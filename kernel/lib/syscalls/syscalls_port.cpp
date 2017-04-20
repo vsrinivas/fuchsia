@@ -155,35 +155,6 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
     return MX_OK;
 }
 
-mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
-                          mx_handle_t source, mx_signals_t signals) {
-    LTRACEF("handle %d source %d\n", handle, source);
-
-    if (!signals)
-        return MX_ERR_INVALID_ARGS;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<PortDispatcher> port;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != MX_OK)
-        return status;
-
-    mxtl::RefPtr<Dispatcher> source_disp;
-
-    status = up->GetDispatcherWithRights(source, MX_RIGHT_READ, &source_disp);
-    if (status != MX_OK)
-        return status;
-
-    AllocChecker ac;
-    mxtl::unique_ptr<PortClient> client(
-        new (&ac) PortClient(mxtl::move(port), key, signals));
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-
-    return source_disp->set_port_client(mxtl::move(client));
-}
-
 mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 

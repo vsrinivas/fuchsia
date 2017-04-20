@@ -22,7 +22,6 @@
 
 class VmMapping;
 class VmObject;
-class PortClient;
 
 constexpr int kMBufHeaderSize = 8 + (4 * 4);
 
@@ -45,7 +44,6 @@ public:
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
-    status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
     mx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
@@ -102,7 +100,6 @@ private:
     MBuf* head_ TA_GUARDED(lock_);
     size_t size_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
-    mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
     // half_closed_[0] is this end and [1] is the other end.
     bool half_closed_[2] TA_GUARDED(lock_);
 };

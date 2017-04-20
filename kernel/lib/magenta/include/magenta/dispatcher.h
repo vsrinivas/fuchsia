@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #include <magenta/handle.h>
-#include <magenta/port_client.h>
 #include <magenta/magenta.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
@@ -75,8 +74,6 @@ public:
     virtual status_t add_observer(StateObserver* observer);
 
     virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
-
-    virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return MX_ERR_NOT_SUPPORTED; }
 
     virtual void on_zero_handles() { }
 

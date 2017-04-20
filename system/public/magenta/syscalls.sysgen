@@ -316,10 +316,6 @@ syscall port_wait blocking
     (handle: mx_handle_t, deadline: mx_time_t, packet: any[size] OUT, size: size_t)
     returns (mx_status_t);
 
-syscall port_bind
-    (handle: mx_handle_t, key: uint64_t, source: mx_handle_t, signals: mx_signals_t)
-    returns (mx_status_t);
-
 syscall port_cancel
     (handle: mx_handle_t, source: mx_handle_t, key: uint64_t)
     returns (mx_status_t);

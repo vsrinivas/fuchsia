@@ -103,5 +103,4 @@ not be waited upon.
 
 [port_create](port_create.md).
 [port_queue](port_queue.md).
-[port_bind](port_bind.md).
 [object_wait_async](object_wait_async.md).

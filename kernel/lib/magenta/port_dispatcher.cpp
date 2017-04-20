@@ -71,7 +71,7 @@ bool IOP_Packet::CopyToUser(void* data, size_t* size) {
 
 IOP_Signal::IOP_Signal(uint64_t key, mx_signals_t signal)
     : IOP_Packet(sizeof(payload), true),
-      payload {{key, MX_PORT_PKT_TYPE_IOSN, 0u}, 0u, 0u, signal, 0u},
+      payload {{key, 0, 0u}, 0u, 0u, signal, 0u},
       count(1u) {
 }
 

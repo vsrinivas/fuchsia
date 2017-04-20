@@ -20,4 +20,3 @@ TODO
 + [port_create](../syscalls/port_create.md) - create a port
 + [port_queue](../syscalls/port_queue.md) - send a packet to a port
 + [port_wait](../syscalls/port_wait.md) - wait for packets to arrive on a port
-+ [port_bind](../syscalls/port_bind.md) - bind an object to a port

@@ -99,4 +99,3 @@ The queue is drained by calling **port_wait**().
 
 [port_create](port_create.md).
 [port_wait](port_wait.md).
-[port_bind](port_bind.md).
