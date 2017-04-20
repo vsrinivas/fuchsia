@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_USERTEST_GROUP := core
+MODULE_USERTEST_GROUP := libc
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/pthread.cpp

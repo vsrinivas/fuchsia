@@ -50,9 +50,9 @@ static int failed_count = 0;
 static int verbosity = -1;
 
 static const char* default_test_groups[] = {
-    "core", "ddk", "sys", "fs"
+    "core", "libc", "ddk", "sys", "fs"
 };
-#define DEFAULT_NUM_TEST_GROUPS 4
+#define DEFAULT_NUM_TEST_GROUPS 5
 
 static bool run_tests(const char* dirn, const char* test_name) {
     DIR* dir = opendir(dirn);
