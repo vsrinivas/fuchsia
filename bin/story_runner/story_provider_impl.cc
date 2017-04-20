@@ -737,6 +737,14 @@ void StoryProviderImpl::Connect(
 }
 
 void StoryProviderImpl::PurgeController(const std::string& story_id) {
+  // TODO(mesch): This needs to go through a StopCall. The erase can be done in
+  // the callback of the StopCall.
+  //
+  // Otherwise it's not async safe: StoryImpl now holds a Page* which is owned
+  // even above StoryProviderImpl. Thus if a StoryImpl Operation is deleted
+  // while a Page method invocation is in progress, the method return callback
+  // will not be cancelled and will hit an Operation instance after it's
+  // deleted.
   story_controllers_.erase(story_id);
 }
 
