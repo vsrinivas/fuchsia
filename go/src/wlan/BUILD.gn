@@ -15,5 +15,6 @@ gobuild("wlanstack") {
   gopackage = "apps/wlan/wlanstack"
   deps = [
     "//apps/wlan/services",
+    "//apps/netstack",
   ]
 }

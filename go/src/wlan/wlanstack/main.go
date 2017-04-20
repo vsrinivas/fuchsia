@@ -5,6 +5,7 @@
 package main
 
 import (
+	"apps/netstack/watcher"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -36,7 +37,7 @@ func main() {
 	log.Print("started")
 
 	const ethdir = "/dev/class/ethernet"
-	w, err := syscall.NewWatcher(ethdir)
+	w, err := watcher.NewWatcher(ethdir)
 	if err != nil {
 		log.Fatalf("ethernet: %v", err)
 	}
