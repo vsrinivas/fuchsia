@@ -233,6 +233,7 @@ private:
     friend void DumpProcessList();
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
     friend void DumpProcessHandles(mx_koid_t id);
+    friend void DumpProcessVmObjects(mx_koid_t id);
     friend void KillProcess(mx_koid_t id);
     friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 

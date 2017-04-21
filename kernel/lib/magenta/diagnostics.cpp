@@ -12,10 +12,12 @@
 
 #include <kernel/auto_lock.h>
 #include <lib/console.h>
+#include <pretty/sizes.h>
 
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/vm_object_dispatcher.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>
@@ -182,6 +184,72 @@ void DumpProcessHandles(mx_koid_t id) {
     printf("total: %u handles\n", total);
 }
 
+// Returns a string representation of VMO-related rights.
+static constexpr size_t kRightsStrLen = 8;
+static const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
+    char* c = str;
+    *c++ = (rights & MX_RIGHT_READ) ? 'r' : '-';
+    *c++ = (rights & MX_RIGHT_WRITE) ? 'w' : '-';
+    *c++ = (rights & MX_RIGHT_EXECUTE) ? 'x' : '-';
+    *c++ = (rights & MX_RIGHT_MAP) ? 'm' : '-';
+    *c++ = (rights & MX_RIGHT_DUPLICATE) ? 'd' : '-';
+    *c++ = (rights & MX_RIGHT_TRANSFER) ? 't' : '-';
+    *c = '\0';
+    return str;
+}
+
+// Non-static so this can be a friend of ProcessDispatcher.
+void DumpProcessVmObjects(mx_koid_t id) {
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process not found!\n");
+        return;
+    }
+
+    printf("process [%" PRIu64 "] VMOs:\n", id);
+    printf("    handle rights  koid #map clone #chld    size   alloc\n");
+    int count = 0;
+    uint64_t total_size = 0;
+    uint64_t total_alloc = 0;
+    char buf[kRightsStrLen];
+    char size_str[MAX_FORMAT_SIZE_LEN];
+    char alloc_str[MAX_FORMAT_SIZE_LEN];
+    AutoLock lock(&pd->handle_table_lock_);
+    for (const auto& handle : pd->handles_) {
+        auto d = handle.dispatcher();
+        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&d);
+        if (vmod == nullptr) {
+            continue;
+        }
+        auto vmo = vmod->vmo();
+        auto size = vmo->size();
+        auto alloc = vmo->AllocatedPages() * PAGE_SIZE;
+        printf("%10u "         // handle
+               "%s "           // rights
+               "%5" PRIu64 " " // koid
+               "%4" PRIu32 " " // number of mappings
+               "%5s "          // clone type
+               "%5" PRIu32 " " // number of children
+               "%7s "          // size in bytes
+               "%7s\n",        // allocated bytes
+               (uint32_t)pd->MapHandleToValue(&handle),
+               VmoRightsToString(handle.rights(), buf),
+               handle.dispatcher()->get_koid(),
+               vmo->num_mappings(),
+               // TODO: Print the parent koid
+               vmo->is_cow_clone() ? "cow" : "-",
+               vmo->num_children(),
+               format_size(size_str, sizeof(size_str), size),
+               format_size(alloc_str, sizeof(alloc_str), alloc));
+        count++;
+        total_size += size;
+        total_alloc += alloc;
+    }
+    printf("total: %d VMOs, size %s, alloc %s\n",
+           count,
+           format_size(size_str, sizeof(size_str), total_size),
+           format_size(alloc_str, sizeof(alloc_str), total_alloc));
+}
 
 class JobDumper final : public JobEnumerator {
 public:
@@ -454,6 +522,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s ps                : list processes\n", argv[0].str);
         printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
+        printf("%s vmos <pid>        : dump process VMOs\n", argv[0].str);
         printf("%s jb   <pid>        : list job tree\n", argv[0].str);
         printf("%s kill <pid>        : kill process\n", argv[0].str);
         printf("%s asd  <pid>|kernel : dump process/kernel address space\n",
@@ -483,6 +552,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 3)
             goto usage;
         DumpProcessHandles(argv[2].u);
+    } else if (strcmp(argv[1].str, "vmos") == 0) {
+        if (argc < 3)
+            goto usage;
+        DumpProcessVmObjects(argv[2].u);
     } else if (strcmp(argv[1].str, "jb") == 0) {
         if (argc < 3)
             goto usage;
