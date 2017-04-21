@@ -457,9 +457,7 @@ static void ahci_hba_reset(ahci_device_t* dev) {
     }
 }
 
-// public api:
-
-void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+static void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
     ahci_device_t* device = get_ahci_device(dev);
     ahci_port_t* port = &device->ports[pdata->port];
@@ -635,6 +633,7 @@ static int ahci_irq_thread(void* arg) {
 // implement device protocol:
 
 static mx_protocol_device_t ahci_device_proto = {
+    .iotxn_queue = ahci_iotxn_queue,
 };
 
 extern mx_protocol_device_t ahci_port_device_proto;

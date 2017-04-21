@@ -34,6 +34,9 @@
 #define IOTXN_PFLAG_PHYSMAP    (1 << 2)   // we performed physmap() on this vmo
 #define IOTXN_PFLAG_MMAP       (1 << 3)   // we performed mmap() on this vmo
 #define IOTXN_PFLAG_FREE       (1 << 4)   // this txn has been released
+#define IOTXN_PFLAG_QUEUED     (1 << 5)   // transaction has been queued and not yet released
+
+#define IOTXN_STATE_MASK       (IOTXN_PFLAG_FREE | IOTXN_PFLAG_QUEUED)
 
 static list_node_t free_list = LIST_INITIAL_VALUE(free_list);
 static mtx_t free_list_mutex = MTX_INIT;
@@ -178,6 +181,10 @@ static void iotxn_release_static(iotxn_t* txn) {
 
 void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
     xprintf("iotxn_complete txn %p\n", txn);
+
+    MX_DEBUG_ASSERT((txn->pflags & IOTXN_STATE_MASK) == IOTXN_PFLAG_QUEUED);
+    txn->pflags &= ~IOTXN_PFLAG_QUEUED;
+
     txn->actual = actual;
     txn->status = status;
     if (txn->complete_cb) {
@@ -375,6 +382,9 @@ mx_status_t iotxn_clone_partial(iotxn_t* txn, uint64_t vmo_offset, mx_off_t leng
 }
 
 void iotxn_release(iotxn_t* txn) {
+    // should not release a queued transaction
+    MX_DEBUG_ASSERT((txn->pflags & IOTXN_STATE_MASK) == 0);
+
     if (txn->release_cb) {
         txn->release_cb(txn);
     }
@@ -430,6 +440,8 @@ out:
 }
 
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    // don't assert not queued here, since iotxns are allowed to be requeued
+    txn->pflags |= IOTXN_PFLAG_QUEUED;
     device_op_iotxn_queue(dev, txn);
 }
 

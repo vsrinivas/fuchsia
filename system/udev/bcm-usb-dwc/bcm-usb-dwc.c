@@ -669,7 +669,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 8;
 
-    do_dwc_iotxn_queue(dwc, get_desc);
+    iotxn_queue(&dwc->device, get_desc);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
@@ -701,7 +701,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 0;
 
-    do_dwc_iotxn_queue(dwc, set_addr);
+    iotxn_queue(&dwc->device, set_addr);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     mx_nanosleep(mx_deadline_after(MX_MSEC(10)));

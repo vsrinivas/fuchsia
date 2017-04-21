@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
-static void ums_block_do_queue(ums_block_t* dev, iotxn_t* txn) {
+static void ums_block_queue(mx_device_t* device, iotxn_t* txn) {
+    ums_block_t* dev = device_to_block(device);
 
     if (txn->offset % dev->block_size) {
         iotxn_complete(txn, ERR_INVALID_ARGS, 0);
@@ -24,11 +25,6 @@ static void ums_block_do_queue(ums_block_t* dev, iotxn_t* txn) {
     list_add_tail(&ums->queued_iotxns, &txn->node);
     mtx_unlock(&ums->iotxn_lock);
     completion_signal(&ums->iotxn_completion);
-}
-
-static void ums_block_queue(mx_device_t* device, iotxn_t* txn) {
-    ums_block_t* dev = device_to_block(device);
-    ums_block_do_queue(dev, txn);
 }
 
 static void ums_get_info(mx_device_t* device, block_info_t* info) {
@@ -103,6 +99,8 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
 static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = device_to_block(device);
+    ums_t* ums = block_to_ums(dev);
+
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
     if (status != NO_ERROR) {
@@ -114,12 +112,14 @@ static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    ums_block_do_queue(dev, txn);
+    iotxn_queue(&ums->device, txn);
 }
 
 static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = device_to_block(device);
+    ums_t* ums = block_to_ums(dev);
+
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
     if (status != NO_ERROR) {
@@ -131,7 +131,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    ums_block_do_queue(dev, txn);
+    iotxn_queue(&ums->device, txn);
 }
 
 static block_ops_t ums_block_ops = {

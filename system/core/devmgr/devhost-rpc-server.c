@@ -175,7 +175,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
         iotxn_copyto(txn, buf, txn->length, 0);
     }
 
-    device_op_iotxn_queue(dev, txn);
+    iotxn_queue(dev, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {

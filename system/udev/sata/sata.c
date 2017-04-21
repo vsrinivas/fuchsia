@@ -76,7 +76,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     txn->cookie = &completion;
     txn->length = 512;
 
-    ahci_iotxn_queue(controller, txn);
+    iotxn_queue(controller, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
@@ -183,7 +183,7 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     pdata->max_cmd = device->max_cmd;
     pdata->port = device->port;
 
-    ahci_iotxn_queue(dev->parent, txn);
+    iotxn_queue(dev->parent, txn);
 }
 
 static void sata_sync_complete(iotxn_t* txn, void* cookie) {
@@ -225,7 +225,7 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         txn->length = 0;
         txn->complete_cb = sata_sync_complete;
         txn->cookie = &completion;
-        sata_iotxn_queue(dev, txn);
+        iotxn_queue(dev, txn);
         completion_wait(&completion, MX_TIME_INFINITE);
         status = txn->status;
         iotxn_release(txn);
@@ -291,7 +291,7 @@ static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
     txn->cookie = cookie;
     memcpy(txn->extra, &device, sizeof(sata_device_t*));
 
-    sata_iotxn_queue(dev, txn);
+    iotxn_queue(dev, txn);
 }
 
 static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
@@ -313,7 +313,7 @@ static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
     txn->cookie = cookie;
     memcpy(txn->extra, &device, sizeof(sata_device_t*));
 
-    sata_iotxn_queue(dev, txn);
+    iotxn_queue(dev, txn);
 }
 
 static block_ops_t sata_block_ops = {

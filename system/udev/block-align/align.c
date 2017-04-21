@@ -86,7 +86,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Don't alter it.
     if ((txn->offset % blksize == 0 && txn->length % blksize == 0) ||
         (txn->opcode != IOTXN_OP_READ && txn->opcode != IOTXN_OP_WRITE)) {
-        device_op_iotxn_queue(parent, txn);
+        iotxn_queue(parent, txn);
         return;
     }
 

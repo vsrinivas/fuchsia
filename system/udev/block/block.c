@@ -194,8 +194,7 @@ static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
 }
 
 static void blkdev_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    mx_device_t* parent = dev->parent;
-    device_op_iotxn_queue(parent, txn);
+    iotxn_queue(dev->parent, txn);
 }
 
 static mx_off_t blkdev_get_size(mx_device_t* dev) {
