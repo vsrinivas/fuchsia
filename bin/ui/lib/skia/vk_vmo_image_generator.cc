@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Import our copy of vulkan.h first because Skia imports its own that does not
+// understand Magma extensions.
+#include <vulkan/vulkan.h>
+
 #include "apps/mozart/lib/skia/vk_vmo_image_generator.h"
 
-#include <vulkan/vulkan.h>
 #include <atomic>
 #include <unordered_map>
 
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/handles/object_info.h"
+#include "third_party/skia/include/gpu/GrBackendSurface.h"
 #include "third_party/skia/include/gpu/GrContext.h"
 #include "third_party/skia/src/gpu/GrResourceProvider.h"
 #include "third_party/skia/src/gpu/vk/GrVkGpu.h"
@@ -212,20 +216,17 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
       .fLevelCount = image_create_info.mipLevels,
   };
 
-  // More wrapping for Skia.
-  // TODO: Get pixel format from info_.
-  GrBackendTextureDesc gr_texture_desc;
-  gr_texture_desc.fWidth = getInfo().width();
-  gr_texture_desc.fHeight = getInfo().height(),
-  gr_texture_desc.fOrigin = kTopLeft_GrSurfaceOrigin;
-  gr_texture_desc.fConfig = kBGRA_8888_GrPixelConfig;
-  gr_texture_desc.fSampleCnt = 0;
-  gr_texture_desc.fTextureHandle =
-      reinterpret_cast<GrBackendObject>(&gr_texture_info);
+  GrBackendTexture backend_texture(getInfo().width(), getInfo().height(),
+                                   &gr_texture_info);
 
   // Get a Skia texture.
   auto tex = context->resourceProvider()->wrapBackendTexture(
-      gr_texture_desc, kBorrow_GrWrapOwnership);
+      backend_texture,             // backend texture
+      kTopLeft_GrSurfaceOrigin,    // origin
+      kNone_GrBackendTextureFlag,  // flags
+      0,                           // sample count
+      kBorrow_GrWrapOwnership      // wrap ownership
+      );
 
   if (!tex) {
     FTL_LOG(ERROR) << "Could not create GrTexture.";
