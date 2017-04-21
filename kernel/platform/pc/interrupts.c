@@ -72,14 +72,17 @@ static void platform_init_apic(uint level)
     uint32_t num_isos;
     status = platform_enumerate_interrupt_source_overrides(NULL, 0, &num_isos);
     ASSERT(status == NO_ERROR);
-    struct io_apic_isa_override *isos = calloc(num_isos, sizeof(*isos));
-    ASSERT(isos != NULL);
-    status = platform_enumerate_interrupt_source_overrides(
-            isos,
-            num_isos,
-            &num_found);
-    ASSERT(status == NO_ERROR);
-    ASSERT(num_isos == num_found);
+    struct io_apic_isa_override* isos = NULL;
+    if (num_isos > 0) {
+        isos = calloc(num_isos, sizeof(*isos));
+        ASSERT(isos != NULL);
+        status = platform_enumerate_interrupt_source_overrides(
+                isos,
+                num_isos,
+                &num_found);
+        ASSERT(status == NO_ERROR);
+        ASSERT(num_isos == num_found);
+    }
 
     apic_vm_init();
     apic_local_init();

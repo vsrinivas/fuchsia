@@ -100,10 +100,16 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    uintptr_t guest_entry = 0;
-    status = guest_create_identity_pt(addr, kVmoSize, &guest_entry);
+    uintptr_t pte_off;
+    status = guest_create_page_table(addr, kVmoSize, &pte_off);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create page table\n");
+        return status;
+    }
+
+    status = guest_create_acpi_table(addr, kVmoSize, pte_off);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to create ACPI table\n");
         return status;
     }
 
@@ -113,6 +119,7 @@ int main(int argc, char** argv) {
         return ERR_IO;
     }
 
+    uintptr_t guest_entry;
     status = load_magenta(fd, addr, &guest_entry);
     close(fd);
     if (status != NO_ERROR)

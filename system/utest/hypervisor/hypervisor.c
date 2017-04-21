@@ -48,7 +48,7 @@ static bool guest_create_page_table_x86_64_test(void) {
 
     // Test 1GB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_identity_pt((uintptr_t)actual, 1 << 30, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), NO_ERROR, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 2u, "");
 
     memset(expected, 0, size);
@@ -64,7 +64,7 @@ static bool guest_create_page_table_x86_64_test(void) {
 
     // Test 2MB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_identity_pt((uintptr_t)actual, 2 << 20, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), NO_ERROR, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 3u, "");
 
     memset(expected, 0, size);
@@ -80,7 +80,7 @@ static bool guest_create_page_table_x86_64_test(void) {
 
     // Test 4KB page.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_identity_pt((uintptr_t)actual, 4 * 4 << 10, &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), NO_ERROR, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     memset(expected, 0, size);
@@ -100,7 +100,7 @@ static bool guest_create_page_table_x86_64_test(void) {
 
     // Test mixed pages.
     memset(actual, 0, size);
-    ASSERT_EQ(guest_create_identity_pt((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), NO_ERROR, "");
     ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
 
     memset(expected, 0, size);
@@ -139,7 +139,7 @@ static bool guest_start_test(void) {
 
     // Setup the guest.
     uintptr_t guest_entry = 0;
-    ASSERT_EQ(guest_create_identity_pt(addr, kVmoSize, &guest_entry), NO_ERROR, "");
+    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_entry), NO_ERROR, "");
 #if __x86_64__
     memcpy((void*)(addr + guest_entry), guest_start, guest_end - guest_start);
     uintptr_t guest_cr3 = 0;

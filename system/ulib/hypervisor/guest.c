@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <hypervisor/guest.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
@@ -37,8 +38,8 @@ enum {
  * @param aspace_off The address space offset, used to keep track of mapped address space.
  * @param has_page Whether this level of the page table has associated pages.
  */
-static uintptr_t create_pt(uintptr_t addr, size_t size, size_t l1_page_size, uintptr_t l1_pte_off,
-                           uint64_t* aspace_off, bool has_page) {
+static uintptr_t page_table(uintptr_t addr, size_t size, size_t l1_page_size, uintptr_t l1_pte_off,
+                            uint64_t* aspace_off, bool has_page) {
     size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
     bool has_l0_aspace = size % l1_page_size != 0;
     size_t l1_pages = (l1_ptes + kPtesPerPage - 1) / kPtesPerPage;
@@ -79,7 +80,7 @@ mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phy
     return NO_ERROR;
 }
 
-mx_status_t guest_create_identity_pt(uintptr_t addr, size_t size, uintptr_t* pte_off) {
+mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* pte_off) {
     if (size % PAGE_SIZE != 0)
         return ERR_INVALID_ARGS;
     if (size > kMaxSize || size < kMinSize)
@@ -88,10 +89,10 @@ mx_status_t guest_create_identity_pt(uintptr_t addr, size_t size, uintptr_t* pte
 #if __x86_64__
     uint64_t aspace_off = 0;
     *pte_off = 0;
-    *pte_off = create_pt(addr, size - aspace_off, kPml4PageSize, *pte_off, &aspace_off, false);
-    *pte_off = create_pt(addr, size - aspace_off, kPdpPageSize, *pte_off, &aspace_off, true);
-    *pte_off = create_pt(addr, size - aspace_off, kPdPageSize, *pte_off, &aspace_off, true);
-    *pte_off = create_pt(addr, size - aspace_off, kPtPageSize, *pte_off, &aspace_off, true);
+    *pte_off = page_table(addr, size - aspace_off, kPml4PageSize, *pte_off, &aspace_off, false);
+    *pte_off = page_table(addr, size - aspace_off, kPdpPageSize, *pte_off, &aspace_off, true);
+    *pte_off = page_table(addr, size - aspace_off, kPdPageSize, *pte_off, &aspace_off, true);
+    *pte_off = page_table(addr, size - aspace_off, kPtPageSize, *pte_off, &aspace_off, true);
     return NO_ERROR;
 #else // __x86_64__
     return ERR_NOT_SUPPORTED;

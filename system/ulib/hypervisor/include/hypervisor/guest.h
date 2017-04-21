@@ -22,7 +22,17 @@ mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phy
  * @param size The size of the memory to map.
  * @param pte_offset The offset of the end of the page table.
  */
-mx_status_t guest_create_identity_pt(uintptr_t addr, size_t size, uintptr_t* pte_off);
+mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* pte_off);
+
+/**
+ * Create an ACPI 1.0 table.
+ *
+ * @param addr The mapped address of the guest physical memory.
+ * @param size The size of guest physical memory.
+ * @param pte_off The offset of the end of the page table. Used to ensure we
+ *                don't collide with the page table.
+ */
+mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_off);
 
 /**
  * Create a guest with the given VMO containing its physical memory.

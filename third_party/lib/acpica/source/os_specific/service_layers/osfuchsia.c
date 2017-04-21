@@ -12,7 +12,7 @@
 #include <hw/inout.h>
 #include <magenta/syscalls.h>
 
-extern mx_handle_t root_resource_handle;
+__WEAK mx_handle_t root_resource_handle;
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
