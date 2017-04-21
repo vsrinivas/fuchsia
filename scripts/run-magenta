@@ -26,11 +26,11 @@ function HELP {
     echo "-r                   : run release build"
     echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
     echo "-u <path>            : execute qemu startUp script, default is no script"
-    echo "-v                   : use vnc based display"
     echo "-V                   : try to use virtio devices"
     echo "-x <bootdata>        : use specified bootdata"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "--vnc=<display>      : use vnc based display"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
     echo "-h for help"
     echo "all arguments after -- are passed to qemu directly"
@@ -56,7 +56,7 @@ NET=0
 QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
-VNC=0
+VNC=
 VIRTIO=0
 SMP=4
 INITRD=
@@ -68,7 +68,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
+while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:Vx:h-:" FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
@@ -87,7 +87,6 @@ while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
         u) UPSCRIPT=$OPTARG;;
-        v) VNC=1;;
         V) VIRTIO=1;;
         x) INITRD=$OPTARG;;
         h) HELP;;
@@ -101,6 +100,7 @@ while getopts "a:bc:CdD:gI:km:nNo:q:rs:u:vVx:h-:" FLAG; do
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE=${OPTARG#*=};;
             disktype=*) DISKTYPE=${OPTARG#*=};;
+            vnc=*) VNC=${OPTARG#*=};;
             *)
                 echo unrecognized long option
                 HELP
@@ -151,8 +151,8 @@ fi
 
 # construct the args for qemu
 ARGS=" -m $MEMSIZE"
-if [ "$VNC" -eq 1 ]; then
-    ARGS+=" -vnc :0"
+if [ "$VNC" != "" ]; then
+    ARGS+=" -vnc $VNC"
 fi
 
 if [ "$GRAPHICS" -eq 0 ]; then
