@@ -4,6 +4,7 @@
 
 group("tools") {
   deps = [
+    "bluetoothcli",
     "btsnoop",
     "hci_acl_test",
     "hcitool",
