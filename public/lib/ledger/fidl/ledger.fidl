@@ -252,8 +252,9 @@ interface PageWatcher {
   // the same page change, will always return the same snapshot: the one
   // including all changes.
   //
-  // Note that calls to Page.StartTransaction() will block until all OnChange()
-  // calls have finished.
+  // Note that calls to Page.StartTransaction() on the page connection on which
+  // the watcher was registered will block until all OnChange() calls have
+  // finished.
   OnChange(PageChange page_change, ResultState result_state)
       => (PageSnapshot&? snapshot);
 };
