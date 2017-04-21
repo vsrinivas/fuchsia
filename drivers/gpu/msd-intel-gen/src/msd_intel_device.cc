@@ -12,6 +12,7 @@
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 #include "registers.h"
+#include "registers_pipe.h"
 #include <bitset>
 #include <cstdio>
 #include <string>
