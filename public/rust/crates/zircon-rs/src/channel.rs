@@ -243,10 +243,12 @@ mod tests {
         let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
         let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
 
-        // Create a virtual memory object and send it down the channel.
+        // Duplicate VMO handle and send it down the channel.
         let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
+        // Handle should be removed from vector.
+        assert!(handles_to_send.is_empty());
 
         // Read the handle from the receiving channel.
         let mut buf = MessageBuf::new();
