@@ -191,22 +191,33 @@ prompt "magenta$". The Fuchsia shell supports additional features like the
 Application Manager. The prompt for the Fuchsia shell is just "$". You should
 use the Fuchsia shell for the examples below.
 
+Note: to select tabs, you may need to enter "console mode". See the next section for details.
+
 ### Launch a graphical application
 
 (qemu users must enable graphics with -g.)
 
 Most graphical applications in Fuchsia use the
-[mozart](https://fuchsia.googlesource.com/mozart) engine. You can launch
+[mozart](https://fuchsia.googlesource.com/mozart) system compositor. You can launch
 such applications, commonly found in `/system/apps`, like this:
 
 ```
 launch spinning_square_view
 ```
 
-Note: Fuchsia is currently doing software-based rendering and not using the GPU.
-
 Source code for mozart example apps is
 [here](https://fuchsia.googlesource.com/mozart/+/HEAD/examples/).
+
+When you launch something that uses mozart, does hardware accelerated graphics, or if you build the
+the [default](https://fuchsia.googlesource.com/packages/+/master/gn/default) package (which will
+boot into the Fuchsia system UI), Fuchsia will enter "graphics mode", which will not display any
+of the text shells. In order to use the text shell, you will need to enter "console mode" by
+pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
+section, and pressing Alt-Escape again will take you back to the graphical shell.
+
+If you would like to use a text shell inside a terminal emulator from within the graphical shell
+you can launch [moterm](https://fuchsia.googlesource.com/moterm/) by selecting the "Ask Anything"
+box and typing "moterm"
 
 ## Contribute changes
 * See [CONTRIBUTING.md](CONTRIBUTING.md).
