@@ -54,9 +54,15 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
                   uint32_t mode) {
     mx_status_t r;
 
+    // The pipeline directive instructs the VFS layer to open the vnode
+    // immediately, rather than describing the VFS object to the caller.
+    // We check it early so we can throw away the protocol part of flags.
+    bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
+    uint32_t open_flags = flags & (~MXRIO_OFLAG_MASK);
+
     {
         mxtl::AutoLock lock(&vfs_lock);
-        r = Vfs::Open(vn, &vn, path, &path, flags, mode);
+        r = Vfs::Open(vn, &vn, path, &path, open_flags, mode);
     }
 
     mxrio_object_t obj;
@@ -80,19 +86,32 @@ done:
     // If r >= 0, then we hold a reference to vn from open.
     // Otherwise, vn is closed, and we're simply responding to the client.
 
-    // Describe the VFS object to the caller
-    obj.status = (r < 0) ? r : NO_ERROR;
-    obj.hcount = (r > 0) ? r : 0;
-    mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
-                     obj.handle, obj.hcount);
-    if (obj.status < 0) {
+    if (pipeline && r > 0) {
+        // If a pipeline open was requested, but extra handles are required, then
+        // we cannot complete the open in a pipelined fashion.
+        while (r-- > 0) {
+            mx_handle_close(obj.handle[r]);
+        }
+        vn->Close();
         mx_handle_close(rh);
-    } else {
-        vn->Serve(rh, flags);
-        // Drop the ref from Vfs::Open.
-        // Serve holds the on-going ref.
-        vn->RefRelease();
+        return;
     }
+
+    if (!pipeline) {
+        // Describe the VFS object to the caller in the non-pipelined case.
+        obj.status = (r < 0) ? r : NO_ERROR;
+        obj.hcount = (r > 0) ? r : 0;
+        mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
+                         obj.handle, obj.hcount);
+        if (r < 0) {
+            mx_handle_close(rh);
+            return;
+        }
+    }
+
+    vn->Serve(rh, open_flags);
+    // Drop the ref from Vfs::Open. Serve holds the on-going ref.
+    vn->RefRelease();
 }
 
 // Consumes rh.
@@ -207,10 +226,12 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
         free(ios);
         return NO_ERROR;
     case MXRIO_CLONE: {
-        mxrio_object_t obj;
-        memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
-        obj.type = MXIO_PROTOCOL_REMOTE;
-        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
+        if (!(arg & MXRIO_OFLAG_PIPELINE)) {
+            mxrio_object_t obj;
+            memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
+            obj.type = MXIO_PROTOCOL_REMOTE;
+            mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
+        }
         vn->Serve(msg->handle[0], ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
