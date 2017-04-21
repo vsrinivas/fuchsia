@@ -32,7 +32,7 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   Status status;
   LedgerRepositoryPtr repository;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), repository.NewRequest(),
+      tmp_dir.path(), nullptr, repository.NewRequest(),
       [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);

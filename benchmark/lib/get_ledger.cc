@@ -30,7 +30,7 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   app::ConnectToService(child_services.get(), repository_factory.NewRequest());
 
   ledger::LedgerRepositoryPtr repository;
-  repository_factory->GetRepository(ledger_repository_path,
+  repository_factory->GetRepository(ledger_repository_path, fidl::String(""),
                                     repository.NewRequest(),
                                     QuitOnErrorCallback("GetRepository"));
 

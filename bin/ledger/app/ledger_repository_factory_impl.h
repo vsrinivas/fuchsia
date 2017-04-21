@@ -26,6 +26,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   // LedgerRepositoryFactory:
   void GetRepository(
       const fidl::String& repository_path,
+      const fidl::String& server_id,
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
 

@@ -7,13 +7,24 @@ module ledger;
 
 import "apps/ledger/services/public/ledger.fidl";
 
-// Base interface implemented by the Ledger application.
-// Will be called by the process setting up the user environment.
+// Entry interface implemented by the Ledger application, intended to be used by
+// the process setting up the user environment to obtain repositories for
+// individual users.
 [ServiceName="ledger::LedgerRepositoryFactory"]
 interface LedgerRepositoryFactory {
-  // Creates a new repository with the given |repository_name| if it doesn't
-  // already exist. All storage will be under |repository_path|.
+  // Binds to the repository stored under |repository_path|, creating it if
+  // needed.
+  //
+  // Parameters:
+  // |repository_path| absolute path of the disk directory where the
+  //     repository is stored. The name of the user is inferred as the name of
+  //     the innermost directory of |repository_path|. TODO(ppi): explicitly
+  //     retrieve user name from the framework.
+  // |server_id| id of the Firebase Db instance to use for cloud sync. Passing
+  //     an empty string defaults to settings configured in the global
+  //     configuration file. Passing null disables sync.
   GetRepository(string repository_path,
+                string? server_id,
                 LedgerRepository& repository) => (Status status);
 };
 

@@ -199,7 +199,7 @@ LedgerPtr LedgerApplicationBaseTest::GetTestLedger() {
   Status status;
   LedgerRepositoryPtr repository;
   ledger_repository_factory_->GetRepository(
-      tmp_dir_.path(), repository.NewRequest(),
+      tmp_dir_.path(), nullptr, repository.NewRequest(),
       [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);

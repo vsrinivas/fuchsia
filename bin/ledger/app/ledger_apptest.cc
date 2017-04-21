@@ -71,7 +71,7 @@ class LedgerAppTest : public ::testing::Test {
     Status status;
     fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
     ledger_repository_factory->GetRepository(
-        tmp_dir_.path(), fidl::GetSynchronousProxy(&ledger_repository),
+        tmp_dir_.path(), nullptr, fidl::GetSynchronousProxy(&ledger_repository),
         &status);
     ASSERT_EQ(Status::OK, status);
 

@@ -28,7 +28,24 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
 
 cloud_sync::UserConfig GetUserConfig(
     const configuration::Configuration& global_config,
+    const fidl::String& server_id,
     ftl::StringView user_id) {
+  if (!server_id) {
+    cloud_sync::UserConfig user_config;
+    user_config.use_sync = false;
+    return user_config;
+  }
+
+  if (server_id.size()) {
+    cloud_sync::UserConfig user_config;
+    user_config.use_sync = true;
+    user_config.server_id = server_id.get();
+    user_config.user_id = user_id.ToString();
+    return user_config;
+  }
+
+  // |server_id| wasn't provided by Framework, default to the values from the
+  // global config file.
   cloud_sync::UserConfig user_config;
   if (!global_config.use_sync) {
     user_config.use_sync = false;
@@ -39,6 +56,9 @@ cloud_sync::UserConfig GetUserConfig(
   user_config.server_id = global_config.sync_params.firebase_id;
   user_config.cloud_prefix = global_config.sync_params.cloud_prefix;
   user_config.user_id = user_id.ToString();
+  FTL_LOG(WARNING) << "Sync configuration not specified by Framework, "
+                   << "using the server id: " << user_config.server_id
+                   << " specified in the global config file";
   return user_config;
 }
 
@@ -125,6 +145,7 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
+    const fidl::String& server_id,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
@@ -132,8 +153,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       files::SimplifyPath(std::move(repository_path.get()));
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
-    cloud_sync::UserConfig user_config =
-        GetUserConfig(config_, GetStorageDirectoryName(sanitized_path));
+    cloud_sync::UserConfig user_config = GetUserConfig(
+        config_, server_id, GetStorageDirectoryName(sanitized_path));
     if (!CheckSyncConfig(user_config, sanitized_path)) {
       callback(Status::CONFIGURATION_ERROR);
       return;
