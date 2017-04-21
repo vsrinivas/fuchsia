@@ -11,8 +11,8 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
 	$(LOCAL_DIR)/bcmctl.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
-
 MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
+
+MODULE_STATIC_LIBS := system/ulib/bcm
 
 include make/module.mk

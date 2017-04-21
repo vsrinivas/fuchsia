@@ -32,7 +32,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
-#include <ddk/protocol/bcm.h>
 #include <ddk/protocol/sdmmc.h>
 
 // Magenta Includes
@@ -43,6 +42,7 @@
 
 // BCM28xx Specific Includes
 #include <bcm/bcm28xx.h>
+#include <bcm/ioctl.h>
 
 #define TRACE 0
 

@@ -7,10 +7,10 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/bcm.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 #include <sync/completion.h>
+#include <bcm/ioctl.h>
 
 #include <inttypes.h>
 #include <fcntl.h>

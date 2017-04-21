@@ -100,7 +100,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/driver-info.c \
     $(DRIVER_SRCS) \
 
-MODULE_STATIC_LIBS := system/ulib/acpisvc-client system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS += system/ulib/acpisvc-client system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/launchpad system/ulib/magenta system/ulib/c
 

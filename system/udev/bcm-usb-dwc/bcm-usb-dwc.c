@@ -14,7 +14,6 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/device.h>
-#include <ddk/protocol/bcm.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
 #include <ddk/protocol/usb.h>
@@ -26,6 +25,7 @@
 
 // BCM28xx Specific Includes
 #include <bcm/bcm28xx.h>
+#include <bcm/ioctl.h>
 #include "bcm28xx/usb_dwc_regs.h"
 
 #define dev_to_usb_dwc(dev) containerof(dev, dwc_usb_t, device)

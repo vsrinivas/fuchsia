@@ -11,13 +11,13 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/bcm.h>
 #include <ddk/protocol/display.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/assert.h>
 
 #include <bcm/bcm28xx.h>
+#include <bcm/ioctl.h>
 
 #define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
 

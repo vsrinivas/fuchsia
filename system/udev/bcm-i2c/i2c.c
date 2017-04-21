@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/bcm.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/threads.h>
@@ -19,6 +18,7 @@
 
 #include <bcm/gpio.h>
 #include <bcm/bcm28xx.h>
+#include <bcm/ioctl.h>
 
 #include "i2c.h"
 

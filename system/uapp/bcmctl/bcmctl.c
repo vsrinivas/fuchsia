@@ -13,7 +13,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <mxio/util.h>
-#include <ddk/protocol/bcm.h>
+#include <bcm/ioctl.h>
 
 const char* prog_name;
 

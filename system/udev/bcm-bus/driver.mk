@@ -7,3 +7,4 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 DRIVER_SRCS += \
     $(LOCAL_DIR)/bcm-bus.c \
 
+MODULE_STATIC_LIBS += system/ulib/bcm

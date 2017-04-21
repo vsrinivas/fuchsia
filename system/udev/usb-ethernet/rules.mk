@@ -31,7 +31,7 @@ include make/module.mk
 
 MODULE_TYPE := driver
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/hexdump system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/hexdump system/ulib/sync system/ulib/bcm
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c system/ulib/mxio
 

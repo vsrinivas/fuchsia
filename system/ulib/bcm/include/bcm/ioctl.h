@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddk/driver.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/compiler.h>
@@ -14,7 +13,6 @@ __BEGIN_CDECLS;
 
 // Broadcomm vendor id
 #define SOC_VID_BROADCOMM 0x00BC
-
 
 // Broadcomm specific PIDs
 #define SOC_DID_BROADCOMM_VIDEOCORE_BUS 0x0000  // Videocore device (used as root bus)
