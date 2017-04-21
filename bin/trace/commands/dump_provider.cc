@@ -57,7 +57,8 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
   for (;;) {
     mx_signals_t pending;
     status = incoming.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                               mx::deadline_after(kReadTimeout.ToNanoseconds()), &pending);
+                               mx::deadline_after(kReadTimeout.ToNanoseconds()),
+                               &pending);
     if (status == ERR_TIMED_OUT) {
       err() << "Timed out after " << kReadTimeout.ToSecondsF()
             << " seconds waiting for provider to write data" << std::endl;

@@ -168,29 +168,28 @@ void UploadResults(std::ostream& out,
   });
 
   out << "starting upload to " << url_request->url << std::endl;
-  url_loader_ptr->Start(std::move(url_request), ftl::MakeCopyable([
-                          url_loader = std::move(url_loader),
-                          on_done, &out, &err
-                        ](auto url_response) {
-                          out << "response";
-                          if (url_response->error) {
-                            err << url_response->url << " network error "
-                                << url_response->error->description
-                                << std::endl;
-                            on_done();
-                            return;
-                          }
+  url_loader_ptr->Start(
+      std::move(url_request), ftl::MakeCopyable([
+        url_loader = std::move(url_loader), on_done, &out, &err
+      ](auto url_response) {
+        out << "response";
+        if (url_response->error) {
+          err << url_response->url << " network error "
+              << url_response->error->description << std::endl;
+          on_done();
+          return;
+        }
 
-                          if (url_response->status_code != 200) {
-                            err << url_response->url << " url_response status "
-                                << url_response->status_code << std::endl;
-                            on_done();
-                            return;
-                          }
+        if (url_response->status_code != 200) {
+          err << url_response->url << " url_response status "
+              << url_response->status_code << std::endl;
+          on_done();
+          return;
+        }
 
-                          out << "upload succeeded" << std::endl;
-                          on_done();
-                        }));
+        out << "upload succeeded" << std::endl;
+        on_done();
+      }));
 }
 
 }  // namespace tracing

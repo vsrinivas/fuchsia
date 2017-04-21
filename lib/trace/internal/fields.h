@@ -150,7 +150,7 @@ struct LogRecordFields : RecordFields {
   using ThreadRef = Field<32, 39>;
 };
 
-}  // namspace internal
-}  // namepsace tracing
+}  // namespace internal
+}  // namespace tracing
 
 #endif  // APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_

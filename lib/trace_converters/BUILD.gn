@@ -10,8 +10,8 @@ group("trace_converters") {
 
 source_set("chromium") {
   sources = [
+    "chromium_exporter.cc",
     "chromium_exporter.h",
-    "chromium_exporter.cc"
   ]
 
   deps = [

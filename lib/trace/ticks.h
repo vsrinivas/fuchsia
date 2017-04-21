@@ -28,8 +28,8 @@ inline Ticks GetTicksPerSecond() {
   return mx_ticks_per_second();
 }
 
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 
-}  // namepsace tracing
+}  // namespace tracing
 
 #endif  // APPS_TRACING_LIB_TRACE_TICKS_H_

@@ -6,7 +6,6 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_session.h"
-#include "apps/tracing/lib/trace/internal/fields.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

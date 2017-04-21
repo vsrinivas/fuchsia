@@ -160,7 +160,7 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
       sampler,
       [](size_t iteration) {
         TRACE_ASYNC_BEGIN("disabled", "ASYNC_1_DISABLED", iteration, "int",
-                           -42);
+                          -42);
         TRACE_ASYNC_BEGIN("two", "ASYNC_1", iteration, "int", -42);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         TRACE_ASYNC_END("disabled", "ASYNC_1_DISABLED", iteration, "int", -33);

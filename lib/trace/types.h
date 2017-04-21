@@ -133,7 +133,7 @@ struct ProcessThread {
   mx_koid_t thread_koid;
 };
 
-}  // namepsace tracing
+}  // namespace tracing
 
 // Inject custom std::hash<> function object for |ProcessThread|.
 namespace std {

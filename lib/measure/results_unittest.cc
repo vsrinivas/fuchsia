@@ -35,30 +35,24 @@ TEST(Results, Duration) {
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
   Result expected = {
-    {{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
-    "ms",
-    "duration of foo (bar)"};
+      {{{1.0, 2.0, 3.0}, "samples 0 to 2"}}, "ms", "duration of foo (bar)"};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
 
 TEST(Results, TimeBetween) {
   Measurements measurements;
-  measurements.time_between = {{42u,
-    {"foo1", "bar1"},
-    Anchor::Begin,
-    {"foo2", "bar2"},
-    Anchor::Begin,
+  measurements.time_between = {{
+      42u, {"foo1", "bar1"}, Anchor::Begin, {"foo2", "bar2"}, Anchor::Begin,
   }};
 
   std::unordered_map<uint64_t, std::vector<Ticks>> ticks;
   ticks[42u] = {1u, 2u, 3u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {
-    {{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
-    "ms",
-    "time between foo1 (bar1) and foo2 (bar2)"};
+  Result expected = {{{{1.0, 2.0, 3.0}, "samples 0 to 2"}},
+                     "ms",
+                     "time between foo1 (bar1) and foo2 (bar2)"};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }
@@ -72,13 +66,13 @@ TEST(Results, SplitSamples) {
   ticks[42u] = {1u, 2u, 3u, 4u};
 
   auto results = ComputeResults(measurements, ticks, 1000.0);
-  Result expected = {
-    {{{1.0}, "samples 0 to 0"},
-     {{2.0}, "samples 1 to 1"},
-     {{3.0, 4.0}, "samples 2 to 3"},
-    },
-    "ms",
-    "duration of foo (bar)"};
+  Result expected = {{
+                         {{1.0}, "samples 0 to 0"},
+                         {{2.0}, "samples 1 to 1"},
+                         {{3.0, 4.0}, "samples 2 to 3"},
+                     },
+                     "ms",
+                     "duration of foo (bar)"};
   EXPECT_EQ(1u, results.size());
   EXPECT_EQ(expected, results[0]);
 }

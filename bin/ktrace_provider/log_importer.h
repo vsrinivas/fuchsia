@@ -32,6 +32,6 @@ class LogImporter {
   FTL_DISALLOW_COPY_AND_ASSIGN(LogImporter);
 };
 
-}  // namesapce ktrace_provider
+}  // namespace ktrace_provider
 
 #endif  // APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
