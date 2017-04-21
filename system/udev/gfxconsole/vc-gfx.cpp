@@ -11,15 +11,16 @@
 
 void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
                       bool invert) {
-    uint8_t fg_color = TOFG(ch);
-    uint8_t bg_color = TOBG(ch);
+    uint8_t fg_color = vc_char_get_fg_color(ch);
+    uint8_t bg_color = vc_char_get_bg_color(ch);
     if (invert) {
         // Swap the colors.
         uint8_t temp = fg_color;
         fg_color = bg_color;
         bg_color = temp;
     }
-    gfx_putchar(dev->gfx, dev->font, TOCHAR(ch), x * dev->charw, y * dev->charh,
+    gfx_putchar(dev->gfx, dev->font, vc_char_get_char(ch),
+                x * dev->charw, y * dev->charh,
                 palette_to_color(dev, fg_color),
                 palette_to_color(dev, bg_color));
 }

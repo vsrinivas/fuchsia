@@ -186,10 +186,10 @@ public:
         size_t len = strlen(str);
         EXPECT_LE(len, size_x, "");
         for (size_t i = 0; i < len; ++i)
-            EXPECT_EQ(str[i], TOCHAR(buf[size_x * line_num + i]), "");
+            EXPECT_EQ(str[i], vc_char_get_char(buf[size_x * line_num + i]), "");
         // The rest of the line should contain spaces.
         for (size_t i = len; i < size_x; ++i)
-            EXPECT_EQ(' ', TOCHAR(buf[size_x * line_num + i]), "");
+            EXPECT_EQ(' ', vc_char_get_char(buf[size_x * line_num + i]), "");
     }
 
     void AssertLineContains(int line_num, const char* str) {
@@ -229,7 +229,7 @@ bool test_display_update_comparison() {
     // Write some characters directly into the text buffer.
     auto SetChar = [&](int x, int y, char ch) {
         tc.vc_dev->text_buf[x + y * tc.size_x] =
-            CHARVAL(ch, tc.textcon.fg, tc.textcon.bg);
+            vc_char_make(ch, tc.textcon.fg, tc.textcon.bg);
     };
     SetChar(2, 1, 'x');
     SetChar(3, 1, 'y');

@@ -17,13 +17,6 @@
 
 #include "textcon.h"
 
-typedef uint16_t vc_char_t;
-#define CHARVAL(ch, fg, bg) \
-    ((vc_char_t)(((ch)&0xff) | (((fg)&0xf) << 8) | (((bg)&0xf) << 12)))
-#define TOCHAR(ch) ((ch)&0xff)
-#define TOFG(ch) ((uint8_t)(((ch) >> 8) & 0xf))
-#define TOBG(ch) ((uint8_t)(((ch) >> 12) & 0xf))
-
 #define MAX_COLOR 0xf
 
 typedef struct vc_device {

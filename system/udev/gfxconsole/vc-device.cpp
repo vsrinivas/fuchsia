@@ -261,7 +261,7 @@ static void vc_device_reset(vc_device_t* dev) {
     size_t count = dev->rows * dev->columns;
     vc_char_t* ptr = dev->text_buf;
     while (count--) {
-        *ptr++ = CHARVAL(' ', dev->front_color, dev->back_color);
+        *ptr++ = vc_char_make(' ', dev->front_color, dev->back_color);
     }
 
     vc_device_clear_gfx(dev);
