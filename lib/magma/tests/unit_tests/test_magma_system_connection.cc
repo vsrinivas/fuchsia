@@ -105,12 +105,15 @@ TEST(MagmaSystemConnection, BufferManagement)
     ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle));
 
     uint64_t id;
-    connection.ImportBuffer(duplicate_handle, &id);
+    EXPECT_TRUE(connection.ImportBuffer(duplicate_handle, &id));
 
     // should be able to get the buffer by handle
     auto get_buf = connection.LookupBuffer(id);
     EXPECT_NE(get_buf, nullptr);
     EXPECT_EQ(get_buf->id(), id); // they are shared ptrs after all
+
+    // should not be able to import it again
+    EXPECT_FALSE(connection.ImportBuffer(duplicate_handle, &id));
 
     // freeing the allocated buffer should work
     EXPECT_TRUE(connection.ReleaseBuffer(id));
@@ -120,6 +123,45 @@ TEST(MagmaSystemConnection, BufferManagement)
 
     // should not be able to double free it
     EXPECT_FALSE(connection.ReleaseBuffer(id));
+}
+
+TEST(MagmaSystemConnection, Semaphores)
+{
+    auto msd_drv = msd_driver_create();
+    ASSERT_NE(msd_drv, nullptr);
+    auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
+    ASSERT_NE(msd_dev, nullptr);
+    auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
+    auto msd_connection = msd_device_open(msd_dev, 0);
+    ASSERT_NE(msd_connection, nullptr);
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
+                                     MAGMA_CAPABILITY_RENDERING);
+
+    auto semaphore = magma::PlatformSemaphore::Create();
+
+    // assert because if this fails the rest of this is gonna be bogus anyway
+    ASSERT_NE(semaphore, nullptr);
+
+    uint32_t duplicate_handle;
+    ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle));
+
+    EXPECT_TRUE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+
+    auto system_semaphore = connection.LookupSemaphore(semaphore->id());
+    EXPECT_NE(system_semaphore, nullptr);
+    EXPECT_EQ(system_semaphore->platform_semaphore()->id(), semaphore->id());
+
+    // should not be able to import it again
+    EXPECT_FALSE(connection.ImportObject(duplicate_handle, magma::PlatformObject::SEMAPHORE));
+
+    // freeing the allocated buffer should work
+    EXPECT_TRUE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));
+
+    // should no longer be able to get it from the map
+    EXPECT_EQ(connection.LookupSemaphore(semaphore->id()), nullptr);
+
+    // should not be able to double free it
+    EXPECT_FALSE(connection.ReleaseObject(semaphore->id(), magma::PlatformObject::SEMAPHORE));
 }
 
 TEST(MagmaSystemConnection, BufferSharing)
@@ -147,9 +189,9 @@ TEST(MagmaSystemConnection, BufferSharing)
 
     uint32_t duplicate_handle;
     ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
-    connection_0.ImportBuffer(duplicate_handle, &buf_id_0);
+    EXPECT_TRUE(connection_0.ImportBuffer(duplicate_handle, &buf_id_0));
     ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
-    connection_1.ImportBuffer(duplicate_handle, &buf_id_1);
+    EXPECT_TRUE(connection_1.ImportBuffer(duplicate_handle, &buf_id_1));
 
     // should be the same underlying memory object
     EXPECT_EQ(buf_id_0, buf_id_1);

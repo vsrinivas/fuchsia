@@ -135,9 +135,10 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
     uint64_t id = buf->id();
 
     auto iter = buffer_map_.find(id);
-    if (iter == buffer_map_.end())
-        buffer_map_.insert(std::make_pair(id, buf));
+    if (iter != buffer_map_.end())
+        return DRETF(false, "buffer 0x%" PRIx64 " already imported", id);
 
+    buffer_map_.insert(std::make_pair(id, buf));
     *id_out = id;
     return true;
 }
@@ -174,7 +175,7 @@ bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject:
 
             auto iter = semaphore_map_.find(id);
             if (iter != semaphore_map_.end())
-                return true;
+                return DRETF(false, "semaphore 0x%" PRIx64 " already imported", id);
 
             auto semaphore = MagmaSystemSemaphore::Create(magma::PlatformSemaphore::Import(handle));
             if (!semaphore)

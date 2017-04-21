@@ -24,6 +24,11 @@ public:
     bool Exec();
     bool Readback();
 
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    uint32_t get_device_memory_handle() { return device_memory_handle_; }
+    void set_device_memory_handle(uint32_t handle) { device_memory_handle_ = handle; }
+#endif
+
 private:
     bool InitVulkan();
     bool InitImage();
@@ -35,7 +40,8 @@ private:
     VkImage vk_image_;
     VkDeviceMemory vk_device_memory_;
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
-    VkDeviceMemory vk_imported_device_memory_;
+    VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
+    uint32_t device_memory_handle_ = 0;
 #endif
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
@@ -214,16 +220,19 @@ bool VkReadbackTest::InitImage()
         return DRETF(false, "vkAllocateMemory failed");
 
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
-    uint32_t handle;
-    DASSERT(vkExportDeviceMemoryMAGMA);
-    if ((result = vkExportDeviceMemoryMAGMA(vk_device_, vk_device_memory_, &handle)) != VK_SUCCESS)
-        return DRETF(false, "vkExportDeviceMemoryMAGMA failed");
-
-    DASSERT(vkImportDeviceMemoryMAGMA);
-    if ((result = vkImportDeviceMemoryMAGMA(vk_device_, handle, nullptr,
-                                            &vk_imported_device_memory_)) != VK_SUCCESS)
-        return DRETF(false, "vkImportDeviceMemoryMAGMA failed");
-
+    if (device_memory_handle_) {
+        DASSERT(vkImportDeviceMemoryMAGMA);
+        if ((result = vkImportDeviceMemoryMAGMA(vk_device_, device_memory_handle_, nullptr,
+                                                &vk_imported_device_memory_)) != VK_SUCCESS)
+            return DRETF(false, "vkImportDeviceMemoryMAGMA failed");
+        printf("imported from handle 0x%x\n", device_memory_handle_);
+    } else {
+        DASSERT(vkExportDeviceMemoryMAGMA);
+        if ((result = vkExportDeviceMemoryMAGMA(vk_device_, vk_device_memory_,
+                                                &device_memory_handle_)) != VK_SUCCESS)
+            return DRETF(false, "vkExportDeviceMemoryMAGMA failed");
+        printf("exported handle 0x%x\n", device_memory_handle_);
+    }
 #endif
 
     void* addr;
@@ -327,14 +336,13 @@ bool VkReadbackTest::Readback()
     void* addr;
 
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
-    if ((result = vkMapMemory(vk_device_, vk_imported_device_memory_, 0, VK_WHOLE_SIZE, 0,
-                              &addr)) != VK_SUCCESS)
-        return DRETF(false, "vkMapMeory failed: %d", result);
+    VkDeviceMemory vk_device_memory = vk_imported_device_memory_;
 #else
-    if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
+    VkDeviceMemory vk_device_memory = vk_device_memory_;
+#endif
+    if ((result = vkMapMemory(vk_device_, vk_device_memory, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
         return DRETF(false, "vkMapMeory failed: %d", result);
-#endif
 
     auto data = reinterpret_cast<uint32_t*>(addr);
 
@@ -353,11 +361,7 @@ bool VkReadbackTest::Readback()
         printf("****** Test Passed! All values matched.\n");
     }
 
-#if defined(MAGMA_TEST_IMPORT_EXPORT)
-    vkUnmapMemory(vk_device_, vk_imported_device_memory_);
-#else
-    vkUnmapMemory(vk_device_, vk_device_memory_);
-#endif
+    vkUnmapMemory(vk_device_, vk_device_memory);
 
     return mismatches == 0;
 }
@@ -368,6 +372,24 @@ int main(void)
     VulkanShimInit();
 #endif
 
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    VkReadbackTest export_app;
+    VkReadbackTest import_app;
+
+    if (!export_app.Initialize())
+        return DRET_MSG(-1, "could not initialize export app");
+
+    import_app.set_device_memory_handle(export_app.get_device_memory_handle());
+
+    if (!import_app.Initialize())
+        return DRET_MSG(-1, "could not initialize import app");
+
+    if (!export_app.Exec())
+        return DRET_MSG(-1, "Exec failed");
+
+    if (!import_app.Readback())
+        return DRET_MSG(-1, "Readback failed");
+#else
     VkReadbackTest app;
 
     if (!app.Initialize())
@@ -378,6 +400,7 @@ int main(void)
 
     if (!app.Readback())
         return DRET_MSG(-1, "Readback failed");
+#endif
 
     return 0;
 }

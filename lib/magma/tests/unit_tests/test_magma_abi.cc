@@ -115,9 +115,6 @@ public:
         magma_buffer_t buffer;
         EXPECT_EQ(magma_import(connection_, handle, &buffer), 0);
         EXPECT_EQ(magma_get_buffer_id(buffer), id);
-
-        // import twice for funsies
-        EXPECT_EQ(magma_import(connection_, handle, &buffer), 0);
     }
 
     static void BufferImportExport(TestConnection* test1, TestConnection* test2)
