@@ -13,6 +13,7 @@
 #include <string.h>
 #include <vector>
 
+#include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
 class VkReadbackTest {
@@ -82,7 +83,7 @@ bool VkReadbackTest::InitVulkan()
     if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
         return DRETF(false, "vkCreateInstance failed %d", result);
 
-    printf("vkCreateInstance succeeded\n");
+    DLOG("vkCreateInstance succeeded");
 
     uint32_t physical_device_count;
     if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
@@ -92,7 +93,7 @@ bool VkReadbackTest::InitVulkan()
     if (physical_device_count < 1)
         return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
 
-    printf("vkEnumeratePhysicalDevices returned count %d\n", physical_device_count);
+    DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
 
     std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
     if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
@@ -102,13 +103,12 @@ bool VkReadbackTest::InitVulkan()
     for (auto device : physical_devices) {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(device, &properties);
-        printf("PHYSICAL DEVICE: %s\n", properties.deviceName);
-        printf("apiVersion 0x%x\n", properties.apiVersion);
-        printf("driverVersion 0x%x\n", properties.driverVersion);
-        printf("vendorID 0x%x\n", properties.vendorID);
-        printf("deviceID 0x%x\n", properties.deviceID);
-        printf("deviceType 0x%x\n", properties.deviceType);
-        printf("etc...\n");
+        DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
+        DLOG("apiVersion 0x%x", properties.apiVersion);
+        DLOG("driverVersion 0x%x", properties.driverVersion);
+        DLOG("vendorID 0x%x", properties.vendorID);
+        DLOG("deviceID 0x%x", properties.deviceID);
+        DLOG("deviceType 0x%x", properties.deviceType);
     }
 
     uint32_t queue_family_count;
@@ -190,7 +190,7 @@ bool VkReadbackTest::InitImage()
     if ((result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_)) != VK_SUCCESS)
         return DRETF(false, "vkCreateImage failed: %d", result);
 
-    printf("Created image\n");
+    DLOG("Created image");
 
     VkMemoryRequirements memory_reqs;
     vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
@@ -244,12 +244,12 @@ bool VkReadbackTest::InitImage()
 
     vkUnmapMemory(vk_device_, vk_device_memory_);
 
-    printf("Allocated memory for image\n");
+    DLOG("Allocated memory for image");
 
     if ((result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0)) != VK_SUCCESS)
         return DRETF(false, "vkBindImageMemory failed");
 
-    printf("Bound memory to image\n");
+    DLOG("Bound memory to image");
 
     VkCommandPoolCreateInfo command_pool_create_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -261,7 +261,7 @@ bool VkReadbackTest::InitImage()
                                       &vk_command_pool_)) != VK_SUCCESS)
         return DRETF(false, "vkCreateCommandPool failed: %d", result);
 
-    printf("Created command buffer pool\n");
+    DLOG("Created command buffer pool");
 
     VkCommandBufferAllocateInfo command_buffer_create_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -273,7 +273,7 @@ bool VkReadbackTest::InitImage()
                                            &vk_command_buffer_)) != VK_SUCCESS)
         return DRETF(false, "vkAllocateCommandBuffers failed: %d", result);
 
-    printf("Created command buffer\n");
+    DLOG("Created command buffer");
 
     VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -284,7 +284,7 @@ bool VkReadbackTest::InitImage()
     if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS)
         return DRETF(false, "vkBeginCommandBuffer failed: %d", result);
 
-    printf("Command buffer begin\n");
+    DLOG("Command buffer begin");
 
     VkClearColorValue color_value = {.float32 = {1.0f, 0.0f, 0.5f, 0.75f}};
 
@@ -302,7 +302,7 @@ bool VkReadbackTest::InitImage()
     if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS)
         return DRETF(false, "vkEndCommandBuffer failed: %d", result);
 
-    printf("Command buffer end\n");
+    DLOG("Command buffer end");
 
     return true;
 }
@@ -351,14 +351,15 @@ bool VkReadbackTest::Readback()
     for (uint32_t i = 0; i < kWidth * kHeight; i++) {
         if (data[i] != expected_value) {
             if (mismatches++ < 10)
-                printf("Value Mismatch at index %d - expected 0x%04x, got 0x%08x\n", i,
-                       expected_value, data[i]);
+                magma::log(magma::LOG_WARNING,
+                           "Value Mismatch at index %d - expected 0x%04x, got 0x%08x", i,
+                           expected_value, data[i]);
         }
     }
     if (mismatches) {
-        printf("****** Test Failed! %d mismatches\n", mismatches);
+        magma::log(magma::LOG_WARNING, "****** Test Failed! %d mismatches", mismatches);
     } else {
-        printf("****** Test Passed! All values matched.\n");
+        magma::log(magma::LOG_INFO, "****** Test Passed! All values matched.");
     }
 
     vkUnmapMemory(vk_device_, vk_device_memory);
