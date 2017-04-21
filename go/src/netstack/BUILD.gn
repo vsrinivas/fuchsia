@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/gobuild.gni")
+import("//build/go/go_binary.gni")
 
 declare_args() {
   # if true, lwiperf server will run
@@ -90,6 +90,6 @@ executable("netstack1") {
 
 }
 
-gobuild("netstack2") {
+go_binary("netstack2") {
     gopackage = "apps/netstack/netstack2"
 }
