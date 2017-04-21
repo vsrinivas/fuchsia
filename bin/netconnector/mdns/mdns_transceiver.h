@@ -32,14 +32,17 @@ class MdnsTransceiver {
   // interfaces that have been enabled.
   void EnableInterface(const std::string& name, sa_family_t family);
 
-  // Starts the transceiver.
-  void Start(const InboundMessageCallback& message_received_callback);
+  // Starts the transceiver. Returns true if successful.
+  bool Start(const std::string& host_full_name,
+             const InboundMessageCallback& inbound_message_callback);
 
   // Stops the transceiver.
   void Stop();
 
-  // Sends a messaage to the specified address on the specified interface.
-  void SendMessage(std::unique_ptr<DnsMessage> message,
+  // Sends a messaage to the specified address on the specified interface. A
+  // V6 interface will send to |MdnsAddresses::kV6Multicast| if |dest_address|
+  // is |MdnsAddresses::kV4Multicast|.
+  void SendMessage(DnsMessage* message,
                    const SocketAddress& dest_address,
                    uint32_t interface_index);
 

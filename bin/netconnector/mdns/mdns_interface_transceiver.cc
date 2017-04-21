@@ -9,8 +9,10 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
+#include "apps/netconnector/src/mdns/dns_formatting.h"
 #include "apps/netconnector/src/mdns/dns_reading.h"
 #include "apps/netconnector/src/mdns/dns_writing.h"
+#include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver_v4.h"
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver_v6.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -46,12 +48,15 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-void MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
+void MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
+                                     const InboundMessageCallback& callback) {
   FTL_DCHECK(callback);
   FTL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
   FTL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", "
                 << (address_.is_v4() ? "IPV4" : "IPV6");
+
+  address_resource_ = MakeAddressResource(host_full_name, address_);
 
   socket_fd_ = ftl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -74,29 +79,57 @@ void MdnsInterfaceTransceiver::Start(const InboundMessageCallback& callback) {
   WaitForInbound();
 }
 
+void MdnsInterfaceTransceiver::SetAlternateAddress(
+    const std::string& host_full_name,
+    const IpAddress& alternate_address) {
+  FTL_DCHECK(!alternate_address_resource_);
+  FTL_DCHECK(alternate_address.family() != address_.family());
+
+  alternate_address_resource_ =
+      MakeAddressResource(host_full_name, alternate_address);
+}
+
 void MdnsInterfaceTransceiver::Stop() {
   FTL_DCHECK(socket_fd_.is_valid()) << "BeginStop called when stopped.";
   fd_waiter_.Cancel();
   socket_fd_.reset();
 }
 
-void MdnsInterfaceTransceiver::SendMessage(const DnsMessage& message,
+void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
                                            const SocketAddress& address) {
+  FTL_DCHECK(message);
   FTL_DCHECK(address.is_valid());
-  FTL_DCHECK(address.family() == address_.family());
+  FTL_DCHECK(address.family() == address_.family() ||
+             address == MdnsAddresses::kV4Multicast);
+
+  FixUpAddresses(&message->answers_);
+  FixUpAddresses(&message->authorities_);
+  FixUpAddresses(&message->additionals_);
+  message->UpdateCounts();
 
   PacketWriter writer(std::move(outbound_buffer_));
-  writer << message;
+  writer << *message;
   size_t packet_size = writer.position();
   outbound_buffer_ = writer.GetPacket();
 
-  ssize_t result =
-      sendto(socket_fd_.get(), outbound_buffer_.data(), packet_size, 0,
-             address.as_sockaddr(), address.socklen());
+  ssize_t result = SendTo(outbound_buffer_.data(), packet_size, address);
+
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to sendto, errno " << errno;
     return;
   }
+}
+
+int MdnsInterfaceTransceiver::SetOptionSharePort() {
+  int param = 1;
+  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param,
+                          sizeof(param));
+  if (result < 0) {
+    FTL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
+                   << errno;
+  }
+
+  return result;
 }
 
 void MdnsInterfaceTransceiver::WaitForInbound() {
@@ -131,23 +164,62 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
     FTL_DCHECK(inbound_message_callback_);
     inbound_message_callback_(std::move(message), source_address, index_);
   } else {
+    inbound_buffer_.resize(result);
     FTL_LOG(ERROR) << "Couldn't parse message from " << source_address << ", "
-                   << result << " bytes.";
+                   << result << " bytes: " << inbound_buffer_;
+    inbound_buffer_.resize(kMaxPacketSize);
   }
 
   WaitForInbound();
 }
 
-int MdnsInterfaceTransceiver::SetOptionSharePort() {
-  int param = 1;
-  int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param,
-                          sizeof(param));
-  if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
-                   << errno;
+std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
+    const std::string& host_full_name,
+    const IpAddress& address) {
+  std::shared_ptr<DnsResource> resource;
+
+  if (address.is_v4()) {
+    resource = std::make_shared<DnsResource>(host_full_name, DnsType::kA);
+    resource->a_.address_.address_ = address;
+  } else {
+    resource = std::make_shared<DnsResource>(host_full_name, DnsType::kAaaa);
+    resource->aaaa_.address_.address_ = address;
   }
 
-  return result;
+  return resource;
+}
+
+void MdnsInterfaceTransceiver::FixUpAddresses(
+    std::vector<std::shared_ptr<DnsResource>>* resources) {
+  for (auto iter = resources->begin(); iter != resources->end(); ++iter) {
+    if ((*iter)->type_ == DnsType::kA || (*iter)->type_ == DnsType::kAaaa) {
+      **iter = *address_resource_;
+
+      auto next_iter = iter;
+      ++next_iter;
+
+      bool next_is_address = next_iter != resources->end() &&
+                             ((*next_iter)->type_ == DnsType::kA ||
+                              (*next_iter)->type_ == DnsType::kAaaa);
+
+      if (alternate_address_resource_) {
+        if (next_is_address) {
+          // There's already a second address record. Copy the alternate address
+          // record over it.
+          **next_iter = *alternate_address_resource_;
+        } else {
+          // There's no second address record. Insert the alternate address
+          // record after the first one.
+          resources->insert(next_iter, alternate_address_resource_);
+        }
+      } else if (next_is_address) {
+        // We don't need this second address record.
+        resources->erase(next_iter);
+      }
+
+      break;
+    }
+  }
 }
 
 }  // namespace mdns

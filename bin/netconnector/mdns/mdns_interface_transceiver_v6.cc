@@ -25,8 +25,8 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   ipv6_mreq param;
   param.ipv6mr_multiaddr =
       MdnsAddresses::kV6Multicast.as_sockaddr_in6().sin6_addr;
-  param.ipv6mr_interface = index_;
-  int result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_JOIN_GROUP,
+  param.ipv6mr_interface = index();
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP,
                           &param, sizeof(param));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, errno "
@@ -37,8 +37,9 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
 }
 
 int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
-  int result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_MULTICAST_IF,
-                          &index_, sizeof(index_));
+  uint32_t index = this->index();
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF,
+                          &index, sizeof(index));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
                    << errno;
@@ -49,7 +50,7 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
 
 int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
   int param = kTimeToLive_;
-  int result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS,
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, errno "
@@ -61,7 +62,7 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
 
 int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
   int param = kTimeToLive_;
-  int result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, errno "
@@ -74,8 +75,8 @@ int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
 int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   // Set hop limit.
   int param = 1;
-  int result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_HOPLIMIT, &param,
-                          sizeof(param));
+  int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_HOPLIMIT,
+                          &param, sizeof(param));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, errno "
                    << errno;
@@ -84,7 +85,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
 
   // Receive V6 packets only.
   param = 1;
-  result = setsockopt(socket_fd_.get(), IPPROTO_IPV6, IPV6_V6ONLY, &param,
+  result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_V6ONLY, &param,
                       sizeof(param));
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, errno "
@@ -96,13 +97,26 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
 }
 
 int MdnsInterfaceTransceiverV6::Bind() {
-  int result = bind(socket_fd_.get(), MdnsAddresses::kV6Bind.as_sockaddr(),
+  int result = bind(socket_fd().get(), MdnsAddresses::kV6Bind.as_sockaddr(),
                     MdnsAddresses::kV6Bind.socklen());
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to bind socket to V6 address, errno " << errno;
   }
 
   return result;
+}
+
+int MdnsInterfaceTransceiverV6::SendTo(const void* buffer,
+                                       size_t size,
+                                       const SocketAddress& address) {
+  if (address == MdnsAddresses::kV4Multicast) {
+    return sendto(socket_fd().get(), buffer, size, 0,
+                  MdnsAddresses::kV6Multicast.as_sockaddr(),
+                  MdnsAddresses::kV6Multicast.socklen());
+  }
+
+  return sendto(socket_fd().get(), buffer, size, 0, address.as_sockaddr(),
+                address.socklen());
 }
 
 }  // namespace mdns

@@ -22,6 +22,9 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override;
   int SetOptionFamilySpecific() override;
   int Bind() override;
+  int SendTo(const void* buffer,
+             size_t size,
+             const SocketAddress& address) override;
 
  private:
   MdnsInterfaceTransceiverV6(const netc_if_info_t& if_info, uint32_t index);

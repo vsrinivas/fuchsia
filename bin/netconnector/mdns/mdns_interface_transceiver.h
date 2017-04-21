@@ -37,14 +37,27 @@ class MdnsInterfaceTransceiver {
 
   virtual ~MdnsInterfaceTransceiver();
 
+  const std::string& name() const { return name_; }
+
+  const IpAddress& address() const { return address_; }
+
+  // Sets an alternate address for the interface.
+  void SetAlternateAddress(const std::string& host_full_name,
+                           const IpAddress& alternate_address);
+
   // Starts the interface transceiver.
-  void Start(const InboundMessageCallback& callback);
+  void Start(const std::string& host_full_name,
+             const InboundMessageCallback& callback);
 
   // Stops the interface transceiver.
   void Stop();
 
-  // Sends a DNS message to the specified address.
-  void SendMessage(const DnsMessage& message, const SocketAddress& address);
+  // Sends a messaage to the specified address. A V6 interface will send to
+  // |MdnsAddresses::kV6Multicast| if |dest_address| is
+  // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
+  // address records per record vector and, if there are two, that they are
+  // adjacent. The same constraints will apply when this method returns.
+  void SendMessage(DnsMessage* message, const SocketAddress& address);
 
  protected:
   static constexpr int kTimeToLive_ = 255;
@@ -52,16 +65,19 @@ class MdnsInterfaceTransceiver {
 
   MdnsInterfaceTransceiver(const netc_if_info_t& if_info, uint32_t index);
 
+  uint32_t index() const { return index_; }
+
+  const ftl::UniqueFD& socket_fd() const { return socket_fd_; }
+
   virtual int SetOptionJoinMulticastGroup() = 0;
   virtual int SetOptionOutboundInterface() = 0;
   virtual int SetOptionUnicastTtl() = 0;
   virtual int SetOptionMulticastTtl() = 0;
   virtual int SetOptionFamilySpecific() = 0;
   virtual int Bind() = 0;
-
-  IpAddress address_;
-  uint32_t index_;
-  ftl::UniqueFD socket_fd_;
+  virtual int SendTo(const void* buffer,
+                     size_t size,
+                     const SocketAddress& address) = 0;
 
  private:
   int SetOptionSharePort();
@@ -70,11 +86,26 @@ class MdnsInterfaceTransceiver {
 
   void InboundReady(mx_status_t status, uint32_t events);
 
+  std::shared_ptr<DnsResource> MakeAddressResource(
+      const std::string& host_full_name,
+      const IpAddress& address);
+
+  // Fixes up the address records in the vector. This method expects there to
+  // be at most two address records in the vector and, if there are two, that
+  // they are adjacent. The same constraints will apply when this method
+  // returns.
+  void FixUpAddresses(std::vector<std::shared_ptr<DnsResource>>* resources);
+
+  IpAddress address_;
+  uint32_t index_;
   std::string name_;
+  ftl::UniqueFD socket_fd_;
   mtl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
   InboundMessageCallback inbound_message_callback_;
+  std::shared_ptr<DnsResource> address_resource_;
+  std::shared_ptr<DnsResource> alternate_address_resource_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MdnsInterfaceTransceiver);
 };
