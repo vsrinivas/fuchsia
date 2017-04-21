@@ -48,6 +48,7 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
         }
         flip_deferred_wait_semaphores_.clear();
         flip_deferred_signal_semaphores_.clear();
+        last_flipped_buffer_ = nullptr;
     }
 
     return last_flipped_buffer_;
