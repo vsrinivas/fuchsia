@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "report_result",
+            "bootfs_path": "bin/report_result"
+        },
+        {
             "binary": "test_runner",
             "bootfs_path": "apps/test_runner"
         }
