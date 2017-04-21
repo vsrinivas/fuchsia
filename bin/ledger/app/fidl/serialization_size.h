@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP__SERIALIZATION_SIZE_H_
-#define APPS_LEDGER_SRC_APP__SERIALIZATION_SIZE_H_
+#ifndef APPS_LEDGER_SRC_APP_FIDL_SERIALIZATION_SIZE_H_
+#define APPS_LEDGER_SRC_APP_FIDL_SERIALIZATION_SIZE_H_
 
 #include <stddef.h>
 
@@ -34,4 +34,4 @@ size_t GetEntrySize(size_t key_length);
 }  // namespace fidl_serialization
 }  //  namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP__SERIALIZATION_SIZE_H_
+#endif  // APPS_LEDGER_SRC_APP_FIDL_SERIALIZATION_SIZE_H_

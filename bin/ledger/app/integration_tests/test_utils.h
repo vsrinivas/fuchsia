@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_TEST_UTILS_H_
+#define APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_TEST_UTILS_H_
+
 #include <vector>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
@@ -100,3 +103,5 @@ class LedgerApplicationBaseTest : public test::TestWithMessageLoop {
 
 }  // namespace integration_tests
 }  // namespace ledger
+
+#endif  // APPS_LEDGER_SRC_APP_INTEGRATION_TESTS_TEST_UTILS_H_

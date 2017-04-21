@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GLUE_CRYPTO_BASE64_H_
-#define GLUE_CRYPTO_BASE64_H_
+#ifndef APPS_LEDGER_SRC_GLUE_CRYPTO_BASE64_H_
+#define APPS_LEDGER_SRC_GLUE_CRYPTO_BASE64_H_
 
 #include <string>
 
@@ -21,4 +21,4 @@ bool Base64Decode(ftl::StringView input, std::string* output);
 
 }  // namespace glue
 
-#endif  // GLUE_CRYPTO_BASE64_H_
+#endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_BASE64_H_

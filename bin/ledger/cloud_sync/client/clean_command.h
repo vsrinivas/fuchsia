@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_REMOTE_CLEAN_COMMAND_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_REMOTE_CLEAN_COMMAND_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLEAN_COMMAND_H_
+#define APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLEAN_COMMAND_H_
 
 #include <memory>
 
@@ -35,4 +35,4 @@ class CleanCommand : public Command {
 
 }  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_REMOTE_CLEAN_COMMAND_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLEAN_COMMAND_H_
