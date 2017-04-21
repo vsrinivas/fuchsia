@@ -17,7 +17,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/tpm.h>
+#include <magenta/device/tpm.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <stdlib.h>
@@ -115,11 +115,6 @@ cleanup:
     return status;
 }
 
-static mx_protocol_tpm_t tpm_proto __UNUSED = {
-    .get_random = tpm_get_random,
-    .save_state = tpm_save_state,
-};
-
 static ssize_t tpm_device_ioctl(mx_device_t* dev, uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len) {
@@ -154,7 +149,6 @@ mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
         return status;
     }
     dev->protocol_id = MX_PROTOCOL_TPM;
-    dev->protocol_ops = &tpm_proto;
 
     status = device_add(dev, parent);
     if (status != NO_ERROR) {

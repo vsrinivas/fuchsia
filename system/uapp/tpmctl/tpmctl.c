@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/tpm.h>
+#include <magenta/device/tpm.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <magenta/syscalls.h>
