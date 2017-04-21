@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -146,12 +147,12 @@ enum class DnsResponseCode : uint16_t {
 
 // DNS message header.
 struct DnsHeader {
-  uint16_t id_;
+  uint16_t id_ = 0;
   uint16_t flags_ = 0;
-  uint16_t question_count_;
-  uint16_t answer_count_;
-  uint16_t authority_count_;
-  uint16_t additional_count_;
+  uint16_t question_count_ = 0;
+  uint16_t answer_count_ = 0;
+  uint16_t authority_count_ = 0;
+  uint16_t additional_count_ = 0;
 
   bool response() { return (flags_ & kQueryResponseMask) != 0; }
 
@@ -175,6 +176,7 @@ struct DnsHeader {
 
   void SetResponse(bool value);
   void SetOpCode(DnsOpCode op_code);
+  void SetAuthoritativeAnswer(bool value);
   void SetTruncated(bool value);
   void SetRecursionDesired(bool value);
   void SetRecursionAvailable(bool value);
@@ -193,9 +195,12 @@ struct DnsHeader {
 
 // DNS question record.
 struct DnsQuestion {
+  DnsQuestion();
+  DnsQuestion(const std::string& name, DnsType type);
+
   DnsName name_;
   DnsType type_;
-  DnsClass class_;
+  DnsClass class_ = DnsClass::kIn;
   bool unicast_response_ = false;
 };
 
@@ -231,8 +236,8 @@ struct DnsResourceDataAaaa {
 
 // Additional data for type 'SRV' resource records.
 struct DnsResourceDataSrv {
-  uint16_t priority_;
-  uint16_t weight_;
+  uint16_t priority_ = 0;
+  uint16_t weight_ = 0;
   IpPort port_;
   DnsName target_;
 };
@@ -245,14 +250,20 @@ struct DnsResourceDataNSec {
 
 // DNS resource record.
 struct DnsResource {
+  static constexpr uint32_t kShortTimeToLive = 2 * 60;
+  static constexpr uint32_t kLongTimeToLive = 75 * 60;
+
   DnsResource();
+  DnsResource(const std::string& name, DnsType type);
   DnsResource(const DnsResource& other);
   ~DnsResource();
 
+  DnsResource& operator=(const DnsResource& other);
+
   DnsName name_;
   DnsType type_ = DnsType::kInvalid;
-  DnsClass class_;
-  bool cache_flush_;
+  DnsClass class_ = DnsClass::kIn;
+  bool cache_flush_ = false;
   uint32_t time_to_live_;
   union {
     DnsResourceDataA a_;
@@ -276,10 +287,10 @@ struct DnsMessage {
   }
 
   DnsHeader header_;
-  std::vector<DnsQuestion> questions_;
-  std::vector<DnsResource> answers_;
-  std::vector<DnsResource> authorities_;
-  std::vector<DnsResource> additionals_;
+  std::vector<std::shared_ptr<DnsQuestion>> questions_;
+  std::vector<std::shared_ptr<DnsResource>> answers_;
+  std::vector<std::shared_ptr<DnsResource>> authorities_;
+  std::vector<std::shared_ptr<DnsResource>> additionals_;
 };
 
 }  // namespace mdns
