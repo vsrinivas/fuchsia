@@ -119,3 +119,17 @@ executable("sockopttest") {
     "magenta",
   ]
 }
+
+executable("passfdtest") {
+  testonly = true
+
+  sources = [
+    "passfdtest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+    "launchpad",
+  ]
+}

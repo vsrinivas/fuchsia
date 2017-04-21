@@ -188,8 +188,8 @@ int server(const char* service) {
 }
 
 void usage(void) {
-  printf("usage: socktest server port\n");
-  printf("       socktest client address port message\n");
+  printf("usage: sockettest server port\n");
+  printf("       sockettest client address port message\n");
 }
 
 int main(int argc, char** argv) {

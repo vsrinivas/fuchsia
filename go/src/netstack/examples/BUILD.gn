@@ -11,6 +11,7 @@ group("examples") {
     "//apps/netstack/examples/sockettest:epolltest",
     "//apps/netstack/examples/sockettest:mctest",
     "//apps/netstack/examples/sockettest:nbiotest",
+    "//apps/netstack/examples/sockettest:passfdtest",
     "//apps/netstack/examples/sockettest:polltest",
     "//apps/netstack/examples/sockettest:selecttest",
     "//apps/netstack/examples/sockettest:sockopttest",
