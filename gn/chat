@@ -15,10 +15,6 @@
         {
             "binary": "gen/apps/modules/chat/modules/conversation_list/chat_conversation_list.flx",
             "bootfs_path": "apps/chat_conversation_list"
-        },
-        {
-            "binary": "gen/apps/modules/chat/modules/story/chat_story.flx",
-            "bootfs_path": "apps/chat_story"
         }
     ]
 }
