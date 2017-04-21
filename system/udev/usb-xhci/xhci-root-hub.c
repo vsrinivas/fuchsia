@@ -217,6 +217,9 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
     volatile uint32_t* portsc = &xhci->op_regs->port_regs[rh_port_index].portsc;
     uint32_t temp = XHCI_READ32(portsc);
     temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PR;
+    if (rh->speed == USB_SPEED_SUPER) {
+        temp |= PORTSC_WPR;
+    }
     XHCI_WRITE32(portsc, temp);
 
     int port_index = xhci->rh_port_map[rh_port_index];
@@ -282,9 +285,10 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 
     memcpy(device_desc, rh->device_desc, sizeof(usb_device_descriptor_t));
     memcpy(config_desc, rh->config_desc, le16toh(rh->config_desc->wTotalLength));
+    rh->speed = xhci_rh_speeds[rh_index];
 
     // Notify bus driver that our emulated hub exists
-    return xhci_add_device(xhci, xhci->max_slots + rh_index + 1, 0, xhci_rh_speeds[rh_index]);
+    return xhci_add_device(xhci, xhci->max_slots + rh_index + 1, 0, rh->speed);
 }
 
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
@@ -361,8 +365,8 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
     uint16_t value = le16toh(setup->wValue);
     uint16_t index = le16toh(setup->wIndex);
 
-    xprintf("xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
-            request_type, request, value, index, le16toh(setup->wLength));
+//    xprintf("xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d\n",
+//            request_type, request, value, index, le16toh(setup->wLength));
 
     if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
         return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), txn);
@@ -432,7 +436,7 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 }
 
 static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
-    xprintf("xhci_rh_handle_intr_req\n");
+//    xprintf("xhci_rh_handle_intr_req\n");
     uint8_t status_bits[128 / 8];
     bool have_status = 0;
     uint8_t* ptr = status_bits;
@@ -464,7 +468,7 @@ static void xhci_rh_handle_intr_req(xhci_root_hub_t* rh, iotxn_t* txn) {
 }
 
 mx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
-    xprintf("xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
+//    xprintf("xhci_rh_iotxn_queue rh_index: %d\n", rh_index);
 
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];

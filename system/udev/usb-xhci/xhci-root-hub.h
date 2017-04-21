@@ -24,6 +24,7 @@ typedef struct {
 
     const usb_device_descriptor_t* device_desc;
     const usb_configuration_descriptor_t* config_desc;
+    usb_speed_t speed;
 } xhci_root_hub_t;
 
 mx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index);
