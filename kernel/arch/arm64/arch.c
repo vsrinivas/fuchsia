@@ -34,7 +34,27 @@ enum {
 typedef struct {
     uint64_t    mpid;
     void*       sp;
+
+    // This part of the struct itself will serve temporarily as the
+    // fake arch_thread in the thread pointer, so that safe-stack
+    // and stack-protector code can work early.  The thread pointer
+    // (TPIDR_EL1) points just past arm64_sp_info_t.
+    uintptr_t   stack_guard;
+    void*       unsafe_sp;
 } arm64_sp_info_t;
+
+static_assert(sizeof(arm64_sp_info_t) == 32,
+              "check arm64_get_secondary_sp assembly");
+static_assert(offsetof(arm64_sp_info_t, sp) == 8,
+              "check arm64_get_secondary_sp assembly");
+static_assert(offsetof(arm64_sp_info_t, mpid) == 0,
+              "check arm64_get_secondary_sp assembly");
+
+#define TP_OFFSET(field) \
+    ((int)offsetof(arm64_sp_info_t, field) - (int)sizeof(arm64_sp_info_t))
+static_assert(TP_OFFSET(stack_guard) == MX_TLS_STACK_GUARD_OFFSET, "");
+static_assert(TP_OFFSET(unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET, "");
+#undef TP_OFFSET
 
 #if WITH_SMP
 /* smp boot lock */
@@ -54,7 +74,8 @@ uint64_t arm64_get_boot_el(void)
 }
 
 #if WITH_SMP
-status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* ptr) {
+status_t arm64_set_secondary_sp(uint cluster, uint cpu,
+                                void* sp, void* unsafe_sp) {
     uint64_t mpid = ARM64_MPID(cluster, cpu);
 
     uint32_t i = 0;
@@ -63,9 +84,16 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu, void* ptr) {
     }
     if (i==SMP_MAX_CPUS)
         return ERR_NO_RESOURCES;
-    printf("Set mpid 0x%lx sp to %p\n", mpid, ptr);
-    arm64_secondary_sp_list[i].mpid = mpid;
-    arm64_secondary_sp_list[i].sp = ptr;
+    printf("Set mpid 0x%lx sp to %p\n", mpid, sp);
+#if __has_feature(safe_stack)
+    printf("Set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
+#else
+    DEBUG_ASSERT(unsafe_sp == NULL);
+#endif
+    arm64_secondary_sp_list[i] = (arm64_sp_info_t){
+        .stack_guard = get_current_thread()->arch.stack_guard,
+        .mpid = mpid, .sp = sp, .unsafe_sp = unsafe_sp,
+    };
     return NO_ERROR;
 }
 #endif

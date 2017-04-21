@@ -66,6 +66,10 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     t->arch.gs_base = 0;
 }
 
+void arch_thread_construct_first(thread_t *t)
+{
+}
+
 void arch_dump_thread(thread_t *t)
 {
     if (t->state != THREAD_RUNNING) {

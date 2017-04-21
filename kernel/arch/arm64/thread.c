@@ -52,14 +52,43 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     memset(frame, 0, sizeof(*frame));
     frame->lr = entry_point;
 
+    // This is really a global (boot-time) constant value.
+    // But it's stored in each thread struct to satisfy the
+    // compiler ABI (TPIDR_EL1 + MX_TLS_STACK_GUARD_OFFSET).
+    t->arch.stack_guard = get_current_thread()->arch.stack_guard;
+
     // set the stack pointer
     t->arch.sp = (vaddr_t)frame;
+#if __has_feature(safe_stack)
+    t->arch.unsafe_sp =
+        ROUNDDOWN((vaddr_t)t->unsafe_stack + t->stack_size, 16);
+#endif
 
     // zero out the fpu state
     memset(&t->arch.fpstate, 0, sizeof(t->arch.fpstate));
 }
 
-void arch_context_switch(thread_t *oldthread, thread_t *newthread)
+__NO_SAFESTACK void arch_thread_construct_first(thread_t *t)
+{
+    // Propagate the values from the fake arch_thread that the thread
+    // pointer points to now (set up in start.S) into the real thread
+    // structure being set up now.
+    thread_t *fake = get_current_thread();
+    t->arch.stack_guard = fake->arch.stack_guard;
+    t->arch.unsafe_sp = fake->arch.unsafe_sp;
+
+    // Force the thread pointer immediately to the real struct.  This way
+    // our callers don't have to avoid safe-stack code or risk losing track
+    // of the unsafe_sp value.  The caller's unsafe_sp value is visible at
+    // TPIDR_EL1 + MX_TLS_UNSAFE_SP_OFFSET as expected, though TPIDR_EL1
+    // happens to have changed.  (We're assuming that the compiler doesn't
+    // decide to cache the TPIDR_EL1 value across this function call, which
+    // would be pointless since it's just one instruction to fetch it afresh.)
+    set_current_thread(t);
+}
+
+__NO_SAFESTACK void arch_context_switch(thread_t *oldthread,
+                                        thread_t *newthread)
 {
     LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
 #if WITH_SMP

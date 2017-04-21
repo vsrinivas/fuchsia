@@ -269,15 +269,22 @@ static void platform_start_cpu(uint cluster, uint cpu) {
 #endif
 }
 
+static void* allocate_one_stack(void) {
+    char* stack =
+        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL);
+    return stack + ARCH_DEFAULT_STACK_SIZE;
+}
+
 static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
-                void* stack_top =
-                    (char*)pmm_alloc_kpages(
-                        ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL) +
-                    ARCH_DEFAULT_STACK_SIZE;
-                arm64_set_secondary_sp(cluster, cpu, stack_top);
+                void* sp = allocate_one_stack();
+                void* unsafe_sp = NULL;
+#if __has_feature(safe_stack)
+                unsafe_sp = allocate_one_stack();
+#endif
+                arm64_set_secondary_sp(cluster, cpu, sp, unsafe_sp);
                 platform_start_cpu(cluster, cpu);
             }
         }

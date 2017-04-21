@@ -9,6 +9,11 @@
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <kernel/vm.h>
+#include <magenta/tls.h>
+
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
 
 /*
  * Register use:
@@ -366,15 +371,31 @@ FUNCTION(arm_reset)
     ldr     tmp, =boot_cpu_kstack_end
     mov     sp, tmp
 
+    // Set the thread pointer early so compiler-generated references
+    // to the stack-guard and unsafe-sp slots work.  This is not a
+    // real 'struct thread' yet, just a pointer to (past, actually)
+    // the two slots used by the ABI known to the compiler.  This avoids
+    // having to compile-time disable safe-stack and stack-protector
+    // code generation features for all the C code in the bootstrap
+    // path, which (unlike on x86, e.g.) is enough to get annoying.
+    ldr     tmp, =boot_cpu_fake_thread_pointer_location
+    msr     tpidr_el1, tmp
+
+    // Choose a good (ideally random) stack-guard value as early as possible.
+    bl      choose_stack_guard
+    str	    x0, [tmp, #MX_TLS_STACK_GUARD_OFFSET]
+    // Don't leak the value to other code.
+    mov	    x0, xzr
+
     bl  lk_main
     b   .
 
 #if WITH_SMP
 .Lsecondary_boot:
     bl      arm64_get_secondary_sp
-    cmp     x0, #0
-    beq     .Lunsupported_cpu_trap
+    cbz     x0, .Lunsupported_cpu_trap
     mov     sp, x0
+    msr     tpidr_el1, x1
 
     bl      arm64_secondary_entry
 
@@ -403,12 +424,31 @@ DATA(page_tables_not_ready)
 END(page_tables_not_ready)
 #endif
 
+    .balign 8
+LOCAL_DATA(boot_cpu_fake_arch_thread)
+    .quad 0xdeadbeef1ee2d00d // stack_guard
+#if __has_feature(safe_stack)
+    .quad boot_cpu_unsafe_kstack_end
+#else
+    .quad 0
+#endif
+LOCAL_DATA(boot_cpu_fake_thread_pointer_location)
+END(boot_cpu_fake_arch_thread)
+
 .bss
 LOCAL_DATA(boot_cpu_kstack)
     .skip ARCH_DEFAULT_STACK_SIZE
     .balign 16
 LOCAL_DATA(boot_cpu_kstack_end)
 END(boot_cpu_kstack)
+
+#if __has_feature(safe_stack)
+LOCAL_DATA(boot_cpu_unsafe_kstack)
+    .skip ARCH_DEFAULT_STACK_SIZE
+    .balign 16
+LOCAL_DATA(boot_cpu_unsafe_kstack_end)
+END(boot_cpu_unsafe_kstack)
+#endif
 
 .section .bss.prebss.translation_table, "aw", @nobits
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT

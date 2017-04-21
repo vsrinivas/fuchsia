@@ -56,7 +56,7 @@ static void arm64_fpu_load_state(struct thread *t)
                         "r"((uint64_t)fpstate->fpsr));
 }
 
-static void arm64_fpu_save_state(struct thread *t)
+__NO_SAFESTACK static void arm64_fpu_save_state(struct thread *t)
 {
     struct fpstate *fpstate = &t->arch.fpstate;
 
@@ -92,7 +92,8 @@ static void arm64_fpu_save_state(struct thread *t)
 }
 
 /* save fpu state if the thread had dirtied it and disable the fpu */
-void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread)
+__NO_SAFESTACK void arm64_fpu_context_switch(struct thread *oldthread,
+                                             struct thread *newthread)
 {
     uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
     if (is_fpu_enabled(cpacr)) {

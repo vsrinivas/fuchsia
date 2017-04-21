@@ -119,10 +119,17 @@ KERNEL_DEFINES += WITH_NO_FP=1
 KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+
 ifndef ARCH_arm64_CLANG_TARGET
 ARCH_arm64_CLANG_TARGET := aarch64-fuchsia
 endif
 GLOBAL_COMPILEFLAGS += --target=$(ARCH_arm64_CLANG_TARGET)
+
+KERNEL_COMPILEFLAGS += -mcmodel=kernel
+
+# Clang now supports -fsanitize=safe-stack with -mcmodel=kernel.
+KERNEL_COMPILEFLAGS += $(SAFESTACK)
+
 endif
 
 # make sure some bits were set up

@@ -21,17 +21,6 @@ __BEGIN_CDECLS
 #define ARM64_MPID(cluster, cpu) (((cluster << MPIDR_AFF1_SHIFT) & MPIDR_AFF1_MASK) | \
                                   ((cpu << MPIDR_AFF0_SHIFT) & MPIDR_AFF0_MASK))
 
-/* use the cpu local thread context pointer to store current_thread */
-static inline struct thread *get_current_thread(void)
-{
-    return (struct thread *)ARM64_READ_SYSREG(tpidr_el1);
-}
-
-static inline void set_current_thread(struct thread *t)
-{
-    ARM64_WRITE_SYSREG(tpidr_el1, (uint64_t)t);
-}
-
 #if WITH_SMP
 
 void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus);
@@ -94,4 +83,3 @@ static inline bool arch_in_int_handler(void)
 }
 
 __END_CDECLS
-

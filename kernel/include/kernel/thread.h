@@ -259,6 +259,7 @@ static inline bool thread_is_real_time_or_idle(thread_t *t)
 enum handler_return thread_timer_tick(void);
 
 /* the current thread */
+#include <arch/current_thread.h>
 thread_t *get_current_thread(void);
 void set_current_thread(thread_t *);
 

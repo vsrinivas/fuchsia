@@ -134,6 +134,7 @@ FUNCTION(arm64_elX_to_el1)
     ret
 END(arm64_elX_to_el1)
 
+#if WITH_SMP
 FUNCTION(arm64_get_secondary_sp)
     mrs     x9, mpidr_el1
     and     x9, x9, #0xffff             /* only use id/cluster */
@@ -146,14 +147,17 @@ FUNCTION(arm64_get_secondary_sp)
     ldr     x12, [x11, #0]
     cmp     x12, x9
     beq     .Lsp_found
-    add     x11, x11, #16
+    add     x11, x11, #32
     subs    x10, x10, #1
     bne     .Lsp_loop
     mov     x0, xzr
+    mov     x1, xzr
     ret
 
 .Lsp_found:
     ldr     x0, [x11, #8]
+    add     x1, x11, #32
     ret
 
 END(arm64_get_secondary_sp)
+#endif

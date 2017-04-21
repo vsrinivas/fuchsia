@@ -649,6 +649,16 @@ __NO_RETURN static int idle_thread_routine(void *arg)
         arch_idle();
 }
 
+// On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
+// after set_current_thread (we'd now see newthread's unsafe-sp instead!).
+// Hence this function and everything it calls between this point and the
+// the low-level context switch must be marked with __NO_SAFESTACK.
+__NO_SAFESTACK static void final_context_switch(thread_t *oldthread,
+                                                thread_t *newthread) {
+    set_current_thread(newthread);
+    arch_context_switch(oldthread, newthread);
+}
+
 /**
  * @brief  Cause another thread to be executed.
  *
@@ -742,9 +752,6 @@ void thread_resched(void)
     /* set some optional target debug leds */
     target_set_debug_led(0, !thread_is_idle(newthread));
 
-    /* do the switch */
-    set_current_thread(newthread);
-
     TRACE_CONTEXT_SWITCH("cpu %u, old %p (%s, pri %d, flags 0x%x), new %p (%s, pri %d, flags 0x%x)\n",
             cpu, oldthread, oldthread->name, oldthread->priority,
             oldthread->flags, newthread, newthread->name,
@@ -782,7 +789,7 @@ void thread_resched(void)
     }
 
     /* do the low level context switch */
-    arch_context_switch(oldthread, newthread);
+    final_context_switch(oldthread, newthread);
 }
 
 /**
@@ -1008,6 +1015,8 @@ void thread_construct_first(thread_t *t, const char *name)
     thread_set_last_cpu(t, cpu);
     thread_set_pinned_cpu(t, cpu);
 
+    arch_thread_construct_first(t);
+
     THREAD_LOCK(state);
     list_add_head(&thread_list, &t->thread_list_node);
     set_current_thread(t);
@@ -1128,7 +1137,7 @@ void thread_secondary_cpu_init_early(thread_t *t)
     thread_construct_first(t, name);
 }
 
-__NO_SAFESTACK void thread_secondary_cpu_entry(void)
+void thread_secondary_cpu_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
 
