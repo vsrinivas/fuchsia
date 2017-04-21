@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/gobuild.gni")
+import("//build/go/go_binary.gni")
 import("//lib/fidl/fidl.gni")
 
 group("wlan") {
@@ -11,7 +11,7 @@ group("wlan") {
   ]
 }
 
-gobuild("wlanstack") {
+go_binary("wlanstack") {
   gopackage = "apps/wlan/wlanstack"
   deps = [
     "//apps/wlan/services",
