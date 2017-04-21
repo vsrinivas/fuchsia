@@ -15,6 +15,7 @@
 
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <kernel/vm/vm_object_paged.h>
 #include <mxtl/auto_call.h>
 
 #define LOCAL_TRACE 0

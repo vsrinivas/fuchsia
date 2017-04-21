@@ -10,6 +10,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_paged.h>
 #include <kernel/vm/vm_address_region.h>
 #include <mxtl/array.h>
 #include <new.h>

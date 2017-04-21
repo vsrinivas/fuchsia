@@ -23,6 +23,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_address_region.h>
+#include <kernel/vm/vm_object_paged.h>
 
 #include <magenta/c_user_thread.h>
 #include <magenta/exception.h>

@@ -4,12 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/resource_dispatcher.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_physical.h>
 #include <magenta/handle.h>
 #include <magenta/handle_owner.h>
 #include <magenta/channel_dispatcher.h>
-#include <magenta/resource_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <new.h>

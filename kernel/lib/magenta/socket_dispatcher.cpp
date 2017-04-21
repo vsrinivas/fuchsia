@@ -19,6 +19,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_paged.h>
 
 #include <magenta/handle.h>
 #include <magenta/port_client.h>

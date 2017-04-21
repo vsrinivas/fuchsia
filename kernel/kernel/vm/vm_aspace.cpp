@@ -17,6 +17,8 @@
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_paged.h>
+#include <kernel/vm/vm_object_physical.h>
 #include <kernel/vm/vm_address_region.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>

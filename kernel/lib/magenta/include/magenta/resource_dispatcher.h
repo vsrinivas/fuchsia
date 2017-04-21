@@ -10,6 +10,7 @@
 #include <lib/user_copy/user_array.h>
 #include <magenta/dispatcher.h>
 #include <magenta/handle_owner.h>
+#include <magenta/state_tracker.h>
 #include <magenta/syscalls/resource.h>
 #include <magenta/thread_annotations.h>
 #include <mxtl/canary.h>

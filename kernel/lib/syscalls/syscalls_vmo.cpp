@@ -9,6 +9,7 @@
 #include <trace.h>
 
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_object_paged.h>
 
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
