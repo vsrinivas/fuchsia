@@ -5,6 +5,7 @@
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h> // for mx_cprng_draw
+#include <ctype.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -346,23 +347,24 @@ static bool expand_special(char* in, uint8_t* out) {
     static const uint8_t efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
     int len = strlen(in);
+    for (int i = 0; i < len; i++) in[i] = tolower(in[i]);
 
-    if (len == 6 && !strncmp("BLOBFS", in, 6)) {
+    if (len == 6 && !strncmp("blobfs", in, 6)) {
         memcpy(out, blobfs, GPT_GUID_LEN);
         return true;
     }
 
-    if (len == 4 && !strncmp("DATA", in, 4)) {
+    if (len == 4 && !strncmp("data", in, 4)) {
         memcpy(out, data, GPT_GUID_LEN);
         return true;
     }
 
-    if (len == 6 && !strncmp("SYSTEM", in, 6)) {
+    if (len == 6 && !strncmp("system", in, 6)) {
         memcpy(out, system, GPT_GUID_LEN);
         return true;
     }
 
-    if (len == 3 && !strncmp("EFI", in, 3)) {
+    if (len == 3 && !strncmp("efi", in, 3)) {
         memcpy(out, efi, GPT_GUID_LEN);
         return true;
     }
@@ -447,6 +449,165 @@ static mx_status_t set_visibility(char* path_device, long idx_part,
     return rc;
 }
 
+// parse_size parses long integers in base 10, expanding p, t, g, m, and k
+// suffices as binary byte scales. If the suffix is %, the value is returned as
+// negative, in order to indicate a proportion.
+static int64_t parse_size(char *s) {
+  char *end = s;
+  long long int v = strtoll(s, &end, 10);
+
+  switch(*end) {
+    case 0:
+      break;
+    case '%':
+      v = -v;
+      break;
+    case 'p':
+    case 'P':
+      v *= 1024;
+    case 't':
+    case 'T':
+      v *= 1024;
+    case 'g':
+    case 'G':
+      v *= 1024;
+    case 'm':
+    case 'M':
+      v *= 1024;
+    case 'k':
+    case 'K':
+      v *= 1024;
+  }
+  return v;
+}
+
+// TODO(raggi): this should eventually get moved into ulib/gpt.
+// align finds the next block at or after base that is aligned to a physical
+// block boundary. The gpt specification requires that all partitions are
+// aligned to physical block boundaries.
+static uint64_t align(uint64_t base, uint64_t logical, uint64_t physical) {
+  uint64_t a = logical;
+  if (physical > a) a = physical;
+  uint64_t base_bytes = base * logical;
+  uint64_t d = base_bytes % a;
+  return (base_bytes + a - d) / logical;
+}
+
+// repartition expects argv to start with the disk path and be followed by
+// triples of name, type and size.
+static int repartition(int argc, char** argv) {
+  int fd = -1;
+  ssize_t rc = 1;
+  gpt_device_t* gpt = init(argv[0], false, &fd);
+  if (!gpt) return 255;
+
+  argc--;
+  argv = &argv[1];
+  int num_partitions = argc/3;
+
+  gpt_partition_t *p = gpt->partitions[0];
+  do {
+    gpt_partition_remove(gpt, p->guid);
+    p = gpt->partitions[0];
+  } while(p);
+
+
+  block_info_t info;
+  rc = ioctl_block_get_info(fd, &info);
+  if (rc < 0) {
+    printf("error getting block info\n");
+    rc = 255;
+    goto repartition_end;
+  }
+  uint64_t logical = info.block_size;
+  uint64_t free_space = info.block_count * logical;
+
+  {
+    // expand out any proportional sizes into absolute sizes
+    uint64_t sizes[num_partitions];
+    memset(sizes, 0, sizeof(sizes));
+    {
+      uint64_t percent = 100;
+      uint64_t portions[num_partitions];
+      memset(portions, 0, sizeof(portions));
+      for (int i = 0; i < num_partitions; i++) {
+        int64_t sz = parse_size(argv[(i*3)+2]);
+        if (sz > 0) {
+          sizes[i] = sz;
+          free_space -= sz;
+        } else {
+          if (percent == 0) {
+            printf("more than 100%% of free space requested\n");
+            rc = 1;
+            goto repartition_end;
+          }
+          // portions from parse_size are negative
+          portions[i] = -sz;
+          percent -= -sz;
+        }
+      }
+      for (int i = 0; i < num_partitions; i++) {
+        if (portions[i] != 0)
+          sizes[i] = (free_space * portions[i]) / 100;
+      }
+    }
+
+    // TODO(raggi): get physical block size...
+    uint64_t physical = 8192;
+
+    uint64_t first_usable = 0;
+    uint64_t last_usable = 0;
+    gpt_device_range(gpt, &first_usable, &last_usable);
+
+    uint64_t start = align(first_usable, logical, physical);
+
+    for (int i = 0; i < num_partitions; i++) {
+      char *name = argv[i*3];
+      char *type_string = argv[i*3+1];
+
+      uint64_t byte_size = sizes[i];
+
+      uint8_t type[GPT_GUID_LEN];
+      if (!expand_special(type_string, type) && !parse_guid(type_string, type)) {
+          printf("GUID could not be parsed: %s\n", type_string);
+          rc = 1;
+          goto repartition_end;
+      }
+
+      uint8_t guid[GPT_GUID_LEN];
+      size_t sz;
+      if (mx_cprng_draw(guid, GPT_GUID_LEN, &sz) != NO_ERROR) {
+        printf("rand read error\n");
+        rc = 255;
+        goto repartition_end;
+      }
+
+      // end is clamped to the sector before the next aligned partition, in order
+      // to avoid wasting alignment space at the tail of partitions.
+      uint64_t nblocks = (byte_size/logical) + (byte_size%logical == 0 ? 0 : 1);
+      uint64_t end = align(start+nblocks+1, logical, physical) - 1;
+      if (end > last_usable) end = last_usable;
+
+      if (start > last_usable) {
+        printf("partition %s does not fit\n", name);
+        rc = 1;
+        goto repartition_end;
+      }
+
+      printf("%s: %lu bytes, %lu blocks, %lu-%lu\n", name, byte_size, nblocks, start, end);
+      gpt_partition_add(gpt, name, type, guid, start, end - start, 0);
+
+      start = end + 1;
+    }
+  }
+
+  rc = commit(gpt, fd);
+repartition_end:
+  gpt_device_release(gpt);
+  close(fd);
+  return rc;
+}
+
 int main(int argc, char** argv) {
     if (argc == 1) goto usage;
 
@@ -482,6 +643,10 @@ int main(int argc, char** argv) {
         if (set_visibility(argv[4], strtol(argv[2], NULL, 0), visible)) {
             printf("Error changing visibility.\n");
         }
+    } else if (!strcmp(cmd, "repartition")) {
+      if (argc < 6) goto usage;
+      if (argc  % 3 != 0) goto usage;
+      return repartition(argc-2, &argv[2]);
     } else {
         goto usage;
     }
@@ -497,6 +662,11 @@ usage:
     printf("  View the properties of the selected device\n");
     printf("> %s init [<dev>]\n", argv[0]);
     printf("  Initialize the block device with a GPT\n");
+    printf("> %s repartition <dev> [[<label> <type> <size>], ...]\n", argv[0]);
+    printf("  Destructively repartition the device with the given layout\n");
+    printf("    e.g.\n");
+    printf("    %s repartition /dev/class/block-core/000", argv[0]);
+    printf(" esp efi 100m sys system 5g blob blobfs 50%% data data 50%%\n");
     printf("> %s add <start block> <end block> <name> [<dev>]\n", argv[0]);
     printf("  Add a partition to the device (and create a GPT if one does not exist)\n");
     printf("  Range of blocks is INCLUSIVE (both start and end). Full device range\n");
