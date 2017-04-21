@@ -49,7 +49,7 @@ void VFSHandler::Stop(bool needs_close) {
   FTL_DCHECK(key_);
   mtl::MessageLoop::GetCurrent()->RemoveHandler(key_);
   key_ = 0;
-  if (need_close)
+  if (needs_close)
     mxrio_handler(MX_HANDLE_INVALID, callback_, cookie_);
   delete this;
 }
