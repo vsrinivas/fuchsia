@@ -341,7 +341,7 @@ static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
 }
 
 /*
- * Match keywords "DATA", "SYSTEM", or "EFI" and convert them to their
+ * Match keywords "BLOBFS", "DATA", "SYSTEM", or "EFI" and convert them to their
  * corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
  */
 static bool expand_special(char* in, uint8_t* out) {
@@ -349,11 +349,17 @@ static bool expand_special(char* in, uint8_t* out) {
         return false;
     }
 
+    static const uint8_t blobfs[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
     static const uint8_t data[GPT_GUID_LEN] = GUID_DATA_VALUE;
     static const uint8_t system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
     static const uint8_t efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
     int len = strlen(in);
+
+    if (len == 6 && !strncmp("BLOBFS", in, 6)) {
+        memcpy(out, blobfs, GPT_GUID_LEN);
+        return true;
+    }
 
     if (len == 4 && !strncmp("DATA", in, 4)) {
         memcpy(out, data, GPT_GUID_LEN);
@@ -504,7 +510,7 @@ usage:
     printf("  Add a partition to the device (and create a GPT if one does not exist)\n");
     printf("  Range of blocks is INCLUSIVE (both start and end). Full device range\n");
     printf("  may be queried using '%s dump'\n", argv[0]);
-    printf("> %s edit <n> type|id DATA|SYSTEM|EFI|<guid> [<dev>]\n", argv[0]);
+    printf("> %s edit <n> type|id BLOBFS|DATA|SYSTEM|EFI|<guid> [<dev>]\n", argv[0]);
     printf("  Edit the GUID of the nth partition on the device\n");
     printf("> %s remove <n> [<dev>]\n", argv[0]);
     printf("  Remove the nth partition from the device\n");
