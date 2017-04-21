@@ -214,16 +214,21 @@ static mx_status_t iotxn_physmap_contiguous(iotxn_t* txn) {
     uint64_t page_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
     mx_status_t status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_COMMIT, page_offset, txn->vmo_length, NULL, 0);
     if (status != NO_ERROR) {
-        return status;
+        goto fail;
     }
 
     status = mx_vmo_op_range(txn->vmo_handle, MX_VMO_OP_LOOKUP, page_offset, PAGE_SIZE, txn->phys, sizeof(mx_paddr_t));
     if (status != NO_ERROR) {
-        return status;
+        goto fail;
     }
 
+    txn->pflags |= IOTXN_PFLAG_PHYSMAP;
     txn->phys_count = 1;
     return NO_ERROR;
+fail:
+    free(txn->phys);
+    txn->phys = NULL;
+    return status;
 }
 
 static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
@@ -255,6 +260,7 @@ static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
         return status;
     }
 
+    txn->pflags |= IOTXN_PFLAG_PHYSMAP;
     txn->phys = paddrs;
     txn->phys_count = pages;
     return NO_ERROR;
