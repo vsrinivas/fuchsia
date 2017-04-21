@@ -18,6 +18,7 @@ class Dispatcher;
 class ExceptionPort;
 class ProcessDispatcher;
 class JobDispatcher;
+class PolicyManager;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
@@ -39,6 +40,8 @@ bool ResetSystemExceptionPort();
 mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
+
+PolicyManager* GetSystemPolicyManager();
 
 bool magenta_rights_check(const Handle* handle, mx_rights_t desired);
 

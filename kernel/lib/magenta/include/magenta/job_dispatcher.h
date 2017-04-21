@@ -11,6 +11,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/policy_manager.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
@@ -85,6 +86,10 @@ public:
     bool EnumerateChildren(JobEnumerator* je);
     void Kill();
 
+    // Set policy. |mode| is is either MX_JOB_POL_RELATIVE or MX_JOB_POL_ABSOLUTE and
+    // in_policy is an array of |count| elements.
+    status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
+
     mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
     mxtl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
 
@@ -94,12 +99,15 @@ private:
         KILLING,
     };
 
-    JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent);
+    JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
+
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
 
     void UpdateSignalsIncrementLocked() TA_REQ(lock_);
     void UpdateSignalsDecrementLocked() TA_REQ(lock_);
+
+    pol_cookie_t GetPolicy();
 
     mxtl::Canary<mxtl::magic("JOBD")> canary_;
 
@@ -111,7 +119,7 @@ private:
     // Used to protect name read/writes
     mutable SpinLock name_lock_;
 
-    // The user-friendly process name. For debug purposes only.
+    // The user-friendly job name. For debug purposes only.
     // This includes the trailing NUL.
     char name_[MX_MAX_NAME_LEN] TA_GUARDED(name_lock_) = {};
 
@@ -134,4 +142,6 @@ private:
 
     WeakJobList jobs_ TA_GUARDED(lock_);
     WeakProcessList procs_ TA_GUARDED(lock_);
+
+    pol_cookie_t policy_ TA_GUARDED(lock_);
 };

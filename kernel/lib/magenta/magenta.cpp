@@ -21,6 +21,7 @@
 #include <magenta/excp_port.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/handle.h>
+#include <magenta/policy_manager.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
 #include <magenta/state_tracker.h>
@@ -59,11 +60,15 @@ static mxtl::RefPtr<JobDispatcher> root_job;
 // TODO(teisenbe): Remove this and magenta_check_deadline by mid May 2017.  It's
 // just to help catch bugs during a migration.
 static bool fatal_small_deadlines = false;
+// The singleton policy manager, for jobs and processes. This is
+// a magenta internal class (not a dispatcher-derived).
+static PolicyManager* policy_manager;
 
 void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
     fatal_small_deadlines = cmdline_get_bool("magenta.fatal_small_deadlines", false);
+    policy_manager = PolicyManager::Create(POL_ACTION_ALLOW);
 }
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
@@ -258,6 +263,10 @@ mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort() {
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
     return root_job;
+}
+
+PolicyManager* GetSystemPolicyManager() {
+    return policy_manager;
 }
 
 bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {

@@ -52,6 +52,9 @@ constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
+// Assume the typical set-policy call has 8 items or less.
+constexpr size_t kPolicyBasicInlineCount = 8;
+
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               user_ptr<const char> _name, uint32_t name_len,
@@ -496,16 +499,28 @@ mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
 
     if ((options != MX_JOB_POL_RELATIVE) && (options != MX_JOB_POL_ABSOLUTE))
         return ERR_INVALID_ARGS;
+    if (!_policy || (count == 0u))
+        return ERR_INVALID_ARGS;
+
     if (topic != MX_JOB_POL_BASIC)
+        return ERR_INVALID_ARGS;
+
+    AllocChecker ac;
+    mxtl::InlineArray<
+        mx_policy_basic, kPolicyBasicInlineCount> policy(&ac, count);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    auto status = _policy.copy_array_from_user(policy.get(), sizeof(mx_policy_basic) * count);
+    if (status != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<JobDispatcher> job;
-    auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_SET_POLICY, &job);
+    status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_SET_POLICY, &job);
     if (status != NO_ERROR)
         return status;
 
-    // TODO(cpu): implement setting policy.
-    return ERR_NOT_SUPPORTED;
+    return job->SetPolicy(options, policy.get(), policy.size());
 }
