@@ -33,22 +33,16 @@ PROJECT_DEPENDENCIES = [
 
 
 def main():
-    flutter_path = os.path.join(paths.FUCHSIA_ROOT, 'lib/flutter')
-    flutter_bin_path = os.path.join(flutter_path, 'bin')
-    # First, run flutter precache to seed its dart SDK and packages
-    # TODO: Stop relying on flutter's copy of the 'pub' binary. Instead, we
-    # should build the 'dart' binary and use it to run pub.dart
-    subprocess.check_call(
-        [os.path.join(flutter_bin_path, 'flutter'), 'precache'])
-    # Then run importer.py, placing the flutter bin cache on the PATH to pick
-    # up the 'pub' binary
+    if len(sys.argv) < 2:
+        print('Usage: %s <path to host out directory>' % sys.argv[0])
+        return 1
+    host_path = os.path.abspath(sys.argv[1])
+    pub_path = os.path.join(host_path, 'dart-sdk', 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                  'importer', 'importer.py')
     args = [importer_path]
-    env = os.environ
-    env['PATH'] = flutter_bin_path + ":" + os.path.join(
-        flutter_bin_path, 'cache', 'dart-sdk', 'bin') + ":" + env['PATH']
-    env['FLUTTER_ROOT'] = flutter_path
+    args.append('--pub')
+    args.append(pub_path)
     args.append('--pubspecs')
     for root in ROOT_PUBSPECS:
         args.append(os.path.join(paths.FUCHSIA_ROOT, root))
@@ -56,7 +50,7 @@ def main():
     for project in PROJECT_DEPENDENCIES:
         args.append(os.path.join(paths.FUCHSIA_ROOT, project))
 
-    subprocess.check_call(args, env=env)
+    subprocess.check_call(args)
 
 
 if __name__ == '__main__':
