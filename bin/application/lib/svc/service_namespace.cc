@@ -65,10 +65,9 @@ int ServiceNamespace::OpenAsFileDescriptor() {
   mx::channel directory = CloneDirectory();
   if (!directory)
     return -1;
-  mxio_t* io = mxio_remote_create(directory.get(), MX_HANDLE_INVALID);
+  mxio_t* io = mxio_remote_create(directory.release(), MX_HANDLE_INVALID);
   if (!io)
     return -1;
-  (void) directory.release(); // The directory is now owned by io.
   return mxio_bind_to_fd(io, -1, 0);
 }
 
