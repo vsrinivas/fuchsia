@@ -349,7 +349,7 @@ bool info_process_maps_non_process_handle_fails(void) {
 
 bool info_process_maps_missing_rights_fails(void) {
     BEGIN_TEST;
-    // Get the current process handle rights.
+    // Get the test process handle rights.
     mx_handle_t process = get_test_process();
     mx_info_handle_basic_t hi;
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_HANDLE_BASIC,
@@ -487,6 +487,320 @@ bool info_process_maps_bad_avail_fails(void) {
     END_TEST;
 }
 
+// MX_INFO_JOB_PROCESS/MX_INFO_JOB_CHILDREN tests
+
+// Returns a job with the structure:
+// - returned job
+//   - child process 1
+//   - child process 2
+//   - child process 3 (kTestJobChildProcs)
+//   - child job 1
+//     - grandchild process 1.1
+//     - grandchild job 1.1
+//   - child job 2 (kTestJobChildJobs)
+//     - grandchild process 2.1
+//     - grandchild job 2.1
+static const size_t kTestJobChildProcs = 3;
+static const size_t kTestJobChildJobs = 2;
+static mx_handle_t get_test_job(void) {
+    static mx_handle_t test_job = MX_HANDLE_INVALID;
+
+    if (test_job == MX_HANDLE_INVALID) {
+        char msg[64];
+        mx_handle_t root;
+        mx_status_t s = mx_job_create(mx_job_default(), 0, &root);
+        if (s != NO_ERROR) {
+            EXPECT_EQ(s, NO_ERROR, "mx_job_create"); // Poison the test.
+            return MX_HANDLE_INVALID;
+        }
+        for (size_t i = 0; i < kTestJobChildProcs; i++) {
+            mx_handle_t proc;
+            mx_handle_t vmar;
+            s = mx_process_create(root, "child", 6, 0, &proc, &vmar);
+            if (s != NO_ERROR) {
+                snprintf(msg, sizeof(msg), "mx_process_create(child %zu)", i);
+                goto fail;
+            }
+        }
+        for (size_t i = 0; i < kTestJobChildJobs; i++) {
+            mx_handle_t job;
+            s = mx_job_create(root, 0, &job);
+            if (s != NO_ERROR) {
+                snprintf(msg, sizeof(msg), "mx_job_create(child %zu)", i);
+                goto fail;
+            }
+            mx_handle_t proc;
+            mx_handle_t vmar;
+            s = mx_process_create(job, "grandchild", 6, 0, &proc, &vmar);
+            if (s != NO_ERROR) {
+                snprintf(msg, sizeof(msg), "mx_process_create(grandchild)");
+                goto fail;
+            }
+            mx_handle_t subjob;
+            s = mx_job_create(job, 0, &subjob);
+            if (s != NO_ERROR) {
+                snprintf(msg, sizeof(msg), "mx_job_create(grandchild)");
+                goto fail;
+            }
+        }
+
+        if (false) {
+        fail:
+            EXPECT_EQ(s, NO_ERROR, msg); // Poison the test
+            mx_task_kill(root);          // Clean up all tasks; leaks handles
+            return MX_HANDLE_INVALID;
+        }
+        test_job = root;
+    }
+
+    return test_job;
+}
+
+// The jobch_helper_* (job child helper) functions allow testing both
+// MX_INFO_JOB_PROCESS and MX_INFO_JOB_CHILDREN.
+bool jobch_helper_smoke(uint32_t topic, size_t expected_count) {
+    BEGIN_TEST;
+    mx_koid_t koids[32];
+    size_t actual;
+    size_t avail;
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 koids, sizeof(koids), &actual, &avail),
+              NO_ERROR, "");
+    EXPECT_EQ(expected_count, actual, "");
+    EXPECT_EQ(expected_count, avail, "");
+
+    // All returned koids should produce a valid handle when passed to
+    // mx_object_get_child.
+    for (size_t i = 0; i < actual; i++) {
+        char msg[32];
+        snprintf(msg, sizeof(msg), "koid %zu", koids[i]);
+        mx_handle_t h = MX_HANDLE_INVALID;
+        EXPECT_EQ(mx_object_get_child(get_test_job(), koids[i],
+                                      MX_RIGHT_SAME_RIGHTS, &h),
+                  NO_ERROR, msg);
+        mx_handle_close(h);
+    }
+    END_TEST;
+}
+
+bool info_job_processes_smoke(void) {
+    return jobch_helper_smoke(MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
+}
+
+bool info_job_children_smoke(void) {
+    return jobch_helper_smoke(MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
+}
+
+bool jobch_helper_invalid_handle_fails(uint32_t topic) {
+    BEGIN_TEST;
+    mx_koid_t koids[2];
+    size_t actual;
+    size_t avail;
+    // Passing MX_HANDLE_INVALID should fail.
+    EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, topic,
+                                 koids, sizeof(koids), &actual, &avail),
+              ERR_BAD_HANDLE, "");
+    END_TEST;
+}
+
+bool info_job_processes_invalid_handle_fails(void) {
+    return jobch_helper_invalid_handle_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_invalid_handle_fails(void) {
+    return jobch_helper_invalid_handle_fails(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_non_job_handle_fails(uint32_t topic) {
+    BEGIN_TEST;
+    mx_koid_t koids[2];
+    size_t actual;
+    size_t avail;
+    // Passing a process handle should fail.
+    EXPECT_EQ(mx_object_get_info(mx_process_self(), topic, koids, sizeof(koids),
+                                 &actual, &avail),
+              ERR_WRONG_TYPE, "");
+    END_TEST;
+}
+
+bool info_job_processes_non_job_handle_fails(void) {
+    return jobch_helper_non_job_handle_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_non_job_handle_fails(void) {
+    return jobch_helper_non_job_handle_fails(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_missing_rights_fails(uint32_t topic) {
+    BEGIN_TEST;
+    // Get our parent job's rights.
+    mx_info_handle_basic_t hi;
+    ASSERT_EQ(mx_object_get_info(get_test_job(), MX_INFO_HANDLE_BASIC,
+                                 &hi, sizeof(hi), NULL, NULL),
+              NO_ERROR, "");
+    char msg[32];
+    snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
+    EXPECT_EQ(hi.rights & MX_RIGHT_ENUMERATE, MX_RIGHT_ENUMERATE, msg);
+
+    // Create a handle without MX_RIGHT_ENUMERATE.
+    mx_handle_t handle;
+    ASSERT_EQ(mx_handle_duplicate(get_test_job(),
+                                  hi.rights & ~MX_RIGHT_ENUMERATE, &handle),
+              NO_ERROR, "");
+
+    // Call should fail.
+    mx_koid_t koids[2];
+    size_t actual;
+    size_t avail;
+    EXPECT_EQ(mx_object_get_info(handle, topic, koids, sizeof(koids),
+                                 &actual, &avail),
+              ERR_ACCESS_DENIED, "");
+
+    mx_handle_close(handle);
+    END_TEST;
+}
+
+bool info_job_processes_missing_rights_fails(void) {
+    return jobch_helper_missing_rights_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_missing_rights_fails(void) {
+    return jobch_helper_missing_rights_fails(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_zero_buffer_succeeds(uint32_t topic, size_t expected_count) {
+    BEGIN_TEST;
+    size_t actual;
+    size_t avail;
+    // Passing a zero-sized null buffer should succeed.
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 NULL, // buffer
+                                 0,    // len
+                                 &actual, &avail),
+              NO_ERROR, "");
+    EXPECT_EQ(0u, actual, "");
+    EXPECT_EQ(expected_count, avail, "");
+    END_TEST;
+}
+
+bool info_job_processes_zero_buffer_succeeds(void) {
+    return jobch_helper_zero_buffer_succeeds(
+        MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
+}
+
+bool info_job_children_zero_buffer_succeeds(void) {
+    return jobch_helper_zero_buffer_succeeds(
+        MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
+}
+
+bool jobch_helper_short_buffer_succeeds(uint32_t topic,
+                                        size_t expected_count) {
+    BEGIN_TEST;
+    mx_koid_t koids[1];
+    size_t actual;
+    size_t avail;
+    // Passing a buffer shorter than avail should succeed.
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 koids,
+                                 sizeof(koids),
+                                 &actual, &avail),
+              NO_ERROR, "");
+    EXPECT_EQ(1u, actual, "");
+    EXPECT_EQ(expected_count, avail, "");
+    END_TEST;
+}
+
+bool info_job_processes_short_buffer_succeeds(void) {
+    return jobch_helper_short_buffer_succeeds(
+        MX_INFO_JOB_PROCESSES, kTestJobChildProcs);
+}
+
+bool info_job_children_short_buffer_succeeds(void) {
+    return jobch_helper_short_buffer_succeeds(
+        MX_INFO_JOB_CHILDREN, kTestJobChildJobs);
+}
+
+bool jobch_helper_null_avail_actual_succeeds(uint32_t topic) {
+    BEGIN_TEST;
+    mx_koid_t koids[2];
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 koids, sizeof(koids),
+                                 NULL,  // actual
+                                 NULL), // avail
+              NO_ERROR, "");
+    END_TEST;
+}
+
+bool info_job_processes_null_avail_actual_succeeds(void) {
+    return jobch_helper_null_avail_actual_succeeds(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_null_avail_actual_succeeds(void) {
+    return jobch_helper_null_avail_actual_succeeds(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_bad_buffer_fails(uint32_t topic) {
+    BEGIN_TEST;
+    size_t actual;
+    size_t avail;
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 // Bad buffer pointer value.
+                                 (mx_koid_t*)1,
+                                 sizeof(mx_koid_t),
+                                 &actual, &avail),
+              ERR_INVALID_ARGS, "");
+    END_TEST;
+}
+
+bool info_job_processes_bad_buffer_fails(void) {
+    return jobch_helper_bad_buffer_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_bad_buffer_fails(void) {
+    return jobch_helper_bad_buffer_fails(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_bad_actual_fails(uint32_t topic) {
+    BEGIN_TEST;
+    mx_koid_t koids[2];
+    size_t avail;
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 koids, sizeof(koids),
+                                 // Bad actual pointer value.
+                                 (size_t*)1,
+                                 &avail),
+              ERR_INVALID_ARGS, "");
+    END_TEST;
+}
+
+bool info_job_processes_bad_actual_fails(void) {
+    return jobch_helper_bad_actual_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_bad_actual_fails(void) {
+    return jobch_helper_bad_actual_fails(MX_INFO_JOB_CHILDREN);
+}
+
+bool jobch_helper_bad_avail_fails(uint32_t topic) {
+    BEGIN_TEST;
+    mx_koid_t koids[2];
+    size_t actual;
+    EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
+                                 koids, sizeof(koids), &actual,
+                                 // Bad available pointer value.
+                                 (size_t*)1),
+              ERR_INVALID_ARGS, "");
+    END_TEST;
+}
+
+bool info_job_processes_bad_avail_fails(void) {
+    return jobch_helper_bad_avail_fails(MX_INFO_JOB_PROCESSES);
+}
+
+bool info_job_children_bad_avail_fails(void) {
+    return jobch_helper_bad_avail_fails(MX_INFO_JOB_CHILDREN);
+}
+
 // TODO(dbort): A lot of these tests would be good to run on any
 // MX_INFO_* arg.
 
@@ -503,6 +817,33 @@ RUN_TEST(info_process_maps_bad_buffer_fails);
 RUN_TEST(info_process_maps_partially_unmapped_buffer_fails);
 RUN_TEST(info_process_maps_bad_actual_fails);
 RUN_TEST(info_process_maps_bad_avail_fails);
+RUN_TEST(info_job_processes_smoke);
+RUN_TEST(info_job_processes_invalid_handle_fails);
+RUN_TEST(info_job_processes_non_job_handle_fails);
+RUN_TEST(info_job_processes_missing_rights_fails);
+RUN_TEST(info_job_processes_zero_buffer_succeeds);
+RUN_TEST(info_job_processes_short_buffer_succeeds);
+RUN_TEST(info_job_processes_null_avail_actual_succeeds);
+RUN_TEST(info_job_processes_bad_buffer_fails);
+RUN_TEST(info_job_processes_bad_actual_fails);
+RUN_TEST(info_job_processes_bad_avail_fails);
+/* TODO(dbort): Enable after fixing MG-702
+      (MX_INFO_JOB_CHILDREN shouldn't return non-direct children)
+RUN_TEST(info_job_children_smoke);
+*/
+RUN_TEST(info_job_children_invalid_handle_fails);
+RUN_TEST(info_job_children_non_job_handle_fails);
+RUN_TEST(info_job_children_missing_rights_fails);
+RUN_TEST(info_job_children_zero_buffer_succeeds);
+/* TODO(dbort): Enable after fixing SimpleJobEnumerator
+      and JobEnumerator::EnumerateChildren to avoid using 'avail'
+      values from the wrong node in the job tree.
+RUN_TEST(info_job_children_short_buffer_succeeds);
+*/
+RUN_TEST(info_job_children_null_avail_actual_succeeds);
+RUN_TEST(info_job_children_bad_buffer_fails);
+RUN_TEST(info_job_children_bad_actual_fails);
+RUN_TEST(info_job_children_bad_avail_fails);
 END_TEST_CASE(object_info_tests)
 
 #ifndef BUILD_COMBINED_TESTS
