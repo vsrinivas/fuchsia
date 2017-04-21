@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <mxio/limits.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>

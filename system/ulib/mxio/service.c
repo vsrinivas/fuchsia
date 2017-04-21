@@ -9,8 +9,6 @@
 #include <magenta/errors.h>
 #include <magenta/syscalls.h>
 
-#include <mxio/limits.h>
-
 #include "private.h"
 #include "unistd.h"
 
