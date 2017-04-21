@@ -53,28 +53,52 @@ VmObject::~VmObject() {
     DEBUG_ASSERT(children_list_.is_empty());
 }
 
+bool VmObject::is_cow_clone() const {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    return parent_ != nullptr;
+}
+
 void VmObject::AddMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.push_front(r);
+    mapping_list_len_++;
 }
 
 void VmObject::RemoveMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.erase(*r);
+    DEBUG_ASSERT(mapping_list_len_ > 0);
+    mapping_list_len_--;
+}
+
+uint32_t VmObject::num_mappings() const {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    return mapping_list_len_;
 }
 
 void VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     children_list_.push_front(o);
+    children_list_len_++;
 }
 
 void VmObject::RemoveChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     children_list_.erase(*o);
+    DEBUG_ASSERT(children_list_len_ > 0);
+    children_list_len_--;
+}
+
+uint32_t VmObject::num_children() const {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    return children_list_len_;
 }
 
 void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {

@@ -116,6 +116,11 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    // Returns true if this VMO was created via CloneCOW().
+    // TODO: If more types of clones appear, replace this with a method that
+    // returns an enum rather than adding a new method for each clone type.
+    bool is_cow_clone() const;
+
     // get a pointer to the page structure and/or physical address at the specified offset.
     // valid flags are VMM_PF_FLAG_*
     virtual status_t GetPageLocked(uint64_t offset, uint pf_flags,
@@ -128,9 +133,11 @@ public:
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
+    uint32_t num_mappings() const;
 
     void AddChildLocked(VmObject* r) TA_REQ(lock_);
     void RemoveChildLocked(VmObject* r) TA_REQ(lock_);
+    uint32_t num_children() const;
 
 protected:
     // private constructor (use Create())
@@ -173,4 +180,8 @@ protected:
 
     // parent pointer (may be null)
     mxtl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
+
+    // lengths of corresponding lists
+    uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;
+    uint32_t children_list_len_ TA_GUARDED(lock_) = 0;
 };
