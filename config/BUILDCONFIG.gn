@@ -70,7 +70,7 @@ if (current_os == "fuchsia") {
 # All binary targets will get this list of configs by default.
 default_shared_binary_configs = [
   "//build/config:compiler",
-  "//build/config:debug_prefix_map",
+  "//build/config:relative_paths",
   "//build/config:default_include_dirs",
   "//build/config:default_warnings",
   "//build/config:no_exceptions",

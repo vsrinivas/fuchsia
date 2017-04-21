@@ -88,10 +88,13 @@ config("lto") {
   }
 }
 
-config("debug_prefix_map") {
-  # Make the debugging information independent of the absolute file path.
+config("relative_paths") {
+  # Make builds independent of absolute file path.
   absolute_path = rebase_path("//.")
-  cflags = [ "-fdebug-prefix-map=$absolute_path=." ]
+  cflags = [
+    "-no-canonical-prefixes",
+    "-fdebug-prefix-map=$absolute_path=.",
+  ]
 }
 
 config("debug") {
