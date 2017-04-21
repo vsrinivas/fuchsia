@@ -45,7 +45,6 @@ typedef struct {
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
     bool online;
-    bool dead;
 
     // interrupt in request
     iotxn_t* interrupt_req;
@@ -59,6 +58,7 @@ typedef struct {
     ethmac_ifc_t* ifc;
     void* cookie;
 
+    thrd_t thread;
     mtx_t mutex;
 } ax88179_t;
 #define get_ax88179(dev) ((ax88179_t*)dev->ctx)
@@ -300,11 +300,6 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
 }
 
 static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
-    if (request->status == ERR_PEER_CLOSED) {
-        // request will be released in ax88179_release()
-        return;
-    }
-
     ax88179_t* eth = (ax88179_t*)cookie;
     completion_signal(&eth->completion);
 }
@@ -376,15 +371,14 @@ static void ax88179_send(mx_device_t* dev, uint32_t options, void* data, size_t 
 static void ax88179_unbind(mx_device_t* device) {
     ax88179_t* eth = get_ax88179(device);
 
-    mtx_lock(&eth->mutex);
-    eth->dead = true;
-    mtx_unlock(&eth->mutex);
-
     // this must be last since this can trigger releasing the device
     device_remove(eth->device);
 }
 
 static void ax88179_free(ax88179_t* eth) {
+    // wait for thread to finish before cleaning up
+    thrd_join(eth->thread, NULL);
+
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
@@ -724,12 +718,10 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void**
     }
     */
 
-    thrd_t thread;
-    int ret = thrd_create_with_name(&thread, ax88179_thread, eth, "ax88179_thread");
+    int ret = thrd_create_with_name(&eth->thread, ax88179_thread, eth, "ax88179_thread");
     if (ret != thrd_success) {
         goto fail;
     }
-    thrd_detach(thread);
     return NO_ERROR;
 
 fail:
