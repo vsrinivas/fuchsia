@@ -76,14 +76,22 @@ def main():
         action="store_true",
         default=False,
         help="tell me what you're doing")
+    parser.add_argument(
+        "--all",
+        dest="all",
+        action="store_true",
+        default=False,
+        help="format all files in the repo, not just the modified ones")
     args = parser.parse_args()
 
     # Find the files to be formatted.
     diff_base = _get_diff_base()
     if args.verbose:
       print "Diff base: " + diff_base
-    files = filter(len, subprocess.check_output(
-        ["git", "diff-index", "--name-only", diff_base]).split("\n"))
+
+    list_command = ["git", "ls-files"] if args.all else [
+        "git", "diff-index", "--name-only", diff_base]
+    files = filter(len, subprocess.check_output(list_command).split("\n"))
 
     if args.verbose:
       print
