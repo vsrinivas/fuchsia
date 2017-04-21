@@ -10,31 +10,11 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
-readonly CMAKE_PROGRAM=${CMAKE_PROGRAM:-${ROOT_DIR}/buildtools/cmake/bin/cmake}
 
 JOBS=`getconf _NPROCESSORS_ONLN` || {
   Cannot get number of processors
   exit 1
 }
-
-readonly CMAKE_HOST_TOOLS="\
-  -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
-  -DCMAKE_C_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang \
-  -DCMAKE_CXX_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang++ \
-  -DCMAKE_AR=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-ar \
-  -DCMAKE_NM=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-nm \
-  -DCMAKE_RANLIB=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-ranlib \
-  -DCMAKE_OBJDUMP=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-objdump \
-  -DCMAKE_OBJCOPY=false \
-  -DCMAKE_STRIP=false"
-
-readonly CMAKE_SHARED_FLAGS="\
-  -DCMAKE_SYSTEM_NAME=Fuchsia \
-  -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
-  -DCMAKE_INSTALL_PREFIX='' \
-  -DLLVM_PATH=${ROOT_DIR}/third_party/llvm \
-  -DLLVM_ENABLE_LIBCXX=ON \
-  -DUNIX=1"
 
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
@@ -48,7 +28,7 @@ build() {
   local magenta_buildroot="${outdir}/build-magenta"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${magenta_buildroot}" "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
+    rm -rf -- "${magenta_buildroot}"
   fi
 
   case "${target}" in
@@ -58,14 +38,6 @@ build() {
   esac
 
   local magenta_sysroot="${magenta_buildroot}/build-${magenta_target}/sysroot"
-
-  if [[ "${release}" = "true" ]]; then
-    local cmake_build_type_flags="${CMAKE_SHARED_FLAGS:-} -DCMAKE_BUILD_TYPE=Release"
-    local magenta_build_type_flags="DEBUG=0"
-  else
-    local cmake_build_type_flags="${CMAKE_SHARED_FLAGS:-} -DCMAKE_BUILD_TYPE=Debug"
-    local magenta_build_type_flags=""
-  fi
 
   rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
 
@@ -97,55 +69,6 @@ build() {
   cp -r -- \
    "${magenta_host_include}" \
    "${out_magenta_host_dir}"
-
-  mkdir -p -- "${outdir}/build-libunwind-${target}"
-  pushd "${outdir}/build-libunwind-${target}"
-  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${CMAKE_PROGRAM} -GNinja \
-    ${CMAKE_HOST_TOOLS:-} \
-    ${CMAKE_SHARED_FLAGS:-} \
-    ${cmake_build_type_flags:-} \
-    -DLIBUNWIND_TARGET_TRIPLE="${target}-fuchsia" \
-    -DLIBUNWIND_SYSROOT="${sysroot}" \
-    -DLIBUNWIND_USE_COMPILER_RT=ON \
-    ${ROOT_DIR}/third_party/llvm/runtimes/libunwind
-  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
-  popd
-
-  mkdir -p -- "${outdir}/build-libcxxabi-${target}"
-  pushd "${outdir}/build-libcxxabi-${target}"
-  [[ -f "${outdir}/build-libcxxabi-${target}/build.ninja" ]] || ${CMAKE_PROGRAM} -GNinja \
-    ${CMAKE_HOST_TOOLS:-} \
-    ${CMAKE_SHARED_FLAGS:-} \
-    ${cmake_build_type_flags:-} \
-    -DLIBCXXABI_TARGET_TRIPLE="${target}-fuchsia" \
-    -DLIBCXXABI_SYSROOT="${sysroot}" \
-    -DLIBCXXABI_LIBCXX_INCLUDES="${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" \
-    -DLIBCXXABI_LIBUNWIND_INCLUDES="${ROOT_DIR}/third_party/llvm/runtimes/libunwind/include" \
-    -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-    -DLIBCXXABI_USE_COMPILER_RT=ON \
-    ${ROOT_DIR}/third_party/llvm/runtimes/libcxxabi
-  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
-  popd
-
-  mkdir -p -- "${outdir}/build-libcxx-${target}"
-  pushd "${outdir}/build-libcxx-${target}"
-  [[ -f "${outdir}/build-libcxx-${target}/build.ninja" ]] || ${CMAKE_PROGRAM} -GNinja \
-    ${CMAKE_HOST_TOOLS:-} \
-    ${CMAKE_SHARED_FLAGS:-} \
-    ${cmake_build_type_flags:-} \
-    -DLIBCXX_CXX_ABI=libcxxabi \
-    -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${ROOT_DIR}/third_party/llvm/runtimes/libcxxabi/include" \
-    -DLIBCXX_ABI_VERSION=2 \
-    -DLIBCXX_TARGET_TRIPLE="${target}-fuchsia" \
-    -DLIBCXX_SYSROOT="${sysroot}" \
-    -DLIBCXX_USE_COMPILER_RT=ON \
-    -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-    ${ROOT_DIR}/third_party/llvm/runtimes/libcxx
-  env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
-  popd
-
-  local stamp="$(LC_ALL=POSIX cat $(find "${sysroot}" -type f | sort) | shasum -a1  | awk '{print $1}')"
-  echo "${stamp}" > "${sysroot}/.stamp"
 }
 
 declare CLEAN="${CLEAN:-false}"
