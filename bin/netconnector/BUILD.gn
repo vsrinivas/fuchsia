@@ -12,6 +12,8 @@ executable("netconnector") {
   sources = [
     "device_service_provider.cc",
     "device_service_provider.h",
+    "host_name.cc",
+    "host_name.h",
     "ip_address.cc",
     "ip_address.h",
     "ip_port.cc",

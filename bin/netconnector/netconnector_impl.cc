@@ -5,6 +5,7 @@
 #include "apps/netconnector/src/netconnector_impl.h"
 
 #include "apps/netconnector/src/device_service_provider.h"
+#include "apps/netconnector/src/host_name.h"
 #include "apps/netconnector/src/netconnector_params.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -18,22 +19,17 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
       application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
-      // Requestors should provide user credentials allowing a ServiceAgent to
-      // obtain a user environment. A RespondingServiceHost should be created
-      // with that environment so that responding services are launched in the
-      // correct environment.
+      // Requestors should provide user credentials allowing a ServiceAgent
+      // to obtain a user environment. A RespondingServiceHost should be
+      // created with that environment so that responding services are
+      // launched in the correct environment.
       responding_service_host_(application_context_->environment()) {
   if (!params->listen()) {
     // Start the listener.
     FTL_DCHECK(!params->listen());
 
-    netconnector::NetConnectorAdminPtr net_connector_admin =
-        application_context_
-            ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
-
-    if (!params->host_name().empty()) {
-      net_connector_admin->SetHostName(params->host_name());
-    }
+    NetConnectorAdminPtr net_connector_admin =
+        application_context_->ConnectToEnvironmentService<NetConnectorAdmin>();
 
     for (auto& pair : params_->MoveServices()) {
       net_connector_admin->RegisterService(pair.first, std::move(pair.second));
@@ -49,9 +45,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
 
   // Running as the listener.
 
-  if (!params->host_name().empty()) {
-    SetHostName(params->host_name());
-  }
+  host_name_ = GetHostName();
+  FTL_LOG(INFO) << "NetConnector starting, host name " << host_name_;
 
   // Register services.
   for (auto& pair : params->MoveServices()) {
@@ -103,12 +98,6 @@ void NetConnectorImpl::GetDeviceServiceProvider(
   AddDeviceServiceProvider(DeviceServiceProvider::Create(
       device_name, SocketAddress(iter->second, kPort), std::move(request),
       this));
-}
-
-void NetConnectorImpl::SetHostName(const fidl::String& host_name) {
-  FTL_LOG(INFO) << "Host name set to '" << host_name << "'";
-  // We have no use for the host name until mDNS is implemented.
-  // TODO(dalesat): Implement mDNS.
 }
 
 void NetConnectorImpl::RegisterService(

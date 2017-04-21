@@ -10,16 +10,13 @@ import "application/services/service_provider.fidl";
 // Netconnector admin service definition.
 [ServiceName="netconnector::NetConnectorAdmin"]
 interface NetConnectorAdmin {
-  // Sets the name for the local device. This method is typically only called
-  // by the |netconnector| app when it's used as an admin utility.
-  SetHostName(string host_name);
-
   // Registers a responding service. |service_name| identifies the service and
   // is the same name used in |ConnectToService|. |launch_info| provides the
   // information required to launch the service. This method is typically only
   // called by the |netconnector| app when it's used as an admin utility. In
   // most cases, responding service will be registered using |netconnector|'s
   // config file.
+  // TODO(dalesat): Move this method to NetConnector.
   RegisterService(string service_name,
                   app.ApplicationLaunchInfo launch_info);
 
@@ -36,6 +33,7 @@ interface NetConnectorAdmin {
   // provides the service. This method is provided so that responding services
   // running in a user context can register with a |netconnector| running in a
   // device context.
+  // TODO(dalesat): Move this method to NetConnector.
   RegisterServiceProvider(string service_name,
                           app.ServiceProvider service_provider);
 };

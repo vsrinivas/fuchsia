@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -51,8 +52,6 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
       fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
 
   // NetConnectorAdmin implementation.
-  void SetHostName(const fidl::String& host_name) override;
-
   void RegisterService(const fidl::String& name,
                        app::ApplicationLaunchInfoPtr launch_info) override;
 
@@ -73,6 +72,7 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
 
   NetConnectorParams* params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
+  std::string host_name_;
   fidl::BindingSet<NetConnector> bindings_;
   fidl::BindingSet<NetConnectorAdmin> admin_bindings_;
   Listener listener_;

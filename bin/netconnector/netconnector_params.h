@@ -22,8 +22,6 @@ class NetConnectorParams {
 
   bool listen() const { return listen_; }
 
-  const std::string& host_name() const { return host_name_; }
-
   std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
   MoveServices() {
     return std::move(launch_infos_by_service_name_);
@@ -47,7 +45,6 @@ class NetConnectorParams {
 
   bool is_valid_;
   bool listen_ = false;
-  std::string host_name_;
   std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
       launch_infos_by_service_name_;
   std::unordered_map<std::string, IpAddress> device_addresses_by_name_;

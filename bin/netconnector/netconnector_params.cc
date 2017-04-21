@@ -15,7 +15,6 @@
 namespace netconnector {
 namespace {
 
-constexpr char kConfigHost[] = "host";
 constexpr char kConfigServices[] = "services";
 constexpr char kConfigDevices[] = "devices";
 constexpr char kDefaultConfigFileName[] =
@@ -26,10 +25,6 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
   listen_ = command_line.HasOption("listen");
-
-  if (!command_line.GetOptionValue("host", &host_name_)) {
-    host_name_ = std::string();
-  }
 
   if (!command_line.HasOption("no-config")) {
     std::string config_file_name;
@@ -98,7 +93,6 @@ void NetConnectorParams::Usage() {
   FTL_LOG(INFO)
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
-  FTL_LOG(INFO) << "    --host=<name>                    set the host name";
   FTL_LOG(INFO) << "    --service=<name>@<app url>[,...] register service";
   FTL_LOG(INFO) << "    --device=<name>@<ip address>     register device";
   FTL_LOG(INFO) << "    --listen                         run as listener";
@@ -138,17 +132,7 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
   if (!document.IsObject())
     return false;
 
-  auto iter = document.FindMember(kConfigHost);
-  if (iter != document.MemberEnd()) {
-    const auto& value = iter->value;
-    if (!value.IsString()) {
-      return false;
-    }
-
-    host_name_ = value.GetString();
-  }
-
-  iter = document.FindMember(kConfigServices);
+  auto iter = document.FindMember(kConfigServices);
   if (iter != document.MemberEnd()) {
     const auto& value = iter->value;
     if (!value.IsObject()) {
