@@ -6,8 +6,6 @@ executable("hcitool") {
   output_name = "bluetooth_hcitool"
 
   sources = [
-    "command_dispatcher.cc",
-    "command_dispatcher.h",
     "commands.cc",
     "commands.h",
     "main.cc",
@@ -16,5 +14,6 @@ executable("hcitool") {
   deps = [
     "//apps/bluetooth/lib/gap",
     "//apps/bluetooth/lib/hci",
+    "//apps/bluetooth/tools/lib",
   ]
 }

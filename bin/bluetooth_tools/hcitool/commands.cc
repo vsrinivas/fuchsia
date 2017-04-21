@@ -12,7 +12,6 @@
 #include "apps/bluetooth/lib/common/manufacturer_names.h"
 #include "apps/bluetooth/lib/gap/advertising_data.h"
 #include "apps/bluetooth/lib/hci/advertising_report_parser.h"
-#include "apps/bluetooth/lib/hci/command_channel.h"
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/util.h"
@@ -20,8 +19,6 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
-
-#include "command_dispatcher.h"
 
 using namespace bluetooth;
 
@@ -39,11 +36,11 @@ void StatusCallback(ftl::Closure complete_cb, bluetooth::hci::CommandChannel::Tr
 }
 
 hci::CommandChannel::TransactionId SendCommand(
-    const CommandDispatcher& owner, const hci::CommandPacket& packet,
+    const CommandData* cmd_data, const hci::CommandPacket& packet,
     const hci::CommandChannel::CommandCompleteCallback& cb, const ftl::Closure& complete_cb) {
-  return owner.cmd_channel()->SendCommand(common::DynamicByteBuffer(*packet.buffer()),
-                                          std::bind(&StatusCallback, complete_cb, _1, _2), cb,
-                                          owner.task_runner());
+  return cmd_data->cmd_channel()->SendCommand(common::DynamicByteBuffer(*packet.buffer()),
+                                              std::bind(&StatusCallback, complete_cb, _1, _2), cb,
+                                              cmd_data->task_runner());
 }
 
 void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId id) {
@@ -177,7 +174,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   }
 }
 
-bool HandleVersionInfo(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleVersionInfo(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                        const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: version-info" << std::endl;
@@ -205,13 +202,13 @@ bool HandleVersionInfo(const CommandDispatcher& owner, const ftl::CommandLine& c
   hci::CommandPacket packet(hci::kReadLocalVersionInfo, &buffer);
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool HandleReset(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                  const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
@@ -228,13 +225,13 @@ bool HandleReset(const CommandDispatcher& owner, const ftl::CommandLine& cmd_lin
   hci::CommandPacket packet(hci::kReset, &buffer);
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleReadBDADDR(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleReadBDADDR(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                       const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-bdaddr" << std::endl;
@@ -257,13 +254,13 @@ bool HandleReadBDADDR(const CommandDispatcher& owner, const ftl::CommandLine& cm
   hci::CommandPacket packet(hci::kReadBDADDR, &buffer);
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleReadLocalName(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleReadLocalName(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                          const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: read-local-name" << std::endl;
@@ -287,13 +284,13 @@ bool HandleReadLocalName(const CommandDispatcher& owner, const ftl::CommandLine&
   hci::CommandPacket packet(hci::kReadLocalName, &buffer);
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleWriteLocalName(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                           const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: write-local-name <name>" << std::endl;
@@ -314,13 +311,13 @@ bool HandleWriteLocalName(const CommandDispatcher& owner, const ftl::CommandLine
               name.c_str());
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
   std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleSetAdvEnable(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                         const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
@@ -353,13 +350,13 @@ bool HandleSetAdvEnable(const CommandDispatcher& owner, const ftl::CommandLine& 
   packet.GetMutablePayload<hci::LESetAdvertisingEnableCommandParams>()->advertising_enable = value;
   packet.EncodeHeader();
 
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")" << std::endl;
   return true;
 }
 
-bool HandleSetAdvParams(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                         const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
@@ -418,14 +415,14 @@ bool HandleSetAdvParams(const CommandDispatcher& owner, const ftl::CommandLine& 
   };
 
   packet.EncodeHeader();
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleSetAdvData(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                       const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
@@ -471,14 +468,14 @@ bool HandleSetAdvData(const CommandDispatcher& owner, const ftl::CommandLine& cm
   };
 
   packet.EncodeHeader();
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleSetScanParams(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                          const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
@@ -526,14 +523,14 @@ bool HandleSetScanParams(const CommandDispatcher& owner, const ftl::CommandLine&
   };
 
   packet.EncodeHeader();
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")" << std::endl;
 
   return true;
 }
 
-bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine& cmd_line,
+bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
                          const ftl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
@@ -604,10 +601,10 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
       DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
     }
   };
-  auto event_handler_id = owner.cmd_channel()->AddLEMetaEventHandler(
-      hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, owner.task_runner());
+  auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
+      hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, cmd_data->task_runner());
 
-  auto cleanup_cb = [ complete_cb, event_handler_id, cmd_channel = owner.cmd_channel() ] {
+  auto cleanup_cb = [ complete_cb, event_handler_id, cmd_channel = cmd_data->cmd_channel() ] {
     cmd_channel->RemoveEventHandler(event_handler_id);
     complete_cb();
   };
@@ -621,7 +618,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   };
 
   // Delayed task that stops scanning.
-  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, &owner] {
+  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, &cmd_data] {
     common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
     hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
 
@@ -630,12 +627,12 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
     params->filter_duplicates = hci::GenericEnableParam::kDisable;
 
     packet.EncodeHeader();
-    auto id = SendCommand(owner, packet, final_cb, cleanup_cb);
+    auto id = SendCommand(cmd_data, packet, final_cb, cleanup_cb);
 
     std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")" << std::endl;
   };
 
-  auto cb = [ scan_disable_cb, cleanup_cb, timeout, task_runner = owner.task_runner() ](
+  auto cb = [ scan_disable_cb, cleanup_cb, timeout, task_runner = cmd_data->task_runner() ](
       hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
     auto return_params = event.GetReturnParams<hci::SimpleReturnParams>();
     LogCommandComplete(return_params->status, id);
@@ -647,7 +644,7 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
   };
 
   packet.EncodeHeader();
-  auto id = SendCommand(owner, packet, cb, complete_cb);
+  auto id = SendCommand(cmd_data, packet, cb, complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")" << std::endl;
 
@@ -656,26 +653,32 @@ bool HandleSetScanEnable(const CommandDispatcher& owner, const ftl::CommandLine&
 
 }  // namespace
 
-void RegisterCommands(CommandDispatcher* handler_map) {
-  FTL_DCHECK(handler_map);
+void RegisterCommands(const CommandData* cmd_data,
+                      bluetooth::tools::CommandDispatcher* dispatcher) {
+  FTL_DCHECK(dispatcher);
 
-  handler_map->RegisterHandler("version-info", "Send HCI_Read_Local_Version_Information",
-                               HandleVersionInfo);
-  handler_map->RegisterHandler("reset", "Send HCI_Reset", HandleReset);
-  handler_map->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR", HandleReadBDADDR);
-  handler_map->RegisterHandler("read-local-name", "Send HCI_Read_Local_Name", HandleReadLocalName);
-  handler_map->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
-                               HandleWriteLocalName);
-  handler_map->RegisterHandler("set-adv-enable", "Send HCI_LE_Set_Advertising_Enable",
-                               HandleSetAdvEnable);
-  handler_map->RegisterHandler("set-adv-params", "Send HCI_LE_Set_Advertising_Parameters",
-                               HandleSetAdvParams);
-  handler_map->RegisterHandler("set-adv-data", "Send HCI_LE_Set_Advertising_Data",
-                               HandleSetAdvData);
-  handler_map->RegisterHandler("set-scan-params", "Send HCI_LE_Set_Scan_Parameters",
-                               HandleSetScanParams);
-  handler_map->RegisterHandler("set-scan-enable", "Perform a LE device scan for a limited duration",
-                               HandleSetScanEnable);
+#define BIND(handler) std::bind(&handler, cmd_data, std::placeholders::_1, std::placeholders::_2)
+
+  dispatcher->RegisterHandler("version-info", "Send HCI_Read_Local_Version_Information",
+                              BIND(HandleVersionInfo));
+  dispatcher->RegisterHandler("reset", "Send HCI_Reset", BIND(HandleReset));
+  dispatcher->RegisterHandler("read-bdaddr", "Send HCI_Read_BDADDR", BIND(HandleReadBDADDR));
+  dispatcher->RegisterHandler("read-local-name", "Send HCI_Read_Local_Name",
+                              BIND(HandleReadLocalName));
+  dispatcher->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
+                              BIND(HandleWriteLocalName));
+  dispatcher->RegisterHandler("set-adv-enable", "Send HCI_LE_Set_Advertising_Enable",
+                              BIND(HandleSetAdvEnable));
+  dispatcher->RegisterHandler("set-adv-params", "Send HCI_LE_Set_Advertising_Parameters",
+                              BIND(HandleSetAdvParams));
+  dispatcher->RegisterHandler("set-adv-data", "Send HCI_LE_Set_Advertising_Data",
+                              BIND(HandleSetAdvData));
+  dispatcher->RegisterHandler("set-scan-params", "Send HCI_LE_Set_Scan_Parameters",
+                              BIND(HandleSetScanParams));
+  dispatcher->RegisterHandler("set-scan-enable", "Perform a LE device scan for a limited duration",
+                              BIND(HandleSetScanEnable));
+
+#undef BIND
 }
 
 }  // namespace hcitool
