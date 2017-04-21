@@ -24,6 +24,18 @@ its output.
 * Shift+PgUp/PgDown scrolls up and down by half page
 * Ctrl+Alt+Delete reboots
 
+## Kernel panics
+
+Since the kernel can't reliably draw to a framebuffer when the GPU is enabled,
+the system will reboot by default if the kernel crashes or panics.
+
+The `k prevpanic` command can get some information about the crash most of the
+time on Acer and NUC.  We're working on being able to get more extensive
+previous crash logs.
+
+To disable reboot-on-panic, pass the kernel commandline argument
+[`kernel.halt_on_panic=true`](kernel_cmdline.md#kernel_halt_on_panic_bool).
+
 ## Low level kernel development
 
 For kernel development it's not uncommon to need to monitor or break things
