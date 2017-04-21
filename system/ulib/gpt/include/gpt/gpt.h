@@ -20,7 +20,7 @@
 };
 
 // GUID for a system partition
-// as a string 606b000b-b7c7-4653-a7d5-b737332c899d
+#define GUID_SYSTEM_STRING "606B000B-B7C7-4653-A7D5-B737332C899D"
 #define GUID_SYSTEM_VALUE {                        \
     0x0b, 0x00, 0x6b, 0x60,                        \
     0xc7, 0xb7,                                    \
@@ -29,7 +29,7 @@
 };
 
 // GUID for a data partition
-// as a string 08185f0c-892d-428a-a789-dbeec8f55e6a
+#define GUID_DATA_STRING "08185F0C-892D-428A-A789-DBEEC8F55E6A"
 #define GUID_DATA_VALUE {                          \
     0x0c, 0x5f, 0x18, 0x08,                        \
     0x2d, 0x89,                                    \
@@ -37,7 +37,7 @@
     0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a \
 };
 
-// 2967380e-134c-4cbb-b6da-17e7ce1ca45d
+#define GUID_BLOBFS_STRING "2967380E-134C-4CBB-B6DA-17E7CE1CA45D"
 #define GUID_BLOBFS_VALUE {                        \
     0x0e, 0x38, 0x67, 0x29,                        \
     0x4c, 0x13,                                    \

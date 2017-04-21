@@ -56,6 +56,14 @@ static const char* guid_to_type(char* guid) {
         return "efi system";
     } else if (!strcmp("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", guid)) {
         return "data";
+    } else if (!strcmp("21686148-6449-6E6F-744E-656564454649", guid)) {
+        return "bios";
+    } else if (!strcmp(GUID_SYSTEM_STRING, guid)) {
+        return "fuchsia-system";
+    } else if (!strcmp(GUID_DATA_STRING, guid)) {
+        return "fuchsia-data";
+    } else if (!strcmp(GUID_BLOBFS_STRING, guid)) {
+        return "fuchsia-blobfs";
     } else {
         return "unknown";
     }
