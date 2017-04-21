@@ -9,6 +9,8 @@
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+// Runs a command specified by argv, and based on its exit code reports success
+// or failure to the TestRunner FIDL service.
 int main(int argc, char** argv) {
   char* executable = argv[1];
 
