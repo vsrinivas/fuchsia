@@ -7,6 +7,7 @@
         {"binary": "epolltest", "bootfs_path": "bin/epolltest"},
         {"binary": "mctest", "bootfs_path": "bin/mctest"},
         {"binary": "nbiotest", "bootfs_path": "bin/nbiotest"},
+        {"binary": "passfdtest", "bootfs_path": "bin/passfdtest"},
         {"binary": "polltest", "bootfs_path": "bin/polltest"},
         {"binary": "selecttest", "bootfs_path": "bin/selecttest"},
         {"binary": "sockettest", "bootfs_path": "bin/sockettest"},
