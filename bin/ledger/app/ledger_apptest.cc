@@ -20,6 +20,7 @@ namespace ledger {
 namespace {
 
 app::ApplicationContext* context_;
+mtl::MessageLoop* loop_;
 
 template <class A>
 bool Equals(const fidl::Array<uint8_t>& a1, const A& a2) {
@@ -54,9 +55,19 @@ class LedgerAppTest : public ::testing::Test {
     context_->launcher()->CreateApplication(
         std::move(launch_info),
         ledger_repository_factory_controller_.NewRequest());
+
+    ledger_repository_factory_controller_.set_connection_error_handler([this] {
+      for (const auto& callback : ledger_shutdown_callbacks_) {
+        callback();
+      }
+    });
+
     app::ConnectToService(
         child_services.get(),
         fidl::GetSynchronousProxy(&ledger_repository_factory));
+    app::ConnectToService(
+        child_services.get(),
+        fidl::GetSynchronousProxy(&controller_));
 
     Status status;
     fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
@@ -70,12 +81,18 @@ class LedgerAppTest : public ::testing::Test {
     ASSERT_EQ(Status::OK, status);
   };
 
+  void RegisterShutdownCallback(std::function<void()> callback) {
+    ledger_shutdown_callbacks_.push_back(std::move(callback));
+  }
+
  private:
   files::ScopedTempDir tmp_dir_;
   app::ApplicationControllerPtr ledger_repository_factory_controller_;
+  std::vector<std::function<void()>> ledger_shutdown_callbacks_;
 
  protected:
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
+  fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
 
 TEST_F(LedgerAppTest, PutAndGet) {
@@ -96,11 +113,26 @@ TEST_F(LedgerAppTest, PutAndGet) {
   EXPECT_TRUE(Equals(TestArray(), value_as_string));
 }
 
+TEST_F(LedgerAppTest, Terminate) {
+  bool called = false;
+  RegisterShutdownCallback([&called] {
+    called = true;
+    loop_->PostQuitTask();
+  });
+  controller_->Terminate();
+  loop_->task_runner()->PostDelayedTask([] {
+    loop_->PostQuitTask();
+  }, ftl::TimeDelta::FromSeconds(1));
+  loop_->Run();
+  EXPECT_TRUE(called);
+}
+
 }  // namespace
 }  // namespace ledger
 
 int main(int argc, char** argv) {
   mtl::MessageLoop loop;
+  ledger::loop_ = &loop;
   std::unique_ptr<app::ApplicationContext> context =
       app::ApplicationContext::CreateFromStartupInfo();
   ledger::context_ = context.get();

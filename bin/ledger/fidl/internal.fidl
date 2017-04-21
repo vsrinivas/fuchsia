@@ -17,6 +17,13 @@ interface LedgerRepositoryFactory {
                 LedgerRepository& repository) => (Status status);
 };
 
+// Controller interface for the Ledger application lifecycle.
+[ServiceName="ledger::LedgerController"]
+interface LedgerController {
+  // Terminate the ledger application.
+  Terminate();
+};
+
 interface LedgerRepository {
   // Creates a new Ledger for the given |ledger_name| if it doesn't already
   // exist.

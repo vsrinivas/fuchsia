@@ -39,7 +39,7 @@ constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 // clients to individual Ledger instances. It should not however hold long-lived
 // objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App {
+class App :  public LedgerController {
  public:
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
@@ -48,7 +48,7 @@ class App {
   }
   ~App() {}
 
-  bool Start(ftl::RefPtr<ftl::TaskRunner> main_runner) {
+  bool Start() {
     configuration::Configuration config;
     if (!LoadConfiguration(&config)) {
       FTL_LOG(ERROR) << "Ledger is misconfigured, quitting.";
@@ -70,12 +70,12 @@ class App {
 
     if (config.use_sync) {
       network_service_ =
-          std::make_unique<ledger::NetworkServiceImpl>(main_runner, [this] {
+          std::make_unique<ledger::NetworkServiceImpl>(loop_.task_runner(), [this] {
             return application_context_
                 ->ConnectToEnvironmentService<network::NetworkService>();
           });
     }
-    environment_ = std::make_unique<Environment>(std::move(main_runner),
+    environment_ = std::make_unique<Environment>(loop_.task_runner(),
                                                  network_service_.get());
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
@@ -87,15 +87,30 @@ class App {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });
+    application_context_->outgoing_services()->AddService<LedgerController>(
+        [this](fidl::InterfaceRequest<LedgerController> request) {
+          controller_bindings_.AddBinding(this,
+                                          std::move(request));
+        });
+
+    loop_.Run();
+
     return true;
   }
 
  private:
+  // LedgerController implementation.
+  void Terminate() override {
+    loop_.PostQuitTask();
+  }
+
+  mtl::MessageLoop loop_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
+  fidl::BindingSet<LedgerController> controller_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
@@ -130,13 +145,10 @@ int main(int argc, const char** argv) {
   // configuration.
   ledger::WaitForData();
 
-  mtl::MessageLoop loop;
-
   ledger::App app;
-  if (!app.Start(loop.task_runner())) {
+  if (!app.Start()) {
     return 1;
   }
 
-  loop.Run();
   return 0;
 }
