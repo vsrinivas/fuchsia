@@ -290,7 +290,7 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
             }
         } else {
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            flags = ios->flags;
+            flags = ios->flags | (flags & MXRIO_OFLAG_MASK);
         }
         devhost_get_handles(msg->handle[0], dev, path, flags);
         return ERR_DISPATCHER_INDIRECT;

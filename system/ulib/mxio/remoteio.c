@@ -528,15 +528,19 @@ static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
     return r;
 }
 
-static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn, const char* name) {
+// This function always consumes the cnxn handle
+// The svc handle is only used to send a message
+static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn,
+                                 uint32_t op, const char* name) {
     size_t len = strlen(name);
     if (len >= PATH_MAX) {
+        mx_handle_close(cnxn);
         return ERR_BAD_PATH;
     }
 
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
-    msg.op = MXRIO_OPEN;
+    msg.op = op;
     msg.datalen = len;
     msg.arg = MXRIO_OFLAG_PIPELINE | O_RDWR;
     msg.arg2.mode = 0755;
@@ -564,7 +568,42 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
     if (svc == MX_HANDLE_INVALID) {
         return ERR_UNAVAILABLE;
     }
-    return mxrio_connect(svc, h, svcpath + 5);
+    return mxrio_connect(svc, h, MXRIO_OPEN, svcpath + 5);
+}
+
+mx_handle_t mxio_service_clone(mx_handle_t svc) {
+    mx_handle_t cli, srv;
+    mx_status_t r;
+    if (svc == MX_HANDLE_INVALID) {
+        return MX_HANDLE_INVALID;
+    }
+    if ((r = mx_channel_create(0, &cli, &srv)) < 0) {
+        return MX_HANDLE_INVALID;
+    }
+    if ((r = mxrio_connect(svc, srv, MXRIO_CLONE, "")) < 0) {
+        mx_handle_close(cli);
+        return MX_HANDLE_INVALID;
+    }
+    return cli;
+}
+
+mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types) {
+    mx_handle_t svc = mxio_svc_root;
+    if (svc == MX_HANDLE_INVALID) {
+        return ERR_BAD_HANDLE;
+    }
+    mx_handle_t cli, srv;
+    mx_status_t r;
+    if ((r = mx_channel_create(0, &cli, &srv)) < 0) {
+        return r;
+    }
+    if ((r = mxrio_connect(svc, srv, MXRIO_CLONE, "")) < 0) {
+        mx_handle_close(cli);
+        return r;
+    }
+    handles[0] = cli;
+    types[0] = MX_HND_TYPE_SERVICE_ROOT;
+    return 1;
 }
 
 static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,

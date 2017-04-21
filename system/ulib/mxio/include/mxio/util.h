@@ -18,6 +18,7 @@ typedef struct mxio mxio_t;
 // Utilities to help assemble handles for a new process
 // may return up to MXIO_MAX_HANDLES
 mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types);
+mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_cwd(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
@@ -58,5 +59,10 @@ mxio_t* mxio_logger_create(mx_handle_t);
 // On success the channel is connected.  On failure
 // an error is returned and the handle is closed.
 mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h);
+
+// Attempt to clone a sevice handle by doing a pipelined
+// CLONE operation, returning the new channel endpoint,
+// or MX_HANDLE_INVALID.
+mx_handle_t mxio_service_clone(mx_handle_t h);
 
 __END_CDECLS

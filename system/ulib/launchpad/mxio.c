@@ -35,6 +35,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
 
     if (what & LP_CLONE_MXIO_ROOT) {
         add_mxio(lp, handles, types, mxio_clone_root(handles, types));
+        add_mxio(lp, handles, types, mxio_clone_svcroot(handles, types));
     }
     if (what & LP_CLONE_MXIO_CWD) {
         add_mxio(lp, handles, types, mxio_clone_cwd(handles, types));
