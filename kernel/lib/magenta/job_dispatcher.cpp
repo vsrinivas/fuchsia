@@ -143,6 +143,8 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
     if ((job_count_ == 0) && (process_count_ == 0)) {
         if (state_ == State::KILLING)
             state_ = State::READY;
+        if (!parent_)
+            panic("No user processes left!\n");
     }
 
     state_tracker_.UpdateState(0u, set);
