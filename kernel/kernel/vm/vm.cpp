@@ -34,7 +34,7 @@ extern int __bss_start;
 extern int __bss_end;
 
 // boot time allocated page full of zeros
-vm_page_t *zero_page;
+vm_page_t* zero_page;
 paddr_t zero_page_paddr;
 
 // mark the physical pages backing a range of virtual as in use.

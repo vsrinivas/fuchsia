@@ -134,7 +134,8 @@ public:
 protected:
     // private constructor (use Create())
     explicit VmObject(mxtl::RefPtr<VmObject> parent);
-    VmObject() : VmObject(nullptr) { }
+    VmObject()
+        : VmObject(nullptr) {}
 
     // private destructor, only called from refptr
     virtual ~VmObject();
@@ -159,6 +160,7 @@ protected:
     // if constructed with a parent vmo, point lock_ at the parent's lock
 private:
     Mutex local_lock_;
+
 protected:
     Mutex& lock_;
 
@@ -171,4 +173,3 @@ protected:
     // parent pointer (may be null)
     mxtl::RefPtr<VmObject> parent_;
 };
-

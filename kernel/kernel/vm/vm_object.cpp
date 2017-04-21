@@ -26,7 +26,7 @@
 
 VmObject::VmObject(mxtl::RefPtr<VmObject> parent)
     : lock_(parent ? parent->lock_ref() : local_lock_),
-    parent_(mxtl::move(parent)) {
+      parent_(mxtl::move(parent)) {
     LTRACEF("%p\n", this);
 }
 

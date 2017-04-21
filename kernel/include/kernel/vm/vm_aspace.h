@@ -8,10 +8,10 @@
 
 #include <arch/mmu.h>
 #include <assert.h>
-#include <lib/crypto/prng.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
+#include <lib/crypto/prng.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
@@ -117,7 +117,10 @@ protected:
     mutex_t* lock() { return &lock_; }
 
     // Expose the PRNG for ASLR to VmAddressRegion
-    crypto::PRNG& AslrPrng() { DEBUG_ASSERT(aslr_enabled_); return aslr_prng_; }
+    crypto::PRNG& AslrPrng() {
+        DEBUG_ASSERT(aslr_enabled_);
+        return aslr_prng_;
+    }
 
 private:
     // can only be constructed via factory

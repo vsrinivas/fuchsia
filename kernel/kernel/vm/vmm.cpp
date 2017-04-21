@@ -12,8 +12,8 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_address_region.h>
+#include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <string.h>
@@ -166,7 +166,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     // this.
     if ((status == ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
         printf("PageFault: %zu free pages\n", pmm_count_free_pages());
-        DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8*256);
+        DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
     }
 #endif
     return status;

@@ -42,7 +42,7 @@
 // mapping can gain this permission.
 #define VMAR_FLAG_CAN_MAP_EXECUTE (1 << 6)
 
-#define VMAR_CAN_RWX_FLAGS (VMAR_FLAG_CAN_MAP_READ | \
+#define VMAR_CAN_RWX_FLAGS (VMAR_FLAG_CAN_MAP_READ |  \
                             VMAR_FLAG_CAN_MAP_WRITE | \
                             VMAR_FLAG_CAN_MAP_EXECUTE)
 
@@ -237,6 +237,7 @@ public:
 
     void Dump(uint depth, bool verbose) const override;
     status_t PageFault(vaddr_t va, uint pf_flags) override;
+
 protected:
     static const uint32_t kMagic = 0x564d4152; // VMAR
 
@@ -321,7 +322,8 @@ private:
     // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
     // If func returns false, the iteration stops.  gap_base will be aligned in
     // accordance with align_pow2.
-    template <typename F> void ForEachGap(F func, uint8_t align_pow2);
+    template <typename F>
+    void ForEachGap(F func, uint8_t align_pow2);
 
     // list of subregions, indexed by base address
     ChildList subregions_;
@@ -331,7 +333,8 @@ private:
 // reference cycle between root VMARs and VmAspaces.
 class VmAddressRegionDummy final : public VmAddressRegion {
 public:
-    VmAddressRegionDummy() : VmAddressRegion() { }
+    VmAddressRegionDummy()
+        : VmAddressRegion() {}
 
     status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                            uint32_t vmar_flags, const char* name,
@@ -376,7 +379,7 @@ public:
         return ERR_BAD_STATE;
     }
 
-    ~VmAddressRegionDummy() override { }
+    ~VmAddressRegionDummy() override {}
 
     size_t AllocatedPagesLocked() const override {
         return 0;

@@ -31,7 +31,7 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t* pa) override;
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t* pa) override;
 
 private:
     // private constructor (use Create())

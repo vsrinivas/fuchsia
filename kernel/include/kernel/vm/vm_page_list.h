@@ -27,7 +27,8 @@ public:
     uint64_t GetKey() const { return obj_offset_; }
 
     // for every valid page in the node call the passed in function
-    template <typename T> void ForEveryPage(T func) {
+    template <typename T>
+    void ForEveryPage(T func) {
         for (size_t i = 0; i < kPageFanOut; i++) {
             if (pages_[i]) {
                 func(pages_[i], obj_offset_ + i * PAGE_SIZE);
@@ -36,7 +37,8 @@ public:
     }
 
     // for every valid page in the node call the passed in function
-    template <typename T> void ForEveryPage(T func) const {
+    template <typename T>
+    void ForEveryPage(T func) const {
         for (size_t i = 0; i < kPageFanOut; i++) {
             if (pages_[i]) {
                 func(pages_[i], obj_offset_ + i * PAGE_SIZE);
@@ -71,14 +73,16 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmPageList);
 
     // walk the page tree, calling the passed in function on every tree node
-    template <typename T> void ForEveryPage(T per_page_func) {
+    template <typename T>
+    void ForEveryPage(T per_page_func) {
         for (auto& pl : list_) {
             pl.ForEveryPage(per_page_func);
         }
     }
 
     // walk the page tree, calling the passed in function on every tree node
-    template <typename T> void ForEveryPage(T per_page_func) const {
+    template <typename T>
+    void ForEveryPage(T per_page_func) const {
         for (auto& pl : list_) {
             pl.ForEveryPage(per_page_func);
         }

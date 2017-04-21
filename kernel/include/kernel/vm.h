@@ -89,8 +89,8 @@ static inline bool is_user_address(vaddr_t va) {
 
 static inline bool is_user_address_range(vaddr_t va, size_t len) {
     return va + len >= va &&
-            is_user_address(va) &&
-            (len == 0 || is_user_address(va + len - 1));
+           is_user_address(va) &&
+           (len == 0 || is_user_address(va + len - 1));
 }
 
 /* physical allocator */
@@ -248,7 +248,7 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace);
 #define VMM_PF_FLAG_FAULT_MASK (VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_SW_FAULT)
 
 /* convenience routine for convering page fault flags to a string */
-static const char *vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
+static const char* vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
     str[0] = (pf_flags & VMM_PF_FLAG_WRITE) ? 'w' : 'r';
     str[1] = (pf_flags & VMM_PF_FLAG_USER) ? 'u' : 's';
     str[2] = (pf_flags & VMM_PF_FLAG_INSTRUCTION) ? 'i' : 'd';
@@ -262,8 +262,8 @@ static const char *vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
 status_t vmm_page_fault_handler(vaddr_t addr, uint pf_flags);
 
 /* return a pointer to the zero page */
-static inline vm_page_t *vm_get_zero_page(void) {
-    extern vm_page_t *zero_page;
+static inline vm_page_t* vm_get_zero_page(void) {
+    extern vm_page_t* zero_page;
     return zero_page;
 }
 

@@ -31,7 +31,7 @@ void boot_alloc_reserve(uintptr_t start, size_t len) {
 
     if (end >= boot_alloc_start) {
         if ((start > boot_alloc_start) &&
-            ((start - boot_alloc_start) > (128*1024*1024))) {
+            ((start - boot_alloc_start) > (128 * 1024 * 1024))) {
             // if we've got 128MB of space, that's good enough
             // it's possible that the start may be *way* far up
             // (gigabytes) and there may not be space after it...

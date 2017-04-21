@@ -8,10 +8,10 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_address_region.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_paged.h>
-#include <kernel/vm/vm_address_region.h>
 #include <mxtl/array.h>
 #include <new.h>
 #include <unittest.h>
@@ -647,5 +647,5 @@ VM_UNITTEST(vmo_dropped_ref_test)
 VM_UNITTEST(vmo_remap_test)
 VM_UNITTEST(vmo_double_remap_test)
 VM_UNITTEST(vmo_read_write_smoke_test)
-VM_UNITTEST(dump_all_aspaces)  // Run last
+VM_UNITTEST(dump_all_aspaces) // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);

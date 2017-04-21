@@ -245,7 +245,7 @@ status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t*
 
     __UNUSED char pf_string[5];
     LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, offset, pf_flags,
-           vmm_pf_flags_to_string(pf_flags, pf_string));
+            vmm_pf_flags_to_string(pf_flags, pf_string));
 
     // if we have a parent see if they have a page for us
     if (parent_) {
@@ -579,7 +579,6 @@ status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     size_ = s;
 
     return NO_ERROR;
-
 }
 
 status_t VmObjectPaged::Resize(uint64_t s) {
@@ -830,7 +829,7 @@ status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
             const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
 
             // Perform the necessary cache op against this page.
-            switch(type) {
+            switch (type) {
             case CacheOpType::Invalidate:
                 arch_invalidate_cache_range(cache_op_addr, cache_op_len);
                 break;
@@ -882,4 +881,3 @@ void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, con
     // TODO: optimize by not passing on ranges that are completely covered by pages local to this vmo
     RangeChangeUpdateLocked(offset_new, len_new);
 }
-

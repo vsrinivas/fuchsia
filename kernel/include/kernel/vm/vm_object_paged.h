@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_page_list.h>
 #include <kernel/vm/vm_object.h>
+#include <kernel/vm/vm_page_list.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
@@ -37,7 +37,7 @@ public:
 
     status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) override;
     status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
-                                           uint8_t alignment_log2) override;
+                                   uint8_t alignment_log2) override;
     status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) override;
 
     status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
@@ -46,9 +46,9 @@ public:
                     vmo_lookup_fn_t lookup_fn, void* context) override;
 
     status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len,
-                              size_t* bytes_read) override;
+                      size_t* bytes_read) override;
     status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
-                               size_t* bytes_written) override;
+                       size_t* bytes_written) override;
 
     status_t LookupUser(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
                         size_t buffer_size) override;
@@ -60,10 +60,10 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t *) override;
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t*) override;
 
     status_t CloneCOW(uint64_t offset, uint64_t size,
-                          mxtl::RefPtr<VmObject>* clone_vmo) override;
+                      mxtl::RefPtr<VmObject>* clone_vmo) override;
 
     void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override;
 
@@ -78,7 +78,10 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
     // perform a cache maintenance operation against the vmo.
-    enum class CacheOpType { Invalidate, Clean, CleanInvalidate, Sync };
+    enum class CacheOpType { Invalidate,
+                             Clean,
+                             CleanInvalidate,
+                             Sync };
     status_t CacheOp(const uint64_t offset, const uint64_t len, const CacheOpType type);
 
     // add a page to the object
@@ -107,4 +110,3 @@ private:
     // a tree of pages
     VmPageList page_list_;
 };
-
