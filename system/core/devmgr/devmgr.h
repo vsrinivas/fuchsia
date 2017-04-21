@@ -33,4 +33,6 @@ int devmgr_start_system_init(void* arg);
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
 
+mx_handle_t get_service_root(void);
+
 __END_CDECLS

@@ -63,6 +63,9 @@ void devmgr_launch_devhost(mx_handle_t job,
         launchpad_add_handle(lp, application_launcher,
                              MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
     }
+    if ((h = get_service_root()) != MX_HANDLE_INVALID) {
+        launchpad_add_handle(lp, h, MX_HND_TYPE_SERVICE_ROOT);
+    }
 #else
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
     if ((h = devhost_acpi_clone()) > 0) {

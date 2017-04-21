@@ -16,6 +16,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/watcher.h>
+#include <mxio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,13 @@
 
 #include "devmgr.h"
 #include "memfs-private.h"
+
+static mx_handle_t svc_root_handle;
+static mx_handle_t svc_request_handle;
+
+mx_handle_t get_service_root(void) {
+    return mxio_service_clone(svc_root_handle);
+}
 
 static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
@@ -214,10 +222,6 @@ static const char* argv_sh[] = { "/boot/bin/sh" };
 static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
 static const char* argv_init[] = { "/system/bin/init" };
 
-void create_application_launcher_handles(void) {
-    mx_channel_create(0, &application_launcher, &application_launcher_child);
-}
-
 int devmgr_start_system_init(void* arg) {
     static bool init_started = false;
     static mtx_t lock = MTX_INIT;
@@ -225,14 +229,21 @@ int devmgr_start_system_init(void* arg) {
     struct stat s;
     if (!init_started && stat(argv_init[0], &s) == 0) {
         unsigned int init_hnd_count = 0;
-        mx_handle_t init_hnds[1] = {};
-        uint32_t init_ids[1] = {};
+        mx_handle_t init_hnds[2] = {};
+        uint32_t init_ids[2] = {};
         if (application_launcher_child) {
             assert(init_hnd_count < countof(init_hnds));
             init_hnds[init_hnd_count] = application_launcher_child;
             init_ids[init_hnd_count] = MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0);
             init_hnd_count++;
             application_launcher_child = 0;
+        }
+        if (svc_request_handle) {
+            assert(init_hnd_count < countof(init_hnds));
+            init_hnds[init_hnd_count] = svc_request_handle;
+            init_ids[init_hnd_count] = MX_HND_TYPE_SERVICE_REQUEST;
+            init_hnd_count++;
+            svc_request_handle = 0;
         }
         devmgr_launch(svcs_job_handle, "init", countof(argv_init), argv_init,
                       NULL, -1, init_hnds, init_ids, init_hnd_count);
@@ -400,7 +411,8 @@ int main(int argc, char** argv) {
 
     start_console_shell();
 
-    create_application_launcher_handles();
+    mx_channel_create(0, &application_launcher, &application_launcher_child);
+    mx_channel_create(0, &svc_root_handle, &svc_request_handle);
 
     if (secondary_bootfs_ready()) {
         devmgr_start_system_init(NULL);
