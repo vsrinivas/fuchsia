@@ -11,8 +11,6 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
 	$(LOCAL_DIR)/i2c.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk
-
 MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
 
 include make/module.mk
