@@ -60,6 +60,7 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
     devhost_iostate_t* newios;
 
     if ((newios = create_devhost_iostate(dev)) == NULL) {
+        mx_handle_close(rh);
         return ERR_NO_MEMORY;
     }
 
@@ -73,7 +74,11 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
     if ((r = device_openat(dev, &dev, path, flags)) < 0) {
         printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
                dev, dev->name, path ? path : "", r);
-        goto fail1;
+        if (pipeline) {
+            goto fail_openat_pipelined;
+        } else {
+            goto fail_openat;
+        }
     }
     newios->dev = dev;
 
@@ -81,16 +86,16 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
         if (dev->event > 0) {
             //TODO: read only?
             if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &obj.handle[0])) < 0) {
-                goto fail2;
+                goto fail_duplicate;
             }
             r = 1;
         } else {
             r = 0;
         }
         goto done;
-fail2:
+fail_duplicate:
         device_close(dev, flags);
-fail1:
+fail_openat:
         free(newios);
 done:
         if (r < 0) {
@@ -115,7 +120,7 @@ done:
         // If we succeeded but the write failed, we have to
         // tear down because the channel is now dead
         if (r < 0) {
-            goto fail3;
+            goto fail;
         }
     }
 
@@ -124,13 +129,14 @@ done:
     // In practice, this should never happen.
     if ((r = devhost_start_iostate(newios, rh)) < 0) {
         printf("devhost_get_handles: failed to start iostate\n");
-        goto fail3;
+        goto fail;
     }
 
     return NO_ERROR;
 
-fail3:
+fail:
     device_close(dev, flags);
+fail_openat_pipelined:
     free(newios);
     mx_handle_close(rh);
     return r;
