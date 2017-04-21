@@ -50,8 +50,9 @@ build_dir_magenta=""
 device_type="pc"
 kernel_cmdline=""
 bootdata=""
+kernel_args=""
 
-while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
+while getopts ":u:hrdp:b:m:e:a:t:c:x:o:" opt; do
   case $opt in
     u)
       bytes_sys=$(($OPTARG * 1024 * 1024 * 1024))
@@ -71,7 +72,10 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
         "to place on the EFI partition. If not supplied, this will be assumed" \
         "relative to fuchsia build directory."
       echo "-t: the device type, for example 'qemu', 'rpi', 'pc', etc"
-      echo "-c: kernel command line options"
+      echo "-c: file containing kernel command line options"
+      echo "-o: the kernel command line options to use. If the command line" \
+        "contains spaces, the string should be quoted. If both this and -c are" \
+        "supplied, these options will be appended to the command line file."
       echo "-x: bootdata location"
       exit 0
       ;;
@@ -101,6 +105,9 @@ while getopts ":u:hrdp:b:m:e:a:t:c:x:" opt; do
       ;;
     c)
       kernel_cmdline=$OPTARG
+      ;;
+    o)
+      kernel_args=$OPTARG
       ;;
     x)
       bootdata=$OPTARG
@@ -158,7 +165,7 @@ fi
 if [ "$build_dir_magenta" = "" ]; then
   build_dir_magenta=$build_dir_fuchsia/../build-magenta/build-magenta-$device_type-$platform
 else
-  if [ "$device_type" -ne "" ]; then
+  if [ "$device_type" != "" ]; then
     echo "build directory is specified, type arg ignored"
   fi
 fi
@@ -241,10 +248,23 @@ else
   mkfs.vfat -F 32 "$disk_path_efi"
 fi
 
+kernel_cmd_staging="${STAGING_DIR}/kernel_cmdline"
+if [ "$kernel_cmdline" != "" ]; then
+  cp "$kernel_cmdline" "$kernel_cmd_staging"
+fi
+
+if [ "$kernel_args" != "" ]; then
+  if [ "$kernel_cmdline" = "" ]; then
+    echo "$kernel_args" > "$kernel_cmd_staging"
+  else
+    echo " $kernel_args" >> "$kernel_cmd_staging"
+  fi
+fi
+
 "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
   --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
   --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta" \
-  --kernel_cmdline="$kernel_cmdline" --bootdata="$bootdata"
+  --kernel_cmdline="$kernel_cmd_staging" --bootdata="$bootdata"
 
 echo "Built disks: $disk_path_efi & $disk_path"
