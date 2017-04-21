@@ -30,9 +30,12 @@ public:
     static mxtl::RefPtr<VmObject> CreateFromROData(const void* data, size_t size);
 
     status_t Resize(uint64_t size) override;
-    status_t ResizeLocked(uint64_t size) override;
+    status_t ResizeLocked(uint64_t size) override TA_REQ(lock_);
+    uint64_t size() const override
+        // TODO: Figure out whether it's safe to lock here without causing
+        // any deadlocks.
+        TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
 
-    uint64_t size() const override { return size_; }
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
     status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) override;
@@ -60,12 +63,18 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t*) override;
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t*) override
+        // Calls a Locked method of the parent, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
 
     status_t CloneCOW(uint64_t offset, uint64_t size,
-                      mxtl::RefPtr<VmObject>* clone_vmo) override;
+                      mxtl::RefPtr<VmObject>* clone_vmo) override
+        // Calls a Locked method of the child, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override;
+    void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) override
+        // Called under the parent's lock, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS;
 
 private:
     // private constructor (use Create())
@@ -97,16 +106,16 @@ private:
                                T copyfunc);
 
     // set our offset within our parent
-    status_t SetParentOffsetLocked(uint64_t o);
+    status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);
 
     // maximum size of a VMO is one page less than the full 64bit range
     static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
 
     // members
-    uint64_t size_ = 0;
-    uint64_t parent_offset_ = 0;
-    uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
+    uint64_t size_ TA_GUARDED(lock_) = 0;
+    uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
+    uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
 
     // a tree of pages
-    VmPageList page_list_;
+    VmPageList page_list_ TA_GUARDED(lock_);
 };

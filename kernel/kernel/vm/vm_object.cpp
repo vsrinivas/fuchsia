@@ -53,25 +53,25 @@ VmObject::~VmObject() {
     DEBUG_ASSERT(children_list_.is_empty());
 }
 
-void VmObject::AddMappingLocked(VmMapping* r) TA_REQ(lock_) {
+void VmObject::AddMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.push_front(r);
 }
 
-void VmObject::RemoveMappingLocked(VmMapping* r) TA_REQ(lock_) {
+void VmObject::RemoveMappingLocked(VmMapping* r) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     mapping_list_.erase(*r);
 }
 
-void VmObject::AddChildLocked(VmObject* o) TA_REQ(lock_) {
+void VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     children_list_.push_front(o);
 }
 
-void VmObject::RemoveChildLocked(VmObject* o) TA_REQ(lock_) {
+void VmObject::RemoveChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     children_list_.erase(*o);

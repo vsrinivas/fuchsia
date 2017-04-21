@@ -31,7 +31,8 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t**, paddr_t* pa) override;
+    status_t GetPageLocked(uint64_t offset, uint pf_flags,
+                           vm_page_t**, paddr_t* pa) override TA_REQ(lock_);
 
 private:
     // private constructor (use Create())
@@ -44,6 +45,6 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 
     // members
-    const uint64_t size_ = 0;
-    const paddr_t base_ = 0;
+    const uint64_t size_ TA_GUARDED(lock_) = 0;
+    const paddr_t base_ TA_GUARDED(lock_) = 0;
 };

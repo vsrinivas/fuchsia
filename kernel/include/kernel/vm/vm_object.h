@@ -118,7 +118,8 @@ public:
 
     // get a pointer to the page structure and/or physical address at the specified offset.
     // valid flags are VMM_PF_FLAG_*
-    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** page, paddr_t* pa) {
+    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags,
+                                   vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -144,12 +145,12 @@ protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
     // inform all mappings and children that a range of this vmo's pages were added or removed.
-    void RangeChangeUpdateLocked(uint64_t offset, uint64_t len);
+    void RangeChangeUpdateLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
     // above call but called from a parent
-    virtual void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len) {
-        RangeChangeUpdateLocked(offset, len);
-    }
+    virtual void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len)
+        // Called under the parent's lock, which confuses analysis.
+        TA_NO_THREAD_SAFETY_ANALYSIS { RangeChangeUpdateLocked(offset, len); }
 
     // magic value
     mxtl::Canary<mxtl::magic("VMO_")> canary_;
@@ -165,11 +166,11 @@ protected:
     Mutex& lock_;
 
     // list of every mapping
-    mxtl::DoublyLinkedList<VmMapping*> mapping_list_;
+    mxtl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 
     // list of every child
-    mxtl::DoublyLinkedList<VmObject*> children_list_;
+    mxtl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
 
     // parent pointer (may be null)
-    mxtl::RefPtr<VmObject> parent_;
+    mxtl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
 };
