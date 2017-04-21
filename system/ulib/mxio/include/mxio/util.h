@@ -53,10 +53,12 @@ mx_status_t mxio_get_service_handle(int fd, mx_handle_t* out);
 // creates a do-nothing mxio_t
 mxio_t* mxio_null_create(void);
 
-// wraps a channel with an mxio_t using remote io
+// Wraps a channel with an mxio_t using remote io.
+// Takes ownership of h and e.
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e);
 
-// wraps a channel with an mxio_t using an unknown rpc protocl
+// Wraps a channel with an mxio_t using an unknown rpc protocl.
+// Takes ownership of h.
 mxio_t* mxio_service_create(mx_handle_t);
 
 // creates a mxio that wraps a log object

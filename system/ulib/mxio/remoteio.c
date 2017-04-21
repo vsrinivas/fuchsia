@@ -649,6 +649,9 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
 
 mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
                               void* extra, uint32_t esize, mxio_t** out) {
+    // All failure cases which require discard_handles set r and break
+    // to the end. All other cases in which handle ownership is moved
+    // on return locally.
     mx_status_t r;
     mxio_t* io;
     switch (type) {
@@ -664,7 +667,7 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             break;
         }
         if (io == NULL) {
-            r = ERR_NO_RESOURCES;
+            return ERR_NO_RESOURCES;
         } else {
             *out = io;
             return NO_ERROR;
@@ -673,8 +676,9 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
     case MXIO_PROTOCOL_SERVICE:
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;
+            break;
         } else if ((*out = mxio_service_create(handles[0])) == NULL) {
-            r = ERR_NO_RESOURCES;
+            return ERR_NO_RESOURCES;
         } else {
             return NO_ERROR;
         }
@@ -682,28 +686,29 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
     case MXIO_PROTOCOL_PIPE:
         if (hcount != 1) {
             r = ERR_INVALID_ARGS;
+            break;
         } else if ((*out = mxio_pipe_create(handles[0])) == NULL) {
-            r = ERR_NO_RESOURCES;
+            return ERR_NO_RESOURCES;
         } else {
             return NO_ERROR;
         }
-        break;
     case MXIO_PROTOCOL_VMOFILE: {
         mx_off_t* args = extra;
         if ((hcount != 2) || (esize != (sizeof(mx_off_t) * 2))) {
             r = ERR_INVALID_ARGS;
-        } else if ((*out = mxio_vmofile_create(handles[1], args[0], args[1])) == NULL) {
-            r = ERR_NO_RESOURCES;
+            break;
+        }
+        // Currently, VMO Files don't use a client-side control channel.
+        mx_handle_close(handles[0]);
+        if ((*out = mxio_vmofile_create(handles[1], args[0], args[1])) == NULL) {
+            return ERR_NO_RESOURCES;
         } else {
-            // Currently, VMO Files don't use a client-side control channel.
-            mx_handle_close(handles[0]);
             return NO_ERROR;
         }
-        break;
     }
     case MXIO_PROTOCOL_SOCKET: {
         if (hcount == 1) {
-            io = mxio_socket_create(handles[0], 0);
+            io = mxio_socket_create(handles[0], MX_HANDLE_INVALID);
         } else if (hcount == 2) {
             io = mxio_socket_create(handles[0], handles[1]);
         } else {
@@ -711,7 +716,7 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             break;
         }
         if (io == NULL) {
-            r = ERR_NO_RESOURCES;
+            return ERR_NO_RESOURCES;
         } else {
             *out = io;
             return NO_ERROR;
@@ -719,6 +724,7 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
     }
     default:
         r = ERR_NOT_SUPPORTED;
+        break;
     }
     discard_handles(handles, hcount);
     return r;
@@ -829,8 +835,11 @@ static mxio_ops_t mx_remote_ops = {
 
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
     mxrio_t* rio = calloc(1, sizeof(*rio));
-    if (rio == NULL)
+    if (rio == NULL) {
+        mx_handle_close(h);
+        mx_handle_close(e);
         return NULL;
+    }
     rio->io.ops = &mx_remote_ops;
     rio->io.magic = MXIO_MAGIC;
     atomic_init(&rio->io.refcount, 1);
@@ -1295,8 +1304,11 @@ static mxio_ops_t mxio_socket_dgram_ops = {
 
 mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {
     mxrio_t* rio = calloc(1, sizeof(*rio));
-    if (rio == NULL)
+    if (rio == NULL) {
+        mx_handle_close(h);
+        mx_handle_close(s);
         return NULL;
+    }
     rio->io.ops = &mxio_socket_stream_ops; // default is stream
     rio->io.magic = MXIO_MAGIC;
     rio->io.refcount = 1;

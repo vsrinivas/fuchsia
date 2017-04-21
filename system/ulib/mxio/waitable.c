@@ -84,8 +84,12 @@ static mxio_ops_t mxio_waitable_ops = {
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in,
                              mx_signals_t signals_out, bool shared_handle) {
     mxwio_t* wio = calloc(1, sizeof(*wio));
-    if (wio == NULL)
+    if (wio == NULL) {
+        if (!shared_handle) {
+            mx_handle_close(h);
+        }
         return NULL;
+    }
     wio->io.ops = &mxio_waitable_ops;
     wio->io.magic = MXIO_MAGIC;
     wio->io.refcount = 1;

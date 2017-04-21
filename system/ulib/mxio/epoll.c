@@ -101,9 +101,11 @@ static mxio_ops_t mxio_epoll_ops = {
     .posix_ioctl = mxio_default_posix_ioctl,
 };
 
-mxio_t* mxio_epoll_create(mx_handle_t h) {
+// Takes ownership of h.
+static mxio_t* mxio_epoll_create(mx_handle_t h) {
     mxio_epoll_t* epio = calloc(1, sizeof(*epio));
     if (epio == NULL) {
+        mx_handle_close(h);
         return NULL;
     }
     epio->io.ops = &mxio_epoll_ops;
@@ -124,7 +126,6 @@ mx_status_t mxio_epoll(mxio_t** out) {
     }
     mxio_t* io;
     if ((io = mxio_epoll_create(h)) == NULL) {
-        mx_handle_close(h);
         return ERR_NO_MEMORY;
     }
     *out = io;

@@ -117,15 +117,18 @@ static inline mx_status_t mxio_open(mxio_t* io, const char* path, int32_t flags,
 }
 mx_status_t mxio_close(mxio_t* io);
 
-// wraps a socket with an mxio_t using simple io
+// Wraps a socket with an mxio_t using simple io.
+// Takes ownership of h.
 mxio_t* mxio_pipe_create(mx_handle_t h);
 
 mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, va_list va);
 
-// wraps a vmo, offset, length with an mxio_t providing a readonly file
+// Wraps a vmo, offset, length with an mxio_t providing a readonly file.
+// Takens ownership of h.
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len);
 
-// wraps a socket with an mxio_t using socket io
+// Wraps a socket with an mxio_t using socket io.
+// Takes ownership of h and s.
 mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s);
 
 // creates a message port and pair of simple io mxio_t's
@@ -147,7 +150,8 @@ static inline void mxio_release(mxio_t* io) {
     }
 }
 
-// wraps an arbitrary handle with a mxio_t that works with wait hooks
+// Wraps an arbitrary handle with a mxio_t that works with wait hooks.
+// Takes ownership of handle unless shared_handle is true.
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
 
 void mxio_socket_set_stream_ops(mxio_t* io);

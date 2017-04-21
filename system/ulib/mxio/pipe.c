@@ -193,8 +193,10 @@ static mxio_ops_t mx_pipe_ops = {
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
     mx_pipe_t* p = calloc(1, sizeof(*p));
-    if (p == NULL)
+    if (p == NULL) {
+        mx_handle_close(h);
         return NULL;
+    }
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
     p->io.flags |= MXIO_FLAG_PIPE;
@@ -211,13 +213,11 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
         return r;
     }
     if ((a = mxio_pipe_create(h0)) == NULL) {
-        mx_handle_close(h0);
         mx_handle_close(h1);
         return ERR_NO_MEMORY;
     }
     if ((b = mxio_pipe_create(h1)) == NULL) {
         mx_pipe_close(a);
-        mx_handle_close(h1);
         return ERR_NO_MEMORY;
     }
     *_a = a;
@@ -257,7 +257,6 @@ mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
     return fd;
 
 fail:
-    mx_handle_close(h0);
     mx_handle_close(h1);
     return r;
 }

@@ -45,6 +45,7 @@ static mxio_ops_t mx_svc_ops = {
 mxio_t* mxio_service_create(mx_handle_t h) {
     mxsvc_t* svc = calloc(1, sizeof(*svc));
     if (svc == NULL) {
+        mx_handle_close(h);
         return NULL;
     }
     svc->io.ops = &mx_svc_ops;

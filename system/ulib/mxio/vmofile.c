@@ -170,6 +170,7 @@ static mxio_ops_t vmofile_ops = {
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {
     vmofile_t* vf = calloc(1, sizeof(vmofile_t));
     if (vf == NULL) {
+        mx_handle_close(h);
         return NULL;
     }
     vf->io.ops = &vmofile_ops;
