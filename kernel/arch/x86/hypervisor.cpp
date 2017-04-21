@@ -13,6 +13,7 @@
 
 #include <arch/defines.h>
 #include <arch/hypervisor.h>
+#include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hypervisor.h>
@@ -38,7 +39,8 @@ extern uint8_t _gdt[];
 static const uint16_t kUartReceiveIoPort = 0x3f8;
 static const uint16_t kUartStatusIoPort = 0x3fd;
 static const uint64_t kUartStatusIdle = 1u << 6;
-static const uint64_t kLocalApicAddress = 0xfee00000;
+static const uint64_t kIa32ApicBase =
+    APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -439,10 +441,6 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     if (status != NO_ERROR)
         return status;
 
-    status = msr_bitmaps_page_.Alloc(vmx_info, 0xff);
-    if (status != NO_ERROR)
-        return status;
-
     status = host_msr_page_.Alloc(vmx_info, 0);
     if (status != NO_ERROR)
         return status;
@@ -548,7 +546,7 @@ static void edit_msr_list(VmxPage* msr_list_page, uint index, uint32_t msr, uint
     entry->value = value;
 }
 
-status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
+status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
     status_t status = Clear();
     if (status != NO_ERROR)
         return status;
@@ -683,19 +681,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
 
     // Setup APIC handling.
-    vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, kLocalApicAddress);
+    vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, APIC_PHYS_BASE);
     vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS, virtual_apic_page_.PhysicalAddress());
 
     // Setup MSR handling.
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_PAT);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_EFER);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_STAR);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_FMASK);
-    ignore_msr(&msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
-    vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_page_.PhysicalAddress());
+    vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
 
     // NOTE: Host X86_MSR_IA32_KERNEL_GS_BASE, is set in VmcsPerCpu::Enter.
     edit_msr_list(&host_msr_page_, 1, X86_MSR_IA32_STAR, read_msr(X86_MSR_IA32_STAR));
@@ -742,7 +732,6 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address) {
     vmcs_write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
 
     // Setup VMCS guest state.
-
     uint64_t cr0 = X86_CR0_PE | // Enable protected mode
                    X86_CR0_PG | // Enable paging
                    X86_CR0_NE;  // Enable internal x87 exception handling
@@ -842,6 +831,8 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
         if (leaf == X86_CPUID_MODEL_FEATURES) {
             // Enable the hypervisor bit.
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
+            // Disable the x2APIC bit.
+            guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
         }
         if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
             // Disable the XSAVES bit.
@@ -853,9 +844,13 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
-
 static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
     switch (guest_state->rcx) {
+    case X86_MSR_IA32_APIC_BASE:
+        next_rip(exit_info);
+        guest_state->rax = kIa32ApicBase;
+        guest_state->rdx = 0;
+        return NO_ERROR;
     // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
     // type used for an access to a guest-physical address.
     case X86_MSR_IA32_MTRRCAP:
@@ -875,6 +870,11 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
 
 static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state) {
     switch (guest_state->rcx) {
+    case X86_MSR_IA32_APIC_BASE:
+        if (guest_state->rax != kIa32ApicBase || guest_state->rdx != 0)
+            return ERR_INVALID_ARGS;
+        next_rip(exit_info);
+        return NO_ERROR;
     // See note in handle_rdmsr.
     case X86_MSR_IA32_MTRRCAP:
     case X86_MSR_IA32_MTRR_DEF_TYPE:
@@ -1029,7 +1029,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Setup(context->Pml4Address());
+    return per_cpu->Setup(context->Pml4Address(), context->MsrBitmapsAddress());
 }
 
 // static
@@ -1052,7 +1052,30 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     if (status != NO_ERROR)
         return status;
 
+    // Setup common MSR bitmaps.
     VmxInfo vmx_info;
+    status = ctx->msr_bitmaps_page_.Alloc(vmx_info, 0xff);
+    if (status != NO_ERROR)
+        return status;
+
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_PAT);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_EFER);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_STAR);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
+
+    // Setup common APIC access.
+    status = ctx->apic_address_page_.Alloc(vmx_info, 0);
+    if (status != NO_ERROR)
+        return status;
+
+    status = ctx->gpas_->MapApicPage(APIC_PHYS_BASE, ctx->apic_address_page_.PhysicalAddress());
+    if (status != NO_ERROR)
+        return status;
+
     status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != NO_ERROR)
         return status;
@@ -1078,10 +1101,16 @@ static int vmcs_clear(void* arg) {
 VmcsContext::~VmcsContext() {
     __UNUSED status_t status = percpu_exec(vmcs_clear, this);
     DEBUG_ASSERT(status == NO_ERROR);
+    status = gpas_->UnmapPage(APIC_PHYS_BASE);
+    DEBUG_ASSERT(status == NO_ERROR);
 }
 
 paddr_t VmcsContext::Pml4Address() {
     return gpas_->Pml4Address();
+}
+
+paddr_t VmcsContext::MsrBitmapsAddress() {
+    return msr_bitmaps_page_.PhysicalAddress();
 }
 
 VmcsPerCpu* VmcsContext::PerCpu() {

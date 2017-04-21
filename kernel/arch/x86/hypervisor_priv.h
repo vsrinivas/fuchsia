@@ -280,12 +280,11 @@ class VmcsPerCpu : public PerCpu {
 public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
-    status_t Setup(paddr_t pml4_address);
+    status_t Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, FifoDispatcher* serial_fifo);
 
 private:
     bool do_resume_ = false;
-    VmxPage msr_bitmaps_page_;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxPage virtual_apic_page_;

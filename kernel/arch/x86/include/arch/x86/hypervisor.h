@@ -68,6 +68,7 @@ public:
     ~VmcsContext();
 
     paddr_t Pml4Address();
+    paddr_t MsrBitmapsAddress();
     VmcsPerCpu* PerCpu();
     status_t Enter();
 
@@ -82,6 +83,9 @@ private:
     uintptr_t entry_ = UINTPTR_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     mxtl::RefPtr<FifoDispatcher> serial_fifo_;
+
+    VmxPage msr_bitmaps_page_;
+    VmxPage apic_address_page_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
     explicit VmcsContext(mxtl::RefPtr<FifoDispatcher> serial_fifo,

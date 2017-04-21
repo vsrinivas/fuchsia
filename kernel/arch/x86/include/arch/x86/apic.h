@@ -12,7 +12,10 @@
 
 __BEGIN_CDECLS
 
-#define INVALID_APIC_ID 0xffffffff
+#define INVALID_APIC_ID             0xffffffff
+#define APIC_PHYS_BASE              0xfee00000
+#define IA32_APIC_BASE_BSP          (1u << 8)
+#define IA32_APIC_BASE_XAPIC_ENABLE (1u << 11)
 
 enum apic_interrupt_delivery_mode {
     // Unless you know what you're doing, you want FIXED.

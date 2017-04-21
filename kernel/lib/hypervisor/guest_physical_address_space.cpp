@@ -5,13 +5,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <new.h>
+#include <stdint.h>
 
 #include <hypervisor/guest_physical_address_space.h>
 #include <safeint/safe_math.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
+static const uint kApicMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 static const uint kMmuFlags =
     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
+static const size_t kAddressSpaceSize =  256ul << 30;
 
 status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
                                            mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
@@ -21,13 +24,12 @@ status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    size_t size = guest_phys_mem->size();
-    status_t status = guest_mmu_init_paspace(&gpas->paspace_, size);
+    status_t status = guest_mmu_init_paspace(&gpas->paspace_, kAddressSpaceSize);
     if (status != NO_ERROR)
         return status;
 
     // TODO(abdulla): Figure out how to do this on-demand.
-    status = gpas->MapRange(0, size);
+    status = gpas->MapRange(0, guest_phys_mem->size());
     if (status != NO_ERROR)
         return status;
 
@@ -43,14 +45,22 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
+static status_t map_page(guest_paspace_t* paspace, vaddr_t vaddr, paddr_t paddr, uint mmu_flags) {
+    size_t mapped;
+    status_t status = guest_mmu_map(paspace, vaddr, paddr, 1, mmu_flags, &mapped);
+    if (status != NO_ERROR)
+        return status;
+    return mapped != 1 ? ERR_NO_MEMORY : NO_ERROR;
+}
+
+status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t vaddr, paddr_t paddr) {
+    return map_page(&paspace_, vaddr, paddr, kApicMmuFlags);
+}
+
 status_t GuestPhysicalAddressSpace::MapRange(size_t offset, size_t len) {
     auto mmu_map = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
         guest_paspace_t* paspace = static_cast<guest_paspace_t*>(context);
-        size_t mapped;
-        status_t status = guest_mmu_map(paspace, offset, pa, 1, kMmuFlags, &mapped);
-        if (status != NO_ERROR)
-            return status;
-        return mapped != 1 ? ERR_NO_MEMORY : NO_ERROR;
+        return map_page(paspace, offset, pa, kMmuFlags);
     };
     return guest_phys_mem_->Lookup(offset, len, kPfFlags, mmu_map, &paspace_);
 }

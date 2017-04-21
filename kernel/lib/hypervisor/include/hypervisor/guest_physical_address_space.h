@@ -20,6 +20,7 @@ public:
     size_t size() const { return guest_phys_mem_->size(); }
 #if ARCH_X86_64
     paddr_t Pml4Address() { return paspace_.pt_phys; }
+    status_t MapApicPage(vaddr_t vaddr, paddr_t paddr);
 #endif
     status_t UnmapPage(vaddr_t vaddr);
     status_t Read(void* ptr, uint64_t offset, size_t len);

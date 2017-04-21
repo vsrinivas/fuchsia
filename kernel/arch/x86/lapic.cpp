@@ -25,14 +25,9 @@
 // We currently only implement support for the xAPIC
 
 // Initialization MSR
-#define IA32_APIC_BASE_MSR 0x01B
-#define IA32_APIC_BASE_BSP (1 << 8)
 #define IA32_APIC_BASE_X2APIC_ENABLE (1 << 10)
-#define IA32_APIC_BASE_XAPIC_ENABLE (1 << 11)
 
 #define IA32_TSC_DEADLINE_MSR 0x6E0
-
-#define APIC_PHYS_BASE 0xFEE00000
 
 // Virtual address of the local APIC's MMIO registers
 static void *apic_virt_base;
@@ -124,9 +119,9 @@ void apic_local_init(void)
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Enter XAPIC mode and set the base address
-    uint64_t v = read_msr(IA32_APIC_BASE_MSR);
+    uint64_t v = read_msr(X86_MSR_IA32_APIC_BASE);
     v |= IA32_APIC_BASE_XAPIC_ENABLE;
-    write_msr(IA32_APIC_BASE_MSR, v);
+    write_msr(X86_MSR_IA32_APIC_BASE, v);
 
     // If this is the bootstrap processor, we should record our APIC ID now
     // that we know it.
@@ -144,7 +139,7 @@ void apic_local_init(void)
 
 uint8_t apic_local_id(void)
 {
-  return (uint8_t)(*LAPIC_ID_ADDR >> 24);
+    return (uint8_t)(*LAPIC_ID_ADDR >> 24);
 }
 
 static inline void apic_wait_for_ipi_send(void) {
