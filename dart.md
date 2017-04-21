@@ -49,7 +49,10 @@ dependencies:
   bar: >=0.1.0
 ```
 3. add a reference to the file in `//scripts/update_dart_packages.py`
-4. run that script
+4. run that script with:
+```
+scripts/update_dart_packages.py out/debug-ABC/host_XYZ
+```
 
 
 ## Analysis
