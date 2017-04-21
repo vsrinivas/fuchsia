@@ -64,7 +64,7 @@ class _AskHandlerImpl extends AskHandler {
       proposals.add(
         _createProposal(
           id: 'open chat',
-          appUrl: 'file:///system/apps/chat_story',
+          appUrl: 'file:///system/apps/chat_conversation_list',
           headline: _chatHeadline,
           color: 0xFF9C27B0, // Material Purple 500
         ),
