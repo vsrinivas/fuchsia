@@ -72,7 +72,6 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     pdata->device = 0;
     pdata->max_cmd = dev->max_cmd;
     pdata->port = dev->port;
-    txn->protocol = MX_PROTOCOL_SATA;
     txn->complete_cb = sata_device_identify_complete;
     txn->cookie = &completion;
     txn->length = 512;
