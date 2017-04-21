@@ -15,6 +15,10 @@ IpPort::IpPort(uint8_t b0, uint8_t b1) {
 }
 
 std::ostream& operator<<(std::ostream& os, IpPort value) {
+  if (!value.is_valid()) {
+    return os << "<invalid>";
+  }
+
   return os << value.as_uint16_t();
 }
 

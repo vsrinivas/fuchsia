@@ -89,6 +89,11 @@ SocketAddress::SocketAddress(const sockaddr_in6& addr) {
 }
 
 SocketAddress::SocketAddress(const IpAddress& addr, IpPort port) {
+  if (!addr.is_valid()) {
+    std::memset(&v6_, 0, sizeof(v6_));
+    return;
+  }
+
   if (addr.is_v4()) {
     std::memset(&v4_, 0, sizeof(v4_));
     v4_.sin_family = AF_INET;
@@ -118,6 +123,10 @@ std::string SocketAddress::ToString() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const SocketAddress& value) {
+  if (!value.is_valid()) {
+    return os << "<invalid>";
+  }
+
   return os << value.address() << ":" << value.port();
 }
 

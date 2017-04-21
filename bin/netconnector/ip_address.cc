@@ -125,6 +125,10 @@ std::string IpAddress::ToString() const {
 }
 
 std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
+  if (!value.is_valid()) {
+    return os << "<invalid>";
+  }
+
   if (value.is_v4()) {
     const uint8_t* bytes = value.as_bytes();
     return os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1])

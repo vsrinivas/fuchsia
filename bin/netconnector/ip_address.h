@@ -86,6 +86,15 @@ class IpAddress {
 
   std::string ToString() const;
 
+  explicit operator bool() const { return is_valid(); }
+
+  bool operator==(const IpAddress& other) const {
+    return is_v4() == other.is_v4() &&
+           std::memcmp(as_bytes(), other.as_bytes(), byte_count()) == 0;
+  }
+
+  bool operator!=(const IpAddress& other) const { return !(*this == other); }
+
  private:
   sa_family_t family_;
   union {

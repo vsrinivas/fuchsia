@@ -51,7 +51,7 @@ class IpPort {
   // Creates a port from two bytes in network order.
   IpPort(uint8_t b0, uint8_t b1);
 
-  bool is_valid() { return value_ != 0; }
+  bool is_valid() const { return value_ != 0; }
 
   // Returns an |in_port_t| value for the port. This value is big-endian
   // (network order), suitable for consumption by the network stack.
@@ -60,6 +60,16 @@ class IpPort {
   // Returns a |uint16_t| value for the port. This value is host-endian,
   // suitable for displaying to humans, etc.
   uint16_t as_uint16_t() const { return betoh16(value_); }
+
+  explicit operator bool() const { return is_valid(); }
+
+  bool operator==(const IpPort& other) const {
+    return as_in_port_t() == other.as_in_port_t();
+  }
+
+  bool operator!=(const IpPort& other) const {
+    return as_in_port_t() != other.as_in_port_t();
+  }
 
  private:
   explicit IpPort(in_port_t port) : value_(port) {}

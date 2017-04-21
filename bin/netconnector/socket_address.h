@@ -90,6 +90,17 @@ class SocketAddress {
 
   std::string ToString() const;
 
+  explicit operator bool() const { return is_valid(); }
+
+  bool operator==(const SocketAddress& other) const {
+    return is_v4() == other.is_v4() &&
+           std::memcmp(as_sockaddr(), other.as_sockaddr(), socklen()) == 0;
+  }
+
+  bool operator!=(const SocketAddress& other) const {
+    return !(*this == other);
+  }
+
  private:
   union {
     sockaddr_in v4_;
