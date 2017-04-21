@@ -23,22 +23,21 @@ VmPageListNode::VmPageListNode(uint64_t offset)
 
 VmPageListNode::~VmPageListNode() {
     LTRACEF("%p offset %#" PRIx64 "\n", this, obj_offset_);
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     for (__UNUSED auto p : pages_) {
         DEBUG_ASSERT(p == nullptr);
     }
-    magic_ = 0;
 }
 
 vm_page* VmPageListNode::GetPage(size_t index) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
     return pages_[index];
 }
 
 vm_page* VmPageListNode::RemovePage(size_t index) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
 
     auto p = pages_[index];
@@ -51,7 +50,7 @@ vm_page* VmPageListNode::RemovePage(size_t index) {
 }
 
 status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(index < kPageFanOut);
     if (pages_[index])
         return ERR_ALREADY_EXISTS;

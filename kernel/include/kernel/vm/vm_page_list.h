@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/macros.h>
 #include <mxtl/unique_ptr.h>
@@ -56,8 +57,7 @@ public:
     }
 
 private:
-    static const uint32_t kMagic = 0x504c5354; // 'PLST'
-    uint32_t magic_ = kMagic;
+    mxtl::Canary<mxtl::magic("PLST")> canary_;
 
     uint64_t obj_offset_ = 0;
     vm_page* pages_[kPageFanOut] = {};

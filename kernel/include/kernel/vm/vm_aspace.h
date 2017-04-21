@@ -12,6 +12,7 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/macros.h>
@@ -136,8 +137,7 @@ private:
     void InitializeAslr();
 
     // magic
-    static const uint32_t MAGIC = 0x564d4153; // VMAS
-    uint32_t magic_ = MAGIC;
+    mxtl::Canary<mxtl::magic("VMAS")> canary_;
 
     // members
     vaddr_t base_;
