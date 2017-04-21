@@ -83,19 +83,25 @@ def main():
     if args.is_test:
         retcode = subprocess.call([args.go_tool, 'test', '-c', '-o', args.binname,
                                   args.package], env=os.environ)
-        return retcode
     else:
         retcode = subprocess.call([args.go_tool, 'install', args.package],
                                   env=os.environ)
 
     if retcode == 0:
-        binname = os.path.basename(args.package)
-        src = os.path.join(gopath, "bin", "fuchsia_"+goarch, binname)
-        if args.binname:
-            dst = os.path.join(gopath, args.binname)
+        if args.is_test:
+            binname = args.binname
         else:
-            dst = os.path.join(gopath, binname)
-        os.rename(src, dst)
+            # For regular Go binaries, they are placed in a "bin/fuchsia_ARCH"
+            # output directory; this relocates them to the root of the
+            # gopath. Tests are not impacted.
+            binname = os.path.basename(args.package)
+            src = os.path.join(gopath, "bin", "fuchsia_"+goarch, binname)
+            if args.binname:
+                dst = os.path.join(gopath, args.binname)
+            else:
+                dst = os.path.join(gopath, binname)
+            os.rename(src, dst)
+
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 os.environ['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
