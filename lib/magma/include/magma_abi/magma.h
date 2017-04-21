@@ -87,6 +87,15 @@ void magma_reset_semaphore(magma_semaphore_t semaphore);
 // expires first.
 magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);
 
+// Exports |semaphore| to it can be imported into another connection via |semaphore_handle_out|
+magma_status_t magma_export_semaphore(struct magma_connection_t* connection,
+                                      magma_semaphore_t semaphore, uint32_t* semaphore_handle_out);
+
+// Imports the semaphore referred to by |semaphore_handle| into the given connection and makes it
+// accessible via |semaphore_out|
+magma_status_t magma_import_semaphore(struct magma_connection_t* connection,
+                                      uint32_t semaphore_handle, magma_semaphore_t* semaphore_out);
+
 #if defined(__cplusplus)
 }
 #endif

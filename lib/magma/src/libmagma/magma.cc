@@ -231,3 +231,35 @@ magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeou
 
     return MAGMA_STATUS_OK;
 }
+
+magma_status_t magma_export_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore,
+                                      uint32_t* semaphore_handle_out)
+{
+    auto platform_semaphore = reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
+
+    if (!platform_semaphore->duplicate_handle(semaphore_handle_out))
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "duplicate_handle failed");
+
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t semaphore_handle,
+                                      magma_semaphore_t* semaphore_out)
+{
+    auto platform_semaphore = magma::PlatformSemaphore::Import(semaphore_handle);
+    if (!platform_semaphore)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformSemaphore::Import failed");
+
+    uint32_t handle;
+    if (!platform_semaphore->duplicate_handle(&handle))
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
+    magma_status_t result = magma::PlatformIpcConnection::cast(connection)
+                                ->ImportObject(handle, magma::PlatformObject::SEMAPHORE);
+    if (result != MAGMA_STATUS_OK)
+        return DRET_MSG(result, "ImportObject failed: %d", result);
+
+    *semaphore_out = reinterpret_cast<magma_semaphore_t>(platform_semaphore.release());
+
+    return MAGMA_STATUS_OK;
+}

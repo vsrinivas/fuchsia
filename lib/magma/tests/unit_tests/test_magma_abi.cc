@@ -156,6 +156,33 @@ public:
         magma_destroy_semaphore(connection_, semaphore);
     }
 
+    void SemaphoreExport(uint32_t* handle_out, uint64_t* id_out)
+    {
+        ASSERT_NE(connection_, nullptr);
+        magma_semaphore_t semaphore;
+
+        EXPECT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
+        *id_out = magma_get_semaphore_id(semaphore);
+        EXPECT_EQ(magma_export_semaphore(connection_, semaphore, handle_out), MAGMA_STATUS_OK);
+    }
+
+    void SemaphoreImport(uint32_t handle, uint64_t id)
+    {
+        ASSERT_NE(connection_, nullptr);
+        magma_semaphore_t semaphore;
+
+        EXPECT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
+        EXPECT_EQ(magma_get_semaphore_id(semaphore), id);
+    }
+
+    static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2)
+    {
+        uint32_t handle;
+        uint64_t id;
+        test1->SemaphoreExport(&handle, &id);
+        test2->SemaphoreImport(handle, id);
+    }
+
 private:
     magma_connection_t* connection_;
 };
@@ -201,4 +228,11 @@ TEST(MagmaAbi, Semaphore)
 {
     TestConnection test;
     test.Semaphore();
+}
+
+TEST(MagmaAbi, SemaphoreImportExport)
+{
+    TestConnection test1;
+    TestConnection test2;
+    TestConnection::SemaphoreImportExport(&test1, &test2);
 }

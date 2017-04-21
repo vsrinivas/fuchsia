@@ -6,8 +6,12 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_semaphore.h"
 
 #include <unordered_map>
+
+std::unordered_map<uint32_t, magma::PlatformBuffer*> exported_buffers;
+std::unordered_map<uint32_t, magma::PlatformSemaphore*> exported_semaphores;
 
 class MockConnection : public magma_connection_t {
 public:
@@ -95,14 +99,19 @@ void magma_wait_rendering(magma_connection_t* connection, uintptr_t buffer) {}
 magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
 {
+    uint32_t handle;
+    reinterpret_cast<magma::PlatformBuffer*>(buffer)->duplicate_handle(&handle);
+    exported_buffers[handle] = magma::PlatformBuffer::Import(handle).release();
+    *buffer_handle_out = handle;
     return MAGMA_STATUS_OK;
 }
 
-int32_t magma_import(magma_connection_t* connection, uint32_t buffer_handle,
-                     magma_buffer_t* buffer_out)
+magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_handle,
+                            magma_buffer_t* buffer_out)
 {
-
-    return 0;
+    *buffer_out = reinterpret_cast<magma_buffer_t>(exported_buffers[buffer_handle]);
+    exported_buffers.erase(buffer_handle);
+    return MAGMA_STATUS_OK;
 }
 
 void magma_display_page_flip(magma_connection_t* connection, uint64_t buffer_id,
@@ -116,12 +125,20 @@ void magma_display_page_flip(magma_connection_t* connection, uint64_t buffer_id,
 magma_status_t magma_create_semaphore(magma_connection_t* connection,
                                       magma_semaphore_t* semaphore_out)
 {
+    *semaphore_out =
+        reinterpret_cast<magma_semaphore_t>(magma::PlatformSemaphore::Create().release());
     return MAGMA_STATUS_OK;
 }
 
-void magma_destroy_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore) {}
+void magma_destroy_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore)
+{
+    delete reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
+}
 
-uint64_t magma_get_semaphore_id(magma_semaphore_t semaphore) { return 0; }
+uint64_t magma_get_semaphore_id(magma_semaphore_t semaphore)
+{
+    return reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->id();
+}
 
 void magma_signal_semaphore(magma_semaphore_t semaphore) {}
 
@@ -129,5 +146,23 @@ void magma_reset_semaphore(magma_semaphore_t semaphore) {}
 
 magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout)
 {
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_export_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore,
+                                      uint32_t* semaphore_handle_out)
+{
+    uint32_t handle;
+    reinterpret_cast<magma::PlatformSemaphore*>(semaphore)->duplicate_handle(&handle);
+    exported_semaphores[handle] = magma::PlatformSemaphore::Import(handle).release();
+    *semaphore_handle_out = handle;
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t semaphore_handle,
+                                      magma_semaphore_t* semaphore_out)
+{
+    *semaphore_out = reinterpret_cast<magma_semaphore_t>(exported_semaphores[semaphore_handle]);
+    exported_semaphores.erase(semaphore_handle);
     return MAGMA_STATUS_OK;
 }
