@@ -31,4 +31,4 @@ TEST_F(AsynchronousCallbackTest, RunAsynchronously) {
 }
 
 }  // namespace
-}  // namespace ledger
+}  // namespace callback

@@ -40,17 +40,17 @@ config("ledger_config") {
   asmflags = safe_stack_flags
 
   cflags = safe_stack_flags + [
-    # Remove when enabled globally by TO-99.
-    "-Wunused-lambda-capture",
+             # Remove when enabled globally by TO-99.
+             "-Wunused-lambda-capture",
 
-    # Remove when enabled globally by TO-100.
-    "-Wuser-defined-warnings",
-  ]
+             # Remove when enabled globally by TO-100.
+             "-Wuser-defined-warnings",
+           ]
 
   ldflags = safe_stack_flags + [
-    # Use a 1M stack.
-    "-Wl,-z,stack-size=0x100000",
-  ]
+              # Use a 1M stack.
+              "-Wl,-z,stack-size=0x100000",
+            ]
 }
 
 executable("ledger_unittests") {

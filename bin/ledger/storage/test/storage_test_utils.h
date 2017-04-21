@@ -102,6 +102,6 @@ class StorageTest : public ::test::TestWithMessageLoop {
   FTL_DISALLOW_COPY_AND_ASSIGN(StorageTest);
 };
 
-}  // storage
+}  // namespace storage
 
 #endif  // APPS_LEDGER_SRC_STORAGE_TEST_STORAGE_TEST_UTILS_H_

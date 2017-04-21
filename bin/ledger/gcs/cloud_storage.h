@@ -33,6 +33,6 @@ class CloudStorage {
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorage);
 };
 
-}  // gcs
+}  // namespace gcs
 
 #endif  // APPS_LEDGER_SRC_GCS_CLOUD_STORAGE_H_

@@ -65,9 +65,8 @@ class LedgerAppTest : public ::testing::Test {
     app::ConnectToService(
         child_services.get(),
         fidl::GetSynchronousProxy(&ledger_repository_factory));
-    app::ConnectToService(
-        child_services.get(),
-        fidl::GetSynchronousProxy(&controller_));
+    app::ConnectToService(child_services.get(),
+                          fidl::GetSynchronousProxy(&controller_));
 
     Status status;
     fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
@@ -120,9 +119,8 @@ TEST_F(LedgerAppTest, Terminate) {
     loop_->PostQuitTask();
   });
   controller_->Terminate();
-  loop_->task_runner()->PostDelayedTask([] {
-    loop_->PostQuitTask();
-  }, ftl::TimeDelta::FromSeconds(1));
+  loop_->task_runner()->PostDelayedTask([] { loop_->PostQuitTask(); },
+                                        ftl::TimeDelta::FromSeconds(1));
   loop_->Run();
   EXPECT_TRUE(called);
 }

@@ -26,5 +26,5 @@ TEST_F(TestWithMessageLoopTest, TestNoTimeout) {
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(20)));
 }
 
-}  // namespace test
 }  // namespace
+}  // namespace test

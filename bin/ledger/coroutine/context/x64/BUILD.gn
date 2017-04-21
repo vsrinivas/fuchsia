@@ -4,7 +4,7 @@
 
 source_set("x64") {
   sources = [
-    "context.h",
     "context.S",
+    "context.h",
   ]
 }

@@ -42,5 +42,5 @@ TEST(Capture, CaptureConstReference) {
   EXPECT_EQ(2, a2);
 }
 
-}  // namespace callback
 }  // namespace
+}  // namespace callback

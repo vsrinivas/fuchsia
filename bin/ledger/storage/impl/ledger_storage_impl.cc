@@ -37,7 +37,7 @@ std::string GetDirectoryName(ftl::StringView bytes) {
   }
   return encoded;
 }
-}
+}  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
     ftl::RefPtr<ftl::TaskRunner> main_runner,

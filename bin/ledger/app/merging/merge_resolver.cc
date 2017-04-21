@@ -22,7 +22,6 @@
 
 namespace ledger {
 
-
 MergeResolver::MergeResolver(ftl::Closure on_destroyed,
                              Environment* environment,
                              storage::PageStorage* storage)

@@ -33,7 +33,7 @@ void EnsureInitEntropy() {
   InitEntropy();
   initialized = true;
 }
-}
+}  // namespace
 
 void RandBytes(void* buffer, size_t size) {
   EnsureInitEntropy();

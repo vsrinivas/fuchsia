@@ -52,8 +52,8 @@ int main(int argc, const char** argv) {
   }
 
   const std::unordered_set<std::string> known_options = {
-      kHelpArg,        kConfigPathArg, kFirebaseIdArg,
-      kDeprecatedCloudPrefixArg, kSyncArg,       kNoSyncArg,
+      kHelpArg, kConfigPathArg, kFirebaseIdArg, kDeprecatedCloudPrefixArg,
+      kSyncArg, kNoSyncArg,
   };
 
   for (auto& option : command_line.options()) {

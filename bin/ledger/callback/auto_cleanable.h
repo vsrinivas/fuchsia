@@ -171,6 +171,6 @@ class AutoCleanableMap {
   ftl::Closure on_empty_callback_;
 };
 
-}  // namespace ledger
+}  // namespace callback
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_AUTO_CLEANABLE_H_

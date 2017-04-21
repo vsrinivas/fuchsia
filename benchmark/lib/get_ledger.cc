@@ -56,8 +56,9 @@ void GetRootPageEnsureInitialized(
   });
 
   ledger::Page* page_ptr = page.get();
-  page_ptr->GetId(ftl::MakeCopyable([ page = std::move(page), callback = std::move(callback) ](
-      auto unused_id) mutable { callback(std::move(page)); }));
+  page_ptr->GetId(ftl::MakeCopyable([
+    page = std::move(page), callback = std::move(callback)
+  ](auto unused_id) mutable { callback(std::move(page)); }));
 }
 
 }  // namespace benchmark

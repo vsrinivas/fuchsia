@@ -12,7 +12,7 @@ class DoneCancellable : public Cancellable {
   bool IsDone() override { return true; }
   void SetOnDone(ftl::Closure callback) override {}
 };
-}  // namespace callback
+}  // namespace
 
 CancellableImpl::CancellableImpl(ftl::Closure on_cancel)
     : on_cancel_(std::move(on_cancel)), is_done_(false) {}

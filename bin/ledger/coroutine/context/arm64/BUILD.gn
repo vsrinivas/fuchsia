@@ -4,11 +4,9 @@
 
 source_set("arm64") {
   sources = [
-    "context.h",
     "context.S",
+    "context.h",
   ]
 
-  configs += [
-    "//apps/ledger/src:ledger_config",
-  ]
+  configs += [ "//apps/ledger/src:ledger_config" ]
 }

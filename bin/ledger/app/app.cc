@@ -39,7 +39,7 @@ constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 // clients to individual Ledger instances. It should not however hold long-lived
 // objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App :  public LedgerController {
+class App : public LedgerController {
  public:
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
@@ -69,8 +69,8 @@ class App :  public LedgerController {
     }
 
     if (config.use_sync) {
-      network_service_ =
-          std::make_unique<ledger::NetworkServiceImpl>(loop_.task_runner(), [this] {
+      network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
+          loop_.task_runner(), [this] {
             return application_context_
                 ->ConnectToEnvironmentService<network::NetworkService>();
           });
@@ -89,8 +89,7 @@ class App :  public LedgerController {
             });
     application_context_->outgoing_services()->AddService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
-          controller_bindings_.AddBinding(this,
-                                          std::move(request));
+          controller_bindings_.AddBinding(this, std::move(request));
         });
 
     loop_.Run();
@@ -100,9 +99,7 @@ class App :  public LedgerController {
 
  private:
   // LedgerController implementation.
-  void Terminate() override {
-    loop_.PostQuitTask();
-  }
+  void Terminate() override { loop_.PostQuitTask(); }
 
   mtl::MessageLoop loop_;
   std::unique_ptr<app::ApplicationContext> application_context_;

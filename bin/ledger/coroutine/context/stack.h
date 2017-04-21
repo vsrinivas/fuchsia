@@ -42,6 +42,6 @@ class Stack {
   mx::vmar unsafe_stack_mapping_;
   uintptr_t unsafe_stack_;
 };
-}
+}  // namespace context
 
 #endif  // APPS_LEDGER_SRC_COROUTINE_CONTEXT_STACK_H_

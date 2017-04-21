@@ -31,7 +31,7 @@ size_t GetByteArraySize(size_t array_length);
 // Returns the fidl size of an Entry holding a key with the given length.
 size_t GetEntrySize(size_t key_length);
 
-}  // namespace serialization
+}  // namespace fidl_serialization
 }  //  namespace ledger
 
 #endif  // APPS_LEDGER_SRC_APP__SERIALIZATION_SIZE_H_

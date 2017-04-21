@@ -63,6 +63,6 @@ class CloudStorageImpl : public CloudStorage {
   callback::CancellableContainer requests_;
 };
 
-}  // gcs
+}  // namespace gcs
 
 #endif  // APPS_LEDGER_SRC_GCS_CLOUD_STORAGE_IMPL_H_

@@ -147,7 +147,7 @@ class CompletionAccumulator {
   bool Result() { return true; }
 };
 
-}  // namespace
+}  // namespace internal
 
 // Waiter can be used to collate the results of many asynchronous calls into one
 // callback. A typical usage example would be:

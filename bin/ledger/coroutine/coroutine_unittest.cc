@@ -132,12 +132,11 @@ TEST(Coroutine, Interrupt) {
   {
     CoroutineServiceImpl coroutine_service;
 
-    coroutine_service.StartCoroutine(
-        [&interrupted](CoroutineHandler* handler) {
-          UseStack();
-          interrupted = handler->Yield();
-          UseStack();
-        });
+    coroutine_service.StartCoroutine([&interrupted](CoroutineHandler* handler) {
+      UseStack();
+      interrupted = handler->Yield();
+      UseStack();
+    });
 
     EXPECT_FALSE(interrupted);
   }
@@ -153,7 +152,8 @@ TEST(Coroutine, ReuseStack) {
 
   for (size_t i = 0; i < 2; ++i) {
     coroutine_service.StartCoroutine(
-        [&handler, &stack_pointer, &nb_coroutines_calls](CoroutineHandler* called_handler) {
+        [&handler, &stack_pointer,
+         &nb_coroutines_calls](CoroutineHandler* called_handler) {
           UseStack();
           int a;
           uintptr_t addr = reinterpret_cast<uintptr_t>(&a);

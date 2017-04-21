@@ -17,5 +17,5 @@ size_t GetEntrySize(size_t key_length) {
   return kPointerSize + key_size + object_size + kPrioritySize;
 }
 
-}  // namespace serialization
+}  // namespace fidl_serialization
 }  //  namespace ledger

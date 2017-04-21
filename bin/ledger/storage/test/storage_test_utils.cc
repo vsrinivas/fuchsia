@@ -203,4 +203,4 @@ StorageTest::~StorageTest(){};
   return CreateNodeFromId(id, node);
 }
 
-}  // storage
+}  // namespace storage

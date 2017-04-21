@@ -73,7 +73,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
 
 fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   fidl::Array<uint8_t> prefix,
-                                                  int *num_queries) {
+                                                  int* num_queries) {
   fidl::Array<fidl::Array<uint8_t>> result;
   fidl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
@@ -83,8 +83,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
     (*snapshot)->GetKeys(
         std::move(prefix), std::move(next_token),
         [&result, &next_token, &num_queries](
-            Status status,
-            fidl::Array<fidl::Array<uint8_t>> keys,
+            Status status, fidl::Array<fidl::Array<uint8_t>> keys,
             fidl::Array<uint8_t> new_next_token) {
           EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT);
           if (num_queries) {
@@ -96,7 +95,7 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
           next_token = std::move(new_next_token);
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponse());
-  } while(next_token);
+  } while (next_token);
   return result;
 }
 
@@ -107,7 +106,7 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
 
 fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> prefix,
-                                         int *num_queries) {
+                                         int* num_queries) {
   fidl::Array<EntryPtr> result;
   fidl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
@@ -117,8 +116,7 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
     (*snapshot)->GetEntries(
         std::move(prefix), std::move(next_token),
         [&result, &next_token, &num_queries](
-            Status status,
-            fidl::Array<EntryPtr> entries,
+            Status status, fidl::Array<EntryPtr> entries,
             fidl::Array<uint8_t> new_next_token) {
           EXPECT_TRUE(status == Status::OK || status == Status::PARTIAL_RESULT);
           if (num_queries) {
@@ -130,7 +128,7 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
           next_token = std::move(new_next_token);
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponse());
-  } while(next_token);
+  } while (next_token);
   return result;
 }
 

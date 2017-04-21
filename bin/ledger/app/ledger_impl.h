@@ -59,6 +59,6 @@ class LedgerImpl : public Ledger {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
 };
-}
+}  // namespace ledger
 
 #endif  // APPS_LEDGER_SRC_APP_LEDGER_IMPL_H_

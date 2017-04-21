@@ -21,7 +21,7 @@ const char kUseSync[] = "use_sync";
 const char kFirebaseId[] = "firebase_id";
 const char kCloudPrefix[] = "cloud_prefix";
 const char kDeprecatedUserPrefix[] = "user_prefix";
-}
+}  // namespace
 
 bool ConfigurationEncoder::Decode(const std::string& configuration_path,
                                   Configuration* configuration) {
