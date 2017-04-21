@@ -39,7 +39,7 @@
 typedef struct gptpart_device {
     mx_device_t device;
     gpt_entry_t gpt_entry;
-    uint64_t blksize;
+    block_info_t info;
     atomic_int writercount;
 } gptpart_device_t;
 
@@ -68,7 +68,7 @@ static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
 static uint64_t getsize(gptpart_device_t* dev) {
     // last LBA is inclusive
     uint64_t lbacount = dev->gpt_entry.last_lba - dev->gpt_entry.first_lba + 1;
-    return lbacount * dev->blksize;
+    return lbacount * dev->info.block_size;
 }
 
 // implement device protocol:
@@ -76,17 +76,12 @@ static uint64_t getsize(gptpart_device_t* dev) {
 static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     gptpart_device_t* device = get_gptpart_device(dev);
     switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = reply;
-        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
-        *size = getsize(device);
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
-        *blksize = device->blksize;
-        return sizeof(*blksize);
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ERR_BUFFER_TOO_SMALL;
+        memcpy(info, &device->info, sizeof(*info));
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
@@ -119,7 +114,7 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
 static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     gptpart_device_t* device = get_gptpart_device(dev);
     // sanity check
-    uint64_t off_lba = txn->offset / device->blksize;
+    uint64_t off_lba = txn->offset / device->info.block_size;
     uint64_t first = device->gpt_entry.first_lba;
     uint64_t last = device->gpt_entry.last_lba;
     if (first + off_lba > last) {
@@ -128,9 +123,9 @@ static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         return;
     }
     // constrain if too many bytes are requested
-    txn->length = MIN((last - (first + off_lba) + 1) * device->blksize, txn->length);
+    txn->length = MIN((last - (first + off_lba) + 1) * device->info.block_size, txn->length);
     // adjust offset
-    txn->offset = first * device->blksize + txn->offset;
+    txn->offset = first * device->info.block_size + txn->offset;
     iotxn_queue(dev->parent, txn);
 }
 
@@ -197,16 +192,17 @@ static int gpt_bind_thread(void* arg) {
     free(info);
 
     unsigned partitions = 0; // used to keep track of number of partitions found
-    uint64_t blksize;
-    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0, &blksize, sizeof(blksize));
+    block_info_t block_info;
+    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &block_info, sizeof(block_info));
     if (rc < 0) {
         xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, dev->name);
         goto unbind;
     }
 
     // sanity check the default txn size with the block size
-    if (TXN_SIZE % blksize) {
-        xprintf("gpt: default txn size=%d is not aligned to blksize=%" PRIu64 "!\n", TXN_SIZE, blksize);
+    if (TXN_SIZE % block_info.block_size) {
+        xprintf("gpt: default txn size=%d is not aligned to blksize=%" PRIu64 "!\n", TXN_SIZE,
+                block_info.block_size);
     }
 
     // allocate an iotxn to read the partition table
@@ -221,8 +217,8 @@ static int gpt_bind_thread(void* arg) {
 
     // read partition table header synchronously (LBA1)
     txn->opcode = IOTXN_OP_READ;
-    txn->offset = blksize;
-    txn->length = blksize;
+    txn->offset = block_info.block_size;
+    txn->length = block_info.block_size;
     txn->complete_cb = gpt_read_sync_complete;
     txn->cookie = &completion;
 
@@ -254,7 +250,7 @@ static int gpt_bind_thread(void* arg) {
         table_sz = TXN_SIZE;
     }
     txn->opcode = IOTXN_OP_READ;
-    txn->offset = header.entries * blksize;
+    txn->offset = header.entries * block_info.block_size;
     txn->length = table_sz;
     txn->complete_cb = gpt_read_sync_complete;
     txn->cookie = &completion;
@@ -277,12 +273,13 @@ static int gpt_bind_thread(void* arg) {
         snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
         device_init(&device->device, drv, name, &gpt_proto);
 
-        device->blksize = blksize;
         iotxn_copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {
             free(device);
             continue;
         }
+        block_info.block_count = device->gpt_entry.last_lba - device->gpt_entry.first_lba + 1;
+        memcpy(&device->info, &block_info, sizeof(block_info));
 
         char type_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(type_guid, device->gpt_entry.type);

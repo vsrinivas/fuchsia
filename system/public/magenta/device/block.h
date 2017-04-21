@@ -10,49 +10,53 @@
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/types.h>
 
-// Get the size of the device in bytes
-#define IOCTL_BLOCK_GET_SIZE \
+// Get information about the underlying block device.
+#define IOCTL_BLOCK_GET_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 1)
-// Get the size of a single block in bytes
-#define IOCTL_BLOCK_GET_BLOCKSIZE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 2)
 // Get the type GUID of the partition (if one exists)
 #define IOCTL_BLOCK_GET_TYPE_GUID \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 3)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 2)
 // Get the GUID of the partition (if one exists)
 #define IOCTL_BLOCK_GET_PARTITION_GUID \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 4)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 3)
 // Get the name of the partition (if one exists)
 #define IOCTL_BLOCK_GET_NAME \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 4)
 // Rebind the block device (if supported)
 #define IOCTL_BLOCK_RR_PART \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 6)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 5)
 // Set up a FIFO-based server on the block device; acquire the handle to it
 #define IOCTL_BLOCK_GET_FIFOS \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BLOCK, 6)
 // Attach a VMO to the currently running FIFO server
 #define IOCTL_BLOCK_ATTACH_VMO \
-    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 8)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
 // Allocate a txn with the currently running FIFO server
 #define IOCTL_BLOCK_ALLOC_TXN \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 9)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 8)
 // Free a txn from the currently running FIFO server
 #define IOCTL_BLOCK_FREE_TXN \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 9)
 // Shut down the fifo server, waiting for it to be ready to be started again.
 // Only necessary to guarantee availibility to the next fifo server client;
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
 
 // Block Core ioctls (specific to each block device):
 
-// ssize_t ioctl_block_get_size(int fd, uint64_t* out);
-IOCTL_WRAPPER_OUT(ioctl_block_get_size, IOCTL_BLOCK_GET_SIZE, uint64_t);
+#define BLOCK_FLAG_READONLY  0x00000001
+#define BLOCK_FLAG_REMOVABLE 0x00000002
 
-// ssize_t ioctl_block_get_blocksize(int fd, uint64_t* out);
-IOCTL_WRAPPER_OUT(ioctl_block_get_blocksize, IOCTL_BLOCK_GET_BLOCKSIZE, uint64_t);
+typedef struct {
+    uint64_t block_size; // The size of a single block
+    uint64_t block_count; // The number of blocks in this block device
+    uint32_t flags;
+    uint32_t reserved;
+} block_info_t;
+
+// ssize_t ioctl_block_get_info(int fd, block_info_t* out);
+IOCTL_WRAPPER_OUT(ioctl_block_get_info, IOCTL_BLOCK_GET_INFO, block_info_t);
 
 // ssize_t ioctl_block_get_type_guid(int fd, void* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_block_get_type_guid, IOCTL_BLOCK_GET_TYPE_GUID, void);

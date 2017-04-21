@@ -157,12 +157,13 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     char name[MX_DEVICE_NAME_MAX + 1];
     snprintf(name, sizeof(name), "%s (aligned)", dev->name);
     device_init(&device->device, drv, name, &align_proto);
-    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0,
-                                 &device->blksize, sizeof(&device->blksize));
+    block_info_t info;
+    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info));
     if (rc < 0) {
         free(device);
         return rc;
     }
+    device->blksize = info.block_size;
     device->device.protocol_id = MX_PROTOCOL_BLOCK;
     mx_status_t status;
     if ((status = device_add(&device->device, dev)) != NO_ERROR) {

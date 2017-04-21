@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/param.h>
 #include <threads.h>
 
@@ -88,21 +89,16 @@ static mx_off_t sdmmc_get_size(mx_device_t* dev) {
 static ssize_t sdmmc_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                            size_t cmdlen, void* reply, size_t max) {
     switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* disk_size = reply;
-        if (max < sizeof(*disk_size))
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        *disk_size = sdmmc_get_size(dev);
-        return sizeof(*disk_size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize))
-            return ERR_BUFFER_TOO_SMALL;
+        memset(info, 0, sizeof(*info));
         // Since we only support SDHC cards, the blocksize must be the SDHC
         // blocksize.
-        *blksize = SDHC_BLOCK_SIZE;
-        return sizeof(*blksize);
+        info->block_size = SDHC_BLOCK_SIZE;
+        info->block_count = sdmmc_get_size(dev) / SDHC_BLOCK_SIZE;
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_GET_NAME: {
         return ERR_NOT_SUPPORTED;

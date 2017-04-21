@@ -87,7 +87,6 @@ static int cmd_list_blk(void) {
     }
     blkinfo_t info;
     const char* type;
-    uint64_t size;
     int fd;
     printf("%-3s %-8s %-8s %-4s %-14s %s\n", "ID", "DEV", "DRV", "SIZE", "TYPE", "LABEL");
     while ((de = readdir(dir)) != NULL) {
@@ -101,8 +100,10 @@ static int cmd_list_blk(void) {
         }
         ioctl_device_get_device_name(fd, info.devname, sizeof(info.devname));
         ioctl_device_get_driver_name(fd, info.drvname, sizeof(info.drvname));
-        if (ioctl_block_get_size(fd, &size) > 0) {
-            size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
+
+        block_info_t block_info;
+        if (ioctl_block_get_info(fd, &block_info) > 0) {
+            size_to_cstring(info.sizestr, sizeof(info.sizestr), block_info.block_size * block_info.block_count);
         }
         uint8_t guid[GPT_GUID_LEN];
         if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) >= 0) {
@@ -128,12 +129,14 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
 
     // check that count and offset are aligned to block size
     uint64_t blksize;
-    ssize_t rc = ioctl_block_get_blocksize(fd, &blksize);
+    block_info_t info;
+    ssize_t rc = ioctl_block_get_info(fd, &info);
     if (rc < 0) {
         printf("Error getting block size for %s\n", dev);
         close(fd);
         goto out;
     }
+    blksize = info.block_size;
     if (count % blksize) {
         printf("Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
         rc = -1;

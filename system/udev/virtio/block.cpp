@@ -11,6 +11,7 @@
 #include <mxtl/auto_lock.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/param.h>
 
 #include "trace.h"
@@ -82,19 +83,14 @@ ssize_t BlockDevice::virtio_block_ioctl(mx_device_t* dev, uint32_t op, const voi
     BlockDevice* bd = static_cast<BlockDevice*>(dev->ctx);
 
     switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = static_cast<uint64_t*>(reply);
-        if (max < sizeof(*size))
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reinterpret_cast<block_info_t*>(reply);
+        if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        *size = bd->GetSize();
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = static_cast<uint64_t*>(reply);
-        if (max < sizeof(*blksize))
-            return ERR_BUFFER_TOO_SMALL;
-        *blksize = bd->GetBlockSize();
-        return sizeof(*blksize);
+        memset(info, 0, sizeof(*info));
+        info->block_size = bd->GetBlockSize();
+        info->block_count = bd->GetSize() / bd->GetBlockSize();
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table

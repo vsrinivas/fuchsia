@@ -39,11 +39,11 @@ static int get_testdev(uint64_t* blk_size, uint64_t* blk_count) {
         printf("OPENING BLKDEV (path=%s) FAILURE. Errno: %d\n", blkdev_path, errno);
     }
     ASSERT_GE(fd, 0, "Could not open block device");
-    ssize_t rc = ioctl_block_get_blocksize(fd, blk_size);
+    block_info_t info;
+    ssize_t rc = ioctl_block_get_info(fd, &info);
     ASSERT_GE(rc, 0, "Could not get block size");
-    rc = ioctl_block_get_size(fd, blk_count);
-    ASSERT_GE(rc, 0, "Could not get block count");
-    *blk_count /= *blk_size;
+    *blk_size = info.block_size;
+    *blk_count = info.block_count;
     return fd;
 }
 

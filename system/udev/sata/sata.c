@@ -194,17 +194,14 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
     sata_device_t* device = get_sata_device(dev);
     // TODO implement other block ioctls
     switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = reply;
-        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
-        *size = device->capacity;
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
-        *blksize = device->sector_sz;
-        return sizeof(*blksize);
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ERR_BUFFER_TOO_SMALL;
+        memset(info, 0, sizeof(*info));
+        info->block_size = device->sector_sz;
+        info->block_count = device->capacity / device->sector_sz;
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table

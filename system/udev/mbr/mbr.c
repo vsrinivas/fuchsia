@@ -71,7 +71,7 @@ typedef struct __PACKED mbr {
 typedef struct mbrpart_device {
     mx_device_t device;
     mbr_partition_entry_t partition;
-    uint64_t blksiz;
+    block_info_t info;
     atomic_int writercount;
 } mbrpart_device_t;
 
@@ -88,26 +88,19 @@ static inline bool is_writer(uint32_t flags) {
 
 static uint64_t getsize(mbrpart_device_t* dev) {
     // Returns the size of the partition referred to by dev.
-    return dev->partition.sector_partition_length * dev->blksiz;
+    return dev->partition.sector_partition_length * dev->info.block_size;
 }
 
 static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                          size_t cmdlen, void* reply, size_t max) {
     mbrpart_device_t* device = get_mbrpart_device(dev);
     switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = reply;
-        if (max < sizeof(*size))
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        *size = getsize(device);
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize))
-            return ERR_BUFFER_TOO_SMALL;
-        *blksize = device->blksiz;
-        return sizeof(*blksize);
+        memcpy(info, &device->info, sizeof(*info));
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         ssize_t retval = ERR_NOT_FOUND;
@@ -148,7 +141,7 @@ static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Sanity check to ensure that we're not writing past
     mbrpart_device_t* device = get_mbrpart_device(dev);
 
-    const uint64_t off_lba = txn->offset / device->blksiz;
+    const uint64_t off_lba = txn->offset / device->info.block_size;
     const uint64_t first = device->partition.start_sector_lba;
     const uint64_t last = first + device->partition.sector_partition_length;
 
@@ -161,12 +154,12 @@ static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     }
 
     // Truncate the read if too many bytes are requested.
-    txn->length = MIN((last - (first + off_lba)) * device->blksiz,
+    txn->length = MIN((last - (first + off_lba)) * device->info.block_size,
                       txn->length);
 
     // Move the offset to the start of the partition when forwarding this
     // request to the block device.
-    txn->offset = first * device->blksiz + txn->offset;
+    txn->offset = first * device->info.block_size + txn->offset;
     iotxn_queue(dev->parent, txn);
 }
 
@@ -222,11 +215,10 @@ static int mbr_bind_thread(void* arg) {
 
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
-    uint64_t blksiz;
     iotxn_t* txn = NULL;
 
-    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_BLOCKSIZE, NULL, 0,
-                                 &blksiz, sizeof(blksiz));
+    block_info_t block_info;
+    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &block_info, sizeof(block_info));
     if (rc < 0) {
         xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
                 dev->name, rc);
@@ -236,11 +228,11 @@ static int mbr_bind_thread(void* arg) {
     // We need to read at least 512B to parse the MBR. Determine if we should
     // read the device's block size or we should ready exactly 512B.
     size_t iotxn_size = 0;
-    if (blksiz >= MBR_SIZE) {
-        iotxn_size = blksiz;
+    if (block_info.block_size >= MBR_SIZE) {
+        iotxn_size = block_info.block_size;
     } else {
         // Make sure we're reading some multiple of the block size.
-        iotxn_size = DIV_ROUND_UP(MBR_SIZE, blksiz) * blksiz;
+        iotxn_size = DIV_ROUND_UP(MBR_SIZE, block_info.block_size) * block_info.block_size;
     }
 
     mx_status_t st = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, iotxn_size);
@@ -307,9 +299,9 @@ static int mbr_bind_thread(void* arg) {
         device_init(&pdev->device, drv, name, &mbr_proto);
 
         pdev->device.protocol_id = MX_PROTOCOL_BLOCK;
-        pdev->blksiz = blksiz;
         memcpy(&pdev->partition, entry, sizeof(*entry));
-
+        block_info.block_count = pdev->partition.sector_partition_length;
+        memcpy(&pdev->info, &block_info, sizeof(block_info));
         if ((st = device_add(&pdev->device, dev)) != NO_ERROR) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
             free(pdev);

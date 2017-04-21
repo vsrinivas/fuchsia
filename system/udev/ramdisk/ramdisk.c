@@ -125,17 +125,14 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         strncpy(name, ramdev->name, max);
         return strnlen(name, max);
     }
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = reply;
-        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
-        *size = sizebytes(ramdev);
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
-        *blksize = ramdev->blk_size;
-        return sizeof(*blksize);
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ERR_BUFFER_TOO_SMALL;
+        memset(info, 0, sizeof(*info));
+        info->block_size = ramdev->blk_size;
+        info->block_count = sizebytes(ramdev) / ramdev->blk_size;
+        return sizeof(*info);
     }
     case IOCTL_BLOCK_RR_PART: {
         return device_rebind(dev);

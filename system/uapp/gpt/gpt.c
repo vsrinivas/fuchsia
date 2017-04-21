@@ -54,24 +54,15 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
         return NULL;
     }
 
-    uint64_t blocksize;
-    ssize_t rc = ioctl_block_get_blocksize(fd, &blocksize);
+    block_info_t info;
+    ssize_t rc = ioctl_block_get_info(fd, &info);
     if (rc < 0) {
-        printf("error getting block size\n");
+        printf("error getting block info\n");
         close(fd);
         return NULL;
     }
 
-    uint64_t blocks;
-    rc = ioctl_block_get_size(fd, &blocks);
-    if (rc < 0) {
-        printf("error getting device size\n");
-        close(fd);
-        return NULL;
-    }
-    blocks /= blocksize;
-
-    printf("blocksize=%" PRIu64 " blocks=%" PRIu64 "\n", blocksize, blocks);
+    printf("blocksize=%" PRIu64 " blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
     if (warn) {
         printf("WARNING: You are about to permanently alter %s\n\n"
@@ -85,7 +76,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     }
 
     gpt_device_t* gpt;
-    rc = gpt_device_init(fd, blocksize, blocks, &gpt);
+    rc = gpt_device_init(fd, info.block_size, info.block_count, &gpt);
     if (rc < 0) {
         printf("error initializing GPT\n");
         close(fd);
