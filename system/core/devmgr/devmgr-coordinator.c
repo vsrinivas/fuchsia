@@ -67,8 +67,8 @@ static void prepopulate_protocol_dirs(void) {
     }
 }
 
-mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
-    if (memfs_create_device_at(parent->vnode, &ctx->vnode, ctx->name, ctx->hdevice)) {
+mx_status_t do_publish(device_t* parent, device_t* ctx) {
+    if (memfs_create_device_at(parent->vnode, &ctx->vnode, ctx->name, ctx->hrpc)) {
         printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
         return ERR_INTERNAL;
     }
@@ -108,7 +108,7 @@ mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     return NO_ERROR;
 }
 
-void do_unpublish(device_ctx_t* dev) {
+void do_unpublish(device_t* dev) {
     devfs_remove(dev->vnode);
 }
 
@@ -116,14 +116,14 @@ void do_unpublish(device_ctx_t* dev) {
 static mxio_dispatcher_t* coordinator_dispatcher;
 static mx_handle_t devhost_job_handle;
 
-static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, device_ctx_t** out,
+static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, device_t** out,
                                     mx_handle_t* _hdevice, mx_handle_t* _hrpc) {
     size_t len = strlen(name);
     if (len >= MX_DEVICE_NAME_MAX) {
         return ERR_INVALID_ARGS;
     }
-    device_ctx_t* ctx;
-    if ((ctx = calloc(1, sizeof(device_ctx_t))) == NULL) {
+    device_t* ctx;
+    if ((ctx = calloc(1, sizeof(device_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
 
@@ -144,7 +144,7 @@ static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, devi
     memcpy(ctx->name, name, len);
     ctx->name[len] = 0;
     ctx->protocol_id = protocol_id;
-    ctx->hdevice = hdevice[1];
+    ctx->hrpc = hdevice[1];
 
     if ((status = mxio_dispatcher_add(coordinator_dispatcher, hrpc[1], NULL, ctx)) < 0) {
         mx_handle_close(hdevice[0]);
@@ -161,21 +161,21 @@ static mx_status_t do_remote_create(const char* name, uint32_t protocol_id, devi
     return NO_ERROR;
 }
 
-static mx_status_t do_remote_add(device_ctx_t* parent, const char* name, uint32_t protocol_id,
+static mx_status_t do_remote_add(device_t* parent, const char* name, uint32_t protocol_id,
                                  mx_handle_t hdevice, mx_handle_t hrpc) {
 
     size_t len = strlen(name);
     if (len >= MX_DEVICE_NAME_MAX) {
         return ERR_INVALID_ARGS;
     }
-    device_ctx_t* ctx;
-    if ((ctx = calloc(1, sizeof(device_ctx_t))) == NULL) {
+    device_t* ctx;
+    if ((ctx = calloc(1, sizeof(device_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     memcpy(ctx->name, name, len);
     ctx->name[len] = 0;
     ctx->protocol_id = protocol_id;
-    ctx->hdevice = hdevice;
+    ctx->hrpc = hdevice;
 
     //printf("devmgr: new ctx %p(%s), parent: %p(%s)\n", ctx, ctx->name, parent, parent->name);
     mx_status_t status;
@@ -190,19 +190,19 @@ static mx_status_t do_remote_add(device_ctx_t* parent, const char* name, uint32_
     return NO_ERROR;
 }
 
-static mx_status_t do_remote_remove(device_ctx_t* dev, bool clean) {
+static mx_status_t do_remote_remove(device_t* dev, bool clean) {
     //printf("devmgr: del ctx %p(%s) %s\n", dev, dev->name, clean ? "" : "unexpected!");
     devfs_remove(dev->vnode);
-    mx_handle_close(dev->hdevice);
+    mx_handle_close(dev->hrpc);
     dev->vnode = NULL;
-    dev->hdevice = 0;
+    dev->hrpc = 0;
     free(dev);
     return NO_ERROR;
 }
 
 // handle dev_coordinator_msgs from devhosts
 mx_status_t coordinator_handler(mx_handle_t h, void* cb, void* cookie) {
-    device_ctx_t* dev = cookie;
+    device_t* dev = cookie;
     dev_coordinator_msg_t msg;
     mx_handle_t handles[2];
     mx_status_t status;
@@ -264,7 +264,7 @@ void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
 }
 
 void coordinator(void) {
-    device_ctx_t* root;
+    device_t* root;
     mx_status_t status;
     mx_handle_t hdevice, hrpc;
     if ((status = do_remote_create("root", 0, &root, &hdevice, &hrpc)) < 0) {

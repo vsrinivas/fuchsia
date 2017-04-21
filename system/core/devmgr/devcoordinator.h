@@ -32,35 +32,46 @@ mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#if DEVHOST_V2
 typedef struct {
     list_node_t node;
     uint32_t op;
     uint32_t arg;
 } work_t;
 
-typedef struct devhost_ctx {
+typedef struct {
     port_handler_t ph;
     mx_handle_t hrpc;
     mx_handle_t proc;
     mx_koid_t koid;
-} devhost_ctx_t;
+} devhost_t;
 
-typedef struct device_ctx {
-    mx_handle_t hdevice;
-#if DEVHOST_V2
+typedef struct {
+    mx_handle_t hrpc;
     mx_handle_t hrsrc;
     port_handler_t ph;
-    devhost_ctx_t* host;
+    devhost_t* host;
     const char* args;
     work_t work;
-#endif
     uint32_t flags;
     uint32_t protocol_id;
     uint32_t prop_count;
     VnodeDir* vnode;
     char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
-} device_ctx_t;
+} device_t;
+
+#else
+typedef struct {
+    mx_handle_t hrpc;
+    uint32_t flags;
+    uint32_t protocol_id;
+    uint32_t prop_count;
+    VnodeDir* vnode;
+    char name[MX_DEVICE_NAME_MAX + 1];
+    mx_device_prop_t props[];
+} device_t;
+#endif
 
 // This device is never destroyed
 #define DEV_CTX_IMMORTAL   0x01
@@ -86,8 +97,8 @@ typedef struct {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-mx_status_t do_publish(device_ctx_t* parent, device_ctx_t* ctx);
-void do_unpublish(device_ctx_t* dev);
+mx_status_t do_publish(device_t* parent, device_t* dev);
+void do_unpublish(device_t* dev);
 
 void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job);
 void coordinator(void);

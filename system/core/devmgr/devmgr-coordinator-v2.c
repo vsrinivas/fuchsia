@@ -21,17 +21,17 @@ static mx_handle_t devhost_job;
 static port_t dc_port;
 static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 
-static device_ctx_t root_device = {
+static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .name = "root",
 };
-static device_ctx_t misc_device = {
+static device_t misc_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_MISC_PARENT,
     .name = "misc",
 };
 
-static void dc_handle_new_device(device_ctx_t* dev);
+static void dc_handle_new_device(device_t* dev);
 
 #define WORK_IDLE 0
 #define WORK_DEVICE_ADDED 1
@@ -51,7 +51,7 @@ static void process_work(work_t* work) {
 
     switch (op) {
     case WORK_DEVICE_ADDED: {
-        device_ctx_t* dev = containerof(work, device_ctx_t, work);
+        device_t* dev = containerof(work, device_t, work);
         dc_handle_new_device(dev);
         break;
     }
@@ -62,7 +62,7 @@ static void process_work(work_t* work) {
 
 static const char* devhost_bin = "/boot/bin/devhost2";
 
-static mx_status_t dc_launch_devhost(devhost_ctx_t* host,
+static mx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
     launchpad_create(devhost_job, name, &lp);
@@ -102,8 +102,8 @@ static mx_status_t dc_launch_devhost(devhost_ctx_t* host,
     return NO_ERROR;
 }
 
-static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
-    devhost_ctx_t* ctx = calloc(1, sizeof(devhost_ctx_t));
+static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
+    devhost_t* ctx = calloc(1, sizeof(devhost_t));
     if (ctx == NULL) {
         return ERR_NO_MEMORY;
     }
@@ -128,7 +128,7 @@ static mx_status_t dc_new_devhost(const char* name, devhost_ctx_t** out) {
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-static mx_status_t dc_add_device(device_ctx_t* parent,
+static mx_status_t dc_add_device(device_t* parent,
                                  mx_handle_t* handle, size_t hcount,
                                  dc_msg_t* msg, const char* name,
                                  const char* args, const void* data) {
@@ -141,13 +141,13 @@ static mx_status_t dc_add_device(device_ctx_t* parent,
     if (msg->datalen % sizeof(mx_device_prop_t)) {
         return ERR_INVALID_ARGS;
     }
-    device_ctx_t* dev;
+    device_t* dev;
     // allocate device struct, followed by space for props, followed
     // by space for bus arguments
     if ((dev = calloc(1, sizeof(*dev) + msg->datalen + msg->argslen + 1)) == NULL) {
         return ERR_NO_MEMORY;
     }
-    dev->hdevice = handle[0];
+    dev->hrpc = handle[0];
     dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
     dev->args = (const char*) (dev->props + dev->prop_count);
@@ -188,7 +188,7 @@ static mx_status_t dc_add_device(device_ctx_t* parent,
 }
 
 // Remove device from parent
-static mx_status_t dc_remove_device(device_ctx_t* dev) {
+static mx_status_t dc_remove_device(device_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
         log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
     } else {
@@ -198,7 +198,7 @@ static mx_status_t dc_remove_device(device_ctx_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
+static mx_status_t dc_handle_device_read(device_t* dev) {
     dc_msg_t msg;
     mx_handle_t hin[2];
     uint32_t msize = sizeof(msg);
@@ -210,7 +210,7 @@ static mx_status_t dc_handle_device_read(device_ctx_t* dev) {
     }
 
     mx_status_t r;
-    if ((r = mx_channel_read(dev->hdevice, 0, &msg, msize, &msize,
+    if ((r = mx_channel_read(dev->hrpc, 0, &msg, msize, &msize,
                              hin, hcount, &hcount)) < 0) {
         return r;
     }
@@ -257,13 +257,13 @@ done:
         .txid = msg.txid,
         .status = r,
     };
-    if ((r = mx_channel_write(dev->hdevice, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
+    if ((r = mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
         return r;
     }
     return NO_ERROR;
 }
 
-void dc_destroy_device(device_ctx_t* dev) {
+void dc_destroy_device(device_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
         log(ERROR, "devcoord: cannot destroy dev %p (immortal)\n", dev);
         return;
@@ -274,11 +274,11 @@ void dc_destroy_device(device_ctx_t* dev) {
     free(dev);
 }
 
-#define dev_from_ph(ph) containerof(ph, device_ctx_t, ph)
+#define dev_from_ph(ph) containerof(ph, device_t, ph)
 
 // handle inbound RPCs from devhost to devices
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
-    device_ctx_t* dev = dev_from_ph(ph);
+    device_t* dev = dev_from_ph(ph);
 
     if (signals & MX_CHANNEL_READABLE) {
         mx_status_t r = dc_handle_device_read(dev);
@@ -297,7 +297,7 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
 }
 
 // send message to devhost, requesting the creation of a device
-static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh,
+static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
                                     const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
@@ -306,8 +306,8 @@ static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh,
         return r;
     }
 
-    mx_handle_t handle[2], hdevice;
-    if ((r = mx_channel_create(0, handle, &hdevice)) < 0) {
+    mx_handle_t handle[2], hrpc;
+    if ((r = mx_channel_create(0, handle, &hrpc)) < 0) {
         return r;
     }
 
@@ -326,8 +326,8 @@ static mx_status_t dh_create_device(device_ctx_t* dev, devhost_ctx_t* dh,
         goto fail_write;
     }
 
-    dev->hdevice = hdevice;
-    dev->ph.handle = hdevice;
+    dev->hrpc = hrpc;
+    dev->ph.handle = hrpc;
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
@@ -342,12 +342,12 @@ fail_write:
 fail_duplicate:
     mx_handle_close(handle[0]);
 fail_watch:
-    mx_handle_close(hdevice);
+    mx_handle_close(hrpc);
     return r;
 }
 
 // send message to devhost, requesting the binding of a driver to a device
-static mx_status_t dh_bind_driver(device_ctx_t* dev, const char* libname) {
+static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
 
@@ -360,14 +360,14 @@ static mx_status_t dh_bind_driver(device_ctx_t* dev, const char* libname) {
     msg.txid = 0;
     msg.op = DC_OP_BIND_DRIVER;
 
-    if ((r = mx_channel_write(dev->hdevice, 0, &msg, mlen, NULL, 0)) < 0) {
+    if ((r = mx_channel_write(dev->hrpc, 0, &msg, mlen, NULL, 0)) < 0) {
         return r;
     }
 
     return NO_ERROR;
 }
 
-static void dc_attempt_bind(driver_ctx_t* drv, device_ctx_t* dev,
+static void dc_attempt_bind(driver_ctx_t* drv, device_t* dev,
                             const char* devhostname, const char* libname) {
     // cannot bind driver to already bound device
     if (dev->flags & DEV_CTX_BOUND) {
@@ -395,7 +395,7 @@ static void dc_attempt_bind(driver_ctx_t* drv, device_ctx_t* dev,
     dh_bind_driver(dev, drv->libname);
 }
 
-static void dc_handle_new_device(device_ctx_t* dev) {
+static void dc_handle_new_device(device_t* dev) {
     driver_ctx_t* drv;
 
     list_for_every_entry(&list_drivers, drv, driver_ctx_t, node) {
