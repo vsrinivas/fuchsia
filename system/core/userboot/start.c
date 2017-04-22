@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "bootdata.h"
 #include "bootfs.h"
 #include "userboot-elf.h"
 #include "option.h"
@@ -9,8 +10,6 @@
 
 #pragma GCC visibility push(hidden)
 
-#include <bootdata/decompress.h>
-#include <magenta/boot/bootdata.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
@@ -84,6 +83,11 @@ static mx_handle_t reserve_low_address_space(mx_handle_t log,
     return vmar;
 }
 
+enum {
+    EXTRA_HANDLE_BOOTFS,
+    EXTRA_HANDLE_COUNT
+};
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -100,8 +104,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     check(log, status, "mxr_message_size failed on bootstrap pipe!\n");
 
     // Read the bootstrap message from the kernel.
-    MXR_PROCESSARGS_BUFFER(buffer, nbytes);
-    mx_handle_t handles[nhandles + 1];
+    MXR_PROCESSARGS_BUFFER(buffer,
+                           nbytes + EXTRA_HANDLE_COUNT * sizeof(uint32_t));
+    mx_handle_t handles[nhandles + EXTRA_HANDLE_COUNT];
     mx_proc_args_t* pargs;
     uint32_t* handle_info;
     status = mxr_processargs_read(bootstrap_pipe,
@@ -111,6 +116,24 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // All done with the channel from the kernel now.  Let it go.
     mx_handle_close(bootstrap_pipe);
+
+    // We're adding some extra handles, so we have to rearrange the
+    // incoming message buffer to make space for their info slots.
+    if (pargs->args_off != 0 || pargs->args_num != 0) {
+        fail(log, ERR_INVALID_ARGS,
+             "unexpected bootstrap message layout: args\n");
+    }
+    if (pargs->environ_off != (pargs->handle_info_off +
+                               nhandles * sizeof(uint32_t))) {
+        fail(log, ERR_INVALID_ARGS,
+             "unexpected bootstrap message layout: environ\n");
+    }
+    const size_t environ_size = nbytes - pargs->environ_off;
+    pargs->environ_off += EXTRA_HANDLE_COUNT * sizeof(uint32_t);
+    memmove(&buffer[pargs->environ_off],
+            &buffer[pargs->handle_info_off + nhandles * sizeof(uint32_t)],
+            environ_size);
+    nbytes += EXTRA_HANDLE_COUNT * sizeof(uint32_t);
 
     // Extract the environment (aka kernel command line) strings.
     char* environ[pargs->environ_num + 1];
@@ -124,7 +147,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     parse_options(log, &o, environ);
 
     mx_handle_t resource_root = MX_HANDLE_INVALID;
-    mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
+    mx_handle_t bootdata_vmo = MX_HANDLE_INVALID;
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
     mx_handle_t job = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
@@ -154,6 +177,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         case MX_HND_TYPE_JOB:
             job = handles[i];
             break;
+        case MX_HND_TYPE_BOOTDATA_VMO:
+            if (bootdata_vmo == MX_HANDLE_INVALID)
+                bootdata_vmo = handles[i];
+            break;
         }
     }
     if (vdso_vmo == MX_HANDLE_INVALID)
@@ -166,6 +193,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (vmar_root_handle_loc == NULL)
         fail(log, ERR_INVALID_ARGS,
              "no vmar root handle in bootstrap message\n");
+    if (bootdata_vmo == MX_HANDLE_INVALID)
+        fail(log, ERR_INVALID_ARGS, "no bootdata VMO in bootstrap message\n");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
@@ -182,61 +211,12 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Locate the first bootfs bootdata section and decompress it.
     // We need it to load devmgr and libc from.
     // Later bootfs sections will be processed by devmgr.
-    for (uint32_t i = 0; i < nhandles; ++i) {
-        if (MX_HND_INFO_TYPE(handle_info[i]) != MX_HND_TYPE_BOOTDATA_VMO) {
-            continue;
-        }
+    mx_handle_t bootfs_vmo = bootdata_get_bootfs(log, vmar_self, bootdata_vmo);
 
-        uint64_t legacy_magic = 0x41544144544f4f42ULL;
-
-        size_t off = 0;
-        for (;;) {
-            bootdata_t bootdata;
-            size_t actual;
-            status = mx_vmo_read(handles[i], &bootdata, off, sizeof(bootdata), &actual);
-            if ((status < 0) || (actual != sizeof(bootdata))) {
-                break;
-            }
-
-            if ((off == 0) && (memcmp(&bootdata, &legacy_magic, sizeof(legacy_magic)) == 0)) {
-                fail(log, ERR_INVALID_ARGS, "***\n*** FATAL: old bootdata images not supported\n***\n");
-            }
-
-            if (bootdata.type == BOOTDATA_CONTAINER) {
-                if (off == 0) {
-                    // quietly skip container header
-                    bootdata.length = 0;
-                } else {
-                    // container in the middle of bootdata is bogus
-                    break;
-                }
-            }
-            if (bootdata.type == BOOTDATA_BOOTFS_BOOT) {
-                const char* errmsg;
-                status = decompress_bootdata(vmar_self, handles[i],
-                                             off, bootdata.length + sizeof(bootdata),
-                                             &bootfs_vmo, &errmsg);
-                if (status < 0) {
-                    fail(log, status, errmsg);
-                }
-
-                // signal that we've already processed this one
-                bootdata.type = BOOTDATA_BOOTFS_DISCARD;
-                mx_vmo_write(handles[i], &bootdata, off, sizeof(bootdata), &actual);
-
-                goto found_bootfs;
-            }
-
-            off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
-        }
-    }
-
-    fail(log, ERR_INVALID_ARGS, "no '/boot' bootfs in bootstrap message\n");
-
-found_bootfs:
-    handles[nhandles] = bootfs_vmo;
-    handle_info[nhandles] = MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 0);
-    nhandles++;
+    // Pass the decompressed bootfs VMO on.
+    handles[nhandles + EXTRA_HANDLE_BOOTFS] = bootfs_vmo;
+    handle_info[nhandles + EXTRA_HANDLE_BOOTFS] =
+        MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 0);
 
     // Make the channel for the bootstrap message.
     mx_handle_t to_child;
@@ -315,7 +295,8 @@ found_bootfs:
     // Now send the bootstrap message, consuming both our VMO handles. We also
     // send the job handle, which in the future means that we can't create more
     // processes from here on.
-    status = mx_channel_write(to_child, 0, buffer, nbytes, handles, nhandles);
+    status = mx_channel_write(to_child, 0, buffer, nbytes,
+                              handles, nhandles + EXTRA_HANDLE_COUNT);
     check(log, status, "mx_channel_write to child failed\n");
     status = mx_handle_close(to_child);
     check(log, status, "mx_handle_close failed on channel handle\n");
