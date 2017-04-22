@@ -408,6 +408,30 @@ $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP): FORCE
 
 SYSROOT_DEPS += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
 GENERATED += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
+
+# Stable (i.e. sorted) list of the actual build inputs in the sysroot.
+# (The debug-info files don't really belong in the sysroot.)
+SYSROOT_LIST := \
+    $(sort $(filter-out debug-info/%,$(SYSROOT_DEPS:$(BUILDSYSROOT)/%=%)))
+
+# Generate a file containing $(SYSROOT_LIST) (but newline-separated), for
+# other scripts and whatnot to consume.  Touch that file only when its
+# contents change, so the whatnot can lazily trigger on changes.
+$(BUILDDIR)/sysroot.list: $(BUILDDIR)/sysroot.list.stamp ;
+$(BUILDDIR)/sysroot.list.stamp: FORCE
+	$(NOECHO)for f in $(SYSROOT_LIST); do echo $$f; done > $(@:.stamp=.new)
+	$(NOECHO)\
+	if cmp -s $(@:.stamp=.new) $(@:.stamp=); then \
+	    rm $(@:.stamp=.new); \
+	else \
+	    $(if $(filter false,$(call TOBOOL,$(QUIET))),\
+	    	 echo generating $(@:.stamp=);) \
+	    mv $(@:.stamp=.new) $(@:.stamp=); \
+	fi
+	$(NOECHO)touch $@
+
+GENERATED += $(BUILDDIR)/sysroot.list $(BUILDDIR)/sysroot.list.stamp
+EXTRA_BUILDDEPS += $(BUILDDIR)/sysroot.list.stamp
 endif
 
 EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
