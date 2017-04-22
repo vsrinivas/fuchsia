@@ -216,7 +216,7 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* _data, size_t len) {
     char* ptr = static_cast<char*>(data);
 
     for (const VnodeSvc& vn : services_) {
-        if (c->last_id < vn.node_id()) {
+        if (c->last_id >= vn.node_id()) {
             continue;
         }
         uint32_t vtype = V_TYPE_FILE;
