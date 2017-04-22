@@ -36,7 +36,7 @@ struct ContextUpdate {
 
 struct ContextQuery {
   // A set of topics to include in the ContextUpdate when the following
-  // conditions match.
+  // conditions match. An empty list includes all topics.
   //
   // If no conditions are given below, the query will match whenever any
   // of |topics| changes.

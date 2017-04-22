@@ -42,8 +42,8 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextEngineTest() : ContextEngineTestBase() {
     ComponentScopePtr scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetProvider(scope->Clone(), provider_.NewRequest());
-    context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
+    context_engine()->GetProvider(scope.Clone(), provider_.NewRequest());
+    context_engine()->GetPublisher(scope.Clone(), publisher_.NewRequest());
   }
 
  protected:
@@ -54,6 +54,12 @@ class ContextEngineTest : public ContextEngineTestBase {
 ContextQueryPtr CreateQuery(const std::string& topic) {
   auto query = ContextQuery::New();
   query->topics.push_back(topic);
+  return query;
+}
+
+ContextQueryPtr CreateWildcardQuery() {
+  auto query = ContextQuery::New();
+  query->topics = fidl::Array<fidl::String>::New(0);
   return query;
 }
 
@@ -105,6 +111,23 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   publisher_->Publish("topic", "flkjsd");
   WAIT_UNTIL(listener1.PopLast());
   WAIT_UNTIL(listener2.PopLast());
+}
+
+TEST_F(ContextEngineTest, WildcardQuery) {
+  // Show that the wildcard query returns all topics that have been published.
+  publisher_->Publish("topic1", "1");
+  publisher_->Publish("topic2", "2");
+  Sleep();  // Give the runloop a chance to dispatch the above messages.
+
+  TestListener listener;
+  // The wildcard query is just a query without any topics.
+  provider_->Subscribe(CreateWildcardQuery(), listener.GetHandle());
+  listener.WaitForUpdate();
+
+  ContextUpdatePtr update;
+  ASSERT_TRUE((update = listener.PopLast()));
+  EXPECT_EQ("1", update->values["topic1"]);
+  EXPECT_EQ("2", update->values["topic2"]);
 }
 
 }  // namespace maxwell

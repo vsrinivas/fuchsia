@@ -12,6 +12,10 @@ namespace {
 
 bool QueryMatches(const std::string& updated_topic,
                   const ContextQueryPtr& query) {
+  // The wildcard query is one without any topics.
+  if (query->topics.size() == 0) return true;
+
+  // Otherwise |updated_topic| must appear in |query->topics|.
   return query->topics.To<std::set<std::string>>().count(updated_topic) > 0;
 }
 
@@ -35,6 +39,7 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
   // listener immediately.
   auto result = BuildContextUpdate(query);
   if (result) {
+    FTL_DCHECK(!result->values.is_null());
     listener->OnUpdate(std::move(result));
   }
 
@@ -50,7 +55,6 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
 
 void ContextRepository::SetInternal(const std::string& topic,
                                     const std::string* json_value) {
-  FTL_VLOG(1) << "SetInternal(): " << topic << " = " << *json_value;
   if (json_value != nullptr) {
     values_[topic] = *json_value;
   } else {
@@ -65,6 +69,7 @@ void ContextRepository::SetInternal(const std::string& topic,
   for (const auto& subscription : subscriptions_) {
     if (QueryMatches(topic, subscription.query)) {
       auto result = BuildContextUpdate(subscription.query);
+      FTL_DCHECK(!result->values.is_null());
       subscription.listener->OnUpdate(std::move(result));
     }
   }
@@ -74,14 +79,24 @@ ContextUpdatePtr ContextRepository::BuildContextUpdate(
     const ContextQueryPtr& query) {
   ContextUpdatePtr result;  // Null by default.
 
-  for (const auto& topic : query->topics) {
-    auto it = values_.find(topic);
-    if (it != values_.end()) {
+  if (query->topics.size() == 0) {
+    // Wildcard query. Send everything.
+    for (const auto& entry : values_) {
       if (!result) result = ContextUpdate::New();
+      result->values[entry.first] = entry.second;
+    }
+  } else {
+    for (const auto& topic : query->topics) {
+      auto it = values_.find(topic);
+      if (it != values_.end()) {
+        if (!result) result = ContextUpdate::New();
 
-      result->values[topic] = it->second;
+        result->values[topic] = it->second;
+      }
     }
   }
+
+  FTL_DCHECK(!result || !result->values.is_null());
 
   return result;
 }
