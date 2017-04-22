@@ -152,6 +152,9 @@ static inline void mxio_release(mxio_t* io) {
     }
 }
 
+// io will be consumed by this and must not be shared
+void mxio_chdir(mxio_t* io, const char* path);
+
 // Wraps an arbitrary handle with a mxio_t that works with wait hooks.
 // Takes ownership of handle unless shared_handle is true.
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);

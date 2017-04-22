@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/dispatcher.c \
     $(LOCAL_DIR)/epoll.c \
     $(LOCAL_DIR)/logger.c \
+    $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/pipe.c \
     $(LOCAL_DIR)/vmofile.c \

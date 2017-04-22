@@ -26,7 +26,7 @@
 #include <mxio/socket.h>
 #include <mxio/util.h>
 
-#include "private.h"
+#include "private-remoteio.h"
 
 #define MXDEBUG 0
 
@@ -39,21 +39,6 @@ static_assert((POLLPRI << POLL_SHIFT) == DEVICE_SIGNAL_OOB, "");
 static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
-
-typedef struct mxrio mxrio_t;
-struct mxrio {
-    // base mxio io object
-    mxio_t io;
-
-    // channel handle for rpc
-    mx_handle_t h;
-
-    // event handle for device state signals, or socket handle
-    mx_handle_t h2;
-
-    // transaction id used for synchronous remoteio calls
-    _Atomic mx_txid_t txid;
-};
 
 static pthread_key_t rchannel_key;
 
@@ -484,7 +469,7 @@ static mx_status_t mxrio_close(mxio_t* io) {
     return r;
 }
 
-static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
+static mx_status_t mxrio_reply_channel_call(mx_handle_t rio_h, mxrio_msg_t* msg,
                                             mxrio_object_t* info) {
     mx_status_t r;
     mx_handle_t h;
@@ -494,7 +479,7 @@ static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
     msg->hcount = 1;
 
     // Write the (one-way) request message
-    if ((r = mx_channel_write(rio->h, 0, msg, MXRIO_HDR_SZ + msg->datalen,
+    if ((r = mx_channel_write(rio_h, 0, msg, MXRIO_HDR_SZ + msg->datalen,
                               msg->handle, msg->hcount)) < 0) {
         mx_handle_close(msg->handle[0]);
         mx_handle_close(h);
@@ -606,8 +591,8 @@ mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types) {
     return 1;
 }
 
-static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
-                              uint32_t maxreply, void* ptr, size_t len) {
+mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
+                       uint32_t maxreply, void* ptr, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
     mxrio_msg_t msg;
     mx_status_t r;
@@ -730,7 +715,7 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
     return r;
 }
 
-static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
+static mx_status_t mxrio_getobject(mx_handle_t rio_h, uint32_t op, const char* name,
                                    int32_t flags, uint32_t mode,
                                    mxrio_object_t* info) {
     if (name == NULL) {
@@ -750,16 +735,52 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
     msg.arg2.mode = mode;
     memcpy(msg.data, name, len);
 
-    return mxrio_reply_channel_call(rio, &msg, info);
+    return mxrio_reply_channel_call(rio_h, &msg, info);
 }
 
-static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
+mx_status_t mxrio_open_handle(mx_handle_t h, const char* path, int32_t flags,
+                              uint32_t mode, mxio_t** out) {
+    mxrio_object_t info;
+    if (flags & MXRIO_OFLAG_MASK) {
+        return ERR_INVALID_ARGS;
+    }
+    mx_status_t r = mxrio_getobject(h, MXRIO_OPEN, path, flags, mode, &info);
+    if (r < 0) {
+        return r;
+    }
+    return mxio_from_handles(info.type, info.handle, info.hcount, info.extra, info.esize, out);
+}
+
+mx_status_t mxrio_open_handle_raw(mx_handle_t h, const char* path, int32_t flags,
+                                  uint32_t mode, mx_handle_t *out) {
+    mxrio_object_t info;
+    if (flags & MXRIO_OFLAG_MASK) {
+        return ERR_INVALID_ARGS;
+    }
+    mx_status_t r = mxrio_getobject(h, MXRIO_OPEN, path, flags, mode, &info);
+    if (r < 0) {
+        return r;
+    }
+    if ((info.type == MXIO_PROTOCOL_REMOTE) && (info.hcount > 0)) {
+        for (unsigned n = 1; n < info.hcount; n++) {
+            mx_handle_close(info.handle[n]);
+        }
+        *out = info.handle[0];
+        return NO_ERROR;
+    }
+    for (unsigned n = 0; n < info.hcount; n++) {
+        mx_handle_close(info.handle[n]);
+    }
+    return ERR_WRONG_TYPE;
+}
+
+mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
     if (flags & MXRIO_OFLAG_MASK) {
         return ERR_INVALID_ARGS;
     }
-    mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, &info);
+    mx_status_t r = mxrio_getobject(rio->h, MXRIO_OPEN, path, flags, mode, &info);
     if (r < 0) {
         return r;
     }
@@ -769,7 +790,7 @@ static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint3
 static mx_status_t mxrio_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
-    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, &info);
+    mx_status_t r = mxrio_getobject(rio->h, MXRIO_CLONE, "", 0, 0, &info);
     if (r < 0) {
         return r;
     }
@@ -972,7 +993,7 @@ static mx_status_t mxsio_clone_stream(mxio_t* io, mx_handle_t* handles, uint32_t
     }
     mxrio_t* rio = (void*)io;
     mxrio_object_t info;
-    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, &info);
+    mx_status_t r = mxrio_getobject(rio->h, MXRIO_CLONE, "", 0, 0, &info);
     if (r < 0) {
         return r;
     }
