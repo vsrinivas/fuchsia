@@ -9,10 +9,10 @@ import os
 import stat
 import subprocess
 
-fuchsia_root = os.environ['FUCHSIA_DIR']
-fuchsia_sysroot = os.environ['FUCHSIA_SYSROOT_DIR']
-fuchsia_build = os.environ['FUCHSIA_BUILD_DIR']
-fuchsia_buildtools = os.path.join(fuchsia_root, 'buildtools')
+fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
+fuchsia_sysroot = os.path.realpath(os.environ['FUCHSIA_SYSROOT_DIR'])
+fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
+fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
 common_flags = [
     '-std=c++14',
@@ -58,7 +58,9 @@ def GetClangCommandFromNinjaForFilename(filename):
       return fuchsia_flags
 
   # Ninja needs the path to the source file from the output build directory.
-  # Cut off the common part and /.
+  # Cut off the common part and /. Also ensure that paths are real and don't
+  # contain symlinks that throw the len() calculation off.
+  filename = os.path.realpath(filename)
   subdir_filename = filename[len(fuchsia_root) + 1:]
   rel_filename = os.path.join('..', '..', subdir_filename)
   ninja_filename = os.path.join(fuchsia_buildtools, 'ninja')
