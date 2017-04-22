@@ -20,13 +20,14 @@ void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct boo
     uintptr_t addr = 0;
     status = mx_vmar_map(vmar, 0, vmo, 0, size, MX_VM_FLAG_PERM_READ, &addr);
     check(log, status, "mx_vmar_map failed on bootfs vmo\n");
-    fs->contents =  (const void*)addr;
+    fs->vmo = vmo;
+    fs->contents = (const void*)addr;
     fs->len = size;
 }
 
-void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct bootfs *fs) {
+void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, struct bootfs *fs) {
     uint64_t size;
-    mx_status_t status = mx_vmo_get_size(vmo, &size);
+    mx_status_t status = mx_vmo_get_size(fs->vmo, &size);
     check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
 
     status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, size);
@@ -101,16 +102,23 @@ mx_handle_t bootfs_open(mx_handle_t log,
     if (fs->len - file.offset < file.size)
         fail(log, ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
 
+    // Clone a private copy of the file's subset of the bootfs VMO.
+    // TODO(mcgrathr): Create a plain read-only clone when the feature
+    // is implemented in the VM.
     mx_handle_t vmo;
-    mx_status_t status = mx_vmo_create(file.size, 0, &vmo);
-    if (status < 0)
-        fail(log, status, "mx_vmo_create failed\n");
-    size_t n;
-    status = mx_vmo_write(vmo, &fs->contents[file.offset], 0, file.size, &n);
-    if (status < 0)
-        fail(log, status, "mx_vmo_write failed\n");
-    if (n != file.size)
-        fail(log, ERR_IO, "mx_vmo_write short write\n");
+    mx_status_t status = mx_vmo_clone(fs->vmo, MX_VMO_CLONE_COPY_ON_WRITE,
+                                      file.offset, file.size, &vmo);
+    if (status != NO_ERROR)
+        fail(log, status, "mx_vmo_clone failed\n");
+    // Drop unnecessary MX_RIGHT_WRITE rights.
+    // TODO(mcgrathr): Should be superfluous with read-only mx_vmo_clone.
+    status = mx_handle_replace(
+        vmo,
+        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
+        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+        &vmo);
+    if (status != NO_ERROR)
+        fail(log, status, "mx_handle_replace failed\n");
 
     return vmo;
 }
