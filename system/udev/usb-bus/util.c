@@ -4,6 +4,7 @@
 
 #include <ddk/protocol/usb.h>
 #include <sync/completion.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "usb-device.h"
@@ -61,7 +62,68 @@ mx_status_t usb_device_control(mx_device_t* hci_device, uint32_t device_id,
 }
 
 mx_status_t usb_device_get_descriptor(mx_device_t* hci_device, uint32_t device_id, uint16_t type,
-                                      uint16_t index, void* data, size_t length) {
+                                      uint16_t index, uint16_t language, void* data, size_t length) {
     return usb_device_control(hci_device, device_id, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                           USB_REQ_GET_DESCRIPTOR, type << 8 | index, 0, data, length);
+                           USB_REQ_GET_DESCRIPTOR, type << 8 | index, language, data, length);
+}
+
+mx_status_t usb_device_get_string_descriptor(mx_device_t* hci_device, uint32_t device_id, uint8_t id,
+                                             char* buf, size_t buflen) {
+    uint16_t buffer[128];
+    uint16_t languages[128];
+    int languageCount = 0;
+
+    buf[0] = 0;
+    memset(languages, 0, sizeof(languages));
+
+    // read list of supported languages
+    mx_status_t result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, 0, 0,
+                                                   languages, sizeof(languages));
+    if (result < 0) {
+        return result;
+    }
+    languageCount = (result - 2) / 2;
+
+    for (int language = 1; language <= languageCount; language++) {
+        memset(buffer, 0, sizeof(buffer));
+
+        result = usb_device_get_descriptor(hci_device, device_id, USB_DT_STRING, id,
+                                           le16toh(languages[language]), buffer, sizeof(buffer));
+        // use first language on the list
+        if (result > 0) {
+            // First word is descriptor length and type
+            usb_descriptor_header_t* header = (usb_descriptor_header_t *)buffer;
+            uint8_t length = header->bLength;
+            if (length > result) {
+                length = result;
+            }
+
+            uint16_t* src = &buffer[1];
+            uint16_t* src_end = src + length / sizeof(uint16_t);
+            char* dest = buf;
+            // subtract 2 since our output UTF8 chars can be up to 3 bytes long,
+            // plus one extra for zero termination
+            char* dest_end = buf + buflen - 3;
+
+            // convert to UTF8 while copying to buffer
+            while (src < src_end && dest < dest_end) {
+                uint16_t uch = *src++;
+                if (uch < 0x80u) {
+                    *dest++ = (char)uch;
+                } else if (uch < 0x800u) {
+                    *dest++ = 0xC0 | (uch >> 6);
+                    *dest++ = 0x80 | (uch & 0x3F);
+                } else {
+                    // with 16 bit input, 3 characters of output is the maximum we will see
+                   *dest++ = 0xE0 | (uch >> 12);
+                   *dest++ = 0x80 | (uch >> 6);
+                   *dest++ = 0x80 | (uch & 0x3F);
+                }
+            }
+            *dest++ = 0;
+            return dest - buf;
+        }
+    }
+    // default to empty string
+    return 0;
 }

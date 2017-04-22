@@ -22,7 +22,9 @@ mx_status_t usb_control(mx_device_t* device, uint8_t request_type, uint8_t reque
 
     uint32_t flags = (length == 0 ? IOTXN_ALLOC_POOL : 0);
     mx_status_t status = iotxn_alloc(&txn, flags, length);
-    if (status != NO_ERROR) return status;
+    if (status != NO_ERROR) {
+        return status;
+    }
     txn->protocol = MX_PROTOCOL_USB;
 
     static_assert(sizeof(usb_protocol_data_t) <= sizeof(iotxn_proto_data_t), "");
@@ -67,47 +69,6 @@ mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16
                                uint16_t index, void* data, size_t length) {
     return usb_control(device, request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
                        type << 8 | index, 0, data, length);
-}
-
-mx_status_t usb_get_string_descriptor(mx_device_t* device, uint8_t id, char** out_string) {
-    char string[256];
-    uint16_t buffer[128];
-    uint16_t languages[128];
-    int languageCount = 0;
-
-    string[0] = 0;
-    *out_string = NULL;
-    memset(languages, 0, sizeof(languages));
-
-    // read list of supported languages
-    mx_status_t result = usb_control(device,
-            USB_DIR_IN | USB_TYPE_STANDARD |  USB_RECIP_DEVICE, USB_REQ_GET_DESCRIPTOR,
-            (USB_DT_STRING << 8) | 0, 0, languages, sizeof(languages));
-    if (result < 0) return result;
-    languageCount = (result - 2) / 2;
-
-    for (int i = 1; i <= languageCount; i++) {
-        memset(buffer, 0, sizeof(buffer));
-
-        result = usb_control(device,
-                USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_GET_DESCRIPTOR,
-                (USB_DT_STRING << 8) | id, le16toh(languages[i]), buffer, sizeof(buffer));
-        if (result > 0) {
-            // skip first word, and copy the rest to the string, changing shorts to bytes.
-            result /= 2;
-            int j;
-            for (j = 1; j < result; j++) {
-                string[j - 1] = le16toh(buffer[j]);
-            }
-            string[j - 1] = 0;
-            break;
-        }
-    }
-
-    char* s = strdup(string);
-    if (!s) return ERR_NO_MEMORY;
-    *out_string = s;
-    return NO_ERROR;
 }
 
 usb_speed_t usb_get_speed(mx_device_t* device) {
