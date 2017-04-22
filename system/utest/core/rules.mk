@@ -17,14 +17,15 @@ MODULE_SRCS := \
 MODULE_NAME := core-tests
 
 MODULE_STATIC_LIBS := \
-    system/ulib/runtime system/ulib/ddk system/ulib/unittest system/ulib/hexdump system/ulib/mini-process system/ulib/sync
+    system/ulib/runtime \
+    system/ulib/ddk \
+    system/ulib/sync
 
-# NOTE!  No other libraries can be added here!
-# Anything else must be statically linked (MODULE_STATIC_LIBS).
-# core-tests is meant to be run as the first real userland process
-# (after the built-in userboot), which does not have access to the
-# loader service needed to find additional shared libraries at runtime.
-MODULE_LIBS := system/ulib/magenta system/ulib/c
+MODULE_LIBS := \
+    system/ulib/unittest \
+    system/ulib/mini-process \
+    system/ulib/magenta \
+    system/ulib/c
 
 MODULE_DEFINES := BUILD_COMBINED_TESTS=1
 
