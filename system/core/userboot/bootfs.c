@@ -20,18 +20,21 @@ void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct boo
     uintptr_t addr = 0;
     status = mx_vmar_map(vmar, 0, vmo, 0, size, MX_VM_FLAG_PERM_READ, &addr);
     check(log, status, "mx_vmar_map failed on bootfs vmo\n");
-    fs->vmo = vmo;
     fs->contents = (const void*)addr;
     fs->len = size;
+    status = mx_handle_duplicate(
+        vmo,
+        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
+        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+        &fs->vmo);
+    check(log, status, "mx_handle_duplicate failed on bootfs VMO handle\n");
 }
 
 void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, struct bootfs *fs) {
-    uint64_t size;
-    mx_status_t status = mx_vmo_get_size(fs->vmo, &size);
-    check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
-
-    status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, size);
+    mx_status_t status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, fs->len);
     check(log, status, "mx_vmar_unmap failed\n");
+    status = mx_handle_close(fs->vmo);
+    check(log, status, "mx_handle_close failed\n");
 }
 
 struct bootfs_magic {
@@ -90,9 +93,10 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
     return runt;
 }
 
-mx_handle_t bootfs_open(mx_handle_t log,
+mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
                         struct bootfs *fs, const char* filename) {
-    print(log, "searching bootfs for \"", filename, "\"\n", NULL);
+    print(log, "searching bootfs for ", purpose,
+          " \"", filename, "\"\n", NULL);
 
     struct bootfs_file file = bootfs_search(log, fs, filename);
     if (file.offset == 0 && file.size == 0)

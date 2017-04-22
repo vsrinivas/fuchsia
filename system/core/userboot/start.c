@@ -4,8 +4,9 @@
 
 #include "bootdata.h"
 #include "bootfs.h"
-#include "userboot-elf.h"
+#include "loader-service.h"
 #include "option.h"
+#include "userboot-elf.h"
 #include "util.h"
 
 #pragma GCC visibility push(hidden)
@@ -34,23 +35,17 @@ static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
 }
 
 static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
-                               const struct options* o, mx_handle_t bootfs_vmo,
+                               const struct options* o, struct bootfs* bootfs,
                                mx_handle_t vdso_vmo, mx_handle_t proc,
                                mx_handle_t vmar, mx_handle_t thread,
                                mx_handle_t to_child,
                                mx_vaddr_t* entry, mx_vaddr_t* vdso_base,
-                               size_t* stack_size) {
-
+                               size_t* stack_size, mx_handle_t* loader_svc) {
     // Examine the bootfs image and find the requested file in it.
-    struct bootfs bootfs;
-    bootfs_mount(vmar_self, log, bootfs_vmo, &bootfs);
-
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
-    *entry = elf_load_bootfs(log, vmar_self, &bootfs, proc, vmar, thread,
-                             o->value[OPTION_FILENAME], to_child, stack_size);
-
-    // All done with bootfs!
-    bootfs_unmount(vmar_self, log, &bootfs);
+    *entry = elf_load_bootfs(log, vmar_self, bootfs, proc, vmar, thread,
+                             o->value[OPTION_FILENAME], to_child, stack_size,
+                             loader_svc);
 
     // Now load the vDSO into the child, so it has access to system calls.
     *vdso_base = elf_load_vmo(log, vmar_self, vmar, vdso_vmo);
@@ -218,6 +213,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     handle_info[nhandles + EXTRA_HANDLE_BOOTFS] =
         MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 0);
 
+    // Map in the bootfs so we can look for files in it.
+    struct bootfs bootfs;
+    bootfs_mount(vmar_self, log, bootfs_vmo, &bootfs);
+
     // Make the channel for the bootstrap message.
     mx_handle_t to_child;
     mx_handle_t child_start_handle;
@@ -242,8 +241,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
-    load_child_process(log, vmar_self, &o, bootfs_vmo, vdso_vmo, proc, vmar,
-                       thread, to_child, &entry, &vdso_base, &stack_size);
+    mx_handle_t loader_service_channel = MX_HANDLE_INVALID;
+    load_child_process(log, vmar_self, &o, &bootfs, vdso_vmo, proc, vmar,
+                       thread, to_child, &entry, &vdso_base, &stack_size,
+                       &loader_service_channel);
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
@@ -308,6 +309,15 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_handle_close(thread);
     check(log, status, "mx_handle_close failed on thread handle\n");
 
+    print(log, "process ", o.value[OPTION_FILENAME], " started.\n", NULL);
+
+    // Now become the loader service for as long as that's needed.
+    if (loader_service_channel != MX_HANDLE_INVALID)
+        loader_service(log, &bootfs, loader_service_channel);
+
+    // All done with bootfs!
+    bootfs_unmount(vmar_self, log, &bootfs);
+
     if (o.value[OPTION_SHUTDOWN] != NULL) {
         print(log, "Waiting for ", o.value[OPTION_FILENAME], " to exit...\n",
               NULL);
@@ -322,8 +332,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_handle_close(proc);
     check(log, status, "mx_handle_close failed on process handle\n");
 
-    print(log, o.value[OPTION_FILENAME], " started.  userboot exiting.\n",
-          NULL);
+    print(log, "finished!\n", NULL);
     mx_process_exit(0);
 }
 

@@ -22,11 +22,12 @@ mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t vmar_self,
 // executable.  In that case, an extra mx_proc_args_t message is
 // sent down the to_child pipe to prime the interpreter (presumably
 // the dynamic linker) with the given log handle and a VMO for the
-// main executable.
+// main executable and a loader-service channel, the other end of
+// which is returned here.
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                            struct bootfs *fs, mx_handle_t proc,
                            mx_handle_t vmar, mx_handle_t thread,
                            const char* filename, mx_handle_t to_child,
-                           size_t* stack_size);
+                           size_t* stack_size, mx_handle_t* loader_svc);
 
 #pragma GCC visibility pop

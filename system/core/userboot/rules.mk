@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/userboot-elf.c \
     $(LOCAL_DIR)/option.c \
     $(LOCAL_DIR)/start.c \
+    $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/util.c
 
 MODULE_NAME := userboot

@@ -11,6 +11,7 @@
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
 #include <magenta/device/devmgr.h>
+#include <magenta/dlfcn.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -355,6 +356,11 @@ int virtcon_starter(void* arg) {
 }
 
 int main(int argc, char** argv) {
+    // Close the loader-service channel so the service can go away.
+    // We won't use it any more (no dlopen calls in this process).
+    mx_handle_t loader_svc = dl_set_loader_service(MX_HANDLE_INVALID);
+    mx_handle_close(loader_svc);
+
     devmgr_io_init();
 
     root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
