@@ -12,7 +12,7 @@ Before running, follow the instructions at the Fuchsia
 
 To run the Maxwell tests in a running Fuchsia environment:
 
-    @ /system/apps/maxwell_test
+    @ /system/test/maxwell_test
 
 Kronk
 -----

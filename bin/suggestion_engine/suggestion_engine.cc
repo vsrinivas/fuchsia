@@ -150,6 +150,27 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
           focus_provider_ptr_->Request(focus_story->story_id);
           break;
         }
+        case Action::Tag::ADD_MODULE_TO_STORY: {
+          if (story_provider_) {
+            const auto& add_module_to_story = action->get_add_module_to_story();
+            const auto& story_id = add_module_to_story->story_id;
+            const auto& module_id = add_module_to_story->module_id;
+            const auto& link_name = add_module_to_story->link_name;
+
+            FTL_LOG(INFO) << "Adding module " << module_id << " to story "
+                          << story_id;
+
+            modular::StoryControllerPtr story_controller;
+            story_provider_->GetController(story_id,
+                                           story_controller.NewRequest());
+
+            story_controller->AddModule(module_id, module_id, link_name);
+          } else {
+            FTL_LOG(WARNING) << "Unable to add module; no story provider";
+          }
+
+          break;
+        }
         case Action::Tag::CUSTOM_ACTION: {
           auto custom_action = maxwell::CustomActionPtr::Create(
               std::move(action->get_custom_action()));

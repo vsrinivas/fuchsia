@@ -36,7 +36,8 @@ class NPublisher {
   ContextPublisherPtr pub_;
 };
 
-ProposalPtr CreateProposal(const std::string& id, const std::string& headline,
+ProposalPtr CreateProposal(const std::string& id,
+                           const std::string& headline,
                            fidl::Array<ActionPtr> actions) {
   auto p = Proposal::New();
   p->id = id;
@@ -65,13 +66,15 @@ class Proposinator {
 
   virtual ~Proposinator() = default;
 
-  void Propose(const std::string& id, fidl::Array<ActionPtr> actions =
-                                          fidl::Array<ActionPtr>::New(0)) {
+  void Propose(
+      const std::string& id,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     Propose(id, id, std::move(actions));
   }
 
   void Propose(
-      const std::string& id, const std::string& headline,
+      const std::string& id,
+      const std::string& headline,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions)));
   }
@@ -440,6 +443,30 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   ASYNC_EQ("foo://bar", story_provider()->last_created_story());
 }
 
+TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  auto module_id = "foo://bar1";
+
+  auto add_module_to_story = AddModuleToStory::New();
+  add_module_to_story->story_id = "foo://bar";
+  add_module_to_story->module_id = module_id;
+  add_module_to_story->link_name = "";
+
+  auto action = Action::New();
+  action->set_add_module_to_story(std::move(add_module_to_story));
+  fidl::Array<ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(1);
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+
+  ASYNC_EQ(module_id, story_provider()->story_controller().last_added_module());
+}
+
 class AskTest : public virtual SuggestionEngineTest {
  public:
   AskTest() : binding_(&listener_) {}
@@ -702,7 +729,8 @@ class AskProposinator : public Proposinator, public AskHandler {
   }
 
   void ProposeForAsk(
-      const std::string& id, const std::string& headline,
+      const std::string& id,
+      const std::string& headline,
       fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
     ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions)));
   }

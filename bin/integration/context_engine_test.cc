@@ -42,7 +42,7 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextEngineTest() : ContextEngineTestBase() {
     ComponentScopePtr scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetProvider(std::move(scope), provider_.NewRequest());
+    context_engine()->GetProvider(scope->Clone(), provider_.NewRequest());
     context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
   }
 
