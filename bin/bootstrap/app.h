@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/modular/src/bootstrap/delegating_application_loader.h"
@@ -56,7 +56,7 @@ class App : public app::ApplicationEnvironmentHost {
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
   fidl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
-  app::ServiceProviderImpl env_services_;
+  app::ServiceNamespace env_services_;
   app::ApplicationLauncherPtr env_launcher_;
 
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;

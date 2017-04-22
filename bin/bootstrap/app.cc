@@ -27,7 +27,6 @@ App::App(Params* params)
   // Register services.
   for (auto& pair : params->TakeServices())
     RegisterSingleton(pair.first, std::move(pair.second));
-  RegisterDefaultServiceConnector();
 
   // Ordering note: The impl of CreateNestedEnvironment will resolve the
   // delegating app loader. However, since its call back to the env host won't
@@ -76,15 +75,6 @@ void App::RegisterSingleton(std::string service_name,
         it->second->ConnectToService(service_name, std::move(client_handle));
       }),
       service_name);
-}
-
-void App::RegisterDefaultServiceConnector() {
-  env_services_.SetDefaultServiceConnector(
-      [this](std::string service_name, mx::channel channel) {
-        FTL_VLOG(2) << "Servicing default service request for " << service_name;
-        application_context_->environment_services()->ConnectToService(
-            service_name, std::move(channel));
-      });
 }
 
 void App::RegisterAppLoaders(Params::ServiceMap app_loaders) {
