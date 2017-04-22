@@ -4,9 +4,12 @@
 
 #include "application/lib/svc/service_namespace.h"
 
+#include <fcntl.h>
+#include <magenta/device/devmgr.h>
 #include <mxio/util.h>
 #include <utility>
 
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/mtl/vfs/vfs_handler.h"
 
 namespace app {
@@ -58,6 +61,8 @@ mx::channel ServiceNamespace::CloneDirectory() {
     return mx::channel();
   }
 
+  // Setting this signal indicates that this directory is actively being served.
+  h2.signal(0, MX_USER_SIGNAL_0);
   return h2;
 }
 
@@ -69,6 +74,19 @@ int ServiceNamespace::OpenAsFileDescriptor() {
   if (!io)
     return -1;
   return mxio_bind_to_fd(io, -1, 0);
+}
+
+bool ServiceNamespace::MountAtPath(const char* path) {
+  mx::channel dir = CloneDirectory();
+  if (!dir)
+    return false;
+
+  ftl::UniqueFD fd(open(path, O_DIRECTORY | O_RDWR));
+  if (fd.get() < 0)
+    return false;
+
+  mx_handle_t h = dir.release();
+  return ioctl_devmgr_mount_fs(fd.get(), &h) >= 0;
 }
 
 void ServiceNamespace::Connect(const char* name, size_t len,

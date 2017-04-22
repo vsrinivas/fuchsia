@@ -89,6 +89,9 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
   // Retuns a file descriptor to a directory containing these services.
   int OpenAsFileDescriptor();
 
+  // Mounts this service namespace at the given path in the file system.
+  bool MountAtPath(const char* path);
+
  private:
   // Overridden from |svcfs::ServiceProvider|:
   void Connect(const char* name, size_t len, mx::channel channel) override;
