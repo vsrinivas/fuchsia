@@ -888,7 +888,7 @@ malloc_conf_init(void)
 			break;
 		case 2: {
 			ssize_t linklen = 0;
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__Fuchsia__)
 			int saved_errno = errno;
 			const char *linkname =
 #  ifdef JEMALLOC_PREFIX
