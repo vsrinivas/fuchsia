@@ -7,8 +7,9 @@
 
 #include <string>
 
+#include "apps/modular/lib/testing/story_controller_mock.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace modular {
@@ -22,6 +23,7 @@ class StoryProviderMock : public StoryProvider {
     });
   }
 
+  modular::StoryControllerMock story_controller() const { return controller_mock_; }
   std::string last_created_story() const { return last_created_story_; }
 
  private:
@@ -64,7 +66,9 @@ class StoryProviderMock : public StoryProvider {
   // |StoryProvider|
   void GetController(
       const fidl::String& story_id,
-      fidl::InterfaceRequest<modular::StoryController> story) override {}
+      fidl::InterfaceRequest<modular::StoryController> story) override {
+    binding_set_.AddBinding(&controller_mock_, std::move(story));
+  }
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override {
@@ -77,6 +81,8 @@ class StoryProviderMock : public StoryProvider {
   }
 
   std::string last_created_story_;
+  modular::StoryControllerMock controller_mock_;
+  fidl::BindingSet<modular::StoryController> binding_set_;
   fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
 };
 
