@@ -16,8 +16,6 @@
 
 mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                                 mx_handle_t bootdata_vmo) {
-    const uint64_t legacy_magic = 0x41544144544f4f42ULL;
-
     size_t off = 0;
     for (;;) {
         bootdata_t bootdata;
@@ -27,12 +25,6 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
         check(log, status, "mx_vmo_read failed on bootdata VMO\n");
         if (actual != sizeof(bootdata))
             fail(log, ERR_INVALID_ARGS, "short read on bootdata VMO\n");
-
-        if (off == 0 &&
-            memcmp(&bootdata, &legacy_magic, sizeof(legacy_magic)) == 0) {
-            fail(log, ERR_INVALID_ARGS,
-                 "***\n*** FATAL: old bootdata images not supported\n***\n");
-        }
 
         switch (bootdata.type) {
         case BOOTDATA_CONTAINER:
