@@ -1,0 +1,10 @@
+module examples;
+
+using "something";
+using "my.import.path";
+
+const int x = 23;
+
+interface Hello {
+  10243: Say(string req) -> (string response);
+};

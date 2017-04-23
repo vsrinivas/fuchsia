@@ -1,0 +1,10 @@
+struct Point {
+    uint64 x;
+};
+enum Enum {};
+interface Interface {
+    const bool foo = true;
+    const string s = "abc";
+    enum Enum {};
+    23: func(bool x) -> ();
+};

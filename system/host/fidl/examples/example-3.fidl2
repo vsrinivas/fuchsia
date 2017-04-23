@@ -1,0 +1,7 @@
+struct Point {
+    // Abscissa
+    int64 x;
+
+    // Ordinate
+    int64 y;
+};

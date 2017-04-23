@@ -27,6 +27,7 @@ EXTRA_BUILDDEPS += $(EXPORTED_HEADERS)
 
 HOSTAPPS := \
 	$(LOCAL_DIR)/bootserver/rules.mk \
+	$(LOCAL_DIR)/fidl/rules.mk \
 	$(LOCAL_DIR)/loglistener/rules.mk \
 	$(LOCAL_DIR)/mdi/rules.mk \
 	$(LOCAL_DIR)/merkleroot/rules.mk \

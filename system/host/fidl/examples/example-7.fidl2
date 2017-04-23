@@ -1,0 +1,9 @@
+module examples.many;
+
+using "¡🇷🇸h";
+
+// ¡🇷🇸🇷
+
+interface Hello {
+  0: Say(string req) -> (string response);
+};
