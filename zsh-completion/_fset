@@ -11,6 +11,7 @@ _fset() {
   archs=(
     'x86-64:64 bit Intel'
     'arm64:64 bit ARM'
+    'rpi3:rpi3 ARM'
   )
 
   # arguments to fset
