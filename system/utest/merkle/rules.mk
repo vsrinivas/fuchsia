@@ -20,10 +20,11 @@ MODULE_LIBS := \
     system/ulib/merkle \
     system/ulib/magenta \
     system/ulib/c \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
     system/ulib/mxio \
 
-MODULE_STATIC_LIBS := third_party/ulib/cryptolib
+MODULE_STATIC_LIBS := \
+    third_party/ulib/cryptolib \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 include make/module.mk

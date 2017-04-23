@@ -12,9 +12,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/server.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/sync \
+    system/ulib/mxcpp \
+    system/ulib/mxtl
 
-MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/magenta system/ulib/mxcpp system/ulib/mxtl
+MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/magenta
 
 include make/module.mk
 

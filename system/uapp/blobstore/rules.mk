@@ -21,13 +21,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/merkle \
     third_party/ulib/cryptolib \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/magenta \
     system/ulib/mxio \
     system/ulib/bitmap \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
 
 include make/module.mk

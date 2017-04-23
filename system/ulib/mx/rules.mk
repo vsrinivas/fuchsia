@@ -22,8 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vmar.cpp \
     $(LOCAL_DIR)/vmo.cpp \
 
-MODULE_SO_NAME := libmx
-
 MODULE_LIBS := system/ulib/magenta
 
 MODULE_COMPILEFLAGS := $(NO_SAFESTACK)

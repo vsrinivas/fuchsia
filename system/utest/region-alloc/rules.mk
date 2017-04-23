@@ -17,11 +17,11 @@ MODULE_NAME := region-alloc-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/region-alloc \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
     system/ulib/mxio \
     system/ulib/unittest
 

@@ -9,8 +9,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS = $(LOCAL_DIR)/new.cpp \
               $(LOCAL_DIR)/pure_virtual.cpp
 
-MODULE_SO_NAME := mxcpp
-
-MODULE_LIBS += system/ulib/c
+MODULE_STATIC_LIBS += system/ulib/c
 
 include make/module.mk

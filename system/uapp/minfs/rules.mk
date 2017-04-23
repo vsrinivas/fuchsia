@@ -24,15 +24,15 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 MODULE_LIBS := \
     system/ulib/bitmap \
     system/ulib/magenta \
     system/ulib/mxio \
     system/ulib/c \
-    system/ulib/mxcpp \
     system/ulib/mxio \
-    system/ulib/mxtl \
 
 include make/module.mk
 

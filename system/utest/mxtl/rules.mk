@@ -33,11 +33,13 @@ MODULE_SRCS += \
 
 MODULE_NAME := mxtl-test
 
+MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/mxcpp \
     system/ulib/mxio \
     system/ulib/unittest \
-    system/ulib/mxtl \
 
 include make/module.mk

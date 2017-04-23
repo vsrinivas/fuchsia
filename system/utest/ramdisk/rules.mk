@@ -14,14 +14,16 @@ MODULE_SRCS += \
 
 MODULE_NAME := ramdisk-test
 
-MODULE_STATIC_LIBS := system/ulib/block-client system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
+    system/ulib/sync \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/magenta \
-    system/ulib/mxcpp \
     system/ulib/mxio \
-    system/ulib/mxtl \
     system/ulib/unittest \
 
 include make/module.mk

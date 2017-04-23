@@ -11,13 +11,15 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/svcfs.cpp \
 
+MODULE_STATIC_LIBS := \
+    system/ulib/mx \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fs \
     system/ulib/magenta \
-    system/ulib/mxcpp \
-    system/ulib/mx \
     system/ulib/mxio \
-    system/ulib/mxtl \
 
 include make/module.mk

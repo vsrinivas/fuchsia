@@ -8,9 +8,4 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_SO_NAME := mxtl
-
-MODULE_SRCS += \
-    $(LOCAL_DIR)/empty.c
-
 include make/module.mk

@@ -25,9 +25,9 @@ MODULE_SRCS := $(LOCAL_DIR)/tftp-test.cpp
 
 MODULE_NAME := tftp-test
 
-MODULE_STATIC_LIBS := system/ulib/tftp
+MODULE_STATIC_LIBS := system/ulib/tftp system/ulib/mxtl system/ulib/mxcpp
 
-MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c system/ulib/mxtl system/ulib/mxcpp
+MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/c
 
 include make/module.mk
 

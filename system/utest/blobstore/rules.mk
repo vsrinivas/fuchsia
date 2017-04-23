@@ -16,14 +16,14 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/merkle \
     third_party/ulib/cryptolib \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
 MODULE_LIBS := \
     system/ulib/mxio \
     system/ulib/c \
     system/ulib/fs-management \
     system/ulib/magenta \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
     system/ulib/unittest \
 
 include make/module.mk

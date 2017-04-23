@@ -16,11 +16,13 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-rpc.cpp \
     $(LOCAL_DIR)/vfs-dispatcher.cpp \
 
+MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/magenta \
-    system/ulib/mxcpp \
     system/ulib/mxio \
-    system/ulib/mxtl \
 
 include make/module.mk

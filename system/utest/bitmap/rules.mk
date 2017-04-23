@@ -15,12 +15,14 @@ MODULE_SRCS += \
 
 MODULE_NAME := bitmap-test
 
+MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
 MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c \
-    system/ulib/mxcpp \
     system/ulib/mxio \
-    system/ulib/mxtl \
     system/ulib/bitmap \
     system/ulib/unittest \
 

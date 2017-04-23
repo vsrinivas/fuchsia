@@ -12,11 +12,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/sine-source.cpp \
     $(LOCAL_DIR)/wav-source.cpp
 
-MODULE_LIBS := system/ulib/c \
-               system/ulib/magenta \
-               system/ulib/mxcpp \
-               system/ulib/mxio \
-               system/ulib/mx \
-               system/ulib/mxtl
+MODULE_STATIC_LIBS := \
+    system/ulib/mx \
+    system/ulib/mxcpp \
+    system/ulib/mxtl
+
+MODULE_LIBS := \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 include make/module.mk

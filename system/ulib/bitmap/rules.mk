@@ -14,10 +14,12 @@ MODULE_SRCS += \
 
 MODULE_SO_NAME := bitmap
 
+MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+
 MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
 
 include make/module.mk

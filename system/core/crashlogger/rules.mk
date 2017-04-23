@@ -17,14 +17,16 @@ MODULE_SRCS += \
 
 MODULE_NAME := crashlogger
 
-MODULE_STATIC_LIBS := system/ulib/hexdump system/ulib/runtime
+MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
+    system/ulib/hexdump \
+    system/ulib/runtime
 
 MODULE_LIBS := \
     third_party/ulib/backtrace \
     third_party/ulib/ngunwind \
     system/ulib/launchpad \
-    system/ulib/mxcpp \
-    system/ulib/mxtl \
     system/ulib/mxio \
     system/ulib/magenta \
     system/ulib/c

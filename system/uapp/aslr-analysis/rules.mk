@@ -12,14 +12,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
     system/ulib/runtime
 
 MODULE_LIBS := \
     system/ulib/launchpad \
     system/ulib/magenta \
     system/ulib/c \
-    system/ulib/mxcpp \
     system/ulib/mxio \
-    system/ulib/mxtl \
 
 include make/module.mk
