@@ -4,7 +4,6 @@
 
 source_set("vfs") {
   sources = [
-    "rpc.cc",
     "vfs_handler.cc",
     "vfs_handler.h",
   ]
