@@ -35,17 +35,18 @@ MODULE_HEADER_DEPS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
-    system/ulib/launchpad \
-    system/ulib/elfload \
-    system/ulib/mxcpp \
-    system/ulib/mxio \
-    system/ulib/mxtl \
     system/ulib/fs \
-    system/ulib/fs-management \
     system/ulib/bootdata \
-    third_party/ulib/lz4
+    third_party/ulib/lz4 \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
 
-MODULE_LIBS := system/ulib/magenta system/ulib/c
+MODULE_LIBS := \
+    system/ulib/fs-management \
+    system/ulib/launchpad \
+    system/ulib/mxio \
+    system/ulib/magenta \
+    system/ulib/c
 
 MODULE_DEFINES := DEVMGR=1
 
@@ -130,4 +131,3 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
-
