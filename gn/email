@@ -1,6 +1,7 @@
 {
   "labels": [
-    "//apps/modules/email"
+    "//apps/modules/email",
+    "//apps/modules/email:test"
   ],
   "binaries": [
     {

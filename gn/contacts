@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/modules/contacts"
+        "//apps/modules/contacts",
+        "//apps/modules/contacts:test"
     ],
     "binaries": [
         {

@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/modules/common"
+        "//apps/modules/common",
+        "//apps/modules/common:test"
     ],
     "imports": [
       "calendar",

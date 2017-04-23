@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/modules/music"
+        "//apps/modules/music",
+        "//apps/modules/music:test"
     ],
     "binaries": [
         {
