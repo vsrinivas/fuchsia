@@ -479,7 +479,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
 // make locking more fine grained
 static mtx_t vfs_big_lock = MTX_INIT;
 
-mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
     mtx_lock(&vfs_big_lock);

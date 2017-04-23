@@ -28,8 +28,6 @@
 
 #define MXDEBUG 0
 
-mtx_t vfs_lock = MTX_INIT;
-
 namespace memfs {
 
 static VnodeMemfs* global_vfs_root;
@@ -83,17 +81,6 @@ mx_status_t VnodeDir::IoctlWatchDir(const void* in_buf, size_t in_len, void* out
 
 // The following functions exist outside the memfs namespace so they
 // can be exposed to C:
-
-static volatile int vfs_txn = -1;
-static int vfs_txn_no = 0;
-
-mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    vfs_txn_no = (vfs_txn_no + 1) & 0x0FFFFFFF;
-    vfs_txn = vfs_txn_no;
-    mx_status_t r = vfs_handler_generic(msg, rh, cookie);
-    vfs_txn = -1;
-    return r;
-}
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
 mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {

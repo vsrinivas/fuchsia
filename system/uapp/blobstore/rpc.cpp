@@ -22,8 +22,6 @@
 
 #include "blobstore-private.h"
 
-mtx_t vfs_lock = MTX_INIT;
-
 namespace blobstore {
 
 mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds,
@@ -39,8 +37,4 @@ mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds,
     return 1;
 }
 
-}
-
-mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    return vfs_handler_generic(msg, rh, cookie);
 }

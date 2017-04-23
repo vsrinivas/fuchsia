@@ -13,12 +13,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef __Fuchsia__
+#include <threads.h>
+#endif
 #include <unistd.h>
 
 #include "vfs-internal.h"
 
 uint32_t __trace_bits;
 
+#ifdef __Fuchsia__
+mtx_t vfs_lock = MTX_INIT;
+#endif
 mxio_dispatcher_t* vfs_dispatcher;
 
 namespace fs {

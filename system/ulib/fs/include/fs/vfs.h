@@ -257,10 +257,7 @@ extern mtx_t vfs_lock;
 #endif
 extern mxio_dispatcher_t* vfs_dispatcher;
 
-// The following function must be defined by the filesystem linking
-// with this VFS layer.
-
-// Handle incoming mxrio messages.
+// Handle incoming mxrio messages, dispatching them to vnode operations.
 mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 // Send an unmount signal on a handle to a filesystem and await a response.
@@ -269,9 +266,6 @@ mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t timeout);
 // Unpins all remote filesystems in the current filesystem, and waits for the
 // response of each one with the provided timeout.
 mx_status_t vfs_uninstall_all(mx_time_t timeout);
-
-// Generic implementation of vfs_handler, which dispatches messages to fs operations.
-mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 // vfs dispatch  (NOTE: only used for mounted roots)
 mx_handle_t vfs_rpc_server(mx_handle_t h, Vnode* vn);
