@@ -24,121 +24,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_printf.h"
 
-
-// Currently we need to forward bytes from the network socket to the subprocess.
-// When we fix MG-663 this won't be needed.
-#define FORWARD_BYTES
-
-
-#ifdef FORWARD_BYTES
-
-template <size_t Size>
-class Buffer {
- public:
-  bool Empty() { return space_start_ == 0; }
-  bool Full() { return space_start_ == Size; }
-
-  bool ReadFrom(int fd) {
-    ssize_t len = read(fd, (void*)(data_ + space_start_), Size - space_start_);
-    if (len < 0) {
-      FTL_LOG(FATAL) << "read failed: " << strerror(errno);
-    }
-    if (len == 0) {
-      return false;
-    }
-    space_start_ += len;
-    return true;
-  }
-
-  bool WriteTo(int fd) {
-    ssize_t len = write(fd, data_, space_start_);
-    if (len < 0) {
-      FTL_LOG(FATAL) << "stdin write failed: " << strerror(errno);
-      return false;
-    }
-    space_start_ -= len;
-    if (space_start_ > 0) {
-      memmove(data_, data_ + len, space_start_);
-    }
-    return true;
-  }
-
- private:
-  // Where does free space start?
-  size_t space_start_;
-  // Buffer for data.
-  char data_[Size];
-};
-
-void subprocess_thread(int sock, int in, int out) {
-  Buffer<1024> input_buffer;
-  Buffer<1024> output_buffer;
-
-  for (;;) {
-    int maxfd = -1;
-    fd_set rset;
-    fd_set wset;
-    FD_ZERO(&rset);
-    FD_ZERO(&wset);
-
-    if (!input_buffer.Empty()) {
-      // Have bytes we want to send to the process.
-      FD_SET(in, &wset);
-      maxfd = std::max(maxfd, in);
-    }
-
-    if (!output_buffer.Empty()) {
-      // Have bytes we want to send to the network.
-      FD_SET(sock, &wset);
-      maxfd = std::max(maxfd, sock);
-    }
-
-    if (!input_buffer.Full()) {
-      // Have more room for bytes from the network.
-      FD_SET(sock, &rset);
-      maxfd = std::max(maxfd, sock);
-    }
-
-    if (!output_buffer.Full()) {
-      // Have more room for bytes from the process.
-      FD_SET(out, &rset);
-      maxfd = std::max(maxfd, out);
-    }
-
-    FTL_DCHECK(maxfd >= 0);
-
-    int nfds = select(maxfd + 1, &rset, &wset, NULL, NULL);
-    if (nfds < 0) {
-      FTL_LOG(FATAL) << "select failed: " << strerror(errno);
-    }
-
-    if (FD_ISSET(sock, &rset)) {
-      if (!input_buffer.ReadFrom(sock)) {
-        break;
-      }
-    }
-
-    if (FD_ISSET(out, &rset)) {
-      if (!output_buffer.ReadFrom(out)) {
-        break;
-      }
-    }
-
-    if (FD_ISSET(sock, &wset)) {
-      output_buffer.WriteTo(sock);
-    }
-    if (FD_ISSET(in, &wset)) {
-      input_buffer.WriteTo(in);
-    }
-  }
-  close(sock);
-  close(in);
-  close(out);
-  // TODO: do we need to kill the process too?
-}
-
-#endif  // FORWARD_BYTES
-
 class Service {
  public:
   Service(int port, int argc, const char** argv)
@@ -177,18 +62,10 @@ class Service {
     launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
     // TODO: set up environment
 
-#ifdef FORWARD_BYTES
-    int in;
-    int out_pipe[2];
-    if (pipe(out_pipe) < 0) {
-      FTL_LOG(FATAL) << "pipe failed: " << strerror(errno);
-    }
-    launchpad_add_pipe(lp, &in, STDIN_FILENO);
-    launchpad_clone_fd(lp, out_pipe[1], STDOUT_FILENO);
-#else  // FORWARD_BYTES
-    launchpad_clone_fd(lp, conn, STDIN_FILENO);
-    launchpad_clone_fd(lp, conn, STDOUT_FILENO);
-#endif  // FORWARD_BYTES
+    // Transfer the socket as stdin.
+    launchpad_transfer_fd(lp, conn, STDIN_FILENO);
+    // Clone this process' stdout and stderr.
+    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
     mx_handle_t proc = 0;
@@ -198,14 +75,6 @@ class Service {
     if (status < 0) {
       FTL_LOG(FATAL) << "error from launchpad_go: " << errmsg;
     }
-
-#ifdef FORWARD_BYTES
-    // Close our copy of their end of the output pipe.
-    close(out_pipe[1]);
-
-    std::thread subprocess(subprocess_thread, conn, in, out_pipe[0]);
-    subprocess.detach();
-#endif  // FORWARD_BYTES
   }
 
   int sock() { return sock_; }
