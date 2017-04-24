@@ -817,34 +817,22 @@ RUN_TEST(info_process_maps_bad_buffer_fails);
 RUN_TEST(info_process_maps_partially_unmapped_buffer_fails);
 RUN_TEST(info_process_maps_bad_actual_fails);
 RUN_TEST(info_process_maps_bad_avail_fails);
-/* TODO(dbort): Enable after fixing MG-702
-      (MX_INFO_JOB_CHILDREN shouldn't return non-direct children)
 RUN_TEST(info_job_processes_smoke);
-*/
 RUN_TEST(info_job_processes_invalid_handle_fails);
 RUN_TEST(info_job_processes_non_job_handle_fails);
 RUN_TEST(info_job_processes_missing_rights_fails);
-/* TODO(dbort): Enable after fixing MG-702
-      (MX_INFO_JOB_CHILDREN shouldn't return non-direct children)
 RUN_TEST(info_job_processes_zero_buffer_succeeds);
 RUN_TEST(info_job_processes_short_buffer_succeeds);
-*/
 RUN_TEST(info_job_processes_null_avail_actual_succeeds);
 RUN_TEST(info_job_processes_bad_buffer_fails);
 RUN_TEST(info_job_processes_bad_actual_fails);
 RUN_TEST(info_job_processes_bad_avail_fails);
-/* TODO(dbort): Enable after fixing MG-702
-      (MX_INFO_JOB_CHILDREN shouldn't return non-direct children)
 RUN_TEST(info_job_children_smoke);
-*/
 RUN_TEST(info_job_children_invalid_handle_fails);
 RUN_TEST(info_job_children_non_job_handle_fails);
 RUN_TEST(info_job_children_missing_rights_fails);
-/* TODO(dbort): Enable after fixing MG-702
-      (MX_INFO_JOB_CHILDREN shouldn't return non-direct children)
 RUN_TEST(info_job_children_zero_buffer_succeeds);
 RUN_TEST(info_job_children_short_buffer_succeeds);
-*/
 RUN_TEST(info_job_children_null_avail_actual_succeeds);
 RUN_TEST(info_job_children_bad_buffer_fails);
 RUN_TEST(info_job_children_bad_actual_fails);
