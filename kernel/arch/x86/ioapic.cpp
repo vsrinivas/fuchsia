@@ -13,8 +13,8 @@
 #include <kernel/spinlock.h>
 #include <kernel/vm/vm_aspace.h>
 
-#define IO_APIC_IND(base) ((volatile uint32_t *)(base))
-#define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + 0x10))
+#define IO_APIC_IND(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOREGSEL))
+#define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOWIN))
 #define IO_APIC_EOIR(base) ((volatile uint32_t *)(((uint8_t *)(base)) + 0x40))
 // The minimum address space required past the base address
 #define IO_APIC_WINDOW_SIZE 0x44
@@ -22,8 +22,6 @@
 #define IO_APIC_EOIR_MIN_VERSION 0x20
 
 // IO APIC register offsets
-#define IO_APIC_REG_ID 0x00
-#define IO_APIC_REG_VER 0x01
 #define IO_APIC_REG_RTE(idx) (0x10 + 2 * (idx))
 
 // Macros for extracting data from REG_ID

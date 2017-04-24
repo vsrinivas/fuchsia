@@ -87,8 +87,13 @@ struct io_apic_isa_override {
 };
 
 // Functionality provided by the IO APICs
-#define IO_APIC_IRQ_MASK true
-#define IO_APIC_IRQ_UNMASK false
+#define IO_APIC_IOREGSEL    0x00
+#define IO_APIC_IOWIN       0x10
+
+#define IO_APIC_REG_ID      0x00
+#define IO_APIC_REG_VER     0x01
+#define IO_APIC_IRQ_MASK    true
+#define IO_APIC_IRQ_UNMASK  false
 
 void apic_io_init(
         struct io_apic_descriptor *io_apics_descs,

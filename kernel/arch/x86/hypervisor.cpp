@@ -832,7 +832,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
     vmcs_write(VmcsFieldXX::HOST_CR3, x86_get_cr3());
     // Kernel GS stores the user-space GS (within the kernel) — as the calling
     // user-space thread may change, save this every time.
-    edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE, read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
+    edit_msr_list(&host_msr_page_, 0, X86_MSR_IA32_KERNEL_GS_BASE,
+                  read_msr(X86_MSR_IA32_KERNEL_GS_BASE));
 
     if (x86_feature_test(X86_FEATURE_XSAVE)) {
         // Save the host XCR0, and load the guest XCR0.
@@ -851,7 +852,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         do_resume_ = true;
-        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, gpas, serial_fifo);
+        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, &io_apic_state_, gpas,
+                                serial_fifo);
     }
     return status;
 }
@@ -904,6 +906,12 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
         return status;
 
     status = ctx->gpas_->MapApicPage(APIC_PHYS_BASE, ctx->apic_address_page_.PhysicalAddress());
+    if (status != NO_ERROR)
+        return status;
+
+    // We ensure the page containing the IO APIC address is not mapped so that
+    // we VM exit with an EPT violation when the guest accesses the page.
+    status = ctx->gpas_->UnmapPage(kIoApicPhysBase);
     if (status != NO_ERROR)
         return status;
 

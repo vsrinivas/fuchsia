@@ -6,9 +6,24 @@
 
 #pragma once
 
+#include <stdint.h>
+
 class FifoDispatcher;
+class GuestPhysicalAddressSpace;
 struct GuestState;
+struct IoApicState;
 struct VmxState;
 
+struct Instruction {
+    bool read;
+    bool rex;
+    uint64_t val;
+    uint64_t* reg;
+};
+
+status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestState* guest_state,
+                            Instruction* inst);
+
 status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state,
-                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* serial_fifo);
+                        IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
+                        FifoDispatcher* serial_fifo);

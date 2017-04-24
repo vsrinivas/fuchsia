@@ -11,6 +11,8 @@
 #include <arch/x86/hypervisor.h>
 #include <arch/x86/hypervisor_state.h>
 
+static const uint64_t kIoApicPhysBase = 0xfec00000;
+
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
 #define X86_MSR_IA32_VMX_PINBASED_CTLS              0x0481      /* Pin-based controls */
@@ -173,6 +175,7 @@ enum class ExitReason : uint32_t {
     WRMSR                       = 32u,
     ENTRY_FAILURE_GUEST_STATE   = 33u,
     ENTRY_FAILURE_MSR_LOADING   = 34u,
+    EPT_VIOLATION               = 48u,
     XSETBV                      = 55u,
 };
 
@@ -202,6 +205,7 @@ struct VmxInfo {
     VmxInfo();
 };
 
+/* Stores miscellaneous VMX info from the X86_MSR_IA32_VMX_MISC MSR. */
 struct MiscInfo {
     bool wait_for_sipi;
     uint32_t msr_list_limit;
@@ -280,6 +284,12 @@ struct AutoVmcsLoad {
     ~AutoVmcsLoad();
 };
 
+/* Stores the IO APIC state across VM exits. */
+struct IoApicState {
+    // IO register-select register.
+    uint32_t select;
+};
+
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsPerCpu : public PerCpu {
 public:
@@ -295,6 +305,7 @@ private:
     VmxPage guest_msr_page_;
     VmxPage virtual_apic_page_;
     VmxState vmx_state_;
+    IoApicState io_apic_state_;
 };
 
 uint16_t vmcs_read(VmcsField16 field);
