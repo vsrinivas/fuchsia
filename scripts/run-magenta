@@ -272,7 +272,7 @@ case $ARCH in
         QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35 -kernel $BUILDDIR/magenta.bin"
         if [ $DO_KVM -ne 0 ]; then
-          ARGS+=" -enable-kvm -cpu host"
+          ARGS+=" -enable-kvm -cpu host,migratable=no"
         else
           ARGS+=" -cpu Haswell,+smap,-check"
         fi
