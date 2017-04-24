@@ -23,6 +23,7 @@ namespace {
 // Command line options.
 const char kSpecFile[] = "spec-file";
 const char kCategories[] = "categories";
+const char kAppendArgs[] = "append-args";
 const char kOutputFile[] = "output-file";
 const char kDuration[] = "duration";
 const char kDetach[] = "detach";
@@ -47,9 +48,9 @@ bool EnsureNonEmpty(std::ostream& err,
 
 bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   const std::unordered_set<std::string> known_options = {
-      kSpecFile,     kCategories, kOutputFile,   kDuration,
-      kDetach,       kDecouple,   kBufferSize,   kUploadServerUrl,
-      kUploadMaster, kUploadBot,  kUploadPointId};
+      kSpecFile,        kCategories,   kAppendArgs, kOutputFile,
+      kDuration,        kDetach,       kDecouple,   kBufferSize,
+      kUploadServerUrl, kUploadMaster, kUploadBot,  kUploadPointId};
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
@@ -95,6 +96,15 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
     categories =
         ftl::SplitStringCopy(command_line.options()[index].value, ",",
                              ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  }
+
+  // --append-args=<arg1>,<arg2>,...
+  if (command_line.HasOption(kAppendArgs, &index)) {
+    auto append_args =
+        ftl::SplitStringCopy(command_line.options()[index].value, ",",
+                             ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+    std::move(std::begin(append_args), std::end(append_args),
+              std::back_inserter(args));
   }
 
   // --output-file=<file>
@@ -215,6 +225,9 @@ Command::Info Record::Describe() {
         "Trace will be active for this long after the session has been "
         "started"},
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
+       {"append-args=[\"\"]",
+        "Additional args for the app being traced, appended to those from the "
+        "spec file, if any"},
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
