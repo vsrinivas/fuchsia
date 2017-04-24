@@ -220,7 +220,7 @@ status_t JobDispatcher::SetPolicy(
     return NO_ERROR;
 }
 
-bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
+bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -231,24 +231,24 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
     if (!je->Size(process_count_, job_count_))
         return false;
 
-    bool completed = true;
-
     for (auto& proc : procs_) {
         if (!je->OnProcess(&proc, proc_index++)) {
-            completed = false;
-            break;
+            return false;
         }
     }
 
     for (auto& job : jobs_) {
         if (!je->OnJob(&job, job_index++)) {
-            completed = false;
-            break;
+            return false;
         }
-        // TODO(kulakowski) This recursive call can overflow the stack.
-        job.EnumerateChildren(je);
+        if (recurse) {
+            // TODO(kulakowski): This recursive call can overflow the stack.
+            if (!job.EnumerateChildren(je, /* recurse */ true)) {
+                return false;
+            }
+        }
     }
-    return completed;
+    return true;
 }
 
 mxtl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {

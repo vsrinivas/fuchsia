@@ -198,7 +198,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             auto koids = _buffer.reinterpret<mx_koid_t>();
             SimpleJobEnumerator sje(koids, max, topic == MX_INFO_JOB_CHILDREN);
 
-            if (!job->EnumerateChildren(&sje)) {
+            // Don't recurse; we only want the job's direct children.
+            if (!job->EnumerateChildren(&sje, /* recurse */ false)) {
                 // SimpleJobEnumerator only returns false when it can't
                 // write to the user pointer.
                 return ERR_INVALID_ARGS;

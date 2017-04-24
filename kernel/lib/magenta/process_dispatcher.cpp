@@ -696,7 +696,7 @@ private:
 // static
 mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
     FindProcessByKoid finder(koid);
-    GetRootJobDispatcher()->EnumerateChildren(&finder);
+    GetRootJobDispatcher()->EnumerateChildren(&finder, /* recurse */ true);
     return finder.get_pd();
 }
 

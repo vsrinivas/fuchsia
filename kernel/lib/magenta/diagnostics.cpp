@@ -156,7 +156,7 @@ void DumpProcessList() {
                process->get_related_koid(),
                pname);
     });
-    GetRootJobDispatcher()->EnumerateChildren(&walker);
+    GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
 void DumpProcessHandles(mx_koid_t id) {
@@ -249,7 +249,7 @@ void DumpJobTreeForProcess(mx_koid_t id) {
     printf("\n");
 
     JobDumper dumper(id);
-    job->EnumerateChildren(&dumper);
+    job->EnumerateChildren(&dumper, /* recurse */ true);
 }
 
 void KillProcess(mx_koid_t id) {
@@ -434,7 +434,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
             printf("%s%s: %zu MB\n", prefix, pname, pages / 256);
         }
     });
-    GetRootJobDispatcher()->EnumerateChildren(&walker);
+    GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
 static int mwd_thread(void* arg) {

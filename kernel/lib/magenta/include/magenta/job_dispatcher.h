@@ -83,12 +83,16 @@ public:
     uint32_t job_count() const TA_REQ(lock_) { return job_count_; }
     bool AddChildProcess(ProcessDispatcher* process);
     void RemoveChildProcess(ProcessDispatcher* process);
-    bool EnumerateChildren(JobEnumerator* je);
     void Kill();
 
     // Set policy. |mode| is is either MX_JOB_POL_RELATIVE or MX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
     status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
+
+    // Walks the job/process tree and invokes |je| methods on each node. If
+    // |recurse| is false, only visits direct children of this job. Returns
+    // false if any methods of |je| return false; returns true otherwise.
+    bool EnumerateChildren(JobEnumerator* je, bool recurse);
 
     mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
     mxtl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
