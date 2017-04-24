@@ -22,58 +22,53 @@
 
 #define LOCAL_TRACE 0
 
-//TODO: accumulate batches and do fewer user copies
-class SimpleJobEnumerator : public JobEnumerator {
+namespace {
+// Gathers the koids of a job's descendants.
+class SimpleJobEnumerator final : public JobEnumerator {
 public:
-    SimpleJobEnumerator(mx_koid_t* ptr, size_t count, bool jobs) :
-        ptr_(ptr), count_(count), avail_(0), jobs_(jobs), failed_(false) {}
+    // If |job| is true, only records job koids; otherwise, only
+    // records process koids.
+    SimpleJobEnumerator(user_ptr<mx_koid_t> ptr, size_t max, bool jobs)
+        : jobs_(jobs), ptr_(ptr), max_(max) {}
 
-    bool Size(uint32_t proc_count, uint32_t job_count) {
+    size_t get_avail() const { return avail_; }
+    size_t get_count() const { return count_; }
+
+private:
+    bool OnJob(JobDispatcher* job, uint32_t index) override {
+        if (!jobs_) {
+            return true;
+        }
+        return RecordKoid(job->get_koid());
+    }
+
+    bool OnProcess(ProcessDispatcher* proc, uint32_t index) override {
         if (jobs_) {
-            avail_ = job_count;
-        } else {
-            avail_ = proc_count;
+            return true;
+        }
+        return RecordKoid(proc->get_koid());
+    }
+
+    bool RecordKoid(mx_koid_t koid) {
+        avail_++;
+        if (count_ < max_) {
+            // TODO: accumulate batches and do fewer user copies
+            if (ptr_.copy_array_to_user(&koid, 1, count_) != NO_ERROR) {
+                return false;
+            }
+            count_++;
         }
         return true;
     }
-    bool OnJob(JobDispatcher* job, uint32_t index) {
-        if (jobs_ && (count_ > 0)) {
-            if (make_user_ptr(ptr_).copy_to_user(job->get_koid()) != NO_ERROR) {
-                failed_ = true;
-                return false;
-            }
-            ptr_++;
-            count_--;
-            return true;
-        }
-        return false;
-    }
-    bool OnProcess(ProcessDispatcher* proc, uint32_t index) {
-        if (!jobs_ && (count_ > 0)) {
-            if (make_user_ptr(ptr_).copy_to_user(proc->get_koid()) != NO_ERROR) {
-                failed_ = true;
-                return false;
-            }
-            ptr_++;
-            count_--;
-            return true;
-        }
-        return false;
-    }
 
-    size_t get_avail() { return avail_; }
-    size_t get_remaining() { return count_; }
-    bool get_error() { return failed_; }
+    const bool jobs_;
+    const user_ptr<mx_koid_t> ptr_;
+    const size_t max_;
 
-private:
-    static constexpr uint32_t kError = 4;
-    // TODO(andymutton): Change to use user_ptr
-    mx_koid_t* ptr_;
-    size_t count_;
-    size_t avail_;
-    bool jobs_;
-    bool failed_;
+    size_t count_ = 0;
+    size_t avail_ = 0;
 };
+} // namespace
 
 // actual is an optional return parameter for the number of records returned
 // avail is an optional return parameter for the number of records available
@@ -200,15 +195,15 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return error;
 
             size_t max = buffer_size / sizeof(mx_koid_t);
-            SimpleJobEnumerator sje(static_cast<mx_koid_t*>(_buffer.get()), max,
-                                    (topic == MX_INFO_JOB_CHILDREN));
+            auto koids = _buffer.reinterpret<mx_koid_t>();
+            SimpleJobEnumerator sje(koids, max, topic == MX_INFO_JOB_CHILDREN);
 
-            job->EnumerateChildren(&sje);
-            size_t actual = max - sje.get_remaining();
-
-            if (sje.get_error())
+            if (!job->EnumerateChildren(&sje)) {
+                // SimpleJobEnumerator only returns false when it can't
+                // write to the user pointer.
                 return ERR_INVALID_ARGS;
-            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
+            }
+            if (_actual && (_actual.copy_to_user(sje.get_count()) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (_avail && (_avail.copy_to_user(sje.get_avail()) != NO_ERROR))
                 return ERR_INVALID_ARGS;
