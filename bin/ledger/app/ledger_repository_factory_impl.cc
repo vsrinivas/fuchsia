@@ -62,33 +62,6 @@ cloud_sync::UserConfig GetUserConfig(
   return user_config;
 }
 
-bool WriteFileInTwoPhases(ftl::StringView data,
-                          const std::string& temp_root,
-                          const std::string& destination_path) {
-  files::ScopedTempDir temp_dir(temp_root);
-
-  std::string temp_file_path;
-  if (!temp_dir.NewTempFile(&temp_file_path)) {
-    FTL_LOG(ERROR)
-        << "Failed to create a temporary file for a two-phase write.";
-    return false;
-  }
-
-  if (!files::WriteFile(temp_file_path, data.data(), data.size())) {
-    FTL_LOG(ERROR)
-        << "Failed to write the temporary file for a two-phase write.";
-    return false;
-  }
-
-  if (rename(temp_file_path.c_str(), destination_path.c_str()) != 0) {
-    FTL_LOG(ERROR) << "Failed to move the temporary file to destination of "
-                   << "the two-phase write.";
-    return false;
-  }
-
-  return true;
-}
-
 // Verifies that the current server id is not different from the server id used
 // in a previous run.
 //
@@ -124,8 +97,8 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
   }
 
   std::string temp_dir_root = ftl::Concatenate({repository_path, "/tmp"});
-  if (!WriteFileInTwoPhases(user_config.server_id, temp_dir_root,
-                            server_id_path)) {
+  if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
+                                   temp_dir_root)) {
     FTL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
                    << "check.";
     return false;
