@@ -16,6 +16,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")
     parser.add_argument("--args", dest="gn_args", help="additional args to pass to gn",
                         action="append")
+    parser.add_argument("--magenta_project", "-p", help="magenta project",
+                        default=os.environ.get("MAGENTA_PROJECT"))
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
                         default="default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
@@ -90,6 +92,9 @@ def main():
         gn_args += " autorun=\"%s\"" % abs_autorun
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
+
+    if args.magenta_project:
+        gn_args += " magenta_project=\"%s\"" % args.magenta_project
 
     if args.omit_tests:
         target = "//packages/gn:default"

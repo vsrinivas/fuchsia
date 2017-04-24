@@ -60,14 +60,8 @@ action("mkbootfs") {
   ]
   deps = all_binaries
 
-  # Compute path to magenta bootdata.bin
-  if (current_cpu == "arm64") {
-    magenta_bootdata = "//out/build-magenta/build-magenta-qemu-arm64/bootdata.bin"
-  } else if (current_cpu == "x64") {
-    magenta_bootdata = "//out/build-magenta/build-magenta-pc-x86-64/bootdata.bin"
-  } else {
-    assert(false, "unable to determine path to magenta's bootdata.bin")
-  }
+  magenta_bootdata = "//out/build-magenta/build-$magenta_project/bootdata.bin"
+
   inputs = [ magenta_bootdata ]
 
   args = [
