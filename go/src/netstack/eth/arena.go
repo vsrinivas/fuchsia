@@ -32,7 +32,7 @@ type Arena struct {
 
 	mu       sync.Mutex
 	freebufs []int
-	isFree   [numBuffers]bool
+	owner    [numBuffers]*Client // nil means buffer is free
 }
 
 // NewArena creates a new Arena of fixed size.
@@ -55,13 +55,12 @@ func NewArena() (*Arena, error) {
 		freebufs: make([]int, numBuffers),
 	}
 	for i := 0; i < numBuffers; i++ {
-		a.isFree[i] = true
 		a.freebufs[i] = i
 	}
 	return a, nil
 }
 
-func (a *Arena) alloc() Buffer {
+func (a *Arena) alloc(c *Client) Buffer {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if len(a.freebufs) == 0 {
@@ -69,22 +68,33 @@ func (a *Arena) alloc() Buffer {
 	}
 	i := a.freebufs[len(a.freebufs)-1]
 	a.freebufs = a.freebufs[:len(a.freebufs)-1]
-	if !a.isFree[i] {
+	if a.owner[i] != nil {
 		panic(fmt.Sprintf("eth.Arena: free list buffer %d is not free", i))
 	}
-	a.isFree[i] = false
+	a.owner[i] = c
 	return a.bufferLocked(i)
 }
 
-func (a *Arena) free(b Buffer) {
+func (a *Arena) free(c *Client, b Buffer) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	i := a.indexLocked(b)
-	if a.isFree[i] {
-		panic(fmt.Sprintf("eth.Arena: freeing a free buffer: %d", i))
+	if a.owner[i] != c {
+		panic(fmt.Sprintf("eth.Arena: freeing a buffer owned by another client: %d (owner: %p, caller: %p)", i, a.owner[i], c))
 	}
-	a.isFree[i] = true
+	a.owner[i] = nil
 	a.freebufs = append(a.freebufs, i)
+}
+
+func (a *Arena) freeAll(c *Client) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for i, owner := range a.owner {
+		if owner == c {
+			a.owner[i] = nil
+			a.freebufs = append(a.freebufs, i)
+		}
+	}
 }
 
 func (a *Arena) indexLocked(b Buffer) int {
@@ -132,7 +142,7 @@ func (a *Arena) bufferFromEntry(e bufferEntry) Buffer {
 	if e.cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
 		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.cookie))
 	}
-	isFree := a.isFree[i]
+	isFree := a.owner[i] == nil
 	if isFree {
 		panic(fmt.Sprintf("eth: buffer entry %d is on free list", i))
 	}

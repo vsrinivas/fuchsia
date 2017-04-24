@@ -48,17 +48,17 @@ type netif struct {
 
 func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
 	if oldAddr != "" && oldAddr != newAddr {
-		log.Printf("DHCP IP %s expired", oldAddr)
+		log.Printf("NIC %d: DHCP IP %s expired", nif.nicid, oldAddr)
 	}
 	if config.Error != nil {
 		log.Printf("%v", config.Error)
 		return
 	}
 	if newAddr == "" {
-		log.Printf("DHCP could not acquire address")
+		log.Printf("NIC %d: DHCP could not acquire address", nif.nicid)
 		return
 	}
-	log.Printf("DHCP acquired IP %s on NIC %d for %s", newAddr, nif.nicid, config.LeaseLength)
+	log.Printf("NIC %d: DHCP acquired IP %s for %s", nif.nicid, newAddr, config.LeaseLength)
 
 	// Update default route with new gateway.
 	nif.ns.mu.Lock()
@@ -70,6 +70,27 @@ func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Confi
 	if newAddr != "" {
 		nif.ns.dispatcher.setAddr(nif.nicid, newAddr)
 	}
+}
+
+func (nif *netif) stateChange(s eth.State) {
+	if s != eth.StateStopped {
+		return
+	}
+	log.Printf("NIC %d: stopped", nif.nicid)
+	if nif.cancel != nil {
+		nif.cancel()
+	}
+
+	// TODO(crawshaw): more cleanup to be done here:
+	//	- remove addresses
+	// 	- remove link endpoint
+	//	- reclaim NICID?
+
+	nif.ns.mu.Lock()
+	nif.routes = nil
+	nif.ns.mu.Unlock()
+
+	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {
@@ -108,7 +129,7 @@ func (ns *netstack) addLoopback() error {
 	ns.mu.Lock()
 	if len(ns.netifs) > 0 {
 		ns.mu.Unlock()
-		return fmt.Errorf("cannot register loopback interface after other interfaces")
+		return fmt.Errorf("loopback: other interfaces already registered")
 	}
 	ns.netifs[nicid] = loopbackIf
 	ns.mu.Unlock()
@@ -118,13 +139,13 @@ func (ns *netstack) addLoopback() error {
 		loopbackID = sniffer.New(loopbackID)
 	}
 	if err := ns.stack.CreateNIC(nicid, loopbackID); err != nil {
-		return fmt.Errorf("could not create loopback interface: %v", err)
+		return fmt.Errorf("loopback: could not create interface: %v", err)
 	}
 	if err := ns.stack.AddAddress(nicid, ipv4.ProtocolNumber, header.IPv4Loopback); err != nil {
-		return fmt.Errorf("AddAddress for localhost failed: %v", err)
+		return fmt.Errorf("loopback: adding ipv4 address failed: %v", err)
 	}
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, header.IPv6Loopback); err != nil {
-		return fmt.Errorf("AddAddress for localhost ipv6 failed: %v", err)
+		return fmt.Errorf("loopback: adding ipv6 address failed: %v", err)
 	}
 
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
@@ -133,22 +154,25 @@ func (ns *netstack) addLoopback() error {
 }
 
 func (ns *netstack) addEth(path string) error {
-	client, err := eth.NewClient(path, ns.arena)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	nif := &netif{
+		ns:     ns,
+		ctx:    ctx,
+		cancel: cancel,
+	}
+
+	client, err := eth.NewClient(path, ns.arena, nif.stateChange)
 	if err != nil {
 		return err
 	}
+	nif.eth = client
 	ep := newLinkEndpoint(client)
 	if err := ep.init(); err != nil {
 		log.Fatalf("%s: endpoint init failed: %v", path, err)
 	}
 	linkID := stack.RegisterLinkEndpoint(ep)
 	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
-
-	if debug2 {
-		linkID = sniffer.New(linkID)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	ns.mu.Lock()
 	var nicid tcpip.NICID
@@ -157,34 +181,33 @@ func (ns *netstack) addEth(path string) error {
 			nicid = netif.nicid
 		}
 	}
-	nicid++ // NICID 0 is reserved to mean "any NIC"
+	nicid++
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
 		ns.mu.Unlock()
-		return fmt.Errorf("netstack: could not create new NIC: %v", err)
+		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
 	}
-	nif := &netif{
-		ns:     ns,
-		ctx:    ctx,
-		cancel: cancel,
-		nicid:  nicid,
-		eth:    client,
-		routes: defaultRouteTable(nicid, ""),
-	}
+	nif.nicid = nicid
+	nif.routes = defaultRouteTable(nicid, "")
 	ns.netifs[nicid] = nif
 	ns.mu.Unlock()
 
-	log.Printf("using ethernet device %q as NIC %d", path, nicid)
-	log.Printf("ipv6addr: %v", lladdr)
+	log.Printf("NIC %d added using ethernet device %q", nicid, path)
+
+	if debug2 {
+		linkID = sniffer.New(linkID)
+	}
+
+	log.Printf("NIC %d: ipv6addr: %v", nicid, lladdr)
 
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
-		return fmt.Errorf("AddAddress for arp failed: %v", err)
+		return fmt.Errorf("NIC %d: adding arp address failed: %v", nicid, err)
 	}
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
-		return fmt.Errorf("AddAddress for link-local IPv6: %v", err)
+		return fmt.Errorf("NIC %d: adding link-local IPv6 failed: %v", nicid, err)
 	}
 	snaddr := ipv6.SolicitedNodeAddr(lladdr)
 	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
-		return fmt.Errorf("AddAddress for solicited-node IPv6: %v", err)
+		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
 	}
 
 	nif.dhcp = dhcp.NewClient(ns.stack, nicid, ep.linkAddr, nif.dhcpAcquired)

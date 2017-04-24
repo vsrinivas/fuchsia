@@ -63,6 +63,8 @@ type Client struct {
 	rxDepth int
 
 	mu         sync.Mutex
+	state      State
+	stateFunc  func(State)
 	arena      *Arena
 	tmpbuf     []bufferEntry // used to fill rx and drain tx
 	recvbuf    []bufferEntry // packets received
@@ -75,7 +77,7 @@ type Client struct {
 
 // NewClient creates a new ethernet Client, connecting to the driver
 // described by path.
-func NewClient(path string, arena *Arena) (*Client, error) {
+func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("eth: client open: %v", err)
@@ -101,16 +103,17 @@ func NewClient(path string, arena *Arena) (*Client, error) {
 	}
 
 	c := &Client{
-		MTU:     int(info.mtu),
-		f:       f,
-		tx:      fifos.tx,
-		rx:      fifos.rx,
-		txDepth: txDepth,
-		rxDepth: rxDepth,
-		arena:   arena,
-		tmpbuf:  make([]bufferEntry, 0, maxDepth),
-		recvbuf: make([]bufferEntry, 0, rxDepth),
-		sendbuf: make([]bufferEntry, 0, txDepth),
+		MTU:       int(info.mtu),
+		f:         f,
+		tx:        fifos.tx,
+		rx:        fifos.rx,
+		txDepth:   txDepth,
+		rxDepth:   rxDepth,
+		stateFunc: stateFunc,
+		arena:     arena,
+		tmpbuf:    make([]bufferEntry, 0, maxDepth),
+		recvbuf:   make([]bufferEntry, 0, rxDepth),
+		sendbuf:   make([]bufferEntry, 0, txDepth),
 	}
 	copy(c.MAC[:], info.mac[:])
 
@@ -133,7 +136,20 @@ func NewClient(path string, arena *Arena) (*Client, error) {
 		c.closeLocked()
 		return nil, err
 	}
+	c.changeStateLocked(StateStarted)
 	return c, nil
+}
+
+func (c *Client) changeStateLocked(s State) {
+	c.state = s
+	go func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.stateFunc == nil {
+			return
+		}
+		c.stateFunc(s)
+	}()
 }
 
 // Close closes a Client, releasing any held resources.
@@ -144,9 +160,21 @@ func (c *Client) Close() {
 }
 
 func (c *Client) closeLocked() {
+	if c.state == StateStopped {
+		return
+	}
+
+	m := syscall.MXIOForFD(int(c.f.Fd()))
+	ioctlStop(m)
+
 	c.tx.Close()
 	c.rx.Close()
-	// TODO release any held arena buffers
+	c.tmpbuf = c.tmpbuf[:0]
+	c.recvbuf = c.recvbuf[:0]
+	c.sendbuf = c.sendbuf[:0]
+	c.f.Close()
+	c.arena.freeAll(c)
+	c.changeStateLocked(StateStopped)
 }
 
 // AllocForSend returns a Buffer to be passed to Send.
@@ -168,7 +196,7 @@ func (c *Client) AllocForSend() Buffer {
 		return nil
 	}
 	c.txInFlight++
-	return c.arena.alloc()
+	return c.arena.alloc(c)
 }
 
 // Send sends a Buffer to the ethernet driver.
@@ -200,7 +228,7 @@ func (c *Client) Send(b Buffer) error {
 func (c *Client) Free(b Buffer) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.arena.free(b)
+	c.arena.free(c, b)
 }
 
 func fifoEntries(b []bufferEntry) (unsafe.Pointer, uint) {
@@ -216,7 +244,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 	c.txInFlight -= n
 	c.txTotal += n
 	for i := 0; i < n; i++ {
-		c.arena.free(c.arena.bufferFromEntry(buf[i]))
+		c.arena.free(c, c.arena.bufferFromEntry(buf[i]))
 	}
 	canSend := c.txInFlight < c.txDepth
 	if status != mx.ErrOk && status != mx.ErrShouldWait {
@@ -260,18 +288,21 @@ func (c *Client) Recv() (b Buffer, err error) {
 func (c *Client) rxCompleteLocked() error {
 	buf := c.tmpbuf[:0]
 	for i := c.rxInFlight; i < c.rxDepth; i++ {
-		b := c.arena.alloc()
+		b := c.arena.alloc(c)
 		if b == nil {
 			break
 		}
 		buf = append(buf, c.arena.entry(b))
+	}
+	if len(buf) == 0 {
+		return nil // nothing to do
 	}
 	entries, entriesSize := fifoEntries(buf)
 	var count uint32
 	status := mx.Sys_fifo_write(c.rx, entries, entriesSize, &count)
 	for _, entry := range buf[count:] {
 		b := c.arena.bufferFromEntry(entry)
-		c.arena.free(b)
+		c.arena.free(c, b)
 	}
 	c.rxInFlight += int(count)
 	if status != mx.ErrOk {
@@ -298,7 +329,10 @@ func (c *Client) WaitSend() error {
 // WaitRecv blocks until it is possible to receive a buffer,
 // or the client is closed.
 func (c *Client) WaitRecv() {
-	c.rx.WaitOne(mx.SignalFIFOReadable|mx.SignalFIFOPeerClosed, mx.TimensecInfinite)
+	obs, err := c.rx.WaitOne(mx.SignalFIFOReadable|mx.SignalFIFOPeerClosed, mx.TimensecInfinite)
+	if err != nil || obs&mx.SignalFIFOPeerClosed != 0 {
+		c.Close()
+	}
 }
 
 // ListenTX tells the ethernet driver to reflect all transmitted
@@ -306,4 +340,25 @@ func (c *Client) WaitRecv() {
 func (c *Client) ListenTX() {
 	m := syscall.MXIOForFD(int(c.f.Fd()))
 	ioctlTXListenStart(m)
+}
+
+type State int
+
+const (
+	StateUnknown = State(iota)
+	StateStarted
+	StateStopped
+)
+
+func (s State) String() string {
+	switch s {
+	case StateUnknown:
+		return "eth unknown state"
+	case StateStarted:
+		return "eth started"
+	case StateStopped:
+		return "eth stopped"
+	default:
+		return fmt.Sprintf("eth bad state(%d)", int(s))
+	}
 }
