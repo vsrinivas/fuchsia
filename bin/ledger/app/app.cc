@@ -62,12 +62,6 @@ class App : public LedgerController {
       return false;
     }
 
-    if (!configuration::SaveAsLastConfiguration(config)) {
-      FTL_LOG(ERROR) << "Failed to save the current configuration for "
-                     << "compatibility check, quitting.";
-      return false;
-    }
-
     if (config.use_sync) {
       network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
           loop_.task_runner(), [this] {

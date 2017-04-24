@@ -14,10 +14,6 @@ namespace configuration {
 // configuration is valid and stored in |result| and false otherwise.
 bool LoadConfiguration(Configuration* result);
 
-// Saves the given configuration at the last one used. This configuration will
-// be used for compatibility check the next time LoadConfiguration() is called..
-bool SaveAsLastConfiguration(const Configuration& configuration);
-
 }  // namespace configuration
 
 #endif  // APPS_LEDGER_SRC_CONFIGURATION_LOAD_CONFIGURATION_H_
