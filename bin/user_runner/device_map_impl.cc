@@ -16,16 +16,6 @@ namespace modular {
 
 namespace {
 
-bool IsDeviceKey(const fidl::Array<uint8_t>& key) {
-  constexpr size_t prefix_size = sizeof(kDeviceKeyPrefix) - 1;
-
-  // NOTE(mesch): A key that is *only* the prefix, without anything
-  // after it, is still not a valid story key. So the key must be
-  // truly longer than the prefix.
-  return key.size() > prefix_size &&
-         0 == memcmp(key.data(), kDeviceKeyPrefix, prefix_size);
-}
-
 void WriteDeviceName(std::string device_name, ledger::Page* const page) {
   std::string json;
   XdrWrite(&json, &device_name, XdrFilter<std::string>);
@@ -105,7 +95,8 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
       page_watcher_binding_(this),
       page_client_("DeviceMapImpl") {
   page_->GetSnapshot(
-      page_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      page_client_.NewRequest(), to_array(kDeviceKeyPrefix),
+      page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
@@ -134,10 +125,6 @@ void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
                              const OnChangeCallback& callback) {
   bool update = false;
   for (auto& entry : page->changes) {
-    if (!IsDeviceKey(entry->key)) {
-      continue;
-    }
-
     FTL_LOG(INFO) << "New Device: " << to_string(entry->key);
     update = true;
   }

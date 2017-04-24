@@ -71,7 +71,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  private:
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr,
+        page_snapshot_.NewRequest(), nullptr, nullptr,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_path_
@@ -176,7 +176,7 @@ class StoryStorageImpl::ReadModuleDataCall
  private:
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr,
+        page_snapshot_.NewRequest(), nullptr, nullptr,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "ReadModuleDataCall() "

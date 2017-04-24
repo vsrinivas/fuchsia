@@ -16,16 +16,6 @@ namespace modular {
 
 namespace {
 
-bool IsFocusKey(const fidl::Array<uint8_t>& key) {
-  constexpr size_t prefix_size = sizeof(kFocusKeyPrefix) - 1;
-
-  // NOTE(mesch): A key that is *only* the prefix, without anything
-  // after it, is still not a valid story key. So the key must be
-  // truly longer than the prefix.
-  return key.size() > prefix_size &&
-         0 == memcmp(key.data(), kFocusKeyPrefix, prefix_size);
-}
-
 // Serialization and deserialization of FocusInfo to and from JSON.
 void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
   xdr->Field("device_id", &data->device_id);
@@ -105,7 +95,8 @@ FocusHandler::FocusHandler(const fidl::String& device_name,
       page_watcher_binding_(this),
       device_name_(device_name) {
   page_->GetSnapshot(
-      page_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      page_client_.NewRequest(), to_array(kFocusKeyPrefix),
+      page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
@@ -187,10 +178,6 @@ void FocusHandler::OnChange(ledger::PageChangePtr page,
                             ledger::ResultState result_state,
                             const OnChangeCallback& callback) {
   for (auto& entry : page->changes) {
-    if (!IsFocusKey(entry->key)) {
-      continue;
-    }
-
     std::string value;
     if (!mtl::StringFromVmo(entry->value, &value)) {
       FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)

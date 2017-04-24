@@ -56,16 +56,6 @@ std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
   return id;
 }
 
-bool IsStoryKey(const fidl::Array<uint8_t>& key) {
-  constexpr size_t prefix_size = sizeof(kStoryKeyPrefix) - 1;
-
-  // NOTE(mesch): A key that is *only* the prefix, without anything
-  // after it, is still not a valid story key. So the key must be
-  // truly longer than the prefix.
-  return key.size() > prefix_size &&
-         0 == memcmp(key.data(), kStoryKeyPrefix, prefix_size);
-}
-
 // Retrieves all entries from the given snapshot and calls the given
 // callback with the final status.
 void GetEntries(ledger::PageSnapshot* const snapshot,
@@ -137,7 +127,7 @@ class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
  private:
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr,
+        page_snapshot_.NewRequest(), nullptr, nullptr,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
@@ -614,7 +604,7 @@ class StoryProviderImpl::PreviousStoriesCall
  private:
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr,
+        page_snapshot_.NewRequest(), nullptr, nullptr,
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "PreviousStoriesCall() "
@@ -688,7 +678,8 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
   root_page_->GetSnapshot(
-      root_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      root_client_.NewRequest(), to_array(kStoryKeyPrefix),
+      page_watcher_binding_.NewBinding(),
       [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)
@@ -834,10 +825,6 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   FTL_DCHECK(!page->changes.is_null());
 
   for (auto& entry : page->changes) {
-    if (!IsStoryKey(entry->key)) {
-      continue;
-    }
-
     std::string value_as_string;
     if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
       FTL_LOG(ERROR) << "StoryProviderImpl::OnChange() "
@@ -862,10 +849,6 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   }
 
   for (auto& key : page->deleted_keys) {
-    if (!IsStoryKey(key)) {
-      continue;
-    }
-
     // Extact the story ID from the ledger key. Cf. kStoryKeyPrefix.
     const fidl::String story_id =
         to_string(key).substr(sizeof(kStoryKeyPrefix) - 1);
