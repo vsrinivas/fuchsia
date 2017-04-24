@@ -290,18 +290,6 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
     xprintf("xhci_start_root_hubs\n");
 
-    // reset all the root hub ports first to make sure we start off with a clean slate
-    for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
-        volatile uint32_t* portsc = &xhci->op_regs->port_regs[i].portsc;
-        uint32_t temp = XHCI_READ32(portsc);
-#if DEBUG_PORTSC
-        print_portsc(i, temp);
-#endif
-        // reset the port
-        temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PR;
-        XHCI_WRITE32(portsc, temp);
-    }
-
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
         mx_status_t status = xhci_start_root_hub(xhci, &xhci->root_hubs[i], i);
         if (status != NO_ERROR) {
