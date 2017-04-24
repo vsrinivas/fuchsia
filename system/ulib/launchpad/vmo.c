@@ -12,24 +12,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len) {
-    mx_handle_t vmo;
-    mx_status_t status = mx_vmo_create(len, 0, &vmo);
-    if (status < 0)
-        return status;
-    size_t n;
-    status = mx_vmo_write(vmo, data, 0, len, &n);
-    if (status < 0) {
-        mx_handle_close(vmo);
-        return status;
-    }
-    if (n != len) {
-        mx_handle_close(vmo);
-        return ERR_IO;
-    }
-    return vmo;
-}
-
 #define MIN_WINDOW (PAGE_SIZE * 4)
 #define MAX_WINDOW ((size_t)64 << 20)
 

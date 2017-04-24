@@ -10,8 +10,6 @@
 
 __BEGIN_CDECLS
 
-mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len);
-
 // These functions return ERR_IO to indicate an error in the POSIXish
 // underlying calls, meaning errno has been set with a POSIX-style error.
 // Other errors are verbatim from the mx_vm_object_* calls.
