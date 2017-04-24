@@ -2,18 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <magenta/device/devmgr.h>
-#include <magenta/syscalls.h>
-#include <unistd.h>
 #include <iostream>
-#include <memory>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/util/filesystem.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/device/device_runner_monitor.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
@@ -52,11 +48,6 @@ namespace {
 // https://fuchsia.googlesource.com/modules/+/master/#Email
 // TODO(alhaad) Find a different home for this config file.
 constexpr char kAuthConfigurationFile[] = "/system/data/email/config.json";
-
-// For polling minfs.
-constexpr ftl::StringView kPersistentFileSystem = "/data";
-constexpr ftl::StringView kMinFsName = "minfs";
-constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
@@ -447,28 +438,6 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
     serialized_users_ = std::move(serialized_users);
     users_storage_ = modular::GetUsersStorage(serialized_users_.data());
     return true;
-  }
-
-  void WaitForMinfs() {
-    auto delay = ftl::TimeDelta::FromMilliseconds(10);
-    ftl::TimePoint now = ftl::TimePoint::Now();
-    while (ftl::TimePoint::Now() - now < kMaxPollingDelay) {
-      ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
-      FTL_DCHECK(fd.is_valid());
-      char out[128];
-      ssize_t len = ioctl_devmgr_query_fs(fd.get(), out, sizeof(out));
-      FTL_DCHECK(len >= 0);
-
-      ftl::StringView fs_name(out, len);
-      if (fs_name == kMinFsName) {
-        return;
-      }
-      usleep(delay.ToMicroseconds());
-      delay = delay * 2;
-    }
-
-    FTL_LOG(WARNING) << kPersistentFileSystem
-                     << " is not persistent. Did you forget to configure it?";
   }
 
   const Settings& settings_;  // Not owned nor copied.

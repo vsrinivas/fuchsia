@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("filesystem") {
+  sources = [
+    "filesystem.h",
+    "filesystem.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 source_set("util") {
   sources = [
     "string_escape.h",
