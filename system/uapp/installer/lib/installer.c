@@ -326,11 +326,13 @@ ssize_t get_next_file_path(DIR *dfd, size_t max_name_len, char *name_out) {
  */
 gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
   assert(blocksize_out != NULL);
-  ssize_t rc = ioctl_block_get_blocksize(fd, blocksize_out);
+  block_info_t info;
+  ssize_t rc = ioctl_block_get_info(fd, &info);
   if (rc < 0) {
-    fprintf(stderr, "error getting block size, ioctl result code: %zd\n", rc);
+    fprintf(stderr, "error getting block info, ioctl result code: %zd\n", rc);
     return NULL;
   }
+  *blocksize_out = info.block_size;
 
   if (*blocksize_out < 1) {
     fprintf(stderr, "Device reports block size of %" PRIu64 ", abort!\n",
@@ -338,14 +340,6 @@ gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
     return NULL;
   }
 
-  uint64_t blocks;
-  rc = ioctl_block_get_size(fd, &blocks);
-  if (rc < 0) {
-    fprintf(stderr, "error getting device size, ioctl result code: %zd\n", rc);
-    return NULL;
-  }
-
-  blocks /= *blocksize_out;
   gpt_device_t *gpt;
 
   // gpt_device_init produces output we want to suppress, so kidnap stdout
@@ -353,7 +347,7 @@ gpt_device_t *read_gpt(int fd, uint64_t *blocksize_out) {
   int backup = dup(1);
   close(1);
 
-  rc = gpt_device_init(fd, *blocksize_out, blocks, &gpt);
+  rc = gpt_device_init(fd, info.block_size, info.block_count, &gpt);
 
   // restore stdout
   fflush(stdout);

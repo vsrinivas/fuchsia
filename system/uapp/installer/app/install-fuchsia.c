@@ -626,13 +626,14 @@ void find_device_with_space(DIR *dir, char *dir_path, uint64_t space_required,
       continue;
     }
 
-    uint64_t disk_size;
-    if (ioctl_block_get_size(device_fd, &disk_size) < 0 ||
-        ioctl_block_get_blocksize(device_fd, &block_size) < 0) {
-      fprintf(stderr, "Unable to block or disk size for '%s'\n", path_buffer);
+    block_info_t info;
+    rc = ioctl_block_get_info(device_fd, &info);
+    if (rc < 0) {
+      fprintf(stderr, "Unable to get block info for '%s'\n", path_buffer);
       close(device_fd);
       continue;
     }
+    block_size = info.block_size;
 
     gpt_device_t *install_dev = read_gpt(device_fd, &block_size);
 
@@ -648,7 +649,7 @@ void find_device_with_space(DIR *dir, char *dir_path, uint64_t space_required,
 
     part_location_t space_offset;
     find_available_space(install_dev, space_required / block_size,
-                         disk_size / block_size, block_size, &space_offset);
+                         info.block_count, block_size, &space_offset);
     gpt_device_release(install_dev);
     close(device_fd);
     if (space_offset.blk_len * block_size >= space_required) {
@@ -743,20 +744,19 @@ static mx_status_t check_for_partition(int device_fd,
 static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
                                  uint64_t size_pref, uint64_t size_min,
                                  size_t *offset_out, size_t *len_out) {
-  uint64_t disk_size;
-  uint64_t block_size;
   part_location_t part_data;
   part_data.blk_offset = 0;
   part_data.blk_len = 0;
 
-  if (ioctl_block_get_size(device_fd, &disk_size) < 0 ||
-      ioctl_block_get_blocksize(device_fd, &block_size) < 0) {
+  block_info_t info;
+  ssize_t rc = ioctl_block_get_info(device_fd, &info);
+  if (rc < 0) {
     return ERR_NOT_FOUND;
   }
 
-  uint64_t num_blocks_pref = size_pref / block_size;
-  uint64_t num_blocks_min = size_min / block_size;
-  find_available_space(dev, num_blocks_pref, disk_size / block_size, block_size,
+  uint64_t num_blocks_pref = size_pref / info.block_size;
+  uint64_t num_blocks_min = size_min / info.block_size;
+  find_available_space(dev, num_blocks_pref, info.block_count, info.block_size,
                        &part_data);
 
   if (part_data.blk_len < num_blocks_min) {
@@ -1058,11 +1058,14 @@ static mx_status_t build_disk_record(int device_fd, char *path,
 }
 
 void print_disk_info(int disk_fd, uint16_t disk_num, char *dev_path) {
+  block_info_t info;
   uint64_t disk_size;
-  ssize_t rc = ioctl_block_get_size(disk_fd, &disk_size);
+  ssize_t rc = ioctl_block_get_info(disk_fd, &info);
   if (rc < 0) {
     printf("WARNING: Unable to read disk size, reporting zero.\n");
     disk_size = 0;
+  } else {
+    disk_size = info.block_size * info.block_count;
   }
 
   uint64_t disk_size_gib;
