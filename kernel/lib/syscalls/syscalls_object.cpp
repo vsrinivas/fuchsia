@@ -35,14 +35,14 @@ public:
     size_t get_count() const { return count_; }
 
 private:
-    bool OnJob(JobDispatcher* job, uint32_t index) override {
+    bool OnJob(JobDispatcher* job) override {
         if (!jobs_) {
             return true;
         }
         return RecordKoid(job->get_koid());
     }
 
-    bool OnProcess(ProcessDispatcher* proc, uint32_t index) override {
+    bool OnProcess(ProcessDispatcher* proc) override {
         if (jobs_) {
             return true;
         }

@@ -679,7 +679,7 @@ public:
     mxtl::RefPtr<ProcessDispatcher> get_pd() { return pd_; }
 
 private:
-    bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
+    bool OnProcess(ProcessDispatcher* process) final {
         if (process->get_koid() == koid_) {
             pd_ = mxtl::WrapRefPtr(process);
             // Stop the enumeration.

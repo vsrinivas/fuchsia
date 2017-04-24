@@ -26,7 +26,7 @@ public:
     ProcessWalker(ProcessWalker&& other) : cb_(other.cb_) {}
 
 private:
-    bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
+    bool OnProcess(ProcessDispatcher* process) final {
         cb_(process);
         return true;
     }
@@ -188,36 +188,33 @@ public:
     JobDumper(mx_koid_t self) : self_(self) {}
     JobDumper(const JobDumper&) = delete;
 
-private:
-    bool Size(uint32_t proc_count, uint32_t job_count) final {
-        if (!job_count)
-            printf("no jobs\n");
-        if (proc_count < 2)
-            printf("no processes\n");
-        return true;
-    }
+    // Returns true if this object has ever printed anything.
+    bool printed() const { return printed_; }
 
+private:
     // This is called by JobDispatcher::EnumerateChildren() which acquires JobDispatcher::lock_
     // first, making it safe to access job->process_count_ etc, but there's no reasonable way to
     // express this fact via thread safety annotations so we disable the analysis for this function.
-    bool OnJob(JobDispatcher* job, uint32_t index) final TA_NO_THREAD_SAFETY_ANALYSIS {
+    bool OnJob(JobDispatcher* job) final TA_NO_THREAD_SAFETY_ANALYSIS {
         printf("- %" PRIu64 " child job (%" PRIu32 " processes)\n",
             job->get_koid(), job->process_count());
+        printed_ = true;
         return true;
     }
 
-    bool OnProcess(ProcessDispatcher* proc, uint32_t index) final {
+    bool OnProcess(ProcessDispatcher* proc) final {
         auto id = proc->get_koid();
         if (id != self_) {
             char pname[MX_MAX_NAME_LEN];
             proc->get_name(pname);
             printf("- %" PRIu64 " proc [%s]\n", id, pname);
+            printed_ = true;
         }
-
         return true;
     }
 
     const mx_koid_t self_;
+    bool printed_ = false;
 };
 
 void DumpJobTreeForProcess(mx_koid_t id) {
@@ -250,6 +247,9 @@ void DumpJobTreeForProcess(mx_koid_t id) {
 
     JobDumper dumper(id);
     job->EnumerateChildren(&dumper, /* recurse */ true);
+    if (!dumper.printed()) {
+        printf("no jobs/processes\n");
+    }
 }
 
 void KillProcess(mx_koid_t id) {

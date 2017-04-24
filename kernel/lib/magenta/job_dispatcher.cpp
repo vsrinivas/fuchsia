@@ -225,20 +225,14 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
 
     AutoLock lock(&lock_);
 
-    uint32_t proc_index = 0u;
-    uint32_t job_index = 0u;
-
-    if (!je->Size(process_count_, job_count_))
-        return false;
-
     for (auto& proc : procs_) {
-        if (!je->OnProcess(&proc, proc_index++)) {
+        if (!je->OnProcess(&proc)) {
             return false;
         }
     }
 
     for (auto& job : jobs_) {
-        if (!je->OnJob(&job, job_index++)) {
+        if (!je->OnJob(&job)) {
             return false;
         }
         if (recurse) {
