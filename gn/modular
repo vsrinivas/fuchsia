@@ -179,10 +179,6 @@
         {
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
-        },
-        {
-            "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
-            "bootfs_path": "apps/userpicker_device_shell"
         }
     ],
     "components": [
