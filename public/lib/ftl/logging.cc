@@ -26,6 +26,20 @@ const char* GetNameForLogSeverity(LogSeverity severity) {
   return "UNKNOWN";
 }
 
+const char* StripDots(const char* path) {
+  while (strncmp(path, "../", 3) == 0)
+    path += 3;
+  return path;
+}
+
+const char* StripPath(const char* path) {
+  auto p = strrchr(path, '/');
+  if (p)
+    return p + 1;
+  else
+    return path;
+}
+
 }  // namespace
 
 LogMessage::LogMessage(LogSeverity severity,
@@ -38,9 +52,8 @@ LogMessage::LogMessage(LogSeverity severity,
     stream_ << GetNameForLogSeverity(severity);
   else
     stream_ << "VERBOSE" << -severity;
-  if (GetMinLogLevel() < LOG_INFO)
-    stream_ << ":" << file_ << "(" << line_ << ")";
-  stream_ << "] ";
+  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "("
+          << line_ << ")]";
 
   if (condition)
     stream_ << "Check failed: " << condition << ". ";
