@@ -28,7 +28,14 @@ shared_library("test") {
   ldflags = [ "$shared_ldflags" ]
 }
 
-group("gtest") {
+group("tests") {
+  testonly = true
+  deps = [
+    "tests/unit_tests:msd_intel_gen_nonhardware_tests",
+  ]
+}
+
+group("indriver_gtest") {
   testonly = true
 
   deps = [
