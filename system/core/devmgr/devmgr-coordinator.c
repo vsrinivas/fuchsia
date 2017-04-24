@@ -40,7 +40,7 @@ static VnodeDir* vnclass;
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
-#define DDK_PROTOCOL_DEF(tag, val, name) case val: return name;
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) case val: return name;
 #include <ddk/protodefs.h>
     default:
         snprintf(buf, PNMAX, "proto-%08x", id);
@@ -48,22 +48,33 @@ static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     }
 }
 
-static const char* proto_names[] = {
-#define DDK_PROTOCOL_DEF(tag, val, name) name,
+typedef struct {
+    const char* name;
+    VnodeDir* vnode;
+    uint32_t id;
+    uint32_t flags;
+} pinfo_t;
+
+static pinfo_t proto_info[] = {
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, NULL, val, flags },
 #include <ddk/protodefs.h>
-    NULL,
+    { NULL, NULL, 0, 0 },
 };
 
-static void prepopulate_protocol_dirs(void) {
-    const char** namep = proto_names;
-    while (*namep) {
-        VnodeDir* vnp;
-        if (!strcmp(*namep, "misc") || !strcmp(*namep, "misc-parent")) {
-            // don't publish /dev/class/misc or /dev/class/misc-parent
-            namep++;
-            continue;
+static VnodeDir* proto_dir(uint32_t id) {
+    for (pinfo_t* info = proto_info; info->name; info++) {
+        if (info->id == id) {
+            return info->vnode;
         }
-        memfs_create_device_at(vnclass, &vnp, *namep++, 0);
+    }
+    return NULL;
+}
+
+static void prepopulate_protocol_dirs(void) {
+    for (pinfo_t* info = proto_info; info->name; info++) {
+        if (!(info->flags & PF_NOPUB)) {
+            memfs_create_device_at(vnclass, &info->vnode, info->name, 0);
+        }
     }
 }
 
@@ -83,26 +94,19 @@ mx_status_t do_publish(device_t* parent, device_t* ctx) {
         return NO_ERROR;
     }
 
-    char buf[PNMAX];
-    const char* pname = proto_name(ctx->protocol_id, buf);
+    // Create link in /dev/class/... if this id has a published class
+    VnodeDir* vnp = proto_dir(ctx->protocol_id);
+    if (vnp != NULL) {
+        const char* name = ctx->name;
+        if ((ctx->protocol_id != MX_PROTOCOL_MISC) &&
+            (ctx->protocol_id != MX_PROTOCOL_CONSOLE)) {
+            // request a numeric name
+            name = NULL;
+        }
 
-    // find or create a vnode for class/<pname>
-    VnodeDir* vnp;
-    mx_status_t status;
-    if ((status = memfs_create_device_at(vnclass, &vnp, pname, 0)) < 0) {
-        printf("devmgr: could not link to '%s'\n", ctx->name);
-        return NO_ERROR;
-    }
-
-    const char* name = ctx->name;
-    if ((ctx->protocol_id != MX_PROTOCOL_MISC) &&
-        (ctx->protocol_id != MX_PROTOCOL_CONSOLE)) {
-        // request a numeric name
-        name = NULL;
-    }
-
-    if ((status = memfs_add_link(vnp, name, (VnodeMemfs*) ctx->vnode)) < 0) {
-        printf("devmgr: could not link to '%s'\n", ctx->name);
+        if (memfs_add_link(vnp, name, (VnodeMemfs*) ctx->vnode) < 0) {
+            printf("devmgr: could not link to '%s'\n", ctx->name);
+        }
     }
 
     return NO_ERROR;

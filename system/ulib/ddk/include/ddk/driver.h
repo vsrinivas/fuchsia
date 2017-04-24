@@ -116,7 +116,7 @@ static inline void panic(void) {
 }
 
 // Protocol Identifiers
-#define DDK_PROTOCOL_DEF(tag, val, name) MX_PROTOCOL_##tag = val,
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) MX_PROTOCOL_##tag = val,
 enum {
 #include <ddk/protodefs.h>
 };
