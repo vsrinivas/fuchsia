@@ -22,11 +22,24 @@
 
 class JobNode;
 
+// Interface for walking a job/process tree.
 class JobEnumerator {
 public:
-    virtual bool Size(uint32_t proc_count, uint32_t job_count) = 0;
-    virtual bool OnJob(JobDispatcher* job, uint32_t index) = 0;
-    virtual bool OnProcess(ProcessDispatcher* proc, uint32_t index) = 0;
+    // Called when visiting a new job node to provide the counts of direct
+    // children of that job. Called before the OnJob/OnProcess methods are
+    // called for children of that job node.
+    virtual bool Size(uint32_t proc_count, uint32_t job_count) { return true; }
+
+    // Visits a job. |index| is the 0-based index of |job| in the list of jobs
+    // in |job->parent()|.
+    virtual bool OnJob(JobDispatcher* job, uint32_t index) { return true; }
+
+    // Visits a process. |index| is the 0-based index of |proc| in the list of
+    // processes in |proc->job()|.
+    virtual bool OnProcess(ProcessDispatcher* proc, uint32_t index) { return true; }
+
+protected:
+    virtual ~JobEnumerator() = default;
 };
 
 class JobDispatcher final : public Dispatcher {

@@ -679,23 +679,17 @@ public:
     mxtl::RefPtr<ProcessDispatcher> get_pd() { return pd_; }
 
 private:
-    bool Size(uint32_t proc_count, uint32_t job_count) final {
-        return true;
-    }
-
-    bool OnJob(JobDispatcher* job, uint32_t index) final {
-        // Stop if we have already found it.
-        return pd_ == nullptr;
-    }
-
     bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
-        if (process->get_koid() == koid_)
+        if (process->get_koid() == koid_) {
             pd_ = mxtl::WrapRefPtr(process);
-
+            // Stop the enumeration.
+            return false;
+        }
+        // Keep looking.
         return true;
     }
 
-    mx_koid_t koid_;
+    const mx_koid_t koid_;
     mxtl::RefPtr<ProcessDispatcher> pd_ = nullptr;
 };
 

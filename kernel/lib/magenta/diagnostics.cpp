@@ -26,20 +26,12 @@ public:
     ProcessWalker(ProcessWalker&& other) : cb_(other.cb_) {}
 
 private:
-    bool Size(uint32_t proc_count, uint32_t job_count) final {
-        return true;
-    }
-
-    bool OnJob(JobDispatcher* job, uint32_t index) final {
-        return true;
-    }
-
     bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
         cb_(process);
         return true;
     }
 
-    ProcessCallbackType cb_;
+    const ProcessCallbackType cb_;
 };
 
 template <typename ProcessCallbackType>
@@ -225,7 +217,7 @@ private:
         return true;
     }
 
-    mx_koid_t self_;
+    const mx_koid_t self_;
 };
 
 void DumpJobTreeForProcess(mx_koid_t id) {
