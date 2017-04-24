@@ -30,7 +30,7 @@ pub use event::{Event, EventOpts};
 pub use eventpair::{EventPair, EventPairOpts};
 pub use fifo::{Fifo, FifoOpts};
 pub use job::Job;
-pub use port::{Packet, PacketSignal, PacketType, PacketUser, Port, PortOpts, WaitAsyncOpts};
+pub use port::{Packet, PacketContents, Port, PortOpts, SignalPacket, UserPacket, WaitAsyncOpts};
 pub use process::Process;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 pub use thread::Thread;
