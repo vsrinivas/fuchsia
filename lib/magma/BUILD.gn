@@ -39,6 +39,7 @@ group("tests") {
   if (target_cpu == "x64") {
     deps = [
       "tests",
+      "$mesa_build_root:tests",
       "$msd_intel_gen_build_root:tests",
     ]
   }
