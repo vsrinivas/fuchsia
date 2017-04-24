@@ -5,6 +5,10 @@
     ],
     "binaries": [
         {
+          "binary": "concert_agent.dartx",
+          "bootfs_path": "apps/concert_agent"
+        },
+        {
             "binary": "gen/apps/modules/music/modules/music_album/music_album.flx",
             "bootfs_path": "apps/music_album"
         },
