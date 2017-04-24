@@ -1,7 +1,6 @@
 {
     "imports": [
         "boringssl_libcrypto",
-        "init",
         "vulkan_loader_and_layers"
     ],
     "labels": [
