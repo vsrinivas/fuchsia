@@ -213,8 +213,8 @@ void LinkImpl::ReadLinkData(const std::function<void()>& done) {
       module_path_, name_, [this, done](const fidl::String& json) {
         if (!json.is_null()) {
           doc_.Parse(json.get());
-          FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
-                        << JsonValueToPrettyString(doc_);
+          //FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
+          //              << JsonValueToPrettyString(doc_);
         }
 
         done();
