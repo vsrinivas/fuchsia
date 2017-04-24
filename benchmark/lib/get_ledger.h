@@ -14,10 +14,14 @@
 
 namespace benchmark {
 
+// TODO(ppi): take the server_id as std::optional<std::string> and drop bool
+// sync once we're on C++17.
 ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                             app::ApplicationControllerPtr* controller,
                             std::string ledger_name,
-                            std::string ledger_repository_path);
+                            std::string ledger_repository_path,
+                            bool sync,
+                            std::string server_id);
 
 // Retrieves the root page of the given Ledger instance, calls the callback only
 // after executing a GetId() call on the page, ensuring that it is already

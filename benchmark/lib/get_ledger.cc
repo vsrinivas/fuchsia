@@ -19,7 +19,9 @@ namespace benchmark {
 ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                             app::ApplicationControllerPtr* controller,
                             std::string ledger_name,
-                            std::string ledger_repository_path) {
+                            std::string ledger_repository_path,
+                            bool sync,
+                            std::string server_id) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
   app::ServiceProviderPtr child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -30,7 +32,8 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   app::ConnectToService(child_services.get(), repository_factory.NewRequest());
 
   ledger::LedgerRepositoryPtr repository;
-  repository_factory->GetRepository(ledger_repository_path, fidl::String(""),
+  fidl::String fidl_server_id = sync ? server_id : nullptr;
+  repository_factory->GetRepository(ledger_repository_path, fidl_server_id,
                                     repository.NewRequest(),
                                     QuitOnErrorCallback("GetRepository"));
 

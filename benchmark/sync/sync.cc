@@ -21,10 +21,12 @@ namespace {
 constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/sync";
 constexpr ftl::StringView kEntryCountFlag = "entry-count";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
+constexpr ftl::StringView kServerIdFlag = "server-id";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int>" << std::endl;
+            << "=<int> --" << kValueSizeFlag << "=<int> --"
+            << kServerIdFlag << "=<string>" << std::endl;
 }
 
 fidl::Array<uint8_t> MakeKey(int i) {
@@ -35,10 +37,13 @@ fidl::Array<uint8_t> MakeKey(int i) {
 
 namespace benchmark {
 
-SyncBenchmark::SyncBenchmark(int entry_count, int value_size)
+SyncBenchmark::SyncBenchmark(int entry_count,
+                             int value_size,
+                             std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       value_(fidl::Array<uint8_t>::New(value_size)),
+      server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
       beta_tmp_dir_(kStoragePath) {
@@ -59,10 +64,12 @@ void SyncBenchmark::Run() {
   ret = files::CreateDirectory(beta_path);
   FTL_DCHECK(ret);
 
-  ledger::LedgerPtr alpha = benchmark::GetLedger(
-      application_context_.get(), &alpha_controller_, "sync", alpha_path);
-  ledger::LedgerPtr beta = benchmark::GetLedger(
-      application_context_.get(), &beta_controller_, "sync", beta_path);
+  ledger::LedgerPtr alpha =
+      benchmark::GetLedger(application_context_.get(), &alpha_controller_,
+                           "sync", alpha_path, true, server_id_);
+  ledger::LedgerPtr beta =
+      benchmark::GetLedger(application_context_.get(), &beta_controller_,
+                           "sync", beta_path, true, server_id_);
 
   benchmark::GetRootPageEnsureInitialized(alpha.get(),
                                           [this](ledger::PagePtr page) {
@@ -132,6 +139,7 @@ int main(int argc, const char** argv) {
   int entry_count;
   std::string value_size_str;
   int value_size;
+  std::string server_id;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
       !ftl::StringToNumberWithError(entry_count_str, &entry_count) ||
@@ -139,13 +147,14 @@ int main(int argc, const char** argv) {
       !command_line.GetOptionValue(kValueSizeFlag.ToString(),
                                    &value_size_str) ||
       !ftl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size <= 0) {
+      value_size <= 0 ||
+      !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
   mtl::MessageLoop loop;
-  benchmark::SyncBenchmark app(entry_count, value_size);
+  benchmark::SyncBenchmark app(entry_count, value_size, server_id);
   loop.task_runner()->PostTask([&app] { app.Run(); });
   loop.Run();
   return 0;

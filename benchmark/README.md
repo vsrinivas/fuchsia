@@ -17,12 +17,12 @@ trace record --categories=benchmark,ledger \
   ledger_benchmark_put --entry-count=10 --value-size=100
 ```
 
-Some benchmarks exercise sync. To run these, make sure that Cloud sync is
-[configured] correctly before running them. For example:
+Some benchmarks exercise sync. To run these, pass the ID of a correctly
+[configured] Firebase instance to the benchmark binary. For example:
 
 ```
-configure_ledger --firebase-id=<my instance id>
-trace record --spec-file=/system/data/ledger/benchmark/sync.tspec
+trace record --spec-file=/system/data/ledger/benchmark/sync.tspec \
+  --append-args=--server-id=<my instance>
 ```
 
 [configured]: https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md

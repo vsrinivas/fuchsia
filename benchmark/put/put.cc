@@ -54,8 +54,9 @@ PutBenchmark::PutBenchmark(int entry_count, int value_size, bool transaction)
 }
 
 void PutBenchmark::Run() {
-  ledger::LedgerPtr ledger = benchmark::GetLedger(
-      application_context_.get(), &ledger_controller_, "put", tmp_dir_.path());
+  ledger::LedgerPtr ledger =
+      benchmark::GetLedger(application_context_.get(), &ledger_controller_,
+                           "put", tmp_dir_.path(), false, "");
   benchmark::GetRootPageEnsureInitialized(
       ledger.get(), [this](ledger::PagePtr page) {
         page_ = std::move(page);

@@ -23,9 +23,10 @@ namespace benchmark {
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
 //   --value-size=<int> the size of a single value in bytes
+//   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:
-  SyncBenchmark(int entry_count, int value_size);
+  SyncBenchmark(int entry_count, int value_size, std::string server_id);
 
   void Run();
 
@@ -42,6 +43,7 @@ class SyncBenchmark : public ledger::PageWatcher {
   std::unique_ptr<app::ApplicationContext> application_context_;
   int entry_count_;
   fidl::Array<uint8_t> value_;
+  std::string server_id_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
