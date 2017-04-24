@@ -52,29 +52,29 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/user_copy.S \
 	$(SUBARCH_DIR)/uspace_entry.S \
 \
-	$(LOCAL_DIR)/arch.c \
-	$(LOCAL_DIR)/cache.c \
-	$(LOCAL_DIR)/cpu_topology.c \
-	$(LOCAL_DIR)/debugger.c \
-	$(LOCAL_DIR)/descriptor.c \
-	$(LOCAL_DIR)/faults.c \
-	$(LOCAL_DIR)/feature.c \
+	$(LOCAL_DIR)/arch.cpp \
+	$(LOCAL_DIR)/cache.cpp \
+	$(LOCAL_DIR)/cpu_topology.cpp \
+	$(LOCAL_DIR)/debugger.cpp \
+	$(LOCAL_DIR)/descriptor.cpp \
+	$(LOCAL_DIR)/faults.cpp \
+	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/gdt.S \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/hypervisor.cpp \
-	$(LOCAL_DIR)/idt.c \
-	$(LOCAL_DIR)/ioapic.c \
+	$(LOCAL_DIR)/idt.cpp \
+	$(LOCAL_DIR)/ioapic.cpp \
 	$(LOCAL_DIR)/ioport.cpp \
-	$(LOCAL_DIR)/lapic.c \
+	$(LOCAL_DIR)/lapic.cpp \
 	$(LOCAL_DIR)/mmu.cpp \
-	$(LOCAL_DIR)/mmu_mem_types.c \
+	$(LOCAL_DIR)/mmu_mem_types.cpp \
 	$(LOCAL_DIR)/mmu_tests.cpp \
-	$(LOCAL_DIR)/mp.c \
+	$(LOCAL_DIR)/mp.cpp \
 	$(LOCAL_DIR)/proc_trace.cpp \
-	$(LOCAL_DIR)/registers.c \
-	$(LOCAL_DIR)/thread.c \
-	$(LOCAL_DIR)/tsc.c \
-	$(LOCAL_DIR)/user_copy.c
+	$(LOCAL_DIR)/registers.cpp \
+	$(LOCAL_DIR)/thread.cpp \
+	$(LOCAL_DIR)/tsc.cpp \
+	$(LOCAL_DIR)/user_copy.cpp
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \
@@ -89,8 +89,8 @@ SMP_MAX_CPUS ?= 16
 KERNEL_DEFINES += \
 	WITH_SMP=1
 MODULE_SRCS += \
-	$(SUBARCH_DIR)/bootstrap16.c \
-	$(SUBARCH_DIR)/smp.c \
+	$(SUBARCH_DIR)/bootstrap16.cpp \
+	$(SUBARCH_DIR)/smp.cpp \
 	$(SUBARCH_DIR)/start16.S
 
 endif
