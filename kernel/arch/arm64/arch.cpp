@@ -90,32 +90,33 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
 #else
     DEBUG_ASSERT(unsafe_sp == NULL);
 #endif
-    arm64_secondary_sp_list[i] = (arm64_sp_info_t){
-        .stack_guard = get_current_thread()->arch.stack_guard,
-        .mpid = mpid, .sp = sp, .unsafe_sp = unsafe_sp,
-    };
+    arm64_secondary_sp_list[i].mpid = mpid;
+    arm64_secondary_sp_list[i].sp = sp;
+    arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch.stack_guard;
+    arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
+
     return NO_ERROR;
 }
 #endif
 
-static void parse_ccsid(arm64_cache_desc_t* desc, uint32_t ccsid) {
+static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {
     desc->write_through = BIT(ccsid, 31) > 0;
     desc->write_back    = BIT(ccsid, 30) > 0;
     desc->read_alloc    = BIT(ccsid, 29) > 0;
     desc->write_alloc   = BIT(ccsid, 28) > 0;
-    desc->num_sets      = BITS_SHIFT(ccsid, 27, 13) + 1;
-    desc->associativity = BITS_SHIFT(ccsid, 12, 3)  + 1;
-    desc->line_size     = 1 << (BITS(ccsid, 2, 0) + 4);
+    desc->num_sets      = (uint32_t)BITS_SHIFT(ccsid, 27, 13) + 1;
+    desc->associativity = (uint32_t)BITS_SHIFT(ccsid, 12, 3)  + 1;
+    desc->line_size     = 1u << (BITS(ccsid, 2, 0) + 4);
 }
 
 void arm64_get_cache_info(arm64_cache_info_t* info) {
-    uint32_t temp=0;
+    uint64_t temp=0;
 
     uint64_t sysreg = ARM64_READ_SYSREG(clidr_el1);
-    info->inner_boundary    = BITS_SHIFT(sysreg, 32, 30);
-    info->lou_u             = BITS_SHIFT(sysreg, 29, 27);
-    info->loc               = BITS_SHIFT(sysreg, 26, 24);
-    info->lou_is            = BITS_SHIFT(sysreg, 23, 21);
+    info->inner_boundary    = (uint8_t)BITS_SHIFT(sysreg, 32, 30);
+    info->lou_u             = (uint8_t)BITS_SHIFT(sysreg, 29, 27);
+    info->loc               = (uint8_t)BITS_SHIFT(sysreg, 26, 24);
+    info->lou_is            = (uint8_t)BITS_SHIFT(sysreg, 23, 21);
     for (int i = 0; i < 7; i++) {
         uint8_t ctype = (sysreg >> (3*i)) & 0x07;
         if (ctype == 0) {
@@ -187,7 +188,7 @@ static void arm64_cpu_early_init(void)
     ARM64_WRITE_SYSREG(VBAR_EL1, (uint64_t)&arm64_exception_base);
 
     /* switch to EL1 */
-    unsigned int current_el = ARM64_READ_SYSREG(CURRENTEL) >> 2;
+    uint64_t current_el = ARM64_READ_SYSREG(CURRENTEL) >> 2;
     if (current_el > 1) {
         arm64_el3_to_el1();
     }
@@ -223,9 +224,9 @@ void arch_early_init(void)
     arm64_cpu_early_init();
 
     /* read the block size of DC ZVA */
-    uint32_t dczid = ARM64_READ_SYSREG(dczid_el0);
+    uint64_t dczid = ARM64_READ_SYSREG(dczid_el0);
     if (BIT(dczid, 4) == 0) {
-        arm64_zva_shift = (ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
+        arm64_zva_shift = (uint32_t)(ARM64_READ_SYSREG(dczid_el0) & 0xf) + 2;
     }
     ASSERT(arm64_zva_shift != 0); /* for now, fail if DC ZVA is unavailable */
 
@@ -297,9 +298,7 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 
 #if WITH_SMP
 /* called from assembly */
-void arm64_secondary_entry(void);
-
-void arm64_secondary_entry(void)
+extern "C" void arm64_secondary_entry(void)
 {
     uint cpu = arch_curr_cpu_num();
 

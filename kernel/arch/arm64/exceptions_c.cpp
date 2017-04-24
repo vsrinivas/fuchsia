@@ -50,7 +50,10 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint3
 
 static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
 {
-    arch_exception_context_t context = { .frame = iframe, .esr = esr };
+    arch_exception_context_t context = {};
+    context.frame = iframe;
+    context.esr = esr;
+
     arch_enable_ints();
     status_t status = magenta_exception_handler(type, &context, iframe->elr);
     arch_disable_ints();
@@ -59,7 +62,11 @@ static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64
 
 static status_t try_magenta_data_fault_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
-    arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
+    arch_exception_context_t context = {};
+    context.frame = iframe;
+    context.esr = esr;
+    context.far = far;
+
     arch_enable_ints();
     status_t status = magenta_exception_handler(type, &context, iframe->elr);
     arch_disable_ints();
@@ -196,7 +203,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
             ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
             iframe->elr, is_user, far, esr, iss);
 
-    uint8_t dfsc = BITS(iss, 5, 0);
+    uint32_t dfsc = BITS(iss, 5, 0);
     if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
         arch_enable_ints();
         status_t err = vmm_page_fault_handler(far, pf_flags);
@@ -240,9 +247,10 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     exception_die(iframe, esr);
 }
 
-void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
+/* called from assembly */
+extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
 {
-    uint32_t esr = ARM64_READ_SYSREG(esr_el1);
+    uint32_t esr = (uint32_t)ARM64_READ_SYSREG(esr_el1);
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
 
     switch (ec) {
@@ -302,9 +310,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 }
 
 /* called from assembly */
-void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags);
-
-void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
+extern "C" void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
 {
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
@@ -329,9 +335,7 @@ void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
 }
 
 /* called from assembly */
-void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which);
-
-void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which)
+extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which)
 {
     printf("invalid exception, which 0x%x\n", which);
     dump_iframe(iframe);

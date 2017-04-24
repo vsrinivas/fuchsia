@@ -85,8 +85,8 @@ __NO_SAFESTACK static void arm64_fpu_save_state(struct thread *t)
     uint64_t fpcr, fpsr;
     __asm__("mrs %0, fpcr\n" : "=r"(fpcr));
     __asm__("mrs %0, fpsr\n" : "=r"(fpsr));
-    fpstate->fpcr = fpcr;
-    fpstate->fpsr = fpsr;
+    fpstate->fpcr = (uint32_t)fpcr;
+    fpstate->fpsr = (uint32_t)fpsr;
 
     LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name, fpstate->fpcr, fpstate->fpsr);
 }
@@ -96,7 +96,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(struct thread *oldthread,
                                              struct thread *newthread)
 {
     uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
-    if (is_fpu_enabled(cpacr)) {
+    if (is_fpu_enabled((uint32_t)cpacr)) {
         LTRACEF("saving state on thread %s\n", oldthread->name);
 
         /* save the state */
@@ -116,7 +116,7 @@ void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags)
     DEBUG_ASSERT(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL);
 
     uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
-    DEBUG_ASSERT(!is_fpu_enabled(cpacr));
+    DEBUG_ASSERT(!is_fpu_enabled((uint32_t)cpacr));
 
     /* enable the fpu */
     cpacr |= FPU_ENABLE_MASK;

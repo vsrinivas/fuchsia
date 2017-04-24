@@ -78,7 +78,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
     switch (regset)
     {
     case 0:
-        return arch_get_general_regs(thread, regs, buf_size);
+        return arch_get_general_regs(thread, (mx_arm64_general_regs_t *)regs, buf_size);
     default:
         return ERR_INVALID_ARGS;
     }
@@ -89,7 +89,7 @@ status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, u
     switch (regset)
     {
     case 0:
-        return arch_set_general_regs(thread, regs, buf_size);
+        return arch_set_general_regs(thread, (mx_arm64_general_regs_t *)regs, buf_size);
     default:
         return ERR_INVALID_ARGS;
     }

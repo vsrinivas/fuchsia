@@ -42,7 +42,7 @@ void arch_init_cpu_map(uint cluster_count, uint* cluster_cpus) {
 
 status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
 {
-    LTRACEF("target 0x%x, ipi %u\n", target, ipi);
+    LTRACEF("target 0x%x, ipi %u\n", target, (uint)ipi);
 
     return interrupt_send_ipi(target, ipi);
 }
