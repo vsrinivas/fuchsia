@@ -338,8 +338,10 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
     }
 
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
+    // TODO: Take the cloud sync server name as Login() parameter from the
+    // device shell and/or from the user db.
     ledger_repository_factory_->GetRepository(
-        ledger_repository_path, ledger_repository.NewRequest(),
+        ledger_repository_path, fidl::String(""), ledger_repository.NewRequest(),
         [](ledger::Status status) {
           FTL_DCHECK(status == ledger::Status::OK)
               << "GetRepository failed: " << status;
