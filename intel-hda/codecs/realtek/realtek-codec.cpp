@@ -79,6 +79,11 @@ mx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     return res;
 }
 
+mx_status_t RealtekCodec::ProcessUnsolicitedResponse(const CodecResponse& resp) {
+    DEBUG_LOG("Unsolicited : %08x %08x\n", resp.data, resp.data_ex);
+    return NO_ERROR;
+}
+
 mx_status_t RealtekCodec::SetupCommon() {
     // Common startup commands
     static const CommandListEntry START_CMDS[] = {
@@ -189,6 +194,9 @@ mx_status_t RealtekCodec::SetupAcer12() {
 
         // Power up the top level Audio Function group.
         {  1u, SET_POWER_STATE(HDA_PS_D0) },
+
+        // Enable unsolicited codec responses from the headphone pin complex.
+        { 33u, SET_UNSOLICITED_RESP_CTRL(true, 0x00) },
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));
@@ -252,6 +260,9 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
 
         // Power up the top level Audio Function group.
         {  1u, SET_POWER_STATE(HDA_PS_D0) },
+
+        // Enable unsolicited codec responses from the headphone pin complex.
+        { 33u, SET_UNSOLICITED_RESP_CTRL(true, 0x00) },
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));

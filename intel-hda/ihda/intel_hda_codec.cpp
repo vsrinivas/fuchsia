@@ -11,6 +11,24 @@ extern void print_codec_state(const CodecState& codec);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+// Parser and CommandList for fetching the currently configured unsolicited
+// response state (present in both function groups and widgets)
+//
+////////////////////////////////////////////////////////////////////////////////
+static mx_status_t ParseUnsolicitedResponseState(UnsolicitedResponseState& state,
+                                                 const CodecResponse& resp) {
+    // Section 7.3.3.14.
+    state.raw_data_ = static_cast<uint8_t>(resp.data & 0xFF);
+    return NO_ERROR;
+}
+
+static const IntelHDACodec::CommandListEntry<UnsolicitedResponseState>
+    FETCH_UNSOLICITED_RESPONSE_STATE[] = {
+    { GET_UNSOLICITED_RESP_CTRL, ParseUnsolicitedResponseState },
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
 // Parsers and CommandLists for fetching info about supported and current power
 // state.
 //
@@ -439,6 +457,11 @@ mx_status_t IntelHDACodec::ReadFunctionGroupState(FunctionGroupStatePtr& ptr, ui
     RUN_COMMAND_LIST(ptr, nid, FETCH_FUNCTION_GROUP_TYPE,
                     "Failed to fetch function group type (nid %hu)", nid);
 
+    if (ptr->can_send_unsolicited_) {
+        RUN_COMMAND_LIST(ptr->unsol_resp_ctrl_, nid, FETCH_UNSOLICITED_RESPONSE_STATE,
+                        "Failed to fetch unsolicited response control state (nid %hu)", nid);
+    }
+
     ptr->nid_ = nid;
 
     switch (ptr->type_) {
@@ -676,6 +699,15 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
                            widget.output_amp_caps_, &widget.output_amp_state_);
         if (res != NO_ERROR)
             return res;
+    }
+
+    // If this widget can send unsolicited responses, query the current state of
+    // the unsolicted response controls.
+    if (widget.caps_.can_send_unsol()) {
+        RUN_COMMAND_LIST(widget.unsol_resp_ctrl_, widget.nid_,
+                         FETCH_UNSOLICITED_RESPONSE_STATE,
+                         "Failed to fetch unsolicited response control state (nid %hu)",
+                         widget.nid_);
     }
 
     // Finished.

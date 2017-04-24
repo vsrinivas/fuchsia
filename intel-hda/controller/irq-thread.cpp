@@ -372,6 +372,9 @@ int IntelHDAController::IRQThread() {
     // up if there is any change to the codec enumeration status.
     REG_SET_BITS(&regs_->wakeen, HDA_REG_STATESTS_MASK);
 
+    // Allow unsolicited codec responses
+    REG_SET_BITS(&regs_->gctl, HDA_REG_GCTL_UNSOL);
+
     while (GetState() != State::SHUTTING_DOWN) {
         // Enable interrupts at the top level and wait for there to be Great
         // Things to do.
