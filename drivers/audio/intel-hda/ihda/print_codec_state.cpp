@@ -378,6 +378,12 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
     printf(FMT(""), "Flags");
     DUMP_FLAGS(widget.caps_.raw_data_, AW_CAPS_FLAGS, "", "none");
 
+    if (widget.caps_.can_send_unsol()) {
+        printf(FMT("%s [tag 0x%02x]\n"),  "Unsolicited Ctrl",
+                   widget.unsol_resp_ctrl_.enabled() ? "enabled" : "disabled",
+                   widget.unsol_resp_ctrl_.tag());
+    }
+
     printf(FMT(""), "Delay");
     ihda_dump_delay(widget.caps_.delay());
 
@@ -536,7 +542,12 @@ static void ihda_dump_codec_fn_group(const CodecState& codec, uint32_t id) {
     printf("%sFunction Group %u/%u\n", pad, id + 1, codec.fn_group_count_);
     printf(FMT("%hu\n"), "Node ID", fn_group.nid_);
     printf(FMT("%s\n"),  "Type", ToString(fn_group.type_));
-    printf(FMT("%s\n"),  "Unsolicited Responses", fn_group.can_send_unsolicited_ ? "yes" : "no");
+
+    if (fn_group.can_send_unsolicited_) {
+        printf(FMT("%s [tag 0x%02x]\n"),  "Unsolicited Ctrl",
+                   fn_group.unsol_resp_ctrl_.enabled() ? "enabled" : "disabled",
+                   fn_group.unsol_resp_ctrl_.tag());
+    }
 
     if (fn_group.type_ != FunctionGroupState::Type::AUDIO)
         return;

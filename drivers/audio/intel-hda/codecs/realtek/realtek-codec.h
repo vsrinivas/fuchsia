@@ -21,7 +21,8 @@ public:
 
     mx_status_t Init(mx_driver_t* driver, mx_device_t* codec_dev);
     mx_status_t Start() override;
-    mx_status_t ProcessSolicitedResponse(const CodecResponse& resp) override;
+    mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) override;
+    mx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) override;
 
 protected:
     void PrintDebugPrefix() const override;

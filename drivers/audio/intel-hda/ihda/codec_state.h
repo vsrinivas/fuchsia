@@ -99,6 +99,14 @@ struct PowerState {
     bool    settings_reset_;
 };
 
+// Section 7.3.3.14.  Present only in nodes (function groups and widgets) whose
+// capabilities indicate the ability to send unsolicited responses.
+struct UnsolicitedResponseState {
+    bool    enabled() const { return (raw_data_ & 0x80) != 0; }
+    uint8_t tag()     const { return static_cast<uint8_t>(raw_data_ & 0x3f); }
+    uint8_t raw_data_;
+};
+
 struct AudioWidgetState {
     /* Defined audio widget types.  See Table 138 */
     enum class Type : uint8_t {
@@ -286,6 +294,9 @@ struct AudioWidgetState {
     // Section 7.3.3.12.  Present only in pin complexes
     PinWidgetCtrlState pin_widget_ctrl_;
 
+    // Section 7.3.3.14.
+    UnsolicitedResponseState unsol_resp_ctrl_;
+
     // Section 7.3.3.15
     //
     // Only valid for pin complexes, only run if the pin complex supports
@@ -321,6 +332,7 @@ struct FunctionGroupState {
     bool             can_send_unsolicited_;
     uint16_t         nid_;
     ImplementationID impl_id_;
+    UnsolicitedResponseState unsol_resp_ctrl_;
 
 protected:
     explicit FunctionGroupState(Type type)

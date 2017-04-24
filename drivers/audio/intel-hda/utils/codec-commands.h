@@ -69,7 +69,10 @@ struct CodecCommand {
 constexpr size_t HDA_CORB_MAX_ENTRIES = 256u;
 constexpr size_t HDA_CORB_MAX_BYTES   = HDA_CORB_MAX_ENTRIES * sizeof(CodecCommand);
 
-struct CodecResponse {  // See Table 54
+// See...
+// Section 3.7 Figures 6 & 7 (Solicited and Unsolicited Data field packing)
+// Section 4.4.2.1 Table 54 (DataEx field packing)
+struct CodecResponse {
     CodecResponse() { }
     constexpr CodecResponse(uint32_t _data, uint32_t _data_ex) : data(_data), data_ex(_data_ex) { }
 
@@ -81,8 +84,11 @@ struct CodecResponse {  // See Table 54
         data_ex = le32toh(data_ex);
     }
 
-    uint32_t caddr()       const { return (data_ex & 0xF); }
-    bool     unsolicited() const { return (data_ex & 0x10) != 0; }
+    uint32_t caddr()        const { return (data_ex & 0xF); }
+    bool     unsolicited()  const { return (data_ex & 0x10) != 0; }
+    uint32_t unsol_tag()    const { return ((data >> 26) & 0x3F); }
+    uint32_t unsol_subtag() const { return ((data >> 21) & 0x1F); }
+    uint32_t unsol_data()   const { return (data & ((1u << 21) - 1)); }
 
 } __PACKED;
 
@@ -234,6 +240,11 @@ static inline constexpr CodecVerb SET_CONVERTER_STREAM_CHAN(uint8_t stream_tag, 
     return SP_SET_VERB<0x06>(static_cast<uint8_t>(((stream_tag & 0xF) << 4) | (chan & 0xF)));
 }
 
+// Section 7.3.3.14 and Figure 68
+static inline constexpr CodecVerb SET_UNSOLICITED_RESP_CTRL(bool enabled, uint8_t tag) {
+    return SP_SET_VERB<0x08>(static_cast<uint8_t>((tag & 0x3F) | (enabled ? 0x80 : 0x00)));
+}
+
 // Section 7.3.3.15
 static inline constexpr CodecVerb EXECUTE_PIN_SENSE(bool right_chan = false) {
     return SP_SET_VERB<0x09>(static_cast<uint8_t>(right_chan ? 0x01 : 0x00));
@@ -294,7 +305,6 @@ MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_3,    SP, uint8_t,  0x3E) // Section 7.3.3
 MAKE_SET_CMD(SET_DIGITAL_CONV_CONTROL_4,    SP, uint8_t,  0x3F) // Section 7.3.3.9
 MAKE_SET_CMD(SET_POWER_STATE,               SP, uint8_t,  0x05) // Section 7.3.3.10
 MAKE_SET_CMD(SET_INPUT_CONV_SDI_SELECT,     SP, uint8_t,  0x04) // Section 7.3.3.12
-MAKE_SET_CMD(SET_UNSOLICITED_RESP_CTRL,     SP, uint8_t,  0x08) // Section 7.3.3.14
 MAKE_SET_CMD(SET_EAPD_BTL_ENABLE,           SP, uint8_t,  0x0C) // Section 7.3.3.16
 MAKE_SET_CMD(SET_GPI_DATA,                  SP, uint8_t,  0x10) // Section 7.3.3.17
 MAKE_SET_CMD(SET_GPI_WAKE_ENB_MASK,         SP, uint8_t,  0x11) // Section 7.3.3.18
