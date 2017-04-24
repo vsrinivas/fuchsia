@@ -140,13 +140,13 @@ static void ums_queue_read(ums_t* ums, uint16_t transfer_length) {
     ums_queue_request(ums, read_request);
 }
 
-static mx_status_t ums_inquiry(ums_t* ums, uint8_t* out_data) {
+static mx_status_t ums_inquiry(ums_t* ums, uint8_t lun, uint8_t* out_data) {
     // CBW Configuration
     scsi_command6_t command;
     memset(&command, 0, sizeof(command));
     command.opcode = UMS_INQUIRY;
     command.length = UMS_INQUIRY_TRANSFER_LENGTH;
-    ums_send_cbw(ums, 0, UMS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
+    ums_send_cbw(ums, lun, UMS_INQUIRY_TRANSFER_LENGTH, USB_DIR_IN, sizeof(command), &command);
 
     // read inquiry response
     ums_queue_read(ums, UMS_INQUIRY_TRANSFER_LENGTH);
@@ -217,6 +217,26 @@ static mx_status_t ums_read_capacity16(ums_t* ums, uint8_t lun, scsi_read_capaci
     ums_send_cbw(ums, lun, sizeof(*out_data), USB_DIR_IN, sizeof(command), &command);
 
     // read capacity16 response
+    ums_queue_read(ums, sizeof(*out_data));
+
+    mx_status_t status = ums_read_csw(ums, NULL);
+    if (status == NO_ERROR) {
+        iotxn_copyfrom(ums->data_iotxn, out_data, sizeof(*out_data), 0);
+    }
+    return status;
+}
+
+static mx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_data_t* out_data) {
+    // CBW Configuration
+    scsi_mode_sense_6_command_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_MODE_SENSE6;
+    command.page = 0x3F;   // all pages, current values
+    command.allocation_length = sizeof(*out_data);
+
+    ums_send_cbw(ums, lun, sizeof(*out_data), USB_DIR_IN, sizeof(command), &command);
+
+    // read mode sense response
     ums_queue_read(ums, sizeof(*out_data));
 
     mx_status_t status = ums_read_csw(ums, NULL);
@@ -469,9 +489,25 @@ static mx_status_t ums_add_block_device(ums_block_t* dev) {
     // +1 because this returns the address of the final block, and blocks are zero indexed
     dev->total_blocks++;
 
-    DEBUG_PRINT(("UMS:block size is: 0x%08x\n", dev->block_size));
-    DEBUG_PRINT(("UMS:total blocks is: %" PRId64 "\n", dev->total_blocks));
-    DEBUG_PRINT(("UMS:total size is: %" PRId64 "\n", dev->total_blocks * dev->block_size));
+    // determine if LUN is read-only
+    scsi_mode_sense_6_data_t ms_data;
+    status = ums_mode_sense6(ums, lun, &ms_data);
+    if (status != NO_ERROR) {
+        printf("ums_mode_sense6 failed: %d\n", status);
+        return status;
+    }
+
+    if (ms_data.device_specific_param & MODE_SENSE_DSP_RO) {
+        dev->flags |= BLOCK_FLAG_READONLY;
+    } else {
+        dev->flags &= ~BLOCK_FLAG_READONLY;
+    }
+
+    DEBUG_PRINT(("UMS: block size is: 0x%08x\n", dev->block_size));
+    DEBUG_PRINT(("UMS: total blocks is: %" PRId64 "\n", dev->total_blocks));
+    DEBUG_PRINT(("UMS: total size is: %" PRId64 "\n", dev->total_blocks * dev->block_size));
+    DEBUG_PRINT(("UMS: read-only: %d removable: %d\n", !!(dev->flags & BLOCK_FLAG_READONLY),
+                                                       !!(dev->flags & BLOCK_FLAG_REMOVABLE)));
 
     return ums_block_add_device(ums, dev);
 }
@@ -520,14 +556,19 @@ static mx_protocol_device_t ums_device_proto = {
 
 static int ums_worker_thread(void* arg) {
     ums_t* ums = (ums_t*)arg;
+    mx_status_t status = NO_ERROR;
 
-    // we need to send the Inquiry command first,
-    // but currently we do not do anything with the response
-    uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
-    mx_status_t status = ums_inquiry(ums, inquiry_data);
-    if (status < 0) {
-        printf("ums_inquiry failed: %d\n", status);
-        goto fail;
+    for (uint8_t lun = 0; lun <= ums->max_lun; lun++) {
+        uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
+        mx_status_t status = ums_inquiry(ums, lun, inquiry_data);
+        if (status < 0) {
+            printf("ums_inquiry failed for lun %d status: %d\n", lun, status);
+            goto fail;
+        }
+        uint8_t rmb = inquiry_data[1] & 0x80;   // Removable Media Bit
+        if (rmb) {
+            ums->block_devs[lun].flags |= BLOCK_FLAG_REMOVABLE;
+        }
     }
 
     // Add root device, which will contain block devices for logical units

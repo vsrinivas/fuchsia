@@ -44,6 +44,7 @@ static ssize_t ums_block_ioctl(mx_device_t* device, uint32_t op, const void* cmd
         memset(info, 0, sizeof(*info));
         info->block_size = dev->block_size;
         info->block_count = dev->total_blocks;
+        info->flags = dev->flags;
         return sizeof(*info);
     }
     case IOCTL_DEVICE_SYNC: {

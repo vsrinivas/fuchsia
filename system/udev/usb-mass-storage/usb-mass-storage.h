@@ -29,6 +29,7 @@ typedef struct {
     uint32_t block_size;
 
     uint8_t lun;                // our logical unit number
+    uint32_t flags;             // flags for block_info_t
     bool device_added;
 } ums_block_t;
 #define device_to_block(dev) containerof(dev, ums_block_t, device)

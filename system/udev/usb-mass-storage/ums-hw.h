@@ -114,6 +114,26 @@ typedef struct {
 } __PACKED scsi_read_capacity_16_t;
 static_assert(sizeof(scsi_read_capacity_16_t) == 32, "");
 
+// SCSI Mode Sense 6 command
+typedef struct {
+    uint8_t     opcode; // UMS_MODE_SENSE6
+    uint8_t     disable_block_desc;
+    uint8_t     page;
+    uint8_t     subpage;
+    uint8_t     allocation_length;
+    uint8_t     control;
+} __PACKED scsi_mode_sense_6_command_t;
+static_assert(sizeof(scsi_mode_sense_6_command_t) == 6, "");
+
+// SCSI Mode Sense 6 data response
+typedef struct {
+    uint8_t     mode_data_length;
+    uint8_t     medium_type;
+    uint8_t     device_specific_param;
+    uint8_t     block_desc_length;
+} __PACKED scsi_mode_sense_6_data_t;
+#define MODE_SENSE_DSP_RO   0x80    //  bit 7 of device_specific_param: read-only
+
 // Command Block Wrapper
 typedef struct {
     uint32_t    dCBWSignature;      // CBW_SIGNATURE
