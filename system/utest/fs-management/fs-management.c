@@ -56,6 +56,30 @@ static bool mount_unmount(void) {
     END_TEST;
 }
 
+static bool mount_mkdir_unmount(void) {
+    const char* ramdisk_name = "mount_unmount";
+    char ramdisk_path[PATH_MAX];
+    const char* mount_path = "/tmp/mount_mkdir_unmount";
+
+    BEGIN_TEST;
+    ASSERT_EQ(create_ramdisk(ramdisk_name, ramdisk_path, 512, 1 << 16), 0, "");
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync), NO_ERROR, "");
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    mount_options_t options;
+    memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+    options.create_mountpoint = true;
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
+                    launch_stdio_async),
+              NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
+    ASSERT_EQ(umount(mount_path), NO_ERROR, "");
+    ASSERT_TRUE(check_mounted_fs(mount_path, "memfs", strlen("memfs")), "");
+    ASSERT_EQ(destroy_ramdisk(ramdisk_path), 0, "");
+    ASSERT_EQ(unlink(mount_path), 0, "");
+    END_TEST;
+}
+
 static bool fmount_funmount(void) {
     const char* ramdisk_name = "mount_unmount";
     char ramdisk_path[PATH_MAX];
@@ -229,6 +253,7 @@ static bool mount_fsck(void) {
 
 BEGIN_TEST_CASE(fs_management_tests)
 RUN_TEST_MEDIUM(mount_unmount)
+RUN_TEST_MEDIUM(mount_mkdir_unmount)
 RUN_TEST_MEDIUM(fmount_funmount)
 RUN_TEST_MEDIUM(mount_evil_memfs)
 RUN_TEST_MEDIUM(mount_evil_minfs)

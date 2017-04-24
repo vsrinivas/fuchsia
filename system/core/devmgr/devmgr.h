@@ -16,10 +16,10 @@ void devmgr_handle_messages(void);
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
 void devmgr_vfs_exit(void);
-void devmgr_launch(mx_handle_t job, const char* name,
-                   int argc, const char* const* argv,
-                   const char** envp, int stdiofd,
-                   mx_handle_t* handles, uint32_t* types, size_t len);
+mx_status_t devmgr_launch(mx_handle_t job, const char* name,
+                          int argc, const char* const* argv,
+                          const char** envp, int stdiofd,
+                          mx_handle_t* handles, uint32_t* types, size_t len);
 void devmgr_launch_devhost(mx_handle_t job,
                            const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc);

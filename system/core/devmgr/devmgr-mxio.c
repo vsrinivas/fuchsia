@@ -53,10 +53,10 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 #define USER_MAX_HANDLES 4
 #define MAX_ENVP 16
 
-void devmgr_launch(mx_handle_t job, const char* name,
-                   int argc, const char* const* argv,
-                   const char** _envp, int stdiofd,
-                   mx_handle_t* handles, uint32_t* types, size_t hcount) {
+mx_status_t devmgr_launch(mx_handle_t job, const char* name,
+                          int argc, const char* const* argv,
+                          const char** _envp, int stdiofd,
+                          mx_handle_t* handles, uint32_t* types, size_t hcount) {
 
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
@@ -103,6 +103,7 @@ void devmgr_launch(mx_handle_t job, const char* name,
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
+    return status;
 }
 
 static void start_system_init(void) {

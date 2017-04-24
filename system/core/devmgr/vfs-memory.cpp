@@ -758,7 +758,6 @@ memfs::VnodeDir* vfs_create_global_root() {
         memfs_mount_locked(memfs::vfs_root, bootfs_get_root());
         memfs_mount_locked(memfs::vfs_root, memfs_get_root());
 
-        memfs_create_directory("/blobstore", 0);
         memfs_create_directory("/data", 0);
         memfs_create_directory("/volume", 0);
         memfs_create_directory("/dev/socket", 0);

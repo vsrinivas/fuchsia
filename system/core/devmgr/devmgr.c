@@ -67,23 +67,20 @@ static bool switch_to_first_vc(void) {
 
 static mx_status_t launch_blobstore(int argc, const char** argv, mx_handle_t* hnd,
                                     uint32_t* ids, size_t len) {
-    devmgr_launch(svcs_job_handle, "blobstore:/blobstore", argc, argv, NULL, -1,
-                  hnd, ids, len);
-    return NO_ERROR;
+    return devmgr_launch(svcs_job_handle, "blobstore:/blobstore", argc, argv, NULL, -1,
+                         hnd, ids, len);
 }
 
 static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
-    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, NULL, -1,
-                  hnd, ids, len);
-    return NO_ERROR;
+    return devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, NULL, -1,
+                         hnd, ids, len);
 }
 
 static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
-    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, NULL, -1,
-                  hnd, ids, len);
-    return NO_ERROR;
+    return devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, NULL, -1,
+                         hnd, ids, len);
 }
 
 static bool data_mounted = false;
@@ -112,10 +109,9 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
                 return ERR_ALREADY_BOUND;
             }
 
-            memfs_create_directory("/system", 0);
-
             options->readonly = true;
             options->wait_until_ready = true;
+            options->create_mountpoint = true;
 
             mx_status_t st = mount(fd, "/system", DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != NO_ERROR) {
@@ -174,7 +170,10 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return NO_ERROR;
     }
     case DISK_FORMAT_BLOBFS: {
-        mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &default_mount_options, launch_blobstore);
+        mount_options_t options;
+        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        options.create_mountpoint = true;
+        mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &options, launch_blobstore);
         return NO_ERROR;
     }
     case DISK_FORMAT_MINFS: {
@@ -198,6 +197,7 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         }
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        options.create_mountpoint = true;
         options.readonly = efi;
         static int fat_counter = 0;
         static int efi_counter = 0;
@@ -207,7 +207,6 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         } else {
             snprintf(mountpath, sizeof(mountpath), "/volume/fat-%d", fat_counter++);
         }
-        mkdir(mountpath, 0755);
         options.wait_until_ready = false;
         printf("devmgr: fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);

@@ -29,12 +29,16 @@ typedef struct mount_options {
     bool verbose_mount;
     // Ensures that requests to the mountpoint will be propagated to the underlying FS
     bool wait_until_ready;
+    // Create the mountpoint directory if it doesn't already exist.
+    // Must be false if passed to "fmount".
+    bool create_mountpoint;
 } mount_options_t;
 
 static const mount_options_t default_mount_options = {
     .readonly = false,
     .verbose_mount = false,
     .wait_until_ready = true,
+    .create_mountpoint = false,
 };
 
 typedef struct fsck_options {

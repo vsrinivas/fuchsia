@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifdef __Fuchsia__
-#include <magenta/syscalls.h>
-#endif
-
-#include <mxio/dispatcher.h>
-#include <mxio/remoteio.h>
-
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <mxio/dispatcher.h>
+#include <mxio/remoteio.h>
+#include <mxtl/auto_call.h>
+
 #ifdef __Fuchsia__
 #include <threads.h>
+#include <magenta/assert.h>
+#include <magenta/syscalls.h>
+#include <mxtl/auto_lock.h>
 #endif
-#include <unistd.h>
 
 #include "vfs-internal.h"
 
@@ -110,10 +110,6 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
         return r;
     }
 
-    if ((flags & O_CREAT) && (flags & O_NOREMOTE)) {
-        return ERR_INVALID_ARGS;
-    }
-
     size_t len = strlen(path);
     Vnode* vn;
 
@@ -147,14 +143,7 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
         if (r < 0) {
             return r;
         }
-        if (flags & O_NOREMOTE) {
-            // Opening a mount point: Do NOT traverse across remote.
-            if (!vn->IsRemote()) {
-                // There must be a remote handle mounted on this vnode.
-                vn->RefRelease();
-                return ERR_BAD_STATE;
-            }
-        } else if (vn->IsRemote() && !vn->IsDevice()) {
+        if (!(flags & O_NOREMOTE) && vn->IsRemote() && !vn->IsDevice()) {
             // Opening a mount point: Traverse across remote.
             // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
@@ -258,9 +247,9 @@ ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
             return ERR_INVALID_ARGS;
         }
-        mx_handle_t h = *(mx_handle_t*)in_buf;
-        mx_status_t status;
-        if ((status = Vfs::InstallRemote(vn, h)) < 0) {
+        mx_handle_t h = *reinterpret_cast<const mx_handle_t*>(in_buf);
+        mx_status_t status = Vfs::InstallRemote(vn, h);
+        if (status < 0) {
             // If we can't install the filesystem, we shoot off a quick "unmount"
             // signal to the filesystem process, since we are the owner of its
             // root handle.
@@ -268,9 +257,52 @@ ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
             // so they can decide what to do with it.
             vfs_unmount_handle(h, 0);
             mx_handle_close(h);
-            return status;
         }
-        return NO_ERROR;
+        return status;
+    }
+    case IOCTL_DEVMGR_MOUNT_MKDIR_FS: {
+        size_t namelen = in_len - sizeof(mount_mkdir_config_t);
+        const mount_mkdir_config_t* config = reinterpret_cast<const mount_mkdir_config_t*>(in_buf);
+        const char* name = config->name;
+        if ((in_len < sizeof(mount_mkdir_config_t)) ||
+            (namelen < 1) || (namelen > PATH_MAX) || (name[namelen - 1] != 0) ||
+            (out_len != 0)) {
+            return ERR_INVALID_ARGS;
+        }
+        mxtl::AutoLock lock(&vfs_lock);
+        mx_status_t r = Open(vn, &vn, name, &name,
+                             O_CREAT | O_RDWR | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
+        MX_DEBUG_ASSERT(r <= NO_ERROR); // Should not be accessing remote nodes
+        if (r < 0) {
+            return r;
+        }
+        // Undo the open once we're done with the ioctl
+        auto ac = mxtl::MakeAutoCall([&vn](){ vn->RefRelease(); });
+        if (vn->IsRemote()) {
+            if (config->flags & MOUNT_MKDIR_FLAG_REPLACE) {
+                // There is an old remote handle on this vnode; shut it down and
+                // replace it with our own.
+                mx_handle_t old_remote;
+                Vfs::UninstallRemote(vn, &old_remote);
+                vfs_unmount_handle(old_remote, 0);
+                mx_handle_close(old_remote);
+            } else {
+                return ERR_BAD_STATE;
+            }
+        }
+        // Lock already held; don't lock again
+        mx_handle_t h = config->fs_root;
+        mx_status_t status = Vfs::InstallRemoteLocked(vn, h);
+        if (status < 0) {
+            // If we can't install the filesystem, we shoot off a quick "unmount"
+            // signal to the filesystem process, since we are the owner of its
+            // root handle.
+            // TODO(smklein): Transfer the mountpoint back to the caller on error,
+            // so they can decide what to do with it.
+            vfs_unmount_handle(h, 0);
+            mx_handle_close(h);
+        }
+        return status;
     }
     case IOCTL_DEVMGR_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {

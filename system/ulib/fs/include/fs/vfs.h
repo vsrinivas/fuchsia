@@ -239,10 +239,13 @@ struct Vfs {
     static ssize_t Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len);
 
+#ifdef __Fuchsia__
     // Pins a handle to a remote filesystem onto a vnode, if possible.
     static mx_status_t InstallRemote(Vnode* vn, mx_handle_t h);
+    static mx_status_t InstallRemoteLocked(Vnode* vn, mx_handle_t h) __TA_REQUIRES(vfs_lock);
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
     static mx_status_t UninstallRemote(Vnode* vn, mx_handle_t* h);
+#endif  // ifdef __Fuchsia__
 };
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,

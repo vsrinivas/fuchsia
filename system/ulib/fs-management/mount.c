@@ -61,7 +61,7 @@ disk_format_t detect_disk_format(int fd) {
     return DISK_FORMAT_UNKNOWN;
 }
 
-// Initializes 'hnd' and 'ids' with the mountpoint handle and block device handle.
+// Initializes 'hnd' and 'ids' with the root handle and block device handle.
 // Consumes devicefd.
 static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle_out,
                                          mx_handle_t* hnd, uint32_t* ids, size_t* n) {
@@ -86,10 +86,20 @@ static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle
     return NO_ERROR;
 }
 
+// Describes the mountpoint of the to-be-mounted root,
+// either by fd or by path (but never both).
+typedef struct mountpoint {
+    union {
+        const char* path;
+        int fd;
+    };
+    uint32_t flags;
+} mountpoint_t;
+
 // Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.
 static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* options,
                                     const char** argv, int argc, mx_handle_t* hnd,
-                                    uint32_t* ids, size_t n, int fd, mx_handle_t mountpoint) {
+                                    uint32_t* ids, size_t n, mountpoint_t* mp, mx_handle_t root) {
     mx_status_t status;
     if ((status = cb(argc, argv, hnd, ids, n)) != NO_ERROR) {
         return status;
@@ -98,7 +108,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
     if (options->wait_until_ready) {
         // Wait until the filesystem is ready to take incoming requests
         mx_signals_t observed;
-        status = mx_object_wait_one(mountpoint, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+        status = mx_object_wait_one(root, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                     MX_TIME_INFINITE, &observed);
         if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
             status = (status != NO_ERROR) ? status : ERR_BAD_STATE;
@@ -107,11 +117,34 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
     }
 
     // Install remote handle.
-    if ((status = ioctl_devmgr_mount_fs(fd, &mountpoint)) != NO_ERROR) {
-        // TODO(smklein): Retreive the mountpoint handle if mounting fails.
+    if (options->create_mountpoint) {
+        int fd = open("/", O_DIRECTORY | O_RDWR);
+        if (fd < 0) {
+            goto fail;
+        }
+
+        size_t config_size = sizeof(mount_mkdir_config_t) + strlen(mp->path) + 1;
+        mount_mkdir_config_t* config = malloc(config_size);
+        if (config == NULL) {
+            close(fd);
+            goto fail;
+        }
+        config->fs_root = root;
+        config->flags = mp->flags;
+        strcpy(config->name, mp->path);
+        status = ioctl_devmgr_mount_mkdir_fs(fd, config, config_size);
         // Currently, the recipient of the ioctl is sending the unmount signal
         // if an error occurs.
+        close(fd);
+        free(config);
         return status;
+    } else {
+        if ((status = ioctl_devmgr_mount_fs(mp->fd, &root)) != NO_ERROR) {
+            // TODO(smklein): Retreive the root handle if mounting fails.
+            // Currently, the recipient of the ioctl is sending the unmount signal
+            // if an error occurs.
+            return status;
+        }
     }
 
     return NO_ERROR;
@@ -124,18 +157,18 @@ fail:
     //
     // The unmount process is a little atypical, since we're just sending a signal over a handle,
     // rather than detaching the mounted filesytem from the "parent" filesystem.
-    vfs_unmount_handle(mountpoint, options->wait_until_ready ? MX_TIME_INFINITE : 0);
+    vfs_unmount_handle(root, options->wait_until_ready ? MX_TIME_INFINITE : 0);
     return status;
 }
 
-static mx_status_t mount_mxfs(const char* binary, int devicefd, int mountfd,
+static mx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp,
                               const mount_options_t* options, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
-    mx_handle_t mountpoint;
+    mx_handle_t root;
     mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != NO_ERROR) {
         return status;
     }
 
@@ -143,17 +176,17 @@ static mx_status_t mount_mxfs(const char* binary, int devicefd, int mountfd,
         printf("fs_mount: Launching %s\n", binary);
     }
     const char* argv[] = { binary, "mount" };
-    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mountfd, mountpoint);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
 }
 
-static mx_status_t mount_fat(int devicefd, int mountfd, const mount_options_t* options,
+static mx_status_t mount_fat(int devicefd, mountpoint_t* mp, const mount_options_t* options,
                              LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
-    mx_handle_t mountpoint;
+    mx_handle_t root;
     mx_status_t status;
-    if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
+    if ((status = mount_prepare_handles(devicefd, &root, hnd, ids, &n)) != NO_ERROR) {
         return status;
     }
 
@@ -172,33 +205,52 @@ static mx_status_t mount_fat(int devicefd, int mountfd, const mount_options_t* o
         blockfd_arg,
         "mount",
     };
-    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mountfd, mountpoint);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
 }
 
-mx_status_t fmount(int devicefd, int mountfd, disk_format_t df, const mount_options_t* options,
-                   LaunchCallback cb) {
+mx_status_t fmount_common(int devicefd, mountpoint_t* mp, disk_format_t df,
+                          const mount_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mount_mxfs("/boot/bin/minfs", devicefd, mountfd, options, cb);
+        return mount_mxfs("/boot/bin/minfs", devicefd, mp, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return mount_mxfs("/boot/bin/blobstore", devicefd, mountfd, options, cb);
+        return mount_mxfs("/boot/bin/blobstore", devicefd, mp, options, cb);
     case DISK_FORMAT_FAT:
-        return mount_fat(devicefd, mountfd, options, cb);
+        return mount_fat(devicefd, mp, options, cb);
     default:
         close(devicefd);
         return ERR_NOT_SUPPORTED;
     }
 }
 
+mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
+                   const mount_options_t* options, LaunchCallback cb) {
+    mountpoint_t mp;
+    mp.fd = mountfd;
+    mp.flags = 0;
+
+    return fmount_common(devicefd, &mp, df, options, cb);
+}
+
 mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb) {
-    int fd;
-    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
-        return ERR_BAD_STATE;
+    mountpoint_t mp;
+    mp.flags = 0;
+
+    if (options->create_mountpoint) {
+        // Using 'path' for mountpoint
+        mp.path = mountpath;
+    } else {
+        // Open mountpoint; use it directly
+        if ((mp.fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
+            return ERR_BAD_STATE;
+        }
     }
 
-    mx_status_t status = fmount(devicefd, fd, df, options, cb);
-    close(fd);
+    mx_status_t status = fmount_common(devicefd, &mp, df, options, cb);
+    if (!options->create_mountpoint) {
+        close(mp.fd);
+    }
     return status;
 }
 
