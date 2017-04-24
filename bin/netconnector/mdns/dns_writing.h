@@ -4,11 +4,19 @@
 
 #pragma once
 
+#include <memory>
+
 #include "apps/netconnector/src/mdns/dns_message.h"
 #include "apps/netconnector/src/mdns/packet_writer.h"
 
 namespace netconnector {
 namespace mdns {
+
+template <typename T>
+PacketWriter& operator<<(PacketWriter& writer,
+                         const std::shared_ptr<T>& value) {
+  return writer << *value;
+}
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsName& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsV4Address& value);

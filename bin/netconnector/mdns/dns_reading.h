@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "apps/netconnector/src/mdns/dns_message.h"
 #include "apps/netconnector/src/mdns/packet_reader.h"
 
@@ -14,6 +16,12 @@ namespace mdns {
 // whose 'bytes remaining' has been set to the length of the item to be read.
 // This is their size needs to be known in order to read them. See the overload
 // for DnsResource to see how this is done.
+
+template <typename T>
+PacketReader& operator>>(PacketReader& reader, std::shared_ptr<T>& value) {
+  value = std::make_shared<T>();
+  return reader >> *value;
+}
 
 PacketReader& operator>>(PacketReader& reader, DnsName& value);
 PacketReader& operator>>(PacketReader& reader, DnsV4Address& value);

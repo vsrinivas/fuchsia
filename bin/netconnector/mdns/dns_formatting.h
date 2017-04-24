@@ -6,6 +6,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <memory>
 
 #include "apps/netconnector/src/mdns/dns_message.h"
 
@@ -32,6 +33,11 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
 template <>
 std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value);
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::shared_ptr<T>& value) {
+  return os << *value;
+}
 
 std::ostream& operator<<(std::ostream& os, DnsType value);
 std::ostream& operator<<(std::ostream& os, DnsClass value);

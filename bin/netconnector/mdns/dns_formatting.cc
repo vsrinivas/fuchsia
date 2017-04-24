@@ -145,7 +145,8 @@ std::ostream& operator<<(std::ostream& os, const DnsHeader& value) {
   os << std::endl;
   os << indent;
   os << begl << "id: " << value.id_ << std::endl;
-  os << begl << "flags: " << value.flags_;
+  os << begl << "flags: 0x" << std::hex << std::setw(4) << std::setfill('0')
+     << value.flags_ << std::dec;
   return os << outdent;
 }
 
@@ -173,7 +174,7 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataCName& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataPtr& value) {
-  return os << begl << "canonical_name: " << value.pointer_domain_name_;
+  return os << begl << "pointer_domain_name_: " << value.pointer_domain_name_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {
