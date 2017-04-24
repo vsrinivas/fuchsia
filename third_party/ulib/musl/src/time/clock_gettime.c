@@ -11,6 +11,7 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
     uint32_t mx_clock;
     switch (clk) {
     case CLOCK_MONOTONIC:
+    case CLOCK_MONOTONIC_RAW:
         mx_clock = MX_CLOCK_MONOTONIC;
         break;
     case CLOCK_REALTIME:
