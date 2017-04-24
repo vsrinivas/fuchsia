@@ -23,7 +23,6 @@ EscherDemoModule _module;
 class EscherDemoModule extends Module {
   final ModuleBinding _binding = new ModuleBinding();
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
-  final LinkProxy _link = new LinkProxy();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -33,18 +32,15 @@ class EscherDemoModule extends Module {
   @override
   void initialize(
       InterfaceHandle<ModuleContext> moduleContextHandle,
-      InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _link.ctrl.bind(linkHandle);
     incomingServices?.close();
     outgoingServices?.close();
   }
 
   @override
   void stop(void callback()) {
-    _link.ctrl.close();
     _moduleContext.ctrl.close();
 
     callback();
@@ -77,7 +73,7 @@ void main() {
     _module._moduleContext.startModule(
         'Escher Demo',
         'file:///system/apps/$appName',
-        _module._link.ctrl.unbind(),
+        null, // pass our default link to the child
         null, // outgoing services
         incoming_services.ctrl.request(),
         moduleControllerPair.passRequest(),

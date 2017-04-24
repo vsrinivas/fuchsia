@@ -96,7 +96,6 @@ void DemoHarnessFuchsia::HandleTouchEnd(uint64_t touch_id,
 // |Module|
 void DemoHarnessFuchsia::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceHandle<modular::Link> link,
     fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
   module_context_.Bind(std::move(module_context));
