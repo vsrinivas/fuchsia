@@ -52,7 +52,6 @@ class App : public modular::Module {
   // modular::Module:
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context_handle,
-      fidl::InterfaceHandle<modular::Link> link_handle,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     fidl::InterfacePtr<modular::ModuleContext> module_context;
