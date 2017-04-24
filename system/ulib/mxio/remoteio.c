@@ -708,9 +708,9 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
     }
     case MXIO_PROTOCOL_SOCKET: {
         if (hcount == 1) {
-            io = mxio_socket_create(handles[0], MX_HANDLE_INVALID);
+            io = mxio_socket_create(handles[0], MX_HANDLE_INVALID, 0);
         } else if (hcount == 2) {
-            io = mxio_socket_create(handles[0], handles[1]);
+            io = mxio_socket_create(handles[0], handles[1], 0);
         } else {
             r = ERR_INVALID_ARGS;
             break;
@@ -963,6 +963,26 @@ static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int fl
         }
     }
     return total;
+}
+
+static mx_status_t mxsio_unwrap_stream(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    // TODO: support unconnected sockets
+    if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
+        return ERR_NOT_SUPPORTED;
+    }
+    mxrio_t* rio = (void*)io;
+    mx_status_t r;
+    handles[0] = rio->h;
+    types[0] = MX_HND_TYPE_MXIO_SOCKET;
+    if (rio->h2 != 0) {
+        handles[1] = rio->h2;
+        types[1] = MX_HND_TYPE_MXIO_SOCKET;
+        r = 2;
+    } else {
+        r = 1;
+    }
+    free(io);
+    return r;
 }
 
 static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
@@ -1279,7 +1299,7 @@ static mxio_ops_t mxio_socket_stream_ops = {
     .ioctl = mxrio_ioctl,
     .wait_begin = mxsio_wait_begin_stream,
     .wait_end = mxsio_wait_end_stream,
-    .unwrap = mxio_default_unwrap,
+    .unwrap = mxsio_unwrap_stream,
     .posix_ioctl = mxsio_posix_ioctl_stream,
     .get_vmo = mxio_default_get_vmo,
 };
@@ -1302,7 +1322,7 @@ static mxio_ops_t mxio_socket_dgram_ops = {
     .get_vmo = mxio_default_get_vmo,
 };
 
-mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {
+mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s, int flags) {
     mxrio_t* rio = calloc(1, sizeof(*rio));
     if (rio == NULL) {
         mx_handle_close(h);
@@ -1312,7 +1332,7 @@ mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {
     rio->io.ops = &mxio_socket_stream_ops; // default is stream
     rio->io.magic = MXIO_MAGIC;
     rio->io.refcount = 1;
-    rio->io.flags |= MXIO_FLAG_SOCKET;
+    rio->io.flags = MXIO_FLAG_SOCKET | flags;
     rio->h = h;
     rio->h2 = s;
     return &rio->io;

@@ -131,7 +131,7 @@ mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len);
 
 // Wraps a socket with an mxio_t using socket io.
 // Takes ownership of h and s.
-mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s);
+mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s, int flags);
 
 // creates a message port and pair of simple io mxio_t's
 int mxio_pipe_pair(mxio_t** a, mxio_t** b);

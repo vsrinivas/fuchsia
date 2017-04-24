@@ -504,6 +504,17 @@ void __libc_extensions_init(uint32_t handle_count,
             mxio_fdtab[arg] = mxio_logger_create(h);
             mxio_fdtab[arg]->dupcount++;
             break;
+        case MX_HND_TYPE_MXIO_SOCKET:
+            // socket objects have a second handle
+            if (((n + 1) < handle_count) &&
+                (handle_info[n] == handle_info[n + 1])) {
+                mxio_fdtab[arg] = mxio_socket_create(h, handle[n + 1], MXIO_FLAG_SOCKET_CONNECTED);
+                handle_info[n + 1] = 0;
+                mxio_fdtab[arg]->dupcount++;
+            } else {
+                mx_handle_close(h);
+            }
+            break;
         case MX_HND_TYPE_SERVICE_ROOT:
             mxio_svc_root = h;
             // do not remove handle, so it is available
