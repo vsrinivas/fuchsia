@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #include <assert.h>
 #include <magenta/compiler.h>
 #include <debug.h>
@@ -32,12 +31,10 @@
 
 #define LOCAL_TRACE 0
 
-struct x86_percpu bp_percpu = {
-    .cpu_num = 0,
-    .direct = &bp_percpu,
-    /* Start with an invalid id until we know the local APIC is setup */
-    .apic_id = INVALID_APIC_ID,
-};
+// put the boot cpu percpu structure in .data since we get initialized before
+// the bss clearing code runs.
+__SECTION(".data") struct x86_percpu bp_percpu;
+
 static struct x86_percpu *ap_percpus;
 uint8_t x86_num_cpus = 1;
 
@@ -53,7 +50,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     }
 
     if (cpu_count > 1) {
-        ap_percpus = calloc(sizeof(*ap_percpus), cpu_count - 1);
+        ap_percpus = (x86_percpu *)calloc(sizeof(*ap_percpus), cpu_count - 1);
         if (ap_percpus == NULL) {
             return ERR_NO_MEMORY;
         }
@@ -81,11 +78,16 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     return NO_ERROR;
 }
 
-__NO_SAFESTACK uintptr_t x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
+__NO_SAFESTACK uintptr_t x86_init_percpu(uint cpu_num, uintptr_t unsafe_sp)
 {
     struct x86_percpu *percpu;
     if (cpu_num == 0) {
         percpu = &bp_percpu;
+
+        percpu->cpu_num = 0;
+        percpu->direct = &bp_percpu;
+        /* Start with an invalid id until we know the local APIC is setup */
+        percpu->apic_id = INVALID_APIC_ID;
     } else {
         percpu = &ap_percpus[cpu_num - 1];
     }
@@ -141,8 +143,6 @@ __NO_SAFESTACK uintptr_t x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp)
     x86_tsc_adjust();
 
     /* load the syscall entry point */
-    extern void x86_syscall(void);
-
     write_msr(X86_MSR_IA32_LSTAR, (uint64_t)&x86_syscall);
 
     /* set the STAR MSR to load the appropriate kernel code selector on syscall
@@ -253,7 +253,7 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
             vector = X86_INT_IPI_HALT;
             break;
         default:
-            panic("Unexpected MP IPI value: %u", ipi);
+            panic("Unexpected MP IPI value: %u", (uint)ipi);
     }
 
     if (target == MP_CPU_ALL_BUT_LOCAL) {
@@ -283,7 +283,7 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
             }
             /* Make sure the CPU is actually up before sending the IPI */
             if (percpu->apic_id != INVALID_APIC_ID) {
-                apic_send_ipi(vector, percpu->apic_id, DELIVERY_MODE_FIXED);
+                apic_send_ipi(vector, (uint8_t)percpu->apic_id, DELIVERY_MODE_FIXED);
             }
         }
         remaining >>= 1;
@@ -337,7 +337,8 @@ status_t arch_mp_cpu_unplug(uint cpu_id)
         return ERR_UNAVAILABLE;
     }
 
-    apic_send_ipi(0, dst_apic_id, DELIVERY_MODE_INIT);
+    DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
+    apic_send_ipi(0, (uint8_t)dst_apic_id, DELIVERY_MODE_INIT);
     return NO_ERROR;
 }
 
@@ -367,7 +368,7 @@ void arch_flush_state_and_halt(event_t *flush_done)
     DEBUG_ASSERT(arch_ints_disabled());
 
     // Enter no-fill cache mode (see Intel 3A section 11.5.3)
-    uint32_t cr0 = x86_get_cr0();
+    ulong cr0 = x86_get_cr0();
     cr0 |= X86_CR0_CD;
     cr0 &= ~X86_CR0_NW;
     x86_set_cr0(cr0);

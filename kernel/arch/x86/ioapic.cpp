@@ -114,7 +114,7 @@ void apic_io_init(
     ASSERT(io_apics == NULL);
 
     num_io_apics = num_io_apic_descs;
-    io_apics = calloc(num_io_apics, sizeof(*io_apics));
+    io_apics = (io_apic *)calloc(num_io_apics, sizeof(*io_apics));
     ASSERT(io_apics != NULL);
     for (unsigned int i = 0; i < num_io_apics; ++i) {
         io_apics[i].desc = io_apic_descs[i];
@@ -143,7 +143,7 @@ void apic_io_init(
                     ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
                         ARCH_MMU_FLAG_UNCACHED_DEVICE); // arch mmu flags
             ASSERT(res == NO_ERROR);
-            vaddr += paddr - paddr_page_base;
+            vaddr = (void *)((uintptr_t)vaddr + paddr - paddr_page_base);
         }
 
         // Populate the rest of the descriptor
@@ -234,10 +234,10 @@ static uint64_t apic_io_read_redirection_entry(
     uint32_t offset = global_irq - io_apic->desc.global_irq_base;
     ASSERT(offset <= io_apic->max_redirection_entry);
 
-    uint8_t reg_id = IO_APIC_REG_RTE(offset);
+    uint8_t reg_id = (uint8_t)IO_APIC_REG_RTE(offset);
     uint64_t result = 0;
     result |= apic_io_read_reg(io_apic, reg_id);
-    result |= ((uint64_t)apic_io_read_reg(io_apic, reg_id + 1)) << 32;
+    result |= ((uint64_t)apic_io_read_reg(io_apic, (uint8_t)(reg_id + 1))) << 32;
     return result;
 }
 
@@ -252,9 +252,9 @@ static void apic_io_write_redirection_entry(
     uint32_t offset = global_irq - io_apic->desc.global_irq_base;
     ASSERT(offset <= io_apic->max_redirection_entry);
 
-    uint8_t reg_id = IO_APIC_REG_RTE(offset);
+    uint8_t reg_id = (uint8_t)IO_APIC_REG_RTE(offset);
     apic_io_write_reg(io_apic, reg_id, (uint32_t)value);
-    apic_io_write_reg(io_apic, reg_id + 1, (uint32_t)(value >> 32));
+    apic_io_write_reg(io_apic, (uint8_t)(reg_id + 1), (uint32_t)(value >> 32));
 }
 
 bool apic_io_is_valid_irq(uint32_t global_irq)

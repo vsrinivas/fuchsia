@@ -24,7 +24,8 @@
 
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
-    status_t status = x86_allocate_ap_structures(apic_ids, num_cpus);
+    DEBUG_ASSERT(num_cpus <= UINT8_MAX);
+    status_t status = x86_allocate_ap_structures(apic_ids, (uint8_t)num_cpus);
     if (status != NO_ERROR) {
         TRACEF("Failed to allocate structures for APs");
         return;
@@ -60,7 +61,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
             &bootstrap_aspace,
             (void **)&bootstrap_data);
     if (status != NO_ERROR) {
-        goto finish;
+        return status;
     }
 
     bootstrap_data->cpu_id_counter = 0;
@@ -70,7 +71,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
     for (unsigned int i = 0; i < count; ++i) {
-        thread_t *thread = memalign(16,
+        thread_t *thread = (thread_t *)memalign(16,
                                     ROUNDUP(sizeof(thread_t), 16) +
 #if __has_feature(safe_stack)
                                     PAGE_SIZE +
@@ -104,7 +105,8 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
 
     // Actually send the startups
     ASSERT(PHYS_BOOTSTRAP_PAGE < 1 * MB);
-    uint8_t vec = PHYS_BOOTSTRAP_PAGE >> PAGE_SIZE_SHIFT;
+    uint8_t vec;
+    vec = PHYS_BOOTSTRAP_PAGE >> PAGE_SIZE_SHIFT;
     // Try up to two times per CPU, as Intel 3A recommends.
     for (int tries = 0; tries < 2; ++tries) {
         for (unsigned int i = 0; i < count; ++i) {
@@ -132,7 +134,8 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
         thread_sleep_relative(LK_MSEC(5));
     }
 
-    uint failed_aps = (uint)atomic_swap(&aps_still_booting, 0);
+    uint failed_aps;
+    failed_aps = (uint)atomic_swap(&aps_still_booting, 0);
     if (failed_aps != 0) {
         printf("Failed to boot CPUs: mask %x\n", failed_aps);
         for (uint i = 0; i < count; ++i) {
@@ -176,8 +179,7 @@ cleanup_allocations:
     }
 cleanup_aspace:
     vmm_free_aspace(bootstrap_aspace);
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_data);
+    vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)bootstrap_data);
 finish:
     return status;
 }

@@ -56,6 +56,8 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
                         uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
                         uint64_t syscall_num, uint64_t ip);
 
+void x86_syscall(void);
+
 /* @brief Register all of the CPUs in the system
  *
  * Must be called only once.

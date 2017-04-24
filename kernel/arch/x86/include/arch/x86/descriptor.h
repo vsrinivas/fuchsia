@@ -59,10 +59,6 @@ __BEGIN_CDECLS
 typedef uint16_t seg_sel_t;
 
 /* fill in a descriptor in the GDT */
-void set_global_desc_32(seg_sel_t sel, uint32_t base, uint32_t limit,
-                        uint8_t present, uint8_t ring, uint8_t sys,
-                        uint8_t type, uint8_t gran, uint8_t bits);
-
 void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
                         uint8_t present, uint8_t ring, uint8_t sys,
                         uint8_t type, uint8_t gran, uint8_t bits);

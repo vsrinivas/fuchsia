@@ -124,8 +124,8 @@ void x86_pat_sync(mp_cpu_mask_t targets)
     targets &= mp_get_online_mask();
 
     struct pat_sync_task_context context = {
-        .barrier1 = targets,
-        .barrier2 = targets,
+        .barrier1 = (int)targets,
+        .barrier2 = (int)targets,
     };
     /* Step 1: Broadcast to all processors to execute the sequence */
     mp_sync_exec(targets, x86_pat_sync_task, &context);
@@ -136,7 +136,7 @@ static void x86_pat_sync_task(void *raw_context)
     /* Step 2: Disable interrupts */
     DEBUG_ASSERT(arch_ints_disabled());
 
-    struct pat_sync_task_context *context = raw_context;
+    struct pat_sync_task_context *context = (struct pat_sync_task_context *)raw_context;
 
     uint cpu = arch_curr_cpu_num();
 

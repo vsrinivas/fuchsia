@@ -37,7 +37,7 @@ uint8_t apic_local_id(void);
 void apic_irq_set(unsigned int vector, bool enable);
 void apic_send_ipi(
         uint8_t vector,
-        uint8_t dst_apic_id,
+        uint32_t dst_apic_id,
         enum apic_interrupt_delivery_mode dm);
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_send_broadcast_ipi(

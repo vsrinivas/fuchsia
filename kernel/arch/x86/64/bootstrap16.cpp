@@ -13,6 +13,7 @@
 #include <arch/x86/mp.h>
 #include <assert.h>
 #include <err.h>
+#include <mxtl/auto_call.h>
 #include <string.h>
 #include <trace.h>
 
@@ -45,6 +46,14 @@ status_t x86_bootstrap16_prep(
     if (status != NO_ERROR) {
         return status;
     }
+
+    // add an auto caller to clean up the address space on the way out
+    auto ac = mxtl::MakeAutoCall([&]() {
+        vmm_free_aspace(bootstrap_aspace);
+        if (bootstrap_virt_addr) {
+            vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_virt_addr);
+        }
+    });
 
     // GDTR referring to identity-mapped gdt
     extern uint8_t _gdtr_phys;
@@ -83,7 +92,7 @@ status_t x86_bootstrap16_prep(
                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
         if (status != NO_ERROR) {
             TRACEF("Failed to create wakeup bootstrap aspace\n");
-            goto cleanup_aspace;
+            return status;
         }
     }
 
@@ -101,38 +110,36 @@ status_t x86_bootstrap16_prep(
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE); // arch mmu flags
     if (status != NO_ERROR) {
         TRACEF("could not allocate AP bootstrap page: %d\n", status);
-        goto cleanup_aspace;
+        return status;
     }
     DEBUG_ASSERT(bootstrap_virt_addr != NULL);
     uintptr_t bootstrap_code_len = (uintptr_t)x86_bootstrap16_end -
             (uintptr_t)x86_bootstrap16_start;
     DEBUG_ASSERT(bootstrap_code_len <= PAGE_SIZE);
     // Copy the bootstrap code in
-    memcpy(bootstrap_virt_addr, x86_bootstrap16_start, bootstrap_code_len);
+    memcpy(bootstrap_virt_addr, (const void *)x86_bootstrap16_start, bootstrap_code_len);
 
     // Configuration data shared with the APs to get them to 64-bit mode
-    struct x86_bootstrap16_data *bootstrap_data = bootstrap_virt_addr + 0x1000;
+    struct x86_bootstrap16_data *bootstrap_data =
+        (struct x86_bootstrap16_data *)((uintptr_t)bootstrap_virt_addr + 0x1000);
 
-    uint32_t long_mode_entry = bootstrap_phys_addr +
+    uintptr_t long_mode_entry = bootstrap_phys_addr +
             (entry64 - (uintptr_t)x86_bootstrap16_start);
 
-    bootstrap_data->phys_bootstrap_pml4 =
-            vmm_get_arch_aspace(bootstrap_aspace)->pt_phys;
-    bootstrap_data->phys_kernel_pml4 = x86_get_cr3();
+    uint64_t phys_bootstrap_pml4 = vmm_get_arch_aspace(bootstrap_aspace)->pt_phys;
+    bootstrap_data->phys_bootstrap_pml4 = (uint32_t)phys_bootstrap_pml4;
+    bootstrap_data->phys_kernel_pml4 = (uint32_t)x86_get_cr3();
     memcpy(bootstrap_data->phys_gdtr,
            &_gdtr_phys,
            sizeof(bootstrap_data->phys_gdtr));
-    bootstrap_data->phys_long_mode_entry = long_mode_entry;
+    bootstrap_data->phys_long_mode_entry = (uint32_t)long_mode_entry;
     bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 
-    *bootstrap_aperature = bootstrap_virt_addr + 0x1000;
+    *bootstrap_aperature = (void *)((uintptr_t)bootstrap_virt_addr + 0x1000);
     *temp_aspace = bootstrap_aspace;
-    return NO_ERROR;
 
-cleanup_aspace:
-    vmm_free_aspace(bootstrap_aspace);
-    if (bootstrap_virt_addr) {
-        vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_virt_addr);
-    }
-    return status;
+    // cancel the cleanup autocall, since we're returning the new aspace and region
+    ac.cancel();
+
+    return NO_ERROR;
 }

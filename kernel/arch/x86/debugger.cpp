@@ -20,7 +20,7 @@ uint arch_num_regsets(void)
 
 static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
-    mx_x86_64_general_regs_t *gr = grp;
+    mx_x86_64_general_regs_t *gr = (mx_x86_64_general_regs_t *)grp;
 
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*gr);
@@ -65,7 +65,7 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
 
 static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
-    const mx_x86_64_general_regs_t *gr = grp;
+    const mx_x86_64_general_regs_t *gr = (const mx_x86_64_general_regs_t *)grp;
 
     if (buf_size != sizeof(*gr))
         return ERR_INVALID_ARGS;

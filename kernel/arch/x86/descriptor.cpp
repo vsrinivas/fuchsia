@@ -34,7 +34,7 @@ struct task_desc {
 void x86_initialize_percpu_tss(void)
 {
     struct x86_percpu *percpu = x86_get_percpu();
-    uint8_t cpu_num = percpu->cpu_num;
+    uint cpu_num = percpu->cpu_num;
     tss_t *tss = &percpu->default_tss;
     memset(tss, 0, sizeof(*tss));
 
@@ -65,57 +65,9 @@ void x86_set_tss_sp(vaddr_t sp)
 
 void x86_clear_tss_busy(seg_sel_t sel)
 {
-    uint16_t index = sel >> 3;
+    uint index = sel >> 3;
     struct task_desc *desc = (struct task_desc *)(_gdt + index * 8);
     desc->low &= ~TSS_DESC_BUSY_BIT;
-}
-
-void set_global_desc_32(seg_sel_t sel, uint32_t base, uint32_t limit,
-                                      uint8_t present, uint8_t ring, uint8_t sys,
-                                      uint8_t type, uint8_t gran, uint8_t bits)
-{
-    // 16/32 bit descriptor structure
-    struct seg_desc_32 {
-        uint16_t limit_15_0;
-        uint16_t base_15_0;
-        uint8_t base_23_16;
-
-        uint8_t type : 4;
-        uint8_t s : 1;
-        uint8_t dpl : 2;
-        uint8_t p : 1;
-
-        uint8_t limit_19_16 : 4;
-        uint8_t avl : 1;
-        uint8_t reserved_0 : 1;
-        uint8_t d_b : 1;
-        uint8_t g : 1;
-
-        uint8_t base_31_24;
-    } __PACKED;
-
-    struct seg_desc_32 entry = {};
-
-    entry.limit_15_0 = limit & 0x0000ffff;
-    entry.limit_19_16 = (limit & 0x000f0000) >> 16;
-
-    entry.base_15_0 = base & 0x0000ffff;
-    entry.base_23_16 = (base & 0x00ff0000) >> 16;
-    entry.base_31_24 = base >> 24;
-
-    entry.type = type & 0x0f; // segment type
-    entry.p = present != 0;   // present
-    entry.dpl = ring & 0x03;  // descriptor privilege level
-    entry.g = gran != 0;      // granularity
-    entry.s = sys != 0;       // system / non-system
-    entry.d_b = bits != 0;    // 16 / 32 bit
-
-    // copy it into the appropriate entry
-    uint16_t index = sel >> 3;
-
-    // index is in units of 8 bytes into the gdt table
-    struct seg_desc_32 *g = (struct seg_desc_32 *)(_gdt + index * 8);
-    *g = entry;
 }
 
 void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
@@ -153,7 +105,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     entry.base_15_0 = base & 0x0000ffff;
     entry.base_23_16 = (base & 0x00ff0000) >> 16;
     entry.base_31_24 = (base & 0xff000000) >> 24;
-    entry.base_63_32 = base >> 32;
+    entry.base_63_32 = (uint32_t)(base >> 32);
 
     entry.type = type & 0x0f; // segment type
     entry.p = present != 0;   // present
@@ -163,7 +115,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     entry.d_b = bits != 0;    // 16 / 32 bit
 
     // copy it into the appropriate entry
-    uint16_t index = sel >> 3;
+    uint index = sel >> 3;
 
     // for x86_64 index is still in units of 8 bytes into the gdt table
     struct seg_desc_64 *g = (struct seg_desc_64 *)(_gdt + index * 8);

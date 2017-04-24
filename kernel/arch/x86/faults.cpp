@@ -16,6 +16,8 @@
 #include <kernel/thread.h>
 #include <platform.h>
 
+#include <mxtl/auto_call.h>
+
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
@@ -72,7 +74,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 {
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
-        struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
+        struct arch_exception_context context = { false, frame, 0 };
         arch_set_in_int_handler(false);
         arch_enable_ints();
         status_t erc = magenta_exception_handler(kind, &context, frame->ip);
@@ -96,7 +98,8 @@ static void x86_debug_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
-extern void platform_handle_watchdog(void);
+extern "C" void platform_handle_watchdog(void);
+
 static void x86_nmi_handler(x86_iframe_t *frame)
 {
     platform_handle_watchdog();
@@ -165,7 +168,7 @@ static void x86_unhandled_exception(x86_iframe_t *frame)
 
 static void x86_dump_pfe(x86_iframe_t *frame, ulong cr2)
 {
-    uint32_t error_code = frame->err_code;
+    uint64_t error_code = frame->err_code;
 
     addr_t v_addr = cr2;
     addr_t ssp = frame->user_ss & X86_8BYTE_MASK;
@@ -196,7 +199,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
 {
     x86_dump_pfe(frame, cr2);
 
-    uint32_t error_code = frame->err_code;
+    uint64_t error_code = frame->err_code;
 
     dump_thread(get_current_thread(), true);
 
@@ -226,20 +229,26 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
     exception_die(frame, "unhandled page fault, halting\n");
 }
 
-static void x86_pfe_handler(x86_iframe_t *frame)
+static status_t x86_pfe_handler(x86_iframe_t *frame)
 {
     /* Handle a page fault exception */
-    uint32_t error_code = frame->err_code;
+    uint64_t error_code = frame->err_code;
     vaddr_t va = x86_get_cr2();
 
     /* reenable interrupts */
     arch_set_in_int_handler(false);
     arch_enable_ints();
 
+    /* make sure we put interrupts back as we exit */
+    auto ac = mxtl::MakeAutoCall([]() {
+        arch_disable_ints();
+        arch_set_in_int_handler(true);
+    });
+
     /* check for flags we're not prepared to handle */
     if (unlikely(error_code & ~(PFEX_I | PFEX_U | PFEX_W | PFEX_P))) {
-        printf("x86_pfe_handler: unhandled error code bits set, error code 0x%x\n", error_code);
-        goto fatal;
+        printf("x86_pfe_handler: unhandled error code bits set, error code %#" PRIx64 "\n", error_code);
+        return ERR_NOT_SUPPORTED;
     }
 
     /* check for a potential SMAP failure */
@@ -251,7 +260,7 @@ static void x86_pfe_handler(x86_iframe_t *frame)
          is_user_address(va))) {
         /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */
         printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR "\n", va);
-        goto fatal;
+        return ERR_ACCESS_DENIED;
     }
 
     /* convert the PF error codes to page fault flags */
@@ -263,8 +272,8 @@ static void x86_pfe_handler(x86_iframe_t *frame)
 
     /* call the high level page fault handler */
     status_t pf_err = vmm_page_fault_handler(va, flags);
-    if (likely(pf_err >= 0))
-        goto out_good;
+    if (likely(pf_err == NO_ERROR))
+        return NO_ERROR;
 
     /* if the high level page fault handler can't deal with it,
      * resort to trying to recover first, before bailing */
@@ -273,33 +282,21 @@ static void x86_pfe_handler(x86_iframe_t *frame)
     thread_t *current_thread = get_current_thread();
     if (unlikely(current_thread->arch.page_fault_resume)) {
         frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
-        goto out_good;
+        return NO_ERROR;
     }
 
     /* let high level code deal with this */
 #if WITH_LIB_MAGENTA
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
-        struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
+        struct arch_exception_context context = { true, frame, va };
         status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->ip);
-        if (erc == NO_ERROR)
-            goto out_good;
+        return erc;
     }
 #endif
 
     /* fall through to fatal path */
-
-fatal:
-    arch_disable_ints();
-    arch_set_in_int_handler(true);
-    x86_fatal_pfe_handler(frame, va);
-    /* no return */
-    return;
-
-out_good:
-    arch_disable_ints();
-    arch_set_in_int_handler(true);
-    return;
+    return ERR_NOT_SUPPORTED;
 }
 
 /* top level x86 exception handler for most exceptions and irqs */
@@ -318,7 +315,7 @@ void x86_exception_handler(x86_iframe_t *frame)
     // deliver the interrupt
     enum handler_return ret = INT_NO_RESCHEDULE;
 
-    ktrace_tiny(TAG_IRQ_ENTER, (frame->vector << 8) | arch_curr_cpu_num());
+    ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
 
     switch (frame->vector) {
         case X86_INT_DEBUG:
@@ -370,7 +367,8 @@ void x86_exception_handler(x86_iframe_t *frame)
 
         case X86_INT_PAGE_FAULT:
             THREAD_STATS_INC(exceptions);
-            x86_pfe_handler(frame);
+            if (x86_pfe_handler(frame) != NO_ERROR)
+                x86_fatal_pfe_handler(frame, x86_get_cr2());
             break;
 
         /* ignore spurious APIC irqs */
@@ -428,7 +426,7 @@ void x86_exception_handler(x86_iframe_t *frame)
     if (ret != INT_NO_RESCHEDULE)
         thread_preempt(true);
 
-    ktrace_tiny(TAG_IRQ_EXIT, (frame->vector << 8) | arch_curr_cpu_num());
+    ktrace_tiny(TAG_IRQ_EXIT, ((uint)frame->vector << 8) | arch_curr_cpu_num());
 
     DEBUG_ASSERT_MSG(arch_ints_disabled(),
         "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",

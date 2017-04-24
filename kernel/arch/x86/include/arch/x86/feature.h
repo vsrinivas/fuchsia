@@ -26,6 +26,8 @@ struct cpuid_leaf {
 enum x86_cpuid_leaf_num {
     X86_CPUID_BASE = 0,
     X86_CPUID_MODEL_FEATURES = 0x1,
+    X86_CPUID_CACHE_V1 = 0x2,
+    X86_CPUID_CACHE_V2 = 0x4,
     X86_CPUID_TOPOLOGY = 0xb,
     X86_CPUID_XSAVE = 0xd,
     X86_CPUID_PT = 0x14,
@@ -193,8 +195,8 @@ struct x86_model_info {
     uint8_t model;
     uint8_t stepping;
 
-    uint16_t display_family;
-    uint8_t display_model;
+    uint32_t display_family;
+    uint32_t display_model;
 };
 
 const struct x86_model_info * x86_get_model(void);

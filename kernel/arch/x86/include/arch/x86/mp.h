@@ -64,7 +64,7 @@ struct x86_percpu {
     uintptr_t gpf_return_target;
 
     /* CPU number */
-    uint8_t cpu_num;
+    uint32_t cpu_num;
 
     /* This CPU's default TSS */
     tss_t __ALIGNED(16) default_tss;
@@ -87,7 +87,7 @@ static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_O
 // each CPU is brought up.  It returns the global stack_guard value, for
 // secondary CPUs.  On the initial CPU, it returns zero because the
 // stack_guard value has not been initialized yet.
-uintptr_t x86_init_percpu(uint8_t cpu_num, uintptr_t unsafe_sp);
+uintptr_t x86_init_percpu(uint cpu_num, uintptr_t unsafe_sp);
 
 /* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);

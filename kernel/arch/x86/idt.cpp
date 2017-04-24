@@ -44,7 +44,7 @@ static inline void idt_set_offset(struct idt_entry *entry, uintptr_t offset)
     uint32_t mid_16 = (offset >> 16) & 0xffff;
     entry->w0 = (entry->w0 & 0xffff0000) | low_16;
     entry->w1 = (entry->w1 & 0x0000ffff) | (mid_16 << 16);
-    uint32_t high_32 = offset >> 32;
+    uint32_t high_32 = (uint32_t)(offset >> 32);
     entry->w2 = high_32;
 }
 
@@ -105,7 +105,7 @@ __NO_SAFESTACK void idt_setup(struct idt *idt)
     enum idt_entry_type typ;
     sel = CODE_64_SELECTOR;
     typ = IDT_INTERRUPT_GATE64;
-    for (unsigned int i = 0; i < countof(idt->entries); ++i) {
+    for (size_t i = 0; i < countof(idt->entries); ++i) {
         uintptr_t offset = _isr_table[i] + clac_shift;
         enum idt_dpl dpl;
         switch (i) {
@@ -116,7 +116,7 @@ __NO_SAFESTACK void idt_setup(struct idt *idt)
             dpl = IDT_DPL0;
             break;
         }
-        idt_set_vector(idt, i, sel, offset, dpl, typ);
+        idt_set_vector(idt, (uint8_t)i, sel, offset, dpl, typ);
     }
 }
 

@@ -195,7 +195,7 @@ usage:
         }
         status_t status = ERR_NOT_SUPPORTED;
 #if WITH_SMP
-        status = mp_unplug_cpu(argv[2].u);
+        status = mp_unplug_cpu((uint)argv[2].u);
 #endif
         printf("CPU %lu unplugged: %d\n", argv[2].u, status);
     } else if (!strcmp(argv[1].str, "hotplug")) {
@@ -205,7 +205,7 @@ usage:
         }
         status_t status = ERR_NOT_SUPPORTED;
 #if WITH_SMP
-        status = mp_hotplug_cpu(argv[2].u);
+        status = mp_hotplug_cpu((uint)argv[2].u);
 #endif
         printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
     } else {

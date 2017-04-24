@@ -28,6 +28,7 @@
 #include <magenta/compiler.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <mxtl/auto_call.h>
 #include <string.h>
 #include <trace.h>
 
@@ -346,13 +347,20 @@ static void read_xsave_state_info(void)
         return;
     }
 
+    /* if we bail, set everything to unsupported */
+    auto ac = mxtl::MakeAutoCall([]() {
+        xsave_supported = false;
+        xsaves_supported = false;
+        xsaveopt_supported = false;
+    });
+
     /* This procedure is described in Intel Vol 1 section 13.2 */
 
     /* Read feature support from subleaves 0 and 1 */
     struct cpuid_leaf leaf;
     if (!x86_get_cpuid_subleaf(X86_CPUID_XSAVE, 0, &leaf)) {
         LTRACEF("could not find xsave leaf\n");
-        goto bailout;
+        return;
     }
     xcr0_component_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
     size_t max_area = XSAVE_EXTENDED_AREA_OFFSET;
@@ -371,8 +379,11 @@ static void read_xsave_state_info(void)
     if ((xcr0_component_bitmap & 0x3) != 0x3) {
         LTRACEF("unexpected xcr0 bitmap %016" PRIx64 "\n",
                 xcr0_component_bitmap);
-        goto bailout;
+        return;
     }
+
+    /* we're okay from now on out */
+    ac.cancel();
 
     /* Read info about the state components */
     for (uint i = 0; i < XSAVE_MAX_EXT_COMPONENTS; ++i) {
@@ -400,10 +411,6 @@ static void read_xsave_state_info(void)
     LTRACEF("total xsave size: %zu\n", max_area);
 
     return;
-bailout:
-    xsave_supported = false;
-    xsaves_supported = false;
-    xsaveopt_supported = false;
 }
 
 static void recompute_state_size(void) {

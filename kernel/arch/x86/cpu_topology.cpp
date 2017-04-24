@@ -73,7 +73,7 @@ static void modern_intel_topology_init(void)
 static void extended_amd_topology_init(void)
 {
     // Described in AMD CPUID Specification, version 2.34, section 3.2
-    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(0x80000008);
+    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(X86_CPUID_ADDR_WIDTH);
     if (!leaf)
         return;
 
@@ -93,7 +93,7 @@ static void extended_amd_topology_init(void)
 
 static void legacy_topology_init(void)
 {
-    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(1);
+    const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
     if (!leaf) {
         return;
     }
@@ -106,14 +106,14 @@ static void legacy_topology_init(void)
     // Get the maximum number of addressable IDs at the sub-package level.
     uint8_t max_num_subpackage = (leaf->b >> 16) & 0xff;
 
-    leaf = x86_get_cpuid_leaf(4);
+    leaf = x86_get_cpuid_leaf(X86_CPUID_CACHE_V2);
     if (!leaf) {
         return;
     }
 
     // Get the maximum number of addressable cores with a package.
-    uint8_t max_num_core = (leaf->a >> 26) + 1;
-    uint8_t max_num_ht = max_num_subpackage / max_num_core;
+    uint max_num_core = (leaf->a >> 26) + 1;
+    uint max_num_ht = max_num_subpackage / max_num_core;
 
     package_mask = ~(max_num_subpackage - 1);
     package_shift = __builtin_ctz(package_mask);

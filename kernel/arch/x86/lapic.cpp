@@ -37,32 +37,32 @@
 // Virtual address of the local APIC's MMIO registers
 static void *apic_virt_base;
 
-#define LAPIC_ID_ADDR ((volatile uint32_t *)(apic_virt_base + 0x020))
-#define LAPIC_VERSION_ADDR ((volatile uint32_t *)(apic_virt_base + 0x030))
-#define TASK_PRIORITY_ADDR ((volatile uint32_t *)(apic_virt_base + 0x080))
-#define PROCESSOR_PRIORITY_ADDR ((volatile uint32_t *)(apic_virt_base + 0x0A0))
-#define EOI_ADDR ((volatile uint32_t *)(apic_virt_base + 0x0B0))
-#define LOGICAL_DST_ADDR ((volatile uint32_t *)(apic_virt_base + 0x0D0))
-#define SPURIOUS_IRQ_ADDR ((volatile uint32_t *)(apic_virt_base + 0x0F0))
+#define LAPIC_ID_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x020))
+#define LAPIC_VERSION_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x030))
+#define TASK_PRIORITY_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x080))
+#define PROCESSOR_PRIORITY_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x0A0))
+#define EOI_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x0B0))
+#define LOGICAL_DST_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x0D0))
+#define SPURIOUS_IRQ_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x0F0))
 #define IN_SERVICE_ADDR(x) \
-        ((volatile uint32_t *)(apic_virt_base + 0x100 + ((x) << 4)))
+        ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x100 + ((x) << 4)))
 #define TRIGGER_MODE_ADDR(x) \
-        ((volatile uint32_t *)(apic_virt_base + 0x180 + ((x) << 4)))
+        ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x180 + ((x) << 4)))
 #define IRQ_REQUEST_ADDR(x) \
-        ((volatile uint32_t *)(apic_virt_base + 0x200 + ((x) << 4)))
-#define ERROR_STATUS_ADDR ((volatile uint32_t *)(apic_virt_base + 0x280))
-#define LVT_CMCI_ADDR ((volatile uint32_t *)(apic_virt_base + 0x2F0))
-#define IRQ_CMD_LOW_ADDR ((volatile uint32_t *)(apic_virt_base + 0x300))
-#define IRQ_CMD_HIGH_ADDR ((volatile uint32_t *)(apic_virt_base + 0x310))
-#define LVT_TIMER_ADDR ((volatile uint32_t *)(apic_virt_base + 0x320))
-#define LVT_THERMAL_ADDR ((volatile uint32_t *)(apic_virt_base + 0x330))
-#define LVT_PERF_ADDR ((volatile uint32_t *)(apic_virt_base + 0x340))
-#define LVT_LINT0_ADDR ((volatile uint32_t *)(apic_virt_base + 0x350))
-#define LVT_LINT1_ADDR ((volatile uint32_t *)(apic_virt_base + 0x360))
-#define LVT_ERROR_ADDR ((volatile uint32_t *)(apic_virt_base + 0x370))
-#define INIT_COUNT_ADDR ((volatile uint32_t *)(apic_virt_base + 0x380))
-#define CURRENT_COUNT_ADDR ((volatile uint32_t *)(apic_virt_base + 0x390))
-#define DIVIDE_CONF_ADDR ((volatile uint32_t *)(apic_virt_base + 0x3E0))
+        ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x200 + ((x) << 4)))
+#define ERROR_STATUS_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x280))
+#define LVT_CMCI_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x2F0))
+#define IRQ_CMD_LOW_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x300))
+#define IRQ_CMD_HIGH_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x310))
+#define LVT_TIMER_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x320))
+#define LVT_THERMAL_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x330))
+#define LVT_PERF_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x340))
+#define LVT_LINT0_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x350))
+#define LVT_LINT1_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x360))
+#define LVT_ERROR_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x370))
+#define INIT_COUNT_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x380))
+#define CURRENT_COUNT_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x390))
+#define DIVIDE_CONF_ADDR ((volatile uint32_t *)((uintptr_t)apic_virt_base + 0x3E0))
 
 // Spurious IRQ bitmasks
 #define SVR_APIC_ENABLE (1 << 8)
@@ -155,9 +155,12 @@ static inline void apic_wait_for_ipi_send(void) {
 
 void apic_send_ipi(
         uint8_t vector,
-        uint8_t dst_apic_id,
+        uint32_t dst_apic_id,
         enum apic_interrupt_delivery_mode dm)
 {
+    // we only support 8 bit apic ids
+    DEBUG_ASSERT(dst_apic_id < UINT8_MAX);
+
     uint32_t request = ICR_VECTOR(vector) | ICR_LEVEL_ASSERT;
     request |= ICR_DELIVERY_MODE(dm);
 
@@ -367,7 +370,7 @@ usage:
     if (!strcmp(argv[1].str, "broadcast")) {
         if (argc < 3)
           goto notenoughargs;
-        uint8_t vec = argv[2].u;
+        uint8_t vec = (uint8_t)argv[2].u;
         apic_send_broadcast_ipi(vec, DELIVERY_MODE_FIXED);
         printf("irr: %x\n", *IRQ_REQUEST_ADDR(vec / 32));
         printf("isr: %x\n", *IN_SERVICE_ADDR(vec / 32));
@@ -375,7 +378,7 @@ usage:
     } else if (!strcmp(argv[1].str, "self")) {
         if (argc < 3)
           goto notenoughargs;
-        uint8_t vec = argv[2].u;
+        uint8_t vec = (uint8_t)argv[2].u;
         apic_send_self_ipi(vec, DELIVERY_MODE_FIXED);
         printf("irr: %x\n", *IRQ_REQUEST_ADDR(vec / 32));
         printf("isr: %x\n", *IN_SERVICE_ADDR(vec / 32));
