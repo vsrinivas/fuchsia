@@ -16,6 +16,7 @@
 
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file_descriptor.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/portable_unistd.h"
@@ -57,6 +58,27 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   if (!fd.is_valid())
     return false;
   return ftl::WriteFileDescriptor(fd.get(), data, size);
+}
+
+bool WriteFileInTwoPhases(const std::string& path,
+                          ftl::StringView data,
+                          const std::string& temp_root) {
+  ScopedTempDir temp_dir(temp_root);
+
+  std::string temp_file_path;
+  if (!temp_dir.NewTempFile(&temp_file_path)) {
+    return false;
+  }
+
+  if (!WriteFile(temp_file_path, data.data(), data.size())) {
+    return false;
+  }
+
+  if (rename(temp_file_path.c_str(), path.c_str()) != 0) {
+    return false;
+  }
+
+  return true;
 }
 
 bool ReadFileToString(const std::string& path, std::string* result) {

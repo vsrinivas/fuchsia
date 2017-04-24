@@ -25,5 +25,19 @@ TEST(File, GetFileSize) {
   EXPECT_EQ(content.size(), size);
 }
 
+TEST(File, WriteFileInTwoPhases) {
+  ScopedTempDir dir;
+  std::string path;
+
+  ASSERT_TRUE(dir.NewTempFile(&path));
+
+  std::string content = "Hello World";
+  ASSERT_TRUE(
+      WriteFileInTwoPhases(path, content, dir.path()));
+  std::string read_content;
+  ASSERT_TRUE(ReadFileToString(path, &read_content));
+  EXPECT_EQ(read_content, content);
+}
+
 }  // namespace
 }  // namespace files
