@@ -554,7 +554,11 @@ bool test_viewport_scrolling_follows_scrollback() {
     EXPECT_EQ(tc.vc_dev->viewport_y, -2, "");
     int limit = tc.vc_dev->scrollback_rows_max;
     for (int line = 3; line < limit * 2; ++line) {
-        tc.PutString("\n");
+        // Output different strings on each line in order to test that the
+        // display is updated consistently when the console starts dropping
+        // lines from the scrollback region.
+        char str[3] = { static_cast<char>('0' + (line % 10)), '\n', '\0' };
+        tc.PutString(str);
         EXPECT_EQ(tc.vc_dev->viewport_y, -MIN(line, limit), "");
     }
 

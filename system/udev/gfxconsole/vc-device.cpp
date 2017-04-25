@@ -156,7 +156,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     }
 }
 
-static void vc_tc_push_scrollback_line(void* cookie, int y) {
+static void vc_tc_push_scrollback_line(void* cookie, int y) TA_REQ(g_vc_lock) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
 
     unsigned dest_row;
@@ -178,13 +178,28 @@ static void vc_tc_push_scrollback_line(void* cookie, int y) {
 
     // If we're displaying only the main console region (and no
     // scrollback), then keep displaying that (i.e. don't modify
-    // viewport_y).  Otherwise, if we're displaying some of the scrollback
-    // buffer, scroll the viewport to keep displaying the same point
-    // (modifying viewport_y), unless we're at the top of the scrollback
-    // buffer.
-    if (dev->viewport_y < 0 &&
-        dev->viewport_y > -static_cast<int>(dev->scrollback_rows_max)) {
-        dev->viewport_y -= 1;
+    // viewport_y).
+    if (dev->viewport_y < 0) {
+        // We are displaying some of the scrollback buffer.
+        if (dev->viewport_y > -static_cast<int>(dev->scrollback_rows_max)) {
+            // Scroll the viewport to continue displaying the same point in
+            // the scrollback buffer.
+            --dev->viewport_y;
+        } else {
+            // We were displaying the line at the top of the scrollback
+            // buffer, but we dropped that line from the buffer.  We could
+            // leave the display as it was (which is what gnome-terminal
+            // does) and not scroll the display.  However, that causes
+            // problems.  If the user later scrolls down, we won't
+            // necessarily be able to display the lines below -- we might
+            // have dropped those too.  So, instead, let's scroll the
+            // display and remove the scrollback line that was lost.
+            //
+            // For simplicity, fall back to redrawing everything.
+            vc_device_invalidate(dev, 0, -dev->scrollback_rows_max,
+                                 dev->columns, vc_device_rows(dev));
+            vc_device_render(dev);
+        }
     }
 }
 
