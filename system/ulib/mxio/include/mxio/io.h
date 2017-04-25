@@ -37,7 +37,7 @@
 __BEGIN_CDECLS
 
 // wait until one or more events are pending
-mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout);
+mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t deadline);
 
 // create a fd that works with wait APIs (epoll, select, etc.) from a handle
 // and expected signals (signals_in/signals_out correspond to EPOLLIN/EPOLLOUT

@@ -649,11 +649,7 @@ mx_status_t mxio_wait(mxio_t* io, uint32_t events, mx_time_t deadline,
     return status;
 }
 
-// TODO(teisenbe): Move this interface to deadlines
-mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t timeout) {
-    const mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? MX_TIME_INFINITE :
-            mx_deadline_after(timeout);
-
+mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t deadline) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL)
         return ERR_BAD_HANDLE;

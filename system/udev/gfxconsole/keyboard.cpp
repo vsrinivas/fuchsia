@@ -102,8 +102,10 @@ static int vc_input_thread(void* arg) {
     }
 
     for (;;) {
+        const mx_time_t deadline = (repeat_interval != MX_TIME_INFINITE) ?
+                mx_deadline_after(repeat_interval) : MX_TIME_INFINITE;
         mx_status_t rc = mxio_wait_fd(args.fd, MXIO_EVT_READABLE, NULL,
-                                      repeat_interval);
+                                      deadline);
 
         if (rc == ERR_TIMED_OUT) {
             // Times out only when need to repeat.
