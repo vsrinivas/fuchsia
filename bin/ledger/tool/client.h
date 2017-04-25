@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLIENT_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLIENT_H_
+#ifndef APPS_LEDGER_SRC_TOOL_CLIENT_H_
+#define APPS_LEDGER_SRC_TOOL_CLIENT_H_
 
 #include <memory>
 #include <string>
@@ -11,15 +11,15 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "apps/ledger/src/cloud_sync/client/command.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service_impl.h"
+#include "apps/ledger/src/tool/command.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
-namespace cloud_sync {
+namespace tool {
 
 class ClientApp {
  public:
@@ -47,6 +47,6 @@ class ClientApp {
   FTL_DISALLOW_COPY_AND_ASSIGN(ClientApp);
 };
 
-}  // namespace cloud_sync
+}  // namespace tool
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_CLIENT_H_
+#endif  // APPS_LEDGER_SRC_TOOL_CLIENT_H_

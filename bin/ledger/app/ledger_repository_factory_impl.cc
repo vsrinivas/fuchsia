@@ -89,7 +89,7 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
                      << " and the current one: " << user_config.server_id;
       FTL_LOG(ERROR) << "Ledger does not support cloud migrations. If you need "
                      << "to change the server, reset Ledger using "
-                     << "`cloud_sync clean`";
+                     << "`ledger_tool clean`";
       return false;
     }
 

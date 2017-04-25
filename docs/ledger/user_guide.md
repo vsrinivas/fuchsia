@@ -113,7 +113,7 @@ firebase ID as in `https://<firebase-id>.firebaseio.com`.
 If something seems off with sync, run the following command:
 
 ```
-cloud_sync doctor
+ledger_tool doctor
 ```
 
 If the provided information is not enough to resolve the problem, please file a
@@ -142,9 +142,9 @@ off, so you don't need to pass them again.
 To remove all data, locally and remotely, run the command:
 
 ```
-cloud_sync clean
+ledger_tool clean
 ```
-`cloud_sync clean` only clears Firebase for now, but not the associated Google
+`ledger_tool clean` only clears Firebase for now, but not the associated Google
 Cloud Storage. This should not impact Ledger use; however, if you want to
 reclaim the space, use the visit `Storage / Files` in the [Firebase
 Console](https://console.firebase.google.com/) and delete all objects.

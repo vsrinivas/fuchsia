@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("client") {
-  output_name = "cloud_sync"
+executable("tool") {
+  output_name = "ledger_tool"
 
   sources = [
     "clean_command.cc",

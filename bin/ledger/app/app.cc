@@ -57,7 +57,7 @@ class App : public LedgerController {
 
     if (!config.sync_params.cloud_prefix.empty()) {
       FTL_LOG(ERROR) << "The cloud_prefix configuration param is deprecated. "
-                     << "Run `cloud_sync clean` and then `configure_ledger` "
+                     << "Run `ledger_tool clean` and then `configure_ledger` "
                      << "to remove it.";
       return false;
     }

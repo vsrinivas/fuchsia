@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_DOCTOR_COMMAND_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_DOCTOR_COMMAND_H_
+#ifndef APPS_LEDGER_SRC_TOOL_DOCTOR_COMMAND_H_
+#define APPS_LEDGER_SRC_TOOL_DOCTOR_COMMAND_H_
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
-#include "apps/ledger/src/cloud_sync/client/command.h"
 #include "apps/ledger/src/network/network_service.h"
+#include "apps/ledger/src/tool/command.h"
 
-namespace cloud_sync {
+namespace tool {
 
 // Command that runs a series of check-ups for the sync configuration.
 class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
@@ -63,6 +63,6 @@ class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(DoctorCommand);
 };
 
-}  // namespace cloud_sync
+}  // namespace tool
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_DOCTOR_COMMAND_H_
+#endif  // APPS_LEDGER_SRC_TOOL_DOCTOR_COMMAND_H_

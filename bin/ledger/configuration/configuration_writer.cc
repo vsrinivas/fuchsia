@@ -125,7 +125,7 @@ int main(int argc, const char** argv) {
   if (!config.sync_params.cloud_prefix.empty()) {
     FTL_LOG(WARNING) << "Removing the deprecated |cloud_prefix| setting. "
                      << kCloudPrefixDeprecationMessage;
-    FTL_LOG(WARNING) << "Note that you might need to run `cloud_sync clean` "
+    FTL_LOG(WARNING) << "Note that you might need to run `ledger_tool clean` "
                      << "to reset the Ledger state.";
     config.sync_params.cloud_prefix.clear();
   }

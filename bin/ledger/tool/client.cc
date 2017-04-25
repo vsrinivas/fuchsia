@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/client/client.h"
+#include "apps/ledger/src/tool/client.h"
 
 #include <iostream>
 #include <unordered_set>
@@ -10,8 +10,6 @@
 #include "application/lib/app/connect.h"
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/cloud_sync/client/clean_command.h"
-#include "apps/ledger/src/cloud_sync/client/doctor_command.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
@@ -20,12 +18,14 @@
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/gcs/cloud_storage_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/tool/clean_command.h"
+#include "apps/ledger/src/tool/doctor_command.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace cloud_sync {
+namespace tool {
 
 namespace {
 
@@ -46,7 +46,7 @@ ClientApp::ClientApp(ftl::CommandLine command_line)
 }
 
 void ClientApp::PrintUsage() {
-  std::cout << "Usage: cloud_sync <COMMAND>" << std::endl;
+  std::cout << "Usage: ledger_tool <COMMAND>" << std::endl;
   std::cout << "Commands:" << std::endl;
   std::cout << " - `doctor` - checks up the cloud sync configuration (default)"
             << std::endl;
@@ -73,6 +73,11 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
 }
 
 bool ClientApp::Initialize() {
+  if (command_line_.argv0() == "file://cloud_sync") {
+    std::cout << "The 'cloud_sync' command is deprecated. "
+              << "Please use 'ledger_tool' instead." << std::endl;
+  }
+
   std::unordered_set<std::string> valid_commands = {"doctor", "clean"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
@@ -111,18 +116,18 @@ bool ClientApp::Initialize() {
       });
 
   std::string app_firebase_path =
-      GetFirebasePathForApp(configuration_.sync_params.cloud_prefix,
-                            "cloud_sync_user", "cloud_sync_client");
+      cloud_sync::GetFirebasePathForApp(configuration_.sync_params.cloud_prefix,
+                                        "cloud_sync_user", "cloud_sync_client");
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
-      GetFirebasePathForPage(app_firebase_path, RandomString()));
+      cloud_sync::GetFirebasePathForPage(app_firebase_path, RandomString()));
   std::string app_gcs_prefix =
-      GetGcsPrefixForApp(configuration_.sync_params.cloud_prefix,
-                         "cloud_sync_user", "cloud_sync_client");
+      cloud_sync::GetGcsPrefixForApp(configuration_.sync_params.cloud_prefix,
+                                     "cloud_sync_user", "cloud_sync_client");
   cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
       mtl::MessageLoop::GetCurrent()->task_runner(), network_service_.get(),
       configuration_.sync_params.firebase_id,
-      GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
+      cloud_sync::GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
   cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
       firebase_.get(), cloud_storage_.get());
 
@@ -140,13 +145,14 @@ void ClientApp::Start() {
   command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
-}  // namespace cloud_sync
+}  // namespace tool
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+
   mtl::MessageLoop loop;
 
-  cloud_sync::ClientApp app(std::move(command_line));
+  tool::ClientApp app(std::move(command_line));
 
   loop.Run();
   return 0;

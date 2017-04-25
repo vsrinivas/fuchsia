@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/client/doctor_command.h"
+#include "apps/ledger/src/tool/doctor_command.h"
 
 #include <iostream>
 
@@ -16,7 +16,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
-namespace cloud_sync {
+namespace tool {
 
 namespace {
 
@@ -380,4 +380,4 @@ void DoctorCommand::Done() {
   on_done_();
 }
 
-}  // namespace cloud_sync
+}  // namespace tool

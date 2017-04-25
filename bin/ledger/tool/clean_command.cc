@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/client/clean_command.h"
+#include "apps/ledger/src/tool/clean_command.h"
 
 #include <string>
 
@@ -13,7 +13,7 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
 
-namespace cloud_sync {
+namespace tool {
 
 namespace {
 
@@ -27,7 +27,8 @@ CleanCommand::CleanCommand(const configuration::Configuration& configuration,
       firebase_(std::make_unique<firebase::FirebaseImpl>(
           network_service,
           configuration_.sync_params.firebase_id,
-          GetFirebasePathForLedger(configuration_.sync_params.cloud_prefix))) {}
+          cloud_sync::GetFirebasePathForLedger(
+              configuration_.sync_params.cloud_prefix))) {}
 
 void CleanCommand::Start(ftl::Closure on_done) {
   std::cout << "> Deleting " << kDefaultLedgerPath << std::endl;
@@ -62,4 +63,4 @@ void CleanCommand::Start(ftl::Closure on_done) {
       });
 }
 
-}  // namespace cloud_sync
+}  // namespace tool
