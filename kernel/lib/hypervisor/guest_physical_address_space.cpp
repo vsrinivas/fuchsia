@@ -54,3 +54,19 @@ status_t GuestPhysicalAddressSpace::MapRange(size_t offset, size_t len) {
     };
     return guest_phys_mem_->Lookup(offset, len, kPfFlags, mmu_map, &paspace_);
 }
+
+status_t GuestPhysicalAddressSpace::UnmapPage(vaddr_t vaddr) {
+    size_t unmapped;
+    status_t status = guest_mmu_unmap(&paspace_, vaddr, 1, &unmapped);
+    if (status != NO_ERROR)
+        return status;
+    return unmapped != 1 ? ERR_BAD_STATE : NO_ERROR;
+}
+
+status_t GuestPhysicalAddressSpace::Read(void* ptr, uint64_t offset, size_t len) {
+    size_t bytes_read;
+    status_t status = guest_phys_mem_->Read(ptr, offset, len, &bytes_read);
+    if (status != NO_ERROR)
+        return status;
+    return bytes_read != len ? ERR_OUT_OF_RANGE : NO_ERROR;
+}
