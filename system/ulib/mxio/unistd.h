@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <errno.h>
 #include <mxio/io.h>
 #include <limits.h>
 #include <stdbool.h>

@@ -618,14 +618,24 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return r;
 }
 
-mx_status_t mxio_get_vmo(int fd, mx_handle_t* vmo, size_t* off, size_t* len) {
-    mxio_t* io;
-    if ((io = fd_to_io(fd)) == NULL) {
-        return ERR_BAD_HANDLE;
+mx_status_t mxio_wait(mxio_t* io, uint32_t events, mx_time_t deadline,
+                      uint32_t* out_pending) {
+    mx_handle_t h = MX_HANDLE_INVALID;
+    mx_signals_t signals = 0;
+    io->ops->wait_begin(io, events, &h, &signals);
+    if (h == MX_HANDLE_INVALID)
+        // Wait operation is not applicable to the handle.
+        return ERR_INVALID_ARGS;
+
+    mx_signals_t pending;
+    mx_status_t status = mx_object_wait_one(h, signals, deadline, &pending);
+    if (status == NO_ERROR || status == ERR_TIMED_OUT) {
+        io->ops->wait_end(io, pending, &events);
+        if (out_pending != NULL)
+            *out_pending = events;
     }
-    mx_status_t r = io->ops->get_vmo(io, vmo, off, len);
-    mxio_release(io);
-    return r;
+
+    return status;
 }
 
 // TODO(teisenbe): Move this interface to deadlines
@@ -633,34 +643,14 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* _pending, mx_time_t 
     const mx_time_t deadline = (timeout == MX_TIME_INFINITE) ? MX_TIME_INFINITE :
             mx_deadline_after(timeout);
 
-    mx_status_t r = NO_ERROR;
-    mxio_t* io;
-    if ((io = fd_to_io(fd)) == NULL) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL)
         return ERR_BAD_HANDLE;
-    }
 
-    mx_handle_t h = MX_HANDLE_INVALID;
-    mx_signals_t signals = 0;
-    io->ops->wait_begin(io, events, &h, &signals);
-    if (h == MX_HANDLE_INVALID) {
-        // wait operation is not applicable to the handle
-        r = ERR_INVALID_ARGS;
-        goto end;
-    }
-    mx_signals_t pending;
-    if ((r = mx_object_wait_one(h, signals, deadline, &pending)) < 0) {
-        if (r != ERR_TIMED_OUT) {
-            goto end;
-        }
-    }
-    io->ops->wait_end(io, pending, &events);
+    mx_status_t status = mxio_wait(io, events, deadline, _pending);
 
-    if (_pending) {
-        *_pending = events;
-    }
- end:
     mxio_release(io);
-    return r;
+    return status;
 }
 
 int mxio_stat(mxio_t* io, struct stat* s) {

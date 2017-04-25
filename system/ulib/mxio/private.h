@@ -116,6 +116,8 @@ static inline mx_status_t mxio_open(mxio_t* io, const char* path, int32_t flags,
     return io->ops->open(io, path, flags, mode, out);
 }
 mx_status_t mxio_close(mxio_t* io);
+mx_status_t mxio_wait(mxio_t* io, uint32_t events, mx_time_t deadline,
+                      uint32_t* out_pending);
 
 // Wraps a socket with an mxio_t using simple io.
 // Takes ownership of h.

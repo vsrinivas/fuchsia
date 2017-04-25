@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/loader-service.c \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
+    $(LOCAL_DIR)/get-vmo.c \
 
 MODULE_EXPORT := so
 

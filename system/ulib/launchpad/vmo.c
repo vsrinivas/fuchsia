@@ -3,99 +3,18 @@
 // found in the LICENSE file.
 
 #include <launchpad/vmo.h>
+#include <mxio/io.h>
 
-#include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
-#define MIN_WINDOW (PAGE_SIZE * 4)
-#define MAX_WINDOW ((size_t)64 << 20)
-
+// TODO(mcgrathr): Drop this interface altogether, since mxio_get_vmo
+// is the same thing.  At that point, perhaps drop launchpad_vmo_from_file
+// too, since it's so thin.
 mx_handle_t launchpad_vmo_from_fd(int fd) {
-    mx_handle_t current_vmar_handle = mx_vmar_root_self();
-
-    struct stat st;
-    if (fstat(fd, &st) < 0)
-        return ERR_IO;
-
-    uint64_t size = st.st_size;
-    uint64_t offset = 0;
-
     mx_handle_t vmo;
-    mx_status_t status = mx_vmo_create(size, 0, &vmo);
-    if (status < 0)
-        return status;
-
-    while (size > 0) {
-        if (size < MIN_WINDOW) {
-            // There is little enough left that copying is less overhead
-            // than fiddling with the page tables.
-            char buffer[PAGE_SIZE];
-            size_t xfer = size < sizeof(buffer) ? size : sizeof(buffer);
-            ssize_t nread = pread(fd, buffer, xfer, offset);
-            if (nread < 0) {
-                mx_handle_close(vmo);
-                return ERR_IO;
-            }
-            if (nread == 0) {
-                mx_handle_close(vmo);
-                errno = ESPIPE;
-                return ERR_IO;
-            }
-            size_t n;
-            status = mx_vmo_write(vmo, buffer, offset, nread, &n);
-            if (status < 0) {
-                mx_handle_close(vmo);
-                return status;
-            }
-            if (n != (size_t)nread) {
-                mx_handle_close(vmo);
-                errno = 0;
-                return ERR_IO;
-            }
-            offset += nread;
-            size -= nread;
-        } else {
-            // Map the VMO into our own address space so we can read into
-            // it directly and avoid double-buffering.
-            size_t chunk = size < MAX_WINDOW ? size : MAX_WINDOW;
-            size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
-            uintptr_t start = 0;
-            mx_status_t status = mx_vmar_map(
-                current_vmar_handle, 0, vmo, offset, window,
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &start);
-            if (status < 0) {
-                mx_handle_close(vmo);
-                return status;
-            }
-            uint8_t* buffer = (void*)start;
-            while (chunk > 0) {
-                ssize_t nread = pread(fd, buffer, chunk, offset);
-                if (nread < 0) {
-                    mx_vmar_unmap(current_vmar_handle, start, window);
-                    mx_handle_close(vmo);
-                    return ERR_IO;
-                }
-                if (nread == 0) {
-                    mx_vmar_unmap(current_vmar_handle, start, window);
-                    mx_handle_close(vmo);
-                    errno = ESPIPE;
-                    return ERR_IO;
-                }
-                buffer += nread;
-                offset += nread;
-                size -= nread;
-                chunk -= nread;
-            }
-            mx_vmar_unmap(current_vmar_handle, start, window);
-        }
-    }
-
-    return vmo;
+    mx_status_t status = mxio_get_vmo(fd, &vmo);
+    return status == NO_ERROR ? vmo : status;
 }
 
 mx_handle_t launchpad_vmo_from_file(const char* filename) {
