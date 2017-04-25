@@ -57,11 +57,6 @@ struct mx_driver {
     // binding instructions
 };
 
-struct mx_driver_binding {
-    uint32_t protocol_id;
-    void* protocol_info;
-};
-
 // Device Manager API
 mx_status_t device_create(mx_device_t** device, mx_driver_t* driver,
                           const char* name, mx_protocol_device_t* ops);
