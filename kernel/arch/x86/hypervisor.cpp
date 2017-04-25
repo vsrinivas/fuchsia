@@ -4,43 +4,27 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <debug.h>
-#include <inttypes.h>
-
 #include <bits.h>
 #include <new.h>
 #include <string.h>
 
-#include <arch/defines.h>
 #include <arch/hypervisor.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/hypervisor.h>
-#include <arch/x86/hypervisor_state.h>
-#include <arch/x86/idt.h>
-#include <arch/x86/registers.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <kernel/mp.h>
-#include <kernel/thread.h>
-#include <magenta/errors.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
 #endif // WITH_LIB_MAGENTA
 
 #include "hypervisor_priv.h"
+#include "vmexit_priv.h"
 
 #define VMX_ERR_CHECK(var) \
     "setna %[" #var "];"     // Check CF and ZF for error.
 
 extern uint8_t _gdt[];
-
-static const uint16_t kUartReceiveIoPort = 0x3f8;
-static const uint16_t kUartStatusIoPort = 0x3fd;
-static const uint64_t kUartStatusIdle = 1u << 6;
-static const uint64_t kIa32ApicBase =
-    APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -109,19 +93,19 @@ static uint64_t vmread(uint64_t field) {
     return val;
 }
 
-static uint16_t vmcs_read(VmcsField16 field) {
+uint16_t vmcs_read(VmcsField16 field) {
     return static_cast<uint16_t>(vmread(static_cast<uint64_t>(field)));
 }
 
-static uint32_t vmcs_read(VmcsField32 field) {
+uint32_t vmcs_read(VmcsField32 field) {
     return static_cast<uint32_t>(vmread(static_cast<uint64_t>(field)));
 }
 
-static uint64_t vmcs_read(VmcsField64 field) {
+uint64_t vmcs_read(VmcsField64 field) {
     return vmread(static_cast<uint64_t>(field));
 }
 
-static uint64_t vmcs_read(VmcsFieldXX field) {
+uint64_t vmcs_read(VmcsFieldXX field) {
     return vmread(static_cast<uint64_t>(field));
 }
 
@@ -138,19 +122,19 @@ static void vmwrite(uint64_t field, uint64_t val) {
     DEBUG_ASSERT(err == NO_ERROR);
 }
 
-static void vmcs_write(VmcsField16 field, uint16_t val) {
+void vmcs_write(VmcsField16 field, uint16_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
-static void vmcs_write(VmcsField32 field, uint32_t val) {
+void vmcs_write(VmcsField32 field, uint32_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
-static void vmcs_write(VmcsField64 field, uint64_t val) {
+void vmcs_write(VmcsField64 field, uint64_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
-static void vmcs_write(VmcsFieldXX field, uint64_t val) {
+void vmcs_write(VmcsFieldXX field, uint64_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
@@ -169,6 +153,16 @@ static status_t percpu_exec(thread_start_routine entry, void* arg) {
     int retcode;
     status = thread_join(t, &retcode, INFINITE_TIME);
     return status != NO_ERROR ? status : retcode;
+}
+
+template<typename T>
+static status_t InitPerCpus(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
+    for (size_t i = 0; i < ctxs->size(); i++) {
+        status_t status = (*ctxs)[i].Init(vmx_info);
+        if (status != NO_ERROR)
+            return status;
+    }
+    return NO_ERROR;
 }
 
 VmxInfo::VmxInfo() {
@@ -806,173 +800,6 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
     return NO_ERROR;
 }
 
-static void next_rip(const ExitInfo& exit_info) {
-    vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
-}
-
-static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
-    const uint64_t leaf = guest_state->rax;
-    const uint64_t subleaf = guest_state->rcx;
-
-    switch (leaf) {
-    case X86_CPUID_BASE:
-    case X86_CPUID_EXT_BASE:
-        next_rip(exit_info);
-        cpuid((uint32_t)guest_state->rax,
-              (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
-              (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
-        return NO_ERROR;
-    case X86_CPUID_BASE + 1 ... MAX_SUPPORTED_CPUID:
-    case X86_CPUID_EXT_BASE + 1 ... MAX_SUPPORTED_CPUID_EXT:
-        next_rip(exit_info);
-        cpuid_c((uint32_t)guest_state->rax, (uint32_t)guest_state->rcx,
-                (uint32_t*)&guest_state->rax, (uint32_t*)&guest_state->rbx,
-                (uint32_t*)&guest_state->rcx, (uint32_t*)&guest_state->rdx);
-        if (leaf == X86_CPUID_MODEL_FEATURES) {
-            // Enable the hypervisor bit.
-            guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
-            // Disable the x2APIC bit.
-            guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
-        }
-        if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
-            // Disable the XSAVES bit.
-            guest_state->rax &= ~(1u << 3);
-        }
-        return NO_ERROR;
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
-static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
-    switch (guest_state->rcx) {
-    case X86_MSR_IA32_APIC_BASE:
-        next_rip(exit_info);
-        guest_state->rax = kIa32ApicBase;
-        guest_state->rdx = 0;
-        return NO_ERROR;
-    // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
-    // type used for an access to a guest-physical address.
-    case X86_MSR_IA32_MTRRCAP:
-    case X86_MSR_IA32_MTRR_DEF_TYPE:
-    case X86_MSR_IA32_MTRR_FIX64K_00000:
-    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
-    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
-    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
-        next_rip(exit_info);
-        guest_state->rax = 0;
-        guest_state->rdx = 0;
-        return NO_ERROR;
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
-static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state) {
-    switch (guest_state->rcx) {
-    case X86_MSR_IA32_APIC_BASE:
-        if (guest_state->rax != kIa32ApicBase || guest_state->rdx != 0)
-            return ERR_INVALID_ARGS;
-        next_rip(exit_info);
-        return NO_ERROR;
-    // See note in handle_rdmsr.
-    case X86_MSR_IA32_MTRRCAP:
-    case X86_MSR_IA32_MTRR_DEF_TYPE:
-    case X86_MSR_IA32_MTRR_FIX64K_00000:
-    case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
-    case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
-    case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
-        next_rip(exit_info);
-        return NO_ERROR;
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
-static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
-                          FifoDispatcher* serial_fifo) {
-    next_rip(exit_info);
-#if WITH_LIB_MAGENTA
-    IoInfo io_info(exit_info.exit_qualification);
-    if (io_info.input) {
-        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort)
-            guest_state->rax = kUartStatusIdle;
-        return NO_ERROR;
-    }
-    if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
-        return NO_ERROR;
-    uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
-    uint32_t actual;
-    return serial_fifo->Write(data, io_info.bytes, &actual);
-#else // WITH_LIB_MAGENTA
-    return NO_ERROR;
-#endif // WITH_LIB_MAGENTA
-}
-
-static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
-    uint64_t guest_cr4 = vmcs_read(VmcsFieldXX::GUEST_CR4);
-    if (!(guest_cr4 & X86_CR4_OSXSAVE))
-        return ERR_INVALID_ARGS;
-
-    // We only support XCR0.
-    if (guest_state->rcx != 0)
-        return ERR_INVALID_ARGS;
-
-    cpuid_leaf leaf;
-    if (!x86_get_cpuid_subleaf(X86_CPUID_XSAVE, 0, &leaf))
-        return ERR_INTERNAL;
-
-    // Check that XCR0 is valid.
-    uint64_t xcr0_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
-    uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & 0xffffffff);
-    if (~xcr0_bitmap & xcr0 ||
-        // x87 state must be enabled.
-        (xcr0 & X86_XSAVE_STATE_X87) != X86_XSAVE_STATE_X87 ||
-        // If AVX state is enabled, SSE state must be enabled.
-        (xcr0 & (X86_XSAVE_STATE_AVX | X86_XSAVE_STATE_SSE)) == X86_XSAVE_STATE_AVX)
-        return ERR_INVALID_ARGS;
-
-    guest_state->xcr0 = xcr0;
-    next_rip(exit_info);
-    return NO_ERROR;
-}
-
-static status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state,
-                               FifoDispatcher* serial_fifo) {
-    ExitInfo exit_info;
-
-    switch (exit_info.exit_reason) {
-    case ExitReason::EXTERNAL_INTERRUPT:
-        dprintf(SPEW, "handling external interrupt\n\n");
-        DEBUG_ASSERT(arch_ints_disabled());
-        arch_enable_ints();
-        arch_disable_ints();
-        return NO_ERROR;
-    case ExitReason::CPUID:
-        dprintf(SPEW, "handling CPUID instruction\n\n");
-        return handle_cpuid(exit_info, guest_state);
-    case ExitReason::IO_INSTRUCTION: {
-        return handle_io(exit_info, guest_state, serial_fifo);
-    }
-    case ExitReason::RDMSR:
-        dprintf(SPEW, "handling RDMSR instruction\n\n");
-        return handle_rdmsr(exit_info, guest_state);
-    case ExitReason::WRMSR:
-        dprintf(SPEW, "handling WRMSR instruction\n\n");
-        return handle_wrmsr(exit_info, guest_state);
-    case ExitReason::ENTRY_FAILURE_GUEST_STATE:
-    case ExitReason::ENTRY_FAILURE_MSR_LOADING:
-        dprintf(SPEW, "handling VM entry failure\n\n");
-        return ERR_BAD_STATE;
-    case ExitReason::XSETBV:
-        dprintf(SPEW, "handling XSETBV instruction\n\n");
-        return handle_xsetbv(exit_info, guest_state);
-    default:
-        dprintf(SPEW, "unhandled VM exit %u\n\n", static_cast<uint32_t>(exit_info.exit_reason));
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
 void vmx_exit(VmxState* vmx_state) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu_num = arch_curr_cpu_num();
@@ -994,7 +821,8 @@ void vmx_exit(VmxState* vmx_state) {
     }
 }
 
-status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fifo) {
+status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
+                           FifoDispatcher* serial_fifo) {
     AutoVmcsLoad vmcs_load(&page_);
     // FS is used for thread-local storage — save for this thread.
     vmcs_write(VmcsFieldXX::HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
@@ -1021,7 +849,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, FifoDispatcher* serial_fi
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         do_resume_ = true;
-        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, serial_fifo);
+        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, gpas, serial_fifo);
     }
     return status;
 }
@@ -1076,6 +904,7 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     if (status != NO_ERROR)
         return status;
 
+    // Setup per-CPU structures.
     status = InitPerCpus(vmx_info, &ctx->per_cpus_);
     if (status != NO_ERROR)
         return status;
@@ -1134,7 +963,7 @@ status_t VmcsContext::set_entry(uintptr_t guest_entry) {
 static int vmcs_launch(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Enter(*context, context->serial_fifo());
+    return per_cpu->Enter(*context, context->gpas(), context->serial_fifo());
 }
 
 status_t VmcsContext::Enter() {

@@ -6,6 +6,11 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include <arch/x86/hypervisor.h>
+#include <arch/x86/hypervisor_state.h>
+
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
 #define X86_MSR_IA32_VMX_PINBASED_CTLS              0x0481      /* Pin-based controls */
@@ -281,7 +286,8 @@ public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
     status_t Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address);
-    status_t Enter(const VmcsContext& context, FifoDispatcher* serial_fifo);
+    status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
+                   FifoDispatcher* serial_fifo);
 
 private:
     bool do_resume_ = false;
@@ -291,12 +297,11 @@ private:
     VmxState vmx_state_;
 };
 
-template<typename T>
-status_t InitPerCpus(const VmxInfo& vmx_info, mxtl::Array<T>* ctxs) {
-    for (size_t i = 0; i < ctxs->size(); i++) {
-        status_t status = (*ctxs)[i].Init(vmx_info);
-        if (status != NO_ERROR)
-            return status;
-    }
-    return NO_ERROR;
-}
+uint16_t vmcs_read(VmcsField16 field);
+uint32_t vmcs_read(VmcsField32 field);
+uint64_t vmcs_read(VmcsField64 field);
+uint64_t vmcs_read(VmcsFieldXX field);
+void vmcs_write(VmcsField16 field, uint16_t val);
+void vmcs_write(VmcsField32 field, uint32_t val);
+void vmcs_write(VmcsField64 field, uint64_t val);
+void vmcs_write(VmcsFieldXX field, uint64_t val);

@@ -13,18 +13,12 @@
 
 typedef struct vm_page vm_page_t;
 
+class FifoDispatcher;
 class VmObject;
 struct VmxInfo;
 class VmxonPerCpu;
 class VmcsPerCpu;
 class GuestPhysicalAddressSpace;
-
-#if WITH_LIB_MAGENTA
-class FifoDispatcher;
-#else // WITH_LIB_MAGENTA
-#include <mxtl/ref_counted.h>
-class FifoDispatcher : public mxtl::RefCounted<FifoDispatcher> {};
-#endif // WITH_LIB_MAGENTA
 
 class VmxPage {
 public:
@@ -76,6 +70,7 @@ public:
     uintptr_t cr3() const { return cr3_; }
     status_t set_entry(uintptr_t guest_entry);
     uintptr_t entry() const {  return entry_; }
+    GuestPhysicalAddressSpace* gpas() const { return gpas_.get(); }
     FifoDispatcher* serial_fifo() const { return serial_fifo_.get(); }
 
 private:
