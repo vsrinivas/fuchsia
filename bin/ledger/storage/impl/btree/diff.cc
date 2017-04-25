@@ -24,12 +24,11 @@ class IteratorPair {
   Status Init(ObjectIdView left_node_id,
               ObjectIdView right_node_id,
               ftl::StringView min_key) {
-    // TODO(nellyv): Optimize this to skip the nodes of the btrees that are
-    // common while searching for the |min_key|.
     RETURN_ON_ERROR(left_.Init(left_node_id));
-    RETURN_ON_ERROR(left_.SkipTo(min_key));
     RETURN_ON_ERROR(right_.Init(right_node_id));
-    RETURN_ON_ERROR(right_.SkipTo(min_key));
+    if (!min_key.empty()) {
+      RETURN_ON_ERROR(SkipIteratorsTo(min_key));
+    }
     Normalize();
     if (!Finished() && !HasDiff()) {
       RETURN_ON_ERROR(Advance());
@@ -105,6 +104,48 @@ class IteratorPair {
   }
 
  private:
+  // Advances the two iterators so that they are both in the first entry that 1)
+  // is greater than or equal to min_key and 2) might be different between the
+  // two iterators. We consider that the two entries might be different, if they
+  // are in btree nodes with different ids.
+  Status SkipIteratorsTo(ftl::StringView min_key) {
+    for (;;) {
+      if (left_.SkipToIndex(min_key)) {
+        right_.SkipTo(min_key);
+        return Status::OK;
+      }
+      if (right_.SkipToIndex(min_key)) {
+        left_.SkipToIndex(min_key);
+        return Status::OK;
+      }
+
+      auto left_child = left_.GetNextChild();
+      auto right_child = right_.GetNextChild();
+      if (left_child.empty()) {
+        right_.SkipTo(min_key);
+        return Status::OK;
+      }
+      if (right_child.empty()) {
+        left_.SkipTo(min_key);
+        return Status::OK;
+      }
+      if (left_child == right_child) {
+        return Status::OK;
+      }
+      // Same nodes might be in different depths of the btrees. Only descend in
+      // each if their current level is the same as or greater than the other
+      // one's.
+      uint8_t level_left = left_.GetLevel();
+      uint8_t level_right = right_.GetLevel();
+      if (level_left >= level_right) {
+        RETURN_ON_ERROR(left_.Advance());
+      }
+      if (level_right >= level_left) {
+        RETURN_ON_ERROR(right_.Advance());
+      }
+    }
+  }
+
   // Ensure that the representation of the pair of iterator is normalized
   // according to the following rules:
   // If only one iterator is finished, it is always the left one.

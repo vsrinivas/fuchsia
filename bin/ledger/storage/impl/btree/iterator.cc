@@ -48,14 +48,7 @@ Status BTreeIterator::Init(ObjectIdView node_id) {
 Status BTreeIterator::SkipTo(ftl::StringView min_key) {
   descending_ = true;
   for (;;) {
-    auto& entries = CurrentNode().entries();
-    size_t skip_count = GetEntryOrChildIndex(entries, min_key);
-    if (skip_count < CurrentIndex()) {
-      return Status::OK;
-    }
-    CurrentIndex() = skip_count;
-    if (skip_count < entries.size() && entries[skip_count].key == min_key) {
-      descending_ = false;
+    if (SkipToIndex(min_key)) {
       return Status::OK;
     }
     auto next_child = GetNextChild();
@@ -64,6 +57,20 @@ Status BTreeIterator::SkipTo(ftl::StringView min_key) {
     }
     RETURN_ON_ERROR(Descend(next_child));
   }
+}
+
+bool BTreeIterator::SkipToIndex(ftl::StringView key) {
+  auto& entries = CurrentNode().entries();
+  size_t skip_count = GetEntryOrChildIndex(entries, key);
+  if (skip_count < CurrentIndex()) {
+    return true;
+  }
+  CurrentIndex() = skip_count;
+  if (CurrentIndex() < entries.size() && entries[CurrentIndex()].key == key) {
+    descending_ = false;
+    return true;
+  }
+  return false;
 }
 
 ftl::StringView BTreeIterator::GetNextChild() const {

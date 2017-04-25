@@ -866,6 +866,104 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   EXPECT_EQ(changes.size(), current_change);
 }
 
+TEST_F(BTreeUtilsTest, ForEachDiffWithMinKey) {
+  // Expected base tree layout (XX is key "keyXX"):
+  //                     [50]
+  //                   /     \
+  //       [03, 07, 30]      [65, 76]
+  //     /
+  // [01, 02]
+  std::vector<EntryChange> base_entries;
+  ASSERT_TRUE(CreateEntryChanges(
+      std::vector<size_t>({1, 2, 3, 7, 30, 50, 65, 76}), &base_entries));
+  // Expected other tree layout (XX is key "keyXX"):
+  //               [50, 75]
+  //             /    |    \
+  //    [03, 07, 30] [65]  [76]
+  //     /           /
+  // [01, 02]      [51]
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({51, 75}), &changes));
+
+  Status status;
+  ObjectId base_root_id = CreateTree(base_entries);
+  ObjectId other_root_id;
+  std::unordered_set<ObjectId> new_nodes;
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, base_root_id,
+      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &other_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
+  // ForEachDiff with a "key0" as min_key should return both changes.
+  size_t current_change = 0;
+  ForEachDiff(
+      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key0",
+      [&changes, &current_change](EntryChange e) {
+        EXPECT_EQ(changes[current_change++].entry, e.entry);
+        return true;
+      },
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(changes.size(), current_change);
+
+  // With "key60" as min_key, only key75 should be returned.
+  ForEachDiff(
+      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key60",
+      [&changes](EntryChange e) {
+        EXPECT_EQ(changes[1].entry, e.entry);
+        return true;
+      },
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+}
+
+TEST_F(BTreeUtilsTest, ForEachDiffWithMinKeySkipNodes) {
+  // Expected base tree layout (XX is key "keyXX"):
+  //       [03, 07, 30]
+  //     /
+  // [01, 02]
+  std::vector<EntryChange> base_entries;
+  ASSERT_TRUE(
+      CreateEntryChanges(std::vector<size_t>({1, 2, 3, 7, 30}), &base_entries));
+  // Expected other tree layout (XX is key "keyXX"):
+  //               [50]
+  //             /
+  //    [03, 07, 30]
+  //     /
+  // [01, 02]
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({50}), &changes));
+
+  Status status;
+  ObjectId base_root_id = CreateTree(base_entries);
+  ObjectId other_root_id;
+  std::unordered_set<ObjectId> new_nodes;
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, base_root_id,
+      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &other_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
+  ForEachDiff(
+      &coroutine_service_, &fake_storage_, base_root_id, other_root_id, "key01",
+      [&changes](EntryChange e) {
+        EXPECT_EQ(changes[0].entry, e.entry);
+        return true;
+      },
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+}
+
 }  // namespace
 }  // namespace btree
 }  // namespace storage

@@ -42,6 +42,12 @@ class BTreeIterator {
   // |min_key|.
   Status SkipTo(ftl::StringView min_key);
 
+  // Skips to the index where key could be found, within the current node. The
+  // current index will only be updated if the new index is after the current
+  // one. Returns true if either the key was found in this node, or if it is
+  // guaranteed not to be found in any of this nodes children; false otherwise.
+  bool SkipToIndex(ftl::StringView key);
+
   // Returns the identifier of the next child that will be explored.
   ftl::StringView GetNextChild() const;
 
