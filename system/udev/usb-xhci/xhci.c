@@ -188,6 +188,11 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     mx_paddr_t* phys_addrs = NULL;
 
     list_initialize(&xhci->command_queue);
+    mtx_init(&xhci->command_ring_lock, mtx_plain);
+    mtx_init(&xhci->command_queue_mutex, mtx_plain);
+    mtx_init(&xhci->mfindex_mutex, mtx_plain);
+    mtx_init(&xhci->input_context_lock, mtx_plain);
+    completion_reset(&xhci->command_queue_completion);
 
     xhci->cap_regs = (xhci_cap_regs_t*)mmio;
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
@@ -325,7 +330,6 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         printf("xhci_command_ring_init failed\n");
         goto fail;
     }
-    mtx_init(&xhci->command_ring_lock, mtx_plain);
 
     result = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
     if (result != NO_ERROR) {

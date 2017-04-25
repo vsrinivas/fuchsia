@@ -146,6 +146,7 @@ struct xhci {
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
     mx_paddr_t input_context_phys;
+    mtx_t input_context_lock;
 
     // for xhci_get_current_frame()
     mtx_t mfindex_mutex;
