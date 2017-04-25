@@ -11,6 +11,13 @@ namespace netconnector {
 namespace mdns {
 namespace {
 
+// Max record counts. These values are selected to prevent an attack that would
+// cause is to allocate memory for large numbers of records.
+static constexpr size_t kMaxQuestions = 1024;
+static constexpr size_t kMaxAnswers = 1024;
+static constexpr size_t kMaxAuthorities = 1024;
+static constexpr size_t kMaxAdditionals = 1024;
+
 void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
   while (reader.healthy()) {
     uint8_t label_size;
@@ -264,7 +271,15 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
 
 PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
   reader >> value.header_;
-  // TODO(dalesat): Limit these counts.
+
+  if (value.header_.question_count_ > kMaxQuestions ||
+      value.header_.answer_count_ > kMaxAnswers ||
+      value.header_.authority_count_ > kMaxAuthorities ||
+      value.header_.additional_count_ > kMaxAdditionals) {
+    FTL_DLOG(ERROR) << "Max record count exceeded; rejecting message.";
+    reader.MarkUnhealthy();
+    return reader;
+  }
 
   if (reader.healthy()) {
     value.questions_.resize(value.header_.question_count_);
