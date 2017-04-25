@@ -1,0 +1,57 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart2;
+
+struct vec2 {
+  float x;
+  float y;
+};
+
+struct vec3 {
+  float x;
+  float y;
+  float z;
+};
+
+struct vec4 {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+struct Quaternion {
+  float i;
+  float j;
+  float k;
+};
+
+struct Transform {
+  vec3 translation;
+  vec3 scale;
+  vec3 anchor;  // point around which rotation and scaling occur
+  Quaternion rotation;
+};
+
+union Value {
+  float val;
+  vec2 pt2;
+  vec3 pt3;
+  vec4 color;  // RGBA
+  float degrees;  // degrees of counter-clockwise rotation in the XY plane
+  Quaternion quaternion;
+  Transform transform;
+  // ID of a value-producing resource (an animation or an expression).
+  // The type of this value matches the type produced by the named resource.
+  uint32 variable_id;
+};
+
+enum ValueType {
+  kNone = 0,
+  kFloat,
+  kVec2,
+  kVec3,
+  kVec4
+};

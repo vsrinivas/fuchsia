@@ -1,0 +1,43 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart2;
+
+import "apps/mozart/services/composition2/types.fidl";
+import "apps/mozart/services/geometry/geometry.fidl";
+
+// The shapes defined in this file can be used to define the rendered shape of
+// an |ObjectNode|, and to define the clip region of a |ClipNode|.
+
+// Rectangle centered at (0,0).
+struct Rectangle {
+  Value width;  // float
+  Value height; // float
+};
+
+struct Circle {
+  Value radius;  // float
+};
+
+struct Mesh {
+  uint32 index_buffer_id;  // ID of a Buffer containing the mesh indices.
+  MeshIndexFormat index_format;
+  uint64 index_offset;  // bytes from start of Buffer
+  uint32 index_count;
+  uint32 vertex_buffer_id;  // ID of a Buffer containing the mesh vertices.
+  MeshVertexFormat vertex_format;
+  uint64 vertex_offset; // bytes from start of Buffer
+  uint32 vertex_count;
+};
+
+enum MeshIndexFormat {
+  kUint16 = 1,
+  kUint32,
+};
+
+struct MeshVertexFormat {
+  ValueType position_type;
+  ValueType normal_type;
+  ValueType tex_coord_type;
+};

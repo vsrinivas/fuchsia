@@ -1,0 +1,117 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart2;
+
+import "apps/mozart/services/composition2/shapes.fidl";
+import "apps/mozart/services/composition2/types.fidl";
+
+// These are all of the types of resources that can be created within a
+// |Session|.
+union Resource {
+  // Memory resources.
+  Memory memory;
+  Image image;
+  Buffer buffer;
+
+  // Shapes (see shapes.fidl).
+  Rectangle rectangle;
+  Circle circle;
+  Mesh mesh;
+
+  Material material;
+  NodeType node;
+};
+
+// |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
+// it with Mozart.
+struct Memory {
+  handle<vmo> vmo;
+  uint32 num_bytes;
+};
+
+// Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|
+// is zero), a solid color is used.  If a texture is provided, then the value sampled from the texture is
+// multiplied by the color.
+struct Material {
+  uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
+  array<uint8, 4> color;  // BGRA
+};
+
+// A Vulkan-formatted image mapped to a range of |Memory|.
+// TODO: more precise and extensive docs.
+struct Image {
+  // Corresponds to
+  // TODO: populate.  For example, see formats supported by Chromium:
+  // https://cs.chromium.org/chromium/src/media/base/video_types.h?type=cs&l=19
+  enum Format {
+    kRGBA = 0,
+    kBGRA,
+    kRGB,
+    kSRGB,
+    kSRGBA,
+    kYV12,
+  };
+
+  // Corresponds to VkImageTiling.
+  // TODO: add a BlitOp so that a client that doesn't want to deal with Vulkan
+  // directly can blit a linear image into an optimal one.
+  enum Tiling {
+    kOptimal = 0,  // VK_IMAGE_TILING_OPTIMAL
+    kLinear,       // VK_IMAGE_TILING_LINEAR
+  };
+
+  uint32 memory_id;      // id of a |Memory| resource
+  uint32 memory_offset;  // byte offset of image within |Memory| resource
+  Format format;
+  Tiling tiling;
+
+  uint32 width;
+  uint32 height;
+  uint32 num_bytes;
+};
+
+// A buffer mapped to a range of |Memory|.
+struct Buffer {
+  uint32 memory_id;      // id of a |Memory| resource
+  uint32 memory_offset;  // byte offset of buffer within |Memory| resource
+  uint32 num_bytes;
+};
+
+// These are the types of nodes that can be created within a Mozart |Session|.
+//
+// Node Characteristics:
+// These are characteristics that each type of |Node| either has or doesn't.
+// These constrain operations that reference nodes; violations will cause the
+// |Session| connection to be closed.  For example, |NodeAddChildOp| must target
+// a node with the "has_children" characteristic.  These characteristics
+// are not explicitly reflected in the Mozart Compositor API; instead, they must
+// be enforced by implementations of the API.
+// - has_transform:
+// - has_children:
+// - has_parts:
+// - has_clip:
+// - is_clip:
+// - has_shape:
+// - has_material:
+enum NodeType {
+  // Properties:
+  // - has_transform
+  // - has_children
+  // - has_parts
+  // - has_clip
+  kEntity = 1,
+
+  // Properties:
+  // - has_transform
+  // - has_shape
+  // - has_material
+  kShape,
+  
+  // Properties:
+  // - has_transform
+  // - is_clip
+  // - has_parts
+  kClip,
+};

@@ -1,0 +1,85 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO: linking to other 'scenes'.
+// TODO: synchronization
+// TODO: materials
+
+module mozart2;
+
+import "apps/mozart/services/composition2/ops.fidl";
+
+interface Session {
+  // Enqueue a list of operations, which will not take effect until Commit() is
+  // called.  It is allowable to call Enqueue() several times before calling
+  // Commit(); the effect is the same as if all operations had been concatenated
+  // into a single Enqueue() call.
+  Enqueue(array<Op> op);
+
+  // Commit all previously enqueued operations.  In order to pipeline the
+  // preparation of the resources required to render the scene, two lists of
+  // events are passed.
+  //
+  // |wait_events| are used by Mozart to wait until all of the session's
+  // resources are ready to render (or to allow downstream components, such as
+  // the Vulkan driver, to wait for these resources).
+  //
+  // For example, Fuchsia's Vulkan driver allows an mx::event to be obtained
+  // from a VkSemaphore.  This allows a Mozart client to submit a Vulkan command
+  // buffer to generate images/meshes/etc., and instructing Vulkan to signal a
+  // VkSemaphore when it is done.  By inserting the mx::event corresponding to
+  // this semaphore into |wait_events|, the client allows Mozart to submit work
+  // to the Vulkan driver without waiting on the CPU for the event to be
+  // signalled.
+  //
+  // |signal_events| is a list of events that will be signalled by Mozart when
+  // the updated session state has been fully committed: future frames will be
+  // rendered using this state, and all frames generated using previous session
+  // states have been fully-rendered and presented to the display.
+  //
+  // Together, |wait_events| and |signal_events| are intended to allow clients
+  // to implement strategies such as double-buffering.  For example, a client
+  // might do the following:
+  //   1) create two Image with resource IDs #1 and #2.
+  //   2) create two Materials with resource IDs #3 and #4, which respectively
+  //      use Images #1 and #2 as their texture.
+  //   3) create a tree of Nodes and attach them to the scene.
+  //   4) set one of the nodes above, say #5, to use Material #3.
+  //   5) submit a Vulkan command-buffer which renders into Image #1, and
+  //      will signal a VkSemaphore.
+  //   6) call Commit() with one wait-event (obtained from the VkSemaphore
+  //      above) and one newly-created signal-event.
+  //
+  // After the steps above, Mozart will use the commited session state to render
+  // frames whenever necessary.  When the client wants to display something
+  // different than Image #1, it would do something similar to steps 4) to 6):
+  //   7) set Node #5 to use Material #4.
+  //   8) submit a Vulkan command-buffer which renders into Image #1, and
+  //      will signal a VkSemaphore.
+  //   9) call Commit() with one wait-event (obtained from the VkSemaphore
+  //      above) and one newly-created signal-event.
+  //
+  // Finally, to continually draw new content, the client could repeat steps
+  // 4) to 9), with one important difference: step 5) must wait on the event
+  // signalled by step 9).  Otherwise, it might render into Image #1 while that
+  // image is still being used by Mozart to render a frame.  Similarly, step 8)
+  // must wait on the event signalled by step 6).
+  //
+  // The scenario described above uses one wait-event and one signal-event, but
+  // it is easy to imagine cases that require more.  For example, in addition
+  // to using Vulkan to render into Images #1 and #2, the client might also
+  // upload other resources to Vulkan on a different VkQueue, which would
+  // would signal a separate semaphore, and therefore require an additional
+  // wait-event.
+  //
+  // Note: |wait_events| and |signal_events| are only necessary to synchronize
+  // access to memory (and other external resources).  Any modification to
+  // resources made via the Session API are automatically synchronized.
+  Commit(array<handle<event>> wait_events, array<handle<event>> signal_events);
+};
+
+interface SessionListener {
+  OnAnimationEnd(uint32 animation_id);
+  OnError(string error);
+};
