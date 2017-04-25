@@ -52,8 +52,8 @@ LogMessage::LogMessage(LogSeverity severity,
     stream_ << GetNameForLogSeverity(severity);
   else
     stream_ << "VERBOSE" << -severity;
-  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_)) << "("
-          << line_ << ")]";
+  stream_ << ":" << (severity > LOG_INFO ? StripDots(file_) : StripPath(file_))
+          << "(" << line_ << ")] ";
 
   if (condition)
     stream_ << "Check failed: " << condition << ". ";
