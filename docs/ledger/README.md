@@ -9,6 +9,10 @@ Documentation for using Ledger in client apps:
  - [API Guide](api_guide.md)
  - [Examples](examples.md)
 
+Documentation for setting up a remote Cloud sync provider:
+
+ - [Firebase](firebase.md)
+
 Documentation for contributing to Ledger:
 
  - [Developer Workflow](workflow.md)

@@ -2,32 +2,15 @@
 
 [TOC]
 
-## Disk Storage
+## Prerequisites
+
+### Disk Storage
 
 Ledger writes all data under `/data/ledger`. In order for data to be persisted,
 ensure that a persistent partition is mounted under /data. See [minfs
 setup](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md).
 
-## Cloud Sync
-
-By default Ledger runs without sync. To enable sync, follow the instructions
-below.
-
-When enabled, Cloud Sync synchronizes the content of all pages using the
-selected cloud provider (see below for configuration).
-
-**Note**: Ledger does not support **migrations** between cloud providers. Once
-Cloud Sync is set up, you won't be able to switch to a different cloud provider
-(e.g. to a different Firebase instance) without flushing the locally persisted
-data. (see Reset Everything below)
-
-**Warning**: Ledger does not (currently) support authorization. Data stored in
-the cloud is world-readable and world-writable. Please don't store anything
-private, sensitive or real in Ledger yet.
-
-### Setup
-
-#### Setup the network stack
+### Networking
 
 Follow the instructions in
 [netstack](https://fuchsia.googlesource.com/netstack/+/d24151e74c745358b102f4f33a3c5f4d720ddc52/README.md)
@@ -41,72 +24,36 @@ wget http://example.com
 
 You should see the HTML content of the `example.com` placeholder page.
 
-#### Create your firebase project
+## Cloud Sync
 
-To use sync, you will need an instance of the Firebase Real-Time Database along
-with Firebase Storage. You can create a new Firebase project at
-(https://firebase.google.com/)[https://firebase.google.com/].
+By default Ledger runs without sync. When enabled, Cloud Sync synchronizes the
+content of all pages using the selected cloud provider.
 
-Take note of your *project ID*, as you will need it to setup your device. It is
-the name of your project, with spaces replaced by `-`. It is also in your
-console URL. For example, if you create a project named *My Firebase Project*
-project, its console URL will be
-`https://console.firebase.google.com/project/my-firebase-project` and its
-identifier will be `my-firebase-project`.
+*** note
+Ledger does not support **migrations** between cloud providers. Once
+Cloud Sync is set up, you won't be able to switch to a different cloud provider
+(e.g. to a different Firebase instance) without flushing the locally persisted
+data (see Reset Everything below).
+***
 
-#### Configure Firebase
-Go to the [Firebase Console](https://console.firebase.google.com/), and open your project.
+*** note
+**Warning**: Ledger does not (currently) support authorization. Data stored in
+the cloud is world-readable and world-writable. Please don't store anything
+private, sensitive or real in Ledger yet.
+***
 
-In `Database / Rules`, paste the rules below and click "Publish". (note that
-this makes the database data world-readable and world-writeable)
+### Firebase
 
-```
-{
-  "rules": {
-    ".read": true,
-    ".write": true,
-    "$prefix": {
-      "$user": {
-        "$version": {
-          "$app": {
-            "$page": {
-              "commits": {
-                ".indexOn": ["timestamp"]
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+Cloud sync is powered by Firebase. Either [configure](firebase.md) your own
+instance or use an existing correctly configured instance that your have
+permission to use.
 
-In `Storage / Rules`, change the line starting with "allow" to match the example
-below and click "Publish". (note that this makes the database data
-world-readable and world-writeable).
+Once you picked the instance to use, pass the Firebase project ID (see the
+[Firebase configuration](firebase.md) doc) to `configure_ledger`:
 
 ```
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if true;
-    }
-  }
-}
+configure_ledger --firebase_id=<FIREBASE_ID>
 ```
-
-#### Configure Ledger
-
-In order to point Ledger to your database, run the configuration script:
-
-```
-configure_ledger --firebase_id=<DATABASE_ID>
-```
-
-`DATABASE_ID` is the identifier of your Firebase database. If you followed the
-setup instructions above, it is your project identifier. It is also your
-firebase ID as in `https://<firebase-id>.firebaseio.com`.
 
 ### Diagnose
 
@@ -136,10 +83,10 @@ configure_ledger --sync
 The configuration tool remembers the Firebase settings even when the sync is
 off, so you don't need to pass them again.
 
-## Reset the ledger
+## Reset Ledger
 
-### Reset local and remote states
-To remove all data, locally and remotely, run the command:
+### Wipe the current user
+To wipe all data (local and remote) of the current user, run the command:
 
 ```
 ledger_tool clean
@@ -149,15 +96,15 @@ Cloud Storage. This should not impact Ledger use; however, if you want to
 reclaim the space, use the visit `Storage / Files` in the [Firebase
 Console](https://console.firebase.google.com/) and delete all objects.
 
-### Reset local state
+### Wipe all local state
 
-To remove only the locally persisted Ledger data, you can run:
+To remove the locally persisted Ledger data for all users, you can run:
 
 ```
 $ rm -r /data/ledger
 ```
 
-Note that running this command also removes your current ledger configuration
-(See (Configure Ledger)[#Configure-Ledger] on how to configure your Ledger). It
+Note that running this command also removes your current Ledger configuration
+(See (Configure Ledger)[#Firebase] on how to configure your Ledger). It
 does not remove your Cloud data; if configured for Cloud synchronization,
 Ledger will start downloading the missing data the next time it starts.
