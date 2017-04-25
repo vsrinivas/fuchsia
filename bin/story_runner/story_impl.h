@@ -104,7 +104,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // story data are deleted from the ledger once the done callback is invoked.
   //
   // No further operations invoked after this one are executed. (The Operation
-  // accompishes this by not calling Done() and instead invoking its callback
+  // accomplishes this by not calling Done() and instead invoking its callback
   // directly from Run(), such that the OperationQueue stays blocked on it until
   // it gets deleted.)
   void StopForDelete(const std::function<void()>& done);

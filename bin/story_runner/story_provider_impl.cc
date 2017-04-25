@@ -849,7 +849,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   }
 
   for (auto& key : page->deleted_keys) {
-    // Extact the story ID from the ledger key. Cf. kStoryKeyPrefix.
+    // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
     const fidl::String story_id =
         to_string(key).substr(sizeof(kStoryKeyPrefix) - 1);
 
