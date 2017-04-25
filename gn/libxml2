@@ -1,0 +1,14 @@
+{
+    "includes": [
+      "zlib"
+    ],
+    "labels": [
+      "//third_party/libxml2"
+    ],
+    "binaries": [
+      {
+        "binary": "libxml2.so",
+        "bootfs_path": "lib/libxml2.so"
+      }
+    ]
+}
