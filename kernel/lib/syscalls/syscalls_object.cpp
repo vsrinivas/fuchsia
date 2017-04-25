@@ -554,6 +554,25 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             uintptr_t value = process->aspace()->vdso_base_address();
             return _value.reinterpret<uintptr_t>().copy_to_user(value);
         }
+        case MX_PROP_JOB_IMPORTANCE: {
+            if (size != sizeof(mx_job_importance_t))
+                return MX_ERR_BUFFER_TOO_SMALL;
+            auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+            if (!job)
+                return MX_ERR_WRONG_TYPE;
+            mx_job_importance_t value;
+            mx_status_t status = job->get_importance(&value);
+            if (status != MX_OK) {
+                // Usually a problem resolving inherited importance,
+                // like racing with task death.
+                return status;
+            }
+            if (_value.reinterpret<mx_job_importance_t>()
+                    .copy_to_user(value) != MX_OK) {
+                return MX_ERR_INVALID_ARGS;
+            }
+            return MX_OK;
+        }
         default:
             return MX_ERR_INVALID_ARGS;
     }
@@ -617,6 +636,20 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (_value.reinterpret<const uintptr_t>().copy_from_user(&value) != MX_OK)
                 return MX_ERR_INVALID_ARGS;
             return process->set_debug_addr(value);
+        }
+        case MX_PROP_JOB_IMPORTANCE: {
+            if (size != sizeof(mx_job_importance_t))
+                return MX_ERR_BUFFER_TOO_SMALL;
+            auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+            if (!job)
+                return MX_ERR_WRONG_TYPE;
+            int32_t value = 0;
+            if (_value.reinterpret<const mx_job_importance_t>()
+                    .copy_from_user(&value) != MX_OK) {
+                return MX_ERR_INVALID_ARGS;
+            }
+            return job->set_importance(
+                static_cast<mx_job_importance_t>(value));
         }
     }
 

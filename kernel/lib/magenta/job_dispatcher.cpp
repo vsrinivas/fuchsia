@@ -21,7 +21,7 @@ static const uint32_t kRootJobMaxHeight = 32;
 mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     AllocChecker ac;
     auto job = mxtl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
-    return ac.check() ? job  : nullptr;
+    return ac.check() ? job : nullptr;
 }
 
 status_t JobDispatcher::Create(uint32_t flags,
@@ -56,6 +56,9 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       state_(State::READY),
       process_count_(0u),
       job_count_(0u),
+      importance_(parent != nullptr
+                      ? MX_JOB_IMPORTANCE_INHERITED
+                      : MX_JOB_IMPORTANCE_MAX),
       state_tracker_(MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS),
       policy_(policy) {
 }
@@ -70,7 +73,7 @@ void JobDispatcher::on_zero_handles() {
 }
 
 mx_koid_t JobDispatcher::get_related_koid() const {
-    return parent_? parent_->get_koid() : 0u;
+    return parent_ ? parent_->get_koid() : 0u;
 }
 
 bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
@@ -285,4 +288,54 @@ status_t JobDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
     return name_.set(name, len);
+}
+
+status_t JobDispatcher::get_importance(mx_job_importance_t* out) const {
+    canary_.Assert();
+    DEBUG_ASSERT(out != nullptr);
+
+    // Find the importance value that we inherit.
+    const JobDispatcher* job = this;
+    do {
+        mx_job_importance_t imp = job->GetRawImportance();
+        if (imp != MX_JOB_IMPORTANCE_INHERITED) {
+            *out = imp;
+            return MX_OK;
+        }
+        // Don't need to use RefPtrs or grab locks: our caller has a reference
+        // to |this|, and there's a const RefPtr chain from |this| to all
+        // ancestors.
+        job = job->parent_.get();
+    } while (job != nullptr);
+
+    // The root job should always have a non-INHERITED importance.
+    PANIC("Could not find inherited importance of job %" PRIu64 "\n",
+          get_koid());
+}
+
+// Does not resolve MX_JOB_IMPORTANCE_INHERITED.
+mx_job_importance_t JobDispatcher::GetRawImportance() const {
+    canary_.Assert();
+    AutoLock lock(&lock_);
+    return importance_;
+}
+
+status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
+    canary_.Assert();
+
+    if ((importance < MX_JOB_IMPORTANCE_MIN ||
+         importance > MX_JOB_IMPORTANCE_MAX) &&
+        importance != MX_JOB_IMPORTANCE_INHERITED) {
+        return MX_ERR_OUT_OF_RANGE;
+    }
+    AutoLock lock(&lock_);
+    // No-one is allowed to change the importance of the root job.  Note that
+    // the actual root job ("<superroot>") typically isn't seen by userspace, so
+    // no userspace program should see this error.  The job that userspace calls
+    // "root" is actually a child of the real (super) root job.
+    if (parent_ == nullptr) {
+        return MX_ERR_ACCESS_DENIED;
+    }
+    importance_ = importance;
+    return MX_OK;
 }

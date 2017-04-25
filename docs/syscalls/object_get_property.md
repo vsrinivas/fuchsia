@@ -99,6 +99,21 @@ Allowed operations: **get**
 
 The base address of the vDSO mapping, or zero.
 
+### MX_PROP_JOB_IMPORTANCE
+
+*handle* type: **Job**
+
+*value* type: **mx_job_importance_t**
+
+Allowed operations: **get**, **set**
+
+A hint about how important a job is; used to rank jobs for the out-of-memory
+(OOM) killer.
+
+Additional errors:
+
+*   **MX_ERR_OUT_OF_RANGE**: If the importance value is not valid
+
 ## RETURN VALUE
 
 **mx_object_get_property**() returns **MX_OK** on success. In the event of

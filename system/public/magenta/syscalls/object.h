@@ -365,6 +365,26 @@ typedef struct mx_info_resource {
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define MX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
 
+// Argument is an mx_job_importance_t value.
+#define MX_PROP_JOB_IMPORTANCE             7u
+
+// Describes how important a job is.
+typedef int32_t mx_job_importance_t;
+
+// Valid mx_job_importance_t values and range.
+// The non-negative values must fit in 8 bits.
+
+// A job with this importance will inherit its actual importance from
+// the closest ancestor with a non-INHERITED importance property value.
+#define MX_JOB_IMPORTANCE_INHERITED ((mx_job_importance_t)-1)
+
+// The lowest importance. Jobs with this importance value are likely to be
+// killed first in an out-of-memory situation.
+#define MX_JOB_IMPORTANCE_MIN       ((mx_job_importance_t)0)
+
+// The highest importance.
+#define MX_JOB_IMPORTANCE_MAX       ((mx_job_importance_t)255)
+
 // Values for mx_info_thread_t.state.
 #define MX_THREAD_STATE_NEW                 0u
 #define MX_THREAD_STATE_RUNNING             1u

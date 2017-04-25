@@ -74,6 +74,21 @@ public:
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     status_t set_name(const char* name, size_t len) final;
     uint32_t max_height() const { return max_height_; }
+
+    // "Importance" is a userspace-settable hint that is used to rank jobs for
+    // OOM killing. See MX_PROP_JOB_IMPORTANCE.
+    // Note: if the importance is set to MX_JOB_IMPORTANCE_INHERITED (which is
+    // the default for all jobs except the root job), get_importance() will
+    // return the inherited value.
+    status_t get_importance(mx_job_importance_t* out) const;
+    status_t set_importance(mx_job_importance_t importance);
+
+    // TODO(dbort): Consider adding a get_capped_importance() so that userspace
+    // doesn't need to check all ancestor jobs to find the value (which is the
+    // minimum importance value of this job and its ancestors). Could also be
+    // used by the killer thread to avoid jobs whose capped importance is
+    // IMMORTAL.
+
     uint32_t process_count() const TA_REQ(lock_) { return process_count_;}
     uint32_t job_count() const TA_REQ(lock_) { return job_count_; }
     bool AddChildProcess(ProcessDispatcher* process);
@@ -101,6 +116,10 @@ private:
 
     JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
 
+    // Like get_importance(), but does not resolve inheritance; i.e., this
+    // method may return MX_JOB_IMPORTANCE_INHERITED.
+    mx_job_importance_t GetRawImportance() const;
+
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
 
@@ -120,10 +139,11 @@ private:
     mxtl::Name<MX_MAX_NAME_LEN> name_;
 
     // The |lock_| protects all members below.
-    Mutex lock_;
+    mutable Mutex lock_;
     State state_ TA_GUARDED(lock_);
     uint32_t process_count_ TA_GUARDED(lock_);
     uint32_t job_count_ TA_GUARDED(lock_);
+    mx_job_importance_t importance_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 
     using RawJobList =
