@@ -588,6 +588,30 @@ bool test_output_when_viewport_scrolled() {
     END_TEST;
 }
 
+bool test_scrolling_when_viewport_scrolled() {
+    BEGIN_TEST;
+
+    TextconHelper tc(10, 3);
+    // Line 1 will move into the scrollback region.
+    tc.PutString("1\n 2\n  3\n   4");
+    EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
+    {
+        mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
+        vc_device_scroll_viewport_top(tc.vc_dev);
+    }
+    EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
+    // Check redrawing consistency.
+    tc.PutString("");
+
+    // Test that the display is updated correctly when we scroll.
+    tc.PutString("\n5");
+    tc.AssertLineContains(0, "  3");
+    tc.AssertLineContains(1, "   4");
+    tc.AssertLineContains(2, "5");
+
+    END_TEST;
+}
+
 // Test that vc_device_get_scrollback_lines() gives the correct results.
 bool test_scrollback_lines_count() {
     BEGIN_TEST;
@@ -667,6 +691,7 @@ RUN_TEST(test_scroll_viewport_by_large_delta)
 RUN_TEST(test_viewport_scrolling_follows_bottom)
 RUN_TEST(test_viewport_scrolling_follows_scrollback)
 RUN_TEST(test_output_when_viewport_scrolled)
+RUN_TEST(test_scrolling_when_viewport_scrolled)
 RUN_TEST(test_scrollback_lines_count)
 RUN_TEST(test_scrollback_lines_contents)
 END_TEST_CASE(gfxconsole_textbuf_tests)

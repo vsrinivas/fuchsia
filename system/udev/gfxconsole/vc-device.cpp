@@ -201,8 +201,16 @@ static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
                              int line_count) TA_REQ(g_vc_lock) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    if (dev->viewport_y < 0)
+    if (dev->viewport_y < 0) {
+        tc_copy_lines(&dev->textcon, y_dest, y_src, line_count);
+
+        // The viewport is scrolled.  For simplicity, fall back to
+        // redrawing all of the non-scrollback lines in this case.
+        int rows = vc_device_rows(dev);
+        vc_device_invalidate(dev, 0, 0, dev->columns, rows);
+        vc_invalidate_lines(dev, 0, rows);
         return;
+    }
 
     // Remove the cursor from the display before copying the lines on
     // screen, otherwise we might be copying a rendering of the cursor to a
