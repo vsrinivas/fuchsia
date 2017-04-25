@@ -34,6 +34,15 @@ SECTIONS {
     . = 0 + SIZEOF_HEADERS;
 
     /*
+     * This should be defined automatically by the linker.
+     * But LLD fails to do so in the presence of a linker script.
+     * So define it explicitly.
+     * TODO(mcgrathr): If http://bugs.llvm.org/show_bug.cgi?id=32367
+     * is ever fixed, remove this.
+     */
+    PROVIDE_HIDDEN(__ehdr_start = . - SIZEOF_HEADERS);
+
+    /*
      * Match the non-allocated Gold version note specially, so
      * it doesn't go into the allocated .note section below.
      * With BFD ld, the .note clause could use:
