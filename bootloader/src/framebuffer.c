@@ -57,9 +57,12 @@ void set_gfx_mode(uint32_t mode) {
         printf("invalid framebuffer mode: %u\n", mode);
         return;
     }
-    gop->SetMode(gop, mode);
+    efi_status s = gop->SetMode(gop, mode);
+    if (EFI_ERROR(s)) {
+        printf("could not set mode: %s\n", xefi_strerror(s));
+    }
     gBS->Stall(1000);
-    gSys->ConOut->ClearScreen(gSys->ConOut);
+    gSys->ConOut->SetCursorPosition(gSys->ConOut, 0, 0);
 }
 
 void set_gfx_mode_from_cmdline(const char* fbres) {
