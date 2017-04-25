@@ -79,11 +79,20 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
 static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
 
-    assert(y0 <= static_cast<int>(dev->rows));
     assert(h >= 0);
-    assert(y0 + h <= static_cast<int>(dev->rows));
+    int y1 = y0 + h;
+    assert(y0 <= static_cast<int>(dev->rows));
+    assert(y1 <= static_cast<int>(dev->rows));
 
-    for (int y = y0; y < y0 + h; y++) {
+    // Clip the y range so that we don't unnecessarily draw characters
+    // outside the visible range, and so that we don't draw characters into
+    // the bottom margin.
+    int visible_y0 = dev->viewport_y;
+    int visible_y1 = dev->viewport_y + vc_device_rows(dev);
+    y0 = MAX(y0, visible_y0);
+    y1 = MIN(y1, visible_y1);
+
+    for (int y = y0; y < y1; y++) {
         if (y < 0) {
             // Scrollback row.
             vc_char_t* row = vc_device_get_scrollback_line_ptr(
@@ -360,7 +369,9 @@ void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     vc_device_clear_gfx(dev);
-    vc_device_invalidate(dev, 0, 0, dev->columns, dev->rows);
+    int scrollback_lines = vc_device_get_scrollback_lines(dev);
+    vc_device_invalidate(dev, 0, -scrollback_lines,
+                         dev->columns, scrollback_lines + dev->rows);
 }
 
 int vc_device_get_scrollback_lines(vc_device_t* dev) {
