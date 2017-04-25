@@ -16,6 +16,7 @@
 #include "apps/bluetooth/lib/hci/test_controller.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace bluetooth {
@@ -40,6 +41,19 @@ constexpr uint8_t LowerBits(const OpCode opcode) {
 }
 
 constexpr uint8_t kNumHCICommandPackets = 1;
+
+// A reference counted object used to verify that HCI command completion and status callbacks are
+// properly cleaned up after the end of a transaction.
+class TestCallbackObject : public ftl::RefCountedThreadSafe<TestCallbackObject> {
+ public:
+  explicit TestCallbackObject(const ftl::Closure& deletion_callback)
+      : deletion_cb_(deletion_callback) {}
+
+  virtual ~TestCallbackObject() { deletion_cb_(); }
+
+ private:
+  ftl::Closure deletion_cb_;
+};
 
 class CommandChannelTest : public ::testing::Test {
  public:
@@ -136,13 +150,17 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   test_controller()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
   test_controller()->Start();
 
-  // Send a HCI_Reset command.
+  // Send a HCI_Reset command. We attach an instance of TestCallbackObject to the callbacks to
+  // verify that it gets cleaned up as expected.
+  bool test_obj_deleted = false;
+  auto test_obj =
+      ftl::MakeRefCounted<TestCallbackObject>([&test_obj_deleted] { test_obj_deleted = true; });
   common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
   CommandPacket reset(kReset, &buffer);
   reset.EncodeHeader();
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
-      common::DynamicByteBuffer(buffer), NOP_STATUS_CB(),
-      [&id, this](CommandChannel::TransactionId callback_id, const EventPacket& event) {
+      common::DynamicByteBuffer(buffer), [test_obj](CommandChannel::TransactionId, Status) {},
+      [&id, this, test_obj](CommandChannel::TransactionId callback_id, const EventPacket& event) {
         EXPECT_EQ(id, callback_id);
         EXPECT_EQ(kCommandCompleteEventCode, event.event_code());
         EXPECT_EQ(4, event.GetHeader().parameter_total_size);
@@ -155,7 +173,11 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
         message_loop()->QuitNow();
       },
       message_loop()->task_runner());
+
+  test_obj = nullptr;
+  EXPECT_FALSE(test_obj_deleted);
   RunMessageLoop();
+  EXPECT_TRUE(test_obj_deleted);
 }
 
 TEST_F(CommandChannelTest, SingleRequestWithStatusResponse) {

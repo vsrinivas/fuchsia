@@ -99,7 +99,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
 
 void SequentialCommandRunner::NotifyResultAndReset(bool result) {
   FTL_DCHECK(result_callback_);
-  command_queue_ = CommandQueue();
+  if (!command_queue_.empty()) command_queue_ = {};
 
   // Reset |result_callback| before invoking it so that the callback implementation can immediately
   // reuse this SequentialCommandRunner.

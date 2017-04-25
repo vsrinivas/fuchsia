@@ -348,6 +348,11 @@ void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
 
   if (!command) {
     is_command_pending_ = false;
+
+    // Clear all the bits of |pending_command_|. This is important since the pending command's
+    // callbacks can hold on to shared resources that are expected to be freed when a command
+    // completes.
+    pending_command_ = {};
     return;
   }
 
