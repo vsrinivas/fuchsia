@@ -26,6 +26,7 @@ ROOT_PUBSPECS = [
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
 PROJECT_DEPENDENCIES = [
+    'apps/modules/chat',
     'apps/modules/common',
     'apps/modules/dashboard',
     'apps/mondrian',
