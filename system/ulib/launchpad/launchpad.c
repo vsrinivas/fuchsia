@@ -129,8 +129,8 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
         lp->errmsg = "no error";
     }
 
-    launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
-    launchpad_add_handle(lp, vmar, MX_HND_TYPE_VMAR_ROOT);
+    launchpad_add_handle(lp, proc, PA_PROC_SELF);
+    launchpad_add_handle(lp, vmar, PA_VMAR_ROOT);
 
     *result = lp;
     return lp->error;
@@ -153,7 +153,7 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
         lp_error(lp, status, "create: mx_process_create() failed");
 
     if (transfered_job != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, transfered_job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+        launchpad_add_handle(lp, transfered_job, PA_JOB_DEFAULT);
     }
 
     *result = lp;
@@ -321,7 +321,7 @@ mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
         return lp_error(lp, status, "add_pipe: failed to create pipe");
     }
     fd = status;
-    if ((status = launchpad_add_handle(lp, handle, MX_HND_INFO(MX_HND_INFO_TYPE(id), target_fd))) < 0) {
+    if ((status = launchpad_add_handle(lp, handle, PA_HND(PA_HND_TYPE(id), target_fd))) < 0) {
         close(fd);
         mx_handle_close(handle);
         return status;
@@ -358,7 +358,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     if (status == NO_ERROR) {
         lp->loader_message = false;
         launchpad_add_handle(lp, segments_vmar,
-                             MX_HND_INFO(MX_HND_TYPE_VMAR_LOADED, 0));
+                             PA_HND(PA_VMAR_LOADED, 0));
     }
 
 done:
@@ -570,7 +570,7 @@ static mx_status_t launchpad_elf_load_body(launchpad_t* lp, const char* hdr_buf,
                     lp->loader_message = false;
                     launchpad_add_handle(
                         lp, segments_vmar,
-                        MX_HND_INFO(MX_HND_TYPE_VMAR_LOADED, 0));
+                        PA_HND(PA_VMAR_LOADED, 0));
                 }
             } else {
                 if ((status = handle_interp(lp, vmo, interp, interp_len))) {
@@ -755,8 +755,7 @@ static void vdso_unlock(void) {
 }
 static mx_handle_t vdso_get_vmo(void) {
     if (vdso_vmo == MX_HANDLE_INVALID)
-        vdso_vmo = mx_get_startup_handle(
-            MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
+        vdso_vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
     return vdso_vmo;
 }
 
@@ -788,7 +787,7 @@ mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
     if (vdso < 0)
         return lp_error(lp, vdso, "add_vdso_vmo: get_vdso_vmo failed");
     mx_status_t status = launchpad_add_handle(
-        lp, vdso, MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
+        lp, vdso, PA_HND(PA_VMO_VDSO, 0));
     if (status != NO_ERROR)
         mx_handle_close(vdso);
     return status;
@@ -937,24 +936,24 @@ static mx_status_t send_loader_message(launchpad_t* lp,
                 return status;
             }
             handles[nhandles] = proc;
-            msg_handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
+            msg_handle_info[nhandles] = PA_PROC_SELF;
             handles[nhandles + 1] = vmar;
-            msg_handle_info[nhandles + 1] = MX_HND_TYPE_VMAR_ROOT;
+            msg_handle_info[nhandles + 1] = PA_VMAR_ROOT;
             handles[nhandles + 2] = thread;
-            msg_handle_info[nhandles + 2] = MX_HND_TYPE_THREAD_SELF;
+            msg_handle_info[nhandles + 2] = PA_THREAD_SELF;
             nhandles += HND_LOADER_COUNT;
             continue;
 
         case HND_LOADER_SVC:
-            id = MX_HND_TYPE_LOADER_SVC;
+            id = PA_SVC_LOADER;
             break;
 
         case HND_EXEC_VMO:
-            id = MX_HND_TYPE_EXEC_VMO;
+            id = PA_VMO_EXECUTABLE;
             break;
 
         case HND_SEGMENTS_VMAR:
-            id = MX_HND_TYPE_VMAR_LOADED;
+            id = PA_VMAR_LOADED;
             break;
         }
         if (lp->special_handles[i] != MX_HANDLE_INVALID) {
@@ -1019,8 +1018,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             mx_handle_close(*thread);
             return lp_error(lp, status, "cannot duplicate thread handle");
         }
-        status = launchpad_add_handle(lp, thread_copy,
-                                      MX_HND_TYPE_THREAD_SELF);
+        status = launchpad_add_handle(lp, thread_copy, PA_THREAD_SELF);
         if (status != NO_ERROR) {
             mx_handle_close(*thread);
             return status;
@@ -1050,7 +1048,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
                                     lp->handles_info,
                                     lp->handle_count * sizeof(lp->handles_info[0]));
     if (allocate_stack)
-        *next_handle = MX_HND_TYPE_STACK_VMO;
+        *next_handle = PA_VMO_STACK;
 
     // Figure out how big an initial thread to allocate.
     size_t stack_size;
@@ -1105,8 +1103,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             // built the bootstrap message.  We shoved an extra info
             // slot with MX_HND_TYPE_STACK_VMO into the message, so
             // now this new final handle will correspond to that slot.
-            status = launchpad_add_handle(lp, stack_vmo,
-                                          MX_HND_TYPE_STACK_VMO);
+            status = launchpad_add_handle(lp, stack_vmo, PA_VMO_STACK);
         }
         if (status != NO_ERROR) {
             mx_handle_close(stack_vmo);

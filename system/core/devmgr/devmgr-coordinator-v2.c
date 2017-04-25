@@ -69,17 +69,17 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
 
-    launchpad_add_handle(lp, hrpc, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, 0));
 
     mx_handle_t h;
     mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &h);
-    launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
 
     launchpad_clone(lp, LP_CLONE_ENVIRON);
 
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
-                         MX_HND_INFO(MX_HND_TYPE_MXIO_ROOT, 0));
+                         PA_HND(PA_MXIO_ROOT, 0));
 
     // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);

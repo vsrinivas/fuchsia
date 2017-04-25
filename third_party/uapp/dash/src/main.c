@@ -147,7 +147,7 @@ main(int argc, char **argv)
 	init();
 	setstackmark(&smark);
 
-	mx_handle_t ast_vmo = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+	mx_handle_t ast_vmo = mx_get_startup_handle(PA_HND(PA_USER0, 0));
 
 	login = procargs(argc, argv, ast_vmo != MX_HANDLE_INVALID);
 

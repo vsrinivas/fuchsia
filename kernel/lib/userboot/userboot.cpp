@@ -213,28 +213,28 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
         uint32_t info = 0;
         switch (static_cast<bootstrap_handle_index>(i)) {
         case BOOTSTRAP_VDSO:
-            info = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
+            info = PA_HND(PA_VMO_VDSO, 0);
             break;
         case BOOTSTRAP_RAMDISK:
-            info = MX_HND_INFO(MX_HND_TYPE_BOOTDATA_VMO, 0);
+            info = PA_HND(PA_VMO_BOOTDATA, 0);
             break;
         case BOOTSTRAP_RESOURCE_ROOT:
-            info = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
+            info = PA_HND(PA_RESOURCE, 0);
             break;
         case BOOTSTRAP_STACK:
-            info = MX_HND_INFO(MX_HND_TYPE_STACK_VMO, 0);
+            info = PA_HND(PA_VMO_STACK, 0);
             break;
         case BOOTSTRAP_PROC:
-            info = MX_HND_INFO(MX_HND_TYPE_PROC_SELF, 0);
+            info = PA_HND(PA_PROC_SELF, 0);
             break;
         case BOOTSTRAP_THREAD:
-            info = MX_HND_INFO(MX_HND_TYPE_THREAD_SELF, 0);
+            info = PA_HND(PA_THREAD_SELF, 0);
             break;
         case BOOTSTRAP_JOB:
-            info = MX_HND_INFO(MX_HND_TYPE_JOB, 0);
+            info = PA_HND(PA_JOB_DEFAULT, 0);
             break;
         case BOOTSTRAP_VMAR_ROOT:
-            info = MX_HND_INFO(MX_HND_TYPE_VMAR_ROOT, 0);
+            info = PA_HND(PA_VMAR_ROOT, 0);
             break;
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();

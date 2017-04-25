@@ -37,9 +37,9 @@ mx_status_t devhost_launch_acpisvc(mx_handle_t job_handle) {
     launchpad_load_from_file(lp, binname);
     launchpad_set_args(lp, 1, &binname);
     launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_MXIO_STDIO));
-    launchpad_add_handle(lp, logger, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1));
-    launchpad_add_handle(lp, root, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    launchpad_add_handle(lp, rpc[1], MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+    launchpad_add_handle(lp, logger, PA_HND(PA_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1));
+    launchpad_add_handle(lp, root, PA_HND(PA_USER0, 0));
+    launchpad_add_handle(lp, rpc[1], PA_HND(PA_USER1, 0));
 
     const char* errmsg;
     mx_status_t status = launchpad_go(lp, NULL, &errmsg);

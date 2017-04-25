@@ -464,7 +464,7 @@ void __libc_extensions_init(uint32_t handle_count,
 
     // extract handles we care about
     for (uint32_t n = 0; n < handle_count; n++) {
-        unsigned arg = MX_HND_INFO_ARG(handle_info[n]);
+        unsigned arg = PA_HND_ARG(handle_info[n]);
         mx_handle_t h = handle[n];
 
         // MXIO uses this bit as a flag to say
@@ -477,14 +477,14 @@ void __libc_extensions_init(uint32_t handle_count,
             }
         }
 
-        switch (MX_HND_INFO_TYPE(handle_info[n])) {
-        case MX_HND_TYPE_MXIO_ROOT:
+        switch (PA_HND_TYPE(handle_info[n])) {
+        case PA_MXIO_ROOT:
             mxio_root_handle = mxio_remote_create(h, 0);
             break;
-        case MX_HND_TYPE_MXIO_CWD:
+        case PA_MXIO_CWD:
             mxio_cwd_handle = mxio_remote_create(h, 0);
             break;
-        case MX_HND_TYPE_MXIO_REMOTE:
+        case PA_MXIO_REMOTE:
             // remote objects may have a second handle
             // which is for signaling events
             if (((n + 1) < handle_count) &&
@@ -496,15 +496,15 @@ void __libc_extensions_init(uint32_t handle_count,
             }
             mxio_fdtab[arg]->dupcount++;
             break;
-        case MX_HND_TYPE_MXIO_PIPE:
+        case PA_MXIO_PIPE:
             mxio_fdtab[arg] = mxio_pipe_create(h);
             mxio_fdtab[arg]->dupcount++;
             break;
-        case MX_HND_TYPE_MXIO_LOGGER:
+        case PA_MXIO_LOGGER:
             mxio_fdtab[arg] = mxio_logger_create(h);
             mxio_fdtab[arg]->dupcount++;
             break;
-        case MX_HND_TYPE_MXIO_SOCKET:
+        case PA_MXIO_SOCKET:
             // socket objects have a second handle
             if (((n + 1) < handle_count) &&
                 (handle_info[n] == handle_info[n + 1])) {
@@ -515,7 +515,7 @@ void __libc_extensions_init(uint32_t handle_count,
                 mx_handle_close(h);
             }
             break;
-        case MX_HND_TYPE_SERVICE_ROOT:
+        case PA_SERVICE_ROOT:
             mxio_svc_root = h;
             // do not remove handle, so it is available
             // to higher level service connection code
@@ -575,7 +575,7 @@ mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types) {
     // in normal operation
     mx_status_t r = mxio_root_handle->ops->clone(mxio_root_handle, handles, types);
     if (r > 0) {
-        *types = MX_HND_TYPE_MXIO_ROOT;
+        *types = PA_MXIO_ROOT;
     }
     return r;
 }
@@ -583,7 +583,7 @@ mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types) {
 mx_status_t mxio_clone_cwd(mx_handle_t* handles, uint32_t* types) {
     mx_status_t r = mxio_cwd_handle->ops->clone(mxio_cwd_handle, handles, types);
     if (r > 0) {
-        *types = MX_HND_TYPE_MXIO_CWD;
+        *types = PA_MXIO_CWD;
     }
     return r;
 }

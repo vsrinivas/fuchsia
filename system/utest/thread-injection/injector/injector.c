@@ -16,7 +16,7 @@
 #define HELPER "/boot/bin/thread-injection-injected"
 
 int main(void) {
-    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h < 0) {
         fprintf(stderr, "mx_get_startup_handle: %d\n", h);
         return 1;

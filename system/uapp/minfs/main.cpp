@@ -47,7 +47,7 @@ int do_minfs_mount(minfs::Bcache* bc, int argc, char** argv) {
         return -1;
     }
 
-    mx_handle_t h = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == MX_HANDLE_INVALID) {
         error("minfs: Could not access startup handle to mount point\n");
         return ERR_BAD_STATE;

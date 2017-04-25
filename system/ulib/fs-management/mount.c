@@ -72,7 +72,7 @@ static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle
         return status;
     }
     hnd[*n] = mountee_handle;
-    ids[*n] = MX_HND_TYPE_USER0;
+    ids[*n] = PA_USER0;
     *n = *n + 1;
 
     if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + *n, ids + *n)) <= 0) {

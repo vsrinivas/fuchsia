@@ -235,14 +235,14 @@ int devmgr_start_system_init(void* arg) {
         if (application_launcher_child) {
             assert(init_hnd_count < countof(init_hnds));
             init_hnds[init_hnd_count] = application_launcher_child;
-            init_ids[init_hnd_count] = MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0);
+            init_ids[init_hnd_count] = PA_HND(PA_APP_LAUNCHER, 0);
             init_hnd_count++;
             application_launcher_child = 0;
         }
         if (svc_request_handle) {
             assert(init_hnd_count < countof(init_hnds));
             init_hnds[init_hnd_count] = svc_request_handle;
-            init_ids[init_hnd_count] = MX_HND_TYPE_SERVICE_REQUEST;
+            init_ids[init_hnd_count] = PA_SERVICE_REQUEST;
             init_hnd_count++;
             svc_request_handle = 0;
         }
@@ -363,7 +363,7 @@ int main(int argc, char** argv) {
 
     devmgr_io_init();
 
-    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    root_resource_handle = mx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
     root_job_handle = mx_job_default();
 
     printf("devmgr: main()\n");

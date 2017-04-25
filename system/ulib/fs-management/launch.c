@@ -36,8 +36,8 @@ mx_status_t launch_logs_async(int argc, const char** argv, mx_handle_t* handles,
     mx_handle_t h;
     mx_log_create(0, &h);
     if (h != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER,
-                                                0 | MXIO_FLAG_USE_FOR_STDIO));
+        launchpad_add_handle(lp, h, PA_HND(PA_MXIO_LOGGER,
+                                           0 | MXIO_FLAG_USE_FOR_STDIO));
     }
 
     mx_status_t status;

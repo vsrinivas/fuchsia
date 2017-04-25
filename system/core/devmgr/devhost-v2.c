@@ -509,13 +509,13 @@ int main(int argc, char** argv) {
 
     driver_api_init(&devhost_api);
 
-    root_ios.ph.handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    root_ios.ph.handle = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (root_ios.ph.handle == MX_HANDLE_INVALID) {
         log(ERROR, "devhost: rpc handle invalid\n");
         return -1;
     }
 
-    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    root_resource_handle = mx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
     if (root_resource_handle == MX_HANDLE_INVALID) {
         log(ERROR, "devhost: no root resource handle!\n");
     }

@@ -61,9 +61,9 @@ static void run_program(const char *progname, int argc, const char** argv, mx_ha
     launchpad_set_args(lp, argc, argv);
     mx_handle_t handle = MX_HANDLE_INVALID;
     mx_log_create(0, &handle);
-    launchpad_add_handle(lp, handle, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 0 | MXIO_FLAG_USE_FOR_STDIO));
+    launchpad_add_handle(lp, handle, PA_HND(PA_MXIO_LOGGER, 0 | MXIO_FLAG_USE_FOR_STDIO));
     if (h != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+        launchpad_add_handle(lp, h, PA_HND(PA_USER0, 0));
     }
     mx_status_t status;
     const char* errmsg;

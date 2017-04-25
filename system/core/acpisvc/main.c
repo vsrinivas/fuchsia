@@ -22,14 +22,14 @@ static ACPI_STATUS init(void);
 mx_handle_t root_resource_handle;
 
 int main(int argc, char** argv) {
-    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    root_resource_handle = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (root_resource_handle <= 0) {
         printf("Failed to find root resource handle\n");
         return 1;
     }
 
     // Get handle from devmgr to serve as the ACPI root handle
-    mx_handle_t acpi_root = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+    mx_handle_t acpi_root = mx_get_startup_handle(PA_HND(PA_USER1, 0));
     if (acpi_root <= 0) {
         printf("Failed to find acpi root handle\n");
         return 1;

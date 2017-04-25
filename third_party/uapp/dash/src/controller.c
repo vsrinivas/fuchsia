@@ -23,7 +23,7 @@ static const char kAddRemoteEntryCommand[] = "add_remote_entry:";
 static const size_t kAddRemoteEntryCommandLen = sizeof(kAddRemoteEntryCommand) - 1;
 
 void controller_init() {
-  ctrl_channel = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+  ctrl_channel = mx_get_startup_handle(PA_HND(PA_USER1, 0));
 
   if (ctrl_channel == MX_HANDLE_INVALID) {
     // Running without a shell controller.

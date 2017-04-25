@@ -541,7 +541,7 @@ static bool msg_loop(mx_handle_t channel)
 
 void test_inferior(void)
 {
-    mx_handle_t channel = mx_get_startup_handle(MX_HND_TYPE_USER0);
+    mx_handle_t channel = mx_get_startup_handle(PA_USER0);
     unittest_printf("test_inferior: got handle %d\n", channel);
 
     if (!msg_loop(channel))

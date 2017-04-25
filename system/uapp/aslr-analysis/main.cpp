@@ -194,7 +194,7 @@ int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
 
 int TestRunMain(int argc, char** argv) {
     mx_handle_t report_pipe =
-        mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
+        mx_get_startup_handle(PA_HND(PA_USER1, 0));
 
     ReportInfo report;
 
@@ -230,7 +230,7 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
         return status;
     }
 
-    ids[0] = MX_HND_TYPE_USER1;
+    ids[0] = PA_USER1;
     hnd[0] = h;
     launchpad_create(job, "testrun", &lp);
     launchpad_load_from_file(lp, bin);

@@ -367,7 +367,7 @@ static int thread_func(void* arg)
 static void __NO_RETURN test_child(void)
 {
     unittest_printf("Test child starting.\n");
-    mx_handle_t channel = mx_get_startup_handle(MX_HND_TYPE_USER0);
+    mx_handle_t channel = mx_get_startup_handle(PA_USER0);
     if (channel == MX_HANDLE_INVALID)
         tu_fatal("mx_get_startup_handle", ERR_BAD_HANDLE - 1000);
     msg_loop(channel);
@@ -393,7 +393,7 @@ static launchpad_t* setup_test_child(const char* arg, mx_handle_t* out_channel)
     };
     int argc = countof(argv) - (arg == NULL);
     mx_handle_t handles[1] = { their_channel };
-    uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
+    uint32_t handle_ids[1] = { PA_USER0 };
     *out_channel = our_channel;
     launchpad_t* lp = tu_launch_mxio_init(test_child_name, argc, argv, NULL, 1, handles, handle_ids);
     unittest_printf("Test child setup.\n");

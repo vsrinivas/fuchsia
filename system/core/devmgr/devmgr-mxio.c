@@ -79,14 +79,14 @@ void devmgr_launch(mx_handle_t job, const char* name,
     launchpad_set_environ(lp, envp);
 
     mx_handle_t h = vfs_create_global_root_handle();
-    launchpad_add_handle(lp, h, MX_HND_TYPE_MXIO_ROOT);
+    launchpad_add_handle(lp, h, PA_MXIO_ROOT);
 
     if (stdiofd < 0) {
         mx_status_t r;
         if ((r = mx_log_create(0, &h) < 0)) {
             launchpad_abort(lp, r, "devmgr: cannot create debuglog handle");
         } else {
-            launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0));
+            launchpad_add_handle(lp, h, PA_HND(PA_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0));
         }
     } else {
         launchpad_clone_fd(lp, stdiofd, MXIO_FLAG_USE_FOR_STDIO | 0);
@@ -138,8 +138,8 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
     return cd.file_count;
 }
 
-#define HND_BOOTFS(n) MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, n)
-#define HND_BOOTDATA(n) MX_HND_INFO(MX_HND_TYPE_BOOTDATA_VMO, n)
+#define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
+#define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
 static void setup_bootfs(void) {
     mx_handle_t vmo;

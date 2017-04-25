@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
     if (pass_loader_handle) {
         mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
         check("mxio_loader_service", loader_svc);
-        status = launchpad_add_handle(lp, loader_svc, MX_HND_TYPE_LOADER_SVC);
+        status = launchpad_add_handle(lp, loader_svc, PA_SVC_LOADER);
         check("launchpad_add_handle", status);
     }
 
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
             return 2;
         }
         check("launchpad_vmo_from_file", exec_vmo);
-        status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
+        status = launchpad_add_handle(lp, exec_vmo, PA_VMO_EXECUTABLE);
     }
 
     if (exec_vmo_fd != -1) {
@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
             return 2;
         }
         check("launchpad_vmo_from_fd", exec_vmo);
-        status = launchpad_add_handle(lp, exec_vmo, MX_HND_TYPE_EXEC_VMO);
+        status = launchpad_add_handle(lp, exec_vmo, PA_VMO_EXECUTABLE);
     }
 
     if (stack_size != (size_t)-1) {

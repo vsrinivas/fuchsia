@@ -74,7 +74,7 @@ static mx_status_t log_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) 
     if (status < 0) {
         return status;
     }
-    types[0] = MX_HND_TYPE_MXIO_LOGGER;
+    types[0] = PA_MXIO_LOGGER;
     return 1;
 }
 

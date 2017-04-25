@@ -322,7 +322,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
     const char* test_child_path = program_path;
     const char* const argv[] = { test_child_path, name, verbosity_string };
     mx_handle_t handles[1] = { channel2 };
-    uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
+    uint32_t handle_ids[1] = { PA_USER0 };
 
     launchpad_t* lp;
     unittest_printf("Creating process \"%s\"\n", name);

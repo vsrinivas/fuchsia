@@ -49,15 +49,37 @@ struct mx_proc_args {
 // Handle Info entries associate a type and optional
 // argument with each handle included in the process
 // arguments message.
-#define MX_HND_INFO(type, arg) (((type)&0xFFFF) | (((arg)&0xFFFF) << 16))
-#define MX_HND_INFO_TYPE(n) ((n)&0xFFFF)
-#define MX_HND_INFO_ARG(n) (((n) >> 16) & 0xFFFF)
+#define PA_HND(type, arg)          (((type)&0xFF)| (((arg)&0xFFFF)<<16))
+#define PA_HND_TYPE(n)             ((n) & 0xFF)
+#define PA_HND_SUBTYPE(n)          (((n) >> 8) & 0xFF)
+#define PA_HND_ARG(n)              (((n) >> 16) & 0xFFFF)
+
+// --- Core Runtime Handles ---
+// Used by libc init (or equivalent) and dynamic loader
 
 // Handle to our own process.
-#define MX_HND_TYPE_PROC_SELF 1
+#define PA_PROC_SELF             0x01
 
 // Handle to the initial thread of our own process.
-#define MX_HND_TYPE_THREAD_SELF 2
+#define PA_THREAD_SELF           0x02
+
+// Handle to a Job object which can be used to make child processes. The
+// Job can be the same as the one used to create this process or it can
+// be different.
+#define PA_JOB_DEFAULT           0x03
+
+// Handle to the root of our address space
+#define PA_VMAR_ROOT             0x04
+
+// Handle to the VMAR used to load the initial program image.
+#define PA_VMAR_LOADED           0x05
+
+
+// --- Loader Service and VMO Handles ---
+// Used by libc init (or equivalent) and dynamic loader
+
+// Channel for dynamic loader service
+#define PA_SVC_LOADER            0x10
 
 // Handle to the VMO containing the ELF image of the system vDSO.  This
 // handle is duplicable, transferable, readable, and executable, but not
@@ -67,7 +89,7 @@ struct mx_proc_args {
 // might create or propagate it on to its children so they can do so.
 // Each process's own vDSO was mapped in by its creator before the
 // process started, its address passed as an argument to entry point.
-#define MX_HND_TYPE_VDSO_VMO 3
+#define PA_VMO_VDSO              0x11
 
 // Handle to the VMO used to map the initial thread's stack.  This
 // handle usually has all rights.  The protocol between process creator
@@ -78,59 +100,58 @@ struct mx_proc_args {
 // calling convention for function entry.  Thus the new process can
 // compute its exact stack bounds by subtracting the size reported by
 // this VMO from the (adjusted back up) initial SP value.
-#define MX_HND_TYPE_STACK_VMO 4
+#define PA_VMO_STACK             0x13
 
-// Handle to a Job object which can be used to make child processes. The
-// Job can be the same as the one used to create this process or it can
-// be different.
-#define MX_HND_TYPE_JOB 6
+// VM object handle for the main executable file
+#define PA_VMO_EXECUTABLE        0x14
 
-// Handle to the root of our address space
-#define MX_HND_TYPE_VMAR_ROOT 7
+// Used by kernel and userboot during startup
+#define PA_VMO_BOOTDATA          0x1A
 
-// Handle to the VMAR used to load the initial program image.
-#define MX_HND_TYPE_VMAR_LOADED 8
+// Used by kernel and userboot during startup
+#define PA_VMO_BOOTFS            0x1B
+
+
+// --- Namespace Handles ---
+// Coming soon
+
+// --- MXIO Handles ---
+// Used by libmxio for passing fdtable, fsroot, etc
 
 // Handle types the mxio library uses
-#define MX_HND_TYPE_MXIO_ROOT 0x10
-#define MX_HND_TYPE_MXIO_REMOTE 0x11
-#define MX_HND_TYPE_MXIO_PIPE 0x12
-#define MX_HND_TYPE_MXIO_EVENT 0x13
-#define MX_HND_TYPE_MXIO_LOGGER 0x14
-#define MX_HND_TYPE_MXIO_CWD 0x15
-#define MX_HND_TYPE_MXIO_SOCKET 0x16
-
-// Handle types used by the device manager and device hosts
-#define MX_HND_TYPE_RESOURCE 0x20
-
-// Handle types used by kernel & userboot for system startup
-#define MX_HND_TYPE_BOOTDATA_VMO 0x30
-#define MX_HND_TYPE_BOOTFS_VMO 0x31
+#define PA_MXIO_ROOT             0x30
+#define PA_MXIO_CWD              0x31
+#define PA_MXIO_REMOTE           0x32
+#define PA_MXIO_PIPE             0x33
+#define PA_MXIO_EVENT            0x34
+#define PA_MXIO_LOGGER           0x35
+#define PA_MXIO_SOCKET           0x36
 
 // Client endpoint for remoteio "/svc" directory provided
 // to enable outbound connections to services.
-#define MX_HND_TYPE_SERVICE_ROOT 0x40
+#define PA_SERVICE_ROOT          0x3A
 
 // Server endpoint for remoteio "/svc" directory provided
 // to enable handling of inbound connections to services
-#define MX_HND_TYPE_SERVICE_REQUEST 0x41
+#define PA_SERVICE_REQUEST       0x3B
+
+// Used by devmgr and devhosts
+#define PA_RESOURCE              0x3F
+
+
+// --- Various ---
 
 // Handle types used by the application model
-#define MX_HND_TYPE_APPLICATION_REQUEST 0x100 // deprecated
-#define MX_HND_TYPE_APPLICATION_LAUNCHER 0x101
-#define MX_HND_TYPE_APPLICATION_ENVIRONMENT 0x102
-#define MX_HND_TYPE_APPLICATION_SERVICES 0x103
-
-// Channel for dynamic loader service
-#define MX_HND_TYPE_LOADER_SVC 0x200
-
-// VM object handle for the main executable file
-#define MX_HND_TYPE_EXEC_VMO 0x201
+#define PA_APP_REQUEST           0x40 // deprecated
+#define PA_APP_LAUNCHER          0x41
+#define PA_APP_ENVIRONMENT       0x42
+#define PA_APP_SERVICES          0x43
 
 // Handle types for one-off use and prototyping
-#define MX_HND_TYPE_USER0 0xFFF0
-#define MX_HND_TYPE_USER1 0xFFF1
-#define MX_HND_TYPE_USER2 0xFFF2
+#define PA_USER0                 0xF0
+#define PA_USER1                 0xF1
+#define PA_USER2                 0xF2
+
 
 // Dynamic Loader Service Messages
 // Used by dynamic loader to obtain objects to link.
@@ -160,6 +181,21 @@ struct mx_loader_svc_msg {
 #define LOADER_SVC_OP_LOAD_SCRIPT_INTERP 4
 // arg=0, data[] object name (asciiz)
 // reply includes vmo handle on success
+
+
+// --- Compatibility Defines ---
+// TODO: remove once Fuchsia deps are resolved
+#define MX_HND_INFO(type, arg) (((type)&0xFF)| (((arg)&0xFFFF)<<16))
+#define MX_HND_INFO_TYPE(n) ((n) & 0xFF)
+
+#define MX_HND_TYPE_USER1 PA_USER1
+#define MX_HND_TYPE_APPLICATION_ENVIRONMENT PA_APP_ENVIRONMENT
+#define MX_HND_TYPE_APPLICATION_SERVICES PA_APP_SERVICES
+#define MX_HND_TYPE_APPLICATION_LAUNCHER PA_APP_LAUNCHER
+#define MX_HND_TYPE_MXIO_PIPE PA_MXIO_PIPE
+#define MX_HND_TYPE_JOB PA_JOB_DEFAULT
+#define MX_HND_TYPE_MXIO_ROOT PA_MXIO_ROOT
+#define MX_HND_TYPE_MXIO_LOGGER PA_MXIO_LOGGER
 
 #ifdef __cplusplus
 }

@@ -1632,8 +1632,8 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
 
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
-        switch (MX_HND_INFO_TYPE(handle_info[i])) {
-        case MX_HND_TYPE_LOADER_SVC:
+        switch (PA_HND_TYPE(handle_info[i])) {
+        case PA_SVC_LOADER:
             if (loader_svc != MX_HANDLE_INVALID ||
                 handles[i] == MX_HANDLE_INVALID) {
                 error("bootstrap message bad LOADER_SVC %#x vs %#x",
@@ -1641,7 +1641,7 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
             }
             loader_svc = handles[i];
             break;
-        case MX_HND_TYPE_EXEC_VMO:
+        case PA_VMO_EXECUTABLE:
             if (exec_vmo != MX_HANDLE_INVALID ||
                 handles[i] == MX_HANDLE_INVALID) {
                 error("bootstrap message bad EXEC_VMO %#x vs %#x",
@@ -1649,7 +1649,7 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
             }
             exec_vmo = handles[i];
             break;
-        case MX_HND_TYPE_MXIO_LOGGER:
+        case PA_MXIO_LOGGER:
             if (logger != MX_HANDLE_INVALID ||
                 handles[i] == MX_HANDLE_INVALID) {
                 error("bootstrap message bad MXIO_LOGGER %#x vs %#x",
@@ -1657,7 +1657,7 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
             }
             logger = handles[i];
             break;
-        case MX_HND_TYPE_VMAR_LOADED:
+        case PA_VMAR_LOADED:
             if (ldso.vmar != MX_HANDLE_INVALID ||
                 handles[i] == MX_HANDLE_INVALID) {
                 error("bootstrap message bad VMAR_LOADED %#x vs %#x",
@@ -1665,10 +1665,10 @@ __NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
             }
             ldso.vmar = handles[i];
             break;
-        case MX_HND_TYPE_PROC_SELF:
+        case PA_PROC_SELF:
             __magenta_process_self = handles[i];
             break;
-        case MX_HND_TYPE_VMAR_ROOT:
+        case PA_VMAR_ROOT:
             __magenta_vmar_root_self = handles[i];
             break;
         default:

@@ -118,8 +118,8 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     // Find the handles we're interested in among what we were given.
     mx_handle_t main_thread_handle = MX_HANDLE_INVALID;
     for (uint32_t i = 0; i < p.nhandles; ++i) {
-        switch (MX_HND_INFO_TYPE(p.handle_info[i])) {
-        case MX_HND_TYPE_PROC_SELF:
+        switch (PA_HND_TYPE(p.handle_info[i])) {
+        case PA_PROC_SELF:
             // The handle will have been installed already by dynamic
             // linker startup, but now we have another one.  They
             // should of course be handles to the same process, but
@@ -131,7 +131,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
             p.handle_info[i] = 0;
             break;
 
-        case MX_HND_TYPE_JOB:
+        case PA_JOB_DEFAULT:
             // The default job provided to the process to use for
             // creation of additional processes.  It may or may not
             // be the job this process is a child of.  It may not
@@ -143,7 +143,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
             p.handle_info[i] = 0;
             break;
 
-        case MX_HND_TYPE_VMAR_ROOT:
+        case PA_VMAR_ROOT:
             // As above for PROC_SELF
             if (__magenta_vmar_root_self != MX_HANDLE_INVALID)
                 _mx_handle_close(__magenta_vmar_root_self);
@@ -152,7 +152,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
             p.handle_info[i] = 0;
             break;
 
-        case MX_HND_TYPE_THREAD_SELF:
+        case PA_THREAD_SELF:
             main_thread_handle = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             p.handle_info[i] = 0;

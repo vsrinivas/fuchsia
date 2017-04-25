@@ -48,34 +48,34 @@ void devmgr_launch_devhost(mx_handle_t job,
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, (const char* const*) argv);
 
-    launchpad_add_handle(lp, hdevice, MX_HND_INFO(MX_HND_TYPE_USER0, ID_HDEVICE));
-    launchpad_add_handle(lp, hrpc, MX_HND_INFO(MX_HND_TYPE_USER0, ID_HRPC));
+    launchpad_add_handle(lp, hdevice, PA_HND(PA_USER0, ID_HDEVICE));
+    launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, ID_HRPC));
 
     mx_handle_t h;
     mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &h);
-    launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
 
 #if DEVMGR
     launchpad_clone(lp, LP_CLONE_ENVIRON);
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
-                         MX_HND_INFO(MX_HND_TYPE_MXIO_ROOT, 0));
+                         PA_HND(PA_MXIO_ROOT, 0));
     if (application_launcher) {
         launchpad_add_handle(lp, application_launcher,
-                             MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
+                             PA_HND(PA_USER0, ID_HLAUNCHER));
     }
     if ((h = get_service_root()) != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, MX_HND_TYPE_SERVICE_ROOT);
+        launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
     }
 #else
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
     if ((h = devhost_acpi_clone()) > 0) {
-        launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI));
+        launchpad_add_handle(lp, h, PA_HND(PA_USER0, ID_HACPI));
     }
 #endif
 
     //TODO: maybe migrate this to using the default job mechanism
     launchpad_add_handle(lp, get_sysinfo_job_root(),
-                         MX_HND_INFO(MX_HND_TYPE_USER0, ID_HJOBROOT));
+                         PA_HND(PA_USER0, ID_HJOBROOT));
 
 
     printf("devmgr: launch: %s %s %s\n", name, argv[0], argv[1]);

@@ -51,7 +51,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     if (what & LP_CLONE_DEFAULT_JOB) {
         mx_handle_t job;
         if (mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job) == NO_ERROR) {
-            launchpad_add_handle(lp, job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+            launchpad_add_handle(lp, job, PA_HND(PA_JOB_DEFAULT, 0));
         }
     }
     return launchpad_get_status(lp);

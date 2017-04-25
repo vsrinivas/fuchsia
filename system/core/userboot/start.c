@@ -150,29 +150,29 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t* thread_handle_loc = NULL;
     mx_handle_t* stack_vmo_handle_loc = NULL;
     for (uint32_t i = 0; i < nhandles; ++i) {
-        switch (MX_HND_INFO_TYPE(handle_info[i])) {
-        case MX_HND_TYPE_VDSO_VMO:
+        switch (PA_HND_TYPE(handle_info[i])) {
+        case PA_VMO_VDSO:
             vdso_vmo = handles[i];
             break;
-        case MX_HND_TYPE_PROC_SELF:
+        case PA_PROC_SELF:
             proc_handle_loc = &handles[i];
             break;
-        case MX_HND_TYPE_VMAR_ROOT:
+        case PA_VMAR_ROOT:
             vmar_root_handle_loc = &handles[i];
             break;
-        case MX_HND_TYPE_THREAD_SELF:
+        case PA_THREAD_SELF:
             thread_handle_loc = &handles[i];
             break;
-        case MX_HND_TYPE_STACK_VMO:
+        case PA_VMO_STACK:
             stack_vmo_handle_loc = &handles[i];
             break;
-        case MX_HND_TYPE_RESOURCE:
+        case PA_RESOURCE:
             resource_root = handles[i];
             break;
-        case MX_HND_TYPE_JOB:
+        case PA_JOB_DEFAULT:
             job = handles[i];
             break;
-        case MX_HND_TYPE_BOOTDATA_VMO:
+        case PA_VMO_BOOTDATA:
             if (bootdata_vmo == MX_HANDLE_INVALID)
                 bootdata_vmo = handles[i];
             break;
@@ -211,7 +211,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Pass the decompressed bootfs VMO on.
     handles[nhandles + EXTRA_HANDLE_BOOTFS] = bootfs_vmo;
     handle_info[nhandles + EXTRA_HANDLE_BOOTFS] =
-        MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, 0);
+        PA_HND(PA_VMO_BOOTFS, 0);
 
     // Map in the bootfs so we can look for files in it.
     struct bootfs bootfs;

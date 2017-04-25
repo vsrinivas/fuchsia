@@ -60,7 +60,7 @@ int thread_injection_test(void) {
     // Start the injector program, which will inject a third program
     // into this here process.
     const char* argv[] = { "/boot/bin/thread-injection-injector" };
-    uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+    uint32_t id = PA_HND(PA_USER0, 0);
 
     launchpad_t* lp;
     launchpad_create(0, argv[0], &lp);

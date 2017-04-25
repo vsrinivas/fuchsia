@@ -23,7 +23,7 @@ static mx_handle_t get_application_environment(void) {
     static mx_handle_t application_environment;
     if (!application_environment) {
         application_environment =
-            mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+            mx_get_startup_handle(PA_HND(PA_APP_ENVIRONMENT, 0));
     }
     return application_environment;
 }
@@ -95,7 +95,7 @@ static void prepare_launch(launchpad_t* lp, const char* filename, int argc,
     mx_status_t status = clone_application_environment(&application_environment);
     if ((status == NO_ERROR) && (application_environment != MX_HANDLE_INVALID)) {
         launchpad_add_handle(lp, application_environment,
-            MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+            PA_HND(PA_APP_ENVIRONMENT, 0));
     }
 }
 
@@ -170,7 +170,7 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     }
 
     prepare_launch(lp, orig_arg0, argc, (const char* const*)argv, envp, fds);
-    launchpad_add_handle(lp, ast_vmo, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    launchpad_add_handle(lp, ast_vmo, PA_HND(PA_USER0, 0));
     const char* errmsg;
     if ((status = launchpad_go(lp, process, &errmsg)) < 0) {
         //fprintf(stderr, "launch() failed: %d: %s\n", status, errmsg);

@@ -602,7 +602,7 @@ mx_status_t mxio_clone_svcroot(mx_handle_t* handles, uint32_t* types) {
         return r;
     }
     handles[0] = cli;
-    types[0] = MX_HND_TYPE_SERVICE_ROOT;
+    types[0] = PA_SERVICE_ROOT;
     return 1;
 }
 
@@ -774,7 +774,7 @@ static mx_status_t mxrio_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types
         return r;
     }
     for (unsigned i = 0; i < info.hcount; i++) {
-        types[i] = MX_HND_TYPE_MXIO_REMOTE;
+        types[i] = PA_MXIO_REMOTE;
     }
     memcpy(handles, info.handle, info.hcount * sizeof(mx_handle_t));
     return info.hcount;
@@ -790,10 +790,10 @@ static mx_status_t mxrio_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* type
     mxrio_t* rio = (void*)io;
     mx_status_t r;
     handles[0] = rio->h;
-    types[0] = MX_HND_TYPE_MXIO_REMOTE;
+    types[0] = PA_MXIO_REMOTE;
     if (rio->h2 != 0) {
         handles[1] = rio->h2;
-        types[1] = MX_HND_TYPE_MXIO_REMOTE;
+        types[1] = PA_MXIO_REMOTE;
         r = 2;
     } else {
         r = 1;
@@ -973,10 +973,10 @@ static mx_status_t mxsio_unwrap_stream(mxio_t* io, mx_handle_t* handles, uint32_
     mxrio_t* rio = (void*)io;
     mx_status_t r;
     handles[0] = rio->h;
-    types[0] = MX_HND_TYPE_MXIO_SOCKET;
+    types[0] = PA_MXIO_SOCKET;
     if (rio->h2 != 0) {
         handles[1] = rio->h2;
-        types[1] = MX_HND_TYPE_MXIO_SOCKET;
+        types[1] = PA_MXIO_SOCKET;
         r = 2;
     } else {
         r = 1;

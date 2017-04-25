@@ -92,15 +92,15 @@ mx_device_t* driver_get_misc_device(void) {
 
 static int devhost_init(void) {
     job_handle = mx_job_default();
-    sysinfo_job_root = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HJOBROOT));
-    app_launcher = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
-    root_resource_handle = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
-    hdevice = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HDEVICE));
-    hrpc = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HRPC));
-    hacpi = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI));
+    sysinfo_job_root = mx_get_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
+    app_launcher = mx_get_startup_handle(PA_HND(PA_USER0, ID_HLAUNCHER));
+    root_resource_handle = mx_get_startup_handle(PA_HND(PA_RESOURCE, 0));
+    hdevice = mx_get_startup_handle(PA_HND(PA_USER0, ID_HDEVICE));
+    hrpc = mx_get_startup_handle(PA_HND(PA_USER0, ID_HRPC));
+    hacpi = mx_get_startup_handle(PA_HND(PA_USER0, ID_HACPI));
 
     //TODO: figure out why we need to do this
-    mx_handle_t vmo = mx_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));
+    mx_handle_t vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
     vmo = launchpad_set_vdso_vmo(vmo);
 
     if (root_resource_handle <= 0) {
