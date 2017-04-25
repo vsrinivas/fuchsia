@@ -585,6 +585,14 @@ bool test_output_when_viewport_scrolled() {
     tc.AssertLineContains(1, "  3");
     tc.AssertLineContains(2, "   4");
 
+    // Test that erasing also updates the display correctly.  This
+    // changes the console contents without moving the cursor.
+    tc.PutString("\b\b\b\b"); // Move cursor left 3 chars
+    tc.PutString("\x1b[1K"); // Erase to beginning of line
+    tc.AssertLineContains(0, "      ium");
+    tc.AssertLineContains(1, "  3");
+    tc.AssertLineContains(2, "   4");
+
     END_TEST;
 }
 
