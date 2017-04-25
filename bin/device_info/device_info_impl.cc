@@ -4,16 +4,16 @@
 
 #include "apps/modular/src/device_info/device_info_impl.h"
 
-#include "apps/modular/lib/device_info/device_info.h"
-
 #include <string>
 
 namespace modular {
 
-DeviceInfoImpl::DeviceInfoImpl(const std::string& user)
-    : modular::DeviceInfo(),
-      device_id_(LoadDeviceID(user)),
-      device_profile_(LoadDeviceProfile()) {}
+DeviceInfoImpl::DeviceInfoImpl(const std::string& device_name,
+                               const std::string& device_id,
+                               const std::string& device_profile)
+    : device_id_(device_id),
+      device_name_(device_name),
+      device_profile_(device_profile) {}
 
 void DeviceInfoImpl::AddBinding(fidl::InterfaceRequest<DeviceInfo> request) {
   bindings_.AddBinding(this, std::move(request));
@@ -29,5 +29,8 @@ void DeviceInfoImpl::GetDeviceProfile(
   callback(device_profile_);
 };
 
+void DeviceInfoImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
+  callback(device_name_);
+}
 
 }  // namespace modular

@@ -313,10 +313,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     device_map_ = application_context()
                       ->ConnectToEnvironmentService<modular::DeviceMap>();
 
-    device_map_->Query([](fidl::Array<fidl::String> devices) {
+    device_map_->Query([](fidl::Array<modular::DeviceMapEntryPtr> devices) {
       FTL_LOG(INFO) << "Known devices:";
-      for (auto& device : devices) {
-        FTL_LOG(INFO) << " - " << device;
+      for (modular::DeviceMapEntryPtr& device : devices) {
+        FTL_LOG(INFO) << " - " << device->name;
       }
     });
   }

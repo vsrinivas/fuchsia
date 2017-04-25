@@ -13,8 +13,8 @@
 
 namespace modular {
 
-// Convinence class to parse a device's profile JSON. Can be used to parse the
-// current device or a remote device's profile from the device map. 
+// Parses a device's profile JSON. Can be used to parse the current device or a
+// remote device's profile from the device map. 
 class DeviceProfile {
   DeviceProfile();
   ~DeviceProfile();

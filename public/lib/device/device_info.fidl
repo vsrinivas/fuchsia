@@ -6,9 +6,13 @@ module modular;
 
 import "application/services/service_provider.fidl";
 
-// Service for querying device specific attributes
+// Service for querying device specific attributes. This data is the same as 
+// the DeviceMapEntry in the DeviceMap service for *this* device.
 [ServiceName="modular::DeviceInfo"]
 interface DeviceInfo {
+  // Returns the device name of this device. This name is user editable and may
+  // be the same between any of the user's devices.
+  GetDeviceName() => (string device_name);
 
   // Semi-sticky device ID usable for syncing. Guarantees a unique device id
   // that no another hardware will be using while this device is syncing.

@@ -12,6 +12,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/auth/token_provider_impl.h"
+#include "apps/modular/lib/device_info/device_info.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/ledger/storage.h"
@@ -132,8 +133,11 @@ UserRunnerImpl::UserRunnerImpl(
   });
 
   // DeviceInfo service
+  std::string device_id = LoadDeviceID(to_hex_string(user_id));
+  std::string device_profile = LoadDeviceProfile();
 
-  device_info_impl_.reset(new DeviceInfoImpl(to_hex_string(user_id)));
+  device_info_impl_.reset(
+      new DeviceInfoImpl(device_name_, device_id, device_profile));
   user_scope_.AddService<DeviceInfo>(
       [this](fidl::InterfaceRequest<DeviceInfo> request) {
         device_info_impl_->AddBinding(std::move(request));
@@ -141,7 +145,8 @@ UserRunnerImpl::UserRunnerImpl(
 
   // DeviceMap
 
-  device_map_impl_.reset(new DeviceMapImpl(device_name_, root_page_.get()));
+  device_map_impl_.reset(new DeviceMapImpl(device_name_, device_id,
+                                           device_profile, root_page_.get()));
   user_scope_.AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         device_map_impl_->Connect(std::move(request));

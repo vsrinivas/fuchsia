@@ -14,9 +14,12 @@
 
 namespace modular {
 
+// See services/device/device_info.fidl for details.
 class DeviceInfoImpl : public modular::DeviceInfo {
  public:
-  DeviceInfoImpl(const std::string& user);
+  DeviceInfoImpl(const std::string& device_name,
+                 const std::string& device_id,
+                 const std::string& device_profile);
 
   void AddBinding(fidl::InterfaceRequest<DeviceInfo> request);
 
@@ -26,7 +29,10 @@ class DeviceInfoImpl : public modular::DeviceInfo {
 
   void GetDeviceProfile(const GetDeviceProfileCallback& callback) override;
 
+  void GetDeviceName(const GetDeviceNameCallback& callback) override;
+
   std::string device_id_;
+  std::string device_name_;
   std::string device_profile_;
 
   fidl::BindingSet<modular::DeviceInfo> bindings_;

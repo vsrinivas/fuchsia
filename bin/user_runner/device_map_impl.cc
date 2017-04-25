@@ -16,10 +16,23 @@ namespace modular {
 
 namespace {
 
-void WriteDeviceName(std::string device_name, ledger::Page* const page) {
+void XdrDeviceData(XdrContext* const xdr, DeviceMapEntryPtr* const data) {
+  xdr->Field("name", &data->get()->name);
+  xdr->Field("device_id", &data->get()->device_id);
+  xdr->Field("profile", &data->get()->profile);
+}
+
+void WriteDeviceData(const std::string& device_name,
+                     const std::string& device_id,
+                     const std::string& profile,
+                     ledger::Page* const page) {
   std::string json;
-  XdrWrite(&json, &device_name, XdrFilter<std::string>);
-  page->Put(to_array(MakeDeviceKey(device_name)), to_array(json),
+  DeviceMapEntryPtr device = DeviceMapEntry::New();
+  device->name = device_name;
+  device->device_id = device_id;
+  device->profile = profile;
+  XdrWrite(&json, &device, XdrDeviceData);
+  page->Put(to_array(MakeDeviceKey(device_id)), to_array(json),
             [](ledger::Status) {});
 }
 
@@ -27,7 +40,7 @@ void WriteDeviceName(std::string device_name, ledger::Page* const page) {
 
 // Asynchronous operations of this service.
 
-class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
+class DeviceMapImpl::QueryCall : Operation<fidl::Array<DeviceMapEntryPtr>> {
  public:
   QueryCall(OperationContainer* const container,
             std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
@@ -67,12 +80,12 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
                   continue;
                 }
 
-                std::string device_name;
-                if (!XdrRead(value, &device_name, XdrFilter<std::string>)) {
+                auto device = DeviceMapEntry::New();
+                if (!XdrRead(value, &device, XdrDeviceData)) {
                   continue;
                 }
 
-                data_.push_back(std::move(device_name));
+                data_.push_back(std::move(device));
               }
 
               if (status == ledger::Status::PARTIAL_RESULT) {
@@ -84,26 +97,24 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<fidl::String>> {
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
-  fidl::Array<fidl::String> data_;
+  fidl::Array<DeviceMapEntryPtr> data_;
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
 
 DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
+                             const std::string& device_id,
+                             const std::string& device_profile,
                              ledger::Page* const page)
-    : device_name_(device_name),
-      page_(page),
-      page_watcher_binding_(this),
-      page_client_("DeviceMapImpl") {
+    : page_(page), page_watcher_binding_(this), page_client_("DeviceMapImpl") {
   page_->GetSnapshot(
       page_client_.NewRequest(), to_array(kDeviceKeyPrefix),
-      page_watcher_binding_.NewBinding(),
-      [](ledger::Status status) {
+      page_watcher_binding_.NewBinding(), [](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
         }
       });
 
-  WriteDeviceName(device_name_, page_);
+  WriteDeviceData(device_name, device_id, device_profile, page_);
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
@@ -114,10 +125,6 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
   new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
-}
-
-void DeviceMapImpl::CurrentDeviceName(const CurrentDeviceNameCallback& callback) {
-  callback(device_name_);
 }
 
 void DeviceMapImpl::OnChange(ledger::PageChangePtr page,

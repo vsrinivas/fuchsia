@@ -9,8 +9,11 @@ module modular;
 interface DeviceMap {
   // HACK(mesch): Just exposes all Device/* entries in the ledger.
   // We'll need something better, possibly with access policy.
-  Query() => (array<string> devices);
+  Query() => (array<DeviceMapEntry> devices);
+};
 
-  // Returns the device name of *this* device.
-  CurrentDeviceName() => (string device_name);
+struct DeviceMapEntry {
+  string name;
+  string device_id;
+  string profile;
 };
