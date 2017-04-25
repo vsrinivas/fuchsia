@@ -43,6 +43,9 @@ typedef struct usb_hub {
     iotxn_t* status_request;
     completion_t completion;
 
+    thrd_t thread;
+    bool thread_done;
+
     // bit field indicating which ports are enabled
     uint8_t enabled_ports[128 / 8];
 } usb_hub_t;
@@ -227,10 +230,19 @@ static void usb_hub_unbind(mx_device_t* device) {
     device_remove(&hub->device);
 }
 
-static mx_status_t usb_hub_release(mx_device_t* device) {
-    usb_hub_t* hub = get_hub(device);
+static mx_status_t usb_hub_free(usb_hub_t* hub) {
     iotxn_release(hub->status_request);
     free(hub);
+    return NO_ERROR;
+}
+
+static mx_status_t usb_hub_release(mx_device_t* device) {
+    usb_hub_t* hub = get_hub(device);
+
+    hub->thread_done = true;
+    completion_signal(&hub->completion);
+    thrd_join(hub->thread, NULL);
+    usb_hub_free(hub);
     return NO_ERROR;
 }
 
@@ -274,7 +286,7 @@ static int usb_hub_thread(void* arg) {
     device_set_bindable(&hub->device, false);
     result = device_add(&hub->device, hub->usb_device);
     if (result != NO_ERROR) {
-        usb_hub_release(&hub->device);
+        usb_hub_free(hub);
         return result;
     }
 
@@ -287,7 +299,7 @@ static int usb_hub_thread(void* arg) {
         completion_reset(&hub->completion);
         iotxn_queue(hub->usb_device, txn);
         completion_wait(&hub->completion, MX_TIME_INFINITE);
-        if (txn->status != NO_ERROR) {
+        if (txn->status != NO_ERROR || hub->thread_done) {
             break;
         }
 
@@ -385,20 +397,15 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
     txn->cookie = hub;
     hub->status_request = txn;
 
-    thrd_t thread;
-    int ret = thrd_create_with_name(&thread, usb_hub_thread, hub, "usb_hub_thread");
+    int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {
         status = ERR_NO_MEMORY;
         goto fail;
     }
-    thrd_detach(thread);
     return NO_ERROR;
 
 fail:
-    if (txn) {
-        iotxn_release(txn);
-    }
-    free(hub);
+    usb_hub_free(hub);
     return status;
 }
 
