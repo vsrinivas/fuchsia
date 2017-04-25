@@ -15,20 +15,20 @@ MODULE_DEPS += \
     kernel/lib/cbuf \
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/acpi.c \
-    $(LOCAL_DIR)/console.c \
-    $(LOCAL_DIR)/debug.c \
+    $(LOCAL_DIR)/acpi.cpp \
+    $(LOCAL_DIR)/console.cpp \
+    $(LOCAL_DIR)/debug.cpp \
     $(LOCAL_DIR)/hpet.cpp \
-    $(LOCAL_DIR)/interrupts.c \
-    $(LOCAL_DIR)/keyboard.c \
-    $(LOCAL_DIR)/memory.c \
+    $(LOCAL_DIR)/interrupts.cpp \
+    $(LOCAL_DIR)/keyboard.cpp \
+    $(LOCAL_DIR)/memory.cpp \
     $(LOCAL_DIR)/pcie_quirks.cpp \
-    $(LOCAL_DIR)/pic.c \
-    $(LOCAL_DIR)/platform.c \
+    $(LOCAL_DIR)/pic.cpp \
+    $(LOCAL_DIR)/platform.cpp \
     $(LOCAL_DIR)/platform_pcie.cpp \
-    $(LOCAL_DIR)/power.c \
-    $(LOCAL_DIR)/timer.c \
-    $(LOCAL_DIR)/watchdog.c \
+    $(LOCAL_DIR)/power.cpp \
+    $(LOCAL_DIR)/timer.cpp \
+    $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_DEPS += \
     third_party/lib/acpica \
