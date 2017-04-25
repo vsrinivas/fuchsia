@@ -18,6 +18,7 @@
 #include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "lib/ftl/functional/cancelable_callback.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/synchronization/thread_checker.h"
@@ -57,7 +58,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   using CommandCompleteCallback =
       std::function<void(TransactionId id, const EventPacket& event_packet)>;
 
-  // Callback invoked to report the status of a pending HCI command.
+  // Callback invoked to report the status of a pending HCI command. This can be following the
+  // receipt of a HCI_Command_Status event from the controller OR due to a command timeout.
   using CommandStatusCallback = std::function<void(TransactionId id, Status status)>;
 
   // Queues the given |command_packet| to be sent to the controller and returns
@@ -79,6 +81,11 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Returns a transaction ID that is unique to the initiated command sequence.
   // This can be used to identify the command sequence by comparing it to the
   // |id| parameter in a CommandCompleteCallback.
+  //
+  // If the controller does not respond to with the expected |complete_event_code| within a certain
+  // amount of time (see kCommandTimeoutMs in hci_constants.h) the command will time out. This will
+  // be signalled to the caller by invoking |status_callback| with the |status| parameter set to
+  // the special status code Status::kCommandTimeout.
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
@@ -194,7 +201,8 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   PendingTransactionData* GetPendingCommand();
 
   // Sets the currently pending command. If |command| is nullptr, this will
-  // clear the currently pending command.
+  // clear the currently pending command. This also cancels the HCI command timeout callback for the
+  // current pending command.
   void SetPendingCommand(PendingTransactionData* command);
 
   // Notifies a matching event handler for the given event.
@@ -242,6 +250,9 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   //
   // Accessed only from the I/O thread and thus not guarded.
   PendingTransactionData pending_command_;
+
+  // The command timeout callback assigned to the current pending command.
+  ftl::CancelableClosure pending_cmd_timeout_;
 
   // Field indicating whether or not there is currently a pending command.
   bool is_command_pending_;

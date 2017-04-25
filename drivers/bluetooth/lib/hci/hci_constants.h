@@ -124,6 +124,12 @@ enum Status : uint8_t {
   kUnknownAdvertisingIdentifier                 = 0x42,
   kLimitReached                                 = 0x43,
   kOperationCancelledByHost                     = 0x44,
+
+  // Our stack defined error to signal a command time out
+  // TODO(armansito): Vendor commands could be using this code to report their custom errors. We
+  // should introduce a wider (16-bit) Status type for errors reported via CommandChannel and assign
+  // a number from beyond the reserved range for our own errors.
+  kCommandTimeout                               = 0xFF,
 };
 
 // Bitmask values for the 8-octet Local Supported LMP Features bit-field. See Core Spec
@@ -701,6 +707,9 @@ enum class ReadTransmitPowerType : uint8_t {
   // Read Maximum Transmit Power Level.
   kMax = 0x01,
 };
+
+// HCI command timeout interval (milliseconds)
+constexpr int64_t kCommandTimeoutMs = 2000;
 
 // The minimum and maximum range values for the LE advertising interval
 // parameters.

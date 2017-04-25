@@ -11,6 +11,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/time/time_delta.h"
 
 #include "command_packet.h"
 #include "transport.h"
@@ -237,6 +238,26 @@ void CommandChannel::TrySendNextQueuedCommand() {
   }
 
   SetPendingCommand(&cmd.transaction_data);
+
+  // Set a callback to execute if this HCI command times out (i.e the controller does not send back
+  // a response in time). Once the command is completed (due to HCI_Command_Status or the
+  // corresponding completion callback) this timeout callback will be cancelled when
+  // SetPendingCommand() is called to clear the pending command.
+  pending_cmd_timeout_.Reset([ this, id = cmd.transaction_data.id ] {
+    auto pending_cmd = GetPendingCommand();
+
+    // If this callback is ever invoked then the command that timed out should still be pending.
+    FTL_DCHECK(pending_cmd);
+    FTL_DCHECK(pending_cmd->id == id);
+
+    pending_cmd->task_runner->PostTask(
+        std::bind(pending_cmd->status_callback, id, Status::kCommandTimeout));
+    SetPendingCommand(nullptr);
+    TrySendNextQueuedCommand();
+  });
+
+  io_task_runner_->PostDelayedTask(pending_cmd_timeout_.callback(),
+                                   ftl::TimeDelta::FromMilliseconds(kCommandTimeoutMs));
 }
 
 void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
@@ -322,6 +343,9 @@ CommandChannel::PendingTransactionData* CommandChannel::GetPendingCommand() {
 }
 
 void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
+  // Cancel the pending command timeout handler as the pending command is being reset.
+  pending_cmd_timeout_.Cancel();
+
   if (!command) {
     is_command_pending_ = false;
     return;

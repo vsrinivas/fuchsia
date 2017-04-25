@@ -85,6 +85,40 @@ class CommandChannelTest : public ::testing::Test {
   mtl::MessageLoop message_loop_;
 };
 
+TEST_F(CommandChannelTest, CommandTimeout) {
+  // Set up expectations:
+  // HCI_Reset
+  auto req = common::CreateStaticByteBuffer(
+      LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
+      0x00                                   // parameter_total_size
+      );
+
+  // No reply.
+  test_controller()->QueueCommandTransaction(CommandTransaction(req, {}));
+  test_controller()->Start();
+
+  // Send a HCI_Reset command.
+  CommandChannel::TransactionId last_id = 0;
+  Status last_status = Status::kSuccess;
+  auto status_cb = [&, this](CommandChannel::TransactionId id, Status status) {
+    last_id = id;
+    last_status = status;
+    message_loop()->QuitNow();
+  };
+
+  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
+  CommandPacket reset(kReset, &buffer);
+  reset.EncodeHeader();
+  CommandChannel::TransactionId id = cmd_channel()->SendCommand(
+      common::DynamicByteBuffer(buffer), status_cb, NOP_COMPLETE_CB(),
+      message_loop()->task_runner());
+
+  RunMessageLoop();
+
+  EXPECT_EQ(id, last_id);
+  EXPECT_EQ(Status::kCommandTimeout, last_status);
+}
+
 TEST_F(CommandChannelTest, SingleRequestResponse) {
   // Set up expectations:
   // HCI_Reset
