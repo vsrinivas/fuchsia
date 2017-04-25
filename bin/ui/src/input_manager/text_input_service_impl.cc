@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/input_manager/text_input_service_impl.h"
 
+#include "application/lib/app/connect.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
 
@@ -40,11 +41,21 @@ void TextInputServiceImpl::GetInputMethodEditor(
   client_ = mozart::InputMethodEditorClientPtr::Create(std::move(client));
   SetKeyboardType(keyboard_type);
   SetState(std::move(initial_state));
-  // TODO Pass client_ to IME
+
+  container_.reset();
+  associate_->inspector()->view_inspector()->GetSoftKeyboardContainer(
+      view_token_->Clone(), container_.NewRequest());
+  container_->Show([this](bool shown) {
+    if (shown) {
+      // Retrieve IME Service
+      // app::ConnectToService(ime_service_.NewRequest());
+    }
+  });
 }
 
 void TextInputServiceImpl::OnEditorDied() {
   // TODO close client connection and text input service connection
+  // TODO Find SoftKeyboardContainer and call hide on it
 }
 
 void TextInputServiceImpl::SetState(mozart::TextInputStatePtr state) {

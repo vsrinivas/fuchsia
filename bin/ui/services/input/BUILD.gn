@@ -6,6 +6,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("input") {
   sources = [
+    "ime_service.fidl",
     "input_connection.fidl",
     "input_device_registry.fidl",
     "input_dispatcher.fidl",

@@ -8,6 +8,8 @@
 #include <cmath>
 #include <utility>
 
+#include "application/lib/app/connect.h"
+#include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/view_manager/view_impl.h"
 #include "apps/mozart/src/view_manager/view_tree_impl.h"
@@ -921,6 +923,19 @@ void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
     }
   }
   callback(false);
+}
+
+void ViewRegistry::GetSoftKeyboardContainer(
+    mozart::ViewTokenPtr view_token,
+    fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
+  FTL_DCHECK(view_token);
+  FTL_DCHECK(container.is_pending());
+  ViewState* view = FindView(view_token->value);
+  if (!view) {
+    return;
+  }
+  // Walk the tree back up until we find a service provider
+  app::ConnectToService(view->service_provider().get(), std::move(container));
 }
 
 // EXTERNAL SIGNALING
