@@ -561,7 +561,7 @@ bool test_viewport_scrolling_follows_scrollback() {
     END_TEST;
 }
 
-bool test_viewport_scrolling_contents() {
+bool test_output_when_viewport_scrolled() {
     BEGIN_TEST;
 
     TextconHelper tc(10, 3);
@@ -575,6 +575,15 @@ bool test_viewport_scrolling_contents() {
     EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
     // Check redrawing consistency.
     tc.PutString("");
+
+    // Test that output updates the display correctly when the viewport is
+    // scrolled.  Using two separate PutString() calls here was necessary
+    // for reproducing an incremental update bug.
+    tc.PutString("\x1b[1;1f"); // Move to top left
+    tc.PutString("Epilobium");
+    tc.AssertLineContains(0, "Epilobium");
+    tc.AssertLineContains(1, "  3");
+    tc.AssertLineContains(2, "   4");
 
     END_TEST;
 }
@@ -657,7 +666,7 @@ RUN_TEST(test_cursor_scroll_bug)
 RUN_TEST(test_scroll_viewport_by_large_delta)
 RUN_TEST(test_viewport_scrolling_follows_bottom)
 RUN_TEST(test_viewport_scrolling_follows_scrollback)
-RUN_TEST(test_viewport_scrolling_contents)
+RUN_TEST(test_output_when_viewport_scrolled)
 RUN_TEST(test_scrollback_lines_count)
 RUN_TEST(test_scrollback_lines_contents)
 END_TEST_CASE(gfxconsole_textbuf_tests)

@@ -332,7 +332,13 @@ ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_
         vc->textcon.putc(&vc->textcon, str[i]);
     }
     if (vc->invy1 >= 0) {
-        vc_gfx_invalidate(vc, 0, vc->invy0, vc->columns, vc->invy1 - vc->invy0);
+        int rows = vc_device_rows(vc);
+        // Adjust for the current viewport position.  Convert
+        // console-relative row numbers to screen-relative row numbers.
+        int invalidate_y0 = MIN(vc->invy0 - vc->viewport_y, rows);
+        int invalidate_y1 = MIN(vc->invy1 - vc->viewport_y, rows);
+        vc_gfx_invalidate(vc, 0, invalidate_y0,
+                          vc->columns, invalidate_y1 - invalidate_y0);
     }
     if (!vc->active && !(vc->flags & VC_FLAG_HASOUTPUT)) {
         vc->flags |= VC_FLAG_HASOUTPUT;
