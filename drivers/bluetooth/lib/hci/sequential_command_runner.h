@@ -7,9 +7,10 @@
 #include <queue>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/hci/command_channel.h"
+#include "lib/ftl/functional/cancelable_callback.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace bluetooth {
@@ -53,23 +54,48 @@ class SequentialCommandRunner final {
   // RunCommands() is currently in progress.
   bool IsReady() const;
 
+  // Cancels a running sequence. RunCommands() must have been called before a sequence can be
+  // cancelled. Once a sequence is cancelled, the state of the SequentialCommandRunner will be reset
+  // (i.e. IsReady() will return true). The result of any pending HCI command will be ignored and
+  // callbacks will not be invoked.
+  //
+  // Depending on the sequence of HCI commands that were previously processed, the controller will
+  // be in an undefined state. The caller is responsible for sending successive HCI commands to
+  // bring the controller back to an expected state.
+  //
+  // After a call to Cancel(), this object can be immediately reused to queue up a new HCI command
+  // sequence.
+  void Cancel();
+
   // Returns true if this currently has any pending commands.
   bool HasQueuedCommands() const;
 
  private:
   void RunNextQueuedCommand();
+  void Reset();
   void NotifyResultAndReset(bool result);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ftl::RefPtr<Transport> transport_;
-  ResultCallback result_callback_;
 
   using CommandQueue = std::queue<std::pair<common::DynamicByteBuffer, CommandCompleteCallback>>;
   CommandQueue command_queue_;
 
-  // Note: This should remain the last member so it'll be destroyed and
-  // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<SequentialCommandRunner> weak_ptr_factory_;
+  // Callback assigned in RunCommands(). If this is non-null then this object is currently executing
+  // a sequence.
+  ResultCallback result_callback_;
+
+  // Number assigned to the current sequence. Each "sequence" begins on a call to RunCommands() and
+  // ends either on a call to Cancel() or when |result_callback_| has been invoked.
+  //
+  // This number is used to detect cancelation of a sequence from a CommandCompleteCallback.
+  uint64_t sequence_number_;
+
+  // The callbacks we pass to the HCI CommandChannel for command execution. These can be cancelled
+  // and erased at any time.
+  ftl::CancelableCallback<void(CommandChannel::TransactionId, Status)> status_callback_;
+  ftl::CancelableCallback<void(CommandChannel::TransactionId, const EventPacket&)>
+      complete_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SequentialCommandRunner);
 };

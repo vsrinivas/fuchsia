@@ -58,7 +58,7 @@ void TestController::SetDataCallback(const DataCallback& callback,
 }
 
 void TestController::OnCommandPacketReceived(const CommandPacket& command_packet) {
-  ASSERT_FALSE(cmd_transactions_.empty());
+  ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
 
   auto& current = cmd_transactions_.front();
   ASSERT_TRUE(ContainersEqual(current.expected_, *command_packet.buffer()));
