@@ -98,6 +98,7 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
 
+  // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();
 
   // |AgentProvider|

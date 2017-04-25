@@ -186,6 +186,8 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   }
 
   auto cont = [this, callback] {
+    // The running agent will call |AgentRunner::RemoveAgent()| which erases it
+    // from the |running_agents_|.
     if (running_agents_.size() == 0) {
       callback();
     }
@@ -437,6 +439,9 @@ AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::UpdateWatchers() {
+  if (terminating_)
+    return;
+
   // A set of all agents that are either running or scheduled to be run.
   std::unordered_set<std::string> agents;
   for (auto const& it : running_agents_) {

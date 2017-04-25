@@ -140,7 +140,10 @@ void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
                  agent_.reset();
                  agent_context_binding_.Close();
                },
-               callback);
+               [this, callback]() {
+                 agent_runner_->RemoveAgent(url_);
+                 callback();
+               });
 }
 
 void AgentContextImpl::NewConnection(
