@@ -149,6 +149,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
       view_->set_enable_animation(true);
       view_->Invalidate();
     }
+
     ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {

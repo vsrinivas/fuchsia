@@ -18,7 +18,7 @@ namespace modular {
 // single service, which also provides a view.
 template <class Service>
 class SingleServiceViewApp : public SingleServiceApp<Service>,
-                             public mozart::ViewProvider {
+                             mozart::ViewProvider {
  public:
   SingleServiceViewApp() : view_provider_binding_(this) {
     // TODO: The following line needs to be broken out for reasons not
@@ -30,8 +30,8 @@ class SingleServiceViewApp : public SingleServiceApp<Service>,
     // SingleServiceApp<Service>::, results in the error:
     //   use 'template' keyword to treat 'AddService' as a dependent template
     //   name
-    app::ApplicationContext* application_context = this->application_context();
-    application_context->outgoing_services()->AddService<mozart::ViewProvider>(
+    app::ApplicationContext* const ctx = this->application_context();
+    ctx->outgoing_services()->AddService<mozart::ViewProvider>(
         [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
           FTL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));

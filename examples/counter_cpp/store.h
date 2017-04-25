@@ -47,7 +47,7 @@ class Counter {
   int counter = -1;
 };
 
-class Store : public modular::LinkWatcher {
+class Store : modular::LinkWatcher {
  public:
   using Callback = std::function<void()>;
 
@@ -59,6 +59,13 @@ class Store : public modular::LinkWatcher {
 
   void Stop();
 
+  void ModelChanged();
+
+  void MarkDirty() { dirty_ = true; }
+
+  modular_example::Counter counter;
+
+ private:
   // |LinkWatcher|
   void Notify(const fidl::String& json) override;
 
@@ -68,13 +75,6 @@ class Store : public modular::LinkWatcher {
   //   - the data in the update is stale (can happen on rehydrate).
   void ApplyLinkData(const std::string& json);
 
-  void ModelChanged();
-
-  void MarkDirty() { dirty_ = true; }
-
-  modular_example::Counter counter;
-
- private:
   void SendIfDirty();
 
   std::string module_name_;

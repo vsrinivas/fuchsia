@@ -49,7 +49,7 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // Called by StoryImpl.
   //
   // When the binding set of StoryImpl becomes empty, it asks its owner to
-  // delete it..
+  // delete it.
   void PurgeController(const std::string& story_id);
 
   // Called by StoryImpl.

@@ -84,7 +84,7 @@ using modular::operator<<;
 
 // Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
-class LinkConnection : public modular::LinkWatcher {
+class LinkConnection : modular::LinkWatcher {
  public:
   LinkConnection(modular::Link* const src, modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
@@ -111,7 +111,7 @@ class LinkConnection : public modular::LinkWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
-class ModuleMonitor : public modular::ModuleWatcher {
+class ModuleMonitor : modular::ModuleWatcher {
  public:
   ModuleMonitor(modular::ModuleController* const module_client,
                 modular::ModuleContext* const module_context)
@@ -134,7 +134,7 @@ class ModuleMonitor : public modular::ModuleWatcher {
 
 class AdderImpl : public modular::examples::Adder {
  public:
-  AdderImpl() {}
+  AdderImpl() = default;
 
  private:
   // |Adder| impl:
@@ -148,9 +148,9 @@ class AdderImpl : public modular::examples::Adder {
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
-class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
+class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
  public:
-  RecipeApp() {}
+  RecipeApp() = default;
   ~RecipeApp() override = default;
 
  private:
@@ -170,7 +170,14 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // Read initial Link data. We expect the shell to tell us what it
     // is.
     link_->Get(nullptr, [this](const fidl::String& json) {
-      FTL_LOG(INFO) << "example_recipe link: " << json;
+        rapidjson::Document doc;
+        doc.Parse(json);
+        if (doc.HasParseError()) {
+          FTL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
+        } else {
+          FTL_LOG(INFO) << "Recipe Module Link: "
+                        << modular::JsonValueToPrettyString(doc);
+        }
     });
 
     constexpr char kModule1Link[] = "module1";

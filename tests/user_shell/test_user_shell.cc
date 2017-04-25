@@ -29,19 +29,15 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-using modular::testing::TestPoint;
-
-// TODO(alhaad): Convert this to a proper test which checks the user shell
-// interfaces.
-
 namespace {
 
 constexpr char kUserShell[] =
     "https://fuchsia.googlesource.com/modular/"
     "services/user/user_shell.fidl#modular.UserShell";
-constexpr char kTestUserShell[] =
+
+constexpr char kTestUserShellApp[] =
     "https://fuchsia.googlesource.com/modular/"
-    "tests/user_shell/test_user_shell.cc";
+    "tests/user_shell/test_user_shell.cc#TestUserShellApp";
 
 class Settings {
  public:
@@ -60,90 +56,105 @@ class Settings {
   bool test{};
 };
 
-class TestUserShellApp : modular::StoryWatcher,
-                         modular::StoryProviderWatcher,
-                         modular::LinkWatcher,
-                         modular::SingleServiceViewApp<modular::UserShell> {
+// A simple link watcher implementation that after every 5 updates of a Link
+// invokes a "continue" callback. Used to push the test sequence forward after a
+// module in the test story was running for a bit.
+class LinkWatcherImpl : modular::LinkWatcher {
  public:
-  explicit TestUserShellApp(const Settings& settings)
-      : settings_(settings),
-        story_provider_watcher_binding_(this),
-        story_watcher_binding_(this),
-        link_watcher_binding_(this) {
-    if (settings_.test) {
-      modular::testing::Init(application_context(), __FILE__);
-    }
+  LinkWatcherImpl() : binding_(this) {}
+  ~LinkWatcherImpl() override = default;
+
+  // Registers itself as watcher on the given link. Only one link at a time can
+  // be watched.
+  void Watch(modular::LinkPtr* const link) {
+    (*link)->Watch(binding_.NewBinding());
+    data_count_ = 0;
   }
-  ~TestUserShellApp() override = default;
+
+  // Deregisters itself from the watched link.
+  void Reset() {
+    binding_.Close();
+  }
+
+  // Sets the function where to continue after enough changes were observed on
+  // the link.
+  void Continue(std::function<void()> at) {
+    continue_ = at;
+  }
 
  private:
-  // |SingleServiceViewApp|
-  void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(new modular::ViewHost(
-        application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
-  }
-
-  // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
-                  fidl::InterfaceHandle<modular::UserShellContext>
-                      user_shell_context) override {
-    user_context_.Bind(std::move(user_context));
-
-    auto user_shell_context_ptr =
-        modular::UserShellContextPtr::Create(std::move(user_shell_context));
-    user_shell_context_ptr->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
-    story_provider_->GetStoryInfo("X", [](modular::StoryInfoPtr story_info) {
-      FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
-    });
-
-    user_shell_context_ptr->GetLink(user_shell_link_.NewRequest());
-    user_shell_link_->Get(nullptr, [](const fidl::String& value) {
-      FTL_LOG(INFO) << "User shell link: " << value;
-    });
-
-    story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
-      if (stories.size() > 0) {
-        std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
-        for (auto& story_id : stories) {
-          story_provider_->GetStoryInfo(story_id, [
-            this, story_id, count, max = stories.size()
-          ](modular::StoryInfoPtr story_info) {
-            ++*count;
-            if (!story_info.is_null()) {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << story_id << " " << story_info->url;
-            } else {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << story_id << " was deleted";
-            }
-
-            if (*count == max) {
-              CreateStory(settings_.first_module, true);
-            }
-          });
-        }
-      } else {
-        CreateStory(settings_.first_module, true);
-      }
-    });
-  }
-
-  // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
-    FTL_LOG(INFO) << "UserShell::Terminate()";
-    // Notify the test runner harness that we can be torn down.
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    if (settings_.test) {
-      modular::testing::Teardown();
+  // |LinkWatcher|
+  void Notify(const fidl::String& json) override {
+    if (++data_count_ % 5 == 0) {
+      continue_();
     }
-    done();
   }
 
+  int data_count_{0};
+  std::function<void()> continue_;
+  fidl::Binding<modular::LinkWatcher> binding_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
+};
+
+// A simple story watcher implementation that invokes a "continue" callback when
+// it sees the watched story transition to DONE state. Used to push the test
+// sequence forward when the test story is done.
+class StoryWatcherImpl : modular::StoryWatcher {
+ public:
+  StoryWatcherImpl() : binding_(this) {}
+  ~StoryWatcherImpl() override = default;
+
+  // Registers itself as a watcher on the given story. Only one story at a time
+  // can be watched.
+  void Watch(modular::StoryControllerPtr* const story_controller) {
+    (*story_controller)->Watch(binding_.NewBinding());
+  }
+
+  // Deregisters itself from the watched story.
+  void Reset() {
+    binding_.Close();
+  }
+
+  // Sets the function where to continue when the story is observed to be done.
+  void Continue(std::function<void()> at) {
+    continue_ = at;
+  }
+
+ private:
+  // |StoryWatcher|
+  void OnStateChange(modular::StoryState state) override {
+    if (state != modular::StoryState::DONE) {
+      return;
+    }
+
+    continue_();
+  }
+
+  fidl::Binding<modular::StoryWatcher> binding_;
+  std::function<void()> continue_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
+};
+
+// A simple story provider watcher implementation. Just logs observed state
+// transitions.
+class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
+ public:
+  StoryProviderWatcherImpl() : binding_(this) {}
+  ~StoryProviderWatcherImpl() override = default;
+
+  // Registers itself a watcher on the given story provider. Only one story
+  // provider can be watched at a time.
+  void Watch(modular::StoryProviderPtr* const story_provider) {
+    (*story_provider)->Watch(binding_.NewBinding());
+  }
+
+  // Deregisters itself from the watched story provider.
+  void Reset() {
+    binding_.Close();
+  }
+
+ private:
   // |StoryProviderWatcher|
   void OnDelete(const ::fidl::String& story_id) override {
     FTL_VLOG(1) << "TestUserShellApp::OnDelete() " << story_id;
@@ -157,31 +168,132 @@ class TestUserShellApp : modular::StoryWatcher,
                 << " url " << story_info->url;
   }
 
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
-    if (state != modular::StoryState::DONE) {
+  fidl::Binding<modular::StoryProviderWatcher> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherImpl);
+};
+
+// Tests the machinery available to a user shell implementation. This is invoked
+// as a user shell from device runner and executes a predefined sequence of
+// steps, rather than to expose a UI to be driven by user interaction, as a user
+// shell normally would.
+class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
+ public:
+  // The app instance must be dynamic, because it needs to do several things
+  // after its own constructor is invoked. It accomplishes that by being able to
+  // call delete this. Cf. Terminate().
+  static void New(const Settings& settings) {
+    new TestUserShellApp(settings);  // will delete itself in Terminate().
+  }
+
+ private:
+  TestUserShellApp(const Settings& settings)
+      : settings_(settings) {
+    if (settings_.test) {
+      modular::testing::Init(application_context(), __FILE__);
+    }
+  }
+
+  ~TestUserShellApp() override = default;
+
+  using TestPoint = modular::testing::TestPoint;
+
+  TestPoint create_view_{"CreateView()"};
+
+  // |SingleServiceViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+    create_view_.Pass();
+    view_.reset(new modular::ViewHost(
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request)));
+  }
+
+  TestPoint initialize_{"Initialize()"};
+
+  // |UserShell|
+  void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
+                  fidl::InterfaceHandle<modular::UserShellContext>
+                      user_shell_context) override {
+    initialize_.Pass();
+
+    user_context_.Bind(std::move(user_context));
+    user_shell_context_.Bind(std::move(user_shell_context));
+    user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
+    story_provider_watcher_.Watch(&story_provider_);
+
+    TestStoryProvider_GetStoryInfo_Null();
+  }
+
+  TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
+
+  void TestStoryProvider_GetStoryInfo_Null() {
+    story_provider_->GetStoryInfo("X", [this](modular::StoryInfoPtr story_info) {
+        if (story_info.is_null()) {
+          get_story_info_null_.Pass();
+        }
+
+        TestUserShellContext_GetLink();
+      });
+  }
+
+  TestPoint get_link_{"UserShellContext.GetLink()"};
+
+  void TestUserShellContext_GetLink() {
+    user_shell_context_->GetLink(user_shell_link_.NewRequest());
+    user_shell_link_->Get(nullptr, [this](const fidl::String& value) {
+        get_link_.Pass();
+        TestStoryProvider_PreviousStories();
+      });
+  }
+
+  TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
+
+  void TestStoryProvider_PreviousStories() {
+    story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
+        previous_stories_.Pass();
+        TestStoryProvider_GetStoryInfo(std::move(stories));
+      });
+  }
+
+  TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
+
+  void TestStoryProvider_GetStoryInfo(fidl::Array<fidl::String> stories) {
+    if (stories.size() == 0) {
+      get_story_info_.Pass();
+      TestStory1();
       return;
     }
 
-    FTL_LOG(INFO) << "TestUserShell DONE";
-    story_controller_->Stop([this] {
-      TearDownStoryController();
+    std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
+    for (auto& story_id : stories) {
+      story_provider_->GetStoryInfo(
+          story_id, [this, story_id, count, max = stories.size()](
+              modular::StoryInfoPtr story_info) {
+            ++*count;
 
-      // When the story is done, we start the next one.
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this] { CreateStory(settings_.second_module, false); },
-          ftl::TimeDelta::FromSeconds(20));
-    });
-  }
+            if (!story_info.is_null()) {
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+                            << " " << story_id << " " << story_info->url;
+            } else {
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+                            << " " << story_id << " was deleted";
+            }
 
-  // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
-    if (++data_count_ % 5 == 0) {
-      StopExampleStory();
+            if (*count == max) {
+              get_story_info_.Pass();
+              TestStory1();
+            }
+          });
     }
   }
 
-  void CreateStory(const fidl::String& url, const bool keep) {
+  TestPoint story1_create_{"Story1 Create"};
+
+  void TestStory1() {
+    const std::string& url = settings_.first_module;
+
     modular::JsonDoc doc;
     std::vector<std::string> segments{"example", url, "created-with-info"};
     modular::CreatePointer(doc, segments.begin(), segments.end())
@@ -190,18 +302,136 @@ class TestUserShellApp : modular::StoryWatcher,
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
     story_provider_->CreateStoryWithInfo(
         url, FidlStringMap(), modular::JsonValueToString(doc),
-        [this, keep](const fidl::String& story_id) {
-          GetStoryInfo(story_id, keep);
+        [this](const fidl::String& story_id) {
+          story1_create_.Pass();
+          TestStory1_GetController(story_id);
         });
   }
 
-  void GetModules() {
-    FTL_DCHECK(story_controller_);
+  TestPoint story1_get_controller_{"Story1 GetController"};
 
+  void TestStory1_GetController(const fidl::String& story_id) {
+    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
+        story1_get_controller_.Pass();
+        story_info_ = std::move(story_info);
+        TestStory1_SetRootLink();
+      });
+  }
+
+  // Totally tentative use of the root module link: Tell the root module under
+  // what user shell it's running.
+  void TestStory1_SetRootLink() {
+    story_controller_->GetLink(root_.NewRequest());
+
+    std::vector<std::string> segments{kUserShell};
+    root_->Set(fidl::Array<fidl::String>::From(segments),
+               modular::JsonValueToString(modular::JsonValue(kTestUserShellApp)));
+
+    TestStory1_Run(0);
+  }
+
+  TestPoint story1_run_{"Story1 Run"};
+
+  void TestStory1_Run(const int round) {
+    if (!story_controller_) {
+      story_provider_->GetController(
+          story_info_->id, story_controller_.NewRequest());
+      story_controller_->GetLink(root_.NewRequest());
+    }
+
+    link_watcher_.Watch(&root_);
+    link_watcher_.Continue([this, round] {
+        TestStory1_Cycle(round);
+      });
+
+    story_watcher_.Watch(&story_controller_);
+    story_watcher_.Continue([this] {
+        story_controller_->Stop([this] {
+            TearDownStoryController();
+            story1_run_.Pass();
+
+            // When the story is done, we start the next one.
+            mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+                [this] { TestStory2(); },
+                ftl::TimeDelta::FromSeconds(20));
+          });
+      });
+
+    // Start and show the new story.
+    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    story_controller_->Start(story_view.NewRequest());
+    view_->ConnectView(std::move(story_view));
+
+    if (round == 0) {
+      story_controller_->AddModule("second", settings_.second_module, "root2");
+    }
+  }
+
+  // Every five counter increments, we dehydrate and rehydrate the story, until
+  // the story stops itself when it reaches 11 counter increments.
+  void TestStory1_Cycle(const int round) {
+    story_provider_->GetStoryInfo(
+        story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
+          FTL_DCHECK(!story_info.is_null());
+          FTL_DCHECK(story_info->is_running == true);
+          story_controller_->Stop([this, round] {
+              TearDownStoryController();
+
+              // When the story stops, we start it again.
+              mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+                  [this, round] {
+                    story_provider_->GetStoryInfo(
+                        story_info_->id,
+                        [this, round](modular::StoryInfoPtr story_info) {
+                          FTL_DCHECK(!story_info.is_null());
+                          FTL_DCHECK(story_info->is_running == false);
+
+                          TestStory1_Run(round + 1);
+                        });
+                  },
+                  ftl::TimeDelta::FromSeconds(10));
+            });
+        });
+  }
+
+  TestPoint story2_create_{"Story2 Create"};
+
+  void TestStory2() {
+    const std::string& url = settings_.second_module;
+
+    modular::JsonDoc doc;
+    std::vector<std::string> segments{"example", url, "created-with-info"};
+    modular::CreatePointer(doc, segments.begin(), segments.end())
+        .Set(doc, true);
+
+    using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+    story_provider_->CreateStoryWithInfo(
+        url, FidlStringMap(), modular::JsonValueToString(doc),
+        [this](const fidl::String& story_id) {
+          story2_create_.Pass();
+          TestStory2_GetController(story_id);
+        });
+  }
+
+  TestPoint story2_get_controller_{"Story2 Get Controller"};
+
+  void TestStory2_GetController(const fidl::String& story_id) {
+    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
+        story_info_ = std::move(story_info);
+
+        story2_get_controller_.Pass();
+
+        TestStory2_GetModules();
+      });
+  }
+
+  TestPoint story2_get_modules_{"Story2 Get Modules"};
+
+  void TestStory2_GetModules() {
     story_controller_->GetModules([this](fidl::Array<modular::ModuleDataPtr> modules) {
-      if (settings_.test) {
-        get_modules_.Pass();
-      }
+      story2_get_modules_.Pass();
 
       FTL_LOG(INFO) << "TestUserShell MODULES:";
       for (const auto& module_data : modules) {
@@ -217,115 +447,90 @@ class TestUserShellApp : modular::StoryWatcher,
           FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
         }
       }
-    });
 
-  }
-
-  void GetStoryInfo(const fidl::String& story_id, const bool keep) {
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
-      story_info_ = std::move(story_info);
-      FTL_LOG(INFO) << "TestUserShell START " << story_info_->id << " "
-                    << story_info_->url;
-      InitStory();
-
-      if (!keep) {
-        GetModules();
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this] {
-              FTL_LOG(INFO) << "TestUserShell DELETE " << story_info_->id;
-              story_provider_->DeleteStory(story_info_->id, [this]() {
-                FTL_LOG(INFO) << "TestUserShell DELETE STORY DONE";
-                user_context_->Logout();
-              });
-            },
-            ftl::TimeDelta::FromSeconds(20));
-      }
+      TestStory2_Run();
     });
   }
 
-  void GetController() {
-    FTL_LOG(INFO) << "TestUserShell RESUME";
-    story_provider_->GetController(story_info_->id,
-                                   story_controller_.NewRequest());
-    InitStory();
-  }
+  TestPoint story2_run_{"Story2 Run"};
 
-  void InitStory() {
-    story_controller_->GetLink(root_.NewRequest());
-
-    // NOTE(mesch): Totally tentative. Tell the root module under what
-    // user shell it's running.
-    std::vector<std::string> segments{"startup", "stories",
-                                      story_info_->url.get(), kUserShell};
-    root_->Set(fidl::Array<fidl::String>::From(segments),
-               modular::JsonValueToString(modular::JsonValue(kTestUserShell)));
-
-    // NOTE(mesch): Both watchers below fire right after they are
-    // registered. Make sure the link data watcher doesn't stop us
-    // right away.
-    data_count_ = 0;
-
-    story_controller_->Watch(story_watcher_binding_.NewBinding());
-    root_->Watch(link_watcher_binding_.NewBinding());
-
+  void TestStory2_Run() {
+    // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-
-    // Show the new story.
     view_->ConnectView(std::move(story_view));
 
-    story_controller_->AddModule("second", settings_.second_module, "root2");
+    story2_run_.Pass();
+
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this] {
+          TestStory2_DeleteStory();
+        },
+        ftl::TimeDelta::FromSeconds(20));
   }
 
-  // Every five counter increments, we dehydrate and rehydrate the story.
-  void StopExampleStory() {
-    FTL_LOG(INFO) << "TestUserShell STOP";
+  TestPoint story2_delete_{"Story2 Delete"};
 
-    story_provider_->GetStoryInfo(
-        story_info_->id, [this](modular::StoryInfoPtr story_info) {
-          FTL_LOG(INFO) << "TestUserShell STOP got story info";
-          FTL_DCHECK(!story_info.is_null());
-          FTL_DCHECK(story_info->is_running == true);
-          story_controller_->Stop([this] {
-            FTL_LOG(INFO) << "TestUserShell STOP done";
-            TearDownStoryController();
+  void TestStory2_DeleteStory() {
+    story_provider_->DeleteStory(story_info_->id, [this]() {
+        story2_delete_.Pass();
+        user_context_->Logout();
+      });
+  }
 
-            // When the story stops, we start it again.
-            mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                [this] {
-                  story_provider_->GetStoryInfo(
-                      story_info_->id,
-                      [this](modular::StoryInfoPtr story_info) {
-                        FTL_DCHECK(!story_info.is_null());
-                        FTL_DCHECK(story_info->is_running == false);
-                        GetController();
-                      });
-                },
-                ftl::TimeDelta::FromSeconds(10));
-          });
-        });
+  TestPoint terminate_{"Terminate"};
+
+  // |UserShell|
+  void Terminate(const TerminateCallback& done) override {
+    terminate_.Pass();
+
+    // A little acrobatics to allow TestPoints, which are data members of this,
+    // to allow post failure notices to the test runner in their destructors.
+    //
+    // We respond to done first, then asynchronously delete this, then
+    // asynchronously delete post Teardown() to the test runner, and finally
+    // asynchronously stop the message queue.
+
+    const bool test = settings_.test;
+    auto binding = PassBinding();  // To invoke done() after delete this.
+
+    delete this;
+
+    if (test) {
+      // TODO(mesch): There is a race between test runner killing everything
+      // when it receives teardown and the user runner killing this when
+      // receiving done(). The solution would be to call Done() here and call
+      // Teardown() in dev_device_shell after logout.
+      modular::testing::Teardown();
+    }
+
+    done();
+
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   void TearDownStoryController() {
-    story_watcher_binding_.Close();
-    link_watcher_binding_.Close();
+    story_watcher_.Reset();
+    link_watcher_.Reset();
     story_controller_.reset();
     root_.reset();
   }
 
   const Settings settings_;
-  fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
-  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
+
+  StoryProviderWatcherImpl story_provider_watcher_;
+  StoryWatcherImpl story_watcher_;
+  LinkWatcherImpl link_watcher_;
+
   std::unique_ptr<modular::ViewHost> view_;
+
   modular::UserContextPtr user_context_;
+  modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_;
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
-  int data_count_{0};
 
   TestPoint get_modules_{"Get Modules"};
 
@@ -339,7 +544,7 @@ int main(int argc, const char** argv) {
   Settings settings(command_line);
 
   mtl::MessageLoop loop;
-  TestUserShellApp app(settings);
+  TestUserShellApp::New(settings);
   loop.Run();
   return 0;
 }

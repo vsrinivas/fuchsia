@@ -45,20 +45,17 @@ rapidjson::Document Counter::ToDocument(const std::string& module_name) {
   rapidjson::Document counter_doc;
   auto& allocator1 = counter_doc.GetAllocator();
   counter_doc.SetObject();
-  counter_doc.AddMember(kCounterKey, rapidjson::Value().SetInt(counter),
-                        allocator1);
-  if (counter == 11) {
+  counter_doc.AddMember(kCounterKey, counter, allocator1);
+  if (counter >= 11) {
     // TODO(jimbe) remove the sender property to prove that property removal
     // works. This requires calling Erase(), but this code isn't structured
     // to work that way right now because it just returns a json string.
     // A related open question is how we should implement deletion based on
     // the JSON string we return. One proposal is for UpdateObject() to also
     // take a list of keys to delete.
-    counter_doc.AddMember(kSenderKey, rapidjson::Value("", allocator1),
-                          allocator1);
+    counter_doc.AddMember(kSenderKey, "", allocator1);
   } else {
-    counter_doc.AddMember(kSenderKey, rapidjson::Value(module_name, allocator1),
-                          allocator1);
+    counter_doc.AddMember(kSenderKey, module_name, allocator1);
   }
 
   return counter_doc;
@@ -136,7 +133,8 @@ void Store::ModelChanged() {
 }
 
 void Store::SendIfDirty() {
-  FTL_LOG(INFO) << "Store::SendIfDirty() " << this->module_name_;
+  FTL_LOG(INFO) << "Store::SendIfDirty() " << module_name_;
+
   if (link_ && dirty_) {
     rapidjson::Document doc = counter.ToDocument(module_name_);
 

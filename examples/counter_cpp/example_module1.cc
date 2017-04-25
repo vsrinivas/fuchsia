@@ -111,7 +111,7 @@ class MultiplierImpl : public modular::examples::Multiplier {
   MultiplierImpl() = default;
 
  private:
-  // |Multiplier| impl:
+  // |Multiplier|
   void Multiply(int32_t a, int32_t b, const MultiplyCallback& result) override {
     result(a * b);
   }
@@ -120,7 +120,7 @@ class MultiplierImpl : public modular::examples::Multiplier {
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module1App : public modular::SingleServiceViewApp<modular::Module> {
+class Module1App : modular::SingleServiceViewApp<modular::Module> {
  public:
   explicit Module1App() : store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] { IncrementCounterAction(); });
