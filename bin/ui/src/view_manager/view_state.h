@@ -116,6 +116,19 @@ class ViewState : public ViewContainerState {
     return focus_chain_.get();
   }
 
+  const app::ServiceProviderPtr& service_provider() {
+    return service_provider_;
+  }
+  void set_service_provider(
+      fidl::InterfaceHandle<app::ServiceProvider> service_provider) {
+    if (service_provider) {
+      service_provider_ =
+          app::ServiceProviderPtr::Create(std::move(service_provider));
+    } else {
+      service_provider_.reset();
+    }
+  }
+
  private:
   void RebuildFocusChain();
 
@@ -139,6 +152,7 @@ class ViewState : public ViewContainerState {
   uint32_t invalidation_flags_ = 0u;
 
   mozart::FocusChainPtr focus_chain_;
+  app::ServiceProviderPtr service_provider_;
 
   ftl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 

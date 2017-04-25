@@ -97,4 +97,9 @@ void MockViewInspector::ActivateFocusChain(
 
 void MockViewInspector::HasFocus(mozart::ViewTokenPtr view_token,
                                  const HasFocusCallback& callback) {}
+
+void MockViewInspector::GetSoftKeyboardContainer(
+    mozart::ViewTokenPtr view_token,
+    fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {}
+
 }  // namespace mozart

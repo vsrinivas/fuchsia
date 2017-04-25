@@ -7,6 +7,7 @@ module mozart;
 import "application/services/service_provider.fidl";
 import "apps/mozart/services/composition/hit_tests.fidl";
 import "apps/mozart/services/composition/scene_token.fidl";
+import "apps/mozart/services/input/ime_service.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 import "apps/mozart/services/views/view_tree_token.fidl";
 
@@ -128,4 +129,9 @@ interface ViewInspector {
 
   // Returns whether view has focus
   HasFocus(ViewToken view_token) => (bool has_focus);
+
+  // Retrieve the SoftKeyboardContainer that is the closest to the ViewToken
+  // in the associated ViewTree
+  GetSoftKeyboardContainer(ViewToken view_token,
+                           SoftKeyboardContainer& container);
 };

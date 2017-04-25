@@ -264,7 +264,7 @@ std::ostream& operator<<(std::ostream& os, const Touch& value) {
   os << "{Touch:";
   os << "finger_id= " << value.finger_id;
   os << ", x=" << value.x;
-  os << ", x=" << value.y;
+  os << ", y=" << value.y;
   os << ", width=" << value.width;
   os << ", height=" << value.height;
   return os << "}";

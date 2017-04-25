@@ -48,6 +48,7 @@ source_set("lib") {
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/input",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/tracing/lib/trace:provider",

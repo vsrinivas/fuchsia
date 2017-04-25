@@ -5,6 +5,7 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_TEXT_INPUT_SERVICE_IMPL_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_TEXT_INPUT_SERVICE_IMPL_H_
 
+#include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_events.fidl.h"
 #include "apps/mozart/services/input/text_input.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
@@ -49,6 +50,8 @@ class TextInputServiceImpl : public mozart::TextInputService,
   mozart::InputMethodEditorClientPtr client_;
   mozart::KeyboardType keyboard_type_;
   mozart::TextInputStatePtr state_;
+  mozart::SoftKeyboardContainerPtr container_;
+  mozart::ImeServicePtr ime_service_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TextInputServiceImpl);
 };
