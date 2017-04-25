@@ -458,7 +458,7 @@ mx_status_t Minfs::Unmount() {
 }
 
 #ifdef __Fuchsia__
-mx_status_t VnodeMinfs::AddDispatcher(mx_handle_t h, void* cookie) {
+mx_status_t VnodeMinfs::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     // create a dispatcher for this handle
     return fs_->dispatcher_->Add(h, (void *)vfs_handler, cookie);
 }

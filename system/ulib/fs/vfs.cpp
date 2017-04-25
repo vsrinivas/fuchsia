@@ -278,7 +278,7 @@ mx_status_t Vfs::Close(Vnode* vn) {
 }
 
 #ifdef __Fuchsia__
-mx_status_t Vnode::AddDispatcher(mx_handle_t h, void* cookie) {
+mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     // default implementation adds this object to the mxio single
     // threaded dispatcher
     return mxio_dispatcher_add(vfs_dispatcher, h, (void*)vfs_handler, cookie);

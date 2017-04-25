@@ -31,11 +31,21 @@
 #define V_FLAG_MOUNT_READY            2
 #define V_FLAG_RESERVED_MASK 0x0000FFFF
 
+__BEGIN_CDECLS
+// A lock which should be used to protect lookup and walk operations
+#ifdef __Fuchsia__
+extern mtx_t vfs_lock;
+#endif
+
+typedef struct vfs_iostate vfs_iostate_t;
+
+__END_CDECLS
+
 #ifdef __cplusplus
 
-namespace fs {
-
 #include <mxtl/macros.h>
+
+namespace fs {
 
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
@@ -170,6 +180,10 @@ public:
 
     virtual ~Vnode() {};
 
+#ifdef __Fuchsia__
+    virtual mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
+#endif
+
     // The vnode is acting as a mount point for a remote filesystem or device.
     bool IsRemote() const { return remote_ > 0; }
     // The vnode is a device. Devices may opt to reveal themselves as directories
@@ -177,12 +191,6 @@ public:
     // during path traversal, devices are NOT treated as mount points, even though
     // they contain remote handles.
     bool IsDevice() const { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
-    // The vnode is "open elsewhere".
-    bool IsBusy() const { return refcount_ > 1; }
-
-#ifdef __Fuchsia__
-    virtual mx_status_t AddDispatcher(mx_handle_t h, void* cookie);
-#endif
 
     mx_handle_t DetachRemote() {
         mx_handle_t h = remote_;
@@ -251,10 +259,6 @@ typedef struct vdircookie {
     void* p;
 } vdircookie_t;
 
-// A lock which should be used to protect lookup and walk operations
-#ifdef __Fuchsia__
-extern mtx_t vfs_lock;
-#endif
 extern mxio_dispatcher_t* vfs_dispatcher;
 
 // Handle incoming mxrio messages, dispatching them to vnode operations.

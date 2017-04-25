@@ -32,7 +32,7 @@ class Vnode : public fs::Vnode {
 public:
     void Release() override final;
     mx_status_t Close() override final;
-    mx_status_t AddDispatcher(mx_handle_t h, void* cookie) override final;
+    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) override final;
 
     ~Vnode() override;
 

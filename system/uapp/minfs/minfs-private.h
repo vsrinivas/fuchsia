@@ -205,7 +205,7 @@ private:
                                                   DirectoryOffset*));
 
 #ifdef __Fuchsia__
-    mx_status_t AddDispatcher(mx_handle_t h, void* cookie) final;
+    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) final;
 
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).
