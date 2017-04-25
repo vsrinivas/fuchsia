@@ -1,7 +1,8 @@
 {
     "labels": [
         "//apps/modular",
-        "//apps/modular/lib/util:modular_util_unittests"
+        "//apps/modular/lib/util:modular_util_unittests",
+        "//apps/web_runner/services"
     ],
     "binaries": [
         {
@@ -115,6 +116,10 @@
         {
             "binary": "modular_tests.json",
             "bootfs_path": "apps/modular_tests/modular_tests.json"
+        },
+        {
+            "binary": "oauth_token_manager",
+            "bootfs_path": "apps/oauth_token_manager"
         },
         {
             "binary": "parent_module",
