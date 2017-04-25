@@ -965,10 +965,28 @@ static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int fl
     return total;
 }
 
+static mx_status_t mxsio_clone_stream(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    // TODO: support unconnected sockets
+    if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
+        return ERR_BAD_STATE;
+    }
+    mxrio_t* rio = (void*)io;
+    mxrio_object_t info;
+    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, &info);
+    if (r < 0) {
+        return r;
+    }
+    for (unsigned i = 0; i < info.hcount; i++) {
+        types[i] = PA_MXIO_SOCKET;
+    }
+    memcpy(handles, info.handle, info.hcount * sizeof(mx_handle_t));
+    return info.hcount;
+}
+
 static mx_status_t mxsio_unwrap_stream(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     // TODO: support unconnected sockets
     if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
-        return ERR_NOT_SUPPORTED;
+        return ERR_BAD_STATE;
     }
     mxrio_t* rio = (void*)io;
     mx_status_t r;
@@ -1295,7 +1313,7 @@ static mxio_ops_t mxio_socket_stream_ops = {
     .misc = mxrio_misc,
     .close = mxrio_close,
     .open = mxrio_open,
-    .clone = mxio_default_clone,
+    .clone = mxsio_clone_stream,
     .ioctl = mxrio_ioctl,
     .wait_begin = mxsio_wait_begin_stream,
     .wait_end = mxsio_wait_end_stream,
