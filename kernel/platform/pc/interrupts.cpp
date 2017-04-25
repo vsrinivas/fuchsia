@@ -60,8 +60,8 @@ static void platform_init_apic(uint level)
     // TODO: If we want to support x86 without IO APICs, we should do something
     // better here.
     ASSERT(status == NO_ERROR);
-    struct io_apic_descriptor *io_apics =
-            calloc(num_io_apics, sizeof(*io_apics));
+    io_apic_descriptor *io_apics =
+            static_cast<io_apic_descriptor *>(calloc(num_io_apics, sizeof(*io_apics)));
     ASSERT(io_apics != NULL);
     uint32_t num_found = 0;
     status = platform_enumerate_io_apics(io_apics, num_io_apics, &num_found);
@@ -72,9 +72,9 @@ static void platform_init_apic(uint level)
     uint32_t num_isos;
     status = platform_enumerate_interrupt_source_overrides(NULL, 0, &num_isos);
     ASSERT(status == NO_ERROR);
-    struct io_apic_isa_override* isos = NULL;
+    io_apic_isa_override *isos = NULL;
     if (num_isos > 0) {
-        isos = calloc(num_isos, sizeof(*isos));
+        isos = static_cast<io_apic_isa_override *>(calloc(num_isos, sizeof(*isos)));
         ASSERT(isos != NULL);
         status = platform_enumerate_interrupt_source_overrides(
                 isos,
@@ -95,7 +95,7 @@ static void platform_init_apic(uint level)
 
     // Initialize the delivery modes/targets for the ISA interrupts
     uint8_t local_apic_id = apic_local_id();
-    for (int irq = 0; irq < 8; ++irq) {
+    for (uint8_t irq = 0; irq < 8; ++irq) {
         // Explicitly skip mapping the PIC2 interrupt, since it is actually
         // just used internally on the PICs for daisy chaining.  QEMU remaps
         // ISA IRQ 0 to global IRQ 2, but does not remap ISA IRQ 2 off of
@@ -111,7 +111,7 @@ static void platform_init_apic(uint level)
                     0);
         }
         apic_io_configure_isa_irq(
-                irq + 8,
+                static_cast<uint8_t>(irq + 8),
                 DELIVERY_MODE_FIXED,
                 IO_APIC_IRQ_MASK,
                 DST_MODE_PHYSICAL,
@@ -194,7 +194,7 @@ status_t get_interrupt_config(unsigned int vector,
 enum handler_return platform_irq(x86_iframe_t *frame)
 {
     // get the current vector
-    unsigned int x86_vector = frame->vector;
+    uint64_t x86_vector = frame->vector;
     DEBUG_ASSERT(x86_vector >= X86_INT_PLATFORM_BASE &&
                  x86_vector <= X86_INT_PLATFORM_MAX);
 
@@ -277,7 +277,10 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags)
 }
 
 unsigned int remap_interrupt(unsigned int vector) {
-    return apic_io_isa_to_global(vector);
+    if (vector > NUM_ISA_IRQS) {
+        return vector;
+    }
+    return apic_io_isa_to_global(static_cast<uint8_t>(vector));
 }
 
 #ifdef WITH_DEV_PCIE

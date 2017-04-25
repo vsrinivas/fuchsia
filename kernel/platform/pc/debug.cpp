@@ -80,8 +80,8 @@ void platform_init_debug_early(void)
     /* get basic config done so that tx functions */
     outp(uart_io_port + 1, 0); // mask all irqs
     outp(uart_io_port + 3, 0x80); // set up to load divisor latch
-    outp(uart_io_port + 0, divisor & 0xff); // lsb
-    outp(uart_io_port + 1, divisor >> 8); // msb
+    outp(uart_io_port + 0, static_cast<uint8_t>(divisor)); // lsb
+    outp(uart_io_port + 1, static_cast<uint8_t>(divisor >> 8)); // msb
     outp(uart_io_port + 3, 3); // 8N1
     outp(uart_io_port + 2, 0xc7); // enable FIFO, clear, 14-byte threshold
 
@@ -135,7 +135,7 @@ void platform_dputs(const char* str, size_t len)
 
 int platform_dgetc(char *c, bool wait)
 {
-    return cbuf_read_char(&console_input_buf, c, wait);
+    return static_cast<int>(cbuf_read_char(&console_input_buf, c, wait));
 }
 
 // panic time polling IO for the panic shell

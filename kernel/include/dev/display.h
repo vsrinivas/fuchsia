@@ -8,6 +8,8 @@
 #ifndef __DEV_DISPLAY_H
 #define __DEV_DISPLAY_H
 
+#include <magenta/compiler.h>
+
 #include <stdbool.h>
 #include <sys/types.h>
 #include <inttypes.h>
@@ -46,7 +48,9 @@ struct display_info {
     void (*flush)(uint starty, uint endy);
 };
 
+__BEGIN_CDECLS
 status_t display_get_info(struct display_info *info);
+__END_CDECLS
 
 #endif
 

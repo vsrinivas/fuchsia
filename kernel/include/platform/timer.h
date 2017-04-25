@@ -5,10 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __PLATFORM_TIMER_H
-#define __PLATFORM_TIMER_H
+#pragma once
 
+#include <magenta/compiler.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 typedef enum handler_return (*platform_timer_callback)(void *arg, lk_time_t now);
 
@@ -19,5 +21,4 @@ status_t platform_set_oneshot_timer (platform_timer_callback callback, void *arg
 void     platform_stop_timer(void);
 #endif
 
-#endif
-
+__END_CDECLS

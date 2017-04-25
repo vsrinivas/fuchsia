@@ -28,22 +28,22 @@
 
 #define LOCAL_TRACE 0
 
-static inline int i8042_read_data(void)
+static inline uint8_t i8042_read_data(void)
 {
     return inp(I8042_DATA_REG);
 }
 
-static inline int i8042_read_status(void)
+static inline uint8_t i8042_read_status(void)
 {
     return inp(I8042_STATUS_REG);
 }
 
-static inline void i8042_write_data(int val)
+static inline void i8042_write_data(uint8_t val)
 {
     outp(I8042_DATA_REG, val);
 }
 
-static inline void i8042_write_command(int val)
+static inline void i8042_write_command(uint8_t val)
 {
     outp(I8042_COMMAND_REG, val);
 }
@@ -94,7 +94,7 @@ static inline void i8042_write_command(int val)
 #define I8042_BUFFER_LENGTH 32
 
 /* extended keys that aren't pure ascii */
-enum {
+enum extended_keys {
     KEY_RETURN = 0x80,
     KEY_ESC,
     KEY_LSHIFT,
@@ -161,7 +161,7 @@ enum {
     KEY_PAD_9,
 
     _KEY_LAST,
-} extended_keys;
+};
 
 static_assert(_KEY_LAST < 0x100, "");
 
@@ -330,13 +330,13 @@ static int i8042_flush(void)
     return i;
 }
 
-static int i8042_command(uint8_t *param, int command)
+static int i8042_command(uint8_t *param, uint16_t command)
 {
     int retval = 0, i = 0;
 
     retval = i8042_wait_write();
     if (!retval) {
-        i8042_write_command(command & 0xff);
+        i8042_write_command(static_cast<uint8_t>(command));
     }
 
     if (!retval) {
@@ -356,7 +356,7 @@ static int i8042_command(uint8_t *param, int command)
             }
 
             if (i8042_read_status() & I8042_STR_AUXDATA) {
-                param[i] = ~i8042_read_data();
+                param[i] = static_cast<uint8_t>(~i8042_read_data());
             } else {
                 param[i] = i8042_read_data();
             }
@@ -372,7 +372,7 @@ static int keyboard_command(uint8_t *param, int command)
 
     retval = i8042_wait_write();
     if (!retval) {
-        i8042_write_data(command & 0xff);
+        i8042_write_data(static_cast<uint8_t>(command));
     }
 
     if (!retval) {
@@ -392,7 +392,7 @@ static int keyboard_command(uint8_t *param, int command)
             }
 
             if (i8042_read_status() & I8042_STR_AUXDATA) {
-                param[i] = ~i8042_read_data();
+                param[i] = static_cast<uint8_t>(~i8042_read_data());
             } else {
                 param[i] = i8042_read_data();
             }
@@ -433,10 +433,8 @@ static enum handler_return i8042_interrupt(void *arg)
 
 int platform_read_key(char *c)
 {
-    ssize_t len;
-
-    len = cbuf_read_char(key_buf, c, true);
-    return len;
+    ssize_t len = cbuf_read_char(key_buf, c, true);
+    return static_cast<int>(len);
 }
 
 void platform_init_keyboard(cbuf_t *buffer)
@@ -456,7 +454,7 @@ void platform_init_keyboard(cbuf_t *buffer)
     ctr |= I8042_CTR_XLATE;
 
     // enable keyboard and keyboard irq
-    ctr &= ~I8042_CTR_KBDDIS;
+    ctr &= static_cast<uint8_t>(~I8042_CTR_KBDDIS);
     ctr |= I8042_CTR_KBDINT;
 
     if (i8042_command(&ctr, I8042_CMD_CTL_WCTR)) {

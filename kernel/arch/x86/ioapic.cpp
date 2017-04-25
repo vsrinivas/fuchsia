@@ -101,7 +101,6 @@ static uint32_t num_io_apics;
 
 // The first 16 global IRQs are identity mapped to the legacy ISA IRQs unless
 // we are told otherwise.  This tracks the actual mapping.
-#define NUM_ISA_IRQS 16
 // Read-only after initialization in apic_io_init()
 static struct io_apic_isa_override isa_overrides[NUM_ISA_IRQS];
 

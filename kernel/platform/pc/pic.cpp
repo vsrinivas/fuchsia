@@ -22,7 +22,7 @@
 /*
  * init the PICs and remap them
  */
-void pic_map(uint32_t pic1, uint32_t pic2) {
+void pic_map(uint8_t pic1, uint8_t pic2) {
     /* send ICW1 */
     outp(PIC1, ICW1);
     outp(PIC2, ICW1);

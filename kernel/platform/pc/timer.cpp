@@ -86,7 +86,7 @@ static enum clock_source calibration_clock;
 
 // APIC timer calibration values
 static bool use_tsc_deadline;
-static uint64_t apic_ticks_per_ms = 0;
+static uint32_t apic_ticks_per_ms = 0;
 static struct fp_32_64 apic_ticks_per_ns;
 static uint8_t apic_divisor = 0;
 
@@ -104,8 +104,8 @@ uint64_t get_tsc_ticks_per_ms(void) {
     return tsc_ticks_per_ms;
 }
 
-#define INTERNAL_FREQ 1193182ULL
-#define INTERNAL_FREQ_3X 3579546ULL
+#define INTERNAL_FREQ 1193182U
+#define INTERNAL_FREQ_3X 3579546U
 
 #define INTERNAL_FREQ_TICKS_PER_MS (INTERNAL_FREQ/1000)
 
@@ -231,25 +231,25 @@ static void set_pit_frequency(uint32_t frequency)
      * timer 0, mode 2, binary counter, LSB followed by MSB
      */
     outp(I8253_CONTROL_REG, 0x34);
-    outp(I8253_DATA_REG, pit_divisor & 0xff); // LSB
-    outp(I8253_DATA_REG, pit_divisor >> 8); // MSB
+    outp(I8253_DATA_REG, static_cast<uint8_t>(pit_divisor)); // LSB
+    outp(I8253_DATA_REG, static_cast<uint8_t>(pit_divisor >> 8)); // MSB
 }
 
 static inline void pit_calibration_cycle_preamble(uint16_t ms)
 {
     // Make the PIT run for
-    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS * ms;
+    const uint16_t init_pic_count = static_cast<uint16_t>(INTERNAL_FREQ_TICKS_PER_MS * ms);
     // Program PIT in the interrupt on terminal count configuration,
     // this makes it count down and set the output high when it hits 0.
     outp(I8253_CONTROL_REG, 0x30);
-    outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
+    outp(I8253_DATA_REG, static_cast<uint8_t>(init_pic_count)); // LSB
 }
 
 static inline void pit_calibration_cycle(uint16_t ms)
 {
     // Make the PIT run for ms millis, see comments in the preamble
-    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS * ms;
-    outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
+    const uint16_t init_pic_count = static_cast<uint16_t>(INTERNAL_FREQ_TICKS_PER_MS * ms);
+    outp(I8253_DATA_REG, static_cast<uint8_t>(init_pic_count >> 8)); // MSB
 
     uint8_t status = 0;
     do {
@@ -318,13 +318,13 @@ static uint64_t lookup_core_crystal_freq(void) {
 }
 
 static uint64_t lookup_tsc_freq(void) {
-    const uint32_t core_crystal_clock_freq = lookup_core_crystal_freq();
+    const uint64_t core_crystal_clock_freq = lookup_core_crystal_freq();
 
     // If this leaf is present, then 18.18.3 (Determining the Processor Base
     // Frequency) documents this as the nominal TSC frequency.
     const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
     if (tsc_leaf) {
-        return ((uint64_t)core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
+        return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
     }
 
     return 0;
@@ -336,10 +336,11 @@ static void calibrate_apic_timer(void)
 
     const uint64_t apic_freq = lookup_core_crystal_freq();
     if (apic_freq != 0) {
-        apic_ticks_per_ms = apic_freq / 1000;
+        ASSERT(apic_freq / 1000 <= UINT32_MAX);
+        apic_ticks_per_ms = static_cast<uint32_t>(apic_freq / 1000);
         apic_divisor = 1;
         fp_32_64_div_32_32(&apic_ticks_per_ns, apic_ticks_per_ms, 1000 * 1000);
-        TRACEF("APIC frequency: %" PRIu64 " ticks/ms\n", apic_ticks_per_ms);
+        TRACEF("APIC frequency: %" PRIu32 " ticks/ms\n", apic_ticks_per_ms);
         return;
     }
 
@@ -349,7 +350,7 @@ static void calibrate_apic_timer(void)
     apic_divisor = 1;
 outer:
     while (apic_divisor != 0) {
-        uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
+        uint32_t best_time[2] = {UINT32_MAX, UINT32_MAX};
         const uint16_t duration_ms[2] = { 2, 4 };
         for (int trial = 0; trial < 2; ++trial) {
             for (int tries = 0; tries < 3; ++tries) {
@@ -401,7 +402,7 @@ outer:
             // If the APIC ran out of time every time, try again with a higher
             // divisor
             if (best_time[trial] == UINT32_MAX) {
-                apic_divisor *= 2;
+                apic_divisor = static_cast<uint8_t>(apic_divisor * 2);
                 goto outer;
             }
 
@@ -412,7 +413,7 @@ outer:
     }
     ASSERT(apic_divisor != 0);
 
-    LTRACEF("APIC timer calibrated: %" PRIu64 " ticks/ms, %d divisor\n",
+    LTRACEF("APIC timer calibrated: %" PRIu32 " ticks/ms, %d divisor\n",
             apic_ticks_per_ms, apic_divisor);
 }
 
@@ -423,8 +424,9 @@ static void calibrate_tsc(void)
     const uint64_t tsc_freq = lookup_tsc_freq();
     if (tsc_freq != 0) {
         tsc_ticks_per_ms = tsc_freq / 1000;
-        fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
-        fp_32_64_div_32_32(&tsc_per_ns, tsc_ticks_per_ms, 1000 * 1000);
+        ASSERT(tsc_ticks_per_ms <= UINT32_MAX);
+        fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, static_cast<uint32_t>(tsc_ticks_per_ms));
+        fp_32_64_div_32_32(&tsc_per_ns, static_cast<uint32_t>(tsc_ticks_per_ms), 1000 * 1000);
         TRACEF("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
         return;
     }
@@ -488,8 +490,9 @@ static void calibrate_tsc(void)
 
     LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 
-    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, tsc_ticks_per_ms);
-    fp_32_64_div_32_32(&tsc_per_ns, tsc_ticks_per_ms, 1000 * 1000);
+    ASSERT(tsc_ticks_per_ms <= UINT32_MAX);
+    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, static_cast<uint32_t>(tsc_ticks_per_ms));
+    fp_32_64_div_32_32(&tsc_per_ns, static_cast<uint32_t>(tsc_ticks_per_ms), 1000 * 1000);
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
@@ -513,7 +516,9 @@ static void platform_init_timer(uint level)
 
     if (has_hpet) {
         calibration_clock = CLOCK_HPET;
-        fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000, hpet_ticks_per_ms());
+        const uint64_t hpet_ms_rate = hpet_ticks_per_ms();
+        ASSERT(hpet_ms_rate <= UINT32_MAX);
+        fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000, static_cast<uint32_t>(hpet_ms_rate));
     } else {
         calibration_clock = CLOCK_PIT;
     }
@@ -606,7 +611,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
 
     // Find the shift needed for this timeout, since count is 32-bit.
     const uint highest_set_bit = log2_ulong_floor(apic_ticks_needed);
-    uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : highest_set_bit - 31;
+    uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : static_cast<uint8_t>(highest_set_bit - 31);
     if (extra_shift > 8) {
         extra_shift = 8;
     }
@@ -631,7 +636,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     }
 
     LTRACEF("Scheduling oneshot timer: %u count, %u div\n", count, divisor);
-    return apic_timer_set_oneshot(count, divisor, false /* unmasked */);
+    return apic_timer_set_oneshot(count, static_cast<uint8_t>(divisor), false /* unmasked */);
 }
 
 void platform_stop_timer(void)

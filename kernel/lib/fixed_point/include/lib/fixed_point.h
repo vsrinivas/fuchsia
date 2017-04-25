@@ -29,11 +29,11 @@ fp_32_64_div_32_32(struct fp_32_64 *result, uint32_t dividend, uint32_t divisor)
     uint32_t rem;
 
     tmp = ((uint64_t)dividend << 32) / divisor;
-    rem = ((uint64_t)dividend << 32) % divisor;
-    result->l0 = tmp >> 32;
-    result->l32 = tmp;
+    rem = (uint32_t)(((uint64_t)dividend << 32) % divisor);
+    result->l0 = (uint32_t)(tmp >> 32);
+    result->l32 = (uint32_t)tmp;
     tmp = ((uint64_t)rem << 32) / divisor;
-    result->l64 = tmp;
+    result->l64 = (uint32_t)tmp;
 }
 
 static uint64_t
@@ -59,7 +59,7 @@ u64_mul_u32_fp32_64(uint32_t a, struct fp_32_64 b)
     res_l32 = (uint32_t)tmp;
     res_l32 += mul_u32_u32(a, b.l64, 0, -64) >> 32; /* Improve rounding accuracy */
     res_0 += res_l32 >> 32;
-    res_l32_32 = res_l32;
+    res_l32_32 = (uint32_t)res_l32;
     ret = res_0 + (res_l32_32 >> 31); /* Round to nearest integer */
 
     debug_u64_mul_u32_fp32_64(a, b, res_0, res_l32_32, ret);
@@ -70,8 +70,8 @@ u64_mul_u32_fp32_64(uint32_t a, struct fp_32_64 b)
 static uint32_t
 u32_mul_u64_fp32_64(uint64_t a, struct fp_32_64 b)
 {
-    uint32_t a_r32 = a >> 32;
-    uint32_t a_0 = a;
+    uint32_t a_r32 = (uint32_t)(a >> 32);
+    uint32_t a_0 = (uint32_t)a;
     uint64_t res_l32;
     uint32_t ret;
 
@@ -81,7 +81,7 @@ u32_mul_u64_fp32_64(uint64_t a, struct fp_32_64 b)
     res_l32 += mul_u32_u32(a_0, b.l32, 0, -32);
     res_l32 += mul_u32_u32(a_r32, b.l64, 32, -64);
     res_l32 += mul_u32_u32(a_0, b.l64, 0, -64) >> 32; /* Improve rounding accuracy */
-    ret = (res_l32 >> 32) + ((uint32_t)res_l32 >> 31); /* Round to nearest integer */
+    ret = (uint32_t)((res_l32 >> 32) + ((uint32_t)res_l32 >> 31)); /* Round to nearest integer */
 
     debug_u32_mul_u64_fp32_64(a, b, res_l32, ret);
 
@@ -91,8 +91,8 @@ u32_mul_u64_fp32_64(uint64_t a, struct fp_32_64 b)
 static uint64_t
 u64_mul_u64_fp32_64(uint64_t a, struct fp_32_64 b)
 {
-    uint32_t a_r32 = a >> 32;
-    uint32_t a_0 = a;
+    uint32_t a_r32 = (uint32_t)(a >> 32);
+    uint32_t a_0 = (uint32_t)a;
     uint64_t res_0;
     uint64_t res_l32;
     uint32_t res_l32_32;
@@ -114,7 +114,7 @@ u64_mul_u64_fp32_64(uint64_t a, struct fp_32_64 b)
     tmp = mul_u32_u32(a_0, b.l64, 0, -64); /* Improve rounding accuracy */
     res_l32 += tmp >> 32;
     res_0 += res_l32 >> 32;
-    res_l32_32 = res_l32;
+    res_l32_32 = (uint32_t)(res_l32);
     ret = res_0 +  (res_l32_32 >> 31); /* Round to nearest integer */
 
     debug_u64_mul_u64_fp32_64(a, b, res_0, res_l32_32, ret);

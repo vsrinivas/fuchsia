@@ -18,7 +18,7 @@
 #include <magenta/user_thread.h>
 
 #if __x86_64__
-extern "C" uint64_t get_tsc_ticks_per_ms(void);
+uint64_t get_tsc_ticks_per_ms(void);
 #define ktrace_timestamp() rdtsc();
 #define ktrace_ticks_per_ms() get_tsc_ticks_per_ms()
 #else

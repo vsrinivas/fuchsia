@@ -86,17 +86,18 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         }
         bootloader.efi_system_table = (void*) *((uint64_t*)item);
         break;
-    case BOOTDATA_FRAMEBUFFER:
+    case BOOTDATA_FRAMEBUFFER: {
         if (bd->length < sizeof(bootdata_swfb_t)) {
             break;
         }
-        bootdata_swfb_t* fb = item;
+        bootdata_swfb_t* fb = static_cast<bootdata_swfb_t*>(item);
         bootloader.fb_base = (uint32_t) fb->phys_base;
         bootloader.fb_width = fb->width;
         bootloader.fb_height = fb->height;
         bootloader.fb_stride = fb->stride;
         bootloader.fb_format = fb->format;
         break;
+    }
     case BOOTDATA_CMDLINE:
         if (bd->length < 1) {
             break;
@@ -118,8 +119,8 @@ static int process_bootitem(bootdata_t* bd, void* item) {
     return 0;
 }
 
-void *boot_alloc_mem(size_t len);
-void boot_alloc_reserve(uintptr_t phys, size_t _len);
+extern "C" void *boot_alloc_mem(size_t len);
+extern "C" void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
 static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
     if ((hdr->type != BOOTDATA_CONTAINER) ||
@@ -135,19 +136,19 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
     printf("bootdata: @ %p (%zu bytes)\n", hdr, total_len);
 
     bootdata_t* bd = hdr + 1;
-    uint32_t remain = hdr->length;
+    size_t remain = hdr->length;
     while (remain > sizeof(bootdata_t)) {
         remain -= sizeof(bootdata_t);
-        void* item = (bd + 1);
+        uintptr_t item = reinterpret_cast<uintptr_t>(bd + 1);
         size_t len = BOOTDATA_ALIGN(bd->length);
         if (len > remain) {
             printf("bootdata: truncated\n");
             break;
         }
-        if (process_bootitem(bd, item)) {
+        if (process_bootitem(bd, reinterpret_cast<void*>(item))) {
             break;
         }
-        bd = (item + len);
+        bd = reinterpret_cast<bootdata_t*>(item + len);
         remain -= len;
     }
 
@@ -172,7 +173,8 @@ static void platform_save_bootloader_data(void) {
             module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);
             if (mi->mods_count > 0) {
                 printf("multiboot: ramdisk @ %08x..%08x\n", mod->mod_start, mod->mod_end);
-                process_bootdata((void*) X86_PHYS_TO_VIRT(mod->mod_start), mod->mod_start);
+                process_bootdata(reinterpret_cast<bootdata_t*>(X86_PHYS_TO_VIRT(mod->mod_start)),
+                                 mod->mod_start);
             }
         }
     }
@@ -332,7 +334,7 @@ static void platform_init_smp(void)
     }
 
     // allocate 2x the table for temporary work
-    uint32_t *apic_ids = malloc(sizeof(*apic_ids) * num_cpus * 2);
+    uint32_t *apic_ids = static_cast<uint32_t *>(malloc(sizeof(*apic_ids) * num_cpus * 2));
     if (apic_ids == NULL) {
         TRACEF("failed to allocate apic_ids table, disabling SMP\n");
         return;

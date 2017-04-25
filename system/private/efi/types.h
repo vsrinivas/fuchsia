@@ -140,4 +140,6 @@ typedef enum {
     TimerRelative
 } efi_timer_delay;
 
+#ifndef __cplusplus
 typedef unsigned short char16_t;
+#endif

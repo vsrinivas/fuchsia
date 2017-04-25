@@ -70,10 +70,9 @@ static void store_panic_in_capsule(void) {
         printf("failed to get backtrace\n");
         return;
     }
-    x86_panic_capsule_t capsule = {
-        .magic = CAPSULE_TAG_MAGIC_x86,
-        .count = (uint32_t)count,
-    };
+    x86_panic_capsule_t capsule = {};
+    capsule.magic = CAPSULE_TAG_MAGIC_x86;
+    capsule.count = (uint32_t)count;
 
     const char *buildid = version.buildid;
 
@@ -118,7 +117,7 @@ void platform_halt(
         platform_halt_action suggested_action,
         platform_halt_reason reason)
 {
-    printf("platform_halt suggested_action %u reason %u\n", suggested_action, reason);
+    printf("platform_halt suggested_action %d reason %d\n", suggested_action, reason);
 
     arch_disable_ints();
 
