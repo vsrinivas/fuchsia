@@ -88,7 +88,7 @@ void TrashStack(void* context) {
   SetContext(reinterpret_cast<Context*>(context));
 }
 
-TEST(Context, MakeContextUnsafeStack) {
+TEST(Context, DISABLED_MakeContextUnsafeStack) {
   Stack stack;
   memset(GetUnsafeStackForTest(stack), 0, stack.stack_size());
 
