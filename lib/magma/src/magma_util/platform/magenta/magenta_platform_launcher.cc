@@ -46,7 +46,7 @@ bool MagentaPlatformLauncher::Launch(mx_handle_t job, const char* name, int argc
     if (status < 0)
         return DRETF(false, "mx_log_create failed: %d", status);
 
-    launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0));
+    launchpad_add_handle(lp, h, PA_HND(PA_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0));
     launchpad_add_handles(lp, hcount, handles, types);
 
     const char* errmsg;
