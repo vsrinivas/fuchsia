@@ -17,7 +17,7 @@
 
 static void bench_cache(size_t bufsize, uint8_t *buf)
 {
-    lk_bigtime_t t;
+    lk_time_t t;
     bool do_free;
 
     if (buf == 0) {
@@ -32,17 +32,17 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     if (!buf)
         return;
 
-    t = current_time_hires();
+    t = current_time();
     arch_clean_cache_range((addr_t)buf, bufsize);
-    t = current_time_hires() - t;
+    t = current_time() - t;
 
     printf("took %" PRIu64 " nsecs to clean %zu bytes (cold)\n", t, bufsize);
 
     memset(buf, 0x99, bufsize);
 
-    t = current_time_hires();
+    t = current_time();
     arch_clean_cache_range((addr_t)buf, bufsize);
-    t = current_time_hires() - t;
+    t = current_time() - t;
 
     if (do_free)
         free(buf);

@@ -18,7 +18,7 @@ public:
     Semaphore& operator=(const Semaphore&) = delete;
 
     int Post();
-    status_t Wait(lk_bigtime_t deadline);
+    status_t Wait(lk_time_t deadline);
 
 private:
     int64_t count_;

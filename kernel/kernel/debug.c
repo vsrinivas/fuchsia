@@ -78,7 +78,7 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
         printf("thread stats (cpu %u):\n", i);
         printf("\ttotal idle time: %" PRIu64 "\n", thread_stats[i].idle_time);
         printf("\ttotal busy time: %" PRIu64 "\n",
-               current_time_hires() - thread_stats[i].idle_time);
+               current_time() - thread_stats[i].idle_time);
         printf("\treschedules: %lu\n", thread_stats[i].reschedules);
 #if WITH_SMP
         printf("\treschedule_ipis: %lu\n", thread_stats[i].reschedule_ipis);
@@ -94,10 +94,10 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-static enum handler_return threadload(struct timer *t, lk_bigtime_t now, void *arg)
+static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
 {
     static struct thread_stats old_stats[SMP_MAX_CPUS];
-    static lk_bigtime_t last_idle_time[SMP_MAX_CPUS];
+    static lk_time_t last_idle_time[SMP_MAX_CPUS];
 
     printf("cpu    load"
             " sched (cs ylds pmpts irq_pmpts)"
@@ -113,16 +113,16 @@ static enum handler_return threadload(struct timer *t, lk_bigtime_t now, void *a
         if (!mp_is_cpu_active(i))
             continue;
 
-        lk_bigtime_t idle_time = thread_stats[i].idle_time;
+        lk_time_t idle_time = thread_stats[i].idle_time;
 
         /* if the cpu is currently idle, add the time since it went idle up until now to the idle counter */
         bool is_idle = !!mp_is_cpu_idle(i);
         if (is_idle) {
-            idle_time += current_time_hires() - thread_stats[i].last_idle_timestamp;
+            idle_time += current_time() - thread_stats[i].last_idle_timestamp;
         }
 
-        lk_bigtime_t delta_time = idle_time - last_idle_time[i];
-        lk_bigtime_t busy_time = LK_SEC(1) - (delta_time > LK_SEC(1) ? LK_SEC(1) : delta_time);
+        lk_time_t delta_time = idle_time - last_idle_time[i];
+        lk_time_t busy_time = LK_SEC(1) - (delta_time > LK_SEC(1) ? LK_SEC(1) : delta_time);
         uint busypercent = (busy_time * 10000) / LK_SEC(1);
 
         printf("%3u"

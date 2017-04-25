@@ -87,7 +87,7 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     hdr.header = DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len);
     hdr.datalen = len;
     hdr.flags = flags;
-    hdr.timestamp = current_time_hires();
+    hdr.timestamp = current_time();
     thread_t *t = get_current_thread();
     if (t) {
         hdr.pid = t->user_pid;
@@ -307,7 +307,7 @@ void dlog_bluescreen_init(void) {
     // replay debug log?
 
     dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\nUPTIME: %" PRIu64 "ms\n",
-            current_time_hires() / LK_MSEC(1));
+            current_time() / LK_MSEC(1));
     dprintf(INFO, "BUILDID %s\n\n", version.buildid);
 }
 

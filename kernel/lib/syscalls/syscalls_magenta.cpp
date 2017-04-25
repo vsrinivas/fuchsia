@@ -61,9 +61,9 @@ static mxtl::atomic<int64_t> utc_offset;
 uint64_t sys_time_get(uint32_t clock_id) {
     switch (clock_id) {
     case MX_CLOCK_MONOTONIC:
-        return current_time_hires();
+        return current_time();
     case MX_CLOCK_UTC:
-        return current_time_hires() + utc_offset.load();
+        return current_time() + utc_offset.load();
     case MX_CLOCK_THREAD:
         return UserThread::GetCurrent()->runtime_ns();
     default:

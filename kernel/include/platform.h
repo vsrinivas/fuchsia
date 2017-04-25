@@ -34,7 +34,7 @@ typedef enum {
 } platform_halt_reason;
 
 /* current time in nanoseconds */
-lk_bigtime_t current_time_hires(void);
+lk_time_t current_time(void);
 
 /* high-precision timer ticks per second */
 uint64_t ticks_per_second(void);

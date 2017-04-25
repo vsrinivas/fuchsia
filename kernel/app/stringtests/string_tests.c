@@ -129,21 +129,21 @@ static void *null_memcpy(void *dst, const void *src, size_t len)
     return dst;
 }
 
-static lk_bigtime_t bench_memcpy_routine(void *memcpy_routine(void *, const void *, size_t), size_t srcalign, size_t dstalign)
+static lk_time_t bench_memcpy_routine(void *memcpy_routine(void *, const void *, size_t), size_t srcalign, size_t dstalign)
 {
     int i;
-    lk_bigtime_t t0;
+    lk_time_t t0;
 
-    t0 = current_time_hires();
+    t0 = current_time();
     for (i=0; i < ITERATIONS; i++) {
         memcpy_routine(dst + dstalign, src + srcalign, BUFFER_SIZE);
     }
-    return current_time_hires() - t0;
+    return current_time() - t0;
 }
 
 static void bench_memcpy(void)
 {
-    lk_bigtime_t null, c, libc, mine;
+    lk_time_t null, c, libc, mine;
     size_t srcalign, dstalign;
 
     printf("memcpy speed test\n");
@@ -222,21 +222,21 @@ static void validate_memcpy(void)
     }
 }
 
-static lk_bigtime_t bench_memset_routine(void *memset_routine(void *, int, size_t), size_t dstalign, size_t len)
+static lk_time_t bench_memset_routine(void *memset_routine(void *, int, size_t), size_t dstalign, size_t len)
 {
     int i;
-    lk_bigtime_t t0;
+    lk_time_t t0;
 
-    t0 = current_time_hires();
+    t0 = current_time();
     for (i=0; i < ITERATIONS; i++) {
         memset_routine(dst + dstalign, 0, len);
     }
-    return current_time_hires() - t0;
+    return current_time() - t0;
 }
 
 static void bench_memset(void)
 {
-    lk_bigtime_t c, libc, mine;
+    lk_time_t c, libc, mine;
     size_t dstalign;
 
     printf("memset speed test\n");

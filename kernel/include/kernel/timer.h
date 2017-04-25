@@ -18,7 +18,7 @@ __BEGIN_CDECLS
 void timer_init(void);
 
 struct timer;
-typedef enum handler_return (*timer_callback)(struct timer *, lk_bigtime_t now, void *arg);
+typedef enum handler_return (*timer_callback)(struct timer *, lk_time_t now, void *arg);
 
 #define TIMER_MAGIC (0x74696D72)  //'timr'
 
@@ -26,8 +26,8 @@ typedef struct timer {
     int magic;
     struct list_node node;
 
-    lk_bigtime_t scheduled_time;
-    lk_bigtime_t period;
+    lk_time_t scheduled_time;
+    lk_time_t period;
 
     timer_callback callback;
     void *arg;
@@ -56,8 +56,8 @@ typedef struct timer {
  * - timer_cancel() may spin waiting for a pending timer to complete on another cpu
 */
 void timer_initialize(timer_t *);
-void timer_set_oneshot(timer_t *, lk_bigtime_t deadline, timer_callback, void *arg);
-void timer_set_periodic(timer_t *, lk_bigtime_t period, timer_callback, void *arg);
+void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg);
+void timer_set_periodic(timer_t *, lk_time_t period, timer_callback, void *arg);
 void timer_cancel(timer_t *);
 
 void timer_transition_off_cpu(uint old_cpu);

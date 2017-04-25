@@ -277,7 +277,7 @@ mx_status_t magenta_sleep(mx_time_t deadline) {
 // TODO(teisenbe): Remove this function post-migration
 void magenta_check_deadline(const char* name, mx_time_t deadline) {
     mx_time_t min_deadline = 0;
-    mx_time_t now = current_time_hires();
+    mx_time_t now = current_time();
     if (now > LK_SEC(1)) {
         if (now <= LK_SEC(6)) {
             min_deadline = now - LK_SEC(1);

@@ -29,11 +29,11 @@ typedef uintptr_t addr_t;
 typedef uintptr_t vaddr_t;
 typedef uintptr_t paddr_t;
 
-typedef uint64_t lk_bigtime_t; // nanoseconds
+typedef uint64_t lk_time_t; // nanoseconds
 #define INFINITE_TIME UINT64_MAX
-#define LK_USEC(n) ((lk_bigtime_t)(1000ULL * (n)))
-#define LK_MSEC(n) ((lk_bigtime_t)(1000000ULL * (n)))
-#define LK_SEC(n)  ((lk_bigtime_t)(1000000000ULL * (n)))
+#define LK_USEC(n) ((lk_time_t)(1000ULL * (n)))
+#define LK_MSEC(n) ((lk_time_t)(1000000ULL * (n)))
+#define LK_SEC(n)  ((lk_time_t)(1000000000ULL * (n)))
 
 #define TIME_GTE(a, b) ((int64_t)((a) - (b)) >= 0)
 #define TIME_LTE(a, b) ((int64_t)((a) - (b)) <= 0)

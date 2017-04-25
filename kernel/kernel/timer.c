@@ -41,7 +41,7 @@ struct timer_state {
 
 static struct timer_state timers[SMP_MAX_CPUS];
 
-static enum handler_return timer_tick(void *arg, lk_bigtime_t now);
+static enum handler_return timer_tick(void *arg, lk_time_t now);
 
 /**
  * @brief  Initialize a timer object
@@ -70,7 +70,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer)
     list_add_tail(&timers[cpu].timer_queue, &timer->node);
 }
 
-static void timer_set(timer_t *timer, lk_bigtime_t deadline, lk_bigtime_t period, timer_callback callback, void *arg)
+static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, timer_callback callback, void *arg)
 {
     LTRACEF("timer %p, deadline %" PRIu64 ", period %" PRIu64 ", callback %p, arg %p\n", timer, deadline, period, callback, arg);
 
@@ -129,9 +129,9 @@ out:
  * @param  arg  The argument to pass to the callback
  *
  * The timer function is declared as:
- *   enum handler_return callback(struct timer *, lk_bigtime_t now, void *arg) { ... }
+ *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
  */
-void timer_set_oneshot(timer_t *timer, lk_bigtime_t deadline, timer_callback callback, void *arg)
+void timer_set_oneshot(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
 {
     timer_set(timer, deadline, 0, callback, arg);
 }
@@ -148,13 +148,13 @@ void timer_set_oneshot(timer_t *timer, lk_bigtime_t deadline, timer_callback cal
  * @param  arg  The argument to pass to the callback
  *
  * The timer function is declared as:
- *   enum handler_return callback(struct timer *, lk_bigtime_t now, void *arg) { ... }
+ *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
  */
-void timer_set_periodic(timer_t *timer, lk_bigtime_t period, timer_callback callback, void *arg)
+void timer_set_periodic(timer_t *timer, lk_time_t period, timer_callback callback, void *arg)
 {
     if (period == 0)
         period = 1;
-    timer_set(timer, current_time_hires() + period, period, callback, arg);
+    timer_set(timer, current_time() + period, period, callback, arg);
 }
 
 /**
@@ -225,7 +225,7 @@ void timer_cancel(timer_t *timer)
 }
 
 /* called at interrupt time to process any pending timers */
-static enum handler_return timer_tick(void *arg, lk_bigtime_t now)
+static enum handler_return timer_tick(void *arg, lk_time_t now)
 {
     timer_t *timer;
     enum handler_return ret = INT_NO_RESCHEDULE;

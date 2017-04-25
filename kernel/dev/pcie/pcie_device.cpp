@@ -293,7 +293,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
 
         // 3) Poll the transaction pending bit until it clears.  This may take
         //    "several seconds"
-        lk_bigtime_t start = current_time_hires();
+        lk_time_t start = current_time();
         ret = ERR_TIMED_OUT;
         do {
             if (!(cfg_->Read(pci_af_->af_status()) &
@@ -302,7 +302,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
                 break;
             }
             thread_sleep_relative(LK_MSEC(1));
-        } while ((current_time_hires() - start) < LK_SEC(5));
+        } while ((current_time() - start) < LK_SEC(5));
 
         if (ret != NO_ERROR) {
             TRACEF("Timeout waiting for pending transactions to clear the bus "
@@ -328,7 +328,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
         // return all 0xFFs until the device finally resets and comes back.
         // Poll the Vendor ID field until the device finally completes it's
         // reset.
-        start = current_time_hires();
+        start = current_time();
         ret   = ERR_TIMED_OUT;
         do {
             if (cfg_->Read(PciConfig::kVendorId) != PCIE_INVALID_VENDOR_ID) {
@@ -336,7 +336,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
                 break;
             }
             thread_sleep_relative(LK_MSEC(1));
-        } while ((current_time_hires() - start) < LK_SEC(5));
+        } while ((current_time() - start) < LK_SEC(5));
 
         if (ret == NO_ERROR) {
             // 6) Software reconfigures the function and enables it for normal operation

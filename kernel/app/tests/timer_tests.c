@@ -13,7 +13,7 @@
 #include <platform.h>
 #include <app/tests.h>
 
-static enum handler_return timer_cb(struct timer* timer, lk_bigtime_t now, void* arg)
+static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg)
 {
     event_t* event = (event_t*)arg;
     event_signal(event, false);
@@ -29,7 +29,7 @@ static int timer_do_one_thread(void* arg)
     event_init(&event, false, 0);
     timer_initialize(&timer);
 
-    timer_set_oneshot(&timer, current_time_hires() + LK_MSEC(10), timer_cb, &event);
+    timer_set_oneshot(&timer, current_time() + LK_MSEC(10), timer_cb, &event);
     event_wait(&event);
 
     printf("got timer on cpu %u\n", arch_curr_cpu_num());

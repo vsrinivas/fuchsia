@@ -28,7 +28,7 @@ __WEAK void watchdog_handler(watchdog_t *dog)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_WATCHDOG);
 }
 
-static enum handler_return watchdog_timer_callback(struct timer *timer, lk_bigtime_t now, void *arg)
+static enum handler_return watchdog_timer_callback(struct timer *timer, lk_time_t now, void *arg)
 {
     watchdog_handler((watchdog_t *)arg);
 
@@ -38,7 +38,7 @@ static enum handler_return watchdog_timer_callback(struct timer *timer, lk_bigti
     return INT_NO_RESCHEDULE;
 }
 
-status_t watchdog_init(watchdog_t *dog, lk_bigtime_t timeout, const char *name)
+status_t watchdog_init(watchdog_t *dog, lk_time_t timeout, const char *name)
 {
     DEBUG_ASSERT(NULL != dog);
     DEBUG_ASSERT(INFINITE_TIME != timeout);
@@ -63,7 +63,7 @@ void watchdog_set_enabled(watchdog_t *dog, bool enabled)
         goto done;
 
     dog->enabled = enabled;
-    lk_bigtime_t deadline = current_time_hires() + dog->timeout;
+    lk_time_t deadline = current_time() + dog->timeout;
     if (enabled)
         timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
     else
@@ -84,7 +84,7 @@ void watchdog_pet(watchdog_t *dog)
         goto done;
 
     timer_cancel(&dog->expire_timer);
-    lk_bigtime_t deadline = current_time_hires() + dog->timeout;
+    lk_time_t deadline = current_time() + dog->timeout;
     timer_set_oneshot(&dog->expire_timer, deadline, watchdog_timer_callback, dog);
 
 done:
@@ -94,15 +94,15 @@ done:
 
 static timer_t   hw_watchdog_timer;
 static bool      hw_watchdog_enabled;
-static lk_bigtime_t hw_watchdog_pet_timeout;
+static lk_time_t hw_watchdog_pet_timeout;
 
-static enum handler_return hw_watchdog_timer_callback(struct timer *timer, lk_bigtime_t now, void *arg)
+static enum handler_return hw_watchdog_timer_callback(struct timer *timer, lk_time_t now, void *arg)
 {
     platform_watchdog_pet();
     return INT_NO_RESCHEDULE;
 }
 
-status_t watchdog_hw_init(lk_bigtime_t timeout)
+status_t watchdog_hw_init(lk_time_t timeout)
 {
     DEBUG_ASSERT(INFINITE_TIME != timeout);
     timer_initialize(&hw_watchdog_timer);

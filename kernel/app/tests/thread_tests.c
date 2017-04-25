@@ -311,7 +311,7 @@ static int preempt_tester(void *arg)
 {
     spin(1000000);
 
-    printf("exiting ts %" PRIu64 " ns\n", current_time_hires());
+    printf("exiting ts %" PRIu64 " ns\n", current_time());
 
     atomic_add(&preempt_count, -1);
 
@@ -482,9 +482,9 @@ static int sleeper_kill_thread(void *arg)
 {
     thread_sleep_relative(LK_MSEC(100));
 
-    lk_bigtime_t t = current_time_hires();
+    lk_time_t t = current_time();
     status_t err = thread_sleep_etc(t + LK_SEC(5), true);
-    t = (current_time_hires() - t) / LK_MSEC(1);
+    t = (current_time() - t) / LK_MSEC(1);
     TRACEF("thread_sleep_etc returns %d after %" PRIu64" msecs\n", err, t);
 
     return 0;
@@ -501,9 +501,9 @@ static int waiter_kill_thread_infinite_wait(void *arg)
 
     thread_sleep_relative(LK_MSEC(100));
 
-    lk_bigtime_t t = current_time_hires();
+    lk_time_t t = current_time();
     status_t err = event_wait_deadline(e, INFINITE_TIME, true);
-    t = (current_time_hires() - t) / LK_MSEC(1);
+    t = (current_time() - t) / LK_MSEC(1);
     TRACEF("event_wait_deadline returns %d after %" PRIu64" msecs\n", err, t);
 
     return 0;
@@ -515,9 +515,9 @@ static int waiter_kill_thread(void *arg)
 
     thread_sleep_relative(LK_MSEC(100));
 
-    lk_bigtime_t t = current_time_hires();
+    lk_time_t t = current_time();
     status_t err = event_wait_deadline (e, t + LK_SEC(5), true);
-    t = (current_time_hires() - t) / LK_MSEC(1);
+    t = (current_time() - t) / LK_MSEC(1);
     TRACEF("event_wait_deadline with deadline returns %d after %" PRIu64" msecs\n", err, t);
 
     return 0;

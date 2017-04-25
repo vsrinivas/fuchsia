@@ -298,7 +298,7 @@ static int cmd_chain(int argc, const cmd_args *argv, uint32_t flags)
 
 static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
 {
-    lk_bigtime_t t = LK_SEC(1); /* default to 1 second */
+    lk_time_t t = LK_SEC(1); /* default to 1 second */
 
     if (argc >= 2) {
         t = LK_MSEC(argv[1].u);

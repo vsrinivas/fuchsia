@@ -57,7 +57,7 @@ void event_destroy(event_t *);
  * Interruptable arg allows it to return early with ERR_INTERRUPTED if thread
  * is signaled for kill.
  */
-status_t event_wait_deadline(event_t *, lk_bigtime_t, bool interruptable);
+status_t event_wait_deadline(event_t *, lk_time_t, bool interruptable);
 
 /* no deadline, non interruptable version of the above. */
 static inline status_t event_wait(event_t *e) { return event_wait_deadline(e, INFINITE_TIME, false); }

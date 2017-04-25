@@ -83,7 +83,7 @@ void event_destroy(event_t *e)
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_deadline(event_t *e, lk_bigtime_t deadline, bool interruptable)
+status_t event_wait_deadline(event_t *e, lk_time_t deadline, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
     status_t ret = NO_ERROR;

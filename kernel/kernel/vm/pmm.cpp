@@ -346,7 +346,7 @@ size_t pmm_count_total_bytes() TA_REQ(arena_lock) {
     return arena_cumulative_size;
 }
 
-extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_bigtime_t, void*) TA_REQ(arena_lock) {
+extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t, void*) TA_REQ(arena_lock) {
     pmm_dump_free();
     return INT_NO_RESCHEDULE;
 }

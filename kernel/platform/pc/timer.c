@@ -115,9 +115,9 @@ uint64_t get_tsc_ticks_per_ms(void) {
 
 #define LOCAL_TRACE 0
 
-lk_bigtime_t current_time_hires(void)
+lk_time_t current_time(void)
 {
-    lk_bigtime_t time;
+    lk_time_t time;
 
     switch (wall_clock) {
         case CLOCK_TSC: {
@@ -143,7 +143,7 @@ lk_bigtime_t current_time_hires(void)
 
 // Round up t to a clock tick, so that when the APIC timer fires, the wall time
 // will have elapsed.
-static lk_bigtime_t discrete_time_roundup(lk_bigtime_t t) {
+static lk_time_t discrete_time_roundup(lk_time_t t) {
     switch (wall_clock) {
         case CLOCK_TSC: {
             // Add 1ns to conservatively deal with rounding
@@ -179,8 +179,8 @@ enum handler_return platform_handle_apic_timer_tick(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
 
-    lk_bigtime_t time = current_time_hires();
-    //lk_bigtime_t btime = current_time_hires();
+    lk_time_t time = current_time();
+    //lk_time_t btime = current_time();
     //printf_xy(71, 0, WHITE, "%08u", (uint32_t) time);
     //printf_xy(63, 1, WHITE, "%016llu", (uint64_t) btime);
 
@@ -567,7 +567,7 @@ static void platform_init_timer(uint level)
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
 status_t platform_set_oneshot_timer(platform_timer_callback callback,
-                                    void *arg, lk_bigtime_t deadline)
+                                    void *arg, lk_time_t deadline)
 {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
@@ -589,14 +589,14 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
         return NO_ERROR;
     }
 
-    const lk_bigtime_t now = current_time_hires();
+    const lk_time_t now = current_time();
     if (now >= deadline) {
         // Deadline has already passed. We still need to schedule a timer so that
         // the interrupt fires.
         LTRACEF("Scheduling oneshot timer for min duration\n");
         return apic_timer_set_oneshot(1, 1, false /* unmasked */);
     }
-    const lk_bigtime_t interval = deadline - now;
+    const lk_time_t interval = deadline - now;
     DEBUG_ASSERT(interval != 0);
 
     uint64_t apic_ticks_needed = u64_mul_u64_fp32_64(interval, apic_ticks_per_ns);

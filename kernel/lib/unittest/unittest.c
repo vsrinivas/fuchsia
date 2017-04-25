@@ -150,16 +150,16 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
         return false;
     }
 
-    lk_bigtime_t testcase_start = current_time_hires();
+    lk_time_t testcase_start = current_time();
 
     for (size_t i = 0; i < testcase->test_cnt; ++i) {
         const unittest_registration_t* test = &testcase->tests[i];
 
         printf(fmt_string, test->name ? test->name : "");
 
-        lk_bigtime_t test_start = current_time_hires();
+        lk_time_t test_start = current_time();
         bool good = test->fn ? test->fn(context) : false;
-        lk_bigtime_t test_runtime = current_time_hires() - test_start;
+        lk_time_t test_runtime = current_time() - test_start;
 
         if (good) {
             passed++;
@@ -172,7 +172,7 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
                         test_runtime);
     }
 
-    lk_bigtime_t testcase_runtime = current_time_hires() - testcase_start;
+    lk_time_t testcase_runtime = current_time() - testcase_start;
 
     unittest_printf("%s : %sll tests passed (%zu/%zu) in %" PRIu64 " nSec\n",
                     testcase->name,
