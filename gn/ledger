@@ -5,8 +5,12 @@
     ],
     "binaries": [
         {
-            "binary": "cloud_sync",
+            "binary": "ledger_tool",
             "bootfs_path": "apps/cloud_sync"
+        },
+        {
+            "binary": "ledger_tool",
+            "bootfs_path": "apps/ledger_tool"
         },
         {
             "binary": "ledger",
