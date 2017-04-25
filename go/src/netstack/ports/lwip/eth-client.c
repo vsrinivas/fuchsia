@@ -25,9 +25,7 @@ void eth_destroy(eth_client_t* eth) {
   free(eth);
 }
 
-mx_status_t eth_create(int fd,
-                       mx_handle_t io_vmo,
-                       void* io_mem,
+mx_status_t eth_create(int fd, mx_handle_t io_vmo, void* io_mem,
                        eth_client_t** out) {
   eth_client_t* eth;
 
@@ -71,11 +69,8 @@ fail:
   return status;
 }
 
-mx_status_t eth_queue_tx(eth_client_t* eth,
-                         void* cookie,
-                         void* data,
-                         size_t len,
-                         uint32_t options) {
+mx_status_t eth_queue_tx(eth_client_t* eth, void* cookie, void* data,
+                         size_t len, uint32_t options) {
   eth_fifo_entry_t e = {
       .offset = data - eth->iobuf,
       .length = len,
@@ -88,11 +83,8 @@ mx_status_t eth_queue_tx(eth_client_t* eth,
   return mx_fifo_write(eth->tx_fifo, &e, sizeof(e), &actual);
 }
 
-mx_status_t eth_queue_rx(eth_client_t* eth,
-                         void* cookie,
-                         void* data,
-                         size_t len,
-                         uint32_t options) {
+mx_status_t eth_queue_rx(eth_client_t* eth, void* cookie, void* data,
+                         size_t len, uint32_t options) {
   eth_fifo_entry_t e = {
       .offset = data - eth->iobuf,
       .length = len,
@@ -105,8 +97,7 @@ mx_status_t eth_queue_rx(eth_client_t* eth,
   return mx_fifo_write(eth->rx_fifo, &e, sizeof(e), &actual);
 }
 
-mx_status_t eth_complete_tx(eth_client_t* eth,
-                            void* ctx,
+mx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
                             void (*func)(void* ctx, void* cookie)) {
   eth_fifo_entry_t entries[eth->tx_size];
   mx_status_t status;
@@ -128,10 +119,9 @@ mx_status_t eth_complete_tx(eth_client_t* eth,
   return NO_ERROR;
 }
 
-mx_status_t eth_complete_rx(
-    eth_client_t* eth,
-    void* ctx,
-    void (*func)(void* ctx, void* cookie, size_t len, uint32_t flags)) {
+mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
+                            void (*func)(void* ctx, void* cookie, size_t len,
+                                         uint32_t flags)) {
   eth_fifo_entry_t entries[eth->rx_size];
   mx_status_t status;
   uint32_t count;
@@ -154,14 +144,11 @@ mx_status_t eth_complete_rx(
 
 // Wait for completed rx packets
 // ERR_PEER_CLOSED - far side disconnected
-// ERR_TIMED_OUT - timeout expired
+// ERR_TIMED_OUT - deadline lapsed
 // NO_ERROR - completed packets are available
-mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout) {
+mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t deadline) {
   mx_status_t status;
   mx_signals_t signals;
-
-  mx_time_t deadline = (timeout != MX_TIME_INFINITE) ? mx_deadline_after(timeout) :
-          MX_TIME_INFINITE;
 
   if ((status = mx_object_wait_one(eth->rx_fifo,
                                    MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
