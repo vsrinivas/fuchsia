@@ -40,8 +40,8 @@ mx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 
 // Wait for completed rx packets
 // ERR_PEER_CLOSED - far side disconnected
-// ERR_TIMED_OUT - timeout expired
+// ERR_TIMED_OUT - deadline lapsed.
 // NO_ERROR - completed packets are available
-mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t timeout);
+mx_status_t eth_wait_rx(eth_client_t* eth, mx_time_t deadline);
 
 __END_CDECLS;

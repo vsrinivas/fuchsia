@@ -396,7 +396,7 @@ int netifc_poll(void) {
             if (now > net_timer) {
                 return 0;
             }
-            status = eth_wait_rx(eth, net_timer - now + MX_MSEC(1));
+            status = eth_wait_rx(eth, net_timer + MX_MSEC(1));
         } else {
             status = eth_wait_rx(eth, MX_TIME_INFINITE);
         }
