@@ -55,7 +55,7 @@ void mutex_destroy(mutex_t *m)
     THREAD_UNLOCK(state);
 }
 
-status_t mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
+void mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -73,8 +73,6 @@ status_t mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
     }
 
     m->holder = get_current_thread();
-
-    return NO_ERROR;
 }
 
 /**
@@ -82,7 +80,7 @@ status_t mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
  *
  * @return  NO_ERROR on success, other values on error
  */
-status_t mutex_acquire(mutex_t *m)
+void mutex_acquire(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -94,9 +92,8 @@ status_t mutex_acquire(mutex_t *m)
 #endif
 
     THREAD_LOCK(state);
-    status_t ret = mutex_acquire_internal(m);
+    mutex_acquire_internal(m);
     THREAD_UNLOCK(state);
-    return ret;
 }
 
 void mutex_release_internal(mutex_t *m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS

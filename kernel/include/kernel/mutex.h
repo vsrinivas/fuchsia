@@ -41,11 +41,11 @@ typedef struct TA_CAP("mutex") mutex {
 
 void mutex_init(mutex_t *);
 void mutex_destroy(mutex_t *);
-status_t mutex_acquire(mutex_t *m) TA_ACQ(m);
+void mutex_acquire(mutex_t *m) TA_ACQ(m);
 void mutex_release(mutex_t *m) TA_REL(m);
 
 /* Internal functions for use by condvar implementation. */
-status_t mutex_acquire_internal(mutex_t *m) TA_ACQ(m);
+void mutex_acquire_internal(mutex_t *m) TA_ACQ(m);
 void mutex_release_internal(mutex_t *m, bool reschedule) TA_REL(m);
 
 /* does the current thread hold the mutex? */
