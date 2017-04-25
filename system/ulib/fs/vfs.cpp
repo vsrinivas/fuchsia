@@ -53,8 +53,19 @@ mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
 
 } // namespace anonymous
 
+bool RemoteContainer::IsRemote() const {
+    return remote_ > 0;
+}
+
+mx_handle_t RemoteContainer::DetachRemote(uint32_t &flags_) {
+    mx_handle_t h = remote_;
+    remote_ = MX_HANDLE_INVALID;
+    flags_ &= ~V_FLAG_MOUNT_READY;
+    return h;
+}
+
 // Access the remote handle if it's ready -- otherwise, return an error.
-mx_handle_t Vnode::WaitForRemote() {
+mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
 #ifdef __Fuchsia__
     if (remote_ == 0) {
         // Trying to get remote on a non-remote vnode
@@ -75,6 +86,14 @@ mx_handle_t Vnode::WaitForRemote() {
 #else
     return ERR_NOT_SUPPORTED;
 #endif
+}
+
+mx_handle_t RemoteContainer::GetRemote() const {
+    return remote_;
+}
+
+void RemoteContainer::SetRemote(mx_handle_t remote) {
+    remote_ = remote;
 }
 
 mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,

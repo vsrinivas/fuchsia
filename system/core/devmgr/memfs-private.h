@@ -97,6 +97,14 @@ public:
 
     mx_status_t CreateDeviceAtLocked(memfs::VnodeDir** out, const char* name, mx_handle_t h);
     void NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) final;
+
+    // The vnode is acting as a mount point for a remote filesystem or device.
+    virtual bool IsRemote() const final;
+    virtual mx_handle_t DetachRemote() final;
+    virtual mx_handle_t WaitForRemote() final;
+    virtual mx_handle_t GetRemote() const final;
+    virtual void SetRemote(mx_handle_t remote) final;
+
 private:
     mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf,
                               size_t out_len) final;
@@ -121,6 +129,7 @@ private:
     // TODO(smklein): Guard the watch list with a lock more fine-grained
     // than the VFS lock (or make the watch list thread-safe while lock-free).
     mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ TA_GUARDED(vfs_lock);
+    fs::RemoteContainer remoter_;
 };
 
 class VnodeDevice final : public VnodeDir {

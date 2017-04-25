@@ -157,6 +157,12 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     return actual;
 }
 
+bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
+mx_handle_t VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
+mx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
+mx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
+void VnodeDir::SetRemote(mx_handle_t remote) { return remoter_.SetRemote(remote); }
+
 mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
     if (!IsDirectory()) {
         return ERR_NOT_FOUND;
@@ -480,7 +486,7 @@ mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
     } else if (IsRemote()) {
         return ERR_ALREADY_BOUND;
     }
-    remote_ = h;
+    SetRemote(h);
     return NO_ERROR;
 }
 

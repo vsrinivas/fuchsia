@@ -47,6 +47,20 @@ __END_CDECLS
 
 namespace fs {
 
+// RemoteContainer adds support for mounting remote handles on nodes.
+class RemoteContainer {
+public:
+    bool IsRemote() const;
+    mx_handle_t DetachRemote(uint32_t &flags_);
+    // Access the remote handle if it's ready -- otherwise, return an error.
+    mx_handle_t WaitForRemote(uint32_t &flags_);
+    mx_handle_t GetRemote() const;
+    void SetRemote(mx_handle_t remote);
+    constexpr RemoteContainer() : remote_(MX_HANDLE_INVALID) {};
+private:
+    mx_handle_t remote_;
+};
+
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
 //
@@ -173,42 +187,37 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
-    // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-    virtual mx_status_t AttachRemote(mx_handle_t h) {
-        return ERR_NOT_SUPPORTED;
-    }
-
     virtual ~Vnode() {};
 
 #ifdef __Fuchsia__
     virtual mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
 #endif
 
+    // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
+    virtual mx_status_t AttachRemote(mx_handle_t h) { return ERR_NOT_SUPPORTED; }
+
+    // The following methods are required to mount sub-filesystems. The logic
+    // (and storage) necessary to implement these functions exists within the
+    // "RemoteContainer" class, which may be composed inside Vnodes that wish
+    // to act as mount points.
+
     // The vnode is acting as a mount point for a remote filesystem or device.
-    bool IsRemote() const { return remote_ > 0; }
+    virtual bool IsRemote() const { return false; }
+    virtual mx_handle_t DetachRemote() { return MX_HANDLE_INVALID; }
+    virtual mx_handle_t WaitForRemote() { return ERR_UNAVAILABLE; }
+    virtual mx_handle_t GetRemote() const { return MX_HANDLE_INVALID; }
+    virtual void SetRemote(mx_handle_t remote) { MX_DEBUG_ASSERT(false); }
+
     // The vnode is a device. Devices may opt to reveal themselves as directories
     // or endpoints, depending on context. For the purposes of our VFS layer,
     // during path traversal, devices are NOT treated as mount points, even though
     // they contain remote handles.
-    bool IsDevice() const { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
-
-    mx_handle_t DetachRemote() {
-        mx_handle_t h = remote_;
-        remote_ = MX_HANDLE_INVALID;
-        flags_ &= ~V_FLAG_MOUNT_READY;
-        return h;
-    }
-
-    // TODO(smklein): Encapsulate the "remote_" flag more, here and in "GetHandles",
-    // so we can avoid leaking information outside the Vnode / Vfs classes.
-    mx_handle_t WaitForRemote();
-    mx_handle_t GetRemote() const { return remote_; }
+    bool IsDevice() { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
-    Vnode() : flags_(0), remote_(MX_HANDLE_INVALID), refcount_(1) {};
+    Vnode() : flags_(0), refcount_(1) {};
 
     uint32_t flags_;
-    mx_handle_t remote_;
 private:
     uint32_t refcount_;
 };

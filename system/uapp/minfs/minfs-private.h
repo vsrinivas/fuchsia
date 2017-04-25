@@ -215,7 +215,15 @@ private:
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
     mx_handle_t vmo_;
+
 #endif
+    // The vnode is acting as a mount point for a remote filesystem or device.
+    virtual bool IsRemote() const final;
+    virtual mx_handle_t DetachRemote() final;
+    virtual mx_handle_t WaitForRemote() final;
+    virtual mx_handle_t GetRemote() const final;
+    virtual void SetRemote(mx_handle_t remote) final;
+    fs::RemoteContainer remoter_;
 };
 
 // write the inode data of this vnode to disk (default does not update time values)

@@ -1103,6 +1103,12 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs), vmo_(MX_HANDLE_INVALID) {}
 VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 #endif
 
+bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
+mx_handle_t VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(flags_); }
+mx_handle_t VnodeMinfs::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
+mx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
+void VnodeMinfs::SetRemote(mx_handle_t remote) { return remoter_.SetRemote(remote); }
+
 mx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, VnodeMinfs** out) {
     mx_status_t status = AllocateHollow(fs, out);
     if (status != NO_ERROR) {
@@ -1490,7 +1496,7 @@ mx_status_t VnodeMinfs::AttachRemote(mx_handle_t h) {
     } else if (IsRemote()) {
         return ERR_ALREADY_BOUND;
     }
-    remote_ = h;
+    SetRemote(h);
     return NO_ERROR;
 }
 
