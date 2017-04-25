@@ -45,7 +45,7 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
     return 1;
 }
 
-static mx_status_t add_file(VnodeDir* vnb, const char* path, mx_handle_t vmo,
+static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_handle_t vmo,
                             mx_off_t off, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -62,7 +62,7 @@ static mx_status_t add_file(VnodeDir* vnb, const char* path, mx_handle_t vmo,
                 return ERR_INVALID_ARGS;
             }
 
-            fs::Vnode* out;
+            mxtl::RefPtr<fs::Vnode> out;
             r = vnb->Lookup(&out, path, nextpath - path);
             if (r == ERR_NOT_FOUND) {
                 r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
@@ -71,8 +71,7 @@ static mx_status_t add_file(VnodeDir* vnb, const char* path, mx_handle_t vmo,
             if (r < 0) {
                 return r;
             }
-            vnb = static_cast<VnodeDir*>(out);
-            vnb->RefRelease();
+            vnb = mxtl::RefPtr<VnodeDir>::Downcast(mxtl::move(out));
             path = nextpath + 1;
         }
     }
@@ -84,9 +83,9 @@ static mx_status_t add_file(VnodeDir* vnb, const char* path, mx_handle_t vmo,
 // be exposed to C:
 
 mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len) {
-    return add_file(bootfs_get_root(), path, vmo, off, len);
+    return add_file(BootfsRoot(), path, vmo, off, len);
 }
 
 mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len) {
-    return add_file(systemfs_get_root(), path, vmo, off, len);
+    return add_file(SystemfsRoot(), path, vmo, off, len);
 }

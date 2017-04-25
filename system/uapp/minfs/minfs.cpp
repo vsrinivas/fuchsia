@@ -194,12 +194,12 @@ mx_status_t Minfs::InoNew(const minfs_inode_t* inode, uint32_t* ino_out) {
     return NO_ERROR;
 }
 
-mx_status_t Minfs::VnodeNew(VnodeMinfs** out, uint32_t type) {
+mx_status_t Minfs::VnodeNew(mxtl::RefPtr<VnodeMinfs>* out, uint32_t type) {
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ERR_INVALID_ARGS;
     }
 
-    VnodeMinfs* vn;
+    mxtl::RefPtr<VnodeMinfs> vn;
     mx_status_t status;
 
     // Allocate the in-memory vnode
@@ -209,16 +209,12 @@ mx_status_t Minfs::VnodeNew(VnodeMinfs** out, uint32_t type) {
 
     // Allocate the on-disk inode
     if ((status = InoNew(&vn->inode_, &vn->ino_)) != NO_ERROR) {
-        delete vn;
         return status;
     }
 
-    vnode_hash_.insert(vn);
+    vnode_hash_.insert(vn.get());
 
-    trace(MINFS, "new_vnode() %p(#%u) { magic=%#08x }\n",
-          vn, vn->ino_, vn->inode_.magic);
-
-    *out = vn;
+    *out = mxtl::move(vn);
     return 0;
 }
 
@@ -226,14 +222,13 @@ void Minfs::VnodeRelease(VnodeMinfs* vn) {
     vnode_hash_.erase(*vn);
 }
 
-mx_status_t Minfs::VnodeGet(VnodeMinfs** out, uint32_t ino) {
+mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
     if ((ino < 1) || (ino >= info_.inode_count)) {
         return ERR_OUT_OF_RANGE;
     }
-    VnodeMinfs* vn = vnode_hash_.find(ino).CopyPointer();
+    mxtl::RefPtr<VnodeMinfs> vn = mxtl::RefPtr<VnodeMinfs>(vnode_hash_.find(ino).CopyPointer());
     if (vn != nullptr) {
-        vn->RefAcquire();
-        *out = vn;
+        *out = mxtl::move(vn);
         return NO_ERROR;
     }
     mx_status_t status;
@@ -254,9 +249,9 @@ mx_status_t Minfs::VnodeGet(VnodeMinfs** out, uint32_t ino) {
 
     vn->fs_ = this;
     vn->ino_ = ino;
-    vnode_hash_.insert(vn);
+    vnode_hash_.insert(vn.get());
 
-    *out = vn;
+    *out = mxtl::move(vn);
     return NO_ERROR;
 }
 
@@ -424,7 +419,7 @@ mx_status_t Minfs::LoadBitmaps() {
     return NO_ERROR;
 }
 
-mx_status_t minfs_mount(VnodeMinfs** out, Bcache* bc) {
+mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, Bcache* bc) {
     minfs_info_t info;
     mx_status_t status;
 
@@ -439,14 +434,14 @@ mx_status_t minfs_mount(VnodeMinfs** out, Bcache* bc) {
         return status;
     }
 
-    VnodeMinfs* vn;
+    mxtl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != NO_ERROR) {
         error("minfs: cannot find root inode\n");
         delete fs;
         return status;
     }
 
-    *out = vn;
+    *out = mxtl::move(vn);
     return NO_ERROR;
 }
 

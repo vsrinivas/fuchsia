@@ -17,13 +17,14 @@
 #include <mxio/vfs.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
+#include <mxtl/ref_ptr.h>
 
 #include "vfs-internal.h"
 
 #define MXDEBUG 0
 
 typedef struct vfs_iostate {
-    Vnode* vn;
+    mxtl::RefPtr<Vnode> vn;
     // Handle to event which allows client to refer to open vnodes in multi-patt
     // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
     // Validated on the server side using cookies.
@@ -50,7 +51,7 @@ static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* path, uint32_t flags,
+void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, const char* path, uint32_t flags,
                   uint32_t mode) {
     mx_status_t r;
 
@@ -62,7 +63,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, fs::Vnode* vn, const char* p
 
     {
         mxtl::AutoLock lock(&vfs_lock);
-        r = Vfs::Open(vn, &vn, path, &path, open_flags, mode);
+        r = Vfs::Open(mxtl::move(vn), &vn, path, &path, open_flags, mode);
     }
 
     mxrio_object_t obj;
@@ -110,8 +111,6 @@ done:
     }
 
     vn->Serve(rh, open_flags);
-    // Drop the ref from Vfs::Open. Serve holds the on-going ref.
-    vn->RefRelease();
 }
 
 // Consumes rh.
@@ -134,7 +133,7 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
         mx_handle_close(h);
         return ERR_NO_MEMORY;
     }
-    ios->vn = this;
+    ios->vn = mxtl::RefPtr<Vnode>(this);
     ios->io_flags = flags;
 
     if ((r = AddDispatcher(h, ios)) < 0) {
@@ -142,8 +141,6 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
         free(ios);
         return r;
     }
-    // take a ref for the dispatcher
-    RefAcquire();
     return NO_ERROR;
 }
 
@@ -176,7 +173,7 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
     return sizeof(mx_handle_t);
 }
 
-mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iostate* ios) {
+mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -223,6 +220,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
 
         // this will drop the ref on the vn
         fs::Vfs::Close(vn);
+        ios->vn = nullptr;
         free(ios);
         return NO_ERROR;
     case MXRIO_CLONE: {
@@ -379,7 +377,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
         memcpy(in_buf + sizeof(mx_handle_t), msg->data + sizeof(mx_handle_t),
                len - sizeof(mx_handle_t));
 
-        ssize_t r = fs::Vfs::Ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+        ssize_t r = fs::Vfs::Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
 
         if (r == ERR_NOT_SUPPORTED) {
             mx_handle_close(msg->handle[0]);
@@ -404,12 +402,12 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
                 r = ERR_INVALID_ARGS;
             } else {
                 mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
-                r = iostate_get_token(reinterpret_cast<uint64_t>(vn), ios, out);
+                r = iostate_get_token(reinterpret_cast<uint64_t>(vn.get()), ios, out);
             }
             break;
         }
         default:
-            r = fs::Vfs::Ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+            r = fs::Vfs::Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
         }
         if (r >= 0) {
             switch (IOCTL_KIND(msg->arg2.op)) {
@@ -473,12 +471,13 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
             return ERR_INVALID_ARGS;
         }
 
-        Vnode* target_parent = reinterpret_cast<Vnode*>(vcookie);
+        mxtl::RefPtr<Vnode> target_parent =
+                mxtl::RefPtr<Vnode>(reinterpret_cast<Vnode*>(vcookie));
         switch (MXRIO_OP(msg->op)) {
         case MXRIO_RENAME:
-            return fs::Vfs::Rename(vn, target_parent, oldname, newname);
+            return fs::Vfs::Rename(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);
         case MXRIO_LINK:
-            return fs::Vfs::Link(vn, target_parent, oldname, newname);
+            return fs::Vfs::Link(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);
         }
         assert(false);
     }
@@ -486,7 +485,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, Vnode* vn, vfs_iost
         return vn->Sync();
     }
     case MXRIO_UNLINK:
-        return fs::Vfs::Unlink(vn, (const char*)msg->data, len);
+        return fs::Vfs::Unlink(mxtl::move(vn), (const char*)msg->data, len);
     default:
         // close inbound handles so they do not leak
         for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
@@ -503,23 +502,19 @@ static mtx_t vfs_big_lock = MTX_INIT;
 mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
-    mtx_lock(&vfs_big_lock);
-    Vnode* vn = ios->vn;
-
-    mx_status_t status = vfs_handler_vn(msg, rh, vn, ios);
-
-    mtx_unlock(&vfs_big_lock);
-
+    mxtl::AutoLock lock(&vfs_big_lock);
+    mxtl::RefPtr<Vnode> vn = ios->vn;
+    mx_status_t status = vfs_handler_vn(msg, rh, mxtl::move(vn), ios);
     return status;
 }
 
-mx_handle_t vfs_rpc_server(mx_handle_t h, Vnode* vn) {
+mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
     vfs_iostate_t* ios;
     mx_status_t r;
 
     if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
         return ERR_NO_MEMORY;
-    ios->vn = vn;  // reference passed in by caller
+    ios->vn = mxtl::move(vn);  // reference passed in by caller
     ios->io_flags = 0;
 
     if ((r = mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler)) < 0) {

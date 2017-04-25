@@ -49,10 +49,10 @@ public:
 
     // instantiate a vnode from an inode
     // the inode must exist in the file system
-    mx_status_t VnodeGet(VnodeMinfs** out, uint32_t ino);
+    mx_status_t VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino);
 
     // instantiate a vnode with a new inode
-    mx_status_t VnodeNew(VnodeMinfs** out, uint32_t type);
+    mx_status_t VnodeNew(mxtl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
     // remove a vnode from the hash map
     void VnodeRelease(VnodeMinfs* vn);
@@ -101,6 +101,8 @@ private:
 #ifdef __Fuchsia__
     mxtl::unique_ptr<MappedVmo> inode_table_;
 #endif
+    // Vnodes exist in the hash table as long as one or more reference exists;
+    // when the Vnode is deleted, it is immediately removed from the map.
     using HashTable = mxtl::HashTable<uint32_t, VnodeMinfs*>;
     HashTable vnode_hash_;
 };
@@ -130,9 +132,9 @@ class VnodeMinfs final : public fs::Vnode, public mxtl::SinglyLinkedListable<Vno
     friend class Minfs;
 public:
     // Allocates a Vnode and initializes the inode given the type.
-    static mx_status_t Allocate(Minfs* fs, uint32_t type, VnodeMinfs** out);
+    static mx_status_t Allocate(Minfs* fs, uint32_t type, mxtl::RefPtr<VnodeMinfs>* out);
     // Allocates a Vnode, but leaves the inode untouched, so it may be overwritten.
-    static mx_status_t AllocateHollow(Minfs* fs, VnodeMinfs** out);
+    static mx_status_t AllocateHollow(Minfs* fs, mxtl::RefPtr<VnodeMinfs>* out);
 
     bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
     bool IsDeletedDirectory() const { return flags_ & kMinfsFlagDeletedDirectory; }
@@ -141,7 +143,7 @@ public:
     uint32_t GetKey() const { return ino_; }
     static size_t GetHash(uint32_t key) { return INO_HASH(key); }
 
-    mx_status_t UnlinkChild(VnodeMinfs* child, minfs_dirent_t* de, DirectoryOffset* offs);
+    mx_status_t UnlinkChild(mxtl::RefPtr<VnodeMinfs> child, minfs_dirent_t* de, DirectoryOffset* offs);
     mx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
     mx_status_t ReadExactInternal(void* data, size_t len, size_t off);
     mx_status_t WriteInternal(const void* data, size_t len, size_t off, size_t* actual);
@@ -149,20 +151,21 @@ public:
     mx_status_t TruncateInternal(size_t len);
     ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                   size_t out_len) final;
-    mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
+    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     // Lookup which can traverse '..'
-    mx_status_t LookupInternal(fs::Vnode** out, const char* name, size_t len);
+    mx_status_t LookupInternal(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len);
 
     Minfs* fs_;
     uint32_t ino_;
     minfs_inode_t inode_;
+
+    ~VnodeMinfs();
 
 private:
     VnodeMinfs(Minfs* fs);
 
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
     // by the VFS library.
-    void Release() final;
     mx_status_t Open(uint32_t flags) final;
     mx_status_t Close() final;
     ssize_t Read(void* data, size_t len, size_t off) final;
@@ -170,13 +173,13 @@ private:
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t Setattr(vnattr_t* a) final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
-    mx_status_t Create(fs::Vnode** out, const char* name, size_t len, uint32_t mode) final;
+    mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
     mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
-    mx_status_t Rename(fs::Vnode* newdir,
+    mx_status_t Rename(mxtl::RefPtr<fs::Vnode> newdir,
                        const char* oldname, size_t oldlen,
                        const char* newname, size_t newlen,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
-    mx_status_t Link(const char* name, size_t len, fs::Vnode* target) final;
+    mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Truncate(size_t len) final;
     mx_status_t Sync() final;
     mx_status_t AttachRemote(mx_handle_t) final;
@@ -201,7 +204,7 @@ private:
 
     // Directories only
     mx_status_t ForEachDirent(DirArgs* args,
-                              mx_status_t (*func)(VnodeMinfs*, minfs_dirent_t*, DirArgs*,
+                              mx_status_t (*func)(mxtl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
                                                   DirectoryOffset*));
 
 #ifdef __Fuchsia__
@@ -227,7 +230,7 @@ private:
 };
 
 // write the inode data of this vnode to disk (default does not update time values)
-void minfs_sync_vnode(VnodeMinfs* vn, uint32_t flags);
+void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max);
 void minfs_dump_info(minfs_info_t* info);
@@ -237,7 +240,7 @@ int minfs_mkfs(Bcache* bc);
 mx_status_t check_inode(CheckMaps*, const Minfs*, uint32_t, uint32_t);
 mx_status_t minfs_check(Bcache* bc);
 
-mx_status_t minfs_mount(VnodeMinfs** root_out, Bcache* bc);
+mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, Bcache* bc);
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);
 

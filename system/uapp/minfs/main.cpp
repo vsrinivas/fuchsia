@@ -25,7 +25,7 @@
 #ifndef __Fuchsia__
 
 static minfs::Bcache* the_block_cache;
-extern minfs::VnodeMinfs* fake_root;
+extern mxtl::RefPtr<minfs::VnodeMinfs> fake_root;
 
 int run_fs_tests(int argc, char** argv);
 void drop_cache() {
@@ -42,7 +42,7 @@ int do_minfs_check(minfs::Bcache* bc, int argc, char** argv) {
 
 #ifdef __Fuchsia__
 int do_minfs_mount(minfs::Bcache* bc, int argc, char** argv) {
-    minfs::VnodeMinfs* vn = 0;
+    mxtl::RefPtr<minfs::VnodeMinfs> vn;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
@@ -58,7 +58,7 @@ int do_minfs_mount(minfs::Bcache* bc, int argc, char** argv) {
 }
 #else
 int io_setup(minfs::Bcache* bc) {
-    minfs::VnodeMinfs* vn = 0;
+    mxtl::RefPtr<minfs::VnodeMinfs> vn;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }

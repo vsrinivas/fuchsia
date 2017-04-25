@@ -16,6 +16,7 @@
 #include <mxio/vfs.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_ptr.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
@@ -31,27 +32,25 @@ public:
     constexpr MountNode() : vn_(nullptr) {}
     ~MountNode() { MX_DEBUG_ASSERT(vn_ == nullptr); }
 
-    void SetNode(Vnode* vn) {
+    void SetNode(mxtl::RefPtr<Vnode> vn) {
         MX_DEBUG_ASSERT(vn_ == nullptr);
-        vn->RefAcquire(); // Acquire the vn to make sure it isn't released from memory
         vn_ = vn;
     }
 
     mx_handle_t ReleaseRemote() {
         MX_DEBUG_ASSERT(vn_ != nullptr);
         mx_handle_t h = vn_->DetachRemote();
-        vn_->RefRelease();
         vn_ = nullptr;
         return h;
     }
 
-    bool VnodeMatch(Vnode* vn) const {
+    bool VnodeMatch(mxtl::RefPtr<Vnode> vn) const {
         MX_DEBUG_ASSERT(vn_ != nullptr);
         return vn == vn_;
     }
 
 private:
-    Vnode* vn_;
+    mxtl::RefPtr<Vnode> vn_;
 };
 
 } // namespace anonymous
@@ -66,7 +65,7 @@ private:
 static MountNode::ListType remote_list TA_GUARDED(vfs_lock);
 
 // Installs a remote filesystem on vn and adds it to the remote_list.
-mx_status_t Vfs::InstallRemote(Vnode* vn, mx_handle_t h) {
+mx_status_t Vfs::InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h) {
     if (vn == nullptr) {
         return ERR_ACCESS_DENIED;
     }
@@ -89,7 +88,7 @@ mx_status_t Vfs::InstallRemote(Vnode* vn, mx_handle_t h) {
 }
 
 // Installs a remote filesystem on vn and adds it to the remote_list.
-mx_status_t Vfs::InstallRemoteLocked(Vnode* vn, mx_handle_t h) {
+mx_status_t Vfs::InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) {
     if (vn == nullptr) {
         return ERR_ACCESS_DENIED;
     }
@@ -113,7 +112,7 @@ mx_status_t Vfs::InstallRemoteLocked(Vnode* vn, mx_handle_t h) {
 
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list, and sends its corresponding filesystem an 'unmount' signal.
-mx_status_t Vfs::UninstallRemote(Vnode* vn, mx_handle_t* h) {
+mx_status_t Vfs::UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h) {
     mxtl::unique_ptr<MountNode> mount_point;
     {
         mxtl::AutoLock lock(&vfs_lock);

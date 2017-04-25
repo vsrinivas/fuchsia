@@ -13,6 +13,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/process.h>
+#include <mxtl/ref_ptr.h>
 
 #include "blobstore-private.h"
 #include "fs/vfs.h"
@@ -22,7 +23,7 @@
 namespace {
 
 int do_blobstore_mount(int fd, int argc, char** argv) {
-    blobstore::VnodeBlob* vn = 0;
+    mxtl::RefPtr<blobstore::VnodeBlob> vn;
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
     }

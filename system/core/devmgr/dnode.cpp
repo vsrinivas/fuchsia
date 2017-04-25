@@ -18,7 +18,7 @@
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, VnodeMemfs* vn) {
+mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, mxtl::RefPtr<VnodeMemfs> vn) {
     if ((len > kDnodeNameMax) || (len < 1)) {
         return nullptr;
     }
@@ -64,7 +64,6 @@ void Dnode::Detach() {
     RemoveFromParent();
     // Detach from vnode
     vnode_->dnode_ = nullptr;
-    vnode_->RefRelease();
     vnode_ = nullptr;
 }
 
@@ -122,8 +121,7 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
     return NO_ERROR;
 }
 
-VnodeMemfs* Dnode::AcquireVnode() const {
-    vnode_->RefAcquire();
+mxtl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
     return vnode_;
 }
 
@@ -232,9 +230,8 @@ void Dnode::PutName(mxtl::unique_ptr<char[]> name, size_t len) {
 
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
-Dnode::Dnode(VnodeMemfs* vn, mxtl::unique_ptr<char[]> name, uint32_t flags) :
-    vnode_(vn), parent_(nullptr), ordering_token_(0), flags_(flags), name_(mxtl::move(name)) {
-    vnode_->RefAcquire();
+Dnode::Dnode(mxtl::RefPtr<VnodeMemfs> vn, mxtl::unique_ptr<char[]> name, uint32_t flags) :
+    vnode_(mxtl::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(mxtl::move(name)) {
 };
 
 size_t Dnode::NameLen() const {

@@ -96,7 +96,7 @@ void RemoteContainer::SetRemote(mx_handle_t remote) {
     remote_ = remote;
 }
 
-mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
+mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const char* path,
                       const char** pathout, uint32_t flags, uint32_t mode) {
     trace(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
     mx_status_t r;
@@ -105,13 +105,12 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
     }
     if (r > 0) {
         // remote filesystem, return handle and path through to caller
-        vndir->RefRelease();
         *pathout = path;
         return r;
     }
 
     size_t len = strlen(path);
-    Vnode* vn;
+    mxtl::RefPtr<Vnode> vn;
 
     bool must_be_dir = false;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
@@ -131,15 +130,11 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
                 // in which case we should still try to open() the file
                 goto try_open;
             }
-            vndir->RefRelease();
             return r;
-        } else {
-            vndir->RefRelease();
         }
     } else {
     try_open:
         r = vndir->Lookup(&vn, path, len);
-        vndir->RefRelease();
         if (r < 0) {
             return r;
         }
@@ -148,38 +143,31 @@ mx_status_t Vfs::Open(Vnode* vndir, Vnode** out, const char* path,
             // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
             r = vn->WaitForRemote();
-            vn->RefRelease();
             return r;
         }
 
 #ifdef __Fuchsia__
         flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
-        r = vn->Open(flags);
-        // Open and lookup both incremented the refcount. Release it once for
-        // opening a vnode.
-        vn->RefRelease();
-        if (r < 0) {
+        if ((r = vn->Open(flags)) < 0) {
             return r;
         }
         if (vn->IsDevice() && !(flags & O_DIRECTORY)) {
             *pathout = ".";
             r = vn->GetRemote();
-            vn->RefRelease();
             return r;
         }
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
-            vn->RefRelease();
             return r;
         }
     }
-    trace(VFS, "VfsOpen: vn=%p\n", vn);
+    trace(VFS, "VfsOpen: vn=%p\n", vn.get());
     *pathout = "";
     *out = vn;
     return NO_ERROR;
 }
 
-mx_status_t Vfs::Unlink(Vnode* vndir, const char* path, size_t len) {
+mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len) {
     bool must_be_dir;
     mx_status_t r;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
@@ -188,7 +176,7 @@ mx_status_t Vfs::Unlink(Vnode* vndir, const char* path, size_t len) {
     return vndir->Unlink(path, len, must_be_dir);
 }
 
-mx_status_t Vfs::Link(Vnode* oldparent, Vnode* newparent,
+mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
                       const char* oldname, const char* newname) {
     // Local filesystem
     size_t oldlen = strlen(oldname);
@@ -209,16 +197,15 @@ mx_status_t Vfs::Link(Vnode* oldparent, Vnode* newparent,
     }
 
     // Look up the target vnode
-    Vnode* target;
-    if ((r = oldparent->Lookup(&target, oldname, oldlen)) < 0) { // target: +1
+    mxtl::RefPtr<Vnode> target;
+    if ((r = oldparent->Lookup(&target, oldname, oldlen)) < 0) {
         return r;
     }
     r = newparent->Link(newname, newlen, target);
-    target->RefRelease(); // target: +0
     return r;
 }
 
-mx_status_t Vfs::Rename(Vnode* oldparent, Vnode* newparent,
+mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
                         const char* oldname, const char* newname) {
     // Local filesystem
     size_t oldlen = strlen(oldname);
@@ -236,7 +223,7 @@ mx_status_t Vfs::Rename(Vnode* oldparent, Vnode* newparent,
                              old_must_be_dir, new_must_be_dir);
 }
 
-ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
+ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                    void* out_buf, size_t out_len) {
     switch (op) {
 #ifdef __Fuchsia__
@@ -276,8 +263,6 @@ ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
         if (r < 0) {
             return r;
         }
-        // Undo the open once we're done with the ioctl
-        auto ac = mxtl::MakeAutoCall([&vn](){ vn->RefRelease(); });
         if (vn->IsRemote()) {
             if (config->flags & MOUNT_MKDIR_FLAG_REPLACE) {
                 // There is an old remote handle on this vnode; shut it down and
@@ -322,8 +307,8 @@ ssize_t Vfs::Ioctl(Vnode* vn, uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
-mx_status_t Vfs::Close(Vnode* vn) {
-    trace(VFS, "vfs_close: vn=%p\n", vn);
+mx_status_t Vfs::Close(mxtl::RefPtr<Vnode> vn) {
+    trace(VFS, "vfs_close: vn=%p\n", vn.get());
     mx_status_t r = vn->Close();
     return r;
 }
@@ -335,31 +320,6 @@ mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     return mxio_dispatcher_add(vfs_dispatcher, h, (void*)vfs_handler, cookie);
 }
 #endif
-
-void Vnode::RefAcquire() {
-    trace(REFS, "acquire vn=%p ref=%u\n", this, refcount_);
-    refcount_++;
-}
-
-// TODO(orr): figure out x-system panic
-#define panic(fmt...)         \
-    do {                      \
-        fprintf(stderr, fmt); \
-        __builtin_trap();     \
-    } while (0)
-
-void Vnode::RefRelease() {
-    trace(REFS, "release vn=%p ref=%u\n", this, refcount_);
-    if (refcount_ == 0) {
-        panic("vn %p: ref underflow\n", this);
-    }
-    refcount_--;
-    if (refcount_ == 0) {
-        assert(!IsRemote());
-        trace(VFS, "vfs_release: vn=%p\n", this);
-        Release();
-    }
-}
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type) {
@@ -383,8 +343,8 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
 //
 // If a non-negative status is returned, the vnode at 'out' has been acquired.
 // Otherwise, no net deltas in acquires/releases occur.
-mx_status_t Vfs::Walk(Vnode* vn, Vnode** out, const char* path, const char** pathout) {
-    Vnode* oldvn = nullptr;
+mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+                      const char* path, const char** pathout) {
     mx_status_t r;
 
     for (;;) {
@@ -404,10 +364,6 @@ mx_status_t Vfs::Walk(Vnode* vn, Vnode** out, const char* path, const char** pat
             }
             *out = vn;
             *pathout = path;
-            if (oldvn == nullptr) {
-                // returning our original vnode, need to upref it
-                vn->RefAcquire();
-            }
             return r;
         }
 
@@ -430,21 +386,12 @@ mx_status_t Vfs::Walk(Vnode* vn, Vnode** out, const char* path, const char** pat
             nextpath++;
             r = vn->Lookup(&vn, path, len);
             assert(r <= 0);
-            if (oldvn) {
-                // release the old vnode, even if there was an error
-                oldvn->RefRelease();
-            }
             if (r < 0) {
                 return r;
             }
-            oldvn = vn;
             path = nextpath;
         } else {
             // final path segment, we're done here
-            if (oldvn == nullptr) {
-                // returning our original vnode, need to upref it
-                vn->RefAcquire();
-            }
             *out = vn;
             *pathout = path;
             return NO_ERROR;

@@ -21,7 +21,7 @@
 #include "minfs.h"
 #include "minfs-private.h"
 
-static mx_status_t do_stat(Vnode* vn, struct stat* s) {
+static mx_status_t do_stat(mxtl::RefPtr<Vnode> vn, struct stat* s) {
     vnattr_t a;
     mx_status_t status = vn->Getattr(&a);
     if (status == NO_ERROR) {
@@ -36,7 +36,7 @@ static mx_status_t do_stat(Vnode* vn, struct stat* s) {
 }
 
 typedef struct {
-    Vnode* vn;
+    mxtl::RefPtr<Vnode> vn;
     uint64_t off;
     vdircookie_t dircookie;
 } file_t;
@@ -94,7 +94,7 @@ int status_to_errno(mx_status_t status) {
             return name(args);         \
     } while (0)
 
-Vnode* fake_root;
+mxtl::RefPtr<Vnode> fake_root;
 
 static inline int check_path(const char* path) {
     if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == nullptr)) {
@@ -110,12 +110,12 @@ int emu_open(const char* path, int flags, mode_t mode) {
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == nullptr) {
             const char* pathout = nullptr;
-            fs::Vnode* vn_fs;
+            mxtl::RefPtr<fs::Vnode> vn_fs;
             mx_status_t status = fs::Vfs::Open(fake_root, &vn_fs, path + PREFIX_SIZE, &pathout, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
-            fdtab[fd].vn = static_cast<Vnode*>(vn_fs);
+            fdtab[fd].vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
             return fd | FD_MAGIC;
         }
     }
@@ -211,7 +211,7 @@ int emu_fstat(int fd, struct stat* s) {
 
 int emu_unlink(const char* path) {
     PATH_WRAP(path, unlink, path);
-    fs::Vnode* vn;
+    mxtl::RefPtr<fs::Vnode> vn;
     mx_status_t status = fs::Vfs::Walk(fake_root, &vn, path + PREFIX_SIZE, &path);
     if (status == NO_ERROR) {
         status = vn->Unlink(path, strlen(path), false);
@@ -226,7 +226,8 @@ int emu_rename(const char* oldpath, const char* newpath) {
 
 int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
-    Vnode *vn, *cur = fake_root;
+    mxtl::RefPtr<Vnode> vn = fake_root;
+    mxtl::RefPtr<Vnode> cur = fake_root;
     mx_status_t status;
     const char* nextpath = nullptr;
     size_t len;
@@ -245,12 +246,12 @@ int emu_stat(const char* fn, struct stat* s) {
             len = nextpath - fn;
             nextpath++;
         }
-        fs::Vnode* vn_fs;
+        mxtl::RefPtr<fs::Vnode> vn_fs;
         status = cur->Lookup(&vn_fs, fn, len);
         if (status != NO_ERROR) {
             return -ENOENT;
         }
-        vn = static_cast<Vnode*>(vn_fs);
+        vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
         if (cur != fake_root) {
             fs::Vfs::Close(cur);
         }
@@ -269,7 +270,7 @@ int emu_stat(const char* fn, struct stat* s) {
 
 typedef struct MINDIR {
     uint64_t magic;
-    Vnode* vn;
+    mxtl::RefPtr<Vnode> vn;
     vdircookie_t cookie;
     uint8_t* ptr;
     uint8_t data[DIR_BUFSIZE];
@@ -279,14 +280,14 @@ typedef struct MINDIR {
 
 DIR* emu_opendir(const char* name) {
     PATH_WRAP(name, opendir, name);
-    fs::Vnode* vn;
+    mxtl::RefPtr<fs::Vnode> vn;
     mx_status_t status = fs::Vfs::Open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
     if (status != NO_ERROR) {
         return nullptr;
     }
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
     dir->magic = minfs::kMinfsMagic0;
-    dir->vn = static_cast<Vnode*>(vn);
+    dir->vn = mxtl::RefPtr<Vnode>::Downcast(vn);
     return (DIR*) dir;
 }
 

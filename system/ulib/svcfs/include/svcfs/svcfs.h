@@ -9,6 +9,7 @@
 #include <mx/channel.h>
 #include <mxtl/array.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/ref_ptr.h>
 
 namespace svcfs {
 
@@ -30,7 +31,6 @@ public:
 
 class Vnode : public fs::Vnode {
 public:
-    void Release() override final;
     mx_status_t Close() override final;
     mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) override final;
 
@@ -45,7 +45,7 @@ protected:
 class VnodeSvc : public Vnode {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VnodeSvc);
-    using NodeState = mxtl::DoublyLinkedListNodeState<VnodeSvc*>;
+    using NodeState = mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<VnodeSvc>>;
 
     struct TypeChildTraits {
         static NodeState& node_state(VnodeSvc& vn) {
@@ -82,7 +82,7 @@ public:
     ~VnodeDir() override;
 
     mx_status_t Open(uint32_t flags) override final;
-    mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) override final;
+    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) override final;
     mx_status_t Getattr(vnattr_t* a) override final;
 
     void NotifyAdd(const char* name, size_t len) override final;
@@ -97,7 +97,7 @@ public:
     void RemoveAllServices();
 
 private:
-    using ServiceList = mxtl::DoublyLinkedList<VnodeSvc*, VnodeSvc::TypeChildTraits>;
+    using ServiceList = mxtl::DoublyLinkedList<mxtl::RefPtr<VnodeSvc>, VnodeSvc::TypeChildTraits>;
 
     // Starts at 3 because . has ID one and .. has ID two.
     uint64_t next_node_id_;

@@ -71,12 +71,7 @@ Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
 
 Vnode::~Vnode() = default;
 
-void Vnode::Release() {
-    delete this;
-}
-
 mx_status_t Vnode::Close() {
-    RefRelease();
     return NO_ERROR;
 }
 
@@ -99,7 +94,6 @@ mx_status_t VnodeSvc::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ERR_NOT_DIR;
     }
-    RefAcquire();
     return NO_ERROR;
 }
 
@@ -129,21 +123,19 @@ VnodeDir::VnodeDir(mxio_dispatcher_cb_t dispatcher)
 VnodeDir::~VnodeDir() = default;
 
 mx_status_t VnodeDir::Open(uint32_t flags) {
-    RefAcquire();
     return NO_ERROR;
 }
 
-mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
+mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (IsDotOrDotDot(name, len)) {
-        RefAcquire();
-        *out = this;
+        *out = mxtl::RefPtr<fs::Vnode>(this);
         return NO_ERROR;
     }
 
-    VnodeSvc* vn = nullptr;
-    for (VnodeSvc& child : services_) {
+    mxtl::RefPtr<VnodeSvc> vn = nullptr;
+    for (auto& child : services_) {
         if (child.NameMatch(name, len)) {
-            vn = &child;
+            vn = mxtl::RefPtr<VnodeSvc>(&child);
         }
     }
 
@@ -151,8 +143,7 @@ mx_status_t VnodeDir::Lookup(fs::Vnode** out, const char* name, size_t len) {
         return ERR_NOT_FOUND;
     }
 
-    vn->RefAcquire();
-    *out = vn;
+    *out = mxtl::move(vn);
     return NO_ERROR;
 }
 
@@ -247,14 +238,13 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
     memcpy(array.get(), name, len);
     array[len] = '\0';
 
-    VnodeSvc* vn = new (&ac) VnodeSvc(
-        dispatcher_, next_node_id_++, mxtl::move(array), provider);
+    mxtl::RefPtr<VnodeSvc> vn = mxtl::AdoptRef(new (&ac) VnodeSvc(
+        dispatcher_, next_node_id_++, mxtl::move(array), provider));
     if (!ac.check()) {
         return false;
     }
 
-    vn->RefAcquire();
-    services_.push_back(vn);
+    services_.push_back(mxtl::move(vn));
     NotifyAdd(name, len);
     return true;
 }
@@ -262,7 +252,6 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
 void VnodeDir::RemoveAllServices() {
     for (VnodeSvc& vn : services_) {
         vn.ClearProvider();
-        vn.RefRelease();
     }
     services_.clear();
 }

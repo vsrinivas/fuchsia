@@ -36,7 +36,6 @@ public:
 
 class VnodeMemfs : public fs::Vnode {
 public:
-    virtual void Release() override;
     virtual mx_status_t Open(uint32_t flags) override;
     virtual mx_status_t Close() override;
     virtual mx_status_t Setattr(vnattr_t* a) override;
@@ -71,7 +70,6 @@ public:
     ~VnodeFile();
 
 private:
-    void Release() final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
     mx_status_t Truncate(size_t len) final;
@@ -86,8 +84,8 @@ public:
     VnodeDir();
     virtual ~VnodeDir();
 
-    mx_status_t Lookup(fs::Vnode** out, const char* name, size_t len) final;
-    mx_status_t Create(fs::Vnode** out, const char* name, size_t len, uint32_t mode) final;
+    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
 
     // Create a vnode from a VMO.
     // Fails if the vnode already exists.
@@ -95,7 +93,8 @@ public:
     mx_status_t CreateFromVmo(const char* name, size_t namelen, mx_handle_t vmo, mx_off_t off,
                               mx_off_t len);
 
-    mx_status_t CreateDeviceAtLocked(memfs::VnodeDir** out, const char* name, mx_handle_t h);
+    mx_status_t CreateDeviceAtLocked(mxtl::RefPtr<memfs::VnodeDir>* out, const char* name,
+                                     mx_handle_t h);
     void NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
@@ -116,14 +115,15 @@ private:
 
     // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches
     // dnode to vnode, and adds dnode to parent directory.
-    mx_status_t AttachVnode(memfs::VnodeMemfs* vn, const char* name, size_t namelen, bool isdir);
+    mx_status_t AttachVnode(mxtl::RefPtr<memfs::VnodeMemfs> vn, const char* name, size_t namelen,
+                            bool isdir);
 
     mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
-    mx_status_t Rename(fs::Vnode* newdir,
+    mx_status_t Rename(mxtl::RefPtr<fs::Vnode> newdir,
                        const char* oldname, size_t oldlen,
                        const char* newname, size_t newlen,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
-    mx_status_t Link(const char* name, size_t len, fs::Vnode* target) final;
+    mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Getattr(vnattr_t* a) override;
 
     // TODO(smklein): Guard the watch list with a lock more fine-grained
@@ -138,7 +138,6 @@ public:
     ~VnodeDevice();
 
 private:
-    void Release() final;
     mx_status_t Getattr(vnattr_t* a) final;
 };
 
@@ -164,6 +163,11 @@ private:
 using VnodeMemfs = memfs::VnodeMemfs;
 using VnodeDir = memfs::VnodeDir;
 
+mxtl::RefPtr<VnodeDir> BootfsRoot();
+mxtl::RefPtr<VnodeDir> MemfsRoot();
+mxtl::RefPtr<VnodeDir> SystemfsRoot();
+mxtl::RefPtr<VnodeDir> DevfsRoot();
+
 #else
 
 typedef struct VnodeMemfs VnodeMemfs;
@@ -186,7 +190,6 @@ mx_status_t memfs_create_device_at(VnodeDir* parent, VnodeDir** out, const char*
 mx_status_t devfs_remove(VnodeDir* vn);
 
 // boot fs
-VnodeDir* bootfs_get_root(void);
 mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 
 // system fs
@@ -194,7 +197,6 @@ VnodeDir* systemfs_get_root(void);
 mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 
 // memory fs
-VnodeDir* memfs_get_root(void);
 mx_status_t memfs_add_link(VnodeDir* parent, const char* name,
                            VnodeMemfs* target) TA_EXCL(vfs_lock);
 
