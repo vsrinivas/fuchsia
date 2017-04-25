@@ -727,14 +727,15 @@ magma::Status MsdIntelDevice::ProcessFlip(
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
 
     uint32_t pipe_number = 0;
-    auto surface_size =
-        registers::DisplayPlaneSurfaceSize::Get(pipe_number).ReadFrom(register_io());
+    registers::PipeRegs pipe(pipe_number);
+
+    auto surface_size = pipe.PlaneSurfaceSize().ReadFrom(register_io());
     uint32_t width = surface_size.width_minus_1().get() + 1;
 
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
 
-    auto plane_control = registers::DisplayPlaneControl::Get(pipe_number).ReadFrom(register_io());
+    auto plane_control = pipe.PlaneControl().ReadFrom(register_io());
     plane_control.async_address_update_enable().set(!kUpdateOnVblank);
 
     if (kWaitForFlip) {
@@ -761,11 +762,11 @@ magma::Status MsdIntelDevice::ProcessFlip(
     }
     plane_control.WriteTo(register_io());
 
-    auto stride_reg = registers::DisplayPlaneSurfaceStride::Get(pipe_number).FromValue(0);
+    auto stride_reg = pipe.PlaneSurfaceStride().FromValue(0);
     stride_reg.stride().set(stride);
     stride_reg.WriteTo(register_io());
 
-    auto addr_reg = registers::DisplayPlaneSurfaceAddress::Get(pipe_number).FromValue(0);
+    auto addr_reg = pipe.PlaneSurfaceAddress().FromValue(0);
     DASSERT((mapping->gpu_addr() & ((1 << addr_reg.kPageShift) - 1)) == 0);
     addr_reg.surface_base_address().set(mapping->gpu_addr() >> addr_reg.kPageShift);
     addr_reg.WriteTo(register_io());

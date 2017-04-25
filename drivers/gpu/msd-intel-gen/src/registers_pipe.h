@@ -12,14 +12,8 @@
 
 namespace registers {
 
-class Pipe {
-public:
-    // Number of pipes that the hardware provides.
-    static constexpr uint32_t kPipeCount = 3;
-};
-
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
-class DisplayPlaneSurfaceAddress : public RegisterBase {
+class PlaneSurfaceAddress : public RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x7019C;
 
@@ -29,47 +23,26 @@ public:
     DEF_FIELD(31, 12, surface_base_address);
 
     DEF_BIT(3, ring_flip_source);
-
-    // Get the instance of this register for Plane 1 of the given pipe.
-    static auto Get(uint32_t pipe_number)
-    {
-        DASSERT(pipe_number < Pipe::kPipeCount);
-        return RegisterAddr<DisplayPlaneSurfaceAddress>(kBaseAddr + 0x1000 * pipe_number);
-    }
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.598
-class DisplayPlaneSurfaceStride : public RegisterBase {
+class PlaneSurfaceStride : public RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
-
-    // Get the instance of this register for Plane 1 of the given pipe.
-    static auto Get(uint32_t pipe_number)
-    {
-        DASSERT(pipe_number < Pipe::kPipeCount);
-        return RegisterAddr<DisplayPlaneSurfaceStride>(kBaseAddr + 0x1000 * pipe_number);
-    }
 };
 
-class DisplayPlaneSurfaceSize : public RegisterBase {
+class PlaneSurfaceSize : public RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70190;
 
     DEF_FIELD(27, 16, height_minus_1);
     DEF_FIELD(12, 0, width_minus_1);
-
-    // Get the instance of this register for Plane 1 of the given pipe.
-    static auto Get(uint32_t pipe_number)
-    {
-        DASSERT(pipe_number < Pipe::kPipeCount);
-        return RegisterAddr<DisplayPlaneSurfaceSize>(kBaseAddr + 0x1000 * pipe_number);
-    }
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
-class DisplayPlaneControl : public RegisterBase {
+class PlaneControl : public RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70180;
 
@@ -96,13 +69,6 @@ public:
     DEF_FIELD(5, 4, alpha_mode);
     DEF_BIT(3, allow_double_buffer_update_disable);
     DEF_FIELD(1, 0, plane_rotation);
-
-    // Get the instance of this register for Plane 1 of the given pipe.
-    static auto Get(uint32_t pipe_number)
-    {
-        DASSERT(pipe_number < Pipe::kPipeCount);
-        return RegisterAddr<DisplayPlaneControl>(kBaseAddr + 0x1000 * pipe_number);
-    }
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.444
@@ -156,6 +122,33 @@ public:
         if ((*bits_present_out = val & bits))
             reg_io->Write32(offset, val | bits); // reset the event
     }
+};
+
+// An instance of PipeRegs represents the registers for a particular pipe.
+class PipeRegs {
+public:
+    // Number of pipes that the hardware provides.
+    static constexpr uint32_t kPipeCount = 3;
+
+    PipeRegs(uint32_t pipe_number) : pipe_number_(pipe_number)
+    {
+        DASSERT(pipe_number < kPipeCount);
+    }
+
+    // The following methods get the instance of the plane register for
+    // Plane 1 of this pipe.
+    auto PlaneSurfaceAddress() { return GetReg<registers::PlaneSurfaceAddress>(); }
+    auto PlaneSurfaceStride() { return GetReg<registers::PlaneSurfaceStride>(); }
+    auto PlaneSurfaceSize() { return GetReg<registers::PlaneSurfaceSize>(); }
+    auto PlaneControl() { return GetReg<registers::PlaneControl>(); }
+
+private:
+    template <class RegType> RegisterAddr<RegType> GetReg()
+    {
+        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_number_);
+    }
+
+    uint32_t pipe_number_;
 };
 
 } // namespace
