@@ -72,6 +72,26 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
     if (status != NO_ERROR)
         return status;
 
+    // Force map the range, even if it crosses multiple mappings.
+    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // things, the bug will come back.  We should fix this more properly.
+    {
+        uint8_t byte = 0;
+        auto int_data = _data.reinterpret<uint8_t>();
+        for (size_t i = 0; i < len; i += PAGE_SIZE) {
+            status = int_data.copy_array_to_user(&byte, 1, i);
+            if (status != NO_ERROR) {
+                return status;
+            }
+        }
+        if (len > 0) {
+            status = int_data.copy_array_to_user(&byte, 1, len - 1);
+            if (status != NO_ERROR) {
+                return status;
+            }
+        }
+    }
+
     // do the read operation
     size_t nread;
     status = vmo->Read(_data, len, offset, &nread);
@@ -93,6 +113,26 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
     if (status != NO_ERROR)
         return status;
+
+    // Force map the range, even if it crosses multiple mappings.
+    // TODO(MG-730): This is a workaround for this bug.  If we start decommitting
+    // things, the bug will come back.  We should fix this more properly.
+    {
+        uint8_t byte = 0;
+        auto int_data = _data.reinterpret<const uint8_t>();
+        for (size_t i = 0; i < len; i += PAGE_SIZE) {
+            status = int_data.copy_array_from_user(&byte, 1, i);
+            if (status != NO_ERROR) {
+                return status;
+            }
+        }
+        if (len > 0) {
+            status = int_data.copy_array_from_user(&byte, 1, len - 1);
+            if (status != NO_ERROR) {
+                return status;
+            }
+        }
+    }
 
     // do the write operation
     size_t nwritten;
