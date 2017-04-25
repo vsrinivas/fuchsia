@@ -109,7 +109,7 @@ mx_status_t Vfs::UninstallRemote(Vnode* vn, mx_handle_t* h) {
 
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
-mx_status_t vfs_uninstall_all(mx_time_t timeout) {
+mx_status_t vfs_uninstall_all(mx_time_t deadline) {
     mxtl::unique_ptr<fs::MountNode> mount_point;
     for (;;) {
         {
@@ -117,7 +117,7 @@ mx_status_t vfs_uninstall_all(mx_time_t timeout) {
             mount_point = fs::remote_list.pop_front();
         }
         if (mount_point) {
-            vfs_unmount_handle(mount_point->ReleaseRemote(), timeout);
+            vfs_unmount_handle(mount_point->ReleaseRemote(), deadline);
         } else {
             return NO_ERROR;
         }
