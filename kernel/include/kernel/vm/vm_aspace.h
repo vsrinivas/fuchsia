@@ -128,10 +128,9 @@ private:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
 
-    // private destructor that can only be used from the ref ptr or vmm_free_aspace
+    // private destructor that can only be used from the ref ptr
     ~VmAspace();
     friend mxtl::RefPtr<VmAspace>;
-    friend status_t vmm_free_aspace(vmm_aspace_t* _aspace);
 
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     status_t PageFault(vaddr_t va, uint flags);

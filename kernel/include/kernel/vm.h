@@ -190,36 +190,10 @@ arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace);
 #define VMM_FLAG_VALLOC_SPECIFIC (1u << 0) /* allocate at specific address */
 #define VMM_FLAG_COMMIT (1u << 1)          /* commit memory up front (no demand paging) */
 
-/* allocate a region of virtual space that maps a physical piece of address space.
-   the physical pages that back this are not allocated from the pmm. */
-status_t vmm_alloc_physical(vmm_aspace_t* aspace, const char* name, size_t size, void** ptr,
-                            uint8_t align_log2, size_t min_alloc_gap,
-                            paddr_t paddr, uint vmm_flags, uint arch_mmu_flags)
-    __NONNULL((1));
-
-/* allocate a region of memory backed by newly allocated contiguous physical memory  */
-status_t vmm_alloc_contiguous(vmm_aspace_t* aspace, const char* name, size_t size, void** ptr,
-                              uint8_t align_log2, size_t min_alloc_gap,
-                              uint vmm_flags, uint arch_mmu_flags)
-    __NONNULL((1));
-
-/* allocate a region of memory backed by newly allocated physical memory */
-status_t vmm_alloc(vmm_aspace_t* aspace, const char* name, size_t size, void** ptr,
-                   uint8_t align_log2, size_t min_alloc_gap,
-                   uint vmm_flags, uint arch_mmu_flags) __NONNULL((1));
-
-/* Unmap previously allocated region and free physical memory pages backing it (if any) */
-status_t vmm_free_region(vmm_aspace_t* aspace, vaddr_t va);
-
 #define VMM_ASPACE_TYPE_USER (0 << 0)
 #define VMM_ASPACE_TYPE_KERNEL (1 << 0)
 #define VMM_ASPACE_TYPE_LOW_KERNEL (2 << 0)
 #define VMM_ASPACE_TYPE_MASK (3 << 0)
-/* allocate a new address space */
-status_t vmm_create_aspace(vmm_aspace_t** aspace, const char* name, uint flags) __NONNULL((1));
-
-/* destroy everything in the address space */
-status_t vmm_free_aspace(vmm_aspace_t* aspace) __NONNULL((1));
 
 /* internal kernel routines below, do not call directly */
 
