@@ -41,3 +41,15 @@ mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags,
 // misc operation directly on remoteio mxio_t
 mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
                        uint32_t maxreply, void* ptr, size_t len);
+
+
+// Shared with remotesocket.c
+
+mx_status_t mxrio_close(mxio_t* io);
+
+ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
+                    size_t in_len, void* out_buf, size_t out_len);
+
+mx_status_t mxrio_getobject(mx_handle_t rio_h, uint32_t op, const char* name,
+                            int32_t flags, uint32_t mode,
+                            mxrio_object_t* info);
