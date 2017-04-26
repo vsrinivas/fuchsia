@@ -1,0 +1,100 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <vector>
+
+#include "apps/mozart/services/composition2/session.fidl.h"
+#include "apps/mozart/src/composer/resources/resource_map.h"
+#include "apps/mozart/src/composer/session/session_context.h"
+#include "apps/mozart/src/composer/util/error_reporter.h"
+#include "lib/ftl/tasks/task_runner.h"
+
+namespace mozart {
+namespace composer {
+
+typedef uint64_t SessionId;
+
+struct SessionUpdate {
+  ::fidl::Array<mozart2::OpPtr> ops;
+  ::fidl::Array<mx::event> wait_events;
+  ::fidl::Array<mx::event> signal_events;
+};
+
+class Session {
+ public:
+  Session(SessionId id,
+          SessionContext* context,
+          ErrorReporter* error_reporter = ErrorReporter::Default());
+  ~Session();
+
+  // Apply the operation to the current session state.  Return true if
+  // successful, and false if the op is somehow invalid.  In the latter case,
+  // the Session is left unchanged.
+  bool ApplyOp(const mozart2::OpPtr& op);
+
+  SessionId id() const { return id_; }
+  SessionContext* context() const { return context_; }
+
+  // Return the total number of existing resources associated with this Session.
+  size_t GetTotalResourceCount() const { return resource_count_; }
+
+  // Return the number of resources that a client can identify via a ResourceId.
+  // This number is decremented when a ReleaseResourceOp is applied.  However,
+  // the resource may continue to exist if it is referenced by other resources.
+  size_t GetMappedResourceCount() const { return resources_.size(); }
+
+  ErrorReporter* error_reporter() const { return error_reporter_; }
+
+  ResourceMap* resources() { return &resources_; }
+
+ private:
+  // Operation application functions, called by ApplyOp().
+  bool ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op);
+  bool ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op);
+  bool ApplyAddChildOp(const mozart2::AddChildOpPtr& op);
+  bool ApplyAddPartOp(const mozart2::AddPartOpPtr& op);
+  bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
+  bool ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op);
+  bool ApplySetTransformOp(const mozart2::SetTransformOpPtr& op);
+  bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
+  bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
+  bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);
+
+  // Resource creation functions, called by ApplyCreateResourceOp().
+  bool ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args);
+  bool ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args);
+  bool ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args);
+  bool ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args);
+  bool ApplyCreateRectangle(ResourceId id, const mozart2::RectanglePtr& args);
+  bool ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args);
+  bool ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args);
+  bool ApplyCreateMaterial(ResourceId id, const mozart2::MaterialPtr& args);
+  bool ApplyCreateNode(ResourceId id, mozart2::NodeType node_type);
+
+  // Actually create resources.
+  ResourcePtr CreateNode(ResourceId id, mozart2::NodeType node_type);
+  ResourcePtr CreateCircle(ResourceId id, float initial_radius);
+  ResourcePtr CreateMaterial(ResourceId id,
+                             float red,
+                             float green,
+                             float blue,
+                             float alpha);
+
+  friend class Resource;
+  void IncrementResourceCount() { ++resource_count_; }
+  void DecrementResourceCount() { --resource_count_; }
+
+  SessionId id_;
+  SessionContext* const context_;
+  ErrorReporter* const error_reporter_;
+
+  ResourceMap resources_;
+
+  size_t resource_count_ = 0;
+};
+
+}  // namespace composer
+}  // namespace mozart

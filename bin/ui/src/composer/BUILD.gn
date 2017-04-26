@@ -1,0 +1,105 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+source_set("common") {
+  sources = [
+    "nodes/entity_node.cc",
+    "nodes/entity_node.h",
+    "nodes/node.cc",
+    "nodes/node.h",
+    "nodes/shape_node.cc",
+    "nodes/shape_node.h",
+    "print_op.cc",
+    "print_op.h",
+    "resources/link.h",
+    "resources/link.cc",
+    "resources/material.h",
+    "resources/material.cc",
+    "resources/resource.cc",
+    "resources/resource.h",
+    "resources/resource_map.cc",
+    "resources/resource_map.h",
+    "resources/resource_type_info.h",
+    "session/session.h",
+    "session/session.cc",
+    "session/session_context.h",
+    "shapes/circle_shape.cc",
+    "shapes/circle_shape.h",
+    "shapes/shape.cc",
+    "shapes/shape.h",
+    "util/error_reporter.cc",
+    "util/error_reporter.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//apps/mozart/services/composition2",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+
+  deps = [
+    "//lib/escher/escher",
+    "//magma:vulkan",
+  ]
+}
+
+source_set("testing_common") {
+  testonly = true
+
+  sources = [
+    "tests/run_all_tests.cc",
+    "tests/session_helpers.cc",
+    "tests/session_helpers.h",
+  ]
+
+  public_deps = [
+    ":common",
+    "//third_party/gtest",
+  ]
+}
+
+executable("apptests") {
+  output_name = "composer_apptests"
+
+  testonly = true
+
+  sources = []
+
+  deps = [
+    ":testing_common",
+  ]
+}
+
+executable("unittests") {
+  output_name = "composer_unittests"
+
+  testonly = true
+
+  sources = [
+    "tests/session_test.cc",
+    "tests/session_test.h",
+    "tests/session_unittest.cc",
+    "tests/shape_unittest.cc",
+  ]
+
+  deps = [
+    ":testing_common",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":apptests",
+    ":unittests",
+  ]
+}

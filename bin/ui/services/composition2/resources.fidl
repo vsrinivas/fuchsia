@@ -15,6 +15,9 @@ union Resource {
   Image image;
   Buffer buffer;
 
+  // Linking to external entities.
+  Link link;
+
   // Shapes (see shapes.fidl).
   Rectangle rectangle;
   Circle circle;
@@ -22,27 +25,23 @@ union Resource {
 
   Material material;
   NodeType node;
+
+  // A value that can be used in place of a constant value.
+  Variable variable;
 };
 
 // |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
 // it with Mozart.
+// TODO: specify resizing behavior.  Who can resize?  Client/Mozart/both/none?
+// TODO: specify memory type.  Is this from a GPU heap?  CPU accessible memory?
 struct Memory {
   handle<vmo> vmo;
-  uint32 num_bytes;
 };
 
-// Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|
-// is zero), a solid color is used.  If a texture is provided, then the value sampled from the texture is
-// multiplied by the color.
-struct Material {
-  uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
-  array<uint8, 4> color;  // BGRA
-};
-
-// A Vulkan-formatted image mapped to a range of |Memory|.
+// An image mapped to a range of a |Memory| resource.
 // TODO: more precise and extensive docs.
 struct Image {
-  // Corresponds to
+  // Specifies the memory layout of pixels in the image.
   // TODO: populate.  For example, see formats supported by Chromium:
   // https://cs.chromium.org/chromium/src/media/base/video_types.h?type=cs&l=19
   enum Format {
@@ -70,6 +69,10 @@ struct Image {
   uint32 width;
   uint32 height;
   uint32 num_bytes;
+
+  // If true, the memory is already formatted as a Vulkan image.  Otherwise, it
+  // is a CPU-accessible image that must be uploaded to Vulkan.
+  bool is_vulkan;
 };
 
 // A buffer mapped to a range of |Memory|.
@@ -77,6 +80,21 @@ struct Buffer {
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of buffer within |Memory| resource
   uint32 num_bytes;
+};
+
+// Represents an external entity which can attach a child |Node| from this
+// |Session|, e.g. the root of a Scene, or a LinkNode from some other session.
+struct Link {
+  handle<eventpair> token;
+};
+
+// Simple texture-mapped material.  If no texture is provided (i.e. |texture_id|
+// is zero), a solid color is used.  If a texture is provided, then the value sampled from the texture is
+// multiplied by the color.
+struct Material {
+  uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
+  // TODO: use Value instead of ColorRgba.
+  ColorRgba color;
 };
 
 // These are the types of nodes that can be created within a Mozart |Session|.
@@ -108,10 +126,15 @@ enum NodeType {
   // - has_shape
   // - has_material
   kShape,
-  
+
   // Properties:
   // - has_transform
   // - is_clip
   // - has_parts
   kClip,
+};
+
+struct Variable {
+  ValueType type;
+  Value initial_value;  // Must match type.  Must not be a variable_id.
 };

@@ -22,6 +22,13 @@ struct vec4 {
   float w;
 };
 
+struct ColorRgba {
+  uint8 red;
+  uint8 green;
+  uint8 blue;
+  uint8 alpha;
+};
+
 struct Quaternion {
   float i;
   float j;
@@ -31,16 +38,18 @@ struct Quaternion {
 struct Transform {
   vec3 translation;
   vec3 scale;
-  vec3 anchor;  // point around which rotation and scaling occur
+  // Point around which rotation and scaling occur.
+  vec3 anchor;
   Quaternion rotation;
 };
 
 union Value {
-  float val;
-  vec2 pt2;
-  vec3 pt3;
-  vec4 color;  // RGBA
-  float degrees;  // degrees of counter-clockwise rotation in the XY plane
+  float vector1;
+  vec2 vector2;
+  vec3 vector3;
+  ColorRgba color_rgba;
+  // Degrees of counter-clockwise rotation in the XY plane.
+  float degrees;
   Quaternion quaternion;
   Transform transform;
   // ID of a value-producing resource (an animation or an expression).
@@ -50,8 +59,12 @@ union Value {
 
 enum ValueType {
   kNone = 0,
-  kFloat,
-  kVec2,
-  kVec3,
-  kVec4
+  kVector1,
+  kVector2,
+  kVector3,
+  kVector4,
+  kColorRgba,
+  kDegrees,
+  kQuaternion,
+  kTransform,
 };

@@ -31,6 +31,7 @@ group("tests") {
   deps = [
     "services/composition/cpp:apptests",
     "services/geometry/cpp:apptests",
+    "src/composer:tests",
     "src/input_reader/tests",
     "src/view_manager/tests",
   ]

@@ -9,7 +9,7 @@ import "apps/mozart/services/composition2/resources.fidl";
 // Operations that are used to modify the state of a |Session|.
 union Op {
   CreateResourceOp create_resource;
-  ReleaseResourceOp destroy_resource;
+  ReleaseResourceOp release_resource;
 
   // Node operations.
   AddChildOp add_child;
@@ -141,7 +141,7 @@ struct SetMaterialOp {
 // Constraints:
 // - |id| refs a |Node| with the has_clip characteristic.
 // - |clip_id| a |Node| with the is_clip characteristic, or nothing.  If the
-//   referenced not is not rooted, then it will have no effect (since its
+//   referenced node is not rooted, then it will have no effect (since its
 //   full world-transform cannot be determined).
 // - |clip_to_self| If false, children are only clipped to the region specified
 //   by |clip_id|.  If true, children are additionally clipped to the node's
