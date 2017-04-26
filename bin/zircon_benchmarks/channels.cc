@@ -42,8 +42,8 @@ BENCHMARK_DEFINE_F(Channel, Write)(benchmark::State& state) {
 
     // Make sure we drain the channel.
     state.PauseTiming();
-    status = mx_channel_read(out, 0, buffer.data(), buffer.size(), nullptr,
-                             nullptr, 0, nullptr);
+    status = mx_channel_read(out, 0, buffer.data(), nullptr,
+                             buffer.size(), 0, nullptr, nullptr);
     if (status != NO_ERROR) {
       state.SkipWithError("Failed to read from channel");
       return;
@@ -73,8 +73,8 @@ BENCHMARK_DEFINE_F(Channel, Read)(benchmark::State& state) {
     state.ResumeTiming();
 
     uint32_t bytes_read;
-    status = mx_channel_read(out, 0, buffer.data(), buffer.size(), &bytes_read,
-                             nullptr, 0, nullptr);
+    status = mx_channel_read(out, 0, buffer.data(), nullptr,
+                             buffer.size(), 0, &bytes_read, nullptr);
     if (status != NO_ERROR) {
       state.SkipWithError("Failed to read from channel");
       return;
@@ -125,8 +125,8 @@ int channel_read(uint32_t num_bytes) {
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
       return 0;
     }
-    status = mx_channel_read(channel, 0, buffer.data(), buffer.size(),
-                             &bytes_read, nullptr, 0, nullptr);
+    status = mx_channel_read(channel, 0, buffer.data(), nullptr,
+                             buffer.size(), 0, &bytes_read, nullptr);
   } while(status == NO_ERROR && bytes_read == num_bytes);
   return -1;
 }
@@ -219,8 +219,8 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Read)(benchmark::State& state) {
     state.ResumeTiming();
 
     uint32_t bytes_read;
-    status = mx_channel_read(channel, 0, buffer.data(), buffer.size(),
-                             &bytes_read, nullptr, 0, nullptr);
+    status = mx_channel_read(channel, 0, buffer.data(), nullptr,
+                             buffer.size(), 0, &bytes_read, nullptr);
     if (status != NO_ERROR) {
       state.SkipWithError("Failed to read from channel");
       return;
