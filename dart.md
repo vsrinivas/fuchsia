@@ -14,7 +14,8 @@ This is to ensure we use consistent versions of our dependencies across multiple
 builds.
 
 Likewise, no build output is placed in the source tree as everything goes under
-`out/`.
+`out/`. That includes `.packages` files which are generated as part of the build
+based on a target's dependency.
 
 
 ## Targets
@@ -28,6 +29,21 @@ Dart targets;
 - [`dart_test`][target-test] defines a group of test.
 
 See the definitions of each of these targets for how to use them.
+
+## Package layout
+
+We use a layout very similar to the [standard layout][package-layout].
+
+```
+my_package/
+  |
+  |-- pubspec.yaml       # Empty, used as a marker
+  |-- BUILD.gn           # Contains all targets
+  |-- .analysis_options  # Note: can be moved to a central location
+  |-- lib/               # dart_package contents
+  |-- bin/               # dart_binary's (target) or dart_tool's (host)
+  |-- test/              # dart_test contents
+```
 
 
 ## Managing third-party dependencies
@@ -141,7 +157,7 @@ symlinks.
 
 ## Known issues
 
-#### Multiple FIDL targets in a single BUILD file
+### Multiple FIDL targets in a single BUILD file
 
 If two FIDL targets coexist in a single BUILD file, their respective, generated
 files will currently be placed in the same subdirectory of the output directory.
@@ -151,16 +167,11 @@ This should not be a build issue now but could become one once the generated
 Dart files are placed in separate directories if clients do not correctly set up
 their dependencies.
 
-#### Location of `dart_test` targets
-
-The current implementation of `dart_package` forces test targets to be defined
-in their own build file. The best location for that file is the test directory
-itself.
-
 
 [pub]: https://www.dartlang.org/tools/pub/get-started "Pub"
 [dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
 [dart-3p-script]: https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py "Dependencies script"
+[package-layout]: https://www.dartlang.org/tools/pub/package-layout "Package layout"
 [target-package]: https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni "dart_package target"
 [target-app]: https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni "dart_package app"
 [target-tool]: https://fuchsia.googlesource.com/build/+/master/dart/dart_tool.gni "dart_tool target"
