@@ -6,9 +6,7 @@
 
 #include <magenta/compiler.h>
 
-__BEGIN_CDECLS
 #include <acpica/acpi.h>
-__END_CDECLS
 
 #include <assert.h>
 #include <err.h>

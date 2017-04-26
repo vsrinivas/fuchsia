@@ -44,6 +44,10 @@
 #ifndef __ACPI_H__
 #define __ACPI_H__
 
+#include <magenta/compiler.h>
+
+__BEGIN_CDECLS
+
 /*
  * Public include files for use by code that will interface to ACPICA.
  *
@@ -63,5 +67,7 @@
 #include "acpiosxf.h"           /* OSL interfaces (ACPICA-to-OS) */
 #include "acpixf.h"             /* ACPI core subsystem external interfaces */
 #include "platform/acenvex.h"   /* Extra environment-specific items */
+
+__END_CDECLS
 
 #endif /* __ACPI_H__ */

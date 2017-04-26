@@ -17,9 +17,7 @@
 #error "Unsupported architecture"
 #endif
 
-__BEGIN_CDECLS
 #include "acpi.h"
-__END_CDECLS
 
 #define _COMPONENT          ACPI_OS_SERVICES
 ACPI_MODULE_NAME    ("osmagenta")
