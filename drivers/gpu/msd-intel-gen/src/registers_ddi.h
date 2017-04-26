@@ -11,12 +11,6 @@
 
 namespace registers {
 
-class Ddi {
-public:
-    // Number of DDIs that the hardware provides.
-    static constexpr uint32_t kDdiCount = 5;
-};
-
 // DDI_AUX_CTL: Control register for the DisplayPort Aux channel
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf
 class DdiAuxControl : public RegisterBase {
@@ -75,7 +69,10 @@ public:
 // An instance of DdiRegs represents the registers for a particular DDI.
 class DdiRegs {
 public:
-    DdiRegs(uint32_t ddi_number) : ddi_number_(ddi_number) { DASSERT(ddi_number < Ddi::kDdiCount); }
+    // Number of DDIs that the hardware provides.
+    static constexpr uint32_t kDdiCount = 5;
+
+    DdiRegs(uint32_t ddi_number) : ddi_number_(ddi_number) { DASSERT(ddi_number < kDdiCount); }
 
     auto DdiAuxControl() { return GetReg<registers::DdiAuxControl>(); }
     auto DdiAuxData() { return GetReg<registers::DdiAuxData>(); }

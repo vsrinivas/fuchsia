@@ -314,7 +314,7 @@ class TestDevice : public RegisterIo::Hook {
 public:
     TestDevice(magma::PlatformMmio* mmio) : mmio_(mmio)
     {
-        for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+        for (uint32_t ddi_number = 0; ddi_number < registers::DdiRegs::kDdiCount; ++ddi_number) {
             dp_aux_[ddi_number].reset(new DpAux(mmio, ddi_number));
         }
     }
@@ -380,7 +380,7 @@ public:
 
     void Write32(uint32_t offset, uint32_t value)
     {
-        for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+        for (uint32_t ddi_number = 0; ddi_number < registers::DdiRegs::kDdiCount; ++ddi_number) {
             registers::DdiRegs ddi(ddi_number);
             if (offset == ddi.DdiAuxControl().addr()) {
                 WriteDdiAuxControl(ddi_number, value);
@@ -398,8 +398,8 @@ public:
     }
 
 private:
-    std::unique_ptr<DpAux> dp_aux_[registers::Ddi::kDdiCount];
-    bool prev_timeout_bit_[registers::Ddi::kDdiCount] = {};
+    std::unique_ptr<DpAux> dp_aux_[registers::DdiRegs::kDdiCount];
+    bool prev_timeout_bit_[registers::DdiRegs::kDdiCount] = {};
     magma::PlatformMmio* mmio_;
 };
 

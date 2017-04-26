@@ -464,7 +464,7 @@ void DisplayPort::PartiallyBringUpDisplays(RegisterIo* reg_io)
 
     uint32_t logged_count = 0;
 
-    for (uint32_t ddi_number = 0; ddi_number < registers::Ddi::kDdiCount; ++ddi_number) {
+    for (uint32_t ddi_number = 0; ddi_number < registers::DdiRegs::kDdiCount; ++ddi_number) {
         BaseEdid edid;
         // The following cast should be safe from C++ strict aliasing
         // problems because FetchEdidData() should act as if it writes its
