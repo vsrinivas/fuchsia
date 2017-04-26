@@ -12,7 +12,7 @@
 #include <arch.h>
 #include <arch/ops.h>
 #include <lib/console.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 #include <platform.h>
 #include <debug.h>
 
@@ -175,8 +175,9 @@ usage:
         }
 
         /* allocate a region to test in */
-        status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "memtest", len, &ptr, 0, 0, VMM_FLAG_COMMIT,
-                                            ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+        status_t err = VmAspace::kernel_aspace()->AllocContiguous(
+                "memtest", len, &ptr, 0, 0, VMM_FLAG_COMMIT,
+                ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (err < 0) {
             printf("error %d allocating test region\n", err);
             return -1;
@@ -192,7 +193,7 @@ usage:
         do_mem_tests(ptr, len);
 
         /* free the test memory */
-        vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
+        VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
     } else if (argc == 3) {
         void *ptr = argv[1].p;
         size_t len = argv[2].u;
