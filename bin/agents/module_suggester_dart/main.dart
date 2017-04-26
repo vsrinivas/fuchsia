@@ -44,7 +44,9 @@ class _AskHandlerImpl extends AskHandler {
           appUrl: web_view.kWebViewURL,
           headline: 'Go to ' + query.text,
           color: 0xff8080ff,
-          initialData: JSON.encode({"url": url}),
+          initialData: JSON.encode({
+            "view": {"uri": url}
+          }),
         ),
       );
     }
