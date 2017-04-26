@@ -399,10 +399,10 @@ static void dc_handle_new_device(device_t* dev) {
     driver_ctx_t* drv;
 
     list_for_every_entry(&list_drivers, drv, driver_ctx_t, node) {
-        if (dc_is_bindable(&drv->drv, dev->protocol_id,
+        if (dc_is_bindable(drv, dev->protocol_id,
                            dev->props, dev->prop_count, true)) {
             log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
-                drv->drv.name, dev->name);
+                drv->name, dev->name);
             if (dev->protocol_id == MX_PROTOCOL_PCI) {
                 dc_attempt_bind(drv, dev, "devhost:pci", "driver/bus-pci.so");
             } else {
@@ -420,7 +420,7 @@ static void dc_handle_new_device(device_t* dev) {
 static struct mx_bind_inst misc_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT);
 
-static bool is_misc_driver(mx_driver_t* drv) {
+static bool is_misc_driver(driver_ctx_t* drv) {
     return (drv->binding_size == sizeof(misc_device_binding)) &&
         (memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding)) == 0);
 }
@@ -429,13 +429,13 @@ void coordinator_new_driver(driver_ctx_t* ctx) {
     //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
     list_add_tail(&list_drivers, &ctx->node);
 
-    if (!strcmp(ctx->drv.name, "pci")) {
-        log(INFO, "driver: %s @ %s is PCI\n", ctx->drv.name, ctx->libname);
+    if (!strcmp(ctx->name, "pci")) {
+        log(INFO, "driver: %s @ %s is PCI\n", ctx->name, ctx->libname);
         dc_attempt_bind(ctx, &root_device, "devhost:pci", "");
         return;
     }
-    if (is_misc_driver(&ctx->drv)) {
-        log(INFO, "driver: %s @ %s is MISC\n", ctx->drv.name, ctx->libname);
+    if (is_misc_driver(ctx)) {
+        log(INFO, "driver: %s @ %s is MISC\n", ctx->name, ctx->libname);
         dc_attempt_bind(ctx, &misc_device, "devhost:misc", "");
         return;
     }

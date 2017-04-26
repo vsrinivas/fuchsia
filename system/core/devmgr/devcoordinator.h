@@ -89,7 +89,9 @@ typedef struct {
 
 #define DEV_CTX_DEAD       0x10
 typedef struct {
-    mx_driver_t drv;
+    const char* name;
+    const mx_bind_inst_t* binding;
+    uint32_t binding_size;
     struct list_node node;
     const char* libname;
     uint32_t flags;
@@ -107,7 +109,7 @@ void coordinator_new_driver(driver_ctx_t* ctx);
 
 void enumerate_drivers(void);
 
-bool dc_is_bindable(mx_driver_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(driver_ctx_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
                     bool autobind);
 #endif

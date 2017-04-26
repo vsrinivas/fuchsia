@@ -40,14 +40,14 @@ static void found_driver(magenta_note_driver_t* note, mx_bind_inst_t* bi, void* 
     }
 
     memset(ctx, 0, sizeof(driver_ctx_t));
-    ctx->drv.binding_size = bindlen;
-    ctx->drv.binding = (void*) (ctx + 1);
-    ctx->libname = (void*) (ctx->drv.binding + note->bindcount);
-    ctx->drv.name = ctx->libname + pathlen;
+    ctx->binding_size = bindlen;
+    ctx->binding = (void*) (ctx + 1);
+    ctx->libname = (void*) (ctx->binding + note->bindcount);
+    ctx->name = ctx->libname + pathlen;
 
-    memcpy((void*) ctx->drv.binding, bi, bindlen);
+    memcpy((void*) ctx->binding, bi, bindlen);
     memcpy((void*) ctx->libname, libname, pathlen);
-    memcpy((void*) ctx->drv.name, note->name, namelen);
+    memcpy((void*) ctx->name, note->name, namelen);
 
 #if VERBOSE_DRIVER_LOAD
     printf("found driver: %s\n", (char*) cookie);
