@@ -35,10 +35,17 @@ SECTIONS
         __code_end = .;
     } =0x9090
 
-    .rodata : ALIGN(4096) {
-        __rodata_start = .;
-        *(.rodata*)
-        *(.gnu.linkonce.r.*)
+    . = ALIGN(4096);
+    __rodata_start = .;
+
+    .note.gnu.build-id : {
+        __build_id_note_start = .;
+        *(.note.gnu.build-id)
+        __build_id_note_end = .;
+    }
+
+    .rodata : {
+        *(.rodata* .gnu.linkonce.r.*)
     }
 
     /*
@@ -99,5 +106,5 @@ SECTIONS
     /* used by the heap and other early boot time allocators */
     _end_of_ram = . + (4 * 1024 * 1024);
 
-    /DISCARD/ : { *(.comment .note) }
+    /DISCARD/ : { *(.comment) }
 }

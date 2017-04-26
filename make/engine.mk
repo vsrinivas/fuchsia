@@ -116,7 +116,7 @@ GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-protot
 GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS := -DASSEMBLY
-GLOBAL_LDFLAGS := -nostdlib
+GLOBAL_LDFLAGS := -nostdlib --build-id
 # $(addprefix -L,$(LKINC)) XXX
 GLOBAL_MODULE_LDFLAGS :=
 
@@ -157,7 +157,7 @@ USER_ASMFLAGS :=
 # executables and for shared libraries.
 USER_DYNAMIC_LDFLAGS := \
     -z combreloc -z relro -z now -z text \
-    --hash-style=gnu --eh-frame-hdr --build-id
+    --hash-style=gnu --eh-frame-hdr
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong

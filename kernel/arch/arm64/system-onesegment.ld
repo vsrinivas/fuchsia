@@ -27,22 +27,35 @@ SECTIONS
         __code_end = .;
     }
 
-    .rodata : ALIGN(4096) {
-        __rodata_start = .;
-        *(.rodata .rodata.* .gnu.linkonce.r.*)
+    . = ALIGN(4096);
+    __rodata_start = .;
+
+    .note.gnu.build-id : {
+        __build_id_note_start = .;
+        *(.note.gnu.build-id)
+        __build_id_note_end = .;
+    }
+
+    .rodata : {
+        *(.rodata* .gnu.linkonce.r.*)
     }
 
     /*
-     * extra linker scripts tend to insert sections just after .rodata,
-     * so we want to make sure this symbol comes after anything inserted above,
-     * but not aligned to the next section necessarily.
+     * Any read-only data "orphan" sections will be inserted here.
+     * Ideally we'd put those into the .rodata output section, but
+     * there isn't a way to do that that guarantees all same-named
+     * input sections collect together as a contiguous unit, which
+     * is what we need them for.  Linkers differ in how they'll
+     * place another dummy section here relative to the orphans, so
+     * there's no good way to define __rodata_end to be exactly the
+     * end of all the orphans sections.  But the only use we have
+     * for __rodata_end is to round it up to page size anyway, so
+     * just define it inside the .data section below, which is
+     * exactly the end of the orphans rounded up to the next page.
      */
-    .dummy_post_rodata : {
-        __rodata_end = .;
-    }
 
     .data : ALIGN(4096) {
-        /* writable data  */
+        __rodata_end = .;
         __data_start = .;
         *(.data .data.* .gnu.linkonce.d.*)
     }
