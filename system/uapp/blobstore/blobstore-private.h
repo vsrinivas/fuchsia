@@ -26,18 +26,23 @@ typedef uint32_t BlobFlags;
 // After Open;
 constexpr BlobFlags kBlobStateEmpty       = 0x00000000; // Not yet allocated
 // After Ioctl configuring size:
-constexpr BlobFlags kBlobStateMerkleWrite = 0x00000001; // Merkle tree is being written
-constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
+constexpr BlobFlags kBlobStateMerkleWrite = 0x00010000; // Merkle tree is being written
+constexpr BlobFlags kBlobStateDataWrite   = 0x00020000; // Data is being written
 // After Writing:
-constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
+constexpr BlobFlags kBlobStateReadable    = 0x00040000; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobStateReleasing   = 0x00000008; // In the process of unlinking
+constexpr BlobFlags kBlobStateReleasing   = 0x00080000; // In the process of unlinking
 // Unrecoverable error state:
-constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
-constexpr BlobFlags kBlobStateMask        = 0x000000FF;
+constexpr BlobFlags kBlobStateError       = 0x00100000; // Unrecoverable error state
+constexpr BlobFlags kBlobStateMask        = 0x00FF0000;
+
 // Informational non-state flags:
-constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
-constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
+constexpr BlobFlags kBlobFlagSync         = 0x01000000; // The blob is being written to disk
+constexpr BlobFlags kBlobFlagDeletable    = 0x02000000; // This node should be unlinked when closed
+constexpr BlobFlags kBlobOtherMask        = 0xFF000000;
+
+static_assert(((kBlobStateMask | kBlobOtherMask) & V_FLAG_RESERVED_MASK) == 0,
+              "Blobstore flags conflict with VFS-reserved flags");
 
 class Blob : public mxtl::DoublyLinkedListable<mxtl::RefPtr<Blob>>,
              public mxtl::RefCounted<Blob> {
