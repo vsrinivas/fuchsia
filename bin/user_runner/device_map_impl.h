@@ -18,7 +18,7 @@ namespace modular {
 // See services/user/device_map.fidl for details.
 //
 // Mostly scaffolding to demonstrate a complete page client.
-class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
+class DeviceMapImpl : DeviceMap, PageClient {
  public:
   DeviceMapImpl(const std::string& device_name,
                 const std::string& device_id,
@@ -32,18 +32,14 @@ class DeviceMapImpl : DeviceMap, ledger::PageWatcher {
   // |DeviceMap|
   void Query(const QueryCallback& callback) override;
 
-  // |ledger::PageWatcher|
-  void OnChange(ledger::PageChangePtr page,
-                ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+  // |PageClient|
+  void OnChange(const std::string& key, const std::string& value) override;
 
-  const std::string device_name_;
-  ledger::Page* const page_;
+  // |PageClient|
+  void OnDelete(const std::string& key) override;
 
   fidl::BindingSet<DeviceMap> bindings_;
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
-  PageClient page_client_;
   OperationQueue operation_queue_;
 
   // Operations implemented here.

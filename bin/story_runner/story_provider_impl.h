@@ -32,7 +32,7 @@ namespace modular {
 class Resolver;
 class StoryImpl;
 
-class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
+class StoryProviderImpl : StoryProvider, PageClient {
  public:
   StoryProviderImpl(
       const Scope* user_scope,
@@ -113,10 +113,11 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
   // |StoryProvider|
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
 
-  // |PageWatcher|
-  void OnChange(ledger::PageChangePtr page,
-                ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+  // |PageClient|
+  void OnChange(const std::string& key, const std::string& value) override;
+
+  // |PageClient|
+  void OnDelete(const std::string& key) override;
 
   const Scope* const user_scope_;
 
@@ -137,11 +138,6 @@ class StoryProviderImpl : StoryProvider, ledger::PageWatcher {
 
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;
-
-  // The last snapshot received from the root page.
-  PageClient root_client_;
-
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 

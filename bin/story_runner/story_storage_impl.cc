@@ -342,20 +342,8 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
 };
 
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
-    : page_watcher_binding_(this),
-      story_page_(story_page),
-      story_client_("StoryStorageImpl") {
-  FTL_DCHECK(story_page_);
-  story_page_->GetSnapshot(
-      story_client_.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-            << "StoryStorageImpl() Ledger.GetSnapshot() "
-            << status;
-        }
-      });
-}
+    : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
+      story_page_(story_page) {}
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
@@ -400,35 +388,12 @@ void StoryStorageImpl::Sync(const SyncCallback& callback) {
   new SyncCall(&operation_queue_, callback);
 }
 
-// |PageWatcher|
-void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
-                                ledger::ResultState result_state,
-                                const OnChangeCallback& callback) {
-  if (!page.is_null() && !page->changes.is_null()) {
-    for (auto& entry : page->changes) {
-      for (auto& watcher_entry : watchers_) {
-        // Only process this key if its a link key.
-        if (to_string(entry->key) == watcher_entry.first) {
-          std::string value_as_string;
-          if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-            FTL_LOG(ERROR) << "StoryStorageImpl::OnChange() "
-                           << "Unable to extract data.";
-            continue;
-          }
-          watcher_entry.second(value_as_string);
-        }
-      }
+void StoryStorageImpl::OnChange(const std::string& key, const std::string& value) {
+  for (auto& watcher_entry : watchers_) {
+    if (key == watcher_entry.first) {
+      watcher_entry.second(value);
     }
   }
-
-  // Every time we receive a group of OnChange notifications, we update the
-  // root page snapshot so we see the current state. Note that pending
-  // Operation instances hold on to the previous value until they finish. New
-  // Operation instances created after the update receive the new snapshot.
-  //
-  // For continued updates, we only request the snapshot once, in the
-  // last OnChange() notification.
-  callback(story_client_.Update(result_state));
 }
 
 }  // namespace modular

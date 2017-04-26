@@ -668,25 +668,13 @@ StoryProviderImpl::StoryProviderImpl(
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
-    : user_scope_(user_scope),
+    : PageClient("StoryProviderImpl", root_page, kStoryKeyPrefix),
+      user_scope_(user_scope),
       ledger_(ledger),
       root_page_(root_page),
       story_shell_(std::move(story_shell)),
-      root_client_("StoryProviderImpl"),
-      page_watcher_binding_(this),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
-  root_page_->GetSnapshot(
-      root_client_.NewRequest(), to_array(kStoryKeyPrefix),
-      page_watcher_binding_.NewBinding(),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "StoryProviderImpl() Ledger.GetSnapshot() "
-              << status;
-        }
-      });
-
   // We must initialize story_ids_ with the IDs of currently existing
   // stories *before* we can process any calls that might create a new
   // story. Hence we bind the interface request only after this call
@@ -816,59 +804,37 @@ void StoryProviderImpl::PreviousStories(
   new PreviousStoriesCall(&operation_queue_, root_page_, callback);
 }
 
-// |PageWatcher|
-void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
-                                 ledger::ResultState result_state,
-                                 const OnChangeCallback& callback) {
-  FTL_DCHECK(!page.is_null());
-  FTL_DCHECK(!page->changes.is_null());
+// |PageClient|
+void StoryProviderImpl::OnChange(const std::string& key,
+                                 const std::string& value) {
+  auto story_data = StoryData::New();
+  if (!XdrRead(value, &story_data, XdrStoryData)) {
+    return;
+  }
 
-  for (auto& entry : page->changes) {
-    std::string value_as_string;
-    if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
-      FTL_LOG(ERROR) << "StoryProviderImpl::OnChange() "
-                     << "Unable to extract data.";
-      continue;
-    }
+  // If this is a new story, guard against double using its key.
+  story_ids_.insert(story_data->story_info->id.get());
 
-    auto story_data = StoryData::New();
-    if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
-      continue;
-    }
-
-    // If this is a new story, guard against double using its key.
-    story_ids_.insert(story_data->story_info->id.get());
-
-    watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
+  watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
       watcher->OnChange(story_data->story_info.Clone());
     });
 
-    // TODO(mesch): If there is an update for a running story, the story
-    // controller needs to be notified.
-  }
+  // TODO(mesch): If there is an update for a running story, the story
+  // controller needs to be notified.
+}
 
-  for (auto& key : page->deleted_keys) {
-    // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
-    const fidl::String story_id =
-        to_string(key).substr(sizeof(kStoryKeyPrefix) - 1);
+// |PageClient|
+void StoryProviderImpl::OnDelete(const std::string& key) {
+  // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
+  const fidl::String story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
 
-    watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
-        watcher->OnDelete(story_id);
-      });
+  watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
+      watcher->OnDelete(story_id);
+    });
 
-    new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
-                        &story_controllers_, true /* already_deleted */,
-                        [] {});
-  }
-
-  // Every time we receive a group of OnChange notifications, we update the
-  // root page snapshot so we see the current state. Note that pending
-  // Operation instances hold on to the previous value until they finish. New
-  // Operation instances created after the update receive the new snapshot.
-  //
-  // For continued updates, we only request the snapshot once, in the
-  // last OnChange() notification.
-  callback(root_client_.Update(result_state));
+  new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+                      &story_controllers_, true /* already_deleted */,
+                      [] {});
 }
 
 }  // namespace modular

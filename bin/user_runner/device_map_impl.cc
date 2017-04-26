@@ -105,16 +105,8 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_id,
                              const std::string& device_profile,
                              ledger::Page* const page)
-    : page_(page), page_watcher_binding_(this), page_client_("DeviceMapImpl") {
-  page_->GetSnapshot(
-      page_client_.NewRequest(), to_array(kDeviceKeyPrefix),
-      page_watcher_binding_.NewBinding(), [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
-        }
-      });
-
-  WriteDeviceData(device_name, device_id, device_profile, page_);
+    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix) {
+  WriteDeviceData(device_name, device_id, device_profile, page);
 }
 
 DeviceMapImpl::~DeviceMapImpl() = default;
@@ -124,26 +116,16 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
+  new QueryCall(&operation_queue_, page_snapshot(), callback);
 }
 
-void DeviceMapImpl::OnChange(ledger::PageChangePtr page,
-                             ledger::ResultState result_state,
-                             const OnChangeCallback& callback) {
-  bool update = false;
-  for (auto& entry : page->changes) {
-    FTL_LOG(INFO) << "New Device: " << to_string(entry->key);
-    update = true;
-  }
+void DeviceMapImpl::OnChange(const std::string& key,
+                             const std::string& value) {
+  FTL_LOG(INFO) << "New Device: " << key;
+}
 
-  // We request a new page snapshot if we see a new device. We have to
-  // do this regardless of continuation state, because there might be
-  // no keys we listen to in the last continuation.
-  if (update) {
-    callback(page_client_.NewRequest());
-  } else {
-    callback(nullptr);
-  }
+void DeviceMapImpl::OnDelete(const std::string& key) {
+  FTL_LOG(INFO) << "Deleted Device: " << key;
 }
 
 }  // namespace modular

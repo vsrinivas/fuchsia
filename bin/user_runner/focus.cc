@@ -90,18 +90,9 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 
 FocusHandler::FocusHandler(const fidl::String& device_name,
                            ledger::Page* const page)
-    : page_(page),
-      page_client_("FocusHandler"),
-      page_watcher_binding_(this),
+    : PageClient("FocusHandler", page, kFocusKeyPrefix),
+      page_(page),
       device_name_(device_name) {
-  page_->GetSnapshot(
-      page_client_.NewRequest(), to_array(kFocusKeyPrefix),
-      page_watcher_binding_.NewBinding(),
-      [](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Page.GetSnapshot() status: " << status;
-        }
-      });
 }
 
 FocusHandler::~FocusHandler() = default;
@@ -117,7 +108,7 @@ void FocusHandler::AddControllerBinding(
 }
 
 void FocusHandler::Query(const QueryCallback& callback) {
-  new QueryCall(&operation_queue_, page_client_.page_snapshot(), callback);
+  new QueryCall(&operation_queue_, page_snapshot(), callback);
 }
 
 void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
@@ -174,32 +165,15 @@ void FocusHandler::WatchRequest(
       FocusRequestWatcherPtr::Create(std::move(watcher)));
 }
 
-void FocusHandler::OnChange(ledger::PageChangePtr page,
-                            ledger::ResultState result_state,
-                            const OnChangeCallback& callback) {
-  for (auto& entry : page->changes) {
-    std::string value;
-    if (!mtl::StringFromVmo(entry->value, &value)) {
-      FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                     << " couldn't be copied.";
-      return;
-    }
-
-    auto focus_info = FocusInfo::New();
-    if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
-      continue;
-    }
-
-    for (const auto& watcher : change_watchers_) {
-      watcher->OnFocusChange(focus_info.Clone());
-    }
+void FocusHandler::OnChange(const std::string& key,
+                            const std::string& value) {
+  auto focus_info = FocusInfo::New();
+  if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
+    return;
   }
 
-  if (result_state != ledger::ResultState::COMPLETED &&
-      result_state != ledger::ResultState::PARTIAL_COMPLETED) {
-    callback(nullptr);
-  } else {
-    callback(page_client_.NewRequest());
+  for (const auto& watcher : change_watchers_) {
+    watcher->OnFocusChange(focus_info.Clone());
   }
 }
 

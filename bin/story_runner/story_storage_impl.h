@@ -23,7 +23,7 @@ namespace modular {
 // A wrapper around a ledger page to store links in a story that runs
 // asynchronous operations pertaining to one Story instance in a
 // dedicated OperationQueue instance.
-class StoryStorageImpl : ledger::PageWatcher {
+class StoryStorageImpl : public PageClient {
  public:
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
@@ -52,13 +52,8 @@ class StoryStorageImpl : ledger::PageWatcher {
   void Sync(const SyncCallback& callback);
 
  private:
-  // |PageWatcher|
-  void OnChange(ledger::PageChangePtr page,
-                ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
-
-  // This instance is a watcher on the ledger Page it stores data in.
-  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  // |PageClient|
+  void OnChange(const std::string& key, const std::string& value) override;
 
   // Clients to notify when the value of a given link changes in the
   // ledger page. The first element in the pair is the key for the link path.
@@ -66,9 +61,6 @@ class StoryStorageImpl : ledger::PageWatcher {
 
   // The ledger page the story data is stored in.
   ledger::Page* const story_page_;
-
-  // The current snapshot of the page obtained by watching it.
-  PageClient story_client_;
 
   // All asynchronous operations are sequenced by this operation
   // queue.

@@ -36,7 +36,7 @@ class XdrContext;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-class AgentRunner : AgentProvider, ledger::PageWatcher {
+class AgentRunner : AgentProvider, PageClient {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
@@ -104,10 +104,11 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   // |AgentProvider|
   void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
 
-  // |PageWatcher|
-  void OnChange(ledger::PageChangePtr page,
-                ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+  // |PageClient|
+  void OnChange(const std::string& key, const std::string& value) override;
+
+  // |PageClient|
+  void OnDelete(const std::string& key) override;
 
   // agent URL -> { task id -> queue name }
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
@@ -140,10 +141,6 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   fidl::BindingSet<AgentProvider> agent_provider_bindings_;
   fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
 
-  // A watcher for any changes happening to the trigger list on the ledger.
-  fidl::Binding<ledger::PageWatcher> watcher_binding_;
-  PageClient page_client_;
-
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
 
@@ -152,6 +149,7 @@ class AgentRunner : AgentProvider, ledger::PageWatcher {
   // Operations implemented here.
   class InitializeCall;
   class UpdateCall;
+  class DeleteCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunner);
 };

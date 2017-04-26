@@ -114,35 +114,45 @@ class AgentRunner::UpdateCall : Operation<void> {
  public:
   UpdateCall(OperationContainer* const container,
              AgentRunner* const agent_runner,
-             ledger::PageChangePtr page,
-             ResultCall result_call)
-      : Operation(container, std::move(result_call)),
+             const std::string& key,
+             const std::string& value)
+      : Operation(container, []{}),
         agent_runner_(agent_runner),
-        page_(std::move(page)) {
+        key_(key),
+        value_(value) {
     Ready();
   }
 
  private:
   void Run() override {
-    for (auto& entry : page_->changes) {
-      std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                      entry->key.size());
-      std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-        continue;
-      }
-      agent_runner_->AddedTrigger(key, value);
-    }
-
-    for (auto& key : page_->deleted_keys) {
-      agent_runner_->DeletedTrigger(to_string(key));
-    }
+    agent_runner_->AddedTrigger(key_, value_);
   }
 
   AgentRunner* const agent_runner_;
-  ledger::PageChangePtr page_;
+  const std::string key_;
+  const std::string value_;
   FTL_DISALLOW_COPY_AND_ASSIGN(UpdateCall);
+};
+
+class AgentRunner::DeleteCall : Operation<void> {
+ public:
+  DeleteCall(OperationContainer* const container,
+             AgentRunner* const agent_runner,
+             const std::string& key)
+      : Operation(container, []{}),
+        agent_runner_(agent_runner),
+        key_(key) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    agent_runner_->DeletedTrigger(key_);
+  }
+
+  AgentRunner* const agent_runner_;
+  const std::string key_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
 AgentRunner::AgentRunner(
@@ -151,22 +161,14 @@ AgentRunner::AgentRunner(
     ledger::LedgerRepository* const ledger_repository,
     ledger::PagePtr page,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
-    : application_launcher_(application_launcher),
+    : PageClient("AgentRunner", page.get(), nullptr),
+      application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
       page_(std::move(page)),
       user_intelligence_provider_(user_intelligence_provider),
-      watcher_binding_(this),
-      page_client_("AgentRunner"),
       terminating_(std::make_shared<bool>(false)) {
-  page_->GetSnapshot(page_client_.NewRequest(), nullptr,
-                     watcher_binding_.NewBinding(), [](ledger::Status status) {
-                       if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR)
-                             << "Ledger operation returned status: " << status;
-                       }
-                     });
-  new InitializeCall(&operation_queue_, this, page_client_.page_snapshot());
+  new InitializeCall(&operation_queue_, this, page_snapshot());
 }
 
 AgentRunner::~AgentRunner() = default;
@@ -470,11 +472,12 @@ void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
       AgentProviderWatcherPtr::Create(std::move(watcher)));
 }
 
-void AgentRunner::OnChange(ledger::PageChangePtr page,
-                           ledger::ResultState result_state,
-                           const OnChangeCallback& callback) {
-  new UpdateCall(&operation_queue_, this, std::move(page),
-                 [callback] { callback(nullptr); });
+void AgentRunner::OnChange(const std::string& key, const std::string& value) {
+  new UpdateCall(&operation_queue_, this, key, value);
+}
+
+void AgentRunner::OnDelete(const std::string& key) {
+  new DeleteCall(&operation_queue_, this, key);
 }
 
 }  // namespace modular

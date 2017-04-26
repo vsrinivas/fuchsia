@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 
@@ -36,13 +37,26 @@ namespace modular {
 // the methods called on that snapshot never return.
 //
 // The same behavior was with a shared_ptr could be accomplished with
-// a duplicate PageSnaphotPtr for each Operation instance that needs
+// a duplicate PageSnapshotPtr for each Operation instance that needs
 // one, but PageSnapshot doesn't have a duplicate method.
-class PageClient {
+class PageClient : ledger::PageWatcher {
  public:
   // Takes a context name as a label for the error messages it logs.
-  explicit PageClient(const std::string& context);
+  explicit PageClient(const std::string& context,
+                      ledger::Page* page,
+                      const char* prefix);
   ~PageClient();
+
+  // Returns the current page snapshot.
+  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot() {
+    return page_snapshot_;
+  }
+
+ private:
+  // Derived classes implement these methods as needed. The default
+  // implementation does nothing.
+  virtual void OnChange(const std::string& key, const std::string& value);
+  virtual void OnDelete(const std::string& key);
 
   // Replaces the previous page snapshot with a newly requested one.
   fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
@@ -53,14 +67,15 @@ class PageClient {
   fidl::InterfaceRequest<ledger::PageSnapshot> Update(
       ledger::ResultState result_state);
 
-  // Returns the current page snapshot.
-  std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot() {
-    return page_snapshot_;
-  }
+  // |PageWatcher|
+  void OnChange(ledger::PageChangePtr page,
+                ledger::ResultState result_state,
+                const OnChangeCallback& callback) override;
 
- private:
+  fidl::Binding<ledger::PageWatcher> binding_;
   const std::string context_;
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
 

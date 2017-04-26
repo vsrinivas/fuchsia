@@ -42,9 +42,11 @@ source_set("ledger") {
   ]
 
   deps = [
+    ":array_to_string",
     "//apps/ledger/services/public",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 
