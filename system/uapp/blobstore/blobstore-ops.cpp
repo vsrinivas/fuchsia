@@ -24,7 +24,7 @@
 namespace blobstore {
 
 void VnodeBlob::Release() {
-    blobstore->ReleaseBlob(mxtl::move(blob));
+    blobstore_->ReleaseBlob(this);
     delete this;
 }
 
@@ -47,7 +47,7 @@ ssize_t VnodeBlob::Read(void* data, size_t len, size_t off) {
     }
 
     size_t actual;
-    mx_status_t status = blob->Read(data, len, off, &actual);
+    mx_status_t status = ReadInternal(data, len, off, &actual);
     if (status != NO_ERROR) {
         return status;
     }
@@ -59,7 +59,7 @@ ssize_t VnodeBlob::Write(const void* data, size_t len, size_t off) {
         return ERR_NOT_FILE;
     }
     size_t actual;
-    mx_status_t status = blob->Write(data, len, &actual);
+    mx_status_t status = WriteInternal(data, len, &actual);
     if (status != NO_ERROR) {
         return status;
     }
@@ -85,17 +85,17 @@ mx_status_t VnodeBlob::Lookup(fs::Vnode** out, const char* name, size_t len) {
         return status;
     }
     VnodeBlob* vn;
-    if ((status = Blobstore::LookupBlob(blobstore, digest, &vn)) < 0) {
+    if ((status = blobstore_->LookupBlob(digest, &vn)) < 0) {
         return status;
     }
-    *out = mxtl::move(vn);
+    *out = vn;
     return NO_ERROR;
 }
 
 mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     a->mode = IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
     a->inode = 0;
-    a->size = IsDirectory() ? 0 : blob->SizeData();
+    a->size = IsDirectory() ? 0 : SizeData();
     a->nlink = 1;
     a->create_time = 0;
     a->modify_time = 0;
@@ -114,7 +114,7 @@ mx_status_t VnodeBlob::Create(fs::Vnode** out, const char* name, size_t len, uin
         return status;
     }
     VnodeBlob* vn;
-    if ((status = Blobstore::NewBlob(blobstore, digest, &vn)) != NO_ERROR) {
+    if ((status = blobstore_->NewBlob(digest, &vn)) != NO_ERROR) {
         return status;
     }
     *out = mxtl::move(vn);
@@ -138,7 +138,7 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
             if (status != NO_ERROR) {
                 error("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
             }
-            return blobstore->Unmount();
+            return blobstore_->Unmount();
         }
         case IOCTL_BLOBSTORE_BLOB_INIT: {
             if (IsDirectory()) {
@@ -149,7 +149,7 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
                 return ERR_INVALID_ARGS;
             }
             const blob_ioctl_config_t* config = static_cast<const blob_ioctl_config_t*>(in_buf);
-            return blob->SpaceAllocate(config->size_data);
+            return SpaceAllocate(config->size_data);
         }
         default: {
             return ERR_NOT_SUPPORTED;
@@ -168,11 +168,11 @@ mx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
     VnodeBlob* out;
     if ((status = digest.Parse(name, len)) != NO_ERROR) {
         return status;
-    } else if ((status = Blobstore::LookupBlob(blobstore, digest, &out)) < 0) {
+    } else if ((status = blobstore_->LookupBlob(digest, &out)) < 0) {
         return status;
     }
-    out->blob->QueueUnlink();
-    out->RefRelease(); // We looked up the blob -- release it too.
+    out->QueueUnlink();
+    out->RefRelease();
     return NO_ERROR;
 }
 

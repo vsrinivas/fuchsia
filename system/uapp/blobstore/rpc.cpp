@@ -27,10 +27,10 @@ namespace blobstore {
 mx_status_t VnodeBlob::GetHandles(uint32_t flags, mx_handle_t* hnds,
                                   uint32_t* type, void* extra, uint32_t* esize) {
     *type = MXIO_PROTOCOL_REMOTE;
-    if (blob == nullptr) {
+    if (IsDirectory()) {
         return 0;
     }
-    mx_status_t r = blob->GetReadableEvent(&hnds[0]);
+    mx_status_t r = GetReadableEvent(&hnds[0]);
     if (r < 0) {
         return r;
     }

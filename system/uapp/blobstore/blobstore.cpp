@@ -170,14 +170,14 @@ mx_status_t writeblk(int fd, uint64_t bno, const void* data) {
     return NO_ERROR;
 }
 
-mx_status_t Blob::InitVmos() {
+mx_status_t VnodeBlob::InitVmos() {
     if (vmo_blob_ != MX_HANDLE_INVALID) {
         return NO_ERROR;
     }
 
     mx_status_t status;
-    int fd = vn->blobstore->blockfd_;
-    blobstore_inode_t* inode = &vn->blobstore->node_map_[map_index_];
+    int fd = blobstore_->blockfd_;
+    blobstore_inode_t* inode = &blobstore_->node_map_[map_index_];
     uint64_t merkle_vmo_size = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
     uint64_t data_vmo_size = BlobDataBlocks(*inode) * kBlobstoreBlockSize;
 
@@ -229,15 +229,16 @@ fail:
     return status;
 }
 
-uint64_t Blob::SizeData() const {
+uint64_t VnodeBlob::SizeData() const {
     if (GetState() == kBlobStateReadable) {
-        auto inode = &vn->blobstore->node_map_[map_index_];
+        auto inode = &blobstore_->node_map_[map_index_];
         return inode->blob_size;
     }
     return 0;
 }
 
-Blob::Blob(const merkle::Digest& digest) :
+VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest) :
+    blobstore_(bs),
     vmo_merkle_tree_(MX_HANDLE_INVALID),
     vmo_merkle_tree_addr_(0),
     vmo_blob_(MX_HANDLE_INVALID),
@@ -249,8 +250,18 @@ Blob::Blob(const merkle::Digest& digest) :
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
-void Blob::BlobCloseHandles() {
-    auto inode = &vn->blobstore->node_map_[map_index_];
+VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs) :
+    blobstore_(bs),
+    vmo_merkle_tree_(MX_HANDLE_INVALID),
+    vmo_merkle_tree_addr_(0),
+    vmo_blob_(MX_HANDLE_INVALID),
+    vmo_blob_addr_(0),
+    readable_event_(MX_HANDLE_INVALID),
+    bytes_written_(0),
+    flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
+
+void VnodeBlob::BlobCloseHandles() {
+    auto inode = &blobstore_->node_map_[map_index_];
     if (vmo_merkle_tree_addr_ != 0) {
         uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
         mx_vmar_unmap(mx_vmar_root_self(), vmo_merkle_tree_addr_, size_merkle);
@@ -274,20 +285,11 @@ void Blob::BlobCloseHandles() {
     readable_event_ = MX_HANDLE_INVALID;
 }
 
-Blob::~Blob() {
+VnodeBlob::~VnodeBlob() {
     BlobCloseHandles();
 }
 
-mxtl::RefPtr<Blob> Blob::Create(const merkle::Digest& digest) {
-    AllocChecker ac;
-    mxtl::RefPtr<Blob> blob = mxtl::AdoptRef(new (&ac) Blob(digest));
-    if (!ac.check()) {
-        return nullptr;
-    }
-    return blob;
-}
-
-mx_status_t Blob::SpaceAllocate(uint64_t size_data) {
+mx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     if (size_data == 0) {
         return ERR_INVALID_ARGS;
     }
@@ -297,12 +299,12 @@ mx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
     // Find a free node, mark it as reserved.
     mx_status_t status;
-    if ((status = vn->blobstore->AllocateNode(&map_index_)) != NO_ERROR) {
+    if ((status = blobstore_->AllocateNode(&map_index_)) != NO_ERROR) {
         return status;
     }
 
     // Initialize the inode with known fields
-    blobstore_inode_t* inode = &vn->blobstore->node_map_[map_index_];
+    blobstore_inode_t* inode = &blobstore_->node_map_[map_index_];
     memset(inode->merkle_root_hash, 0, merkle::Digest::kLength);
     inode->blob_size = size_data;
     inode->num_blocks = MerkleTreeBlocks(*inode) + BlobDataBlocks(*inode);
@@ -329,7 +331,7 @@ mx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     }
 
     // Allocate space for the blob
-    if ((status = vn->blobstore->AllocateBlocks(inode->num_blocks, &inode->start_block)) != NO_ERROR) {
+    if ((status = blobstore_->AllocateBlocks(inode->num_blocks, &inode->start_block)) != NO_ERROR) {
         goto fail;
     }
 
@@ -338,14 +340,14 @@ mx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
 fail:
     BlobCloseHandles();
-    vn->blobstore->FreeNode(map_index_);
+    blobstore_->FreeNode(map_index_);
     return status;
 }
 
 // A helper function for dumping either the Merkle Tree or the actual blob data
 // to both (1) The containing VMO, and (2) disk.
-mx_status_t Blob::WriteShared(const void** data, size_t* len, size_t* actual,
-                              uint64_t maxlen, mx_handle_t vmo, uint64_t start_block) {
+mx_status_t VnodeBlob::WriteShared(const void** data, size_t* len, size_t* actual,
+                                   uint64_t maxlen, mx_handle_t vmo, uint64_t start_block) {
     size_t to_write = mxtl::min(*len, maxlen - bytes_written_);
     mx_status_t status = vmo_write_exact(vmo, *data, bytes_written_, to_write);
     if (status != NO_ERROR) {
@@ -356,7 +358,7 @@ mx_status_t Blob::WriteShared(const void** data, size_t* len, size_t* actual,
     uint64_t n = bytes_written_ / kBlobstoreBlockSize;
     uint64_t n_end = (bytes_written_ + to_write) / kBlobstoreBlockSize;
     while (n < n_end) {
-        status = vn_dump_block(vn->blobstore->blockfd_, vmo, n, n + start_block, false);
+        status = vn_dump_block(blobstore_->blockfd_, vmo, n, n + start_block, false);
         if (status != NO_ERROR) {
             return status;
         }
@@ -367,7 +369,7 @@ mx_status_t Blob::WriteShared(const void** data, size_t* len, size_t* actual,
     // a partial block at the very end.
     if ((bytes_written_ + to_write == maxlen) &&
         (maxlen % kBlobstoreBlockSize != 0)) {
-        status = vn_dump_block(vn->blobstore->blockfd_, vmo, n, n + start_block, true);
+        status = vn_dump_block(blobstore_->blockfd_, vmo, n, n + start_block, true);
         if (status != NO_ERROR) {
             return status;
         }
@@ -381,7 +383,7 @@ mx_status_t Blob::WriteShared(const void** data, size_t* len, size_t* actual,
     return NO_ERROR;
 }
 
-mx_status_t Blob::WriteMetadata() {
+mx_status_t VnodeBlob::WriteMetadata() {
     assert(GetState() == kBlobStateDataWrite);
 
     // All data has been written to the containing VMO
@@ -401,21 +403,21 @@ mx_status_t Blob::WriteMetadata() {
     // This 'kBlobFlagSync' is currently not used, but it indicates when the sync is
     // complete.
     flags_ |= kBlobFlagSync;
-    auto inode = &vn->blobstore->node_map_[map_index_];
+    auto inode = &blobstore_->node_map_[map_index_];
 
     // Write block allocation bitmap
-    if (vn->blobstore->WriteBitmap(inode->num_blocks, inode->start_block) != NO_ERROR) {
+    if (blobstore_->WriteBitmap(inode->num_blocks, inode->start_block) != NO_ERROR) {
         return ERR_IO;
     }
 
     // Flush the block allocation bitmap to disk
-    fsync(vn->blobstore->blockfd_);
+    fsync(blobstore_->blockfd_);
 
     // Update the on-disk hash
     memcpy(inode->merkle_root_hash, &digest_[0], merkle::Digest::kLength);
 
     // Write back the blob node
-    if (vn->blobstore->WriteNode(map_index_)) {
+    if (blobstore_->WriteNode(map_index_)) {
         return ERR_IO;
     }
 
@@ -423,13 +425,13 @@ mx_status_t Blob::WriteMetadata() {
     return NO_ERROR;
 }
 
-mx_status_t Blob::Write(const void* data, size_t len, size_t* actual) {
+mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actual) {
     *actual = 0;
     if (len == 0) {
         return NO_ERROR;
     }
 
-    auto inode = &vn->blobstore->node_map_[map_index_];
+    auto inode = &blobstore_->node_map_[map_index_];
     mx_status_t status;
     if (GetState() == kBlobStateMerkleWrite) {
         uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
@@ -475,7 +477,7 @@ mx_status_t Blob::Write(const void* data, size_t len, size_t* actual) {
     return ERR_BAD_STATE;
 }
 
-mx_status_t Blob::GetReadableEvent(mx_handle_t* out) {
+mx_status_t VnodeBlob::GetReadableEvent(mx_handle_t* out) {
     mx_status_t status;
     // This is the first 'wait until read event' request received
     if (readable_event_ == MX_HANDLE_INVALID) {
@@ -494,7 +496,7 @@ mx_status_t Blob::GetReadableEvent(mx_handle_t* out) {
     return sizeof(mx_handle_t);
 }
 
-mx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* actual) {
+mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
     if (GetState() != kBlobStateReadable) {
         return ERR_BAD_STATE;
     }
@@ -507,7 +509,7 @@ mx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* actual) {
     merkle::Tree mt;
     merkle::Digest d;
     d = ((const uint8_t*) &digest_[0]);
-    auto inode = &vn->blobstore->node_map_[map_index_];
+    auto inode = &blobstore_->node_map_[map_index_];
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
     status = mt.Verify((const void*)vmo_blob_addr_, inode->blob_size,
                        (const void*)vmo_merkle_tree_addr_, size_merkle,
@@ -519,7 +521,7 @@ mx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* actual) {
     return mx_vmo_read(vmo_blob_, data, off, len, actual);
 }
 
-void Blob::QueueUnlink() {
+void VnodeBlob::QueueUnlink() {
     flags_ |= kBlobFlagDeletable;
 }
 
@@ -589,51 +591,25 @@ mx_status_t Blobstore::WriteNode(size_t map_index) {
     return NO_ERROR;
 }
 
-mx_status_t Blobstore::VnodeNew(mxtl::RefPtr<Blobstore> bs, mxtl::RefPtr<Blob> blob,
-                                VnodeBlob** out) {
-    AllocChecker ac;
-    VnodeBlob* vn = new (&ac) VnodeBlob(blob, mxtl::move(bs));
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-    blob->vn = vn;
-    *out = vn;
-    return NO_ERROR;
-}
-
-mx_status_t Blobstore::RootVnodeNew(mxtl::RefPtr<Blobstore> bs, VnodeBlob** out) {
-    AllocChecker ac;
-    VnodeBlob* vn = new (&ac) VnodeBlob(nullptr, mxtl::move(bs));
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-    *out = vn;
-    return NO_ERROR;
-}
-
-mx_status_t Blobstore::NewBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest,
-                               VnodeBlob** out) {
+mx_status_t Blobstore::NewBlob(const merkle::Digest& digest, VnodeBlob** out) {
     mx_status_t status;
     // If the blob already exists (or we're having trouble looking up the blob),
     // return an error.
-    if ((status = LookupBlob(bs, digest, nullptr)) != ERR_NOT_FOUND) {
+    if ((status = LookupBlob(digest, nullptr)) != ERR_NOT_FOUND) {
         return (status == NO_ERROR) ? ERR_ALREADY_EXISTS : status;
     }
 
-    auto blob = Blob::Create(digest);
-    if (blob == nullptr) {
+    AllocChecker ac;
+    *out = new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest);
+    if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
 
-    if ((status = VnodeNew(bs, blob, out)) != NO_ERROR) {
-        return status;
-    }
-
-    bs->hash_.insert(mxtl::move(blob));
+    hash_.insert(*out);
     return NO_ERROR;
 }
 
-mx_status_t Blobstore::ReleaseBlob(mxtl::RefPtr<Blob> blob) {
+mx_status_t Blobstore::ReleaseBlob(VnodeBlob* blob) {
     // TODO(smklein): What if kBlobFlagSync is set? Do we risk writing out
     // parts of the blob AFTER it has been deleted?
     // Ex: open, alloc, disk write async start, unlink, release, disk write async end.
@@ -674,37 +650,34 @@ mx_status_t Blobstore::ReleaseBlob(mxtl::RefPtr<Blob> blob) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t Blobstore::LookupBlob(mxtl::RefPtr<Blobstore> bs, const merkle::Digest& digest,
-                                  VnodeBlob** out) {
+mx_status_t Blobstore::LookupBlob(const merkle::Digest& digest, VnodeBlob** out) {
     // Look up blob in the fast map (is the blob open elsewhere?)
-    mxtl::RefPtr<Blob> blob = bs->hash_.find(digest.AcquireBytes()).CopyPointer();
+    VnodeBlob* vn = hash_.find(digest.AcquireBytes()).CopyPointer();
     digest.ReleaseBytes();
-    if (blob != nullptr) {
+    if (vn != nullptr) {
         if (out != nullptr) {
-            *out = blob->vn;
-            (*out)->RefAcquire();
+            vn->RefAcquire();
+            *out = vn;
         }
         return NO_ERROR;
     }
 
     // Look up blob in the slow map
-    for (size_t i = 0; i < bs->info_.inode_count; ++i) {
-        if (bs->node_map_[i].start_block >= kStartBlockMinimum) {
-            if (digest == bs->node_map_[i].merkle_root_hash) {
+    for (size_t i = 0; i < info_.inode_count; ++i) {
+        if (node_map_[i].start_block >= kStartBlockMinimum) {
+            if (digest == node_map_[i].merkle_root_hash) {
                 if (out != nullptr) {
                     // Found it. Attempt to wrap the blob in a vnode.
-                    blob = Blob::Create(digest);
-                    if (blob == nullptr) {
+                    AllocChecker ac;
+                    VnodeBlob* vn = new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest);
+                    if (!ac.check()) {
                         return ERR_NO_MEMORY;
                     }
-                    blob->SetState(kBlobStateReadable);
-                    blob->SetMapIndex(i);
+                    vn->SetState(kBlobStateReadable);
+                    vn->SetMapIndex(i);
                     // Delay reading any data from disk until read.
-                    mx_status_t status = VnodeNew(bs, blob, out);
-                    if (status != NO_ERROR) {
-                        return status;
-                    }
-                    bs->hash_.insert(mxtl::move(blob));
+                    *out = vn;
+                    hash_.insert(mxtl::move(vn));
                 }
                 return NO_ERROR;
             }
@@ -752,9 +725,11 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, VnodeBlob** 
     if ((status = fs->LoadBitmaps()) < 0) {
         fprintf(stderr, "blobstore: Failed to load bitmaps\n");
         return status;
-    } else if (Blobstore::RootVnodeNew(fs, out)) {
-        fprintf(stderr, "blobstore: Failed to allocate root vnode\n");
-        return status;
+    }
+
+    *out = new (&ac) VnodeBlob(mxtl::move(fs));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
     }
     return NO_ERROR;
 }
