@@ -188,19 +188,19 @@ static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         return blkdev_fifo_close(blkdev);
     default: {
         mx_device_t* parent = dev->parent;
-        return parent->ops->ioctl(parent, op, cmd, cmdlen, reply, max);
+        return device_op_ioctl(parent, op, cmd, cmdlen, reply, max);
     }
     }
 }
 
 static void blkdev_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     mx_device_t* parent = dev->parent;
-    parent->ops->iotxn_queue(parent, txn);
+    device_op_iotxn_queue(parent, txn);
 }
 
 static mx_off_t blkdev_get_size(mx_device_t* dev) {
     mx_device_t* parent = dev->parent;
-    return parent->ops->get_size(parent);
+    return device_op_get_size(parent);
 }
 
 static void blkdev_unbind(mx_device_t* dev) {

@@ -116,8 +116,8 @@ static mx_status_t usb_audio_sink_release(mx_device_t* device) {
 
 static uint64_t get_usb_current_frame(usb_audio_sink_t* sink) {
     uint64_t result;
-    ssize_t rc = sink->usb_device->ops->ioctl(sink->usb_device, IOCTL_USB_GET_CURRENT_FRAME,
-                                              NULL, 0, &result, sizeof(result));
+    ssize_t rc = device_op_ioctl(sink->usb_device, IOCTL_USB_GET_CURRENT_FRAME,
+                                 NULL, 0, &result, sizeof(result));
     if (rc != sizeof(result)) {
         printf("get_usb_current_frame failed %zu\n", rc);
         return sink->last_usb_frame;

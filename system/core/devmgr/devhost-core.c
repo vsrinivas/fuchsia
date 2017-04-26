@@ -86,9 +86,9 @@ static void default_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     void* buf;
     iotxn_mmap(txn, &buf);
     if (txn->opcode == IOTXN_OP_READ) {
-        rc = dev->ops->read(dev, buf, txn->length, txn->offset);
+        rc = device_op_read(dev, buf, txn->length, txn->offset);
     } else if (txn->opcode == IOTXN_OP_WRITE) {
-        rc = dev->ops->write(dev, buf, txn->length, txn->offset);
+        rc = device_op_write(dev, buf, txn->length, txn->offset);
     } else {
         rc = ERR_NOT_SUPPORTED;
     }
@@ -150,7 +150,7 @@ void dev_ref_release(mx_device_t* dev) {
 
         mx_handle_close(dev->event);
         DM_UNLOCK();
-        dev->ops->release(dev);
+        device_op_release(dev);
         DM_LOCK();
     }
 }
@@ -474,7 +474,7 @@ static void devhost_unbind_children(mx_device_t* dev) {
             // hold a reference so the child won't get released during its unbind callback.
             dev_ref_acquire(child);
             DM_UNLOCK();
-            child->ops->unbind(child);
+            device_op_unbind(child);
             DM_LOCK();
             dev_ref_release(child);
         }
@@ -589,9 +589,9 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const cha
     DM_UNLOCK();
     *out = dev;
     if (path) {
-        r = dev->ops->openat(dev, out, path, flags);
+        r = device_op_open_at(dev, out, path, flags);
     } else {
-        r = dev->ops->open(dev, out, flags);
+        r = device_op_open(dev, out, flags);
     }
     DM_LOCK();
     if (r < 0) {
@@ -612,7 +612,7 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const cha
 mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->close(dev, flags);
+    r = device_op_close(dev, flags);
     DM_LOCK();
     dev_ref_release(dev);
     return r;

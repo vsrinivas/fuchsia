@@ -126,7 +126,7 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
     }
     default:
         // other ioctls are handled by top level device
-        return device->parent->ops->ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
+        return device_op_ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
     }
 }
 

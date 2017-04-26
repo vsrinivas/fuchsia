@@ -460,8 +460,7 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
-        status = edev->edev0->mac->ops->ioctl(edev->edev0->mac, op, in_buf, in_len,
-                    out_buf, out_len);
+        status = device_op_ioctl(edev->edev0->mac, op, in_buf, in_len, out_buf, out_len);
         break;
     }
 

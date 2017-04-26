@@ -80,8 +80,8 @@ static mx_status_t i2c_hid_get_descriptor(mx_hid_device_t* dev, uint8_t desc_typ
     if (out == NULL) {
         return ERR_NO_MEMORY;
     }
-    ssize_t ret = hid->i2cdev->ops->ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
-            buf, sizeof(buf), out, desc_len);
+    ssize_t ret = device_op_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
+                                  buf, sizeof(buf), out, desc_len);
     if (ret < 0) {
         printf("i2c-hid: could not read HID report descriptor: %zd\n", ret);
         free(out);
@@ -153,7 +153,7 @@ static int i2c_hid_irq_thread(void* arg) {
     // IRQ, we just poll.
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
-        ssize_t ret = dev->i2cdev->ops->read(dev->i2cdev, buf, len, 0);
+        ssize_t ret = device_op_read(dev->i2cdev, buf, len, 0);
         if (ret < 2) {
             printf("i2c-hid: short read (%zd < 2)!!!\n", ret);
             continue;
@@ -186,7 +186,7 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     *data++ = 0x01;
     *data++ = 0x00;
     uint8_t out[4];
-    ssize_t ret = dev->ops->ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out));
+    ssize_t ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out));
     if (ret < 0) {
         printf("i2c-hid: could not read HID descriptor: %zd\n", ret);
         return ERR_NOT_SUPPORTED;
@@ -202,7 +202,7 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     i2chid->hiddesc = malloc(desc_len);
 
     i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
-    ret = dev->ops->ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len);
+    ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len);
     if (ret < 0) {
         printf("i2c-hid: could not read HID descriptor: %zd\n", ret);
         free(i2chid->hiddesc);

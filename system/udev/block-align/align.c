@@ -36,7 +36,7 @@ typedef struct align_device {
 static ssize_t align_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                            size_t cmdlen, void* reply, size_t max) {
     mx_device_t* parent = dev->parent;
-    return parent->ops->ioctl(parent, op, cmd, cmdlen, reply, max);
+    return device_op_ioctl(parent, op, cmd, cmdlen, reply, max);
 }
 
 static void aligned_write_complete(iotxn_t* txn_aligned, void* cookie) {
@@ -86,7 +86,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Don't alter it.
     if ((txn->offset % blksize == 0 && txn->length % blksize == 0) ||
         (txn->opcode != IOTXN_OP_READ && txn->opcode != IOTXN_OP_WRITE)) {
-        parent->ops->iotxn_queue(parent, txn);
+        device_op_iotxn_queue(parent, txn);
         return;
     }
 
@@ -128,7 +128,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
 static mx_off_t align_getsize(mx_device_t* dev) {
     mx_device_t* parent = dev->parent;
-    return parent->ops->get_size(parent);
+    return device_op_get_size(parent);
 }
 
 static void align_unbind(mx_device_t* dev) {
@@ -158,7 +158,7 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     snprintf(name, sizeof(name), "%s (aligned)", dev->name);
     device_init(&device->device, drv, name, &align_proto);
     block_info_t info;
-    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info));
+    ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info));
     if (rc < 0) {
         free(device);
         return rc;

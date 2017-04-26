@@ -73,8 +73,8 @@ mx_status_t usb_get_descriptor(mx_device_t* device, uint8_t request_type, uint16
 
 usb_speed_t usb_get_speed(mx_device_t* device) {
     int speed;
-    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
-                                        &speed, sizeof(speed));
+    ssize_t result = device_op_ioctl(device, IOCTL_USB_GET_DEVICE_SPEED, NULL, 0,
+                                     &speed, sizeof(speed));
     if (result == sizeof(speed)) {
         return (usb_speed_t)speed;
     } else {
@@ -95,7 +95,7 @@ mx_status_t usb_set_configuration(mx_device_t* device, int config) {
 
 mx_status_t usb_set_interface(mx_device_t* device, int interface_number, int alt_setting) {
     int args[2] = {interface_number, alt_setting};
-    return device->ops->ioctl(device, IOCTL_USB_SET_INTERFACE, args, sizeof(args), NULL, 0);
+    return device_op_ioctl(device, IOCTL_USB_SET_INTERFACE, args, sizeof(args), NULL, 0);
 }
 
 mx_status_t usb_set_feature(mx_device_t* device, uint8_t request_type, int feature, int index) {
@@ -146,8 +146,8 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     memset(iter, 0, sizeof(*iter));
 
     int desc_size;
-    ssize_t result = device->ops->ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
-                                        &desc_size, sizeof(desc_size));
+    ssize_t result = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS_SIZE, NULL, 0,
+                                     &desc_size, sizeof(desc_size));
     if (result != sizeof(desc_size)) goto fail;
 
     uint8_t* desc = malloc(desc_size);
@@ -156,7 +156,7 @@ mx_status_t usb_desc_iter_init(mx_device_t* device, usb_desc_iter_t* iter) {
     iter->desc_end = desc + desc_size;
     iter->current = desc;
 
-    result = device->ops->ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size);
+    result = device_op_ioctl(device, IOCTL_USB_GET_DESCRIPTORS, NULL, 0, desc, desc_size);
     if (result != desc_size) goto fail;
     return NO_ERROR;
 

@@ -430,7 +430,7 @@ out:
 }
 
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    dev->ops->iotxn_queue(dev, txn);
+    device_op_iotxn_queue(dev, txn);
 }
 
 void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length) {

@@ -175,7 +175,7 @@ static ssize_t do_sync_io(mx_device_t* dev, uint32_t opcode, void* buf, size_t c
         iotxn_copyto(txn, buf, txn->length, 0);
     }
 
-    dev->ops->iotxn_queue(dev, txn);
+    device_op_iotxn_queue(dev, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
@@ -243,15 +243,15 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
         break;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        r = dev->ops->suspend(dev);
+        r = device_op_suspend(dev);
         break;
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        r = dev->ops->resume(dev);
+        r = device_op_resume(dev);
         break;
     }
     default:
-        r = dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
+        r = device_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len);
     }
     return r;
 }
@@ -343,7 +343,7 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
     }
     case MXRIO_SEEK: {
         size_t end, n;
-        end = dev->ops->get_size(dev);
+        end = device_op_get_size(dev);
         switch (arg) {
         case SEEK_SET:
             if ((msg->arg2.off < 0) || ((size_t)msg->arg2.off > end)) {
@@ -400,7 +400,7 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
         vnattr_t* attr = (void*)msg->data;
         memset(attr, 0, sizeof(vnattr_t));
         attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-        attr->size = dev->ops->get_size(dev);
+        attr->size = device_op_get_size(dev);
         return msg->datalen;
     }
     case MXRIO_SYNC: {

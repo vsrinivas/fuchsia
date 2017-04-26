@@ -127,8 +127,7 @@ static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return dev->parent->ops->ioctl(dev->parent, IOCTL_DEVICE_SYNC, NULL, 0,
-                                       NULL, 0);
+        return device_op_ioctl(dev->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
     }
     default:
         return ERR_NOT_SUPPORTED;
@@ -218,7 +217,8 @@ static int mbr_bind_thread(void* arg) {
     iotxn_t* txn = NULL;
 
     block_info_t block_info;
-    ssize_t rc = dev->ops->ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &block_info, sizeof(block_info));
+    ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
+                                 &block_info, sizeof(block_info));
     if (rc < 0) {
         xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
                 dev->name, rc);

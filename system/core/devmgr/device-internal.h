@@ -19,3 +19,32 @@
 mx_status_t device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags);
 mx_status_t device_close(mx_device_t* dev, uint32_t flags);
+
+static inline mx_status_t device_op_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    return dev->ops->open(dev, dev_out, flags);
+}
+
+static inline mx_status_t device_op_open_at(mx_device_t* dev, mx_device_t** dev_out,
+                                           const char* path, uint32_t flags) {
+    return dev->ops->openat(dev, dev_out, path, flags);
+}
+
+static inline mx_status_t device_op_close(mx_device_t* dev, uint32_t flags) {
+    return dev->ops->close(dev, flags);
+}
+
+static inline void device_op_unbind(mx_device_t* dev) {
+    dev->ops->unbind(dev);
+}
+
+static inline mx_status_t device_op_release(mx_device_t* dev) {
+    return dev->ops->release(dev);
+}
+
+static inline mx_status_t device_op_suspend(mx_device_t* dev) {
+    return dev->ops->suspend(dev);
+}
+
+static inline mx_status_t device_op_resume(mx_device_t* dev) {
+    return dev->ops->resume(dev);
+}
