@@ -211,10 +211,8 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
         }
-    } else if (status->wPortChange & USB_C_PORT_ENABLE) {
-        if (status->wPortStatus & USB_PORT_ENABLE) {
-            usb_hub_port_enabled(hub, port);
-        }
+    } else if (status->wPortStatus & USB_PORT_ENABLE && !usb_hub_is_port_enabled(hub, port)) {
+        usb_hub_port_enabled(hub, port);
     }
 }
 
