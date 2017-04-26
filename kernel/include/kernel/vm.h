@@ -190,11 +190,6 @@ arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace);
 #define VMM_FLAG_VALLOC_SPECIFIC (1u << 0) /* allocate at specific address */
 #define VMM_FLAG_COMMIT (1u << 1)          /* commit memory up front (no demand paging) */
 
-#define VMM_ASPACE_TYPE_USER (0 << 0)
-#define VMM_ASPACE_TYPE_KERNEL (1 << 0)
-#define VMM_ASPACE_TYPE_LOW_KERNEL (2 << 0)
-#define VMM_ASPACE_TYPE_MASK (3 << 0)
-
 /* internal kernel routines below, do not call directly */
 
 /* internal routine by the scheduler to swap mmu contexts */

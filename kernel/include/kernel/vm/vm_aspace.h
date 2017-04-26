@@ -33,13 +33,13 @@ public:
     void Rename(const char* name);
 
     // flags
-    static const uint32_t TYPE_USER = VMM_ASPACE_TYPE_USER;
-    static const uint32_t TYPE_KERNEL = VMM_ASPACE_TYPE_KERNEL;
+    static const uint32_t TYPE_USER       = (0 << 0);
+    static const uint32_t TYPE_KERNEL     = (1 << 0);
     // You probably do not want to use LOW_KERNEL.  It is primarily
     // used for SMP bootstrap to allow mappings of very low memory using
     // the standard VMM subsystem.
-    static const uint32_t TYPE_LOW_KERNEL = VMM_ASPACE_TYPE_LOW_KERNEL;
-    static const uint32_t TYPE_MASK = VMM_ASPACE_TYPE_MASK;
+    static const uint32_t TYPE_LOW_KERNEL = (2 << 0);
+    static const uint32_t TYPE_MASK       = (3 << 0);
 
     // simple accessors
     vaddr_t base() const { return base_; }

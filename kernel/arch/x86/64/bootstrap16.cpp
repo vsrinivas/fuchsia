@@ -37,7 +37,7 @@ status_t x86_bootstrap16_prep(
     }
 
     VmAspace *kernel_aspace = VmAspace::kernel_aspace();
-    mxtl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VMM_ASPACE_TYPE_LOW_KERNEL,
+    mxtl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL,
                                                                "bootstrap16");
     if (!bootstrap_aspace) {
         return ERR_NO_MEMORY;
