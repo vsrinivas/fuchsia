@@ -61,6 +61,13 @@ typedef struct mx_hid_device {
 
     uint32_t flags;
 
+    // Reassembly buffer for input events too large to fit in a single interrupt
+    // transaction.
+    uint8_t* rbuf;
+    size_t rbuf_size;
+    size_t rbuf_filled;
+    size_t rbuf_needed;
+
     size_t hid_report_desc_len;
     uint8_t* hid_report_desc;
 

@@ -5,6 +5,7 @@
 #include <ddk/common/hid.h>
 #include <ddk/common/hid-fifo.h>
 
+#include <magenta/assert.h>
 #include <magenta/listnode.h>
 
 #include <assert.h>
@@ -16,6 +17,11 @@
 #define HID_FLAGS_WRITE_FAILED (1 << 1)
 
 #define USB_HID_DEBUG 0
+
+// TODO(johngro) : Get this from a standard header instead of defining our own.
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define to_hid_dev(d) containerof(d, mx_hid_device_t, dev)
 #define to_hid_instance(d) containerof(d, mx_hid_instance_t, dev);
@@ -148,7 +154,7 @@ static mx_status_t hid_get_report_size(mx_hid_device_t* hid, const void* in_buf,
     return sizeof(*reply);
 }
 
-static mx_status_t hid_get_max_reportsize(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
+static ssize_t hid_get_max_input_reportsize(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
@@ -278,7 +284,7 @@ static ssize_t hid_ioctl_instance(mx_device_t* dev, uint32_t op,
     case IOCTL_INPUT_GET_REPORT_SIZE:
         return hid_get_report_size(hid->root, in_buf, in_len, out_buf, out_len);
     case IOCTL_INPUT_GET_MAX_REPORTSIZE:
-        return hid_get_max_reportsize(hid->root, out_buf, out_len);
+        return hid_get_max_input_reportsize(hid->root, out_buf, out_len);
     case IOCTL_INPUT_GET_REPORT:
         return hid_get_report(hid->root, in_buf, in_len, out_buf, out_len);
     case IOCTL_INPUT_SET_REPORT:
@@ -514,6 +520,50 @@ static inline void hid_init_report_sizes(mx_hid_device_t* dev) {
     }
 }
 
+static void hid_release_reassembly_buffer(mx_hid_device_t* dev) {
+    if (dev->rbuf != NULL) {
+        free(dev->rbuf);
+    }
+
+    dev->rbuf = NULL;
+    dev->rbuf_size =  0;
+    dev->rbuf_filled =  0;
+    dev->rbuf_needed =  0;
+}
+
+static mx_status_t hid_init_reassembly_buffer(mx_hid_device_t* dev) {
+    MX_DEBUG_ASSERT(dev->rbuf == NULL);
+    MX_DEBUG_ASSERT(dev->rbuf_size == 0);
+    MX_DEBUG_ASSERT(dev->rbuf_filled == 0);
+    MX_DEBUG_ASSERT(dev->rbuf_needed == 0);
+
+    // TODO(johngro) : Take into account the underlying transport's ability to
+    // deliver payloads.  For example, if this is a USB HID device operating at
+    // full speed, we can expect it to deliver up to 64 bytes at a time.  If the
+    // maximum HID input report size is only 60 bytes, we should not need a
+    // reassembly buffer.
+    input_report_size_t max_report_size = 0;
+    ssize_t res = hid_get_max_input_reportsize(dev, &max_report_size, sizeof(max_report_size));
+    if ((res < 0) || !max_report_size) {
+        return (res < 0) ? ((mx_status_t)res) : ERR_INTERNAL;
+    }
+
+    // If this device can deliver more than one input report, we will need an
+    // extra byte in the reassembly buffer for the Report ID.
+    size_t buf_size = max_report_size;
+    if (dev->num_reports > 1) {
+        buf_size++;
+    }
+
+    dev->rbuf = malloc(buf_size);
+    if (dev->rbuf == NULL) {
+        return ERR_NO_MEMORY;
+    }
+
+    dev->rbuf_size = buf_size;
+    return NO_ERROR;
+}
+
 void hid_init_device(mx_hid_device_t* dev, hid_bus_ops_t* bus,
         uint8_t dev_num, bool boot_device, uint8_t dev_class) {
     dev->ops = bus;
@@ -523,6 +573,10 @@ void hid_init_device(mx_hid_device_t* dev, hid_bus_ops_t* bus,
     hid_init_report_sizes(dev);
     mtx_init(&dev->instance_lock, mtx_plain);
     list_initialize(&dev->instance_list);
+
+    MX_DEBUG_ASSERT(dev->rbuf == NULL);
+    MX_DEBUG_ASSERT(dev->rbuf_size == 0);
+    MX_DEBUG_ASSERT(dev->rbuf_needed == 0);
 }
 
 void hid_release_device(mx_hid_device_t* dev) {
@@ -531,6 +585,8 @@ void hid_release_device(mx_hid_device_t* dev) {
         dev->hid_report_desc = NULL;
         dev->hid_report_desc_len = 0;
     }
+
+    hid_release_reassembly_buffer(dev);
 }
 
 static mx_status_t hid_open_device(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
@@ -585,25 +641,104 @@ mx_protocol_device_t hid_device_proto = {
 
 void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
     mtx_lock(&hid->instance_lock);
-    mx_hid_instance_t* instance;
-    foreach_instance(hid, instance) {
-        mtx_lock(&instance->fifo.lock);
-        bool was_empty = mx_hid_fifo_size(&instance->fifo) == 0;
-        ssize_t wrote = mx_hid_fifo_write(&instance->fifo, buf, len);
-        if (wrote <= 0) {
-            if (!(instance->flags & HID_FLAGS_WRITE_FAILED)) {
-                printf("%s: could not write to hid fifo (ret=%zd)\n",
-                        hid->dev.name, wrote);
-                instance->flags |= HID_FLAGS_WRITE_FAILED;
+
+    while (len) {
+        // Start by figuring out if this payload either completes a partially
+        // assembled input report or represents an entire input buffer report on
+        // its own.
+        const uint8_t* rbuf;
+        size_t rlen;
+        size_t consumed;
+
+        if (hid->rbuf_needed) {
+            // Reassembly is in progress, just continue the process.
+            consumed = MIN(len, hid->rbuf_needed);
+            MX_DEBUG_ASSERT (hid->rbuf_size >= hid->rbuf_filled);
+            MX_DEBUG_ASSERT((hid->rbuf_size - hid->rbuf_filled) >= consumed);
+
+            memcpy(hid->rbuf + hid->rbuf_filled, buf, consumed);
+
+            if (consumed == hid->rbuf_needed) {
+                // reassembly finished.  Reset the bookkeeping and deliver the
+                // payload.
+                rbuf = hid->rbuf;
+                rlen = hid->rbuf_filled + consumed;
+                hid->rbuf_filled = 0;
+                hid->rbuf_needed = 0;
+            } else {
+                // We have not finished the process yet.  Update the bookkeeping
+                // and get out.
+                hid->rbuf_filled += consumed;
+                hid->rbuf_needed -= consumed;
+                break;
             }
         } else {
-            instance->flags &= ~HID_FLAGS_WRITE_FAILED;
-            if (was_empty) {
-                device_state_set(&instance->dev, DEV_STATE_READABLE);
+            // No reassembly is in progress.  Start by identifying this report's
+            // size.
+            uint8_t rpt_id = (hid->num_reports > 1) ? buf[0] : 0;
+            size_t  rpt_sz = hid_get_report_size_by_id(hid, rpt_id, INPUT_REPORT_INPUT);
+
+            // If we don't recognize this report ID, we are in trouble.  Drop
+            // the rest of this payload and hope that the next one gets us back
+            // on track.
+            if (!rpt_sz) {
+                printf("%s: failed to find input report size (report id %u)\n",
+                        hid->dev.name, rpt_id);
+                break;
+            }
+
+            // TODO(johngro) : Is this correct?  If a device has just one input
+            // report defined, but multiple feature reports defined, does it
+            // still put the report ID on the input report it delivers or does
+            // it omit it?
+            if (hid->num_reports > 1) {
+                rpt_sz++;
+            }
+
+            // Is the entire report present in this payload?  If so, just go
+            // ahead an deliver it directly from the input buffer.
+            if (len >= rpt_sz) {
+                rbuf = buf;
+                consumed = rlen = rpt_sz;
+            } else {
+                // Looks likes our report is fragmented over multiple buffers.
+                // Start the process of reassembly and get out.
+                MX_DEBUG_ASSERT(hid->rbuf != NULL);
+                MX_DEBUG_ASSERT(hid->rbuf_size >= rpt_sz);
+                memcpy(hid->rbuf, buf, len);
+                hid->rbuf_filled = len;
+                hid->rbuf_needed = rpt_sz - len;
+                break;
             }
         }
-        mtx_unlock(&instance->fifo.lock);
+
+        MX_DEBUG_ASSERT(rbuf != NULL);
+        MX_DEBUG_ASSERT(consumed <= len);
+        buf += consumed;
+        len -= consumed;
+
+        mx_hid_instance_t* instance;
+        foreach_instance(hid, instance) {
+            mtx_lock(&instance->fifo.lock);
+            bool was_empty = mx_hid_fifo_size(&instance->fifo) == 0;
+            ssize_t wrote = mx_hid_fifo_write(&instance->fifo, rbuf, rlen);
+
+            if (wrote <= 0) {
+                if (!(instance->flags & HID_FLAGS_WRITE_FAILED)) {
+                    printf("%s: could not write to hid fifo (ret=%zd)\n",
+                            hid->dev.name, wrote);
+                    instance->flags |= HID_FLAGS_WRITE_FAILED;
+                }
+            } else {
+                instance->flags &= ~HID_FLAGS_WRITE_FAILED;
+                if (was_empty) {
+                    device_state_set(&instance->dev, DEV_STATE_READABLE);
+                }
+            }
+            mtx_unlock(&instance->fifo.lock);
+        }
     }
+
     mtx_unlock(&hid->instance_lock);
 }
 
@@ -644,6 +779,12 @@ mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device
     hid_dump_hid_report_desc(dev);
 #endif
 
+    status = hid_init_reassembly_buffer(dev);
+    if (status != NO_ERROR) {
+        printf("Failed to initialize reassembly buffer: %d\n", status);
+        return status;
+    }
+
     char _name[sizeof(dev->dev.name)];
     if (name == NULL) {
         snprintf(_name, sizeof(_name), "hid-device-%03d", dev->dev_num);
@@ -655,6 +796,7 @@ mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device
     status = device_add(&dev->dev, parent);
     if (status != NO_ERROR) {
         printf("device_add failed for HID device: %d\n", status);
+        hid_release_reassembly_buffer(dev);
         return status;
     }
 
