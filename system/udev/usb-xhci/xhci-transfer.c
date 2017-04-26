@@ -531,6 +531,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             xprintf("ignoring transfer event with cc: %d\n", cc);
             return;
         default:
+            xprintf("Unhandled transfer event condition code, closing peer connection: %d\n", cc);
             result = ERR_PEER_CLOSED;
             break;
     }
