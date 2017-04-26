@@ -61,6 +61,12 @@ class InputDevice {
   const TouchReport& touch_report() const { return touch_report_; }
 
  private:
+  enum class TouchDeviceType {
+    NONE,
+    ACER12,
+    SAMSUNG,
+  };
+
   InputDevice(std::string name, int fd, uint32_t id);
 
   mx_status_t GetProtocol(int* out_proto);
@@ -71,8 +77,9 @@ class InputDevice {
 
   void ParseKeyboardReport(uint8_t* report, size_t len);
   void ParseMouseReport(uint8_t* report, size_t len);
-  void ParseTouchscreenReport(uint8_t* report, size_t len);
-  void ParseStylusReport(uint8_t* r, size_t len);
+  bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
+  bool ParseAcer12StylusReport(uint8_t* r, size_t len);
+  bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
 
   const int fd_;
   const std::string name_;
@@ -91,6 +98,8 @@ class InputDevice {
   StylusDescriptor stylus_descriptor_;
   bool has_touchscreen_ = false;
   TouchscreenDescriptor touchscreen_descriptor_;
+
+  TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
 
   KeyboardReport keyboard_report_;
   MouseReport mouse_report_;

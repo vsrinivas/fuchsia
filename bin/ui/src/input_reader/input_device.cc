@@ -8,6 +8,7 @@
 #include <hid/acer12.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+#include <hid/samsung.h>
 #include <magenta/device/device.h>
 #include <magenta/device/input.h>
 #include <magenta/types.h>
@@ -71,17 +72,20 @@ bool InputDevice::Initialize() {
                      << name_;
       return false;
     }
-    if (report_desc_len != ACER12_RPT_DESC_LEN) {
-      return false;
-    }
 
-    uint8_t desc[ACER12_RPT_DESC_LEN];
-    if (!GetReportDescription(desc, report_desc_len)) {
+    std::vector<uint8_t> desc(report_desc_len);
+    if (!GetReportDescription(desc.data(), desc.size())) {
       FTL_LOG(ERROR) << "Failed to retrieve HID description for " << name_;
       return false;
     }
 
-    if (!memcmp(desc, acer12_touch_report_desc, ACER12_RPT_DESC_LEN)) {
+    if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
+      mx_status_t setup_res = setup_acer12_touch(fd_);
+      if (setup_res != NO_ERROR) {
+        FTL_LOG(ERROR) << "Failed to setup Acer12 touch (res " << setup_res << ")";
+        return false;
+      }
+
       has_stylus_ = true;
       stylus_descriptor_.x = MakeAxis<uint32_t>(0, ACER12_STYLUS_X_MAX, 1);
       stylus_descriptor_.y = MakeAxis<uint32_t>(0, ACER12_STYLUS_Y_MAX, 1);
@@ -92,6 +96,21 @@ bool InputDevice::Initialize() {
       has_touchscreen_ = true;
       touchscreen_descriptor_.x = MakeAxis<uint32_t>(0, ACER12_X_MAX, 1);
       touchscreen_descriptor_.y = MakeAxis<uint32_t>(0, ACER12_Y_MAX, 1);
+
+      touch_device_type_ = TouchDeviceType::ACER12;
+    } else
+    if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
+      mx_status_t setup_res = setup_samsung_touch(fd_);
+      if (setup_res != NO_ERROR) {
+        FTL_LOG(ERROR) << "Failed to setup Samsung touch (res " << setup_res << ")";
+        return false;
+      }
+
+      has_touchscreen_ = true;
+      touchscreen_descriptor_.x = MakeAxis<uint32_t>(0, SAMSUNG_X_MAX, 1);
+      touchscreen_descriptor_.y = MakeAxis<uint32_t>(0, SAMSUNG_Y_MAX, 1);
+
+      touch_device_type_ = TouchDeviceType::SAMSUNG;
     } else {
       return false;
     }
@@ -139,14 +158,30 @@ bool InputDevice::Read(const OnReportCallback& callback) {
     pending.push_back(InputReport::ReportType::kMouse);
   }
 
-  if (has_stylus_ && report_[0] == ACER12_RPT_ID_STYLUS) {
-    ParseStylusReport(report_.data(), rc);
-    pending.push_back(InputReport::ReportType::kStylus);
-  }
+  switch (touch_device_type_) {
+    case TouchDeviceType::ACER12:
+      if (report_[0] == ACER12_RPT_ID_STYLUS) {
+        if (ParseAcer12StylusReport(report_.data(), rc)) {
+          pending.push_back(InputReport::ReportType::kStylus);
+        }
+      } else
+      if (report_[0] == ACER12_RPT_ID_TOUCH) {
+        if (ParseAcer12TouchscreenReport(report_.data(), rc)) {
+          pending.push_back(InputReport::ReportType::kTouchscreen);
+        }
+      }
+      break;
 
-  if (has_touchscreen_ && report_[0] == ACER12_RPT_ID_TOUCH) {
-    ParseTouchscreenReport(report_.data(), rc);
-    pending.push_back(InputReport::ReportType::kTouchscreen);
+    case TouchDeviceType::SAMSUNG:
+      if (report_[0] == SAMSUNG_RPT_ID_TOUCH) {
+        if (ParseSamsungTouchscreenReport(report_.data(), rc)) {
+          pending.push_back(InputReport::ReportType::kTouchscreen);
+        }
+      }
+      break;
+
+    default:
+      break;
   }
 
   for (auto type : pending) {
@@ -175,7 +210,11 @@ void InputDevice::ParseMouseReport(uint8_t* r, size_t len) {
   mouse_report_.buttons = report->buttons;
 }
 
-void InputDevice::ParseStylusReport(uint8_t* r, size_t len) {
+bool InputDevice::ParseAcer12StylusReport(uint8_t* r, size_t len) {
+  if (len != sizeof(acer12_stylus_t)) {
+    return false;
+  }
+
   auto report = reinterpret_cast<acer12_stylus_t*>(r);
   stylus_report_.timestamp = ftl::TimePoint::Now();
   stylus_report_.x = report->x;
@@ -201,9 +240,15 @@ void InputDevice::ParseStylusReport(uint8_t* r, size_t len) {
   if (acer12_stylus_status_eraser(report->status)) {
     stylus_report_.down.push_back(INPUT_USAGE_STYLUS_ERASER);
   }
+
+  return true;
 }
 
-void InputDevice::ParseTouchscreenReport(uint8_t* r, size_t len) {
+bool InputDevice::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
+  if (len != sizeof(acer12_touch_t)) {
+    return false;
+  }
+
   // Acer12 touch reports come in pairs when there are more than 5 fingers
   // First report has the actual number of fingers stored in contact_count,
   // second report will have a contact_count of 0.
@@ -219,11 +264,13 @@ void InputDevice::ParseTouchscreenReport(uint8_t* r, size_t len) {
   for (uint8_t i = 0; i < 2; i++) {
     // Only 5 touches per report
     for (uint8_t c = 0; c < 5; c++) {
-      if (!acer12_finger_id_tswitch(
-              acer12_touch_reports_[i].fingers[c].finger_id))
+      auto fid = acer12_touch_reports_[i].fingers[c].finger_id;
+
+      if (!acer12_finger_id_tswitch(fid))
         continue;
+
       Touch touch;
-      touch.finger_id = acer12_touch_reports_[i].fingers[c].finger_id;
+      touch.finger_id = acer12_finger_id_contact(fid);
       touch.x = acer12_touch_reports_[i].fingers[c].x;
       touch.y = acer12_touch_reports_[i].fingers[c].y;
       touch.width = acer12_touch_reports_[i].fingers[c].width;
@@ -231,6 +278,35 @@ void InputDevice::ParseTouchscreenReport(uint8_t* r, size_t len) {
       touch_report_.touches.push_back(touch);
     }
   }
+
+  return true;
+}
+
+bool InputDevice::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
+  if (len != sizeof(samsung_touch_t)) {
+    return false;
+  }
+
+  const auto& report = *(reinterpret_cast<samsung_touch_t*>(r));
+  touch_report_.timestamp = ftl::TimePoint::Now();
+  touch_report_.touches.clear();
+
+  for (size_t i = 0; i < countof(report.fingers); ++i) {
+    auto fid = report.fingers[i].finger_id;
+
+    if (!samsung_finger_id_tswitch(fid))
+      continue;
+
+    Touch touch;
+    touch.finger_id = samsung_finger_id_contact(fid);
+    touch.x = report.fingers[i].x;
+    touch.y = report.fingers[i].y;
+    touch.width = report.fingers[i].width;
+    touch.height = report.fingers[i].height;
+    touch_report_.touches.push_back(touch);
+  }
+
+  return true;
 }
 
 mx_status_t InputDevice::GetProtocol(int* out_proto) {
@@ -268,6 +344,9 @@ mx_status_t InputDevice::GetMaxReportLength(
   if (rc < 0) {
     FTL_LOG(ERROR) << "hid: could not get max report size from " << name_
                    << " (status=" << rc << ")";
+  } else {
+    // Add an extra byte for report ID
+    *out_max_report_len += 1;
   }
   return rc;
 }
