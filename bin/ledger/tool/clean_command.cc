@@ -17,8 +17,9 @@ namespace tool {
 
 CleanCommand::CleanCommand(const cloud_sync::UserConfig& user_config,
                            ftl::StringView user_repository_path,
-                           ledger::NetworkService* network_service)
-    : user_repository_path_(user_repository_path.ToString()) {
+                           ledger::NetworkService* network_service,
+                           bool force)
+    : user_repository_path_(user_repository_path.ToString()), force_(force) {
   FTL_DCHECK(!user_repository_path_.empty());
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service, user_config.server_id,
@@ -27,6 +28,21 @@ CleanCommand::CleanCommand(const cloud_sync::UserConfig& user_config,
 }
 
 void CleanCommand::Start(ftl::Closure on_done) {
+  if (!force_) {
+    std::cout << std::endl;
+    std::cout << "About to delete: " << std::endl;
+    std::cout << " - local data at " << user_repository_path_ << std::endl;
+    std::cout << " - remote data at " << firebase_->api_url() << std::endl;
+    std::cout << "Sounds good? (enter \"yes\" to confirm)" << std::endl;
+    std::string answer;
+    std::getline(std::cin, answer);
+    if (answer != "yes") {
+      std::cout << "As you prefer, bye." << std::endl;
+      on_done();
+      return;
+    }
+  }
+
   std::cout << "> Deleting " << user_repository_path_ << " ";
   if (!files::DeletePath(user_repository_path_, true)) {
     std::cout << std::endl;

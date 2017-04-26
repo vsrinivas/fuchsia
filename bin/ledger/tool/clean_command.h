@@ -23,7 +23,8 @@ class CleanCommand : public Command {
  public:
   CleanCommand(const cloud_sync::UserConfig& user_config,
                ftl::StringView user_repository_path,
-               ledger::NetworkService* network_service);
+               ledger::NetworkService* network_service,
+               bool force);
   ~CleanCommand() {}
 
   // Command:
@@ -32,6 +33,7 @@ class CleanCommand : public Command {
  private:
   std::unique_ptr<firebase::FirebaseImpl> firebase_;
   const std::string user_repository_path_;
+  const bool force_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CleanCommand);
 };

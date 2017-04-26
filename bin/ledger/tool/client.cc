@@ -26,6 +26,7 @@ namespace tool {
 namespace {
 
 constexpr ftl::StringView kUserIdFlag = "user-id";
+constexpr ftl::StringView kForceFlag = "force";
 
 // Inverse of the transformation currently used by DeviceRunner to translate
 // human-readable username to user ID.
@@ -72,6 +73,7 @@ void ClientApp::PrintUsage() {
   std::cout << "Usage: ledger_tool [options] <COMMAND>" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << " --user-id=<string> overrides the user ID to use" << std::endl;
+  std::cout << " --force skips confirmation dialogs" << std::endl;
   std::cout << "Commands:" << std::endl;
   std::cout << " - `doctor` - checks up the Ledger configuration (default)"
             << std::endl;
@@ -97,8 +99,9 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
       FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
       return nullptr;
     }
-    return std::make_unique<CleanCommand>(user_config_, user_repository_path_,
-                                          network_service_.get());
+    return std::make_unique<CleanCommand>(
+        user_config_, user_repository_path_, network_service_.get(),
+        command_line_.HasOption(kForceFlag.ToString()));
   }
 
   return nullptr;
@@ -111,7 +114,7 @@ bool ClientApp::Initialize() {
   }
 
   const std::unordered_set<std::string> known_options = {
-      kUserIdFlag.ToString()};
+      kForceFlag.ToString(), kUserIdFlag.ToString()};
 
   for (auto& option : command_line_.options()) {
     if (known_options.count(option.name) == 0) {
