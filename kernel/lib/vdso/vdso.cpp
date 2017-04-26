@@ -40,7 +40,7 @@ public:
         void* ptr;
         status_t status = VmAspace::kernel_aspace()->MapObject(
             mxtl::move(vmo), name, page_offset, offset_in_page + sizeof(T),
-            &ptr, 0, 0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+            &ptr, 0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         ASSERT(status == NO_ERROR);
         mapping_ = reinterpret_cast<uintptr_t>(ptr);
         data_ = reinterpret_cast<T*>(mapping_ + offset_in_page);

@@ -608,7 +608,6 @@ status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
             ecam_.size,
             &vaddr_,
             PAGE_SIZE_SHIFT,
-            0 /* min alloc gap */,
             ecam_.phys_base,
             0 /* vmm flags */,
             ARCH_MMU_FLAG_UNCACHED_DEVICE |

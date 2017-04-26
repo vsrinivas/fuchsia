@@ -96,16 +96,16 @@ public:
     // as children of the root.  They will all assert if used on user aspaces
     // TODO(teisenbe): remove uses of these in favor of new VMAR interfaces
     status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                       void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
+                       void** ptr, uint8_t align_pow2, uint vmm_flags,
                        uint arch_mmu_flags);
     status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
     status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                           size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
+                           paddr_t paddr, uint vmm_flags,
                            uint arch_mmu_flags);
     status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                             size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
+                             uint vmm_flags, uint arch_mmu_flags);
     status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                   size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
+                   uint vmm_flags, uint arch_mmu_flags);
     status_t FreeRegion(vaddr_t va);
 
 protected:

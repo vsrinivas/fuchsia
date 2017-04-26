@@ -136,7 +136,7 @@ static bool vmm_alloc_smoke_test(void* context) {
     void* ptr;
     auto kaspace = VmAspace::kernel_aspace();
     auto err = kaspace->Alloc(
-            "test", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+            "test", alloc_size, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
@@ -160,7 +160,7 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
     void* ptr;
     auto kaspace = VmAspace::kernel_aspace();
     auto err = kaspace->AllocContiguous("test",
-                                        alloc_size, &ptr, 0, 0,
+                                        alloc_size, &ptr, 0,
                                         VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::AllocContiguous region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
@@ -201,7 +201,7 @@ static bool multiple_regions_test(void* context) {
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
 
     // allocate region 0
-    status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+    status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
@@ -210,7 +210,7 @@ static bool multiple_regions_test(void* context) {
         all_ok = false;
 
     // allocate region 1
-    err = aspace->Alloc("test1", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
@@ -219,7 +219,7 @@ static bool multiple_regions_test(void* context) {
         all_ok = false;
 
     // allocate region 2
-    err = aspace->Alloc("test2", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
@@ -240,7 +240,7 @@ static bool vmm_alloc_zero_size_fails(void* context) {
     const size_t zero_size = 0;
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->Alloc(
-            "test", zero_size, &ptr, 0, 0, 0, kArchRwFlags);
+            "test", zero_size, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -250,7 +250,7 @@ static bool vmm_alloc_bad_specific_pointer_fails(void* context) {
     // bad specific pointer
     void* ptr = (void*)1;
     status_t err = VmAspace::kernel_aspace()->Alloc(
-            "test", 16384, &ptr, 0, 0,
+            "test", 16384, &ptr, 0,
             VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
@@ -262,7 +262,7 @@ static bool vmm_alloc_contiguous_missing_flag_commit_fails(void* context) {
     const uint zero_vmm_flags = 0;
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
-            "test", 4096, &ptr, 0, 0, zero_vmm_flags, kArchRwFlags);
+            "test", 4096, &ptr, 0, zero_vmm_flags, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -272,7 +272,7 @@ static bool vmm_alloc_contiguous_zero_size_fails(void* context) {
     const size_t zero_size = 0;
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
-            "test", zero_size, &ptr, 0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+            "test", zero_size, &ptr, 0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -292,7 +292,7 @@ static bool vmaspace_alloc_smoke_test(void* context) {
     auto aspace = VmAspace::Create(0, "test aspace2");
 
     void* ptr;
-    auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, 0, kArchRwFlags);
+    auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, err, "allocating region\n");
 
     // destroy the aspace, which should drop all the internal refs to it
@@ -376,7 +376,7 @@ static bool vmo_precommitted_map_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
-                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
     // fill with known pattern and test
@@ -398,7 +398,7 @@ static bool vmo_demand_paged_map_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
-                             0, 0, 0, kArchRwFlags);
+                             0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
     // fill with known pattern and test
@@ -420,7 +420,7 @@ static bool vmo_dropped_ref_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
-                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
     EXPECT_NULL(vmo, "dropped ref to object");
@@ -445,7 +445,7 @@ static bool vmo_remap_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
-                             0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
     // fill with known pattern and test
@@ -457,7 +457,7 @@ static bool vmo_remap_test(void* context) {
 
     // map it again
     ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
-                        0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+                        0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
     // test that the pattern is still valid
@@ -480,7 +480,7 @@ static bool vmo_double_remap_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObject(vmo, "test0", 0, alloc_size, &ptr,
-                             0, 0, 0, kArchRwFlags);
+                             0, 0, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
     // fill with known pattern and test
@@ -490,7 +490,7 @@ static bool vmo_double_remap_test(void* context) {
     // map it again
     void* ptr2;
     ret = ka->MapObject(vmo, "test1", 0, alloc_size, &ptr2,
-                        0, 0, 0, kArchRwFlags);
+                        0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object second time");
     EXPECT_NEQ(ptr, ptr2, "second mapping is different");
 
@@ -502,7 +502,7 @@ static bool vmo_double_remap_test(void* context) {
     void* ptr3;
     static const size_t alloc_offset = PAGE_SIZE;
     ret = ka->MapObject(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
-                        &ptr3, 0, 0, 0, kArchRwFlags);
+                        &ptr3, 0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object third time");
     EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
     EXPECT_NEQ(ptr3, ptr, "third mapping is different");
@@ -574,7 +574,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     uint8_t* ptr;
     err = ka->MapObject(vmo, "test", 0, alloc_size, (void**)&ptr,
-                        0, 0, 0, kArchRwFlags);
+                        0, 0, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, err, "mapping object");
 
     // write to it at odd offsets

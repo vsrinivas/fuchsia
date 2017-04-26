@@ -146,7 +146,6 @@ void *AcpiOsMapMemory(
             end - aligned_address,
             &vaddr,
             PAGE_SIZE_SHIFT,
-            0,
             aligned_address,
             0,
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);

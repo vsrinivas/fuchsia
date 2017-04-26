@@ -82,7 +82,6 @@ status_t x86_bootstrap16_prep(
                 page_mappings[i].size,
                 &vaddr,
                 PAGE_SIZE_SHIFT,
-                0,
                 page_mappings[i].start_paddr,
                 VMM_FLAG_VALLOC_SPECIFIC,
                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
@@ -99,7 +98,6 @@ status_t x86_bootstrap16_prep(
             PAGE_SIZE * 2, // size
             &bootstrap_virt_addr, // requested virtual address
             PAGE_SIZE_SHIFT, // alignment log2
-            0, // min alloc gap
             bootstrap_phys_addr, // physical address
             0, // vmm flags
             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE); // arch mmu flags

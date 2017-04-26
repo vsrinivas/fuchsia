@@ -284,7 +284,6 @@ static void platform_ensure_display_memtype(uint level)
             ROUNDUP(info.stride * info.height * 4, PAGE_SIZE),
             &addr,
             PAGE_SIZE_SHIFT,
-            0 /* min alloc gap */,
             bootloader.fb_base,
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |

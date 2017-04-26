@@ -261,7 +261,7 @@ __WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
 }
 
 status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                             void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
+                             void** ptr, uint8_t align_pow2, uint vmm_flags,
                              uint arch_mmu_flags) {
 
     canary_.Assert();
@@ -362,11 +362,11 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // map it, creating a new region
     void* ptr = reinterpret_cast<void*>(vaddr);
-    return MapObject(mxtl::move(vmo), name, 0, size, &ptr, 0, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
+    return MapObject(mxtl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
 }
 
 status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                                 size_t min_alloc_gap, paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
+                                 paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size %#zx ptr %p paddr %#" PRIxPTR " vmm_flags 0x%x arch_mmu_flags 0x%x\n",
             this, name, size, ptr ? *ptr : 0, paddr, vmm_flags, arch_mmu_flags);
@@ -389,12 +389,12 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     // TODO: add new flag to precisely mean pre-map
     vmm_flags |= VMM_FLAG_COMMIT;
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 
 status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                                   size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags) {
+                                   uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
             name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
@@ -423,11 +423,11 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return ERR_NO_MEMORY;
     }
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 
-status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2, size_t min_alloc_gap,
+status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                          uint vmm_flags, uint arch_mmu_flags) {
     canary_.Assert();
     LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
@@ -457,7 +457,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
     }
 
     // map it, creating a new region
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 

@@ -104,7 +104,6 @@ status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
         g_udisplay.framebuffer_size,
         &g_udisplay.framebuffer_virt,
         PAGE_SIZE_SHIFT,
-        0 /* min alloc gap */,
         fb_phys,
         0 /* vmm flags */,
         kFramebufferArchMmuFlags);
@@ -122,7 +121,6 @@ status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
     void* start;
     status_t status = VmAspace::kernel_aspace()->MapObject(
         vmo, "framebuffer_vmo", 0u, vmo->size(), &start, PAGE_SIZE_SHIFT,
-        0,               // min_alloc_gap
         VMM_FLAG_COMMIT, // vmm flags
         kFramebufferArchMmuFlags);
 

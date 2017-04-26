@@ -133,7 +133,6 @@ void idt_setup_readonly(void) {
                                          sizeof(_idt),
                                          (void **)&_idt_ro,
                                          PAGE_SIZE_SHIFT,
-                                         0 /* min alloc gap */,
                                          vaddr_to_paddr(&_idt),
                                          0 /* vmm flags */,
                                          ARCH_MMU_FLAG_PERM_READ);
