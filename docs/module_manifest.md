@@ -29,20 +29,25 @@ What's missing:
 
 **contract** : string
 
-For now, this is akin to a method name. This may change in the future.
+For now, this is akin to a method name. This may change in the future. In links,
+module initial data are provided as a value keyed by the contract name (see
+below for examples).
+
+A description of known contracts is available [here](known_contracts.md).
 
 ## Data Preconditions
 
 Modules get their input in the form of a JSON document.
 
-**data_preconditions** : &lt;dictionary&gt;
+**data_preconditions** : &lt;any&gt;
 
-For any key-value pair defined in the dictionary, a test is run against the
-corresponding member in the input document. All specified tests must pass; there
-is not currently a way to specify disjunction at the document level.
+Data preconditions are tests evaluated against the JSON data mapped under the
+contract name in a link document.
 
-If the value in the precondition dictionary is an object, the same property
-matching test is performed as was performed for the top-level document.
+If the value in the precondition dictionary is an object, then the member being
+tested must be an object. For any key-value pair defined in the spec, a test is
+run against the corresponding member in the input object. All specified tests
+must pass.
 
 *Example:*
 
@@ -53,19 +58,47 @@ matching test is performed as was performed for the top-level document.
       }
     }
 
+matches link data
+
+    {
+      "share": {
+        "content": { ... }
+        "recipient": {
+          "name": "Aparna Nielsen",
+          "network": "your social network",
+          "group": "close friends"
+        }
+      }
+    }
+
 If the value is an array, the match succeeds if any member or test in the array
 matches the member being tested.
 
 *Example:*
 
     "data_preconditions": {
-      "protocol": [ "http", "https" ],
+      "scheme": [ "http", "https" ],
       "referrer": [
         "https://www.google.com",
         {
-          "domain": "google.com"
+          "host": "www.google.com"
         }
       ]
+    }
+
+matches link data
+
+    {
+      "view": {
+        "uri": "https://en.wikipedia.com",
+        "scheme": "https",
+        "host": "en.wikipedia.com",
+        "referrer": {
+          "uri": "https://www.google.com",
+          "scheme": "https",
+          "host": "www.google.com"
+        }
+      }
     }
 
 If the value is anything else, the match succeeds if the member is exactly equal

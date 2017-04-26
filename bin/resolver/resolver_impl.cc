@@ -155,9 +155,10 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
             raw_results.push_back({url, kDefaultMatch});
           } else {
             MatchScore score;
-            if (MatchProperties(
+            if (MatchDataPrecondition(
                     manifest[kModuleFacetName]["data_preconditions"], data,
                     &score)) {
+              FTL_LOG(INFO) << "Resolved to " << url << " with score " << score;
               raw_results.push_back({url, score});
             }
           }
