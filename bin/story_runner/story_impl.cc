@@ -81,6 +81,26 @@ class StoryImpl::AddModuleCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
+class StoryImpl::GetModulesCall : Operation<fidl::Array<ModuleDataPtr>> {
+ public:
+  GetModulesCall(OperationContainer* const container,
+                 StoryImpl* const story_impl,
+                 const ResultCall& callback)
+      : Operation(container, callback), story_impl_(story_impl) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    story_impl_->story_storage_impl_->ReadModuleData(
+        [this](fidl::Array<ModuleDataPtr> module_data) {
+          Done(std::move(module_data));
+        });
+  }
+  StoryImpl* const story_impl_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
+};
+
 class StoryImpl::AddForCreateCall : Operation<void> {
  public:
   AddForCreateCall(OperationContainer* const container,
@@ -398,6 +418,11 @@ void StoryImpl::AddModule(const fidl::String& module_name,
                           const fidl::String& link_name) {
   new AddModuleCall(&operation_queue_, this,
                     module_name, module_url, link_name, []{});
+}
+
+// |StoryController|
+void StoryImpl::GetModules(const GetModulesCallback& callback) {
+  new GetModulesCall(&operation_queue_, this, callback);
 }
 
 // |StoryController|

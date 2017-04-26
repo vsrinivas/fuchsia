@@ -131,6 +131,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void AddModule(const fidl::String& module_name,
                  const fidl::String& url,
                  const fidl::String& link_name) override;
+  void GetModules(const GetModulesCallback& callback) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(fidl::InterfaceRequest<mozart::ViewOwner> request);
@@ -198,6 +199,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   class StartCall;
   class StopCall;
   class DeleteCall;
+  class GetModulesCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

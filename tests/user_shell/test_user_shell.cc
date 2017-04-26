@@ -11,6 +11,7 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -27,6 +28,8 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+using modular::testing::TestPoint;
 
 // TODO(alhaad): Convert this to a proper test which checks the user shell
 // interfaces.
@@ -192,6 +195,31 @@ class TestUserShellApp : modular::StoryWatcher,
         });
   }
 
+  void GetModules() {
+    FTL_DCHECK(story_controller_);
+
+    story_controller_->GetModules([this](fidl::Array<modular::ModuleDataPtr> modules) {
+      if (settings_.test) {
+        get_modules_.Pass();
+      }
+
+      FTL_LOG(INFO) << "TestUserShell MODULES:";
+      for (const auto& module_data : modules) {
+        FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->url;
+        FTL_LOG(INFO) << "TestUserShell         link=" << module_data->link;
+        std::string path;
+        for (const auto& path_element : module_data->module_path) {
+          path.push_back(' ');
+          path.append(path_element);
+        }
+        if (path.size()) {
+          FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
+        }
+      }
+    });
+
+  }
+
   void GetStoryInfo(const fidl::String& story_id, const bool keep) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
@@ -201,6 +229,7 @@ class TestUserShellApp : modular::StoryWatcher,
       InitStory();
 
       if (!keep) {
+        GetModules();
         mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
             [this] {
               FTL_LOG(INFO) << "TestUserShell DELETE " << story_info_->id;
@@ -296,6 +325,8 @@ class TestUserShellApp : modular::StoryWatcher,
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
   int data_count_{0};
+
+  TestPoint get_modules_{"Get Modules"};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
 };

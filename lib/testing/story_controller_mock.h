@@ -55,6 +55,9 @@ class StoryControllerMock : public StoryController {
   // |StoryController|
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {}
 
+  // |StoryController|
+  void GetModules(const GetModulesCallback& callback) override {}
+
   std::string last_added_module_;
 };
 

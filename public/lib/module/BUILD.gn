@@ -20,17 +20,14 @@ fidl("module") {
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
   ]
+
+  public_deps = [
+    ":module_data",
+  ]
 }
 
-# Only for implementation of modular.
-fidl("private") {
+fidl("module_data") {
   sources = [
     "module_data.fidl",
   ]
-
-  public_deps = [
-    ":module",
-  ]
-
-  visibility = [ "//apps/modular/*" ]
 }
