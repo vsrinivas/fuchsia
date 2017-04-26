@@ -11,7 +11,8 @@ use {EncodeBuf, DecodeBuf, MsgType, Error};
 use {Future, Promise};
 use cookiemap::CookieMap;
 
-use magenta::{Channel, WaitSet, WaitSetOpts, Status};
+use magenta::{Channel, HandleBase, Packet, PacketContents, Port,
+    SignalPacket, WaitAsyncOpts};
 use magenta::{MX_TIME_INFINITE, MX_CHANNEL_READABLE, MX_CHANNEL_PEER_CLOSED};
 
 #[derive(Clone)]
@@ -59,6 +60,21 @@ impl Client {
     }
 }
 
+// Helper function to extract a valid signal packet.
+fn as_signal_packet(packet: &Packet) -> Option<SignalPacket> {
+    if packet.status() == 0 {
+        match packet.contents() {
+            PacketContents::SignalOne(s) => return Some(s),
+            PacketContents::SignalRep(s) => return Some(s),
+            _ => (),
+        }
+    }
+    None
+}
+
+// Since we're only waiting on one event, we don't need multiple keys.
+const DEFAULT_KEY: u64 = 0;
+
 impl ListenerThread {
     fn new() -> Self {
         ListenerThread {
@@ -70,6 +86,12 @@ impl ListenerThread {
     // away (and there are no pending requests), the channel will get closed, and the wait
     // will complete.
     //
+    // To facilitate this, the code is designed so that it's holding only a weak reference
+    // to the channel object itself. When the last client's reference goes away, the wait
+    // call will return with an error, and this code will clean up the thread. This is the
+    // reason we use a multi-event wait primitive, even though we're only waiting on a
+    // single channel.
+    //
     // Another perfectly good way of designing this would be to only wait when responses
     // are pending. Then the thread would be parked when no responses are pending, and we'd
     // hold a strong reference to the client state (and thus the channel) when responses
@@ -77,10 +99,11 @@ impl ListenerThread {
     //
     // But the current implementation is probably good enough for now.
     fn work(&self, client: Weak<ClientState>) {
-        let waitset = if let Some(c) = client.upgrade() {
-            if let Ok(waitset) = WaitSet::create(WaitSetOpts::Default) {
-                if waitset.add(&c.channel, 0, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED).is_ok() {
-                    waitset
+        let port = if let Some(c) = client.upgrade() {
+            if let Ok(port) = Port::create(Default::default()) {
+                if c.channel.wait_async(&port, DEFAULT_KEY,
+                        MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, WaitAsyncOpts::Once).is_ok() {
+                    port
                 } else {
                     return;
                 }
@@ -90,13 +113,10 @@ impl ListenerThread {
         } else {
             return;
         };
-        let mut waitset_result = Vec::with_capacity(1);
         loop {
-            if waitset.wait(MX_TIME_INFINITE, &mut waitset_result).is_err() {
-                break;
-            }
-            if let Some(ref res) = waitset_result.first() {
-                if res.status() != Status::NoError || !res.observed().contains(MX_CHANNEL_READABLE) {
+            let wait_result = port.wait(MX_TIME_INFINITE);
+            if let Some(packet) = wait_result.ok().and_then(|p| as_signal_packet(&p)) {
+                if !packet.observed().contains(MX_CHANNEL_READABLE) {
                     break;
                 }
                 let mut buf = DecodeBuf::new();
@@ -109,7 +129,12 @@ impl ListenerThread {
                     let pending = self.pending.lock().unwrap().as_mut().unwrap().remove(id);
                     if let Some((promise, _client_state_ref)) = pending {
                         promise.set_ok(buf);
-                        continue;
+                        if c.channel.wait_async(&port, 0,
+                            MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                            WaitAsyncOpts::Once).is_ok()
+                        {
+                            continue;
+                        }
                     }
                 }
             }
