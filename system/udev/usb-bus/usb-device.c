@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -214,10 +215,6 @@ static mx_protocol_device_t usb_device_proto = {
     .release = usb_device_release,
 };
 
-static mx_driver_t _driver_usb_device = {
-    .name = "usb-device",
-};
-
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
 static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
@@ -382,7 +379,7 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
     char name[16];
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
 
-    device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
+    device_init(&dev->device, &_driver_usb_bus, name, &usb_device_proto);
     dev->device.protocol_id = MX_PROTOCOL_USB;
 
     // Do not allow binding to root of a composite device.

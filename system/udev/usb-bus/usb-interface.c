@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -145,10 +146,6 @@ static mx_protocol_device_t usb_interface_proto = {
     .release = usb_interface_release,
 };
 
-static mx_driver_t _driver_usb_interface = {
-    .name = "usb-interface",
-};
-
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
 static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
@@ -240,7 +237,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     char name[20];
     snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id, interface_desc->bInterfaceNumber);
 
-    device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
+    device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
     intf->device.protocol_id = MX_PROTOCOL_USB;
     intf->device.protocol_ops = &_usb_protocol;
 
@@ -302,7 +299,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     char name[20];
     snprintf(name, sizeof(name), "usb-dev-%03d-ia-%d", device->device_id, assoc_desc->iFunction);
 
-    device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
+    device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
     intf->device.protocol_id = MX_PROTOCOL_USB;
     intf->device.protocol_ops = &_usb_protocol;
 
