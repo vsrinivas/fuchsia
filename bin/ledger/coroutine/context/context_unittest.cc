@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
+#include "lib/ftl/compiler_specific.h"
 #include "lib/ftl/logging.h"
 
 namespace context {
@@ -79,16 +80,23 @@ TEST(Context, MakeContext) {
   EXPECT_EQ(10, va_args_result);
 }
 
+// Force to set the pointed address to 1. This must be no-inline to prevent the
+// compiler to optimize away the set.
+FTL_NOINLINE void ForceSet(volatile char* addr) {
+  *addr = 1;
+}
+
+// Write some data to the unsafe stack.
 void TrashStack(void* context) {
-  char buffer[1024];
+  volatile char buffer[1024];
   for (size_t i = 0; i < 6; ++i) {
-    buffer[Fact(i)] = 1;
+    ForceSet(buffer + Fact(i));
   }
 
   SetContext(reinterpret_cast<Context*>(context));
 }
 
-TEST(Context, DISABLED_MakeContextUnsafeStack) {
+TEST(Context, MakeContextUnsafeStack) {
   Stack stack;
   memset(GetUnsafeStackForTest(stack), 0, stack.stack_size());
 
