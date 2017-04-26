@@ -16,6 +16,8 @@
 
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
+#else
+class FifoDispatcher : public mxtl::RefCounted<FifoDispatcher> {};
 #endif // WITH_LIB_MAGENTA
 
 #include "hypervisor_priv.h"
