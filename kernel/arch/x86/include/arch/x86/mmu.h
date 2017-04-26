@@ -126,9 +126,6 @@
 #define VADDR_TO_PD_INDEX(vaddr)  ((vaddr) >> PD_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
 #define VADDR_TO_PT_INDEX(vaddr)  ((vaddr) >> PT_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
 
-#define VADDR_TO_PML4_INDEX(vaddr) ((vaddr) >> PML4_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
-#define VADDR_TO_PDP_INDEX(vaddr)  ((vaddr) >> PDP_SHIFT) & ((1ul << ADDR_OFFSET) - 1)
-
 /* on both x86-32 and x86-64 physical memory is mapped at the base of the kernel address space */
 #define X86_PHYS_TO_VIRT(x)     ((uintptr_t)(x) + KERNEL_ASPACE_BASE)
 #define X86_VIRT_TO_PHYS(x)     ((uintptr_t)(x) - KERNEL_ASPACE_BASE)
