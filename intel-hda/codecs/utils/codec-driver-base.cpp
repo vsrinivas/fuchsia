@@ -34,7 +34,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_driver_t* driver, mx_device_t* code
     if (codec_device_ != nullptr)
         return ERR_BAD_STATE;
 
-    res = device_get_protocol(codec_dev, MX_PROTOCOL_IHDA_CODEC, &proto_void);
+    res = device_op_get_protocol(codec_dev, MX_PROTOCOL_IHDA_CODEC, &proto_void);
     if (res != NO_ERROR)
         return res;
 

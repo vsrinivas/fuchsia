@@ -127,7 +127,7 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     }
 
     // The device had better be a PCI device, or we are very confused.
-    res = device_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void**>(&pci_proto_));
+    res = device_op_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void**>(&pci_proto_));
     if (res != NO_ERROR) {
         LOG("PCI device does not support PCI protocol! (res %d)\n", res);
         return res;
