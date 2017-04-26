@@ -168,8 +168,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
   // Operations implemented here.
   class GetStoryDataCall;
   class WriteStoryDataCall;
-  class SetStoryInfoExtraCall;
-  class SetStoryStateCall;
+  class MutateStoryDataCall;
   class CreateStoryCall;
   class DeleteStoryCall;
   class GetControllerCall;
