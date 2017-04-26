@@ -62,8 +62,8 @@ impl Channel {
             let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
             let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
             let status = sys::mx_channel_read(raw_handle, opts,
-                buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
-                buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
+                buf.bytes.as_mut_ptr(), buf.handles.as_mut_ptr(),
+                num_bytes, num_handles, &mut num_bytes, &mut num_handles);
             if status == sys::ERR_BUFFER_TOO_SMALL {
                 Err((num_bytes as usize, num_handles as usize))
             } else {

@@ -139,10 +139,10 @@ extern {
         handle: mx_handle_t,
         options: u32,
         bytes: *mut u8,
-        num_bytes: u32,
-        actual_bytes: *mut u32,
         handles: *mut mx_handle_t,
+        num_bytes: u32,
         num_handles: u32,
+        actual_bytes: *mut u32,
         actual_handles: *mut u32
         ) -> mx_status_t;
 
@@ -263,6 +263,14 @@ extern {
         parent_job: mx_handle_t,
         options: u32,
         out: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_job_set_policy(
+        job: mx_handle_t,
+        options: u32,
+        topic: u32,
+        policy: *const u8,
+        count: u32
         ) -> mx_status_t;
 
     pub fn mx_task_bind_exception_port(
@@ -409,6 +417,14 @@ extern {
         size: u64,
         buffer: *mut u8,
         buffer_size: usize
+        ) -> mx_status_t;
+
+    pub fn mx_vmo_clone(
+        handle: mx_handle_t,
+        options: u32,
+        offset: u64,
+        size: u64,
+        out: *mut mx_handle_t
         ) -> mx_status_t;
 
     pub fn mx_vmar_allocate(
