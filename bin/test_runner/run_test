@@ -136,7 +136,7 @@ def run_test(sock, listener_process, command_str):
         # Consume the log output, whether or not we print it.
         log_output = read_log_listener(listener_process, test_id)
       else:
-        log_output = None
+        log_output = ''
       if msg == "fail":
         print log_output
       return status
