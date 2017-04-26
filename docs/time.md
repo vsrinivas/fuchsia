@@ -1,10 +1,19 @@
 # Time units
 
 ## Userspace exposed time units
-mx\_time\_t is nanoseconds
+
+*mx\_time\_t* is in nanoseconds.
+
+Use [mx_time_get()](syscalls/time_get.md) to get the current time.
 
 ## Kernel-internal time units
-lk\_time\_t is milliseconds
-lk\_bigtime\_t is nanoseconds
 
-The kernel-internal time units are likely to change but mx\_time\_t is expected to be stable.
+*lk\_time\_t* is in nanoseconds.
+
+To get the current time since boot, use:
+
+```
+#include <platform.h>
+
+lk_time_t current_time(void);
+```
