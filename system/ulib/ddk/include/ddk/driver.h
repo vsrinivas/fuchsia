@@ -50,7 +50,9 @@ struct mx_driver {
 
     uint32_t flags;
 
+#if !DEVHOST_V2
     struct list_node node;
+#endif
 
     const mx_bind_inst_t* binding;
     uint32_t binding_size;
