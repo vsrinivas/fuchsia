@@ -15,6 +15,7 @@
 #include <threads.h>
 
 typedef struct mxio mxio_t;
+typedef struct mxio_namespace mxio_ns_t;
 
 // MXIO provides open/close/read/write io over various transports
 // via the mxio_t interface abstraction.
@@ -152,6 +153,8 @@ static inline void mxio_release(mxio_t* io) {
     }
 }
 
+mxio_t* mxio_ns_open_root(mxio_ns_t* ns);
+
 // io will be consumed by this and must not be shared
 void mxio_chdir(mxio_t* io, const char* path);
 
@@ -199,6 +202,7 @@ typedef struct {
     mxio_t* root;
     mxio_t* cwd;
     mxio_t* fdtab[MAX_MXIO_FD];
+    mxio_ns_t* ns;
     char cwd_path[PATH_MAX];
 } mxio_state_t;
 
@@ -212,3 +216,4 @@ extern mxio_state_t __mxio_global_state;
 #define mxio_fdtab (__mxio_global_state.fdtab)
 #define mxio_root_init (__mxio_global_state.init)
 #define mxio_svc_root (__mxio_global_state.svc_root)
+#define mxio_root_ns (__mxio_global_state.ns)

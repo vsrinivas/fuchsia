@@ -485,6 +485,10 @@ mx_status_t mxio_ns_bind_fd(mxio_ns_t* ns, const char* path, int fd) {
     return r;
 }
 
+mxio_t* mxio_ns_open_root(mxio_ns_t* ns) {
+    return mxio_dir_create(ns, &ns->root, 0);
+}
+
 int mxio_ns_opendir(mxio_ns_t* ns) {
     mxio_t* io = mxio_dir_create(ns, &ns->root, 0);
     if (io == NULL) {

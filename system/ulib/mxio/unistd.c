@@ -28,6 +28,7 @@
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
+#include <mxio/namespace.h>
 #include <mxio/private.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
@@ -454,6 +455,7 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, char
     return __mxio_opendir_containing_at(io, AT_FDCWD, path, name);
 }
 
+
 // hook into libc process startup
 // this is called prior to main to set up the mxio world
 // and thus does not use the mxio_lock
@@ -522,6 +524,20 @@ void __libc_extensions_init(uint32_t handle_count,
             // do not remove handle, so it is available
             // to higher level service connection code
             continue;
+        case PA_NS_DIR:
+            // we always contine here to not steal the
+            // handles from higher level code that may
+            // also need access to the namespace
+            if (arg >= name_count) {
+                continue;
+            }
+            if (mxio_root_ns == NULL) {
+                if (mxio_ns_create(&mxio_root_ns) < 0) {
+                    continue;
+                }
+            }
+            mxio_ns_bind(mxio_root_ns, names[arg], h);
+            continue;
         default:
             // unknown handle, leave it alone
             continue;
@@ -554,6 +570,17 @@ void __libc_extensions_init(uint32_t handle_count,
         }
     }
 
+    if (mxio_root_ns) {
+        mxio_t* io = mxio_ns_open_root(mxio_root_ns);
+        if (io != NULL) {
+            // If we have a root from the legacy PA_MXIO_ROOT,
+            // a specified root namespace overrides it
+            if (mxio_root_handle) {
+                mxio_close(mxio_root_handle);
+            }
+            mxio_root_handle = io;
+        }
+    }
     if (mxio_root_handle) {
         mxio_root_init = true;
         if(!mxio_cwd_handle) {
