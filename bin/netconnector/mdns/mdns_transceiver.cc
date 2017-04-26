@@ -46,6 +46,11 @@ bool MdnsTransceiver::Start(
     return false;
   }
 
+  if (get_if_info.n_info == 0) {
+    FTL_LOG(ERROR) << "No interfaces found.";
+    return false;
+  }
+
   // Launch a transceiver for each interface.
   uint32_t interface_index = 0;
   for (uint32_t i = 0; i < get_if_info.n_info; ++i) {
