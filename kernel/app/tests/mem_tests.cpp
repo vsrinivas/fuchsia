@@ -26,7 +26,7 @@ static void mem_test_fail(void *ptr, uint32_t should, uint32_t is)
 
 static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
 {
-    volatile uint32_t *vbuf32 = ptr;
+    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
     size_t i;
 
     printf("\tpattern 0x%08x\n", pat);
@@ -46,7 +46,7 @@ static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
 
 static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
 {
-    volatile uint32_t *vbuf32 = ptr;
+    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
     size_t i;
 
     printf("\tpattern 0x%08x\n", pat);
@@ -96,14 +96,14 @@ static void do_mem_tests(void *ptr, size_t len)
 
     /* test 1: simple write address to memory, read back */
     printf("test 1: simple address write, read back\n");
-    volatile uint32_t *vbuf32 = ptr;
+    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
     for (i = 0; i < len / 4; i++) {
-        vbuf32[i] = i;
+        vbuf32[i] = static_cast<uint32_t>(i);
     }
 
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != i) {
-            mem_test_fail((void *)&vbuf32[i], i, vbuf32[i]);
+            mem_test_fail((void*)&vbuf32[i], static_cast<uint32_t>(i), vbuf32[i]);
             goto out;
         }
     }
@@ -126,7 +126,7 @@ static void do_mem_tests(void *ptr, size_t len)
             goto out;
     }
     // shift bits through 16bit word, invert top of 32bit
-    for (uint16_t p = 1; p != 0; p <<= 1) {
+    for (uint16_t p = 1; p != 0; p = static_cast<uint16_t>(p << 1)) {
         if (do_pattern_test(ptr, len, ((~p) << 16) | p) < 0)
             goto out;
     }
@@ -144,7 +144,7 @@ static void do_mem_tests(void *ptr, size_t len)
             goto out;
     }
     // shift bits through 16bit word, invert top of 32bit
-    for (uint16_t p = 1; p != 0; p <<= 1) {
+    for (uint16_t p = 1; p != 0; p = static_cast<uint16_t>(p << 1)) {
         if (do_moving_inversion_test(ptr, len, ((~p) << 16) | p) < 0)
             goto out;
     }

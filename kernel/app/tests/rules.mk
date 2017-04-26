@@ -14,7 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/cache_tests.c \
     $(LOCAL_DIR)/clock_tests.c \
     $(LOCAL_DIR)/fibo.c \
-    $(LOCAL_DIR)/mem_tests.c \
+    $(LOCAL_DIR)/mem_tests.cpp \
     $(LOCAL_DIR)/printf_tests.c \
     $(LOCAL_DIR)/sync_ipi_tests.c \
     $(LOCAL_DIR)/sleep_tests.c \
