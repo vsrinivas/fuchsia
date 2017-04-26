@@ -134,18 +134,19 @@ static bool vmm_alloc_smoke_test(void* context) {
 
     // allocate a region of memory
     void* ptr;
-    auto err = vmm_alloc(vmm_get_kernel_aspace(), "test",
-                         alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
-    EXPECT_EQ(0, err, "vmm_allocate region of memory");
-    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    auto kaspace = VmAspace::kernel_aspace();
+    auto err = kaspace->Alloc(
+            "test", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
+    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     // free the region
-    err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
-    EXPECT_EQ(0, err, "vmm_free_region region of memory");
+    err = kaspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
+    EXPECT_EQ(0, err, "VmAspace::FreeRegion region of memory");
     END_TEST;
 }
 
@@ -157,11 +158,12 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
 
     // allocate a region of memory
     void* ptr;
-    auto err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
-                                    alloc_size, &ptr, 0, 0,
-                                    VMM_FLAG_COMMIT, kArchRwFlags);
-    EXPECT_EQ(0, err, "vmm_allocate_contiguous region of memory");
-    EXPECT_NEQ(nullptr, ptr, "vmm_allocate_contiguous region of memory");
+    auto kaspace = VmAspace::kernel_aspace();
+    auto err = kaspace->AllocContiguous("test",
+                                        alloc_size, &ptr, 0, 0,
+                                        VMM_FLAG_COMMIT, kArchRwFlags);
+    EXPECT_EQ(0, err, "VmAspace::AllocContiguous region of memory");
+    EXPECT_NEQ(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -180,8 +182,8 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
     }
 
     // free the region
-    err = vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
-    EXPECT_EQ(0, err, "vmm_free_region region of memory");
+    err = kaspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
+    EXPECT_EQ(0, err, "VmAspace::FreeRegion region of memory");
     END_TEST;
 }
 
@@ -190,38 +192,36 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
 static bool multiple_regions_test(void* context) {
     BEGIN_TEST;
     void* ptr;
-    vmm_aspace_t* aspace;
     static const size_t alloc_size = 16 * 1024;
 
-    auto err = vmm_create_aspace(&aspace, "test aspace", 0);
-    EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
-    EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
+    mxtl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+    EXPECT_NEQ(nullptr, aspace, "VmAspace::Create pointer");
 
     vmm_aspace_t* old_aspace = get_current_thread()->aspace;
-    vmm_set_active_aspace(aspace);
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
 
     // allocate region 0
-    err = vmm_alloc(aspace, "test0", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
-    EXPECT_EQ(0, err, "vmm_allocate region of memory");
-    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
+    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     // allocate region 1
-    err = vmm_alloc(aspace, "test1", 16384, &ptr, 0, 0, 0, kArchRwFlags);
-    EXPECT_EQ(0, err, "vmm_allocate region of memory");
-    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    err = aspace->Alloc("test1", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
+    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
         all_ok = false;
 
     // allocate region 2
-    err = vmm_alloc(aspace, "test2", 16384, &ptr, 0, 0, 0, kArchRwFlags);
-    EXPECT_EQ(0, err, "vmm_allocate region of memory");
-    EXPECT_NEQ(nullptr, ptr, "vmm_allocate region of memory");
+    err = aspace->Alloc("test2", 16384, &ptr, 0, 0, 0, kArchRwFlags);
+    EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
+    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -230,8 +230,8 @@ static bool multiple_regions_test(void* context) {
     vmm_set_active_aspace(old_aspace);
 
     // free the address space all at once
-    err = vmm_free_aspace(aspace);
-    EXPECT_EQ(0, err, "vmm_free_aspace");
+    err = aspace->Destroy();
+    EXPECT_EQ(0, err, "VmAspace::Destroy");
     END_TEST;
 }
 
@@ -239,8 +239,8 @@ static bool vmm_alloc_zero_size_fails(void* context) {
     BEGIN_TEST;
     const size_t zero_size = 0;
     void* ptr;
-    status_t err = vmm_alloc(vmm_get_kernel_aspace(), "test",
-                             zero_size, &ptr, 0, 0, 0, kArchRwFlags);
+    status_t err = VmAspace::kernel_aspace()->Alloc(
+            "test", zero_size, &ptr, 0, 0, 0, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -249,8 +249,9 @@ static bool vmm_alloc_bad_specific_pointer_fails(void* context) {
     BEGIN_TEST;
     // bad specific pointer
     void* ptr = (void*)1;
-    status_t err = vmm_alloc(vmm_get_kernel_aspace(), "test", 16384, &ptr, 0, 0,
-                             VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, kArchRwFlags);
+    status_t err = VmAspace::kernel_aspace()->Alloc(
+            "test", 16384, &ptr, 0, 0,
+            VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -260,9 +261,8 @@ static bool vmm_alloc_contiguous_missing_flag_commit_fails(void* context) {
     // should have VMM_FLAG_COMMIT
     const uint zero_vmm_flags = 0;
     void* ptr;
-    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
-                                        4096, &ptr, 0, 0, zero_vmm_flags,
-                                        kArchRwFlags);
+    status_t err = VmAspace::kernel_aspace()->AllocContiguous(
+            "test", 4096, &ptr, 0, 0, zero_vmm_flags, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -271,9 +271,8 @@ static bool vmm_alloc_contiguous_zero_size_fails(void* context) {
     BEGIN_TEST;
     const size_t zero_size = 0;
     void* ptr;
-    status_t err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test",
-                                        zero_size, &ptr, 0, 0, VMM_FLAG_COMMIT,
-                                        kArchRwFlags);
+    status_t err = VmAspace::kernel_aspace()->AllocContiguous(
+            "test", zero_size, &ptr, 0, 0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
