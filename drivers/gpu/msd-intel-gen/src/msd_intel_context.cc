@@ -100,7 +100,23 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
     return true;
 }
 
-magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+ClientContext::~ClientContext() { DASSERT(!wait_thread_.joinable()); }
+
+void ClientContext::Shutdown()
+{
+    if (semaphore_port_)
+        semaphore_port_->Close();
+
+    if (wait_thread_.joinable()) {
+        DLOG("joining wait thread");
+        wait_thread_.join();
+        DLOG("joined wait thread");
+    }
+
+    semaphore_port_.reset();
+}
+
+magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
     auto connection = connection_.lock();
     if (!connection)
@@ -109,7 +125,69 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
     if (connection->context_killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
-    return connection->SubmitCommandBuffer(std::move(cmd_buf));
+    if (!semaphore_port_) {
+        semaphore_port_ = magma::SemaphorePort::Create();
+
+        DASSERT(!wait_thread_.joinable());
+        wait_thread_ = std::thread([this] {
+            DLOG("context wait thread started");
+            while (semaphore_port_->WaitOne()) {
+            }
+            DLOG("context wait thread exited");
+        });
+    }
+
+    std::unique_lock<std::mutex> lock(pending_command_buffer_mutex_);
+    pending_command_buffer_queue_.push(std::move(command_buffer));
+
+    if (pending_command_buffer_queue_.size() == 1)
+        return SubmitPendingCommandBuffer(true);
+
+    return MAGMA_STATUS_OK;
+}
+
+magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
+{
+    auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
+        this->SubmitPendingCommandBuffer(false);
+    };
+
+    auto lock = have_lock
+                    ? std::unique_lock<std::mutex>(pending_command_buffer_mutex_, std::adopt_lock)
+                    : std::unique_lock<std::mutex>(pending_command_buffer_mutex_);
+
+    while (pending_command_buffer_queue_.size()) {
+        DLOG("pending_command_buffer_queue_ size %zu", pending_command_buffer_queue_.size());
+
+        std::unique_ptr<CommandBuffer>& command_buffer = pending_command_buffer_queue_.front();
+
+        // Takes ownership
+        auto semaphores = command_buffer->wait_semaphores();
+
+        if (semaphores.size() == 0) {
+            auto connection = connection_.lock();
+            if (!connection)
+                return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST,
+                                "couldn't lock reference to connection");
+
+            if (connection->context_killed())
+                return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+
+            connection->SubmitCommandBuffer(std::move(command_buffer));
+            pending_command_buffer_queue_.pop();
+        } else {
+            DLOG("adding waitset with %zu semaphores", semaphores.size());
+
+            // Invoke the callback when semaphores are satisfied;
+            // the next ProcessPendingFlip will see an empty semaphore array for the front request.
+            bool result = semaphore_port_->AddWaitSet(
+                std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
+            DASSERT(result);
+            break;
+        }
+    }
+
+    return MAGMA_STATUS_OK;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -119,6 +197,7 @@ void msd_context_destroy(msd_context_t* ctx)
     auto abi_context = MsdIntelAbiContext::cast(ctx);
     // get a copy of the shared ptr
     auto client_context = abi_context->ptr();
+    client_context->Shutdown();
     // delete the abi container
     delete abi_context;
     // can safely unmap contexts only from the device thread; for that we go through the connection

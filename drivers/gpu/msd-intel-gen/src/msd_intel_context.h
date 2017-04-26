@@ -6,6 +6,7 @@
 #define MSD_INTEL_CONTEXT_H
 
 #include "command_buffer.h"
+#include "magma_util/semaphore_port.h"
 #include "magma_util/status.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
@@ -15,6 +16,7 @@
 #include <map>
 #include <memory>
 #include <queue>
+#include <thread>
 
 class MsdIntelConnection;
 
@@ -86,12 +88,21 @@ public:
     {
     }
 
+    ~ClientContext();
+
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+    void Shutdown();
 
     std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
 private:
+    magma::Status SubmitPendingCommandBuffer(bool have_lock);
+
     std::weak_ptr<MsdIntelConnection> connection_;
+    std::unique_ptr<magma::SemaphorePort> semaphore_port_;
+    std::thread wait_thread_;
+    std::mutex pending_command_buffer_mutex_;
+    std::queue<std::unique_ptr<CommandBuffer>> pending_command_buffer_queue_;
 };
 
 class MsdIntelAbiContext : public msd_context_t {

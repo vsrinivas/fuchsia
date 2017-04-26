@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test_command_buffer.h"
 #include "command_buffer.h"
 #include "gpu_mapping_cache.h"
 #include "helper/command_buffer_helper.h"
@@ -11,12 +12,9 @@
 #include "msd_intel_device.h"
 #include "gtest/gtest.h"
 
-class TestCommandBuffer {
+class Test {
 public:
-    static std::unique_ptr<TestCommandBuffer> Create()
-    {
-        return std::unique_ptr<TestCommandBuffer>(new TestCommandBuffer());
-    }
+    static std::unique_ptr<Test> Create() { return std::unique_ptr<Test>(new Test()); }
 
     MsdIntelDevice* device() { return MsdIntelDevice::cast(helper_->dev()->msd_dev()); }
 
@@ -32,7 +30,7 @@ public:
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
         std::vector<std::shared_ptr<GpuMapping>> mappings;
-        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space, mappings));
+        ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
 
         uint32_t i = 0;
         gpu_addr_t addr;
@@ -43,7 +41,7 @@ public:
             EXPECT_GE(addr_space->allocated_size(addr), helper_->resources()[i++]->size());
         }
 
-        cmd_buf_->UnmapResourcesGpu();
+        TestCommandBuffer::UnmapResourcesGpu(cmd_buf_.get());
 
         for (auto& map : mappings) {
             addr = map->gpu_addr();
@@ -57,14 +55,14 @@ public:
         auto addr_space =
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
-        auto batch_buf_index = cmd_buf_->batch_buffer_resource_index();
-        auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
+        auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
+        auto batch_res = TestCommandBuffer::exec_resources(cmd_buf_.get())[batch_buf_index];
         void* batch_buf_virt_addr = 0;
         ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_buf_virt_addr));
         auto batch_buf_data = (uint32_t*)batch_buf_virt_addr;
 
         // Clear the relocations to be sure
-        auto batch_buf_resource = &cmd_buf_->resource(batch_buf_index);
+        auto batch_buf_resource = &TestCommandBuffer::resource(cmd_buf_.get(), batch_buf_index);
         for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
             auto relocation = batch_buf_resource->relocation(i);
 
@@ -76,8 +74,8 @@ public:
 
         // do the relocation foo
         std::vector<std::shared_ptr<GpuMapping>> mappings;
-        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space, mappings));
-        ASSERT_TRUE(cmd_buf_->PatchRelocations(mappings));
+        ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
+        ASSERT_TRUE(TestCommandBuffer::PatchRelocations(cmd_buf_.get(), mappings));
 
         // check that we foo'd it correctly
         for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
@@ -93,7 +91,8 @@ public:
 
     void TestPrepareForExecution()
     {
-        auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
+        auto engine =
+            TestCommandBuffer::render_engine(MsdIntelDevice::cast(helper_->dev()->msd_dev()));
         auto address_space = exec_address_space();
 
         uint32_t batch_start_offset = 0x10;
@@ -140,8 +139,8 @@ public:
         DLOG("target_gpu_addr 0x%lx", target_gpu_addr);
         *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
-        auto batch_buf_index = cmd_buf_->batch_buffer_resource_index();
-        auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
+        auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
+        auto batch_res = TestCommandBuffer::exec_resources(cmd_buf_.get())[batch_buf_index];
         void* batch_cpu_addr;
 
         ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
@@ -159,7 +158,7 @@ public:
         // batch end
         *batch_ptr++ = (0xA << 23);
 
-        device()->StartDeviceThread();
+        TestCommandBuffer::StartDeviceThread(device());
 
         cmd_buf_.reset();
         EXPECT_TRUE(helper_->ExecuteAndWait());
@@ -169,7 +168,7 @@ public:
     }
 
 private:
-    TestCommandBuffer()
+    Test()
     {
         auto platform_device = TestPlatformDevice::GetInstance();
         if (!platform_device)
@@ -192,11 +191,11 @@ private:
 
 TEST(CommandBuffer, MapUnmapResourcesGpu)
 {
-    TestCommandBuffer::Create()->TestMapUnmapResourcesGpu();
+    ::Test::Create()->TestMapUnmapResourcesGpu();
 }
 
-TEST(CommandBuffer, PatchRelocations) { TestCommandBuffer::Create()->TestPatchRelocations(); }
+TEST(CommandBuffer, PatchRelocations) { ::Test::Create()->TestPatchRelocations(); }
 
-TEST(CommandBuffer, PrepareForExecution) { TestCommandBuffer::Create()->TestPrepareForExecution(); }
+TEST(CommandBuffer, PrepareForExecution) { ::Test::Create()->TestPrepareForExecution(); }
 
-TEST(CommandBuffer, Execute) { TestCommandBuffer::Create()->TestExecute(); }
+TEST(CommandBuffer, Execute) { ::Test::Create()->TestExecute(); }
