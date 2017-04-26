@@ -28,7 +28,8 @@ class _AskHandlerImpl extends AskHandler {
   static final _urlSubPattern = new RegExp(r"\.[a-z]{2}");
   static final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
   static final _chatHeadline = "Open Chat";
-  static final _musicPattern = new RegExp(r"kanye|yeezus");
+  static final _musicPatternKanye = new RegExp(r"kanye|yeezus");
+  static final _musicPatternPortugal = new RegExp(r"portugal|the man");
 
   @override
   void ask(UserInput query, void callback(List<Proposal> proposals)) {
@@ -92,7 +93,7 @@ class _AskHandlerImpl extends AskHandler {
       });
     }
 
-    if (query.text?.contains(_musicPattern) ?? false) {
+    if (query.text?.contains(_musicPatternKanye) ?? false) {
       proposals.add(
         _createProposal(
           id: 'Listen to Kanye',
@@ -101,6 +102,20 @@ class _AskHandlerImpl extends AskHandler {
           color: 0xFF9C27B0, // Material Purple 500,
           initialData: JSON.encode(
             {"spotify:artistId": "5K4W6rqBFWDnAN6FQUkS6x"},
+          ),
+        ),
+      );
+    }
+
+    if (query.text?.contains(_musicPatternPortugal) ?? false) {
+      proposals.add(
+        _createProposal(
+          id: 'Listen to Portugal. The Man',
+          appUrl: 'file:///system/apps/music_artist',
+          headline: 'Listen to Portugal. The Man',
+          color: 0xFF9C27B0, // Material Purple 500,
+          initialData: JSON.encode(
+            {"spotify:artistId": "4kI8Ie27vjvonwaB2ePh8T"},
           ),
         ),
       );
