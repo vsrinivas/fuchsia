@@ -33,9 +33,15 @@ import("//build/dart/dart_package.gni")
 #   }
 template("dart_test") {
 
-  template_name = target_name
+  main_target_name = target_name
+  package_target_name = "${target_name}_package"
 
-  dart_package(template_name) {
+  sources_dir = "test"
+  if (defined(invoker.source_dir)) {
+    sources_dir = invoker.source_dir
+  }
+
+  dart_package(package_target_name) {
     forward_variables_from(invoker, [
       "analysis_options",
       "deps",
@@ -44,9 +50,45 @@ template("dart_test") {
 
     infer_package_name = true
 
-    source_dir = "test"
-    if (defined(invoker.source_dir)) {
-      source_dir = invoker.source_dir
-    }
+    source_dir = sources_dir
+  }
+
+  dot_packages_file = "$target_gen_dir/$package_target_name.packages"
+
+  fuchsia_tester_label = "//lib/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
+  fuchsia_tester_out_dir = get_label_info(fuchsia_tester_label, "root_out_dir")
+  fuchsia_tester_bin = "$fuchsia_tester_out_dir/dart-tools/fuchsia_tester"
+
+  flutter_shell_label = "//flutter/shell($host_toolchain)"
+  flutter_shell_out_dir = get_label_info(flutter_shell_label, "root_out_dir")
+  flutter_shell_bin = "$flutter_shell_out_dir/flutter_tester"
+
+  invocation_file = "$target_gen_dir/$target_name.sh"
+
+  action(main_target_name) {
+    script = "//build/dart/gen_test_invocation.py"
+
+    outputs = [
+      invocation_file,
+    ]
+
+    args = [
+      "--out",
+      rebase_path(invocation_file),
+      "--source-dir",
+      rebase_path(sources_dir),
+      "--dot-packages",
+      rebase_path(dot_packages_file),
+      "--test-runner",
+      rebase_path(fuchsia_tester_bin),
+      "--flutter-shell",
+      rebase_path(flutter_shell_bin),
+    ]
+
+    deps = [
+      ":$package_target_name",
+      flutter_shell_label,
+      fuchsia_tester_label,
+    ]
   }
 }
