@@ -21,19 +21,6 @@ enum {
     LOCKED_WITH_WAITERS = 2
 };
 
-static mx_status_t futex_wait_abstime(mx_futex_t* futex_addr,
-                                      int expected_value, mx_time_t abstime) {
-    if (abstime == MX_TIME_INFINITE)
-        return _mx_futex_wait(futex_addr, expected_value, MX_TIME_INFINITE);
-
-    // TODO(kulakowski) Use MX_CLOCK_UTC when available.
-    mx_time_t now = _mx_time_get(MX_CLOCK_MONOTONIC);
-    if (abstime < now) {
-        return ERR_TIMED_OUT;
-    }
-    return _mx_futex_wait(futex_addr, expected_value, abstime);
-}
-
 // On success, this will leave the mutex in the LOCKED_WITH_WAITERS state.
 static mx_status_t lock_slow_path(mxr_mutex_t* mutex, mx_time_t abstime,
                                   int old_state) {
@@ -44,8 +31,9 @@ static mx_status_t lock_slow_path(mxr_mutex_t* mutex, mx_time_t abstime,
             (old_state == LOCKED_WITHOUT_WAITERS &&
              atomic_compare_exchange_strong(&mutex->futex, &old_state,
                                             LOCKED_WITH_WAITERS))) {
-            mx_status_t status = futex_wait_abstime(
-                &mutex->futex, LOCKED_WITH_WAITERS, abstime);
+            // TODO(kulakowski) Use MX_CLOCK_UTC when available.
+            mx_status_t status = _mx_futex_wait(
+                    &mutex->futex, LOCKED_WITH_WAITERS, abstime);
             if (status == ERR_TIMED_OUT)
                 return ERR_TIMED_OUT;
         }
