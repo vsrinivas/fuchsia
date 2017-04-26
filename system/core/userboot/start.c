@@ -132,7 +132,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Extract the environment (aka kernel command line) strings.
     char* environ[pargs->environ_num + 1];
-    status = mxr_processargs_strings(buffer, nbytes, NULL, environ);
+    status = mxr_processargs_strings(buffer, nbytes, NULL, environ, NULL);
     check(log, status,
           "mxr_processargs_strings failed on bootstrap message\n");
 

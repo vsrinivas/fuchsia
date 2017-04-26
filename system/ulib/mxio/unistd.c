@@ -459,7 +459,9 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, char
 // and thus does not use the mxio_lock
 void __libc_extensions_init(uint32_t handle_count,
                             mx_handle_t handle[],
-                            uint32_t handle_info[]) {
+                            uint32_t handle_info[],
+                            uint32_t name_count,
+                            char** names) {
     int stdio_fd = -1;
 
     // extract handles we care about

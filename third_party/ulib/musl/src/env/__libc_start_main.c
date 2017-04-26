@@ -15,11 +15,14 @@
 // handle[i] and handle_info[i] for any handles they claim.
 void __libc_extensions_init(uint32_t handle_count,
                             mx_handle_t handle[],
-                            uint32_t handle_info[]) __attribute__((weak));
+                            uint32_t handle_info[],
+                            uint32_t name_count,
+                            char** names) __attribute__((weak));
 
 struct start_params {
-    uint32_t argc, nhandles;
+    uint32_t argc, nhandles, namec;
     char** argv;
+    char** names;
     mx_handle_t* handles;
     uint32_t* handle_info;
     int (*main)(int, char**, char**);
@@ -33,7 +36,8 @@ static void start_main(const struct start_params* p) {
     // Allow companion libraries a chance to claim handles, zeroing out
     // handles[i] and handle_info[i] for handles they claim.
     if (&__libc_extensions_init != NULL)
-        __libc_extensions_init(p->nhandles, p->handles, p->handle_info);
+        __libc_extensions_init(p->nhandles, p->handles, p->handle_info,
+                               p->namec, p->names);
 
     // Give any unclaimed handles to mx_get_startup_handle(). This function
     // takes ownership of the data, but not the memory: it assumes that the
@@ -93,6 +97,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     if (status == NO_ERROR) {
         p.argc = procargs->args_num;
         envc = procargs->environ_num;
+        p.namec = procargs->names_num;
     }
 
     // Use a single contiguous buffer for argv and envp, with two
@@ -108,11 +113,15 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     char** dummy_auxv = &args_and_environ[p.argc + 1 + envc + 1];
     dummy_auxv[0] = dummy_auxv[1] = 0;
 
+    char* names[p.namec + 1];
+    p.names = names;
+
     if (status == NO_ERROR)
-        status = mxr_processargs_strings(buffer, nbytes, p.argv, __environ);
+        status = mxr_processargs_strings(buffer, nbytes, p.argv, __environ, p.names);
     if (status != NO_ERROR) {
         p.argc = 0;
         p.argv = __environ = NULL;
+        p.namec = 0;
     }
 
     // Find the handles we're interested in among what we were given.

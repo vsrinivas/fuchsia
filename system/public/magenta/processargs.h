@@ -44,6 +44,16 @@ struct mx_proc_args {
     // the form "NAME=VALUE", but nothing enforces this.
     uint32_t environ_off;
     uint32_t environ_num;
+
+    // Offset from start of message to name strings and count of them.
+    // These strings are packed similar to the argument strings,
+    // but are referenced by PA_NS_* handle table entries and used
+    // to set up namespaces.
+    //
+    // Specifically: In a handle table entry with PA_HND_TYPE(info)
+    // of PA_NS_*, PA_HND_ARG(info) is an index into this name table.
+    uint32_t names_off;
+    uint32_t names_num;
 };
 
 // Handle Info entries associate a type and optional
@@ -113,7 +123,12 @@ struct mx_proc_args {
 
 
 // --- Namespace Handles ---
-// Coming soon
+
+// A handle which will handle OPEN requests relative
+// to a particular path which is specified by the
+// nametable entry refereed to by the "arg" field
+#define PA_NS_DIR                0x20
+
 
 // --- MXIO Handles ---
 // Used by libmxio for passing fdtable, fsroot, etc

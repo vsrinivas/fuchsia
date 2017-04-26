@@ -139,13 +139,15 @@ mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo);
 // passed to the new process via the processargs protocol.
 // ---------------------------------------------------------------------
 
-// Set the arguments or environment to be passed in the bootstrap
-// message.  All the strings are copied into the launchpad by this
-// call, with no pointers to these argument strings retained.
+// Set the arguments, environment, or nametable to be passed in the
+// bootstrap message.  All the strings are copied into the launchpad
+// by this call, with no pointers to these argument strings retained.
 // Successive calls replace the previous values.
 mx_status_t launchpad_set_args(launchpad_t* lp,
                                int argc, const char* const* argv);
 mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
+mx_status_t launchpad_set_nametable(launchpad_t* lp,
+                                    size_t count, const char* const* names);
 
 
 // Add one or more handles to be passed in the bootstrap message.
