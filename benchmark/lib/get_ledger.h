@@ -23,12 +23,15 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                             bool sync,
                             std::string server_id);
 
-// Retrieves the root page of the given Ledger instance, calls the callback only
-// after executing a GetId() call on the page, ensuring that it is already
-// initialized.
-void GetRootPageEnsureInitialized(
+// Retrieves the requested page of the given Ledger instance and calls the
+// callback only after executing a GetId() call on the page, ensuring that it is
+// already initialized. If |id| is nullptr, a new page with a unique id is
+// created.
+void GetPageEnsureInitialized(
     ledger::Ledger* ledger,
-    std::function<void(ledger::PagePtr page)> callback);
+    fidl::Array<uint8_t> id,
+    std::function<void(ledger::PagePtr page, fidl::Array<uint8_t> id)>
+        callback);
 
 }  // namespace benchmark
 

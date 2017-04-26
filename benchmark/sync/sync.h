@@ -41,16 +41,14 @@ class SyncBenchmark : public ledger::PageWatcher {
   void ShutDown();
 
   std::unique_ptr<app::ApplicationContext> application_context_;
-  int entry_count_;
-  fidl::Array<uint8_t> value_;
+  const int entry_count_;
+  const int value_size_;
   std::string server_id_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
-  bool alpha_ready_ = false;
-  bool beta_ready_ = false;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
 

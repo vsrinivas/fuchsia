@@ -6,6 +6,8 @@ source_set("lib") {
   sources = [
     "convert.cc",
     "convert.h",
+    "data.cc",
+    "data.h",
     "get_ledger.cc",
     "get_ledger.h",
     "logging.cc",

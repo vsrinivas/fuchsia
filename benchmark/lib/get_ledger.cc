@@ -47,12 +47,14 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   return ledger;
 }
 
-void GetRootPageEnsureInitialized(
+void GetPageEnsureInitialized(
     ledger::Ledger* ledger,
-    std::function<void(ledger::PagePtr page)> callback) {
+    fidl::Array<uint8_t> id,
+    std::function<void(ledger::PagePtr page, fidl::Array<uint8_t> id)>
+        callback) {
   ledger::PagePtr page;
-  ledger->GetRootPage(page.NewRequest(),
-                      benchmark::QuitOnErrorCallback("GetRootPage"));
+  ledger->GetPage(std::move(id), page.NewRequest(),
+                  benchmark::QuitOnErrorCallback("GetRootPage"));
   page.set_connection_error_handler([] {
     FTL_LOG(ERROR) << "The root page connection was closed, quitting.";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -61,7 +63,7 @@ void GetRootPageEnsureInitialized(
   ledger::Page* page_ptr = page.get();
   page_ptr->GetId(ftl::MakeCopyable([
     page = std::move(page), callback = std::move(callback)
-  ](auto unused_id) mutable { callback(std::move(page)); }));
+  ](auto id) mutable { callback(std::move(page), std::move(id)); }));
 }
 
 }  // namespace benchmark

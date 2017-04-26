@@ -7,12 +7,14 @@
 #include <iostream>
 
 #include "apps/ledger/benchmark/lib/convert.h"
+#include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -25,12 +27,8 @@ constexpr ftl::StringView kServerIdFlag = "server-id";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --"
-            << kServerIdFlag << "=<string>" << std::endl;
-}
-
-fidl::Array<uint8_t> MakeKey(int i) {
-  return benchmark::ToArray(std::to_string(i));
+            << "=<int> --" << kValueSizeFlag << "=<int> --" << kServerIdFlag
+            << "=<string>" << std::endl;
 }
 
 }  // namespace
@@ -42,7 +40,7 @@ SyncBenchmark::SyncBenchmark(int entry_count,
                              std::string server_id)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
-      value_(fidl::Array<uint8_t>::New(value_size)),
+      value_size_(value_size),
       server_id_(std::move(server_id)),
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
@@ -71,29 +69,24 @@ void SyncBenchmark::Run() {
       benchmark::GetLedger(application_context_.get(), &beta_controller_,
                            "sync", beta_path, true, server_id_);
 
-  benchmark::GetRootPageEnsureInitialized(alpha.get(),
-                                          [this](ledger::PagePtr page) {
-                                            alpha_page_ = std::move(page);
-                                            alpha_ready_ = true;
-                                            if (beta_ready_) {
-                                              RunSingle(0);
-                                            }
-                                          });
+  benchmark::GetPageEnsureInitialized(
+      alpha.get(), nullptr,
+      ftl::MakeCopyable([ this, beta = std::move(beta) ](ledger::PagePtr page,
+                                                         auto id) {
+        alpha_page_ = std::move(page);
+        beta->GetPage(std::move(id), beta_page_.NewRequest(),
+                      benchmark::QuitOnErrorCallback("GetPage"));
 
-  beta->GetRootPage(beta_page_.NewRequest(),
-                    benchmark::QuitOnErrorCallback("GetRootPage"));
-  ledger::PageSnapshotPtr snapshot;
-  beta_page_->GetSnapshot(snapshot.NewRequest(), nullptr,
-                          page_watcher_binding_.NewBinding(),
-                          [this](ledger::Status status) {
-                            if (benchmark::QuitOnError(status, "GetSnapshot")) {
-                              return;
-                            }
-                            beta_ready_ = true;
-                            if (alpha_ready_) {
-                              RunSingle(0);
-                            }
-                          });
+        ledger::PageSnapshotPtr snapshot;
+        beta_page_->GetSnapshot(
+            snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+            [this](ledger::Status status) {
+              if (benchmark::QuitOnError(status, "GetSnapshot")) {
+                return;
+              }
+              RunSingle(0);
+            });
+      }));
 }
 
 void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
@@ -108,14 +101,13 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
 }
 
 void SyncBenchmark::RunSingle(int i) {
-  FTL_DCHECK(alpha_ready_ && beta_ready_);
   if (i == entry_count_) {
     ShutDown();
     return;
   }
 
-  fidl::Array<uint8_t> key = MakeKey(i);
-  fidl::Array<uint8_t> value = value_.Clone();
+  fidl::Array<uint8_t> key = benchmark::MakeKey(i);
+  fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
   alpha_page_->Put(std::move(key), std::move(value),
                    benchmark::QuitOnErrorCallback("Put"));

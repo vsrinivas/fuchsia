@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "apps/ledger/benchmark/lib/convert.h"
+#include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -25,16 +26,6 @@ constexpr ftl::StringView kTransactionFlag = "transaction";
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
             << "=<int> --" << kValueSizeFlag << "=<int>" << std::endl;
-}
-
-fidl::Array<uint8_t> MakeKey(int i) {
-  return benchmark::ToArray(std::to_string(i));
-}
-
-fidl::Array<uint8_t> MakeValue(int i, size_t size) {
-  std::string data = std::to_string(i);
-  data.resize(size, 'a');
-  return benchmark::ToArray(data);
 }
 
 }  // namespace
@@ -57,8 +48,8 @@ void PutBenchmark::Run() {
   ledger::LedgerPtr ledger =
       benchmark::GetLedger(application_context_.get(), &ledger_controller_,
                            "put", tmp_dir_.path(), false, "");
-  benchmark::GetRootPageEnsureInitialized(
-      ledger.get(), [this](ledger::PagePtr page) {
+  benchmark::GetPageEnsureInitialized(
+      ledger.get(), nullptr, [this](ledger::PagePtr page, auto id) {
         page_ = std::move(page);
         if (transaction_) {
           page_->StartTransaction([this](ledger::Status status) {
@@ -84,8 +75,8 @@ void PutBenchmark::RunSingle(int i, int count) {
     return;
   }
 
-  fidl::Array<uint8_t> key = MakeKey(i);
-  fidl::Array<uint8_t> value = MakeValue(i, value_size_);
+  fidl::Array<uint8_t> key = benchmark::MakeKey(i);
+  fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
   page_->Put(std::move(key), std::move(value),
              [this, i, count](ledger::Status status) {
