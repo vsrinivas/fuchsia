@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>

@@ -6,7 +6,6 @@
 
 #include <mxtl/arena.h>
 
-#include <app/tests.h>
 #include <kernel/vm/vm_aspace.h>
 #include <unittest.h>
 

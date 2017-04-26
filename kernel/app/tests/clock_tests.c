@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <stdio.h>
 #include <rand.h>
 #include <err.h>
 #include <inttypes.h>
-#include <app/tests.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <kernel/event.h>

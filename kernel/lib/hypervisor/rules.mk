@@ -12,6 +12,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/guest_physical_address_space.cpp \
 
 MODULE_DEPS := \
+    third_party/lib/safeint \
     kernel/lib/mxtl \
 
 include make/module.mk

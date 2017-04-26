@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <stdio.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <platform.h>
-#include <app/tests.h>
 
 // Tests that thread_sleep and current_time() are consistent.
 static int thread_sleep_test(void)

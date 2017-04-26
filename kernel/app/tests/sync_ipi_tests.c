@@ -5,11 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <assert.h>
 #include <err.h>
 #include <stdio.h>
 #include <trace.h>
-#include <app/tests.h>
 #include <arch/ops.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>

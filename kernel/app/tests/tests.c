@@ -5,9 +5,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <app.h>
 #include <debug.h>
-#include <app/tests.h>
 #include <magenta/compiler.h>
 
 #if defined(WITH_LIB_CONSOLE)

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __APP_TESTS_H
-#define __APP_TESTS_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <lib/console.h>
@@ -37,6 +36,3 @@ int alloc_checker_tests(int argc, const cmd_args* argv);
 void unittests(void);
 
 __END_CDECLS
-
-#endif
-

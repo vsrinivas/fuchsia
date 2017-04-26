@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <app/tests.h>
+#include "tests.h"
+
 #include <new.h>
 #include <unittest.h>
 #include <mxtl/unique_ptr.h>

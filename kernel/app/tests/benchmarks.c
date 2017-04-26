@@ -5,13 +5,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "tests.h"
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <rand.h>
 #include <err.h>
 #include <stdlib.h>
 #include <string.h>
-#include <app/tests.h>
 #include <kernel/thread.h>
 #include <platform.h>
 #include <arch/ops.h>
