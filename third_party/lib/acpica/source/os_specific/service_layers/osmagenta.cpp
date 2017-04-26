@@ -9,7 +9,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <trace.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
@@ -142,10 +142,8 @@ void *AcpiOsMapMemory(
     ACPI_PHYSICAL_ADDRESS aligned_address = ROUNDDOWN(PhysicalAddress, PAGE_SIZE);
     ACPI_PHYSICAL_ADDRESS end = ROUNDUP(PhysicalAddress + Length, PAGE_SIZE);
 
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
     void *vaddr = NULL;
-    status_t status = vmm_alloc_physical(
-            kernel_aspace,
+    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
             "acpi_mapping",
             end - aligned_address,
             &vaddr,
@@ -171,8 +169,8 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    status_t status = vmm_free_region(kernel_aspace, (vaddr_t)LogicalAddress);
+    status_t status = VmAspace::kernel_aspace()->FreeRegion(
+            reinterpret_cast<vaddr_t>(LogicalAddress));
     if (status != NO_ERROR) {
         TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n",
                LogicalAddress, (uint64_t)Length);
