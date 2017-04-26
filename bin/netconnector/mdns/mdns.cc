@@ -8,6 +8,7 @@
 
 #include "apps/netconnector/src/mdns/address_responder.h"
 #include "apps/netconnector/src/mdns/dns_formatting.h"
+#include "apps/netconnector/src/mdns/host_name_resolver.h"
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
 #include "lib/ftl/logging.h"
@@ -94,6 +95,19 @@ bool Mdns::Start(const std::string& host_name) {
 
 void Mdns::Stop() {
   transceiver_.Stop();
+  started_ = false;
+}
+
+void Mdns::ResolveHostName(const std::string& host_name,
+                           ftl::TimePoint timeout,
+                           const ResolveHostNameCallback& callback) {
+  FTL_DCHECK(callback);
+
+  std::string host_full_name = MdnsNames::LocalHostFullName(host_name);
+
+  AddAgent(host_full_name,
+           std::make_shared<HostNameResolver>(this, host_name, host_full_name,
+                                              timeout, callback));
 }
 
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) {

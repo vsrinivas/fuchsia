@@ -24,6 +24,11 @@ namespace mdns {
 // Implements mDNS.
 class Mdns : public MdnsAgent::Host {
  public:
+  using ResolveHostNameCallback =
+      std::function<void(const std::string& host_name,
+                         const IpAddress& v4_address,
+                         const IpAddress& v6_address)>;
+
   Mdns();
 
   virtual ~Mdns() override;
@@ -42,6 +47,11 @@ class Mdns : public MdnsAgent::Host {
 
   // Stops the transceiver.
   void Stop();
+
+  // Resolves |host_name| to one or two |IpAddress|es.
+  void ResolveHostName(const std::string& host_name,
+                       ftl::TimePoint timeout,
+                       const ResolveHostNameCallback& callback);
 
  private:
   struct WakeQueueEntry {

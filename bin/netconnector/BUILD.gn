@@ -31,6 +31,8 @@ executable("netconnector") {
     "mdns/dns_reading.h",
     "mdns/dns_writing.cc",
     "mdns/dns_writing.h",
+    "mdns/host_name_resolver.cc",
+    "mdns/host_name_resolver.h",
     "mdns/mdns.cc",
     "mdns/mdns.h",
     "mdns/mdns_addresses.cc",
