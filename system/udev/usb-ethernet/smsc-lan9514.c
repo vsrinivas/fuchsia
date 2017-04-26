@@ -815,14 +815,13 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_lan9514 = {
-    .ops = {
-        .bind = lan9514_bind,
-    },
+static mx_driver_ops_t lan9514_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = lan9514_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_lan9514, "usb-ethernet-lan9514", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(ethernet_lan9514, lan9514_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, SMSC_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, SMSC_9514_LAN_PID),
-MAGENTA_DRIVER_END(_driver_lan9514)
+MAGENTA_DRIVER_END(ethernet_lan9514)

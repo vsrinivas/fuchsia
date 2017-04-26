@@ -137,17 +137,14 @@ mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     return status;
 }
 
-mx_driver_t _driver_msm_fbuffer = {
-    .name = "msm-fb",
-    .ops = {
-        .bind = fb_bind,
-    },
+static mx_driver_ops_t msm_fb_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = fb_bind,
 };
 
 // clang-format off
-
-MAGENTA_DRIVER_BEGIN(_driver_msm_fbuffer, "msm-fb", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(msm_fb, msm_fb_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_QCOM),
     BI_MATCH_IF(EQ, BIND_SOC_PID, SOC_PID_TRAPPER),
-MAGENTA_DRIVER_END(_driver_msm_fbuffer)
+MAGENTA_DRIVER_END(msm_fb)

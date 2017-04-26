@@ -35,11 +35,10 @@ mx_status_t zero_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_zero = {
-    .ops = {
-        .init = zero_init,
-    },
+static mx_driver_ops_t zero_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = zero_init,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_zero, "zero", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_zero)
+MAGENTA_DRIVER_BEGIN(zero, zero_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(zero)

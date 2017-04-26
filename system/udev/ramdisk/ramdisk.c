@@ -302,12 +302,11 @@ static mx_status_t ramdisk_driver_bind(mx_driver_t* driver, mx_device_t* parent,
     return NO_ERROR;
 }
 
-mx_driver_t _driver_ramdisk = {
-    .ops = {
-        .bind = ramdisk_driver_bind,
-    },
+static mx_driver_ops_t ramdisk_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = ramdisk_driver_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ramdisk, "ramdisk", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(ramdisk, ramdisk_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_ramdisk)
+MAGENTA_DRIVER_END(ramdisk)

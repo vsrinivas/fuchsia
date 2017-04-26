@@ -38,11 +38,12 @@ mx_status_t null_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_null = {
-    .ops = {
-        .init = null_init,
-    },
+mx_driver_t _driver_null;
+
+static mx_driver_ops_t null_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = null_init,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_null, "null", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_null)
+MAGENTA_DRIVER_BEGIN(null, null_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(null)

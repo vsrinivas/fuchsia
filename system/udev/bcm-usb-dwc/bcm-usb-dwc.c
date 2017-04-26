@@ -1799,16 +1799,15 @@ error_return:
     return st;
 }
 
-mx_driver_t _driver_usb_dwc = {
-    .ops = {
-        .bind = usb_dwc_bind,
-    },
+static mx_driver_ops_t usb_dwc_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = usb_dwc_bind,
 };
 
 // The formatter does not play nice with these macros.
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_usb_dwc, "bcm-usb-dwc", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(bcm_usb_dwc, usb_dwc_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_MAILBOX),
-MAGENTA_DRIVER_END(_driver_usb_dwc)
+MAGENTA_DRIVER_END(bcm_usb_dwc)
 // clang-format on

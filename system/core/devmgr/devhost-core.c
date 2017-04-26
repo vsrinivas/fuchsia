@@ -179,7 +179,7 @@ static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv, bool
         DM_LOCK();
         return status;
     }
-    status = drv->ops.bind(drv, dev, &cookie);
+    status = drv->ops->bind(drv, dev, &cookie);
     DM_LOCK();
     if (status < 0) {
         return status;
@@ -500,8 +500,8 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
 
     // detach from owner, downref on behalf of owner
     if (dev->owner) {
-        if (dev->owner->ops.unbind) {
-            dev->owner->ops.unbind(dev->owner, dev, dev->owner_cookie);
+        if (dev->owner->ops->unbind) {
+            dev->owner->ops->unbind(dev->owner, dev, dev->owner_cookie);
         }
         dev->owner = NULL;
         dev_ref_release(dev);

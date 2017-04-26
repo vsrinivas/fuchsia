@@ -763,13 +763,12 @@ static mx_status_t i8042_bind(mx_driver_t* driver, mx_device_t* parent, void** c
     return rc;
 }
 
-mx_driver_t _driver_i8042 = {
-    .ops = {
-        .bind = i8042_bind,
-    },
+static mx_driver_ops_t i8042_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = i8042_bind,
 };
 
 //TODO: should bind against PC/ACPI instead of misc
-MAGENTA_DRIVER_BEGIN(_driver_i8042, "i8042", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(i8042, i8042_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_i8042)
+MAGENTA_DRIVER_END(i8042)

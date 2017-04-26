@@ -240,15 +240,14 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_bochs_vbe = {
-    .ops = {
-        .bind = bochs_vbe_bind,
-    },
+static mx_driver_ops_t bochs_vbe_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = bochs_vbe_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_bochs_vbe, "bochs-vbe", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(bochs_vbe, bochs_vbe_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
-MAGENTA_DRIVER_END(_driver_bochs_vbe)
+MAGENTA_DRIVER_END(bochs_vbe)

@@ -236,13 +236,12 @@ next_interface:
     return NO_ERROR;
 }
 
-mx_driver_t _driver_usb_hid = {
-    .ops = {
-        .bind = usb_hid_bind,
-    },
+static mx_driver_ops_t usb_hid_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = usb_hid_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_hid, "usb-hid", "magenta", "0.1", 4)
+MAGENTA_DRIVER_BEGIN(usb_hid, usb_hid_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
-MAGENTA_DRIVER_END(_driver_usb_hid)
+MAGENTA_DRIVER_END(usb_hid)

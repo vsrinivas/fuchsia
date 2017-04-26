@@ -42,13 +42,12 @@ static mx_status_t bcm_root_init(mx_driver_t* driver) {
 
 #ifdef RASPBERRY_PI
 
-mx_driver_t _driver_bcmroot = {
-    .ops = {
-        .init = bcm_root_init,
-    },
+static mx_driver_ops_t bcmroot_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = bcm_root_init,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_bcmroot, "soc", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_bcmroot)
+MAGENTA_DRIVER_BEGIN(bcmroot, bcmroot_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(bcmroot)
 
 #endif

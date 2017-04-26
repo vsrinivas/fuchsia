@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "acpi.h"
 #include "devhost.h"
 #include "devcoordinator.h"
@@ -186,9 +185,10 @@ mx_status_t dmctl_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_dmctl = {
-    .name = "dmctl",
-    .ops = {
-        .init = dmctl_init,
-    },
+static mx_driver_ops_t dmctl_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = dmctl_init,
 };
+
+MAGENTA_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(dmctl)

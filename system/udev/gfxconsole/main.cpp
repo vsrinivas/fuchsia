@@ -647,7 +647,7 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_vc_root;
+static mx_driver_ops_t vc_root_driver_ops;
 
 __attribute__((constructor)) static void initialize() {
     vc_device_proto.release = vc_device_release;
@@ -657,9 +657,11 @@ __attribute__((constructor)) static void initialize() {
 
     vc_root_proto.open = vc_root_open;
 
-    _driver_vc_root.ops.bind = vc_root_bind;
+    vc_root_driver_ops.version = DRIVER_OPS_VERSION,
+    vc_root_driver_ops.bind = vc_root_bind;
+    _driver_vc_root.ops = &vc_root_driver_ops;
 }
 
-MAGENTA_DRIVER_BEGIN(_driver_vc_root, "virtconsole", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(vc_root, vc_root_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_DISPLAY),
-MAGENTA_DRIVER_END(_driver_vc_root)
+MAGENTA_DRIVER_END(vc_root)

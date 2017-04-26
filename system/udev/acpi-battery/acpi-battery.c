@@ -132,17 +132,16 @@ static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** 
     return NO_ERROR;
 }
 
-mx_driver_t _driver_acpi_battery = {
-    .ops = {
-        .bind = acpi_battery_bind,
-    },
+static mx_driver_ops_t acpi_battery_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = acpi_battery_bind,
 };
 
 #define ACPI_BATTERY_HID_0_3 0x504e5030 // "PNP0"
 #define ACPI_BATTERY_HID_4_7 0x43304100 // "C0A"
 
-MAGENTA_DRIVER_BEGIN(_driver_acpi_battery, "acpi-battery", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(acpi_battery, acpi_battery_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
     BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, ACPI_BATTERY_HID_0_3),
     BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, ACPI_BATTERY_HID_4_7),
-MAGENTA_DRIVER_END(_driver_acpi_battery)
+MAGENTA_DRIVER_END(acpi_battery)

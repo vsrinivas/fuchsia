@@ -320,14 +320,13 @@ static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     return ret;
 }
 
-mx_driver_t _driver_bcm_i2c = {
-    .ops = {
-        .bind = i2c_bind,
-    },
+static mx_driver_ops_t bcm_i2c_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = i2c_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_bcm_i2c, "bcm-i2c", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(bcm_i2c, bcm_i2c_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_I2C),
-MAGENTA_DRIVER_END(_driver_bcm_i2c)
+MAGENTA_DRIVER_END(bcm_i2c)

@@ -48,11 +48,10 @@ static mx_status_t msm_root_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_msmroot = {
-    .ops = {
-        .init = msm_root_init,
-    },
+static mx_driver_ops_t msm_root_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = msm_root_init,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_msmroot, "soc", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_msmroot)
+MAGENTA_DRIVER_BEGIN(msmroot, msm_root_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(msmroot)

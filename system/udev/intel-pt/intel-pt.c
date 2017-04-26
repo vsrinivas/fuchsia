@@ -952,12 +952,11 @@ static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     return NO_ERROR;
 }
 
-mx_driver_t _driver_intel_pt = {
-    .ops = {
-        .bind = ipt_bind,
-    },
+static mx_driver_ops_t ipt_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = ipt_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_intel_pt, "intel-pt", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(intel_pt, ipt_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_intel_pt)
+MAGENTA_DRIVER_END(intel_pt)

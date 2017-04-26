@@ -183,16 +183,15 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
 }
 #endif
 
-mx_driver_t _driver_kpci = {
-    .ops = {
+static mx_driver_ops_t kpci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
 #if NEW_BUS_DRIVER
-        .bind = kpci_drv_bind,
-        .create = kpci_drv_create,
+    .bind = kpci_drv_bind,
+    .create = kpci_drv_create,
 #else
-        .init = kpci_drv_init,
+    .init = kpci_drv_init,
 #endif
-    },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_kpci, "pci", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_kpci)
+MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(pci)

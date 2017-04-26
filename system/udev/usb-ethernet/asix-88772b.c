@@ -572,14 +572,13 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_ax88772b = {
-    .ops = {
-        .bind = ax88772b_bind,
-    },
+static mx_driver_ops_t ax88772b_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = ax88772b_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ax88772b, "usb-ethernet-ax88772b", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
-MAGENTA_DRIVER_END(_driver_ax88772b)
+MAGENTA_DRIVER_END(ethernet_ax88772b)

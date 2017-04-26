@@ -361,12 +361,11 @@ static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** 
 #endif
 }
 
-mx_driver_t _driver_intel_rtc = {
-    .ops = {
-        .bind = intel_rtc_bind,
-    },
+static mx_driver_ops_t intel_rtc_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = intel_rtc_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_intel_rtc, "intel-rtc", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(intel_rtc, intel_rtc_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_intel_rtc)
+MAGENTA_DRIVER_END(intel_rtc)

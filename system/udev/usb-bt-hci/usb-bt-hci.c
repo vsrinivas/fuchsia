@@ -636,13 +636,12 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_usb_bt_hci = {
-    .ops = {
-        .bind = hci_bind,
-    },
+static mx_driver_ops_t usb_bt_hci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = hci_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_bt_hci, "usb-bt-hci", "magenta", "0.1", 4)
+MAGENTA_DRIVER_BEGIN(usb_bt_hci, usb_bt_hci_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
 #if defined(USB_VID) && defined(USB_PID)
     BI_ABORT_IF(NE, BIND_USB_VID, USB_VID),
@@ -653,4 +652,4 @@ MAGENTA_DRIVER_BEGIN(_driver_usb_bt_hci, "usb-bt-hci", "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, 1),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 1),
 #endif
-MAGENTA_DRIVER_END(_driver_usb_bt_hci)
+MAGENTA_DRIVER_END(usb_bt_hci)

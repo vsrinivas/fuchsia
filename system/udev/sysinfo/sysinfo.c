@@ -65,11 +65,10 @@ mx_status_t sysinfo_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_sysinfo = {
-    .ops = {
-        .init = sysinfo_init,
-    },
+static mx_driver_ops_t sysinfo_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = sysinfo_init,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_sysinfo, "sysinfo", "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(_driver_sysinfo)
+MAGENTA_DRIVER_BEGIN(sysinfo, sysinfo_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(sysinfo)

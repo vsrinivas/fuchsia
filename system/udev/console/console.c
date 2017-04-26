@@ -98,12 +98,11 @@ static mx_status_t console_bind(mx_driver_t* drv, mx_device_t* parent, void** co
     return NO_ERROR;
 }
 
-mx_driver_t _driver_console = {
-    .ops = {
-        .bind = console_bind,
-    },
+static mx_driver_ops_t console_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = console_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_console, "console", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(console, console_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_console)
+MAGENTA_DRIVER_END(console)

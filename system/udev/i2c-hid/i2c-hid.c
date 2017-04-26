@@ -246,14 +246,13 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     return NO_ERROR;
 }
 
-mx_driver_t _driver_i2c_hid = {
-    .ops = {
-        .bind = i2c_hid_bind,
-    },
+static mx_driver_ops_t i2c_hid_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = i2c_hid_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_i2c_hid, "i2c-hid", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
     BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0010),
-MAGENTA_DRIVER_END(_driver_i2c_hid)
+MAGENTA_DRIVER_END(i2c_hid)

@@ -499,15 +499,14 @@ static mx_status_t sdmmc_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     return NO_ERROR;
 }
 
-mx_driver_t _driver_sdmmc = {
-    .ops = {
-        .bind = sdmmc_bind,
-    },
+static mx_driver_ops_t sdmmc_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = sdmmc_bind,
 };
 
 // The formatter does not play nice with these macros.
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_sdmmc, "sdmmc", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(sdmmc, sdmmc_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_SDMMC),
-MAGENTA_DRIVER_END(_driver_sdmmc)
+MAGENTA_DRIVER_END(sdmmc)
 // clang-format on

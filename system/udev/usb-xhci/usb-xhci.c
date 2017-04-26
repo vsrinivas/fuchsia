@@ -298,16 +298,15 @@ error_return:
     return status;
 }
 
-mx_driver_t _driver_usb_xhci = {
-    .ops = {
-        .bind = usb_xhci_bind,
-    },
+static mx_driver_ops_t xhci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = usb_xhci_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_usb_xhci, "usb-xhci", "magenta", "0.1", 4)
+MAGENTA_DRIVER_BEGIN(usb_xhci, xhci_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
     BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x03),
     BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x30),
-MAGENTA_DRIVER_END(_driver_usb_xhci)
+MAGENTA_DRIVER_END(usb_xhci)

@@ -18,7 +18,12 @@ typedef struct mx_driver mx_driver_t;
 typedef struct mx_bind_inst mx_bind_inst_t;
 typedef struct mx_driver_binding mx_driver_binding_t;
 
+// echo -n "mx_driver_ops_v0.5" | sha256sum | cut -c1-16
+#define DRIVER_OPS_VERSION 0x2b3490fa40d9f452
+
 typedef struct mx_driver_ops {
+    uint64_t version;   // DRIVER_OPS_VERSION
+
     // Opportunity to do on-load work.
     // Called ony once, before any other ops are called.
     mx_status_t (*init)(mx_driver_t* driver);
@@ -46,7 +51,7 @@ typedef struct mx_driver_ops {
 struct mx_driver {
     const char* name;
 
-    mx_driver_ops_t ops;
+    mx_driver_ops_t* ops;
 
     uint32_t flags;
 

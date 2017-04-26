@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -172,15 +173,27 @@ mx_status_t devhost_load_driver(mx_driver_t* drv) {
             status = ERR_IO;
             break;
         }
+        if (!di->driver->ops) {
+            printf("devhost: driver '%s' has NULL ops\n", rec->libname);
+            status = ERR_INVALID_ARGS;
+            break;
+        }
+        if (di->driver->ops->version != DRIVER_OPS_VERSION) {
+            printf("devhost: driver '%s' has bad driver ops version %" PRIx64
+                    ", expecting %" PRIx64 "\n", rec->libname,
+                    di->driver->ops->version, DRIVER_OPS_VERSION);
+            status = ERR_INVALID_ARGS;
+            break;
+        }
 
         printf("devhost: loaded '%s'\n", rec->libname);
-        memcpy(&rec->drv.ops, &di->driver->ops, sizeof(mx_driver_ops_t));
+        rec->drv.ops = di->driver->ops;
         rec->drv.flags = di->driver->flags;
         // fallthrough
     }
     case DRV_STATE_NEED_INIT:
-        if (rec->drv.ops.init) {
-            status = rec->drv.ops.init(drv);
+        if (rec->drv.ops->init) {
+            status = rec->drv.ops->init(drv);
             if (status < 0) {
                 printf("devhost: driver '%s' failed in init: %d\n", rec->libname, status);
                 break;
@@ -361,7 +374,7 @@ extern magenta_driver_info_t __stop_magenta_drivers[] __WEAK;
 static void init_builtin_drivers(bool for_root) {
     magenta_driver_info_t* di;
     for (di = __start_magenta_drivers; di < __stop_magenta_drivers; di++) {
-        if (is_driver_disabled(di->driver->name)) continue;
+        if (is_driver_disabled(di->note->name)) continue;
         init_from_driver_info(di, for_root);
     }
 }
@@ -374,11 +387,11 @@ void devhost_init_drivers(bool as_root) {
     if (as_root) {
         // dmctl must be loaded first as the dynamic loader
         // and other core services depend on it
-        _driver_dmctl.ops.init(&_driver_dmctl);
+        _driver_dmctl.ops->init(&_driver_dmctl);
 
         // acpi must be loaded second until we get the bus
         // manager startup process rationalized
-        _driver_acpi_root.ops.init(&_driver_acpi_root);
+        _driver_acpi_root.ops->init(&_driver_acpi_root);
     }
     init_builtin_drivers(as_root);
     find_loadable_drivers("/system/lib/driver");

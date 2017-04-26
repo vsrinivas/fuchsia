@@ -172,12 +172,11 @@ static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** 
     return NO_ERROR;
 }
 
-mx_driver_t _driver_hidctl = {
-    .ops = {
-        .bind = hidctl_bind,
-    },
+static mx_driver_ops_t hidctl_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = hidctl_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_hidctl, "hidctl", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(hidctl, hidctl_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_hidctl)
+MAGENTA_DRIVER_END(hidctl)

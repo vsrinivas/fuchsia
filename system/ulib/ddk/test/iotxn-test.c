@@ -251,13 +251,11 @@ static mx_status_t iotxn_test_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     return NO_ERROR;
 }
 
-mx_driver_t _driver_iotxn_test = {
-    .ops = {
-        .bind = iotxn_test_bind,
-    },
+static mx_driver_ops_t iotxn_test_driver_ops = {
+    .bind = iotxn_test_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_iotxn_test, "iotxn-test", "magenta", "0.1", 2)
+MAGENTA_DRIVER_BEGIN(iotxn_test, iotxn_test_driver_ops, "magenta", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_TEST),
-MAGENTA_DRIVER_END(_driver_iotxn_test)
+MAGENTA_DRIVER_END(iotxn_test)

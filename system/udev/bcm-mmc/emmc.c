@@ -809,17 +809,16 @@ static mx_status_t emmc_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     return NO_ERROR;
 }
 
-mx_driver_t _driver_emmc_dwc = {
-    .ops = {
-        .bind = emmc_bind,
-    },
+static mx_driver_ops_t emmc_dwc_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = emmc_bind,
 };
 
 // The formatter does not play nice with these macros.
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_emmc_dwc, "bcm-emmc", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(bcm_emmc, emmc_dwc_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_EMMC),
-MAGENTA_DRIVER_END(_driver_emmc_dwc)
+MAGENTA_DRIVER_END(bcm_emmc)
 // clang-format on

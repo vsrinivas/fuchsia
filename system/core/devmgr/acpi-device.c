@@ -129,18 +129,18 @@ static mx_status_t acpi_root_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_acpi_root = {
-    .ops = {
-        .init = acpi_root_init,
-    },
+static mx_driver_ops_t acpi_root_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = acpi_root_init,
 };
 
-mx_driver_t _driver_acpi = {
-    .ops = {
-        .bind = acpi_bind,
-    },
+MAGENTA_DRIVER_BEGIN(acpi_root, acpi_root_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(acpi_root)
+
+static mx_driver_ops_t acpi_driver_ops = {
+    .bind = acpi_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_acpi, "acpi-bus", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(acpi, acpi_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ACPI_BUS),
-MAGENTA_DRIVER_END(_driver_acpi)
+MAGENTA_DRIVER_END(acpi)

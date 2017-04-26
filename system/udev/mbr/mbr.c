@@ -349,17 +349,14 @@ static mx_status_t mbr_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_mbr = {
-    .ops = {
-        .bind = mbr_bind,
-    },
-    // Don't automatically bind this driver, instead let the FS layer select
-    // this driver if a block device with an MBR is detected.
+static mx_driver_ops_t mbr_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = mbr_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_mbr, "mbr", "magenta", "0.1", 2)
+MAGENTA_DRIVER_BEGIN(mbr, mbr_driver_ops, "magenta", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
-MAGENTA_DRIVER_END(_driver_mbr)
+MAGENTA_DRIVER_END(mbr)
 // clang-format on

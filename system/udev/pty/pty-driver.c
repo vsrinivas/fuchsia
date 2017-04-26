@@ -158,12 +158,11 @@ static mx_status_t ptmx_bind(mx_driver_t* drv, mx_device_t* parent, void** cooki
     return NO_ERROR;
 }
 
-mx_driver_t _driver_ptmx = {
-    .ops = {
-        .bind = ptmx_bind,
-    },
+static mx_driver_ops_t ptmx_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = ptmx_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ptmx, "ptmx", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(ptmx, ptmx_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
-MAGENTA_DRIVER_END(_driver_ptmx)
+MAGENTA_DRIVER_END(ptmx)

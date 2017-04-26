@@ -539,7 +539,7 @@ static mx_protocol_device_t ethdev_ops = {
 
 static ethernet_protocol_t ethernet_ops = {};
 
-extern mx_driver_t _driver_ethernet;
+mx_driver_t _driver_ethernet;
 
 static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
     ethdev0_t* edev0 = get_ethdev0(dev);
@@ -651,12 +651,11 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_ethernet = {
-    .ops = {
-        .bind = eth_bind,
-    },
+static mx_driver_ops_t eth_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = eth_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ethernet, "ethernet", "magenta", "0.1", 1)
+MAGENTA_DRIVER_BEGIN(ethernet, eth_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ETHERMAC),
-MAGENTA_DRIVER_END(_driver_ethernet)
+MAGENTA_DRIVER_END(ethernet)
