@@ -47,9 +47,9 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     DLOG("CpuMapPciMmio bar %d", pci_bar);
 
     void* protocol;
-    mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
+    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
     if (status != NO_ERROR)
-        return DRETP(nullptr, "device_get_protocol failed");
+        return DRETP(nullptr, "device_op_get_protocol failed");
 
     auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
     void* addr;
@@ -72,9 +72,9 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
 bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 {
     void* protocol;
-    mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
+    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
     if (status != NO_ERROR)
-        return DRETF(false, "device_get_protocol failed");
+        return DRETF(false, "device_op_get_protocol failed");
 
     auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
     const pci_config_t* pci_config;
@@ -93,9 +93,9 @@ bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
 {
     void* protocol;
-    mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
+    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
     if (status != NO_ERROR)
-        return DRETP(nullptr, "device_get_protocol failed (%d)", status);
+        return DRETP(nullptr, "device_op_get_protocol failed (%d)", status);
 
     auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
 
