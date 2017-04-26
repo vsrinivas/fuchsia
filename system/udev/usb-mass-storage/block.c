@@ -99,7 +99,6 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
 static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = device_to_block(device);
-    ums_t* ums = block_to_ums(dev);
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -112,13 +111,12 @@ static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(&ums->device, txn);
+    iotxn_queue(&dev->device, txn);
 }
 
 static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
     ums_block_t* dev = device_to_block(device);
-    ums_t* ums = block_to_ums(dev);
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -131,7 +129,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(&ums->device, txn);
+    iotxn_queue(&dev->device, txn);
 }
 
 static block_ops_t ums_block_ops = {
