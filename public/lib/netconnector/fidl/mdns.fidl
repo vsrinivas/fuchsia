@@ -1,0 +1,55 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module netconnector;
+
+import "apps/network/services/net_address.fidl";
+
+// mDNS service interface.
+[ServiceName="netconnector::MdnsService"]
+interface MdnsService {
+  // Gets the addresses for the specified host name.
+  ResolveHostName(string host_name, uint32 timeout_ms) =>
+    (network.NetAddressIPv4? v4_address, network.NetAddressIPv6? v6_address);
+
+  // Subscribes to a service. The subscription lasts until |subscription| is
+  // unbound.
+  SubscribeToService(string service_name,
+                     MdnsServiceSubscription& subscription);
+
+  // Publishes a service instance available at the specified port. |text|
+  // describes the instance. |port| is host-endian.
+  PublishServiceInstance(string service_name,
+                         string instance_name,
+                         uint16 port,
+                         array<string>? text);
+
+  // Ends publication started with |PublishServiceInstance|.
+  UnpublishServiceInstance(string service_name, string instance_name);
+
+  // Specifies whether mDNS traffic should be logged.
+  SetVerbose(bool value);
+};
+
+// Represents a subscription.
+interface MdnsServiceSubscription {
+  // Special value for GetInstances version_last_seen parameter to get the
+  // current instances immediately.
+  const uint64 kInitialInstances = 0;
+
+  // Gets the known service instances. To get the list immediately, call
+  // |GetInstances(kInitialInstances)|. To get updates thereafter, pass the
+  // version sent in the previous callback.
+  GetInstances(uint64 version_last_seen) =>
+    (uint64 version, array<MdnsServiceInstance> instances);
+};
+
+// Describes a service instance.
+struct MdnsServiceInstance {
+  string service_name;
+  string instance_name;
+  network.NetAddressIPv4? v4_address;
+  network.NetAddressIPv6? v6_address;
+  array<string>? text;
+};
