@@ -118,18 +118,22 @@ status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
     g_udisplay.framebuffer_size = 0;
     g_udisplay.framebuffer_virt = 0;
 
-    void* start;
-    status_t status = VmAspace::kernel_aspace()->MapObject(
-        vmo, "framebuffer_vmo", 0u, vmo->size(), &start, PAGE_SIZE_SHIFT,
-        VMM_FLAG_COMMIT, // vmm flags
-        kFramebufferArchMmuFlags);
-
+    const size_t size = vmo->size();
+    mxtl::RefPtr<VmMapping> mapping;
+    status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+            0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
+            mxtl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
     if (status != NO_ERROR)
         return status;
 
-    g_udisplay.framebuffer_virt = start;
-    g_udisplay.framebuffer_size = vmo->size();
+    status = mapping->MapRange(0, size, true);
+    if (status != NO_ERROR) {
+        mapping->Destroy();
+        return status;
+    }
 
+    g_udisplay.framebuffer_virt = reinterpret_cast<void*>(mapping->base());
+    g_udisplay.framebuffer_size = size;
     return NO_ERROR;
 }
 
