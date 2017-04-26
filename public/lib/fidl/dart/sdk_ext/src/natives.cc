@@ -328,8 +328,8 @@ void MxChannel_Read(Dart_NativeArguments arguments) {
   uint32_t hlen = static_cast<uint32_t>(handles_len);
 
   mx_status_t rv =
-      mx_channel_read(static_cast<mx_handle_t>(handle), options, bytes, blen,
-                      &blen, handles.data(), hlen, &hlen);
+      mx_channel_read(static_cast<mx_handle_t>(handle), options, bytes,
+                      handles.data(), blen, hlen, &blen, &hlen);
 
   // Release the data.
   if (!Dart_IsNull(typed_data)) {
@@ -378,7 +378,7 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   uint32_t blen = 0;
   uint32_t hlen = 0;
   mx_status_t rv = mx_channel_read(static_cast<mx_handle_t>(dart_handle), 0,
-                                   nullptr, 0, &blen, nullptr, 0, &hlen);
+                                   nullptr, nullptr, 0, 0, &blen, &hlen);
 
   if ((rv != NO_ERROR) && (rv != ERR_BUFFER_TOO_SMALL)) {
     Dart_ListSetAt(result, 0, Dart_NewInteger(rv));
@@ -451,8 +451,8 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   }
 
   rv = mx_channel_read(
-      static_cast<mx_handle_t>(dart_handle), options, bytes, blen, &blen,
-      reinterpret_cast<mx_handle_t*>(handle_bytes), hlen, &hlen);
+      static_cast<mx_handle_t>(dart_handle), options, bytes,
+      reinterpret_cast<mx_handle_t*>(handle_bytes), blen, hlen, &blen, &hlen);
 
   if (blen > 0) {
     err = Dart_TypedDataReleaseData(data);
