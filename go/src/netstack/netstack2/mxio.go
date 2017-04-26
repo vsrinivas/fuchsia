@@ -105,14 +105,34 @@ func (s *socketServer) setNetstack(ns *netstack) {
 type cookie int64
 
 type iostate struct {
-	cookie cookie
-	wq     *waiter.Queue
-	ep     tcpip.Endpoint
+	wq *waiter.Queue
+	ep tcpip.Endpoint
 
 	transProto tcpip.TransportProtocolNumber
 	// dataHandle is used to communicate with libc.
 	// dataHandle is an mx.Socket for TCP, or an mx.Channel for UDP.
-	dataHandle mx.Handle
+	dataHandle     mx.Handle
+	peerDataHandle mx.Handle // other end of dataHandle
+
+	mu   sync.Mutex
+	refs int
+}
+
+func (ios *iostate) acquire() {
+	ios.mu.Lock()
+	ios.refs++
+	ios.mu.Unlock()
+}
+
+func (ios *iostate) release(f func()) {
+	ios.mu.Lock()
+	ios.refs--
+	isLast := ios.refs == 0
+	ios.mu.Unlock()
+
+	if isLast {
+		f()
+	}
 }
 
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
@@ -417,42 +437,68 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 	}
 }
 
-func (s *socketServer) newIostate(h mx.Handle, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
-	ios = &iostate{
-		transProto: transProto,
-		wq:         wq,
-		ep:         ep,
-	}
+func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
 	var peerS mx.Handle
-	switch transProto {
-	case tcp.ProtocolNumber:
-		s0, s1, err := mx.NewSocket(0)
-		if err != nil {
-			return nil, err
+	if iosOrig == nil {
+		ios = &iostate{
+			transProto: transProto,
+			wq:         wq,
+			ep:         ep,
+			refs:       1,
 		}
-		ios.dataHandle = mx.Handle(s0)
-		peerS = mx.Handle(s1)
-	case udp.ProtocolNumber:
-		c0, c1, err := mx.NewChannel(0)
-		if err != nil {
-			return nil, err
+		switch transProto {
+		case tcp.ProtocolNumber:
+			s0, s1, err := mx.NewSocket(0)
+			if err != nil {
+				return nil, err
+			}
+			ios.dataHandle = mx.Handle(s0)
+			ios.peerDataHandle = mx.Handle(s1)
+			peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
+			if err != nil {
+				ios.dataHandle.Close()
+				ios.peerDataHandle.Close()
+				return nil, err
+			}
+		case udp.ProtocolNumber:
+			c0, c1, err := mx.NewChannel(0)
+			if err != nil {
+				return nil, err
+			}
+			ios.dataHandle = c0.Handle
+			peerS = c1.Handle
+		default:
+			panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 		}
-		ios.dataHandle = c0.Handle
-		peerS = c1.Handle
-	default:
-		panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
+	} else {
+		ios = iosOrig
+		switch transProto {
+		case tcp.ProtocolNumber:
+			var err error
+			peerS, err = ios.peerDataHandle.Duplicate(mx.RightSameRights)
+			if err != nil {
+				return nil, err
+			}
+		case udp.ProtocolNumber:
+			return nil, mxerror.Errorf(mx.ErrNotSupported, "cannot clone an udp socket")
+		default:
+			panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
+		}
 	}
 	defer func() {
 		if reterr != nil {
 			ios.dataHandle.Close()
+			if ios.peerDataHandle != 0 {
+				ios.peerDataHandle.Close()
+			}
 			peerS.Close()
 		}
 	}()
 
 	s.mu.Lock()
-	ios.cookie = s.next
+	newCookie := s.next
 	s.next++
-	s.io[ios.cookie] = ios
+	s.io[newCookie] = ios
 	s.mu.Unlock()
 
 	// Before we add a dispatcher for this iostate, respond to the client describing what
@@ -470,9 +516,9 @@ func (s *socketServer) newIostate(h mx.Handle, transProto tcpip.TransportProtoco
 	}
 	ro.Write(h, 0)
 
-	if err := s.dispatcher.AddHandler(h, rio.ServerHandler(s.mxioHandler), int64(ios.cookie)); err != nil {
+	if err := s.dispatcher.AddHandler(h, rio.ServerHandler(s.mxioHandler), int64(newCookie)); err != nil {
 		s.mu.Lock()
-		delete(s.io, ios.cookie)
+		delete(s.io, newCookie)
 		s.mu.Unlock()
 		h.Close()
 	}
@@ -538,7 +584,7 @@ func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	ios, err = s.newIostate(h, transProto, wq, ep)
+	ios, err = s.newIostate(h, nil, transProto, wq, ep)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -602,7 +648,7 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 		return err
 	}
 
-	_, err = s.newIostate(h, ios.transProto, newwq, newep)
+	_, err = s.newIostate(h, nil, ios.transProto, newwq, newep)
 	return err
 }
 
@@ -1008,6 +1054,18 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
+func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
+	if ios.ep != nil {
+		ios.dataHandle.Close() // loopShutdown closes ep
+		if ios.peerDataHandle != 0 {
+			ios.peerDataHandle.Close()
+		}
+	}
+	s.mu.Lock()
+	delete(s.io, cookie)
+	s.mu.Unlock()
+}
+
 func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
 	cookie := cookie(cookieVal)
 	op := msg.Op()
@@ -1031,7 +1089,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		var err error
 		switch {
 		case strings.HasPrefix(path, "none"): // MXRIO_SOCKET_DIR_NONE
-			_, err = s.newIostate(msg.Handle[0], tcp.ProtocolNumber, nil, nil)
+			_, err = s.newIostate(msg.Handle[0], nil, tcp.ProtocolNumber, nil, nil)
 		case strings.HasPrefix(path, "socket/"): // MXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
@@ -1055,16 +1113,27 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 			msg.Handle[0].Close()
 		}
 		return dispatcher.ErrIndirect.Status
+	case rio.OpClone:
+		ios.acquire()
+		_, err := s.newIostate(msg.Handle[0], ios, tcp.ProtocolNumber, nil, nil)
+		if err != nil {
+			ios.release(func() { s.iosCloseHandler(ios, cookie) })
+			ro := rio.RioObject{
+				RioObjectHeader: rio.RioObjectHeader{
+					Status: errStatus(err),
+					Type:   uint32(mxio.ProtocolSocket),
+				},
+				Esize: 0,
+			}
+			ro.Write(msg.Handle[0], 0)
+			msg.Handle[0].Close()
+		}
+		return dispatcher.ErrIndirect.Status
 
 	case rio.OpConnect:
 		return s.opConnect(ios, msg) // do_connect
 	case rio.OpClose:
-		if ios.ep != nil {
-			ios.dataHandle.Close() // loopShutdown closes ep
-		}
-		s.mu.Lock()
-		delete(s.io, cookie)
-		s.mu.Unlock()
+		ios.release(func() { s.iosCloseHandler(ios, cookie) })
 		return mx.ErrOk
 	case rio.OpRead:
 		if debug {
