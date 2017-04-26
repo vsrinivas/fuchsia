@@ -9,7 +9,7 @@
 #include <err.h>
 #include <string.h>
 #include <kernel/mp.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 #include <arch/ops.h>
 
 #include <arch/x86.h>
@@ -128,7 +128,7 @@ __NO_SAFESTACK void idt_setup(struct idt *idt)
 void idt_setup_readonly(void) {
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
     DEBUG_ASSERT(mp_get_online_mask() == 1);
-    status_t status = vmm_alloc_physical(vmm_get_kernel_aspace(),
+    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
                                          "idt_readonly",
                                          sizeof(_idt),
                                          (void **)&_idt_ro,

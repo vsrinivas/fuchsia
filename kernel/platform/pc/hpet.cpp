@@ -11,7 +11,7 @@
 #include <lk/init.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 struct hpet_timer_registers {
     volatile uint64_t conf_caps;
@@ -71,9 +71,7 @@ static void hpet_init(uint level)
         return;
     }
 
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    status_t res = vmm_alloc_physical(
-            kernel_aspace,
+    status_t res = VmAspace::kernel_aspace()->AllocPhysical(
             "hpet",
             PAGE_SIZE, /* size */
             (void **)&hpet_regs, /* returned virtual address */
@@ -110,7 +108,7 @@ static void hpet_init(uint level)
     return;
 
 fail:
-    vmm_free_region(kernel_aspace, (vaddr_t)hpet_regs);
+    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(hpet_regs));
     hpet_regs = nullptr;
     num_timers = 0;
 }

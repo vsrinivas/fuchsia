@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 #define LOCAL_TRACE 0
 
@@ -279,8 +279,7 @@ static void platform_ensure_display_memtype(uint level)
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     void *addr = NULL;
-    status_t status = vmm_alloc_physical(
-            vmm_get_kernel_aspace(),
+    status_t status = VmAspace::kernel_aspace()->AllocPhysical(
             "boot_fb",
             ROUNDUP(info.stride * info.height * 4, PAGE_SIZE),
             &addr,

@@ -17,7 +17,7 @@
 #include <arch/x86/mp.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 #include <dev/interrupt.h>
 
 #include <lib/console.h>
@@ -94,9 +94,7 @@ void apic_vm_init(void)
 {
     ASSERT(apic_virt_base == NULL);
     // Create a mapping for the page of MMIO registers
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    status_t res = vmm_alloc_physical(
-            kernel_aspace,
+    status_t res = VmAspace::kernel_aspace()->AllocPhysical(
             "lapic",
             PAGE_SIZE, // size
             &apic_virt_base, // returned virtual address

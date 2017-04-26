@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <dev/udisplay.h>
-#include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/debuglog.h>
@@ -100,9 +99,7 @@ status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
     g_udisplay.framebuffer_size = fb_size;
 
     // map the framebuffer
-    vmm_aspace_t* aspace = vmm_get_kernel_aspace();
-    status_t result = vmm_alloc_physical(
-        aspace,
+    status_t result = VmAspace::kernel_aspace()->AllocPhysical(
         "udisplay_fb",
         g_udisplay.framebuffer_size,
         &g_udisplay.framebuffer_virt,

@@ -11,6 +11,7 @@
 #include <dev/pcie_root.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
+#include <kernel/vm/vm_aspace.h>
 #include <lk/init.h>
 #include <mxtl/limits.h>
 #include <new.h>
@@ -601,23 +602,20 @@ status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
     if (vaddr_ != nullptr)
         return ERR_BAD_STATE;
 
-    auto kernel_aspace = vmm_get_kernel_aspace();
-    DEBUG_ASSERT(kernel_aspace != nullptr);
-
     char name_buf[32];
     snprintf(name_buf, sizeof(name_buf), "pcie_cfg_%02x_%02x", ecam_.bus_start, ecam_.bus_end);
 
-    return vmm_alloc_physical(kernel_aspace,
-                              name_buf,
-                              ecam_.size,
-                              &vaddr_,
-                              PAGE_SIZE_SHIFT,
-                              0 /* min alloc gap */,
-                              ecam_.phys_base,
-                              0 /* vmm flags */,
-                              ARCH_MMU_FLAG_UNCACHED_DEVICE |
-                              ARCH_MMU_FLAG_PERM_READ |
-                              ARCH_MMU_FLAG_PERM_WRITE);
+    return VmAspace::kernel_aspace()->AllocPhysical(
+            name_buf,
+            ecam_.size,
+            &vaddr_,
+            PAGE_SIZE_SHIFT,
+            0 /* min alloc gap */,
+            ecam_.phys_base,
+            0 /* vmm flags */,
+            ARCH_MMU_FLAG_UNCACHED_DEVICE |
+            ARCH_MMU_FLAG_PERM_READ |
+            ARCH_MMU_FLAG_PERM_WRITE);
 }
 
 // External references to the quirks handler table.

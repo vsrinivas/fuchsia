@@ -11,6 +11,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <kernel/spinlock.h>
+#include <kernel/vm/vm_aspace.h>
 
 #define IO_APIC_IND(base) ((volatile uint32_t *)(base))
 #define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + 0x10))
@@ -129,9 +130,7 @@ void apic_io_init(
         if (vaddr == NULL) {
             paddr_t paddr_page_base = ROUNDDOWN(paddr, PAGE_SIZE);
             ASSERT(paddr + IO_APIC_WINDOW_SIZE <= paddr_page_base + PAGE_SIZE);
-            vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-            status_t res = vmm_alloc_physical(
-                    kernel_aspace,
+            status_t res = VmAspace::kernel_aspace()->AllocPhysical(
                     "ioapic",
                     PAGE_SIZE, // size
                     &vaddr, // requested virtual vaddress
