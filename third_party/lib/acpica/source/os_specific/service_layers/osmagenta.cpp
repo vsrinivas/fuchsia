@@ -17,7 +17,9 @@
 #error "Unsupported architecture"
 #endif
 
+__BEGIN_CDECLS
 #include "acpi.h"
+__END_CDECLS
 
 #define _COMPONENT          ACPI_OS_SERVICES
 ACPI_MODULE_NAME    ("osmagenta")
@@ -155,7 +157,9 @@ void *AcpiOsMapMemory(
     if (status != NO_ERROR) {
         return NULL;
     }
-    return vaddr + (PhysicalAddress - aligned_address);
+    const uintptr_t real_addr =
+            reinterpret_cast<uintptr_t>(vaddr) + (PhysicalAddress - aligned_address);
+    return reinterpret_cast<void*>(real_addr);
 }
 
 /**

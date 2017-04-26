@@ -11,7 +11,9 @@ MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-format-signedness
 else
 MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing -I$(LOCAL_DIR)/source/include/acpica
+MODULE_CFLAGS += -Wno-strict-aliasing
+
+MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/source/include/acpica
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/tables/tbdata.c \
@@ -33,6 +35,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/utilities/utstate.c \
 	$(LOCAL_DIR)/source/components/utilities/utstring.c \
 	$(LOCAL_DIR)/source/components/utilities/utxferror.c \
-	$(LOCAL_DIR)/source/os_specific/service_layers/osmagenta.c
+	$(LOCAL_DIR)/source/os_specific/service_layers/osmagenta.cpp
 
 include make/module.mk
