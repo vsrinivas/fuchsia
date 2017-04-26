@@ -269,7 +269,7 @@ mod tests {
         // before the cancel call.
         assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
-        let read_packet = port.wait(ten_ms).unwrap();
+        let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
         match read_packet.contents() {
