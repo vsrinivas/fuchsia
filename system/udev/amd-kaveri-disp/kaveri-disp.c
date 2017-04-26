@@ -93,7 +93,7 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
     pci_protocol_t* pci;
     mx_status_t status;
 
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
     status = pci->claim_device(dev);

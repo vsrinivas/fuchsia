@@ -103,7 +103,7 @@ static int acpi_battery_poll_thread(void* arg) {
 
 static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     mx_acpi_protocol_t* acpi;
-    if (device_get_protocol(dev, MX_PROTOCOL_ACPI, (void**)&acpi)) {
+    if (device_op_get_protocol(dev, MX_PROTOCOL_ACPI, (void**)&acpi)) {
         return ERR_NOT_SUPPORTED;
     }
 

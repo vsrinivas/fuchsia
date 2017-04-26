@@ -543,7 +543,7 @@ static void dwc_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     dwc_usb_t* dwc = dev_to_usb_dwc(device);
     dwc->bus_device = busdev;
     if (busdev) {
-        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS,
+        device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS,
                             (void**)&dwc->bus_protocol);
         dwc->bus_protocol->add_device(dwc->bus_device, ROOT_HUB_DEVICE_ID, 0,
                                       USB_SPEED_HIGH);

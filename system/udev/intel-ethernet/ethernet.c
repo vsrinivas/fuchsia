@@ -144,7 +144,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     mtx_init(&edev->eth.send_lock, mtx_plain);
 
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) {
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) {
         printf("no pci protocol\n");
         goto fail;
     }

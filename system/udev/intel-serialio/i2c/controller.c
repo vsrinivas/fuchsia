@@ -94,7 +94,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
 
     // Retrieve pci_config (again)
     pci_protocol_t* pci;
-    status = device_get_protocol(dev->parent, MX_PROTOCOL_PCI, (void**)&pci);
+    status = device_op_get_protocol(dev->parent, MX_PROTOCOL_PCI, (void**)&pci);
     if (status < 0)
         goto fail2;
 
@@ -410,7 +410,7 @@ static mx_status_t intel_serialio_i2c_device_specific_init(
 
 mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);

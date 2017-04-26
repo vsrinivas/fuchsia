@@ -108,7 +108,7 @@ mx_status_t usb_clear_feature(mx_device_t* device, uint8_t request_type, int fea
 
 mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
     usb_protocol_t* usb_protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
+    if (device_op_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -117,7 +117,7 @@ mx_status_t usb_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
 
 size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
     usb_protocol_t* usb_protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
+    if (device_op_get_protocol(device, MX_PROTOCOL_USB, (void**)&usb_protocol)) {
         return 0;
     }
 

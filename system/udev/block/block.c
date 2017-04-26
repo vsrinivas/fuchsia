@@ -229,7 +229,7 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
     }
 
     mx_status_t status;
-    if (device_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {
+    if (device_op_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {
         status = ERR_INTERNAL;
         goto fail;
     }

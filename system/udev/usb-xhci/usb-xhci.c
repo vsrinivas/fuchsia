@@ -80,7 +80,7 @@ static void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
     xhci_t* xhci = dev_to_xhci(device);
     xhci->bus_device = busdev;
     if (busdev) {
-        device_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&xhci->bus_protocol);
+        device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS, (void**)&xhci->bus_protocol);
         // wait until bus driver has started before doing this
         xhci_queue_start_root_hubs(xhci);
     } else {
@@ -197,7 +197,7 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
     mx_status_t status;
 
     pci_protocol_t* pci_proto;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci_proto)) {
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci_proto)) {
         status = ERR_NOT_SUPPORTED;
         goto error_return;
     }

@@ -32,7 +32,7 @@ extern "C" mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device, voi
     pci_protocol_t* pci;
 
     /* grab the pci device and configuration */
-    if (device_get_protocol(device, MX_PROTOCOL_PCI, (void**)&pci)) {
+    if (device_op_get_protocol(device, MX_PROTOCOL_PCI, (void**)&pci)) {
         TRACEF("no pci protocol\n");
         return -1;
     }

@@ -151,8 +151,53 @@ typedef struct mx_protocol_device {
 } mx_protocol_device_t;
 
 // Device Convenience Wrappers
-static inline mx_status_t device_get_protocol(mx_device_t* dev, uint32_t proto_id, void** protocol) {
+static inline mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
+                                                 void** protocol) {
     return dev->ops->get_protocol(dev, proto_id, protocol);
+}
+
+static inline mx_status_t device_op_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    return dev->ops->open(dev, dev_out, flags);
+}
+
+static inline mx_status_t device_op_open_at(mx_device_t* dev, mx_device_t** dev_out,
+                                           const char* path, uint32_t flags) {
+    return dev->ops->openat(dev, dev_out, path, flags);
+}
+
+static inline mx_status_t device_op_close(mx_device_t* dev, uint32_t flags) {
+    return dev->ops->close(dev, flags);
+}
+
+static inline ssize_t device_op_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+    return dev->ops->read(dev, buf, count, off);
+}
+
+static inline ssize_t device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                                      mx_off_t off) {
+    return dev->ops->write(dev, buf, count, off);
+}
+
+static inline void device_op_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+    dev->ops->iotxn_queue(dev, txn);
+}
+
+static inline mx_off_t device_op_get_size(mx_device_t* dev) {
+    return dev->ops->get_size(dev);
+}
+
+static inline ssize_t device_op_ioctl(mx_device_t* dev, uint32_t op,
+                                      const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len) {
+    return dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
+}
+
+static inline mx_status_t device_op_suspend(mx_device_t* dev) {
+    return dev->ops->suspend(dev);
+}
+
+static inline mx_status_t device_op_resume(mx_device_t* dev) {
+    return dev->ops->resume(dev);
 }
 
 // State change functions

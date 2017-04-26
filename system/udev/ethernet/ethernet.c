@@ -612,7 +612,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     }
 
     mx_status_t status;
-    if (device_get_protocol(dev, MX_PROTOCOL_ETHERMAC, (void**)&edev0->macops)) {
+    if (device_op_get_protocol(dev, MX_PROTOCOL_ETHERMAC, (void**)&edev0->macops)) {
         printf("eth: bind: no ethermac protocol\n");
         status = ERR_INTERNAL;
         goto fail;

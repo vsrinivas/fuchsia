@@ -705,7 +705,7 @@ fail:
 
 static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
     if (status < 0) {

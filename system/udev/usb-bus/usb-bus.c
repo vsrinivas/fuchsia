@@ -109,7 +109,7 @@ static mx_protocol_device_t usb_bus_device_proto = {
 
 static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
     usb_hci_protocol_t* hci_protocol;
-    if (device_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
+    if (device_op_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
         return ERR_NOT_SUPPORTED;
     }
 

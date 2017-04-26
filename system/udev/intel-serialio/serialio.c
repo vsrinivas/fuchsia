@@ -25,7 +25,7 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void*
         return ERR_INVALID_ARGS;
     }
 
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
     res = pci->get_config(dev, &pci_config, &config_handle);

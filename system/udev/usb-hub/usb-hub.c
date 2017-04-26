@@ -339,7 +339,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
     mx_device_t* bus_device = device->parent;
     usb_bus_protocol_t* bus_protocol = NULL;
     while (bus_device != NULL && bus_protocol == NULL) {
-        if (device_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol) == NO_ERROR) {
+        if (device_op_get_protocol(bus_device, MX_PROTOCOL_USB_BUS, (void**)&bus_protocol) == NO_ERROR) {
             break;
         }
         bus_device = bus_device->parent;

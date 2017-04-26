@@ -576,7 +576,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     mx_display_protocol_t* disp;
     mx_status_t status;
-    if ((status = device_get_protocol(dev, MX_PROTOCOL_DISPLAY, (void**)&disp)) < 0) {
+    if ((status = device_op_get_protocol(dev, MX_PROTOCOL_DISPLAY, (void**)&disp)) < 0) {
         return status;
     }
 

@@ -132,7 +132,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
-    if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
+    if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
 
     mx_status_t status = pci->claim_device(dev);
