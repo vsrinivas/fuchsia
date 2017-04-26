@@ -15,7 +15,7 @@ extern "C" mx_status_t wlan_test_bind(mx_driver_t* driver, mx_device_t* device, 
     std::printf("%s\n", __func__);
 
     test_protocol_t* proto;
-    auto status = device_get_protocol(device, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&proto));
+    auto status = device_op_get_protocol(device, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&proto));
     if (status != NO_ERROR) {
         return status;
     }
