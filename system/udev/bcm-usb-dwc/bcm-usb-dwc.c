@@ -814,11 +814,11 @@ static void dwc_handle_irq(dwc_usb_t* dwc) {
         }
 
         if (hw_status.connected_changed)
-            dwc->root_port_status.wPortChange |= USB_PORT_CONNECTION;
+            dwc->root_port_status.wPortChange |= USB_C_PORT_CONNECTION;
         if (hw_status.enabled_changed)
-            dwc->root_port_status.wPortChange |= USB_PORT_ENABLE;
+            dwc->root_port_status.wPortChange |= USB_C_PORT_ENABLE;
         if (hw_status.overcurrent_changed)
-            dwc->root_port_status.wPortChange |= USB_PORT_OVER_CURRENT;
+            dwc->root_port_status.wPortChange |= USB_C_PORT_OVER_CURRENT;
 
         mtx_unlock(&dwc->rh_status_mtx);
 
@@ -977,19 +977,19 @@ static void dwc_process_root_hub_class_req(dwc_usb_transfer_request_t* req,
         uint16_t* change_bits = &(dwc->root_port_status.wPortChange);
         switch (value) {
         case USB_FEATURE_C_PORT_CONNECTION:
-            *change_bits &= ~USB_PORT_CONNECTION;
+            *change_bits &= ~USB_C_PORT_CONNECTION;
             break;
         case USB_FEATURE_C_PORT_ENABLE:
-            *change_bits &= ~USB_PORT_ENABLE;
+            *change_bits &= ~USB_C_PORT_ENABLE;
             break;
         case USB_FEATURE_C_PORT_SUSPEND:
             *change_bits &= ~USB_PORT_SUSPEND;
             break;
         case USB_FEATURE_C_PORT_OVER_CURRENT:
-            *change_bits &= ~USB_PORT_OVER_CURRENT;
+            *change_bits &= ~USB_C_PORT_OVER_CURRENT;
             break;
         case USB_FEATURE_C_PORT_RESET:
-            *change_bits &= ~USB_PORT_RESET;
+            *change_bits &= ~USB_C_PORT_RESET;
             break;
         }
         mtx_unlock(&dwc->rh_status_mtx);

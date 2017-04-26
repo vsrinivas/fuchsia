@@ -225,7 +225,7 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
     int port_index = xhci->rh_port_map[rh_port_index];
     usb_port_status_t* status = &rh->port_status[port_index];
     status->wPortStatus |= USB_PORT_RESET;
-    status->wPortChange |= USB_PORT_RESET;
+    status->wPortChange |= USB_C_PORT_RESET;
 }
 
 mx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
@@ -394,19 +394,19 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 
             switch (value) {
                 case USB_FEATURE_C_PORT_CONNECTION:
-                    *change_bits &= ~USB_PORT_CONNECTION;
+                    *change_bits &= ~USB_C_PORT_CONNECTION;
                     break;
                 case USB_FEATURE_C_PORT_ENABLE:
-                    *change_bits &= ~USB_PORT_ENABLE;
+                    *change_bits &= ~USB_C_PORT_ENABLE;
                     break;
                 case USB_FEATURE_C_PORT_SUSPEND:
-                    *change_bits &= ~USB_PORT_SUSPEND;
+                    *change_bits &= ~USB_C_PORT_SUSPEND;
                     break;
                 case USB_FEATURE_C_PORT_OVER_CURRENT:
-                    *change_bits &= ~USB_PORT_OVER_CURRENT;
+                    *change_bits &= ~USB_C_PORT_OVER_CURRENT;
                     break;
                 case USB_FEATURE_C_PORT_RESET:
-                    *change_bits &= ~USB_PORT_RESET;
+                    *change_bits &= ~USB_C_PORT_RESET;
                     break;
             }
 
@@ -517,21 +517,21 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
                      status->wPortStatus |= USB_PORT_CONNECTION;
                 } else {
                     if (status->wPortStatus & USB_PORT_ENABLE) {
-                        status->wPortChange |= USB_PORT_ENABLE;
+                        status->wPortChange |= USB_C_PORT_ENABLE;
                     }
                     status->wPortStatus = 0;
                 }
-                status->wPortChange |= USB_PORT_CONNECTION;
+                status->wPortChange |= USB_C_PORT_CONNECTION;
             }
             if (portsc & PORTSC_PRC) {
                 // port reset change
                 xprintf("port %d PORTSC_PRC enabled: %d\n", i, enabled);
                 if (enabled) {
                     status->wPortStatus &= ~USB_PORT_RESET;
-                    status->wPortChange |= USB_PORT_RESET;
+                    status->wPortChange |= USB_C_PORT_RESET;
                     if (!(status->wPortStatus & USB_PORT_ENABLE)) {
                         status->wPortStatus |= USB_PORT_ENABLE;
-                        status->wPortChange |= USB_PORT_ENABLE;
+                        status->wPortChange |= USB_C_PORT_ENABLE;
                     }
 
                     if (speed == USB_SPEED_LOW) {

@@ -27,6 +27,7 @@ __BEGIN_CDECLS;
 #define USB_FEATURE_PORT_SUSPEND        2
 #define USB_FEATURE_PORT_OVER_CURRENT   3
 #define USB_FEATURE_PORT_RESET          4
+#define USB_FEATURE_PORT_LINK_STATE     5
 #define USB_FEATURE_PORT_POWER          8
 #define USB_FEATURE_PORT_LOW_SPEED      9
 #define USB_FEATURE_C_PORT_CONNECTION   16
@@ -36,6 +37,15 @@ __BEGIN_CDECLS;
 #define USB_FEATURE_C_PORT_RESET        20
 #define USB_FEATURE_PORT_TEST           21
 #define USB_FEATURE_PORT_INDICATOR      22
+#define USB_FEATURE_PORT_INDICATOR      22
+#define USB_FEATURE_PORT_U1_TIMEOUT     23
+#define USB_FEATURE_PORT_U2_TIMEOUT     24
+#define USB_FEATURE_C_PORT_LINK_STATE   25
+#define USB_FEATURE_C_PORT_CONFIG_ERROR 26
+#define USB_FEATURE_PORT_REMOTE_WAKE_MASK 27
+#define USB_FEATURE_BH_PORT_RESET       28
+#define USB_FEATURE_C_BH_PORT_RESET     29
+#define USB_FEATURE_FORCE_LINKPM_ACCEPT 30
 
 typedef struct {
     uint8_t bDescLength;
@@ -74,16 +84,31 @@ typedef struct {
     uint16_t wPortChange;
 } __attribute__ ((packed)) usb_port_status_t;
 
-// wPortStatus bits
+// Port Status bits
 #define USB_PORT_CONNECTION         (1 << 0)
 #define USB_PORT_ENABLE             (1 << 1)
-#define USB_PORT_SUSPEND            (1 << 2)
+#define USB_PORT_SUSPEND            (1 << 2)    // USB 2.0 only
 #define USB_PORT_OVER_CURRENT       (1 << 3)
 #define USB_PORT_RESET              (1 << 4)
-#define USB_PORT_POWER              (1 << 8)
-#define USB_PORT_LOW_SPEED          (1 << 9)
-#define USB_PORT_HIGH_SPEED         (1 << 10)
-#define USB_PORT_TEST_MODE          (1 << 11)
-#define USB_PORT_INDICATOR_CONTROL  (1 << 12)
+#define USB_PORT_POWER              (1 << 8)    // USB 2.0 only
+#define USB_PORT_LOW_SPEED          (1 << 9)    // USB 2.0 only
+#define USB_PORT_HIGH_SPEED         (1 << 10)   // USB 2.0 only
+#define USB_PORT_TEST_MODE          (1 << 11)   // USB 2.0 only
+#define USB_PORT_INDICATOR_CONTROL  (1 << 12)   // USB 2.0 only
+
+// Port Status Changed bits
+#define USB_C_PORT_CONNECTION       (1 << 0)
+#define USB_C_PORT_ENABLE           (1 << 1)    // USB 2.0 only
+#define USB_C_PORT_SUSPEND          (1 << 2)    // USB 2.0 only
+#define USB_C_PORT_OVER_CURRENT     (1 << 3)
+#define USB_C_PORT_RESET            (1 << 4)
+#define USB_C_BH_PORT_RESET         (1 << 5)    // USB 3.0 only
+#define USB_C_PORT_LINK_STATE       (1 << 6)    // USB 3.0 only
+#define USB_C_PORT_CONFIG_ERROR     (1 << 7)    // USB 3.0 only
+#define USB_C_PORT_POWER            (1 << 8)    // USB 2.0 only
+#define USB_C_PORT_LOW_SPEED        (1 << 9)    // USB 2.0 only
+#define USB_C_PORT_HIGH_SPEED       (1 << 10)   // USB 2.0 only
+#define USB_C_PORT_TEST_MODE        (1 << 11)   // USB 2.0 only
+#define USB_C_PORT_INDICATOR_CONTROL (1 << 12)   // USB 2.0 only
 
 __END_CDECLS;

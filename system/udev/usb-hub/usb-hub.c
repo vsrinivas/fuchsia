@@ -64,25 +64,37 @@ static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_st
     mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
     if (result == sizeof(*status)) {
         xprintf("usb_hub_get_port_status port %d ", port);
-        if (status->wPortChange & USB_PORT_CONNECTION) {
-            xprintf("USB_PORT_CONNECTION ");
+        if (status->wPortChange & USB_C_PORT_CONNECTION) {
+            xprintf("USB_C_PORT_CONNECTION ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
         }
-        if (status->wPortChange & USB_PORT_ENABLE) {
-            xprintf("USB_PORT_ENABLE ");
+        if (status->wPortChange & USB_C_PORT_ENABLE) {
+            xprintf("USB_C_PORT_ENABLE ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
         }
-        if (status->wPortChange & USB_PORT_SUSPEND) {
-            xprintf("USB_PORT_SUSPEND ");
+        if (status->wPortChange & USB_C_PORT_SUSPEND) {
+            xprintf("USB_C_PORT_SUSPEND ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
         }
-        if (status->wPortChange & USB_PORT_OVER_CURRENT) {
-            xprintf("USB_PORT_OVER_CURRENT ");
+        if (status->wPortChange & USB_C_PORT_OVER_CURRENT) {
+            xprintf("USB_C_PORT_OVER_CURRENT ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
         }
-        if (status->wPortChange & USB_PORT_RESET) {
-            xprintf("USB_PORT_RESET");
+        if (status->wPortChange & USB_C_PORT_RESET) {
+            xprintf("USB_C_PORT_RESET");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
+        }
+        if (status->wPortChange & USB_C_BH_PORT_RESET) {
+            xprintf("USB_C_BH_PORT_RESET");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port);
+        }
+        if (status->wPortChange & USB_C_PORT_LINK_STATE) {
+            xprintf("USB_C_PORT_LINK_STATE");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port);
+        }
+        if (status->wPortChange & USB_C_PORT_CONFIG_ERROR) {
+            xprintf("USB_C_PORT_CONFIG_ERROR");
+            usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port);
         }
         xprintf("\n");
 
@@ -188,7 +200,7 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
     xprintf("usb_hub_handle_port_status port: %d status: %04X change: %04X\n", port,
             status->wPortStatus, status->wPortChange);
 
-    if (status->wPortChange & USB_PORT_CONNECTION) {
+    if (status->wPortChange & USB_C_PORT_CONNECTION) {
         // Handle race condition where device is quickly disconnected and reconnected.
         // This happens when Android devices switch USB configurations.
         // In this case, any change to the connect state should trigger a disconnect
@@ -199,7 +211,7 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
         }
-    } else if (status->wPortChange & USB_PORT_ENABLE) {
+    } else if (status->wPortChange & USB_C_PORT_ENABLE) {
         if (status->wPortStatus & USB_PORT_ENABLE) {
             usb_hub_port_enabled(hub, port);
         }
