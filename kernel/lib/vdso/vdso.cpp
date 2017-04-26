@@ -33,22 +33,23 @@ public:
 
     KernelVmoWindow(const char* name,
                     mxtl::RefPtr<VmObject> vmo, uint64_t offset)
-        : mapping_(0) {
+        : mapping_(nullptr) {
         uint64_t page_offset = ROUNDDOWN(offset, PAGE_SIZE);
         size_t offset_in_page = static_cast<size_t>(offset % PAGE_SIZE);
         ASSERT(offset % alignof(T) == 0);
-        void* ptr;
-        status_t status = VmAspace::kernel_aspace()->MapObject(
-            mxtl::move(vmo), name, page_offset, offset_in_page + sizeof(T),
-            &ptr, 0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+
+        const size_t size = offset_in_page + sizeof(T);
+        const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+        status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+                0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
+                mxtl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
         ASSERT(status == NO_ERROR);
-        mapping_ = reinterpret_cast<uintptr_t>(ptr);
-        data_ = reinterpret_cast<T*>(mapping_ + offset_in_page);
+        data_ = reinterpret_cast<T*>(mapping_->base() + offset_in_page);
     }
 
     ~KernelVmoWindow() {
-        if (mapping_ != 0) {
-            status_t status = VmAspace::kernel_aspace()->FreeRegion(mapping_);
+        if (mapping_) {
+            status_t status = mapping_->Destroy();
             ASSERT(status == NO_ERROR);
         }
     }
@@ -56,7 +57,7 @@ public:
     T* data() const { return data_; }
 
 private:
-    uintptr_t mapping_;
+    mxtl::RefPtr<VmMapping> mapping_;
     T* data_;
 };
 
