@@ -53,6 +53,26 @@ def magenta_ipv6_to_fuchsia(mac):
   return ":".join(parts)
 
 
+def start_log_listener(loglistener_path, hostname):
+  starting_dirname = os.getcwd()
+  loglistener_dirname = os.path.dirname(loglistener_path)
+  loglistener_basename = os.path.basename(loglistener_path)
+  loglistener_executable = './%s' % loglistener_basename
+
+  # if hostname is None, then this is an ipv4 address and we don't have
+  # the device name.
+  if hostname is None:
+    listener_command = loglistener_executable
+  else:
+    listener_command = [loglistener_executable, hostname]
+
+  # start loglistener from its own directory so its banner fits on a line.
+  os.chdir(loglistener_dirname)
+  process = subprocess.Popen(listener_command, stdout=subprocess.PIPE)
+  os.chdir(starting_dirname)
+  return process
+
+
 def read_log_listener(listener_process, test_id):
   """ Returns the output of loglistener up until it sees the |test_id|."""
   termination_substring = "test_runner: teardown %s" % test_id
@@ -112,8 +132,11 @@ def run_test(sock, listener_process, command_str):
         print "%s%s%s" % (color.RED, result, color.END)
       else:
         print "%s" % result
-      # Consume the log output, whether or not we print it.
-      log_output = read_log_listener(listener_process, test_id)
+      if listener_process:
+        # Consume the log output, whether or not we print it.
+        log_output = read_log_listener(listener_process, test_id)
+      else:
+        log_output = None
       if msg == "fail":
         print log_output
       return status
@@ -253,6 +276,16 @@ def main(argv):
       type=int,
       default=default_port)
   parser.add_argument(
+      "--loglistener",
+      help="Run loglistener",
+      dest="loglistener",
+      action="store_true")
+  parser.add_argument(
+      "--no-loglistener",
+      help="Don't run loglistener",
+      dest="loglistener",
+      action="store_false")
+  parser.add_argument(
       "--loglistener_path",
       help="Path to the loglistener binary",
       type=str,
@@ -272,7 +305,7 @@ def main(argv):
       help="If using test_file, don't copy the dependent files to the device.",
       dest="sync_files",
       action="store_false")
-  parser.set_defaults(sync_files=False)
+  parser.set_defaults(loglistener=True, sync_files=False)
   parser.add_argument("command", nargs="*")
   args = parser.parse_args()
 
@@ -302,22 +335,10 @@ def main(argv):
   (family, socktype, proto, canonname, sockaddr) = addrinfo[0]
 
   # 1. Start listening to the device log.
-  starting_dirname = os.getcwd()
-  loglistener_dirname = os.path.dirname(args.loglistener_path)
-  loglistener_basename = os.path.basename(args.loglistener_path)
-  loglistener_executable = './%s' % loglistener_basename
-
-  # if hostname is None, then this is an ipv4 address and we don't have
-  # the device name.
-  if hostname is None:
-    listener_command = loglistener_executable
+  if args.loglistener:
+    listener_process = start_log_listener(args.loglistener_path, hostname)
   else:
-    listener_command = [loglistener_executable, hostname]
-
-  # start loglistener from its own directory so its banner fits on a line.
-  os.chdir(loglistener_dirname)
-  listener_process = subprocess.Popen(listener_command, stdout=subprocess.PIPE)
-  os.chdir(starting_dirname)
+    listener_process = None
 
   # 2. Open up a connection to the on-device test runner server.
   sock = socket.socket(family, socktype)
@@ -352,7 +373,8 @@ def main(argv):
       return status
   finally:
     # 4. Cleanup
-    listener_process.terminate()
+    if listener_process:
+      listener_process.terminate()
     sock.close()
 
 
