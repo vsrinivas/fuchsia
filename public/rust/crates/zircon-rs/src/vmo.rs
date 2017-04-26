@@ -107,6 +107,19 @@ impl Vmo {
         };
         into_result(status, || ())
     }
+
+    /// Create a new virtual memory object that clones a range of this one.
+    ///
+    /// Wraps the
+    /// [mx_vmo_clone](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_clone.md)
+    /// syscall.
+    pub fn clone(&self, options: VmoCloneOpts, offset: u64, size: u64) -> Result<Vmo, Status> {
+        let mut out = 0;
+        let status = unsafe {
+            sys::mx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
+        };
+        into_result(status, || Vmo::from_handle(Handle(out)))
+    }
 }
 
 /// Options for creating virtual memory objects. None supported yet.
@@ -140,6 +153,18 @@ pub enum VmoOp {
     CacheClean = sys::MX_VMO_OP_CACHE_CLEAN,
     /// Perform cache clean and invalidation operations together.
     CacheCleanInvalidate = sys::MX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+}
+
+#[repr(u32)]
+pub enum VmoCloneOpts {
+    /// Create a copy-on-write clone.
+    CopyOnWrite = sys::MX_VMO_CLONE_COPY_ON_WRITE,
+}
+
+impl Default for VmoCloneOpts {
+    fn default() -> Self {
+        VmoCloneOpts::CopyOnWrite
+    }
 }
 
 #[cfg(test)]
@@ -214,5 +239,39 @@ mod tests {
         assert_eq!(vmo.op_range(VmoOp::CacheInvalidate, 0, 12), Ok(()));
         assert_eq!(vmo.op_range(VmoOp::CacheClean, 0, 12), Ok(()));
         assert_eq!(vmo.op_range(VmoOp::CacheCleanInvalidate, 0, 12), Ok(()));
+    }
+
+    #[test]
+    fn vmo_clone() {
+        let original = Vmo::create(12, VmoOpts::Default).unwrap();
+        assert_eq!(original.write(b"one", 0), Ok(3));
+
+        // Clone the VMO, and make sure it contains what we expect.
+        let clone = original.clone(VmoCloneOpts::CopyOnWrite, 0, 10).unwrap();
+        let mut read_buffer = vec![0; 16];
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(&read_buffer[0..3], b"one");
+
+        // Writing to the original will affect the clone too, surprisingly.
+        assert_eq!(original.write(b"two", 0), Ok(3));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(&read_buffer[0..3], b"two");
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(&read_buffer[0..3], b"two");
+
+        // However, writing to the clone will not affect the original
+        assert_eq!(clone.write(b"three", 0), Ok(5));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(&read_buffer[0..3], b"two");
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(&read_buffer[0..5], b"three");
+
+        // And now that the copy-on-write has happened, writing to the original will not affect the
+        // clone. How bizarre.
+        assert_eq!(original.write(b"four", 0), Ok(4));
+        assert_eq!(original.read(&mut read_buffer, 0), Ok(12));
+        assert_eq!(&read_buffer[0..4], b"four");
+        assert_eq!(clone.read(&mut read_buffer, 0), Ok(10));
+        assert_eq!(&read_buffer[0..5], b"three");
     }
 }

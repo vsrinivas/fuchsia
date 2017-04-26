@@ -153,6 +153,9 @@ pub const MX_VMO_OP_CACHE_INVALIDATE: u32 = 7;
 pub const MX_VMO_OP_CACHE_CLEAN: u32 = 8;
 pub const MX_VMO_OP_CACHE_CLEAN_INVALIDATE: u32 = 9;
 
+// VM Object clone flags
+pub const MX_VMO_CLONE_COPY_ON_WRITE: u32 = 1;
+
 #[repr(C)]
 pub enum mx_cache_policy_t {
     MX_CACHE_POLICY_CACHED = 0,
