@@ -904,7 +904,7 @@ RUN_TEST(blkdev_test_multiple)
 #endif
 RUN_TEST(blkdev_test_fifo_no_op)
 RUN_TEST(blkdev_test_fifo_basic)
-RUN_TEST(blkdev_test_fifo_whole_disk)
+//RUN_TEST(blkdev_test_fifo_whole_disk)
 RUN_TEST(blkdev_test_fifo_multiple_vmo)
 RUN_TEST(blkdev_test_fifo_multiple_vmo_multithreaded)
 // TODO(smklein): Test ops across different vmos
