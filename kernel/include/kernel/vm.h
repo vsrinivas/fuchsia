@@ -186,10 +186,6 @@ struct vmm_aspace* vaddr_to_aspace(const void* ptr);
 /* retrieve the arch-specific information for this aspace */
 arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace);
 
-/* reserve a chunk of address space to prevent allocations from that space */
-status_t vmm_reserve_space(vmm_aspace_t* aspace, const char* name, size_t size, vaddr_t vaddr)
-    __NONNULL((1));
-
 /* For region creation routines */
 #define VMM_FLAG_VALLOC_SPECIFIC (1u << 0) /* allocate at specific address */
 #define VMM_FLAG_COMMIT (1u << 1)          /* commit memory up front (no demand paging) */
@@ -214,9 +210,6 @@ status_t vmm_alloc(vmm_aspace_t* aspace, const char* name, size_t size, void** p
 
 /* Unmap previously allocated region and free physical memory pages backing it (if any) */
 status_t vmm_free_region(vmm_aspace_t* aspace, vaddr_t va);
-
-/* Change permissions on a previously allocated region */
-status_t vmm_protect_region(vmm_aspace_t* aspace, vaddr_t va, uint arch_mmu_flags);
 
 #define VMM_ASPACE_TYPE_USER (0 << 0)
 #define VMM_ASPACE_TYPE_KERNEL (1 << 0)

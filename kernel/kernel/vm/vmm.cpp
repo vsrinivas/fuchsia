@@ -27,14 +27,6 @@
 
 static void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace);
 
-status_t vmm_reserve_space(vmm_aspace_t* _aspace, const char* name, size_t size, vaddr_t vaddr) {
-    auto aspace = vmm_aspace_to_obj(_aspace);
-    if (!aspace)
-        return ERR_INVALID_ARGS;
-
-    return aspace->ReserveSpace(name, size, vaddr);
-}
-
 status_t vmm_alloc_physical(vmm_aspace_t* _aspace, const char* name, size_t size, void** ptr,
                             uint8_t align_pow2, size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
                             uint arch_mmu_flags) {
@@ -62,22 +54,6 @@ status_t vmm_alloc(vmm_aspace_t* _aspace, const char* name, size_t size, void** 
         return ERR_INVALID_ARGS;
 
     return aspace->Alloc(name, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
-}
-
-status_t vmm_protect_region(vmm_aspace_t* _aspace, vaddr_t va, uint arch_mmu_flags) {
-    auto aspace = vmm_aspace_to_obj(_aspace);
-    if (!aspace)
-        return ERR_INVALID_ARGS;
-
-    auto r = aspace->FindRegion(va);
-    if (!r)
-        return ERR_NOT_FOUND;
-
-    auto vm_mapping = r->as_vm_mapping();
-    if (!vm_mapping)
-        return ERR_NOT_FOUND;
-
-    return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
 
 status_t vmm_free_region(vmm_aspace_t* _aspace, vaddr_t vaddr) {
