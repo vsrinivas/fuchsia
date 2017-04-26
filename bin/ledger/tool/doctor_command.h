@@ -7,6 +7,9 @@
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
+#include "apps/ledger/src/firebase/firebase.h"
+#include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "apps/ledger/src/tool/command.h"
 
@@ -15,9 +18,8 @@ namespace tool {
 // Command that runs a series of check-ups for the sync configuration.
 class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
  public:
-  DoctorCommand(ledger::NetworkService* network_service,
-                const std::string& firebase_id,
-                cloud_provider::CloudProvider* cloud_provider);
+  DoctorCommand(const cloud_sync::UserConfig& user_config,
+                ledger::NetworkService* network_service);
   ~DoctorCommand();
 
   // Command:
@@ -53,9 +55,11 @@ class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
 
   void Done();
 
+  const cloud_sync::UserConfig user_config_;
   ledger::NetworkService* const network_service_;
-  std::string firebase_id_;
-  cloud_provider::CloudProvider* const cloud_provider_;
+  std::unique_ptr<firebase::Firebase> firebase_;
+  std::unique_ptr<gcs::CloudStorage> cloud_storage_;
+  std::unique_ptr<cloud_provider::CloudProvider> cloud_provider_;
   ftl::Closure on_done_;
   std::function<void(cloud_provider::Commit, std::string)> on_remote_commit_;
   std::function<void(ftl::StringView)> on_error_;

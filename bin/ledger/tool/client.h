@@ -10,10 +10,9 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/configuration/configuration.h"
-#include "apps/ledger/src/firebase/firebase.h"
-#include "apps/ledger/src/gcs/cloud_storage.h"
+#include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/tool/command.h"
 #include "lib/ftl/command_line.h"
@@ -31,17 +30,18 @@ class ClientApp {
 
   void PrintUsage();
 
+  bool ReadConfig();
+
   bool Initialize();
 
   void Start();
 
   ftl::CommandLine command_line_;
-  configuration::Configuration configuration_;
+  cloud_sync::UserConfig user_config_;
+  // Path to disk directory storing the data of the current user.
+  std::string user_repository_path_;
   std::unique_ptr<app::ApplicationContext> context_;
   std::unique_ptr<ledger::NetworkService> network_service_;
-  std::unique_ptr<firebase::Firebase> firebase_;
-  std::unique_ptr<gcs::CloudStorage> cloud_storage_;
-  std::unique_ptr<cloud_provider::CloudProvider> cloud_provider_;
   std::unique_ptr<Command> command_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ClientApp);

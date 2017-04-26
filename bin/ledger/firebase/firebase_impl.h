@@ -53,6 +53,8 @@ class FirebaseImpl : public Firebase {
              WatchClient* watch_client) override;
   void UnWatch(WatchClient* watch_client) override;
 
+  const std::string& api_url() { return api_url_; }
+
  private:
   std::string BuildApiUrl(const std::string& db_id, const std::string& prefix);
 

@@ -8,19 +8,15 @@
 #include <unordered_set>
 
 #include "application/lib/app/connect.h"
-#include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/firebase/firebase_impl.h"
-#include "apps/ledger/src/gcs/cloud_storage_impl.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/tool/clean_command.h"
 #include "apps/ledger/src/tool/doctor_command.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -29,8 +25,35 @@ namespace tool {
 
 namespace {
 
-std::string RandomString() {
-  return std::to_string(glue::RandUint64());
+constexpr ftl::StringView kUserIdFlag = "user-id";
+
+// Inverse of the transformation currently used by DeviceRunner to translate
+// human-readable username to user ID.
+bool FromHexString(const std::string& hex_string, std::string* result) {
+  if (hex_string.size() % 2 != 0) {
+    return false;
+  }
+
+  std::string bytes;
+  bytes.reserve(hex_string.size() / 2);
+  for (size_t i = 0; i < hex_string.size(); i += 2) {
+    bytes.push_back(strtol(hex_string.substr(i, 2).c_str(), nullptr, 16));
+  }
+  result->swap(bytes);
+  return true;
+}
+
+// Transformation currently used by DeviceRunner to translate human-readable
+// username to user ID.
+std::string ToHexString(ftl::StringView data) {
+  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
+  std::string ret;
+  ret.reserve(data.size() * 2);
+  for (size_t i = 0; i < data.size(); ++i) {
+    ret.push_back(kHexadecimalCharacters[data[i] >> 4]);
+    ret.push_back(kHexadecimalCharacters[data[i] & 0xf]);
+  }
+  return ret;
 }
 
 }  // namespace
@@ -46,26 +69,35 @@ ClientApp::ClientApp(ftl::CommandLine command_line)
 }
 
 void ClientApp::PrintUsage() {
-  std::cout << "Usage: ledger_tool <COMMAND>" << std::endl;
+  std::cout << "Usage: ledger_tool [options] <COMMAND>" << std::endl;
+  std::cout << "Options:" << std::endl;
+  std::cout << " --user-id=<string> overrides the user ID to use" << std::endl;
   std::cout << "Commands:" << std::endl;
-  std::cout << " - `doctor` - checks up the cloud sync configuration (default)"
+  std::cout << " - `doctor` - checks up the Ledger configuration (default)"
             << std::endl;
   std::cout
-      << " - `clean` - removes all data from both local and remote storage"
+      << " - `clean` - wipes remote and local data of the most recent user "
       << std::endl;
 }
 
 std::unique_ptr<Command> ClientApp::CommandFromArgs(
     const std::vector<std::string>& args) {
   // `doctor` is the default command.
-  if (args.empty() || (args[0] == "doctor" && args.size() == 1)) {
-    return std::make_unique<DoctorCommand>(
-        network_service_.get(), configuration_.sync_params.firebase_id,
-        cloud_provider_.get());
+  if (args.empty() || args[0] == "doctor") {
+    if (args.size() > 1) {
+      FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
+      return nullptr;
+    }
+    return std::make_unique<DoctorCommand>(user_config_,
+                                           network_service_.get());
   }
 
-  if ((args[0] == "clean" && args.size() == 1)) {
-    return std::make_unique<CleanCommand>(configuration_,
+  if (args[0] == "clean") {
+    if (args.size() > 1) {
+      FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
+      return nullptr;
+    }
+    return std::make_unique<CleanCommand>(user_config_, user_repository_path_,
                                           network_service_.get());
   }
 
@@ -78,15 +110,28 @@ bool ClientApp::Initialize() {
               << "Please use 'ledger_tool' instead." << std::endl;
   }
 
+  const std::unordered_set<std::string> known_options = {
+      kUserIdFlag.ToString()};
+
+  for (auto& option : command_line_.options()) {
+    if (known_options.count(option.name) == 0) {
+      FTL_LOG(ERROR) << "Unknown option: " << option.name << std::endl;
+      PrintUsage();
+      return false;
+    }
+  }
+
   std::unordered_set<std::string> valid_commands = {"doctor", "clean"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
+    FTL_LOG(ERROR) << "Unknown command: " << args[0];
     PrintUsage();
     return false;
   }
 
-  if (!configuration::LoadConfiguration(&configuration_)) {
-    std::cout << "Error: Ledger is misconfigured." << std::endl;
+  std::string repository_path;
+  if (!ReadConfig()) {
+    std::cout << "Error: no Ledger configuration found." << std::endl;
     std::cout
         << "Hint: refer to the User Guide at "
         << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md"
@@ -94,19 +139,26 @@ bool ClientApp::Initialize() {
     return false;
   }
 
-  if (!configuration_.use_sync) {
+  if (!user_config_.use_sync) {
     std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
               << std::endl;
     std::cout << "Hint: pass --firebase_id to `configure_ledger`" << std::endl;
     return false;
   }
 
-  std::cout << "Cloud Sync Settings:" << std::endl;
-  std::cout << " - firebase id: " << configuration_.sync_params.firebase_id
-            << std::endl;
-  if (!configuration_.sync_params.cloud_prefix.empty()) {
-    std::cout << " - cloud prefix: " << configuration_.sync_params.cloud_prefix
-              << std::endl;
+  std::cout << "parameters: " << std::endl;
+  // User ID.
+  std::cout << " - user ID: " << user_config_.user_id;
+  std::string readable_id;
+  if (!user_config_.user_id.empty() &&
+      FromHexString(user_config_.user_id, &readable_id)) {
+    std::cout << " (" << readable_id << ")";
+  }
+  std::cout << std::endl;
+  // Sync settings.
+  std::cout << " - firebase ID: " << user_config_.server_id << std::endl;
+  if (!user_config_.cloud_prefix.empty()) {
+    std::cout << " - cloud prefix: " << user_config_.cloud_prefix << std::endl;
   }
   std::cout << std::endl;
 
@@ -115,28 +167,48 @@ bool ClientApp::Initialize() {
         return context_->ConnectToEnvironmentService<network::NetworkService>();
       });
 
-  std::string app_firebase_path =
-      cloud_sync::GetFirebasePathForApp(configuration_.sync_params.cloud_prefix,
-                                        "cloud_sync_user", "cloud_sync_client");
-  firebase_ = std::make_unique<firebase::FirebaseImpl>(
-      network_service_.get(), configuration_.sync_params.firebase_id,
-      cloud_sync::GetFirebasePathForPage(app_firebase_path, RandomString()));
-  std::string app_gcs_prefix =
-      cloud_sync::GetGcsPrefixForApp(configuration_.sync_params.cloud_prefix,
-                                     "cloud_sync_user", "cloud_sync_client");
-  cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
-      mtl::MessageLoop::GetCurrent()->task_runner(), network_service_.get(),
-      configuration_.sync_params.firebase_id,
-      cloud_sync::GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
-  cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
-      firebase_.get(), cloud_storage_.get());
-
   command_ = CommandFromArgs(args);
   if (command_ == nullptr) {
     std::cout << "Failed to initialize the selected command." << std::endl;
     PrintUsage();
     return false;
   }
+  return true;
+}
+
+bool ClientApp::ReadConfig() {
+  configuration::Configuration global_config;
+  if (!configuration::LoadConfiguration(&global_config)) {
+    return false;
+  }
+  user_config_.use_sync = global_config.use_sync;
+  user_config_.server_id = global_config.sync_params.firebase_id;
+  user_config_.cloud_prefix = global_config.sync_params.cloud_prefix;
+
+  std::string user_id_human_readable;
+  if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
+                                   &user_id_human_readable)) {
+    FTL_LOG(INFO) << "using the user id passed on the command line";
+    user_config_.user_id = ToHexString(user_id_human_readable);
+    user_repository_path_ =
+        ftl::Concatenate({"/data/ledger/", user_config_.user_id});
+    return true;
+  }
+
+  if (!files::IsFile(configuration::kLastUserIdPath.ToString()) ||
+      !files::ReadFileToString(configuration::kLastUserIdPath.ToString(),
+                               &user_config_.user_id) ||
+      !files::IsFile(configuration::kLastUserRepositoryPath.ToString()) ||
+      !files::ReadFileToString(
+          configuration::kLastUserRepositoryPath.ToString(),
+          &user_repository_path_)) {
+    FTL_LOG(ERROR) << "Failed to identify the most recent user ID, "
+                   << "pick the user in Device Shell UI or pass the user ID "
+                   << "to use in the --" << kUserIdFlag << " flag";
+    return false;
+  }
+
+  FTL_LOG(INFO) << "using the user id of the most recent Ledger run";
   return true;
 }
 

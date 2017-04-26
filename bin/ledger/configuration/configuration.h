@@ -14,6 +14,18 @@ namespace configuration {
 constexpr ftl::StringView kDefaultConfigurationFile =
     "/data/ledger/config.json";
 
+// File path under which is stored the last user id for which the Ledger was
+// initialized. This is a stop-gap convenience solution to allow `cloud_sync
+// clean` to reset the Ledger for the concrete user on the device (and not wipe
+// the entire cloud which can be shared between many users).
+constexpr ftl::StringView kLastUserIdPath = "/data/ledger/last_user_id";
+constexpr ftl::StringView kLastUserRepositoryPath =
+    "/data/ledger/last_user_dir";
+
+// Filename under which the server id used to sync a given user is stored within
+// the repository dir of that user.
+constexpr ftl::StringView kServerIdFilename = "server_id";
+
 // The configuration for the Ledger.
 struct Configuration {
   // Creates a default, empty configuration.

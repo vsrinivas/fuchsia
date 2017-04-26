@@ -16,8 +16,6 @@
 namespace ledger {
 
 namespace {
-constexpr ftl::StringView kServerIdFilename = "server_id";
-
 ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
   size_t separator = repository_path.rfind('/');
   FTL_DCHECK(separator != std::string::npos);
@@ -62,19 +60,35 @@ cloud_sync::UserConfig GetUserConfig(
   return user_config;
 }
 
+bool SaveConfigForDebugging(ftl::StringView user_id,
+                            ftl::StringView repository_path,
+                            const std::string& temp_dir) {
+  if (!files::WriteFileInTwoPhases(configuration::kLastUserIdPath.ToString(),
+                                   user_id, temp_dir)) {
+    return false;
+  }
+  if (!files::WriteFileInTwoPhases(
+          configuration::kLastUserRepositoryPath.ToString(), repository_path,
+          temp_dir)) {
+    return false;
+  }
+  return true;
+}
+
 // Verifies that the current server id is not different from the server id used
 // in a previous run.
 //
 // Ledger does not support cloud migrations - once the repository is synced with
 // a cloud, we can't change the server.
 bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
-                     ftl::StringView repository_path) {
+                     ftl::StringView repository_path,
+                     const std::string& temp_dir) {
   if (!user_config.use_sync) {
     return true;
   }
 
-  std::string server_id_path =
-      ftl::Concatenate({repository_path, "/", kServerIdFilename});
+  std::string server_id_path = ftl::Concatenate(
+      {repository_path, "/", configuration::kServerIdFilename});
   if (files::IsFile(server_id_path)) {
     std::string previous_server_id;
     if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
@@ -98,7 +112,7 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
 
   std::string temp_dir_root = ftl::Concatenate({repository_path, "/tmp"});
   if (!files::WriteFileInTwoPhases(server_id_path, user_config.server_id,
-                                   temp_dir_root)) {
+                                   temp_dir)) {
     FTL_LOG(ERROR) << "Failed to write the current server_id for compatibility "
                    << "check.";
     return false;
@@ -126,11 +140,18 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       files::SimplifyPath(std::move(repository_path.get()));
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
-    cloud_sync::UserConfig user_config = GetUserConfig(
-        config_, server_id, GetStorageDirectoryName(sanitized_path));
-    if (!CheckSyncConfig(user_config, sanitized_path)) {
+    ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
+    cloud_sync::UserConfig user_config =
+        GetUserConfig(config_, server_id, user_id);
+    const std::string temp_dir =
+        ftl::Concatenate({repository_path.get(), "/tmp"});
+    if (!CheckSyncConfig(user_config, sanitized_path, temp_dir)) {
       callback(Status::CONFIGURATION_ERROR);
       return;
+    }
+    // Save debugging data for `ledger_tool`.
+    if (!SaveConfigForDebugging(user_id, repository_path.get(), temp_dir)) {
+      FTL_LOG(WARNING) << "Failed to save the current configuration.";
     }
     auto result = repositories_.emplace(
         std::piecewise_construct, std::forward_as_tuple(sanitized_path),

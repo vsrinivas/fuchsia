@@ -6,6 +6,10 @@
 
 #include <iostream>
 
+#include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/firebase/firebase_impl.h"
+#include "apps/ledger/src/gcs/cloud_storage_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/concatenate.h"
@@ -19,6 +23,7 @@
 namespace tool {
 
 namespace {
+const char kDoctorAppId[] = "__ledger_doctor__";
 
 constexpr ftl::StringView kIndexConfigurationHint =
     "A Firebase commit query failed. "
@@ -72,15 +77,25 @@ std::string FirebaseUrlFromId(const std::string& firebase_id) {
 
 }  // namespace
 
-DoctorCommand::DoctorCommand(ledger::NetworkService* network_service,
-                             const std::string& firebase_id,
-                             cloud_provider::CloudProvider* cloud_provider)
-    : network_service_(network_service),
-      firebase_id_(firebase_id),
-      cloud_provider_(cloud_provider) {
+DoctorCommand::DoctorCommand(const cloud_sync::UserConfig& user_config,
+                             ledger::NetworkService* network_service)
+    : user_config_(user_config), network_service_(network_service) {
   FTL_DCHECK(network_service_);
-  FTL_DCHECK(!firebase_id_.empty());
-  FTL_DCHECK(cloud_provider_);
+  FTL_DCHECK(!user_config.server_id.empty());
+
+  std::string app_firebase_path = cloud_sync::GetFirebasePathForApp(
+      user_config_.cloud_prefix, user_config_.user_id, kDoctorAppId);
+  firebase_ = std::make_unique<firebase::FirebaseImpl>(
+      network_service_, user_config_.server_id,
+      cloud_sync::GetFirebasePathForPage(app_firebase_path, RandomString()));
+  std::string app_gcs_prefix = cloud_sync::GetGcsPrefixForApp(
+      user_config_.cloud_prefix, user_config_.user_id, kDoctorAppId);
+  cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
+      mtl::MessageLoop::GetCurrent()->task_runner(), network_service_,
+      user_config_.server_id,
+      cloud_sync::GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
+  cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
+      firebase_.get(), cloud_storage_.get());
 }
 
 DoctorCommand::~DoctorCommand() {}
@@ -248,7 +263,7 @@ void DoctorCommand::CheckCommits() {
           hint(ftl::Concatenate(
               {"It seems that we can't access the Firebase instance. "
                "Please verify that you can access ",
-               FirebaseUrlFromId(firebase_id_),
+               FirebaseUrlFromId(user_config_.server_id),
                " on your host machine. If not, refer to the User Guide for the "
                "recommended Firebase configuration."}));
           on_done_();

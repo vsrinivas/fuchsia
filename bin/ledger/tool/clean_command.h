@@ -8,18 +8,21 @@
 #include <memory>
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
-#include "apps/ledger/src/firebase/firebase.h"
+#include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "apps/ledger/src/tool/command.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace tool {
 
 // Command that cleans the local and remote storage of Ledger.
 class CleanCommand : public Command {
  public:
-  CleanCommand(const configuration::Configuration& configuration,
+  CleanCommand(const cloud_sync::UserConfig& user_config,
+               ftl::StringView user_repository_path,
                ledger::NetworkService* network_service);
   ~CleanCommand() {}
 
@@ -27,8 +30,8 @@ class CleanCommand : public Command {
   void Start(ftl::Closure on_done) override;
 
  private:
-  const configuration::Configuration& configuration_;
-  std::unique_ptr<firebase::Firebase> firebase_;
+  std::unique_ptr<firebase::FirebaseImpl> firebase_;
+  const std::string user_repository_path_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CleanCommand);
 };

@@ -22,6 +22,10 @@ std::string GetGcsPrefixForApp(ftl::StringView cloud_prefix,
 std::string GetGcsPrefixForPage(ftl::StringView app_prefix,
                                 ftl::StringView app_id);
 
+// Returns the Firebase path under which the data for the given user is stored.
+std::string GetFirebasePathForUser(ftl::StringView cloud_prefix,
+                                   ftl::StringView user_id);
+
 // Returns the Firebase path under which the data for the given app is stored.
 std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
                                   ftl::StringView user_id,

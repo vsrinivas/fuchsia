@@ -38,15 +38,21 @@ std::string GetGcsPrefixForPage(ftl::StringView app_path,
       {app_path, kGcsSeparator, firebase::EncodeKey(page_id), kGcsSeparator});
 }
 
-std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
-                                  ftl::StringView user_id,
-                                  ftl::StringView app_id) {
+std::string GetFirebasePathForUser(ftl::StringView cloud_prefix,
+                                   ftl::StringView user_id) {
   ftl::StringView cloud_prefix_or_default =
       cloud_prefix.empty() ? kDefaultCloudPrefix : cloud_prefix;
   return ftl::Concatenate({firebase::EncodeKey(cloud_prefix_or_default),
                            kFirebaseSeparator, firebase::EncodeKey(user_id),
-                           kFirebaseSeparator, storage::kSerializationVersion,
-                           kFirebaseSeparator, firebase::EncodeKey(app_id)});
+                           kFirebaseSeparator, storage::kSerializationVersion});
+}
+
+std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
+                                  ftl::StringView user_id,
+                                  ftl::StringView app_id) {
+  std::string user_path = GetFirebasePathForUser(cloud_prefix, user_id);
+  return ftl::Concatenate(
+      {user_path, kFirebaseSeparator, firebase::EncodeKey(app_id)});
 }
 
 std::string GetFirebasePathForPage(ftl::StringView app_path,
