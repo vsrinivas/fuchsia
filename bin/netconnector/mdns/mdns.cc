@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
 #include <unordered_set>
 
 #include "apps/netconnector/src/mdns/mdns.h"
@@ -9,6 +10,7 @@
 #include "apps/netconnector/src/mdns/address_responder.h"
 #include "apps/netconnector/src/mdns/dns_formatting.h"
 #include "apps/netconnector/src/mdns/host_name_resolver.h"
+#include "apps/netconnector/src/mdns/instance_publisher.h"
 #include "apps/netconnector/src/mdns/instance_subscriber.h"
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
@@ -17,6 +19,12 @@
 
 namespace netconnector {
 namespace mdns {
+namespace {
+
+static constexpr uint32_t kCancelTimeToLive =
+    std::numeric_limits<uint32_t>::max();
+
+}  // namespace
 
 Mdns::Mdns() : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
 
@@ -129,6 +137,29 @@ void Mdns::UnsubscribeToService(const std::string& service_name) {
   TellAgentToQuit(MdnsNames::LocalServiceFullName(service_name));
 }
 
+void Mdns::PublishServiceInstance(const std::string& service_name,
+                                  const std::string& instance_name,
+                                  IpPort port,
+                                  const std::vector<std::string>& text) {
+  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+
+  std::string instance_full_name =
+      MdnsNames::LocalInstanceFullName(instance_name, service_name);
+
+  std::string service_full_name = MdnsNames::LocalServiceFullName(service_name);
+
+  AddAgent(instance_full_name, std::make_shared<InstancePublisher>(
+                                   this, host_full_name_, instance_full_name,
+                                   service_full_name, port, text));
+}
+
+void Mdns::UnpublishServiceInstance(const std::string& instance_name,
+                                    const std::string& service_name) {
+  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  TellAgentToQuit(
+      MdnsNames::LocalInstanceFullName(instance_name, service_name));
+}
+
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) {
   FTL_DCHECK(agent);
   wake_queue_.emplace(when, agent);
@@ -180,7 +211,14 @@ void Mdns::SendMessage() {
   std::unordered_set<DnsResource*> resources_added;
 
   while (!resource_queue_.empty() && resource_queue_.top().time_ <= now) {
+    if (resource_queue_.top().resource_->time_to_live_ == kCancelTimeToLive) {
+      // Cancelled while in the queue.
+      resource_queue_.pop();
+      continue;
+    }
+
     if (resources_added.count(resource_queue_.top().resource_.get()) != 0) {
+      // Already added to this message.
       resource_queue_.pop();
       continue;
     }
@@ -220,6 +258,24 @@ void Mdns::SendMessage() {
 
   // V6 interface transceivers will treat this as |kV6Multicast|.
   transceiver_.SendMessage(&message, MdnsAddresses::kV4Multicast, 0);
+
+  for (auto resource : message.answers_) {
+    if (resource->time_to_live_ == 0) {
+      resource->time_to_live_ = kCancelTimeToLive;
+    }
+  }
+
+  for (auto resource : message.authorities_) {
+    if (resource->time_to_live_ == 0) {
+      resource->time_to_live_ = kCancelTimeToLive;
+    }
+  }
+
+  for (auto resource : message.additionals_) {
+    if (resource->time_to_live_ == 0) {
+      resource->time_to_live_ = kCancelTimeToLive;
+    }
+  }
 }
 
 void Mdns::PostTask() {

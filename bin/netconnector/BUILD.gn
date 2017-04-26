@@ -33,6 +33,8 @@ executable("netconnector") {
     "mdns/dns_writing.h",
     "mdns/host_name_resolver.cc",
     "mdns/host_name_resolver.h",
+    "mdns/instance_publisher.cc",
+    "mdns/instance_publisher.h",
     "mdns/instance_subscriber.cc",
     "mdns/instance_subscriber.h",
     "mdns/mdns.cc",

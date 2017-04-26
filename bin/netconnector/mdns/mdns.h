@@ -59,6 +59,16 @@ class Mdns : public MdnsAgent::Host {
                        ftl::TimePoint timeout,
                        const ResolveHostNameCallback& callback);
 
+  // Starts publishing the indicated service instance.
+  void PublishServiceInstance(const std::string& service_name,
+                              const std::string& instance_name,
+                              IpPort port,
+                              const std::vector<std::string>& text);
+
+  // Stops publishing the indicated service instance.
+  void UnpublishServiceInstance(const std::string& service_name,
+                                const std::string& instance_name);
+
   // Registers interest in the specified service.
   void SubscribeToService(const std::string& service_name,
                           const ServiceInstanceCallback& callback);
