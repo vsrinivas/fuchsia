@@ -120,14 +120,24 @@ status_t x86_bootstrap16_prep(
 
     uintptr_t long_mode_entry = bootstrap_phys_addr +
             (entry64 - (uintptr_t)x86_bootstrap16_start);
+    ASSERT(long_mode_entry <= UINT32_MAX);
 
     uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().pt_phys;
-    bootstrap_data->phys_bootstrap_pml4 = (uint32_t)phys_bootstrap_pml4;
-    bootstrap_data->phys_kernel_pml4 = (uint32_t)x86_get_cr3();
+    uint64_t phys_kernel_pml4 = x86_get_cr3();
+    if (phys_bootstrap_pml4 > UINT32_MAX) {
+        // TODO(teisenbe): Once the pmm supports it, we should request that this
+        // VmAspace is backed by a low mem PML4, so we can avoid this issue.
+        TRACEF("bootstrap PML4 was not allocated out of low mem\n");
+        return ERR_NO_MEMORY;
+    }
+    ASSERT(phys_kernel_pml4 <= UINT32_MAX);
+
+    bootstrap_data->phys_bootstrap_pml4 = static_cast<uint32_t>(phys_bootstrap_pml4);
+    bootstrap_data->phys_kernel_pml4 = static_cast<uint32_t>(phys_kernel_pml4);
     memcpy(bootstrap_data->phys_gdtr,
            &_gdtr_phys,
            sizeof(bootstrap_data->phys_gdtr));
-    bootstrap_data->phys_long_mode_entry = (uint32_t)long_mode_entry;
+    bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
     bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 
     *bootstrap_aperature = (void *)((uintptr_t)bootstrap_virt_addr + 0x1000);
