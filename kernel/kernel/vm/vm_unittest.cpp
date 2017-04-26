@@ -375,7 +375,7 @@ static bool vmo_precommitted_map_test(void* context) {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
@@ -397,7 +397,7 @@ static bool vmo_demand_paged_map_test(void* context) {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
@@ -419,7 +419,7 @@ static bool vmo_dropped_ref_test(void* context) {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
                              0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
@@ -444,7 +444,7 @@ static bool vmo_remap_test(void* context) {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                              0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
@@ -456,7 +456,7 @@ static bool vmo_remap_test(void* context) {
     EXPECT_EQ(NO_ERROR, err, "unmapping object");
 
     // map it again
-    ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr,
+    ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
                         0, VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
@@ -479,7 +479,7 @@ static bool vmo_double_remap_test(void* context) {
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObject(vmo, "test0", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(vmo, "test0", 0, alloc_size, &ptr,
                              0, 0, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
@@ -489,7 +489,7 @@ static bool vmo_double_remap_test(void* context) {
 
     // map it again
     void* ptr2;
-    ret = ka->MapObject(vmo, "test1", 0, alloc_size, &ptr2,
+    ret = ka->MapObjectInternal(vmo, "test1", 0, alloc_size, &ptr2,
                         0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object second time");
     EXPECT_NEQ(ptr, ptr2, "second mapping is different");
@@ -501,7 +501,7 @@ static bool vmo_double_remap_test(void* context) {
     // map it a third time with an offset
     void* ptr3;
     static const size_t alloc_offset = PAGE_SIZE;
-    ret = ka->MapObject(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
+    ret = ka->MapObjectInternal(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
                         &ptr3, 0, 0, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object third time");
     EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
@@ -573,7 +573,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     // map the object
     auto ka = VmAspace::kernel_aspace();
     uint8_t* ptr;
-    err = ka->MapObject(vmo, "test", 0, alloc_size, (void**)&ptr,
+    err = ka->MapObjectInternal(vmo, "test", 0, alloc_size, (void**)&ptr,
                         0, 0, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, err, "mapping object");
 

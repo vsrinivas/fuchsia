@@ -260,9 +260,9 @@ __WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
     return ALIGN(base, align);
 }
 
-status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                             void** ptr, uint8_t align_pow2, uint vmm_flags,
-                             uint arch_mmu_flags) {
+status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+                                     size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
+                                     uint arch_mmu_flags) {
 
     canary_.Assert();
     LTRACEF("aspace %p name '%s' vmo %p, offset %#" PRIx64 " size %#zx "
@@ -302,7 +302,7 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
 
     // Create the mappings with all of the CAN_* RWX flags, so that
     // Protect() can transition them arbitrarily.  This is not desirable for the
-    // long-term, and will vanish when MapObject is removed from VmAspace.
+    // long-term.
     vmar_flags |= VMAR_CAN_RWX_FLAGS;
 
     // allocate a region and put it in the aspace list
@@ -362,7 +362,8 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // map it, creating a new region
     void* ptr = reinterpret_cast<void*>(vaddr);
-    return MapObject(mxtl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
+    return MapObjectInternal(mxtl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
+                             arch_mmu_flags);
 }
 
 status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
@@ -389,7 +390,7 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     // TODO: add new flag to precisely mean pre-map
     vmm_flags |= VMM_FLAG_COMMIT;
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 
@@ -423,7 +424,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return ERR_NO_MEMORY;
     }
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 
@@ -457,7 +458,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
     }
 
     // map it, creating a new region
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                      arch_mmu_flags);
 }
 

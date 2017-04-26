@@ -95,9 +95,6 @@ public:
     // These all assume a flat VMAR structure in which all VMOs are mapped
     // as children of the root.  They will all assert if used on user aspaces
     // TODO(teisenbe): remove uses of these in favor of new VMAR interfaces
-    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                       void** ptr, uint8_t align_pow2, uint vmm_flags,
-                       uint arch_mmu_flags);
     status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
     status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                            paddr_t paddr, uint vmm_flags,
@@ -107,6 +104,12 @@ public:
     status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                    uint vmm_flags, uint arch_mmu_flags);
     status_t FreeRegion(vaddr_t va);
+
+    // Internal use function for mapping VMOs.  Do not use.  This is exposed in
+    // the public API purely for tests.
+    status_t MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+                               size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
+                               uint arch_mmu_flags);
 
 protected:
     // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
