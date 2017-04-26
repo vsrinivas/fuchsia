@@ -20,7 +20,7 @@
 #include <lk/main.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {
@@ -53,7 +53,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     }
 
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
-    vmm_aspace_t *bootstrap_aspace = NULL;
+    mxtl::RefPtr<VmAspace> bootstrap_aspace;
 
     status = x86_bootstrap16_prep(
             PHYS_BOOTSTRAP_PAGE,
@@ -178,8 +178,8 @@ cleanup_allocations:
         }
     }
 cleanup_aspace:
-    vmm_free_aspace(bootstrap_aspace);
-    vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)bootstrap_data);
+    bootstrap_aspace->Destroy();
+    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_data));
 finish:
     return status;
 }

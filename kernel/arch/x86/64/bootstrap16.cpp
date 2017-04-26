@@ -20,7 +20,7 @@
 status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
-        vmm_aspace_t **temp_aspace,
+        mxtl::RefPtr<VmAspace> *temp_aspace,
         void **bootstrap_aperature)
 {
     // Make sure bootstrap region will be entirely in the first 1MB of physical
@@ -36,22 +36,19 @@ status_t x86_bootstrap16_prep(
         return ERR_INVALID_ARGS;
     }
 
-    vmm_aspace_t *bootstrap_aspace;
-    vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
-    void *bootstrap_virt_addr = NULL;
-    status_t status = vmm_create_aspace(
-            &bootstrap_aspace,
-            "bootstrap16",
-            VMM_ASPACE_TYPE_LOW_KERNEL);
-    if (status != NO_ERROR) {
-        return status;
+    VmAspace *kernel_aspace = VmAspace::kernel_aspace();
+    mxtl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VMM_ASPACE_TYPE_LOW_KERNEL,
+                                                               "bootstrap16");
+    if (!bootstrap_aspace) {
+        return ERR_NO_MEMORY;
     }
+    void *bootstrap_virt_addr = NULL;
 
     // add an auto caller to clean up the address space on the way out
     auto ac = mxtl::MakeAutoCall([&]() {
-        vmm_free_aspace(bootstrap_aspace);
+        bootstrap_aspace->Destroy();
         if (bootstrap_virt_addr) {
-            vmm_free_region(kernel_aspace, (vaddr_t)bootstrap_virt_addr);
+            kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_virt_addr));
         }
     });
 
@@ -80,8 +77,7 @@ status_t x86_bootstrap16_prep(
     };
     for (unsigned int i = 0; i < countof(page_mappings); ++i) {
         void *vaddr = (void *)page_mappings[i].start_vaddr;
-        status = vmm_alloc_physical(
-                bootstrap_aspace,
+        status_t status = bootstrap_aspace->AllocPhysical(
                 "bootstrap_mapping",
                 page_mappings[i].size,
                 &vaddr,
@@ -98,8 +94,7 @@ status_t x86_bootstrap16_prep(
 
     // Map the AP bootstrap page and a low mem data page to configure
     // the AP processors with
-    status = vmm_alloc_physical(
-            kernel_aspace,
+    status_t status = kernel_aspace->AllocPhysical(
             "bootstrap16_aperture",
             PAGE_SIZE * 2, // size
             &bootstrap_virt_addr, // requested virtual address
@@ -126,7 +121,7 @@ status_t x86_bootstrap16_prep(
     uintptr_t long_mode_entry = bootstrap_phys_addr +
             (entry64 - (uintptr_t)x86_bootstrap16_start);
 
-    uint64_t phys_bootstrap_pml4 = vmm_get_arch_aspace(bootstrap_aspace)->pt_phys;
+    uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().pt_phys;
     bootstrap_data->phys_bootstrap_pml4 = (uint32_t)phys_bootstrap_pml4;
     bootstrap_data->phys_kernel_pml4 = (uint32_t)x86_get_cr3();
     memcpy(bootstrap_data->phys_gdtr,

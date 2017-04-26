@@ -24,7 +24,7 @@
 #ifndef ASSEMBLY
 #include <assert.h>
 #include <magenta/compiler.h>
-#include <kernel/vm.h>
+#include <kernel/vm/vm_aspace.h>
 
 __BEGIN_CDECLS
 
@@ -37,6 +37,8 @@ extern void x86_bootstrap16_end(void);
 // 64-bit entry points that bootstrap might transition to
 extern void _x86_secondary_cpu_long_mode_entry(void);
 extern void _x86_suspend_wakeup(void);
+
+__END_CDECLS
 
 struct __PACKED x86_bootstrap16_data {
     // Physical address of identity PML4
@@ -84,7 +86,7 @@ struct __PACKED x86_ap_bootstrap_data {
 status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
-        vmm_aspace_t **temp_aspace,
+        mxtl::RefPtr<VmAspace> *temp_aspace,
         void **bootstrap_aperature);
 
 static_assert(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE, "");
@@ -103,8 +105,6 @@ static_assert(__offsetof(struct x86_ap_bootstrap_data, per_cpu) == BCD_PER_CPU_B
 
 static_assert(__offsetof(struct x86_realmode_entry_data, hdr) == 0, "");
 static_assert(__offsetof(struct x86_realmode_entry_data, registers_ptr) == RED_REGISTERS_OFFSET, "");
-
-__END_CDECLS
 
 #endif // ASSEMBLY
 
