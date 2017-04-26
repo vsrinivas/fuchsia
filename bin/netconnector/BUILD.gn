@@ -21,6 +21,8 @@ executable("netconnector") {
     "listener.cc",
     "listener.h",
     "main.cc",
+    "mdns/address_responder.cc",
+    "mdns/address_responder.h",
     "mdns/dns_formatting.cc",
     "mdns/dns_formatting.h",
     "mdns/dns_message.cc",

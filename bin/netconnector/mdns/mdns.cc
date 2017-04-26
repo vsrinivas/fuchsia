@@ -6,6 +6,7 @@
 
 #include "apps/netconnector/src/mdns/mdns.h"
 
+#include "apps/netconnector/src/mdns/address_responder.h"
 #include "apps/netconnector/src/mdns/dns_formatting.h"
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
@@ -32,6 +33,10 @@ bool Mdns::Start(const std::string& host_name) {
 
   address_placeholder_ =
       std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
+
+  // Create an address responder agent to respond to simple address queries.
+  AddAgent(AddressResponder::kName,
+           std::make_shared<AddressResponder>(this, host_full_name_));
 
   started_ = transceiver_.Start(
       host_full_name_,
