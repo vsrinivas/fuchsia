@@ -8,6 +8,7 @@ declare_args() {
   msd_intel_enable_mapping_cache = !is_debug
   msd_intel_enable_modesetting = false
   msd_intel_wait_for_flip = true
+  msd_intel_print_fps = false
 }
 
 source_set("src") {
@@ -89,5 +90,11 @@ source_set("src") {
     defines += [ "MSD_INTEL_WAIT_FOR_FLIP=1" ]
   } else {
     defines += [ "MSD_INTEL_WAIT_FOR_FLIP=0" ]
+  }
+
+  if (msd_intel_print_fps) {
+    defines += [ "MSD_INTEL_PRINT_FPS=1" ]
+  } else {
+    defines += [ "MSD_INTEL_PRINT_FPS=0" ]
   }
 }

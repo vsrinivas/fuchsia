@@ -713,7 +713,9 @@ magma::Status MsdIntelDevice::ProcessFlip(
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(buffer);
 
-    DLOG("ProcessFlip buffer 0x%" PRIx64, buffer->platform_buffer()->id());
+#if MSD_INTEL_PRINT_FPS
+    fps_printer_.OnNewFrame();
+#endif
 
     TRACE_NONCE_DECLARE(nonce);
     TRACE_ASYNC_BEGIN("magma", "ProcessFlip", nonce);

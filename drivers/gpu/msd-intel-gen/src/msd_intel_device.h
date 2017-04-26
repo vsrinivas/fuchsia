@@ -10,6 +10,7 @@
 #include "global_context.h"
 #include "gpu_progress.h"
 #include "gtt.h"
+#include "magma_util/fps_printer.h"
 #include "magma_util/macros.h"
 #include "magma_util/semaphore_port.h"
 #include "magma_util/thread.h"
@@ -204,6 +205,8 @@ private:
 
     std::mutex pageflip_request_mutex_;
     std::queue<std::unique_ptr<FlipRequest>> pageflip_pending_queue_;
+
+    magma::FpsPrinter fps_printer_;
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;
