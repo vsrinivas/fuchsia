@@ -37,9 +37,11 @@ extern int __bss_end;
 vm_page_t* zero_page;
 paddr_t zero_page_paddr;
 
+namespace {
+
 // mark the physical pages backing a range of virtual as in use.
 // allocate the physical pages and throw them away
-static void mark_pages_in_use(vaddr_t va, size_t len) {
+void MarkPagesInUse(vaddr_t va, size_t len) {
     LTRACEF("va %#" PRIxPTR ", len %#zx\n", va, len);
 
     // make sure we are inclusive of all of the pages in the address range
@@ -89,6 +91,20 @@ static void mark_pages_in_use(vaddr_t va, size_t len) {
     list_for_every_entry (&list, p, vm_page_t, free.node) { p->state = VM_PAGE_STATE_WIRED; }
 }
 
+status_t ProtectRegion(VmAspace* aspace, vaddr_t va, uint arch_mmu_flags) {
+    auto r = aspace->FindRegion(va);
+    if (!r)
+        return ERR_NOT_FOUND;
+
+    auto vm_mapping = r->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NOT_FOUND;
+
+    return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
+}
+
+} // namespace {}
+
 void vm_init_preheap(uint level) {
     LTRACE_ENTRY;
 
@@ -97,14 +113,14 @@ void vm_init_preheap(uint level) {
 
     // mark all of the kernel pages in use
     LTRACEF("marking all kernel pages as used\n");
-    mark_pages_in_use((vaddr_t)&_start, ((uintptr_t)&_end - (uintptr_t)&_start));
+    MarkPagesInUse((vaddr_t)&_start, ((uintptr_t)&_end - (uintptr_t)&_start));
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
         LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n", boot_alloc_start,
                 boot_alloc_end);
 
-        mark_pages_in_use(boot_alloc_start, boot_alloc_end - boot_alloc_start);
+        MarkPagesInUse(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
 
     // grab a page and mark it as the zero page
@@ -120,7 +136,7 @@ void vm_init_preheap(uint level) {
 void vm_init_postheap(uint level) {
     LTRACE_ENTRY;
 
-    vmm_aspace_t* aspace = vmm_get_kernel_aspace();
+    VmAspace* aspace = VmAspace::kernel_aspace();
 
     // we expect the kernel to be in a temporary mapping, define permanent
     // regions for those now
@@ -169,9 +185,9 @@ void vm_init_postheap(uint level) {
         dprintf(INFO, "VM: reserving kernel region [%016" PRIxPTR ", %016" PRIxPTR ") flags %#x name '%s'\n",
                 region->base, region->base + region->size, region->arch_mmu_flags, region->name);
 
-        status_t status = vmm_reserve_space(aspace, region->name, region->size, region->base);
+        status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
         ASSERT(status == NO_ERROR);
-        status = vmm_protect_region(aspace, region->base, region->arch_mmu_flags);
+        status = ProtectRegion(aspace, region->base, region->arch_mmu_flags);
         ASSERT(status == NO_ERROR);
     }
 
@@ -205,18 +221,17 @@ void vm_init_postheap(uint level) {
             // If vaddr isn't the start of a kernel code/data region, then we should make
             // a mapping between it and the next closest one.
             if (next_kernel_region != vaddr) {
-                status_t status = vmm_reserve_space(aspace, map->name, next_kernel_region - vaddr, vaddr);
+                status_t status = aspace->ReserveSpace(map->name, next_kernel_region - vaddr, vaddr);
                 ASSERT(status == NO_ERROR);
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
                     dprintf(INFO, "VM: freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
-                    status = vmm_free_region(aspace, vaddr);
+                    status = aspace->FreeRegion(vaddr);
                     ASSERT(status == NO_ERROR);
                 } else {
                     // Otherwise, mark it no-exec since it's not explicitly code
-                    status =
-                        vmm_protect_region(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+                    status = ProtectRegion(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
                     ASSERT(status == NO_ERROR);
                 }
             }
