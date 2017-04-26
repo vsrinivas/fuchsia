@@ -142,6 +142,17 @@ pub const MX_CLOCK_MONOTONIC: u32 = 0;
 // Socket flags and limits.
 pub const MX_SOCKET_HALF_CLOSE: u32 = 1;
 
+// VM Object opcodes
+pub const MX_VMO_OP_COMMIT: u32 = 1;
+pub const MX_VMO_OP_DECOMMIT: u32 = 2;
+pub const MX_VMO_OP_LOCK: u32 = 3;
+pub const MX_VMO_OP_UNLOCK: u32 = 4;
+pub const MX_VMO_OP_LOOKUP: u32 = 5;
+pub const MX_VMO_OP_CACHE_SYNC: u32 = 6;
+pub const MX_VMO_OP_CACHE_INVALIDATE: u32 = 7;
+pub const MX_VMO_OP_CACHE_CLEAN: u32 = 8;
+pub const MX_VMO_OP_CACHE_CLEAN_INVALIDATE: u32 = 9;
+
 #[repr(C)]
 pub enum mx_cache_policy_t {
     MX_CACHE_POLICY_CACHED = 0,

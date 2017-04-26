@@ -6,6 +6,7 @@
 
 use {HandleBase, Handle, HandleRef, Status};
 use {sys, into_result};
+use std::{mem, ptr};
 
 /// An object representing a Magenta
 /// [virtual memory object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md).
@@ -78,6 +79,34 @@ impl Vmo {
         let status = unsafe { sys::mx_vmo_set_size(self.raw_handle(), size) };
         into_result(status, || ())
     }
+
+    /// Perform an operation on a range of a virtual memory object.
+    ///
+    /// Wraps the
+    /// [mx_vmo_op_range](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_op_range.md)
+    /// syscall.
+    pub fn op_range(&self, op: VmoOp, offset: u64, size: u64) -> Result<(), Status> {
+        let status = unsafe {
+            sys::mx_vmo_op_range(self.raw_handle(), op as u32, offset, size, ptr::null_mut(), 0)
+        };
+        into_result(status, || ())
+    }
+
+    /// Look up a list of physical addresses corresponding to the pages held by the VMO from
+    /// `offset` to `offset`+`size`, and store them in `buffer`.
+    ///
+    /// Wraps the
+    /// [mx_vmo_op_range](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/vmo_op_range.md)
+    /// syscall with MX_VMO_OP_LOOKUP.
+    pub fn lookup(&self, offset: u64, size: u64, buffer: &mut [sys::mx_paddr_t])
+        -> Result<(), Status>
+    {
+        let status = unsafe {
+            sys::mx_vmo_op_range(self.raw_handle(), sys::MX_VMO_OP_LOOKUP, offset, size,
+                buffer.as_mut_ptr() as *mut u8, buffer.len() * mem::size_of::<sys::mx_paddr_t>())
+        };
+        into_result(status, || ())
+    }
 }
 
 /// Options for creating virtual memory objects. None supported yet.
@@ -91,6 +120,26 @@ impl Default for VmoOpts {
     fn default() -> Self {
         VmoOpts::Default
     }
+}
+
+#[repr(u32)]
+pub enum VmoOp {
+    /// Commit `size` bytes worth of pages starting at byte `offset` for the VMO.
+    Commit = sys::MX_VMO_OP_COMMIT,
+    /// Release a range of pages previously committed to the VMO from `offset` to `offset`+`size`.
+    Decommit = sys::MX_VMO_OP_DECOMMIT,
+    // Presently unsupported.
+    Lock = sys::MX_VMO_OP_LOCK,
+    // Presently unsupported.
+    Unlock = sys::MX_VMO_OP_UNLOCK,
+    /// Perform a cache sync operation.
+    CacheSync = sys::MX_VMO_OP_CACHE_SYNC,
+    /// Perform a cache invalidation operation.
+    CacheInvalidate = sys::MX_VMO_OP_CACHE_INVALIDATE,
+    /// Perform a cache clean operation.
+    CacheClean = sys::MX_VMO_OP_CACHE_CLEAN,
+    /// Perform cache clean and invalidation operations together.
+    CacheCleanInvalidate = sys::MX_VMO_OP_CACHE_CLEAN_INVALIDATE,
 }
 
 #[cfg(test)]
@@ -128,5 +177,42 @@ mod tests {
         assert_eq!(b"ab123f", &vec1[0..6]);
         assert_eq!(15, vmo.read(&mut vec1, 1).unwrap());
         assert_eq!(b"b123f", &vec1[0..5]);
+    }
+
+    #[test]
+    fn vmo_op_range_unsupported() {
+        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+        assert_eq!(vmo.op_range(VmoOp::Lock, 0, 1), Err(Status::ErrNotSupported));
+        assert_eq!(vmo.op_range(VmoOp::Unlock, 0, 1), Err(Status::ErrNotSupported));
+    }
+
+    #[test]
+    fn vmo_lookup() {
+        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+        let mut buffer = vec![0; 2];
+
+        // Lookup will fail as it is not committed yet.
+        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::ErrNoMemory));
+
+        // Commit and try again.
+        assert_eq!(vmo.op_range(VmoOp::Commit, 0, 12), Ok(()));
+        assert_eq!(vmo.lookup(0, 12, &mut buffer), Ok(()));
+        assert_ne!(buffer[0], 0);
+        assert_eq!(buffer[1], 0);
+
+        // If we decommit then lookup should go back to failing.
+        assert_eq!(vmo.op_range(VmoOp::Decommit, 0, 12), Ok(()));
+        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::ErrNoMemory));
+    }
+
+    #[test]
+    fn vmo_cache() {
+        let vmo = Vmo::create(12, VmoOpts::Default).unwrap();
+
+        // Cache operations should all succeed.
+        assert_eq!(vmo.op_range(VmoOp::CacheSync, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CacheInvalidate, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CacheClean, 0, 12), Ok(()));
+        assert_eq!(vmo.op_range(VmoOp::CacheCleanInvalidate, 0, 12), Ok(()));
     }
 }
