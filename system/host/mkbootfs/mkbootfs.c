@@ -539,12 +539,119 @@ char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
+int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed) {
+    uint32_t n;
+    fsentry_t* e;
+
+    // Make note of where we started
+    off_t start = lseek(fd, 0, SEEK_CUR);
+
+    if (start < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
+fail:
+        return -1;
+    }
+
+    if (compressed) {
+        // Update the LZ4 content size to be original size without the bootdata
+        // header which isn't being compressed.
+        lz4_prefs.frameInfo.contentSize = item->outsize - sizeof(bootdata_t);
+    }
+
+    // Increment past the bootdata header which will be filled out later.
+    if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
+        fprintf(stderr, "error: cannot seek\n");
+        return -1;
+    }
+
+    void* cookie = NULL;
+    if (op->setup) {
+        CHECK(op->setup(fd, &cookie));
+    }
+
+    fsentry_t* last_entry = NULL;
+    for (e = item->first; e != NULL; e = e->next) {
+        uint32_t hdr[3];
+        hdr[0] = e->namelen;
+        hdr[1] = e->length;
+        hdr[2] = e->offset;
+        CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
+        CHECK(op->write(fd, e->name, e->namelen, cookie));
+        last_entry = e;
+    }
+    // Record length of last file
+    uint32_t last_length = last_entry ? last_entry->length : 0;
+
+    // null terminator record
+    CHECK(op->write(fd, fill, 12, cookie));
+
+    if ((n = PAGEFILL(item->hdrsize))) {
+        CHECK(op->write(fd, fill, n, cookie));
+    }
+
+    for (e = item->first; e != NULL; e = e->next) {
+        if (verbose) {
+            fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
+        }
+        CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
+        if ((n = PAGEFILL(e->length))) {
+            CHECK(op->write(fd, fill, n, cookie));
+        }
+    }
+    // If the last entry has length zero, add an extra zero page at the end.
+    // This prevents the possibility of trying to read/map past the end of the
+    // bootfs at runtime.
+    if (last_length == 0) {
+        CHECK(op->write(fd, fill, sizeof(fill), cookie));
+    }
+
+    if (op->finish) {
+        CHECK(op->finish(fd, cookie));
+    }
+
+    off_t end = lseek(fd, 0, SEEK_CUR);
+    if (end < 0) {
+        fprintf(stderr, "error: couldn't seek\n");
+        return -1;
+    }
+
+    // pad bootdata_t records to 8 byte boundary
+    size_t pad = BOOTDATA_ALIGN(end) - end;
+    if (pad) {
+        write(fd, fill, pad);
+    }
+
+    // Write the bootheader
+    if (lseek(fd, start, SEEK_SET) != start) {
+        fprintf(stderr, "error: couldn't seek to bootdata header\n");
+        return -1;
+    }
+
+    size_t wrote = (end - start) - sizeof(bootdata_t);
+
+    bootdata_t boothdr = {
+        .type = (item->type == ITEM_BOOTFS_SYSTEM) ?
+                BOOTDATA_BOOTFS_SYSTEM : BOOTDATA_BOOTFS_BOOT,
+        .length = wrote,
+        .extra = compressed ? item->outsize : wrote,
+        .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
+    };
+    if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
+        return -1;
+    }
+
+    if (lseek(fd, end + pad, SEEK_SET) != (end + pad)) {
+        fprintf(stderr, "error: couldn't seek to end of item\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int write_bootdata(const char* fn, item_t* item) {
     //TODO: re-enable for debugging someday
     bool compressed = true;
 
-    uint32_t n;
-    fsentry_t* e;
     int fd;
     const io_ops* op = compressed ? &io_compressed : &io_plain;
 
@@ -585,109 +692,9 @@ int write_bootdata(const char* fn, item_t* item) {
             break;
         }
         case ITEM_BOOTFS_BOOT:
-        case ITEM_BOOTFS_SYSTEM: {
-            // Make note of where we started
-            off_t start = lseek(fd, 0, SEEK_CUR);
-
-            if (start < 0) {
-                fprintf(stderr, "error: couldn't seek\n");
-                goto fail;
-            }
-
-            if (compressed) {
-                // Update the LZ4 content size to be original size without the bootdata
-                // header which isn't being compressed.
-                lz4_prefs.frameInfo.contentSize = item->outsize - sizeof(bootdata_t);
-            }
-
-            // Increment past the bootdata header which will be filled out later.
-            if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
-                fprintf(stderr, "error: cannot seek\n");
-                goto fail;
-            }
-
-            void* cookie = NULL;
-            if (op->setup) {
-                CHECK(op->setup(fd, &cookie));
-            }
-
-            fsentry_t* last_entry = NULL;
-            for (e = item->first; e != NULL; e = e->next) {
-                uint32_t hdr[3];
-                hdr[0] = e->namelen;
-                hdr[1] = e->length;
-                hdr[2] = e->offset;
-                CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
-                CHECK(op->write(fd, e->name, e->namelen, cookie));
-                last_entry = e;
-            }
-            // Record length of last file
-            uint32_t last_length = last_entry ? last_entry->length : 0;
-
-            // null terminator record
-            CHECK(op->write(fd, fill, 12, cookie));
-
-            if ((n = PAGEFILL(item->hdrsize))) {
-                CHECK(op->write(fd, fill, n, cookie));
-            }
-
-            for (e = item->first; e != NULL; e = e->next) {
-                if (verbose) {
-                    fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
-                }
-                CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
-                if ((n = PAGEFILL(e->length))) {
-                    CHECK(op->write(fd, fill, n, cookie));
-                }
-            }
-            // If the last entry has length zero, add an extra zero page at the end.
-            // This prevents the possibility of trying to read/map past the end of the
-            // bootfs at runtime.
-            if (last_length == 0) {
-                CHECK(op->write(fd, fill, sizeof(fill), cookie));
-            }
-
-            if (op->finish) {
-                CHECK(op->finish(fd, cookie));
-            }
-
-            off_t end = lseek(fd, 0, SEEK_CUR);
-            if (end < 0) {
-                fprintf(stderr, "error: couldn't seek\n");
-                goto fail;
-            }
-
-            // pad bootdata_t records to 8 byte boundary
-            size_t pad = BOOTDATA_ALIGN(end) - end;
-            if (pad) {
-                write(fd, fill, pad);
-            }
-
-            // Write the bootheader
-            if (lseek(fd, start, SEEK_SET) != start) {
-                fprintf(stderr, "error: couldn't seek to bootdata header\n");
-                goto fail;
-            }
-
-            size_t wrote = (end - start) - sizeof(bootdata_t);
-
-            bootdata_t boothdr = {
-                .type = (item->type == ITEM_BOOTFS_SYSTEM) ?
-                        BOOTDATA_BOOTFS_SYSTEM : BOOTDATA_BOOTFS_BOOT,
-                .length = wrote,
-                .extra = compressed ? item->outsize : wrote,
-                .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
-            };
-            if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
-                goto fail;
-            }
-
-            if (lseek(fd, end + pad, SEEK_SET) != (end + pad)) {
-                fprintf(stderr, "error: couldn't seek to end of item\n");
-                goto fail;
-            }
+        case ITEM_BOOTFS_SYSTEM:
+            CHECK(write_bootfs(fd, op, item, compressed));
             break;
-        }
         default:
             fprintf(stderr, "error: internal: type %08x unknown\n", item->type);
             goto fail;
