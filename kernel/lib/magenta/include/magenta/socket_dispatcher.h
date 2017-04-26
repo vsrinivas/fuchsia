@@ -17,6 +17,7 @@
 #include <mxtl/canary.h>
 #include <mxtl/ref_counted.h>
 
+class VmMapping;
 class VmObject;
 class PortClient;
 
@@ -61,7 +62,7 @@ private:
         size_t head_ = 0u;
         size_t tail_ = 0u;
         uint32_t len_pow2_ = 0u;
-        char* buf_ = nullptr;
+        mxtl::RefPtr<VmMapping> mapping_;
         mxtl::RefPtr<VmObject> vmo_;
     };
 

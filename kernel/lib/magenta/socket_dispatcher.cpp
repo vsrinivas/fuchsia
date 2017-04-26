@@ -42,7 +42,9 @@ template <typename T> T vmodpow2(T val, uint modp2) { return val & ((1U << modp2
 #define INC_POINTER(len_pow2, ptr, inc) vmodpow2(((ptr) + (inc)), len_pow2)
 
 SocketDispatcher::CBuf::~CBuf() {
-    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(buf_));
+    if (mapping_) {
+        mapping_->Destroy();
+    }
 }
 
 bool SocketDispatcher::CBuf::Init(uint32_t len) {
@@ -50,18 +52,15 @@ bool SocketDispatcher::CBuf::Init(uint32_t len) {
     if (!vmo_)
         return false;
 
-    void* start = nullptr;
-    auto st = VmAspace::kernel_aspace()->MapObject(
-        vmo_, "socket", 0u, len, &start, PAGE_SIZE_SHIFT, 0,
-        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+    const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    auto st = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+            0 /* ignored */, len, 0 /* align pow2 */, 0 /* vmar flags */,
+            vmo_, 0, arch_mmu_flags, "socket", &mapping_);
 
     if (st < 0)
         return false;
 
-    buf_ = reinterpret_cast<char*>(start);
-
-    if (!buf_)
-        return false;
+    DEBUG_ASSERT(mapping_);
     len_pow2_ = log2_uint_floor(len);
     return true;
 }
@@ -108,7 +107,7 @@ size_t SocketDispatcher::CBuf::Write(const void* src, size_t len, bool from_user
             user_ptr<const void> uptr(ptr);
             vmo_->WriteUser(uptr, head_, write_len, nullptr);
         } else {
-            memcpy(buf_ + head_, ptr, write_len);
+            memcpy(reinterpret_cast<void*>(mapping_->base() + head_), ptr, write_len);
         }
 
         head_ = INC_POINTER(len_pow2_, head_, write_len);
@@ -141,7 +140,7 @@ size_t SocketDispatcher::CBuf::Read(void* dest, size_t len, bool from_user) {
                 user_ptr<void> uptr(ptr);
                 vmo_->ReadUser(uptr, tail_, read_len, nullptr);
             } else {
-                memcpy(ptr, buf_ + tail_, read_len);
+                memcpy(ptr, reinterpret_cast<void*>(mapping_->base() + tail_), read_len);
             }
 
             tail_ = INC_POINTER(len_pow2_, tail_, read_len);
