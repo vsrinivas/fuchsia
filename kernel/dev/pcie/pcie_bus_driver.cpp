@@ -587,9 +587,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
 
 PcieBusDriver::MappedEcamRegion::~MappedEcamRegion() {
     if (vaddr_ != nullptr) {
-        auto kernel_aspace = vmm_get_kernel_aspace();
-        DEBUG_ASSERT(kernel_aspace != nullptr);
-        vmm_free_region(kernel_aspace, (vaddr_t)vaddr_);
+        VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(vaddr_));
     }
 }
 
