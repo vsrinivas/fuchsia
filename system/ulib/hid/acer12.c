@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <hid/acer12.h>
+#include <magenta/errors.h>
+#include <string.h>
 
 const uint8_t acer12_touch_report_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
@@ -329,3 +331,20 @@ const uint8_t acer12_touch_report_desc[] = {
 
     // 660 bytes
 };
+
+bool is_acer12_touch_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(acer12_touch_report_desc))
+        return false;
+
+    return (memcmp(data, acer12_touch_report_desc, len) == 0);
+}
+
+mx_status_t setup_acer12_touch(int fd) {
+    if (fd < 0)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
+}
