@@ -28,7 +28,7 @@ typedef status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, 
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
-// into an address space via VmAspace::MapObject
+// into an address space via VmAddressRegion::CreateVmMapping
 class VmObject : public mxtl::RefCounted<VmObject>,
                  public mxtl::DoublyLinkedListable<VmObject*> {
 public:
