@@ -9,6 +9,7 @@
 #include "apps/netconnector/src/mdns/address_responder.h"
 #include "apps/netconnector/src/mdns/dns_formatting.h"
 #include "apps/netconnector/src/mdns/host_name_resolver.h"
+#include "apps/netconnector/src/mdns/instance_subscriber.h"
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
 #include "lib/ftl/logging.h"
@@ -108,6 +109,24 @@ void Mdns::ResolveHostName(const std::string& host_name,
   AddAgent(host_full_name,
            std::make_shared<HostNameResolver>(this, host_name, host_full_name,
                                               timeout, callback));
+}
+
+void Mdns::SubscribeToService(const std::string& service_name,
+                              const ServiceInstanceCallback& callback) {
+  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FTL_DCHECK(callback);
+
+  std::string service_full_name = MdnsNames::LocalServiceFullName(service_name);
+
+  AddAgent(service_full_name,
+           std::make_shared<InstanceSubscriber>(this, service_name,
+                                                service_full_name, callback));
+}
+
+void Mdns::UnsubscribeToService(const std::string& service_name) {
+  FTL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+
+  TellAgentToQuit(MdnsNames::LocalServiceFullName(service_name));
 }
 
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) {

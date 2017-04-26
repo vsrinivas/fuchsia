@@ -28,6 +28,12 @@ class Mdns : public MdnsAgent::Host {
       std::function<void(const std::string& host_name,
                          const IpAddress& v4_address,
                          const IpAddress& v6_address)>;
+  using ServiceInstanceCallback =
+      std::function<void(const std::string& service,
+                         const std::string& instance,
+                         const SocketAddress& v4_address,
+                         const SocketAddress& v6_address,
+                         const std::vector<std::string>& text)>;
 
   Mdns();
 
@@ -52,6 +58,13 @@ class Mdns : public MdnsAgent::Host {
   void ResolveHostName(const std::string& host_name,
                        ftl::TimePoint timeout,
                        const ResolveHostNameCallback& callback);
+
+  // Registers interest in the specified service.
+  void SubscribeToService(const std::string& service_name,
+                          const ServiceInstanceCallback& callback);
+
+  // Registers disinterest in the specified service.
+  void UnsubscribeToService(const std::string& service_name);
 
  private:
   struct WakeQueueEntry {
