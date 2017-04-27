@@ -144,8 +144,7 @@ mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
     snprintf(name, sizeof(name), "ums-lun-%02d", dev->lun);
 
     device_init(&dev->device, ums->driver, name, &ums_block_proto);
-    dev->device.protocol_id = MX_PROTOCOL_BLOCK_CORE;
-    dev->device.protocol_ops = &ums_block_ops;
+    device_set_protocol(&dev->device, MX_PROTOCOL_BLOCK_CORE, &ums_block_ops);
     dev->cb = NULL;
 
     return device_add(&dev->device, &ums->device);

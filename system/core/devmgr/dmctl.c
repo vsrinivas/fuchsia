@@ -162,7 +162,7 @@ mx_status_t dmctl_init(mx_driver_t* driver) {
     mxio_force_local_loader_service();
 
     mx_device_t* dev;
-    mx_status_t s = device_create(&dev, driver, "dmctl", &dmctl_device_proto);
+    mx_status_t s = device_create("dmctl", NULL, &dmctl_device_proto, driver, &dev);
     if (s != NO_ERROR) {
         return s;
     }

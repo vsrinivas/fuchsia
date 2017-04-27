@@ -1761,8 +1761,7 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     device_init(&usb_dwc->device, drv, "bcm-usb-dwc", &dwc_device_proto);
 
-    usb_dwc->device.protocol_id = MX_PROTOCOL_USB_HCI;
-    usb_dwc->device.protocol_ops = &dwc_hci_protocol;
+    device_set_protocol(&usb_dwc->device, MX_PROTOCOL_USB_HCI, &dwc_hci_protocol);
 
     // Initialize all the channel completions.
     for (size_t i = 0; i < NUM_HOST_CHANNELS; i++) {

@@ -162,7 +162,7 @@ static mx_protocol_device_t hidctl_device_proto = {
 };
 
 static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
-    if (device_create(&hidctl_dev, driver, "hidctl", &hidctl_device_proto) == NO_ERROR) {
+    if (device_create("hidctl", NULL, &hidctl_device_proto, driver, &hidctl_dev) == NO_ERROR) {
         mx_status_t status;
         if ((status = device_add(hidctl_dev, parent)) < 0) {
             free(hidctl_dev);

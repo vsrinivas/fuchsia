@@ -208,8 +208,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     eth_init_hw(&edev->eth);
 
     device_init(&edev->dev, drv, "intel-ethernet", &device_ops);
-    edev->dev.protocol_id = MX_PROTOCOL_ETHERMAC;
-    edev->dev.protocol_ops = &ethmac_ops;
+    device_set_protocol(&edev->dev, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
     if (device_add(&edev->dev, dev)) {
         goto fail;
     }

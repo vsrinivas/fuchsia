@@ -238,8 +238,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id, interface_desc->bInterfaceNumber);
 
     device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
-    intf->device.protocol_id = MX_PROTOCOL_USB;
-    intf->device.protocol_ops = &_usb_protocol;
+    device_set_protocol(&intf->device, MX_PROTOCOL_USB, &_usb_protocol);
 
     uint8_t usb_class, usb_subclass, usb_protocol;
     if (interface_desc->bInterfaceClass == 0) {
@@ -272,7 +271,8 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
 
     // need to do this first so usb_device_set_interface() can be called from driver bind
     list_add_head(&device->children, &intf->node);
-    status = device_add(&intf->device, &device->device);
+    status = device_add_with_props(&intf->device, &device->device, intf->device.props,
+                                   intf->device.prop_count);
     if (status != NO_ERROR) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
@@ -300,8 +300,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     snprintf(name, sizeof(name), "usb-dev-%03d-ia-%d", device->device_id, assoc_desc->iFunction);
 
     device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
-    intf->device.protocol_id = MX_PROTOCOL_USB;
-    intf->device.protocol_ops = &_usb_protocol;
+    device_set_protocol(&intf->device, MX_PROTOCOL_USB, &_usb_protocol);
 
     uint8_t usb_class, usb_subclass, usb_protocol;
     if (assoc_desc->bFunctionClass == 0) {

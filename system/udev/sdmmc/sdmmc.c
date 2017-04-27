@@ -458,8 +458,9 @@ static int sdmmc_bootstrap_thread(void* arg) {
     }
 
     device_init(&sdmmc->device, drv, "sdmmc", &sdmmc_device_proto);
+    // TODO(tkilbourn): figure out why this next line is set, and possibly remove it
     sdmmc->parent = dev;
-    sdmmc->device.protocol_id = MX_PROTOCOL_BLOCK;
+    device_set_protocol(&sdmmc->device, MX_PROTOCOL_BLOCK, NULL);
     device_add(&sdmmc->device, dev);
 
     xprintf("sdmmc: bind success!\n");

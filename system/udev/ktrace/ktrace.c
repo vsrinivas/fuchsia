@@ -74,7 +74,7 @@ static mx_protocol_device_t ktrace_device_proto = {
 
 static mx_status_t ktrace_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     mx_device_t* dev;
-    if (device_create(&dev, drv, "ktrace", &ktrace_device_proto) == NO_ERROR) {
+    if (device_create("ktrace", NULL, &ktrace_device_proto, drv, &dev) == NO_ERROR) {
         mx_status_t status;
         if ((status = device_add(dev, parent)) < 0) {
             free(dev);

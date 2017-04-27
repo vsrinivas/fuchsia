@@ -143,8 +143,7 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
     mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
                        format, width, height, stride);
 
-    device->device.protocol_id = MX_PROTOCOL_DISPLAY;
-    device->device.protocol_ops = &kaveri_disp_display_proto;
+    device_set_protocol(&device->device, MX_PROTOCOL_DISPLAY, &kaveri_disp_display_proto);
     device_add(&device->device, dev);
 
     printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",

@@ -13,6 +13,7 @@
 #define DEV_FLAG_INSTANCE       0x00000020  // this device was created-on-open
 #define DEV_FLAG_REBIND         0x00000040  // this device is being rebound
 #define DEV_FLAG_MULTI_BIND     0x00000080  // this device accepts many children
+#define DEV_FLAG_ADDED          0x00000100  // device_add() has been called for this device
 
 #define DEV_MAGIC 'MDEV'
 

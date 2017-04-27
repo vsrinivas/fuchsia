@@ -144,11 +144,11 @@ mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     tpm_base = (void*)(tmp);
 
     mx_device_t* dev;
-    status = device_create(&dev, driver, "tpm", &tpm_device_proto);
+    status = device_create("tpm", NULL, &tpm_device_proto, driver, &dev);
     if (status != NO_ERROR) {
         return status;
     }
-    dev->protocol_id = MX_PROTOCOL_TPM;
+    device_set_protocol(dev, MX_PROTOCOL_TPM, NULL);
 
     status = device_add(dev, parent);
     if (status != NO_ERROR) {

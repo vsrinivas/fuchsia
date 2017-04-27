@@ -51,8 +51,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
     device_init(&device->device, drv, name, &kpci_device_proto);
 
-    device->device.protocol_id = MX_PROTOCOL_PCI;
-    device->device.protocol_ops = &_pci_protocol;
+    device_set_protocol(&device->device, MX_PROTOCOL_PCI, &_pci_protocol);
     device->handle = handle;
     device->index = index;
     *out = &device->device;
@@ -86,7 +85,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     mx_status_t status;
     mx_device_t* pcidev;
-    if ((status = device_create(&pcidev, drv, "pci", &kpci_device_proto)) < 0) {
+    if ((status = device_create("pci", NULL, &kpci_device_proto, drv, &pcidev)) < 0) {
         return status;
     }
     if ((status = device_add(pcidev, parent)) < 0) {
@@ -99,7 +98,8 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
         }
         char args[32];
         snprintf(args, sizeof(args), "%u", index);
-        device_add_etc(dev, pcidev, args, MX_HANDLE_INVALID);
+        device_add_busdev(dev, pcidev, dev->props, dev->prop_count, args,
+                          MX_HANDLE_INVALID);
     }
     return NO_ERROR;
 }
@@ -135,7 +135,7 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
         if (kpci_init_child(drv, &device, index) != NO_ERROR) {
             break;
         }
-        device_add(device, parent);
+        device_add_with_props(device, parent, device->props, device->prop_count);
 #else
         mx_pcie_get_nth_info_t info;
         mx_handle_t h = mx_pci_get_nth_device(get_root_resource(), index, &info);
@@ -167,7 +167,7 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
     mx_status_t status;
     printf("kpci_init()\n");
 
-    if ((status = device_create(&kpci_root_dev, drv, "pci", &kpci_device_proto))) {
+    if ((status = device_create("pci", NULL, &kpci_device_proto, drv, &kpci_root_dev))) {
         return status;
     }
 

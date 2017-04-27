@@ -453,7 +453,7 @@ static int ax88772b_start_thread(void* arg) {
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    status = device_create(&eth->device, eth->driver, "usb-ethernet", &ax88772b_device_proto);
+    status = device_create("usb-ethernet", NULL, &ax88772b_device_proto, eth->driver, &eth->device);
     if (status < 0) {
         printf("ax8872b: failed to create device: %d\n", status);
         goto fail;
@@ -464,8 +464,7 @@ static int ax88772b_start_thread(void* arg) {
     mtx_unlock(&eth->mutex);
 
     eth->device->ctx = eth;
-    eth->device->protocol_id = MX_PROTOCOL_ETHERMAC;
-    eth->device->protocol_ops = &ethmac_ops;
+    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
     status = device_add(eth->device, eth->usb_device);
     if (status == NO_ERROR) return NO_ERROR;
 

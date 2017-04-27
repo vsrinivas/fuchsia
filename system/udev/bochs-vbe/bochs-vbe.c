@@ -220,8 +220,7 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** coo
     // create and add the display (char) device
     device_init(&device->device, drv, "bochs_vbe", &bochs_vbe_device_proto);
 
-    device->device.protocol_id = MX_PROTOCOL_DISPLAY;
-    device->device.protocol_ops = &bochs_vbe_display_proto;
+    device_set_protocol(&device->device, MX_PROTOCOL_DISPLAY, &bochs_vbe_display_proto);
 
     device->info.format = MX_PIXEL_FORMAT_RGB_565;
     device->info.width = 1024;

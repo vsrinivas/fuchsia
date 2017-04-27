@@ -112,7 +112,8 @@ static mx_status_t intel_serialio_i2c_add_slave(
     slave->device.props = slave->props;
     slave->device.prop_count = count;
 
-    status = device_add(&slave->device, dev);
+    status = device_add_with_props(&slave->device, dev, slave->device.props,
+                                   slave->device.prop_count);
     if (status < 0)
         goto fail1;
 

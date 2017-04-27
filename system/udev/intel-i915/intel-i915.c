@@ -195,8 +195,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
                        format, width, height, stride);
 
-    device->device.protocol_id = MX_PROTOCOL_DISPLAY;
-    device->device.protocol_ops = &intel_i915_display_proto;
+    device_set_protocol(&device->device, MX_PROTOCOL_DISPLAY, &intel_i915_display_proto);
     device_add(&device->device, dev);
 
     xprintf("initialized intel i915 display driver, reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",

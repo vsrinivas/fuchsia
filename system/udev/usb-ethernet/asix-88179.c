@@ -589,15 +589,14 @@ static int ax88179_thread(void* arg) {
     }
 
     // Create the device
-    status = device_create(&eth->device, eth->driver, "ax88179", &ax88179_device_proto);
+    status = device_create("ax88179", NULL, &ax88179_device_proto, eth->driver, &eth->device);
     if (status < 0) {
         printf("ax88179: failed to create device: %d\n", status);
         goto fail;
     }
 
     eth->device->ctx = eth;
-    eth->device->protocol_id = MX_PROTOCOL_ETHERMAC;
-    eth->device->protocol_ops = &ethmac_ops;
+    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
     status = device_add(eth->device, eth->usb_device);
     if (status != NO_ERROR) {
         goto fail;

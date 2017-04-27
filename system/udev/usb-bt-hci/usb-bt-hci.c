@@ -626,7 +626,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
-    hci->device.protocol_id = MX_PROTOCOL_BLUETOOTH_HCI;
+    device_set_protocol(&hci->device, MX_PROTOCOL_BLUETOOTH_HCI, NULL);
     status = device_add(&hci->device, device);
     if (status == NO_ERROR) return NO_ERROR;
 

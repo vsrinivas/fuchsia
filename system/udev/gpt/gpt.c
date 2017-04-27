@@ -291,7 +291,7 @@ static int gpt_bind_thread(void* arg) {
         xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
                 device->device.name, type_guid, partition_guid, pname);
 
-        device->device.protocol_id = MX_PROTOCOL_BLOCK;
+        device_set_protocol(&device->device, MX_PROTOCOL_BLOCK, NULL);
         if (device_add(&device->device, dev) != NO_ERROR) {
             printf("gpt device_add failed\n");
             free(device);

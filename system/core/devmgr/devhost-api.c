@@ -30,11 +30,11 @@ static void _driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     DM_UNLOCK();
 }
 
-static mx_status_t _device_create(mx_device_t** dev, mx_driver_t* drv,
-                                  const char* name, mx_protocol_device_t* ops) {
+static mx_status_t _device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
+                                  mx_driver_t* drv, mx_device_t** out) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_create(dev, drv, name, ops);
+    r = devhost_device_create(name, ctx, ops, drv, out);
     DM_UNLOCK();
     return r;
 }
@@ -46,11 +46,18 @@ static void _device_init(mx_device_t* dev, mx_driver_t* drv,
     DM_UNLOCK();
 }
 
+static void _device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
+    DM_LOCK();
+    devhost_device_set_protocol(dev, proto_id, proto_ops);
+    DM_UNLOCK();
+}
+
 static mx_status_t _device_add(mx_device_t* dev, mx_device_t* parent,
+                               mx_device_prop_t* props, uint32_t prop_count,
                                const char* businfo, mx_handle_t resource) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_add(dev, parent, businfo, resource);
+    r = devhost_device_add(dev, parent, props, prop_count, businfo, resource);
     DM_UNLOCK();
     return r;
 }
@@ -61,7 +68,7 @@ static mx_status_t _device_add_instance(mx_device_t* dev, mx_device_t* parent) {
     if (dev) {
         dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
     }
-    r = devhost_device_add(dev, parent, NULL, 0);
+    r = devhost_device_add(dev, parent, NULL, 0, NULL, 0);
     DM_UNLOCK();
     return r;
 }
@@ -80,6 +87,12 @@ static mx_status_t _device_rebind(mx_device_t* dev) {
     r = devhost_device_rebind(dev);
     DM_UNLOCK();
     return r;
+}
+
+static void _device_destroy(mx_device_t* dev) {
+    DM_LOCK();
+    devhost_device_destroy(dev);
+    DM_UNLOCK();
 }
 
 static void _device_set_bindable(mx_device_t* dev, bool bindable) {
@@ -131,10 +144,12 @@ driver_api_t devhost_api = {
     .driver_unbind = _driver_unbind,
     .device_create = _device_create,
     .device_init = _device_init,
+    .device_set_protocol = _device_set_protocol,
     .device_add = _device_add,
     .device_add_instance = _device_add_instance,
     .device_remove = _device_remove,
     .device_rebind = _device_rebind,
+    .device_destroy = _device_destroy,
     .device_set_bindable = _device_set_bindable,
     .get_root_resource = _get_root_resource,
     .load_firmware = _load_firmware,

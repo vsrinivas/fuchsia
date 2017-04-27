@@ -124,8 +124,7 @@ mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
 
     device_init(&disp_device, driver, "msm-fb", &msm_device_proto);
 
-    disp_device.protocol_id = MX_PROTOCOL_DISPLAY;
-    disp_device.protocol_ops = &msm_display_proto;
+    device_set_protocol(&disp_device, MX_PROTOCOL_DISPLAY, &msm_display_proto);
     status = mx_set_framebuffer(get_root_resource(), msm_framebuffer,
                                 msm_framebuffer_size, disp_info.format,
                                 disp_info.width, disp_info.height, disp_info.stride);

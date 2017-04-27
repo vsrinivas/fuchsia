@@ -298,7 +298,7 @@ static int mbr_bind_thread(void* arg) {
         snprintf(name, sizeof(name), "%sp%u", dev->name, partition_count);
         device_init(&pdev->device, drv, name, &mbr_proto);
 
-        pdev->device.protocol_id = MX_PROTOCOL_BLOCK;
+        device_set_protocol(&pdev->device, MX_PROTOCOL_BLOCK, NULL);
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));

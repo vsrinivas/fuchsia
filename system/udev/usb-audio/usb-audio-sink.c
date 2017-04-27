@@ -410,8 +410,7 @@ mx_status_t usb_audio_sink_create(mx_driver_t* driver, mx_device_t* device, int 
     snprintf(name, sizeof(name), "usb-audio-sink-%d\n", index);
     device_init(&sink->device, driver, name, &usb_audio_sink_device_proto);
 
-    sink->device.protocol_id = MX_PROTOCOL_AUDIO;
-    sink->device.protocol_ops = NULL;
+    device_set_protocol(&sink->device, MX_PROTOCOL_AUDIO, NULL);
     mx_status_t status = device_add(&sink->device, sink->usb_device);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_audio_sink_create\n");

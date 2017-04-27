@@ -634,7 +634,7 @@ static int lan9514_start_thread(void* arg) {
 
     lan9514_reset(eth);
 
-    status = device_create(&eth->device, eth->driver, "usb-ethernet", &lan9514_device_proto);
+    status = device_create("usb-ethernet", NULL, &lan9514_device_proto, eth->driver, &eth->device);
     if (status < 0) {
         printf("lan9514: failed to create device: %d\n", status);
         goto fail;
@@ -645,8 +645,7 @@ static int lan9514_start_thread(void* arg) {
     mtx_unlock(&eth->mutex);
 
     eth->device->ctx = eth;
-    eth->device->protocol_id = MX_PROTOCOL_ETHERMAC;
-    eth->device->protocol_ops = &ethmac_ops;
+    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
     status = device_add(eth->device, eth->usb_device);
 
     while (true) {

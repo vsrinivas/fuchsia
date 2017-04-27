@@ -409,7 +409,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     mailbox_regs = (uint32_t*)(page_base + PAGE_REG_DELTA);
 
     mx_device_t* dev;
-    status = device_create(&dev, driver, "bcm-vc-rpc", &mailbox_device_proto);
+    status = device_create("bcm-vc-rpc", NULL, &mailbox_device_proto, driver, &dev);
     if (status != NO_ERROR)
         return status;
 
@@ -418,7 +418,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     dev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_MAILBOX};
     dev->prop_count = 2;
 
-    status = device_add(dev, parent);
+    status = device_add_with_props(dev, parent, dev->props, dev->prop_count);
     if (status != NO_ERROR) {
         free(dev);
         return status;
@@ -444,8 +444,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
 
     device_init(&disp_device, driver, "bcm-vc-fbuff", &empty_device_proto);
 
-    disp_device.protocol_id = MX_PROTOCOL_DISPLAY;
-    disp_device.protocol_ops = &vc_display_proto;
+    device_set_protocol(&disp_device, MX_PROTOCOL_DISPLAY, &vc_display_proto);
 
     disp_info.format = MX_PIXEL_FORMAT_ARGB_8888;
     disp_info.width = 800;
@@ -470,8 +469,9 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     sdmmc_device->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
     sdmmc_device->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_EMMC};
     sdmmc_device->prop_count = 2;
-    sdmmc_device->protocol_id = MX_PROTOCOL_SOC;
-    status = device_add(sdmmc_device, parent);
+    device_set_protocol(sdmmc_device, MX_PROTOCOL_SOC, NULL);
+    status = device_add_with_props(sdmmc_device, parent, sdmmc_device->props,
+                                   sdmmc_device->prop_count);
 
     bcm_vc_poweron(bcm_dev_usb);
 
@@ -485,8 +485,8 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     i2c_device->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
     i2c_device->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C};
     i2c_device->prop_count = 2;
-    i2c_device->protocol_id = MX_PROTOCOL_SOC;
-    status = device_add(i2c_device, parent);
+    device_set_protocol(i2c_device, MX_PROTOCOL_SOC, NULL);
+    status = device_add_with_props(i2c_device, parent, i2c_device->props, i2c_device->prop_count);
 
 
     return NO_ERROR;

@@ -212,8 +212,7 @@ mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int i
     snprintf(name, sizeof(name), "usb-midi-sink-%d\n", index);
     device_init(&sink->device, driver, name, &usb_midi_sink_device_proto);
 
-    sink->device.protocol_id = MX_PROTOCOL_MIDI;
-    sink->device.protocol_ops = NULL;
+    device_set_protocol(&sink->device, MX_PROTOCOL_MIDI, NULL);
     mx_status_t status = device_add(&sink->device, sink->usb_device);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_midi_sink_create\n");

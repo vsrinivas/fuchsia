@@ -434,8 +434,7 @@ mx_status_t GpuDevice::virtio_gpu_start() {
     display_proto_ops_.get_framebuffer = virtio_gpu_get_framebuffer;
     display_proto_ops_.flush = virtio_gpu_flush;
 
-    device_.protocol_id = MX_PROTOCOL_DISPLAY;
-    device_.protocol_ops = &display_proto_ops_;
+    device_set_protocol(&device_, MX_PROTOCOL_DISPLAY, &display_proto_ops_);
     auto status = device_add(&device_, bus_device_);
     if (status < 0)
         return status;

@@ -13,6 +13,7 @@ __BEGIN_CDECLS;
 
 typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
+typedef struct mx_device_prop mx_device_prop_t;
 
 typedef struct mx_driver mx_driver_t;
 typedef struct mx_bind_inst mx_bind_inst_t;
@@ -65,8 +66,8 @@ struct mx_driver {
 };
 
 // Device Manager API
-mx_status_t device_create(mx_device_t** device, mx_driver_t* driver,
-                          const char* name, mx_protocol_device_t* ops);
+mx_status_t device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
+                          mx_driver_t* driver, mx_device_t** out);
 void device_init(mx_device_t* device, mx_driver_t* driver,
                  const char* name, mx_protocol_device_t* ops);
 // Devices are created or (if embedded in a driver-specific structure)
@@ -76,11 +77,22 @@ void device_init(mx_device_t* device, mx_driver_t* driver,
 // fields of the mx_device_t.
 
 mx_status_t device_add(mx_device_t* device, mx_device_t* parent);
-mx_status_t device_add_etc(mx_device_t* device, mx_device_t* parent,
-                           const char* businfo, mx_handle_t resource);
+mx_status_t device_add_with_props(mx_device_t* device, mx_device_t* parent,
+                                  mx_device_prop_t* props, uint32_t prop_count);
+// Adds the device to the devmgr. This makes the device visible to other drivers for binding, as
+// well as through an entry in the devfs. The props must remain accessible until the device is
+// unbound (or until after device_add fails).
+//
 mx_status_t device_add_instance(mx_device_t* device, mx_device_t* parent);
+void device_add_busdev(mx_device_t* device, mx_device_t* parent,
+                       mx_device_prop_t* props, uint32_t prop_count,
+                       const char* args, mx_handle_t rsrc);
 mx_status_t device_remove(mx_device_t* device);
 mx_status_t device_rebind(mx_device_t* device);
+
+// Cleans up the memory allocated by device_create. Must be called during the release operation on a
+// device, or if device_add fails.
+void device_destroy(mx_device_t* dev);
 
 // These are only for the use of core platform drivers and may return
 // NULL for non-approved callers.
@@ -88,8 +100,12 @@ mx_device_t* driver_get_root_device(void);
 mx_device_t* driver_get_misc_device(void);
 
 // Devices are bindable by drivers by default.
-// This can be used to prevent a device from being bound by a driver
+// This can be used to prevent a device from being bound by a driver.
+// Must be called before the device is added.
 void device_set_bindable(mx_device_t* dev, bool bindable);
+// Sets the additional protocol for the device.
+// Must be called before the device is added.
+void device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
 
 void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 

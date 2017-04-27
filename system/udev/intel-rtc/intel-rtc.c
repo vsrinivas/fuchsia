@@ -340,7 +340,7 @@ static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** 
     }
 
     mx_device_t* dev;
-    status = device_create(&dev, drv, "rtc", &intel_rtc_device_proto);
+    status = device_create("rtc", NULL, &intel_rtc_device_proto, drv, &dev);
     if (status != NO_ERROR) {
         return status;
     }

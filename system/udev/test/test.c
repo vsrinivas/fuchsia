@@ -151,8 +151,7 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
     }
 
     device_init(&device->device, dev->driver, devname, &test_device_proto);
-    device->device.protocol_id = MX_PROTOCOL_TEST;
-    device->device.protocol_ops = &test_test_proto;
+    device_set_protocol(&device->device, MX_PROTOCOL_TEST, &test_test_proto);
 
     mx_status_t status;
     if ((status = device_add(&device->device, dev)) != NO_ERROR) {
@@ -169,7 +168,7 @@ static mx_protocol_device_t test_root_proto = {
 
 static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     mx_device_t* device;
-    if (device_create(&device, drv, "test", &test_root_proto) == NO_ERROR) {
+    if (device_create("test", NULL, &test_root_proto, drv, &device) == NO_ERROR) {
         if (device_add(device, dev) < 0) {
             printf("test: device_add() failed\n");
             free(device);

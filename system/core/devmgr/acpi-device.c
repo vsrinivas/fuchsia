@@ -101,8 +101,7 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         memcpy(batt_dev->hid, hid, 7);
         device_init(&batt_dev->device, drv, name, &acpi_device_proto);
 
-        batt_dev->device.protocol_id = MX_PROTOCOL_ACPI;
-        batt_dev->device.protocol_ops = &acpi_device_acpi_proto;
+        device_set_protocol(&batt_dev->device, MX_PROTOCOL_ACPI, &acpi_device_acpi_proto);
 
         batt_dev->device.props = calloc(2, sizeof(mx_device_prop_t));
         batt_dev->device.props[0].id = BIND_ACPI_HID_0_3;
@@ -111,7 +110,8 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         batt_dev->device.props[1].value = htobe32(*((uint32_t *)(hid + 4)));
         batt_dev->device.prop_count = 2;
 
-        device_add(&batt_dev->device, dev);
+        device_add_with_props(&batt_dev->device, dev, batt_dev->device.props,
+                              batt_dev->device.prop_count);
     }
 
     acpi_handle_close(&pcie_handle);

@@ -550,8 +550,7 @@ static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     }
 
     device_init(&edev->dev, &_driver_ethernet, "ethernet", &ethdev_ops);
-    edev->dev.protocol_id = MX_PROTOCOL_ETHERNET;
-    edev->dev.protocol_ops = &ethernet_ops;
+    device_set_protocol(&edev->dev, MX_PROTOCOL_ETHERNET, &ethernet_ops);
     edev->edev0 = edev0;
 
     mx_status_t status;
@@ -638,7 +637,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     edev0->refcount = 1;
 
     edev0->mac = dev;
-    edev0->dev.protocol_id = MX_PROTOCOL_ETHERNET;
+    device_set_protocol(&edev0->dev, MX_PROTOCOL_ETHERNET, NULL);
 
     if ((status = device_add(&edev0->dev, dev)) < 0) {
         goto fail;

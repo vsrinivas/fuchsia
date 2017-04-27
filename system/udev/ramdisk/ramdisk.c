@@ -241,8 +241,7 @@ static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         }
 
         device_init(&ramdev->device, &_driver_ramdisk, config->name, &ramdisk_instance_proto);
-        ramdev->device.protocol_id = MX_PROTOCOL_BLOCK_CORE;
-        ramdev->device.protocol_ops = &ramdisk_block_ops;
+        device_set_protocol(&ramdev->device, MX_PROTOCOL_BLOCK_CORE, &ramdisk_block_ops);
         if ((status = device_add(&ramdev->device, ramdisk_ctl_dev)) != NO_ERROR) {
             mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             mx_handle_close(ramdev->vmo);
@@ -292,7 +291,7 @@ static mx_protocol_device_t ramdisk_ctl_proto = {
 };
 
 static mx_status_t ramdisk_driver_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
-    if (device_create(&ramdisk_ctl_dev, driver, "ramctl", &ramdisk_ctl_proto) == NO_ERROR) {
+    if (device_create("ramctl", NULL, &ramdisk_ctl_proto, driver, &ramdisk_ctl_dev) == NO_ERROR) {
         mx_status_t status;
         if ((status = device_add(ramdisk_ctl_dev, parent)) < 0) {
             free(ramdisk_ctl_dev);

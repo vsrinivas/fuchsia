@@ -345,8 +345,7 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
     }
 
     // add the device
-    device->device.protocol_id = MX_PROTOCOL_BLOCK_CORE;
-    device->device.protocol_ops = &sata_block_ops;
+    device_set_protocol(&device->device, MX_PROTOCOL_BLOCK_CORE, &sata_block_ops);
     device_add(&device->device, dev);
 
     return NO_ERROR;

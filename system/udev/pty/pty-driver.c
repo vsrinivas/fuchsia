@@ -124,7 +124,7 @@ static mx_status_t ptmx_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     psd->srv.recv = psd_recv;
 
     device_init(&psd->srv.dev, NULL, "pty", &psd_ops);
-    psd->srv.dev.protocol_id = MX_PROTOCOL_PTY;
+    device_set_protocol(&psd->srv.dev, MX_PROTOCOL_PTY, NULL);
 
     mtx_init(&psd->lock, mtx_plain);
     psd->fifo.head = 0;
@@ -149,7 +149,7 @@ static mx_protocol_device_t ptmx_ops = {
 static mx_status_t ptmx_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     mx_device_t* dev;
     mx_status_t status;
-    if ((status = device_create(&dev, drv, "ptmx", &ptmx_ops)) < 0) {
+    if ((status = device_create("ptmx", NULL, &ptmx_ops, drv, &dev)) < 0) {
         return status;
     }
     if ((status = device_add(dev, parent)) < 0) {

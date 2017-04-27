@@ -599,7 +599,7 @@ static mx_status_t hid_open_device(mx_device_t* dev, mx_device_t** dev_out, uint
     }
 
     device_init(&inst->dev, hid->drv, "hid", &hid_instance_proto);
-    inst->dev.protocol_id = MX_PROTOCOL_INPUT;
+    device_set_protocol(&inst->dev, MX_PROTOCOL_INPUT, NULL);
     status = device_add_instance(&inst->dev, dev);
     if (status != NO_ERROR) {
         hid_cleanup_instance(inst);
@@ -792,7 +792,7 @@ mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device
         snprintf(_name, sizeof(_name), "%s", name);
     }
     device_init(&dev->dev, drv, _name, &hid_device_proto);
-    dev->dev.protocol_id = MX_PROTOCOL_INPUT;
+    device_set_protocol(&dev->dev, MX_PROTOCOL_INPUT, NULL);
     status = device_add(&dev->dev, parent);
     if (status != NO_ERROR) {
         printf("device_add failed for HID device: %d\n", status);

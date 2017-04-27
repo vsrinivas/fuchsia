@@ -380,7 +380,7 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
 
     device_init(&dev->device, &_driver_usb_bus, name, &usb_device_proto);
-    dev->device.protocol_id = MX_PROTOCOL_USB;
+    device_set_protocol(&dev->device, MX_PROTOCOL_USB, NULL);
 
     // Do not allow binding to root of a composite device.
     // Clients will bind to the child interfaces instead.

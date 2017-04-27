@@ -126,7 +126,7 @@ static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** 
     }
 
     device_init(&device->device, drv, "acpi-battery", &acpi_battery_device_proto);
-    device->device.protocol_id = MX_PROTOCOL_BATTERY;
+    device_set_protocol(&device->device, MX_PROTOCOL_BATTERY, NULL);
     device_add(&device->device, dev);
 
     return NO_ERROR;

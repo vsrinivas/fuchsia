@@ -154,7 +154,7 @@ static mx_status_t dc_add_device(device_t* parent,
     memcpy(dev->props, data, msg->datalen);
     memcpy((char*) (dev->props + dev->prop_count), args, msg->argslen + 1);
     memcpy(dev->name, name, msg->namelen + 1);
-    dev->protocol_id = msg->protocol_id;
+    device_set_protocol(dev, msg->protocol_id, NULL);
 
     // If we have bus device args or resource handle
     // we are, by definition a bus device.

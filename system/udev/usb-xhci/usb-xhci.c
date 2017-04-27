@@ -277,8 +277,7 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
     if (status < 0)
         goto error_return;
 
-    xhci->device.protocol_id = MX_PROTOCOL_USB_HCI;
-    xhci->device.protocol_ops = &xhci_hci_protocol;
+    device_set_protocol(&xhci->device, MX_PROTOCOL_USB_HCI, &xhci_hci_protocol);
 
     thrd_t thread;
     thrd_create_with_name(&thread, xhci_irq_thread, xhci, "xhci_irq_thread");

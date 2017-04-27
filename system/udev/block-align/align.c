@@ -164,7 +164,7 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
         return rc;
     }
     device->blksize = info.block_size;
-    device->device.protocol_id = MX_PROTOCOL_BLOCK;
+    device_set_protocol(&device->device, MX_PROTOCOL_BLOCK, NULL);
     mx_status_t status;
     if ((status = device_add(&device->device, dev)) != NO_ERROR) {
         free(device);

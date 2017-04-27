@@ -133,8 +133,7 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
 
     device_init(&bus->device, driver, "usb_bus", &usb_bus_device_proto);
 
-    bus->device.protocol_id = MX_PROTOCOL_USB_BUS;
-    bus->device.protocol_ops = &_bus_protocol;
+    device_set_protocol(&bus->device, MX_PROTOCOL_USB_BUS, &_bus_protocol);
     device_set_bindable(&bus->device, false);
     mx_status_t status = device_add(&bus->device, device);
     if (status == NO_ERROR) {

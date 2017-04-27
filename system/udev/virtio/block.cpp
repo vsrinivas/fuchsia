@@ -169,7 +169,7 @@ mx_status_t BlockDevice::Init() {
     // point the ctx of our embedded device structure at ourself
     device_.ctx = this;
 
-    device_.protocol_id = MX_PROTOCOL_BLOCK;
+    device_set_protocol(&device_, MX_PROTOCOL_BLOCK, NULL);
     auto status = device_add(&device_, bus_device_);
     if (status < 0)
         return status;

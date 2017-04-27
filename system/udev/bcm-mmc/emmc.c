@@ -757,7 +757,7 @@ static int emmc_bootstrap_thread(void *arg) {
 
     // Create the device.
     device_init(&emmc->device, drv, "bcm-emmc", &emmc_device_proto);
-    emmc->device.protocol_id = MX_PROTOCOL_SDMMC;
+    device_set_protocol(&emmc->device, MX_PROTOCOL_SDMMC, NULL);
 
     // Create a thread to handle IRQs.
     thrd_t irq_thrd;

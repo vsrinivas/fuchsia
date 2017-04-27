@@ -18,6 +18,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include <magenta/assert.h>
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -254,18 +255,26 @@ void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
     dev->name[len] = 0;
 }
 
-mx_status_t devhost_device_create(mx_device_t** out, mx_driver_t* driver,
-                                 const char* name, mx_protocol_device_t* ops) {
+mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
+                                  mx_driver_t* driver, mx_device_t** out) {
     mx_device_t* dev = malloc(sizeof(mx_device_t));
     if (dev == NULL) {
         return ERR_NO_MEMORY;
     }
     devhost_device_init(dev, driver, name, ops);
+    dev->ctx = ctx ? ctx : dev;
     *out = dev;
     return NO_ERROR;
 }
 
+void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
+    MX_DEBUG_ASSERT(!(dev->flags & DEV_FLAG_ADDED));
+    dev->protocol_id = proto_id;
+    dev->protocol_ops = proto_ops;
+}
+
 void devhost_device_set_bindable(mx_device_t* dev, bool bindable) {
+    MX_DEBUG_ASSERT(!(dev->flags & DEV_FLAG_ADDED));
     if (bindable) {
         dev->flags &= ~DEV_FLAG_UNBINDABLE;
     } else {
@@ -282,6 +291,10 @@ static mx_status_t device_validate(mx_device_t* dev) {
     if (dev == NULL) {
         printf("INVAL: NULL!\n");
         return ERR_INVALID_ARGS;
+    }
+    if (dev->flags & DEV_FLAG_ADDED) {
+        printf("device already added: %p(%s)\n", dev, dev->name);
+        return ERR_BAD_STATE;
     }
     if (dev->magic != DEV_MAGIC) {
         return ERR_BAD_STATE;
@@ -332,6 +345,7 @@ static mx_status_t device_validate(mx_device_t* dev) {
 mx_status_t devhost_device_add_root(mx_device_t* dev) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
+        dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         return status;
     }
     if (root_dev != NULL) {
@@ -344,12 +358,14 @@ mx_status_t devhost_device_add_root(mx_device_t* dev) {
     if (dev->protocol_id != 0) {
         list_add_tail(&unmatched_device_list, &dev->unode);
     }
+    dev->flags |= DEV_FLAG_ADDED;
     return NO_ERROR;
 }
 
 mx_status_t devhost_device_install(mx_device_t* dev) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
+        dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         return status;
     }
     // Don't create an event handle if we alredy have one
@@ -357,13 +373,16 @@ mx_status_t devhost_device_install(mx_device_t* dev) {
         ((status = mx_event_create(0, &dev->event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
+        dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
         return status;
     }
     dev_ref_acquire(dev);
+    dev->flags |= DEV_FLAG_ADDED;
     return NO_ERROR;
 }
 
 mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
+                               mx_device_prop_t* props, uint32_t prop_count,
                                const char* businfo, mx_handle_t resource) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
@@ -390,6 +409,12 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         printf("device add: %p(%s): cannot create event: %d\n",
                dev, dev->name, status);
         goto fail;
+    }
+
+    // Set the device properties if they're not already filled out
+    if (dev->props == NULL) {
+        dev->props = props;
+        dev->prop_count = prop_count;
     }
 
     dev->flags |= DEV_FLAG_BUSY;
@@ -423,6 +448,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
             mx_handle_close(resource);
         }
     }
+    dev->flags |= DEV_FLAG_ADDED;
 
 #if !DEVHOST_V2
     // probe the device
@@ -436,6 +462,7 @@ fail:
     if (resource != MX_HANDLE_INVALID) {
         mx_handle_close(resource);
     }
+    dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
     return status;
 }
 
@@ -648,6 +675,14 @@ mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     dev_ref_release(dev);
 
     return NO_ERROR;
+}
+
+void devhost_device_destroy(mx_device_t* dev) {
+    // Only destroy devices immediately after device_create() or after they're dead.
+    MX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);
+    dev->magic = 0xdeaddead;
+    dev->ops = NULL;
+    free(dev);
 }
 
 typedef struct {

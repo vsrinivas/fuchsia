@@ -429,7 +429,7 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
     if (dev) {
         // if called normally, add the instance
         // if dev is null, we're creating the log console
-        device->device.protocol_id = MX_PROTOCOL_CONSOLE;
+        device_set_protocol(&device->device, MX_PROTOCOL_CONSOLE, NULL);
         status = device_add_instance(&device->device, dev);
         if (status != NO_ERROR) {
             vc_device_free(device);
@@ -608,7 +608,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     // publish the root vc device. opening this device will create a new vc
     mx_device_t* device;
-    status = device_create(&device, drv, VC_DEVNAME, &vc_root_proto);
+    status = device_create(VC_DEVNAME, NULL, &vc_root_proto, drv, &device);
     if (status != NO_ERROR) {
         return status;
     }
@@ -621,7 +621,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
 
-    device->protocol_id = MX_PROTOCOL_CONSOLE;
+    device_set_protocol(device, MX_PROTOCOL_CONSOLE, NULL);
     status = device_add(device, dev);
     if (status != NO_ERROR) {
         goto fail;

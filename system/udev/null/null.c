@@ -30,7 +30,7 @@ static mx_protocol_device_t null_device_proto = {
 
 mx_status_t null_init(mx_driver_t* driver) {
     mx_device_t* dev;
-    if (device_create(&dev, driver, "null", &null_device_proto) == NO_ERROR) {
+    if (device_create("null", NULL, &null_device_proto, driver, &dev) == NO_ERROR) {
         if (device_add(dev, driver_get_root_device()) < 0) {
             free(dev);
         }
