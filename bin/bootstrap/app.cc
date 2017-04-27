@@ -4,6 +4,9 @@
 
 #include "apps/modular/src/bootstrap/app.h"
 
+#include <magenta/process.h>
+#include <magenta/processargs.h>
+
 #include "application/lib/app/connect.h"
 #include "apps/modular/src/bootstrap/params.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -33,6 +36,10 @@ App::App(Params* params)
   // happen until the next (first) message loop iteration, we'll be set up by
   // then.
   RegisterAppLoaders(params->TakeAppLoaders());
+
+  mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
+  if (request != MX_HANDLE_INVALID)
+    env_services_.ServeDirectory(mx::channel(request));
 
   // Launch startup applications.
   for (auto& launch_info : params->TakeApps())
