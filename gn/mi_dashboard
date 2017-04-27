@@ -17,6 +17,10 @@
         {
             "file": "apps/maxwell/src/agents/mi_dashboard/webroot/snooty-badge.jpg",
             "bootfs_path": "data/mi_dashboard/webroot/snooty-badge.jpg"
+        },
+        {
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.js",
+            "bootfs_path": "data/mi_dashboard/webroot/dashboard.js"
         }
     ]
 }
