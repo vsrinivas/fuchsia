@@ -50,14 +50,6 @@ def main():
         gn_args += " fuchsia_use_vulkan=false"
 
 
-    # Disable some Skia features not needed for host builds.
-    # This is needed in order to build the Flutter shell.
-    gn_args += " skia_use_dng_sdk=false"
-    gn_args += " skia_use_fontconfig=false"
-    gn_args += " skia_use_libjpeg_turbo=false"
-    gn_args += " skia_use_libwebp=false"
-    gn_args += " skia_use_sfntly=false"
-
     gn_args += " modules=\"" + args.modules + "\""
 
     if args.release:
