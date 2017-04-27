@@ -89,10 +89,11 @@ static mx_status_t read_file_into_vmo(mxio_t* io, mx_handle_t* out_vmo) {
             while (chunk > 0) {
                 size_t nread;
                 status = read_at(io, buffer, chunk, offset, &nread);
-                if (status != NO_ERROR)
+                if (status != NO_ERROR) {
                     mx_vmar_unmap(current_vmar_handle, start, window);
-                mx_handle_close(*out_vmo);
-                return status;
+                    mx_handle_close(*out_vmo);
+                    return status;
+                }
                 buffer += nread;
                 offset += nread;
                 size -= nread;
