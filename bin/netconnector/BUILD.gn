@@ -40,6 +40,8 @@ executable("netconnector") {
     "mdns/mdns_addresses.cc",
     "mdns/mdns_addresses.h",
     "mdns/mdns_agent.h",
+    "mdns/mdns_fidl_util.cc",
+    "mdns/mdns_fidl_util.h",
     "mdns/mdns_interface_transceiver.cc",
     "mdns/mdns_interface_transceiver.h",
     "mdns/mdns_interface_transceiver_v4.cc",
