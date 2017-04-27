@@ -423,7 +423,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 }
 
 static mx_driver_ops_t intel_gen_gpu_driver_ops = {
-    .bind = intel_i915_bind,
+    .version = DRIVER_OPS_VERSION, .bind = intel_i915_bind,
 };
 
 // clang-format off
