@@ -21,6 +21,7 @@ import (
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
+	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/transport/tcp"
@@ -73,7 +74,6 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		stack:      stk,
 		io:         make(map[cookie]*iostate),
 		next:       1,
-		nicData:    make(map[tcpip.NICID]*nicData),
 	}
 
 	h, err := devmgrConnect()
@@ -97,25 +97,8 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	return s, nil
 }
 
-func (s *socketServer) getNICData(nicid tcpip.NICID) *nicData {
-	if d, ok := s.nicData[nicid]; ok {
-		return d
-	}
-
-	s.nicData[nicid] = &nicData{}
-	return s.nicData[nicid]
-}
-
-func (s *socketServer) setAddr(nicid tcpip.NICID, addr tcpip.Address) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	d := s.getNICData(nicid)
-	d.addr = addr
-
-	if s.dnsClient == nil {
-		s.dnsClient = dns.NewClient(s.stack, 0)
-	}
+func (s *socketServer) setNetstack(ns *netstack) {
+	s.ns = ns
 }
 
 type cookie int64
@@ -520,15 +503,11 @@ type socketServer struct {
 	dispatcher *dispatcher.Dispatcher
 	stack      tcpip.Stack
 	dnsClient  *dns.Client
+	ns         *netstack
 
-	mu      sync.Mutex
-	next    cookie
-	nicData map[tcpip.NICID]*nicData
-	io      map[cookie]*iostate
-}
-
-type nicData struct {
-	addr tcpip.Address
+	mu   sync.Mutex
+	next cookie
+	io   map[cookie]*iostate
 }
 
 func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *rio.Msg, path string) (err error) {
@@ -748,8 +727,39 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 
 func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 	if debug {
-		log.Printf("opIoctl TODO op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
+		log.Printf("opIoctl op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
 	}
+
+	switch msg.Op() {
+	case IOCTL_NETC_GET_IF_INFO:
+		rep := c_netc_get_if_info{}
+
+		s.ns.mu.Lock()
+		defer s.ns.mu.Unlock()
+		index := uint32(0)
+		for nicid, netif := range s.ns.netifs {
+			if netif.addr == header.IPv4Loopback {
+				continue
+			}
+			rep.info[index].index = uint16(index)
+			rep.info[index].flags |= NETC_IFF_UP
+			copy(rep.info[index].name[:], []byte(fmt.Sprintf("en%d", nicid)))
+			writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: netif.addr})
+			writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(netif.netmask)})
+
+			// Long-hand for: broadaddr = netif.addr | ^netif.netmask
+			broadaddr := []byte(netif.addr)
+			for i := range broadaddr {
+				broadaddr[i] |= ^netif.netmask[i]
+			}
+			writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
+			index++
+		}
+		rep.n_info = index
+		rep.Encode(msg)
+		return mx.ErrOk
+	}
+
 	return mx.ErrInvalidArgs
 }
 

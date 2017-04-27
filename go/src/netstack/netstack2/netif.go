@@ -43,7 +43,10 @@ type netif struct {
 	eth    *eth.Client
 	dhcp   *dhcp.Client
 
-	routes []tcpip.Route // guarded by ns.mu
+	// guarded by ns.mu
+	addr    tcpip.Address
+	netmask tcpip.AddressMask
+	routes  []tcpip.Route
 }
 
 func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
@@ -63,13 +66,11 @@ func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Confi
 	// Update default route with new gateway.
 	nif.ns.mu.Lock()
 	nif.routes = defaultRouteTable(nif.nicid, config.Gateway)
+	nif.netmask = config.SubnetMask
+	nif.addr = newAddr
 	nif.ns.mu.Unlock()
 
 	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
-
-	if newAddr != "" {
-		nif.ns.dispatcher.setAddr(nif.nicid, newAddr)
-	}
 }
 
 func (nif *netif) stateChange(s eth.State) {
@@ -108,10 +109,12 @@ func (ns *netstack) addLoopback() error {
 	const nicid = 1
 	ctx, cancel := context.WithCancel(context.Background())
 	loopbackIf := &netif{
-		ns:     ns,
-		ctx:    ctx,
-		cancel: cancel,
-		nicid:  nicid,
+		ns:      ns,
+		ctx:     ctx,
+		cancel:  cancel,
+		nicid:   nicid,
+		addr:    header.IPv4Loopback,
+		netmask: tcpip.AddressMask(strings.Repeat("\xff", 4)),
 		routes: []tcpip.Route{
 			{
 				Destination: header.IPv4Loopback,

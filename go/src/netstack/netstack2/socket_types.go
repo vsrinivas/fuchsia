@@ -158,6 +158,10 @@ const EAI_MEMORY = -10
 const EAI_SYSTEM = -11
 const EAI_OVERFLOW = -12
 
+const IOCTL_NETC_GET_IF_INFO = 10
+
+const NETC_IFF_UP = 1
+
 type c_socklen uint32
 type c_in_port [2]byte // uint16 in C, but stored in network order
 type c_sa_family uint16
@@ -249,4 +253,20 @@ type c_mxio_socket_msg struct {
 	hdr  c_mxio_socket_msg_hdr
 	data [1]uint8
 	_    [7]byte
+}
+
+type c_netc_if_info struct {
+	name       [16]byte
+	addr       c_sockaddr_storage
+	netmask    c_sockaddr_storage
+	broadaddr  c_sockaddr_storage
+	flags      uint32
+	index      uint16
+	hwaddr_len uint16
+	hwaddr     [8]uint8
+}
+
+type c_netc_get_if_info struct {
+	n_info uint32
+	info   [16]c_netc_if_info
 }

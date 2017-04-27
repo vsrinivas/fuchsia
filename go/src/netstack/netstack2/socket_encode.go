@@ -72,6 +72,21 @@ func (v *c_mxrio_sockaddr_reply) Encode(msg *rio.Msg) {
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
+func (v *c_netc_get_if_info) Decode(data []byte) error {
+	if uintptr(len(data)) < unsafe.Sizeof(c_netc_get_if_info{}) {
+		return fmt.Errorf("netstack: short c_netc_get_if_info: %d", len(data))
+	}
+	req := (*c_netc_get_if_info)(unsafe.Pointer(&data[0]))
+	*v = *req
+	return nil
+}
+
+func (v *c_netc_get_if_info) Encode(msg *rio.Msg) {
+	r := (*c_netc_get_if_info)(unsafe.Pointer(&msg.Data[0]))
+	*r = *v
+	msg.Datalen = uint32(unsafe.Sizeof(*v))
+}
+
 // TODO: make these methods on c_sockaddr_storage
 func writeSockaddrStorage4(dst *c_sockaddr_storage, src *c_sockaddr_in) c_socklen {
 	srcb := (*[unsafe.Sizeof(*src)]byte)(unsafe.Pointer(src))[:]

@@ -55,6 +55,8 @@ func main() {
 		log.Fatalf("loopback: %v", err)
 	}
 
+	s.setNetstack(ns)
+
 	const ethdir = "/dev/class/ethernet"
 	w, err := watcher.NewWatcher(ethdir)
 	if err != nil {
