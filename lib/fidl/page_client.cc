@@ -5,6 +5,7 @@
 #include "apps/modular/lib/fidl/page_client.h"
 
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -87,5 +88,34 @@ void PageClient::OnChange(ledger::PageChangePtr page,
 void PageClient::OnChange(const std::string& key, const std::string& value) {}
 
 void PageClient::OnDelete(const std::string& key) {}
+
+// Retrieves all entries from the given snapshot and calls the given callback
+// with the final status.
+void GetEntries(ledger::PageSnapshot* const snapshot,
+                const char* const prefix,
+                std::vector<ledger::EntryPtr>* const entries,
+                fidl::Array<uint8_t> token,
+                std::function<void(ledger::Status)> callback) {
+  snapshot->GetEntries(
+      prefix == nullptr ? nullptr : to_array(prefix),
+      std::move(token),
+      ftl::MakeCopyable([ snapshot, prefix, entries, callback = std::move(callback) ](
+          ledger::Status status, auto new_entries, auto next_token) mutable {
+                          if (status != ledger::Status::OK &&
+                              status != ledger::Status::PARTIAL_RESULT) {
+                            callback(status);
+                            return;
+                          }
+                          for (auto& entry : new_entries) {
+                            entries->push_back(std::move(entry));
+                          }
+                          if (status == ledger::Status::OK) {
+                            callback(ledger::Status::OK);
+                            return;
+                          }
+                          GetEntries(snapshot, prefix, entries, std::move(next_token),
+                                     std::move(callback));
+                        }));
+}
 
 }  // namespace modular

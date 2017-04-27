@@ -11,7 +11,6 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {

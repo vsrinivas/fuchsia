@@ -79,6 +79,12 @@ class PageClient : ledger::PageWatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);
 };
 
+void GetEntries(ledger::PageSnapshot* snapshot,
+                const char* prefix,
+                std::vector<ledger::EntryPtr>* entries,
+                fidl::Array<uint8_t> token,
+                std::function<void(ledger::Status)> callback);
+
 }  // namespace modular
 
 #endif  // APPS_MODULAR_LIB_FIDL_PAGE_CLIENT_H_

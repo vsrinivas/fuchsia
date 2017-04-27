@@ -19,33 +19,6 @@ namespace modular {
 
 namespace {
 
-// TODO(mesch): Duplicated from story_provider_impl.cc. Move to lib/ledger/..
-
-// Retrieves all entries from the given snapshot and calls the given
-// callback with the final status.
-void GetEntries(ledger::PageSnapshot* const snapshot,
-                std::vector<ledger::EntryPtr>* const entries,
-                fidl::Array<uint8_t> token,
-                std::function<void(ledger::Status)> callback) {
-  snapshot->GetEntries(to_array(kModuleKeyPrefix), std::move(token), [
-    snapshot, entries, callback = std::move(callback)
-  ](ledger::Status status, auto new_entries, auto next_token) mutable {
-    if (status != ledger::Status::OK &&
-        status != ledger::Status::PARTIAL_RESULT) {
-      callback(status);
-      return;
-    }
-    for (auto& entry : new_entries) {
-      entries->push_back(std::move(entry));
-    }
-    if (status == ledger::Status::OK) {
-      callback(ledger::Status::OK);
-      return;
-    }
-    GetEntries(snapshot, entries, std::move(next_token), std::move(callback));
-  });
-}
-
 void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
@@ -253,17 +226,20 @@ class StoryStorageImpl::ReadAllModuleDataCall
   }
 
   void Cont1() {
-    GetEntries(page_snapshot_.get(), &entries_, nullptr /* next_token */,
-               [this](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
-                                  << " PageSnapshot.GetEntries() " << status;
-                   Done(std::move(data_));
-                   return;
-                 }
+    GetEntries(
+        page_snapshot_.get(),
+        kModuleKeyPrefix,
+        &entries_, nullptr /* next_token */,
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
+                           << "GetEntries() " << status;
+            Done(std::move(data_));
+            return;
+          }
 
-                 Cont2();
-               });
+          Cont2();
+        });
   }
 
   void Cont2() {

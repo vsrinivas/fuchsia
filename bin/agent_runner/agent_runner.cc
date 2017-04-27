@@ -64,49 +64,47 @@ class AgentRunner::InitializeCall : Operation<void> {
   }
 
  private:
-  void Run() override { GetEntries(nullptr); }
+  void Run() override {
+    GetEntries(
+        (*snapshot_).get(),
+        nullptr,
+        &entries_, nullptr /* next_token */,
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "InitializeCall() "
+                           << "GetEntries() " << status;
+            Done();
+            return;
+          }
 
-  void GetEntries(fidl::Array<uint8_t> continuation_token) {
-    (*snapshot_)
-        ->GetEntries(
-            nullptr, std::move(continuation_token),
-            [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-                   fidl::Array<uint8_t> continuation_token) {
-              if (status != ledger::Status::OK &&
-                  status != ledger::Status::PARTIAL_RESULT) {
-                FTL_LOG(ERROR) << "Ledger status " << status << ".";
-                Done();
-                return;
-              }
+          Cont();
+        });
+  }
 
-              if (entries.size() == 0) {
-                // No existing entries.
-                Done();
-                return;
-              }
-              for (const auto& entry : entries) {
-                std::string key(
-                    reinterpret_cast<const char*>(entry->key.data()),
-                    entry->key.size());
-                std::string value;
-                if (!mtl::StringFromVmo(entry->value, &value)) {
-                  FTL_LOG(ERROR)
-                      << "VMO for key " << key << " couldn't be copied.";
-                  return;
-                }
-                agent_runner_->AddedTrigger(key, std::move(value));
-              }
-
-              if (status == ledger::Status::PARTIAL_RESULT) {
-                GetEntries(std::move(continuation_token));
-              } else {
-                Done();
-              }
-            });
+  void Cont() {
+    if (entries_.size() == 0) {
+      // No existing entries.
+      Done();
+      return;
+    }
+    for (const auto& entry : entries_) {
+      std::string key(
+          reinterpret_cast<const char*>(entry->key.data()),
+          entry->key.size());
+      std::string value;
+      if (!mtl::StringFromVmo(entry->value, &value)) {
+        FTL_LOG(ERROR)
+            << "VMO for key " << key << " couldn't be copied.";
+        return;
+      }
+      agent_runner_->AddedTrigger(key, std::move(value));
+    }
+    Done();
   }
 
   AgentRunner* const agent_runner_;
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
+  std::vector<ledger::EntryPtr> entries_;
   FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 

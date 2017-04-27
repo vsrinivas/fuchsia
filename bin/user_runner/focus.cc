@@ -38,52 +38,51 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
   }
 
  private:
-  void Run() override { GetEntries(nullptr); }
+  void Run() override {
+    GetEntries(
+        (*snapshot_).get(),
+        kFocusKeyPrefix,
+        &entries_, nullptr /* next_token */,
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "QueryCall() "
+                           << "GetEntries() " << status;
+            Done(std::move(data_));
+            return;
+          }
 
-  void GetEntries(fidl::Array<uint8_t> continuation_token) {
-    (*snapshot_)
-        ->GetEntries(
-            to_array(kFocusKeyPrefix), std::move(continuation_token),
-            [this](ledger::Status status, fidl::Array<ledger::EntryPtr> entries,
-                   fidl::Array<uint8_t> continuation_token) {
-              if (status != ledger::Status::OK &&
-                  status != ledger::Status::PARTIAL_RESULT) {
-                FTL_LOG(ERROR) << "Ledger status " << status << ".";
-                Done(std::move(data_));
-                return;
-              }
+          Cont();
+        });
+  }
 
-              if (entries.size() == 0) {
-                // No existing entries.
-                Done(std::move(data_));
-                return;
-              }
+  void Cont() {
+    if (entries_.size() == 0) {
+      // No existing entries.
+      Done(std::move(data_));
+      return;
+    }
 
-              for (const auto& entry : entries) {
-                std::string value;
-                if (!mtl::StringFromVmo(entry->value, &value)) {
-                  FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                                 << " couldn't be copied.";
-                  continue;
-                }
+    for (const auto& entry : entries_) {
+      std::string value;
+      if (!mtl::StringFromVmo(entry->value, &value)) {
+        FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                       << " couldn't be copied.";
+        continue;
+      }
 
-                auto focus_info = FocusInfo::New();
-                if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
-                  continue;
-                }
+      auto focus_info = FocusInfo::New();
+      if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
+        continue;
+      }
 
-                data_.push_back(std::move(focus_info));
-              }
+      data_.push_back(std::move(focus_info));
+    }
 
-              if (status == ledger::Status::PARTIAL_RESULT) {
-                GetEntries(std::move(continuation_token));
-              } else {
-                Done(std::move(data_));
-              }
-            });
+    Done(std::move(data_));
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
+  std::vector<ledger::EntryPtr> entries_;
   fidl::Array<FocusInfoPtr> data_;
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
