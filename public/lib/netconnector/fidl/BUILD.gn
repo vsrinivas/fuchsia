@@ -6,11 +6,13 @@ import("//lib/fidl/fidl.gni")
 
 fidl("services") {
   sources = [
+    "mdns.fidl",
     "netconnector.fidl",
     "netconnector_admin.fidl",
   ]
 
   public_deps = [
     "//application/services",
+    "//apps/network/services",
   ]
 }
