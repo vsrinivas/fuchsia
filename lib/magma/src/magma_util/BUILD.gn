@@ -96,7 +96,7 @@ source_set("semaphore_port") {
     "semaphore_port.h",
   ]
 
-  deps = [
+  public_deps = [
     "platform:port"
   ]
 }
