@@ -48,44 +48,46 @@ void ServiceNamespace::AddServiceForName(ServiceConnector connector,
   directory_->AddService(service_name.data(), service_name.length(), this);
 }
 
-mx::channel ServiceNamespace::CloneDirectory() {
-  mx::channel h1, h2;
-  if (mx::channel::create(0, &h1, &h2) < 0)
-    return mx::channel();
-
+bool ServiceNamespace::ServeDirectory(mx::channel channel) {
   if (directory_->Open(O_DIRECTORY) < 0)
-    return mx::channel();
+    return false;
 
-  if (directory_->Serve(h1.release(), 0) < 0) {
+  mx_handle_t h = channel.release();
+  if (directory_->Serve(h, 0) < 0) {
     directory_->Close();
-    return mx::channel();
+    return false;
   }
 
   // Setting this signal indicates that this directory is actively being served.
-  h2.signal(0, MX_USER_SIGNAL_0);
-  return h2;
+  mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0);
+  return true;
 }
 
 int ServiceNamespace::OpenAsFileDescriptor() {
-  mx::channel directory = CloneDirectory();
-  if (!directory)
+  mx::channel h1, h2;
+  if (mx::channel::create(0, &h1, &h2) < 0)
     return -1;
-  mxio_t* io = mxio_remote_create(directory.release(), MX_HANDLE_INVALID);
+  if (!ServeDirectory(std::move(h1)))
+    return -1;
+  mxio_t* io = mxio_remote_create(h2.release(), MX_HANDLE_INVALID);
   if (!io)
     return -1;
   return mxio_bind_to_fd(io, -1, 0);
 }
 
 bool ServiceNamespace::MountAtPath(const char* path) {
-  mx::channel dir = CloneDirectory();
-  if (!dir)
+  mx::channel h1, h2;
+  if (mx::channel::create(0, &h1, &h2) < 0)
+    return false;
+
+  if (!ServeDirectory(std::move(h1)))
     return false;
 
   ftl::UniqueFD fd(open(path, O_DIRECTORY | O_RDWR));
   if (fd.get() < 0)
     return false;
 
-  mx_handle_t h = dir.release();
+  mx_handle_t h = h2.release();
   return ioctl_devmgr_mount_fs(fd.get(), &h) >= 0;
 }
 

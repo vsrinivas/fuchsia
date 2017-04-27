@@ -39,6 +39,20 @@ bool HasReservedHandles(
          HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_SERVICES);
 }
 
+// The very first process we create gets the PA_SERVICE_REQUEST given to us by
+// our parent. This handle comes from the devmgr and is intended as a short term
+// solution for wiring up the graphics driver to the tracing services.
+// TODO(abarth): Once namespaces are a thing, switch to a more robust approach.
+void ForwardServiceRequestToFirstProcess(std::vector<uint32_t>* ids,
+                                         std::vector<mx_handle_t>* handles) {
+  static mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
+  if (request == MX_HANDLE_INVALID)
+    return;
+  ids->push_back(PA_SERVICE_REQUEST);
+  handles->push_back(request);
+  request = MX_HANDLE_INVALID;
+}
+
 mx::process CreateProcess(
     const mx::job& job,
     ApplicationPackagePtr package,
@@ -61,6 +75,8 @@ mx::process CreateProcess(
     ids.push_back(it.GetKey());
     handles.push_back(it.GetValue().release());
   }
+
+  ForwardServiceRequestToFirstProcess(&ids, &handles);
 
   const char* path_arg = launch_info->url.get().c_str();
   std::vector<const char*> argv;

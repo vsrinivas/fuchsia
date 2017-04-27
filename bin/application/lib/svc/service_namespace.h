@@ -81,10 +81,10 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
         service_name);
   }
 
-  // Retuns a channel to a directory containing these services.
+  // Serves a directory containing these services on the given channel.
   //
-  // Suitable for passing to another process as a startup handle.
-  mx::channel CloneDirectory();
+  // Returns true on success.
+  bool ServeDirectory(mx::channel channel);
 
   // Retuns a file descriptor to a directory containing these services.
   int OpenAsFileDescriptor();
