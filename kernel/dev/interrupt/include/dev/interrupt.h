@@ -25,6 +25,7 @@ enum interrupt_polarity {
 
 status_t mask_interrupt(unsigned int vector);
 status_t unmask_interrupt(unsigned int vector);
+void shutdown_interrupts(void);
 
 // Configure the specified interrupt vector.  If it is invoked, it muust be
 // invoked prior to interrupt registration

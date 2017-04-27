@@ -84,6 +84,9 @@ static enum handler_return default_handle_fiq(iframe* frame) {
     return INT_NO_RESCHEDULE;
 }
 
+static void default_shutdown(void) {
+}
+
 static const struct pdev_interrupt_ops default_ops = {
     .mask = default_mask,
     .unmask = default_unmask,
@@ -96,6 +99,7 @@ static const struct pdev_interrupt_ops default_ops = {
     .init_percpu = default_init_percpu,
     .handle_irq = default_handle_irq,
     .handle_fiq = default_handle_fiq,
+    .shutdown = default_shutdown,
 };
 
 static const struct pdev_interrupt_ops* intr_ops = &default_ops;
@@ -149,6 +153,10 @@ void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
 
 static void interrupt_init_percpu_early(uint level) {
     intr_ops->init_percpu_early();
+}
+
+void shutdown_interrupts(void) {
+    intr_ops->shutdown();
 }
 
 LK_INIT_HOOK_FLAGS(interrupt_init_percpu_early, interrupt_init_percpu_early, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS);

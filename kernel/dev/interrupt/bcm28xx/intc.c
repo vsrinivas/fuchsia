@@ -244,6 +244,13 @@ static status_t bcm28xx_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
 static void bcm28xx_init_percpu_early(void) {
 }
 
+static void bcm28xx_shutdown(void) {
+    // Mask away all interrupts.
+    *REG32(INTC_DISABLE1) = 0xffffffff;
+    *REG32(INTC_DISABLE2) = 0xffffffff;
+    *REG32(INTC_DISABLE3) = 0xffffffff;
+}
+
 static void bcm28xx_init_percpu(void) {
     mp_set_curr_cpu_online(true);
     bcm28xx_unmask_interrupt(INTERRUPT_ARM_LOCAL_MAILBOX0);
@@ -261,6 +268,7 @@ static const struct pdev_interrupt_ops intc_ops = {
     .init_percpu = bcm28xx_init_percpu,
     .handle_irq = bcm28xx_handle_irq,
     .handle_fiq = bcm28xx_handle_fiq,
+    .shutdown = bcm28xx_shutdown,
 };
 
 static void bcm28xx_intc_init(mdi_node_ref_t* node, uint level) {

@@ -35,6 +35,7 @@ struct pdev_interrupt_ops {
     void (*init_percpu)(void);
     enum handler_return (*handle_irq)(iframe* frame);
     enum handler_return (*handle_fiq)(iframe* frame);
+    void (*shutdown)(void);
 };
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);

@@ -303,6 +303,10 @@ static void gic_init_percpu(void) {
     unmask_interrupt(MP_IPI_HALT + ipi_base);
 }
 
+static void gic_shutdown(void) {
+    PANIC_UNIMPLEMENTED;
+}
+
 static const struct pdev_interrupt_ops gic_ops = {
     .mask = gic_mask_interrupt,
     .unmask = gic_unmask_interrupt,
@@ -315,6 +319,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .init_percpu = gic_init_percpu,
     .handle_irq = gic_handle_irq,
     .handle_fiq = gic_handle_fiq,
+    .shutdown = gic_shutdown,
 };
 
 static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
