@@ -351,8 +351,6 @@ static void init_from_driver_info(magenta_driver_info_t* di, bool for_root) {
     mtx_init(&rec->lock, mtx_plain);
     memcpy(&rec->drv, di->driver, sizeof(mx_driver_t));
     rec->drv.name = di->note->name;
-    rec->drv.binding = di->binding;
-    rec->drv.binding_size = di->binding_size;
     rec->state = DRV_STATE_NEED_INIT;
     init_driver(&rec->drv, for_root);
 }
