@@ -6,9 +6,10 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-mx_driver_t _stub_gpu = {};
+static mx_driver_ops_t intel_gen_gpu_driver_ops = {
+};
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_stub_gpu, "stub-gpu", "magma", "0.1", 5)
+MAGENTA_DRIVER_BEGIN(_stub_gpu, intel_gen_gpu_driver_ops, "magma", "0.1", 5)
 MAGENTA_DRIVER_END(_stub_gpu)
 // clang-format on
