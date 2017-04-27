@@ -90,22 +90,27 @@ UserRunnerImpl::UserRunnerImpl(
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserRunner> user_runner_request)
-    : binding_(this, std::move(user_runner_request)),
+    : binding_(new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
       user_shell_context_binding_(this),
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
       user_scope_(std::move(application_environment),
                   std::string(kUserScopeLabelPrefix) + to_hex_string(user_id)),
+      user_shell_(user_scope_.GetLauncher(), std::move(user_shell)),
       token_provider_impl_(auth_token),
       device_name_(device_name) {
-  binding_.set_connection_error_handler([this] { delete this; });
+  binding_->set_connection_error_handler([this] { Terminate([]{}); });
+
+  // Show user shell.
+
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(user_shell_.services(), view_provider.NewRequest());
+  view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   user_scope_.AddService<TokenProvider>(
       [this](fidl::InterfaceRequest<TokenProvider> request) {
         token_provider_impl_.AddBinding(std::move(request));
       });
-
-  RunUserShell(std::move(user_shell), std::move(view_owner_request));
 
   // Open Ledger.
 
@@ -231,10 +236,16 @@ UserRunnerImpl::UserRunnerImpl(
   maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
       maxwell_component_context_impl_.get()));
 
-  auto maxwell_services = GetServiceProvider(kMaxwellUrl);
-  auto maxwell_factory =
-      app::ConnectToService<maxwell::UserIntelligenceProviderFactory>(
-          maxwell_services.get());
+
+
+  auto maxwell_config = AppConfig::New();
+  maxwell_config->url = kMaxwellUrl;
+
+  maxwell_.reset(new AppClientBase(
+      user_scope_.GetLauncher(), std::move(maxwell_config)));
+
+  maxwell::UserIntelligenceProviderFactoryPtr maxwell_factory;
+  app::ConnectToService(maxwell_->services(), maxwell_factory.NewRequest());
 
   maxwell_factory->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
@@ -259,20 +270,23 @@ UserRunnerImpl::UserRunnerImpl(
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
 
-  user_shell_->Initialize(std::move(user_context),
-                          user_shell_context_binding_.NewBinding());
+  user_shell_.primary_service()->Initialize(
+      std::move(user_context), user_shell_context_binding_.NewBinding());
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Terminate(const TerminateCallback& done) {
-  FTL_DCHECK(user_shell_.is_bound());
   FTL_LOG(INFO) << "UserRunner::Terminate()";
-  user_shell_->Terminate([this, done] {
+
+  user_shell_.AppTerminate([this, done] {
     agent_runner_->Teardown([this, done] {
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-      done();
+      // First delete this, then invoke done, finally post stop.
+      std::unique_ptr<fidl::Binding<UserRunner>> binding = std::move(binding_);
       delete this;
+      done();
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+
       FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
     });
   });
@@ -324,43 +338,6 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path->link_name = kUserShellLinkName;
   user_shell_link_.reset(new LinkImpl(link_storage_.get(), link_path));
   user_shell_link_->Connect(std::move(request));
-}
-
-app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(
-    AppConfigPtr config) {
-  auto launch_info = app::ApplicationLaunchInfo::New();
-
-  app::ServiceProviderPtr services;
-  launch_info->services = services.NewRequest();
-  launch_info->url = config->url;
-  launch_info->arguments = config->args.Clone();
-
-  app::ApplicationControllerPtr ctrl;
-  user_scope_.GetLauncher()->CreateApplication(std::move(launch_info),
-                                               ctrl.NewRequest());
-  application_controllers_.emplace_back(std::move(ctrl));
-
-  return services;
-}
-
-app::ServiceProviderPtr UserRunnerImpl::GetServiceProvider(
-    const std::string& url) {
-  AppConfig config;
-  config.url = url;
-  return GetServiceProvider(config.Clone());
-}
-
-void UserRunnerImpl::RunUserShell(
-    AppConfigPtr user_shell,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  auto app_services = GetServiceProvider(std::move(user_shell));
-
-  mozart::ViewProviderPtr view_provider;
-  ConnectToService(app_services.get(), view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_owner_request), nullptr);
-
-  // Use this service provider to get |UserShell| interface.
-  ConnectToService(app_services.get(), user_shell_.NewRequest());
 }
 
 }  // namespace modular

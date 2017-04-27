@@ -2,6 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("app_client") {
+  sources = [
+    "app_client.cc",
+    "app_client.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/modular/services/config",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 source_set("array_to_string") {
   sources = [
     "array_to_string.h",

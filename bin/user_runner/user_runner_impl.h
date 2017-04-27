@@ -14,6 +14,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/auth/token_provider_impl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -77,14 +78,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
-  // This method starts UserShell in a new process, connects to its
-  // |ViewProvider| interface, passes a |ViewOwner| request, gets
-  // |ServiceProvider| and finally connects to UserShell.
-  void RunUserShell(
-      AppConfigPtr user_shell,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
-
-  fidl::Binding<UserRunner> binding_;
+  std::unique_ptr<fidl::Binding<UserRunner>> binding_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
@@ -93,7 +87,9 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   ConflictResolverImpl conflict_resolver_;
 
   Scope user_scope_;
-  UserShellPtr user_shell_;
+
+  std::unique_ptr<AppClientBase> maxwell_;
+  AppClient<UserShell> user_shell_;
 
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
