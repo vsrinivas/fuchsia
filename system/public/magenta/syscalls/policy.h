@@ -26,46 +26,26 @@ typedef struct mx_policy_basic {
     uint32_t policy;
 } mx_policy_basic_t;
 
-
 // Conditons handled by job policy.
-#define MX_BAD_HANDLE_POLICY                1u
-#define MX_WRONG_OBJECT_POLICY              2u
-#define MX_CREATION_POLICY                  3u
-#define MX_VMAR_MAP_POLICY                  4u
+#define MX_POL_BAD_HANDLE                   0u
+#define MX_POL_WRONG_OBJECT                 1u
+#define MX_POL_VMAR_WX                      2u
+#define MX_POL_NEW_ANY                      3u
+#define MX_POL_NEW_VMO                      4u
+#define MX_POL_NEW_CHANNEL                  5u
+#define MX_POL_NEW_EVENT                    6u
+#define MX_POL_NEW_EVPAIR                   7u
+#define MX_POL_NEW_PORT                     8u
+#define MX_POL_NEW_SOCKET                   9u
+#define MX_POL_NEW_FIFO                     10u
+#define MX_POL_MAX                          11u
 
-// General policy to either generate an alarm or terminate
-// the process. Ir can be ORed to any below.
-
-#define MX_POL_GENERATE_ALARM               (1u << 14)
-#define MX_POL_TERMINATE                    (1u << 15)
-
-// Policies for MX_BAD_HANDLE_POLICY:
-#define MX_POL_BAD_HANDLE_ALLOW             1u
-
-// Policies for MX_WRONG_OBJECT_POLICY:
-#define MX_POL_WRONG_HANDLE_ALLOW           1u
-
-// Policies for MX_CREATION_POLICY:
-#define MX_POL_ALL_DENY                     1u
-#define MX_POL_ALL_ALLOW                    2u
-#define MX_POL_VM_OBJECT_DENY               3u
-#define MX_POL_VM_OBJECT_ALLOW              4u
-#define MX_POL_CHANNEL_DENY                 5u
-#define MX_POL_CHANNEL_ALLOW                6u
-#define MX_POL_EVENT_DENY                   7u
-#define MX_POL_EVENT_ALLOW                  7u
-#define MX_POL_EVPAIR_DENY                  8u
-#define MX_POL_EVPAIR_ALLOW                 9u
-#define MX_POL_PORT_DENY                   10u
-#define MX_POL_PORT_ALLOW                  11u
-#define MX_POL_SOCKET_DENY                 12u
-#define MX_POL_SOCKET_ALLOW                13u
-#define MX_POL_FIFO_DENY                   14u
-#define MX_POL_FIFO_ALLOW                  15u
-
-// Policies for MX_VMAR_MAP_POLICY
-#define MX_POL_WX_MAP_DENY                  1u
-#define MX_POL_WX_MAP_ALLOW                 2u
-
+// Polciy actions.
+// MX_POL_ACTION_ALLOW and MX_POL_ACTION_DENY can be ORed with MX_POL_ACTION_ALARM.
+// MX_POL_ACTION_KILL implies MX_POL_ACTION_DENY.
+#define MX_POL_ACTION_ALLOW                 0u
+#define MX_POL_ACTION_DENY                  1u
+#define MX_POL_ACTION_ALARM                 2u
+#define MX_POL_ACTION_KILL                  5u
 
 __END_CDECLS

@@ -68,7 +68,7 @@ void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
     fatal_small_deadlines = cmdline_get_bool("magenta.fatal_small_deadlines", false);
-    policy_manager = PolicyManager::Create(POL_ACTION_ALLOW);
+    policy_manager = PolicyManager::Create();
 }
 
 // Masks for building a Handle's base_value, which ProcessDispatcher

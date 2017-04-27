@@ -51,13 +51,12 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       state_(State::READY),
       process_count_(0u), job_count_(0u),
       state_tracker_(MX_JOB_NO_PROCESSES|MX_JOB_NO_JOBS),
-      policy_(GetSystemPolicyManager()->ClonePolicy(policy)) {
+      policy_(policy) {
 }
 
 JobDispatcher::~JobDispatcher() {
     if (parent_)
         parent_->RemoveChildJob(this);
-    GetSystemPolicyManager()->RemovePolicy(policy_);
 }
 
 void JobDispatcher::on_zero_handles() {

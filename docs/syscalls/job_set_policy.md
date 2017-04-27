@@ -17,9 +17,10 @@ mx_status_t mx_job_set_policy(mx_handle_t job_handle, uint32_t options,
 
 ## DESCRIPTION
 
-Sets a security and/or resource policy to an empty job. The job's effective policy
-is the combination of the parent's effective policy and the policy specified in
-*policy*. The effective policy is controlled by *options* values:
+Sets one or more security and/or resource policies to an empty job. The job's
+effective policies is the combination of the parent's effective policies and
+the policies specified in *policy*. The effect in the case of conflict between
+the existing policies and the new policies is controlled by *options* values:
 
 + **MX_JOB_POL_RELATIVE** : policy is applied for the conditions not specifically
   overridden by the parent policy.
@@ -40,6 +41,43 @@ typedef struct mx_policy_basic {
 
 ```
 
+Where *condition* is one of
++ **MX_POL_BAD_HANDLE** a process under this job is attempting to
+  issue a syscall with an invalid handle.
++ **MX_POL_WRONG_OBJECT** a process under this job is attempting to
+  issue a syscall with a handle that does not support such operation.
++ **MX_POL_VMAR_WX** a process under this job is attempting to map an
+  address region with write-execute access.
++ **MX_POL_NEW_VMO** a process under this job is attempting to create
+  a new vm object.
++ **MX_POL_NEW_CHANNEL** a process under this job is attempting to create
+  a new channel.
++ **MX_POL_NEW_EVENT** a process under this job is attempting to create
+  a new event.
++ **MX_POL_NEW_EVPAIR** a process under this job is attempting to create
+  a new event pair.
++ **MX_POL_NEW_PORT** a process under this job is attempting to create
+  a new port.
++ **MX_POL_NEW_SOCKET** a process under this job is attempting to create
+  a new socket.
++ **MX_POL_NEW_FIFO** a process under this job is attempting to create
+  a new fifo.
++ **MX_POL_NEW_ANY** is a special *condition* that stands for all of
+  the above **MX_NEW** condtions such as **MX_POL_NEW_VMO**,
+  **MX_POL_NEW_CHANNEL**, **MX_POL_NEW_EVENT**, **MX_POL_NEW_EVPAIR**,
+  **MX_POL_NEW_PORT**, **MX_POL_NEW_SOCKET** and **MX_POL_NEW_FIFO**
+  and any future MX_NEW policy. This will include any new kernel objects
+  which do not require a parent object for creation.
+
+Where *policy* is either
++ **MX_POL_ACTION_ALLOW**  allow *condition*.
++ **MX_POL_ACTION_DENY**  prevent *condition*.
+
+Optionally it can be augmented via OR with
++ **MX_POL_ACTION_ALARM** generate an alarm packet via the job.
++ **MX_POL_ACTION_KILL** terminate the process. It also
+implies **MX_POL_ACTION_DENY**.
+
 ## RETURN VALUE
 
 **mx_job_set_policy**() returns **NO_ERROR** on success.  In the event of failure,
@@ -56,9 +94,15 @@ or *policy* was not **MX_JOB_POL_RELATIVE** or **MX_JOB_POL_ABSOLUTE**, or
 
 **ERR_WRONG_HANDLE**  *job_handle* is not a job handle.
 
-**ERR_ACCESS_DENIED**  *job_handle* does not have MX_RIGHT_SET_POLICY right.
+**ERR_ACCESS_DENIED**  *job_handle* does not have MX_POL_RIGHT_SET right.
 
 **ERR_BAD_STATE**  the job has existing jobs or processes alive.
+
+**ERR_OUT_OF_RANGE** *count* is bigger than MX_MAX_POLICY.
+
+**ERR_ALREADY_EXISTS** existing policy conflicts with the new policy.
+
+**ERR_NOT_SUPPORTED** an entry in *policy* has an invalid value.
 
 **ERR_NO_MEMORY**  (Temporary) Out of memory condition.
 

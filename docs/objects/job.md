@@ -25,14 +25,13 @@ controlled as a single entity.
 
 ## SYSCALLS
 
-+ [job_create](../syscalls/job_create.md) - create a new job within a job
-
-<br>
-
-+ [process_create](../syscalls/process_create.md) - create a new process within a job
-
-<br>
-
-+ [task_resume](../syscalls/task_resume.md) - cause a suspended task to continue running
-+ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) - attach an exception port to a task
-+ [task_kill](../syscalls/task_kill.md) - cause a task to stop running
++ [job_create](../syscalls/job_create.md) - create a new child job.
++ [process_create](../syscalls/process_create.md) - create a new process
+  within a job.
++ [job_set_policy](../syscalls/job_set_policy.md) - set policy for
+  new processes in the job.
++ [task_resume](../syscalls/task_resume.md) - cause a suspended task to
+  continue running.
++ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) -
+  attach an exception port to a task
++ [task_kill](../syscalls/task_kill.md) - cause a task to stop running.

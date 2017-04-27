@@ -78,14 +78,13 @@ static bool policy_basic_test(void) {
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), NO_ERROR, "");
 
     mx_policy_basic_t policy[] = {
-        { MX_BAD_HANDLE_POLICY, MX_POL_TERMINATE },
-        { MX_CREATION_POLICY, MX_POL_CHANNEL_ALLOW | MX_POL_GENERATE_ALARM },
-        { MX_CREATION_POLICY, MX_POL_FIFO_DENY },
+        { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL },
+        { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_ALARM },
+        { MX_POL_NEW_FIFO, MX_POL_ACTION_DENY },
     };
 
-    // TODO(cpu): make this real.
     ASSERT_EQ(mx_job_set_policy(job_child, MX_JOB_POL_RELATIVE,
-        MX_JOB_POL_BASIC, policy, countof(policy)), ERR_NOT_SUPPORTED, "");
+        MX_JOB_POL_BASIC, policy, countof(policy)), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(job_child), NO_ERROR, "");
     END_TEST;

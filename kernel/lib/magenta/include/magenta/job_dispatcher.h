@@ -81,6 +81,7 @@ public:
     // Set policy. |mode| is is either MX_JOB_POL_RELATIVE or MX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
     status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
+    pol_cookie_t GetPolicy();
 
     // Walks the job/process tree and invokes |je| methods on each node. If
     // |recurse| is false, only visits direct children of this job. Returns
@@ -103,8 +104,6 @@ private:
 
     void UpdateSignalsIncrementLocked() TA_REQ(lock_);
     void UpdateSignalsDecrementLocked() TA_REQ(lock_);
-
-    pol_cookie_t GetPolicy();
 
     mxtl::Canary<mxtl::magic("JOBD")> canary_;
 

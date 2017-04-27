@@ -18,6 +18,7 @@
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 
 #include <mxtl/algorithm.h>
@@ -31,11 +32,17 @@
 constexpr size_t kChannelReadHandlesChunkCount = 16u;
 constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
-mx_status_t sys_channel_create(uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
+mx_status_t sys_channel_create(
+    uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     LTRACEF("out_handles %p,%p\n", _out0.get(), _out1.get());
 
     if (options != 0u)
         return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_CHANNEL);
+    if (res < 0)
+        return res;
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
@@ -54,7 +61,6 @@ mx_status_t sys_channel_create(uint32_t options, user_ptr<mx_handle_t> _out0, us
     if (!h1)
         return ERR_NO_MEMORY;
 
-    auto up = ProcessDispatcher::GetCurrent();
     if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     if (_out1.copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)

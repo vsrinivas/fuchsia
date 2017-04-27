@@ -69,12 +69,14 @@ mx_status_t ProcessDispatcher::Create(
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-
+    // TODO(cpu): remove conditional check on Job and make |policy_| a const member.
     if (job) {
         // Process creation can fail if the job is in the middle of a
         // killing operation.
         if (!job->AddChildProcess(process.get()))
             return ERR_BAD_STATE;
+
+        process->policy_ = job->GetPolicy();
     }
 
     status_t result = process->Initialize();
@@ -722,6 +724,18 @@ mx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
         return ERR_ACCESS_DENIED;
     debug_addr_ = addr;
     return NO_ERROR;
+}
+
+mx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
+    auto action = GetSystemPolicyManager()->QueryBasicPolicy(policy_, condition);
+    if (action & MX_POL_ACTION_ALARM) {
+        // TODO(cpu): Generate Port packet. Probably need to call up to the
+        // parent job for the actual port.
+        action &= ~MX_POL_ACTION_ALARM;
+    }
+    // TODO(cpu): check for the MX_POL_KILL bit and return an error code
+    // that sysgen understands as termination.
+    return (action & MX_POL_ACTION_DENY) ? ERR_ACCESS_DENIED : NO_ERROR;
 }
 
 const char* StateToString(ProcessDispatcher::State state) {
