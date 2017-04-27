@@ -259,7 +259,6 @@ def main(argv):
   # run_test --server "fe80::8eae:4cff:fef4:350d%2"
   default_server = ":"
   default_port = 8342
-  sync_files = False
 
   parser = argparse.ArgumentParser()
   parser.add_argument(
@@ -365,7 +364,7 @@ def main(argv):
         for test in tests["tests"]:
           print "%sRunning %s ..%s" % (color.BOLD, test["name"], color.END)
           sys.stdout.flush()
-          if sync_files and "copy" in test:
+          if args.sync_files and "copy" in test:
             if not copy_files(fuchsia_tools_dir, hostname, test["copy"]):
               return 1
           if run_test(sock, listener_process, test["exec"]):
