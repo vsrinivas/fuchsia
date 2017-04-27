@@ -69,7 +69,7 @@ mx_status_t handle_watcher_stop(void) {
     error("handle_watcher_stop: mx_object_wait_one not readable (r=%d)\n", r);
     return ERR_BAD_STATE;
   }
-  if ((r = mx_channel_read(s_ctrl[1], 0u, &c, 1u, NULL, NULL, 0u, NULL)) < 0) {
+  if ((r = mx_channel_read(s_ctrl[1], 0u, &c, NULL, 1u, 0u, NULL, NULL)) < 0) {
     error("handle_watcher_stop: mx_channel_read failed (r=%d)\n", r);
     return r;
   }
@@ -194,7 +194,7 @@ static int handle_watcher_loop(void* arg) {
       return ERR_BAD_STATE;
     }
     uint8_t c;
-    if ((r = mx_channel_read(s_ctrl[0], 0u, &c, 1, NULL, NULL, 0u, NULL)) < 0) {
+    if ((r = mx_channel_read(s_ctrl[0], 0u, &c, NULL, 1, 0u, NULL, NULL)) < 0) {
       error("handle_watcher_loop: mx_channel_read failed (r=%d)\n", r);
       return r;
     }

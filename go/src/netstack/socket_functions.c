@@ -877,8 +877,8 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
     assert(ios->wbuf);
   }
   uint32_t nread;
-  mx_status_t r = mx_channel_read(ios->data_h, 0u, ios->wbuf->data, RWBUF_SIZE,
-                                  &nread, NULL, 0, NULL);
+  mx_status_t r = mx_channel_read(ios->data_h, 0u, ios->wbuf->data, NULL, RWBUF_SIZE,
+                                  0, &nread, NULL);
   debug_socket("mx_channel_read => %d (%u)\n", r, nread);
   if (r == ERR_SHOULD_WAIT) {
     if (signals & MX_SOCKET_PEER_CLOSED) {
