@@ -110,6 +110,11 @@ void VulkanRasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
   {
     TRACE_DURATION("gfx", "Draw");
     auto framebuffer_surface = window_->AcquireSurface();
+    FTL_DCHECK(false);
+    if (!framebuffer_surface) {
+      FTL_LOG(ERROR) << "Mozart surface is invalid, cant draw";
+      return;
+    }
     SkCanvas* canvas = framebuffer_surface->getCanvas();
     frame->Draw(canvas);
     canvas->flush();
