@@ -223,6 +223,11 @@ int main(int argc, char* argv[]) {
     uint8_t* rpt_desc = NULL;
     while ((de = readdir(dir)) != NULL) {
         char devname[128];
+
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
+            continue;
+        }
+
         snprintf(devname, sizeof(devname), "%s/%s", DEV_INPUT, de->d_name);
         touchfd = open(devname, O_RDONLY);
         if (touchfd < 0) {
@@ -233,35 +238,39 @@ int main(int argc, char* argv[]) {
         ret = ioctl_input_get_report_desc_size(touchfd, &rpt_desc_len);
         if (ret < 0) {
             printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
-            touchfd = -1;
-            continue;
-        }
-        if (rpt_desc_len != ACER12_RPT_DESC_LEN) {
-            rpt_desc_len = 0;
-            touchfd = -1;
-            continue;
+            goto next_node;
         }
 
         rpt_desc = malloc(rpt_desc_len);
         if (rpt_desc == NULL) {
             printf("no memory!\n");
-            return -1;
+            exit(-1);
         }
+
         ret = ioctl_input_get_report_desc(touchfd, rpt_desc, rpt_desc_len);
         if (ret < 0) {
             printf("failed to get report descriptor for %s: %zd\n", devname, ret);
-            rpt_desc_len = 0;
-            free(rpt_desc);
-            rpt_desc = NULL;
-            touchfd = -1;
-            continue;
+            goto next_node;
         }
-        if (!memcmp(rpt_desc, acer12_touch_report_desc, ACER12_RPT_DESC_LEN)) {
+
+        if (is_acer12_touch_report_desc(rpt_desc, rpt_desc_len)) {
             // Found the touchscreen
             printf("touchscreen: %s\n", devname);
             break;
         }
-        touchfd = -1;
+
+next_node:
+        rpt_desc_len = 0;
+
+        if (rpt_desc != NULL) {
+            free(rpt_desc);
+            rpt_desc = NULL;
+        }
+
+        if (touchfd >= 0) {
+            close(touchfd);
+            touchfd = -1;
+        }
     }
     closedir(dir);
 
