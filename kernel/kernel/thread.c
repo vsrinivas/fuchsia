@@ -1291,6 +1291,7 @@ void ktrace_report_live_threads(void) {
 
     THREAD_LOCK(state);
     list_for_every_entry(&thread_list, t, thread_t, thread_list_node) {
+        DEBUG_ASSERT(t->magic == THREAD_MAGIC);
         if (t->user_tid) {
             ktrace_name(TAG_THREAD_NAME, t->user_tid, t->user_pid, t->name);
         } else {
