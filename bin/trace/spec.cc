@@ -57,6 +57,9 @@ const char kRootSchema[] = R"({
           "required": ["type"]
         }
       }
+    },
+    "test_suite_name": {
+      "type": "string"
     }
   }
 })";
@@ -67,6 +70,7 @@ const char kCategoriesKey[] = "categories";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
 const char kSplitSamplesAtKey[] = "split_samples_at";
+const char kTestSuiteNameKey[] = "test_suite_name";
 const char kMeasureDurationType[] = "duration";
 const char kMeasureTimeBetweenType[] = "time_between";
 
@@ -229,6 +233,10 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   if (document.HasMember(kDurationKey)) {
     result.duration =
         ftl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
+  }
+
+  if (document.HasMember(kTestSuiteNameKey)) {
+    result.test_suite_name = document[kTestSuiteNameKey].GetString();
   }
 
   if (!document.HasMember(kMeasurementsKey)) {

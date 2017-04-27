@@ -69,9 +69,6 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
       err() << spec_file_path << " is not a file" << std::endl;
       return false;
     }
-    // By default use the name of the tspec file as the test suite name.
-    // TODO(ppi): allow specyfing the test suite name in the tspec file.
-    upload_metadata.test_suite_name = files::GetBaseName(spec_file_path);
 
     std::string content;
     if (!files::ReadFileToString(spec_file_path, &content)) {
@@ -89,6 +86,7 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
     categories = std::move(spec.categories);
     duration = std::move(spec.duration);
     measurements = std::move(spec.measurements);
+    upload_metadata.test_suite_name = std::move(spec.test_suite_name);
   }
 
   // --categories=<cat1>,<cat2>,...
@@ -155,6 +153,11 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
   }
   if (upload_param_count > 0) {
     upload_results = true;
+    if (upload_metadata.test_suite_name.empty()) {
+      err() << "To upload results, the spec file must specify its "
+            << "`test_suite_name`" << std::endl;
+      return false;
+    }
   }
 
   // --upload-server-url

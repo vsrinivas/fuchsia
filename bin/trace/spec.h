@@ -32,6 +32,9 @@ struct Spec {
 
   // Measurements to be performed on the captured traces.
   measure::Measurements measurements;
+
+  // Test suite name to be used for dashboard upload.
+  std::string test_suite_name;
 };
 
 bool DecodeSpec(const std::string& json, Spec* spec);
