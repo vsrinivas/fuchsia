@@ -25,6 +25,21 @@ static_assert(sizeof(size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
+struct TextureInfo;
+
+// Store a list of TextureInfos for each VMO (represented by the KOID). We need
+// this to know if a VMO still has a texture bound to it before we call
+// vkFreeMemory.
+std::unordered_multimap<mx_koid_t, std::unique_ptr<TextureInfo>> g_textures;
+
+// Remember any VkDeviceMemory that we imported from a given vmo, so that we
+// can re-use it rather than calling vkImportDeviceMemoryMAGMA again for the
+// same vmo (which is not allowed).
+std::unordered_map<mx_koid_t, VkDeviceMemory> g_vmo_to_device_memory_map;
+
+// Number of textures currently alive.
+std::atomic<int32_t> g_count;
+
 // Helper struct. Saves data used for cleanup once Skia is done with a texture.
 // Also stores a reference to |shared_vmo| to keep it alive.
 struct TextureInfo {
@@ -42,15 +57,6 @@ struct TextureInfo {
   VkDeviceMemory vk_device_memory;
   ftl::RefPtr<mtl::SharedVmo> shared_vmo;
 };
-
-// Store a list of TextureInfos for each VMO (represented by the KOID). We need
-// this to know if a VMO still has a texture bound to it before we call
-// vkFreeMemory.
-std::unordered_multimap<mx_koid_t, std::unique_ptr<TextureInfo>> g_textures;
-std::mutex g_textures_mutex;
-
-// Number of textures currently alive.
-std::atomic<int32_t> g_count;
 
 // Increment/decrement the number of textures currently alive.
 void TraceCount(int32_t delta) {
@@ -72,8 +78,8 @@ TextureInfo* CreateAndStoreTextureInfoGlobally(
       vk_device, vk_image, vk_device_memory, shared_vmo);
   TextureInfo* texture_info = texture_info_ptr.get();
   {
-    std::lock_guard<std::mutex> lock(g_textures_mutex);
-    g_textures.insert(std::make_pair(vmo_koid, std::move(texture_info_ptr)));
+    g_textures.insert({vmo_koid, std::move(texture_info_ptr)});
+    g_vmo_to_device_memory_map.insert({vmo_koid, vk_device_memory});
   }
 
   // Increment the global number of textures.
@@ -92,8 +98,6 @@ void ReleaseTexture(void* texture_info) {
 
   mx_koid_t vmo_koid = mtl::GetKoid(vmo_info->shared_vmo->vmo().get());
   {
-    std::lock_guard<std::mutex> lock(g_textures_mutex);
-
     // Search for texture_info in g_textures (looking through only the entries
     // that are mapped to vmo_koid
     auto range = g_textures.equal_range(vmo_koid);
@@ -109,9 +113,10 @@ void ReleaseTexture(void* texture_info) {
 
     // Clean up VkDeviceMemory only if we're the last texture using this
     // VMO. Otherwise, we can get a crash in the device driver.
-    if (range_size == 1)
+    if (range_size == 1) {
       vkFreeMemory(vmo_info->vk_device, vmo_info->vk_device_memory, nullptr);
-
+      g_vmo_to_device_memory_map.erase(vmo_koid);
+    }
     // Remove this TextureInfo object from our global map
     g_textures.erase(texture_info_it);
   }
@@ -183,21 +188,35 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
     return nullptr;
   }
 
-  // Duplicate the VMO because vkImportDeviceMemoryMAGMA takes ownership of
-  // the handle it is passed.
-  mx::vmo vmo;
-  auto status = shared_vmo_->vmo().duplicate(MX_RIGHT_SAME_RIGHTS, &vmo);
-  if (status) {
-    FTL_LOG(ERROR) << "Failed to duplicate vmo handle.";
-    return nullptr;
+  // Get a VkDeviceMemory out of the VMO.
+
+  // Re-use an existing VkDeviceMemory if we already have one.
+
+  mx_koid_t vmo_koid = mtl::GetKoid(shared_vmo_->vmo().get());
+  VkDeviceMemory mem = VK_NULL_HANDLE;
+  {
+    if (g_vmo_to_device_memory_map.find(vmo_koid) !=
+        g_vmo_to_device_memory_map.end()) {
+      mem = g_vmo_to_device_memory_map[vmo_koid];
+    }
   }
 
-  // Get a VkDeviceMemory out of the VMO.
-  VkDeviceMemory mem;
-  err = vkImportDeviceMemoryMAGMA(vk_device, vmo.release(), nullptr, &mem);
-  if (err != VK_SUCCESS) {
-    FTL_LOG(ERROR) << "vkImportDeviceMemoryMAGMA failed.";
-    return nullptr;
+  if (mem == VK_NULL_HANDLE) {
+    // Duplicate the VMO because vkImportDeviceMemoryMAGMA takes ownership of
+    // the handle it is passed.
+    mx::vmo temp_vmo;
+    auto status = shared_vmo_->vmo().duplicate(MX_RIGHT_SAME_RIGHTS, &temp_vmo);
+    if (status) {
+      FTL_LOG(ERROR) << "Failed to duplicate vmo handle.";
+      return nullptr;
+    }
+
+    err =
+        vkImportDeviceMemoryMAGMA(vk_device, temp_vmo.release(), nullptr, &mem);
+    if (err != VK_SUCCESS) {
+      FTL_LOG(ERROR) << "vkImportDeviceMemoryMAGMA failed.";
+      return nullptr;
+    }
   }
 
   err = vkBindImageMemory(vk_device, vk_image, mem, 0);
