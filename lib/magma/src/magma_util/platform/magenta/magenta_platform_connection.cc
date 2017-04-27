@@ -165,7 +165,7 @@ public:
             return DRETF(false, "shutdown event signalled");
 
         if (wait_items[kIndexChannel].pending & MX_CHANNEL_PEER_CLOSED)
-            return DRETF(false, "remote endpoint closed");
+            return false; // No DRET because this happens on the normal connection closed path
 
         if (wait_items[kIndexChannel].pending & MX_CHANNEL_READABLE) {
             auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
