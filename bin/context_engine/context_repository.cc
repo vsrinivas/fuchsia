@@ -29,6 +29,12 @@ void ContextRepository::Set(const std::string& topic,
   SetInternal(topic, &json_value);
 }
 
+const std::string* ContextRepository::Get(const std::string& topic) const {
+  auto it = values_.find(topic);
+  if (it == values_.end()) return nullptr;
+  return &it->second;
+}
+
 void ContextRepository::Remove(const std::string& topic) {
   SetInternal(topic, nullptr);
 }

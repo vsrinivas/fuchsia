@@ -22,3 +22,17 @@ source_set("bound_set") {
     "//application/lib/app",
   ]
 }
+
+group("unittests") {
+  testonly = true
+  deps = [
+    "//apps/maxwell/src/context_engine:context_repository_unittest",
+  ]
+}
+
+group("integration_tests") {
+  testonly = true
+  deps = [
+    "//apps/maxwell/src/integration",
+  ]
+}

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # Directory-level alias.
-source_set("context_engine") {
+group("context_engine") {
   deps = [
     ":context_engine_main",
   ]
@@ -44,6 +44,22 @@ source_set("context_repository") {
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
+  ]
+}
+
+executable("context_repository_unittest") {
+  testonly = true
+
+  sources = [
+    "context_repository_unittest.cc",
+  ]
+
+  deps = [
+    ":context_repository",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/services/context",
+    "//lib/mtl",
+    "//third_party/gtest",
   ]
 }
 

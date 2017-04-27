@@ -20,6 +20,9 @@ class ContextRepository {
   ~ContextRepository();
 
   void Set(const std::string& topic, const std::string& json_value);
+  // Returns nullptr if |topic| does not exist.
+  const std::string* Get(const std::string& topic) const;
+
   void Remove(const std::string& topic);
 
   void AddSubscription(ContextQueryPtr query, ContextListenerPtr listener);
