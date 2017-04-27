@@ -70,12 +70,14 @@ interface Page {
   // Returns the identifier for the page.
   GetId() => (array<uint8, 16> id);
 
-  // Creates a snapshot of the page. Read operations can only be performed on a
-  // snapshot. Optionally, clients can provide a key prefix to scope the
-  // contents of the snapshot. Clients can also provide a PageWatcher to
-  // receive change notifications for any change posterior to the returned
-  // snapshot. If both a key prefix and a PageWatcher request are present, the
-  // key prefix will scope both the snapshot and the PageWatcher.
+  // Creates a snapshot of the page, allowing the client app to read a
+  // consistent view of the content of the page. If |key_prefix| is provided,
+  // the resulting snapshot includes only the entries with matching keys.
+  //
+  // If |watcher| is provided, it will receive notifications for changes of the
+  // page state on this page connection newer than the resulting snapshot. If
+  // |key_prefix| is provided too, the change notifications will only contain
+  // the entries with matching keys.
   GetSnapshot(PageSnapshot& snapshot_request, array<uint8>? key_prefix,
       PageWatcher? watcher) => (Status status);
 

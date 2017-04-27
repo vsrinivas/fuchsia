@@ -171,10 +171,14 @@ explicitly requested through a dedicated `Fetch()` method.
 
 The client application can register a watcher to be notified of changes to the
 state tracked by the local page connection. As typically we are interested in
-retrieving the initial base state from the moment of registering the watcher,
+retrieving the initial base state at the moment of registering the watcher,
 the watchers are registered using the `GetSnapshot()` method.
 
 [C++ watcher example], [Dart watcher example].
+
+`GetSnapshot()` takes an optional `key_prefix` parameter, which allows the
+client app to register specifically for change notifications within a particular
+prefix of keys.
 
 ### Transactions
 
@@ -197,11 +201,15 @@ clients can create multiple connections to the same page. Each of these
 connections can run a transaction independently from the others.
 
 *** note
-*Watch and transactions*: As starting the transaction pins the state of the
-page, the client app won't receive any watch notifications when a transaction
-is in progress. Conversely, on a watched page, a `StartTransaction()` call will
-only return when the app finishes processing all pending change notification.
-This ensures the app knows the base state of the page when doing a transaction.
+*Watch and transactions*: As starting a transaction pins the state of the page
+visible on the particular page connection, the client app won't receive any
+watch notifications (for watchers registered on this page connection) while the
+transaction is in progress.
+
+Conversely, on a page connection with registered watchers, a
+`StartTransaction()` call will only return when the app finishes processing all
+pending change notification. This ensures the app knows the base state of the
+page when performing a transaction.
 ***
 
 ## Conflict resolution
