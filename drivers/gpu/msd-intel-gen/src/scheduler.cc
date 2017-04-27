@@ -33,13 +33,16 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
             return nullptr;
 
         context = fifo_.front().lock();
-        if (!context)
+        if (!context) {
             fifo_.pop();
+            continue;
+        }
 
         auto connection = context->connection().lock();
         if (connection && connection->context_killed()) {
             DLOG("connection context killed");
             fifo_.pop();
+            context = nullptr;
         }
     }
 
