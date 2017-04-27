@@ -12,9 +12,12 @@ build=release
 bootfs=$fuchsia_root/out/user.bootfs
 build_dir=$fuchsia_root/out/$build-x86-64
 
+args="msd_intel_wait_for_flip=true"
+args="$args magma_enable_tracing=false"
+
 rm -f $bootfs
 cd $fuchsia_root
-$fuchsia_root/packages/gn/gen.py --modules magma-dev --$build
+$fuchsia_root/packages/gn/gen.py --modules magma-dev --$build --args="$args"
 $fuchsia_root/buildtools/ninja -C $build_dir
 cp $build_dir/user.bootfs $bootfs
 
