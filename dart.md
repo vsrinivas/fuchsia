@@ -94,23 +94,37 @@ dart_package("foo") {
 }
 ```
 
-The `//scripts/run-dart-analysis.py` script makes it easy to run the analysis over
+The `//scripts/run-dart-action.py` script makes it easy to run the analysis over
 multiple targets:
 ```sh
-scripts/run-dart-analysis.py --out out/<build-type> --tree //apps/sysui/*
+scripts/run-dart-action.py analyze --out out/<build-type> --tree //apps/sysui/*
 ```
 
 Regular analyzer flags may also be passed:
 ```sh
-scripts/run-dart-analysis.py --out out/<build-type> --fatal-warnings --lints
+scripts/run-dart-action.py analyze --out out/<build-type> --fatal-warnings --lints
 ```
 This holds true for the individual analysis scripts.
 
 
 ## Testing
 
-For now `dart_test` targets are not operational. They do however allow test code
-to be analyzed.
+The `dart_test` target is appropriate for unit tests.
+Each target yields a test script in the output directory under:
+```sh
+out/<build-type>/gen/path/to/package/target_name.sh
+```
+This script simply runs the given tests in the Flutter shell *on the host*.
+
+The `//scripts/run-dart-action.py` script may be used to run multiple test
+suites at once:
+```sh
+scripts/run-dart-action.py test --out out/<build-type> --tree //apps/sysui/*
+```
+It also works with a single suite:
+```sh
+scripts/run-dart-action.py test --out out/<build-type> --tree //apps/sysui/armadillo:test
+```
 
 
 ## FIDL
