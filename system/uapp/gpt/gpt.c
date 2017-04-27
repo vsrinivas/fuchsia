@@ -506,10 +506,10 @@ static int repartition(int argc, char** argv) {
   int num_partitions = argc/3;
 
   gpt_partition_t *p = gpt->partitions[0];
-  do {
+  while (p) {
     gpt_partition_remove(gpt, p->guid);
     p = gpt->partitions[0];
-  } while(p);
+  }
 
 
   block_info_t info;
