@@ -238,12 +238,12 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
     mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
                                        page_count * PAGE_SIZE, nullptr, 0);
     if (status != NO_ERROR)
-        return DRETF(false, "failed to commit vmo pages: 0x%x", status);
+        return DRETF(false, "failed to commit vmo pages: %d", status);
 
     status = vmo_.op_range(MX_VMO_OP_LOCK, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
                            nullptr, 0);
     if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
-        return DRETF(false, "failed to lock vmo pages: 0x%x", status);
+        return DRETF(false, "failed to lock vmo pages: %d", status);
 
     for (uint32_t i = 0; i < page_count; i++) {
         pin_count_array_->incr(start_page_index + i);
