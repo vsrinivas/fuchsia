@@ -6,7 +6,7 @@
 #include <magenta/errors.h>
 #include <string.h>
 
-const uint8_t acer12_touch_report_desc[] = {
+static const uint8_t acer12_touch_report_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
     0x09, 0x04,        // Usage (Touch Screen)
     0xA1, 0x01,        // Collection (Application)
