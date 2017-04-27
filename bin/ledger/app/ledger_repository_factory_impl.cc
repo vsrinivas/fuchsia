@@ -52,7 +52,6 @@ cloud_sync::UserConfig GetUserConfig(
 
   user_config.use_sync = true;
   user_config.server_id = global_config.sync_params.firebase_id;
-  user_config.cloud_prefix = global_config.sync_params.cloud_prefix;
   user_config.user_id = user_id.ToString();
   FTL_LOG(WARNING) << "Sync configuration not specified by Framework, "
                    << "using the server id: " << user_config.server_id

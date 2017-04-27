@@ -55,13 +55,6 @@ class App : public LedgerController {
       return false;
     }
 
-    if (!config.sync_params.cloud_prefix.empty()) {
-      FTL_LOG(ERROR) << "The cloud_prefix configuration param is deprecated. "
-                     << "Run `ledger_tool clean` and then `configure_ledger` "
-                     << "to remove it.";
-      return false;
-    }
-
     if (config.use_sync) {
       network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
           loop_.task_runner(), [this] {

@@ -160,9 +160,6 @@ bool ClientApp::Initialize() {
   std::cout << std::endl;
   // Sync settings.
   std::cout << " - firebase ID: " << user_config_.server_id << std::endl;
-  if (!user_config_.cloud_prefix.empty()) {
-    std::cout << " - cloud prefix: " << user_config_.cloud_prefix << std::endl;
-  }
   std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
@@ -186,7 +183,6 @@ bool ClientApp::ReadConfig() {
   }
   user_config_.use_sync = global_config.use_sync;
   user_config_.server_id = global_config.sync_params.firebase_id;
-  user_config_.cloud_prefix = global_config.sync_params.cloud_prefix;
 
   std::string user_id_human_readable;
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),

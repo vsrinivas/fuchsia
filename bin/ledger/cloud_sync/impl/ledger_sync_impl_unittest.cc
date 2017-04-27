@@ -20,7 +20,7 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
   LedgerSyncImplTest()
       : network_service_(mtl::MessageLoop::GetCurrent()->task_runner()),
         environment_(nullptr, &network_service_),
-        user_config_({true, "server_id", "", "test_user"}),
+        user_config_({true, "server_id", "test_user"}),
         ledger_sync_(&environment_, &user_config_, "test_id") {}
 
   // ::testing::Test:

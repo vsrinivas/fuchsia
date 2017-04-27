@@ -83,13 +83,13 @@ DoctorCommand::DoctorCommand(const cloud_sync::UserConfig& user_config,
   FTL_DCHECK(network_service_);
   FTL_DCHECK(!user_config.server_id.empty());
 
-  std::string app_firebase_path = cloud_sync::GetFirebasePathForApp(
-      user_config_.cloud_prefix, user_config_.user_id, kDoctorAppId);
+  std::string app_firebase_path =
+      cloud_sync::GetFirebasePathForApp(user_config_.user_id, kDoctorAppId);
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_, user_config_.server_id,
       cloud_sync::GetFirebasePathForPage(app_firebase_path, RandomString()));
-  std::string app_gcs_prefix = cloud_sync::GetGcsPrefixForApp(
-      user_config_.cloud_prefix, user_config_.user_id, kDoctorAppId);
+  std::string app_gcs_prefix =
+      cloud_sync::GetGcsPrefixForApp(user_config_.user_id, kDoctorAppId);
   cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
       mtl::MessageLoop::GetCurrent()->task_runner(), network_service_,
       user_config_.server_id,

@@ -23,8 +23,7 @@ CleanCommand::CleanCommand(const cloud_sync::UserConfig& user_config,
   FTL_DCHECK(!user_repository_path_.empty());
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service, user_config.server_id,
-      cloud_sync::GetFirebasePathForUser(user_config.cloud_prefix,
-                                         user_config.user_id));
+      cloud_sync::GetFirebasePathForUser(user_config.user_id));
 }
 
 void CleanCommand::Start(ftl::Closure on_done) {

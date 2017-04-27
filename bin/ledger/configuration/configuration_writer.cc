@@ -122,14 +122,6 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (!config.sync_params.cloud_prefix.empty()) {
-    FTL_LOG(WARNING) << "Removing the deprecated |cloud_prefix| setting. "
-                     << kCloudPrefixDeprecationMessage;
-    FTL_LOG(WARNING) << "Note that you might need to run `ledger_tool clean` "
-                     << "to reset the Ledger state.";
-    config.sync_params.cloud_prefix.clear();
-  }
-
   if (!files::CreateDirectory(files::GetDirectoryName(config_path))) {
     FTL_LOG(ERROR) << "Unable to create directory for file " << config_path;
   }

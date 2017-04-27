@@ -19,7 +19,7 @@ namespace {
 const char kSynchronization[] = "synchronization";
 const char kUseSync[] = "use_sync";
 const char kFirebaseId[] = "firebase_id";
-const char kCloudPrefix[] = "cloud_prefix";
+const char kDeprecatedCloudPrefix[] = "cloud_prefix";
 const char kDeprecatedUserPrefix[] = "user_prefix";
 }  // namespace
 
@@ -82,30 +82,11 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   new_configuration.sync_params.firebase_id =
       sync_config[kFirebaseId].GetString();
 
-  // Read the cloud prefix from --cloud_prefix for backward-compatibility.
-  // TODO(ppi): remove the fallback in 6/2017
-  if (sync_config.HasMember(kDeprecatedUserPrefix)) {
-    if (!sync_config[kDeprecatedUserPrefix].IsString()) {
-      FTL_LOG(ERROR) << "The " << kDeprecatedUserPrefix << " parameter inside "
-                     << kSynchronization << " must be a string.";
-      return false;
-    }
-
-    FTL_LOG(WARNING) << "The " << kDeprecatedUserPrefix << " parameter is "
-                     << "deprecated.";
-    new_configuration.sync_params.cloud_prefix =
-        sync_config[kDeprecatedUserPrefix].GetString();
-  }
-
-  if (sync_config.HasMember(kCloudPrefix)) {
-    if (!sync_config[kCloudPrefix].IsString()) {
-      FTL_LOG(ERROR) << "The " << kCloudPrefix << " parameter inside "
-                     << kSynchronization << "must be a string.";
-      return false;
-    }
-
-    new_configuration.sync_params.cloud_prefix =
-        sync_config[kCloudPrefix].GetString();
+  if (sync_config.HasMember(kDeprecatedCloudPrefix) ||
+      sync_config.HasMember(kDeprecatedUserPrefix)) {
+    FTL_LOG(ERROR) << "Configuration contains deprecated parameters. "
+                   << "Run `ledger_tool clean` and `configure_ledger`.";
+    return false;
   }
 
   if (!sync_config.HasMember(kUseSync) || !sync_config[kUseSync].IsBool()) {
@@ -139,13 +120,6 @@ std::string ConfigurationEncoder::EncodeToString(
         writer.Key(kFirebaseId);
         writer.String(configuration.sync_params.firebase_id.c_str(),
                       configuration.sync_params.firebase_id.size());
-      }
-      if (!configuration.sync_params.cloud_prefix.empty()) {
-        {
-          writer.Key(kCloudPrefix);
-          writer.String(configuration.sync_params.cloud_prefix.c_str(),
-                        configuration.sync_params.cloud_prefix.size());
-        }
       }
     }
     writer.EndObject();

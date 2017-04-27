@@ -14,8 +14,6 @@ struct UserConfig {
   bool use_sync = false;
   // ID of the firebase instance.
   std::string server_id;
-  // Prefix to use for firebase keys and GCS objects.
-  std::string cloud_prefix;
   // The id of the user.
   std::string user_id;
 };
