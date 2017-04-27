@@ -12,6 +12,7 @@
 #include <arch/x86/hypervisor_state.h>
 
 static const uint64_t kIoApicPhysBase = 0xfec00000;
+static const uint8_t kIoApicRedirectOffsets = 0x36;
 
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
@@ -288,6 +289,10 @@ struct AutoVmcsLoad {
 struct IoApicState {
     // IO register-select register.
     uint32_t select;
+    // IO APIC identification register.
+    uint32_t id;
+    // IO redirection table offsets.
+    uint32_t redirect[kIoApicRedirectOffsets];
 };
 
 /* Creates a VMCS CPU context to initialize a VM. */

@@ -450,6 +450,7 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
         return status;
 
     memset(&vmx_state_, 0, sizeof(vmx_state_));
+    memset(&io_apic_state_, 0, sizeof(io_apic_state_));
     return NO_ERROR;
 }
 

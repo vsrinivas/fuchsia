@@ -25,8 +25,9 @@ static const uint64_t kUartStatusIdle = 1u << 6;
 
 static const uint64_t kIa32ApicBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
-// From Intel 82093AA, Section 3.2.2.
 static const uint8_t kIoApicVersion = 0x11;
+static const uint32_t kFirstRedirectOffset = 0x10;
+static const uint32_t kLastRedirectOffset = kFirstRedirectOffset + kIoApicRedirectOffsets - 1;
 
 static const uint32_t kMaxInstructionLength = 15;
 static const uint8_t kRexRMask = 1u << 2;
@@ -290,16 +291,24 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
 
     const uint8_t disp_size = displacement_size(mod_rm);
     switch (inst_buf[0]) {
+    // Move r to r/m.
+    case 0x89:
+        if (inst_len != disp_size + 2u)
+            return ERR_OUT_OF_RANGE;
+        inst->read = false;
+        inst->rex = rex_w;
+        inst->val = 0;
+        inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
+        return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move r/m to r.
-    case 0x8b: {
+    case 0x8b:
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
         inst->read = true;
         inst->rex = rex_w;
         inst->val = 0;
         inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
-        return NO_ERROR;
-    }
+        return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move imm to r/m.
     case 0xc7: {
         const uint8_t imm_size = 4;
@@ -319,6 +328,11 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
     }
 }
 
+template<typename T>
+T get_value(const Instruction& inst) {
+    return static_cast<T>(inst.reg != nullptr ? *inst.reg : inst.val);
+}
+
 static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* guest_state,
                                      IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas) {
     if (exit_info.guest_physical_address < kIoApicPhysBase ||
@@ -335,29 +349,47 @@ static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* gues
     status = decode_instruction(inst_buf, inst_len, guest_state, &inst);
     if (status != NO_ERROR)
         return status;
+    if (inst.rex)
+        return ERR_NOT_SUPPORTED;
 
     uint64_t io_apic_reg = exit_info.guest_physical_address - kIoApicPhysBase;
     switch (io_apic_reg) {
     case IO_APIC_IOREGSEL:
-        // TODO(abdulla): Expand this to handle all IOREGSEL interactions.
         if (inst.read)
             return ERR_NOT_SUPPORTED;
         next_rip(exit_info);
-        io_apic_state->select = static_cast<uint32_t>(inst.val);
-        return NO_ERROR;
+        io_apic_state->select = get_value<uint32_t>(inst);
+        return io_apic_state->select > UINT8_MAX ? ERR_INVALID_ARGS : NO_ERROR;
     case IO_APIC_IOWIN:
-        // TODO(abdulla): Expand this to handle all IOWIN interactions.
-        if (!inst.read || inst.reg == nullptr)
-            return ERR_NOT_SUPPORTED;
         switch (io_apic_state->select) {
-        case IO_APIC_REG_VER:
+        case IO_APIC_REG_ID:
             next_rip(exit_info);
-            *inst.reg = kIoApicVersion;
+            if (inst.read)
+                *inst.reg = io_apic_state->id;
+            else
+                io_apic_state->id = get_value<uint32_t>(inst);
             return NO_ERROR;
-        }
-    default:
-        return ERR_NOT_SUPPORTED;
+        case IO_APIC_REG_VER:
+            if (!inst.read || inst.reg == nullptr)
+                return ERR_NOT_SUPPORTED;
+            next_rip(exit_info);
+            // There are two redirect offsets per redirection entry. We return
+            // the maximum redirection entry index.
+            //
+            // From Intel 82093AA, Section 3.2.2.
+            *inst.reg = (kIoApicRedirectOffsets / 2 - 1) << 16 | kIoApicVersion;
+            return NO_ERROR;
+        case kFirstRedirectOffset ... kLastRedirectOffset: {
+            next_rip(exit_info);
+            uint32_t i = io_apic_state->select - kFirstRedirectOffset;
+            if (inst.read)
+                *inst.reg = io_apic_state->redirect[i];
+            else
+                io_apic_state->redirect[i] = get_value<uint32_t>(inst);
+            return NO_ERROR;
+        }}
     }
+    return ERR_NOT_SUPPORTED;
 }
 
 static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
