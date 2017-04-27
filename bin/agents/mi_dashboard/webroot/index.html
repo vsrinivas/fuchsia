@@ -3,33 +3,19 @@
   <title>MI Dashboard</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js">
   </script>
+  <script src="/dashboard.js"></script>
 </head>
 <body>
   <h1>Machine Intelligence Dashboard</h1>
   <p>
-    Eventually this will be pretty freaking awesome.  An image should appear
-    below this paragraph.
+    This page displays all of the context parameters currently recorded
+    in the system.
   </p>
-  <img src="snooty-badge.jpg"/>
-  <p>
-    Visible stories count: <span id="visible_count"></span>
-  </p>
-  <script>
-    // this is a quick test of the data URLs from the server
-    // will be removed in favor of however we decide to do this in the end
-    $(function() {
-      // every 1s
-      setInterval(function() {
-        // load the visible_count context value from the server and
-        // update it on the page
-        $.ajax({
-          url: "/data/context/story/visible_count",
-          success: function( result ) {
-            $( "#visible_count" ).html( result );
-          }
-      }, 1000);
-    })
-});
-  </script>
+  <h2>Context</h2>
+  <table>
+    <tr><th>Topic</th><th>Value</th></tr>
+    <tbody id="contextTBody">
+    </tbody>
+  </table>
 </body>
 </html>
