@@ -103,8 +103,7 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(
-            app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         ask_(this) {
@@ -135,7 +134,7 @@ class ModuleSuggesterAgentApp : public ContextListener, public AskHandler {
   }
 
   void Ask(UserInputPtr query, const AskCallback& callback) override {
-    if (query->is_text() && query->get_text() != "") {
+    if (query->is_text() && query->get_text().size() >= 4) {
       // Propose everything; let the Next filter do the filtering
       // HACK(rosswang)
       for (const auto& entry : kAskOnlyStories) {

@@ -72,7 +72,7 @@ class _AskHandlerImpl extends AskHandler {
       );
     }
 
-    if (query.text?.isNotEmpty ?? false) {
+    if ((query.text?.length ?? 0) >= 4) {
       Directory systemApps = new Directory('/system/apps/');
       systemApps
           .listSync(followLinks: false)
