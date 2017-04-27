@@ -29,6 +29,7 @@
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/device_map_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
+#include "apps/modular/src/user_runner/remote_invoker_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -150,6 +151,15 @@ UserRunnerImpl::UserRunnerImpl(
   user_scope_.AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         device_map_impl_->Connect(std::move(request));
+      });
+
+  // RemoteInvoker
+
+  // TODO(planders) Do not create RemoteInvoker until service is actually requested.
+  remote_invoker_impl_.reset(new RemoteInvokerImpl(ledger_.get()));
+  user_scope_.AddService<RemoteInvoker>(
+      [this](fidl::InterfaceRequest<RemoteInvoker> request) {
+        remote_invoker_impl_->Connect(std::move(request));
       });
 
   // Setup MessageQueueManager.

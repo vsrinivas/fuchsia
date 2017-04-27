@@ -37,6 +37,7 @@ class DeviceMapImpl;
 class FocusHandler;
 class LinkImpl;
 class MessageQueueManager;
+class RemoteInvokerImpl;
 class StoryStorageImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
@@ -95,6 +96,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceInfoImpl> device_info_impl_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
+  std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;
   std::string device_name_;
 
   // This component context is supplied to the user intelligence provider,

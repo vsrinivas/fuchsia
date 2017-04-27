@@ -1,0 +1,18 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Service for modules to make calls to remote devices.
+[ServiceName="modular.RemoteInvoker"]
+interface RemoteInvoker {
+  // Sends rehydrate story to specified device
+  // If device_id does not exist, request will be made but nothing will happen.
+  // TODO(planders) Should we check for device_id in device_map before posting to Ledger?
+  // TODO(planders) Add more information on error handling/fail case.
+
+  // Returns the page_id of the Ledger page written to. If the page_id exists, the call was successful.
+  // TODO(planders) Find a better way to determine whether call was successful.
+  StartOnDevice(string device_id, string story_id) => (string? page_id);
+};

@@ -10,6 +10,7 @@ group("tests") {
     "component_context",
     "parent_child",
     "queue_persistence",
+    "remote",
     "run_modular_tests",
     "suggestion",
     "triggers",
