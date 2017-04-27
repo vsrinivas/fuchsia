@@ -422,19 +422,16 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     return NO_ERROR;
 }
 
-mx_driver_t _driver_intel_gen_gpu = {
-    .ops =
-        {
-            .bind = intel_i915_bind,
-        },
+static mx_driver_ops_t intel_gen_gpu_driver_ops = {
+    .bind = intel_i915_bind,
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(_driver_intel_gen_gpu, "intel-gen-gpu", "magenta", "!0.1", 5)
+MAGENTA_DRIVER_BEGIN(intel_gen_gpu, intel_gen_gpu_driver_ops, "magenta", "!0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
     BI_MATCH_IF(EQ, BIND_PCI_CLASS, 0x3), // Display class
-MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
+MAGENTA_DRIVER_END(intel_gen_gpu)
     // clang-format on
 
     static int magma_start(intel_i915_device_t* device)
