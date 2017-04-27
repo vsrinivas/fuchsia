@@ -1,4 +1,5 @@
 {
+  "test_suite_name": "fuchsia.ledger",
   "app": "ledger_benchmark_put",
   "args": ["--entry-count=1000", "--value-size=1000", "--transaction"],
   "categories": ["benchmark"],
