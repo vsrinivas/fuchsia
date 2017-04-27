@@ -37,7 +37,7 @@ class WorkerThread(threading.Thread):
             try:
                 script = self.script_queue.get(False)
             except Queue.Empty, e:
-                # no more scripts to run
+                # No more scripts to run.
                 return
             job = subprocess.Popen(
                 [script] + self.args,
@@ -49,8 +49,8 @@ class WorkerThread(threading.Thread):
 
 def main():
     parser = argparse.ArgumentParser(
-        '''Run Dart analysis for Dart build targets
-Extra flags will be passed to the analyzer.
+        '''Run Dart actions (analysis, tests) for Dart build targets.
+Extra flags will be passed to the supporting Dart tool if applicable.
 ''')
     parser.add_argument(
         '--out',
@@ -60,6 +60,10 @@ Extra flags will be passed to the analyzer.
         '--tree',
         help='Restrict analysis to a source subtree, e.g. //apps/sysui/*',
         default='*')
+    parser.add_argument(
+        'action',
+        help='Action to perform on the targets',
+        choices=('analyze', 'test'))
     args, extras = parser.parse_known_args()
 
     if not os.path.isdir(os.path.join(paths.FUCHSIA_ROOT, args.out)):
@@ -69,11 +73,17 @@ Extra flags will be passed to the analyzer.
     # Ask gn about all the dart analyzer scripts.
     scripts = []
     targets = gn_describe(args.out, args.tree)
+    if not targets:
+        print 'No targets found...'
+        exit(1)
+    target_script = ('//build/dart/gen_analyzer_invocation.py'
+                     if args.action == 'analyze'
+                     else '//build/dart/gen_test_invocation.py')
     for target_name, properties in targets.items():
         if ('type' not in properties or
                 properties['type'] != 'action' or
                 'script' not in properties or
-                properties['script'] != '//build/dart/gen_analyzer_invocation.py' or
+                properties['script'] != target_script or
                 'outputs' not in properties or
                 not len(properties['outputs'])):
             continue
@@ -106,7 +116,7 @@ Extra flags will be passed to the analyzer.
 
     if len(failed_scripts):
         failed_scripts.sort()
-        print 'Analysis failed in:'
+        print 'Failures in:'
         for script in failed_scripts:
             print '  %s' % script
         exit(1)
