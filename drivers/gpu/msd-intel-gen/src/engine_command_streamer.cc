@@ -707,8 +707,11 @@ void RenderEngineCommandStreamer::ResetCurrentContext()
 
     // Do this before releasing any connection threads block in wait rendering
     auto connection = context->connection().lock();
-    DASSERT(connection);
-    connection->set_context_killed();
+    if (connection) {
+        connection->set_context_killed();
+    } else {
+        magma::log(magma::LOG_WARNING, "Attempting to reset global context");
+    }
 
     // Cleanup resources for any inflight command sequences on this context
     while (!inflight_command_sequences_.empty()) {
