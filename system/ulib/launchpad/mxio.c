@@ -9,8 +9,10 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
+#include <mxio/namespace.h>
 #include <mxio/util.h>
 
+#include <stdlib.h>
 #include <unistd.h>
 
 static mx_status_t add_mxio(launchpad_t* lp,
@@ -34,8 +36,22 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     uint32_t types[MXIO_MAX_HANDLES];
 
     if (what & LP_CLONE_MXIO_ROOT) {
-        add_mxio(lp, handles, types, mxio_clone_root(handles, types));
-        add_mxio(lp, handles, types, mxio_clone_svcroot(handles, types));
+        mxio_flat_namespace_t* flat;
+        mx_status_t status = mxio_ns_export_root(&flat);
+        if (status == NO_ERROR) {
+            launchpad_set_nametable(lp, flat->count, flat->path);
+            launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
+            free(flat);
+        } else {
+            if (status == ERR_NOT_FOUND) {
+                // if there's no root namespace, fail back to the legacy handles
+                add_mxio(lp, handles, types, mxio_clone_root(handles, types));
+                add_mxio(lp, handles, types, mxio_clone_svcroot(handles, types));
+            } else {
+                launchpad_abort(lp, status, "clone: error cloning namespace");
+                return status;
+            }
+        }
     }
     if (what & LP_CLONE_MXIO_CWD) {
         add_mxio(lp, handles, types, mxio_clone_cwd(handles, types));

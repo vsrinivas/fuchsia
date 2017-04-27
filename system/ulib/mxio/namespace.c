@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -17,6 +18,7 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
+#include "private.h"
 #include "private-remoteio.h"
 
 // A mxio namespace is a simple local filesystem that consists
@@ -155,6 +157,18 @@ static mx_status_t mxdir_close(mxio_t* io) {
         dir->rio.h = MX_HANDLE_INVALID;
     }
     return NO_ERROR;
+}
+
+static mx_status_t mxdir_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    mxdir_t* dir = (mxdir_t*) io;
+    if (dir->rio.h == MX_HANDLE_INVALID) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if ((handles[0] = mxio_service_clone(dir->rio.h)) == MX_HANDLE_INVALID) {
+        return ERR_BAD_HANDLE;
+    }
+    types[0] = PA_MXIO_REMOTE;
+    return 1;
 }
 
 // Expects a canonical path (no ..) with no leading
@@ -364,7 +378,7 @@ static mxio_ops_t dir_ops = {
     .seek = mxio_default_seek,
     .close = mxdir_close,
     .open = mxdir_open,
-    .clone = mxio_default_clone,
+    .clone = mxdir_clone,
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
@@ -421,6 +435,16 @@ mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t remote) {
 
     mtx_lock(&ns->lock);
     mxvn_t* vn = &ns->root;
+    if (path[0] == 0) {
+        // the path was "/" so we're trying to bind to the root vnode
+        if (vn->remote == MX_HANDLE_INVALID) {
+            vn->remote = remote;
+        } else {
+            r = ERR_ALREADY_EXISTS;
+        }
+        mtx_unlock(&ns->lock);
+        return r;
+    }
     for (;;) {
         const char* next = strchr(path, '/');
         if (next) {
@@ -515,4 +539,139 @@ mx_status_t mxio_ns_chdir(mxio_ns_t* ns) {
 mx_status_t mxio_ns_install(mxio_ns_t* ns) {
     //TODO
     return ERR_NOT_SUPPORTED;
+}
+
+
+static mx_status_t ns_enum_callback(mxvn_t* vn, void* cookie,
+                                    mx_status_t (*func)(void* cookie, const char* path,
+                                                        size_t len, mx_handle_t h)) {
+    char path[PATH_MAX];
+    char* end = path + sizeof(path) - 1;
+    *end = 0;
+    mx_handle_t h = vn->remote;
+    for (;;) {
+        if ((vn->namelen + 1) > (size_t)(end - path)) {
+            return ERR_BAD_PATH;
+        }
+        end -= vn->namelen;
+        memcpy(end, vn->name, vn->namelen);
+        if ((vn = vn->parent) == NULL) {
+            size_t len = (sizeof(path) - 1) - (end - path);
+            if (len > 0) {
+                return func(cookie, end, len, h);
+            } else {
+                // the root vn ends up having length 0, so we
+                // fake up a correct canonical name for it here
+                return func(cookie, "/", 1, h);
+            }
+        }
+        end--;
+        *end = '/';
+    }
+}
+
+static mx_status_t ns_enumerate(mxvn_t* vn, void* cookie,
+                                mx_status_t (*func)(void* cookie, const char* path,
+                                                    size_t len, mx_handle_t h)) {
+    while (vn != NULL) {
+        if (vn->remote != MX_HANDLE_INVALID) {
+            ns_enum_callback(vn, cookie, func);
+        }
+        if (vn->child) {
+            ns_enumerate(vn->child, cookie, func);
+        }
+        vn = vn->next;
+    }
+    return 0;
+}
+
+typedef struct {
+    size_t bytes;
+    size_t count;
+    char* buffer;
+    mx_handle_t* handle;
+    uint32_t* type;
+    char** path;
+} export_state_t;
+
+static mx_status_t ns_export_count(void* cookie, const char* path,
+                                   size_t len, mx_handle_t h) {
+    export_state_t* es = cookie;
+    // Each entry needs one slot in the handle table,
+    // one slot in the type table, and one slot in the
+    // path table, plus storage for the path and NUL
+    es->bytes += sizeof(mx_handle_t) + sizeof(uint32_t) + sizeof(char**) + len + 1;
+    es->count += 1;
+    return NO_ERROR;
+}
+
+static mx_status_t ns_export_copy(void* cookie, const char* path,
+                                  size_t len, mx_handle_t h) {
+    if ((h = mxio_service_clone(h)) == MX_HANDLE_INVALID) {
+        return ERR_BAD_STATE;
+    }
+    export_state_t* es = cookie;
+    memcpy(es->buffer, path, len + 1);
+    es->path[es->count] = es->buffer;
+    es->handle[es->count] = h;
+    es->type[es->count] = PA_HND(PA_NS_DIR, es->count);
+    es->buffer += (len + 1);
+    es->count++;
+    return NO_ERROR;
+}
+
+mx_status_t mxio_ns_export(mxio_ns_t* ns, mxio_flat_namespace_t** out) {
+    export_state_t es;
+    es.bytes = sizeof(mxio_flat_namespace_t);
+    es.count = 0;
+
+    mtx_lock(&ns->lock);
+
+    ns_enumerate(&ns->root, &es, ns_export_count);
+
+    mxio_flat_namespace_t* flat = malloc(es.bytes);
+    if (flat == NULL) {
+        mtx_unlock(&ns->lock);
+        return ERR_NO_MEMORY;
+    }
+    // We've allocated enough memory for the flat struct
+    // followed by count handles, followed by count types,
+    // follewed by count path ptrs followed by enough bytes
+    // for all the path strings.  Point es.* at the right
+    // slices of that memory:
+    es.handle = (mx_handle_t*) (flat + 1);
+    es.type = (uint32_t*) (es.handle + es.count);
+    es.path = (char**) (es.type + es.count);
+    es.buffer = (char*) (es.path + es.count);
+
+    es.count = 0;
+    mx_status_t status = ns_enumerate(&ns->root, &es, ns_export_copy);
+    mtx_unlock(&ns->lock);
+
+    if (status < 0) {
+        for (size_t n = 0; n < es.count; n++) {
+            mx_handle_close(es.handle[n]);
+        }
+        free(flat);
+    } else {
+        flat->count = es.count;
+        flat->handle = es.handle;
+        flat->type = es.type;
+        flat->path = (const char* const*) es.path;
+        *out = flat;
+    }
+
+    return status;
+}
+
+mx_status_t mxio_ns_export_root(mxio_flat_namespace_t** out) {
+    mx_status_t status;
+    mtx_lock(&mxio_lock);
+    if (mxio_root_ns == NULL) {
+        status = ERR_NOT_FOUND;
+    } else {
+        status = mxio_ns_export(mxio_root_ns, out);
+    }
+    mtx_unlock(&mxio_lock);
+    return status;
 }

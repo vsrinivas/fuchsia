@@ -45,4 +45,22 @@ mx_status_t mxio_ns_chdir(mxio_ns_t* ns);
 // Replace the mxio "global" namespace with the provided namespace
 mx_status_t mxio_ns_install(mxio_ns_t* ns);
 
+
+typedef struct mxio_flat_namespace {
+    size_t count;
+    mx_handle_t* handle;
+    uint32_t* type;
+    const char* const* path;
+} mxio_flat_namespace_t;
+
+// On success the caller takes ownership of a mxio_flat_namespace_t
+// containing a flat representation of the exported namespace (the
+// one provided in 'ns' or the active root namespace, respectively.)
+// The handles are CLONEs of the handles in the namespace and also
+// belong to the caller.
+// The whole data structure can be released with free(), keeping in
+// mind that the handles should be used or closed first.
+mx_status_t mxio_ns_export(mxio_ns_t* ns, mxio_flat_namespace_t** out);
+mx_status_t mxio_ns_export_root(mxio_flat_namespace_t** out);
+
 __END_CDECLS;
