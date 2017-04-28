@@ -29,7 +29,7 @@
 #define ACPI_BATTERY_STATE_CRITICAL    (1 << 2)
 
 typedef struct acpi_battery_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     acpi_handle_t acpi_handle;
     thrd_t poll_thread;
@@ -42,10 +42,8 @@ typedef struct acpi_battery_device {
     uint32_t capacity_remaining;
 } acpi_battery_device_t;
 
-#define get_acpi_battery_device(dev) containerof(dev, acpi_battery_device_t, device)
-
 static ssize_t acpi_battery_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    acpi_battery_device_t* device = get_acpi_battery_device(dev);
+    acpi_battery_device_t* device = dev->ctx;
     mtx_lock(&device->lock);
     ssize_t rc = 0;
     int pct;
@@ -125,9 +123,18 @@ static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         printf("acpi-battery: polling thread did not start (%d)\n", rc);
     }
 
-    device_init(&device->device, drv, "acpi-battery", &acpi_battery_device_proto);
-    device_set_protocol(&device->device, MX_PROTOCOL_BATTERY, NULL);
-    device_add(&device->device, dev);
+    mx_status_t status;
+    if ((status = device_create("acpi-battery", device, &acpi_battery_device_proto, drv, &device->mxdev)) < 0) {
+        free(device);
+        return status;
+    }
+    device_set_protocol(device->mxdev, MX_PROTOCOL_BATTERY, NULL);
+    if ((status = device_add(device->mxdev, dev)) < 0) {
+        printf("acpi-battery: could not add device! err=%d\n", status);
+        device_destroy(device->mxdev);
+        free(device);
+        return status;
+    }
 
     return NO_ERROR;
 }
