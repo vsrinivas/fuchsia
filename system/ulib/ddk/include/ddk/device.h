@@ -151,6 +151,10 @@ typedef struct mx_protocol_device {
 } mx_protocol_device_t;
 
 // Device Convenience Wrappers
+static inline const char* device_get_name(mx_device_t* dev) {
+    return dev->name;
+}
+
 static inline mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
                                                  void** protocol) {
     return dev->ops->get_protocol(dev, proto_id, protocol);
