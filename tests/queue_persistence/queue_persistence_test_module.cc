@@ -9,9 +9,8 @@
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/tests/queue_persistence/queue_persistence_test_agent_interface.fidl.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
-
-using modular::testing::TestPoint;
 
 namespace {
 
@@ -23,17 +22,24 @@ constexpr char kTestAgent[] =
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
+  static void New() {
+    new ParentApp();  // deletes itself in Stop()
+  }
 
  private:
+  ParentApp() : weak_factory_(this) {
+    modular::testing::Init(application_context(), __FILE__);
+  }
+
+  ~ParentApp() override = default;
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
     module_context_.Bind(std::move(module_context));
+
     initialized_.Pass();
 
     module_context_->GetComponentContext(component_context_.NewRequest());
@@ -49,17 +55,17 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
         [this](const fidl::String&) { AgentConnected(); });
 
     // Start a timer to call Story.Done in case the test agent misbehaves and we
-    // time out.
+    // time out. If that happens, the agent will exit normally through Stop(),
+    // but the test will fail because some TestPoints will not have been passed.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
-  }
+        [ptr = weak_factory_.GetWeakPtr()] {
+          if (!ptr) {
+            return;
+          }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    stopped_.Pass();
-    done();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+          ptr->module_context_->Done();
+        },
+        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   void AgentConnected() {
@@ -120,6 +126,17 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
         [this](const fidl::String&) { module_context_->Done(); });
   }
 
+  // |Module|
+  void Stop(const StopCallback& done) override {
+    stopped_.Pass();
+
+    auto binding = PassBinding();  // To invoke done() after delete this.
+    delete this;
+    modular::testing::Teardown();
+    done();
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
+
   modular::ModuleContextPtr module_context_;
   modular::AgentControllerPtr agent_controller_;
   modular::testing::QueuePersistenceAgentInterfacePtr
@@ -129,6 +146,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   std::string queue_token_;
 
+  using TestPoint = modular::testing::TestPoint;
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_queue_persistence_token_{
       "Received queue_persistence token"};
@@ -137,15 +155,15 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   TestPoint agent_connected_again_{"Agent accepted connection, again"};
   TestPoint agent_received_message_{"Agent received message"};
   TestPoint agent_stopped_{"Agent stopped"};
+
+  ftl::WeakPtrFactory<ParentApp> weak_factory_;
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ParentApp parent_app;
+  ParentApp::New();
   loop.Run();
-  TEST_PASS("Root module exited");
-  modular::testing::Teardown();
   return 0;
 }
