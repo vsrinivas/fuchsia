@@ -233,7 +233,8 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* _data, size_t len) {
 }
 
 bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provider) {
-    if (!name || len < 1 || !provider) {
+    if (!name || len < 1 || !provider || IsDotOrDotDot(name, len) ||
+        memchr(name, '/', len) || memchr(name, 0, len)) {
         return false;
     }
 
