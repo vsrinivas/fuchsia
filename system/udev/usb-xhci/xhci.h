@@ -76,9 +76,8 @@ typedef struct {
 
 struct xhci {
     // the device we implement
-    mx_device_t device;
-
-    mx_device_t* bus_device;
+    mx_device_t* mxdev;
+    mx_device_t* bus_mxdev;
     usb_bus_protocol_t* bus_protocol;
 
     pci_protocol_t* pci_proto;
@@ -168,7 +167,6 @@ struct xhci {
     mx_handle_t scratch_pad_index_handle;
     mx_vaddr_t scratch_pad_index_virt;
 };
-#define dev_to_xhci(dev) containerof(dev, xhci_t, device)
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 mx_status_t xhci_endpoint_init(xhci_endpoint_t* ep, int ring_count);
