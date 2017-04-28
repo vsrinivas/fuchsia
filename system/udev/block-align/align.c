@@ -25,11 +25,9 @@
 // file.
 
 typedef struct align_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
     uint64_t blksize;
 } align_device_t;
-
-#define get_aligned_device(dev) containerof(dev, align_device_t, device)
 
 // implement device protocol:
 
@@ -77,7 +75,8 @@ done:
 }
 
 static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    uint64_t blksize = get_aligned_device(dev)->blksize;
+    align_device_t* device = dev->ctx;
+    uint64_t blksize = device->blksize;
     mx_device_t* parent = dev->parent;
 
     // In the case that the request is:
@@ -136,7 +135,8 @@ static void align_unbind(mx_device_t* dev) {
 }
 
 static mx_status_t align_release(mx_device_t* dev) {
-    align_device_t* device = get_aligned_device(dev);
+    align_device_t* device = dev->ctx;
+    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -156,17 +156,23 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     }
     char name[MX_DEVICE_NAME_MAX + 1];
     snprintf(name, sizeof(name), "%s (aligned)", dev->name);
-    device_init(&device->device, drv, name, &align_proto);
+    mx_status_t status = device_create(name, device, &align_proto, drv, &device->mxdev);
+    if (status != NO_ERROR) {
+        free(device);
+        return status;
+    }
+
     block_info_t info;
     ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info));
     if (rc < 0) {
+        device_destroy(device->mxdev);
         free(device);
         return rc;
     }
     device->blksize = info.block_size;
-    device_set_protocol(&device->device, MX_PROTOCOL_BLOCK, NULL);
-    mx_status_t status;
-    if ((status = device_add(&device->device, dev)) != NO_ERROR) {
+    device_set_protocol(device->mxdev, MX_PROTOCOL_BLOCK, NULL);
+    if ((status = device_add(device->mxdev, dev)) != NO_ERROR) {
+        device_destroy(device->mxdev);
         free(device);
         return status;
     }
