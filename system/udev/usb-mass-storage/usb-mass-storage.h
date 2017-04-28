@@ -13,6 +13,8 @@
 
 #include <threads.h>
 
+extern mx_driver_t _driver_usb_mass_storage;
+
 // stack allocated struct used to implement IOCTL_DEVICE_SYNC
 typedef struct {
     iotxn_t* iotxn;             // iotxn we are waiting to complete
@@ -22,7 +24,7 @@ typedef struct {
 
 // struct representing a block device for a logical unit
 typedef struct {
-    mx_device_t device;         // block device we publish
+    mx_device_t* mxdev;         // block device we publish
     block_callbacks_t* cb;      // callbacks for async block protocol
 
     uint64_t total_blocks;
@@ -32,13 +34,11 @@ typedef struct {
     uint32_t flags;             // flags for block_info_t
     bool device_added;
 } ums_block_t;
-#define device_to_block(dev) containerof(dev, ums_block_t, device)
 
 // main struct for the UMS driver
 typedef struct {
-    mx_device_t device;         // root device we publish
-    mx_device_t* usb_device;    // USB device we are bound to
-    mx_driver_t* driver;
+    mx_device_t* mxdev;         // root device we publish
+    mx_device_t* usb_mxdev;     // USB device we are bound to
 
     uint32_t tag_send;          // next tag to send in CBW
     uint32_t tag_receive;       // next tag we expect to receive in CSW
@@ -70,7 +70,6 @@ typedef struct {
 
     ums_block_t block_devs[];
 } ums_t;
-#define device_to_ums(dev) containerof(dev, ums_t, device)
 #define block_to_ums(block) containerof(block - block->lun, ums_t, block_devs)
 
 mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev);

@@ -40,19 +40,19 @@ static mx_status_t ums_reset(ums_t* ums) {
     // value and index not used for first command, though index is supposed to be set to interface number
     // TODO: check interface number, see if index needs to be set
     DEBUG_PRINT(("UMS: performing reset recovery\n"));
-    mx_status_t status = usb_control(ums->usb_device, USB_DIR_OUT | USB_TYPE_CLASS
+    mx_status_t status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
                                             | USB_RECIP_INTERFACE, USB_REQ_RESET, 0x00, 0x00, NULL, 0);
-    status = usb_control(ums->usb_device, USB_DIR_OUT | USB_TYPE_CLASS
+    status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            ums->bulk_in_addr, NULL, 0);
-    status = usb_control(ums->usb_device, USB_DIR_OUT | USB_TYPE_CLASS
+    status = usb_control(ums->usb_mxdev, USB_DIR_OUT | USB_TYPE_CLASS
                                            | USB_RECIP_INTERFACE, USB_REQ_CLEAR_FEATURE, FS_ENDPOINT_HALT,
                                            ums->bulk_out_addr, NULL, 0);
     return status;
 }
 
 static void ums_queue_request(ums_t* ums, iotxn_t* txn) {
-    iotxn_queue(ums->usb_device, txn);
+    iotxn_queue(ums->usb_mxdev, txn);
 }
 
 static void ums_txn_complete(iotxn_t* txn, void* cookie) {
@@ -417,7 +417,7 @@ static mx_status_t ums_write(ums_block_t* dev, iotxn_t* txn) {
 }
 
 static void ums_unbind(mx_device_t* device) {
-    ums_t* ums = device_to_ums(device);
+    ums_t* ums = device->ctx;
 
     // terminate our worker thread
     mtx_lock(&ums->iotxn_lock);
@@ -432,16 +432,16 @@ static void ums_unbind(mx_device_t* device) {
         ums_block_t* dev = &ums->block_devs[lun];
 
         if (dev->device_added) {
-            device_remove(&dev->device);
+            device_remove(dev->mxdev);
         }
     }
 
     // remove our root device
-    device_remove(&ums->device);
+    device_remove(ums->mxdev);
 }
 
 static mx_status_t ums_release(mx_device_t* device) {
-    ums_t* ums = device_to_ums(device);
+    ums_t* ums = device->ctx;
 
     if (ums->cbw_iotxn) {
         iotxn_release(ums->cbw_iotxn);
@@ -453,6 +453,7 @@ static mx_status_t ums_release(mx_device_t* device) {
         iotxn_release(ums->csw_iotxn);
     }
 
+    device_destroy(ums->mxdev);
     free(ums);
     return NO_ERROR;
 }
@@ -542,7 +543,7 @@ static mx_status_t ums_check_luns_ready(ums_t* ums) {
                 printf("UMS: device_add for block device failed %d\n", status);
             }
         } else if (!ready && dev->device_added) {
-            device_remove(&dev->device);
+            device_remove(dev->mxdev);
             dev->device_added = false;
         }
     }
@@ -561,7 +562,7 @@ static int ums_worker_thread(void* arg) {
 
     for (uint8_t lun = 0; lun <= ums->max_lun; lun++) {
         uint8_t inquiry_data[UMS_INQUIRY_TRANSFER_LENGTH];
-        mx_status_t status = ums_inquiry(ums, lun, inquiry_data);
+        status = ums_inquiry(ums, lun, inquiry_data);
         if (status < 0) {
             printf("ums_inquiry failed for lun %d status: %d\n", lun, status);
             goto fail;
@@ -573,10 +574,14 @@ static int ums_worker_thread(void* arg) {
     }
 
     // Add root device, which will contain block devices for logical units
-    device_init(&ums->device, ums->driver, "ums", &ums_device_proto);
-    device_set_bindable(&ums->device, false);
-    if (device_add(&ums->device, ums->usb_device) != NO_ERROR) {
-        printf("ums device_add failed: %d\n", status);
+    status = device_create("usb-mass-storage", ums, &ums_device_proto, &_driver_usb_mass_storage,
+                           &ums->mxdev);
+    if (status != NO_ERROR) {
+        goto fail;
+    }
+    device_set_bindable(ums->mxdev, false);
+    status = device_add(ums->mxdev, ums->usb_mxdev);
+    if (status != NO_ERROR) {
         goto fail;
     }
 
@@ -586,7 +591,7 @@ static int ums_worker_thread(void* arg) {
             status = completion_wait(&ums->iotxn_completion, MX_SEC(1));
             if (status == ERR_TIMED_OUT) {
                 if (ums_check_luns_ready(ums) != NO_ERROR) {
-                    goto fail;
+                    return status;
                 }
                 continue;
             }
@@ -655,7 +660,7 @@ static int ums_worker_thread(void* arg) {
 
 fail:
     printf("ums_worker_thread failed\n");
-    ums_release(&ums->device);
+    ums_release(ums->mxdev);
     return status;
 }
 
@@ -729,8 +734,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     completion_reset(&ums->iotxn_completion);
     mtx_init(&ums->iotxn_lock, mtx_plain);
 
-    ums->usb_device = device;
-    ums->driver = driver;
+    ums->usb_mxdev = device;
     ums->bulk_in_addr = bulk_in_addr;
     ums->bulk_out_addr = bulk_out_addr;
     ums->bulk_in_max_packet = bulk_in_max_packet;
@@ -770,7 +774,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
 
 fail:
     printf("ums_bind failed: %d\n", status);
-    ums_release(&ums->device);
+    ums_release(ums->mxdev);
     return status;
 }
 

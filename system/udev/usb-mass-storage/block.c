@@ -8,7 +8,7 @@
 #include <string.h>
 
 static void ums_block_queue(mx_device_t* device, iotxn_t* txn) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
 
     if (txn->offset % dev->block_size) {
         iotxn_complete(txn, ERR_INVALID_ARGS, 0);
@@ -28,7 +28,7 @@ static void ums_block_queue(mx_device_t* device, iotxn_t* txn) {
 }
 
 static void ums_get_info(mx_device_t* device, block_info_t* info) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
     memset(info, 0, sizeof(*info));
     info->block_size = dev->block_size;
     info->block_count = dev->total_blocks;
@@ -37,7 +37,7 @@ static void ums_get_info(mx_device_t* device, block_info_t* info) {
 
 static ssize_t ums_block_ioctl(mx_device_t* device, uint32_t op, const void* cmd, size_t cmdlen,
                                    void* reply, size_t max) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
 
     // TODO implement other block ioctls
     switch (op) {
@@ -75,18 +75,26 @@ static ssize_t ums_block_ioctl(mx_device_t* device, uint32_t op, const void* cmd
 }
 
 static mx_off_t ums_block_get_size(mx_device_t* device) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
     return dev->block_size * dev->total_blocks;
+}
+
+static mx_status_t ums_block_release(mx_device_t* device) {
+    ums_block_t* dev = device->ctx;
+    device_destroy(dev->mxdev);
+    // ums_block_t is inline with ums_t, so don't try to free it here
+    return NO_ERROR;
 }
 
 static mx_protocol_device_t ums_block_proto = {
     .iotxn_queue = ums_block_queue,
     .ioctl = ums_block_ioctl,
     .get_size = ums_block_get_size,
+    .release = ums_block_release,
 };
 
 static void ums_async_set_callbacks(mx_device_t* device, block_callbacks_t* cb) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
     dev->cb = cb;
 }
 
@@ -98,7 +106,7 @@ static void ums_async_complete(iotxn_t* txn, void* cookie) {
 
 static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -111,12 +119,12 @@ static void ums_async_read(mx_device_t* device, mx_handle_t vmo, uint64_t length
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(&dev->device, txn);
+    iotxn_queue(dev->mxdev, txn);
 }
 
 static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    ums_block_t* dev = device_to_block(device);
+    ums_block_t* dev = device->ctx;
 
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length);
@@ -129,7 +137,7 @@ static void ums_async_write(mx_device_t* device, mx_handle_t vmo, uint64_t lengt
     txn->complete_cb = ums_async_complete;
     txn->cookie = cookie;
     txn->extra[0] = (uintptr_t)dev;
-    iotxn_queue(&dev->device, txn);
+    iotxn_queue(dev->mxdev, txn);
 }
 
 static block_ops_t ums_block_ops = {
@@ -142,10 +150,17 @@ static block_ops_t ums_block_ops = {
 mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
     char name[16];
     snprintf(name, sizeof(name), "ums-lun-%02d", dev->lun);
-
-    device_init(&dev->device, ums->driver, name, &ums_block_proto);
-    device_set_protocol(&dev->device, MX_PROTOCOL_BLOCK_CORE, &ums_block_ops);
+    mx_status_t status = device_create(name, dev, &ums_block_proto, &_driver_usb_mass_storage,
+                                       &dev->mxdev);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    device_set_protocol(dev->mxdev, MX_PROTOCOL_BLOCK_CORE, &ums_block_ops);
     dev->cb = NULL;
 
-    return device_add(&dev->device, &ums->device);
+    status = device_add(dev->mxdev, ums->mxdev);
+    if (status != NO_ERROR) {
+        device_destroy(dev->mxdev);
+    }
+    return status;
 }
