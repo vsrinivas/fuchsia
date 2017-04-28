@@ -13,7 +13,6 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "memory.h"
 #include "util.h"
 
 namespace debugserver {
@@ -30,7 +29,7 @@ const char* ErrorName(Error err) {
 }
 
 Error Reader::Create(const std::string& file_name,
-                     const util::Memory& reader, uint32_t options,
+                     const util::ByteBlock& reader, uint32_t options,
                      uint64_t base, std::unique_ptr<Reader>* out) {
   FTL_DCHECK(options == 0);
   Reader* er = new Reader(file_name, reader, base);
@@ -46,7 +45,7 @@ Error Reader::Create(const std::string& file_name,
   return Error::OK;
 }
 
-Reader::Reader(const std::string& file_name, const util::Memory& reader,
+Reader::Reader(const std::string& file_name, const util::ByteBlock& reader,
                uint64_t base)
   : file_name_(file_name),
     reader_(reader),
@@ -59,7 +58,7 @@ Reader::~Reader() {
 }
 
 // static
-bool Reader::ReadHeader(const util::Memory& m, uint64_t base, Header* hdr) {
+bool Reader::ReadHeader(const util::ByteBlock& m, uint64_t base, Header* hdr) {
   return m.Read(base, hdr, sizeof(*hdr));
 }
 

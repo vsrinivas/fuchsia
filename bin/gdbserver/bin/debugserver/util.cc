@@ -9,8 +9,8 @@
 
 #include <magenta/status.h>
 
+#include "debugger-utils/byte-block.h"
 #include "debugger-utils/util.h"
-#include "debugger-utils/memory.h"
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"

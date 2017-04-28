@@ -20,7 +20,7 @@
 namespace debugserver {
 namespace util {
 
-class Memory;
+class ByteBlock;
 
 // Decodes the 2 character ASCII string |hex| and returns the result in
 // |out_byte|. Returns false if |hex| contains invalid characters.
@@ -110,7 +110,7 @@ const char* ExceptionName(mx_excp_type_t type);
 std::string ExceptionToString(mx_excp_type_t type,
                               const mx_exception_context_t& context);
 
-bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
+bool ReadString(const ByteBlock& m, mx_vaddr_t vaddr, char* ptr, size_t max);
 
 #endif  // __Fuchsia__
 

@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 
-#include "memory.h"
+#include "byte-block.h"
 
 namespace debugserver {
 namespace elf {
@@ -94,7 +94,7 @@ class SectionContents {
 class Reader {
  public:
   static Error Create(const std::string& file_name,
-                      const util::Memory& reader,
+                      const util::ByteBlock& reader,
                       uint32_t options,
                       uint64_t base,
                       std::unique_ptr<Reader>* out);
@@ -104,7 +104,7 @@ class Reader {
 
   // Read the ELF header at offset |base| in |m|.
   // The header is written in to |hdr|.
-  static bool ReadHeader(const util::Memory& m, uint64_t base, Header* hdr);
+  static bool ReadHeader(const util::ByteBlock& m, uint64_t base, Header* hdr);
 
   // Return true if |hdr| is a valid ELF header.
   static bool VerifyHeader(const Header* hdr);
@@ -169,7 +169,7 @@ class Reader {
 
  private:
   Reader(const std::string& file_name,
-         const util::Memory& reader,
+         const util::ByteBlock& reader,
          uint64_t base);
 
   // For debugging/informational purposes only.
@@ -177,7 +177,7 @@ class Reader {
 
   // This is the API to read/write from wherever the ELF object lives.
   // It could be in process memory, or in a file, or wherever.
-  const util::Memory& reader_;
+  const util::ByteBlock& reader_;
 
   // The offset in |reader_| of the start of the ELF object.
   const uint64_t base_;

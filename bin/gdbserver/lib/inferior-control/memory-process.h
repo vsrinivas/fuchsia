@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "debugger-utils/memory.h"
+#include "debugger-utils/byte-block.h"
 
 namespace debugserver {
 
@@ -12,7 +12,7 @@ class Process;
 
 // The API for accessing process memory.
 
-class ProcessMemory final : public util::Memory {
+class ProcessMemory final : public util::ByteBlock {
  public:
   explicit ProcessMemory(Process* process);
   bool Read(uintptr_t address, void* out_buffer, size_t length)

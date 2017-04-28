@@ -12,14 +12,12 @@
 namespace debugserver {
 namespace util {
 
-// An API for accessing "memory".
-// TODO(dje): Find a better name than "memory".
-// This is a fixed size, randomly accessible, block of contiguous bytes.
-// No rush though, the name is "good enough" until things settle.
+// An API for accessing memory, files, or anything else that is
+// fixed size, randomly accessible, block of contiguous bytes.
 
-class Memory {
+class ByteBlock {
  public:
-  virtual ~Memory() = default;
+  virtual ~ByteBlock() = default;
 
   // Reads the block of memory of length |length| bytes starting at address
   // |address| into |out_buffer|. |out_buffer| must be at least as large as
@@ -37,10 +35,10 @@ class Memory {
                      size_t length) const = 0;
 
  protected:
-  Memory() = default;
+  ByteBlock() = default;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(Memory);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ByteBlock);
 };
 
 }  // namespace util

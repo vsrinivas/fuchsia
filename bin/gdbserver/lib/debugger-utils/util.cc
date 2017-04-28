@@ -12,8 +12,6 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "memory.h"
-
 namespace debugserver {
 namespace util {
 

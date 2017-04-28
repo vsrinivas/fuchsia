@@ -13,7 +13,7 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "memory.h"
+#include "byte-block.h"
 
 namespace debugserver {
 namespace util {
@@ -52,7 +52,7 @@ std::string ExceptionToString(mx_excp_type_t type,
   return result;
 }
 
-bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
+bool ReadString(const ByteBlock& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
   while (max > 1) {
     if (!m.Read(vaddr, ptr, 1)) {
       *ptr = '\0';

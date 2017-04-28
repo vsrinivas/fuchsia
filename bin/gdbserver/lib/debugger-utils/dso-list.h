@@ -14,8 +14,8 @@
 
 #include <magenta/types.h>
 
+#include "byte-block.h"
 #include "elf-reader.h"
-#include "memory.h"
 
 namespace debugserver {
 namespace util {
@@ -37,7 +37,7 @@ typedef struct dsoinfo {
   char name[];
 } dsoinfo_t;
 
-extern dsoinfo_t* dso_fetch_list(const Memory& m,
+extern dsoinfo_t* dso_fetch_list(const ByteBlock& bb,
                                  mx_vaddr_t lmap,
                                  const char* name);
 

@@ -4,20 +4,19 @@
 
 #pragma once
 
-#include "memory.h"
+#include "byte-block.h"
 
 namespace debugserver {
 namespace util {
 
-// The API for accessing a file via the "memory" interface.
-// TODO(dje): Find a better term than "memory".
+// The API for accessing a file via the "byte block" interface.
 // This is a fixed size block of contiguous bytes.
 
-class FileMemory final : public util::Memory {
+class FileByteBlock final : public util::ByteBlock {
  public:
   // This consumes fd;
-  explicit FileMemory(int fd);
-  ~FileMemory();
+  explicit FileByteBlock(int fd);
+  ~FileByteBlock();
 
   bool Read(uintptr_t address, void* out_buffer, size_t length)
     const override;
@@ -27,7 +26,7 @@ class FileMemory final : public util::Memory {
  private:
   int fd_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(FileMemory);
+  FTL_DISALLOW_COPY_AND_ASSIGN(FileByteBlock);
 };
 
 }  // namespace util

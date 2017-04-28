@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "memory-file.h"
+#include "byte-block-file.h"
 
 #include <cinttypes>
 #include <unistd.h>
@@ -15,17 +15,17 @@
 namespace debugserver {
 namespace util {
 
-FileMemory::FileMemory(int fd)
+FileByteBlock::FileByteBlock(int fd)
     : fd_(fd) {
   FTL_DCHECK(fd >= 0);
 }
 
-FileMemory::~FileMemory() {
+FileByteBlock::~FileByteBlock() {
   close(fd_);
 }
 
-bool FileMemory::Read(uintptr_t address, void* out_buffer,
-                      size_t length) const {
+bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
+                         size_t length) const {
   FTL_DCHECK(out_buffer);
 
   off_t where = lseek(fd_, address, SEEK_SET);
@@ -54,8 +54,8 @@ bool FileMemory::Read(uintptr_t address, void* out_buffer,
   return true;
 }
 
-bool FileMemory::Write(uintptr_t address, const void* buffer,
-                       size_t length) const {
+bool FileByteBlock::Write(uintptr_t address, const void* buffer,
+                          size_t length) const {
   FTL_DCHECK(buffer);
 
   if (length == 0) {

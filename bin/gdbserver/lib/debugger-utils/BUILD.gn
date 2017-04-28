@@ -10,6 +10,9 @@ static_library("debugger-utils") {
   sources = [
     "build-ids.cc",
     "build-ids.h",
+    "byte-block.h",
+    "byte-block-file.cc",
+    "byte-block-file.h",
     "elf-reader.cc",
     "elf-reader.h",
     "elf-symtab.cc",
@@ -18,9 +21,6 @@ static_library("debugger-utils") {
     "ktrace-reader.h",
     "load-maps.cc",
     "load-maps.h",
-    "memory.h",
-    "memory-file.cc",
-    "memory-file.h",
     "util.cc",
     "util.h",
   ]
