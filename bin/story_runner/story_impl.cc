@@ -403,6 +403,8 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
     module_path_ = parent_module_path_.Clone();
     module_path_.push_back(module_name_);
 
+    FTL_DCHECK(!parent_module_path_.is_null());
+
     Ready();
   }
 
@@ -437,6 +439,17 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
                 });
           });
     }
+  }
+
+  void NotifyWatchers() {
+    ModuleDataPtr module_data = ModuleData::New();
+    module_data->url = query_;
+    module_data->module_path = module_path_.Clone();
+    module_data->default_link_path = link_path_.Clone();
+    story_impl_->watchers_.ForAllPtrs(
+        [&module_data](StoryWatcher* const watcher) {
+          watcher->OnModuleAdded(module_data.Clone());
+        });
   }
 
   void Cont() {
@@ -482,6 +495,8 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
         connection.module_controller_impl.get(), std::move(self_request)));
 
     story_impl_->connections_.emplace_back(std::move(connection));
+
+    NotifyWatchers();
 
     Done(id);
   }
@@ -611,8 +626,9 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
                                 const fidl::String& url,
                                 const fidl::String& link_name) {
   ModuleControllerPtr module_controller;
-  StartModuleInShell(nullptr, module_name, url, link_name, nullptr,
-                     nullptr, module_controller.NewRequest(), 0L, "");
+  StartModuleInShell(fidl::Array<fidl::String>::New(0), module_name, url,
+                     link_name, nullptr, nullptr,
+                     module_controller.NewRequest(), 0L, "");
 
   // TODO(mesch): Watch all root modules and compute story state from that.
   if (module_name == kRootModuleName) {

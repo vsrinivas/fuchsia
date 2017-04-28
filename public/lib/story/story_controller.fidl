@@ -63,4 +63,7 @@ interface StoryWatcher {
   // Called with the current state right after registration, and
   // subsequently when the state changes.
   OnStateChange(StoryState new_state);
+
+  // Called when a module is added to a story.
+  OnModuleAdded(ModuleData module_data);
 };

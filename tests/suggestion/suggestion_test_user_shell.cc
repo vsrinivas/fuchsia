@@ -88,6 +88,10 @@ class SuggestionTestUserShellApp
     });
   }
 
+  // |StoryWatcher|
+  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
+  }
+
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
     for (auto& suggestion : suggestions) {

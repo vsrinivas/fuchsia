@@ -131,8 +131,19 @@ class StoryWatcherImpl : modular::StoryWatcher {
     continue_();
   }
 
+  // |StoryWatcher|
+  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
+    FTL_LOG(INFO) << "OnModuleAdded: " << module_data->url;
+    if (!on_module_added_called_) {
+      on_module_added_.Pass();
+      on_module_added_called_ = true;
+    }
+  }
+
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
+  modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
+  bool on_module_added_called_ = false;
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
