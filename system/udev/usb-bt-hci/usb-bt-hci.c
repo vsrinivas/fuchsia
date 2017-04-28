@@ -36,8 +36,8 @@
 // #define USB_PID 0x0001
 
 typedef struct {
-    mx_device_t device;
-    mx_device_t* usb_device;
+    mx_device_t* mxdev;
+    mx_device_t* usb_mxdev;
 
     mx_handle_t cmd_channel;
     mx_handle_t acl_channel;
@@ -62,13 +62,12 @@ typedef struct {
 
     mtx_t mutex;
 } hci_t;
-#define get_hci(dev) containerof(dev, hci_t, device)
 
 static void queue_acl_read_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_acl_read_reqs)) != NULL) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_device, txn);
+        iotxn_queue(hci->usb_mxdev, txn);
     }
 }
 
@@ -76,7 +75,7 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
     list_node_t* node;
     while ((node = list_remove_head(&hci->free_event_reqs)) != NULL) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
-        iotxn_queue(hci->usb_device, txn);
+        iotxn_queue(hci->usb_mxdev, txn);
     }
 }
 
@@ -270,7 +269,7 @@ static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
             goto fail;
         }
 
-        status = usb_control(hci->usb_device,
+        status = usb_control(hci->usb_mxdev,
                              USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
                              0, 0, 0, buf, length);
         if (status < 0) {
@@ -323,7 +322,7 @@ static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
         iotxn_t* txn = containerof(node, iotxn_t, node);
         iotxn_copyto(txn, buf, length, 0);
         txn->length = length;
-        iotxn_queue(hci->usb_device, txn);
+        iotxn_queue(hci->usb_mxdev, txn);
     }
 
     return true;
@@ -394,7 +393,7 @@ done:
 static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len) {
     ssize_t result = ERR_NOT_SUPPORTED;
-    hci_t* hci = get_hci(device);
+    hci_t* hci = device->ctx;
 
     mtx_lock(&hci->mutex);
 
@@ -485,7 +484,7 @@ done:
 }
 
 static void hci_unbind(mx_device_t* device) {
-    hci_t* hci = get_hci(device);
+    hci_t* hci = device->ctx;
 
     // Close the transport channels so that the host stack is notified of device removal.
     mtx_lock(&hci->mutex);
@@ -496,11 +495,11 @@ static void hci_unbind(mx_device_t* device) {
 
     mtx_unlock(&hci->mutex);
 
-    device_remove(&hci->device);
+    device_remove(hci->mxdev);
 }
 
 static mx_status_t hci_release(mx_device_t* device) {
-    hci_t* hci = get_hci(device);
+    hci_t* hci = device->ctx;
 
     mtx_lock(&hci->mutex);
 
@@ -517,7 +516,7 @@ static mx_status_t hci_release(mx_device_t* device) {
 
     mtx_unlock(&hci->mutex);
 
-    mtx_destroy(&hci->mutex);
+    device_destroy(hci->mxdev);
     free(hci);
 
     return NO_ERROR;
@@ -574,6 +573,11 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         printf("Not enough memory for hci_t\n");
         return ERR_NO_MEMORY;
     }
+    mx_status_t status = device_create("usb_bt_hci", hci, &hci_device_proto, driver, &hci->mxdev);
+    if (status != NO_ERROR) {
+        free(hci);
+        return status;
+    }
 
     list_initialize(&hci->free_event_reqs);
     list_initialize(&hci->free_acl_read_reqs);
@@ -581,9 +585,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
 
     mtx_init(&hci->mutex, mtx_plain);
 
-    hci->usb_device = device;
-
-    mx_status_t status;
+    hci->usb_mxdev = device;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);
@@ -619,20 +621,18 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         list_add_head(&hci->free_acl_write_reqs, &txn->node);
     }
 
-    device_init(&hci->device, driver, "usb_bt_hci", &hci_device_proto);
-
     mtx_lock(&hci->mutex);
     queue_interrupt_requests_locked(hci);
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
-    device_set_protocol(&hci->device, MX_PROTOCOL_BLUETOOTH_HCI, NULL);
-    status = device_add(&hci->device, device);
+    device_set_protocol(hci->mxdev, MX_PROTOCOL_BLUETOOTH_HCI, NULL);
+    status = device_add(hci->mxdev, device);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:
     printf("hci_bind failed: %s\n", mx_status_get_string(status));
-    hci_release(&hci->device);
+    hci_release(hci->mxdev);
     return status;
 }
 
