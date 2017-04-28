@@ -8,16 +8,18 @@ import("//build/toolchain/ccache.gni")
 assert(current_os == "fuchsia")
 
 config("werror") {
-  cflags = [
-    "-Werror",
+  if (!use_ccache) {
+    cflags = [
+      "-Werror",
 
-    # Declarations marked as deprecated should cause build failures, rather
-    # they should emit warnings to notify developers about the use of
-    # deprecated interfaces.
-    "-Wno-error=deprecated-declarations",
+      # Declarations marked as deprecated should cause build failures, rather
+      # they should emit warnings to notify developers about the use of
+      # deprecated interfaces.
+      "-Wno-error=deprecated-declarations",
 
-    # Do not add additional -Wno-error to this config.
-  ]
+      # Do not add additional -Wno-error to this config.
+    ]
+  }
 }
 
 config("icf") {
@@ -65,15 +67,10 @@ config("compiler") {
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
-    ":icf",
-    ":safestack",
-    ":thread_safety_annotations",
     ":toolchain_version_stamp",
-    ":werror",
   ]
   if (use_ccache) {
     configs += [ ":ccache" ]
-    configs -= [ ":werror" ]
   }
   asmflags = cflags + cflags_c
 }
