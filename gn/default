@@ -43,7 +43,7 @@
         "openssh",
         "openssh-keys",
         "re2",
-        "runtime",
+        "runtime_config",
         "sbase",
         "sysui",
         "test_runner",
