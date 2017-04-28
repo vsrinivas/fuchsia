@@ -13,14 +13,13 @@ namespace {
 
 std::string GetLabel(const measure::DurationSpec& spec) {
   std::ostringstream os;
-  os << "duration of " << spec.event.name << " (" << spec.event.category << ")";
+  os << spec.event.name << " (" << spec.event.category << ")";
   return os.str();
 }
 
 std::string GetLabel(const measure::TimeBetweenSpec& spec) {
   std::ostringstream os;
-  os << "time between ";
-  os << spec.first_event.name << " (" << spec.first_event.category << ") and ";
+  os << spec.first_event.name << " (" << spec.first_event.category << ") to ";
   os << spec.second_event.name << " (" << spec.second_event.category << ")";
   return os.str();
 }
