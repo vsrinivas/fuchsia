@@ -1,0 +1,12 @@
+.mi-header {
+  background-color: rgb(50,50,50);
+  color: rgb(200,200,200);
+}
+
+.spacing {
+  padding-top: 2em;
+}
+
+div.navbar-header > a.navbar-brand {
+  color: rgb(225,225,225);
+}
