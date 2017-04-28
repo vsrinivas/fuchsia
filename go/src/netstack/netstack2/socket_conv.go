@@ -59,6 +59,30 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case SO_RCVBUF:
 		}
 		log.Printf("convSockOpt: TODO SOL_SOCKET optname=%d", v.optname)
+	case SOL_IP:
+		switch v.optname {
+		case IP_TOS:
+		case IP_TTL:
+		case IP_MULTICAST_IF:
+		case IP_MULTICAST_TTL:
+		case IP_MULTICAST_LOOP:
+		case IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP:
+			mreq := c_ip_mreq{}
+			if err := mreq.Decode(v.optval[:]); err != nil {
+				log.Printf("sockopt: bad argument to %d", v.optname)
+				return nil
+			}
+			option := tcpip.MembershipOption{
+				InterfaceAddr: tcpip.Address(mreq.imr_interface[:]),
+				MulticastAddr: tcpip.Address(mreq.imr_multiaddr[:]),
+			}
+			if v.optname == IP_ADD_MEMBERSHIP {
+				return tcpip.AddMembershipOption(option)
+			} else {
+				return tcpip.RemoveMembershipOption(option)
+			}
+		}
+		log.Printf("convSockOpt: TODO IPPROTO_IP optname=%d", v.optname)
 	case SOL_TCP:
 		switch v.optname {
 		case TCP_NODELAY:

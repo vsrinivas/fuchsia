@@ -72,6 +72,15 @@ func (v *c_mxrio_sockaddr_reply) Encode(msg *rio.Msg) {
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
+func (v *c_ip_mreq) Decode(data []byte) error {
+	if uintptr(len(data)) < unsafe.Sizeof(c_ip_mreq{}) {
+		return fmt.Errorf("netstack: short c_ip_mreq: %d", len(data))
+	}
+	req := (*c_ip_mreq)(unsafe.Pointer(&data[0]))
+	*v = *req
+	return nil
+}
+
 func (v *c_netc_get_if_info) Decode(data []byte) error {
 	if uintptr(len(data)) < unsafe.Sizeof(c_netc_get_if_info{}) {
 		return fmt.Errorf("netstack: short c_netc_get_if_info: %d", len(data))

@@ -192,15 +192,6 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	}
 }
 
-func (ios *iostate) loopRead(stk tcpip.Stack) {
-	switch ios.transProto {
-	case tcp.ProtocolNumber:
-		go ios.loopSocketRead(stk)
-	case udp.ProtocolNumber:
-		go ios.loopDgramRead(stk)
-	}
-}
-
 // loopSocketRead connects libc read to the network stack for TCP sockets.
 func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	dataHandle := mx.Socket(ios.dataHandle)
@@ -213,7 +204,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 		return
 	default:
-		log.Printf("loopSocketWrite: warmup failed: %v", err)
+		log.Printf("loopSocketRead: warmup failed: %v", err)
 	}
 	switch {
 	case obs&MX_SOCKET_PEER_CLOSED != 0:
@@ -229,9 +220,9 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			v, err = ios.ep.Read(nil)
 			if err == nil {
 				break
-			} else if err == tcpip.ErrWouldBlock {
+			} else if err == tcpip.ErrWouldBlock || err == tcpip.ErrInvalidEndpointState {
 				if debug2 {
-					log.Printf("loopSocketRead got tcpip.ErrWouldBlock")
+					log.Printf("loopSocketRead read err=%v", err)
 				}
 				<-notifyCh
 				// TODO: get socket closed message from loopSocketWrite
@@ -490,10 +481,12 @@ func (s *socketServer) newIostate(h mx.Handle, transProto tcpip.TransportProtoco
 	case tcp.ProtocolNumber:
 		if ep != nil {
 			go ios.loopShutdown()
+			go ios.loopSocketRead(s.stack)
 			go ios.loopSocketWrite(s.stack)
 		}
 	case udp.ProtocolNumber:
 		go ios.loopShutdown()
+		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
 
@@ -609,8 +602,7 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 		return err
 	}
 
-	newios, err := s.newIostate(h, ios.transProto, newwq, newep)
-	go newios.loopRead(s.stack)
+	_, err = s.newIostate(h, ios.transProto, newwq, newep)
 	return err
 }
 
@@ -892,7 +884,6 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 			log.Printf("connect: signal failed: %v", err)
 		}
 	}
-	go ios.loopRead(s.stack)
 
 	msg.SetOff(0)
 	msg.Datalen = 0

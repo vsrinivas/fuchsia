@@ -100,6 +100,9 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		ep.vv.SetSize(len(v))
 		ep.c.Free(b)
 
+		// TODO: optimization: consider unpacking the destination link addr
+		// and checking that we are a destination (including multicast support).
+
 		remoteLinkAddr := tcpip.LinkAddress(v[6:12])
 		p := tcpip.NetworkProtocolNumber(uint16(v[12])<<8 | uint16(v[13]))
 

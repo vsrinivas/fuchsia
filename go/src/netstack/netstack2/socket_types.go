@@ -105,8 +105,17 @@ const AF_INET6 = 10
 const MXRIO_GAI_REQ_NODE_MAXLEN = 256
 const MXRIO_GAI_REQ_SERVICE_MAXLEN = 256
 const MXRIO_GAI_REPLY_MAX = 4
+const SOL_IP = 0
 const SOL_SOCKET = 0x1
 const SOL_TCP = 0x6
+
+const IP_TOS = 1
+const IP_TTL = 2
+const IP_MULTICAST_IF = 32
+const IP_MULTICAST_TTL = 33
+const IP_MULTICAST_LOOP = 34
+const IP_ADD_MEMBERSHIP = 35
+const IP_DROP_MEMBERSHIP = 36
 
 const SO_ACCEPTCONN = 0x1e
 const SO_BROADCAST = 0x6
@@ -253,6 +262,11 @@ type c_mxio_socket_msg struct {
 	hdr  c_mxio_socket_msg_hdr
 	data [1]uint8
 	_    [7]byte
+}
+
+type c_ip_mreq struct {
+	imr_multiaddr c_in_addr
+	imr_interface c_in_addr
 }
 
 type c_netc_if_info struct {
