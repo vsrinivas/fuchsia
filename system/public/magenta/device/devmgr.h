@@ -26,6 +26,14 @@
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 5)
 #define IOCTL_DEVMGR_MOUNT_MKDIR_FS \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DEVMGR, 6)
+// Watch a directory for changes
+//   in: none
+//   out: handle to channel to get notified on.
+//        Notification messages will be a string child entry name WITHOUT a
+//        null-terminating character; the length of the string should be
+//        determined by the message length during the channel read.
+#define IOCTL_DEVMGR_WATCH_DIR \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 7)
 
 // ssize_t ioctl_devmgr_mount_fs(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_devmgr_mount_fs, IOCTL_DEVMGR_MOUNT_FS, mx_handle_t);
@@ -45,6 +53,9 @@ IOCTL_WRAPPER_VAROUT(ioctl_devmgr_query_fs, IOCTL_DEVMGR_QUERY_FS, char);
 // ssize_t ioctl_devmgr_get_token(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_devmgr_get_token, IOCTL_DEVMGR_GET_TOKEN, mx_handle_t);
 
+// ssize_t ioctl_devmgr_watch_dir(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_devmgr_watch_dir, IOCTL_DEVMGR_WATCH_DIR, mx_handle_t);
+
 #define MOUNT_MKDIR_FLAG_REPLACE 1
 
 typedef struct mount_mkdir_config {
@@ -58,7 +69,7 @@ IOCTL_WRAPPER_VARIN(ioctl_devmgr_mount_mkdir_fs, IOCTL_DEVMGR_MOUNT_MKDIR_FS, mo
 
 // TODO(smklein): Move these ioctls to a new location
 #define IOCTL_BLOBSTORE_BLOB_INIT \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 7)
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 8)
 
 typedef struct blob_ioctl_config {
     size_t size_data;

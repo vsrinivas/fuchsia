@@ -19,6 +19,7 @@ typedef struct fs_info {
     bool can_be_mounted;
     bool can_mount_sub_filesystems;
     bool supports_hardlinks;
+    bool supports_watchers;
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested

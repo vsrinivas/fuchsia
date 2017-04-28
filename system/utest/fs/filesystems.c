@@ -165,6 +165,6 @@ int unmount_minfs(const char* mount_path) {
 }
 
 fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
-    {"memfs", mkfs_memfs, mount_memfs, unmount_memfs, false, true, true },
-    {"minfs", mkfs_minfs, mount_minfs, unmount_minfs,  true, true, true },
+    {"memfs", mkfs_memfs, mount_memfs, unmount_memfs, false, true, true,  true },
+    {"minfs", mkfs_minfs, mount_minfs, unmount_minfs,  true, true, true, false },
 };
