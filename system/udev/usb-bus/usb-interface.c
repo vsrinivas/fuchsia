@@ -81,7 +81,7 @@ static void clone_complete(iotxn_t* clone, void* cookie) {
 }
 
 static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
-    usb_interface_t* intf = get_usb_interface(device);
+    usb_interface_t* intf = device->ctx;
 
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone = NULL;
@@ -97,12 +97,12 @@ static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     txn->context = intf;
     clone->complete_cb = clone_complete;
     clone->cookie = txn;
-    iotxn_queue(intf->hci_device, clone);
+    iotxn_queue(intf->hci_mxdev, clone);
 }
 
-static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
-        const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    usb_interface_t* intf = get_usb_interface(device);
+static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op, const void* in_buf,
+                                   size_t in_len, void* out_buf, size_t out_len) {
+    usb_interface_t* intf = device->ctx;
 
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
@@ -131,9 +131,10 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
 }
 
 static mx_status_t usb_interface_release(mx_device_t* device) {
-    usb_interface_t* intf = get_usb_interface(device);
+    usb_interface_t* intf = device->ctx;
 
     stop_callback_thread(intf);
+    device_destroy(intf->mxdev);
     free(intf->descriptor);
     free(intf);
 
@@ -151,7 +152,7 @@ static mx_protocol_device_t usb_interface_proto = {
 static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  usb_endpoint_descriptor_t* ep,
                                                  bool enable) {
-    mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_device, intf->device_id, ep,
+    mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_mxdev, intf->device_id, ep,
                                                              enable);
     if (status != NO_ERROR) {
         printf("usb_interface_enable_endpoint failed\n");
@@ -202,13 +203,13 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
 }
 
 mx_status_t usb_interface_reset_endpoint(mx_device_t* device, uint8_t ep_address) {
-    usb_interface_t* intf = get_usb_interface(device);
-    return intf->hci_protocol->reset_endpoint(intf->hci_device, intf->device_id, ep_address);
+    usb_interface_t* intf = device->ctx;
+    return intf->hci_protocol->reset_endpoint(intf->hci_mxdev, intf->device_id, ep_address);
 }
 
 size_t usb_interface_get_max_transfer_size(mx_device_t* device, uint8_t ep_address) {
-    usb_interface_t* intf = get_usb_interface(device);
-    return intf->hci_protocol->get_max_transfer_size(intf->hci_device, intf->device_id, ep_address);
+    usb_interface_t* intf = device->ctx;
+    return intf->hci_protocol->get_max_transfer_size(intf->hci_mxdev, intf->device_id, ep_address);
 }
 
 static usb_protocol_t _usb_protocol = {
@@ -228,17 +229,23 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     completion_reset(&intf->callback_thread_completion);
     list_initialize(&intf->completed_txns);
 
-    intf->hci_device = device->hci_device;
+    intf->hci_mxdev = device->hci_mxdev;
     intf->hci_protocol = device->hci_protocol;
     intf->device_id = device->device_id;
     intf->descriptor = (usb_descriptor_header_t *)interface_desc;
     intf->descriptor_length = interface_desc_length;
 
     char name[20];
-    snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id, interface_desc->bInterfaceNumber);
+    snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id,
+             interface_desc->bInterfaceNumber);
+    mx_status_t status = device_create(name, intf, &usb_interface_proto, &_driver_usb_bus,
+                                       &intf->mxdev);
+    if (status != NO_ERROR) {
+        free(intf);
+        return status; 
+    }
 
-    device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
-    device_set_protocol(&intf->device, MX_PROTOCOL_USB, &_usb_protocol);
+    device_set_protocol(intf->mxdev, MX_PROTOCOL_USB, &_usb_protocol);
 
     uint8_t usb_class, usb_subclass, usb_protocol;
     if (interface_desc->bInterfaceClass == 0) {
@@ -252,30 +259,32 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         usb_protocol = interface_desc->bInterfaceProtocol;
    }
 
-    int count = 0;
-    intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, usb_class };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, usb_subclass };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, usb_protocol };
-    intf->device.props = intf->props;
-    intf->device.prop_count = count;
+    int prop_count = 0;
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, usb_class };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, usb_subclass };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, usb_protocol };
 
-    mx_status_t status = usb_interface_configure_endpoints(intf, interface_desc->bInterfaceNumber, 0);
-    if (status != NO_ERROR) return status;
+    status = usb_interface_configure_endpoints(intf, interface_desc->bInterfaceNumber, 0);
+    if (status != NO_ERROR) {
+        device_destroy(intf->mxdev);
+        free(intf);
+        return status;
+    }
 
-    // callback thread must be started before device_add() since it will recursively bind other
-    // drivers to us before it returns.
+    // callback thread must be started before device_add_with_props() since it will recursively
+    // bind other drivers to us before it returns.
     start_callback_thread(intf);
 
     // need to do this first so usb_device_set_interface() can be called from driver bind
     list_add_head(&device->children, &intf->node);
-    status = device_add_with_props(&intf->device, &device->device, intf->device.props,
-                                   intf->device.prop_count);
+    status = device_add_with_props(intf->mxdev, device->mxdev, intf->props, prop_count);
     if (status != NO_ERROR) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
+        device_destroy(intf->mxdev);
         free(interface_desc);
         free(intf);
     }
@@ -290,7 +299,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     if (!intf)
         return ERR_NO_MEMORY;
 
-    intf->hci_device = device->hci_device;
+    intf->hci_mxdev = device->hci_mxdev;
     intf->hci_protocol = device->hci_protocol;
     intf->device_id = device->device_id;
     intf->descriptor = (usb_descriptor_header_t *)assoc_desc;
@@ -298,9 +307,14 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
 
     char name[20];
     snprintf(name, sizeof(name), "usb-dev-%03d-ia-%d", device->device_id, assoc_desc->iFunction);
+    mx_status_t status = device_create(name, intf, &usb_interface_proto, &_driver_usb_bus,
+                                       &intf->mxdev);
+    if (status != NO_ERROR) {
+        free(intf);
+        return status; 
+    }
 
-    device_init(&intf->device, &_driver_usb_bus, name, &usb_interface_proto);
-    device_set_protocol(&intf->device, MX_PROTOCOL_USB, &_usb_protocol);
+    device_set_protocol(intf->mxdev, MX_PROTOCOL_USB, &_usb_protocol);
 
     uint8_t usb_class, usb_subclass, usb_protocol;
     if (assoc_desc->bFunctionClass == 0) {
@@ -314,15 +328,13 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         usb_protocol = assoc_desc->bFunctionProtocol;
    }
 
-    int count = 0;
-    intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, usb_class };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, usb_subclass };
-    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, usb_protocol };
-    intf->device.props = intf->props;
-    intf->device.prop_count = count;
+    int prop_count = 0;
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, usb_class };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, usb_subclass };
+    intf->props[prop_count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, usb_protocol };
 
     usb_descriptor_header_t* header = intf->descriptor;
     usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->descriptor_length);
@@ -337,16 +349,17 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         header = NEXT_DESCRIPTOR(header);
     }
 
-    // callback thread must be started before device_add() since it will recursively bind other
-    // drivers to us before it returns.
+    // callback thread must be started before device_add_with_props() since it will recursively
+    // bind other drivers to us before it returns.
     start_callback_thread(intf);
 
     // need to do this first so usb_device_set_interface() can be called from driver bind
     list_add_head(&device->children, &intf->node);
-    mx_status_t status = device_add(&intf->device, &device->device);
+    status = device_add_with_props(intf->mxdev, device->mxdev, intf->props, prop_count);
     if (status != NO_ERROR) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
+        device_destroy(intf->mxdev);
         free(assoc_desc);
         free(intf);
     }
@@ -357,12 +370,12 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
 void usb_device_remove_interfaces(usb_device_t* device) {
     usb_interface_t* intf;
     while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
-        device_remove(&intf->device);
+        device_remove(intf->mxdev);
     }
 }
 
 uint32_t usb_interface_get_device_id(mx_device_t* device) {
-    usb_interface_t* intf = get_usb_interface(device);
+    usb_interface_t* intf = device->ctx;
     return intf->device_id;
 }
 
@@ -387,7 +400,7 @@ mx_status_t usb_interface_set_alt_setting(usb_interface_t* intf, uint8_t interfa
     mx_status_t status = usb_interface_configure_endpoints(intf, interface_id, alt_setting);
     if (status != NO_ERROR) return status;
 
-    return usb_device_control(intf->hci_device, intf->device_id,
+    return usb_device_control(intf->hci_mxdev, intf->device_id,
                               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                               USB_REQ_SET_INTERFACE, alt_setting, interface_id, NULL, 0);
 }

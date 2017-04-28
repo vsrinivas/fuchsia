@@ -16,25 +16,23 @@
 
 // Represents a USB bus, which manages all devices for a USB host controller
 typedef struct usb_bus {
-    mx_device_t device;
-
-    mx_device_t* hci_device;
+    mx_device_t* mxdev;
+    mx_device_t* hci_mxdev;
     usb_hci_protocol_t* hci_protocol;
 
     // top-level USB devices, indexed by device_id
     usb_device_t** devices;
     size_t max_device_count;
 } usb_bus_t;
-#define get_usb_bus(dev) containerof(dev, usb_bus_t, device)
 
 static mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, uint32_t hub_id,
                                       usb_speed_t speed) {
-    usb_bus_t* bus = get_usb_bus(device);
+    usb_bus_t* bus = device->ctx;
 
     if (device_id >= bus->max_device_count) return ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
-    mx_status_t result = usb_device_add(bus->hci_device, bus->hci_protocol, &bus->device, device_id,
+    mx_status_t result = usb_device_add(bus->hci_mxdev, bus->hci_protocol, bus->mxdev, device_id,
                                         hub_id, speed, &usb_device);
     if (result == NO_ERROR) {
         bus->devices[device_id] = usb_device;
@@ -43,7 +41,7 @@ static mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, u
 }
 
 static void usb_bus_remove_device(mx_device_t* dev, uint32_t device_id) {
-    usb_bus_t* bus = get_usb_bus(dev);
+    usb_bus_t* bus = dev->ctx;
     if (device_id >= bus->max_device_count) {
         printf("device_id out of range in usb_bus_remove_device\n");
         return;
@@ -57,21 +55,21 @@ static void usb_bus_remove_device(mx_device_t* dev, uint32_t device_id) {
 
 static mx_status_t usb_bus_configure_hub(mx_device_t* device, mx_device_t* hub_device, usb_speed_t speed,
                                          usb_hub_descriptor_t* descriptor) {
-    usb_bus_t* bus = get_usb_bus(device);
+    usb_bus_t* bus = device->ctx;
     uint32_t hub_id = usb_interface_get_device_id(hub_device);
-    return bus->hci_protocol->configure_hub(bus->hci_device, hub_id, speed, descriptor);
+    return bus->hci_protocol->configure_hub(bus->hci_mxdev, hub_id, speed, descriptor);
 }
 
 static mx_status_t usb_bus_device_added(mx_device_t* device, mx_device_t* hub_device, int port, usb_speed_t speed) {
-    usb_bus_t* bus = get_usb_bus(device);
+    usb_bus_t* bus = device->ctx;
     uint32_t hub_id = usb_interface_get_device_id(hub_device);
-    return bus->hci_protocol->hub_device_added(bus->hci_device, hub_id, port, speed);
+    return bus->hci_protocol->hub_device_added(bus->hci_mxdev, hub_id, port, speed);
 }
 
 static mx_status_t usb_bus_device_removed(mx_device_t* device, mx_device_t* hub_device, int port) {
-    usb_bus_t* bus = get_usb_bus(device);
+    usb_bus_t* bus = device->ctx;
     uint32_t hub_id = usb_interface_get_device_id(hub_device);
-    return bus->hci_protocol->hub_device_removed(bus->hci_device, hub_id, port);
+    return bus->hci_protocol->hub_device_removed(bus->hci_mxdev, hub_id, port);
 }
 
 static usb_bus_protocol_t _bus_protocol = {
@@ -83,20 +81,21 @@ static usb_bus_protocol_t _bus_protocol = {
 };
 
 static void usb_bus_unbind(mx_device_t* dev) {
-    usb_bus_t* bus = get_usb_bus(dev);
-    bus->hci_protocol->set_bus_device(bus->hci_device, NULL);
+    usb_bus_t* bus = dev->ctx;
+    bus->hci_protocol->set_bus_device(bus->hci_mxdev, NULL);
 
     for (size_t i = 0; i < bus->max_device_count; i++) {
         usb_device_t* device = bus->devices[i];
         if (device) {
-            device_remove(&device->device);
+            device_remove(device->mxdev);
             bus->devices[i] = NULL;
         }
     }
 }
 
 static mx_status_t usb_bus_release(mx_device_t* dev) {
-    usb_bus_t* bus = get_usb_bus(dev);
+    usb_bus_t* bus = dev->ctx;
+    device_destroy(bus->mxdev);
     free(bus->devices);
     free(bus);
     return NO_ERROR;
@@ -119,7 +118,7 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
         return ERR_NO_MEMORY;
     }
 
-    bus->hci_device = device;
+    bus->hci_mxdev = device;
     bus->hci_protocol = hci_protocol;
 
     bus->max_device_count = hci_protocol->get_max_device_count(device);
@@ -131,14 +130,20 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
         return ERR_NO_MEMORY;
     }
 
-    device_init(&bus->device, driver, "usb_bus", &usb_bus_device_proto);
+    mx_status_t status = device_create("usb_bus", bus, &usb_bus_device_proto, driver, &bus->mxdev);
+    if (status != NO_ERROR) {
+        free(bus->devices);
+        free(bus);
+        return status; 
+    }
 
-    device_set_protocol(&bus->device, MX_PROTOCOL_USB_BUS, &_bus_protocol);
-    device_set_bindable(&bus->device, false);
-    mx_status_t status = device_add(&bus->device, device);
+    device_set_protocol(bus->mxdev, MX_PROTOCOL_USB_BUS, &_bus_protocol);
+    device_set_bindable(bus->mxdev, false);
+    status = device_add(bus->mxdev, device);
     if (status == NO_ERROR) {
-        hci_protocol->set_bus_device(device, &bus->device);
+        hci_protocol->set_bus_device(device, bus->mxdev);
     } else {
+        device_destroy(bus->mxdev);
         free(bus->devices);
         free(bus);
     }

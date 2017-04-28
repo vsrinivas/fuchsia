@@ -11,16 +11,15 @@
 
 // Represents a USB top-level device
 typedef struct usb_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
+    mx_device_t* hci_mxdev;
+    usb_hci_protocol_t* hci_protocol;
 
     // ID assigned by host controller
     uint32_t device_id;
     // device_id of the hub we are attached to (or zero for root hub)
     uint32_t hub_id;
     usb_speed_t speed;
-
-    mx_device_t* hci_device;
-    usb_hci_protocol_t* hci_protocol;
 
     usb_device_descriptor_t device_desc;
     usb_configuration_descriptor_t** config_descs;
@@ -31,7 +30,6 @@ typedef struct usb_device {
 
     list_node_t node;
 } usb_device_t;
-#define get_usb_device(dev) containerof(dev, usb_device_t, device)
 
 mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
                            mx_device_t* parent,  uint32_t device_id, uint32_t hub_id,

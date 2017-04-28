@@ -12,9 +12,8 @@
 
 // Represents an interface within a composite device
 typedef struct {
-    mx_device_t device;
-
-    mx_device_t* hci_device;
+    mx_device_t* mxdev;
+    mx_device_t* hci_mxdev;
     usb_hci_protocol_t* hci_protocol;
     uint32_t device_id;
 
@@ -39,7 +38,6 @@ typedef struct {
     mtx_t callback_lock;
 
 } usb_interface_t;
-#define get_usb_interface(dev) containerof(dev, usb_interface_t, device)
 
 // for determining index into active_endpoints[]
 // bEndpointAddress has 4 lower order bits, plus high bit to signify direction
