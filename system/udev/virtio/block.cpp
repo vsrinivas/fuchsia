@@ -164,15 +164,19 @@ mx_status_t BlockDevice::Init() {
     device_ops_.iotxn_queue = &virtio_block_iotxn_queue;
     device_ops_.get_size = &virtio_block_get_size;
     device_ops_.ioctl = &virtio_block_ioctl;
-    device_init(&device_, driver_, "virtio-block", &device_ops_);
-
-    // point the ctx of our embedded device structure at ourself
-    device_.ctx = this;
-
-    device_set_protocol(&device_, MX_PROTOCOL_BLOCK, NULL);
-    auto status = device_add(&device_, bus_device_);
-    if (status < 0)
+    // point the ctx of our DDK device at ourself
+    auto status = device_create("virtio-block", this, &device_ops_, driver_, &device_);
+    if (status < 0) {
         return status;
+    }
+
+    device_set_protocol(device_, MX_PROTOCOL_BLOCK, NULL);
+    status = device_add(device_, bus_device_);
+    if (status < 0) {
+        device_destroy(device_);
+        device_ = nullptr;
+        return status;
+    }
 
     return NO_ERROR;
 }

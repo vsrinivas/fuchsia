@@ -22,7 +22,7 @@ public:
     virtual ~Device();
 
     mx_device_t* bus_device() { return bus_device_; }
-    mx_device_t* device() { return &device_; }
+    mx_device_t* device() { return device_; }
 
     virtual mx_status_t Bind(pci_protocol_t*, mx_handle_t pci_config_handle, const pci_config_t*);
 
@@ -85,8 +85,8 @@ protected:
     // irq thread object
     thrd_t irq_thread_ = {};
 
-    // embedded device object
-    mx_device_t device_ = {};
+    // DDK device
+    mx_device_t* device_ = nullptr;
     mx_protocol_device_t device_ops_ = {};
 };
 

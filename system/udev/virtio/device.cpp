@@ -27,6 +27,7 @@ Device::Device(mx_driver_t* driver, mx_device_t* bus_device)
 
 Device::~Device() {
     LTRACE_ENTRY;
+    device_destroy(device_);
 }
 
 mx_status_t Device::Bind(pci_protocol_t* pci,
