@@ -12,7 +12,9 @@
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/tool/clean_command.h"
+#include "apps/ledger/src/tool/convert.h"
 #include "apps/ledger/src/tool/doctor_command.h"
+#include "apps/ledger/src/tool/inspect_command.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/strings/concatenate.h"
@@ -25,35 +27,6 @@ namespace {
 
 constexpr ftl::StringView kUserIdFlag = "user-id";
 constexpr ftl::StringView kForceFlag = "force";
-
-// Inverse of the transformation currently used by DeviceRunner to translate
-// human-readable username to user ID.
-bool FromHexString(const std::string& hex_string, std::string* result) {
-  if (hex_string.size() % 2 != 0) {
-    return false;
-  }
-
-  std::string bytes;
-  bytes.reserve(hex_string.size() / 2);
-  for (size_t i = 0; i < hex_string.size(); i += 2) {
-    bytes.push_back(strtol(hex_string.substr(i, 2).c_str(), nullptr, 16));
-  }
-  result->swap(bytes);
-  return true;
-}
-
-// Transformation currently used by DeviceRunner to translate human-readable
-// username to user ID.
-std::string ToHexString(ftl::StringView data) {
-  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
-  std::string ret;
-  ret.reserve(data.size() * 2);
-  for (size_t i = 0; i < data.size(); ++i) {
-    ret.push_back(kHexadecimalCharacters[static_cast<uint8_t>(data[i]) >> 4]);
-    ret.push_back(kHexadecimalCharacters[static_cast<uint8_t>(data[i]) & 0xf]);
-  }
-  return ret;
-}
 
 }  // namespace
 
@@ -76,8 +49,9 @@ void ClientApp::PrintUsage() {
   std::cout << " - `doctor` - checks up the Ledger configuration (default)"
             << std::endl;
   std::cout
-      << " - `clean` - wipes remote and local data of the most recent user "
+      << " - `clean` - wipes remote and local data of the most recent user"
       << std::endl;
+  std::cout << " - `inspect` - inspects the state of a ledger" << std::endl;
 }
 
 std::unique_ptr<Command> ClientApp::CommandFromArgs(
@@ -108,6 +82,15 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
         command_line_.HasOption(kForceFlag.ToString()));
   }
 
+  if (args[0] == "inspect") {
+    if (args.size() < 2) {
+      FTL_LOG(ERROR) << "App id needed for inspect command.";
+      return nullptr;
+    }
+    return std::make_unique<InspectCommand>(args, user_config_,
+                                            user_repository_path_);
+  }
+
   return nullptr;
 }
 
@@ -128,7 +111,8 @@ bool ClientApp::Initialize() {
     }
   }
 
-  std::unordered_set<std::string> valid_commands = {"doctor", "clean"};
+  std::unordered_set<std::string> valid_commands = {"doctor", "clean",
+                                                    "inspect"};
   const std::vector<std::string>& args = command_line_.positional_args();
   if (args.size() && valid_commands.count(args[0]) == 0) {
     FTL_LOG(ERROR) << "Unknown command: " << args[0];

@@ -34,6 +34,9 @@ class LedgerStorageImpl : public LedgerStorage {
 
   bool DeletePageStorage(PageIdView page_id) override;
 
+  // For debugging only.
+  std::vector<PageId> ListLocalPages();
+
  private:
   std::string GetPathFor(PageIdView page_id);
 

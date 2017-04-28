@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <iterator>
 
+#include <dirent.h>
+
 #include "apps/ledger/src/glue/crypto/base64.h"
+#include "apps/ledger/src/storage/impl/directory_reader.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/files/directory.h"
@@ -37,6 +40,26 @@ std::string GetDirectoryName(ftl::StringView bytes) {
   }
   return encoded;
 }
+
+// Decodes opaque bytes used as a directory names into an id. This is the
+// opposite transformation of GetDirectoryName.
+std::string GetObjectId(ftl::StringView bytes) {
+  std::string preprocessed(bytes.ToString());
+  for (auto it = preprocessed.begin(); it != preprocessed.end(); ++it) {
+    switch (*it) {
+      case '_':
+        *it = '/';
+        break;
+      case '.':
+        *it = '+';
+        break;
+    }
+  }
+  std::string decoded;
+  glue::Base64Decode(preprocessed, &decoded);
+  return decoded;
+}
+
 }  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
@@ -111,6 +134,16 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
     return false;
   }
   return true;
+}
+
+std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
+  std::vector<PageId> local_pages;
+  DirectoryReader::GetDirectoryEntries(
+      storage_dir_, [&local_pages](ftl::StringView encoded_page_id) {
+        local_pages.emplace_back(GetObjectId(encoded_page_id));
+        return true;
+      });
+  return local_pages;
 }
 
 std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {

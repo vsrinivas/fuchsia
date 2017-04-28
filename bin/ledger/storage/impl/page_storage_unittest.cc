@@ -18,6 +18,7 @@
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db_empty_impl.h"
+#include "apps/ledger/src/storage/impl/directory_reader.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -48,31 +49,14 @@ class PageStorageImplAccessorForTest {
 
 namespace {
 
-void SafeCloseDir(DIR* dir) {
-  if (dir)
-    closedir(dir);
-}
-
 bool IsDirectoryEmpty(const std::string& directory) {
-  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(opendir(directory.c_str()),
-                                                    SafeCloseDir);
-  if (!dir.get())
-    return true;
-
-  for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
-       entry = readdir(dir.get())) {
-    char* name = entry->d_name;
-    if (name[0]) {
-      if (name[0] == '.') {
-        if (!name[1] || (name[1] == '.' && !name[2])) {
-          // . or ..
-          continue;
-        }
-      }
-    }
-    return false;
-  }
-  return true;
+  bool is_empty = true;
+  DirectoryReader::GetDirectoryEntries(directory,
+                                       [&is_empty](ftl::StringView dir) {
+                                         is_empty = false;
+                                         return false;
+                                       });
+  return is_empty;
 }
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
@@ -1022,19 +1006,21 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   parent.emplace_back(commit1->Clone());
 
   std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
-              storage_.get(), RandomId(kObjectIdSize), std::move(parent));
+      storage_.get(), RandomId(kObjectIdSize), std::move(parent));
   CommitId id2 = commit2->GetId();
 
   FakeCommitWatcher watcher;
   storage_->AddCommitWatcher(&watcher);
 
-  storage_->AddCommitFromLocal(std::move(commit1), ftl::MakeCopyable([
-    this, commit2 = std::move(commit2)
-  ](Status status) mutable { EXPECT_EQ(Status::OK, status);
-    storage_->AddCommitFromLocal(std::move(commit2), [](Status status) {
-      EXPECT_EQ(Status::OK, status);
-    });
-  }));
+  storage_->AddCommitFromLocal(
+      std::move(commit1),
+      ftl::MakeCopyable(
+          [ this, commit2 = std::move(commit2) ](Status status) mutable {
+            EXPECT_EQ(Status::OK, status);
+            storage_->AddCommitFromLocal(std::move(commit2), [](Status status) {
+              EXPECT_EQ(Status::OK, status);
+            });
+          }));
 
   EXPECT_EQ(2, watcher.commit_count);
   EXPECT_EQ(id2, watcher.last_commit_id);
