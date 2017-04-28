@@ -50,15 +50,12 @@ typedef struct mx_hid_instance {
 } mx_hid_instance_t;
 
 static input_report_size_t hid_get_report_size_by_id(mx_hid_device_t* hid,
-        input_report_id_t id, input_report_type_t type) {
-#if BOOT_MOUSE_HACK
-    // Ignore the HID report descriptor from the device, since we're putting the
-    // device into boot protocol mode.
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) return 3;
-#endif
+                                                     input_report_id_t id,
+                                                     input_report_type_t type) {
     for (size_t i = 0; i < hid->num_reports; i++) {
-        if (hid->sizes[i].id < 0) break;
-        if (hid->sizes[i].id == id) {
+        MX_DEBUG_ASSERT(hid->sizes[i].id >= 0);
+
+        if ((hid->sizes[i].id == id) || (hid->num_reports == 1)) {
             switch (type) {
             case INPUT_REPORT_INPUT:
                 return bits_to_bytes(hid->sizes[i].in_size);
@@ -69,6 +66,7 @@ static input_report_size_t hid_get_report_size_by_id(mx_hid_device_t* hid,
             }
         }
     }
+
     return 0;
 }
 
@@ -79,15 +77,9 @@ static inline bool hid_expect_report_id(mx_hid_device_t* hid) {
     // report defined, but multiple feature reports defined, does it
     // still put the report ID on the input report it delivers or does
     // it omit it?
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class != HID_DEV_CLASS_POINTER) {
-#endif
     if (hid->num_reports > 1) {
         return true;
     }
-#if BOOT_MOUSE_HACK
-    }
-#endif
 
     return false;
 }
@@ -125,34 +117,14 @@ static mx_status_t hid_get_num_reports(mx_hid_device_t* hid, void* out_buf, size
 
     size_t* reply = out_buf;
     *reply = hid->num_reports;
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) *reply = 1;
-#endif
     return sizeof(*reply);
 }
 
 static mx_status_t hid_get_report_ids(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) {
-        if (out_len < sizeof(input_report_id_t)) {
-            return ERR_INVALID_ARGS;
-        }
-    } else {
-        if (out_len < hid->num_reports * sizeof(input_report_id_t))
-        return ERR_INVALID_ARGS;
-    }
-#else
     if (out_len < hid->num_reports * sizeof(input_report_id_t))
         return ERR_INVALID_ARGS;
-#endif
 
     input_report_id_t* reply = out_buf;
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) {
-        *reply = 0;
-        return sizeof(input_report_id_t);
-    }
-#endif
     for (size_t i = 0; i < hid->num_reports; i++) {
         assert(hid->sizes[i].id >= 0);
         *reply++ = (input_report_id_t)hid->sizes[i].id;
@@ -171,6 +143,7 @@ static mx_status_t hid_get_report_size(mx_hid_device_t* hid, const void* in_buf,
     *reply = hid_get_report_size_by_id(hid, inp->id, inp->type);
     if (*reply == 0)
         return ERR_INVALID_ARGS;
+
     return sizeof(*reply);
 }
 
@@ -178,17 +151,12 @@ static ssize_t hid_get_max_input_reportsize(mx_hid_device_t* hid, void* out_buf,
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) {
-        *reply = 3;
-        return sizeof(*reply);
-    }
-#endif
 
     *reply = 0;
-    for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
-        if (hid->sizes[i].id >= 0 &&
-            hid->sizes[i].in_size > *reply)
+    for (size_t i = 0; i < hid->num_reports; i++) {
+        MX_DEBUG_ASSERT(hid->sizes[i].id >= 0);
+
+        if (hid->sizes[i].in_size > *reply)
             *reply = hid->sizes[i].in_size;
     }
 
@@ -403,7 +371,7 @@ static const uint8_t* hid_parse_short_item(const uint8_t* buf, const uint8_t* en
     return buf;
 }
 
-static int hid_find_report_id(input_report_id_t report_id, mx_hid_device_t* dev) {
+static int hid_alloc_report_id(input_report_id_t report_id, mx_hid_device_t* dev) {
     for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
         if (dev->sizes[i].id == report_id) return i;
         if (dev->sizes[i].id == -1) {
@@ -472,7 +440,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
             int idx;
             switch (item.bTag) {
             case HID_ITEM_MAIN_TAG_INPUT:
-                idx = hid_find_report_id(state.rpt_id, dev);
+                idx = hid_alloc_report_id(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -480,7 +448,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
                 dev->sizes[idx].in_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_OUTPUT:
-                idx = hid_find_report_id(state.rpt_id, dev);
+                idx = hid_alloc_report_id(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -488,7 +456,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
                 dev->sizes[idx].out_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_FEATURE:
-                idx = hid_find_report_id(state.rpt_id, dev);
+                idx = hid_alloc_report_id(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -532,6 +500,24 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
     }
 done:
     hid_clear_global_state(&global_stack);
+
+#if BOOT_MOUSE_HACK
+    if (status == NO_ERROR) {
+        // Ignore the HID report descriptor from the device, since we're putting
+        // the device into boot protocol mode.
+        if (dev->dev_class == HID_DEV_CLASS_POINTER) {
+            printf("hid: Applying boot mouse hack to hid device \"%s\".  "
+                   "Altering report count (%zu -> 1)\n",
+                   dev->dev.name, dev->num_reports);
+            dev->num_reports = 1;
+            dev->sizes[0].id = 0;
+            dev->sizes[0].in_size = 24;
+            dev->sizes[0].out_size = 0;
+            dev->sizes[0].feat_size = 0;
+        }
+    }
+#endif
+
     return status;
 }
 
