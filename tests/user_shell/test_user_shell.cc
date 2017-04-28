@@ -532,8 +532,6 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 
-  TestPoint get_modules_{"Get Modules"};
-
   FTL_DISALLOW_COPY_AND_ASSIGN(TestUserShellApp);
 };
 
