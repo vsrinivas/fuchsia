@@ -18,6 +18,8 @@ def main():
                       required=True)
   parser.add_argument('--dot-packages', help='Path to the .packages file',
                       required=True)
+  parser.add_argument('--root-build-dir',
+                      help='Path to root of the build directory', required=True)
   parser.add_argument('--dartanalyzer',
                       help='Path to the Dart analyzer executable',
                       required=True)
@@ -28,7 +30,7 @@ def main():
   parser.add_argument('--options', help='Path to analysis options')
   args = parser.parse_args()
 
-  analyzer_file = args.out
+  analyzer_file = os.path.join(args.root_build_dir, args.out)
   analyzer_path = os.path.dirname(analyzer_file)
   if not os.path.exists(analyzer_path):
     os.makedirs(analyzer_path)
