@@ -181,13 +181,13 @@ bool InputInterpreter::Initialize() {
       touchscreen_descriptor_->x = mozart::Axis::New();
       touchscreen_descriptor_->x->range = mozart::Range::New();
       touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = ACER12_X_MAX;
+      touchscreen_descriptor_->x->range->max = SAMSUNG_X_MAX;
       touchscreen_descriptor_->x->resolution = 1;
 
       touchscreen_descriptor_->y = mozart::Axis::New();
       touchscreen_descriptor_->y->range = mozart::Range::New();
       touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = ACER12_Y_MAX;
+      touchscreen_descriptor_->y->range->max = SAMSUNG_Y_MAX;
       touchscreen_descriptor_->y->resolution = 1;
 
       // TODO(jpoichet) do not hardcode this
