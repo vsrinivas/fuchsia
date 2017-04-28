@@ -11,6 +11,7 @@ extern mx_status_t qemu_ihda_codec_bind_hook(mx_driver_t*, mx_device_t*, void**)
 extern void        qemu_ihda_codec_unbind_hook(mx_driver_t*, mx_device_t*, void*);
 
 static mx_driver_ops_t qemu_ihda_codec_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
     .init    = NULL,
     .bind    = qemu_ihda_codec_bind_hook,
     .unbind  = qemu_ihda_codec_unbind_hook,
