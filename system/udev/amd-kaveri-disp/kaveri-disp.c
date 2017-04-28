@@ -23,7 +23,7 @@
 #define AMD_KAVERI_R7_DID (0x130f)
 
 typedef struct kaveri_disp_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     void* regs;
     uint64_t regs_size;
@@ -36,8 +36,6 @@ typedef struct kaveri_disp_device {
     mx_display_info_t info;
 } kaveri_disp_device_t;
 
-#define get_kaveri_disp_device(dev) containerof(dev, kaveri_disp_device_t, device)
-
 // implement display protocol
 static mx_status_t kaveri_disp_set_mode(mx_device_t* dev, mx_display_info_t* info) {
     return ERR_NOT_SUPPORTED;
@@ -45,7 +43,7 @@ static mx_status_t kaveri_disp_set_mode(mx_device_t* dev, mx_display_info_t* inf
 
 static mx_status_t kaveri_disp_get_mode(mx_device_t* dev, mx_display_info_t* info) {
     assert(info);
-    kaveri_disp_device_t* device = get_kaveri_disp_device(dev);
+    kaveri_disp_device_t* device = dev->ctx;
 
     memcpy(info, &device->info, sizeof(mx_display_info_t));
     return NO_ERROR;
@@ -53,7 +51,7 @@ static mx_status_t kaveri_disp_get_mode(mx_device_t* dev, mx_display_info_t* inf
 
 static mx_status_t kaveri_disp_get_framebuffer(mx_device_t* dev, void** framebuffer) {
     assert(framebuffer);
-    kaveri_disp_device_t* device = get_kaveri_disp_device(dev);
+    kaveri_disp_device_t* device = dev->ctx;
 
     (*framebuffer) = device->framebuffer;
     return NO_ERROR;
@@ -68,7 +66,7 @@ static mx_display_protocol_t kaveri_disp_display_proto = {
 // implement device protocol
 
 static mx_status_t kaveri_disp_release(mx_device_t* dev) {
-    kaveri_disp_device_t* device = get_kaveri_disp_device(dev);
+    kaveri_disp_device_t* device = dev->ctx;
 
     if (device->regs) {
         mx_handle_close(device->regs_handle);
@@ -80,6 +78,8 @@ static mx_status_t kaveri_disp_release(mx_device_t* dev) {
         device->framebuffer_handle = -1;
     }
 
+    device_destroy(device->mxdev);
+    free(device);
     return NO_ERROR;
 }
 
@@ -124,7 +124,10 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
     }
 
     // create and add the display (char) device
-    device_init(&device->device, drv, "amd_kaveri_disp", &kaveri_disp_device_proto);
+    status = device_create("amd_kaveri_disp", device, &kaveri_disp_device_proto, drv, &device->mxdev);
+    if (status != NO_ERROR) {
+        goto fail;
+    }
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
@@ -136,15 +139,18 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
         di->stride = stride;
     } else {
         status = ERR_NOT_SUPPORTED;
-        goto fail;
+        goto fail_add;
     }
     di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
                        format, width, height, stride);
 
-    device_set_protocol(&device->device, MX_PROTOCOL_DISPLAY, &kaveri_disp_display_proto);
-    device_add(&device->device, dev);
+    device_set_protocol(device->mxdev, MX_PROTOCOL_DISPLAY, &kaveri_disp_display_proto);
+    status = device_add(device->mxdev, dev);
+    if (status != NO_ERROR) {
+        goto fail_add;
+    }
 
     printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
            device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
@@ -152,6 +158,9 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
            device->info.width, device->info.height, device->info.stride, device->info.format);
 
     return NO_ERROR;
+
+fail_add:
+    device_destroy(device->mxdev);
 fail:
     free(device);
     return status;
