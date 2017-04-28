@@ -237,7 +237,7 @@ mx_status_t launchpad_set_nametable(launchpad_t* lp,
     if (r < 0)
         return r;
 
-    free(lp->args);
+    free(lp->names);
     lp->namec = count;
     lp->names = buffer;
     lp->names_len = total;
