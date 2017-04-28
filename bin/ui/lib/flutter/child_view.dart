@@ -100,8 +100,7 @@ class ChildViewConnection {
     try {
       launcher.createApplication(launchInfo, controller);
       return new ChildViewConnection.connect(services,
-          childServices: childServices,
-          onAvailable: onAvailable,
+          childServices: childServices, onAvailable: onAvailable,
           onUnavailable: onUnavailable);
     } finally {
       services.ctrl.close();
@@ -127,6 +126,7 @@ class ChildViewConnection {
   final ChildViewConnectionCallback _onAvailableCallback;
   final ChildViewConnectionCallback _onUnavailableCallback;
   InterfaceHandle<ViewOwner> _viewOwner;
+
 
   static int _nextViewKey = 1;
   int _viewKey;
@@ -204,13 +204,8 @@ class ChildViewConnection {
   }
 
   ViewProperties _createViewProperties(
-      int physicalWidth,
-      int physicalHeight,
-      double devicePixelRatio,
-      int insetTop,
-      int insetRight,
-      int insetBottom,
-      int insetLeft) {
+      int physicalWidth, int physicalHeight, double devicePixelRatio,
+      int insetTop, int insetRight, int insetBottom, int insetLeft) {
     if (_currentViewProperties != null &&
         _currentViewProperties.displayMetrics.devicePixelRatio ==
             devicePixelRatio &&
@@ -219,7 +214,8 @@ class ChildViewConnection {
         _currentViewProperties.viewLayout.inset.top == insetTop &&
         _currentViewProperties.viewLayout.inset.right == insetRight &&
         _currentViewProperties.viewLayout.inset.bottom == insetBottom &&
-        _currentViewProperties.viewLayout.inset.left == insetLeft) return null;
+        _currentViewProperties.viewLayout.inset.left == insetLeft)
+      return null;
 
     DisplayMetrics displayMetrics = new DisplayMetrics()
       ..devicePixelRatio = devicePixelRatio;
@@ -241,25 +237,15 @@ class ChildViewConnection {
   }
 
   void _setChildProperties(
-      int physicalWidth,
-      int physicalHeight,
-      double devicePixelRatio,
-      int insetTop,
-      int insetRight,
-      int insetBottom,
-      int insetLeft) {
+      int physicalWidth, int physicalHeight, double devicePixelRatio,
+      int insetTop, int insetRight, int insetBottom, int insetLeft) {
     assert(_attached);
     assert(_attachments == 1);
     assert(_viewKey != null);
     if (_viewContainer == null) return;
-    ViewProperties viewProperties = _createViewProperties(
-        physicalWidth,
-        physicalHeight,
-        devicePixelRatio,
-        insetTop,
-        insetRight,
-        insetBottom,
-        insetLeft);
+    ViewProperties viewProperties =
+        _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio,
+        insetTop, insetRight, insetBottom, insetLeft);
     if (viewProperties == null) return;
     _viewContainer.setChildProperties(
         _viewKey, _sceneVersion++, viewProperties);
@@ -359,8 +345,8 @@ class _RenderChildView extends RenderBox {
     if (_connection != null) {
       _physicalWidth = (size.width * scale).round();
       _physicalHeight = (size.height * scale).round();
-      _connection._setChildProperties(
-          _physicalWidth, _physicalHeight, scale, 0, 0, 0, 0);
+      _connection._setChildProperties(_physicalWidth, _physicalHeight, scale,
+        0, 0, 0, 0);
       assert(() {
         if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(
@@ -486,8 +472,7 @@ class ChildView extends LeafRenderObjectWidget {
   _RenderChildView createRenderObject(BuildContext context) {
     return new _RenderChildView(
       connection: connection,
-      scale:
-          (MediaQuery.of(context) ?? const MediaQueryData()).devicePixelRatio,
+      scale: MediaQuery.of(context).devicePixelRatio,
       hitTestable: hitTestable,
     );
   }
@@ -496,8 +481,7 @@ class ChildView extends LeafRenderObjectWidget {
   void updateRenderObject(BuildContext context, _RenderChildView renderObject) {
     renderObject
       ..connection = connection
-      ..scale =
-          (MediaQuery.of(context) ?? const MediaQueryData()).devicePixelRatio
+      ..scale = MediaQuery.of(context).devicePixelRatio
       ..hitTestable = hitTestable;
   }
 }
