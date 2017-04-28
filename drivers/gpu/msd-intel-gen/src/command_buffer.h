@@ -25,17 +25,10 @@ public:
     // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
     // lifetime of this object
     static std::unique_ptr<CommandBuffer> Create(msd_buffer_t* abi_cmd_buf,
-                                                 msd_buffer_t** exec_buffers,
+                                                 msd_buffer_t** msd_buffers,
                                                  std::weak_ptr<ClientContext> context,
-                                                 msd_semaphore_t** wait_semaphores,
-                                                 msd_semaphore_t** signal_semaphores)
-    {
-        auto command_buffer =
-            std::unique_ptr<CommandBuffer>(new CommandBuffer(abi_cmd_buf, context));
-        if (!command_buffer->Initialize(exec_buffers, wait_semaphores, signal_semaphores))
-            return DRETP(nullptr, "failed to initialize command buffer");
-        return command_buffer;
-    }
+                                                 msd_semaphore_t** msd_wait_semaphores,
+                                                 msd_semaphore_t** msd_signal_semaphores);
 
     ~CommandBuffer();
 
@@ -61,7 +54,8 @@ public:
     }
 
 private:
-    CommandBuffer(msd_buffer_t* abi_cmd_buf, std::weak_ptr<ClientContext> context);
+    CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
+                  std::weak_ptr<ClientContext> context);
 
     // maps all execution resources into the given |address_space|.
     // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
@@ -71,8 +65,10 @@ private:
 
     void UnmapResourcesGpu();
 
-    bool Initialize(msd_buffer_t** exec_buffers, msd_semaphore_t** wait_semaphores,
-                    msd_semaphore_t** signal_semaphores);
+    bool
+    InitializeResources(std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
+                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
     // given the virtual addresses of all of the exec_resources_, walks the relocations data
     // structure in

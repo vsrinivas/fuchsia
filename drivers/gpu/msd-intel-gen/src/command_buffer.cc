@@ -9,6 +9,51 @@
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 
+std::unique_ptr<CommandBuffer> CommandBuffer::Create(msd_buffer_t* abi_cmd_buf,
+                                                     msd_buffer_t** msd_buffers,
+                                                     std::weak_ptr<ClientContext> context,
+                                                     msd_semaphore_t** msd_wait_semaphores,
+                                                     msd_semaphore_t** msd_signal_semaphores)
+{
+    auto command_buffer = std::unique_ptr<CommandBuffer>(
+        new CommandBuffer(MsdIntelAbiBuffer::cast(abi_cmd_buf)->ptr(), context));
+
+    if (!command_buffer->Initialize())
+        return DRETP(nullptr, "failed to initialize command buffer");
+
+    std::vector<std::shared_ptr<MsdIntelBuffer>> buffers;
+    buffers.reserve(command_buffer->num_resources());
+    for (uint32_t i = 0; i < command_buffer->num_resources(); i++) {
+        buffers.emplace_back(MsdIntelAbiBuffer::cast(msd_buffers[i])->ptr());
+    }
+
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
+    wait_semaphores.reserve(command_buffer->wait_semaphore_count());
+    for (uint32_t i = 0; i < command_buffer->wait_semaphore_count(); i++) {
+        wait_semaphores.emplace_back(MsdIntelAbiSemaphore::cast(msd_wait_semaphores[i])->ptr());
+    }
+
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
+    signal_semaphores.reserve(command_buffer->signal_semaphore_count());
+    for (uint32_t i = 0; i < command_buffer->signal_semaphore_count(); i++) {
+        signal_semaphores.emplace_back(MsdIntelAbiSemaphore::cast(msd_signal_semaphores[i])->ptr());
+    }
+
+    if (!command_buffer->InitializeResources(std::move(buffers), std::move(wait_semaphores),
+                                             std::move(signal_semaphores)))
+        return DRETP(nullptr, "failed to initialize command buffer resources");
+
+    return command_buffer;
+}
+
+CommandBuffer::CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
+                             std::weak_ptr<ClientContext> context)
+    : abi_cmd_buf_(std::move(abi_cmd_buf)), context_(context)
+{
+    nonce_ = TRACE_NONCE();
+    prepared_to_execute_ = false;
+}
+
 CommandBuffer::~CommandBuffer()
 {
     for (auto res : exec_resources_) {
@@ -32,39 +77,33 @@ void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
     sequence_number_ = sequence_number;
 }
 
-CommandBuffer::CommandBuffer(msd_buffer_t* abi_cmd_buf, std::weak_ptr<ClientContext> context)
-    : abi_cmd_buf_(MsdIntelAbiBuffer::cast(abi_cmd_buf)->ptr()), context_(context)
+bool CommandBuffer::InitializeResources(
+    std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
 {
-    nonce_ = TRACE_NONCE();
-    prepared_to_execute_ = false;
-}
+    if (!magma::CommandBuffer::initialized())
+        return DRETF(false, "base command buffer not initialized");
 
-bool CommandBuffer::Initialize(msd_buffer_t** exec_buffers, msd_semaphore_t** wait_semaphores,
-                               msd_semaphore_t** signal_semaphores)
-{
-    if (!magma::CommandBuffer::Initialize())
-        return DRETF(false, "Failed to intialize command buffer base class");
+    if (num_resources() != buffers.size())
+        return DRETF(false, "buffers size mismatch");
 
+    if (wait_semaphores.size() != wait_semaphore_count())
+        return DRETF(false, "wait semaphore count mismatch");
+
+    if (signal_semaphores.size() != signal_semaphore_count())
+        return DRETF(false, "wait semaphore count mismatch");
+
+    exec_resources_.clear();
     exec_resources_.reserve(num_resources());
     for (uint32_t i = 0; i < num_resources(); i++) {
-        auto buffer = MsdIntelAbiBuffer::cast(exec_buffers[i])->ptr();
         exec_resources_.emplace_back(
-            ExecResource{buffer, resource(i).offset(), resource(i).length()});
+            ExecResource{buffers[i], resource(i).offset(), resource(i).length()});
+        buffers[i]->IncrementInflightCounter();
     }
 
-    wait_semaphores_.reserve(wait_semaphore_count());
-    for (uint32_t i = 0; i < wait_semaphore_count(); i++) {
-        wait_semaphores_.emplace_back(MsdIntelAbiSemaphore::cast(wait_semaphores[i])->ptr());
-    }
-
-    signal_semaphores_.reserve(signal_semaphore_count());
-    for (uint32_t i = 0; i < signal_semaphore_count(); i++) {
-        signal_semaphores_.emplace_back(MsdIntelAbiSemaphore::cast(signal_semaphores[i])->ptr());
-    }
-
-    for (auto res : exec_resources_) {
-        res.buffer->IncrementInflightCounter();
-    }
+    wait_semaphores_ = std::move(wait_semaphores);
+    signal_semaphores_ = std::move(signal_semaphores);
 
     return true;
 }
