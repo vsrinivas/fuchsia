@@ -13,6 +13,7 @@ extern void        ihda_unbind_hook(mx_driver_t*, mx_device_t*, void*);
 extern mx_status_t ihda_release_hook(mx_driver_t*);
 
 static mx_driver_ops_t intel_hda_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
     .init = ihda_init_hook,
     .bind = ihda_bind_hook,
     .unbind = ihda_unbind_hook,
