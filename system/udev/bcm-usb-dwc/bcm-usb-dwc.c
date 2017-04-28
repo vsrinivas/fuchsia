@@ -28,8 +28,6 @@
 #include <bcm/ioctl.h>
 #include "bcm28xx/usb_dwc_regs.h"
 
-#define dev_to_usb_dwc(dev) containerof(dev, dwc_usb_t, device)
-
 #define NUM_HOST_CHANNELS 8
 #define PAGE_MASK_4K (0xFFF)
 #define USB_PAGE_START (USB_BASE & (~PAGE_MASK_4K))
@@ -115,7 +113,7 @@ typedef struct dwc_usb_device {
 } dwc_usb_device_t;
 
 typedef struct dwc_usb {
-    mx_device_t device;
+    mx_device_t* mxdev;
     mx_device_t* bus_device;
     usb_bus_protocol_t* bus_protocol;
     mx_handle_t irq_handle;
@@ -519,7 +517,7 @@ static void dwc_iotxn_queue(mx_device_t* hci_device, iotxn_t* txn) {
     if (txn->length > dwc_get_max_transfer_size(hci_device, data->device_id, data->ep_address)) {
         iotxn_complete(txn, ERR_INVALID_ARGS, 0);
     } else {
-        dwc_usb_t* dwc = dev_to_usb_dwc(hci_device);
+        dwc_usb_t* dwc = hci_device->ctx;
         do_dwc_iotxn_queue(dwc, txn);
     }
 }
@@ -540,7 +538,7 @@ static mx_protocol_device_t dwc_device_proto = {
 };
 
 static void dwc_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
-    dwc_usb_t* dwc = dev_to_usb_dwc(device);
+    dwc_usb_t* dwc = device->ctx;
     dwc->bus_device = busdev;
     if (busdev) {
         device_op_get_protocol(busdev, MX_PROTOCOL_USB_BUS,
@@ -562,7 +560,7 @@ static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
     xprintf("dwc_enable_ep: device_id = %u, ep_addr = %u\n", device_id,
             ep_desc->bEndpointAddress);
 
-    dwc_usb_t* dwc = dev_to_usb_dwc(hci_device);
+    dwc_usb_t* dwc = hci_device->ctx;
 
     if (device_id == ROOT_HUB_DEVICE_ID) {
         // Nothing to be done for root hub.
@@ -620,7 +618,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     printf("dwc usb device added hub_address = %u, port = %d, speed = %d\n",
            hub_address, port, speed);
 
-    dwc_usb_t* dwc = dev_to_usb_dwc(hci_device);
+    dwc_usb_t* dwc = hci_device->ctx;
 
     dwc_usb_device_t* new_device = &dwc->usb_devices[0];
     dwc_usb_endpoint_t* ep0 = NULL;
@@ -669,7 +667,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 8;
 
-    iotxn_queue(&dwc->device, get_desc);
+    iotxn_queue(dwc->mxdev, get_desc);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     usb_device_descriptor_t short_descriptor;
@@ -701,7 +699,7 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     pdata->setup.wIndex = 0;
     pdata->setup.wLength = 0;
 
-    iotxn_queue(&dwc->device, set_addr);
+    iotxn_queue(dwc->mxdev, set_addr);
     completion_wait(&completion, MX_TIME_INFINITE);
 
     mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
@@ -852,7 +850,8 @@ static void dwc_handle_irq(dwc_usb_t* dwc) {
 static int dwc_irq_thread(void* arg) {
     dwc_usb_t* dwc = (dwc_usb_t*)arg;
 
-    device_add(&dwc->device, dwc->parent);
+    // TODO: handle errors from device_add
+    device_add(dwc->mxdev, dwc->parent);
     dwc->parent = NULL;
 
     while (1) {
@@ -1759,9 +1758,12 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         goto error_return;
     }
 
-    device_init(&usb_dwc->device, drv, "bcm-usb-dwc", &dwc_device_proto);
+    st = device_create("bcm-usb-dwc", usb_dwc, &dwc_device_proto, drv, &usb_dwc->mxdev);
+    if (st != NO_ERROR) {
+        goto error_return;
+    }
 
-    device_set_protocol(&usb_dwc->device, MX_PROTOCOL_USB_HCI, &dwc_hci_protocol);
+    device_set_protocol(usb_dwc->mxdev, MX_PROTOCOL_USB_HCI, &dwc_hci_protocol);
 
     // Initialize all the channel completions.
     for (size_t i = 0; i < NUM_HOST_CHANNELS; i++) {
@@ -1775,7 +1777,7 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     if ((st = create_default_device(usb_dwc)) != NO_ERROR) {
         xprintf("usb_dwc_bind failed to create default device. retcode = %d\n",
                 st);
-        goto error_return;
+        goto error_return_created;
     }
 
     // Thread that responds to requests for the root hub.
@@ -1791,6 +1793,9 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     xprintf("usb_dwc_bind success!\n");
     return NO_ERROR;
+
+error_return_created:
+    device_destroy(usb_dwc->mxdev);
 error_return:
     if (usb_dwc)
         free(usb_dwc);
