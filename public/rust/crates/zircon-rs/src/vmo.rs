@@ -169,10 +169,10 @@ mod tests {
     fn vmo_read_write() {
         let mut vec1 = vec![0; 16];
         let vmo = Vmo::create(vec1.len() as u64, VmoOpts::Default).unwrap();
-        vmo.write(b"abcdef", 0).unwrap();
+        assert_eq!(vmo.write(b"abcdef", 0), Ok(6));
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"abcdef", &vec1[0..6]);
-        vmo.write(b"123", 2).unwrap();
+        assert_eq!(vmo.write(b"123", 2), Ok(3));
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"ab123f", &vec1[0..6]);
         assert_eq!(15, vmo.read(&mut vec1, 1).unwrap());
