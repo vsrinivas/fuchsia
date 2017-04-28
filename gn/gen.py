@@ -31,6 +31,8 @@ def main():
                         action="store_true")
     parser.add_argument("--fuchsia-disable-vulkan", help="Disable Vulkan in Mozart, Skia, and Flutter",
                         action="store_true", default=False)
+    parser.add_argument("--ignore-skia", help="Disable Skia settings - for Skia-less builds",
+                        action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
     (args, passthrough) = parser.parse_known_args()
     if args.release:
@@ -49,6 +51,13 @@ def main():
     if args.fuchsia_disable_vulkan:
         gn_args += " fuchsia_use_vulkan=false"
 
+    if not args.ignore_skia:
+        # Disable some Skia features not needed for host builds.
+        # This is needed in order to build the Flutter shell.
+        gn_args += " skia_use_dng_sdk=false"
+        gn_args += " skia_use_fontconfig=false"
+        gn_args += " skia_use_libwebp=false"
+        gn_args += " skia_use_sfntly=false"
 
     gn_args += " modules=\"" + args.modules + "\""
 
