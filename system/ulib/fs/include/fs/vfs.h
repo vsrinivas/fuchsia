@@ -43,9 +43,14 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
+#ifdef __Fuchsia__
+#include <mxtl/mutex.h>
+#endif  // __Fuchsia__
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 
 namespace fs {
 
@@ -62,6 +67,27 @@ public:
 private:
     mx_handle_t remote_;
 };
+
+#ifdef __Fuchsia__
+
+struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
+public:
+    VnodeWatcher();
+    ~VnodeWatcher();
+
+    mx_handle_t h;
+};
+
+class WatcherContainer {
+public:
+    virtual mx_status_t WatchDir(mx_handle_t* out) final;
+    virtual void NotifyAdd(const char* name, size_t len) final;
+private:
+    mxtl::Mutex lock_;
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
+};
+
+#endif // __Fuchsia__
 
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
@@ -91,10 +117,7 @@ public:
     }
 #endif
 
-    virtual mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-        return ERR_NOT_SUPPORTED;
-    }
-    // Called when something is added to a watched directory.
+    virtual mx_status_t WatchDir(mx_handle_t* out) { return ERR_NOT_SUPPORTED; }
     virtual void NotifyAdd(const char* name, size_t len) {}
 
     // Ensure that it is valid to open vn.

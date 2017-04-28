@@ -15,6 +15,7 @@ static_library("fs") {
     "vfs-unmount.cpp",
     "vfs-rpc.cpp",
     "vfs-dispatcher.cpp",
+    "vfs-watcher.cpp",
   ]
 
   public_configs = [ ":fs_config" ]

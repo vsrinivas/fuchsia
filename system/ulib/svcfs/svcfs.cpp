@@ -55,16 +55,6 @@ static mx_status_t ReaddirStart(void* cookie, void* data, size_t len) {
 
 ServiceProvider::~ServiceProvider() = default;
 
-// VnodeWatcher ----------------------------------------------------------------
-
-VnodeWatcher::VnodeWatcher() : h(MX_HANDLE_INVALID) {}
-
-VnodeWatcher::~VnodeWatcher() {
-    if (h != MX_HANDLE_INVALID) {
-        mx_handle_close(h);
-    }
-}
-
 // Vnode -----------------------------------------------------------------------
 
 Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
@@ -150,42 +140,8 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return NO_ERROR;
 }
 
-void VnodeDir::NotifyAdd(const char* name, size_t len) {
-    for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-        mx_status_t status;
-        if ((status = mx_channel_write(it->h, 0, name, static_cast<uint32_t>(len), nullptr, 0)) < 0) {
-            auto to_remove = it;
-            ++it;
-            watch_list_.erase(to_remove);
-        } else {
-            ++it;
-        }
-    }
-}
-
-mx_status_t VnodeDir::IoctlWatchDir(const void* in_buf,
-                                    size_t in_len,
-                                    void* out_buf,
-                                    size_t out_len) {
-    if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
-        return ERR_INVALID_ARGS;
-    }
-
-    AllocChecker ac;
-    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher);
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-
-    mx_handle_t h;
-    if (mx_channel_create(0, &h, &watcher->h) < 0) {
-        return ERR_NO_RESOURCES;
-    }
-
-    memcpy(out_buf, &h, sizeof(mx_handle_t));
-    watch_list_.push_back(mxtl::move(watcher));
-    return sizeof(mx_handle_t);
-}
+void VnodeDir::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
+mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* _data, size_t len) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);

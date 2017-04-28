@@ -32,50 +32,8 @@ namespace memfs {
 
 static VnodeMemfs* global_vfs_root;
 
-VnodeWatcher::VnodeWatcher() : h(MX_HANDLE_INVALID) {}
-
-VnodeWatcher::~VnodeWatcher() {
-    if (h != MX_HANDLE_INVALID) {
-        mx_handle_close(h);
-    }
-}
-
-void VnodeDir::NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) {
-    xprintf("devfs: notify vn=%p name='%.*s'\n", this, (int)len, name);
-    for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-        mx_status_t status;
-        if ((status = mx_channel_write(it->h, 0, name, static_cast<uint32_t>(len), nullptr, 0)) < 0) {
-            auto to_remove = it;
-            ++it;
-            watch_list_.erase(to_remove);
-        } else {
-            ++it;
-        }
-    }
-}
-
-mx_status_t VnodeDir::IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
-        return ERR_INVALID_ARGS;
-    }
-    if (!IsDirectory()) {
-        // not a directory
-        return ERR_WRONG_TYPE;
-    }
-    AllocChecker ac;
-    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher);
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-    mx_handle_t h;
-    if (mx_channel_create(0, &h, &watcher->h) < 0) {
-        return ERR_NO_RESOURCES;
-    }
-    memcpy(out_buf, &h, sizeof(mx_handle_t));
-    mxtl::AutoLock lock(&vfs_lock);
-    watch_list_.push_back(mxtl::move(watcher));
-    return sizeof(mx_handle_t);
-}
+void VnodeDir::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
+mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
 
 } // namespace memfs
 

@@ -132,6 +132,7 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
             }
             return r;
         }
+        vndir->NotifyAdd(path, len);
     } else {
     try_open:
         r = vndir->Lookup(&vn, path, len);
@@ -202,7 +203,11 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
         return r;
     }
     r = newparent->Link(newname, newlen, target);
-    return r;
+    if (r != NO_ERROR) {
+        return r;
+    }
+    newparent->NotifyAdd(newname, newlen);
+    return NO_ERROR;
 }
 
 mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
@@ -219,8 +224,13 @@ mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpa
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
         return r;
     }
-    return oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
-                             old_must_be_dir, new_must_be_dir);
+    r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
+                          old_must_be_dir, new_must_be_dir);
+    if (r != NO_ERROR) {
+        return r;
+    }
+    newparent->NotifyAdd(newname, newlen);
+    return NO_ERROR;
 }
 
 ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
@@ -228,7 +238,14 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
     switch (op) {
 #ifdef __Fuchsia__
     case IOCTL_DEVICE_WATCH_DIR: {
-        return vn->IoctlWatchDir(in_buf, in_len, out_buf, out_len);
+        if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_status_t status = vn->WatchDir(reinterpret_cast<mx_handle_t*>(out_buf));
+        if (status != NO_ERROR) {
+            return status;
+        }
+        return sizeof(mx_handle_t);
     }
     case IOCTL_DEVMGR_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {

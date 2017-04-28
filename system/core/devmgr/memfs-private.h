@@ -26,14 +26,6 @@ namespace memfs {
 
 class Dnode;
 
-struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
-public:
-    VnodeWatcher();
-    ~VnodeWatcher();
-
-    mx_handle_t h;
-};
-
 class VnodeMemfs : public fs::Vnode {
 public:
     virtual mx_status_t Open(uint32_t flags) override;
@@ -95,7 +87,10 @@ public:
 
     mx_status_t CreateDeviceAtLocked(mxtl::RefPtr<memfs::VnodeDir>* out, const char* name,
                                      mx_handle_t h);
-    void NotifyAdd(const char* name, size_t len) TA_REQ(vfs_lock) final;
+
+    // Use the watcher container to implement a directory watcher
+    void NotifyAdd(const char* name, size_t len) final;
+    mx_status_t WatchDir(mx_handle_t* out) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
@@ -105,8 +100,6 @@ public:
     virtual void SetRemote(mx_handle_t remote) final;
 
 private:
-    mx_status_t IoctlWatchDir(const void* in_buf, size_t in_len, void* out_buf,
-                              size_t out_len) final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     // Resolves the question, "Can this directory create a child node with the name?"
@@ -126,10 +119,8 @@ private:
     mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Getattr(vnattr_t* a) override;
 
-    // TODO(smklein): Guard the watch list with a lock more fine-grained
-    // than the VFS lock (or make the watch list thread-safe while lock-free).
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ TA_GUARDED(vfs_lock);
     fs::RemoteContainer remoter_;
+    fs::WatcherContainer watcher_;
 };
 
 class VnodeDevice final : public VnodeDir {

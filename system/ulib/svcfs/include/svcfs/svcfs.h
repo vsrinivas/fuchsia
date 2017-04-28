@@ -21,14 +21,6 @@ protected:
     virtual ~ServiceProvider();
 };
 
-struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
-public:
-    VnodeWatcher();
-    ~VnodeWatcher();
-
-    mx_handle_t h;
-};
-
 class Vnode : public fs::Vnode {
 public:
     mx_status_t Close() override final;
@@ -86,11 +78,8 @@ public:
     mx_status_t Getattr(vnattr_t* a) override final;
 
     void NotifyAdd(const char* name, size_t len) override final;
+    mx_status_t WatchDir(mx_handle_t* out) final;
 
-    mx_status_t IoctlWatchDir(const void* in_buf,
-                              size_t in_len,
-                              void* out_buf,
-                              size_t out_len) override final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) override final;
 
     bool AddService(const char* name, size_t len, ServiceProvider* provider);
@@ -102,7 +91,7 @@ private:
     // Starts at 3 because . has ID one and .. has ID two.
     uint64_t next_node_id_;
     ServiceList services_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_;
+    fs::WatcherContainer watcher_;
 };
 
 } // namespace svcfs
