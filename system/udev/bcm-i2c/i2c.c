@@ -27,15 +27,13 @@
 
 typedef struct {
 
-    mx_device_t         device;
+    mx_device_t*        mxdev;
     mx_device_t*        parent;
     mx_driver_t*        driver;
     bcm_i2c_regs_t*     control_regs;
     uint32_t            dev_id;
 
 } bcm_i2c_t;
-
-#define dev_to_bcm_i2c(dev) containerof(dev, bcm_i2c_t, device)
 
 /* TODO - improve fifo read/write to be interrupt driven and capable of handling
             multiple transactions in a buffer at once.
@@ -110,7 +108,7 @@ static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
 
 static ssize_t i2cread(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
 
-    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+    bcm_i2c_t* ctx = dev->ctx;
     mx_status_t status = bcm_read_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
     if (status == NO_ERROR) {
         return count;
@@ -121,7 +119,7 @@ static ssize_t i2cread(mx_device_t* dev, void* buf, size_t count, mx_off_t off) 
 
 static ssize_t i2cwrite(mx_device_t* dev, const void* buf, size_t count, mx_off_t off){
 
-    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+    bcm_i2c_t* ctx = dev->ctx;
 
     mx_status_t status = bcm_write_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
 
@@ -180,7 +178,7 @@ static ssize_t bcm_i2c_ioctl(
     void* out_buf, size_t out_len) {
 
 
-    bcm_i2c_t* ctx = dev_to_bcm_i2c(dev);
+    bcm_i2c_t* ctx = dev->ctx;
     int ret;
 
     switch (op) {
@@ -247,11 +245,15 @@ static int i2c_bootstrap_thread(void *arg) {
     char id[5];
     snprintf(id,sizeof(id),"i2c%u",i2c_ctx->dev_id);
 
-    device_init(&i2c_ctx->device, i2c_ctx->driver, id, &i2c_device_proto);
-    status = device_add(&i2c_ctx->device, i2c_ctx->parent);
+    status = device_create(id, i2c_ctx, &i2c_device_proto, i2c_ctx->driver, &i2c_ctx->mxdev);
+    if (status != NO_ERROR) {
+        goto i2c_err;
+    }
+    status = device_add(i2c_ctx->mxdev, i2c_ctx->parent);
 
     if (status == NO_ERROR) return 0;
 
+    device_destroy(i2c_ctx->mxdev);
 i2c_err:
     if (i2c_ctx)
         free(i2c_ctx);
