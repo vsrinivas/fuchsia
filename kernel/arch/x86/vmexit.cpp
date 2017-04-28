@@ -48,6 +48,8 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
+            // Disable the TSC deadline bit.
+            guest_state->rcx &= ~(1u << X86_FEATURE_TSC_DEADLINE.bit);
         }
         if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
             // Disable the XSAVES bit.

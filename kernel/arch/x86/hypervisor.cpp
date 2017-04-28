@@ -890,6 +890,7 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
 
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_PAT);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_EFER);
+    ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_FS_BASE);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
     ignore_msr(&ctx->msr_bitmaps_page_, X86_MSR_IA32_STAR);
