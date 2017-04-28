@@ -25,7 +25,6 @@ typedef struct pty_server_dev {
 } pty_server_dev_t;
 
 #define psd_from_ps(ps) containerof(ps, pty_server_dev_t, srv)
-#define psd_from_dev(dev) containerof(dev, pty_server_dev_t, srv.dev)
 
 static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size_t* actual) {
     if (len == 0) {
@@ -37,7 +36,7 @@ static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
     bool was_empty = pty_fifo_is_empty(&psd->fifo);
     *actual = pty_fifo_write(&psd->fifo, data, len, false);
     if (was_empty && *actual) {
-        device_state_set(&ps->dev, DEV_STATE_READABLE);
+        device_state_set(ps->mxdev, DEV_STATE_READABLE);
     }
 
     if (*actual == 0) {
@@ -48,13 +47,13 @@ static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
 }
 
 static ssize_t psd_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    pty_server_dev_t* psd = psd_from_dev(dev);
+    pty_server_dev_t* psd = dev->ctx;
 
     mtx_lock(&psd->srv.lock);
     bool was_full = pty_fifo_is_full(&psd->fifo);
     size_t actual = pty_fifo_read(&psd->fifo, buf, count);
     if (pty_fifo_is_empty(&psd->fifo)) {
-        device_state_clr(&psd->srv.dev, DEV_STATE_READABLE);
+        device_state_clr(psd->srv.mxdev, DEV_STATE_READABLE);
     }
     if (was_full && actual) {
         pty_server_resume_locked(&psd->srv);
@@ -69,7 +68,7 @@ static ssize_t psd_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off)
 }
 
 static ssize_t psd_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    pty_server_dev_t* psd = psd_from_dev(dev);
+    pty_server_dev_t* psd = dev->ctx;
     size_t actual;
     mx_status_t status;
 
@@ -83,7 +82,7 @@ static ssize_t psd_write(mx_device_t* dev, const void* buf, size_t count, mx_off
 static ssize_t psd_ioctl(mx_device_t* dev, uint32_t op,
                   const void* in_buf, size_t in_len,
                   void* out_buf, size_t out_len) {
-    pty_server_dev_t* psd = psd_from_dev(dev);
+    pty_server_dev_t* psd = dev->ctx;
 
     switch (op) {
     case IOCTL_PTY_SET_WINDOW_SIZE: {
@@ -123,21 +122,26 @@ static mx_status_t ptmx_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     pty_server_init(&psd->srv);
     psd->srv.recv = psd_recv;
 
-    device_init(&psd->srv.dev, NULL, "pty", &psd_ops);
-    device_set_protocol(&psd->srv.dev, MX_PROTOCOL_PTY, NULL);
+    mx_status_t status;
+    if ((status = device_create("pty", psd, &psd_ops, NULL, &psd->srv.mxdev)) < 0) {
+        free(psd);
+        return status;
+    }
+    device_set_protocol(psd->srv.mxdev, MX_PROTOCOL_PTY, NULL);
 
     mtx_init(&psd->lock, mtx_plain);
     psd->fifo.head = 0;
     psd->fifo.tail = 0;
 
-    mx_status_t status = device_add_instance(&psd->srv.dev, dev);
+    status = device_add_instance(psd->srv.mxdev, dev);
     if (status < 0) {
+        device_destroy(psd->srv.mxdev);
         free(psd);
         return status;
     }
 
     printf("pty srv %p created\n", psd);
-    *out = &psd->srv.dev;
+    *out = psd->srv.mxdev;
     return NO_ERROR;
 }
 

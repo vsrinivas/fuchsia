@@ -18,7 +18,7 @@ typedef struct pty_server pty_server_t;
 typedef struct pty_client pty_client_t;
 
 struct pty_server {
-    mx_device_t dev;
+    mx_device_t* mxdev;
 
     // lock covers server and all its clients
     mtx_t lock;
