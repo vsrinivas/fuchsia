@@ -239,9 +239,9 @@ fail:
 static mx_status_t iotxn_physmap_paged(iotxn_t* txn) {
     // MX_VMO_OP_LOOKUP returns whole pages, so take into account unaligned vmo
     // offset and length when calculating the amount of pages returned
-    uint32_t page_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
-    uint32_t page_length = txn->vmo_length + (txn->vmo_offset - page_offset);
-    uint32_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
+    uint64_t page_offset = ROUNDDOWN(txn->vmo_offset, PAGE_SIZE);
+    uint64_t page_length = txn->vmo_length + (txn->vmo_offset - page_offset);
+    uint64_t pages = ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
 
     mx_paddr_t* paddrs = malloc(sizeof(mx_paddr_t) * pages);
     if (paddrs == NULL) {
