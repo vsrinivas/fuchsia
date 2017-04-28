@@ -13,7 +13,7 @@ WITH_SMP := 1
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/platform.c \
+	$(LOCAL_DIR)/platform.cpp \
 
 GLOBAL_DEFINES += \
 	ARM_ARCH_WAIT_FOR_SECONDARIES=1
