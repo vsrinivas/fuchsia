@@ -349,6 +349,8 @@ void sys_process_exit(int retcode) {
 mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
                                     user_ptr<void> _buffer,
                                     size_t len, user_ptr<size_t> _actual) {
+    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
+
     if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)
@@ -393,6 +395,8 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
 mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
                                      user_ptr<const void> _buffer,
                                      size_t len, user_ptr<size_t> _actual) {
+    LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
+
     if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugWriteBlock)
