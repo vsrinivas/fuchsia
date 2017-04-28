@@ -11,6 +11,7 @@
 extern mx_status_t wlan_bind(mx_driver_t* driver, mx_device_t* device, void** cookie);
 
 static mx_driver_ops_t wlan_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
     .bind = wlan_bind,
 };
 
