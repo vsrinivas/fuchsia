@@ -21,6 +21,10 @@
         {
             "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.js",
             "bootfs_path": "data/mi_dashboard/webroot/dashboard.js"
+        },
+        {
+            "file": "apps/maxwell/src/agents/mi_dashboard/webroot/dashboard.css",
+            "bootfs_path": "data/mi_dashboard/webroot/dashboard.css"
         }
     ]
 }
