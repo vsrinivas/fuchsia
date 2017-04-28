@@ -51,7 +51,6 @@ std::string GetHostName() {
     ssize_t size = ioctl_netc_get_if_info(socket_fd.get(), &get_if_info);
     if (size < 0) {
       FTL_LOG(WARNING) << "ioctl_netc_get_if_info failed, errno " << errno;
-      FTL_LOG(WARNING) << "This probably means you're using netstack2.";
       FTL_LOG(WARNING)
           << "No IP address could be obtained to dedup the host name.";
       return host_name;

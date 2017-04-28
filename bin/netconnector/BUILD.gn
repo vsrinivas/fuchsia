@@ -52,6 +52,8 @@ executable("netconnector") {
     "mdns/mdns_interface_transceiver_v6.h",
     "mdns/mdns_names.cc",
     "mdns/mdns_names.h",
+    "mdns/mdns_service_impl.cc",
+    "mdns/mdns_service_impl.h",
     "mdns/mdns_transceiver.cc",
     "mdns/mdns_transceiver.h",
     "mdns/packet_reader.cc",
@@ -77,6 +79,7 @@ executable("netconnector") {
   deps = [
     "//application/lib/app",
     "//application/services",
+    "//apps/media/src/util",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//lib/ftl",
