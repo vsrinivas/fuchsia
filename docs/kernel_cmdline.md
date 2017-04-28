@@ -60,6 +60,12 @@ to detect hangs/crashes and reboot upon detection.
 If this option is set (disabled by default), the system will halt on
 a kernel panic instead of rebooting.
 
+## kernel.memory-limit-mb=\<num>
+
+This option tells the kernel to limit system memory to the MB value specified
+by 'num'. Using this effectively allows a user to simulate the system having
+less physical memory than physically present.
+
 ## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics

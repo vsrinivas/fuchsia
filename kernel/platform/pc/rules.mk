@@ -35,6 +35,7 @@ MODULE_DEPS += \
     kernel/lib/capsule \
     kernel/lib/gfxconsole \
     kernel/lib/fixed_point \
+    kernel/lib/memory_limit \
     kernel/lib/pow2_range_allocator \
     kernel/lib/version \
     kernel/dev/interrupt \
