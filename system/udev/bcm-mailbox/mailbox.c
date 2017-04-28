@@ -116,7 +116,7 @@ static uint32_t power_state = 0x0;
 static bcm_fb_desc_t bcm_vc_framebuffer;
 static uint8_t* vc_framebuffer = (uint8_t*)NULL;
 
-static mx_device_t disp_device;
+static mx_device_t* disp_mxdev;
 static mx_display_info_t disp_info;
 
 static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) {
@@ -442,9 +442,12 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
 
     bcm_vc_get_framebuffer(&framebuff_descriptor);
 
-    device_init(&disp_device, driver, "bcm-vc-fbuff", &empty_device_proto);
+    status = device_create("bcm-vc-fbuff", NULL, &empty_device_proto, driver, &disp_mxdev);
+    if (status != NO_ERROR) {
+        return status;
+    }
 
-    device_set_protocol(&disp_device, MX_PROTOCOL_DISPLAY, &vc_display_proto);
+    device_set_protocol(disp_mxdev, MX_PROTOCOL_DISPLAY, &vc_display_proto);
 
     disp_info.format = MX_PIXEL_FORMAT_ARGB_8888;
     disp_info.width = 800;
@@ -455,8 +458,9 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
                        bcm_vc_framebuffer.fb_size, disp_info.format,
                        disp_info.width, disp_info.height, disp_info.stride);
 
-    status = device_add(&disp_device, parent);
+    status = device_add(disp_mxdev, parent);
     if (status != NO_ERROR) {
+        device_destroy(disp_mxdev);
         return status;
     }
 
@@ -479,15 +483,24 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     // Publish this mock device to allow the i2c device to bind to.
 
     bcm_vc_poweron(bcm_dev_i2c1);
-    mx_device_t* i2c_device = malloc(sizeof(*i2c_device));
-    device_init(i2c_device, driver, "bcm-i2c", &empty_device_proto);
-    i2c_device->props = calloc(2, sizeof(mx_device_prop_t));
-    i2c_device->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    i2c_device->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C};
-    i2c_device->prop_count = 2;
-    device_set_protocol(i2c_device, MX_PROTOCOL_SOC, NULL);
-    status = device_add_with_props(i2c_device, parent, i2c_device->props, i2c_device->prop_count);
-
+    mx_device_t* i2c_mxdev;
+    status = device_create("bcm-i2c", NULL, &empty_device_proto, driver, &i2c_mxdev);
+    if (status != NO_ERROR) {
+        device_destroy(disp_mxdev);
+        return status;
+    }
+    i2c_mxdev->props = calloc(2, sizeof(mx_device_prop_t));
+    i2c_mxdev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
+    i2c_mxdev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C};
+    i2c_mxdev->prop_count = 2;
+    device_set_protocol(i2c_mxdev, MX_PROTOCOL_SOC, NULL);
+    status = device_add_with_props(i2c_mxdev, parent, i2c_mxdev->props, i2c_mxdev->prop_count);
+    if (status != NO_ERROR) {
+        free(i2c_mxdev->props);
+        device_destroy(i2c_mxdev);
+        device_destroy(disp_mxdev);
+        return status;
+    }
 
     return NO_ERROR;
 }
