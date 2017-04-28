@@ -72,6 +72,7 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	s := &socketServer{
 		dispatcher: d,
 		stack:      stk,
+		dnsClient:  dns.NewClient(stk, 0),
 		io:         make(map[cookie]*iostate),
 		next:       1,
 	}
@@ -914,6 +915,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 	s.mu.Unlock()
 
 	if dnsClient == nil {
+		log.Println("getaddrinfo called, but no DNS client available.")
 		rep := c_mxrio_gai_reply{retval: EAI_FAIL}
 		rep.Encode(msg)
 		return mx.ErrOk
