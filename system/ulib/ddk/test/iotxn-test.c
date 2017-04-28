@@ -252,6 +252,7 @@ static mx_status_t iotxn_test_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 }
 
 static mx_driver_ops_t iotxn_test_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
     .bind = iotxn_test_bind,
 };
 
