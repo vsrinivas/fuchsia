@@ -7,8 +7,11 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 void uart_init(void);
 void uart_init_early(void);
@@ -20,3 +23,4 @@ int uart_getc(bool wait);
 int uart_pputc(char c);
 int uart_pgetc(void);
 
+__END_CDECLS

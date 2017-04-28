@@ -78,13 +78,12 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
  {}
 };
 
-extern void arm_reset(void);
-
 static pmm_arena_info_t arena = {
     .name = "sdram",
+    .flags = PMM_ARENA_FLAG_KMAP,
+    .priority = 0,
     .base = MEMBASE,
     .size = MEMSIZE,
-    .flags = PMM_ARENA_FLAG_KMAP,
 };
 
 static volatile int panic_started;
@@ -123,7 +122,7 @@ void platform_panic_start(void)
 
 // Reads Linux device tree to initialize command line and return ramdisk location
 static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
-    if (ramdisk_base) *ramdisk_base = NULL;
+    if (ramdisk_base) *ramdisk_base = nullptr;
     if (ramdisk_size) *ramdisk_size = 0;
     if (mem_size) *mem_size = 0;
 
@@ -145,7 +144,8 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
     }
 
     int length;
-    const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &length);
+    const char* bootargs =
+        static_cast<const char*>(fdt_getprop(fdt, offset, "bootargs", &length));
     if (bootargs) {
         printf("kernel command line: %s\n", bootargs);
         cmdline_init(bootargs);
@@ -218,7 +218,7 @@ void* platform_get_ramdisk(size_t *size) {
         return ramdisk_base;
     } else {
         *size = 0;
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -257,8 +257,9 @@ static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
 
 static void platform_start_cpu(uint cluster, uint cpu) {
 #if BCM2837
-    uintptr_t sec_entry = (uintptr_t)(&arm_reset - KERNEL_ASPACE_BASE);
-    unsigned long long *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
+    uintptr_t sec_entry = reinterpret_cast<uintptr_t>(&arm_reset) - KERNEL_ASPACE_BASE;
+    unsigned long long *spin_table =
+        reinterpret_cast<unsigned long long *>(KERNEL_ASPACE_BASE + 0xd8);
 
     spin_table[cpu] = sec_entry;
     __asm__ __volatile__ ("" : : : "memory");
@@ -270,9 +271,10 @@ static void platform_start_cpu(uint cluster, uint cpu) {
 }
 
 static void* allocate_one_stack(void) {
-    char* stack =
-        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, NULL, NULL);
-    return stack + ARCH_DEFAULT_STACK_SIZE;
+    uint8_t* stack = static_cast<uint8_t*>(
+        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, nullptr, nullptr)
+    );
+    return static_cast<void*>(stack + ARCH_DEFAULT_STACK_SIZE);
 }
 
 static void platform_cpu_init(void) {
@@ -280,7 +282,7 @@ static void platform_cpu_init(void) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
                 void* sp = allocate_one_stack();
-                void* unsafe_sp = NULL;
+                void* unsafe_sp = nullptr;
 #if __has_feature(safe_stack)
                 unsafe_sp = allocate_one_stack();
 #endif
@@ -318,14 +320,15 @@ static void platform_mdi_init(void) {
 
     // Look for MDI data in ramdisk bootdata
     size_t offset = 0;
-    bootdata_t* header = (ramdisk_base + offset);
+    uintptr_t ramdisk_base_ptr = reinterpret_cast<uintptr_t>(ramdisk_base);
+    bootdata_t* header = reinterpret_cast<bootdata_t*>(ramdisk_base_ptr);
     if (header->type != BOOTDATA_CONTAINER) {
         panic("invalid bootdata container header\n");
     }
     offset += sizeof(*header);
 
     while (offset < ramdisk_size) {
-        header = (ramdisk_base + offset);
+        header = reinterpret_cast<bootdata_t*>(ramdisk_base_ptr + offset);
 
         if (header->type == BOOTDATA_MDI) {
             break;
@@ -337,7 +340,8 @@ static void platform_mdi_init(void) {
         panic("No MDI found in ramdisk\n");
     }
 
-    if (mdi_init(ramdisk_base + offset, ramdisk_size - offset, &root) != NO_ERROR) {
+    if (mdi_init(reinterpret_cast<void *>(ramdisk_base_ptr + offset),
+                 ramdisk_size - offset, &root) != NO_ERROR) {
         panic("mdi_init failed\n");
     }
 
@@ -396,7 +400,7 @@ void platform_early_init(void)
 
 #ifdef BOOTLOADER_RESERVE_START
     /* Allocate memory regions reserved by bootloaders for other functions */
-    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, NULL);
+    pmm_alloc_range(BOOTLOADER_RESERVE_START, BOOTLOADER_RESERVE_SIZE / PAGE_SIZE, nullptr);
 #endif
 
     platform_preserve_ramdisk();
@@ -425,7 +429,7 @@ int platform_dgetc(char *c, bool wait)
     int ret = uart_getc(wait);
     if (ret == -1)
         return -1;
-    *c = ret;
+    *c = static_cast<char>(ret);
     return 0;
 }
 
@@ -441,7 +445,7 @@ int platform_pgetc(char *c, bool wait)
          return -1;
      }
 
-     *c = r;
+     *c = static_cast<char>(r);
      return 0;
 }
 
@@ -493,13 +497,13 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 
 #if ENABLE_PANIC_SHELL
     if (reason == HALT_REASON_SW_PANIC) {
-        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %u)\n", reason);
+        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
         arch_disable_ints();
         panic_shell_start();
     }
 #endif  // ENABLE_PANIC_SHELL
 
-    dprintf(ALWAYS, "HALT: spinning forever... (reason = %u)\n", reason);
+    dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
 
     // catch all fallthrough cases
     arch_disable_ints();

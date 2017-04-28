@@ -8,6 +8,8 @@
 #include <magenta/types.h>
 #include <magenta/mdi.h>
 
+__BEGIN_CDECLS;
+
 typedef struct mdi_node_ref {
     const mdi_node_t* node;
     uint32_t siblings_count;        // number of siblings following node in list
@@ -55,3 +57,5 @@ mx_status_t mdi_find_node(const mdi_node_ref_t* ref, mdi_id_t id, mdi_node_ref_t
 
 #define mdi_each_child(parent, child) \
     for (mdi_first_child(parent, child); mdi_valid(child); mdi_next_child(child, child))
+
+__END_CDECLS;

@@ -6,6 +6,7 @@
 
 #include <asm.h>
 #include <arch/arm64/mmu.h>
+#include <arch/arm64.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <kernel/vm.h>

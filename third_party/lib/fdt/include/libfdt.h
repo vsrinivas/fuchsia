@@ -53,6 +53,9 @@
 
 #include <libfdt_env.h>
 #include <fdt.h>
+#include <magenta/compiler.h>
+
+__BEGIN_CDECLS;
 
 #define FDT_FIRST_SUPPORTED_VERSION	0x10
 #define FDT_LAST_SUPPORTED_VERSION	0x11
@@ -1582,5 +1585,7 @@ int fdt_del_node(void *fdt, int nodeoffset);
 /**********************************************************************/
 
 const char *fdt_strerror(int errval);
+
+__END_CDECLS;
 
 #endif /* _LIBFDT_H */

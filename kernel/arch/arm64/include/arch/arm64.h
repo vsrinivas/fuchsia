@@ -105,6 +105,7 @@ uint64_t arm64_get_boot_el(void);
 void arm64_get_cache_info(arm64_cache_info_t* info);
 void arm64_dump_cache_info(uint32_t cpu);
 
+void arm_reset(void);
 /*
  * Sets the secondary stack pointer for the specified CPU.  |sp| and
  * |unsafe_sp| must point to the top (highest address, exclusive) of the
