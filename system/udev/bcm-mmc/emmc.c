@@ -167,7 +167,7 @@ typedef struct emmc {
     volatile struct emmc_regs* regs;
 
     // Device heirarchy
-    mx_device_t device;
+    mx_device_t* mxdev;
     mx_device_t* parent;
 
     // Held when a command or action is in progress.
@@ -181,8 +181,6 @@ typedef struct emmc_setup_context {
     mx_device_t* dev;
     mx_driver_t* drv;
 } emmc_setup_context_t;
-
-#define dev_to_bcm_emmc(dev) containerof(dev, emmc_t, device)
 
 // If any of these interrupts is asserted in the SDHCI irq register, it means
 // that an error has occured.
@@ -328,7 +326,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         return;
     }
 
-    emmc_t* emmc = dev_to_bcm_emmc(dev);
+    emmc_t* emmc = dev->ctx;
     mx_status_t st;
     mtx_lock(&emmc->mtx);
 
@@ -553,7 +551,7 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
 static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
                           const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
-    emmc_t* emmc = dev_to_bcm_emmc(dev);
+    emmc_t* emmc = dev->ctx;
     uint32_t* arg;
     arg = (uint32_t*)in_buf;
     if (in_len < sizeof(*arg))
@@ -575,12 +573,13 @@ static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 static void emmc_unbind(mx_device_t* device) {
-    emmc_t* emmc = dev_to_bcm_emmc(device);
-    device_remove(&emmc->device);
+    emmc_t* emmc = device->ctx;
+    device_remove(emmc->mxdev);
 }
 
 static mx_status_t emmmc_release(mx_device_t* device) {
-    emmc_t* emmc = dev_to_bcm_emmc(device);
+    emmc_t* emmc = device->ctx;
+    device_destroy(emmc->mxdev);
     free(emmc);
     return NO_ERROR;
 }
@@ -756,8 +755,11 @@ static int emmc_bootstrap_thread(void *arg) {
     regs->irq = 0xffffffff;
 
     // Create the device.
-    device_init(&emmc->device, drv, "bcm-emmc", &emmc_device_proto);
-    device_set_protocol(&emmc->device, MX_PROTOCOL_SDMMC, NULL);
+    st = device_create("bcm-emmc", emmc, &emmc_device_proto, drv, &emmc->mxdev);
+    if (st != NO_ERROR) {
+        goto out;
+    }
+    device_set_protocol(emmc->mxdev, MX_PROTOCOL_SDMMC, NULL);
 
     // Create a thread to handle IRQs.
     thrd_t irq_thrd;
@@ -769,10 +771,16 @@ static int emmc_bootstrap_thread(void *arg) {
     }
     thrd_detach(irq_thrd);
 
-    device_add(&emmc->device, emmc->parent);
+    st = device_add(emmc->mxdev, emmc->parent);
+    if (st != NO_ERROR) {
+        goto out_err_add;
+    }
 
     // Everything went okay, exit the bootstrap thread!
     return 0;
+
+out_err_add:
+    device_destroy(emmc->mxdev);
 out:
     if (emmc)
         free(emmc);
