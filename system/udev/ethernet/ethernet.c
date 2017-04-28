@@ -54,7 +54,7 @@ typedef struct ethdev0 {
 
     ethmac_info_t info;
 
-    mx_device_t dev;
+    mx_device_t* mxdev;
 } ethdev0_t;
 
 static void eth0_downref(ethdev0_t* edev0) {
@@ -62,6 +62,7 @@ static void eth0_downref(ethdev0_t* edev0) {
     edev0->refcount--;
     if (edev0->refcount == 0) {
         mtx_unlock(&edev0->lock);
+        device_destroy(edev0->mxdev);
         free(edev0);
     } else {
         mtx_unlock(&edev0->lock);
@@ -107,7 +108,7 @@ typedef struct ethdev {
     // fifo thread
     thrd_t tx_thr;
 
-    mx_device_t dev;
+    mx_device_t* mxdev;
 
     uint32_t fail_rx_read;
     uint32_t fail_rx_write;
@@ -115,9 +116,6 @@ typedef struct ethdev {
 } ethdev_t;
 
 #define FAIL_REPORT_RATE 50
-
-#define get_ethdev(d) containerof(d, ethdev_t, dev)
-#define get_ethdev0(d) containerof(d, ethdev0_t, dev)
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
     eth_fifo_entry_t e;
@@ -416,7 +414,7 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
                          const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len) {
 
-    ethdev_t* edev = get_ethdev(dev);
+    ethdev_t* edev = dev->ctx;
     mtx_lock(&edev->edev0->lock);
     mx_status_t status;
     if (edev->state & ETHDEV_DEAD) {
@@ -513,14 +511,15 @@ static void eth_kill_locked(ethdev_t* edev) {
 }
 
 static mx_status_t eth_release(mx_device_t* dev) {
-    ethdev_t* edev = get_ethdev(dev);
+    ethdev_t* edev = dev->ctx;
     eth0_downref(edev->edev0);
+    device_destroy(edev->mxdev);
     free(edev);
     return ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t eth_close(mx_device_t* dev, uint32_t flags) {
-    ethdev_t* edev = get_ethdev(dev);
+    ethdev_t* edev = dev->ctx;
 
     mtx_lock(&edev->edev0->lock);
     eth_stop_locked(edev);
@@ -542,19 +541,23 @@ static ethernet_protocol_t ethernet_ops = {};
 mx_driver_t _driver_ethernet;
 
 static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
-    ethdev0_t* edev0 = get_ethdev0(dev);
+    ethdev0_t* edev0 = dev->ctx;
 
     ethdev_t* edev;
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
 
-    device_init(&edev->dev, &_driver_ethernet, "ethernet", &ethdev_ops);
-    device_set_protocol(&edev->dev, MX_PROTOCOL_ETHERNET, &ethernet_ops);
+    mx_status_t status;
+    if ((status = device_create("ethernet", edev, &ethdev_ops, &_driver_ethernet, &edev->mxdev)) < 0) {
+        free(edev);
+        return status;
+    }
+    device_set_protocol(edev->mxdev, MX_PROTOCOL_ETHERNET, &ethernet_ops);
     edev->edev0 = edev0;
 
-    mx_status_t status;
-    if ((status = device_add_instance(&edev->dev, dev)) < 0) {
+    if ((status = device_add_instance(edev->mxdev, dev)) < 0) {
+        device_destroy(edev->mxdev);
         free(edev);
         return status;
     }
@@ -564,12 +567,12 @@ static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     list_add_tail(&edev0->list_idle, &edev->node);
     mtx_unlock(&edev0->lock);
 
-    *out = &edev->dev;
+    *out = edev->mxdev;
     return NO_ERROR;
 }
 
 static void eth0_unbind(mx_device_t* dev) {
-    ethdev0_t* edev0 = get_ethdev0(dev);
+    ethdev0_t* edev0 = dev->ctx;
 
     mtx_lock(&edev0->lock);
 
@@ -589,7 +592,7 @@ static void eth0_unbind(mx_device_t* dev) {
 }
 
 static mx_status_t eth0_release(mx_device_t* dev) {
-    ethdev0_t* edev0 = get_ethdev0(dev);
+    ethdev0_t* edev0 = dev->ctx;
     eth0_downref(edev0);
     return NO_ERROR;
 }
@@ -628,7 +631,9 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    device_init(&edev0->dev, drv, "ethernet", &ethdev0_ops);
+    if ((status = device_create("ethernet", edev0, &ethdev0_ops, drv, &edev0->mxdev)) < 0) {
+        goto fail;
+    }
     mtx_init(&edev0->lock, mtx_plain);
     list_initialize(&edev0->list_active);
     list_initialize(&edev0->list_idle);
@@ -637,14 +642,16 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     edev0->refcount = 1;
 
     edev0->mac = dev;
-    device_set_protocol(&edev0->dev, MX_PROTOCOL_ETHERNET, NULL);
+    device_set_protocol(edev0->mxdev, MX_PROTOCOL_ETHERNET, NULL);
 
-    if ((status = device_add(&edev0->dev, dev)) < 0) {
-        goto fail;
+    if ((status = device_add(edev0->mxdev, dev)) < 0) {
+        goto fail_add;
     }
 
     return NO_ERROR;
 
+fail_add:
+    device_destroy(edev0->mxdev);
 fail:
     free(edev0);
     return status;
