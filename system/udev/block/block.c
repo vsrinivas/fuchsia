@@ -23,7 +23,7 @@
 #define FLAG_BG_THREAD_JOINABLE       0x0001
 
 typedef struct blkdev {
-    mx_device_t device;
+    mx_device_t* mxdev;
     block_ops_t* blockops;
 
     mtx_t lock;
@@ -32,12 +32,10 @@ typedef struct blkdev {
     thrd_t bs_thread;
 } blkdev_t;
 
-#define get_blkdev(dev) containerof(dev, blkdev_t, device)
-
 static int blockserver_thread(void* arg) {
     blkdev_t* bdev = (blkdev_t*)arg;
     BlockServer* bs = bdev->bs;
-    blockserver_serve(bs, bdev->device.parent, bdev->blockops);
+    blockserver_serve(bs, bdev->mxdev->parent, bdev->blockops);
 
     mtx_lock(&bdev->lock);
     bdev->bs = NULL;
@@ -174,7 +172,7 @@ static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
 
 static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max) {
-    blkdev_t* blkdev = get_blkdev(dev);
+    blkdev_t* blkdev = dev->ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_FIFOS:
         return blkdev_get_fifos(blkdev, reply, max);
@@ -207,8 +205,9 @@ static void blkdev_unbind(mx_device_t* dev) {
 }
 
 static mx_status_t blkdev_release(mx_device_t* dev) {
-    blkdev_t* blkdev = get_blkdev(dev);
+    blkdev_t* blkdev = dev->ctx;
     blkdev_fifo_close(blkdev);
+    device_destroy(blkdev->mxdev);
     free(blkdev);
     return NO_ERROR;
 }
@@ -233,15 +232,20 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         goto fail;
     }
 
-    device_init(&bdev->device, drv, "block", &blkdev_ops);
+    if ((status = device_create("block", bdev, &blkdev_ops, drv, &bdev->mxdev)) < 0) {
+        goto fail;
+    }
     mtx_init(&bdev->lock, mtx_plain);
 
-    device_set_protocol(&bdev->device, MX_PROTOCOL_BLOCK, NULL);
-    if ((status = device_add(&bdev->device, dev)) != NO_ERROR) {
-        goto fail;
+    device_set_protocol(bdev->mxdev, MX_PROTOCOL_BLOCK, NULL);
+    if ((status = device_add(bdev->mxdev, dev)) != NO_ERROR) {
+        goto fail_add;
     }
 
     return NO_ERROR;
+
+fail_add:
+    device_destroy(bdev->mxdev);
 fail:
     free(bdev);
     return status;
