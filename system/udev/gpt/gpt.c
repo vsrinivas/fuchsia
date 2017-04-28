@@ -24,7 +24,7 @@
 
 #include "gpt.h"
 
-#define TRACE 1
+#define TRACE 0
 
 #if TRACE
 #define xprintf(fmt...) printf(fmt)
@@ -38,8 +38,12 @@
 
 typedef struct gptpart_device {
     mx_device_t device;
+
     gpt_entry_t gpt_entry;
+
     block_info_t info;
+    block_callbacks_t* callbacks;
+
     atomic_int writercount;
 } gptpart_device_t;
 
@@ -69,6 +73,22 @@ static uint64_t getsize(gptpart_device_t* dev) {
     // last LBA is inclusive
     uint64_t lbacount = dev->gpt_entry.last_lba - dev->gpt_entry.first_lba + 1;
     return lbacount * dev->info.block_size;
+}
+
+static bool prepare_txn(gptpart_device_t* dev, iotxn_t* txn) {
+    // sanity check
+    uint64_t off_lba = txn->offset / dev->info.block_size;
+    uint64_t first = dev->gpt_entry.first_lba;
+    uint64_t last = dev->gpt_entry.last_lba;
+    if (first + off_lba > last) {
+        xprintf("%s: offset 0x%" PRIx64 " is past the end of partition!\n", dev->device.name, txn->offset);
+        return false;
+    }
+    // constrain if too many bytes are requested
+    txn->length = MIN((last - (first + off_lba) + 1) * dev->info.block_size, txn->length);
+    // adjust offset
+    txn->offset = first * dev->info.block_size + txn->offset;
+    return true;
 }
 
 // implement device protocol:
@@ -113,20 +133,11 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
 
 static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     gptpart_device_t* device = get_gptpart_device(dev);
-    // sanity check
-    uint64_t off_lba = txn->offset / device->info.block_size;
-    uint64_t first = device->gpt_entry.first_lba;
-    uint64_t last = device->gpt_entry.last_lba;
-    if (first + off_lba > last) {
-        xprintf("%s: offset 0x%" PRIx64 " is past the end of partition!\n", dev->name, txn->offset);
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
-        return;
+    if (!prepare_txn(device, txn)) {
+        iotxn_complete(txn, NO_ERROR, 0);
+    } else {
+        iotxn_queue(dev->parent, txn);
     }
-    // constrain if too many bytes are requested
-    txn->length = MIN((last - (first + off_lba) + 1) * device->info.block_size, txn->length);
-    // adjust offset
-    txn->offset = first * device->info.block_size + txn->offset;
-    iotxn_queue(dev->parent, txn);
 }
 
 static mx_off_t gpt_getsize(mx_device_t* dev) {
@@ -174,6 +185,78 @@ static mx_protocol_device_t gpt_proto = {
     .release = gpt_release,
     .open = gpt_open,
     .close = gpt_close,
+};
+
+static void gpt_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    device->callbacks = cb;
+}
+
+static void gpt_block_get_info(mx_device_t* dev, block_info_t* info) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    memcpy(info, &device->info, sizeof(*info));
+}
+
+static void gpt_block_complete(iotxn_t* txn, void* cookie) {
+    gptpart_device_t* dev;
+    memcpy(&dev, txn->extra, sizeof(gptpart_device_t*));
+    dev->callbacks->complete(cookie, txn->status);
+    iotxn_release(txn);
+}
+
+static void gpt_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+        device->callbacks->complete(cookie, status);
+        return;
+    }
+
+    txn->opcode = IOTXN_OP_READ;
+    txn->length = length;
+    txn->offset = dev_offset;
+    txn->complete_cb = gpt_block_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &device, sizeof(gptpart_device_t*));
+
+    if (!prepare_txn(device, txn)) {
+        iotxn_release(txn);
+        device->callbacks->complete(cookie, ERR_INVALID_ARGS);
+    } else {
+        iotxn_queue(dev->parent, txn);
+    }
+}
+
+static void gpt_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+        device->callbacks->complete(cookie, status);
+        return;
+    }
+
+    txn->opcode = IOTXN_OP_WRITE;
+    txn->length = length;
+    txn->offset = dev_offset;
+    txn->complete_cb = gpt_block_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &device, sizeof(gptpart_device_t*));
+
+    if (!prepare_txn(device, txn)) {
+        iotxn_release(txn);
+        device->callbacks->complete(cookie, ERR_INVALID_ARGS);
+    } else {
+        iotxn_queue(dev->parent, txn);
+    }
+}
+
+static block_ops_t gpt_block_ops = {
+    .set_callbacks = gpt_block_set_callbacks,
+    .get_info = gpt_block_get_info,
+    .read = gpt_block_read,
+    .write = gpt_block_write,
 };
 
 static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
@@ -291,7 +374,7 @@ static int gpt_bind_thread(void* arg) {
         xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
                 device->device.name, type_guid, partition_guid, pname);
 
-        device_set_protocol(&device->device, MX_PROTOCOL_BLOCK, NULL);
+        device_set_protocol(&device->device, MX_PROTOCOL_BLOCK_CORE, &gpt_block_ops);
         if (device_add(&device->device, dev) != NO_ERROR) {
             printf("gpt device_add failed\n");
             free(device);
