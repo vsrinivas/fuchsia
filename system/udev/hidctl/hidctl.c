@@ -15,14 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define from_mx_device(d)  containerof(d, hidctl_instance_t, dev)
 #define from_hid_device(d) containerof(d, hidctl_instance_t, hiddev)
 
 mx_driver_t _driver_hidctl;
 static mx_device_t* hidctl_dev;
 
 typedef struct hidctl_instance {
-    mx_device_t dev;
+    mx_device_t* mxdev;
     mx_hid_device_t hiddev;
 
     uint8_t* hid_report_desc;
@@ -106,14 +105,14 @@ static ssize_t hidctl_read(mx_device_t* dev, void* buf, size_t count, mx_off_t o
 }
 
 static ssize_t hidctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    hidctl_instance_t* inst = from_mx_device(dev);
+    hidctl_instance_t* inst = dev->ctx;
     hid_io_queue(&inst->hiddev, buf, count);
     return count;
 }
 
 static ssize_t hidctl_ioctl(mx_device_t* dev, uint32_t op,
         const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    hidctl_instance_t* inst = from_mx_device(dev);
+    hidctl_instance_t* inst = dev->ctx;
     switch (op) {
     case IOCTL_HID_CTL_CONFIG:
         return hidctl_set_config(inst, in_buf, in_len);
@@ -123,12 +122,13 @@ static ssize_t hidctl_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 static mx_status_t hidctl_release(mx_device_t* dev) {
-    hidctl_instance_t* inst = from_mx_device(dev);
+    hidctl_instance_t* inst = dev->ctx;
     hid_release_device(&inst->hiddev);
     if (inst->hid_report_desc) {
         free(inst->hid_report_desc);
         device_remove(&inst->hiddev.dev);
     }
+    device_destroy(inst->mxdev);
     free(inst);
     return NO_ERROR;
 }
@@ -146,14 +146,21 @@ static mx_status_t hidctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t
         return ERR_NO_MEMORY;
     }
 
-    device_init(&inst->dev, &_driver_hidctl, "hidctl-inst", &hidctl_instance_proto);
-    mx_status_t status = device_add_instance(&inst->dev, dev);
-    if (status != NO_ERROR) {
-        printf("hidctl: could not open instance: %d\n", status);
+    mx_status_t status;
+    if ((status = device_create("hidctl-inst", inst, &hidctl_instance_proto, &_driver_hidctl,
+                                &inst->mxdev)) < 0) {
         free(inst);
         return status;
     }
-    *dev_out = &inst->dev;
+
+    status = device_add_instance(inst->mxdev, dev);
+    if (status != NO_ERROR) {
+        printf("hidctl: could not open instance: %d\n", status);
+        device_destroy(inst->mxdev);
+        free(inst);
+        return status;
+    }
+    *dev_out = inst->mxdev;
     return NO_ERROR;
 }
 
@@ -165,7 +172,7 @@ static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** 
     if (device_create("hidctl", NULL, &hidctl_device_proto, driver, &hidctl_dev) == NO_ERROR) {
         mx_status_t status;
         if ((status = device_add(hidctl_dev, parent)) < 0) {
-            free(hidctl_dev);
+            device_destroy(hidctl_dev);
             return status;
         }
     }
