@@ -1,0 +1,17 @@
+{
+    "imports": [
+        "curl",
+        "libxml2",
+        "sqlite",
+        "zlib"
+    ],
+    "labels": [
+        "//third_party/webkit"
+    ],
+    "binaries": [
+        {
+            "binary": "x64-shared/libwebkit.so",
+            "bootfs_path": "lib/libwebkit.so"
+        }
+    ]
+}
