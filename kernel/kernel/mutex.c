@@ -55,32 +55,12 @@ void mutex_destroy(mutex_t *m)
     THREAD_UNLOCK(state);
 }
 
-void mutex_acquire_internal(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(!arch_in_int_handler());
-
-    if (unlikely(++m->count > 1)) {
-        status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
-        if (unlikely(ret < NO_ERROR)) {
-            /* mutexes are not interruptable and cannot time out, so it
-             * is illegal to return with any error state.
-             */
-            panic("mutex_acquire_internal: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
-                   ret, m, get_current_thread(), __GET_FRAME());
-        }
-    }
-
-    m->holder = get_current_thread();
-}
-
 /**
  * @brief  Acquire the mutex
  *
  * @return  NO_ERROR on success, other values on error
  */
-void mutex_acquire(mutex_t *m)
+void mutex_acquire(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -92,28 +72,23 @@ void mutex_acquire(mutex_t *m)
 #endif
 
     THREAD_LOCK(state);
-    mutex_acquire_internal(m);
+    if (unlikely(++m->count > 1)) {
+        status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
+        if (unlikely(ret < NO_ERROR)) {
+            /* mutexes are not interruptable and cannot time out, so it
+             * is illegal to return with any error state.
+             */
+            panic("mutex_acquire: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
+                   ret, m, get_current_thread(), __GET_FRAME());
+        }
+    }
+
+    m->holder = get_current_thread();
     THREAD_UNLOCK(state);
 }
 
-void mutex_release_internal(mutex_t *m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(!arch_in_int_handler());
 
-    m->holder = 0;
-
-    if (unlikely(--m->count >= 1)) {
-        /* release a thread */
-        wait_queue_wake_one(&m->wait, reschedule, NO_ERROR);
-    }
-}
-
-/**
- * @brief  Release mutex
- */
-void mutex_release(mutex_t *m)
+void mutex_release(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -126,7 +101,35 @@ void mutex_release(mutex_t *m)
 #endif
 
     THREAD_LOCK(state);
-    mutex_release_internal(m, true);
+    m->holder = 0;
+
+    if (unlikely(--m->count >= 1)) {
+        /* release a thread */
+        wait_queue_wake_one(&m->wait, true, NO_ERROR);
+    }
     THREAD_UNLOCK(state);
 }
 
+void mutex_release_thread_locked(mutex_t *m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS
+{
+    DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+#if LK_DEBUGLEVEL > 0
+    if (unlikely(get_current_thread() != m->holder)) {
+        panic("mutex_release_thread_locked: thread %p (%s) tried to release mutex %p it doesn't own. "
+              "owned by %p (%s)\n",
+              get_current_thread(), get_current_thread()->name, m, m->holder,
+              m->holder ? m->holder->name : "none");
+    }
+#endif
+
+    m->holder = 0;
+
+    if (unlikely(--m->count >= 1)) {
+        /* release a thread */
+        wait_queue_wake_one(&m->wait, reschedule, NO_ERROR);
+    }
+}

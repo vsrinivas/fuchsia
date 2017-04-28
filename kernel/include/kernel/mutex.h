@@ -38,18 +38,16 @@ typedef struct TA_CAP("mutex") mutex {
  * - Mutexes are only safe to use from thread context.
  * - Mutexes are non-recursive.
 */
-
-void mutex_init(mutex_t *);
-void mutex_destroy(mutex_t *);
+void mutex_init(mutex_t *m);
+void mutex_destroy(mutex_t *m);
 void mutex_acquire(mutex_t *m) TA_ACQ(m);
 void mutex_release(mutex_t *m) TA_REL(m);
 
-/* Internal functions for use by condvar implementation. */
-void mutex_acquire_internal(mutex_t *m) TA_ACQ(m);
-void mutex_release_internal(mutex_t *m, bool reschedule) TA_REL(m);
+/* special version of the above with the thread lock held */
+void mutex_release_thread_locked(mutex_t *m, bool resched) TA_REL(m);
 
 /* does the current thread hold the mutex? */
-static bool is_mutex_held(const mutex_t *m)
+static inline bool is_mutex_held(const mutex_t *m)
 {
     return m->holder == get_current_thread();
 }

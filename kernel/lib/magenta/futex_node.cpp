@@ -111,7 +111,7 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_S
     // We specifically want reschedule=false here, otherwise the
     // combination of releasing the mutex and enqueuing the current thread
     // would not be atomic, which would mean that we could miss wakeups.
-    mutex_release_internal(mutex->GetInternal(), /* reschedule= */ false);
+    mutex_release_thread_locked(mutex->GetInternal(), /* reschedule= */ false);
 
     // Check whether a kill has been initiated, and block if not.  This
     // check+wait must be done atomically (with respect to THREAD_LOCK),
