@@ -124,6 +124,7 @@ private:
                            uint32_t* type, void* extra, uint32_t* esize) final;
     mx_status_t Open(uint32_t flags) final;
     mx_status_t Close() final;
+    mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
     mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
@@ -208,6 +209,8 @@ public:
 
     // Removes blob from 'active' hashmap.
     mx_status_t ReleaseBlob(VnodeBlob* blob);
+
+    mx_status_t Readdir(void* cookie, void* dirents, size_t len);
 
     int blockfd_;
     blobstore_info_t info_;

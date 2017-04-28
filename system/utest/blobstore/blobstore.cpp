@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -278,7 +279,73 @@ static bool TestMmap(void) {
         ASSERT_EQ(close(fd), 0, "");
         ASSERT_EQ(unlink(info->path), 0, "");
     }
+    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    END_TEST;
+}
 
+static bool TestReaddir(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+
+    constexpr size_t kMaxEntries = 50;
+    constexpr size_t kBlobSize = 1 << 10;
+
+    AllocChecker ac;
+    mxtl::Array<mxtl::unique_ptr<blob_info_t>>
+            info(new (&ac) mxtl::unique_ptr<blob_info_t>[kMaxEntries](), kMaxEntries);
+    ASSERT_TRUE(ac.check(), "");
+
+    // Try to readdir on an empty directory
+    DIR* dir = opendir(MOUNT_PATH);
+    ASSERT_NONNULL(dir, "");
+    ASSERT_NULL(readdir(dir), "Expected blobstore to start empty");
+
+    // Fill a directory with entries
+    for (size_t i = 0; i < kMaxEntries; i++) {
+        ASSERT_TRUE(GenerateBlob(kBlobSize, &info[i]), "");
+        int fd;
+        ASSERT_TRUE(MakeBlob(info[i]->path, info[i]->merkle.get(), info[i]->size_merkle,
+                             info[i]->data.get(), info[i]->size_data, &fd), "");
+        ASSERT_EQ(close(fd), 0, "");
+        fd = open(info[i]->path, O_RDWR);
+        ASSERT_GT(fd, 0, "Failed to-reopen blob");
+        ASSERT_TRUE(VerifyContents(fd, info[i]->data.get(), info[i]->size_data), "");
+        ASSERT_EQ(close(fd), 0, "");
+    }
+
+    // Check that we see the expected number of entries
+    size_t entries_seen = 0;
+    struct dirent* de;
+    while ((de = readdir(dir)) != nullptr) {
+        entries_seen++;
+    }
+    ASSERT_EQ(entries_seen, kMaxEntries, "");
+    entries_seen = 0;
+    rewinddir(dir);
+
+    // Readdir on a directory which contains entries, removing them as we go
+    // along.
+    while ((de = readdir(dir)) != nullptr) {
+        for (size_t i = 0; i < kMaxEntries; i++) {
+            if ((info[i]->size_data != 0) &&
+                strcmp(strrchr(info[i]->path, '/') + 1, de->d_name) == 0) {
+                ASSERT_EQ(unlink(info[i]->path), 0, "");
+                // It's a bit hacky, but we set 'size_data' to zero
+                // to identify the entry has been unlinked.
+                info[i]->size_data = 0;
+                goto found;
+            }
+        }
+        ASSERT_TRUE(false, "Blobstore Readdir found an unexpected entry");
+found:
+        entries_seen++;
+    }
+    ASSERT_EQ(entries_seen, kMaxEntries, "");
+
+    ASSERT_NULL(readdir(dir), "Expected blobstore to end empty");
+
+    ASSERT_EQ(closedir(dir), 0, "");
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -1152,6 +1219,7 @@ static bool RootDirectory(void) {
 BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_MEDIUM(TestBasic)
 RUN_TEST_MEDIUM(TestMmap)
+RUN_TEST_MEDIUM(TestReaddir)
 RUN_TEST_MEDIUM(UseAfterUnlink)
 RUN_TEST_MEDIUM(WriteAfterRead)
 RUN_TEST_MEDIUM(BadAllocation)

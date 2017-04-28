@@ -675,6 +675,40 @@ mx_status_t Blobstore::ReleaseBlob(VnodeBlob* vn) {
     return ERR_NOT_SUPPORTED;
 }
 
+typedef struct dircookie {
+    size_t index;      // Index into node map
+    uint64_t reserved; // Unused
+} dircookie_t;
+
+static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
+              "Blobstore dircookie too large to fit in IO state");
+
+mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
+    dircookie_t* c = static_cast<dircookie_t*>(cookie);
+    char* data = static_cast<char*>(dirents);
+    size_t pos = 0; // Position from start of "dirents"
+
+    for (size_t i = c->index; i < info_.inode_count; ++i) {
+        if (node_map_[i].start_block >= kStartBlockMinimum) {
+            merkle::Digest digest(node_map_[i].merkle_root_hash);
+            char name[merkle::Digest::kLength * 2 + 1];
+            mx_status_t r = digest.ToString(name, sizeof(name));
+            if (r < 0) {
+                return r;
+            }
+            r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(data + pos), len - pos,
+                                    name, strlen(name), VTYPE_TO_DTYPE(V_TYPE_FILE));
+            if (r < 0) {
+                break;
+            }
+            pos += r;
+            c->index = i + 1;
+        }
+    }
+
+    return static_cast<mx_status_t>(pos);
+}
+
 mx_status_t Blobstore::LookupBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
     // Look up blob in the fast map (is the blob open elsewhere?)
     mxtl::RefPtr<VnodeBlob> vn = mxtl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());

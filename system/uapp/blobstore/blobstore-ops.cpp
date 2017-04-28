@@ -40,6 +40,14 @@ mx_status_t VnodeBlob::Close() {
     return NO_ERROR;
 }
 
+mx_status_t VnodeBlob::Readdir(void* cookie, void* dirents, size_t len) {
+    if (!IsDirectory()) {
+        return ERR_NOT_DIR;
+    }
+
+    return blobstore_->Readdir(cookie, dirents, len);
+}
+
 ssize_t VnodeBlob::Read(void* data, size_t len, size_t off) {
     if (IsDirectory()) {
         return ERR_NOT_FILE;
