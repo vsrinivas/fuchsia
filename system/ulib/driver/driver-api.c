@@ -60,6 +60,7 @@ __EXPORT mx_status_t device_rebind(mx_device_t* dev) {
 }
 
 __EXPORT void device_destroy(mx_device_t* dev) {
+    if (!dev) return;
     API->device_destroy(dev);
 }
 
