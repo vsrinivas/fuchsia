@@ -91,12 +91,10 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       startServiceProviderApp("file:///system/apps/resolver_main");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
+  startAgent("file:///system/apps/agents/mi_dashboard.dartx");
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
   startAgent("file:///system/apps/concert_agent");
-
-// TODO(jwnichols): Uncomment this when the dashboard is more functional
-// startAgent("file:///system/apps/agents/mi_dashboard.dartx");
 
 // Toggle using the "kronk_dev" gn arg (see README).
 #ifdef KRONK_DEV
