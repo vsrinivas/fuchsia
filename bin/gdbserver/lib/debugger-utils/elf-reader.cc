@@ -29,11 +29,12 @@ const char* ErrorName(Error err) {
 }
 
 Error Reader::Create(const std::string& file_name,
-                     const util::ByteBlock& reader, uint32_t options,
-                     uint64_t base, std::unique_ptr<Reader>* out) {
+                     std::shared_ptr<util::ByteBlock> byte_block,
+                     uint32_t options, uint64_t base,
+                     std::unique_ptr<Reader>* out) {
   FTL_DCHECK(options == 0);
-  Reader* er = new Reader(file_name, reader, base);
-  if (!ReadHeader(reader, base, &er->header_)) {
+  Reader* er = new Reader(file_name, byte_block, base);
+  if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
     return Error::IO;
   }
@@ -45,10 +46,11 @@ Error Reader::Create(const std::string& file_name,
   return Error::OK;
 }
 
-Reader::Reader(const std::string& file_name, const util::ByteBlock& reader,
+Reader::Reader(const std::string& file_name,
+               std::shared_ptr<util::ByteBlock> byte_block,
                uint64_t base)
   : file_name_(file_name),
-    reader_(reader),
+    byte_block_(byte_block),
     base_(base) {
 }
 
@@ -82,8 +84,8 @@ Error Reader::ReadSegmentHeaders() {
     return Error::OK;
   size_t num_segments = GetNumSegments();
   auto seg_hdrs = new SegmentHeader[num_segments];
-  if (!reader_.Read(base_ + header_.e_phoff, seg_hdrs,
-                    num_segments * sizeof(SegmentHeader))) {
+  if (!byte_block_->Read(base_ + header_.e_phoff, seg_hdrs,
+                         num_segments * sizeof(SegmentHeader))) {
     delete[] seg_hdrs;
     return Error::IO;
   }
@@ -108,8 +110,8 @@ Error Reader::ReadSectionHeaders() {
     return Error::OK;
   size_t num_sections = GetNumSections();
   auto scn_hdrs = new SectionHeader[num_sections];
-  if (!reader_.Read(base_ + header_.e_shoff, scn_hdrs,
-                    num_sections * sizeof(SectionHeader))) {
+  if (!byte_block_->Read(base_ + header_.e_shoff, scn_hdrs,
+                         num_sections * sizeof(SectionHeader))) {
     delete[] scn_hdrs;
     return Error::IO;
   }
@@ -148,7 +150,7 @@ Error Reader::GetSectionContents(
     return Error::NOMEM;
   }
 
-  if (!reader_.Read(base_ + sh.sh_offset, buffer, sh.sh_size)) {
+  if (!byte_block_->Read(base_ + sh.sh_offset, buffer, sh.sh_size)) {
     FTL_LOG(ERROR) << "Error reading section contents";
     return Error::IO;
   }
@@ -182,7 +184,7 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
     uint64_t size = phdr.p_filesz;
     uint64_t offset = phdr.p_offset;
     while (size > sizeof(note)) {
-      if (!reader_.Read(vaddr + offset, &note, sizeof(note)))
+      if (!byte_block_->Read(vaddr + offset, &note, sizeof(note)))
         return Error::IO;
       size_t header_size = sizeof(Elf32_Nhdr) + ((note.hdr.n_namesz + 3) & -4);
       size_t payload_size = (note.hdr.n_descsz + 3) & -4;
@@ -201,7 +203,7 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
         snprintf(buf, buf_size, "build_id_too_large_%u", note.hdr.n_descsz);
       } else {
         uint8_t buildid[kMaxBuildIdSize];
-        if (!reader_.Read(payload_vaddr, buildid, note.hdr.n_descsz))
+        if (!byte_block_->Read(payload_vaddr, buildid, note.hdr.n_descsz))
           return Error::IO;
         for (uint32_t i = 0; i < note.hdr.n_descsz; ++i) {
           snprintf(&buf[i * 2], 3, "%02x", buildid[i]);

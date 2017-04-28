@@ -5,12 +5,11 @@
 // TODO(dje): This code is copied from crashlogger. Modest changes
 // have been done. Further changes left for later.
 // [C++-ification, Google code style, etc. etc. etc.]
-// TODO(dje): Might be useful for this to live in the ELF library
-// along with elf-util.
 
 #pragma once
 
 #include <cstdio>
+#include <memory>
 
 #include <magenta/types.h>
 
@@ -37,7 +36,7 @@ typedef struct dsoinfo {
   char name[];
 } dsoinfo_t;
 
-extern dsoinfo_t* dso_fetch_list(const ByteBlock& bb,
+extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb,
                                  mx_vaddr_t lmap,
                                  const char* name);
 

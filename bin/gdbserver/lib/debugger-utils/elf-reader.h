@@ -94,7 +94,7 @@ class SectionContents {
 class Reader {
  public:
   static Error Create(const std::string& file_name,
-                      const util::ByteBlock& reader,
+                      std::shared_ptr<util::ByteBlock> byte_block,
                       uint32_t options,
                       uint64_t base,
                       std::unique_ptr<Reader>* out);
@@ -169,7 +169,7 @@ class Reader {
 
  private:
   Reader(const std::string& file_name,
-         const util::ByteBlock& reader,
+         std::shared_ptr<util::ByteBlock> byte_block,
          uint64_t base);
 
   // For debugging/informational purposes only.
@@ -177,9 +177,9 @@ class Reader {
 
   // This is the API to read/write from wherever the ELF object lives.
   // It could be in process memory, or in a file, or wherever.
-  const util::ByteBlock& reader_;
+  const std::shared_ptr<util::ByteBlock> byte_block_;
 
-  // The offset in |reader_| of the start of the ELF object.
+  // The offset in |byte_block_| of the start of the ELF object.
   const uint64_t base_;
 
   Header header_;

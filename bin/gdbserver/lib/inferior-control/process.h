@@ -270,7 +270,7 @@ class Process final {
   bool attached_running_ = false;
 
   // The API to access memory.
-  ProcessMemory memory_;
+  std::shared_ptr<util::ByteBlock> memory_;
 
   // The collection of breakpoints that belong to this process.
   arch::ProcessBreakpointSet breakpoints_;

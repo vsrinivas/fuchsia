@@ -56,7 +56,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   return dso;
 }
 
-dsoinfo_t* dso_fetch_list(const ByteBlock& bb, mx_vaddr_t lmap_addr,
+dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, mx_vaddr_t lmap_addr,
                           const char* name) {
   dsoinfo_t* dsolist = nullptr;
   // The first dso we see is the main executable.
@@ -69,9 +69,9 @@ dsoinfo_t* dso_fetch_list(const ByteBlock& bb, mx_vaddr_t lmap_addr,
     // If there's a failure here, say because the internal data structures got
     // corrupted, just bail and return what we've collected so far.
 
-    if (!bb.Read(lmap_addr, &lmap, sizeof(lmap)))
+    if (!bb->Read(lmap_addr, &lmap, sizeof(lmap)))
       break;
-    if (!ReadString(bb, reinterpret_cast<mx_vaddr_t>(lmap.l_name), dsoname,
+    if (!ReadString(*bb, reinterpret_cast<mx_vaddr_t>(lmap.l_name), dsoname,
                     sizeof(dsoname)))
       break;
 

@@ -144,7 +144,7 @@ const char* Process::StateName(Process::State state) {
 Process::Process(Server* server, Delegate* delegate)
     : server_(server),
       delegate_(delegate),
-      memory_(this),
+      memory_(std::shared_ptr<util::ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
   FTL_DCHECK(server_);
   FTL_DCHECK(delegate_);
@@ -600,11 +600,11 @@ void Process::ForEachLiveThread(const ThreadCallback& callback) {
 }
 
 bool Process::ReadMemory(uintptr_t address, void* out_buffer, size_t length) {
-  return memory_.Read(address, out_buffer, length);
+  return memory_->Read(address, out_buffer, length);
 }
 
 bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
-  return memory_.Write(address, data, length);
+  return memory_->Write(address, data, length);
 }
 
 void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
