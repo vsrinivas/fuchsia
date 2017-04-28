@@ -88,7 +88,7 @@ static inline bool is_writer(uint32_t flags) {
 
 static uint64_t getsize(mbrpart_device_t* dev) {
     // Returns the size of the partition referred to by dev.
-    return dev->partition.sector_partition_length * dev->info.block_size;
+    return dev->partition.sector_partition_length * ((uint64_t) dev->info.block_size);
 }
 
 static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
