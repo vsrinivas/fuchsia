@@ -20,7 +20,7 @@
 #define MAX_COLOR 0xf
 
 typedef struct vc_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     char title[8];
     // vc title, shown in status bar
@@ -81,8 +81,6 @@ typedef struct vc_device {
     // for virtual console list
 } vc_device_t;
 
-#define get_vc_device(dev) containerof(dev, vc_device_t, device)
-
 // When VC_FLAG_HASOUTPUT is set, this indicates that there was output to
 // the console that hasn't been displayed yet, because this console isn't
 // visible.
@@ -118,7 +116,9 @@ void vc_device_scroll_viewport_bottom(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen)
     TA_REQ(g_vc_lock);
 
-ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count,
+ssize_t vc_device_op_write(mx_device_t* dev, const void* buf, size_t count,
+                           mx_off_t off);
+ssize_t vc_device_write(vc_device_t* dev, const void* buf, size_t count,
                         mx_off_t off);
 
 static inline int vc_device_rows(vc_device_t* dev) {

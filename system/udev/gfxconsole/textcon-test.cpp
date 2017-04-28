@@ -169,7 +169,7 @@ public:
         for (const char* ptr = str; *ptr; ++ptr)
             textcon.putc(&textcon, *ptr);
 
-        vc_device_write(&vc_dev->device, str, strlen(str), 0);
+        vc_device_write(vc_dev, str, strlen(str), 0);
         // Test that the incremental update of the display was correct.  We
         // do that by refreshing the entire display, and checking that
         // there was no change.

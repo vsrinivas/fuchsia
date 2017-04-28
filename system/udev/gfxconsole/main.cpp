@@ -174,7 +174,7 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
         // key code sequences in that case.
         mx_hid_fifo_write(&dev->fifo, output, length);
 
-        device_state_set(&dev->device, DEV_STATE_READABLE);
+        device_state_set(dev->mxdev, DEV_STATE_READABLE);
 
         vc_device_scroll_viewport_bottom(dev);
     }
@@ -264,7 +264,7 @@ void vc_get_battery_info(vc_battery_info_t* info) {
 // implement device protocol:
 
 static mx_status_t vc_device_release(mx_device_t* dev) {
-    vc_device_t* vc = get_vc_device(dev);
+    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -306,7 +306,7 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
 }
 
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    vc_device_t* vc = get_vc_device(dev);
+    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -320,9 +320,12 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
     return result;
 }
 
-ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    vc_device_t* vc = get_vc_device(dev);
+ssize_t vc_device_op_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
+    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
+    return vc_device_write(vc, buf, count, off);
+}
 
+ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t off) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     vc->invy0 = vc_device_rows(vc) + 1;
@@ -349,7 +352,7 @@ ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_
 }
 
 static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    vc_device_t* vc = get_vc_device(dev);
+    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -424,13 +427,17 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
     // init the new device
     char name[8];
     snprintf(name, sizeof(name), "vc%u", g_vc_count);
-    device_init(&device->device, &_driver_vc_root, name, &vc_device_proto);
+    status = device_create(name, device, &vc_device_proto, &_driver_vc_root, &device->mxdev);
+    if (status != NO_ERROR) {
+        vc_device_free(device);
+        return status;
+    }
 
     if (dev) {
         // if called normally, add the instance
         // if dev is null, we're creating the log console
-        device_set_protocol(&device->device, MX_PROTOCOL_CONSOLE, NULL);
-        status = device_add_instance(&device->device, dev);
+        device_set_protocol(device->mxdev, MX_PROTOCOL_CONSOLE, NULL);
+        status = device_add_instance(device->mxdev, dev);
         if (status != NO_ERROR) {
             vc_device_free(device);
             return status;
@@ -448,7 +455,7 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
         vc_device_render(g_active_vc);
     }
 
-    *dev_out = &device->device;
+    *dev_out = device->mxdev;
     return NO_ERROR;
 }
 
@@ -477,15 +484,15 @@ static int vc_log_reader_thread(void* arg) {
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                  rec->pid, rec->tid);
-        vc_device_write(dev, tmp, strlen(tmp), 0);
-        vc_device_write(dev, rec->data, rec->datalen, 0);
+        vc_device_op_write(dev, tmp, strlen(tmp), 0);
+        vc_device_op_write(dev, rec->data, rec->datalen, 0);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-            vc_device_write(dev, "\n", 1, 0);
+            vc_device_op_write(dev, "\n", 1, 0);
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
-    vc_device_write(dev, oops, strlen(oops), 0);
+    vc_device_op_write(dev, oops, strlen(oops), 0);
 
     return 0;
 }
@@ -652,7 +659,7 @@ static mx_driver_ops_t vc_root_driver_ops;
 __attribute__((constructor)) static void initialize() {
     vc_device_proto.release = vc_device_release;
     vc_device_proto.read = vc_device_read;
-    vc_device_proto.write = vc_device_write;
+    vc_device_proto.write = vc_device_op_write;
     vc_device_proto.ioctl = vc_device_ioctl;
 
     vc_root_proto.open = vc_root_open;
