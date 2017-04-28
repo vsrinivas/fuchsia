@@ -79,12 +79,11 @@ public:
     mxtl::RefPtr<BlockNode> BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk, uint32_t n);
     void BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk);
 
+    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
+
     Bcache* bc_;
     RawBitmap block_map_;
     minfs_info_t info_;
-#ifdef __Fuchsia__
-    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher_;
-#endif
 
 private:
     // Fsck can introspect Minfs
@@ -95,6 +94,9 @@ private:
     mx_status_t InoNew(const minfs_inode_t* inode, uint32_t* ino_out);
     mx_status_t LoadBitmaps();
 
+#ifdef __Fuchsia__
+    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher_;
+#endif
     uint32_t abmblks_;
     uint32_t ibmblks_;
     RawBitmap inode_map_;
@@ -129,7 +131,6 @@ static_assert((kMinfsFlagReservedMask & V_FLAG_RESERVED_MASK) == 0,
               "MinFS should not be using any Vnode flags which are reserved");
 
 class VnodeMinfs final : public fs::Vnode, public mxtl::SinglyLinkedListable<VnodeMinfs*> {
-    friend class Minfs;
 public:
     // Allocates a Vnode and initializes the inode given the type.
     static mx_status_t Allocate(Minfs* fs, uint32_t type, mxtl::RefPtr<VnodeMinfs>* out);
