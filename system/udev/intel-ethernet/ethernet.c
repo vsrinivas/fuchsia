@@ -23,7 +23,7 @@ typedef mx_status_t status_t;
 typedef struct ethernet_device {
     ethdev_t eth;
     mtx_t lock;
-    mx_device_t dev;
+    mx_device_t* mxdev;
     pci_protocol_t* pci;
     mx_device_t* pcidev;
     mx_handle_t ioh;
@@ -36,8 +36,6 @@ typedef struct ethernet_device {
     ethmac_ifc_t* ifc;
     void* cookie;
 } ethernet_device_t;
-
-#define get_eth_device(d) containerof(d, ethernet_device_t, dev)
 
 static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
@@ -73,7 +71,7 @@ static int irq_thread(void* arg) {
 }
 
 static mx_status_t eth_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
-    ethernet_device_t* edev = get_eth_device(dev);
+    ethernet_device_t* edev = dev->ctx;
 
     if (options) {
         return ERR_INVALID_ARGS;
@@ -87,14 +85,14 @@ static mx_status_t eth_query(mx_device_t* dev, uint32_t options, ethmac_info_t* 
 }
 
 static void eth_stop(mx_device_t* dev) {
-    ethernet_device_t* edev = get_eth_device(dev);
+    ethernet_device_t* edev = dev->ctx;
     mtx_lock(&edev->lock);
     edev->ifc = NULL;
     mtx_unlock(&edev->lock);
 }
 
 static mx_status_t eth_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
-    ethernet_device_t* edev = get_eth_device(dev);
+    ethernet_device_t* edev = dev->ctx;
     mx_status_t status = NO_ERROR;
 
     mtx_lock(&edev->lock);
@@ -110,7 +108,7 @@ static mx_status_t eth_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) 
 }
 
 static void eth_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
-    ethernet_device_t* edev = get_eth_device(dev);
+    ethernet_device_t* edev = dev->ctx;
     eth_tx(&edev->eth, data, length);
 }
 
@@ -122,7 +120,7 @@ static ethmac_protocol_t ethmac_ops = {
 };
 
 static mx_status_t eth_release(mx_device_t* dev) {
-    ethernet_device_t* edev = get_eth_device(dev);
+    ethernet_device_t* edev = dev->ctx;
     eth_reset_hw(&edev->eth);
     edev->pci->enable_bus_master(edev->pcidev, true);
     mx_handle_close(edev->irqh);
@@ -207,9 +205,13 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     eth_setup_buffers(&edev->eth, io_buffer_virt(&edev->buffer), io_buffer_phys(&edev->buffer));
     eth_init_hw(&edev->eth);
 
-    device_init(&edev->dev, drv, "intel-ethernet", &device_ops);
-    device_set_protocol(&edev->dev, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
-    if (device_add(&edev->dev, dev)) {
+    r = device_create("intel-ethernet", edev, &device_ops, drv, &edev->mxdev);
+    if (r < 0) {
+        printf("eth: cannot create device %d\n", r);
+        goto fail;
+    }
+    device_set_protocol(edev->mxdev, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
+    if (device_add(edev->mxdev, dev)) {
         goto fail;
     }
 
@@ -227,6 +229,7 @@ fail:
         mx_handle_close(edev->irqh);
         mx_handle_close(edev->ioh);
     }
+    device_destroy(edev->mxdev);
     free(edev);
     return ERR_NOT_SUPPORTED;
 }
