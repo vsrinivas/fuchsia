@@ -53,8 +53,6 @@ static input_report_size_t hid_get_report_size_by_id(mx_hid_device_t* hid,
                                                      input_report_id_t id,
                                                      input_report_type_t type) {
     for (size_t i = 0; i < hid->num_reports; i++) {
-        MX_DEBUG_ASSERT(hid->sizes[i].id >= 0);
-
         if ((hid->sizes[i].id == id) || (hid->num_reports == 1)) {
             switch (type) {
             case INPUT_REPORT_INPUT:
@@ -68,20 +66,6 @@ static input_report_size_t hid_get_report_size_by_id(mx_hid_device_t* hid,
     }
 
     return 0;
-}
-
-static inline bool hid_expect_report_id(mx_hid_device_t* hid) {
-    MX_DEBUG_ASSERT(hid);
-
-    // TODO(johngro) : Is this correct?  If a device has just one input
-    // report defined, but multiple feature reports defined, does it
-    // still put the report ID on the input report it delivers or does
-    // it omit it?
-    if (hid->num_reports > 1) {
-        return true;
-    }
-
-    return false;
 }
 
 static mx_status_t hid_get_protocol(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
@@ -126,7 +110,6 @@ static mx_status_t hid_get_report_ids(mx_hid_device_t* hid, void* out_buf, size_
 
     input_report_id_t* reply = out_buf;
     for (size_t i = 0; i < hid->num_reports; i++) {
-        assert(hid->sizes[i].id >= 0);
         *reply++ = (input_report_id_t)hid->sizes[i].id;
     }
     return hid->num_reports * sizeof(input_report_id_t);
@@ -154,8 +137,6 @@ static ssize_t hid_get_max_input_reportsize(mx_hid_device_t* hid, void* out_buf,
 
     *reply = 0;
     for (size_t i = 0; i < hid->num_reports; i++) {
-        MX_DEBUG_ASSERT(hid->sizes[i].id >= 0);
-
         if (hid->sizes[i].in_size > *reply)
             *reply = hid->sizes[i].in_size;
     }
@@ -219,15 +200,14 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
     size_t left;
     mtx_lock(&hid->fifo.lock);
     size_t xfer;
-    uint8_t rpt_id = 0;
-    if (hid->root->num_reports > 1) {
-        ssize_t r = mx_hid_fifo_peek(&hid->fifo, &rpt_id);
-        if (r < 1) {
-            // fifo is empty
-            mtx_unlock(&hid->fifo.lock);
-            return ERR_SHOULD_WAIT;
-        }
+    uint8_t rpt_id;
+    ssize_t r = mx_hid_fifo_peek(&hid->fifo, &rpt_id);
+    if (r < 1) {
+        // fifo is empty
+        mtx_unlock(&hid->fifo.lock);
+        return ERR_SHOULD_WAIT;
     }
+
     xfer = hid_get_report_size_by_id(hid->root, rpt_id, INPUT_REPORT_INPUT);
     if (xfer == 0) {
         printf("error reading hid device: unknown report id (%u)!\n", rpt_id);
@@ -235,17 +215,13 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
         return ERR_BAD_STATE;
     }
 
-    if (hid_expect_report_id(hid->root)) {
-        // account for the report id
-        xfer++;
-    }
-
     if (xfer > count) {
         printf("next report: %zd, read count: %zd\n", xfer, count);
         mtx_unlock(&hid->fifo.lock);
         return ERR_BUFFER_TOO_SMALL;
     }
-    ssize_t r = mx_hid_fifo_read(&hid->fifo, buf, xfer);
+
+    r = mx_hid_fifo_read(&hid->fifo, buf, xfer);
     left = mx_hid_fifo_size(&hid->fifo);
     if (left == 0) {
         device_state_clr(&hid->dev, DEV_STATE_READABLE);
@@ -323,11 +299,9 @@ static void hid_dump_hid_report_desc(mx_hid_device_t* dev) {
     printf("\n");
     printf("hid: num reports: %zd\n", dev->num_reports);
     for (size_t i = 0; i < dev->num_reports; i++) {
-        if (dev->sizes[i].id >= 0) {
-            printf("  report id: %u  sizes: in %u out %u feat %u\n",
-                    dev->sizes[i].id, dev->sizes[i].in_size, dev->sizes[i].out_size,
-                    dev->sizes[i].feat_size);
-        }
+        printf("  report id: %u  sizes: in %u out %u feat %u\n",
+                dev->sizes[i].id, dev->sizes[i].in_size, dev->sizes[i].out_size,
+                dev->sizes[i].feat_size);
     }
 }
 
@@ -371,16 +345,23 @@ static const uint8_t* hid_parse_short_item(const uint8_t* buf, const uint8_t* en
     return buf;
 }
 
-static int hid_alloc_report_id(input_report_id_t report_id, mx_hid_device_t* dev) {
-    for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
-        if (dev->sizes[i].id == report_id) return i;
-        if (dev->sizes[i].id == -1) {
-            dev->sizes[i].id = report_id;
-            dev->num_reports++;
+static int hid_fetch_or_alloc_report_ndx(input_report_id_t report_id, mx_hid_device_t* dev) {
+    MX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
+    for (size_t i = 0; i < dev->num_reports; i++) {
+        if (dev->sizes[i].id == report_id)
             return i;
-        }
     }
-    return -1;
+
+    if (dev->num_reports < countof(dev->sizes)) {
+        dev->sizes[dev->num_reports].id = report_id;
+        MX_DEBUG_ASSERT(dev->sizes[dev->num_reports].in_size == 0);
+        MX_DEBUG_ASSERT(dev->sizes[dev->num_reports].out_size == 0);
+        MX_DEBUG_ASSERT(dev->sizes[dev->num_reports].feat_size == 0);
+        return dev->num_reports++;
+    } else {
+        return -1;
+    }
+
 }
 
 typedef struct hid_global_state {
@@ -440,7 +421,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
             int idx;
             switch (item.bTag) {
             case HID_ITEM_MAIN_TAG_INPUT:
-                idx = hid_alloc_report_id(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -448,7 +429,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
                 dev->sizes[idx].in_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_OUTPUT:
-                idx = hid_alloc_report_id(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -456,7 +437,7 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
                 dev->sizes[idx].out_size += inc;
                 break;
             case HID_ITEM_MAIN_TAG_FEATURE:
-                idx = hid_alloc_report_id(state.rpt_id, dev);
+                idx = hid_fetch_or_alloc_report_ndx(state.rpt_id, dev);
                 if (idx < 0) {
                     status = ERR_NOT_SUPPORTED;
                     goto done;
@@ -501,8 +482,8 @@ static mx_status_t hid_process_hid_report_desc(mx_hid_device_t* dev) {
 done:
     hid_clear_global_state(&global_stack);
 
-#if BOOT_MOUSE_HACK
     if (status == NO_ERROR) {
+#if BOOT_MOUSE_HACK
         // Ignore the HID report descriptor from the device, since we're putting
         // the device into boot protocol mode.
         if (dev->dev_class == HID_DEV_CLASS_POINTER) {
@@ -515,16 +496,21 @@ done:
             dev->sizes[0].out_size = 0;
             dev->sizes[0].feat_size = 0;
         }
-    }
 #endif
+        // If we have more than one defined report ID, adjust the expected
+        // report sizes to reflect the fact that we expect a report ID to be
+        // prepended to each report.
+        MX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
+        if (dev->num_reports > 1) {
+            for (size_t i = 0; i < dev->num_reports; ++i) {
+                if (dev->sizes[i].in_size)   dev->sizes[i].in_size   += 8;
+                if (dev->sizes[i].out_size)  dev->sizes[i].out_size  += 8;
+                if (dev->sizes[i].feat_size) dev->sizes[i].feat_size += 8;
+            }
+        }
+    }
 
     return status;
-}
-
-static inline void hid_init_report_sizes(mx_hid_device_t* dev) {
-    for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
-        dev->sizes[i].id = -1;
-    }
 }
 
 static void hid_release_reassembly_buffer(mx_hid_device_t* dev) {
@@ -555,19 +541,12 @@ static mx_status_t hid_init_reassembly_buffer(mx_hid_device_t* dev) {
         return (res < 0) ? ((mx_status_t)res) : ERR_INTERNAL;
     }
 
-    // If this device can deliver more than one input report, we will need an
-    // extra byte in the reassembly buffer for the Report ID.
-    size_t buf_size = max_report_size;
-    if (hid_expect_report_id(dev)) {
-        buf_size++;
-    }
-
-    dev->rbuf = malloc(buf_size);
+    dev->rbuf = malloc(max_report_size);
     if (dev->rbuf == NULL) {
         return ERR_NO_MEMORY;
     }
 
-    dev->rbuf_size = buf_size;
+    dev->rbuf_size = max_report_size;
     return NO_ERROR;
 }
 
@@ -577,10 +556,10 @@ void hid_init_device(mx_hid_device_t* dev, hid_bus_ops_t* bus,
     dev->dev_num = dev_num;
     dev->boot_device = boot_device;
     dev->dev_class = dev_class;
-    hid_init_report_sizes(dev);
     mtx_init(&dev->instance_lock, mtx_plain);
     list_initialize(&dev->instance_list);
 
+    MX_DEBUG_ASSERT(dev->num_reports == 0);
     MX_DEBUG_ASSERT(dev->rbuf == NULL);
     MX_DEBUG_ASSERT(dev->rbuf_size == 0);
     MX_DEBUG_ASSERT(dev->rbuf_needed == 0);
@@ -682,21 +661,15 @@ void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
         } else {
             // No reassembly is in progress.  Start by identifying this report's
             // size.
-            bool expect_rpt_id = hid_expect_report_id(hid);
-            uint8_t rpt_id = expect_rpt_id ? buf[0] : 0;
-            size_t  rpt_sz = hid_get_report_size_by_id(hid, rpt_id, INPUT_REPORT_INPUT);
+            size_t  rpt_sz = hid_get_report_size_by_id(hid, buf[0], INPUT_REPORT_INPUT);
 
             // If we don't recognize this report ID, we are in trouble.  Drop
             // the rest of this payload and hope that the next one gets us back
             // on track.
             if (!rpt_sz) {
                 printf("%s: failed to find input report size (report id %u)\n",
-                        hid->dev.name, rpt_id);
+                        hid->dev.name, buf[0]);
                 break;
-            }
-
-            if (expect_rpt_id) {
-                rpt_sz++;
             }
 
             // Is the entire report present in this payload?  If so, just go
@@ -767,6 +740,14 @@ mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device
         }
     }
 
+    char _name[sizeof(dev->dev.name)];
+    if (name == NULL) {
+        snprintf(_name, sizeof(_name), "hid-device-%03d", dev->dev_num);
+    } else {
+        snprintf(_name, sizeof(_name), "%s", name);
+    }
+    device_init(&dev->dev, drv, _name, &hid_device_proto);
+
     status = dev->ops->get_descriptor(dev, HID_DESC_TYPE_REPORT, (void**)&dev->hid_report_desc,
             &dev->hid_report_desc_len);
     if (status != NO_ERROR) {
@@ -789,13 +770,6 @@ mx_status_t hid_add_device_etc(mx_driver_t* drv, mx_hid_device_t* dev, mx_device
         return status;
     }
 
-    char _name[sizeof(dev->dev.name)];
-    if (name == NULL) {
-        snprintf(_name, sizeof(_name), "hid-device-%03d", dev->dev_num);
-    } else {
-        snprintf(_name, sizeof(_name), "%s", name);
-    }
-    device_init(&dev->dev, drv, _name, &hid_device_proto);
     device_set_protocol(&dev->dev, MX_PROTOCOL_INPUT, NULL);
     status = device_add(&dev->dev, parent);
     if (status != NO_ERROR) {
