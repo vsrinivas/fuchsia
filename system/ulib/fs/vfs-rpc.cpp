@@ -397,7 +397,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode>
         ssize_t r;
         switch (msg->arg2.op) {
         // Ioctls which act on iostate
-        case IOCTL_DEVMGR_GET_TOKEN: {
+        case IOCTL_VFS_GET_TOKEN: {
             if (arg != sizeof(mx_handle_t)) {
                 r = ERR_INVALID_ARGS;
             } else {

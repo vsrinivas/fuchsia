@@ -10,7 +10,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 
 #include <mxio/watcher.h>
 
@@ -26,7 +26,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     }
 
     ssize_t r;
-    if ((r = ioctl_devmgr_watch_dir(dirfd, &watcher->h)) < 0) {
+    if ((r = ioctl_vfs_watch_dir(dirfd, &watcher->h)) < 0) {
         free(watcher);
         return r;
     }

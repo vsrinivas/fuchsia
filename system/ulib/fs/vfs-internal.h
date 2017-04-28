@@ -7,7 +7,7 @@
 #ifdef __Fuchsia__
 // TODO(smklein): Move thse ioctls to public/magenta/fs/vfs.h
 #include <magenta/device/device.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>

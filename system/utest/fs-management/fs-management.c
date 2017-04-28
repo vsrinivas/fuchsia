@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 #include <magenta/device/block.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
@@ -26,7 +26,7 @@ static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) 
     int fd = open(path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     char out[128];
-    ASSERT_EQ(ioctl_devmgr_query_fs(fd, out, sizeof(out)), (ssize_t)len,
+    ASSERT_EQ(ioctl_vfs_query_fs(fd, out, sizeof(out)), (ssize_t)len,
               "Failed to query filesystem");
     ASSERT_EQ(strncmp(fs_name, out, len), 0, "Unexpected filesystem mounted");
     ASSERT_EQ(close(fd), 0, "");

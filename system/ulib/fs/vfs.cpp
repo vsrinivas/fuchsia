@@ -237,7 +237,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
                    void* out_buf, size_t out_len) {
     switch (op) {
 #ifdef __Fuchsia__
-    case IOCTL_DEVMGR_WATCH_DIR: {
+    case IOCTL_VFS_WATCH_DIR: {
         if ((out_len != sizeof(mx_handle_t)) || (in_len != 0)) {
             return ERR_INVALID_ARGS;
         }
@@ -247,7 +247,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         return sizeof(mx_handle_t);
     }
-    case IOCTL_DEVMGR_MOUNT_FS: {
+    case IOCTL_VFS_MOUNT_FS: {
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
             return ERR_INVALID_ARGS;
         }
@@ -264,7 +264,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         return status;
     }
-    case IOCTL_DEVMGR_MOUNT_MKDIR_FS: {
+    case IOCTL_VFS_MOUNT_MKDIR_FS: {
         size_t namelen = in_len - sizeof(mount_mkdir_config_t);
         const mount_mkdir_config_t* config = reinterpret_cast<const mount_mkdir_config_t*>(in_buf);
         const char* name = config->name;
@@ -306,14 +306,14 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         return status;
     }
-    case IOCTL_DEVMGR_UNMOUNT_NODE: {
+    case IOCTL_VFS_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
             return ERR_INVALID_ARGS;
         }
         mx_handle_t* h = (mx_handle_t*)out_buf;
         return Vfs::UninstallRemote(vn, h);
     }
-    case IOCTL_DEVMGR_UNMOUNT_FS: {
+    case IOCTL_VFS_UNMOUNT_FS: {
         vfs_uninstall_all(MX_TIME_INFINITE);
         vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
         exit(0);

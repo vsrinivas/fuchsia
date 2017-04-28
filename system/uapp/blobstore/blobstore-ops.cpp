@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 
 #include <magenta/syscalls.h>
 #include <mxio/vfs.h>
@@ -124,14 +124,14 @@ constexpr const char kFsName[] = "blobstore";
 ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len) {
     switch (op) {
-        case IOCTL_DEVMGR_QUERY_FS: {
+        case IOCTL_VFS_QUERY_FS: {
             if (out_len < strlen(kFsName) + 1) {
                 return ERR_INVALID_ARGS;
             }
             strcpy(static_cast<char*>(out_buf), kFsName);
             return strlen(kFsName);
         }
-        case IOCTL_DEVMGR_UNMOUNT_FS: {
+        case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();
             if (status != NO_ERROR) {
                 error("blobstore unmount failed to sync; unmounting anyway: %d\n", status);

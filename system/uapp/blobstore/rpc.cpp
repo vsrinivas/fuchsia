@@ -16,7 +16,7 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 

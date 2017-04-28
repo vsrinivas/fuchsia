@@ -10,7 +10,7 @@
 
 #include <ddk/device.h>
 #include <fs/vfs.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/new.h>
 #include <magenta/thread_annotations.h>
 #include <mxio/debug.h>
@@ -443,14 +443,14 @@ constexpr const char kFsName[] = "memfs";
 ssize_t VnodeMemfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                           void* out_buf, size_t out_len) {
     switch (op) {
-    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO: {
+    case IOCTL_VFS_MOUNT_BOOTFS_VMO: {
         if (in_len < sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
         }
         const mx_handle_t* vmo = static_cast<const mx_handle_t*>(in_buf);
         return devmgr_add_systemfs_vmo(*vmo);
     }
-    case IOCTL_DEVMGR_QUERY_FS: {
+    case IOCTL_VFS_QUERY_FS: {
         if (out_len < strlen(kFsName) + 1) {
             return ERR_INVALID_ARGS;
         }

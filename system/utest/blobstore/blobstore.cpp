@@ -20,7 +20,7 @@
 
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/new.h>
 #include <magenta/syscalls.h>
@@ -1108,7 +1108,7 @@ static bool InvalidOps(void) {
     ASSERT_LT(utime(info->path, nullptr), 0, "");
 
     // TODO(smklein): Test that a blob fd cannot unmount the entire blobstore.
-    //    ASSERT_LT(ioctl_devmgr_unmount_fs(fd), 0, "");
+    //    ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0, "");
 
     // Access the file once more, after these operations
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");

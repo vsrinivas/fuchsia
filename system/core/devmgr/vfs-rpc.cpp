@@ -10,7 +10,7 @@
 
 #include <fs/vfs.h>
 #include <magenta/device/device.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/new.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>

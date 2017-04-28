@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/limits.h>

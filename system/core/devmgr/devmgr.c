@@ -10,7 +10,7 @@
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/dlfcn.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>

@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 
@@ -56,7 +56,7 @@ bool test_watcher_basic(void) {
     DIR* dir = opendir("::dir");
     ASSERT_NONNULL(dir, "");
     mx_handle_t h;
-    ASSERT_EQ(ioctl_devmgr_watch_dir(dirfd(dir), &h), (ssize_t) sizeof(mx_handle_t), "");
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &h), (ssize_t) sizeof(mx_handle_t), "");
 
     // The channel should be empty
     ASSERT_TRUE(check_for_empty(h), "");

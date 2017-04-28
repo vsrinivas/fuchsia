@@ -22,7 +22,7 @@ mx_status_t vfs_unmount_handle(mx_handle_t srv, mx_time_t deadline) {
     // txid of 0.
     msg.txid = 1;
     msg.op = MXRIO_IOCTL;
-    msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
+    msg.arg2.op = IOCTL_VFS_UNMOUNT_FS;
 
     mx_channel_call_args_t args;
     args.wr_bytes = &msg;

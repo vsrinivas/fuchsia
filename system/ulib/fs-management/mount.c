@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/limits.h>
@@ -132,14 +132,14 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         config->fs_root = root;
         config->flags = mp->flags;
         strcpy(config->name, mp->path);
-        status = ioctl_devmgr_mount_mkdir_fs(fd, config, config_size);
+        status = ioctl_vfs_mount_mkdir_fs(fd, config, config_size);
         // Currently, the recipient of the ioctl is sending the unmount signal
         // if an error occurs.
         close(fd);
         free(config);
         return status;
     } else {
-        if ((status = ioctl_devmgr_mount_fs(mp->fd, &root)) != NO_ERROR) {
+        if ((status = ioctl_vfs_mount_fs(mp->fd, &root)) != NO_ERROR) {
             // TODO(smklein): Retreive the root handle if mounting fails.
             // Currently, the recipient of the ioctl is sending the unmount signal
             // if an error occurs.
@@ -256,7 +256,7 @@ mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
 
 mx_status_t fumount(int mountfd) {
     mx_handle_t h;
-    mx_status_t status = ioctl_devmgr_unmount_node(mountfd, &h);
+    mx_status_t status = ioctl_vfs_unmount_node(mountfd, &h);
     if (status < 0) {
         fprintf(stderr, "Could not unmount filesystem: %d\n", status);
     } else {

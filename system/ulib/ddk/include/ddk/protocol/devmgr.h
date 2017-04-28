@@ -4,5 +4,5 @@
 
 #pragma once
 
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 

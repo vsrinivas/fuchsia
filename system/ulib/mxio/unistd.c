@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -1200,7 +1200,7 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
     }
 
     mx_handle_t token;
-    status = io_newparent->ops->ioctl(io_newparent, IOCTL_DEVMGR_GET_TOKEN,
+    status = io_newparent->ops->ioctl(io_newparent, IOCTL_VFS_GET_TOKEN,
                                       NULL, 0, &token, sizeof(token));
     if (status < 0) {
         r = ERROR(status);
