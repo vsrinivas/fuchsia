@@ -27,7 +27,7 @@
 
 typedef struct usb_hub {
     // the device we are publishing
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     // Underlying USB device
     mx_device_t* usb_device;
@@ -49,7 +49,6 @@ typedef struct usb_hub {
     // bit field indicating which ports are enabled
     uint8_t enabled_ports[128 / 8];
 } usb_hub_t;
-#define get_hub(dev) containerof(dev, usb_hub_t, device)
 
 inline bool usb_hub_is_port_enabled(usb_hub_t* hub, int port) {
     return (hub->enabled_ports[port / 8] & (1 << (port % 8))) != 0;
@@ -220,24 +219,25 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
 }
 
 static void usb_hub_unbind(mx_device_t* device) {
-    usb_hub_t* hub = get_hub(device);
+    usb_hub_t* hub = device->ctx;
 
     for (int i = 1; i <= hub->num_ports; i++) {
         if (usb_hub_is_port_enabled(hub, i)) {
             usb_hub_port_disconnected(hub, i);
         }
     }
-    device_remove(&hub->device);
+    device_remove(hub->mxdev);
 }
 
 static mx_status_t usb_hub_free(usb_hub_t* hub) {
     iotxn_release(hub->status_request);
+    device_destroy(hub->mxdev);
     free(hub);
     return NO_ERROR;
 }
 
 static mx_status_t usb_hub_release(mx_device_t* device) {
-    usb_hub_t* hub = get_hub(device);
+    usb_hub_t* hub = device->ctx;
 
     hub->thread_done = true;
     completion_signal(&hub->completion);
@@ -283,8 +283,8 @@ static int usb_hub_thread(void* arg) {
         usb_hub_enable_port(hub, i);
     }
 
-    device_set_bindable(&hub->device, false);
-    result = device_add(&hub->device, hub->usb_device);
+    device_set_bindable(hub->mxdev, false);
+    result = device_add(hub->mxdev, hub->usb_device);
     if (result != NO_ERROR) {
         usb_hub_free(hub);
         return result;
@@ -379,14 +379,17 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
         return ERR_NO_MEMORY;
     }
 
-    device_init(&hub->device, driver, "usb-hub", &usb_hub_device_proto);
+    mx_status_t status;
+    if ((status = device_create("usb-hub", hub, &usb_hub_device_proto, driver, &hub->mxdev)) < 0) {
+        free(hub);
+        return status;
+    }
 
     hub->usb_device = device;
     hub->hub_speed = usb_get_speed(device);
     hub->bus_device = bus_device;
     hub->bus_protocol = bus_protocol;
 
-    mx_status_t status;
     iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);
     if (!txn) {
         status = ERR_NO_MEMORY;
