@@ -72,6 +72,26 @@ static input_report_size_t hid_get_report_size_by_id(mx_hid_device_t* hid,
     return 0;
 }
 
+static inline bool hid_expect_report_id(mx_hid_device_t* hid) {
+    MX_DEBUG_ASSERT(hid);
+
+    // TODO(johngro) : Is this correct?  If a device has just one input
+    // report defined, but multiple feature reports defined, does it
+    // still put the report ID on the input report it delivers or does
+    // it omit it?
+#if BOOT_MOUSE_HACK
+    if (hid->dev_class != HID_DEV_CLASS_POINTER) {
+#endif
+    if (hid->num_reports > 1) {
+        return true;
+    }
+#if BOOT_MOUSE_HACK
+    }
+#endif
+
+    return false;
+}
+
 static mx_status_t hid_get_protocol(mx_hid_device_t* hid, void* out_buf, size_t out_len) {
     if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
 
@@ -158,6 +178,13 @@ static ssize_t hid_get_max_input_reportsize(mx_hid_device_t* hid, void* out_buf,
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
+#if BOOT_MOUSE_HACK
+    if (hid->dev_class == HID_DEV_CLASS_POINTER) {
+        *reply = 3;
+        return sizeof(*reply);
+    }
+#endif
+
     *reply = 0;
     for (int i = 0; i < HID_MAX_REPORT_IDS; i++) {
         if (hid->sizes[i].id >= 0 &&
@@ -166,9 +193,7 @@ static ssize_t hid_get_max_input_reportsize(mx_hid_device_t* hid, void* out_buf,
     }
 
     *reply = bits_to_bytes(*reply);
-#if BOOT_MOUSE_HACK
-    if (hid->dev_class == HID_DEV_CLASS_POINTER) *reply = 3;
-#endif
+
     return sizeof(*reply);
 }
 
@@ -241,16 +266,12 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
         mtx_unlock(&hid->fifo.lock);
         return ERR_BAD_STATE;
     }
-#if BOOT_MOUSE_HACK
-    if (hid->root->dev_class != HID_DEV_CLASS_POINTER) {
-#endif
-    if (hid->root->num_reports > 1) {
+
+    if (hid_expect_report_id(hid->root)) {
         // account for the report id
         xfer++;
     }
-#if BOOT_MOUSE_HACK
-    }
-#endif
+
     if (xfer > count) {
         printf("next report: %zd, read count: %zd\n", xfer, count);
         mtx_unlock(&hid->fifo.lock);
@@ -551,7 +572,7 @@ static mx_status_t hid_init_reassembly_buffer(mx_hid_device_t* dev) {
     // If this device can deliver more than one input report, we will need an
     // extra byte in the reassembly buffer for the Report ID.
     size_t buf_size = max_report_size;
-    if (dev->num_reports > 1) {
+    if (hid_expect_report_id(dev)) {
         buf_size++;
     }
 
@@ -675,7 +696,8 @@ void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
         } else {
             // No reassembly is in progress.  Start by identifying this report's
             // size.
-            uint8_t rpt_id = (hid->num_reports > 1) ? buf[0] : 0;
+            bool expect_rpt_id = hid_expect_report_id(hid);
+            uint8_t rpt_id = expect_rpt_id ? buf[0] : 0;
             size_t  rpt_sz = hid_get_report_size_by_id(hid, rpt_id, INPUT_REPORT_INPUT);
 
             // If we don't recognize this report ID, we are in trouble.  Drop
@@ -687,11 +709,7 @@ void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
                 break;
             }
 
-            // TODO(johngro) : Is this correct?  If a device has just one input
-            // report defined, but multiple feature reports defined, does it
-            // still put the report ID on the input report it delivers or does
-            // it omit it?
-            if (hid->num_reports > 1) {
+            if (expect_rpt_id) {
                 rpt_sz++;
             }
 
