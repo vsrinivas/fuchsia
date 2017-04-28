@@ -261,6 +261,7 @@ static void clone_complete(iotxn_t* clone, void* cookie) {
             }
             clone->length = length;
             clone->vmo_offset += clone->actual;
+            clone->vmo_length -= clone->actual;
             ums_queue_request(ums, clone);
             return;
         }
