@@ -26,59 +26,20 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
 
   listen_ = command_line.HasOption("listen");
 
-  if (!command_line.HasOption("no-config")) {
-    std::string config_file_name;
-    if (!command_line.GetOptionValue("config", &config_file_name)) {
-      config_file_name = kDefaultConfigFileName;
-    }
 
-    if (config_file_name.empty()) {
-      Usage();
-      return;
-    }
-
-    if (!ReadConfigFrom(config_file_name)) {
-      FTL_LOG(ERROR) << "Failed to parse config file " << config_file_name;
-      return;
-    }
+  std::string config_file_name;
+  if (!command_line.GetOptionValue("config", &config_file_name)) {
+    config_file_name = kDefaultConfigFileName;
   }
 
-  for (auto option : command_line.options()) {
-    if (option.name == "service") {
-      for (auto service :
-           ftl::SplitString(option.value, ",", ftl::kTrimWhitespace,
-                            ftl::kSplitWantNonEmpty)) {
-        auto split = ftl::SplitString(service, "@", ftl::kTrimWhitespace,
-                                      ftl::kSplitWantNonEmpty);
+  if (config_file_name.empty()) {
+    Usage();
+    return;
+  }
 
-        if (split.size() != 2) {
-          Usage();
-          FTL_LOG(ERROR) << "Invalid --service value";
-          return;
-        }
-
-        auto launch_info = app::ApplicationLaunchInfo::New();
-        launch_info->url = split[1].ToString();
-        RegisterService(split[0].ToString(), std::move(launch_info));
-      }
-    }
-
-    if (option.name == "device") {
-      auto split = ftl::SplitString(option.value, "@", ftl::kTrimWhitespace,
-                                    ftl::kSplitWantNonEmpty);
-      if (split.size() != 2) {
-        Usage();
-        return;
-      }
-
-      IpAddress address = IpAddress::FromString(split[1].ToString());
-      if (!address.is_valid()) {
-        FTL_LOG(ERROR) << "Invalid IP address " << split[1].ToString();
-        return;
-      }
-
-      RegisterDevice(split[0].ToString(), address);
-    }
+  if (listen_ && !ReadConfigFrom(config_file_name)) {
+    FTL_LOG(ERROR) << "Failed to parse config file " << config_file_name;
+    return;
   }
 
   is_valid_ = true;
@@ -89,12 +50,8 @@ void NetConnectorParams::Usage() {
   FTL_LOG(INFO) << "    @boot netconnector [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO)
-      << "    --no-config                      don't read a config file";
-  FTL_LOG(INFO)
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
-  FTL_LOG(INFO) << "    --service=<name>@<app url>[,...] register service";
-  FTL_LOG(INFO) << "    --device=<name>@<ip address>     register device";
   FTL_LOG(INFO) << "    --listen                         run as listener";
 }
 

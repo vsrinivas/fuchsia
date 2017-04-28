@@ -26,18 +26,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       responding_service_host_(application_context_->environment()) {
   if (!params->listen()) {
     // Start the listener.
-    FTL_DCHECK(!params->listen());
-
-    NetConnectorAdminPtr net_connector_admin =
-        application_context_->ConnectToEnvironmentService<NetConnectorAdmin>();
-
-    for (auto& pair : params_->MoveServices()) {
-      net_connector_admin->RegisterService(pair.first, std::move(pair.second));
-    }
-
-    for (auto& pair : params_->devices()) {
-      net_connector_admin->RegisterDevice(pair.first, pair.second.ToString());
-    }
+    NetConnectorPtr net_connector =
+        application_context_->ConnectToEnvironmentService<NetConnector>();
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
@@ -61,10 +51,6 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
   application_context_->outgoing_services()->AddService<NetConnector>(
       [this](fidl::InterfaceRequest<NetConnector> request) {
         bindings_.AddBinding(this, std::move(request));
-      });
-  application_context_->outgoing_services()->AddService<NetConnectorAdmin>(
-      [this](fidl::InterfaceRequest<NetConnectorAdmin> request) {
-        admin_bindings_.AddBinding(this, std::move(request));
       });
 }
 
@@ -98,26 +84,6 @@ void NetConnectorImpl::GetDeviceServiceProvider(
   AddDeviceServiceProvider(DeviceServiceProvider::Create(
       device_name, SocketAddress(iter->second, kPort), std::move(request),
       this));
-}
-
-void NetConnectorImpl::RegisterService(
-    const fidl::String& name,
-    app::ApplicationLaunchInfoPtr launch_info) {
-  FTL_LOG(INFO) << "Service '" << name << "' registered.";
-  responding_service_host_.RegisterSingleton(name, std::move(launch_info));
-}
-
-void NetConnectorImpl::RegisterDevice(const fidl::String& name,
-                                      const fidl::String& address) {
-  IpAddress ip_address = IpAddress::FromString(address);
-  if (!ip_address.is_valid()) {
-    FTL_LOG(ERROR) << "RegisterDevice called with invalid address " << address;
-    return;
-  }
-
-  FTL_LOG(INFO) << "Device '" << name << "' registered at address "
-                << ip_address;
-  params_->RegisterDevice(name, ip_address);
 }
 
 void NetConnectorImpl::RegisterServiceProvider(

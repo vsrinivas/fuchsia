@@ -8,7 +8,6 @@
 
 #include "apps/netconnector/examples/netconnector_example/netconnector_example_params.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
-#include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -23,8 +22,7 @@ static const std::vector<std::string> kConversation = {
 
 NetConnectorExampleImpl::NetConnectorExampleImpl(
     NetConnectorExampleParams* params)
-    : application_context_(
-          app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -59,9 +57,9 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     if (params->register_provider()) {
       // Register our provider with netconnector.
       FTL_LOG(INFO) << "Registering provider";
-      netconnector::NetConnectorAdminPtr admin =
+      netconnector::NetConnectorPtr connector =
           application_context_
-              ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
+              ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
       fidl::InterfaceHandle<app::ServiceProvider> handle;
       application_context_->outgoing_services()->AddBinding(
@@ -69,7 +67,8 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
 
       FTL_DCHECK(handle);
 
-      admin->RegisterServiceProvider(kRespondingServiceName, std::move(handle));
+      connector->RegisterServiceProvider(kRespondingServiceName,
+                                         std::move(handle));
     }
   } else {
     // Params say we should be a requestor.
@@ -83,8 +82,8 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     mx::channel remote;
     mx_status_t status = mx::channel::create(0u, &local, &remote);
 
-    FTL_CHECK(status == NO_ERROR) << "mx::channel::create failed, status "
-                                  << status;
+    FTL_CHECK(status == NO_ERROR)
+        << "mx::channel::create failed, status " << status;
 
     // Give the local end of the channel to the relay.
     message_relay_.SetChannel(std::move(local));

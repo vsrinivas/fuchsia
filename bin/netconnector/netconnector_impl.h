@@ -14,7 +14,6 @@
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
-#include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/ip_port.h"
 #include "apps/netconnector/src/listener.h"
@@ -27,40 +26,39 @@
 
 namespace netconnector {
 
-class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
+class NetConnectorImpl : public NetConnector {
  public:
   NetConnectorImpl(NetConnectorParams* params);
 
-  ~NetConnectorImpl();
+  ~NetConnectorImpl() override;
 
+  // Returns the service provider exposed to remote requestors.
   app::ServiceProvider* responding_services() {
     return responding_service_host_.services();
   }
 
+  // Releases a service provider for a remote device.
   void ReleaseDeviceServiceProvider(
       DeviceServiceProvider* device_service_provider);
 
+  // Adds an agent that represents a local requestor.
   void AddRequestorAgent(std::unique_ptr<RequestorAgent> requestor_agent);
 
+  // Releases an agent that manages a connection on behalf of a local requestor.
   void ReleaseRequestorAgent(RequestorAgent* requestor_agent);
 
+  // Releases an agent that manages a connection on behalf of a remote
+  // requestor.
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void GetDeviceServiceProvider(
-      const fidl::String& device_name,
-      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
-
-  // NetConnectorAdmin implementation.
-  void RegisterService(const fidl::String& name,
-                       app::ApplicationLaunchInfoPtr launch_info) override;
-
-  void RegisterDevice(const fidl::String& name,
-                      const fidl::String& address) override;
-
   void RegisterServiceProvider(
       const fidl::String& name,
       fidl::InterfaceHandle<app::ServiceProvider> service_provider) override;
+
+  void GetDeviceServiceProvider(
+      const fidl::String& device_name,
+      fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
 
  private:
   static const IpPort kPort;
@@ -74,7 +72,6 @@ class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
   std::unique_ptr<app::ApplicationContext> application_context_;
   std::string host_name_;
   fidl::BindingSet<NetConnector> bindings_;
-  fidl::BindingSet<NetConnectorAdmin> admin_bindings_;
   Listener listener_;
   RespondingServiceHost responding_service_host_;
   std::unordered_map<DeviceServiceProvider*,

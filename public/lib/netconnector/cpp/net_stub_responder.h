@@ -8,7 +8,7 @@
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
-#include "apps/netconnector/services/netconnector_admin.fidl.h"
+#include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace netconnector {
@@ -34,15 +34,15 @@ class NetStubResponder {
         },
         service_name);
 
-    netconnector::NetConnectorAdminPtr admin =
+    netconnector::NetConnectorPtr connector =
         application_context
-            ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
+            ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     fidl::InterfaceHandle<app::ServiceProvider> handle;
     application_context->outgoing_services()->AddBinding(handle.NewRequest());
     FTL_DCHECK(handle);
 
-    admin->RegisterServiceProvider(service_name, std::move(handle));
+    connector->RegisterServiceProvider(service_name, std::move(handle));
   }
 
   void ReleaseStub(std::shared_ptr<TStub> stub) { stubs_.erase(stub); }
