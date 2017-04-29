@@ -10,25 +10,25 @@
 #include "kpci-private.h"
 
 static mx_status_t pci_claim_device(mx_device_t* dev) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_claim_device(device->handle);
 }
 
 static mx_status_t pci_enable_bus_master(mx_device_t* dev, bool enable) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_enable_bus_master(device->handle, enable);
 }
 
 static mx_status_t pci_enable_pio(mx_device_t* dev, bool enable) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_enable_pio(device->handle, enable);
 }
 
 static mx_status_t pci_reset_device(mx_device_t* dev) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_reset_device(device->handle);
 }
@@ -48,7 +48,7 @@ static mx_status_t pci_map_mmio(mx_device_t* dev,
         return ERR_INVALID_ARGS;
     }
 
-    device = get_kpci_device(dev);
+    device = dev->ctx;
     if (device->handle == MX_HANDLE_INVALID) {
         return ERR_BAD_HANDLE;
     }
@@ -76,7 +76,7 @@ static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_
         return ERR_INVALID_ARGS;
     }
 
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     if (device->handle == MX_HANDLE_INVALID) {
         return ERR_BAD_HANDLE;
     }
@@ -103,7 +103,7 @@ static mx_status_t pci_get_config(mx_device_t* dev,
         return ERR_INVALID_ARGS;
     }
 
-    device = get_kpci_device(dev);
+    device = dev->ctx;
     if (device->handle == MX_HANDLE_INVALID) {
         return ERR_BAD_HANDLE;
     }
@@ -128,7 +128,7 @@ static mx_status_t pci_get_config(mx_device_t* dev,
 static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
                                            mx_pci_irq_mode_t mode,
                                            uint32_t* out_max_irqs) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_query_irq_mode_caps(device->handle, mode, out_max_irqs);
 }
@@ -136,7 +136,7 @@ static mx_status_t pci_query_irq_mode_caps(mx_device_t* dev,
 static mx_status_t pci_set_irq_mode(mx_device_t* dev,
                                     mx_pci_irq_mode_t mode,
                                     uint32_t requested_irq_count) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     assert(device->handle != MX_HANDLE_INVALID);
     return mx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }

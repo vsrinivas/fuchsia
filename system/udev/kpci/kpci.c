@@ -23,8 +23,9 @@
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
 
 static mx_status_t kpci_release(mx_device_t* dev) {
-    kpci_device_t* device = get_kpci_device(dev);
+    kpci_device_t* device = dev->ctx;
     mx_handle_close(device->handle);
+    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -49,12 +50,16 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x:%02x", info.bus_id, info.dev_id, info.func_id);
-    device_init(&device->device, drv, name, &kpci_device_proto);
+    mx_status_t status = device_create(name, device, &kpci_device_proto, drv, &device->mxdev);
+    if (status != NO_ERROR) {
+        free(device);
+        return status;
+    }
 
-    device_set_protocol(&device->device, MX_PROTOCOL_PCI, &_pci_protocol);
+    device_set_protocol(device->mxdev, MX_PROTOCOL_PCI, &_pci_protocol);
     device->handle = handle;
     device->index = index;
-    *out = &device->device;
+    *out = device->mxdev;
 
     mx_device_prop_t device_props[] = {
         (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_PCI },
@@ -73,8 +78,10 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
                  "Invalid number of PCI properties in kpci_device_t!");
 
     memcpy(device->props, device_props, sizeof(device->props));
-    device->device.props = device->props;
-    device->device.prop_count = countof(device->props);
+    // TODO - devhost_create_pcidev() requires that we write directly into the mx_device_t here.
+    // This can be cleaned up after we untangle this driver from the devhost internals
+    device->mxdev->props = device->props;
+    device->mxdev->prop_count = countof(device->props);
 
     memcpy(&device->info, &info, sizeof(info));
 
@@ -89,6 +96,7 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
         return status;
     }
     if ((status = device_add(pcidev, parent)) < 0) {
+        device_destroy(pcidev);
         return status;
     }
     for (uint32_t index = 0;; index++) {
