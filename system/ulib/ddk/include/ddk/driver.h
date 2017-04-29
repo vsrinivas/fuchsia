@@ -69,7 +69,8 @@ struct mx_driver {
 mx_status_t device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
                           mx_driver_t* driver, mx_device_t** out);
 void device_init(mx_device_t* device, mx_driver_t* driver,
-                 const char* name, mx_protocol_device_t* ops);
+                 const char* name, mx_protocol_device_t* ops)
+    __attribute__((deprecated("use device_create and device_destroy instead")));
 // Devices are created or (if embedded in a driver-specific structure)
 // initialized with the above functions.  The mx_device_t will be completely
 // written during initialization, and after initialization and before calling
