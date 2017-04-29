@@ -8,6 +8,7 @@ import("//lib/fidl/fidl.gni")
 fidl("story") {
   sources = [
     "link.fidl",
+    "per_device_story_info.fidl",
     "story_controller.fidl",
     "story_info.fidl",
     "story_marker.fidl",

@@ -36,6 +36,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
  public:
   StoryProviderImpl(
       const Scope* user_scope,
+      const std::string& device_id,
       ledger::Ledger* ledger,
       ledger::Page* root_page,
       AppConfigPtr story_shell,
@@ -55,6 +56,9 @@ class StoryProviderImpl : StoryProvider, PageClient {
   // Called by StoryImpl.
   const Scope* user_scope() const { return user_scope_; }
 
+  // The device ID for this user/device.
+  const std::string device_id() const { return device_id_; }
+
   // Called by StoryImpl.
   const ComponentContextInfo& component_context_info() {
     return component_context_info_;
@@ -73,10 +77,6 @@ class StoryProviderImpl : StoryProvider, PageClient {
                          const fidl::String& name,
                          const fidl::String& value,
                          const std::function<void()>& callback);
-
-  // Called by StoryImpl.
-  void SetStoryState(const fidl::String& story_id,
-                     bool running, StoryState state);
 
   // |StoryProvider|, also used by StoryImpl.
   void GetStoryInfo(const fidl::String& story_id,
@@ -108,6 +108,9 @@ class StoryProviderImpl : StoryProvider, PageClient {
   void PreviousStories(const PreviousStoriesCallback& callback) override;
 
   // |StoryProvider|
+  void RunningStories(const RunningStoriesCallback& callback) override;
+
+  // |StoryProvider|
   void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |StoryProvider|
@@ -120,6 +123,9 @@ class StoryProviderImpl : StoryProvider, PageClient {
   void OnDelete(const std::string& key) override;
 
   const Scope* const user_scope_;
+
+  // Unique ID generated for this user/device combination.
+  std::string device_id_;
 
   // Story provider writes story records to the root page, and creates
   // new pages for stories.

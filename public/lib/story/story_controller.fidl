@@ -14,7 +14,7 @@ import "apps/mozart/services/views/view_token.fidl";
 // single story. Created by StoryProvider.
 interface StoryController {
   // Gets information associated with the story.
-  GetInfo() => (StoryInfo info);
+  GetInfo() => (StoryInfo info, StoryState state);
 
   // Stores extra information associated with the story, like title,
   // color, etc. Available in the |extra| field in StoryInfo.

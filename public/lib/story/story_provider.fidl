@@ -5,6 +5,7 @@
 module modular;
 
 import "apps/modular/services/story/story_controller.fidl";
+import "apps/modular/services/story/story_state.fidl";
 
 // UserRunner creates an instance of this service and passes it to the
 // UserShell so it can operate on stories for the user.
@@ -47,6 +48,11 @@ interface StoryProvider {
   // then StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 
+  // Returns IDs of stories on the current device that are not in the INITIAL or
+  // STOPPED state. More information about the stories can be retrieved using
+  // GetStoryInfo(), or by GetController(), then StoryController.GetInfo().
+  RunningStories() => (array<string> story_ids);
+
   // Registers a listener for changes in the story collection.
   Watch(StoryProviderWatcher watcher);
 
@@ -58,13 +64,15 @@ interface StoryProvider {
 //
 // These calls are for a story event happening on ANY device, not just
 // the current device.
-//
-// TODO(jimbe) Need a way to determine which device the action
-// happened on.
 interface StoryProviderWatcher {
-  // The StoryInfo changed. |story_info.state| is INITIAL if this
-  // story was just created.
-  OnChange(StoryInfo story_info);
+  // The StoryInfo changed or the StoryState changed. |story_state| is
+  // INITIAL if this story was just created. The state will always be "STOPPED"
+  // on the current device if no StoryController is present. This behavior is
+  // only surprising because the state could change to INITIAL after the
+  // StoryController is created.
+  // TODO(jimbe) The "INITIAL" value has a race condition between devices and
+  // should be removed.
+  OnChange(StoryInfo story_info, StoryState story_state);
 
   // A Story was deleted.
   OnDelete(string story_id);

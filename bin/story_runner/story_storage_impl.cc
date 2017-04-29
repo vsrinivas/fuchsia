@@ -1,18 +1,14 @@
-
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "apps/modular/src/story_runner/story_storage_impl.h"
-
-#include <memory>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/ledger/storage.h"
-#include "apps/modular/lib/util/string_escape.h"
-#include "lib/ftl/strings/join_strings.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -28,6 +24,14 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->url);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("default_link_path", &data->default_link_path, XdrLinkPath);
+}
+
+void XdrPerDeviceStoryInfo(XdrContext* const xdr,
+                           PerDeviceStoryInfo* const info) {
+  xdr->Field("device", &info->device_id);
+  xdr->Field("id", &info->story_id);
+  xdr->Field("time", &info->timestamp);
+  xdr->Field("state", &info->state);
 }
 
 }  // namespace
@@ -317,6 +321,54 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteModuleDataCall);
 };
 
+class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
+ public:
+  WriteDeviceDataCall(OperationContainer* const container,
+                      ledger::Page* const page,
+                      const std::string& story_id,
+                      const std::string& device_id,
+                      StoryState state,
+                      ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        page_(page),
+        story_id_(story_id),
+        device_id_(device_id),
+        state_(state) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+
+  auto per_device = PerDeviceStoryInfo::New();
+  per_device->device_id = device_id_;
+  per_device->story_id = story_id_;
+  per_device->timestamp = time(nullptr);
+  per_device->state = state_;
+
+  std::string json;
+  XdrWrite(&json, &per_device, XdrPerDeviceStoryInfo);
+
+  page_->PutWithPriority(
+      to_array(MakePerDeviceKey(per_device->device_id)), to_array(json),
+      ledger::Priority::EAGER, [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "WriteDeviceDataCall() " << device_id_
+                         << " Page.PutWithPriority() " << status;
+        }
+
+        Done();
+      });
+  }
+
+  ledger::Page* const page_;  // not owned
+  const std::string& story_id_;
+  const std::string& device_id_;
+  StoryState state_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(WriteDeviceDataCall);
+};
+
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
       story_page_(story_page) {}
@@ -367,6 +419,14 @@ void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
       [impl](auto& entry) { return entry.impl == impl; });
   FTL_DCHECK(f != watchers_.end());
   watchers_.erase(f);
+}
+
+void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
+                                       const std::string& device_id,
+                                       StoryState state,
+                                       const SyncCallback& callback) {
+  new WriteDeviceDataCall(&operation_queue_, story_page_, story_id, device_id,
+                          state, callback);
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {

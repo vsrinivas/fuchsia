@@ -17,9 +17,10 @@ namespace modular {
 class StoryProviderMock : public StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(modular::StoryInfoPtr story_info) {
-    watchers_.ForAllPtrs([&story_info](modular::StoryProviderWatcher* watcher) {
-      watcher->OnChange(story_info->Clone());
+  void NotifyStoryChanged(modular::StoryInfoPtr story_info,
+                          modular::StoryState story_state) {
+    watchers_.ForAllPtrs([&story_info, story_state](modular::StoryProviderWatcher* watcher) {
+      watcher->OnChange(story_info->Clone(), story_state);
     });
   }
 
@@ -72,6 +73,11 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override {
+    callback(fidl::Array<fidl::String>::New(0));
+  }
+
+  // |StoryProvider|
+  void RunningStories(const RunningStoriesCallback& callback) override {
     callback(fidl::Array<fidl::String>::New(0));
   }
 

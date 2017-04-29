@@ -39,6 +39,19 @@ constexpr char kTestUserShellApp[] =
     "https://fuchsia.googlesource.com/modular/"
     "tests/user_shell/test_user_shell.cc#TestUserShellApp";
 
+bool IsRunning(const modular::StoryState state) {
+  switch (state) {
+    case modular::StoryState::STARTING:
+    case modular::StoryState::RUNNING:
+    case modular::StoryState::DONE:
+      return true;
+    case modular::StoryState::INITIAL:
+    case modular::StoryState::STOPPED:
+    case modular::StoryState::ERROR:
+      return false;
+  }
+}
+
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
@@ -172,11 +185,10 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   }
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr story_info) override {
+  void OnChange(modular::StoryInfoPtr story_info,
+                modular::StoryState story_state) override {
     FTL_VLOG(1) << "TestUserShellApp::OnChange() "
-                << " id " << story_info->id << " is_running "
-                << story_info->is_running << " state " << story_info->state
-                << " url " << story_info->url;
+                << " id " << story_info->id << " url " << story_info->url;
   }
 
   fidl::Binding<modular::StoryProviderWatcher> binding_;
@@ -323,11 +335,12 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
   void TestStory1_GetController(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
-        story1_get_controller_.Pass();
-        story_info_ = std::move(story_info);
-        TestStory1_SetRootLink();
-      });
+    story_controller_->GetInfo(
+        [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
+          story1_get_controller_.Pass();
+          story_info_ = std::move(story_info);
+          TestStory1_SetRootLink();
+        });
   }
 
   // Totally tentative use of the root module link: Tell the root module under
@@ -382,28 +395,36 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   // Every five counter increments, we dehydrate and rehydrate the story, until
   // the story stops itself when it reaches 11 counter increments.
   void TestStory1_Cycle(const int round) {
-    story_provider_->GetStoryInfo(
-        story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
-          FTL_DCHECK(!story_info.is_null());
-          FTL_DCHECK(story_info->is_running == true);
-          story_controller_->Stop([this, round] {
-              TearDownStoryController();
+    story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,
+                                             modular::StoryState state) {
+      FTL_DCHECK(!story_info.is_null());
+      FTL_DCHECK(IsRunning(state));
+      story_controller_->Stop([this, round] {
+        TearDownStoryController();
 
-              // When the story stops, we start it again.
-              mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                  [this, round] {
-                    story_provider_->GetStoryInfo(
-                        story_info_->id,
-                        [this, round](modular::StoryInfoPtr story_info) {
-                          FTL_DCHECK(!story_info.is_null());
-                          FTL_DCHECK(story_info->is_running == false);
+        // When the story stops, we start it again.
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this, round] {
+              story_provider_->GetStoryInfo(
+                  story_info_->id,
+                  [this, round](modular::StoryInfoPtr story_info) {
+                    FTL_DCHECK(!story_info.is_null());
+
+                    // Can't use the StoryController here because we closed it
+                    // in TearDownStoryController().
+                    story_provider_->RunningStories(
+                        [this, round](fidl::Array<fidl::String> story_ids) {
+                          auto n = count(story_ids.begin(), story_ids.begin(),
+                                         story_info_->id);
+                          FTL_DCHECK(n == 0);
 
                           TestStory1_Run(round + 1);
                         });
-                  },
-                  ftl::TimeDelta::FromSeconds(10));
-            });
-        });
+                  });
+            },
+            ftl::TimeDelta::FromSeconds(10));
+      });
+    });
   }
 
   TestPoint story2_create_{"Story2 Create"};
@@ -429,13 +450,14 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
   void TestStory2_GetController(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
-        story_info_ = std::move(story_info);
+    story_controller_->GetInfo(
+        [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
+          story_info_ = std::move(story_info);
 
-        story2_get_controller_.Pass();
+          story2_get_controller_.Pass();
 
-        TestStory2_GetModules();
-      });
+          TestStory2_GetModules();
+        });
   }
 
   TestPoint story2_get_modules_{"Story2 Get Modules"};

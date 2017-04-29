@@ -50,6 +50,7 @@ constexpr char kTriggerKeyPrefix[] = "Trigger/";
 //    Story page:
 constexpr char kLinkKeyPrefix[] = "Link/";
 constexpr char kModuleKeyPrefix[] = "Module/";
+constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of
@@ -57,6 +58,7 @@ constexpr char kModuleKeyPrefix[] = "Module/";
 //
 std::string MakeStoryKey(const fidl::String& story_id);
 std::string MakeDeviceKey(const fidl::String& device_name);
+std::string MakePerDeviceKey(const fidl::String& device_name);
 std::string MakeFocusKey(const fidl::String& device_name);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,

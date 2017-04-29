@@ -21,6 +21,11 @@ std::string MakeDeviceKey(const fidl::String& device_name) {
   return kDeviceKeyPrefix + device_name.get();
 }
 
+std::string MakePerDeviceKey(const fidl::String& device_name) {
+  // Not escaped, because only one component after the prefix.
+  return kPerDeviceKeyPrefix + device_name.get();
+}
+
 std::string MakeFocusKey(const fidl::String& device_name) {
   // Not escaped, because only one component after the prefix.
   return kFocusKeyPrefix + device_name.get();

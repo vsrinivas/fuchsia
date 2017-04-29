@@ -22,6 +22,7 @@
 #include "apps/modular/services/module/module_controller.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
@@ -90,6 +91,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Called by ModuleContextImpl.
   const fidl::String& GetStoryId() const;
 
+  // Called by StoryProviderImpl.
+  StoryState GetStoryState() const;
+
   // Called by ModuleControllerImpl.
   //
   // Releases ownership of |controller|, which deletes itself after return.
@@ -97,6 +101,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
 
   // Called by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> request);
+
+  // Called by StoryProviderImpl.
+  bool IsRunning();
 
   // Called by StoryProviderImpl.
   //
@@ -149,7 +156,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // The ID of the story, its state and the context to obtain it from
   // and persist it to.
   const fidl::String story_id_;
-  bool running_{false};
+  // This is the canonical source for state. The value in the ledger is just
+  // a write-behind copy of this value.
   StoryState state_{StoryState::INITIAL};
   StoryProviderImpl* const story_provider_impl_;
   ledger::PagePtr story_page_;

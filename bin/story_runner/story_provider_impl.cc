@@ -28,8 +28,6 @@ namespace {
 void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
-  xdr->Field("is_running", &data->is_running);
-  xdr->Field("state", &data->state);
   xdr->Field("extra", &data->extra);
 }
 
@@ -248,8 +246,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
                            auto* const story_info = story_data_->story_info.get();
                            story_info->url = url_;
                            story_info->id = story_id_;
-                           story_info->is_running = false;
-                           story_info->state = StoryState::INITIAL;
                            story_info->extra = std::move(extra_info_);
                            story_info->extra.mark_non_null();
 
@@ -397,61 +393,28 @@ class StoryProviderImpl::GetControllerCall : Operation<void> {
 
  private:
   void Run() override {
-    // If possible, try connecting to an existing controller.
+    FlowToken flow(this);
+
+    // Use the existing controller, if possible.
     auto i = story_controllers_->find(story_id_);
     if (i != story_controllers_->end()) {
       i->second->Connect(std::move(request_));
-      Done();
       return;
     }
 
-    auto mutate = [this](StoryData* const story_data) {
-      return Mutate(story_data);
-    };
-    auto done = [this] {
-      if (story_data_) {
-        Cont1();
-      } else {
-        Done();
-      }
-    };
-
-    new MutateStoryDataCall(&operation_queue_, page_, story_id_, mutate, done);
+    new GetStoryDataCall(&operation_queue_, page_, story_id_,
+                         [this, flow](StoryDataPtr story_data) {
+                           if (story_data) {
+                             story_data_ = std::move(story_data);
+                             Cont1(flow);
+                           }
+                         });
   }
 
-  bool Mutate(StoryData* const story_data) {
-    // HACK(mesch): If the story were really running, it would
-    // have a story controller found in the section above, and
-    // we would never get here. But if the user runner was
-    // previously killed while the story was running, the story
-    // would be recorded in the ledger as running even though it
-    // isn't, and the user shell is then unable to actually
-    // start it (cf. StoryImpl::Start()).
-    //
-    // This needs to be fixed properly in different ways (adding
-    // a device ID to the persisted state and resurrecting the
-    // user session with stories already running). This
-    // workaround here just gets user shell be able to start
-    // previous stories. FW-95
-    //
-    // If this field is changed here, it needs to be written back too,
-    // otherwise StoryProvider.GetStoryInfo() and
-    // StoryController.GetInfo() will return the wrong values.
-    bool result = false;
-    if (story_data->story_info->is_running) {
-      FTL_LOG(INFO) << "GetControllerCall() " << story_id_
-                    << " marked running but isn't -- correcting";
-      story_data->story_info->is_running = false;
-      result = true;
-    }
-
-    story_data_ = story_data->Clone();
-    return result;
-  }
-
-  void Cont1() {
+  void Cont1(FlowToken flow) {
     ledger_->GetPage(story_data_->story_page_id.Clone(),
-                     story_page_.NewRequest(), [this](ledger::Status status) {
+                     story_page_.NewRequest(),
+                     [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FTL_LOG(ERROR) << "GetControllerCall() " << story_id_
                                         << " Ledger.GetPage() " << status;
@@ -461,7 +424,6 @@ class StoryProviderImpl::GetControllerCall : Operation<void> {
                                          story_provider_impl_);
                        controller->Connect(std::move(request_));
                        story_controllers_->emplace(story_id_, controller);
-                       Done();
                      });
   }
 
@@ -512,20 +474,17 @@ class StoryProviderImpl::PreviousStoriesCall
   }
 
   void Cont1() {
-    GetEntries(
-        page_snapshot_.get(),
-        kStoryKeyPrefix,
-        &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "PreviousStoriesCall() "
-                           << "GetEntries() " << status;
-            Done(std::move(story_ids_));
-            return;
-          }
+    GetEntries(page_snapshot_.get(), kStoryKeyPrefix, &entries_,
+               nullptr /* next_token */, [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "PreviousStoriesCall() "
+                                  << "GetEntries() " << status;
+                   Done(std::move(story_ids_));
+                   return;
+                 }
 
-          Cont2();
-        });
+                 Cont2();
+               });
   }
 
   void Cont2() {
@@ -565,6 +524,7 @@ class StoryProviderImpl::PreviousStoriesCall
 
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,
+    const std::string& device_id,
     ledger::Ledger* const ledger,
     ledger::Page* const root_page,
     AppConfigPtr story_shell,
@@ -572,6 +532,7 @@ StoryProviderImpl::StoryProviderImpl(
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : PageClient("StoryProviderImpl", root_page, kStoryKeyPrefix),
       user_scope_(user_scope),
+      device_id_(device_id),
       ledger_(ledger),
       root_page_(root_page),
       story_shell_(std::move(story_shell)),
@@ -623,20 +584,6 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
                           done);
 };
 
-void StoryProviderImpl::SetStoryState(const fidl::String& story_id,
-                                      const bool running,
-                                      const StoryState state) {
-  auto mutate = [running, state](StoryData* const story_data) {
-    story_data->story_info->is_running = running;
-    story_data->story_info->state = state;
-    return true;
-  };
-  auto done = [] {};
-
-  new MutateStoryDataCall(&operation_queue_, root_page_, story_id, mutate,
-                          done);
-};
-
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,
                                     const CreateStoryCallback& callback) {
@@ -671,7 +618,7 @@ void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
   new GetStoryDataCall(
       &operation_queue_, root_page_, story_id,
       [callback](StoryDataPtr story_data) {
-        callback(story_data ? std::move(story_data->story_info) : nullptr );
+        callback(story_data ? std::move(story_data->story_info) : nullptr);
       });
 }
 
@@ -689,6 +636,18 @@ void StoryProviderImpl::PreviousStories(
   new PreviousStoriesCall(&operation_queue_, root_page_, callback);
 }
 
+// |StoryProvider|
+void StoryProviderImpl::RunningStories(
+    const RunningStoriesCallback& callback) {
+  auto stories = fidl::Array<fidl::String>::New(0);
+  for (const auto& controller : story_controllers_) {
+    if (controller.second->IsRunning()) {
+      stories.push_back(controller.second->GetStoryId());
+    }
+  }
+  callback(std::move(stories));
+}
+
 // |PageClient|
 void StoryProviderImpl::OnChange(const std::string& key,
                                  const std::string& value) {
@@ -697,9 +656,19 @@ void StoryProviderImpl::OnChange(const std::string& key,
     return;
   }
 
-  watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
-      watcher->OnChange(story_data->story_info.Clone());
-    });
+  // HACK(jimbe) We don't have the page and it's expensive to get it, so just
+  // mark it as STOPPED. We know it's not running or we'd have a
+  // StoryController.
+  StoryState state = StoryState::STOPPED;
+  auto i = story_controllers_.find(story_data->story_info->id);
+  if (i != story_controllers_.end()) {
+    state = i->second->GetStoryState();
+  }
+
+  watchers_.ForAllPtrs(
+      [&story_data, state](StoryProviderWatcher* const watcher) {
+        watcher->OnChange(story_data->story_info.Clone(), state);
+      });
 
   // TODO(mesch): If there is an update for a running story, the story
   // controller needs to be notified.
@@ -711,8 +680,8 @@ void StoryProviderImpl::OnDelete(const std::string& key) {
   const fidl::String story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
 
   watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
-      watcher->OnDelete(story_id);
-    });
+    watcher->OnDelete(story_id);
+  });
 
   new DeleteStoryCall(&operation_queue_, root_page_, story_id,
                       &story_controllers_, true /* already_deleted */,

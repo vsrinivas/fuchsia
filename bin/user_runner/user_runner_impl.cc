@@ -252,8 +252,9 @@ UserRunnerImpl::UserRunnerImpl(
   // End init maxwell.
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      &user_scope_, ledger_.get(), root_page_.get(), std::move(story_shell),
-      component_context_info, user_intelligence_provider_.get()));
+      &user_scope_, device_id, ledger_.get(), root_page_.get(),
+      std::move(story_shell), component_context_info,
+      user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_.reset(new FocusHandler(device_name, root_page_.get()));

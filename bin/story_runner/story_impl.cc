@@ -75,7 +75,7 @@ class StoryImpl::AddModuleCall : Operation<void> {
 
     story_impl_->story_storage_impl_->WriteModuleData(
         module_path, module_url_, link_path, [this] {
-          if (story_impl_->running_) {
+          if (story_impl_->IsRunning()) {
             story_impl_->StartRootModule(module_name_, module_url_, link_name_);
           }
           Done();
@@ -192,7 +192,7 @@ class StoryImpl::StartCall : Operation<void> {
  private:
   void Run() {
     // If the story is running, we do nothing and close the view owner request.
-    if (story_impl_->running_) {
+    if (story_impl_->IsRunning()) {
       FTL_LOG(INFO) << "StoryImpl::StartCall() while already running: ignored.";
       Done();
       return;
@@ -221,7 +221,6 @@ class StoryImpl::StartCall : Operation<void> {
             }
           }
 
-          story_impl_->running_ = true;
           story_impl_->state_ = StoryState::STARTING;
 
           story_impl_->NotifyStateChange();
@@ -331,7 +330,6 @@ class StoryImpl::StopCall : Operation<void> {
     story_impl_->links_.clear();
     story_impl_->connections_.clear();
 
-    story_impl_->running_ = false;
     story_impl_->state_ = StoryState::STOPPED;
 
     story_impl_->NotifyStateChange();
@@ -558,8 +556,12 @@ void StoryImpl::GetInfo(const GetInfoCallback& callback) {
   //
   // This race is normal fidl concurrency behavior.
   new SyncCall(&operation_queue_, [this, callback] {
-      story_provider_impl_->GetStoryInfo(story_id_, callback);
-    });
+    story_provider_impl_->GetStoryInfo(
+        story_id_,
+        [ state = state_, callback ](modular::StoryInfoPtr story_info) {
+          callback(std::move(story_info), state);
+        });
+  });
 }
 
 // |StoryController|
@@ -682,8 +684,11 @@ void StoryImpl::NotifyStateChange() {
   // outside the container; this way we prevent lock cycles).
   //
   // TODO(mesch): It would still be nicer if we could complete the State writing
-  // inside this Operation. We need out own copy of the Page* for that.
-  story_provider_impl_->SetStoryState(story_id_, running_, state_);
+  // while this Operation is executing so that it stays on our queue and there's
+  // no race condition. We need our own copy of the Page* for that.
+
+  story_storage_impl_->WriteDeviceData(
+      story_id_, story_provider_impl_->device_id(), state_, [] {});
 }
 
 void StoryImpl::GetLink(const fidl::String& name,
@@ -735,6 +740,19 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
   links_.erase(f);
 }
 
+bool StoryImpl::IsRunning() {
+  switch (state_) {
+    case StoryState::STARTING:
+    case StoryState::RUNNING:
+    case StoryState::DONE:
+      return true;
+    case StoryState::INITIAL:
+    case StoryState::STOPPED:
+    case StoryState::ERROR:
+      return false;
+  }
+}
+
 void StoryImpl::StartModule(
     const fidl::Array<fidl::String>& parent_module_path,
     const fidl::String& module_name,
@@ -781,6 +799,10 @@ void StoryImpl::StartModuleInShell(
 
 const fidl::String& StoryImpl::GetStoryId() const {
   return story_id_;
+}
+
+StoryState StoryImpl::GetStoryState() const {
+  return state_;
 }
 
 void StoryImpl::StopForDelete(const StopCallback& done) {

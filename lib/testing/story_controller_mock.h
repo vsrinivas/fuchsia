@@ -24,7 +24,7 @@ class StoryControllerMock : public StoryController {
     info->id = "wow";
     info->url = "wow";
     info->extra.mark_non_null();
-    callback(std::move(info));
+    callback(std::move(info), modular::StoryState::INITIAL);
   }
 
   // |StoryController|

@@ -5,23 +5,18 @@
 #ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_STORAGE_IMPL_H_
 #define APPS_MODULAR_SRC_STORY_RUNNER_STORY_STORAGE_IMPL_H_
 
-#include <memory>
 #include <string>
-#include <unordered_map>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/module/module_data.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "apps/modular/services/story/per_device_story_info.fidl.h"
 
 namespace modular {
 
 class LinkImpl;
-  
+
 // A wrapper around a ledger page to store links in a story that runs
 // asynchronous operations pertaining to one Story instance in a
 // dedicated OperationQueue instance.
@@ -31,12 +26,13 @@ class StoryStorageImpl : public PageClient {
   using SyncCallback = std::function<void()>;
   using AllModuleDataCallback = std::function<void(fidl::Array<ModuleDataPtr>)>;
   using ModuleDataCallback = std::function<void(ModuleDataPtr)>;
+  using DeviceDataCallback =
+      std::function<void(PerDeviceStoryInfoPtr per_device)>;
 
   StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
 
-  void ReadLinkData(const LinkPathPtr& link_path,
-                    const DataCallback& callback);
+  void ReadLinkData(const LinkPathPtr& link_path, const DataCallback& callback);
   void WriteLinkData(const LinkPathPtr& link_path,
                      const fidl::String& data,
                      const SyncCallback& callback);
@@ -50,8 +46,14 @@ class StoryStorageImpl : public PageClient {
                        const LinkPathPtr& link_path,
                        const SyncCallback& callback);
 
-  void WatchLink(const LinkPathPtr& link_path, LinkImpl* impl,
-		 const DataCallback& watcher);
+  void WriteDeviceData(const std::string& story_id,
+                       const std::string& device_name,
+                       StoryState state,
+                       const SyncCallback& callback);
+
+  void WatchLink(const LinkPathPtr& link_path,
+                 LinkImpl* impl,
+                 const DataCallback& watcher);
   void DropWatcher(LinkImpl* impl);
   void Sync(const SyncCallback& callback);
 
@@ -81,6 +83,8 @@ class StoryStorageImpl : public PageClient {
   class ReadModuleDataCall;
   class ReadAllModuleDataCall;
   class WriteModuleDataCall;
+  class ReadDeviceDataCall;
+  class WriteDeviceDataCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

@@ -1,0 +1,22 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/story_state.fidl";
+
+// Information about a story running on a particular device.
+struct PerDeviceStoryInfo {
+  // The ID of the device.
+  string device_id;
+
+  // The ID of the Story, used to reference the story in method arguments.
+  string story_id;
+
+  // Wallclock timestamp when this entry was last updated.
+  int64 timestamp;
+
+  // Which state the story is in on this device.
+  StoryState state;
+};
