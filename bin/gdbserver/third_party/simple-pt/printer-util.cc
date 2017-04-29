@@ -27,26 +27,24 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "printer-util.h"
 
-#include <cstdint>
-#include <memory>
-
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
-
-#include "third_party/processor-trace/libipt/include/intel-pt.h"
+#include "lib/ftl/arraysize.h"
 
 namespace simple_pt {
 
-bool ReadElf(const char* file_name, struct pt_image* image,
-             uint64_t base, uint64_t cr3,
-             uint64_t file_off, uint64_t map_len,
-             std::unique_ptr<SymbolTable>* out_symtab,
-             std::unique_ptr<SymbolTable>* out_dynsym);
-
-bool ReadNonPicElf(const char* file_name, pt_image* image,
-                   uint64_t cr3, bool is_kernel,
-                   std::unique_ptr<SymbolTable>* out_symtab,
-                   std::unique_ptr<SymbolTable>* out_dynsym);
+const char* InsnClassName(enum pt_insn_class iclass) {
+  // Note: The output expects this to be 7 chars or less.
+  static const char* const class_name[] = {
+          [ptic_error] = "error",    [ptic_other] = "other",
+          [ptic_call] = "call",      [ptic_return] = "return",
+          [ptic_jump] = "jump",      [ptic_cond_jump] = "cjump",
+          [ptic_far_call] = "fcall", [ptic_far_return] = "freturn",
+          [ptic_far_jump] = "fjump",
+  };
+  if (iclass >= arraysize(class_name))
+    return ";;;";
+  return class_name[iclass] ? class_name[iclass] : "???";
+}
 
 }  // namespace simple_pt

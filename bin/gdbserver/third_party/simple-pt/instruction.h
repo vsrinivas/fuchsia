@@ -29,24 +29,47 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {
 
-bool ReadElf(const char* file_name, struct pt_image* image,
-             uint64_t base, uint64_t cr3,
-             uint64_t file_off, uint64_t map_len,
-             std::unique_ptr<SymbolTable>* out_symtab,
-             std::unique_ptr<SymbolTable>* out_dynsym);
+struct Instruction {
+  // The total instruction count thus far.
+  uint64_t tic;
 
-bool ReadNonPicElf(const char* file_name, pt_image* image,
-                   uint64_t cr3, bool is_kernel,
-                   std::unique_ptr<SymbolTable>* out_symtab,
-                   std::unique_ptr<SymbolTable>* out_dynsym);
+  uint64_t cr3;
+  uint64_t pc;
+
+  // The destination of the branch/call.
+  uint64_t dst;
+
+  // The timestamp of this instruction.
+  // The units depends on how the trace was made.
+  // If the value is zero, either the value is unknown or it is the same
+  // value as the previous instruction - the frequency at which timing packets
+  // are emitted is configurable so there will be gaps.
+  uint64_t ts;
+
+  // See intel-pt.h:pt_insn_time.
+  uint32_t lost_mtc;
+  uint32_t lost_cyc;
+
+  enum pt_insn_class iclass;
+
+  // The number of instructions since the last record was emitted.
+  unsigned insn_delta;
+
+  // The core bus ratio. See intel docs on the CBR packet and
+  // intel-pt.h:pt_insn_core_bus_ratio.
+  // If the value is zero, either the value is unknown or it is the same
+  // value as the previous instruction.
+  uint32_t core_bus_ratio;
+
+  // See intel-pt.h.
+  unsigned speculative : 1, aborted : 1, committed : 1, disabled : 1,
+      enabled : 1, resumed : 1, interrupted : 1, resynced : 1, stopped : 1;
+};
+
+void TransferEvents(Instruction* insn, const struct pt_insn* raw_insn);
 
 }  // namespace simple_pt

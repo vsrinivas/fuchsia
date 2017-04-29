@@ -29,24 +29,10 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {
 
-bool ReadElf(const char* file_name, struct pt_image* image,
-             uint64_t base, uint64_t cr3,
-             uint64_t file_off, uint64_t map_len,
-             std::unique_ptr<SymbolTable>* out_symtab,
-             std::unique_ptr<SymbolTable>* out_dynsym);
+const char* InsnClassName(enum pt_insn_class iclass);
 
-bool ReadNonPicElf(const char* file_name, pt_image* image,
-                   uint64_t cr3, bool is_kernel,
-                   std::unique_ptr<SymbolTable>* out_symtab,
-                   std::unique_ptr<SymbolTable>* out_dynsym);
-
-}  // namespace simple_pt
+}  // namespace intel_processor_trace

@@ -27,26 +27,24 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "instruction.h"
 
-#include <cstdint>
-#include <memory>
-
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
-
-#include "third_party/processor-trace/libipt/include/intel-pt.h"
+#include "lib/ftl/arraysize.h"
 
 namespace simple_pt {
 
-bool ReadElf(const char* file_name, struct pt_image* image,
-             uint64_t base, uint64_t cr3,
-             uint64_t file_off, uint64_t map_len,
-             std::unique_ptr<SymbolTable>* out_symtab,
-             std::unique_ptr<SymbolTable>* out_dynsym);
-
-bool ReadNonPicElf(const char* file_name, pt_image* image,
-                   uint64_t cr3, bool is_kernel,
-                   std::unique_ptr<SymbolTable>* out_symtab,
-                   std::unique_ptr<SymbolTable>* out_dynsym);
+void TransferEvents(Instruction* insn, const struct pt_insn* raw_insn) {
+#define T(x) insn->x = raw_insn->x
+  T(speculative);
+  T(aborted);
+  T(committed);
+  T(disabled);
+  T(enabled);
+  T(resumed);
+  T(interrupted);
+  T(resynced);
+  T(stopped);
+#undef T
+}
 
 }  // namespace simple_pt
