@@ -78,7 +78,7 @@ typedef struct ipt_per_trace_state {
 } ipt_per_trace_state_t;
 
 typedef struct ipt_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     mtx_t lock;
 
@@ -99,8 +99,6 @@ typedef struct ipt_device {
     // Once tracing has started various things are not allowed until it stops.
     bool active;
 } ipt_device_t;
-
-#define get_ipt_device(dev) containerof(dev, ipt_device_t, device)
 
 static uint32_t ipt_config_family;
 static uint32_t ipt_config_model;
@@ -677,7 +675,7 @@ static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
     // TODO(dje): What's the best way to allow only one open at a time?
     // [We could allow multiple, but multiple clients trying to control
     // tracing is problematic so just punt for now..]
-    ipt_device_t* ipt_dev = get_ipt_device(dev);
+    ipt_device_t* ipt_dev = dev->ctx;
     if (ipt_dev->opened)
         return ERR_ALREADY_BOUND;
 
@@ -700,7 +698,7 @@ static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
 }
 
 static mx_status_t ipt_close(mx_device_t* dev, uint32_t flags) {
-    ipt_device_t* ipt_dev = get_ipt_device(dev);
+    ipt_device_t* ipt_dev = dev->ctx;
 
     ipt_dev->opened = false;
     return NO_ERROR;
@@ -902,7 +900,7 @@ static ssize_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
 static ssize_t ipt_ioctl(mx_device_t* dev, uint32_t op,
                          const void* cmd, size_t cmdlen,
                          void* reply, size_t max) {
-    ipt_device_t* ipt_dev = get_ipt_device(dev);
+    ipt_device_t* ipt_dev = dev->ctx;
 
     // TODO(dje): Switch to c++ so that we can use AutoLock.
     mtx_lock(&ipt_dev->lock);
@@ -913,13 +911,14 @@ static ssize_t ipt_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 static mx_status_t ipt_release(mx_device_t* dev) {
-    ipt_device_t* ipt_dev = get_ipt_device(dev);
+    ipt_device_t* ipt_dev = dev->ctx;
 
     // TODO(dje): Neither of these should fail. What to do?
     // For now flag things as busted and prevent further use.
     x86_pt_cpu_mode_stop(ipt_dev);
     x86_pt_cpu_mode_free(ipt_dev);
 
+    device_destroy(ipt_dev->mxdev);
     free(ipt_dev);
 
     return NO_ERROR;
@@ -941,10 +940,14 @@ static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     if (!ipt_dev)
         return ERR_NO_MEMORY;
 
-    device_init(&ipt_dev->device, driver, "intel-pt", &ipt_device_proto);
-
     mx_status_t status;
-    if ((status = device_add(&ipt_dev->device, parent)) < 0) {
+    if ((status = device_create("intel-pt", ipt_dev, &ipt_device_proto, driver, &ipt_dev->mxdev)) < 0) {
+        free(ipt_dev);
+        return status;
+    }
+
+    if ((status = device_add(ipt_dev->mxdev, parent)) < 0) {
+        device_destroy(ipt_dev->mxdev);
         free(ipt_dev);
         return status;
     }
