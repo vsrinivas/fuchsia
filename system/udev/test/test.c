@@ -12,18 +12,19 @@
 #include <string.h>
 #include <magenta/listnode.h>
 
+// created by MAGENTA_DRIVER_BEGIN macro
+extern mx_driver_t _driver_test;
+
 typedef struct test_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
     mx_handle_t output;
     mx_handle_t control;
     test_func_t test_func;
     void* cookie;
 } test_device_t;
 
-#define get_test_device(dev) containerof(dev, test_device_t, device)
-
 static void test_device_set_output_socket(mx_device_t* dev, mx_handle_t handle) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     if (device->output != MX_HANDLE_INVALID) {
         mx_handle_close(device->output);
     }
@@ -31,12 +32,12 @@ static void test_device_set_output_socket(mx_device_t* dev, mx_handle_t handle) 
 }
 
 static mx_handle_t test_device_get_output_socket(mx_device_t* dev) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     return device->output;
 }
 
 static void test_device_set_control_channel(mx_device_t* dev, mx_handle_t handle) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     if (device->control != MX_HANDLE_INVALID) {
         mx_handle_close(device->control);
     }
@@ -44,18 +45,18 @@ static void test_device_set_control_channel(mx_device_t* dev, mx_handle_t handle
 }
 
 static mx_handle_t test_device_get_control_channel(mx_device_t* dev) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     return device->control;
 }
 
 static void test_device_set_test_func(mx_device_t* dev, test_func_t func, void* cookie) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     device->test_func = func;
     device->cookie = cookie;
 }
 
 static mx_status_t test_device_run_tests(mx_device_t* dev, test_report_t* report, const void* arg, size_t arglen) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     if (device->test_func != NULL) {
         return device->test_func(device->cookie, report, arg, arglen);
     } else {
@@ -110,13 +111,14 @@ static ssize_t test_device_ioctl(mx_device_t* dev, uint32_t op, const void* in, 
 }
 
 static mx_status_t test_device_release(mx_device_t* dev) {
-    test_device_t* device = get_test_device(dev);
+    test_device_t* device = dev->ctx;
     if (device->output != MX_HANDLE_INVALID) {
         mx_handle_close(device->output);
     }
     if (device->control != MX_HANDLE_INVALID) {
         mx_handle_close(device->control);
     }
+    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -150,11 +152,17 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
         return ERR_NO_MEMORY;
     }
 
-    device_init(&device->device, dev->driver, devname, &test_device_proto);
-    device_set_protocol(&device->device, MX_PROTOCOL_TEST, &test_test_proto);
-
     mx_status_t status;
-    if ((status = device_add(&device->device, dev)) != NO_ERROR) {
+    if ((status = device_create(devname, device, &test_device_proto, &_driver_test,
+                                &device->mxdev)) != NO_ERROR) {
+        free(device);
+        return status;
+    }
+
+    device_set_protocol(device->mxdev, MX_PROTOCOL_TEST, &test_test_proto);
+
+    if ((status = device_add(device->mxdev, dev)) != NO_ERROR) {
+        device_destroy(device->mxdev);
         free(device);
         return status;
     }
@@ -162,8 +170,14 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
     return snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
 }
 
+static mx_status_t test_release(mx_device_t* dev) {
+    device_destroy(dev);
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t test_root_proto = {
     .ioctl = test_ioctl,
+    .release = test_release,
 };
 
 static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
@@ -171,7 +185,7 @@ static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     if (device_create("test", NULL, &test_root_proto, drv, &device) == NO_ERROR) {
         if (device_add(device, dev) < 0) {
             printf("test: device_add() failed\n");
-            free(device);
+            device_destroy(device);
         }
     }
     return NO_ERROR;
