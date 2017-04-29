@@ -17,6 +17,10 @@ typedef struct mxio_namespace mxio_ns_t;
 // Create a new, empty namespace
 mx_status_t mxio_ns_create(mxio_ns_t** out);
 
+// Destroy and deallocate a namespace
+// Will fail (ERR_BAD_STATE) if the namespace is in use.
+mx_status_t mxio_ns_destroy(mxio_ns_t* ns);
+
 // Create a new directory within a namespace, bound to the
 // directory-protocol-compatible handle h
 // The path must be an absolute path, like "/x/y/z", containing
@@ -24,6 +28,8 @@ mx_status_t mxio_ns_create(mxio_ns_t** out);
 // namespace.
 //
 // The handle is not closed on failure.
+//
+// Will fail with ERR_BAD_STATE if the namespace is in use.
 mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t h);
 
 // Create a new directory within a namespace, bound to the
@@ -34,6 +40,8 @@ mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t h);
 //
 // The fd is not closed on success or failure.
 // Closing the fd after success does not affect namespace.
+//
+// Will fail with ERR_BAD_STATE if the namespace is in use.
 mx_status_t mxio_ns_bind_fd(mxio_ns_t* ns, const char* path, int fd);
 
 // Open the root directory of the namespace as a file descriptor

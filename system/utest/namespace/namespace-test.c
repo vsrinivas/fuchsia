@@ -41,7 +41,10 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
         close(fd);
     }
     mxio_flat_namespace_t* flat;
-    if ((r = mxio_ns_export(ns, &flat)) < 0) {
+    mxio_ns_opendir(ns);
+    r = mxio_ns_export(ns, &flat);
+    mxio_ns_destroy(ns);
+    if (r < 0) {
         fprintf(stderr, "error: cannot flatten namespace: %d\n", r);
         return -1;
     }

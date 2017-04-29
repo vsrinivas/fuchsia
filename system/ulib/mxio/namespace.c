@@ -51,8 +51,11 @@ struct mxio_vnode {
     char name[];
 };
 
+// refcount is incremented when a mxio_dir references any of its vnodes
+// when refcount is nonzero it may not be modified or destroyed
 struct mxio_namespace {
     mtx_t lock;
+    int32_t refcount;
     mxvn_t root;
 };
 
@@ -69,7 +72,7 @@ struct mxio_directory {
     atomic_int_fast32_t seq;
 };
 
-static mxio_t* mxio_dir_create(mxio_ns_t* fs, mxvn_t* vn, mx_handle_t h);
+static mxio_t* mxio_dir_create_locked(mxio_ns_t* fs, mxvn_t* vn, mx_handle_t h);
 
 static mxvn_t* vn_lookup_locked(mxvn_t* dir, const char* name, size_t len) {
     for (mxvn_t* vn = dir->child; vn; vn = vn->next) {
@@ -148,8 +151,25 @@ static mx_status_t vn_destroy_locked(mxvn_t* child) {
     return NO_ERROR;
 }
 
+static void vn_destroy_children_locked(mxvn_t* parent) {
+    mxvn_t* next;
+    for (mxvn_t* vn = parent->child; vn; vn = next) {
+        next = vn->next;
+        if (vn->child) {
+            vn_destroy_children_locked(vn);
+        }
+        if (vn->remote != MX_HANDLE_INVALID) {
+            mx_handle_close(vn->remote);
+        }
+        free(vn);
+    }
+}
+
 static mx_status_t mxdir_close(mxio_t* io) {
     mxdir_t* dir = (mxdir_t*) io;
+    mtx_lock(&dir->ns->lock);
+    dir->ns->refcount--;
+    mtx_unlock(&dir->ns->lock);
     dir->ns = NULL;
     dir->vn = NULL;
     if (dir->rio.h != MX_HANDLE_INVALID) {
@@ -167,6 +187,9 @@ static mx_status_t mxdir_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types
     if ((handles[0] = mxio_service_clone(dir->rio.h)) == MX_HANDLE_INVALID) {
         return ERR_BAD_HANDLE;
     }
+    mtx_lock(&dir->ns->lock);
+    dir->ns->refcount++;
+    mtx_unlock(&dir->ns->lock);
     types[0] = PA_MXIO_REMOTE;
     return 1;
 }
@@ -180,6 +203,7 @@ static mx_status_t mxdir_open(mxio_t* io, const char* path,
     mxvn_t* vn = dir->vn;
     mx_status_t r;
 
+    mtx_lock(&dir->ns->lock);
     if ((path[0] == '.') && (path[1] == 0)) {
         goto open_dot;
     }
@@ -191,7 +215,6 @@ static mx_status_t mxdir_open(mxio_t* io, const char* path,
     mxvn_t* save_vn = NULL;
     const char* save_path = "";
 
-    mtx_lock(&dir->ns->lock);
     for (;;) {
         // find the next path segment
         const char* name = path;
@@ -236,7 +259,6 @@ static mx_status_t mxdir_open(mxio_t* io, const char* path,
         mtx_unlock(&dir->ns->lock);
         return mxrio_open_handle(vn->remote, path, flags, mode, out);
     }
-    mtx_unlock(&dir->ns->lock);
     if (r == NO_ERROR) {
         if ((vn->remote == MX_HANDLE_INVALID) && (save_vn != NULL)) {
             // This node doesn't have a remote directory, but it
@@ -244,18 +266,21 @@ static mx_status_t mxdir_open(mxio_t* io, const char* path,
             // relative to that directory for our remote fs
             mx_handle_t h;
             if (mxrio_open_handle_raw(save_vn->remote, save_path, flags, mode, &h) == NO_ERROR) {
-                if ((*out = mxio_dir_create(dir->ns, vn, h)) == NULL) {
-                    return ERR_NO_MEMORY;
+                if ((*out = mxio_dir_create_locked(dir->ns, vn, h)) == NULL) {
+                    r = ERR_NO_MEMORY;
+                } else {
+                    r = NO_ERROR;
                 }
-                return NO_ERROR;
             }
 
-        }
+        } else {
 open_dot:
-        if ((*out = mxio_dir_create(dir->ns, vn, 0)) == NULL) {
-            return ERR_NO_MEMORY;
+            if ((*out = mxio_dir_create_locked(dir->ns, vn, 0)) == NULL) {
+                r = ERR_NO_MEMORY;
+            }
         }
     }
+    mtx_unlock(&dir->ns->lock);
     return r;
 }
 
@@ -358,7 +383,7 @@ static mx_status_t mxdir_misc(mxio_t* io, uint32_t op, int64_t off,
         }
         vnattr_t* attr = ptr;
         memset(attr, 0, sizeof(*attr));
-        attr->mode = 0555;
+        attr->mode = V_TYPE_DIR | V_IRUSR;
         attr->inode = 1;
         attr->nlink = 1;
         return sizeof(vnattr_t);
@@ -387,7 +412,7 @@ static mxio_ops_t dir_ops = {
     .get_vmo = mxio_default_get_vmo,
 };
 
-static mxio_t* mxio_dir_create(mxio_ns_t* ns, mxvn_t* vn, mx_handle_t h) {
+static mxio_t* mxio_dir_create_locked(mxio_ns_t* ns, mxvn_t* vn, mx_handle_t h) {
     mxdir_t* dir = calloc(1, sizeof(*dir));
     if (dir == NULL) {
         if (h != MX_HANDLE_INVALID) {
@@ -420,6 +445,19 @@ mx_status_t mxio_ns_create(mxio_ns_t** out) {
     return NO_ERROR;
 }
 
+mx_status_t mxio_ns_destroy(mxio_ns_t* ns) {
+    mtx_lock(&ns->lock);
+    if (ns->refcount != 0) {
+        mtx_unlock(&ns->lock);
+        return ERR_BAD_STATE;
+    } else {
+        vn_destroy_children_locked(&ns->root);
+        mtx_unlock(&ns->lock);
+        free(ns);
+        return NO_ERROR;
+    }
+}
+
 mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t remote) {
     if (remote == MX_HANDLE_INVALID) {
         return ERR_BAD_HANDLE;
@@ -434,6 +472,10 @@ mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t remote) {
     mx_status_t r = NO_ERROR;
 
     mtx_lock(&ns->lock);
+    if (ns->refcount != 0) {
+        r = ERR_BAD_STATE;
+        goto done;
+    }
     mxvn_t* vn = &ns->root;
     if (path[0] == 0) {
         // the path was "/" so we're trying to bind to the root vnode
@@ -475,6 +517,7 @@ mx_status_t mxio_ns_bind(mxio_ns_t* ns, const char* path, mx_handle_t remote) {
             vn = parent;
         }
     }
+done:
     mtx_unlock(&ns->lock);
     return r;
 }
@@ -510,11 +553,17 @@ mx_status_t mxio_ns_bind_fd(mxio_ns_t* ns, const char* path, int fd) {
 }
 
 mxio_t* mxio_ns_open_root(mxio_ns_t* ns) {
-    return mxio_dir_create(ns, &ns->root, 0);
+    mtx_lock(&ns->lock);
+    mxio_t* io = mxio_dir_create_locked(ns, &ns->root, 0);
+    if (io != NULL) {
+        ns->refcount++;
+    }
+    mtx_unlock(&ns->lock);
+    return io;
 }
 
 int mxio_ns_opendir(mxio_ns_t* ns) {
-    mxio_t* io = mxio_dir_create(ns, &ns->root, 0);
+    mxio_t* io = mxio_ns_open_root(ns);
     if (io == NULL) {
         errno = ENOMEM;
         return -1;
@@ -528,7 +577,7 @@ int mxio_ns_opendir(mxio_ns_t* ns) {
 }
 
 mx_status_t mxio_ns_chdir(mxio_ns_t* ns) {
-    mxio_t* io = mxio_dir_create(ns, &ns->root, 0);
+    mxio_t* io = mxio_ns_open_root(ns);
     if (io == NULL) {
         return ERR_NO_MEMORY;
     }
