@@ -28,6 +28,7 @@ Sections will be populated over time.
  - [Boot sequence](boot_sequence.md)
  - Device, user, and story runners
  - Components
+ - [Namespaces](namespaces.md)
  - [Story][framework-story]
  - [Module][framework-module]
  - [Agent][framework-agent]

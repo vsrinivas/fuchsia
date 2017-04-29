@@ -1,140 +1,303 @@
-# Namespaces
+# Fuchsia Namespaces
 
-## What is a namespace?
+Namespaces are the backbone of file access and service discovery in Fuchsia.
 
-A namespace is the composite hierarchy of files, directories, sockets, services,
-and other named objects which are offered to application components by their
+## Definition
+
+A namespace is a composite hierarchy of files, directories, sockets, services,
+devices, and other named objects which are provided to a component by its
 environment.
 
-The location of each object within a namespace can be described by delimited
-path expressions of the form `a/b/c`.
+Let's unpack that a little bit.
 
-## So a namespace is like a root filesystem?
+**Objects are named**: The namespace contains _objects_ which can be enumerated
+and accessed by name, much like listing a directory or opening a file.
 
-Sort of but it's not universal; it's subjective.
+**Composite hierarchy**: The namespace is a _tree_ of objects which has been
+assembled by _combining_ together subtrees of objects from other namespaces
+into a composite structure where each part has been assigned a path prefix
+by convention.
 
-Not all components perceive the same namespace. The contents and structure of
-the namespace provided to each component varies depending on the component's
-nature, identity, scope, relation to other components, and rights.
+**Namespace per component**: Every component receives its own namespace
+tailored to meet its own needs.  It can also publish objects of its own
+to be included in other namespaces.
 
-In fact, different instances of the same component may perceive quite different
-namespaces according to their respective roles.
+**Constructed by the environment**: The environment which instantiates a
+component is responsible for constructing an appropriate namespace for that
+component within that scope.
 
-## What's inside a namespace?
+Namespaces can also be created and used independently from components although
+this document focuses on typical component-bound usage.
 
-A namespace may contain many kinds of objects such as:
+## Namespaces in Action
 
- - read-only executables and assets
- - local persistent storage
- - temporary storage
- - services offered by the system, the application framework, or the embedder
- - device nodes (for drivers and privileged components)
+You have probably already spent some time exploring a Fuchsia namespace;
+they are everywhere.  If you type `ls /` at a command-line shell prompt
+you will see a list of some of the objects which are accessible from the
+shell's namespace.
 
-## How is a namespace composed?
+Unlike other operating systems, Fuchsia does not have a "root filesystem".
+As described earlier, namespaces are defined per-component rather than
+globally or per-process.
 
-When a component is instantiated in an environment (eg. its process is started),
-it receives a collection of paths and object handles representing the structure
-of its namespace. The paths themselves encode the intended significance of the
-objects within the namespace by convention.
+This has some interesting implications:
 
-## What does a namespace look like?
+- There is no global "root" namespace.
+- There is no concept of "running in a chroot-ed environment" because every
+  component effectively has its own private "root".
+- Components receive namespaces which are tailored to their specific needs.
+- Object paths may not be meaningful across namespace boundaries.
+- A process may have access to several distinct namespaces at once.
+- The mechanisms used to control access to files can also be used to control
+  access to services and other named objects on a per-component basis.
 
-Here's an illustration of the conventional namespace organization for a typical
-component. Some kinds of components (serving specialized purposes) may receive
-additional paths not described here. Other kinds of components (in more
-restrictive sandboxes) may receive fewer.
+## Objects
 
-_The structure of the namespace which a component can expect to see should be
-described as part of the documentation for how one would go about implementing
-that particular kind of component._
+The items within a namespace are called objects.  They come in various flavors,
+including:
 
- - `pkg/`: binaries and assets (read-only)
-    - `my-program/`
-        - `bin/`
-        - `lib/`
-        - `assets/`
-    - `a-package-my-program-depends-on/`
-        - `bin/`, `lib/`, `assets/`, ...
- - `data/`: local persistent storage (read-write)
-    - `my-file.txt`
- - `tmp/`: temporary storage (read-write)
- - `svc/`: services offered to the component
-    - `fuchsia.com/`
-        - `compositor/`: create graphical objects
-        - `container/`: create sub-environments and sub-components
-        - `fonts/`: font provider
-        - `http-client/`: http client
-        - `http-server/`: http server
-        - `icu/`: ICU data provider
-        - `ledger/`: replicated storage
-        - `log/`: logging service
-        - `mailbox/`: the component’s default message queue
-        - `media/`: media server
-        - `messaging/`: cross-device messaging
-        - `mdns/`: MDNS lookup
-        - `network/`: TCP/IP stack
-        - `resolver/`: query the component index and retrieve manifests
-        - `story/`: interact with the containing story (modules only)
-        - `time/`: query or manipulate the real-time clock
-        - `trace-controller/`: start/stop performance tracing
-        - ... and many many more things...
-    - `vendor.com/`
-        - `fancy-display/`
-        - `fancy-pen/`
-    - `dev/`: device tree (relevant portions visible to privileged components as needed)
-        - `class/`, ...
-    - `env/`: introspect the structure of the environment (privileged components only)
-        - `boot/`: information about the "boot" environment
-            - `1234/`: information about component instance #1234
-                - `name/`: component name
-                - `origin/`: component origin url
-                - `local/`: namespace seen by the component itself
-                    - `bin/`, `data/`, `svc/`, ...
-                - `pub/`: namespace published by the component
-                    - `svc/`, ...
-            - `device/`: information about the "device" environment
-                - `user:aparna/`: information about Aparna's user environment
-                    - `4567/`: information about component instance #4567
-                    - `origin/`, `ns/`, `pub/`, ...
+- Files: objects which contain binary data
+- Directories: objects which contain other objects
+- Sockets: objects which establish connections when opened, like named pipes
+- Services: objects which provide FIDL services when opened
+- Devices: objects which provide access to hardware resources
 
-## What's a service anyway?
+### Accessing Objects
 
-A service is a well-known object which can be discovered by name and which
-provides an implementation of a FIDL interface that performs a particular role
-in the system.
+To access an object within a namespace, you must already have another object
+in your possession.  A component typically receives channel handles for
+objects in the scope of its namespace during
+[Namespace Transfer](#namespace-transfer).
 
-For example, the service object located at `/svc/fuchsia.com/log` provides an
-implementation of the logging interface which components should use by default.
-In this case, the service’s name is `fuchsia.com/log`.
+You can also create new objects out of thin air by implementing the
+appropriate FIDL interfaces.
 
-There may be other implementations of the logging interface available using
-different service names. For example, the service object located at
-`/svc/vendor.com/fancy-log` could offer a fancier logging service which happens
-to implement the same interface. Clients which are aware of the distinction may
-choose to ask for this more specialized logging service when available instead
-of the default one.
+Given an object's channel, you can open a channel for one of its sub-objects
+by sending it a FIDL message which includes an object relative path expression
+which identifies the desired sub-object.  This is much like opening files
+in a directory.
 
-## How are services configured?
+Notice that you can only access objects which are reachable from the ones
+you already have access to.  There is no ambient authority.
 
-The environment's namespace specifies how service names are bound to specific
-implementations. Different environments may bind different implementations to
-the same service names.
+We will now define how object names and paths are constructed.
 
-It may be helpful to think of the environment’s role in service resolution as a
-function which:
+### Object Names
 
- 1. accepts the name of a service which the clients wants to access
- 2. resolves the service name to the location of a component which offers that service
- 3. activates (starts or finds an existing instance of) that component
- 4. returns a reference to the appropriate service published by the component
+An object name is a locally unique label by which an object can be located
+within a container (such as a directory).  Note that the name is a property
+of the container's table of sub-objects rather than a property of the object
+itself.
 
-For resolution, a simple environment might use a configuration file to map
-service names to components:
+For example, `cat` designates a furry object which may be located within
+some unspecified recipient of an `Open()` request.
 
- - `fuchsia.com/compositor` ⇒ `http://fuchsia.com/mozart/compositor.far`
- - `fuchsia.com/log` ⇒ `http://vendor.com/fancy-services/fancy-logger.far`
+Objects are fundamentally nameless but they may be called many names by others.
 
-Notice that `vendor.com` can implement an interface defined by `fuchsia.com`.
+Object names are represented as binary octet strings (arbitrary sequences
+of bytes) subject to the following constraints:
 
-More complex environments might leverage indexes of components, user
-preferences, or administrative policies.
+- Minimum length of 1 byte.
+- Maximum length of 255 bytes.
+- Does not contain NULs (zero-valued bytes).
+- Does not contain `/`.
+- Does not equal `.` or `..`.
+- Always compared using byte-for-byte equality (implies case-sensitive).
+
+Object names are valid arguments to a container's `Open()` method.
+See [FIDL Interfaces](#fidl-interfaces).
+
+It is intended that object names be encoded and interpreted as human-readable
+sequences of UTF-8 graphic characters, however this property is not enforced
+by the namespace itself.
+
+Consequently clients are responsible for deciding how to present names
+which contain invalid, undisplayable, or ambiguous character sequences to
+the user.
+
+_TODO(jeffbrown): Document a specific strategy for how to present names._
+
+### Object Relative Path Expressions
+
+An object relative path expression is an object name or a `/`-delimited
+sequence of object names designating a sequence of nested objects to be
+traversed in order to locate an object within a container (such as a
+directory).
+
+For example, `house/box/cat` designates a furry object which may be located
+within its containing object called `box` which may be located within its
+containing object called `house` which may be located within some unspecified
+recipient of an `Open()` request.
+
+An object relative path expression always traverses deeper into the namespace.
+Notably, the namespace does not directly support upwards traversal out of
+containers (e.g. via `..`) but this feature may be partially emulated by
+clients (see below).
+
+Object relative path expressions have the following additional constraints:
+
+- Minimum length of 1 byte.
+- Maximum length of 4095 bytes.
+- Does not begin or end with `/`.
+- All segments are valid object names.
+- Always compared using byte-for-byte equality (implies case-sensitive).
+
+Object relative path expressions are valid arguments to a container's `Open()`
+method.  See [FIDL Interfaces](#fidl-interfaces).
+
+### Client Interpreted Path Expressions
+
+A client interpreted path expression is a generalization of object relative
+path expressions which includes optional features which may be emulated
+by client code to enhance compatibility with programs which expect a rooted
+file-like interface.
+
+Technically these features are beyond the scope of the Fuchsia namespace
+protocol itself but they are often used so we describe them here.
+
+- A client may designate one of its namespaces to function as its "root".
+  This namespace is denoted `/`.
+- A client may construct paths relative to its designated root namespace
+  by prepending a single `/`.
+- A client may construct paths which traverse updates from containers using
+  `..` path segments by folding segments together (assuming the container's
+  path is known) through a process known as client-side "canonicalization".
+- These features may be combined together.
+
+For example, `/places/house/box/../sofa/cat` designates a furry object
+which may be located at `places/house/sofa/cat` within some client
+designated "root" container.
+
+Client interpreted path expressions that contain these optional features
+are not valid arguments to a container's `Open()` method; they must be
+translated by the client prior to communicating with the namespace.
+See [FIDL Interfaces](#fidl-interfaces).
+
+For example, `mxio` implements client-side interpretation of `..` paths
+in file manipulation APIs such as `open()`, `stat()`, `unlink()`, etc.
+
+## Namespace Transfer
+
+When a component is instantiated in an environment (e.g. its process is
+started), it receives a table which maps one or more namespace path prefixes
+to object handles.
+
+The path prefixes in the table encode the intended significance of their
+associated objects by convention.  For example, the `pkg` prefix should
+be associated with a directory object which contains the component's own
+binaries and assets.
+
+More on this in the next section.
+
+## Namespace Conventions
+
+This section describes the conventional layout of namespaces for typical
+components running on Fuchsia.
+
+The precise contents and organization of a component's namespace varies
+greatly depending on the component's role, type, identity, scope,
+relation to other components, and rights.
+
+_For more information about the namespace your component can expect to
+receive from its environment, please consult the documentation related to
+the component type you are implementing._
+
+### Typical Objects
+
+There are some typical objects which a component namespace might contain:
+
+- Read-only executables and assets from the component's package.
+- Private local persistent storage.
+- Private temporary storage.
+- Services offered to the component by the system, the application framework,
+  or by the client which started it.
+- Device nodes (for drivers and privileged components).
+
+### Typical Directory Structure
+
+- `pkg/`: binaries and assets (read-only, except perhaps for development)
+  - `bin/`
+  - `lib/`
+  - `assets/`
+- `data/`: local persistent storage (read-write, private to the package)
+- `tmp/`: temporary storage (read-write, private to the package)
+- `svc/`: services offered to the component
+  - `fuchsia.com/`: services defined by the Fuchsia SDK
+    - `compositor/`: create graphical objects
+    - `log/`: logging service
+    - ... and many many more things...
+  - `vendor.com/`: services defined by some _vendor_
+    - `vendor-product/`
+- `dev/`: device tree (relevant portions visible to privileged components as needed)
+  - `class/`, ...
+- `env/`: introspect the structure of the environment (privileged components only)
+    - `boot/`: information about the "boot" environment
+      - `components/`: information about components within the boot environment
+        - `1234/`: information about component instance #1234
+          - `name`: component name
+          - `origin`: component origin url
+          - `local/`: component's own namespace as defined by its environment
+            - `pkg/`, `data/`, `tmp/`, `svc/`, ...
+            - `pub/`: objects published by the component
+            - `svc/`, ...
+        - `2345/`: information about component instance #2345
+      - `children/`: information about sub-environments of the boot environment
+        - `device/`: information about the "device" sub-environment
+          - `3456/`: information about component instance #3456
+
+## Namespace Participants
+
+Here is some more information about a few abstractions which interact with
+and support the Fuchsia namespace protocol.
+
+### Filesystems
+
+Filesystems make files available in namespaces.
+
+A filesystem is simply a component which publishes file-like objects which
+are included in someone else's namespace.
+
+### Services
+
+Services live in namespaces.
+
+A service is a well-known object which provides an implementation of a FIDL
+interface which can be discovered using the namespace.
+
+A service name corresponds to a path within the `svc` branch of the namespace
+from which a component can access an implementation of the service.
+
+For example, the name of the default Fuchsia logging service is
+`fuchsia.com/log` and its location in the namespace is `svc/fuchsia.com/log`.
+
+### Components
+
+Components consume and extend namespaces.
+
+A component is an executable program object which has been instantiated
+within some environment and given a namespace.
+
+A component participates in the Fuchsia namespace in two ways:
+
+1. It can use objects from the namespace which it received from its environment,
+   notably to access its own package contents and incoming services.
+
+2. It can publish objects through its environment in the form of a namespace,
+   parts of which its environment may subsequently make available to other
+   components upon request.  This is how services are implemented by
+   components.
+
+### Environments
+
+Environments construct namespaces.
+
+An environment is a container of components.  Each environment is responsible
+for _constructing_ the namespace which its components will receive.
+
+The environment decides what objects a component may access and how the
+component's request for services by name will be bound to specific
+implementations.
+
+## FIDL Interfaces
+
+_TODO(jeffbrown): Explain how the namespace interfaces work._
