@@ -981,34 +981,26 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 		}
 	}
 
-	if val.node_is_null == 1 {
-		rep := c_mxrio_gai_reply{}
-		rep.res[0].ai.ai_family = AF_INET
-		rep.res[0].ai.ai_addrlen = c_socklen(c_sockaddr_in_len)
-		sockaddr := c_sockaddr_in{sin_family: AF_INET}
-		sockaddr.sin_port.setPort(port)
-		writeSockaddrStorage4(&rep.res[0].addr, &sockaddr)
-		rep.nres = 1
-		rep.Encode(msg)
-		return mx.ErrOk
-	}
-
 	var addr tcpip.Address
-	dnsLookupIPs, err := dnsClient.LookupIP(node)
-	if err != nil {
-		if node == "localhost" {
-			addr = "\x7f\x00\x00\x01"
-		} else {
-			addr = tcpip.Parse(node)
-		}
+	if val.node_is_null == 1 {
+		addr = "\x00\x00\x00\x00"
 	} else {
-		for _, ip := range dnsLookupIPs {
-			if ip4 := ip.To4(); ip4 != "" {
-				addr = ip4
+		dnsLookupIPs, err := dnsClient.LookupIP(node)
+		if err != nil {
+			if node == "localhost" {
+				addr = "\x7f\x00\x00\x01"
 			} else {
-				addr = ip
+				addr = tcpip.Parse(node)
 			}
-			break
+		} else {
+			for _, ip := range dnsLookupIPs {
+				if ip4 := ip.To4(); ip4 != "" {
+					addr = ip4
+				} else {
+					addr = ip
+				}
+				break
+			}
 		}
 	}
 	if debug2 {
