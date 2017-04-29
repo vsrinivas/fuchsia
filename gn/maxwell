@@ -1,7 +1,8 @@
 {
     "labels": [
         "//apps/maxwell",
-        "//apps/maxwell/src/integration"
+        "//apps/maxwell/src:integration_tests",
+        "//apps/maxwell/src:unittests"
     ],
     "binaries": [
         {
@@ -37,10 +38,6 @@
             "bootfs_path": "apps/maxwell"
         },
         {
-            "binary": "maxwell_test",
-            "bootfs_path": "test/maxwell_test"
-        },
-        {
             "binary": "resolver_main",
             "bootfs_path": "apps/resolver_main"
         },
@@ -51,6 +48,14 @@
         {
             "binary": "suggestion_engine",
             "bootfs_path": "apps/suggestion_engine"
+        },
+        {
+            "binary": "maxwell_test",
+            "bootfs_path": "test/maxwell/integration"
+        },
+        {
+            "binary": "context_repository_unittest",
+            "bootfs_path": "test/maxwell/context_repository_unittest"
         }
     ]
 }
