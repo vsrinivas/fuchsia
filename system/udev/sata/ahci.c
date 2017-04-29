@@ -78,7 +78,7 @@ typedef struct ahci_port {
 } ahci_port_t;
 
 typedef struct ahci_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     ahci_hba_t* regs;
     uint64_t regs_size;
@@ -99,8 +99,6 @@ typedef struct ahci_device {
 
     ahci_port_t ports[AHCI_MAX_PORTS];
 } ahci_device_t;
-
-#define get_ahci_device(dev) containerof(dev, ahci_device_t, device)
 
 static inline mx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint32_t mask, mx_time_t timeout) {
     int i = 0;
@@ -459,7 +457,7 @@ static void ahci_hba_reset(ahci_device_t* dev) {
 
 static void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
-    ahci_device_t* device = get_ahci_device(dev);
+    ahci_device_t* device = dev->ctx;
     ahci_port_t* port = &device->ports[pdata->port];
 
     assert(pdata->port < AHCI_MAX_PORTS);
@@ -472,6 +470,14 @@ static void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // hit the worker thread
     completion_signal(&device->worker_completion);
+}
+
+static mx_status_t ahci_release(mx_device_t* dev) {
+    // FIXME - join threads created by this driver
+    ahci_device_t* device = dev->ctx;
+    device_destroy(device->mxdev);
+    free(device);
+    return NO_ERROR;
 }
 
 // worker thread (for iotxn queue):
@@ -634,6 +640,7 @@ static int ahci_irq_thread(void* arg) {
 
 static mx_protocol_device_t ahci_device_proto = {
     .iotxn_queue = ahci_iotxn_queue,
+    .release = ahci_release,
 };
 
 extern mx_protocol_device_t ahci_port_device_proto;
@@ -695,7 +702,7 @@ static int ahci_init_thread(void* arg) {
         if (ahci_read(&port->regs->ssts) & AHCI_PORT_SSTS_DET_PRESENT) {
             port->flags |= AHCI_PORT_FLAG_PRESENT;
             if (ahci_read(&port->regs->sig) == AHCI_PORT_SIG_SATA) {
-                sata_bind(&dev->device, port->nr);
+                sata_bind(dev->mxdev, port->nr);
             }
         }
     }
@@ -725,7 +732,12 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         return ERR_NO_MEMORY;
     }
 
-    device_init(&device->device, drv, "ahci", &ahci_device_proto);
+    status = device_create("ahci", device, &ahci_device_proto, drv, &device->mxdev);
+    if (status < 0) {
+        xprintf("ahci: error %d in device_create\n", status);
+        free(device);
+        return status;
+    }
 
     // map register window
     status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size, &device->regs_handle);
@@ -794,7 +806,11 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     }
 
     // add the device for the controller
-    device_add(&device->device, dev);
+    status = device_add(device->mxdev, dev);
+    if (status != NO_ERROR) {
+        xprintf("ahci: error %d in device_add\n", status);
+        goto fail;
+    }
 
     // initialize controller and detect devices
     thrd_t t;
@@ -806,7 +822,8 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
 
     return NO_ERROR;
 fail:
-    // FIXME unmap
+    // FIXME unmap, and join any threads created above
+    device_destroy(device->mxdev);
     free(device);
     return status;
 }

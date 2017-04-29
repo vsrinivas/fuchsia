@@ -38,7 +38,7 @@
 #define SATA_FLAG_LBA48 (1 << 1)
 
 typedef struct sata_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     block_callbacks_t* callbacks;
 
@@ -50,8 +50,6 @@ typedef struct sata_device {
     mx_off_t capacity; // bytes
 } sata_device_t;
 
-#define get_sata_device(dev) containerof(dev, sata_device_t, device)
-
 static void sata_device_identify_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
@@ -61,7 +59,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
     if (status != NO_ERROR) {
-        xprintf("%s: error %d allocating iotxn\n", dev->device.name, status);
+        xprintf("%s: error %d allocating iotxn\n", device_get_name(dev->mxdev), status);
         return status;
     }
 
@@ -80,7 +78,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
-        xprintf("%s: error %d in device identify\n", dev->device.name, txn->status);
+        xprintf("%s: error %d in device identify\n", device_get_name(dev->mxdev), txn->status);
         return txn->status;
     }
     assert(txn->actual == 512);
@@ -92,7 +90,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     iotxn_release(txn);
 
     char str[41]; // model id is 40 chars
-    xprintf("%s: dev info\n", dev->device.name);
+    xprintf("%s: dev info\n", device_get_name(dev->mxdev));
     snprintf(str, SATA_DEVINFO_SERIAL_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_SERIAL));
     xprintf("  serial=%s\n", str);
     snprintf(str, SATA_DEVINFO_FW_REV_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_FW_REV));
@@ -158,7 +156,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
 static mx_protocol_device_t sata_device_proto;
 
 static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
@@ -198,7 +196,7 @@ static void sata_get_info(sata_device_t* dev, block_info_t* info) {
 }
 
 static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     // TODO implement other block ioctls
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
@@ -237,12 +235,13 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
 }
 
 static mx_off_t sata_getsize(mx_device_t* dev) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     return device->capacity;
 }
 
 static mx_status_t sata_release(mx_device_t* dev) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
+    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -255,12 +254,12 @@ static mx_protocol_device_t sata_device_proto = {
 };
 
 static void sata_fifo_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     device->callbacks = cb;
 }
 
 static void sata_fifo_get_info(mx_device_t* dev, block_info_t* info) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     sata_get_info(device, info);
 }
 
@@ -274,7 +273,7 @@ static void sata_fifo_complete(iotxn_t* txn, void* cookie) {
 
 static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
                            uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     //xprintf("sata: fifo_read dev %p vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 " length 0x%" PRIx64 "\n", dev, vmo_offset, dev_offset, length);
 
     mx_status_t status;
@@ -296,7 +295,7 @@ static void sata_fifo_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
 
 static void sata_fifo_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length,
                             uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    sata_device_t* device = get_sata_device(dev);
+    sata_device_t* device = dev->ctx;
     //xprintf("sata: fifo_write dev %p vmo_offset 0x%" PRIx64 " dev_offset 0x%" PRIx64 " length 0x%" PRIx64 "\n", dev, vmo_offset, dev_offset, length);
 
     mx_status_t status;
@@ -333,20 +332,31 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
 
     char name[8];
     snprintf(name, sizeof(name), "sata%d", port);
-    device_init(&device->device, dev->driver, name, &sata_device_proto);
-
-    device->port = port;
-
-    // send device identify
-    mx_status_t status = sata_device_identify(device, dev);
+    mx_status_t status = device_create(name, device, &sata_device_proto, dev->driver,
+                                       &device->mxdev);
     if (status < 0) {
         free(device);
         return status;
     }
 
+    device->port = port;
+
+    // send device identify
+    status = sata_device_identify(device, dev);
+    if (status < 0) {
+        device_destroy(device->mxdev);
+        free(device);
+        return status;
+    }
+
     // add the device
-    device_set_protocol(&device->device, MX_PROTOCOL_BLOCK_CORE, &sata_block_ops);
-    device_add(&device->device, dev);
+    device_set_protocol(device->mxdev, MX_PROTOCOL_BLOCK_CORE, &sata_block_ops);
+    status = device_add(device->mxdev, dev);
+    if (status < 0) {
+        device_destroy(device->mxdev);
+        free(device);
+        return status;
+    }
 
     return NO_ERROR;
 }
