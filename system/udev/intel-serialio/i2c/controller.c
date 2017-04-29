@@ -60,7 +60,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
         return ERR_INVALID_ARGS;
     }
 
-    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = dev->ctx;
 
     intel_serialio_i2c_slave_device_t* slave;
 
@@ -109,11 +109,8 @@ static mx_status_t intel_serialio_i2c_add_slave(
     slave->props[count++] = (mx_device_prop_t){BIND_PCI_VID, 0, pci_config->vendor_id};
     slave->props[count++] = (mx_device_prop_t){BIND_PCI_DID, 0, pci_config->device_id};
     slave->props[count++] = (mx_device_prop_t){BIND_I2C_ADDR, 0, address};
-    slave->device.props = slave->props;
-    slave->device.prop_count = count;
 
-    status = device_add_with_props(&slave->device, dev, slave->device.props,
-                                   slave->device.prop_count);
+    status = device_add_with_props(slave->mxdev, dev, slave->props, count);
     if (status < 0)
         goto fail1;
 
@@ -136,7 +133,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
         return ERR_INVALID_ARGS;
     }
 
-    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = dev->ctx;
 
     intel_serialio_i2c_slave_device_t* slave;
 
@@ -152,7 +149,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
         goto remove_slave_finish;
     }
 
-    status = device_remove(&slave->device);
+    status = device_remove(slave->mxdev);
     if (status < 0)
         goto remove_slave_finish;
 
@@ -234,7 +231,7 @@ static mx_status_t intel_serialio_configure_bus_timing(
 
 static mx_status_t intel_serialio_i2c_set_bus_frequency(mx_device_t* dev,
                                                         uint32_t frequency) {
-    intel_serialio_i2c_device_t* device = get_intel_serialio_i2c_device(dev);
+    intel_serialio_i2c_device_t* device = dev->ctx;
 
     if (frequency != I2C_MAX_FAST_SPEED_HZ &&
         frequency != I2C_MAX_STANDARD_SPEED_HZ) {
@@ -295,8 +292,16 @@ static ssize_t intel_serialio_i2c_ioctl(
         return ret;
 }
 
+static mx_status_t intel_serialio_i2c_release(mx_device_t* dev) {
+    intel_serialio_i2c_device_t* cont = dev->ctx;
+    device_destroy(cont->mxdev);
+    free(cont);
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t intel_serialio_i2c_device_proto = {
-    .ioctl = &intel_serialio_i2c_ioctl,
+    .ioctl = intel_serialio_i2c_ioctl,
+    .release = intel_serialio_i2c_release,
 };
 
 // The controller lock should already be held when entering this function.
@@ -448,8 +453,10 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
 
     char name[MX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "i2c-bus-%04x", pci_config->device_id);
-    device_init(&device->device, drv, name,
-                &intel_serialio_i2c_device_proto);
+    status = device_create(name, device, &intel_serialio_i2c_device_proto, drv, &device->mxdev);
+    if (status != NO_ERROR) {
+        goto fail;
+    }
 
     // This is a temporary workaround until we have full ACPI device
     // enumeration. If this is the I2C1 bus, we run _PS0 so the controller is
@@ -475,7 +482,7 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     if (status < 0)
         goto fail;
 
-    status = device_add(&device->device, dev);
+    status = device_add(device->mxdev, dev);
     if (status < 0)
         goto fail;
 
@@ -489,8 +496,8 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     // hardcode it.
     if (pci_config->vendor_id == INTEL_VID &&
         pci_config->device_id == ACER_I2C_TOUCH) {
-        intel_serialio_i2c_set_bus_frequency(&device->device, 400000);
-        intel_serialio_i2c_add_slave(&device->device, I2C_7BIT_ADDRESS, 0x0010);
+        intel_serialio_i2c_set_bus_frequency(device->mxdev, 400000);
+        intel_serialio_i2c_add_slave(device->mxdev, I2C_7BIT_ADDRESS, 0x0010);
     }
     mx_handle_close(config_handle);
     return NO_ERROR;
@@ -500,6 +507,7 @@ fail:
         mx_handle_close(device->regs_handle);
     if (config_handle)
         mx_handle_close(config_handle);
+    device_destroy(device->mxdev);
     free(device);
 
     return status;

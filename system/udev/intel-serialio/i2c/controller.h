@@ -124,7 +124,7 @@ enum {
 };
 
 typedef struct intel_serialio_i2c_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
 
     intel_serialio_i2c_regs* regs;
     volatile uint32_t* soft_reset;
@@ -142,6 +142,3 @@ typedef struct intel_serialio_i2c_device {
 
 mx_status_t intel_serialio_i2c_reset_controller(
     intel_serialio_i2c_device_t* controller);
-
-#define get_intel_serialio_i2c_device(dev) \
-    containerof(dev, intel_serialio_i2c_device_t, device)

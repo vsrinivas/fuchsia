@@ -66,8 +66,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
             goto transfer_finish_2;
         }
     }
-    intel_serialio_i2c_slave_device_t *slave =
-        get_intel_serialio_i2c_slave_device(dev);
+    intel_serialio_i2c_slave_device_t *slave = dev->ctx;
 
     if (!dev->parent) {
         printf("Orphaned I2C slave.\n");
@@ -75,8 +74,7 @@ static mx_status_t intel_serialio_i2c_slave_transfer(
         goto transfer_finish_2;
     }
 
-    intel_serialio_i2c_device_t* controller =
-        get_intel_serialio_i2c_device(dev->parent);
+    intel_serialio_i2c_device_t* controller = dev->parent->ctx;
 
     uint32_t ctl_addr_mode_bit;
     uint32_t tar_add_addr_mode_bit;
@@ -324,12 +322,20 @@ static ssize_t intel_serialio_i2c_slave_ioctl(
     }
 }
 
+static mx_status_t intel_serialio_i2c_slave_release(mx_device_t* dev) {
+    intel_serialio_i2c_slave_device_t* slave = dev->ctx;
+    device_destroy(slave->mxdev);
+    free(slave);
+    return NO_ERROR;
+}
+
 // Implement the device protocol for the slave devices.
 
 static mx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
-    .read = &intel_serialio_i2c_slave_read,
-    .write = &intel_serialio_i2c_slave_write,
-    .ioctl = &intel_serialio_i2c_slave_ioctl,
+    .read = intel_serialio_i2c_slave_read,
+    .write = intel_serialio_i2c_slave_write,
+    .ioctl = intel_serialio_i2c_slave_ioctl,
+    .release = intel_serialio_i2c_slave_release,
 };
 
 // Initialize a slave device structure.
@@ -344,8 +350,11 @@ mx_status_t intel_serialio_i2c_slave_device_init(
     };
     snprintf(name, sizeof(name) - 1, "%04x", address);
 
-    device_init(&slave->device, cont->driver, name,
-                &intel_serialio_i2c_slave_device_proto);
+    status = device_create(name, slave, &intel_serialio_i2c_slave_device_proto, cont->driver,
+            &slave->mxdev);
+    if (status != NO_ERROR) {
+        return status;
+    }
 
     slave->chip_address_width = width;
     slave->chip_address = address;
