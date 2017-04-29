@@ -18,15 +18,14 @@
 #include "devhost.h"
 
 typedef struct acpi_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
     char hid[8];
     acpi_handle_t handle;
+    mx_device_prop_t props[2];
 } acpi_device_t;
 
-#define get_acpi_device(dev) containerof(dev, acpi_device_t, device)
-
 static mx_handle_t acpi_device_clone_handle(mx_device_t* dev) {
-    acpi_device_t* device = get_acpi_device(dev);
+    acpi_device_t* device = dev->ctx;
     return acpi_clone_handle(&device->handle);
 }
 
@@ -34,7 +33,15 @@ static mx_acpi_protocol_t acpi_device_acpi_proto = {
     .clone_handle = acpi_device_clone_handle,
 };
 
+static mx_status_t acpi_device_release(mx_device_t* dev) {
+    acpi_device_t* device = dev->ctx;
+    device_destroy(device->mxdev);
+    free(device);
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t acpi_device_proto = {
+    .release = acpi_device_release,
 };
 
 static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hid, acpi_handle_t* child, char* child_name) {
@@ -79,18 +86,22 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         return ERR_NOT_SUPPORTED;
     }
 
+    acpi_device_t* batt_dev = calloc(1, sizeof(acpi_device_t));
+    if (!batt_dev) {
+        return ERR_NO_MEMORY;
+    }
+
     acpi_handle_t acpi_root, pcie_handle;
     acpi_handle_init(&acpi_root, hacpi);
 
     mx_status_t status = acpi_get_child_handle_by_hid(&acpi_root, "PNP0A08", &pcie_handle, NULL);
+    acpi_handle_close(&acpi_root);
     if (status != NO_ERROR) {
         printf("no pcie handle\n");
-        acpi_handle_close(&acpi_root);
+        free(batt_dev);
         return ERR_NOT_SUPPORTED;
     }
-    acpi_handle_close(&acpi_root);
 
-    acpi_device_t* batt_dev = calloc(1, sizeof(acpi_device_t));
     const char* hid = ACPI_HID_BATTERY;
     char name[4];
     status = acpi_get_child_handle_by_hid(&pcie_handle, hid, &batt_dev->handle, name);
@@ -99,23 +110,30 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         free(batt_dev);
     } else {
         memcpy(batt_dev->hid, hid, 7);
-        device_init(&batt_dev->device, drv, name, &acpi_device_proto);
+        status = device_create(name, batt_dev, &acpi_device_proto, drv, &batt_dev->mxdev);
+        if (status != NO_ERROR) {
+            free(batt_dev);
+            goto fail;
+        }
+        device_set_protocol(batt_dev->mxdev, MX_PROTOCOL_ACPI, &acpi_device_acpi_proto);
 
-        device_set_protocol(&batt_dev->device, MX_PROTOCOL_ACPI, &acpi_device_acpi_proto);
+        batt_dev->props[0].id = BIND_ACPI_HID_0_3;
+        batt_dev->props[0].value = htobe32(*((uint32_t *)(hid)));
+        batt_dev->props[1].id = BIND_ACPI_HID_4_7;
+        batt_dev->props[1].value = htobe32(*((uint32_t *)(hid + 4)));
 
-        batt_dev->device.props = calloc(2, sizeof(mx_device_prop_t));
-        batt_dev->device.props[0].id = BIND_ACPI_HID_0_3;
-        batt_dev->device.props[0].value = htobe32(*((uint32_t *)(hid)));
-        batt_dev->device.props[1].id = BIND_ACPI_HID_4_7;
-        batt_dev->device.props[1].value = htobe32(*((uint32_t *)(hid + 4)));
-        batt_dev->device.prop_count = 2;
-
-        device_add_with_props(&batt_dev->device, dev, batt_dev->device.props,
-                              batt_dev->device.prop_count);
+        status = device_add_with_props(batt_dev->mxdev, dev, batt_dev->props,
+                                       countof(batt_dev->props));
+        if (status != NO_ERROR) {
+            device_destroy(batt_dev->mxdev);
+            free(batt_dev);
+            goto fail;
+        }
     }
 
+fail:
     acpi_handle_close(&pcie_handle);
-    return NO_ERROR;
+    return status;
 }
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id, const char* procname, int argc, char** argv);
