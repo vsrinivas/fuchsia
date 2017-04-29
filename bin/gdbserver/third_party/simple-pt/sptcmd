@@ -1,0 +1,280 @@
+#!/bin/bash
+# simple pt trace a command
+
+usage() {
+	cat <<EOU
+Simple PT processor branch trace. The complete system is traced
+unless a comm filter is set, as long as cmd is executing.
+The output files are in ptout.CPU and ptout.sideband
+
+When cmd has options please use -- to separate them from the sptcmd options.
+
+sptcmd [options] cmd
+--comm COMM -c COMM  Set comm filter for comm (only trace that command)
+--no-kernel -K disable kernel trace (default on) (only use with --comm ...)
+--no-user   -U disable user trace (default on)
+--msr-trace -t enable msr trace in side band
+--disretc   -R disable return compression
+--reload    -d Always reload driver
+--dont-dump -N Don't dump data
+--prefix    -o PREFIX Dump to PREFIX.cpu and PREFIX.sideband (default ptout)
+--enumerate -e enumerate all processes in sideband (default unless -c is set)
+--force     -f Force initialization even when PT is already active (dangerous)
+--keep	    -k Keep kernel trace points running after end.
+--enable    -E Only enable tracing, but don't dump. cmd is optional
+--dump	    -D Only dump already running trace (after sptcmd -E)
+--disable      Only disable already running trace. Can be combined with --dump.
+
+--start-addr addr -s addr
+	       Start trace on CPU when kernel symbol start is hit. Can be address
+	       or sym+offset
+--stop-addr addr -y addr
+	      Stop trace on CPU when kernel symbol stop is hit. Can be address
+	      or sym+offset
+--print-regs  Print PT register setup
+
+Following flags are not supported on Broadwell:
+
+--cyc thresh -C thresh    Set cycle packet threshold to 2^(n-1) cycles for fine grained timing
+--mtc freq   -M freq	  Set MTC packet frequency to 2^(n-1)
+--psb thresh -P thresh	  Set PSB packet threshold to 2K^n bytes
+--filter     -F start,end  Only trace between virtual address start-end. Can be kernel symbols.
+	      Two ranges allowed (shared with -S)
+--stop-range -S start,end  Stop trace when reaching virtual address start-end. Can be kernel
+	      symbols. Two ranges allowed (shared with -F)
+EOU
+	exit 1
+}
+
+PATH=$PATH:$(dirname $0)
+
+unset COMM KERNEL TRACE USERMODE DISRETC DRIVER DONTDUMP PREFIX ENUMALL
+unset CYC_THRESH MTC_FREQ PSB_FREQ FILTER TSTOP START STOP FORCE KEEP
+unset PRINT_REGS ENABLE_ONLY DUMP_ONLY DISABLE
+declare -a RANGE_START RANGE_END RANGE_CFG
+NUM_RANGE=0
+MAX_RANGE=2
+ENUMDFL=1
+
+declare -a ARGS
+ARGS=($@)
+
+B=0
+for ((j = 0; j < $#; j++)) ; do
+	if [ $B -ne 0 ] ; then
+		ARGS[$j]=${ARGS[$j]}
+		continue
+	fi
+	case "${ARGS[$j]}" in
+	--comm) ARGS[$j]=-c ;;
+	--no-kernel) ARGS[$j]=-K ;;
+	--no-user) ARGS[$j]=-U ;;
+	--msr-trace) ARGS[$j]=-t ;;
+	--disretc) ARGS[$j]=-R ;;
+	--reload) ARGS[$j]=-d ;;
+	--dont-dump) ARGS[$j]=-N ;;
+	--force) ARGS[$j]=-f ;;
+	--prefix) ARGS[$j]=-o ;;
+	--enum-all) ARGS[$j]=-e ;;
+	--keep) ARGS[$j]=-k ;;
+	--cyc) ARGS[$j]=-C ;;
+	--mtc) ARGS[$j]=-M ;;
+	--psb) ARGS[$j]=-P ;;
+	--filter) ARGS[$j]=-F ;;
+	--stop-range) ARGS[$j]=-S ;;
+	--start-addr) ARGS[$j]=-s ;;
+	--stop-addr) ARGS[$j]=-y ;;
+	--print-regs) ARGS[$j]="-@" ; PRINT_REGS=1 ;;
+	--enable) ARGS[$j]=-E ;;
+	--dump) ARGS[$j]=-D ;;
+	--disable) ARGS[$j]="-@" ; DISABLE=1 ;;
+	--) ARGS[$j]=${ARGS[$j]}; B=1 ;;
+	--*) usage ; exit 1 ;;
+	*) ARGS[$j]="${ARGS[$j]}" ;;
+	esac
+done
+
+while getopts "c:KtURkfdNo:eC:M:P:F:S:s:y:@ED" opt ${ARGS[@]} ; do
+	case "$opt" in
+	c) COMM="$OPTARG" ; ENUMDFL=0 ;;
+	K) KERNEL=0 ;;
+	t) TRACE=1 ;;
+	U) USERMODE=0 ;;
+	R) DISRETC=1 ;;
+	d) DRIVER=1 ;;
+	N) DONTDUMP=1 ;;
+	D) DUMP_ONLY=1 ;;
+	f) FORCE=1 ;;
+	o) PREFIX="$OPTARG" ;;
+	e) ENUMALL=1 ;;
+	k) KEEP=1 ;;
+	E) ENABLE_ONLY=1;;
+	C) CYC_THRESH="$OPTARG"
+	   ptfeature cyc_thresh $CYC_THRESH || usage
+	   ;;
+	M) MTC_FREQ="$OPTARG"
+	   ptfeature mtc_freq $MTC_FREQ || usage
+	   ;;
+	P) PSB_FREQ="$OPTARG"
+	   ptfeature psb_freq $PSB_FREQ || usage
+	   ;;
+	F) IFS=, read st end <<< "$OPTARG"
+	   RANGE_START[$NUM_RANGE]=$st
+	   RANGE_END[$NUM_RANGE]=$end
+	   RANGE_CFG[$NUM_RANGE]=1
+	   (( NUM_RANGE++ ))
+	   ;;
+	S) IFS=, read st end <<< "$OPTARG"
+	   RANGE_START[$NUM_RANGE]=$st
+	   RANGE_END[$NUM_RANGE]=$end
+	   RANGE_CFG[$NUM_RANGE]=2
+	   (( NUM_RANGE++ ))
+	   ;;
+	s) START="$OPTARG" ;;
+	y) STOP="$OPTARG" ;;
+	@) ;;
+	\?) usage ; exit 1 ;;
+	*) break ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+if [ -z "$1" ] ; then
+	ENABLE_ONLY=1
+fi
+
+COMM=${COMM:-}
+KERNEL=${KERNEL:-1}
+TRACE=${TRACE:-0}
+USERMODE=${USERMODE:-1}
+DISRETC=${DISRETC:-0}
+DRIVER=${DRIVER:-}
+DONTDUMP=${DONTDUMP:-}
+DUMP_ONLY=${DUMP_ONLY:-}
+PREFIX=${PREFIX:-ptout}
+ENUMALL=${ENUMALL:-$ENUMDFL}
+CYC_THRESH=${CYC_THRESH:-0}
+MTC_FREQ=${MTC_FREQ:-0}
+PSB_FREQ=${PSB_FREQ:-0}
+START=${START:-0}
+STOP=${STOP:-0}
+FORCE=${FORCE:-0}
+KEEP=${KEEP:-}
+PRINT_REGS=${PRINT_REGS:-0}
+
+if [ "$EUID" -ne 0 ] ; then
+	echo >&2 sptcmd needs to run as root
+	exit 1
+fi
+
+[ -n "$DRIVER" ] && /sbin/rmmod simple_pt
+if ! lsmod | grep -q simple_pt ; then
+	if [ -r simple-pt.ko ] ; then
+		/sbin/insmod simple-pt.ko force=$FORCE
+	else
+		/sbin/modprobe simple-pt force=$FORCE
+	fi
+fi
+C=/sys/module/simple_pt/parameters
+if [ -n "$DUMP_ONLY" ] ; then
+	OLDSTART="`cat $C/start`"
+fi
+
+if [ "$KERNEL" != 1 -a "$COMM" = "" ] ; then
+	echo >&2 WARNING Using -K without a -c filter.
+	echo >&2 WARNING Decoder will not be able to trace multiple processes.
+fi
+
+T=/sys/kernel/debug/tracing
+
+if [ -n "$DISABLE" ] ; then
+	echo 0 > $C/start
+	if [ -z "$DUMP_ONLY" ] ; then
+		exit 0
+	fi
+fi
+
+if [ -z "$DUMP_ONLY" ] ; then
+	if [ -n "$COMM" ] ; then
+		echo $COMM > $C/comm_filter
+		echo 1 > $C/cr3_filter
+	else
+		echo > $C/comm_filter
+		echo 0 > $C/cr3_filter
+	fi
+	echo $KERNEL > $C/kernel
+	echo $USERMODE > $C/user
+	echo $DISRETC > $C/dis_retc
+	echo $FORCE > $C/force
+	echo $TRACE > $T/events/pttp/msr/enable
+	echo 1 > $T/events/pttp/exec_cr3/enable
+	echo 1 > $T/events/pttp/mmap_cr3/enable
+	echo 1 > $T/events/pttp/process_cr3/enable
+	echo $MTC_FREQ > $C/mtc_freq
+	echo $CYC_THRESH > $C/cyc_thresh
+	echo $PSB_FREQ > $C/psb_freq
+	for (( r = 0; r < NUM_RANGE; r++ )) ; do
+		echo ${RANGE_START[$r]} > $C/addr${r}_start
+		echo ${RANGE_END[$r]} > $C/addr${r}_end
+		echo ${RANGE_CFG[$r]} > $C/addr${r}_cfg
+	done
+	for (( ; r < MAX_RANGE; r++ )) ; do
+		echo 0 > $C/addr${r}_cfg
+	done
+	echo $START > $C/trace_start
+	echo $STOP > $C/trace_stop
+	echo > $T/trace
+	echo $ENUMALL > $C/enumerate_all
+	if [ "$ENUMALL" != 0 ] ; then
+		grep . /proc/[0-9]*/maps > ${PREFIX}.maps
+		echo >&2 "Wrote initial process maps to ${PREFIX}.maps"
+	else
+		echo -n > ${PREFIX}.maps
+	fi
+	ptfeature > ${PREFIX}.cpuid
+	echo 1 > $C/start
+	if [ "$ENABLE_ONLY" != "" ] ; then
+		echo "PT running"
+		exit 0
+	fi
+	"$@"
+fi
+if [ "$PRINT_REGS" != 0 ] ; then
+	ptregs
+fi
+echo 0 > $C/start
+if [ -z "$KEEP" ] ; then
+	echo 0 > $T/events/pttp/exec_cr3/enable
+	echo 0 > $T/events/pttp/mmap_cr3/enable
+	echo 0 > $T/events/pttp/process_cr3/enable
+	echo 0 > $T/events/pttp/msr/enable
+fi
+if [ -z "$DONTDUMP" ] ; then
+	sptdump $PREFIX
+
+	ptfeature > ${PREFIX}.cpuid
+
+	sptsideband.py $T/trace ${PREFIX}.maps ${PREFIX}.cpuid $MTC_FREQ > ${PREFIX}.sideband
+
+	if [ "$TRACE" != 0 ] ; then
+		spttrace < $T/trace > ${PREFIX}.trace
+	fi
+
+	#if [ -r /boot/vmlinux-$(uname -r) ] ; then
+	#	echo -e "0.0 0 0 0\t/boot/vmlinux-$(uname -r)" >> ${PREFIX}.sideband
+	#elif [ -r /lib/modules/$(uname -r)/build/vmlinux ] ; then
+	#	echo -e "0.0 0 0 0\t/lib/modules/$(uname -r)/build/vmlinux" >> ${PREFIX}.sideband
+	#else
+	#	echo "vmlinux not found"
+	#fi
+
+	#shopt -s globstar
+	#while read name a b c d addr ; do
+	#	name=$(echo $name | sed s/_/?/g)
+	#	echo -e "0.0 0" $addr 0 "\t" /lib/modules/$(uname -r)/**/${name}.ko
+	#done < /proc/modules >> ${PREFIX}.sideband
+	echo "Wrote sideband to ${PREFIX}.sideband"
+fi
+if [ -n "$DUMP_ONLY" ] ; then
+	echo $OLDSTART > $C/start
+fi

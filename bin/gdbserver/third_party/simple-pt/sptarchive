@@ -1,0 +1,9 @@
+#!/bin/bash
+# generate archive of all executables in sideband
+# ptout.sideband -> ptout.tar.gz
+# sptarchive [ptout]
+#
+
+PREFIX=${1:-ptout}
+
+tar czf ${PREFIX}.tar.gz ${PREFIX}.sideband $(awk ' { print $6 } ' ${PREFIX}.sideband | sort | uniq)
