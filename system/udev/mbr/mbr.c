@@ -48,10 +48,8 @@ static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 #define PARTITION_TYPE_DATA 0xE9
 #define PARTITION_TYPE_SYS 0xEA
 
-typedef struct mbr_bind_info {
-    mx_device_t* dev;
-    mx_driver_t* drv;
-} mbr_bind_info_t;
+// created by the MAGENTA_DRIVER_BEGIN macro
+extern mx_driver_t _driver_mbr;
 
 typedef struct __PACKED mbr_partition_entry {
     uint8_t status;
@@ -69,13 +67,12 @@ typedef struct __PACKED mbr {
 } mbr_t;
 
 typedef struct mbrpart_device {
-    mx_device_t device;
+    mx_device_t* mxdev;
     mbr_partition_entry_t partition;
     block_info_t info;
     atomic_int writercount;
 } mbrpart_device_t;
 
-#define get_mbrpart_device(dev) containerof(dev, mbrpart_device_t, device)
 
 static void mbr_read_sync_complete(iotxn_t* txn, void* cookie) {
     // Used to synchronize iotxn_calls.
@@ -93,7 +90,7 @@ static uint64_t getsize(mbrpart_device_t* dev) {
 
 static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
                          size_t cmdlen, void* reply, size_t max) {
-    mbrpart_device_t* device = get_mbrpart_device(dev);
+    mbrpart_device_t* device = dev->ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
@@ -138,7 +135,7 @@ static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
 static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // Sanity check to ensure that we're not writing past
-    mbrpart_device_t* device = get_mbrpart_device(dev);
+    mbrpart_device_t* device = dev->ctx;
 
     const uint64_t off_lba = txn->offset / device->info.block_size;
     const uint64_t first = device->partition.start_sector_lba;
@@ -163,23 +160,24 @@ static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 }
 
 static mx_off_t mbr_getsize(mx_device_t* dev) {
-    return getsize(get_mbrpart_device(dev));
+    return getsize(dev->ctx);
 }
 
 static void mbr_unbind(mx_device_t* dev) {
-    mbrpart_device_t* device = get_mbrpart_device(dev);
-    device_remove(&device->device);
+    mbrpart_device_t* device = dev->ctx;
+    device_remove(device->mxdev);
 }
 
 static mx_status_t mbr_release(mx_device_t* dev) {
-    mbrpart_device_t* device = get_mbrpart_device(dev);
+    mbrpart_device_t* device = dev->ctx;
+    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
 
 static mx_status_t mbr_open(mx_device_t* dev, mx_device_t** dev_out,
                             uint32_t flags) {
-    mbrpart_device_t* device = get_mbrpart_device(dev);
+    mbrpart_device_t* device = dev->ctx;
     mx_status_t status = NO_ERROR;
     if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
         xprintf("Partition cannot be opened as writable (open elsewhere)\n");
@@ -189,7 +187,7 @@ static mx_status_t mbr_open(mx_device_t* dev, mx_device_t** dev_out,
 }
 
 static mx_status_t mbr_close(mx_device_t* dev, uint32_t flags) {
-    mbrpart_device_t* device = get_mbrpart_device(dev);
+    mbrpart_device_t* device = dev->ctx;
     if (is_writer(flags)) {
         atomic_fetch_sub(&device->writercount, 1);
     }
@@ -207,10 +205,7 @@ static mx_protocol_device_t mbr_proto = {
 };
 
 static int mbr_bind_thread(void* arg) {
-    mbr_bind_info_t* info = (mbr_bind_info_t*)arg;
-    mx_device_t* dev = info->dev;
-    mx_driver_t* drv = info->drv;
-    free(info);
+    mx_device_t* dev = arg;
 
     // Classic MBR supports 4 partitions.
     uint8_t partition_count = 0;
@@ -296,14 +291,18 @@ static int mbr_bind_thread(void* arg) {
 
         char name[128];
         snprintf(name, sizeof(name), "%sp%u", dev->name, partition_count);
-        device_init(&pdev->device, drv, name, &mbr_proto);
+        if ((st = device_create(name, pdev, &mbr_proto, &_driver_mbr, &pdev->mxdev)) != NO_ERROR) {
+            free(pdev);
+            continue;
+        }
 
-        device_set_protocol(&pdev->device, MX_PROTOCOL_BLOCK, NULL);
+        device_set_protocol(pdev->mxdev, MX_PROTOCOL_BLOCK, NULL);
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));
-        if ((st = device_add(&pdev->device, dev)) != NO_ERROR) {
+        if ((st = device_add(pdev->mxdev, dev)) != NO_ERROR) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
+            device_destroy(pdev->mxdev);
             free(pdev);
             continue;
         }
@@ -319,7 +318,7 @@ unbind:
     // If we weren't able to bind any subdevices (for partitions), then unbind
     // the MBR driver as well.
     if (partition_count == 0) {
-        driver_unbind(drv, dev);
+        driver_unbind(&_driver_mbr, dev);
     }
 
     return -1;
@@ -331,19 +330,10 @@ static mx_status_t mbr_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     static_assert(sizeof(mbr_partition_entry_t) == MBR_PARTITION_ENTRY_SIZE,
                   "mbr_partition_entry_t is the wrong size");
 
-    mbr_bind_info_t* info = malloc(sizeof(*info));
-    if (!info)
-        return ERR_NO_MEMORY;
-
-    info->drv = drv;
-    info->dev = dev;
-
     // Read the partition table asyncrhonously.
     thrd_t t;
-    int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, info,
-                                        "mbr-init");
+    int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, dev, "mbr-init");
     if (thrd_rc != thrd_success) {
-        free(info);
         return thrd_status_to_mx_status(thrd_rc);
     }
     return NO_ERROR;
