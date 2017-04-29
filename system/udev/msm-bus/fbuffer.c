@@ -21,7 +21,7 @@
 static uint8_t* msm_framebuffer = (uint8_t*)NULL;
 static uint32_t msm_framebuffer_size = 0;
 
-static mx_device_t disp_device;
+static mx_device_t* disp_device;
 static mx_display_info_t disp_info;
 
 static mx_status_t msm_parse_framebuffer(char* args) {
@@ -122,18 +122,26 @@ mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     if (status != NO_ERROR)
         return status;
 
-    device_init(&disp_device, driver, "msm-fb", &msm_device_proto);
-
-    device_set_protocol(&disp_device, MX_PROTOCOL_DISPLAY, &msm_display_proto);
-    status = mx_set_framebuffer(get_root_resource(), msm_framebuffer,
-                                msm_framebuffer_size, disp_info.format,
-                                disp_info.width, disp_info.height, disp_info.stride);
+    status = device_create("msm-fb", NULL, &msm_device_proto, driver, &disp_device);
     if (status != NO_ERROR)
         return status;
 
-    status = device_add(&disp_device, parent);
+    device_set_protocol(disp_device, MX_PROTOCOL_DISPLAY, &msm_display_proto);
+    status = mx_set_framebuffer(get_root_resource(), msm_framebuffer,
+                                msm_framebuffer_size, disp_info.format,
+                                disp_info.width, disp_info.height, disp_info.stride);
+    if (status != NO_ERROR) {
+        device_destroy(disp_device);
+        return status;
+    }
 
-    return status;
+    status = device_add(disp_device, parent);
+    if (status != NO_ERROR) {
+        device_destroy(disp_device);
+        return status;
+    }
+
+    return NO_ERROR;
 }
 
 static mx_driver_ops_t msm_fb_driver_ops = {
