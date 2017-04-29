@@ -64,7 +64,7 @@ typedef union {
 
 typedef struct {
 
-    mx_device_t device;
+    mx_device_t* mxdev;
     mx_device_t* parent;
     mx_driver_t* driver;
     bcm_pcm_regs_t* control_regs;
@@ -100,8 +100,6 @@ typedef struct {
 
 static mx_status_t pcm_dma_init(bcm_pcm_t* ctx);
 static mx_status_t pcm_deinit_buffer_locked(bcm_pcm_t* ctx);
-
-#define dev_to_bcm_pcm(dev) containerof(dev, bcm_pcm_t, device)
 
 static void set_pcm_clock(bcm_pcm_t* pcm_ctx) {
 
@@ -399,23 +397,22 @@ set_stream_done:
 }
 
 static mx_status_t pcm_audio_sink_release(mx_device_t* device) {
-    bcm_pcm_t* ctx = dev_to_bcm_pcm(device);
+    bcm_pcm_t* ctx = device->ctx;
+    device_destroy(ctx->mxdev);
     free(ctx);
     return NO_ERROR;
 }
 
 static void pcm_audio_sink_unbind(mx_device_t* device) {
 
-    bcm_pcm_t* ctx = dev_to_bcm_pcm(device);
-
-    device_remove(&ctx->device);
+    bcm_pcm_t* ctx = device->ctx;
 
     mtx_lock(&ctx->pcm_lock);
     pcm_stop_locked(ctx);
     pcm_deinit_locked(ctx);
     mtx_unlock(&ctx->pcm_lock);
-    free(ctx);
 
+    device_remove(ctx->mxdev);
 }
 
 static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio2_rb_cmd_get_buffer_req_t req) {
@@ -577,7 +574,7 @@ static ssize_t pcm_audio2_sink_ioctl(mx_device_t* device, uint32_t op,
                                      const void* in_buf, size_t in_len,
                                      void* out_buf, size_t out_len) {
 
-    bcm_pcm_t* ctx = dev_to_bcm_pcm(device);
+    bcm_pcm_t* ctx = device->ctx;
     mtx_lock(&ctx->pcm_lock);
 
     mx_status_t status = NO_ERROR;
@@ -692,18 +689,24 @@ static int pcm_bootstrap_thread(void* arg) {
     if (status != NO_ERROR)
         goto pcm_err;
 
-    device_init(&pcm_ctx->device, pcm_ctx->driver, "pcm0", &pcm_audio_ctx_device_proto);
+    status = device_create("pcm0", pcm_ctx, &pcm_audio_ctx_device_proto, pcm_ctx->driver,
+                           &pcm_ctx->mxdev);
+    if (status != NO_ERROR)
+        goto pcm_err;
 
-    pcm_ctx->device.protocol_id = MX_PROTOCOL_AUDIO2_OUTPUT;
-    pcm_ctx->device.protocol_ops = NULL;
+    device_set_protocol(pcm_ctx->mxdev, MX_PROTOCOL_AUDIO2_OUTPUT, NULL);
 
-    status = device_add(&pcm_ctx->device, pcm_ctx->parent);
+    status = device_add(pcm_ctx->mxdev, pcm_ctx->parent);
+    if (status != NO_ERROR)
+        goto pcm_err;
 
     return 0;
 
 pcm_err:
-    if (pcm_ctx)
+    if (pcm_ctx) {
+        device_destroy(pcm_ctx->mxdev);
         free(pcm_ctx);
+    }
 
     return -1;
 }
