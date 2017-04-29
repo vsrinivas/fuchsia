@@ -81,9 +81,13 @@ void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
 
+    // offsets for vmos needn't be aligned, but vmars use aligned offsets
+    const uint64_t aligned_offset = ROUNDDOWN(offset, PAGE_SIZE);
+    const uint64_t aligned_len = ROUNDUP(offset + len, PAGE_SIZE) - aligned_offset;
+
     // other mappings may have covered this offset into the vmo, so unmap those ranges
     for (auto& m : mapping_list_) {
-        m.UnmapVmoRangeLocked(offset, len);
+        m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
     }
 
     // inform all our children this as well, so they can inform their mappings

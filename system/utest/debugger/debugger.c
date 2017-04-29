@@ -414,6 +414,42 @@ static bool property_process_debug_addr_test(void)
     END_TEST;
 }
 
+static int write_text_segment_helper(void) __ALIGNED(8);
+static int write_text_segment_helper(void)
+{
+    /* This function needs to be at least two bytes in size as we set a
+       breakpoint, figuratively speaking, on write_text_segment_helper + 1
+       to ensure the address is not page aligned. Returning some random value
+       will ensure that. */
+    return 42;
+}
+
+static bool write_text_segment(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t self = mx_process_self();
+
+    // Exercise MG-739
+    // Pretend we're writing a s/w breakpoint to the start of this function.
+
+    // write_text_segment_helper is suitably aligned, add 1 to ensure the
+    // byte we write is not page aligned.
+    uintptr_t addr = (uintptr_t) write_text_segment_helper + 1;
+    uint8_t previous_byte;
+    size_t size = read_inferior_memory(self, addr, &previous_byte, sizeof(previous_byte));
+    EXPECT_EQ(size, sizeof(previous_byte), "");
+
+    uint8_t byte_to_write = 0;
+    size = write_inferior_memory(self, addr, &byte_to_write, sizeof(byte_to_write));
+    EXPECT_EQ(size, sizeof(byte_to_write), "");
+
+    size = write_inferior_memory(self, addr, &previous_byte, sizeof(previous_byte));
+    EXPECT_EQ(size, sizeof(previous_byte), "");
+
+    END_TEST;
+}
+
 // This function is marked as no-inline to avoid duplicate label in case the
 // function call is being inlined.
 __NO_INLINE static bool test_prep_and_segv(void)
@@ -613,6 +649,7 @@ BEGIN_TEST_CASE(debugger_tests)
 RUN_TEST(debugger_test);
 RUN_TEST(debugger_thread_list_test);
 RUN_TEST(property_process_debug_addr_test);
+RUN_TEST(write_text_segment);
 END_TEST_CASE(debugger_tests)
 
 static void check_verbosity(int argc, char** argv)
