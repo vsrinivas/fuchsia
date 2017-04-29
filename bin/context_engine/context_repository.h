@@ -15,7 +15,11 @@ namespace maxwell {
 // topics. Is responsible for notifying any subscribed clients whenever a topic
 // changes value.
 class ContextRepository {
+  struct Subscription;
+
  public:
+  using SubscriptionId = std::list<Subscription>::const_iterator;
+
   ContextRepository();
   ~ContextRepository();
 
@@ -25,7 +29,12 @@ class ContextRepository {
 
   void Remove(const std::string& topic);
 
-  void AddSubscription(ContextQueryPtr query, ContextListenerPtr listener);
+  // Does not take ownership of |listener|. |listener| must remain valid until
+  // RemoveSubscription() is called. The returned SubscriptionId can be passed
+  // to RemoveSubscription().
+  SubscriptionId AddSubscription(ContextQueryPtr query,
+                                 ContextListener* listener);
+  void RemoveSubscription(SubscriptionId id);
 
  private:
   void SetInternal(const std::string& topic, const std::string* json_value);
@@ -36,11 +45,11 @@ class ContextRepository {
 
   struct Subscription {
     ContextQueryPtr query;
-    ContextListenerPtr listener;
+    ContextListener* listener;  // Not owned.
   };
   // We use a std::list<> here instead of a std::vector<> since we capture
-  // iterators in |subscriptions_| for removing elements in our connection
-  // error handler.
+  // iterators to identify a subscription for clients, and we want them to
+  // remain valid regardless of operations on the container.
   std::list<Subscription> subscriptions_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);

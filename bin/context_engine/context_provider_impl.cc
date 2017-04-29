@@ -13,10 +13,17 @@ ContextProviderImpl::ContextProviderImpl(ContextRepository* repository)
 ContextProviderImpl::~ContextProviderImpl() = default;
 
 void ContextProviderImpl::Subscribe(
-    ContextQueryPtr query, fidl::InterfaceHandle<ContextListener> listener) {
+    ContextQueryPtr query,
+    fidl::InterfaceHandle<ContextListener> listener) {
   ContextListenerPtr listener_ptr =
       ContextListenerPtr::Create(std::move(listener));
-  repository_->AddSubscription(std::move(query), std::move(listener_ptr));
+  auto it = listeners_.emplace(listeners_.begin(), std::move(listener_ptr));
+  auto subscription_id =
+      repository_->AddSubscription(std::move(query), it->get());
+  it->set_connection_error_handler([this, it, subscription_id] {
+    listeners_.erase(it);
+    repository_->RemoveSubscription(subscription_id);
+  });
 }
 
 }  // namespace maxwell

@@ -13,7 +13,8 @@ namespace {
 bool QueryMatches(const std::string& updated_topic,
                   const ContextQueryPtr& query) {
   // The wildcard query is one without any topics.
-  if (query->topics.size() == 0) return true;
+  if (query->topics.size() == 0)
+    return true;
 
   // Otherwise |updated_topic| must appear in |query->topics|.
   return query->topics.To<std::set<std::string>>().count(updated_topic) > 0;
@@ -31,7 +32,8 @@ void ContextRepository::Set(const std::string& topic,
 
 const std::string* ContextRepository::Get(const std::string& topic) const {
   auto it = values_.find(topic);
-  if (it == values_.end()) return nullptr;
+  if (it == values_.end())
+    return nullptr;
   return &it->second;
 }
 
@@ -39,8 +41,9 @@ void ContextRepository::Remove(const std::string& topic) {
   SetInternal(topic, nullptr);
 }
 
-void ContextRepository::AddSubscription(ContextQueryPtr query,
-                                        ContextListenerPtr listener) {
+ContextRepository::SubscriptionId ContextRepository::AddSubscription(
+    ContextQueryPtr query,
+    ContextListener* listener) {
   // If we already have a value for any topics in |query|, notify the
   // listener immediately.
   auto result = BuildContextUpdate(query);
@@ -51,12 +54,12 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
 
   // Add the subscription to our list.
   Subscription subscription{std::move(query), std::move(listener)};
-  auto it =
-      subscriptions_.emplace(subscriptions_.begin(), std::move(subscription));
-  it->listener.set_connection_error_handler([this, it] {
-    // Remove this subscription when it has an error.
-    subscriptions_.erase(it);
-  });
+  return subscriptions_.emplace(subscriptions_.begin(),
+                                std::move(subscription));
+}
+
+void ContextRepository::RemoveSubscription(SubscriptionId id) {
+  subscriptions_.erase(id);
 }
 
 void ContextRepository::SetInternal(const std::string& topic,
@@ -88,14 +91,16 @@ ContextUpdatePtr ContextRepository::BuildContextUpdate(
   if (query->topics.size() == 0) {
     // Wildcard query. Send everything.
     for (const auto& entry : values_) {
-      if (!result) result = ContextUpdate::New();
+      if (!result)
+        result = ContextUpdate::New();
       result->values[entry.first] = entry.second;
     }
   } else {
     for (const auto& topic : query->topics) {
       auto it = values_.find(topic);
       if (it != values_.end()) {
-        if (!result) result = ContextUpdate::New();
+        if (!result)
+          result = ContextUpdate::New();
 
         result->values[topic] = it->second;
       }

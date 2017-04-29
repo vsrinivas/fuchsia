@@ -19,8 +19,6 @@ class TestListener : public ContextListener {
     last_update_ = std::move(update);
   }
 
-  // void WaitForUpdate() { binding_.WaitForIncomingMethodCall(kSignalDeadline);
-  // }
   void WaitForUpdate() {
     WaitUntil([this] { return last_update_ ? true : false; });
   }
@@ -57,20 +55,10 @@ ContextQueryPtr CreateQuery(const std::string& topic) {
   return query;
 }
 
-ContextQueryPtr CreateWildcardQuery() {
-  auto query = ContextQuery::New();
-  query->topics = fidl::Array<fidl::String>::New(0);
-  return query;
-}
-
 }  // namespace
 
-TEST_F(ContextEngineTest, CorrectValues) {
-  // Show that when we're notified of an update, we get the value that was
-  // published back.
-  //
-  // Also show that when a subscription is created for an existing topic, the
-  // value is immediately sent to the subscription listener.
+TEST_F(ContextEngineTest, PublishAndSubscribe) {
+  // Show that we can publish to a topic and that we can subscribe to that topic.
   publisher_->Publish("topic", "foobar");
   publisher_->Publish("a_different_topic", "baz");
 
@@ -80,24 +68,8 @@ TEST_F(ContextEngineTest, CorrectValues) {
 
   ContextUpdatePtr update;
   ASSERT_TRUE((update = listener.PopLast()));
-  // Make sure we only got the only topic we subscribed to.
   EXPECT_EQ(1ul, update->values.size());
-  // And that it has the expected value.
   EXPECT_EQ(update->values["topic"], "foobar");
-}
-
-TEST_F(ContextEngineTest, PublishAfterSubscribe) {
-  // Show that a subscription made before a value is published will cause the
-  // subscriber's callback to be called the moment a value is published.
-  TestListener listener;
-  provider_->Subscribe(CreateQuery("topic"), listener.GetHandle());
-  Sleep();
-
-  publisher_->Publish("topic", "foobar");
-  listener.WaitForUpdate();
-
-  ContextUpdatePtr update;
-  EXPECT_TRUE((update = listener.PopLast()));
 }
 
 TEST_F(ContextEngineTest, MultipleSubscribers) {
@@ -111,23 +83,6 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   publisher_->Publish("topic", "flkjsd");
   WAIT_UNTIL(listener1.PopLast());
   WAIT_UNTIL(listener2.PopLast());
-}
-
-TEST_F(ContextEngineTest, WildcardQuery) {
-  // Show that the wildcard query returns all topics that have been published.
-  publisher_->Publish("topic1", "1");
-  publisher_->Publish("topic2", "2");
-  Sleep();  // Give the runloop a chance to dispatch the above messages.
-
-  TestListener listener;
-  // The wildcard query is just a query without any topics.
-  provider_->Subscribe(CreateWildcardQuery(), listener.GetHandle());
-  listener.WaitForUpdate();
-
-  ContextUpdatePtr update;
-  ASSERT_TRUE((update = listener.PopLast()));
-  EXPECT_EQ("1", update->values["topic1"]);
-  EXPECT_EQ("2", update->values["topic2"]);
 }
 
 }  // namespace maxwell

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <list>
+
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 
 namespace maxwell {
@@ -19,6 +21,11 @@ class ContextProviderImpl : public ContextProvider {
                  fidl::InterfaceHandle<ContextListener> listener) override;
 
   ContextRepository* repository_;
+
+  // We use a std::list<> here instead of a std::vector<> since we capture
+  // iterators in |listeners_| for removing elements in our connection
+  // error handler.
+  std::list<ContextListenerPtr> listeners_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextProviderImpl);
 };
