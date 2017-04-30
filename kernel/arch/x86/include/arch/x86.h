@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include <arch/x86/general_regs.h>
 #include <arch/x86/registers.h>
 
 __BEGIN_CDECLS
@@ -48,15 +49,26 @@ struct x86_64_context_switch_frame {
     uint64_t rip;
 };
 
+struct x86_64_syscall_result {
+    // The assembler relies on the fact that the ABI will return this in
+    // rax,rdx so we use plain types here to ensure this.
+    uint64_t status;
+    // Non-zero if thread was signaled.
+    uint64_t is_signaled;
+};
+
 void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
 void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
                       uintptr_t pc, uint64_t rflags) __NO_RETURN;
 
-uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-                        uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-                        uint64_t syscall_num, uint64_t ip);
+struct x86_64_syscall_result x86_64_syscall(
+    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+    uint64_t syscall_num, uint64_t ip);
 
 void x86_syscall(void);
+
+void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs);
 
 /* @brief Register all of the CPUs in the system
  *

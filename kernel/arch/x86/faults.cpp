@@ -433,11 +433,20 @@ void x86_exception_handler(x86_iframe_t *frame)
         frame->vector, frame->ip);
 }
 
-__WEAK uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-                               uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-                               uint64_t syscall_num, uint64_t ip)
+__WEAK struct x86_64_syscall_result x86_64_syscall(
+    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+    uint64_t syscall_num, uint64_t ip)
 {
     PANIC_UNIMPLEMENTED;
+}
+
+void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs)
+{
+    thread_t *thread = get_current_thread();
+    x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_SYSCALL, gregs);
+    thread_process_pending_signals();
+    x86_reset_suspended_general_regs(&thread->arch);
 }
 
 #if WITH_LIB_MAGENTA

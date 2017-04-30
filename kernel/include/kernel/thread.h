@@ -228,6 +228,12 @@ lk_time_t thread_runtime(const thread_t *t);
 /* deliver a kill signal to a thread */
 void thread_kill(thread_t *t, bool block);
 
+/* return true if thread has been signaled */
+static inline bool thread_is_signaled(thread_t *t)
+{
+    return t->signals != 0;
+}
+
 /* process pending signals, may never return because of kill signal */
 void thread_process_pending_signals(void);
 

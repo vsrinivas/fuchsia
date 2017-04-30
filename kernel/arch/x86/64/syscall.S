@@ -63,6 +63,10 @@ FUNCTION(x86_syscall)
     /* call the high level routine */
     call    x86_64_syscall
 
+    /* at this point:
+       rax = syscall result
+       rdx = non-zero if thread was signaled */
+
     /* skip some of the arguments we pushed on the stack (rax, r13 and r12).
      * r12 and r13 are callee-saved, so they won't have been clobbered. */
     add     $8 * 3, %rsp
@@ -74,10 +78,17 @@ FUNCTION(x86_syscall)
     /* zero out trashed arg registers */
     xor     %rdi, %rdi
     xor     %rsi, %rsi
-    xor     %rdx, %rdx
+    /*xor     %rdx, %rdx - can't yet, contains "is signaled" indicator */
     xor     %r10, %r10
     xor     %r8, %r8
     xor     %r9, %r9
+
+    cmp     $0, %rdx
+    jnz     .Lthread_signaled
+
+    /*xor     %rdx, %rdx - already zero */
+
+.Lreturn_from_syscall:
 
     /* make sure interrupts are disabled */
     cli
@@ -91,6 +102,54 @@ FUNCTION(x86_syscall)
     /* This will fault if the return address is non-canonical.  See
      * docs/magenta/sysret_problem.md for how we avoid that. */
     sysretq
+
+.Lthread_signaled:
+    /* fill in x86_syscall_general_regs_t
+       Because we don't save the regs unless we have to a lot of the original
+       values are gone. The user just has to deal with it. One important thing
+       to do here is not leak kernel values to userspace. */
+    movq    (%rsp), %rdi /* user rsp */
+    push    %r11 /* rflags */
+    push    %rcx /* rip */
+    push    %r15
+    push    %r14
+    push    %r13
+    push    %r12
+    push    %r11
+    push    %r10
+    push    %r9
+    push    %r8
+    push    %rdi /* rsp */
+    push    %rbp
+    pushq   $0
+    push    %rsi
+    pushq   $0 /* instead of signaled flag */
+    push    %rcx
+    push    %rbx
+    push    %rax
+
+    movq    %rsp, %rdi
+    call    x86_syscall_process_pending_signals
+
+    pop     %rax
+    pop     %rbx
+    pop     %rcx
+    pop     %rdx
+    pop     %rsi
+    pop     %rdi
+    pop     %rbp
+    pop     %r8 /* discard any changed %rsp value - TODO(dje): check ok */
+    pop     %r8
+    pop     %r9
+    pop     %r10
+    pop     %r11
+    pop     %r12
+    pop     %r13
+    pop     %r14
+    pop     %r15
+    pop     %rcx
+    pop     %r11
+    jmp     .Lreturn_from_syscall
 
 END(x86_syscall)
 

@@ -81,15 +81,21 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 #if ARCH_X86_64
 #include <arch/x86.h>
 
-uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-                        uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-                        uint64_t syscall_num, uint64_t ip) {
+struct x86_64_syscall_result x86_64_syscall(
+    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+    uint64_t syscall_num, uint64_t ip) {
+
+    thread_t* thread = get_current_thread();
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely((syscall_num >> 32) != 0xff00ff)) {
         LTRACEF("syscall does not have magenta magic, %#" PRIx64
                 " @ IP %#" PRIx64 "\n", syscall_num, ip);
-        return ERR_BAD_SYSCALL;
+        struct x86_64_syscall_result result;
+        result.status = ERR_BAD_SYSCALL;
+        result.is_signaled = thread_is_signaled(thread);
+        return result;
     }
     syscall_num &= 0xffffffff;
 
@@ -101,19 +107,20 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
     arch_enable_ints();
 
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
-                  get_current_thread(), syscall_num, ip);
+                  thread, syscall_num, ip);
 
     uint64_t ret = invoke_syscall(syscall_num, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
-    /* check to see if there are any pending signals */
-    thread_process_pending_signals();
+    LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", thread, ret);
 
-    LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", get_current_thread(), ret);
-
-    arch_disable_ints();
     ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
 
-    return ret;
+    // The assembler caller will re-disable interrupts at the appropriate time.
+
+    struct x86_64_syscall_result result;
+    result.status = ret;
+    result.is_signaled = thread_is_signaled(thread);
+    return result;
 }
 
 #endif
