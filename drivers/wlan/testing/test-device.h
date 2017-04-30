@@ -37,7 +37,7 @@ class Device {
     mx_device_t* test_device_;
     test_protocol_t* test_ops_;
 
-    mx_device_t device_;
+    mx_device_t* device_;
     mx_protocol_device_t device_ops_ = {};
     wlanmac_protocol_t wlanmac_ops_ = {};
 

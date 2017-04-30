@@ -63,7 +63,7 @@ class Device {
     mx_driver_t* driver_;
 
     // Generic ddk device
-    mx_device_t device_;
+    mx_device_t* device_;
     mx_protocol_device_t device_ops_ = {};
 
     // Wlan mac device

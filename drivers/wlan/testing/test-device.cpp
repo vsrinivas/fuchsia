@@ -24,7 +24,10 @@ mx_status_t Device::Bind() {
                            void* out_buf, size_t out_len) -> ssize_t {
         return static_cast<Device*>(dev->ctx)->Ioctl(ops, in_buf, in_len, out_buf, out_len);
     };
-    device_init(&device_, driver_, "wlan-test", &device_ops_);
+    auto status = device_create("wlan-test", this, &device_ops_, driver_, &device_);
+    if (status != NO_ERROR) {
+        return status;
+    }
 
     wlanmac_ops_.query = [](mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
         return static_cast<Device*>(dev->ctx)->Query(options, info);
@@ -42,23 +45,26 @@ mx_status_t Device::Bind() {
         return static_cast<Device*>(dev->ctx)->SetChannel(options, chan);
     };
 
-    device_.ctx = this;
-    device_.protocol_id = MX_PROTOCOL_WLANMAC;
-    device_.protocol_ops = &wlanmac_ops_;
+    device_set_protocol_id(device_, MX_PROTOCOL_WLANMAC, &wlanmac_ops_);
 
     // squash unused member error
     // TODO: use test_ops_ for setting up output and control handles
     (void)test_ops_;
 
-    return device_add(&device_, test_device_);
+    status = device_add(device_, test_device_);
+    if (status != NO_ERROR) {
+        device_destroy(device_);
+    }
+    return status;
 }
 void Device::Unbind() {
     std::printf("wlan::testing::Device::Unbind()\n");
-    device_remove(&device_);
+    device_remove(device_);
 }
 
 mx_status_t Device::Release() {
     std::printf("wlan::testing::Device::Release()\n");
+    device_destroy(device_);
     delete this;
     return NO_ERROR;
 }

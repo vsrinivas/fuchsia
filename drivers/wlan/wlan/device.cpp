@@ -34,9 +34,14 @@ mx_status_t Device::Bind() {
 
     device_ops_.unbind = [](mx_device_t* dev){ WLAN_DEV(dev->ctx)->Unbind(); };
     device_ops_.release = [](mx_device_t* dev) { return WLAN_DEV(dev->ctx)->Release(); };
-    device_init(&device_, driver_, "wlan", &device_ops_);
 
-    auto status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
+    auto status = device_create("wlan", this, &device_ops_, driver_, &device_);
+    if (status != NO_ERROR) {
+        warnf("device_create failed: %d\n", status);
+        return status;
+    }
+
+    status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
     if (status != NO_ERROR) {
         warnf("could not query wlan mac device: %d\n", status);
     }
@@ -57,18 +62,17 @@ mx_status_t Device::Bind() {
         WLAN_DEV(cookie)->Recv(data, length, flags);
     };
 
-    device_.ctx = this;
-    device_.protocol_id = MX_PROTOCOL_ETHERMAC;
-    device_.protocol_ops = &ethmac_ops_;
+    device_set_protocol(device_, MX_PROTOCOL_ETHERMAC, &ethmac_ops_);
 
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
     if (status != NO_ERROR) {
         errorf("could not create port: %d\n", status);
+        device_destroy(device_);
         return status;
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = device_add(&device_, wlanmac_device_);
+    status = device_add(device_, wlanmac_device_);
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
@@ -78,6 +82,7 @@ mx_status_t Device::Bind() {
         if (work_thread_.joinable()) {
             work_thread_.join();
         }
+        device_destroy(device_);
     } else {
         debugf("device added\n");
     }
@@ -87,7 +92,7 @@ mx_status_t Device::Bind() {
 
 void Device::Unbind() {
     debugfn();
-    device_remove(&device_);
+    device_remove(device_);
 }
 
 mx_status_t Device::Release() {
@@ -101,6 +106,7 @@ mx_status_t Device::Release() {
             work_thread_.join();
         }
     }
+    device_destroy(device_);
     delete this;
     return NO_ERROR;
 }
