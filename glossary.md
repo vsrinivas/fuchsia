@@ -31,14 +31,14 @@ datagram-like transport that can transfer small messages including Handles.
 
 #### **DevHost**
 
-A Device Host (DevHost) is a process containing one or more device drivers.  They are 
-created by the Device Manager, as needed, to provide isolation between drivers for 
+A Device Host (DevHost) is a process containing one or more device drivers.  They are
+created by the Device Manager, as needed, to provide isolation between drivers for
 stability and security.
 
 #### **DevMgr**
 
-The Device Manager (DevMgr) is responsible for enumerating, loading, and managing the 
-lifecycle of device drivers, as well as low level system tasks (providing filesystem 
+The Device Manager (DevMgr) is responsible for enumerating, loading, and managing the
+lifecycle of device drivers, as well as low level system tasks (providing filesystem
 servers for the boot filesystem, launching [Init](#Init), and so on).
 
 #### **DDK**
@@ -59,7 +59,18 @@ It will replace Magenta's older BootFS container and be used in Fuchsia Packages
 - [FAR Spec](https://fuchsia.googlesource.com/docs/+/master/archive_format.md)
 
 #### **FIDL**
+
+The Fuchsia Interface Definition Language (FIDL) is a language for defining protocols
+for use over [Channels](#channel). FIDL is programming language agnostic and has
+bindings for many popular languages, including C, C++, Dart, Go, and Rust. This
+approach lets system components written in a variety of languages interact seamlessly.
+
 #### **Flutter**
+
+[Flutter](https://flutter.io/) is a functional-reactive user interface framework
+optimized for Fuchsia and is used by many system components. Flutter also runs on
+a variety of other platform, including Android and iOS. Fuchsia itself does not
+require you to use any particular language or user interface framework.
 
 #### **GN**
 
@@ -77,7 +88,15 @@ to a kernel object.  They can be passed to other processes over [Channel](#Chann
 - [Handle (in Magenta Concepts Doc)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md)
 
 #### **Init**
+
+Init is the first process that runs in the "fuchsia" [Job](#job). It is started by
+[DevMgr](#devmgr) and is responsible for starting (and restarting) the rest of the
+user space processes. Init is an extremely simple program that is optimized for
+never crashing. For example, Init does not dynamically allocate memory.
+
 #### **Jiri**
+
+#### **Job**
 
 #### **Launchpad**
 
@@ -128,7 +147,7 @@ functional implementations.
 #### **Namespace**
 
 A namespace is the composite hierarchy of files, directories, sockets, [service](#Service)s,
-and other named objects which are offered to application components by their 
+and other named objects which are offered to application components by their
 [environment](#Environment).
 - [Fuchsia Namespace Spec](https://fuchsia.googlesource.com/docs/+/master/namespaces.md)
 
@@ -151,6 +170,17 @@ of FIDL Interfaces (File, Directory, Device, ...) allowing easier interoperabili
 and more flexible asynchronous IO for clients or servers.
 
 #### **Service**
+
+A service is an implementation of a [FIDL](#FIDL) interface. Components can offer
+their creator a set of services, which the creator can either use directly or
+offer to other components.
+
+Services can also be obtained by interface name from a [Namespace](#namespace),
+which lets the component that created the namespace pick the implementation of
+the interface. Long-running services, such as [Mozart](#mozart), are typically
+obtained through a [Namespace](#namespace), which lets many clients connect to a
+common implementation.
+
 #### **Story**
 #### **Story Shell**
 #### **User Shell**
@@ -159,8 +189,8 @@ and more flexible asynchronous IO for clients or servers.
 
 The VDSO is a Virtual Shared Library -- it is provided by the [Magenta](#Magenta) kernel
 and does not appear in the filesystem or a package.  It provides the Magenta System Call
-API/ABI to userspace processes in the form of an ELF library that's "always there."  
-In the Fuchsia SDK and [Magenta DDK](#DDK) it exists as `libmagenta.so` for the purpose of 
+API/ABI to userspace processes in the form of an ELF library that's "always there."
+In the Fuchsia SDK and [Magenta DDK](#DDK) it exists as `libmagenta.so` for the purpose of
 having something to pass to the linker representing the VDSO.
 
 #### **VMAR**
