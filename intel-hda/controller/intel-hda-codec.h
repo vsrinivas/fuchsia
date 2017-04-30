@@ -161,7 +161,7 @@ private:
     // Device properties.
     const uint8_t codec_id_;
     mx_device_prop_t dev_props_[PROP_COUNT];
-    mx_device_t dev_node_;
+    mx_device_t* dev_node_ = nullptr;
 
     // Active DMA streams
     mxtl::Mutex          active_streams_lock_;

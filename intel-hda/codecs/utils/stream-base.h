@@ -102,7 +102,7 @@ private:
     uint8_t  dma_stream_tag_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_TAG;
 
     mx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
-    mx_device_t  stream_device_ __TA_GUARDED(obj_lock_);
+    mx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
     mxtl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(obj_lock_);
 

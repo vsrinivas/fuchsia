@@ -21,7 +21,10 @@ mx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .openat       = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
-    .release      = nullptr,
+    .release      = [](mx_device_t* stream_dev) -> mx_status_t {
+                        device_destroy(stream_dev);
+                        return NO_ERROR;
+                    },
     .read         = nullptr,
     .write        = nullptr,
     .iotxn_queue  = nullptr,
@@ -40,7 +43,6 @@ IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
     : id_(id),
       is_input_(is_input) {
     snprintf(dev_name_, sizeof(dev_name_), "%s-stream-%03u", is_input_ ? "input" : "output", id_);
-    memset(&stream_device_, 0, sizeof(stream_device_));
 }
 
 void IntelHDAStreamBase::PrintDebugPrefix() const {
@@ -116,7 +118,7 @@ void IntelHDAStreamBase::Deactivate() {
 
         // If we had published a device node, remove it now.
         if (parent_device_ != nullptr) {
-            device_remove(&stream_device_);
+            device_remove(stream_device_);
             parent_device_ = nullptr;
         }
     }
@@ -132,17 +134,23 @@ mx_status_t IntelHDAStreamBase::PublishDevice(mx_driver_t* codec_driver,
     if (shutting_down_ || (parent_device_ != nullptr)) return ERR_BAD_STATE;
 
     // Initialize our device and fill out the protocol hooks
-    device_init(&stream_device_, codec_driver, dev_name_, &STREAM_DEVICE_THUNKS);
-    stream_device_.protocol_id  = is_input()
-                                ? MX_PROTOCOL_AUDIO2_INPUT
-                                : MX_PROTOCOL_AUDIO2_OUTPUT;
-    stream_device_.protocol_ops = nullptr;
-    stream_device_.ctx = this;
-
-    // Publish the device.
-    mx_status_t res = device_add(&stream_device_, codec_device);
+    mx_status_t res = device_create(dev_name_, this, &STREAM_DEVICE_THUNKS, codec_driver,
+                                    &stream_device_);
     if (res != NO_ERROR) {
         LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
+        return res;
+    }
+    if (is_input()) {
+        device_set_protocol(stream_device_, MX_PROTOCOL_AUDIO2_INPUT, nullptr);
+    } else {
+        device_set_protocol(stream_device_, MX_PROTOCOL_AUDIO2_OUTPUT, nullptr);
+    }
+
+    // Publish the device.
+    res = device_add(stream_device_, codec_device);
+    if (res != NO_ERROR) {
+        LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
+        device_destroy(stream_device_);
         return res;
     }
 

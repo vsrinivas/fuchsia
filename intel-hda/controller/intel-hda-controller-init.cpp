@@ -447,9 +447,12 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
 
     // Generate a device name and initialize our device structure
     snprintf(debug_tag_, sizeof(debug_tag_), "intel-hda-%03u", id());
-    device_init(&dev_node_, driver_, debug_tag_, &CONTROLLER_DEVICE_THUNKS);
-    dev_node_.protocol_id  = MX_PROTOCOL_IHDA;
-    dev_node_.protocol_ops = nullptr;
+    res = device_create(debug_tag_, this, &CONTROLLER_DEVICE_THUNKS, driver_, &dev_node_);
+    if (res != NO_ERROR) {
+        return res;
+    }
+
+    device_set_protocol(dev_node_, MX_PROTOCOL_IHDA, nullptr);
 
     // Start the IRQ thread.
     // TODO(johngro) : Fix this; C11 does not support thrd_create_with_name but MUSL does.
@@ -470,6 +473,7 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     if (c11_res < 0) {
         LOG("Failed create IRQ thread! (res = %d)\n", c11_res);
         SetState(State::SHUT_DOWN);
+        device_destroy(dev_node_);
         return ERR_INTERNAL;
     }
 
@@ -498,14 +502,13 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     // Put an unmanaged reference to ourselves in the device node we are about
     // to publish.  Only perform an manual AddRef if we succeed in publishing
     // our device.
-    dev_node_.ctx = this;
-    res = device_add(&dev_node_, pci_dev_);
+    res = device_add(dev_node_, pci_dev_);
     if (res == NO_ERROR) {
         this->AddRef();
         SetState(State::OPERATING);
         WakeupIRQThread();
     } else {
-        dev_node_.ctx = nullptr;
+        device_destroy(dev_node_);
     }
 
     return res;
