@@ -6,8 +6,8 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/iotxn.h>
-#include <ddk/common/hid.h>
 #include <ddk/common/usb.h>
+#include <ddk/protocol/hidbus.h>
 #include <magenta/hw/usb-hid.h>
 
 #include <hexdump/hexdump.h>
@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <threads.h>
 
 #define USB_HID_SUBCLASS_BOOT   0x01
 #define USB_HID_PROTOCOL_KBD    0x01
@@ -24,8 +25,15 @@
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
 typedef struct usb_hid_device {
-    mx_hid_device_t hiddev;
+    mx_device_t* mxdev;
     mx_device_t* usbdev;
+
+    hid_info_t info;
+    iotxn_t* txn;
+
+    mtx_t lock;
+    hidbus_ifc_t* ifc;
+    void* cookie;
 
     uint8_t interface;
     usb_hid_descriptor_t* hid_desc;
@@ -47,7 +55,11 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
         requeue = false;
         break;
     case NO_ERROR:
-        hid_io_queue(&hid->hiddev, buffer, txn->actual);
+        mtx_lock(&hid->lock);
+        if (hid->ifc) {
+            hid->ifc->io_queue(hid->cookie, buffer, txn->actual);
+        }
+        mtx_unlock(&hid->lock);
         break;
     default:
         printf("usb-hid: unknown interrupt status %d\n", txn->status);
@@ -59,9 +71,41 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
     }
 }
 
-static mx_status_t usb_hid_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type,
-        void** data, size_t* len) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_query(mx_device_t* dev, uint32_t options, hid_info_t* info) {
+    if (!info) {
+        return ERR_INVALID_ARGS;
+    }
+    usb_hid_device_t* hid = dev->ctx;
+    info->dev_num = hid->info.dev_num;
+    info->dev_class = hid->info.dev_class;
+    info->boot_device = hid->info.boot_device;
+    return NO_ERROR;
+}
+
+static mx_status_t usb_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
+    usb_hid_device_t* hid = dev->ctx;
+    mtx_lock(&hid->lock);
+    if (hid->ifc) {
+        mtx_unlock(&hid->lock);
+        return ERR_ALREADY_BOUND;
+    }
+    hid->ifc = ifc;
+    hid->cookie = cookie;
+    mtx_unlock(&hid->lock);
+    return NO_ERROR;
+}
+
+static void usb_hid_stop(mx_device_t* dev) {
+    usb_hid_device_t* hid = dev->ctx;
+    mtx_lock(&hid->lock);
+    hid->ifc = NULL;
+    hid->cookie = NULL;
+    mtx_unlock(&hid->lock);
+}
+
+static mx_status_t usb_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
+                                          void** data, size_t* len) {
+    usb_hid_device_t* hid = dev->ctx;
     int desc_idx = -1;
     for (int i = 0; i < hid->hid_desc->bNumDescriptors; i++) {
         if (hid->hid_desc->descriptors[i].bDescriptorType == desc_type) {
@@ -88,29 +132,29 @@ static mx_status_t usb_hid_get_descriptor(mx_hid_device_t* dev, uint8_t desc_typ
     return NO_ERROR;
 }
 
-static mx_status_t usb_hid_get_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
-        void* data, size_t len) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+                                      void* data, size_t len) {
+    usb_hid_device_t* hid = dev->ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
 }
 
-static mx_status_t usb_hid_set_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
-        void* data, size_t len) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_set_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+                                      void* data, size_t len) {
+    usb_hid_device_t* hid = dev->ctx;
     return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_REPORT, (rpt_type << 8 | rpt_id), hid->interface, data, len);
 }
 
-static mx_status_t usb_hid_get_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_get_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
+    usb_hid_device_t* hid = dev->ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_IDLE, rpt_id, hid->interface, duration, sizeof(*duration));
 }
 
-static mx_status_t usb_hid_set_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t duration) {
+static mx_status_t usb_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t duration) {
     mx_status_t status;
-    usb_hid_device_t* hid = to_usb_hid(dev);
+    usb_hid_device_t* hid = dev->ctx;
     status = usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0);
     if (status == ERR_IO_REFUSED) {
@@ -121,19 +165,22 @@ static mx_status_t usb_hid_set_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_
     return status;
 }
 
-static mx_status_t usb_hid_get_protocol(mx_hid_device_t* dev, uint8_t* protocol) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_get_protocol(mx_device_t* dev, uint8_t* protocol) {
+    usb_hid_device_t* hid = dev->ctx;
     return usb_control(hid->usbdev, (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol));
 }
 
-static mx_status_t usb_hid_set_protocol(mx_hid_device_t* dev, uint8_t protocol) {
-    usb_hid_device_t* hid = to_usb_hid(dev);
+static mx_status_t usb_hid_set_protocol(mx_device_t* dev, uint8_t protocol) {
+    usb_hid_device_t* hid = dev->ctx;
     return usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0);
 }
 
-static hid_bus_ops_t usb_hid_bus_ops = {
+static hidbus_protocol_t usb_hid_bus_ops = {
+    .query = usb_hid_query,
+    .start = usb_hid_start,
+    .stop = usb_hid_stop,
     .get_descriptor = usb_hid_get_descriptor,
     .get_report = usb_hid_get_report,
     .set_report = usb_hid_set_report,
@@ -141,6 +188,23 @@ static hid_bus_ops_t usb_hid_bus_ops = {
     .set_idle = usb_hid_set_idle,
     .get_protocol = usb_hid_get_protocol,
     .set_protocol = usb_hid_set_protocol,
+};
+
+static void usb_hid_unbind(mx_device_t* dev) {
+    device_remove(dev);
+}
+
+static mx_status_t usb_hid_release(mx_device_t* dev) {
+    usb_hid_device_t* hid = dev->ctx;
+    iotxn_release(hid->txn);
+    device_destroy(hid->mxdev);
+    free(hid);
+    return NO_ERROR;
+}
+
+static mx_protocol_device_t usb_hid_dev_ops = {
+    .unbind = usb_hid_unbind,
+    .release = usb_hid_release,
 };
 
 static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
@@ -192,36 +256,45 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         }
 
         usbhid->usbdev = dev;
-        usbhid->interface = intf->bInterfaceNumber;
+        usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
         usbhid->hid_desc = hid_desc;
 
-        bool boot_dev = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
-        uint8_t dev_class = HID_DEV_CLASS_OTHER;
+        usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
+        usbhid->info.dev_class = HID_DEV_CLASS_OTHER;
         if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-            dev_class = HID_DEV_CLASS_KBD;
+            usbhid->info.dev_class = HID_DEV_CLASS_KBD;
         } else if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
-            dev_class = HID_DEV_CLASS_POINTER;
+            usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
         }
 
-        iotxn_t* usbtxn = usb_alloc_iotxn(endpt->bEndpointAddress, usb_ep_max_packet(endpt));
-        if (usbtxn == NULL) {
+        usbhid->txn = usb_alloc_iotxn(endpt->bEndpointAddress, usb_ep_max_packet(endpt));
+        if (usbhid->txn == NULL) {
             usb_desc_iter_release(&iter);
             free(usbhid);
             return ERR_NO_MEMORY;
         }
-        usbtxn->length = usb_ep_max_packet(endpt);
-        usbtxn->complete_cb = usb_interrupt_callback;
-        usbtxn->cookie = usbhid;
-        iotxn_queue(usbhid->usbdev, usbtxn);
+        usbhid->txn->length = usb_ep_max_packet(endpt);
+        usbhid->txn->complete_cb = usb_interrupt_callback;
+        usbhid->txn->cookie = usbhid;
 
-        hid_init_device(&usbhid->hiddev, &usb_hid_bus_ops, usbhid->interface, boot_dev, dev_class);
-        mx_status_t status = hid_add_device(drv, &usbhid->hiddev, dev);
+        mx_status_t status = device_create("usb-hid", usbhid, &usb_hid_dev_ops, drv, &usbhid->mxdev);
         if (status != NO_ERROR) {
             usb_desc_iter_release(&iter);
-            hid_release_device(&usbhid->hiddev);
+            iotxn_release(usbhid->txn);
             free(usbhid);
             return status;
         }
+        device_set_protocol(usbhid->mxdev, MX_PROTOCOL_HIDBUS, &usb_hid_bus_ops);
+
+        status = device_add(usbhid->mxdev, dev);
+        if (status != NO_ERROR) {
+            usb_desc_iter_release(&iter);
+            iotxn_release(usbhid->txn);
+            device_destroy(usbhid->mxdev);
+            free(usbhid);
+            return status;
+        }
+        iotxn_queue(usbhid->usbdev, usbhid->txn);
 
 next_interface:
         // move on to next interface
