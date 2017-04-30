@@ -74,6 +74,14 @@
 #define X86_FLAGS_ID                    (1<<21)
 #define X86_FLAGS_RESERVED_ONES         0x2
 #define X86_FLAGS_RESERVED              0xffc0802a
+#define X86_FLAGS_USER                  (X86_FLAGS_CF | \
+                                         X86_FLAGS_PF | \
+                                         X86_FLAGS_AF | \
+                                         X86_FLAGS_ZF | \
+                                         X86_FLAGS_SF | \
+                                         X86_FLAGS_TF | \
+                                         X86_FLAGS_DF | \
+                                         X86_FLAGS_OF)
 
 #ifndef ASSEMBLY
 

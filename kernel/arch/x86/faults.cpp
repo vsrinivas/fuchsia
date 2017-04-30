@@ -70,6 +70,18 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
 }
 
 #if WITH_LIB_MAGENTA
+
+static status_t call_magenta_exception_handler(uint kind,
+                                               struct arch_exception_context *context,
+                                               x86_iframe_t *frame)
+{
+    thread_t *thread = get_current_thread();
+    x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
+    status_t status = magenta_exception_handler(kind, context, frame->ip);
+    x86_reset_suspended_general_regs(&thread->arch);
+    return status;
+}
+
 static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 {
     bool from_user = SELECTOR_PL(frame->cs) != 0;
@@ -77,7 +89,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
         struct arch_exception_context context = { false, frame, 0 };
         arch_set_in_int_handler(false);
         arch_enable_ints();
-        status_t erc = magenta_exception_handler(kind, &context, frame->ip);
+        status_t erc = call_magenta_exception_handler(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
         if (erc == NO_ERROR)
@@ -86,6 +98,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 
     return false;
 }
+
 #endif
 
 static void x86_debug_handler(x86_iframe_t *frame)
@@ -290,13 +303,23 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         struct arch_exception_context context = { true, frame, va };
-        status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->ip);
-        return erc;
+        return call_magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT,
+                                              &context, frame);
     }
 #endif
 
     /* fall through to fatal path */
     return ERR_NOT_SUPPORTED;
+}
+
+static void x86_iframe_process_pending_signals(x86_iframe_t *frame)
+{
+    thread_t *thread = get_current_thread();
+    if (unlikely(thread_is_signaled(thread))) {
+        x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
+        thread_process_pending_signals();
+        x86_reset_suspended_general_regs(&thread->arch);
+    }
 }
 
 /* top level x86 exception handler for most exceptions and irqs */
@@ -420,7 +443,7 @@ void x86_exception_handler(x86_iframe_t *frame)
         /* in the case of receiving a kill signal, this function may not return,
          * but the scheduler would have been invoked so it's fine.
          */
-        thread_process_pending_signals();
+        x86_iframe_process_pending_signals(frame);
     }
 
     if (ret != INT_NO_RESCHEDULE)

@@ -850,9 +850,16 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&exception_wait_lock_);
+    // We can't be reading regs while the thread transitions from
+    // SUSPENDED to RUNNING.
+    // TODO(dje): Is it ok to use this lock here?
+    AutoLock state_lock(&state_lock_);
 
-    if (!InExceptionLocked())
+    // OTOH, the thread may be in an exception.
+    // TODO(dje): Can we reduce this to just one lock?
+    AutoLock exception_wait_lock(&exception_wait_lock_);
+
+    if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ERR_BAD_STATE;
 
     switch (state_kind)
@@ -871,9 +878,16 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
 
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&exception_wait_lock_);
+    // We can't be reading regs while the thread transitions from
+    // SUSPENDED to RUNNING.
+    // TODO(dje): Is it ok to use this lock here?
+    AutoLock state_lock(&state_lock_);
 
-    if (!InExceptionLocked())
+    // OTOH, the thread may be in an exception.
+    // TODO(dje): Can we reduce this to just one lock?
+    AutoLock exception_wait_lock(&exception_wait_lock_);
+
+    if (state_ != State::SUSPENDED && !InExceptionLocked())
         return ERR_BAD_STATE;
 
     switch (state_kind)
