@@ -24,7 +24,6 @@ public:
 #endif
     status_t UnmapPage(vaddr_t guest_paddr);
     status_t GetPage(vaddr_t guest_paddr, paddr_t* host_paddr);
-    status_t Read(void* ptr, uint64_t offset, size_t len);
 
 private:
     guest_paspace_t paspace_;

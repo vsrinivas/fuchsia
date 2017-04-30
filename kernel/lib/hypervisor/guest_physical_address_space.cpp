@@ -5,10 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <new.h>
-#include <stdint.h>
 
 #include <hypervisor/guest_physical_address_space.h>
-#include <safeint/safe_math.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 static const uint kApicMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -77,12 +75,4 @@ status_t GuestPhysicalAddressSpace::UnmapPage(vaddr_t guest_paddr) {
 status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* host_paddr) {
     uint mmu_flags;
     return guest_mmu_query(&paspace_, guest_paddr, host_paddr, &mmu_flags);
-}
-
-status_t GuestPhysicalAddressSpace::Read(void* ptr, uint64_t offset, size_t len) {
-    size_t bytes_read;
-    status_t status = guest_phys_mem_->Read(ptr, offset, len, &bytes_read);
-    if (status != NO_ERROR)
-        return status;
-    return bytes_read != len ? ERR_OUT_OF_RANGE : NO_ERROR;
 }
