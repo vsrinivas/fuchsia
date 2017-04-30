@@ -54,7 +54,10 @@ mx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .openat       = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
-    .release      = nullptr,
+    .release      = [](mx_device_t* codec_dev) -> mx_status_t {
+                        device_destroy(codec_dev);
+                        return NO_ERROR;
+                    },
     .read         = nullptr,
     .write        = nullptr,
     .iotxn_queue  = nullptr,
@@ -83,7 +86,6 @@ ihda_codec_protocol_t IntelHDACodec::CODEC_PROTO_THUNKS = {
 IntelHDACodec::IntelHDACodec(IntelHDAController& controller, uint8_t codec_id)
     : controller_(controller),
       codec_id_(codec_id) {
-    ::memset(&dev_node_, 0, sizeof(dev_node_));
     ::memset(&dev_props_, 0, sizeof(dev_props_));
     dev_props_[PROP_PROTOCOL].id    = BIND_PROTOCOL;
     dev_props_[PROP_PROTOCOL].value = MX_PROTOCOL_IHDA_CODEC;
@@ -222,17 +224,19 @@ mx_status_t IntelHDACodec::PublishDevice() {
     snprintf(name, sizeof(name), "intel-hda-codec-%03u", codec_id_);
 
     // Initialize our device and fill out the protocol hooks
-    device_init(&dev_node_, IntelHDAController::driver(), name, &CODEC_DEVICE_THUNKS);
-    dev_node_.ctx          = this;
-    dev_node_.protocol_id  = MX_PROTOCOL_IHDA_CODEC;
-    dev_node_.protocol_ops = &CODEC_PROTO_THUNKS;
-    dev_node_.props        = dev_props_;
-    dev_node_.prop_count   = countof(dev_props_);
+    mx_status_t res = device_create(name, this, &CODEC_DEVICE_THUNKS, IntelHDAController::driver(),
+                                    &dev_node_);
+    if (res != NO_ERROR) {
+        LOG("Failed to create codec device for \"%s\" (res %d)\n", name, res);
+        return res;
+    }
+    device_set_protocol(dev_node_, MX_PROTOCOL_IHDA_CODEC, &CODEC_PROTO_THUNKS);
 
     // Publish the device.
-    mx_status_t res = device_add(&dev_node_, controller_.dev_node());
+    res = device_add_with_props(dev_node_, controller_.dev_node(), dev_props_, countof(dev_props_));
     if (res != NO_ERROR) {
         LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
+        device_destroy(dev_node_);
         return res;
     }
 
@@ -339,7 +343,7 @@ mx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel* channel,
 
     ihda_proto::GetIDsResp resp;
     mx_status_t res;
-    const auto d = &dev_node_;
+    const auto d = dev_node_;
 
     if (((res = GetDevProperty(d, BIND_IHDA_CODEC_VID,         &resp.vid))       != NO_ERROR) ||
         ((res = GetDevProperty(d, BIND_IHDA_CODEC_DID,         &resp.did))       != NO_ERROR) ||

@@ -62,7 +62,6 @@ void IntelHDAController::PrintDebugPrefix() const {
 IntelHDAController::IntelHDAController()
     : state_(static_cast<StateStorage>(State::STARTING)),
       id_(device_id_gen_.fetch_add(1u)) {
-    memset(&dev_node_, 0, sizeof(dev_node_));
     snprintf(debug_tag_, sizeof(debug_tag_), "Unknown IHDA Controller");
 }
 
@@ -200,9 +199,8 @@ void IntelHDAController::DeviceShutdown() {
 
 mx_status_t IntelHDAController::DeviceRelease() {
     // Take our unmanaged reference back from our published device node.
-    MX_DEBUG_ASSERT(dev_node_.ctx == this);
     auto thiz = mxtl::internal::MakeRefPtrNoAdopt(this);
-    dev_node_.ctx = nullptr;
+    device_destroy(dev_node_);
 
     // ASSERT that we have been properly shut down, then release the DDK's
     // reference to our state as we allow thiz to go out of scope.

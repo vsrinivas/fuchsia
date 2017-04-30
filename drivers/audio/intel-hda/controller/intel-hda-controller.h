@@ -42,8 +42,8 @@ public:
 
     mx_status_t Init(mx_device_t* pci_dev);
     void PrintDebugPrefix() const;
-    const char*  dev_name() const { return dev_node_.name; }
-    mx_device_t* dev_node() { return &dev_node_; }
+    const char*  dev_name() const { return device_get_name(dev_node_); }
+    mx_device_t* dev_node() { return dev_node_; }
     unsigned int id() const { return id_; }
 
     // CORB/RIRB
@@ -143,7 +143,7 @@ private:
 
     // Unique ID and published HDA device node.
     const uint32_t id_;
-    mx_device_t dev_node_;
+    mx_device_t* dev_node_ = nullptr;
 
     // PCI Registers and IRQ
     mx_handle_t      irq_handle_  = MX_HANDLE_INVALID;
