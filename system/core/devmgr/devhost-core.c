@@ -227,10 +227,13 @@ static void devhost_device_probe_all(mx_device_t* dev, bool autobind) {
 }
 #endif
 
-void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
-                        const char* name, mx_protocol_device_t* ops) {
-    xprintf("devhost: init '%s' drv=%p, ops=%p\n",
-            name ? name : "<NULL>", driver, ops);
+
+mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
+                                  mx_driver_t* driver, mx_device_t** out) {
+    mx_device_t* dev = malloc(sizeof(mx_device_t));
+    if (dev == NULL) {
+        return ERR_NO_MEMORY;
+    }
 
     memset(dev, 0, sizeof(mx_device_t));
     dev->magic = DEV_MAGIC;
@@ -253,15 +256,6 @@ void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
 
     memcpy(dev->name, name, len);
     dev->name[len] = 0;
-}
-
-mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
-                                  mx_driver_t* driver, mx_device_t** out) {
-    mx_device_t* dev = malloc(sizeof(mx_device_t));
-    if (dev == NULL) {
-        return ERR_NO_MEMORY;
-    }
-    devhost_device_init(dev, driver, name, ops);
     dev->ctx = ctx ? ctx : dev;
     *out = dev;
     return NO_ERROR;

@@ -53,8 +53,6 @@ mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t devhost_device_rebind(mx_device_t* dev);
 mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
                                   mx_driver_t* driver, mx_device_t** out);
-void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
-                        const char* name, mx_protocol_device_t* ops);
 void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
 void devhost_device_set_bindable(mx_device_t* dev, bool bindable);
 mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out,

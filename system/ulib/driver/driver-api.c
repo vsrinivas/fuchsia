@@ -23,11 +23,6 @@ __EXPORT mx_status_t device_create(const char* name, void* ctx,
     return API->device_create(name, ctx, ops, driver, out);
 }
 
-__EXPORT void device_init(mx_device_t* dev, mx_driver_t* drv,
-                          const char* name, mx_protocol_device_t* ops) {
-    API->device_init(dev, drv, name, ops);
-}
-
 __EXPORT void device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
     API->device_set_protocol(dev, proto_id, proto_ops);
 }

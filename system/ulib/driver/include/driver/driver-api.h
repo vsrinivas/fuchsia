@@ -18,8 +18,6 @@ typedef struct driver_api {
     mx_status_t (*device_create)(const char* name, void* ctx,
                                  mx_protocol_device_t* ops, mx_driver_t* driver,
                                  mx_device_t** out);
-    void (*device_init)(mx_device_t* dev, mx_driver_t* drv,
-                        const char* name, mx_protocol_device_t* ops);
     void (*device_set_protocol)(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
     mx_status_t (*device_add)(mx_device_t* dev, mx_device_t* parent,
                               mx_device_prop_t* props, uint32_t prop_count,

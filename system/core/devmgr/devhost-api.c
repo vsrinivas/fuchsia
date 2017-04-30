@@ -39,13 +39,6 @@ static mx_status_t _device_create(const char* name, void* ctx, mx_protocol_devic
     return r;
 }
 
-static void _device_init(mx_device_t* dev, mx_driver_t* drv,
-                         const char* name, mx_protocol_device_t* ops) {
-    DM_LOCK();
-    devhost_device_init(dev, drv, name, ops);
-    DM_UNLOCK();
-}
-
 static void _device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
     DM_LOCK();
     devhost_device_set_protocol(dev, proto_id, proto_ops);
@@ -143,7 +136,6 @@ static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_
 driver_api_t devhost_api = {
     .driver_unbind = _driver_unbind,
     .device_create = _device_create,
-    .device_init = _device_init,
     .device_set_protocol = _device_set_protocol,
     .device_add = _device_add,
     .device_add_instance = _device_add_instance,

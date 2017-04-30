@@ -77,7 +77,7 @@ struct mx_device {
 };
 
 // mx_device_t objects must be created or initialized by the driver manager's
-// device_create() and device_init() functions.  Drivers MAY NOT touch any
+// device_create() function.  Drivers MAY NOT touch any
 // fields in the mx_device_t, except for the protocol_id and protocol_ops
 // fields which it may fill out after init and before device_add() is called,
 // and the ctx field which may be used to store driver-specific data.
@@ -94,7 +94,7 @@ typedef struct mx_protocol_device {
     // that child device instead).  If dev_out is not modified the device itself
     // is opened.
     //
-    // The per-instance child should be created with device_create() or device_init(),
+    // The per-instance child should be created with device_create(),
     // but added with device_add_instance() instead of device_add().
     //
     // open is also called whenever a device is cloned (a new handle is obtained).
