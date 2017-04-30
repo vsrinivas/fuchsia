@@ -4,13 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <platform.h>
 #include <string.h>
 
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <mxtl/algorithm.h>
+#include <platform/pc/timer.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
@@ -33,8 +36,17 @@ static const uint32_t kMaxInstructionLength = 15;
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 
+static const uint32_t kInterruptValid = 1u << 31;
+
 static void next_rip(const ExitInfo& exit_info) {
     vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
+}
+
+static status_t handle_external_interrupt() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    arch_enable_ints();
+    arch_disable_ints();
+    return NO_ERROR;
 }
 
 static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state) {
@@ -58,10 +70,10 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
         if (leaf == X86_CPUID_MODEL_FEATURES) {
             // Enable the hypervisor bit.
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
+            // Disable the VMX bit.
+            guest_state->rcx &= ~(1u << X86_FEATURE_VMX.bit);
             // Disable the x2APIC bit.
             guest_state->rcx &= ~(1u << X86_FEATURE_X2APIC.bit);
-            // Disable the TSC deadline bit.
-            guest_state->rcx &= ~(1u << X86_FEATURE_TSC_DEADLINE.bit);
         }
         if (leaf == X86_CPUID_XSAVE && subleaf == 1) {
             // Disable the XSAVES bit.
@@ -71,6 +83,21 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
     default:
         return ERR_NOT_SUPPORTED;
     }
+}
+
+static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic_state) {
+    // TODO(abdulla): Validate that we're here for a timer.
+    if (local_apic_state->tsc_deadline > rdtsc()) {
+        lk_time_t deadline = ticks_to_nanos(local_apic_state->tsc_deadline);
+        // TODO(abdulla): Use an interruptible sleep here, so that we can:
+        // a) Continue to deliver interrupts to the guest.
+        // b) Kill the hypervisor while a guest is halted.
+        thread_sleep(deadline);
+    }
+    local_apic_state->tsc_deadline = 0;
+    vmcs_write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, kInterruptValid | X86_INT_APIC_TIMER);
+    next_rip(exit_info);
+    return NO_ERROR;
 }
 
 static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
@@ -97,7 +124,8 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
-static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state) {
+static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
+                             LocalApicState* local_apic_state) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rax != kIa32ApicBase || guest_state->rdx != 0)
@@ -112,6 +140,10 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state)
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
         next_rip(exit_info);
+        return NO_ERROR;
+    case X86_MSR_IA32_TSC_DEADLINE:
+        next_rip(exit_info);
+        local_apic_state->tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & 0xffffffff);
         return NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
@@ -420,21 +452,19 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
     return NO_ERROR;
 }
 
-status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state,
+status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_state,
                         IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
                         FifoDispatcher* serial_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
-        dprintf(SPEW, "handling external interrupt\n\n");
-        DEBUG_ASSERT(arch_ints_disabled());
-        arch_enable_ints();
-        arch_disable_ints();
-        return NO_ERROR;
+        return handle_external_interrupt();
     case ExitReason::CPUID:
         dprintf(SPEW, "handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);
+    case ExitReason::HLT:
+        return handle_hlt(exit_info, local_apic_state);
     case ExitReason::IO_INSTRUCTION:
         return handle_io(exit_info, guest_state, serial_fifo);
     case ExitReason::RDMSR:
@@ -442,7 +472,7 @@ status_t vmexit_handler(const VmxState& vmx_state, GuestState* guest_state,
         return handle_rdmsr(exit_info, guest_state);
     case ExitReason::WRMSR:
         dprintf(SPEW, "handling WRMSR instruction\n\n");
-        return handle_wrmsr(exit_info, guest_state);
+        return handle_wrmsr(exit_info, guest_state, local_apic_state);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         dprintf(SPEW, "handling VM entry failure\n\n");

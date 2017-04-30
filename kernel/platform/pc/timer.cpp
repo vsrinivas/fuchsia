@@ -161,6 +161,10 @@ uint64_t ticks_per_second(void)
     return tsc_ticks_per_ms * 1000;
 }
 
+lk_time_t ticks_to_nanos(uint64_t ticks) {
+    return u64_mul_u64_fp32_64(ticks, ns_per_tsc);
+}
+
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static enum handler_return pit_timer_tick(void *arg)
 {

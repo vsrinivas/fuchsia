@@ -205,27 +205,31 @@ EptInfo::EptInfo() {
 ExitInfo::ExitInfo() {
     exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
     exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
-    interruption_information = vmcs_read(VmcsField32::INTERRUPTION_INFORMATION);
-    interruption_error_code = vmcs_read(VmcsField32::INTERRUPTION_ERROR_CODE);
-    instruction_length = vmcs_read(VmcsField32::INSTRUCTION_LENGTH);
-    instruction_information = vmcs_read(VmcsField32::INSTRUCTION_INFORMATION);
+    instruction_length = vmcs_read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
     guest_physical_address = vmcs_read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
-    guest_linear_address = vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS);
-    guest_interruptibility_state = vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
     guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
 
-    if (exit_reason == ExitReason::IO_INSTRUCTION)
+    if (exit_reason == ExitReason::EXTERNAL_INTERRUPT ||
+        exit_reason == ExitReason::HLT ||
+        exit_reason == ExitReason::IO_INSTRUCTION)
         return;
 
     dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
     dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
-    dprintf(SPEW, "interruption information: %#" PRIx32 "\n", interruption_information);
-    dprintf(SPEW, "interruption error code: %#" PRIx32 "\n", interruption_error_code);
+    dprintf(SPEW, "interruption information: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::EXIT_INTERRUPTION_INFORMATION));
+    dprintf(SPEW, "interruption error code: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::EXIT_INTERRUPTION_ERROR_CODE));
     dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
-    dprintf(SPEW, "instruction information: %#" PRIx32 "\n", instruction_information);
+    dprintf(SPEW, "instruction information: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::EXIT_INSTRUCTION_INFORMATION));
     dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
-    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n", guest_linear_address);
-    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n", guest_interruptibility_state);
+    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n",
+        vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
+    dprintf(SPEW, "guest activity state: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
     dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
 }
 
@@ -445,11 +449,13 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     if (status != NO_ERROR)
         return status;
 
-    status = virtual_apic_page_.Alloc(vmx_info, 0);
+    memset(&vmx_state_, 0, sizeof(vmx_state_));
+
+    local_apic_state_.tsc_deadline = 0;
+    status = local_apic_state_.virtual_apic_page.Alloc(vmx_info, 0);
     if (status != NO_ERROR)
         return status;
 
-    memset(&vmx_state_, 0, sizeof(vmx_state_));
     memset(&io_apic_state_, 0, sizeof(io_apic_state_));
     return NO_ERROR;
 }
@@ -583,6 +589,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
     status = set_vmcs_control(VmcsField32::PROCBASED_CTLS,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
+                              // Enable VM exit on HLT instruction.
+                              PROCBASED_CTLS_HLT_EXITING |
                               // Enable TPR virtualization.
                               PROCBASED_CTLS_TPR_SHADOW |
                               // Enable VM exit on IO instructions.
@@ -679,7 +687,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
 
     // Setup APIC handling.
     vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, APIC_PHYS_BASE);
-    vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS, virtual_apic_page_.PhysicalAddress());
+    vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS,
+               local_apic_state_.virtual_apic_page.PhysicalAddress());
 
     // Setup MSR handling.
     vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
@@ -849,11 +858,11 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
 
     status_t status = vmx_enter(&vmx_state_, do_resume_);
     if (status != NO_ERROR) {
-        uint64_t error = vmcs_read(VmcsField32::VM_INSTRUCTION_ERROR);
+        uint64_t error = vmcs_read(VmcsField32::INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         do_resume_ = true;
-        status = vmexit_handler(vmx_state_, &vmx_state_.guest_state, &io_apic_state_, gpas,
+        status = vmexit_handler(&vmx_state_.guest_state, &local_apic_state_, &io_apic_state_, gpas,
                                 serial_fifo);
     }
     return status;

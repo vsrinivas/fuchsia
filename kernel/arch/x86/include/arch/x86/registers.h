@@ -42,6 +42,7 @@
 #define X86_MSR_IA32_MTRR_FIX4K_C0000   0x00000268 /* MTRR FIX4K_C0000 model-specific register */
 #define X86_MSR_IA32_MTRR_FIX4K_F8000   0x0000026f /* MTRR FIX4K_F8000 model-specific register */
 #define X86_MSR_IA32_PAT                0x00000277 /* PAT model-specific register */
+#define X86_MSR_IA32_TSC_DEADLINE       0x000006e0 /* TSC deadline model-specific register */
 #define X86_MSR_IA32_EFER               0xc0000080 /* EFER model-specific register */
 #define X86_MSR_IA32_STAR               0xc0000081 /* system call address */
 #define X86_MSR_IA32_LSTAR              0xc0000082 /* long mode call address */

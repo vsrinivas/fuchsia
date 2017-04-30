@@ -27,8 +27,6 @@
 // Initialization MSR
 #define IA32_APIC_BASE_X2APIC_ENABLE (1 << 10)
 
-#define IA32_TSC_DEADLINE_MSR 0x6E0
-
 // Virtual address of the local APIC's MMIO registers
 static void *apic_virt_base;
 
@@ -261,7 +259,7 @@ void apic_timer_stop(void) {
     arch_interrupt_save(&state, 0);
     *INIT_COUNT_ADDR = 0;
     if (x86_feature_test(X86_FEATURE_TSC_DEADLINE)) {
-        write_msr(IA32_TSC_DEADLINE_MSR, 0);
+        write_msr(X86_MSR_IA32_TSC_DEADLINE, 0);
     }
     arch_interrupt_restore(state, 0);
 }
@@ -305,7 +303,7 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
     // takes before the write_msr(), since writes to this MSR are ignored if the
     // time mode is not DEADLINE.
     mb();
-    write_msr(IA32_TSC_DEADLINE_MSR, deadline);
+    write_msr(X86_MSR_IA32_TSC_DEADLINE, deadline);
 
     arch_interrupt_restore(state, 0);
 }

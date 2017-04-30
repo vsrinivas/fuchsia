@@ -80,13 +80,14 @@ enum class VmcsField32 : uint64_t {
     EXIT_MSR_LOAD_COUNT             = 0x4010,   /* VM-exit MSR-load count */
     ENTRY_CTLS                      = 0x4012,   /* VM-entry controls */
     ENTRY_MSR_LOAD_COUNT            = 0x4014,   /* VM-entry MSR-load count */
+    ENTRY_INTERRUPTION_INFORMATION  = 0x4016,   /* VM-entry interruption-information field */
     PROCBASED_CTLS2                 = 0x401e,   /* Secondary processor-based controls */
-    VM_INSTRUCTION_ERROR            = 0x4400,   /* VM instruction error */
+    INSTRUCTION_ERROR               = 0x4400,   /* VM instruction error */
     EXIT_REASON                     = 0x4402,   /* Exit reason */
-    INTERRUPTION_INFORMATION        = 0x4404,   /* VM-exit interruption information */
-    INTERRUPTION_ERROR_CODE         = 0x4406,   /* VM-exit interruption error code */
-    INSTRUCTION_LENGTH              = 0x440c,   /* VM-exit instruction length */
-    INSTRUCTION_INFORMATION         = 0x440e,   /* VM-exit instruction information */
+    EXIT_INTERRUPTION_INFORMATION   = 0x4404,   /* VM-exit interruption information */
+    EXIT_INTERRUPTION_ERROR_CODE    = 0x4406,   /* VM-exit interruption error code */
+    EXIT_INSTRUCTION_LENGTH         = 0x440c,   /* VM-exit instruction length */
+    EXIT_INSTRUCTION_INFORMATION    = 0x440e,   /* VM-exit instruction information */
     HOST_IA32_SYSENTER_CS           = 0x4c00,   /* Host SYSENTER CS */
     GUEST_GDTR_LIMIT                = 0x4810,   /* Guest GDTR Limit */
     GUEST_IDTR_LIMIT                = 0x4812,   /* Guest IDTR Limit */
@@ -138,6 +139,7 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS2_VPID                (1u << 5)
 
 /* PROCBASED_CTLS flags */
+#define PROCBASED_CTLS_HLT_EXITING          (1u << 7)
 #define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
 #define PROCBASED_CTLS_CR3_STORE_EXITING    (1u << 16)
 #define PROCBASED_CTLS_CR8_LOAD_EXITING     (1u << 19)
@@ -153,7 +155,6 @@ enum class VmcsFieldXX : uint64_t {
 
 /* EXIT_CTLS flags */
 #define EXIT_CTLS_64BIT_MODE                (1u << 9)
-#define EXIT_CTLS_ACK_INTERRUPT             (1u << 15)
 #define EXIT_CTLS_SAVE_IA32_PAT             (1u << 18)
 #define EXIT_CTLS_LOAD_IA32_PAT             (1u << 19)
 #define EXIT_CTLS_SAVE_IA32_EFER            (1u << 20)
@@ -171,6 +172,7 @@ enum class VmcsFieldXX : uint64_t {
 enum class ExitReason : uint32_t {
     EXTERNAL_INTERRUPT          = 1u,
     CPUID                       = 10u,
+    HLT                         = 12u,
     IO_INSTRUCTION              = 30u,
     RDMSR                       = 31u,
     WRMSR                       = 32u,
@@ -231,13 +233,8 @@ struct EptInfo {
 struct ExitInfo {
     ExitReason exit_reason;
     uint64_t exit_qualification;
-    uint32_t interruption_information;
-    uint32_t interruption_error_code;
     uint32_t instruction_length;
-    uint32_t instruction_information;
     uint64_t guest_physical_address;
-    uint64_t guest_linear_address;
-    uint32_t guest_interruptibility_state;
     uint64_t guest_rip;
 
     ExitInfo();
@@ -285,6 +282,14 @@ struct AutoVmcsLoad {
     ~AutoVmcsLoad();
 };
 
+/* Stores the local APIC state across VM exits. */
+struct LocalApicState {
+    // TSC deadline.
+    uint64_t tsc_deadline;
+    // Virtual local APIC page.
+    VmxPage virtual_apic_page;
+};
+
 /* Stores the IO APIC state across VM exits. */
 struct IoApicState {
     // IO register-select register.
@@ -308,8 +313,8 @@ private:
     bool do_resume_ = false;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
-    VmxPage virtual_apic_page_;
     VmxState vmx_state_;
+    LocalApicState local_apic_state_;
     IoApicState io_apic_state_;
 };
 
