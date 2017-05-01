@@ -7,7 +7,9 @@
 
 #include <asm.h>
 #include <arch/asm_macros.h>
+#include <arch/arch_thread.h>
 #include <arch/arm64.h>
+#include <arch/arm64/exceptions.h>
 
 .section .text.boot.vectab,"ax",@progbits
 .align 12
@@ -116,6 +118,7 @@ add sp, sp, #32
     mov x0, sp
     mov x1, \exception_flags
     bl  arm64_irq
+    cbnz x0, arm64_finish_user_irq_wrapper /* anything extra to do? */
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
     b   arm64_exc_shared_restore_short
 .endm
@@ -221,6 +224,39 @@ END(arm64_fiq_lower_el_32)
 LOCAL_FUNCTION(arm64_err_exc_lower_el_32)
     invalid_exception 0x33
 END(arm64_err_exc_lower_el_32)
+
+/* If an IRQ happened in userspace, and either the thread was signaled or
+   needs to be rescheduled, then we end up here after arm64_irq returns.
+   Suspending the thread requires constructing a long iframe in order to
+   provide the values of all regs to any debugger that wishes to access
+   them, but we can't do that until arm64_irq returns as we rely on the
+   compiler to save/restore callee-saved regs. */
+LOCAL_FUNCTION(arm64_finish_user_irq_wrapper)
+    /* if we're only here because of a need to reschedule then we don't
+       need to construct a long iframe */
+    cmp x0, #ARM64_IRQ_EXIT_RESCHEDULE
+    bne 1f
+    mov x1, #0 /* don't need an iframe, just pass NULL */
+    bl  arm64_finish_user_irq
+    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
+    b   arm64_exc_shared_restore_short
+1:
+    /* need to construct a long iframe
+       Since we're going to be suspending the thread, keep it simple and just
+       undo the short frame and replace it with a long frame. */
+    mrs x1, tpidr_el1
+    str w0, [x1, #ARM64_SAVED_EXIT_FLAGS_OFFSET]
+    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
+    regrestore_short
+    regsave_long
+    msr daifclr, #1 /* reenable fiqs once elr and spsr have been saved */
+    mrs x1, tpidr_el1
+    ldr w0, [x1, #ARM64_SAVED_EXIT_FLAGS_OFFSET]
+    mov x1, sp
+    bl  arm64_finish_user_irq
+    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
+    b   arm64_exc_shared_restore_long
+END(arm64_finish_user_irq_wrapper)
 
 LOCAL_FUNCTION(arm64_exc_shared_restore_long)
     regrestore_long

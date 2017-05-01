@@ -12,6 +12,7 @@
 #include <trace.h>
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
+#include <arch/arm64/exceptions.h>
 #include <kernel/thread.h>
 #include <platform.h>
 
@@ -306,7 +307,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
 }
 
 /* called from assembly */
-extern "C" void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
+extern "C" uint32_t arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
 {
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
@@ -319,14 +320,34 @@ extern "C" void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flag
 
     /* if we came from user space, check to see if we have any signals to handle */
     if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
-        /* in the case of receiving a kill signal, this function may not return,
-         * but the scheduler would have been invoked so it's fine.
-         */
-        thread_process_pending_signals();
+        uint32_t exit_flags = 0;
+        thread_t *thread = get_current_thread();
+        if (thread_is_signaled(thread))
+            exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
+        if (ret != INT_NO_RESCHEDULE)
+            exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
+        return exit_flags;
     }
 
     /* preempt the thread if the interrupt has signaled it */
     if (ret != INT_NO_RESCHEDULE)
+        thread_preempt(true);
+    return 0;
+}
+
+/* called from assembly */
+extern "C" void arm64_finish_user_irq(uint32_t exit_flags, struct arm64_iframe_long *iframe)
+{
+    /* in the case of receiving a kill signal, this function may not return,
+     * but the scheduler would have been invoked so it's fine.
+     */
+    if (unlikely(exit_flags & ARM64_IRQ_EXIT_THREAD_SIGNALED)) {
+        DEBUG_ASSERT(iframe != nullptr);
+        arm64_thread_process_pending_signals(iframe);
+    }
+
+    /* preempt the thread if the interrupt has signaled it */
+    if (exit_flags & ARM64_IRQ_EXIT_RESCHEDULE)
         thread_preempt(true);
 }
 
