@@ -17,7 +17,7 @@ args="$args magma_enable_tracing=false"
 
 rm -f $bootfs
 cd $fuchsia_root
-$fuchsia_root/packages/gn/gen.py --modules magma-dev --$build --args="$args"
+$fuchsia_root/packages/gn/gen.py --modules magma-dev --$build --args="$args" --ignore-skia
 $fuchsia_root/buildtools/ninja -C $build_dir
 cp $build_dir/user.bootfs $bootfs
 
