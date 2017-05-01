@@ -94,9 +94,7 @@ func (n *node) Metadata() *Metadata {
 func (n *node) SetSize(size int64) {
 	clusterSize := int64(n.metadata.Br.ClusterSize())
 	maxSize := clusterSize * int64(len(n.clusters))
-	if n.deleted {
-		panic("Should not modify size of deleted node")
-	} else if maxSize < size {
+	if maxSize < size {
 		panic("Setting size larger than accessible by known clusters")
 	} else if !n.IsRoot() && n.IsDirectory() && size <= 0 {
 		panic("Should not attempt to set size of non-root directory to less than or equal to zero")
@@ -133,6 +131,10 @@ func (n *node) MarkDeleted() {
 
 	n.deleted = true
 	n.parent = nil
+}
+
+func (n *node) IsDeleted() bool {
+	return n.deleted
 }
 
 func (n *node) RefUp() {
@@ -292,14 +294,14 @@ func (n *node) writeAt(buf []byte, off int64) (int, error) {
 		}
 		if err != nil {
 			if bytesWritten > 0 {
-				n.mtime = time.Now()
+				n.mtime = direntry.ModifyTime(time.Now())
 			}
 			return bytesWritten, err
 		}
 	}
 
 	if bytesWritten > 0 {
-		n.mtime = time.Now()
+		n.mtime = direntry.ModifyTime(time.Now())
 	}
 
 	// We successfully wrote as many bytes as possible, but the request was still for an unmanagable

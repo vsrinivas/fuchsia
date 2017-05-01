@@ -27,8 +27,8 @@ var (
 	// ErrReadOnly indicates that the operation failed because the underlying resource is read only
 	ErrReadOnly = ErrPermission
 
-	// ErrResourceExhausted indicates that a resource (such as disk space) has been used up
-	ErrResourceExhausted = errors.New("a filesystem resource has been exhausted")
+	// ErrNoSpace indicates that a resource (such as disk space) has been used up
+	ErrNoSpace = errors.New("a filesystem resource has been exhausted")
 
 	// ErrFailedPrecondition indicates the system is not in a state where the operation can succeed
 	ErrFailedPrecondition = errors.New("the filesystem is not in a state required for the operation")

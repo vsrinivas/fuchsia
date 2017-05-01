@@ -34,7 +34,7 @@ func stat(n node.Node) (int64, time.Time, time.Time, error) {
 func touch(n node.Node, lastAccess, lastModified time.Time) {
 	n.Lock()
 	defer n.Unlock()
-	n.SetMTime(lastModified)
+	n.SetMTime(direntry.ModifyTime(lastModified))
 }
 
 func dup(n node.Node) {
@@ -86,11 +86,19 @@ func readDir(n node.DirectoryNode) ([]fs.Dirent, error) {
 }
 
 func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, error) {
+	if n.IsDeleted() {
+		return nil, fs.ErrFailedPrecondition
+	}
+
 	// ACQUIRE parent directory from dcache.
 	// After this function succeeds, we'll need to be sure to RELEASE "parent" before returning.
-	parent, singleName, err := traversePath(n, name)
+	parent, singleName, mustBeDir, err := traversePath(n, name)
 	if err != nil { // Parent directory containing "name" cannot be resolved
 		return nil, err
+	}
+
+	if mustBeDir {
+		flags |= fs.OpenFlagDirectory
 	}
 
 	// Helper function to validate the flags when opening files via "." or "..".
@@ -106,7 +114,7 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 	}
 
 	switch singleName {
-	case ".":
+	case ".", "..":
 		if err = validateDotFlags(flags); err != nil {
 			n.Metadata().Dcache.Release(parent.ID())
 			return nil, err
@@ -117,11 +125,6 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 		// We don't need to RELEASE the dcache reference to the parent directory, since we're
 		// opening that node anyway.
 		return parent, nil
-	case "..":
-		if err = validateDotFlags(flags); err != nil {
-			n.Metadata().Dcache.Release(parent.ID())
-			return nil, err
-		}
 	}
 
 	// Either "openIncremental" or "createIncremental" will ACQUIRE the target from the dcache
@@ -159,7 +162,7 @@ func open(n node.DirectoryNode, name string, flags fs.OpenFlags) (node.Node, err
 // Currently, only supports a single-threaded version which locks the entire filesystem.
 func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst string) error {
 	metadata := srcStart.Metadata()
-	srcParent, srcName, err := traversePath(srcStart, src) // ACQUIRE srcParent...
+	srcParent, srcName, srcMustBeDir, err := traversePath(srcStart, src) // ACQUIRE srcParent...
 	if err != nil {
 		return err
 	}
@@ -169,18 +172,22 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 	if srcName == "." || srcName == ".." {
 		return fs.ErrIsActive
 	}
-	srcEntry, srcDirentryIndex, err := node.Lookup(srcParent, srcName)
+	dstParent, dstName, dstMustBeDir, err := traversePath(dstStart, dst) // ACQUIRE dstParent...
+	if err != nil {
+		return err
+	}
+	defer metadata.Dcache.Release(dstParent.ID()) // ... ensure it is RELEASED
+
+	srcFlags := fs.OpenFlagWrite | fs.OpenFlagRead
+	if srcMustBeDir || dstMustBeDir {
+		srcFlags |= fs.OpenFlagDirectory
+	}
+	srcEntry, srcDirentryIndex, err := lookupAndCheck(srcParent, srcName, srcFlags)
 	if err != nil {
 		return err
 	} else if srcEntry == nil {
 		return fs.ErrNotFound
 	}
-
-	dstParent, dstName, err := traversePath(dstStart, dst) // ACQUIRE dstParent...
-	if err != nil {
-		return err
-	}
-	defer metadata.Dcache.Release(dstParent.ID()) // ... ensure it is RELEASED
 
 	// Verify that dst is valid, independent of src
 	if dstName == "." || dstName == ".." {
@@ -241,13 +248,20 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 			return err
 		}
 	} else {
+		dstFlags := fs.OpenFlagWrite | fs.OpenFlagRead
+		if dstMustBeDir {
+			dstFlags |= fs.OpenFlagDirectory
+		}
+
 		// Destination DOES exist. We should unlink and replace it.
 		if dstEntry.GetType() != srcEntry.GetType() {
 			return fs.ErrNotADir
-		} else if _, err := ensureCanUnlink(dstParent, dstName); err != nil {
+		}
+		_, isDir, err := ensureCanUnlink(dstParent, dstName, dstFlags)
+		if err != nil {
 			return err
 		}
-		oldCluster, err := doReplace(dstParent, dstDirentryIndex, srcEntry.Cluster, srcEntry.WriteTime, srcEntry.Size)
+		oldCluster, err := doReplace(dstParent, dstDirentryIndex, isDir, srcEntry.Cluster, srcEntry.WriteTime, srcEntry.Size)
 		if err != nil {
 			return err
 		}
@@ -274,10 +288,7 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 	} else if srcNode, ok := srcParent.ChildFile(srcDirentryIndex); ok {
 		// If the source is an open file, relocate it.
 		srcNode.MoveFile(dstParent, dstDirentryIndex)
-		// ACQUIRE the new parent directory
-		metadata.Dcache.Acquire(dstParent.ID())
-		// RELEASE the old parent directory
-		metadata.Dcache.Release(srcParent.ID())
+		metadata.Dcache.Transfer(srcParent.ID(), dstParent.ID(), srcNode.RefCount())
 	}
 
 	return nil
@@ -296,23 +307,27 @@ func syncDirectory(n node.DirectoryNode) error {
 }
 
 func unlink(n node.DirectoryNode, target string) error {
-	parent, name, err := traversePath(n, target) // ACQUIRE parent...
+	parent, name, mustBeDir, err := traversePath(n, target) // ACQUIRE parent...
 	if err != nil {
 		return err
 	}
 	defer n.Metadata().Dcache.Release(parent.ID()) // ... ensure it is RELEASED
+	flags := fs.OpenFlagWrite | fs.OpenFlagRead
+	if mustBeDir {
+		flags |= fs.OpenFlagDirectory
+	}
 
 	// Use an anonymous function for the duration of holding a lock on the parent.
 	cluster, err := func() (uint32, error) {
 		parent.Lock()
 		defer parent.Unlock()
 		// Ensure that we are not attempting to unlink a non-empty directory
-		direntryIndex, err := ensureCanUnlink(parent, name)
+		direntryIndex, isDir, err := ensureCanUnlink(parent, name, flags)
 		if err != nil {
 			return 0, err
 		}
 		// The target dirent exists, and is in an unlinkable state.
-		cluster, err := doUnlink(parent, direntryIndex)
+		cluster, err := doUnlink(parent, direntryIndex, isDir)
 		if err != nil {
 			return 0, err
 		}
@@ -331,7 +346,7 @@ func unlink(n node.DirectoryNode, target string) error {
 // Precondition:
 //	 - the node lock is not held by the caller
 //	 - the parent lock is not held by the caller
-// Postcontiion:
+// Postcondition:
 //	 - same as precondition
 func flushFile(n node.FileNode, doClose bool) (err error) {
 	// Lock parent (if not nil) then node
@@ -376,41 +391,35 @@ func flushFile(n node.FileNode, doClose bool) (err error) {
 //	 - the node lock corresponding to 'name' is not held by the caller
 // Postcondition:
 //	 - parent is locked
-func ensureCanUnlink(parent node.DirectoryNode, name string) (int, error) {
+func ensureCanUnlink(parent node.DirectoryNode, name string, flags fs.OpenFlags) (index int, isdir bool, err error) {
 	if name == "." || name == ".." {
-		return 0, fs.ErrIsActive
+		return 0, true, fs.ErrIsActive
 	}
 
-	entry, direntryIndex, err := node.Lookup(parent, name)
+	entry, direntryIndex, err := lookupAndCheck(parent, name, flags)
 	if err != nil {
-		return 0, err
-	} else if entry == nil {
-		return 0, fs.ErrNotFound
+		return 0, false, err
 	}
 
 	if entry.GetType() == fs.FileTypeDirectory {
 		// ACQUIRE openedDir...
 		openedDir, err := traverseDirectory(parent, name, fs.OpenFlagRead|fs.OpenFlagDirectory)
 		if err != nil {
-			return 0, err
+			return 0, true, err
 		}
 		defer parent.Metadata().Dcache.Release(openedDir.ID()) // ... ensure it is RELEASED
 
 		openedDir.RLock()
 		defer openedDir.RUnlock()
-		if openedDir.RefCount() > 0 {
-			// Cannot delete open directories. As long as the parent remains locked until 'unlink'
-			// is complete, the child directory cannot be opened.
-			return 0, fs.ErrIsActive
-		} else if empty, err := node.IsEmpty(openedDir); err != nil {
-			return 0, err
+		if empty, err := node.IsEmpty(openedDir); err != nil {
+			return 0, true, err
 		} else if !empty {
 			// Cannot delete non-empty directories. As long as the parent remains locked until
 			// 'unlink' is complete, the child directory cannot become non-empty (it's closed).
-			return 0, fs.ErrNotEmpty
+			return 0, true, fs.ErrNotEmpty
 		}
 	}
-	return direntryIndex, nil
+	return direntryIndex, entry.GetType() == fs.FileTypeDirectory, nil
 }
 
 // Update the in-memory connection between a parent and a child to signify that the child should be
@@ -423,7 +432,7 @@ func ensureCanUnlink(parent node.DirectoryNode, name string) (int, error) {
 //	 - child lock is not held by the caller
 // Postcondition:
 //	 - parent is locked
-func nodeDeleteChild(parent node.DirectoryNode, direntryIndex int) bool {
+func nodeDeleteChildFile(parent node.DirectoryNode, direntryIndex int) bool {
 	if child, ok := parent.ChildFile(direntryIndex); ok {
 		// RELEASE the parent directory from the access acquired when opening
 		parent.Metadata().Dcache.Release(parent.ID())
@@ -432,6 +441,21 @@ func nodeDeleteChild(parent node.DirectoryNode, direntryIndex int) bool {
 		parent.RemoveFile(direntryIndex)
 		child.MarkDeleted()
 		child.RefDown(0)
+		return true
+	}
+	return false
+}
+
+// nodeDeleteChildDir acts like nodeDeleteChildFile, but acts
+// on directories instead.
+func nodeDeleteChildDir(parent node.DirectoryNode, id uint32) bool {
+	if child, err := parent.Metadata().Dcache.Lookup(id); err == nil {
+		child.Lock()
+		defer child.Unlock()
+		child.MarkDeleted()
+		child.RefDown(0)
+		// RELEASE the parent directory from the access acquired when opening
+		parent.Metadata().Dcache.Release(id)
 		return true
 	}
 	return false
@@ -447,12 +471,22 @@ func nodeDeleteChild(parent node.DirectoryNode, direntryIndex int) bool {
 //	 - parent is locked
 //	 - the dirent corresponding to 'direntryIndex' is replaced with an entry for 'replacement'
 //	 - the node corresponding to 'direntryIndex' is marked as deleted (if open)
-func doReplace(parent node.DirectoryNode, direntryIndex int, cluster uint32, writeTime time.Time, size uint32) (uint32, error) {
-	if oldCluster, err := node.Update(parent, cluster, writeTime, size, direntryIndex); err != nil {
+func doReplace(parent node.DirectoryNode, direntryIndex int, isDir bool, cluster uint32, writeTime time.Time, size uint32) (uint32, error) {
+	oldCluster, err := node.Update(parent, cluster, writeTime, size, direntryIndex)
+	if err != nil {
 		return 0, err
-	} else if childOpen := nodeDeleteChild(parent, direntryIndex); !childOpen {
-		// Return the child's cluster for deleting if it is not open
-		return oldCluster, nil
+	}
+	if isDir {
+		if childOpen := nodeDeleteChildDir(parent, oldCluster); !childOpen {
+			// Return the child's cluster for deleting if it is not open
+			return oldCluster, nil
+		}
+	} else {
+		if childOpen := nodeDeleteChildFile(parent, direntryIndex); !childOpen {
+			// Return the child's cluster for deleting if it is not open
+			return oldCluster, nil
+		}
+
 	}
 	return 0, nil // The cluster will be deleted when the child file is closed
 }
@@ -467,14 +501,26 @@ func doReplace(parent node.DirectoryNode, direntryIndex int, cluster uint32, wri
 //	 - parent is locked
 //	 - dirent is removed from the directory
 //	 - the node corresponding to 'direntryIndex' is marked as deleted (if open)
-func doUnlink(parent node.DirectoryNode, direntryIndex int) (uint32, error) {
+func doUnlink(parent node.DirectoryNode, direntryIndex int, isDir bool) (uint32, error) {
 	// Remove the dirent from the directory. The node is not yet deleted.
-	if entry, err := node.Free(parent, direntryIndex); err != nil {
+	entry, err := node.Free(parent, direntryIndex)
+	if err != nil {
 		return 0, err
-	} else if childOpen := nodeDeleteChild(parent, direntryIndex); !childOpen {
-		// Return the child's cluster for deleting if it is not open
-		return entry.Cluster, nil
 	}
+
+	if isDir {
+		if childOpen := nodeDeleteChildDir(parent, entry.Cluster); !childOpen {
+			// Return the child's cluster for deleting if it is not open
+			return entry.Cluster, nil
+		}
+	} else {
+		if childOpen := nodeDeleteChildFile(parent, direntryIndex); !childOpen {
+			// Return the child's cluster for deleting if it is not open
+			return entry.Cluster, nil
+		}
+
+	}
+
 	return 0, nil // The cluster will be deleted when the child file is closed
 }
 

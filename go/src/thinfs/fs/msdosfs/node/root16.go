@@ -51,6 +51,10 @@ func (r *root) MarkDeleted() {
 	panic("Cannot delete root")
 }
 
+func (r *root) IsDeleted() bool {
+	return false
+}
+
 func (r *root) RefUp() {
 	r.references++
 }

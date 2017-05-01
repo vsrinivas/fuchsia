@@ -144,8 +144,8 @@ func errorToRIO(err error) mx.Status {
 		return mx.ErrAlreadyExists
 	case fs.ErrPermission, fs.ErrReadOnly:
 		return mx.ErrAccessDenied
-	case fs.ErrResourceExhausted:
-		return mx.ErrNoResources
+	case fs.ErrNoSpace:
+		return mx.ErrNoSpace
 	case fs.ErrFailedPrecondition, fs.ErrNotEmpty, fs.ErrNotOpen, fs.ErrIsActive, fs.ErrUnmounted:
 		return mx.ErrBadState
 	case fs.ErrNotAFile:
@@ -397,6 +397,15 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		}
 		return statShared(msg, size, mtime, true)
 	case rio.OpReaddir:
+		maxlen := uint32(msg.Arg)
+		if maxlen > mxio.ChunkSize {
+			return mx.ErrInvalidArgs
+		}
+		if msg.Off() == 1 {
+			// TODO(smklein): 1 == ReaddirCmdReset; update the Go standard library to include this
+			// magic number.
+			dw.reading = false
+		}
 		if dw.reading && len(dw.dirents) == 0 {
 			// The final read of 'readdir' must return zero
 			dw.reading = false
@@ -422,11 +431,10 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 				return (a + 3) &^ 3
 			}
 			rioDirent.Size = uint32(align(len(name))) + 8
-			rioDirent.Type = fileTypeToRIO(dirent.GetType())
-			if bytesWritten+rioDirent.Size > mxio.ChunkSize {
+			rioDirent.Type = (fileTypeToRIO(dirent.GetType()) >> 12) & 15
+			if bytesWritten+rioDirent.Size > maxlen {
 				break
 			}
-			//			*(*syscall.Dirent)(unsafe.Pointer(&msg.Data[bytesWritten])) = rioDirent
 			copy(msg.Data[bytesWritten:], (*(*[8]byte)(unsafe.Pointer(&rioDirent)))[:])
 			copy(msg.Data[bytesWritten+8:], name)
 			bytesWritten += rioDirent.Size

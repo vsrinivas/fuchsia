@@ -7,6 +7,8 @@ package node
 import (
 	"sync"
 	"time"
+
+	"fuchsia.googlesource.com/thinfs/fs"
 )
 
 // Dcache destribes a cache of directories
@@ -60,6 +62,19 @@ func (d *Dcache) CreateOrAcquire(m *Metadata, id uint32, mtime time.Time) (Direc
 	return newNode, nil
 }
 
+// Lookup (and acquire) the directory node, if it exists
+//
+// Thread-safe
+func (d *Dcache) Lookup(id uint32) (DirectoryNode, error) {
+	d.Lock()
+	defer d.Unlock()
+	node := d.acquire(id)
+	if node == nil {
+		return nil, fs.ErrNotFound
+	}
+	return node, nil
+}
+
 // Insert adds a node to the dcache
 // Precondition: Key does NOT exist in dcache
 //
@@ -99,6 +114,25 @@ func (d *Dcache) Release(id uint32) {
 	} else if entry.refs == 0 {
 		delete(d.entries, id)
 	}
+}
+
+// Transfer moves count references from one ID to another.
+func (d *Dcache) Transfer(src, dst uint32, count int) {
+	d.Lock()
+	defer d.Unlock()
+	srcEntry, srcOk := d.entries[src]
+	dstEntry, dstOk := d.entries[dst]
+	if !srcOk || !dstOk {
+		panic("Invalid src/dst; cannot transfer")
+	}
+
+	srcEntry.refs -= count
+	if srcEntry.refs < 0 {
+		panic("Invalid refcounting")
+	} else if srcEntry.refs == 0 {
+		delete(d.entries, src)
+	}
+	dstEntry.refs += count
 }
 
 func (d *Dcache) acquire(id uint32) DirectoryNode {

@@ -13,7 +13,7 @@ import (
 
 var (
 	// ErrNoSpace indicates the requested operation requires more space than is available
-	ErrNoSpace = fs.ErrResourceExhausted
+	ErrNoSpace = fs.ErrNoSpace
 
 	// ErrBadArgument indicates the argument passed to a node was invalid
 	ErrBadArgument = fs.ErrInvalidArgs
@@ -64,6 +64,7 @@ type Node interface {
 	NumClusters() int     // Returns the number of clusters used by the node (internally)
 	RefCount() int        // Number of external references ('refs') to the node
 	MTime() time.Time     // Get last modified time of node, if known
+	IsDeleted() bool      // Return if the entry has been deleted
 
 	// Accessible without a lock
 	IsDirectory() bool   // True iff the node corresponds to a directory

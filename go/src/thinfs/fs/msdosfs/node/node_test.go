@@ -668,23 +668,6 @@ func TestNodePanicRefUpAfterDelete(t *testing.T) {
 	t.Fatal("Expected panic")
 }
 
-// There is no reason why users of the node package should need to modify the size of deleted nodes.
-// As a precaution, panic if incorrect behavior is exhibited.
-func TestNodePanicSetSizeAfterDelete(t *testing.T) {
-	fileBackedFAT, metadata := setupFAT32(t, "1G", false)
-	defer cleanup(fileBackedFAT, metadata)
-	root := checkedMakeRoot(t, metadata /* fat32= */, true)
-	foo := checkedMakeFileNode(t, metadata, root, 0)
-	foo.MarkDeleted()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Recover returned without a panic")
-		}
-	}()
-	foo.SetSize(0)
-	t.Fatal("Expected panic")
-}
-
 // Non-root directories require space for "." and ".." entries.
 // If their size could be set to zero, it would become invalid.
 func TestNodePanicSetSizeNonRootDirectory(t *testing.T) {
@@ -836,7 +819,7 @@ func TestNoSpace(t *testing.T) {
 
 		for {
 			n, err := largeNode.writeAt(buf, largeNode.Size())
-			if err == fs.ErrResourceExhausted && n < len(buf) {
+			if err == fs.ErrNoSpace && n < len(buf) {
 				// Only valid exit condition: Using all the space in the filesystem and not
 				// completing write
 				break

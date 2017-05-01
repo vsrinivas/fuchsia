@@ -20,15 +20,13 @@ import (
 // Postcondition:
 //	 - no node locks are held by the caller
 //	 - If successful, the opened parent node is ACQUIRED in the dcache
-func traversePath(n node.DirectoryNode, path string) (node.DirectoryNode, string, error) {
+func traversePath(n node.DirectoryNode, path string) (parent node.DirectoryNode, name string, isDir bool, err error) {
 	if len(path) == 0 || path[0] == '/' {
 		// Empty and absolute paths are both disallowed
-		return nil, "", fs.ErrInvalidArgs
+		return nil, "", false, fs.ErrInvalidArgs
 	}
 
 	// Break the path into components. Remove extraneous "/" characters.
-	// TODO(smklein): Be careful, "a/" and "a" are the same right now. Doesn't the "a/" version
-	// mean that "a" must exist? Shouldn't we check that?
 	pathComponents := strings.Split(path, "/")
 	var temp []string
 	for i := range pathComponents {
@@ -41,8 +39,10 @@ func traversePath(n node.DirectoryNode, path string) (node.DirectoryNode, string
 	oldDirectoryID := int64(-1)
 	for i := 0; i < len(pathComponents)-1; i++ {
 		component := pathComponents[i]
-		if component == "." || (component == ".." && n.IsRoot()) {
+		if component == "." || component == ".." {
 			// In this case, "n" stays the same.
+			// Note that this is Fuchsia-specific behavior for '..', where server-side '..'
+			// is redirected to '.'
 		} else {
 			n.RLock()
 			newDir, err := traverseDirectory(n, component, fs.OpenFlagRead|fs.OpenFlagDirectory)
@@ -51,7 +51,7 @@ func traversePath(n node.DirectoryNode, path string) (node.DirectoryNode, string
 				n.Metadata().Dcache.Release(uint32(oldDirectoryID))
 			}
 			if err != nil {
-				return nil, "", err
+				return nil, "", false, err
 			}
 			n = newDir
 			oldDirectoryID = int64(n.ID())
@@ -65,7 +65,9 @@ func traversePath(n node.DirectoryNode, path string) (node.DirectoryNode, string
 	}
 
 	// The final component of the path may be ".", "..", a file name, or a directory name.
-	return n, pathComponents[len(pathComponents)-1], nil
+	extra := ""
+	isDir = path[len(path)-1] == '/'
+	return n, pathComponents[len(pathComponents)-1] + extra, isDir, nil
 }
 
 // Validates that the open flags can open a file of a certain type.

@@ -42,6 +42,16 @@ type Dirent struct {
 // Ensure the Dirent implements the fs.Dirent interface
 var _ fs.Dirent = (*Dirent)(nil)
 
+func CreateTime(t time.Time) time.Time {
+	// FAT stores creation time at 10ms granularity
+	return t.Truncate(time.Millisecond * 10)
+}
+
+func ModifyTime(t time.Time) time.Time {
+	// FAT stores modification time at 2s granularity
+	return t.Truncate(time.Second * 2)
+}
+
 // New creates a new in-memory Dirent.
 //
 // Does not allocate any on-disk space; simply creates an in-memory structure.
@@ -54,7 +64,7 @@ func New(name string, cluster uint32, attr fs.FileType) *Dirent {
 
 	// Set cluster.
 	d.Cluster = cluster
-	d.WriteTime = time.Now() // File creation is considered a write
+	d.WriteTime = CreateTime(time.Now()) // File creation is considered a write
 	// "size" can be set to zero. File and directories start with zero size.
 
 	// Set Attributes

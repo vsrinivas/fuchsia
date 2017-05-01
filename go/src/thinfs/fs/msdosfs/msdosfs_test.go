@@ -818,12 +818,9 @@ func TestRenameInvalid(t *testing.T) {
 			// Test renaming directory to target directory where target is not closed
 			overwriteName := "overwrite_me"
 			overwriteDir := checkOpenDirectory(t, d, overwriteName, exclusiveCreateFlags)
-			if err := d.Rename(d, dirname, overwriteName); err != fs.ErrIsActive {
-				t.Fatal(err)
-				t.Fatal("Expected error: Should not be able to rename a directory to an OPEN directory")
-			}
+			checkRename(t, d, dirname, overwriteName)
+			checkRename(t, d, overwriteName, dirname)
 			checkClose(t, overwriteDir)
-			checkUnlink(t, d, overwriteName)
 
 			// Test renaming file to directory and vice-versa
 			if err := d.Rename(d, filename, dirname); err != fs.ErrNotADir {
@@ -842,8 +839,8 @@ func TestRenameInvalid(t *testing.T) {
 			} else if err := bar.Rename(bar, subdirname, subdirname+"/blat/blah"); err != fs.ErrNotFound {
 				// bar/baz -> bar/baz/blat/blah
 				t.Fatal("Expected error: Subdirectory does not exist")
-			} else if err := bar.Rename(bar, subdirname, "../"+dirname+"/"+subdirname+"/blat"); err != fs.ErrInvalidArgs {
-				// bar/baz -> bar/../bar/baz/blat
+			} else if err := bar.Rename(bar, subdirname, subdirname+"/blat"); err != fs.ErrInvalidArgs {
+				// bar/baz -> bar/baz/blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
 			} else if err := bar.Rename(bar, subdirname, "./"+subdirname+"/./blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/./baz/./blat
@@ -918,21 +915,26 @@ func TestRenameSimple(t *testing.T) {
 			targetName := dstPfx + "foo_renamed.txt"
 			foo := checkOpenFile(t, renameBaseDir, srcName, exclusiveCreateFlags)
 
-			// Rename: File --> File that doesn't exist
-			checkExists(t, renameBaseDir, srcName)
-			checkDoesNotExist(t, renameBaseDir, targetName)
-			checkRenameAndBack(srcName, targetName)
+			for i := 0; i < 2; i++ {
+				// Rename: File --> File that doesn't exist
+				checkExists(t, renameBaseDir, srcName)
+				checkDoesNotExist(t, renameBaseDir, targetName)
+				checkRenameAndBack(srcName, targetName)
 
-			// Rename: File --> Files that DOES exist
-			targetName = dstPfx + "overwrite_me.txt"
-			overwriteMe := checkOpenFile(t, renameBaseDir, targetName, exclusiveCreateFlags)
-			checkExists(t, renameBaseDir, srcName)
-			checkExists(t, renameBaseDir, targetName)
-			checkRenameAndBack(srcName, targetName)
-			// ... Even with all this renaming, the overwritten file should still be closeable
-			checkClose(t, overwriteMe)
+				// Rename: File --> Files that DOES exist
+				targetName = dstPfx + "overwrite_me.txt"
+				overwriteMe := checkOpenFile(t, renameBaseDir, targetName, exclusiveCreateFlags)
+				checkExists(t, renameBaseDir, srcName)
+				checkExists(t, renameBaseDir, targetName)
+				checkRenameAndBack(srcName, targetName)
+				// ... Even with all this renaming, the overwritten file should still be closeable
+				checkClose(t, overwriteMe)
 
-			checkClose(t, foo)
+				if i == 0 {
+					// Try these operations, once with the file open, and once with the file closed.
+					checkClose(t, foo)
+				}
+			}
 			checkUnlink(t, renameBaseDir, srcName)
 
 			// Test renaming a single directory
@@ -940,19 +942,39 @@ func TestRenameSimple(t *testing.T) {
 			targetName = dstPfx + "bar_renamed"
 			bar := checkOpenDirectory(t, renameBaseDir, srcName, exclusiveCreateFlags)
 
-			// Rename: Dir --> Dir that doesn't exist
-			checkExists(t, renameBaseDir, srcName)
-			checkDoesNotExist(t, renameBaseDir, targetName)
-			checkRenameAndBack(srcName, targetName)
+			for i := 0; i < 2; i++ {
+				// Rename: Dir --> Dir that doesn't exist
+				checkExists(t, renameBaseDir, srcName)
+				checkDoesNotExist(t, renameBaseDir, targetName)
+				checkRenameAndBack(srcName, targetName)
 
-			// Rename: Dir --> Dir that DOES exist. It must, however, be closed and empty.
-			targetName = dstPfx + "overwrite_me"
-			checkClose(t, checkOpenDirectory(t, renameBaseDir, targetName, exclusiveCreateFlags))
+				// Rename: Dir --> Dir that DOES exist, is closed, and is empty.
+				targetName = dstPfx + "overwrite_me"
+				checkClose(t, checkOpenDirectory(t, renameBaseDir, targetName, exclusiveCreateFlags))
+				checkExists(t, renameBaseDir, srcName)
+				checkExists(t, renameBaseDir, targetName)
+				checkRenameAndBack(srcName, targetName)
+				if i == 0 {
+					// Try these operations, once with the directory open, and once with the
+					// directory closed.
+					checkClose(t, bar)
+				}
+			}
+
+			// Rename: Dir --> Dir that DOES exist, is NOT closed, and is empty.
+			targetDir := checkOpenDirectory(t, renameBaseDir, targetName, exclusiveCreateFlags)
 			checkExists(t, renameBaseDir, srcName)
 			checkExists(t, renameBaseDir, targetName)
 			checkRenameAndBack(srcName, targetName)
+			// Target should exist, but shouldn't be writable (it no longer has a name)
+			targetContents := checkReadDir(t, targetDir, 2)
+			checkDirent(t, targetContents[0], ".", fs.FileTypeDirectory)
+			checkDirent(t, targetContents[1], "..", fs.FileTypeDirectory)
+			if _, _, err := targetDir.Open("foo", exclusiveCreateFlags|fs.OpenFlagFile); err != fs.ErrFailedPrecondition {
+				t.Fatal("Expected error writing to deleted dir, but saw: ", err)
+			}
+			checkClose(t, targetDir)
 
-			checkClose(t, bar)
 			checkUnlink(t, renameBaseDir, srcName)
 		}
 
@@ -960,15 +982,74 @@ func TestRenameSimple(t *testing.T) {
 
 		subDir := checkOpenDirectory(t, root, "subdir", exclusiveCreateFlags)
 		renameTestsInDirectory(subDir, "", "")
-		renameTestsInDirectory(subDir, "../", "")
-		renameTestsInDirectory(subDir, "", "../")
+		renameTestsInDirectory(root, "subdir/", "")
+		renameTestsInDirectory(root, "", "subdir/")
 
 		subSubDir := checkOpenDirectory(t, subDir, "subsubdir", exclusiveCreateFlags)
-		renameTestsInDirectory(subSubDir, "", "")
-		renameTestsInDirectory(subSubDir, "../", "")
-		renameTestsInDirectory(subSubDir, "", "../")
-		renameTestsInDirectory(subSubDir, "../../", "../")
-		renameTestsInDirectory(subSubDir, "../", "../../")
+		renameTestsInDirectory(subDir, "", "")
+		renameTestsInDirectory(subDir, "subsubdir/", "")
+		renameTestsInDirectory(subDir, "", "subsubdir/")
+		renameTestsInDirectory(root, "subdir/subsubdir/", "subdir/")
+		renameTestsInDirectory(root, "subdir/", "subdir/subsubdir/")
+
+		checkClose(t, subDir)
+		checkClose(t, subSubDir)
+
+		// Close the filesystem
+		checkClose(t, root)
+		checkClose(t, fatFS)
+	}
+
+	fileBackedFAT, dev := setupFAT32(t)
+	doTest(dev)
+	cleanup(fileBackedFAT, dev)
+
+	fileBackedFAT, dev = setupFAT16(t)
+	doTest(dev)
+	cleanup(fileBackedFAT, dev)
+}
+
+// Test renaming between directories.
+// This may seem like a somewhat contrived case (double-open + rename) but
+// it is intended to prevent a regression against a real refcounting bug that
+// has occurred in the past.
+func TestRenameInterDirectory(t *testing.T) {
+	doTest := func(dev block.Device) {
+		fatFS := checkNewFS(t, dev, fs.ReadWrite)
+		root := fatFS.RootDirectory()
+
+		// Verify that moving a "twice-opened-file" into a new directory preserves
+		// the refcount upon close.
+		exclusiveCreateFlags := fs.OpenFlagRead | fs.OpenFlagWrite | fs.OpenFlagCreate | fs.OpenFlagExclusive
+		subDir := checkOpenDirectory(t, root, "subdir", exclusiveCreateFlags)
+		dstfile := checkOpenFile(t, subDir, "srcfile", exclusiveCreateFlags)
+		checkClose(t, dstfile)
+		checkClose(t, subDir)
+
+		srcfile := checkOpenFile(t, root, "srcfile", exclusiveCreateFlags)
+		srcfile2 := checkOpenFile(t, root, "srcfile", fs.OpenFlagRead)
+		checkRename(t, root, "srcfile", "subdir/srcfile")
+		checkClose(t, srcfile)
+		checkClose(t, srcfile2)
+
+		checkUnlink(t, root, "subdir/srcfile")
+		checkUnlink(t, root, "subdir")
+
+		// Verify the same thing for a "twice-opened-directory".
+
+		subDir = checkOpenDirectory(t, root, "subdir", exclusiveCreateFlags)
+		dstDir := checkOpenDirectory(t, subDir, "src", exclusiveCreateFlags)
+		checkClose(t, dstDir)
+		checkClose(t, subDir)
+
+		srcdir := checkOpenDirectory(t, root, "src", exclusiveCreateFlags)
+		srcdir2 := checkOpenDirectory(t, root, "src", fs.OpenFlagRead)
+		checkRename(t, root, "src", "subdir/src")
+		checkClose(t, srcdir)
+		checkClose(t, srcdir2)
+
+		checkUnlink(t, root, "subdir/src")
+		checkUnlink(t, root, "subdir")
 
 		// Close the filesystem
 		checkClose(t, root)
@@ -1057,16 +1138,12 @@ func TestUnlinkSimple(t *testing.T) {
 		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
 		checkDirectoryEmpty(t, subdir)
 
-		// Try (and fail) to unlink the subdirectory
-		if err := d.Unlink(subdirname); err != fs.ErrIsActive {
-			t.Fatal("Expected error ErrIsActive, saw: ", err)
-		}
+		// Try (and succeed) to unlink the subdirectory
 		checkDirectoryContains(t, d, subdirname, fs.FileTypeDirectory, 3)
-		checkDirectoryEmpty(t, subdir)
-
-		checkClose(t, subdir)
 		checkUnlink(t, d, subdirname)
 		checkDirectoryEmpty(t, d)
+		checkDirectoryEmpty(t, subdir)
+		checkClose(t, subdir)
 
 		// Clean up the subfile, which was unlinked a while ago
 		checkClose(t, subfile)
@@ -1391,27 +1468,19 @@ func TestPathTraversalStatic(t *testing.T) {
 		checkValidFoo(dir)
 		checkClose(t, dir)
 
-		dir = checkOpenDirectory(t, foo, "..", fs.OpenFlagRead) // In "/foo", open root
-		checkValidRoot(dir)
+		dir = checkOpenDirectory(t, foo, "..", fs.OpenFlagRead) // In "/foo", open self via ".."
+		checkValidFoo(dir)
 		checkClose(t, dir)
 
 		dir = checkOpenDirectory(t, foo, "bar/baz", fs.OpenFlagRead) // In "/foo", open baz
 		checkValidBaz(dir)
 		checkClose(t, dir)
 
-		dir = checkOpenDirectory(t, bar, "../fiz", fs.OpenFlagRead) // In "/foo/bar", open fiz
+		dir = checkOpenDirectory(t, foo, "fiz", fs.OpenFlagRead) // In "/foo", open fiz
 		checkValidFiz(dir)
 		checkClose(t, dir)
 
-		dir = checkOpenDirectory(t, bar, "../fiz/./../", fs.OpenFlagRead) // In "/foo/bar", open "foo"
-		checkValidFoo(dir)
-		checkClose(t, dir)
-
-		dir = checkOpenDirectory(t, bar, "../fiz/./../../foo", fs.OpenFlagRead) // In "/foo/bar", open "foo"
-		checkValidFoo(dir)
-		checkClose(t, dir)
-
-		dir = checkOpenDirectory(t, bar, "..//fiz/.///../..//foo", fs.OpenFlagRead) // In "/foo/bar", open "foo"
+		dir = checkOpenDirectory(t, foo, "..///./../", fs.OpenFlagRead) // In "/foo", open "foo"
 		checkValidFoo(dir)
 		checkClose(t, dir)
 
@@ -1504,7 +1573,7 @@ func createInDirectory(d fs.Directory, path string, maxNumToCreate int) (numCrea
 		if err == fs.ErrNotAFile || err == fs.ErrAlreadyExists {
 			// 'name' already exists
 			return
-		} else if err == fs.ErrResourceExhausted {
+		} else if err == fs.ErrNoSpace {
 			// Disk (or directory) space is full
 			return
 		} else if err != nil {
@@ -1518,7 +1587,7 @@ func createInDirectory(d fs.Directory, path string, maxNumToCreate int) (numCrea
 		if err == fs.ErrNotADir || err == fs.ErrAlreadyExists {
 			// 'name' already exists
 			return
-		} else if err == fs.ErrResourceExhausted {
+		} else if err == fs.ErrNoSpace {
 			// Disk (or directory) space is full
 			return
 		} else if err != nil {

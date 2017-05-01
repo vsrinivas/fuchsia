@@ -36,7 +36,7 @@ var (
 	ErrInvalidCluster = errors.New("FAT: Attempting to access FAT with invalid cluster")
 
 	// ErrNoSpace indicates there is no remaining space in the FAT.
-	ErrNoSpace = fs.ErrResourceExhausted
+	ErrNoSpace = fs.ErrNoSpace
 )
 
 const (
