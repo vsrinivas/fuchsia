@@ -62,9 +62,7 @@ void HostNameResolver::ReceiveResource(const DnsResource& resource,
 }
 
 void HostNameResolver::EndOfMessage() {
-  if (!callback_) {
-    return;
-  }
+  FTL_DCHECK(callback_);
 
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
@@ -74,10 +72,9 @@ void HostNameResolver::EndOfMessage() {
 }
 
 void HostNameResolver::Quit() {
-  if (callback_) {
-    callback_(host_name_, v4_address_, v6_address_);
-    callback_ = nullptr;
-  }
+  FTL_DCHECK(callback_);
+  callback_(host_name_, v4_address_, v6_address_);
+  callback_ = nullptr;
 
   host_->RemoveAgent(host_full_name_);
 }
