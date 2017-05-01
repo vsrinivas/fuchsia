@@ -16,6 +16,8 @@
 
 #include "filesystems.h"
 
+#define ROUND_DOWN(t, granularity) ((t) - ((t) % (granularity)))
+
 int64_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
     return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
@@ -38,9 +40,12 @@ bool test_attr(void) {
     ASSERT_EQ(futimens(fd1, ts), 0, "");
     struct stat statb1;
     ASSERT_EQ(fstat(fd1, &statb1), 0, "");
+    now = ROUND_DOWN(now, test_info->nsec_granularity);
     ASSERT_EQ(statb1.st_mtim.tv_sec, (long)(now / MX_SEC(1)), "");
     ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % MX_SEC(1)), "");
     ASSERT_EQ(close(fd1), 0, "");
+
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
 
     ASSERT_EQ(utimes("::file.txt", NULL), 0, "");
     struct stat statb2;

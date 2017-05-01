@@ -11,8 +11,8 @@
 
 #include "filesystems.h"
 
-// Print progress every ~5 MB
-#define PRINT_SIZE (1 << 19)
+#define MB (1 << 20)
+#define PRINT_SIZE (MB * 5)
 
 bool test_maxfile(void) {
     BEGIN_TEST;
@@ -25,14 +25,16 @@ bool test_maxfile(void) {
     for (;;) {
         if ((r = write(fd, data, sizeof(data))) < 0) {
             fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
-            if (errno == EFBIG) {
+            if ((errno == EFBIG) || (errno == ENOSPC)) {
+                // Either the file should be too big (EFBIG) or the file should
+                // consume the whole volume (ENOSPC).
                 fprintf(stderr, "(This was an expected error)\n");
                 r = 0;
             }
             break;
         }
         if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
-            fprintf(stderr, "wrote %d bytes\n", (int)(sz + r));
+            fprintf(stderr, "wrote %lu MB\n", (size_t)(sz + r) / MB);
         }
         sz += r;
         if (r < (ssize_t)(sizeof(data))) {
@@ -42,7 +44,7 @@ bool test_maxfile(void) {
     }
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(unlink("::bigfile"), 0, "");
-    fprintf(stderr, "wrote %d bytes\n", (int)sz);
+    fprintf(stderr, "wrote %lu bytes\n", (size_t)sz);
     ASSERT_EQ(r, 0, "Saw an unexpected error");
     END_TEST;
 }

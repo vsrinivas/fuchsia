@@ -13,6 +13,7 @@
 
 typedef struct fs_info {
     const char* name;
+    bool (*exists)(void);
     int (*mkfs)(const char* disk_path);
     int (*mount)(const char* disk_path, const char* mount_path);
     int (*unmount)(const char* mount_path);
@@ -20,6 +21,7 @@ typedef struct fs_info {
     bool can_mount_sub_filesystems;
     bool supports_hardlinks;
     bool supports_watchers;
+    int64_t nsec_granularity;
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested
@@ -32,7 +34,7 @@ extern char test_disk_path[];
 // Current filesystem's info
 extern fs_info_t* test_info;
 
-#define NUM_FILESYSTEMS 2
+#define NUM_FILESYSTEMS 3
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
 
 int setup_fs_test(void);
@@ -42,15 +44,19 @@ int teardown_fs_test(void);
 // for filesystem tests when "utest_test_type" is not at
 // LEAST size "medium". This avoids the overhead of creating
 // a ramdisk when running small tests.
-#define BEGIN_FS_TEST_CASE(case_name, fs_name, info) \
-        BEGIN_TEST_CASE(case_name##_##fs_name)       \
-        if (utest_test_type & ~TEST_SMALL) {         \
-            test_info = info;                        \
-            setup_fs_test();
+#define BEGIN_FS_TEST_CASE(case_name, fs_name, info)          \
+        BEGIN_TEST_CASE(case_name##_##fs_name)                \
+        if (utest_test_type & ~TEST_SMALL) {                  \
+            test_info = info;                                 \
+            if (test_info->exists()) {                        \
+                setup_fs_test();
 
-#define END_FS_TEST_CASE(case_name, fs_name)         \
-            teardown_fs_test();                      \
-        }                                            \
+#define END_FS_TEST_CASE(case_name, fs_name)                  \
+                teardown_fs_test();                           \
+            } else {                                          \
+                printf("Filesystem not found; not tested\n"); \
+            }                                                 \
+        }                                                     \
         END_TEST_CASE(case_name##_##fs_name)
 
 #define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)           \
@@ -59,4 +65,7 @@ int teardown_fs_test(void);
         END_FS_TEST_CASE(case_name, memfs)                       \
         BEGIN_FS_TEST_CASE(case_name, minfs, &FILESYSTEMS[1])    \
         CASE_TESTS                                               \
-        END_FS_TEST_CASE(case_name, minfs)
+        END_FS_TEST_CASE(case_name, minfs)                       \
+        BEGIN_FS_TEST_CASE(case_name, thinfs, &FILESYSTEMS[2])   \
+        CASE_TESTS                                               \
+        END_FS_TEST_CASE(case_name, thinfs)
