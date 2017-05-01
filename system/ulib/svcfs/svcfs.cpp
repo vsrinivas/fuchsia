@@ -135,16 +135,12 @@ mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, siz
     mxtl::RefPtr<VnodeSvc> vn = nullptr;
     for (auto& child : services_) {
         if (child.NameMatch(name, len)) {
-            vn = mxtl::RefPtr<VnodeSvc>(&child);
+            *out = mxtl::RefPtr<VnodeSvc>(&child);
+            return NO_ERROR;
         }
     }
 
-    if (!vn) {
-        return ERR_NOT_FOUND;
-    }
-
-    *out = mxtl::move(vn);
-    return NO_ERROR;
+    return ERR_NOT_FOUND;
 }
 
 mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
