@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <dirent.h>
-#include <magenta/device/device.h>
+#include <magenta/device/devmgr.h>
 #include <mxio/io.h>
 #include <sys/types.h>
 
@@ -52,7 +52,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
   // Create the directory watch channel.
   mx_handle_t dir_watch_handle;
   ssize_t ioctl_result =
-      ioctl_device_watch_dir(dir_fd.get(), &dir_watch_handle);
+      ioctl_devmgr_watch_dir(dir_fd.get(), &dir_watch_handle);
   if (ioctl_result < 0) {
     FTL_LOG(ERROR) << "Failed to create device watcher for " << directory_path
                    << ", result=" << ioctl_result;
