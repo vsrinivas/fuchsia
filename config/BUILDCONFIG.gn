@@ -61,10 +61,20 @@ _shared_binary_target_configs = [
   "//build/config:no_exceptions",
   "//build/config:no_rtti",
 ]
+
 if (is_debug) {
   _shared_binary_target_configs += [ "//build/config:debug" ]
 } else {
   _shared_binary_target_configs += [ "//build/config:release" ]
+}
+
+if (is_fuchsia) {
+  _shared_binary_target_configs += [
+    "//build/config/fuchsia:icf",
+    "//build/config/fuchsia:safestack",
+    "//build/config/fuchsia:thread_safety_annotations",
+    "//build/config/fuchsia:werror",
+  ]
 }
 
 _shared_library_target_configs = _shared_binary_target_configs + [
@@ -78,15 +88,6 @@ _executable_target_configs = _shared_binary_target_configs + [
 
 if (is_pic_default) {
   _shared_binary_target_configs += [ "//build/config:shared_library_config" ]
-}
-
-if (is_fuchsia) {
-  _shared_binary_target_configs += [
-    "//build/config/fuchsia:icf",
-    "//build/config/fuchsia:safestack",
-    "//build/config/fuchsia:thread_safety_annotations",
-    "//build/config/fuchsia:werror",
-  ]
 }
 
 # Apply that default list to the binary target types.
