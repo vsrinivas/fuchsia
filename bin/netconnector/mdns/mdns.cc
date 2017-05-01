@@ -15,6 +15,7 @@
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -23,6 +24,9 @@ namespace {
 
 static constexpr uint32_t kCancelTimeToLive =
     std::numeric_limits<uint32_t>::max();
+
+static const ftl::TimeDelta kMessageAggregationWindowSize =
+    ftl::TimeDelta::FromMilliseconds(100);
 
 }  // namespace
 
@@ -200,7 +204,11 @@ void Mdns::AddAgent(const std::string& name, std::shared_ptr<MdnsAgent> agent) {
 }
 
 void Mdns::SendMessage() {
-  ftl::TimePoint now = ftl::TimePoint::Now();
+  // It's acceptable to send records a bit early, and this provides two
+  // advantages:
+  // 1) We get more records per message, which is more efficient.
+  // 2) Agents can schedule records in short sequences if sequence is important.
+  ftl::TimePoint now = ftl::TimePoint::Now() + kMessageAggregationWindowSize;
 
   DnsMessage message;
 

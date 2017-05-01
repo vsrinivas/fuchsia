@@ -69,13 +69,18 @@ void InstancePublisher::Quit() {
 }
 
 void InstancePublisher::SendRecords(ftl::TimePoint when) {
+  // We schedule these a nanosecond apart to ensure proper sequence.
+  int64_t sequence = 0;
+
   host_->SendResource(answer_, MdnsResourceSection::kAnswer, when);
 
   for (auto& additional : additionals_) {
-    host_->SendResource(additional, MdnsResourceSection::kAdditional, when);
+    host_->SendResource(additional, MdnsResourceSection::kAdditional,
+                        when + ftl::TimeDelta::FromNanoseconds(++sequence));
   }
 
-  host_->SendAddresses(MdnsResourceSection::kAdditional, when);
+  host_->SendAddresses(MdnsResourceSection::kAdditional,
+                       when + ftl::TimeDelta::FromNanoseconds(++sequence));
 }
 
 }  // namespace mdns
