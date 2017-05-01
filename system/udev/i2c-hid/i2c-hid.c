@@ -5,8 +5,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/common/hid.h>
+#include <ddk/protocol/hidbus.h>
 
+#include <magenta/assert.h>
 #include <magenta/types.h>
 #include <magenta/device/i2c.h>
 
@@ -43,8 +44,12 @@ typedef struct i2c_hid_desc {
 } __PACKED i2c_hid_desc_t;
 
 typedef struct i2c_hid_device {
-    mx_hid_device_t hiddev;
+    mx_device_t* mxdev;
     mx_device_t* i2cdev;
+
+    mtx_t lock;
+    hidbus_ifc_t* ifc;
+    void* cookie;
 
     i2c_hid_desc_t* hiddesc;
     thrd_t irq_thread;
@@ -61,13 +66,44 @@ static uint8_t* i2c_hid_prepare_write_read_buffer(uint8_t* buf, int wlen, int rl
     return buf + 3 * sizeof(i2c_slave_ioctl_segment_t);
 }
 
-static mx_status_t i2c_hid_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type,
+static mx_status_t i2c_hid_query(mx_device_t* dev, uint32_t options, hid_info_t* info) {
+    if (!info) {
+        return ERR_INVALID_ARGS;
+    }
+    info->dev_num = 0;
+    info->dev_class = HID_DEV_CLASS_OTHER;
+    info->boot_device = false;
+    return NO_ERROR;
+}
+
+static mx_status_t i2c_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
+    i2c_hid_device_t* hid = dev->ctx;
+    mtx_lock(&hid->lock);
+    if (hid->ifc) {
+        mtx_unlock(&hid->lock);
+        return ERR_ALREADY_BOUND;
+    }
+    hid->ifc = ifc;
+    hid->cookie = cookie;
+    mtx_unlock(&hid->lock);
+    return NO_ERROR;
+}
+
+static void i2c_hid_stop(mx_device_t* dev) {
+    i2c_hid_device_t* hid = dev->ctx;
+    mtx_lock(&hid->lock);
+    hid->ifc = NULL;
+    hid->cookie = NULL;
+    mtx_unlock(&hid->lock);
+}
+
+static mx_status_t i2c_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         void** data, size_t* len) {
     if (desc_type != HID_DESC_TYPE_REPORT) {
         return ERR_NOT_FOUND;
     }
 
-    i2c_hid_device_t* hid = to_i2c_hid(dev);
+    i2c_hid_device_t* hid = dev->ctx;
     size_t desc_len = letoh16(hid->hiddesc->wReportDescLength);
     uint16_t desc_reg = letoh16(hid->hiddesc->wReportDescRegister);
 
@@ -94,34 +130,37 @@ static mx_status_t i2c_hid_get_descriptor(mx_hid_device_t* dev, uint8_t desc_typ
 }
 
 // TODO: implement the rest of the HID protocol
-static mx_status_t i2c_hid_get_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+static mx_status_t i2c_hid_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t i2c_hid_set_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
+static mx_status_t i2c_hid_set_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t i2c_hid_get_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
+static mx_status_t i2c_hid_get_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t i2c_hid_set_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t duration) {
+static mx_status_t i2c_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t duration) {
     return NO_ERROR;
 }
 
-static mx_status_t i2c_hid_get_protocol(mx_hid_device_t* dev, uint8_t* protocol) {
+static mx_status_t i2c_hid_get_protocol(mx_device_t* dev, uint8_t* protocol) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t i2c_hid_set_protocol(mx_hid_device_t* dev, uint8_t protocol) {
+static mx_status_t i2c_hid_set_protocol(mx_device_t* dev, uint8_t protocol) {
     return NO_ERROR;
 }
 
 
-static hid_bus_ops_t i2c_hid_bus_ops = {
+static hidbus_protocol_t i2c_hidbus_ops = {
+    .query = i2c_hid_query,
+    .start = i2c_hid_start,
+    .stop = i2c_hid_stop,
     .get_descriptor = i2c_hid_get_descriptor,
     .get_report = i2c_hid_get_report,
     .set_report = i2c_hid_set_report,
@@ -168,13 +207,26 @@ static int i2c_hid_irq_thread(void* arg) {
             printf("i2c-hid: short read (%zd < %u)!!!\n", ret, report_len);
             continue;
         }
-        hid_io_queue(&dev->hiddev, buf + 2, report_len - 2);
+        mtx_lock(&dev->lock);
+        if (dev->ifc) {
+            dev->ifc->io_queue(dev->cookie, buf + 2, report_len - 2);
+        }
+        mtx_unlock(&dev->lock);
     }
 
     // TODO: figure out how to clean up
     free(buf);
     return 0;
 }
+
+static mx_status_t i2c_hid_release(mx_device_t* dev) {
+    MX_PANIC("cannot release an i2c hid device yet!\n");
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_protocol_device_t i2c_hid_dev_ops = {
+    .release = i2c_hid_release,
+};
 
 static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     printf("i2c_hid_bind\n");
@@ -225,19 +277,29 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     printf("  version id:      %x\n", i2chid->hiddesc->wVersionID);
 #endif
 
-    hid_init_device(&i2chid->hiddev, &i2c_hid_bus_ops, 0, false, HID_DEV_CLASS_OTHER);
-    mx_status_t status = hid_add_device(drv, &i2chid->hiddev, dev);
+    mx_status_t status = device_create("i2c-hid", i2chid, &i2c_hid_dev_ops, drv, &i2chid->mxdev);
     if (status != NO_ERROR) {
+        printf("i2c-hid: could not create device: %d\n", status);
         free(i2chid->hiddesc);
-        hid_release_device(&i2chid->hiddev);
+        free(i2chid);
+        return status;
+    }
+    device_set_protocol(i2chid->mxdev, MX_PROTOCOL_HIDBUS, &i2c_hidbus_ops);
+
+    status = device_add(i2chid->mxdev, i2chid->i2cdev);
+    if (status != NO_ERROR) {
+        printf("i2c-hid: could not add device: %d\n", status);
+        device_destroy(i2chid->mxdev);
+        free(i2chid->hiddesc);
         free(i2chid);
         return status;
     }
 
     ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
     if (ret != thrd_success) {
+        printf("i2c-hid: could not create irq thread: %zd\n", ret);
+        device_destroy(i2chid->mxdev);
         free(i2chid->hiddesc);
-        hid_release_device(&i2chid->hiddev);
         free(i2chid);
         // TODO: map thrd_* status codes to ERR_* status codes
         return ERR_INTERNAL;
