@@ -97,6 +97,9 @@ bool Mdns::Start(const std::string& host_name) {
     for (auto pair : agents_by_name_) {
       pair.second->Start();
     }
+
+    SendMessage();
+    PostTask();
   }
 
   return started_;
@@ -163,17 +166,18 @@ void Mdns::UnpublishServiceInstance(const std::string& instance_name,
 void Mdns::WakeAt(std::shared_ptr<MdnsAgent> agent, ftl::TimePoint when) {
   FTL_DCHECK(agent);
   wake_queue_.emplace(when, agent);
-  PostTask();
 }
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question,
                         ftl::TimePoint when) {
+  FTL_DCHECK(question);
   question_queue_.emplace(when, question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
                         MdnsResourceSection section,
                         ftl::TimePoint when) {
+  FTL_DCHECK(resource);
   resource_queue_.emplace(when, resource, section);
 }
 
@@ -190,6 +194,8 @@ void Mdns::AddAgent(const std::string& name, std::shared_ptr<MdnsAgent> agent) {
   agents_by_name_.emplace(name, agent);
   if (started_) {
     agent->Start();
+    SendMessage();
+    PostTask();
   }
 }
 
