@@ -52,7 +52,8 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_o
 
     // MADT header.
     ACPI_TABLE_MADT* madt = (ACPI_TABLE_MADT*)(addr + rsdt->TableOffsetEntry[0]);
-    uint32_t madt_length = sizeof(ACPI_TABLE_MADT) + sizeof(ACPI_MADT_IO_APIC);
+    uint32_t madt_length = sizeof(ACPI_TABLE_MADT) + sizeof(ACPI_MADT_IO_APIC) +
+                           sizeof(ACPI_MADT_LOCAL_APIC);
     acpi_header(&madt->Header, ACPI_SIG_MADT, madt_length);
 
     // IO APIC header.
@@ -60,6 +61,15 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_o
                                                ACPI_MADT_TYPE_IO_APIC, sizeof(ACPI_MADT_IO_APIC));
     io_apic->Address = kIoApicAddress;
     io_apic->GlobalIrqBase = 0;
+
+    // Local APIC header.
+    //
+    // TODO(abdulla): Expand this to support multiple CPUs.
+    ACPI_MADT_LOCAL_APIC* local_apic = madt_subtable(io_apic, sizeof(ACPI_MADT_IO_APIC),
+                                                     ACPI_MADT_TYPE_LOCAL_APIC,
+                                                     sizeof(ACPI_MADT_LOCAL_APIC));
+    local_apic->Id = 0;
+    local_apic->LapicFlags = ACPI_MADT_ENABLED;
 
     return NO_ERROR;
 #else // __x86_64__
