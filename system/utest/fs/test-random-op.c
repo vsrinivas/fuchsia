@@ -72,7 +72,7 @@ typedef struct thread_list {
     thrd_t t;
 } thread_list_t;
 
-static bool worker_new(env_t* env, const char* where, const char* fn, uint32_t size) {
+static bool worker_new(env_t* env, const char* fn, uint32_t size) {
     worker_t* w = calloc(1, sizeof(worker_t));
     ASSERT_NEQ(w, NULL, "");
 
@@ -83,7 +83,7 @@ static bool worker_new(env_t* env, const char* where, const char* fn, uint32_t s
 
     w->env = env;
 
-    snprintf(w->name, sizeof(w->name), "%s%s", where, fn);
+    snprintf(w->name, sizeof(w->name), "%s", fn);
     w->size = size;
     w->fd = -1;
 
@@ -137,9 +137,8 @@ static bool init_environment(env_t* env) {
     add_random_ops(env);
 
     // assemble the work
-    const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
-        ASSERT_TRUE(worker_new(env, where, WORK[n].name, WORK[n].size), "");
+        ASSERT_TRUE(worker_new(env, WORK[n].name, WORK[n].size), "");
     }
 
     return true;
