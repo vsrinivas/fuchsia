@@ -8,6 +8,11 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := hostapp
 
-MODULE_SRCS += $(LOCAL_DIR)/sysgen.cpp
+MODULE_SRCS += \
+	$(LOCAL_DIR)/sysgen.cpp \
+  $(LOCAL_DIR)/parser.cpp \
+  $(LOCAL_DIR)/types.cpp \
+  $(LOCAL_DIR)/syscall_parser.cpp \
+  $(LOCAL_DIR)/generator.cpp
 
 include make/module.mk
