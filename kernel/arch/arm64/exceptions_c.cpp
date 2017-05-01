@@ -50,13 +50,18 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint6
 
 static status_t call_magenta_data_fault_exception_handler(mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
+    thread_t *thread = get_current_thread();
     arch_exception_context_t context = {};
+    DEBUG_ASSERT(iframe != nullptr);
     context.frame = iframe;
     context.esr = esr;
     context.far = far;
 
     arch_enable_ints();
+    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+    thread->arch.suspended_general_regs = iframe;
     status_t status = magenta_exception_handler(type, &context, iframe->elr);
+    thread->arch.suspended_general_regs = nullptr;
     arch_disable_ints();
     return status;
 }
@@ -296,7 +301,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
         /* in the case of receiving a kill signal, this function may not return,
          * but the scheduler would have been invoked so it's fine.
          */
-        thread_process_pending_signals();
+        arm64_thread_process_pending_signals(iframe);
     }
 }
 
@@ -332,6 +337,16 @@ extern "C" void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsign
     dump_iframe(iframe);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+}
+
+void arm64_thread_process_pending_signals(struct arm64_iframe_long *iframe)
+{
+    thread_t *thread = get_current_thread();
+    DEBUG_ASSERT(iframe != nullptr);
+    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+    thread->arch.suspended_general_regs = iframe;
+    thread_process_pending_signals();
+    thread->arch.suspended_general_regs = nullptr;
 }
 
 #if WITH_LIB_MAGENTA

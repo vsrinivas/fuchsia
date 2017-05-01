@@ -33,6 +33,12 @@ struct arch_thread {
         vaddr_t sp;
     };
 
+    // Debugger access to userspace general regs while suspended or stopped
+    // in an exception.
+    // The regs are saved on the stack and then a pointer is stored here.
+    // NULL if not suspended or stopped in an exception.
+    struct arm64_iframe_long *suspended_general_regs;
+
     /* if non-NULL, address to return to on data fault */
     void *data_fault_resume;
 

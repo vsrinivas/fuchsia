@@ -22,21 +22,18 @@ static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_re
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*out);
 
-    // Do "buffer too small" checks first. No point in prohibiting the caller
-    // from finding out the needed size just because the thread is currently
-    // running.
     if (provided_buf_size < sizeof(*out))
         return ERR_BUFFER_TOO_SMALL;
 
-    if (!thread_stopped_in_exception(thread))
-        return ERR_BAD_STATE;
+    if (thread_stopped_in_exception(thread)) {
+        // TODO(dje): We could get called while processing a synthetic
+        // exception where there is no frame.
+        if (thread->exception_context->frame == NULL)
+            return ERR_NOT_SUPPORTED;
+    }
 
-    struct arm64_iframe_long *in = thread->exception_context->frame;
-
-    // TODO: We could get called while processing a synthetic exception where
-    // there is no frame.
-    if (in == NULL)
-        return ERR_NOT_SUPPORTED;
+    struct arm64_iframe_long *in = thread->arch.suspended_general_regs;
+    DEBUG_ASSERT(in);
 
     static_assert(sizeof(in->r) == sizeof(out->r), "");
     memcpy(&out->r[0], &in->r[0], sizeof(in->r));
@@ -53,15 +50,15 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_gene
     if (buf_size != sizeof(*in))
         return ERR_INVALID_ARGS;
 
-    if (!thread_stopped_in_exception(thread))
-        return ERR_BAD_STATE;
+    if (thread_stopped_in_exception(thread)) {
+        // TODO(dje): We could get called while processing a synthetic
+        // exception where there is no frame.
+        if (thread->exception_context->frame == NULL)
+            return ERR_NOT_SUPPORTED;
+    }
 
-    struct arm64_iframe_long *out = thread->exception_context->frame;
-
-    // TODO: We could get called while processing a synthetic exception where
-    // there is no frame.
-    if (out == NULL)
-        return ERR_NOT_SUPPORTED;
+    struct arm64_iframe_long *out = thread->arch.suspended_general_regs;
+    DEBUG_ASSERT(out);
 
     static_assert(sizeof(out->r) == sizeof(in->r), "");
     memcpy(&out->r[0], &in->r[0], sizeof(in->r));
@@ -73,6 +70,8 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_gene
     return NO_ERROR;
 }
 
+// The caller is responsible for making sure the thread is in an exception
+// or is suspended, and stays so.
 status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_t *buf_size)
 {
     switch (regset)
@@ -84,6 +83,8 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
     }
 }
 
+// The caller is responsible for making sure the thread is in an exception
+// or is suspended, and stays so.
 status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size, bool priv)
 {
     switch (regset)

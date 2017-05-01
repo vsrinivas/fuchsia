@@ -95,6 +95,8 @@ typedef struct arm64_iframe_short iframe;
 enum handler_return platform_irq(iframe* frame);
 enum handler_return platform_fiq(iframe* frame);
 
+void arm64_thread_process_pending_signals(struct arm64_iframe_long *frame);
+
 /* fpu routines */
 void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags);
 void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread);
