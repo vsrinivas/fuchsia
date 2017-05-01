@@ -43,11 +43,8 @@ class StoryControllerMock : public StoryController {
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override {}
 
   // |StoryController|
-  void GetLink(fidl::InterfaceRequest<Link> request) override {}
-
-  // |StoryController|
-  void GetNamedLink(const fidl::String& name,
-                    fidl::InterfaceRequest<Link> request) override {}
+  void GetLink(const fidl::String& name,
+               fidl::InterfaceRequest<Link> request) override {}
 
   // |StoryController|
   void Stop(const StopCallback& done) override {}

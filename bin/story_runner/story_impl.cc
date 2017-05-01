@@ -670,12 +670,8 @@ void StoryImpl::NotifyStateChange() {
   story_provider_impl_->SetStoryState(story_id_, running_, state_);
 }
 
-void StoryImpl::GetLink(fidl::InterfaceRequest<Link> request) {
-  GetNamedLink(kRootLink, std::move(request));
-}
-
-void StoryImpl::GetNamedLink(const fidl::String& name,
-                             fidl::InterfaceRequest<Link> request) {
+void StoryImpl::GetLink(const fidl::String& name,
+                        fidl::InterfaceRequest<Link> request) {
   auto link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = name;

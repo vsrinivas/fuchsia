@@ -322,7 +322,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   // Totally tentative use of the root module link: Tell the root module under
   // what user shell it's running.
   void TestStory1_SetRootLink() {
-    story_controller_->GetLink(root_.NewRequest());
+    story_controller_->GetLink("root", root_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
     root_->Set(fidl::Array<fidl::String>::From(segments),
@@ -337,7 +337,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     if (!story_controller_) {
       story_provider_->GetController(
           story_info_->id, story_controller_.NewRequest());
-      story_controller_->GetLink(root_.NewRequest());
+      story_controller_->GetLink("root", root_.NewRequest());
     }
 
     link_watcher_.Watch(&root_);

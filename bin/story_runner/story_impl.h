@@ -124,8 +124,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
                     const fidl::String& value,
                     const SetInfoExtraCallback& callback) override;
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
-  void GetLink(fidl::InterfaceRequest<Link> request) override;
-  void GetNamedLink(const fidl::String& name,
+  void GetLink(const fidl::String& name,
                     fidl::InterfaceRequest<Link> request) override;
   void Stop(const StopCallback& callback) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;

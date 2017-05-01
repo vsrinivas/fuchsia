@@ -28,14 +28,11 @@ interface StoryController {
   // completes.
   Start(mozart.ViewOwner& view_owner);
 
-  // Gets a connection to the root Link.
-  GetLink(Link& link);
-
   // Gets a connection to the named Link in the story. The name of the
   // root link is "root", and it's implicitly created when the story
   // is created. Any other link, if it doesn't exist yet, is
   // implicitly created.
-  GetNamedLink(string name, Link& link);
+  GetLink(string name, Link& link);
 
   // Stops this story if it is running, else does nothing. Returns
   // when the story is stopped.
