@@ -50,7 +50,7 @@ class _Module extends Module implements LinkWatcher {
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _moduleContext.createLink(null, _link.ctrl.request());
+    _moduleContext.getLink(null, _link.ctrl.request());
     _link.watchAll(_linkWatcherBinding.wrap(this));
   }
 

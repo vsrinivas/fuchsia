@@ -48,11 +48,6 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
   story_impl_->GetLinkPath(std::move(link_path), std::move(link));
 }
 
-void ModuleContextImpl::CreateLink(const fidl::String& name,
-                                   fidl::InterfaceRequest<Link> link) {
-  GetLink(name, std::move(link));
-}
-
 void ModuleContextImpl::StartModule(
     const fidl::String& name, const fidl::String& query,
     const fidl::String& link_name,

@@ -71,7 +71,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
     // A module is initialized with a ModuleContext and a Link.
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _moduleContext.createLink(null, _link.ctrl.request());
+    _moduleContext.getLink(null, _link.ctrl.request());
 
     // On the link, we can declare that values stored in the link adhere
     // to a schema. If an update violates the schema, this only created

@@ -14,9 +14,6 @@ import "apps/mozart/services/views/view_token.fidl";
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
 interface ModuleContext {
-  // DEPRECATED. See GetLink() below.
-  CreateLink(string? name, Link& link);
-
   // Gets a Link instance with the given name.
   //
   // The link instance has a name so that it can be recognized when

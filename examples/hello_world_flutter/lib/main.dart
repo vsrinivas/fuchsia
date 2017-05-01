@@ -45,7 +45,7 @@ class ModuleImpl extends Module {
     // collected before the pipe is properly closed or unbound, the app will
     // crash due to the leaked handle.
     _moduleContext.ctrl.bind(moduleContextHandle);
-    _moduleContext.createLink(null, _link.ctrl.request());
+    _moduleContext.getLink(null, _link.ctrl.request());
 
     // Do something with the story and link services.
   }
