@@ -5,7 +5,7 @@
 #include "application/lib/svc/service_namespace.h"
 
 #include <fcntl.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <mxio/util.h>
 #include <mxtl/ref_ptr.h>
 #include <utility>
@@ -86,7 +86,7 @@ bool ServiceNamespace::MountAtPath(const char* path) {
     return false;
 
   mx_handle_t h = h2.release();
-  return ioctl_devmgr_mount_fs(fd.get(), &h) >= 0;
+  return ioctl_vfs_mount_fs(fd.get(), &h) >= 0;
 }
 
 void ServiceNamespace::Connect(const char* name, size_t len,
