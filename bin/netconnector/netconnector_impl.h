@@ -13,6 +13,7 @@
 #include "application/lib/app/application_context.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/media/src/util/fidl_publisher.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/ip_port.h"
@@ -61,6 +62,10 @@ class NetConnectorImpl : public NetConnector {
       const fidl::String& device_name,
       fidl::InterfaceRequest<app::ServiceProvider> service_provider) override;
 
+  void GetKnownDeviceNames(
+      uint64_t version_last_seen,
+      const GetKnownDeviceNamesCallback& callback) override;
+
  private:
   static const IpPort kPort;
   static const std::string kFuchsiaServiceName;
@@ -87,6 +92,8 @@ class NetConnectorImpl : public NetConnector {
       service_agents_;
 
   mdns::MdnsServiceImpl mdns_service_impl_;
+
+  media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };

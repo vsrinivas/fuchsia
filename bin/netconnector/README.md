@@ -14,8 +14,12 @@ the config when it runs as listener.
 
 The command line options for `netconnector` are:
 
+    --show-devices              show a list of known devices
     --config=<path>             use <path> rather than the default config file
     --listen                    run as listener
+
+The `--show-devices` option is only relevant when `netconnector` is running as
+a utility. `--config` is only relevant to the listener.
 
 The `--listen` option makes `netconnector` run as listener. Typically, this
 argument is only used in the context of `bootstrap`'s `services.config` file.

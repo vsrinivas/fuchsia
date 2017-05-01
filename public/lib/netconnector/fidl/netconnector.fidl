@@ -9,6 +9,10 @@ import "application/services/service_provider.fidl";
 // Primary netconnector service definition.
 [ServiceName="netconnector::NetConnector"]
 interface NetConnector {
+  // Special value for GetKnownDeviceNames version_last_seen parameter to
+  // get the current status immediately.
+  const uint64 kInitialKnownDeviceNames = 0;
+
   // Registers a running responding service. |service_name| identifies the
   // service and is the same name used in |ConnectToService|. |service_provider|
   // provides the service. This method is provided so that responding services
@@ -20,4 +24,10 @@ interface NetConnector {
   // Gets a provider for services on the specified device.
   GetDeviceServiceProvider(string device_name,
                            app.ServiceProvider& service_provider);
+
+  // Gets the names of known devices. To get the list immediately, call
+  // |GetKnownDeviceNames(kInitialKnownDeviceNames)|. To get updates thereafter,
+  // pass the version sent in the previous callback.
+  GetKnownDeviceNames(uint64 version_last_seen) =>
+    (uint64 version, array<string> devices);
 };

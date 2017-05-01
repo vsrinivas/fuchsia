@@ -4,9 +4,13 @@
 
 #include "apps/netconnector/src/netconnector_impl.h"
 
+#include <iostream>
+
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/host_name.h"
+#include "apps/netconnector/src/mdns/mdns_names.h"
 #include "apps/netconnector/src/netconnector_params.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -33,13 +37,43 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     MdnsServicePtr mdns_service =
         application_context_->ConnectToEnvironmentService<MdnsService>();
 
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    if (params_->show_devices()) {
+      net_connector->GetKnownDeviceNames(
+          NetConnector::kInitialKnownDeviceNames,
+          ftl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
+              uint64_t version, fidl::Array<fidl::String> device_names) {
+            if (device_names.size() == 0) {
+              std::cout << "No remote devices found" << std::endl;
+            } else {
+              for (auto& device_name : device_names) {
+                std::cout << device_name << std::endl;
+              }
+            }
+
+            mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          }));
+    } else {
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    }
+
     return;
   }
 
   // Running as the listener.
 
   host_name_ = GetHostName();
+
+  device_names_publisher_.SetCallbackRunner(
+      [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
+        fidl::Array<fidl::String> device_names =
+            fidl::Array<fidl::String>::New(0);
+
+        for (auto& pair : params_->devices()) {
+          device_names.push_back(pair.first);
+        }
+
+        callback(version, std::move(device_names));
+      });
 
   // Register services.
   for (auto& pair : params->MoveServices()) {
@@ -93,6 +127,12 @@ void NetConnectorImpl::GetDeviceServiceProvider(
   AddDeviceServiceProvider(DeviceServiceProvider::Create(
       device_name, SocketAddress(iter->second, kPort), std::move(request),
       this));
+}
+
+void NetConnectorImpl::GetKnownDeviceNames(
+    uint64_t version_last_seen,
+    const GetKnownDeviceNamesCallback& callback) {
+  device_names_publisher_.Get(version_last_seen, callback);
 }
 
 void NetConnectorImpl::RegisterServiceProvider(
@@ -157,6 +197,8 @@ void NetConnectorImpl::StartMdns() {
           FTL_LOG(INFO) << "Device '" << instance_name << "' lost";
           params_->UnregisterDevice(instance_name);
         }
+
+        device_names_publisher_.SendUpdates();
       });
 }
 

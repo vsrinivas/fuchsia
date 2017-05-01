@@ -25,7 +25,13 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
   listen_ = command_line.HasOption("listen");
+  show_devices_ = command_line.HasOption("show-devices");
 
+  if (listen_ && show_devices_) {
+    FTL_LOG(ERROR) << "--listen and --show-devices are mutually exclusive";
+    Usage();
+    return;
+  }
 
   std::string config_file_name;
   if (!command_line.GetOptionValue("config", &config_file_name)) {
@@ -52,6 +58,7 @@ void NetConnectorParams::Usage() {
   FTL_LOG(INFO)
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
+  FTL_LOG(INFO) << "    --show-devices                   show known devices";
   FTL_LOG(INFO) << "    --listen                         run as listener";
 }
 
