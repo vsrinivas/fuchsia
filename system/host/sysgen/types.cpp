@@ -6,6 +6,9 @@
 
 #include "types.h"
 
+using std::string;
+using std::vector;
+
 const std::map<string, string> rust_overrides = {
     {"any[]IN", "*const u8"},
     {"any[]OUT", "*mut u8"},

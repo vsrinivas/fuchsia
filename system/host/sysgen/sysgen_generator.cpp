@@ -1,0 +1,173 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <algorithm>
+#include <ctime>
+
+#include "generator.h"
+#include "kernel_invocation_generator.h"
+#include "rust_binding_generator.h"
+#include "header_generator.h"
+
+#include "sysgen_generator.h"
+
+using std::string;
+using std::map;
+using std::vector;
+
+const map<string, string> user_attrs = {
+    {"noreturn", "__attribute__((__noreturn__))"},
+    {"const", "__attribute__((const))"},
+    {"deprecated", "__attribute__((deprecated))"},
+
+    // All vDSO calls are "leaf" in the sense of the GCC attribute.
+    // It just means they can't ever call back into their callers'
+    // own translation unit.  No vDSO calls make callbacks at all.
+    {"*", "__attribute__((__leaf__))"},
+};
+
+const map<string, string> kernel_attrs = {
+    {"noreturn", "__attribute__((__noreturn__))"},
+};
+
+static KernelInvocationGenerator kernel_code(
+            "sys_",                     // function prefix
+            "ret",                      // variable to assign invocation result to
+            "uint64_t",                 // type of result variable
+            "arg");                     // prefix for syscall arguments);
+
+static HeaderGenerator user_header(
+            "extern ",                          // function prefix
+            vector<string>({"mx_", "_mx_"}),    // function name prefixes
+            "void",                             // no-args special type
+            false,
+            user_attrs,
+            false);
+
+static HeaderGenerator vdso_header(
+            "__attribute__((visibility(\"hidden\"))) extern ",  // function prefix
+            vector<string>({"VDSO_mx_"}),                       // function name prefixes
+            "void",                                             // no-args special type
+            false,
+            user_attrs,
+            false);
+
+static HeaderGenerator kernel_header(
+            "",
+            vector<string>({"sys_"}),
+            "",
+            true,
+            kernel_attrs,
+            true);
+
+static X86AssemblyGenerator x86_generator(
+            "m_syscall",                // syscall macro name
+            "mx_");                     // syscall name prefix
+
+static Arm64AssemblyGenerator arm64_generator(
+            "m_syscall",                // syscall macro name
+            "mx_");                     // syscall name prefix
+
+static SyscallNumbersGenerator syscall_num_generator("#define MX_SYS_");
+
+static RustBindingGenerator rust_bindings;
+static TraceInfoGenerator trace_generator;
+
+const map<string, const Generator&> type_to_generator = {
+    // The user header, pure C.
+    { "user-header", user_header },
+
+    // The vDSO-internal header, pure C.  (VDsoHeaderC)
+    { "vdso-header", vdso_header },
+
+    // The kernel header, C++.
+    { "kernel-header", kernel_header },
+
+    // The kernel C++ code. A switch statement set.
+    { "kernel-code", kernel_code },
+
+    //  The assembly file for x86-64.
+    { "x86-asm", x86_generator },
+
+    //  The assembly include file for ARM64.
+    { "arm-asm", arm64_generator },
+
+    // A C header defining MX_SYS_* syscall number macros.
+    { "numbers", syscall_num_generator },
+
+    // The trace subsystem data, to be interpreted as an array of structs.
+    { "trace", trace_generator },
+
+    // Rust bindings.
+    { "rust", rust_bindings },
+};
+
+const map<string, string> type_to_default_suffix = {
+  {"user-header",   ".user.h"} ,
+  {"vdso-header",   ".vdso.h"},
+  {"kernel-header", ".kernel.h"},
+  {"kernel-code",   ".kernel.inc"},
+  {"x86-asm",   ".x86-64.S"},
+  {"arm-asm",   ".arm64.S"},
+  {"numbers",   ".syscall-numbers.h"},
+  {"trace",   ".trace.inc"},
+  {"rust",    ".rs"},
+};
+
+const map<string, string>& get_type_to_default_suffix() {
+    return type_to_default_suffix;
+}
+
+const map<string, const Generator&>& get_type_to_generator() {
+    return type_to_generator;
+}
+
+bool SysgenGenerator::AddSyscall(Syscall& syscall) {
+    if (!syscall.validate())
+        return false;
+    syscall.assign_index(&next_index_);
+    calls_.push_back(syscall);
+    return true;
+}
+
+bool SysgenGenerator::Generate(const map<string, string>& type_to_filename) {
+    for (auto& entry : type_to_filename) {
+        if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
+            return false;
+    }
+    return true;
+}
+
+bool SysgenGenerator::verbose() const {
+    return verbose_;
+}
+
+bool SysgenGenerator::generate_one(const string& output_file, const Generator& generator, const string& type) {
+    std::ofstream ofile;
+    ofile.open(output_file.c_str(), std::ofstream::out);
+
+    if (!generator.header(ofile)) {
+        print_error("i/o error", output_file);
+        return false;
+    }
+
+    if (!std::all_of(calls_.begin(), calls_.end(),
+                    [&generator, &ofile](const Syscall& sc) {
+                        return generator.syscall(ofile, sc);
+                    })) {
+        print_error("generation failed", output_file);
+        return false;
+    }
+
+    if (!generator.footer(ofile)) {
+        print_error("i/o error", output_file);
+        return false;
+    }
+
+    return true;
+}
+
+void SysgenGenerator::print_error(const char* what, const string& file) {
+    fprintf(stderr, "error: %s for %s\n", what, file.c_str());
+}

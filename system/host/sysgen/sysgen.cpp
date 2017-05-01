@@ -10,7 +10,7 @@
 
 #include "types.h"
 #include "syscall_parser.h"
-#include "generator.h"
+#include "sysgen_generator.h"
 
 using std::string;
 

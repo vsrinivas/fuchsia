@@ -4,31 +4,64 @@
 
 #pragma once
 
+#include <ctime>
 #include <fstream>
-#include <functional>
-#include <list>
-#include <map>
 #include <string>
 
 #include "types.h"
 
-using gen = std::function<bool(std::ofstream& os, const Syscall& sc)>;
-
-const std::map<string, string>& get_type_to_default_suffix();
-const std::map<string, gen>& get_type_to_generator();
-
-class SysgenGenerator {
+// Interface for syscall generators.
+class Generator {
 public:
-    SysgenGenerator(bool verbose) : verbose_(verbose) {}
-    bool AddSyscall(Syscall& syscall);
-    bool Generate(const std::map<string, string>& type_to_filename);
-    bool verbose() const;
+  virtual bool header(std::ofstream& os) const;
+  virtual bool syscall(std::ofstream& os, const Syscall& sc) const = 0;
+  virtual bool footer(std::ofstream& os) const;
+protected:
+  virtual ~Generator() {}
+};
+
+// Generate the x86_64 userspace functions.
+class X86AssemblyGenerator : public Generator {
+public:
+    X86AssemblyGenerator(const std::string& syscall_macro, const std::string& name_prefix) :
+        syscall_macro_(syscall_macro),
+        name_prefix_(name_prefix) {}
+
+    bool syscall(std::ofstream& os, const Syscall& sc) const override;
 
 private:
-    bool generate_one(const string& output_file, const gen& generator, const string& type);
-    void print_error(const char* what, const string& file);
+    const std::string syscall_macro_;
+    const std::string name_prefix_;
+};
 
-    std::list<Syscall> calls_;
-    int next_index_ = 0;
-    const bool verbose_;
+// Generate the arm64 userspace functions.
+class Arm64AssemblyGenerator : public Generator {
+public:
+    Arm64AssemblyGenerator(const std::string& syscall_macro, const std::string& name_prefix) :
+        syscall_macro_(syscall_macro),
+        name_prefix_(name_prefix) {}
+
+    bool syscall(std::ofstream& os, const Syscall& sc) const override;
+
+private:
+    const std::string syscall_macro_;
+    const std::string name_prefix_;
+};
+
+// Generate the syscall number definitions.
+class SyscallNumbersGenerator : public Generator {
+public:
+    SyscallNumbersGenerator(const std::string& define_prefix) :
+        define_prefix_(define_prefix) {}
+
+    bool syscall(std::ofstream& os, const Syscall& sc) const override;
+
+private:
+    const std::string define_prefix_;
+};
+
+// Generate debug trace info.
+class TraceInfoGenerator : public Generator {
+public:
+    bool syscall(std::ofstream& os, const Syscall& sc) const override;
 };

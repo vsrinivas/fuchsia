@@ -10,9 +10,13 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/sysgen.cpp \
-  $(LOCAL_DIR)/parser.cpp \
   $(LOCAL_DIR)/types.cpp \
   $(LOCAL_DIR)/syscall_parser.cpp \
-  $(LOCAL_DIR)/generator.cpp
+  $(LOCAL_DIR)/sysgen_generator.cpp \
+  $(LOCAL_DIR)/generator.cpp \
+  $(LOCAL_DIR)/header_generator.cpp \
+  $(LOCAL_DIR)/kernel_invocation_generator.cpp \
+  $(LOCAL_DIR)/rust_binding_generator.cpp \
+  $(LOCAL_DIR)/parser/parser.cpp \
 
 include make/module.mk

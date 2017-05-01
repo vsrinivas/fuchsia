@@ -9,16 +9,13 @@
 #include <vector>
 #include <map>
 
-#include "parser.h" // for FileCtx
-
-using std::string;
-using std::vector;
+#include "parser/parser.h" // for FileCtx
 
 constexpr size_t kMaxArgs = 8;
 
-extern const std::map<string, string> rust_overrides;
-extern const std::map<string, string> rust_primitives;
-extern const std::map<string, string> rust_reserved_words;
+extern const std::map<std::string, std::string> rust_overrides;
+extern const std::map<std::string, std::string> rust_primitives;
+extern const std::map<std::string, std::string> rust_reserved_words;
 
 struct ArraySpec {
     enum Kind : uint32_t {
@@ -29,36 +26,36 @@ struct ArraySpec {
 
     Kind kind;
     uint32_t count;
-    string name;
+    std::string name;
 
-    string kind_str() const;
-    bool assign_kind(const vector<string>& attrs);
-    string to_string() const;
+    std::string kind_str() const;
+    bool assign_kind(const std::vector<std::string>& attrs);
+    std::string to_string() const;
 };
 
 struct TypeSpec {
-    string name;
-    string type;
-    vector<string> attributes;
+    std::string name;
+    std::string type;
+    std::vector<std::string> attributes;
     ArraySpec* arr_spec = nullptr;
 
     void debug_dump() const;
-    string to_string() const;
-    string as_cpp_declaration(bool is_wrapped) const;
-    string as_rust_declaration() const;
-    string as_cpp_cast(const string& arg) const;
+    std::string to_string() const;
+    std::string as_cpp_declaration(bool is_wrapped) const;
+    std::string as_rust_declaration() const;
+    std::string as_cpp_cast(const std::string& arg) const;
 };
 
 
 struct Syscall {
     FileCtx fc;
-    string name;
+    std::string name;
     int index = -1;
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
-    std::vector<string> attributes;
+    std::vector<std::string> attributes;
 
-    Syscall(const FileCtx& sc_fc, const string& sc_name)
+    Syscall(const FileCtx& sc_fc, const std::string& sc_name)
         : fc(sc_fc), name(sc_name) {}
 
     bool is_vdso() const;
@@ -72,13 +69,13 @@ struct Syscall {
     bool valid_array_count(const TypeSpec& ts) const;
     void print_error(const char* what) const;
     void debug_dump() const;
-    string return_type() const;
+    std::string return_type() const;
     bool is_void_return() const;
-    bool will_wrap(const string& type) const;
-    string maybe_wrap(const string& type) const;
+    bool will_wrap(const std::string& type) const;
+    std::string maybe_wrap(const std::string& type) const;
 };
 
-const string map_override(const string& name, const std::map<string, string>& overrides);
-
-const bool has_attribute(const char* attr, const vector<string>& attrs);
-const void dump_attributes(const vector<string>& attrs);
+const std::string map_override(
+        const std::string& name, const std::map<std::string, std::string>& overrides);
+const bool has_attribute(const char* attr, const std::vector<std::string>& attrs);
+const void dump_attributes(const std::vector<std::string>& attrs);
