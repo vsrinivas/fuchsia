@@ -71,6 +71,7 @@ typedef struct mbrpart_device {
     mx_device_t* parent;
     mbr_partition_entry_t partition;
     block_info_t info;
+    block_callbacks_t* callbacks;
     atomic_int writercount;
 } mbrpart_device_t;
 
@@ -206,6 +207,65 @@ static mx_protocol_device_t mbr_proto = {
     .close = mbr_close,
 };
 
+static void mbr_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
+    mbrpart_device_t* device = dev->ctx;
+    device->callbacks = cb;
+}
+
+static void mbr_block_get_info(mx_device_t* dev, block_info_t* info) {
+    mbrpart_device_t* device = dev->ctx;
+    memcpy(info, &device->info, sizeof(*info));
+}
+
+static void mbr_block_complete(iotxn_t* txn, void* cookie) {
+    mbrpart_device_t* dev;
+    memcpy(&dev, txn->extra, sizeof(mbrpart_device_t*));
+    dev->callbacks->complete(cookie, txn->status);
+    iotxn_release(txn);
+}
+
+static void block_do_txn(mbrpart_device_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_info_t* info = &dev->info;
+    if ((dev_offset % info->block_size) || (length % info->block_size)) {
+        dev->callbacks->complete(cookie, ERR_INVALID_ARGS);
+        return;
+    }
+    uint64_t size = getsize(dev);
+    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
+        dev->callbacks->complete(cookie, ERR_OUT_OF_RANGE);
+        return;
+    }
+
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+        dev->callbacks->complete(cookie, status);
+        return;
+    }
+    txn->opcode = opcode;
+    txn->length = length;
+    txn->offset = to_parent_offset(dev, dev_offset);
+    txn->complete_cb = mbr_block_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &dev, sizeof(mbrpart_device_t*));
+    iotxn_queue(dev->parent, txn);
+}
+
+static void mbr_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn((mbrpart_device_t*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+}
+
+static void mbr_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn((mbrpart_device_t*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+}
+
+static block_ops_t mbr_block_ops = {
+    .set_callbacks = mbr_block_set_callbacks,
+    .get_info = mbr_block_get_info,
+    .read = mbr_block_read,
+    .write = mbr_block_write,
+};
+
 static int mbr_bind_thread(void* arg) {
     mx_device_t* dev = arg;
 
@@ -306,7 +366,8 @@ static int mbr_bind_thread(void* arg) {
             .ctx = pdev,
             .driver = &_driver_mbr,
             .ops = &mbr_proto,
-            .proto_id = MX_PROTOCOL_BLOCK,
+            .proto_id = MX_PROTOCOL_BLOCK_CORE,
+            .proto_ops = &mbr_block_ops,
         };
 
         if ((st = device_add(dev, &args, &pdev->mxdev)) != NO_ERROR) {
