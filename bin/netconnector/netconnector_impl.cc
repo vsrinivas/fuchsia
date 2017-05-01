@@ -14,6 +14,8 @@ namespace netconnector {
 
 // static
 const IpPort NetConnectorImpl::kPort = IpPort::From_uint16_t(7777);
+// static
+const std::string NetConnectorImpl::kFuchsiaServiceName = "_fuchsia._tcp.";
 
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
@@ -28,6 +30,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     // Start the listener.
     NetConnectorPtr net_connector =
         application_context_->ConnectToEnvironmentService<NetConnector>();
+    MdnsServicePtr mdns_service =
+        application_context_->ConnectToEnvironmentService<MdnsService>();
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
@@ -52,6 +56,12 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       [this](fidl::InterfaceRequest<NetConnector> request) {
         bindings_.AddBinding(this, std::move(request));
       });
+  application_context_->outgoing_services()->AddService<MdnsService>(
+      [this](fidl::InterfaceRequest<MdnsService> request) {
+        mdns_service_impl_.AddBinding(std::move(request));
+      });
+
+  StartMdns();
 }
 
 NetConnectorImpl::~NetConnectorImpl() {}
@@ -110,6 +120,32 @@ void NetConnectorImpl::AddServiceAgent(
     std::unique_ptr<ServiceAgent> service_agent) {
   ServiceAgent* raw_ptr = service_agent.get();
   service_agents_.emplace(raw_ptr, std::move(service_agent));
+}
+
+void NetConnectorImpl::StartMdns() {
+  mdns_service_impl_.Start(host_name_);
+
+  mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
+                                            kPort, std::vector<std::string>());
+
+  mdns_service_impl_.SubscribeToService(
+      kFuchsiaServiceName,
+      [this](const std::string& service_name, const std::string& instance_name,
+             const SocketAddress& v4_address, const SocketAddress& v6_address,
+             const std::vector<std::string>& text) {
+        if (v4_address.is_valid()) {
+          FTL_LOG(INFO) << "Device '" << instance_name
+                        << "' discovered at address " << v4_address.address();
+          params_->RegisterDevice(instance_name, v4_address.address());
+        } else if (v6_address.is_valid()) {
+          FTL_LOG(INFO) << "Device '" << instance_name
+                        << "' discovered at address " << v6_address.address();
+          params_->RegisterDevice(instance_name, v6_address.address());
+        } else {
+          FTL_LOG(INFO) << "Device '" << instance_name << "' lost";
+          params_->UnregisterDevice(instance_name);
+        }
+      });
 }
 
 }  // namespace netconnector

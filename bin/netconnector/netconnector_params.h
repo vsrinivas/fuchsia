@@ -33,6 +33,8 @@ class NetConnectorParams {
 
   void RegisterDevice(const std::string& name, const IpAddress& address);
 
+  void UnregisterDevice(const std::string& name);
+
  private:
   void Usage();
 

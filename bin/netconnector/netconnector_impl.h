@@ -17,6 +17,7 @@
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/ip_port.h"
 #include "apps/netconnector/src/listener.h"
+#include "apps/netconnector/src/mdns/mdns_service_impl.h"
 #include "apps/netconnector/src/netconnector_params.h"
 #include "apps/netconnector/src/requestor_agent.h"
 #include "apps/netconnector/src/responding_service_host.h"
@@ -62,11 +63,14 @@ class NetConnectorImpl : public NetConnector {
 
  private:
   static const IpPort kPort;
+  static const std::string kFuchsiaServiceName;
 
   void AddDeviceServiceProvider(
       std::unique_ptr<DeviceServiceProvider> device_service_provider);
 
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
+
+  void StartMdns();
 
   NetConnectorParams* params_;
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -81,6 +85,8 @@ class NetConnectorImpl : public NetConnector {
       requestor_agents_;
   std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
       service_agents_;
+
+  mdns::MdnsServiceImpl mdns_service_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };
