@@ -25,6 +25,8 @@ public:
 
     bool Initialize();
 
+    bool initialized() { return initialized_; }
+
     uint32_t batch_buffer_resource_index() const
     {
         DASSERT(command_buffer_);
