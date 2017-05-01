@@ -118,7 +118,7 @@ static mx_status_t dh_find_driver(const char* libname, driver_rec_t** out) {
         goto done;
     }
     if (di->driver->ops->version != DRIVER_OPS_VERSION) {
-        log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64 
+        log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64
             ", expecting %" PRIx64 "\n", libname,
             di->driver->ops->version, DRIVER_OPS_VERSION);
         rec->status = ERR_INVALID_ARGS;

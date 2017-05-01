@@ -113,7 +113,10 @@ mx_status_t do_publish(device_t* parent, device_t* ctx) {
 }
 
 void do_unpublish(device_t* dev) {
-    devfs_remove(dev->vnode);
+    if (dev->vnode != NULL) {
+        devfs_remove(dev->vnode);
+        dev->vnode = NULL;
+    }
 }
 
 #if !DEVHOST_V2

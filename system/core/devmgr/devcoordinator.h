@@ -33,20 +33,25 @@ mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
 #include <ddk/driver.h>
 
 #if DEVHOST_V2
-typedef struct {
+typedef struct dc_work work_t;
+typedef struct dc_devhost devhost_t;
+typedef struct dc_device device_t;
+typedef struct dc_driver driver_t;
+
+struct dc_work {
     list_node_t node;
     uint32_t op;
     uint32_t arg;
-} work_t;
+};
 
-typedef struct {
+struct dc_devhost {
     port_handler_t ph;
     mx_handle_t hrpc;
     mx_handle_t proc;
     mx_koid_t koid;
-} devhost_t;
+};
 
-typedef struct {
+struct dc_device {
     mx_handle_t hrpc;
     mx_handle_t hrsrc;
     port_handler_t ph;
@@ -54,12 +59,17 @@ typedef struct {
     const char* args;
     work_t work;
     uint32_t flags;
+    int32_t refcount;
     uint32_t protocol_id;
     uint32_t prop_count;
     VnodeDir* vnode;
+    device_t* parent;
+    device_t* shadow;
+    list_node_t node;
+    list_node_t children;
     char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
-} device_t;
+};
 
 #else
 typedef struct {
@@ -88,7 +98,10 @@ typedef struct {
 #define DEV_CTX_BOUND      0x08
 
 #define DEV_CTX_DEAD       0x10
-typedef struct {
+
+#define DEV_CTX_SHADOW     0x20
+
+typedef struct dc_driver {
     const char* name;
     const mx_bind_inst_t* binding;
     uint32_t binding_size;

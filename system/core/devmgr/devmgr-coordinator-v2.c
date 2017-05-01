@@ -24,11 +24,16 @@ static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .name = "root",
+    .children = LIST_INITIAL_VALUE(root_device.children),
+    .refcount = 1,
 };
+
 static device_t misc_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_MISC_PARENT,
     .name = "misc",
+    .children = LIST_INITIAL_VALUE(misc_device.children),
+    .refcount = 1,
 };
 
 static void dc_handle_new_device(device_t* dev);
@@ -125,6 +130,36 @@ static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
     return NO_ERROR;
 }
 
+// called when device children or shadows are removed
+static void dc_release_device(device_t* dev) {
+    dev->refcount--;
+    if (dev->refcount > 0) {
+        return;
+    }
+
+    // Immortal devices are never destroyed
+    if (dev->flags & DEV_CTX_IMMORTAL) {
+        return;
+    }
+
+    log(INFO, "devcoord: dev %p (name='%s') destroyed\n", dev, dev->name);
+
+    do_unpublish(dev);
+
+    if (dev->hrpc) {
+        mx_handle_close(dev->hrpc);
+        dev->hrpc = MX_HANDLE_INVALID;
+        dev->ph.handle = MX_HANDLE_INVALID;
+    }
+    if (dev->hrsrc) {
+        mx_handle_close(dev->hrsrc);
+        dev->hrsrc = MX_HANDLE_INVALID;
+    }
+    dev->host = NULL;
+    //TODO: refcount, reap hosts
+    free(dev);
+}
+
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
@@ -147,6 +182,7 @@ static mx_status_t dc_add_device(device_t* parent,
     if ((dev = calloc(1, sizeof(*dev) + msg->datalen + msg->argslen + 1)) == NULL) {
         return ERR_NO_MEMORY;
     }
+    list_initialize(&dev->children);
     dev->hrpc = handle[0];
     dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
@@ -160,9 +196,16 @@ static mx_status_t dc_add_device(device_t* parent,
     // we are, by definition a bus device.
     if (args[0] || (dev->hrsrc != MX_HANDLE_INVALID)) {
         dev->flags |= DEV_CTX_BUSDEV;
-    } else {
-        //TODO: create shadow instead
-        dev->host = parent->host;
+    }
+
+    // We exist within our parent's device host
+    dev->host = parent->host;
+
+    // If our parent is a shadow, for the purpose
+    // of devicefs, we need to work with *its* parent
+    // which is the device that it is shadowing.
+    if (parent->flags & DEV_CTX_SHADOW) {
+        parent = parent->parent;
     }
 
     mx_status_t r;
@@ -180,6 +223,9 @@ static mx_status_t dc_add_device(device_t* parent,
         return r;
     }
 
+    list_add_tail(&parent->children, &dev->node);
+    parent->refcount++;
+
     log(DEVFS, "devcoord: publish '%s' props=%u args='%s'\n",
         dev->name, dev->prop_count, dev->args);
 
@@ -192,8 +238,23 @@ static mx_status_t dc_remove_device(device_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
         log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
     } else {
-        do_unpublish(dev);
+        printf("REMOVE %p %s\n", dev, dev->name);
         dev->flags |= DEV_CTX_DEAD;
+
+        // remove from devfs, preventing further OPEN attempts
+        do_unpublish(dev);
+
+        // if we have a parent, disconnect and downref it
+        device_t* parent = dev->parent;
+        if (parent != NULL) {
+            if (dev->flags & DEV_CTX_SHADOW) {
+                parent->shadow = NULL;
+            } else {
+                list_delete(&dev->node);
+            }
+            dev->parent = NULL;
+            dc_release_device(dev->parent);
+        }
     }
     return NO_ERROR;
 }
@@ -271,7 +332,6 @@ void dc_destroy_device(device_t* dev) {
     if (!(dev->flags & DEV_CTX_DEAD)) {
         dc_remove_device(dev);
     }
-    free(dev);
 }
 
 #define dev_from_ph(ph) containerof(ph, device_t, ph)
@@ -302,7 +362,13 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     dc_msg_t msg;
     uint32_t mlen;
     mx_status_t r;
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, dev->args)) < 0) {
+
+    // Where to get information to send to devhost from?
+    // Shadow devices defer to the device they're shadowing,
+    // otherwise we use the information from the device itself.
+    device_t* info = (dev->flags & DEV_CTX_SHADOW) ? dev->parent : dev;
+
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, info->args)) < 0) {
         return r;
     }
 
@@ -311,8 +377,8 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
         return r;
     }
 
-    if (dev->hrsrc != MX_HANDLE_INVALID) {
-        if ((r = mx_handle_duplicate(dev->hrsrc, MX_RIGHT_SAME_RIGHTS, handle + 1)) < 0) {
+    if (info->hrsrc != MX_HANDLE_INVALID) {
+        if ((r = mx_handle_duplicate(info->hrsrc, MX_RIGHT_SAME_RIGHTS, handle + 1)) < 0) {
             goto fail_duplicate;
         }
     }
@@ -322,7 +388,7 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     msg.protocol_id = dev->protocol_id;
 
     if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, handle,
-                              (dev->hrsrc != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
+                              (info->hrsrc != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
         goto fail_write;
     }
 
@@ -336,7 +402,7 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     return NO_ERROR;
 
 fail_write:
-    if (dev->hrsrc != MX_HANDLE_INVALID) {
+    if (info->hrsrc != MX_HANDLE_INVALID) {
         mx_handle_close(handle[1]);
     }
 fail_duplicate:
@@ -344,6 +410,25 @@ fail_duplicate:
 fail_watch:
     mx_handle_close(hrpc);
     return r;
+}
+
+static mx_status_t dc_create_shadow(device_t* parent) {
+    if (parent->shadow != NULL) {
+        return NO_ERROR;
+    }
+
+    device_t* dev = calloc(1, sizeof(mx_device_t));
+    if (dev == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    memcpy(dev->name, parent->name, sizeof(dev->name));
+    list_initialize(&dev->children);
+    dev->flags = DEV_CTX_SHADOW;
+    dev->protocol_id = parent->protocol_id;
+    dev->parent = parent;
+    parent->shadow = dev;
+    parent->refcount++;
+    return NO_ERROR;
 }
 
 // send message to devhost, requesting the binding of a driver to a device
@@ -367,47 +452,69 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     return NO_ERROR;
 }
 
-static void dc_attempt_bind(driver_ctx_t* drv, device_t* dev,
-                            const char* devhostname, const char* libname) {
+static void dc_attempt_bind(driver_t* drv, device_t* dev) {
     // cannot bind driver to already bound device
     if (dev->flags & DEV_CTX_BOUND) {
         return;
     }
     if (!(dev->flags & DEV_CTX_BUSDEV)) {
-        //TODO: non-busdev codepath
-        log(ERROR, "devcoord: can't bind non-busdevs yet...\n");
+        // non-busdev is pretty simple
+        if (dev->host == NULL) {
+            log(ERROR, "devcoord: can't bind to device without devhost\n");
+            return;
+        }
+        dev->flags |= DEV_CTX_BOUND;
+        dh_bind_driver(dev, drv->libname);
+        return;
+    }
+
+    //TODO: generic discovery of driver for shadow devices
+    const char* libname = "";
+    const char* devhostname = "devhost";
+    if (dev->protocol_id == MX_PROTOCOL_PCI) {
+        libname = "driver/bus-pci.so";
+        devhostname = "devhost:pci";
+    } else if (dev->protocol_id == MX_PROTOCOL_MISC_PARENT) {
+        libname = "";
+        devhostname = "devhost:misc";
+    } else if (dev == &root_device) {
+        libname = "";
+        devhostname = "devhost:root";
+    } else {
+        log(ERROR, "devcoord: cannot create proto %x shadow (yet)\n", dev->protocol_id);
+        return;
+    }
+
+    mx_status_t r;
+    if ((r = dc_create_shadow(dev)) < 0) {
+        log(ERROR, "devcoord: cannot create shadow device: %d\n", r);
         return;
     }
 
     // if this device has no devhost, first instantiate it
-    if (dev->host == NULL) {
-        mx_status_t r;
-        if ((r = dc_new_devhost(devhostname, &dev->host)) < 0) {
+    if (dev->shadow->host == NULL) {
+        if ((r = dc_new_devhost(devhostname, &dev->shadow->host)) < 0) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
             return;
         }
-        if ((r = dh_create_device(dev, dev->host, libname)) < 0) {
+        if ((r = dh_create_device(dev->shadow, dev->shadow->host, libname)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return;
         }
     }
 
-    dh_bind_driver(dev, drv->libname);
+    dh_bind_driver(dev->shadow, drv->libname);
 }
 
 static void dc_handle_new_device(device_t* dev) {
-    driver_ctx_t* drv;
+    driver_t* drv;
 
-    list_for_every_entry(&list_drivers, drv, driver_ctx_t, node) {
+    list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (dc_is_bindable(drv, dev->protocol_id,
                            dev->props, dev->prop_count, true)) {
             log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                 drv->name, dev->name);
-            if (dev->protocol_id == MX_PROTOCOL_PCI) {
-                dc_attempt_bind(drv, dev, "devhost:pci", "driver/bus-pci.so");
-            } else {
-                log(ERROR, "devcoord: but that is not supported yet\n");
-            }
+            dc_attempt_bind(drv, dev);
             break;
         }
     }
@@ -420,23 +527,23 @@ static void dc_handle_new_device(device_t* dev) {
 static struct mx_bind_inst misc_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT);
 
-static bool is_misc_driver(driver_ctx_t* drv) {
+static bool is_misc_driver(driver_t* drv) {
     return (drv->binding_size == sizeof(misc_device_binding)) &&
         (memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding)) == 0);
 }
 
-void coordinator_new_driver(driver_ctx_t* ctx) {
+void coordinator_new_driver(driver_t* ctx) {
     //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
     list_add_tail(&list_drivers, &ctx->node);
 
     if (!strcmp(ctx->name, "pci")) {
         log(INFO, "driver: %s @ %s is PCI\n", ctx->name, ctx->libname);
-        dc_attempt_bind(ctx, &root_device, "devhost:pci", "");
+        dc_attempt_bind(ctx, &root_device);
         return;
     }
     if (is_misc_driver(ctx)) {
         log(INFO, "driver: %s @ %s is MISC\n", ctx->name, ctx->libname);
-        dc_attempt_bind(ctx, &misc_device, "devhost:misc", "");
+        dc_attempt_bind(ctx, &misc_device);
         return;
     }
 }
