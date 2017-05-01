@@ -7,6 +7,7 @@
 
 #include <mx/channel.h>
 #include <svcfs/svcfs.h>
+#include <mxtl/ref_ptr.h>
 
 #include <functional>
 #include <string>
@@ -105,7 +106,7 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
-  svcfs::VnodeDir* directory_;
+  mxtl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);

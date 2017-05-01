@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <magenta/device/devmgr.h>
 #include <mxio/util.h>
+#include <mxtl/ref_ptr.h>
 #include <utility>
 
 #include "lib/ftl/files/unique_fd.h"
@@ -15,20 +16,17 @@
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : directory_(new svcfs::VnodeDir(mtl::VFSHandler::Start)) {
-  directory_->RefAcquire();
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(mtl::VFSHandler::Start))) {
 }
 
 ServiceNamespace::ServiceNamespace(
     fidl::InterfaceRequest<app::ServiceProvider> request)
-    : directory_(new svcfs::VnodeDir(mtl::VFSHandler::Start)) {
-  directory_->RefAcquire();
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(mtl::VFSHandler::Start))) {
   AddBinding(std::move(request));
 }
 
 ServiceNamespace::~ServiceNamespace() {
   directory_->RemoveAllServices();
-  directory_->RefRelease();
   directory_ = nullptr;
 }
 
