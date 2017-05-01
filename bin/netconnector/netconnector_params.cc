@@ -77,6 +77,10 @@ void NetConnectorParams::RegisterDevice(const std::string& name,
   }
 }
 
+void NetConnectorParams::UnregisterDevice(const std::string& name) {
+  device_addresses_by_name_.erase(name);
+}
+
 bool NetConnectorParams::ReadConfigFrom(const std::string& config_file_name) {
   std::string config_file_contents;
   return files::ReadFileToString(config_file_name, &config_file_contents) &&
