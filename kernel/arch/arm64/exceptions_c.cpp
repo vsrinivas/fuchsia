@@ -48,7 +48,7 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint3
 
 #if WITH_LIB_MAGENTA
 
-static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
+static status_t call_magenta_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
 {
     arch_exception_context_t context = {};
     context.frame = iframe;
@@ -60,7 +60,7 @@ static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64
     return status;
 }
 
-static status_t try_magenta_data_fault_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
+static status_t call_magenta_data_fault_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
     arch_exception_context_t context = {};
     context.frame = iframe;
@@ -100,7 +100,7 @@ static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint excepti
         exception_die(iframe, esr);
     }
 #if WITH_LIB_MAGENTA
-    try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
+    call_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 #endif
 }
 
@@ -113,7 +113,7 @@ static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_f
         exception_die(iframe, esr);
     }
 #if WITH_LIB_MAGENTA
-    try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
+    call_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
 #endif
 }
 
@@ -172,7 +172,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
 #if WITH_LIB_MAGENTA
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
-        if (try_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
+        if (call_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
             return;
     }
 #endif
@@ -228,7 +228,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
             excp_type = MX_EXCP_UNALIGNED_ACCESS;
         }
-        if (try_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
+        if (call_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
             return;
     }
 #endif
@@ -291,7 +291,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
             }
 #if WITH_LIB_MAGENTA
             /* let magenta get a shot at it */
-            if (try_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
+            if (call_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
                 break;
 #endif
             printf("unhandled synchronous exception\n");
