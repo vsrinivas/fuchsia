@@ -12,6 +12,7 @@
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace netconnector {
 namespace mdns {
@@ -47,6 +48,10 @@ class MdnsTransceiver {
                    uint32_t interface_index);
 
  private:
+  static const ftl::TimeDelta kMinAddressRecheckDelay;
+  static const ftl::TimeDelta kMaxAddressRecheckDelay;
+  static constexpr int64_t kAddressRecheckDelayMultiplier = 2;
+
   struct InterfaceId {
     InterfaceId(const std::string& name, sa_family_t family)
         : name_(name), family_(family) {}
@@ -55,11 +60,27 @@ class MdnsTransceiver {
     sa_family_t family_;
   };
 
+  // Determines if the interface is enabled.
   bool InterfaceEnabled(netc_if_info_t* if_info);
+
+  // Creates a new |MdnsInterfaceTransciver| for each interface that's ready
+  // and doesn't already have one. Schedules another call to this method if
+  // unready interfaces were found.
+  bool FindNewInterfaces();
+
+  // Determines if a |MdnsInterfaceTransciver| has already been created for the
+  // specified address.
+  bool InterfaceAlreadyFound(const IpAddress& address);
+
+  // Determines if |address| has been set (e.g. via DHCP).
+  bool AddressIsSet(const IpAddress& address);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::vector<InterfaceId> enabled_interfaces_;
+  InboundMessageCallback inbound_message_callback_;
+  std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
+  ftl::TimeDelta address_recheck_delay_ = kMinAddressRecheckDelay;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

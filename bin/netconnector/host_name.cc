@@ -56,6 +56,13 @@ std::string GetHostName() {
       return host_name;
     }
 
+    if (get_if_info.n_info == 0) {
+      FTL_LOG(WARNING) << "ioctl_netc_get_if_info returned no interfaces";
+      FTL_LOG(WARNING)
+          << "No IP address could be obtained to dedup the host name.";
+      return host_name;
+    }
+
     for (uint32_t i = 0; i < get_if_info.n_info; ++i) {
       netc_if_info_t* if_info = &get_if_info.info[i];
 

@@ -53,8 +53,8 @@ void MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
   FTL_DCHECK(callback);
   FTL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  FTL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", "
-                << (address_.is_v4() ? "IPV4" : "IPV6");
+  FTL_LOG(INFO) << "Starting mDNS on interface " << name_ << ", address "
+                << address_;
 
   address_resource_ = MakeAddressResource(host_full_name, address_);
 
