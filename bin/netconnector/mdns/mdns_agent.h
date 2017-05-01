@@ -12,7 +12,9 @@
 namespace netconnector {
 namespace mdns {
 
-enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional };
+// kExpired is used when distributing resource expirations. It's not a real
+// resource section.
+enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
 
 // Abstract class for objects that drive mDNS question and record traffic.
 class MdnsAgent {
@@ -41,6 +43,19 @@ class MdnsAgent {
     // Sends address resources to the multicast address at the specified time.
     virtual void SendAddresses(MdnsResourceSection section,
                                ftl::TimePoint when) = 0;
+
+    // Registers the resource for renewal. Before the resource's TTL expires,
+    // an attempt will be made to renew the resource by issuing queries for it.
+    // If the renewal is successful, the agent will receive the renewed resource
+    // (via |ReceiveResource|) and may choose to renew the resource again.
+    // If the renewal fails, the agent will receive a resource record with the
+    // same name and type but with a TTL of zero. The section parameter
+    // accompanying that resource record will be kExpired.
+    //
+    // The effect if this call is transient, and there is no way to cancel the
+    // renewal. When an agent loses interest in a particular resource, it should
+    // simply refrain from renewing the incoming records.
+    virtual void Renew(const DnsResource& resource) = 0;
 
     // Removes the agent with the specified name.
     virtual void RemoveAgent(const std::string& name) = 0;

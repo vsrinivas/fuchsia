@@ -52,6 +52,7 @@ class InstanceSubscriber
   static constexpr uint32_t kMaxQueryInterval = 60 * 60;
 
   struct InstanceInfo {
+    std::string instance_name_;
     std::string target_;
     IpPort port_;
     std::vector<std::string> text_;
@@ -61,6 +62,7 @@ class InstanceSubscriber
   struct TargetInfo {
     IpAddress v4_address_;
     IpAddress v6_address_;
+    bool keep_ = false;
     bool dirty_ = false;
   };
 
@@ -83,14 +85,14 @@ class InstanceSubscriber
                            MdnsResourceSection section,
                            TargetInfo* target_info);
 
-  InstanceInfo* FindInstanceInfo(const std::string& instance_full_name);
+  void RemoveInstance(const std::string& instance_full_name);
 
   MdnsAgent::Host* host_;
   std::string service_name_;
   std::string service_full_name_;
   ServiceInstanceCallback callback_;
-  std::unordered_map<std::string, InstanceInfo> instance_infos_by_name_;
-  std::unordered_map<std::string, TargetInfo> target_infos_by_name_;
+  std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
+  std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
   uint32_t query_delay_ = 0;
   std::shared_ptr<DnsQuestion> question_;
 };

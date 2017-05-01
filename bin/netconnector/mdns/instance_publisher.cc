@@ -45,9 +45,20 @@ void InstancePublisher::Start() {
 void InstancePublisher::Wake() {}
 
 void InstancePublisher::ReceiveQuestion(const DnsQuestion& question) {
-  if (question.type_ == DnsType::kPtr &&
-      question.name_.dotted_string_ == service_full_name_) {
-    SendRecords(ftl::TimePoint::Now());
+  switch (question.type_) {
+    case DnsType::kPtr:
+      if (question.name_.dotted_string_ == service_full_name_) {
+        SendRecords(ftl::TimePoint::Now());
+      }
+      break;
+    case DnsType::kSrv:
+    case DnsType::kTxt:
+      if (question.name_.dotted_string_ == instance_full_name_) {
+        SendRecords(ftl::TimePoint::Now());
+      }
+      break;
+    default:
+      break;
   }
 }
 

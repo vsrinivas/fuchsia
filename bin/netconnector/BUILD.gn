@@ -60,6 +60,8 @@ executable("netconnector") {
     "mdns/packet_reader.h",
     "mdns/packet_writer.cc",
     "mdns/packet_writer.h",
+    "mdns/resource_renewer.cc",
+    "mdns/resource_renewer.h",
     "message_transceiver.cc",
     "message_transceiver.h",
     "netconnector_impl.cc",

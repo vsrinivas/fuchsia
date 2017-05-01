@@ -13,6 +13,7 @@
 #include "apps/netconnector/src/mdns/dns_message.h"
 #include "apps/netconnector/src/mdns/mdns_agent.h"
 #include "apps/netconnector/src/mdns/mdns_transceiver.h"
+#include "apps/netconnector/src/mdns/resource_renewer.h"
 #include "apps/netconnector/src/socket_address.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -133,6 +134,8 @@ class Mdns : public MdnsAgent::Host {
 
   void SendAddresses(MdnsResourceSection section, ftl::TimePoint when) override;
 
+  void Renew(const DnsResource& resource) override;
+
   void RemoveAgent(const std::string& name) override;
 
   // Misc private.
@@ -140,6 +143,10 @@ class Mdns : public MdnsAgent::Host {
 
   void SendMessage();
 
+  void ReceiveQuestion(const DnsQuestion& question);
+
+  void ReceiveResource(const DnsResource& resource,
+                       MdnsResourceSection section);
   void PostTask();
 
   void TellAgentToQuit(const std::string& name);
@@ -155,6 +162,7 @@ class Mdns : public MdnsAgent::Host {
   std::unordered_map<std::string, std::shared_ptr<MdnsAgent>> agents_by_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
   bool verbose_ = false;
+  std::shared_ptr<ResourceRenewer> resource_renewer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Mdns);
 };

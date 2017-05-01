@@ -14,6 +14,7 @@
 #include "apps/netconnector/src/mdns/instance_subscriber.h"
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_names.h"
+#include "apps/netconnector/src/mdns/resource_renewer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -52,6 +53,9 @@ bool Mdns::Start(const std::string& host_name) {
   AddAgent(AddressResponder::kName,
            std::make_shared<AddressResponder>(this, host_full_name_));
 
+  // Create a resource renewer agent to keep resources alive.
+  resource_renewer_ = std::make_shared<ResourceRenewer>(this);
+
   started_ = transceiver_.Start(
       host_full_name_,
       [this](std::unique_ptr<DnsMessage> message,
@@ -63,32 +67,22 @@ bool Mdns::Start(const std::string& host_name) {
         }
 
         for (auto& question : message->questions_) {
-          for (auto& pair : agents_by_name_) {
-            pair.second->ReceiveQuestion(*question);
-          }
+          ReceiveQuestion(*question);
         }
 
         for (auto& resource : message->answers_) {
-          for (auto& pair : agents_by_name_) {
-            pair.second->ReceiveResource(*resource,
-                                         MdnsResourceSection::kAnswer);
-          }
+          ReceiveResource(*resource, MdnsResourceSection::kAnswer);
         }
 
         for (auto& resource : message->authorities_) {
-          for (auto& pair : agents_by_name_) {
-            pair.second->ReceiveResource(*resource,
-                                         MdnsResourceSection::kAuthority);
-          }
+          ReceiveResource(*resource, MdnsResourceSection::kAuthority);
         }
 
         for (auto& resource : message->additionals_) {
-          for (auto& pair : agents_by_name_) {
-            pair.second->ReceiveResource(*resource,
-                                         MdnsResourceSection::kAdditional);
-          }
+          ReceiveResource(*resource, MdnsResourceSection::kAdditional);
         }
 
+        resource_renewer_->EndOfMessage();
         for (auto& pair : agents_by_name_) {
           pair.second->EndOfMessage();
         }
@@ -182,12 +176,26 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource,
                         MdnsResourceSection section,
                         ftl::TimePoint when) {
   FTL_DCHECK(resource);
+
+  if (section == MdnsResourceSection::kExpired) {
+    // Expirations are distributed to local agents.
+    for (auto& pair : agents_by_name_) {
+      pair.second->ReceiveResource(*resource, MdnsResourceSection::kExpired);
+    }
+
+    return;
+  }
+
   resource_queue_.emplace(when, resource, section);
 }
 
 void Mdns::SendAddresses(MdnsResourceSection section, ftl::TimePoint when) {
   // Placeholder for address resource record.
   resource_queue_.emplace(when, address_placeholder_, section);
+}
+
+void Mdns::Renew(const DnsResource& resource) {
+  resource_renewer_->Renew(resource);
 }
 
 void Mdns::RemoveAgent(const std::string& name) {
@@ -249,6 +257,9 @@ void Mdns::SendMessage() {
       case MdnsResourceSection::kAdditional:
         message.additionals_.push_back(resource_queue_.top().resource_);
         break;
+      case MdnsResourceSection::kExpired:
+        FTL_DCHECK(false);
+        break;
     }
 
     resource_queue_.pop();
@@ -289,6 +300,22 @@ void Mdns::SendMessage() {
     if (resource->time_to_live_ == 0) {
       resource->time_to_live_ = kCancelTimeToLive;
     }
+  }
+}
+
+void Mdns::ReceiveQuestion(const DnsQuestion& question) {
+  // Renewer doesn't need questions.
+  for (auto& pair : agents_by_name_) {
+    pair.second->ReceiveQuestion(question);
+  }
+}
+
+void Mdns::ReceiveResource(const DnsResource& resource,
+                           MdnsResourceSection section) {
+  // Renewer is always first.
+  resource_renewer_->ReceiveResource(resource, section);
+  for (auto& pair : agents_by_name_) {
+    pair.second->ReceiveResource(resource, section);
   }
 }
 
