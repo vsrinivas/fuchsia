@@ -40,7 +40,6 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
   // Running as the listener.
 
   host_name_ = GetHostName();
-  FTL_LOG(INFO) << "NetConnector starting, host name " << host_name_;
 
   // Register services.
   for (auto& pair : params->MoveServices()) {
@@ -123,6 +122,19 @@ void NetConnectorImpl::AddServiceAgent(
 }
 
 void NetConnectorImpl::StartMdns() {
+  // TODO(dalesat): Temporary hack until we have a real gethostname. Remove.
+  if (host_name_ == "fuchsia" || host_name_ == "fuchsia-0") {
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this]() {
+          host_name_ = GetHostName();
+          StartMdns();
+        },
+        ftl::TimeDelta::FromSeconds(1));
+    return;
+  }
+
+  FTL_LOG(INFO) << "NetConnector starting, host name " << host_name_;
+
   mdns_service_impl_.Start(host_name_);
 
   mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
