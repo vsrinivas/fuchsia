@@ -15,6 +15,7 @@ the config when it runs as listener.
 The command line options for `netconnector` are:
 
     --show-devices              show a list of known devices
+    --mdns-verbose              show mDNS traffic in the log
     --config=<path>             use <path> rather than the default config file
     --listen                    run as listener
 

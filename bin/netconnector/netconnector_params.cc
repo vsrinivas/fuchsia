@@ -26,6 +26,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
 
   listen_ = command_line.HasOption("listen");
   show_devices_ = command_line.HasOption("show-devices");
+  mdns_verbose_ = command_line.HasOption("mdns-verbose");
 
   if (listen_ && show_devices_) {
     FTL_LOG(ERROR) << "--listen and --show-devices are mutually exclusive";
@@ -59,6 +60,7 @@ void NetConnectorParams::Usage() {
       << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
   FTL_LOG(INFO) << "    --show-devices                   show known devices";
+  FTL_LOG(INFO) << "    --mdns-verbose                   log mDNS traffic";
   FTL_LOG(INFO) << "    --listen                         run as listener";
 }
 

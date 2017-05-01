@@ -37,6 +37,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     MdnsServicePtr mdns_service =
         application_context_->ConnectToEnvironmentService<MdnsService>();
 
+    if (params_->mdns_verbose()) {
+      mdns_service->SetVerbose(true);
+    }
+
     if (params_->show_devices()) {
       net_connector->GetKnownDeviceNames(
           NetConnector::kInitialKnownDeviceNames,

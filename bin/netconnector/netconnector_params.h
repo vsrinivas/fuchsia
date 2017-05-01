@@ -23,6 +23,7 @@ class NetConnectorParams {
   bool listen() const { return listen_; }
 
   bool show_devices() const { return show_devices_; }
+  bool mdns_verbose() const { return mdns_verbose_; }
 
   std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
   MoveServices() {
@@ -50,6 +51,7 @@ class NetConnectorParams {
   bool is_valid_;
   bool listen_ = false;
   bool show_devices_ = false;
+  bool mdns_verbose_ = false;
   std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
       launch_infos_by_service_name_;
   std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
