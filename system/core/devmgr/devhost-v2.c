@@ -268,7 +268,6 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         driver_rec_t* rec;
         if ((r = dh_find_driver(name, &rec)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
-            //TODO: inform devcoord
         } else {
             if (rec->drv.ops->bind) {
                 r = rec->drv.ops->bind(&rec->drv, ios->dev, &ios->dev->owner_cookie);
@@ -278,8 +277,13 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
             if (r < 0) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
             }
-            //TODO: inform devcoord
         }
+        dc_msg_t reply = {
+            .txid = 0,
+            .op = DC_OP_STATUS,
+            .status = r,
+        };
+        mx_channel_write(h, 0, &reply, sizeof(reply), NULL, 0);
         return NO_ERROR;
 
     default:

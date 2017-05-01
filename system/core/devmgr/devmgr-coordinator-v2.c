@@ -25,6 +25,7 @@ static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .name = "root",
     .children = LIST_INITIAL_VALUE(root_device.children),
+    .pending = LIST_INITIAL_VALUE(root_device.pending),
     .refcount = 1,
 };
 
@@ -33,6 +34,7 @@ static device_t misc_device = {
     .protocol_id = MX_PROTOCOL_MISC_PARENT,
     .name = "misc",
     .children = LIST_INITIAL_VALUE(misc_device.children),
+    .pending = LIST_INITIAL_VALUE(misc_device.pending),
     .refcount = 1,
 };
 
@@ -183,6 +185,7 @@ static mx_status_t dc_add_device(device_t* parent,
         return ERR_NO_MEMORY;
     }
     list_initialize(&dev->children);
+    list_initialize(&dev->pending);
     dev->hrpc = handle[0];
     dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
@@ -285,7 +288,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
-        log(RPC_IN, "devcoord: add device '%s' args='%s'\n", name, args);
+        log(RPC_IN, "devcoord: rpc: add device '%s' args='%s'\n", name, args);
         if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) == NO_ERROR) {
             goto done;
         }
@@ -296,11 +299,37 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
             r = ERR_INVALID_ARGS;
             goto fail;
         }
-        log(RPC_IN, "devcoord: remove device '%s'\n", name);
+        log(RPC_IN, "devcoord: rpc: remove device '%s'\n", dev->name);
         if ((r = dc_remove_device(dev)) == NO_ERROR) {
             goto done;
         }
         break;
+
+    case DC_OP_STATUS:
+        // all of these return directly and do not write a
+        // reply, since this message is a reply itself
+        if (hcount != 0) {
+            while (hcount > 0) {
+                mx_handle_close(hin[--hcount]);
+                return NO_ERROR;
+            }
+        }
+        pending_t* pending = list_remove_tail_type(&dev->pending, pending_t, node);
+        if (pending == NULL) {
+            log(ERROR, "devcoord: rpc: spurious status message\n");
+            return NO_ERROR;
+        }
+        switch (pending->op) {
+        case PENDING_BIND:
+            if (msg.status != NO_ERROR) {
+                log(ERROR, "devcoord: rpc: bind device '%s' status %d\n",
+                    dev->name, msg.status);
+            }
+            //TODO: try next driver, clear BOUND flag
+            break;
+        }
+        free(pending);
+        return NO_ERROR;
 
     default:
         log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
@@ -423,6 +452,7 @@ static mx_status_t dc_create_shadow(device_t* parent) {
     }
     memcpy(dev->name, parent->name, sizeof(dev->name));
     list_initialize(&dev->children);
+    list_initialize(&dev->pending);
     dev->flags = DEV_CTX_SHADOW;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
@@ -436,9 +466,14 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     dc_msg_t msg;
     uint32_t mlen;
 
-    mx_status_t r;
+    pending_t* pending = malloc(sizeof(pending_t));
+    if (pending == NULL) {
+        return ERR_NO_MEMORY;
+    }
 
+    mx_status_t r;
     if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, NULL)) < 0) {
+        free(pending);
         return r;
     }
 
@@ -446,26 +481,29 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
     msg.op = DC_OP_BIND_DRIVER;
 
     if ((r = mx_channel_write(dev->hrpc, 0, &msg, mlen, NULL, 0)) < 0) {
+        free(pending);
         return r;
     }
 
+    dev->flags |= DEV_CTX_BOUND;
+    pending->op = PENDING_BIND;
+    pending->ctx = NULL;
+    list_add_tail(&dev->pending, &pending->node);
     return NO_ERROR;
 }
 
-static void dc_attempt_bind(driver_t* drv, device_t* dev) {
+static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
     // cannot bind driver to already bound device
-    if (dev->flags & DEV_CTX_BOUND) {
-        return;
+    if ((dev->flags & DEV_CTX_BOUND) && (!(dev->flags & DEV_CTX_MULTI_BIND))) {
+        return ERR_BAD_STATE;
     }
     if (!(dev->flags & DEV_CTX_BUSDEV)) {
         // non-busdev is pretty simple
         if (dev->host == NULL) {
             log(ERROR, "devcoord: can't bind to device without devhost\n");
-            return;
+            return ERR_BAD_STATE;
         }
-        dev->flags |= DEV_CTX_BOUND;
-        dh_bind_driver(dev, drv->libname);
-        return;
+        return dh_bind_driver(dev, drv->libname);
     }
 
     //TODO: generic discovery of driver for shadow devices
@@ -482,28 +520,28 @@ static void dc_attempt_bind(driver_t* drv, device_t* dev) {
         devhostname = "devhost:root";
     } else {
         log(ERROR, "devcoord: cannot create proto %x shadow (yet)\n", dev->protocol_id);
-        return;
+        return ERR_NOT_SUPPORTED;
     }
 
     mx_status_t r;
     if ((r = dc_create_shadow(dev)) < 0) {
         log(ERROR, "devcoord: cannot create shadow device: %d\n", r);
-        return;
+        return r;
     }
 
     // if this device has no devhost, first instantiate it
     if (dev->shadow->host == NULL) {
         if ((r = dc_new_devhost(devhostname, &dev->shadow->host)) < 0) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
-            return;
+            return r;
         }
         if ((r = dh_create_device(dev->shadow, dev->shadow->host, libname)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
-            return;
+            return r;
         }
     }
 
-    dh_bind_driver(dev->shadow, drv->libname);
+    return dh_bind_driver(dev->shadow, drv->libname);
 }
 
 static void dc_handle_new_device(device_t* dev) {
@@ -514,6 +552,7 @@ static void dc_handle_new_device(device_t* dev) {
                            dev->props, dev->prop_count, true)) {
             log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
                 drv->name, dev->name);
+
             dc_attempt_bind(drv, dev);
             break;
         }

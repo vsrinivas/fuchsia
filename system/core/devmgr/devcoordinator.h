@@ -34,6 +34,7 @@ mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
 
 #if DEVHOST_V2
 typedef struct dc_work work_t;
+typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
@@ -42,7 +43,16 @@ struct dc_work {
     list_node_t node;
     uint32_t op;
     uint32_t arg;
+    void* ptr;
 };
+
+struct dc_pending {
+    list_node_t node;
+    void* ctx;
+    uint32_t op;
+};
+
+#define PENDING_BIND 1
 
 struct dc_devhost {
     port_handler_t ph;
@@ -67,6 +77,7 @@ struct dc_device {
     device_t* shadow;
     list_node_t node;
     list_node_t children;
+    list_node_t pending;
     char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
 };
@@ -139,7 +150,10 @@ typedef struct {
     mx_txid_t txid;
     uint32_t op;
 
-    uint32_t protocol_id;
+    union {
+        mx_status_t status;
+        uint32_t protocol_id;
+    };
     uint32_t datalen;
     uint32_t namelen;
     uint32_t argslen;
@@ -157,6 +171,7 @@ typedef struct {
 #define DC_OP_BIND_DRIVER    0x80000002
 
 // Host->Coord Ops
+#define DC_OP_STATUS         0x80000010
 #define DC_OP_ADD_DEVICE     0x80000011
 #define DC_OP_REMOVE_DEVICE  0x80000012
 
