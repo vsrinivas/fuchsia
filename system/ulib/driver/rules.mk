@@ -17,4 +17,9 @@ MODULE_COMPILEFLAGS := -fvisibility=hidden
 
 MODULE_SRCS := $(LOCAL_DIR)/driver-api.c
 
+MODULE_LIBS := system/ulib/c
+
+# for DDK header files
+MODULE_STATIC_LIBS := system/ulib/ddk
+
 include make/module.mk
