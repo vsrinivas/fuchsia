@@ -210,8 +210,8 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     }
 
     mx_status_t r;
-    if ((r = mx_channel_read(dev->hrpc, 0, &msg, msize, &msize,
-                             hin, hcount, &hcount)) < 0) {
+    if ((r = mx_channel_read(dev->hrpc, 0, &msg, hin,
+                             msize, hcount, &msize, &hcount)) < 0) {
         return r;
     }
 
