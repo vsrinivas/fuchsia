@@ -77,6 +77,10 @@ class Mdns : public MdnsAgent::Host {
   void UnsubscribeToService(const std::string& service_name);
 
  private:
+  template <typename T>
+  class reverse_priority_queue
+      : public std::priority_queue<T, std::vector<T>, std::greater<T>> {};
+
   struct WakeQueueEntry {
     WakeQueueEntry(ftl::TimePoint time, std::shared_ptr<MdnsAgent> agent)
         : time_(time), agent_(agent) {}
@@ -84,8 +88,8 @@ class Mdns : public MdnsAgent::Host {
     ftl::TimePoint time_;
     std::shared_ptr<MdnsAgent> agent_;
 
-    bool operator<(const WakeQueueEntry& other) const {
-      return time_ < other.time_;
+    bool operator>(const WakeQueueEntry& other) const {
+      return time_ > other.time_;
     }
   };
 
@@ -97,8 +101,8 @@ class Mdns : public MdnsAgent::Host {
     ftl::TimePoint time_;
     std::shared_ptr<DnsQuestion> question_;
 
-    bool operator<(const QuestionQueueEntry& other) const {
-      return time_ < other.time_;
+    bool operator>(const QuestionQueueEntry& other) const {
+      return time_ > other.time_;
     }
   };
 
@@ -112,8 +116,8 @@ class Mdns : public MdnsAgent::Host {
     std::shared_ptr<DnsResource> resource_;
     MdnsResourceSection section_;
 
-    bool operator<(const ResourceQueueEntry& other) const {
-      return time_ < other.time_;
+    bool operator>(const ResourceQueueEntry& other) const {
+      return time_ > other.time_;
     }
   };
 
@@ -144,13 +148,10 @@ class Mdns : public MdnsAgent::Host {
   MdnsTransceiver transceiver_;
   std::string host_full_name_;
   bool started_ = false;
-  std::priority_queue<ftl::TimePoint,
-                      std::vector<ftl::TimePoint>,
-                      std::greater<ftl::TimePoint>>
-      post_task_queue_;
-  std::priority_queue<WakeQueueEntry> wake_queue_;
-  std::priority_queue<QuestionQueueEntry> question_queue_;
-  std::priority_queue<ResourceQueueEntry> resource_queue_;
+  reverse_priority_queue<ftl::TimePoint> post_task_queue_;
+  reverse_priority_queue<WakeQueueEntry> wake_queue_;
+  reverse_priority_queue<QuestionQueueEntry> question_queue_;
+  reverse_priority_queue<ResourceQueueEntry> resource_queue_;
   std::unordered_map<std::string, std::shared_ptr<MdnsAgent>> agents_by_name_;
   std::shared_ptr<DnsResource> address_placeholder_;
   bool verbose_ = false;
