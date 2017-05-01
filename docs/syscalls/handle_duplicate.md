@@ -39,4 +39,5 @@ to specify no rights by using 0.
 ## SEE ALSO
 
 [handle_close](handle_close.md),
-[handle_replace](handle_replace.md).
+[handle_replace](handle_replace.md),
+[rights](../rights.md).
