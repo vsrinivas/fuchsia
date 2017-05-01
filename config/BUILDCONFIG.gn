@@ -29,6 +29,9 @@ declare_args() {
 
   # Whether the toolchain defaults to PIC.
   is_pic_default = false
+
+  # Use link time optimization (LTO).
+  use_lto = false
 }
 
 is_android = false
@@ -75,6 +78,10 @@ if (is_fuchsia) {
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config/fuchsia:werror",
   ]
+}
+
+if (use_lto) {
+  _shared_binary_target_configs += [ "//build/config:lto" ]
 }
 
 _shared_library_target_configs = _shared_binary_target_configs + [
