@@ -161,14 +161,16 @@ mx_status_t dmctl_init(mx_driver_t* driver) {
     // uses the device's presence as an invitation to use it.
     mxio_force_local_loader_service();
 
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "dmctl",
+        .driver = driver,
+        .ops = &dmctl_device_proto,
+    };
+
     mx_device_t* dev;
-    mx_status_t s = device_create("dmctl", NULL, &dmctl_device_proto, driver, &dev);
+    mx_status_t s = device_add2(driver_get_misc_device(), &args, &dev);
     if (s != NO_ERROR) {
-        return s;
-    }
-    s = device_add(dev, driver_get_misc_device());
-    if (s != NO_ERROR) {
-        free(dev);
         return s;
     }
     dmctl_handle = dev->rpc;

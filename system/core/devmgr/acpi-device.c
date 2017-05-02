@@ -35,7 +35,6 @@ static mx_acpi_protocol_t acpi_device_acpi_proto = {
 
 static mx_status_t acpi_device_release(mx_device_t* dev) {
     acpi_device_t* device = dev->ctx;
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -110,22 +109,26 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         free(batt_dev);
     } else {
         memcpy(batt_dev->hid, hid, 7);
-        status = device_create(name, batt_dev, &acpi_device_proto, drv, &batt_dev->mxdev);
-        if (status != NO_ERROR) {
-            free(batt_dev);
-            goto fail;
-        }
-        device_set_protocol(batt_dev->mxdev, MX_PROTOCOL_ACPI, &acpi_device_acpi_proto);
 
         batt_dev->props[0].id = BIND_ACPI_HID_0_3;
         batt_dev->props[0].value = htobe32(*((uint32_t *)(hid)));
         batt_dev->props[1].id = BIND_ACPI_HID_4_7;
         batt_dev->props[1].value = htobe32(*((uint32_t *)(hid + 4)));
 
-        status = device_add_with_props(batt_dev->mxdev, dev, batt_dev->props,
-                                       countof(batt_dev->props));
+        device_add_args_t args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = name,
+            .ctx = batt_dev,
+            .driver = drv,
+            .ops = &acpi_device_proto,
+            .proto_id = MX_PROTOCOL_ACPI,
+            .proto_ops = &acpi_device_acpi_proto,
+            .props = batt_dev->props,
+            .prop_count = countof(batt_dev->props),
+        };
+
+        status = device_add2(dev, &args, &batt_dev->mxdev);
         if (status != NO_ERROR) {
-            device_destroy(batt_dev->mxdev);
             free(batt_dev);
             goto fail;
         }
