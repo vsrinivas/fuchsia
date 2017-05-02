@@ -136,6 +136,87 @@ TEST_F(ContextRepositoryTest, WildcardQuery) {
   EXPECT_EQ("2", listener.last_update->values["topic2"]);
 }
 
+class TestCoprocessor : public ContextCoprocessor {
+  using ProcessCall = std::function<void(const ContextRepository*,
+                                         const std::set<std::string>&,
+                                         std::map<std::string, std::string>*)>;
+
+ public:
+  void ProcessTopicUpdate(const ContextRepository* repository,
+                          const std::set<std::string>& topics_updated,
+                          std::map<std::string, std::string>* out) override {
+    ASSERT_FALSE(process_calls_.empty());
+    auto f = process_calls_.front();
+    process_calls_.pop_front();
+    f(repository, topics_updated, out);
+  }
+
+  // Adds an expected ProcessTopicUpdate() call and sets behavior. For each
+  // call to ProcessTopicUpdate(), the front of |process_calls_| will be popped
+  // and executed with the same parameters.
+  void AddExpectedProcessCall(ProcessCall call) {
+    process_calls_.push_back(call);
+  }
+
+  void CheckExpectations() {
+    ASSERT_TRUE(process_calls_.empty())
+        << "TestCoprocessor has expectations of "
+           "ProcessTopicUpdate() that were not met.";
+  }
+
+ private:
+  std::list<ProcessCall> process_calls_;
+};
+
+TEST_F(ContextRepositoryTest, Coprocessor_Basic) {
+  auto coprocessor1 = new TestCoprocessor();
+  auto coprocessor2 = new TestCoprocessor();
+  repository_.AddCoprocessor(coprocessor1);
+  repository_.AddCoprocessor(coprocessor2);
+
+  // The first coprocessor expects that it is called and sees that "topic1" has
+  // been updated. We expect that |repository_| already reflects this change.
+  // It instructs |repository_| to also update "topic2".
+  coprocessor1->AddExpectedProcessCall(
+      [this](const ContextRepository* repository,
+             const std::set<std::string>& topics,
+             std::map<std::string, std::string>* out) {
+        ASSERT_FALSE(out == nullptr);
+        ASSERT_EQ(&repository_, repository);
+        EXPECT_EQ(1ul, topics.size());
+        EXPECT_EQ("topic1", *topics.begin());
+        EXPECT_EQ("hello", *repository->Get("topic1"));
+        (*out)["topic2"] = "foobar";
+      });
+  // The second coprocessor should see both "topic1" and "topic2" changes.
+  coprocessor2->AddExpectedProcessCall(
+      [](const ContextRepository* repository,
+         const std::set<std::string>& topics,
+         std::map<std::string, std::string>* out) {
+        ASSERT_FALSE(out == nullptr);
+        EXPECT_EQ(2ul, topics.size());
+        EXPECT_EQ("topic1", *topics.begin());
+        EXPECT_EQ("hello", *repository->Get("topic1"));
+
+        EXPECT_EQ("topic2", *++topics.begin());
+        EXPECT_EQ("foobar", *repository->Get("topic2"));
+      });
+
+  // Before setting "topic1", we want to show that a listener for "topic2" (set
+  // by a coprocessor above) correctly gets notified of changes.
+  TestListener listener;
+  repository_.AddSubscription(CreateQuery("topic2"), &listener);
+  repository_.Set("topic1", "hello");
+
+  // Make sure all expectations were processed.
+  coprocessor1->CheckExpectations();
+  coprocessor2->CheckExpectations();
+
+  // And lastly ensure that our listener was called.
+  ASSERT_TRUE(listener.last_update);
+  EXPECT_EQ("foobar", listener.last_update->values["topic2"]);
+}
+
 }  // namespace maxwell
 
 int main(int argc, char** argv) {

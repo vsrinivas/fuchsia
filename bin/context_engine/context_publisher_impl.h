@@ -22,8 +22,8 @@ class ContextPublisherImpl : public ContextPublisher {
   void Publish(const fidl::String& topic,
                const fidl::String& json_data) override;
 
-  /* const std::string& source_url_; */  // Unused now, will be used soon.
-  ContextRepository* repository_;
+  ComponentScopePtr scope_;
+  ContextRepository* repository_;  // Not owned.
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextPublisherImpl);
 };

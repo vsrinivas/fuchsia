@@ -10,6 +10,7 @@ source_set("context_publisher_impl") {
 
   deps = [
     ":context_repository",
+    ":scope_utils",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
   ]
@@ -36,6 +37,7 @@ source_set("context_repository") {
   ]
 
   deps = [
+    ":scope_utils",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
@@ -71,6 +73,7 @@ source_set("context_engine_impl") {
     ":debug",
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/src/context_engine/coprocessors:aggregate",
     "//lib/fidl/cpp/bindings",
   ]
 }
@@ -84,6 +87,19 @@ source_set("debug") {
   deps = [
     "//apps/maxwell/services/context:debug",
     "//lib/fidl/cpp/bindings",
+  ]
+}
+
+source_set("scope_utils") {
+  sources = [
+    "scope_utils.h",
+    "scope_utils.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/user:scope",
+    "//lib/ftl",
+    "//third_party/boringssl",  # for sha256
   ]
 }
 

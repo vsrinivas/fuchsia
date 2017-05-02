@@ -27,6 +27,7 @@ group("unittests") {
   testonly = true
   deps = [
     "//apps/maxwell/src/context_engine:context_repository_unittest",
+    "//apps/maxwell/src/context_engine/coprocessors:coprocessors_unittest",
   ]
 }
 

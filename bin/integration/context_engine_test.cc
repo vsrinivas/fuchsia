@@ -10,9 +10,19 @@
 namespace maxwell {
 namespace {
 
-ComponentScopePtr CreateGlobalScope() {
+ComponentScopePtr MakeGlobalScope() {
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
+  return scope;
+}
+
+ComponentScopePtr MakeModuleScope(const std::string& module_url,
+                                  const std::string& story_id) {
+  auto scope = ComponentScope::New();
+  auto module_scope = ModuleScope::New();
+  module_scope->url = module_url;
+  module_scope->story_id = story_id;
+  scope->set_module_scope(std::move(module_scope));
   return scope;
 }
 
@@ -45,12 +55,25 @@ class TestListener : public ContextListener {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() : ContextEngineTestBase() {
-    context_engine()->GetProvider(CreateGlobalScope(), provider_.NewRequest());
-    context_engine()->GetPublisher(CreateGlobalScope(),
-                                   publisher_.NewRequest());
+    InitAllGlobalScope();
   }
 
  protected:
+  void InitAllGlobalScope() {
+    InitProvider(MakeGlobalScope());
+    InitPublisher(MakeGlobalScope());
+  }
+
+  void InitProvider(ComponentScopePtr scope) {
+    provider_.reset();
+    context_engine()->GetProvider(std::move(scope), provider_.NewRequest());
+  }
+
+  void InitPublisher(ComponentScopePtr scope) {
+    publisher_.reset();
+    context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
+  }
+
   ContextProviderPtr provider_;
   ContextPublisherPtr publisher_;
 };
@@ -64,8 +87,9 @@ ContextQueryPtr CreateQuery(const std::string& topic) {
 }  // namespace
 
 TEST_F(ContextEngineTest, PublishAndSubscribe) {
-  // Show that we can publish to a topic and that we can subscribe to that
-  // topic.
+  // Show that we can publish to a topic and that we can subscribe to that topic.
+  // Querying behavior and other Listener dynamics are tested elsewhere.
+  InitAllGlobalScope();
   publisher_->Publish("topic", "foobar");
   publisher_->Publish("a_different_topic", "baz");
 
@@ -111,8 +135,7 @@ TEST_F(ContextEngineTest, CloseProvider) {
   provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
 
   // Close the provider and open a new one to ensure we're still running.
-  provider_.reset();
-  context_engine()->GetProvider(CreateGlobalScope(), provider_.NewRequest());
+  InitProvider(MakeGlobalScope());
 
   publisher_->Publish("topic", "please don't crash");
   TestListener listener2;
@@ -120,6 +143,27 @@ TEST_F(ContextEngineTest, CloseProvider) {
 
   WAIT_UNTIL(listener2.PopLast());
   ASYNC_CHECK(!listener1.PeekLast());
+}
+
+TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
+  // Show that when the ContextPublisher is created with Module scope,
+  // that the topic is prefixed with a Module-scope prefix.
+  InitPublisher(MakeModuleScope("url", "story_id"));
+  InitProvider(MakeGlobalScope());
+
+  publisher_->Publish("/topic", "1");
+
+  TestListener listener;
+  // 17363581645103e3247b10582a641dc is the SHA1 of "url".
+  const std::string kTopicString =
+      "/story/id/story_id/module/17363581645103e3247b10582a641dc/explicit/"
+      "topic";
+  provider_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
+  listener.WaitForUpdate();
+
+  ContextUpdatePtr update;
+  ASSERT_TRUE((update = listener.PopLast()));
+  EXPECT_EQ("1", update->values[kTopicString]);
 }
 
 }  // namespace maxwell

@@ -5,20 +5,29 @@
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 
 #include "apps/maxwell/src/context_engine/context_repository.h"
+#include "apps/maxwell/src/context_engine/scope_utils.h"
 
 namespace maxwell {
 
-ContextPublisherImpl::ContextPublisherImpl(ComponentScopePtr /* scope */,
+namespace {
+
+
+}  // namespace
+
+ContextPublisherImpl::ContextPublisherImpl(ComponentScopePtr scope,
                                            ContextRepository* repository)
-    : /* source_url_(source_url), */ repository_(repository) {}
+    : scope_(std::move(scope)), repository_(repository) {}
 ContextPublisherImpl::~ContextPublisherImpl() = default;
 
 void ContextPublisherImpl::Publish(const fidl::String& topic,
                                    const fidl::String& json_data) {
+  // Rewrite the topic to be within the scope specified at construction time.
+  const auto scoped_topic = ScopeAndTopicToString(scope_, topic);
+
   if (json_data) {
-    repository_->Set(topic, json_data);
+    repository_->Set(scoped_topic, json_data);
   } else {
-    repository_->Remove(topic);
+    repository_->Remove(scoped_topic);
   }
 }
 

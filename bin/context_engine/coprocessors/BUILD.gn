@@ -1,0 +1,41 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Directory-level alias.
+group("coprocessors") {
+  public_deps = [
+    ":aggregate",
+  ]
+}
+
+executable("coprocessors_unittest") {
+  testonly = true
+  output_name = "context_coprocessors_unittest"
+
+  sources = [
+    "coprocessors_unittest.cc",
+  ]
+
+  deps = [
+    ":aggregate",
+    "//apps/maxwell/src/context_engine:scope_utils",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("aggregate") {
+  sources = [
+    "aggregate.h",
+    "aggregate.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/src/context_engine:context_repository",
+    "//apps/maxwell/src/context_engine:scope_utils",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
+    "//third_party/rapidjson",
+  ]
+}
