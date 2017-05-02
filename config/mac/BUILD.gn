@@ -5,13 +5,6 @@
 import("//build/config/sysroot.gni")
 
 config("compiler") {
-  cflags_objc = [
-    "-Wno-availability",
-    "-Wno-deprecated-declarations",
-    "-Wno-incompatible-property-type",
-    "-Wno-missing-method-return-type",
-    "-Wno-property-attribute-mismatch",
-  ]
   cflags_objcc = [
     "-std=c++14",
     "-stdlib=libc++",
