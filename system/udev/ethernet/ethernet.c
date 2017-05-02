@@ -62,7 +62,6 @@ static void eth0_downref(ethdev0_t* edev0) {
     edev0->refcount--;
     if (edev0->refcount == 0) {
         mtx_unlock(&edev0->lock);
-        device_destroy(edev0->mxdev);
         free(edev0);
     } else {
         mtx_unlock(&edev0->lock);
@@ -513,7 +512,6 @@ static void eth_kill_locked(ethdev_t* edev) {
 static mx_status_t eth_release(mx_device_t* dev) {
     ethdev_t* edev = dev->ctx;
     eth0_downref(edev->edev0);
-    device_destroy(edev->mxdev);
     free(edev);
     return ERR_NOT_SUPPORTED;
 }
@@ -547,17 +545,21 @@ static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
-
-    mx_status_t status;
-    if ((status = device_create("ethernet", edev, &ethdev_ops, &_driver_ethernet, &edev->mxdev)) < 0) {
-        free(edev);
-        return status;
-    }
-    device_set_protocol(edev->mxdev, MX_PROTOCOL_ETHERNET, &ethernet_ops);
     edev->edev0 = edev0;
 
-    if ((status = device_add_instance(edev->mxdev, dev)) < 0) {
-        device_destroy(edev->mxdev);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ethernet",
+        .ctx = edev,
+        .driver = &_driver_ethernet,
+        .ops = &ethdev_ops,
+        .proto_id = MX_PROTOCOL_ETHERNET,
+        .proto_ops = &ethernet_ops,
+        .flags = DEVICE_ADD_INSTANCE,
+    };
+
+    mx_status_t status;
+    if ((status = device_add2(dev, &args, &edev->mxdev)) < 0) {
         free(edev);
         return status;
     }
@@ -631,9 +633,6 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    if ((status = device_create("ethernet", edev0, &ethdev0_ops, drv, &edev0->mxdev)) < 0) {
-        goto fail;
-    }
     mtx_init(&edev0->lock, mtx_plain);
     list_initialize(&edev0->list_active);
     list_initialize(&edev0->list_idle);
@@ -642,16 +641,22 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     edev0->refcount = 1;
 
     edev0->mac = dev;
-    device_set_protocol(edev0->mxdev, MX_PROTOCOL_ETHERNET, NULL);
 
-    if ((status = device_add(edev0->mxdev, dev)) < 0) {
-        goto fail_add;
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ethernet",
+        .ctx = edev0,
+        .driver = drv,
+        .ops = &ethdev0_ops,
+        .proto_id = MX_PROTOCOL_ETHERNET,
+    };
+
+    if ((status = device_add2(dev, &args, &edev0->mxdev)) < 0) {
+        goto fail;
     }
 
     return NO_ERROR;
 
-fail_add:
-    device_destroy(edev0->mxdev);
 fail:
     free(edev0);
     return status;
