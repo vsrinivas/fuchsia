@@ -708,7 +708,6 @@ static hidbus_protocol_t hidbus_ops = {
 
 static mx_status_t i8042_release(mx_device_t* dev) {
     i8042_device_t* i8042 = dev->ctx;
-    device_destroy(i8042->mxdev);
     free(i8042);
     return NO_ERROR;
 }
@@ -718,12 +717,6 @@ static mx_protocol_device_t i8042_dev_proto = {
 };
 
 static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_device_t* parent) {
-    mx_status_t status;
-    if ((status = device_create(name, dev, &i8042_dev_proto, &_driver_i8042, &dev->mxdev)) < 0) {
-        return status;
-    }
-    device_set_protocol(dev->mxdev, MX_PROTOCOL_HIDBUS, &hidbus_ops);
-
     // enable device port
     int cmd = dev->type == INPUT_PROTO_KBD ?
         I8042_CMD_CTL_KBD_DIS : I8042_CMD_CTL_MOUSE_DIS;
@@ -742,7 +735,6 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_devi
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
     dev->irq = mx_interrupt_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ);
     if (dev->irq < 0) {
-        device_destroy(dev->mxdev);
         return dev->irq;
     }
 
@@ -751,17 +743,20 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_devi
         "i8042-kbd-irq" : "i8042-mouse-irq";
     int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, name);
     if (ret != thrd_success) {
-        device_destroy(dev->mxdev);
         return ERR_BAD_STATE;
     }
 
-    status = device_add(dev->mxdev, parent);
-    if (status != NO_ERROR) {
-        device_destroy(dev->mxdev);
-        return status;
-    }
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = dev,
+        .driver = &_driver_i8042,
+        .ops = &i8042_dev_proto,
+        .proto_id = MX_PROTOCOL_HIDBUS,
+        .proto_ops = &hidbus_ops,
+    };
 
-    return NO_ERROR;
+    return device_add2(parent, &args, &dev->mxdev);
 }
 
 static int i8042_init_thread(void* arg) {
