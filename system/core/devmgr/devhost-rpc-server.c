@@ -71,7 +71,7 @@ static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
 
     newios->flags = flags;
 
-    if ((r = device_openat(dev, &dev, path, flags)) < 0) {
+    if ((r = device_open_at(dev, &dev, path, flags)) < 0) {
         printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
                dev, dev->name, path ? path : "", r);
         if (pipeline) {
@@ -243,15 +243,20 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
         break;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        r = device_op_suspend(dev);
+        r = device_op_suspend(dev, 0);
         break;
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        r = device_op_resume(dev);
+        r = device_op_resume(dev, 0);
         break;
     }
-    default:
-        r = device_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len);
+    default: {
+        size_t actual = 0;
+        r = device_op_ioctl(dev, op, in_buf, in_len, out_buf, out_len, &actual);
+        if (r == NO_ERROR) {
+            r = actual;
+        }
+    }
     }
     return r;
 }

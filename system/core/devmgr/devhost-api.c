@@ -102,10 +102,10 @@ mx_status_t device_bind(mx_device_t* dev, const char* drv_name) {
     return r;
 }
 
-mx_status_t device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
+mx_status_t device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_openat(dev, out, path, flags);
+    r = devhost_device_open_at(dev, out, path, flags);
     DM_UNLOCK();
     return r;
 }

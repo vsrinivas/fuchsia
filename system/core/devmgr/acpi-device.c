@@ -33,13 +33,13 @@ static mx_acpi_protocol_t acpi_device_acpi_proto = {
     .clone_handle = acpi_device_clone_handle,
 };
 
-static mx_status_t acpi_device_release(mx_device_t* dev) {
-    acpi_device_t* device = dev->ctx;
+static void acpi_device_release(void* ctx) {
+    acpi_device_t* device = ctx;
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t acpi_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .release = acpi_device_release,
 };
 

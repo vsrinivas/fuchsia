@@ -116,8 +116,6 @@ void vc_device_scroll_viewport_bottom(vc_device_t* dev) TA_REQ(g_vc_lock);
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen)
     TA_REQ(g_vc_lock);
 
-ssize_t vc_device_op_write(mx_device_t* dev, const void* buf, size_t count,
-                           mx_off_t off);
 ssize_t vc_device_write(vc_device_t* dev, const void* buf, size_t count,
                         mx_off_t off);
 

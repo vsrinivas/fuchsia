@@ -80,8 +80,8 @@ static void clone_complete(iotxn_t* clone, void* cookie) {
     iotxn_release(clone);
 }
 
-static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
-    usb_interface_t* intf = device->ctx;
+static void usb_interface_iotxn_queue(void* ctx, iotxn_t* txn) {
+    usb_interface_t* intf = ctx;
 
     // clone the txn and pass it down to the HCI driver
     iotxn_t* clone = NULL;
@@ -100,47 +100,51 @@ static void usb_interface_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     iotxn_queue(intf->hci_mxdev, clone);
 }
 
-static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op, const void* in_buf,
-                                   size_t in_len, void* out_buf, size_t out_len) {
-    usb_interface_t* intf = device->ctx;
+static mx_status_t usb_interface_ioctl(void* ctx, uint32_t op, const void* in_buf,
+                                       size_t in_len, void* out_buf, size_t out_len,
+                                       size_t* out_actual) {
+    usb_interface_t* intf = ctx;
 
     switch (op) {
     case IOCTL_USB_GET_DEVICE_TYPE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = USB_DEVICE_TYPE_INTERFACE;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = intf->descriptor_length;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     case IOCTL_USB_GET_DESCRIPTORS: {
         void* descriptors = intf->descriptor;
         size_t desc_length = intf->descriptor_length;
         if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptors, desc_length);
-        return desc_length;
+        *out_actual = desc_length;
+        return NO_ERROR;
     }
     default:
         // other ioctls are handled by top level device
-        return device_op_ioctl(device->parent, op, in_buf, in_len, out_buf, out_len);
+        return device_op_ioctl(intf->device->mxdev, op, in_buf, in_len, out_buf, out_len,
+                               out_actual);
     }
 }
 
-static mx_status_t usb_interface_release(mx_device_t* device) {
-    usb_interface_t* intf = device->ctx;
+static void usb_interface_release(void* ctx) {
+    usb_interface_t* intf = ctx;
 
     stop_callback_thread(intf);
     free(intf->descriptor);
     free(intf);
-
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t usb_interface_proto = {
+    .version = DEVICE_OPS_VERSION,
     .iotxn_queue = usb_interface_iotxn_queue,
     .ioctl = usb_interface_ioctl,
     .release = usb_interface_release,
@@ -228,6 +232,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     completion_reset(&intf->callback_thread_completion);
     list_initialize(&intf->completed_txns);
 
+    intf->device = device;
     intf->hci_mxdev = device->hci_mxdev;
     intf->hci_protocol = device->hci_protocol;
     intf->device_id = device->device_id;

@@ -368,10 +368,8 @@ static void ax88179_send(mx_device_t* dev, uint32_t options, void* data, size_t 
     iotxn_queue(eth->usb_device, request);
 }
 
-static void ax88179_unbind(mx_device_t* device) {
-    ax88179_t* eth = get_ax88179(device);
-
-    // this must be last since this can trigger releasing the device
+static void ax88179_unbind(void* ctx) {
+    ax88179_t* eth = ctx;
     device_remove(eth->device);
 }
 
@@ -388,17 +386,17 @@ static void ax88179_free(ax88179_t* eth) {
     free(eth);
 }
 
-static mx_status_t ax88179_release(mx_device_t* device) {
-    ax88179_t* eth = get_ax88179(device);
+static void ax88179_release(void* ctx) {
+    ax88179_t* eth = ctx;
 
     // wait for thread to finish before cleaning up
     thrd_join(eth->thread, NULL);
 
     ax88179_free(eth);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t ax88179_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = ax88179_unbind,
     .release = ax88179_release,
 };

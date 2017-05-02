@@ -23,6 +23,10 @@ typedef struct test_device {
     void* cookie;
 } test_device_t;
 
+typedef struct test_root {
+    mx_device_t* mxdev;
+} test_root_t;
+
 static void test_device_set_output_socket(mx_device_t* dev, mx_handle_t handle) {
     test_device_t* device = dev->ctx;
     if (device->output != MX_HANDLE_INVALID) {
@@ -78,31 +82,34 @@ static test_protocol_t test_test_proto = {
     .destroy = test_device_destroy,
 };
 
-static ssize_t test_device_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t inlen, void* out, size_t outlen) {
+static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen, void* out,
+                                    size_t outlen, size_t* out_actual) {
+    test_device_t* dev = ctx;
     switch (op) {
     case IOCTL_TEST_SET_OUTPUT_SOCKET:
         if (inlen != sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
         }
-        test_device_set_output_socket(dev, *(mx_handle_t*)in);
+        test_device_set_output_socket(dev->mxdev, *(mx_handle_t*)in);
         return NO_ERROR;
 
     case IOCTL_TEST_SET_CONTROL_CHANNEL:
         if (inlen != sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
         }
-        test_device_set_control_channel(dev, *(mx_handle_t*)in);
+        test_device_set_control_channel(dev->mxdev, *(mx_handle_t*)in);
         return NO_ERROR;
 
     case IOCTL_TEST_RUN_TESTS:
         if (outlen != sizeof(test_report_t)) {
             return ERR_BUFFER_TOO_SMALL;
         }
-        test_device_run_tests(dev, (test_report_t*)out, in, inlen);
-        return sizeof(test_report_t);
+        test_device_run_tests(dev->mxdev, (test_report_t*)out, in, inlen);
+        *out_actual = sizeof(test_report_t);
+        return NO_ERROR;
 
     case IOCTL_TEST_DESTROY_DEVICE:
-        device_remove(dev);
+        device_remove(dev->mxdev);
         return 0;
 
     default:
@@ -110,8 +117,8 @@ static ssize_t test_device_ioctl(mx_device_t* dev, uint32_t op, const void* in, 
     }
 }
 
-static mx_status_t test_device_release(mx_device_t* dev) {
-    test_device_t* device = dev->ctx;
+static void test_device_release(void* ctx) {
+    test_device_t* device = ctx;
     if (device->output != MX_HANDLE_INVALID) {
         mx_handle_close(device->output);
     }
@@ -119,10 +126,10 @@ static mx_status_t test_device_release(mx_device_t* dev) {
         mx_handle_close(device->control);
     }
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t test_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = test_device_ioctl,
     .release = test_device_release,
 };
@@ -130,7 +137,10 @@ static mx_protocol_device_t test_device_proto = {
 
 #define DEV_TEST "/dev/misc/test"
 
-static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t inlen, void* out, size_t outlen) {
+static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
+                              void* out, size_t outlen, size_t* out_actual) {
+    test_root_t* root = ctx;
+
     if (op != IOCTL_TEST_CREATE_DEVICE) {
         return ERR_NOT_SUPPORTED;
     }
@@ -162,22 +172,30 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
     };
 
     mx_status_t status;
-    if ((status = device_add2(dev, &args, &device->mxdev)) != NO_ERROR) {
+    if ((status = device_add2(root->mxdev, &args, &device->mxdev)) != NO_ERROR) {
         free(device);
         return status;
     }
 
-    return snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
+    int length = snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
+    *out_actual = length;
+    return NO_ERROR;
 }
 
 static mx_protocol_device_t test_root_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = test_ioctl,
 };
 
 static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+    test_root_t* root = calloc(1, sizeof(test_root_t));
+    if (!root) {
+        return ERR_NO_MEMORY;
+    }
     device_add_args_t args = {
        .version = DEVICE_ADD_ARGS_VERSION,
         .name = "test",
+        .ctx = root,
         .driver = drv,
         .ops = &test_root_proto,
     };

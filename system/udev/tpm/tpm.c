@@ -86,7 +86,7 @@ cleanup:
     return status;
 }
 
-static mx_status_t tpm_save_state(mx_device_t *dev) {
+static mx_status_t tpm_save_state(void) {
     struct tpm_savestate_cmd cmd;
     uint32_t resp_len = tpm_init_savestate(&cmd);
     struct tpm_savestate_resp resp;
@@ -115,17 +115,18 @@ cleanup:
     return status;
 }
 
-static ssize_t tpm_device_ioctl(mx_device_t* dev, uint32_t op,
-                             const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len) {
+static mx_status_t tpm_device_ioctl(void* ctx, uint32_t op,
+                                    const void* in_buf, size_t in_len,
+                                    void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
-        case IOCTL_TPM_SAVE_STATE: return tpm_save_state(dev);
+        case IOCTL_TPM_SAVE_STATE: return tpm_save_state();
     }
     return ERR_NOT_SUPPORTED;
 }
 
 // implement device protocol:
 static mx_protocol_device_t tpm_device_proto __UNUSED = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = tpm_device_ioctl,
 };
 

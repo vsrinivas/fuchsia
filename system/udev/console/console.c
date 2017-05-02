@@ -17,6 +17,10 @@
 #define FIFOSIZE 256
 #define FIFOMASK (FIFOSIZE - 1)
 
+typedef struct console_ctx {
+    mx_device_t* mxdev;
+} console_device_t;
+
 static struct {
     uint8_t data[FIFOSIZE];
     uint32_t head;
@@ -59,7 +63,9 @@ static int debug_reader(void* arg) {
     return 0;
 }
 
-static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    console_device_t* console = ctx;
+
     uint8_t* data = buf;
     mtx_lock(&fifo.lock);
     while (count-- > 0) {
@@ -68,39 +74,60 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t 
         data++;
     }
     if (fifo.head == fifo.tail) {
-        device_state_clr(dev, DEV_STATE_READABLE);
+        device_state_clr(console->mxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&fifo.lock);
-    ssize_t actual = data - (uint8_t*)buf;
-    return actual ? actual : (ssize_t)ERR_SHOULD_WAIT;
+    ssize_t length = data - (uint8_t*)buf;
+    if (length == 0) {
+        return ERR_SHOULD_WAIT;
+    }
+    *actual = length;
+    return NO_ERROR;
 }
 
-static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    return mx_debug_write(buf, count);
+static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
+    mx_status_t status = mx_debug_write(buf, count);
+    if (status >= 0) {
+        *actual = status;
+        status = NO_ERROR;
+     }
+     return status;
+}
+
+static void console_release(void* ctx) {
+    console_device_t* console = ctx;
+    free(console);
 }
 
 static mx_protocol_device_t console_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = console_read,
     .write = console_write,
+    .release = console_release,
 };
 
 static mx_status_t console_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+    console_device_t* console = calloc(1, sizeof(console_device_t));
+    if (!console) {
+        return ERR_NO_MEMORY;
+    }
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "console",
+        .ctx = console,
         .driver = drv,
         .ops = &console_device_proto,
     };
 
-    mx_device_t* dev;
-    mx_status_t status = device_add2(parent, &args, &dev);
+    mx_status_t status = device_add2(parent, &args, &console->mxdev);
     if (status != NO_ERROR) {
         printf("console: device_add() failed\n");
+        free(console);
         return status;
     }
 
     thrd_t t;
-    thrd_create_with_name(&t, debug_reader, dev, "debug-reader");
+    thrd_create_with_name(&t, debug_reader, console->mxdev, "debug-reader");
 
     return NO_ERROR;
 }

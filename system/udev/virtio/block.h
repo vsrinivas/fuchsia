@@ -29,10 +29,10 @@ public:
 
 private:
     // DDK driver hooks
-    static void virtio_block_iotxn_queue(mx_device_t* dev, iotxn_t* txn);
-    static mx_off_t virtio_block_get_size(mx_device_t* dev);
-    static ssize_t virtio_block_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len);
+    static void virtio_block_iotxn_queue(void* ctx, iotxn_t* txn);
+    static mx_off_t virtio_block_get_size(void* ctx);
+    static mx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len, size_t* out_actual);
 
     void QueueReadWriteTxn(iotxn_t* txn);
 

@@ -416,8 +416,8 @@ static mx_status_t ums_write(ums_block_t* dev, iotxn_t* txn) {
     return status;
 }
 
-static void ums_unbind(mx_device_t* device) {
-    ums_t* ums = device->ctx;
+static void ums_unbind(void* ctx) {
+    ums_t* ums = ctx;
 
     // terminate our worker thread
     mtx_lock(&ums->iotxn_lock);
@@ -440,8 +440,8 @@ static void ums_unbind(mx_device_t* device) {
     device_remove(ums->mxdev);
 }
 
-static mx_status_t ums_release(mx_device_t* device) {
-    ums_t* ums = device->ctx;
+static void ums_release(void* ctx) {
+    ums_t* ums = ctx;
 
     if (ums->cbw_iotxn) {
         iotxn_release(ums->cbw_iotxn);
@@ -454,7 +454,6 @@ static mx_status_t ums_release(mx_device_t* device) {
     }
 
     free(ums);
-    return NO_ERROR;
 }
 
 static mx_status_t ums_add_block_device(ums_block_t* dev) {
@@ -551,6 +550,7 @@ static mx_status_t ums_check_luns_ready(ums_t* ums) {
 }
 
 static mx_protocol_device_t ums_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = ums_unbind,
     .release = ums_release,
 };
@@ -662,7 +662,7 @@ static int ums_worker_thread(void* arg) {
 
 fail:
     printf("ums_worker_thread failed\n");
-    ums_release(ums->mxdev);
+    ums_release(ums);
     return status;
 }
 
@@ -776,7 +776,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** coo
 
 fail:
     printf("ums_bind failed: %d\n", status);
-    ums_release(ums->mxdev);
+    ums_release(ums);
     return status;
 }
 

@@ -89,8 +89,8 @@ static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     mtx_unlock(&source->mutex);
 }
 
-static void usb_audio_source_unbind(mx_device_t* dev) {
-    usb_audio_source_t* source = dev->ctx;
+static void usb_audio_source_unbind(void* ctx) {
+    usb_audio_source_t* source = ctx;
     source->dead = true;
     update_signals(source);
     device_remove(source->mxdev);
@@ -108,10 +108,9 @@ static void usb_audio_source_free(usb_audio_source_t* source) {
     free(source);
 }
 
-static mx_status_t usb_audio_source_release(mx_device_t* dev) {
-    usb_audio_source_t* source = dev->ctx;
+static void usb_audio_source_release(void* ctx) {
+    usb_audio_source_t* source = ctx;
     usb_audio_source_free(source);
-    return NO_ERROR;
 }
 
 static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
@@ -168,8 +167,8 @@ out:
     return status;
 }
 
-static mx_status_t usb_audio_source_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    usb_audio_source_t* source = dev->ctx;
+static mx_status_t usb_audio_source_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    usb_audio_source_t* source = ctx;
     mx_status_t result;
 
     mtx_lock(&source->mutex);
@@ -184,8 +183,8 @@ static mx_status_t usb_audio_source_open(mx_device_t* dev, mx_device_t** dev_out
     return result;
 }
 
-static mx_status_t usb_audio_source_close(mx_device_t* dev, uint32_t flags) {
-    usb_audio_source_t* source = dev->ctx;
+static mx_status_t usb_audio_source_close(void* ctx, uint32_t flags) {
+    usb_audio_source_t* source = ctx;
 
     mtx_lock(&source->mutex);
     source->open = false;
@@ -195,14 +194,15 @@ static mx_status_t usb_audio_source_close(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
-static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length, mx_off_t offset) {
-    usb_audio_source_t* source = dev->ctx;
+static mx_status_t usb_audio_source_read(void* ctx, void* data, size_t length, mx_off_t offset,
+                                         size_t* actual) {
+    usb_audio_source_t* source = ctx;
 
     if (source->dead) {
         return ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = 0;
+    mx_status_t status = NO_ERROR;
 
     mtx_lock(&source->mutex);
 
@@ -232,9 +232,9 @@ static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length
             *dest-- = sample;
             *dest-- = sample;
         }
-        status = 2 * txn->actual;
+        *actual = 2 * txn->actual;
     } else {
-        status = txn->actual;
+        *actual = txn->actual;
     }
 
     // requeue the transaction
@@ -250,16 +250,18 @@ out:
     return status;
 }
 
-static ssize_t usb_audio_source_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf,
-                                    size_t in_len, void* out_buf, size_t out_len) {
-    usb_audio_source_t* source = dev->ctx;
+static mx_status_t usb_audio_source_ioctl(void* ctx, uint32_t op, const void* in_buf,
+                                          size_t in_len, void* out_buf, size_t out_len,
+                                          size_t* out_actual) {
+    usb_audio_source_t* source = ctx;
 
     switch (op) {
     case IOCTL_AUDIO_GET_DEVICE_TYPE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = AUDIO_TYPE_SOURCE;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     case IOCTL_AUDIO_GET_SAMPLE_RATE_COUNT: {
         int* reply = out_buf;
@@ -271,13 +273,15 @@ static ssize_t usb_audio_source_ioctl(mx_device_t* dev, uint32_t op, const void*
         size_t reply_size = source->sample_rate_count * sizeof(uint32_t);
         if (out_len < reply_size) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, source->sample_rates, reply_size);
-        return reply_size;
+        *out_actual = reply_size;
+        return NO_ERROR;
     }
     case IOCTL_AUDIO_GET_SAMPLE_RATE: {
         uint32_t* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = source->sample_rate;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     case IOCTL_AUDIO_SET_SAMPLE_RATE: {
         if (in_len < sizeof(uint32_t))  return ERR_BUFFER_TOO_SMALL;
@@ -310,6 +314,7 @@ static ssize_t usb_audio_source_ioctl(mx_device_t* dev, uint32_t op, const void*
 }
 
 static mx_protocol_device_t usb_audio_source_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_audio_source_unbind,
     .release = usb_audio_source_release,
     .open = usb_audio_source_open,

@@ -396,22 +396,20 @@ set_stream_done:
     return status;
 }
 
-static mx_status_t pcm_audio_sink_release(mx_device_t* device) {
-    bcm_pcm_t* ctx = device->ctx;
-    free(ctx);
-    return NO_ERROR;
+static void pcm_audio_sink_release(void* ctx) {
+    bcm_pcm_t* pcm = ctx;
+    free(pcm);
 }
 
-static void pcm_audio_sink_unbind(mx_device_t* device) {
+static void pcm_audio_sink_unbind(void* ctx) {
+    bcm_pcm_t* pcm = ctx;
 
-    bcm_pcm_t* ctx = device->ctx;
+    mtx_lock(&pcm->pcm_lock);
+    pcm_stop_locked(pcm);
+    pcm_deinit_locked(pcm);
+    mtx_unlock(&pcm->pcm_lock);
 
-    mtx_lock(&ctx->pcm_lock);
-    pcm_stop_locked(ctx);
-    pcm_deinit_locked(ctx);
-    mtx_unlock(&ctx->pcm_lock);
-
-    device_remove(ctx->mxdev);
+    device_remove(pcm->mxdev);
 }
 
 static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio2_rb_cmd_get_buffer_req_t req) {
@@ -569,12 +567,12 @@ static int pcm_port_thread(void* arg) {
 }
 #undef HANDLE_REQ
 
-static ssize_t pcm_audio2_sink_ioctl(mx_device_t* device, uint32_t op,
-                                     const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len) {
+static mx_status_t pcm_audio2_sink_ioctl(void* ctx, uint32_t op,
+                                         const void* in_buf, size_t in_len,
+                                         void* out_buf, size_t out_len, size_t* out_actual) {
 
-    bcm_pcm_t* ctx = device->ctx;
-    mtx_lock(&ctx->pcm_lock);
+    bcm_pcm_t* pcm = ctx;
+    mtx_lock(&pcm->pcm_lock);
 
     mx_status_t status = NO_ERROR;
     mx_handle_t* reply = out_buf;
@@ -584,54 +582,57 @@ static ssize_t pcm_audio2_sink_ioctl(mx_device_t* device, uint32_t op,
         goto pcm_ioctl_end;
     }
 
-    if (ctx->state != BCM_PCM_STATE_SHUTDOWN) {
+    if (pcm->state != BCM_PCM_STATE_SHUTDOWN) {
         status = ERR_BAD_STATE;
         goto pcm_ioctl_end;
     }
 
-    MX_DEBUG_ASSERT(ctx->stream_ch == MX_HANDLE_INVALID);
-    MX_DEBUG_ASSERT(ctx->pcm_port == MX_HANDLE_INVALID);
+    MX_DEBUG_ASSERT(pcm->stream_ch == MX_HANDLE_INVALID);
+    MX_DEBUG_ASSERT(pcm->pcm_port == MX_HANDLE_INVALID);
 
     mx_handle_t ret_handle;
-    status = mx_channel_create(0, &ctx->stream_ch, &ret_handle);
+    status = mx_channel_create(0, &pcm->stream_ch, &ret_handle);
     if (status != NO_ERROR) {
         status = ERR_INTERNAL;
         goto pcm_ioctl_end;
     }
     *reply = ret_handle;
 
-    status = mx_port_create(0, &ctx->pcm_port);
+    status = mx_port_create(0, &pcm->pcm_port);
     if (status != NO_ERROR) {
         xprintf("error creating port\n");
-        mx_handle_close(ctx->stream_ch);
+        mx_handle_close(pcm->stream_ch);
         goto pcm_ioctl_end;
     }
 
-    status = mx_port_bind(ctx->pcm_port, (uint64_t)ctx->stream_ch, ctx->stream_ch,
+    status = mx_port_bind(pcm->pcm_port, (uint64_t)pcm->stream_ch, pcm->stream_ch,
                                 MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
 
     if (status != NO_ERROR) {
         xprintf("error binding port to stream_ch\n");
-        mx_handle_close(ctx->stream_ch);
-        mx_handle_close(ctx->pcm_port);
+        mx_handle_close(pcm->stream_ch);
+        mx_handle_close(pcm->pcm_port);
         goto pcm_ioctl_end;
     }
 
-    int thrd_rc = thrd_create_with_name(&ctx->port_thrd,
-                                        pcm_port_thread, ctx,
+    int thrd_rc = thrd_create_with_name(&pcm->port_thrd,
+                                        pcm_port_thread, pcm,
                                         "pcm_port_thread");
     if (thrd_rc != thrd_success) {
-        mx_handle_close(ctx->stream_ch);
-        mx_handle_close(ctx->pcm_port);
+        mx_handle_close(pcm->stream_ch);
+        mx_handle_close(pcm->pcm_port);
         status = thrd_status_to_mx_status(thrd_rc);
         goto pcm_ioctl_end;
     }
-    ctx->state |= BCM_PCM_STATE_CLIENT_ACTIVE;
+    pcm->state |= BCM_PCM_STATE_CLIENT_ACTIVE;
     xprintf("Client request successful...\n");
 pcm_ioctl_end:
-    if (status != NO_ERROR)
+    mtx_unlock(&pcm->pcm_lock);
+    if (status == NO_ERROR) {
+        *out_actual = sizeof(ret_handle);
+    } else {
         xprintf("Problem with client request: status=%d\n", status);
-    mtx_unlock(&ctx->pcm_lock);
+    }
     return status;
 }
 
@@ -645,6 +646,7 @@ static mx_status_t pcm_dma_init(bcm_pcm_t* ctx) {
 }
 
 static mx_protocol_device_t pcm_audio_ctx_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = pcm_audio_sink_unbind,
     .release = pcm_audio_sink_release,
     .ioctl = pcm_audio2_sink_ioctl,

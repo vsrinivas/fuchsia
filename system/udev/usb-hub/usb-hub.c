@@ -15,6 +15,7 @@
 #include <string.h>
 #include <magenta/listnode.h>
 #include <threads.h>
+#include <unistd.h>
 
 //#define TRACE 1
 #if TRACE
@@ -220,8 +221,8 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
     }
 }
 
-static void usb_hub_unbind(mx_device_t* device) {
-    usb_hub_t* hub = device->ctx;
+static void usb_hub_unbind(void* ctx) {
+    usb_hub_t* hub = ctx;
 
     for (int i = 1; i <= hub->num_ports; i++) {
         if (usb_hub_is_port_enabled(hub, i)) {
@@ -237,17 +238,17 @@ static mx_status_t usb_hub_free(usb_hub_t* hub) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_hub_release(mx_device_t* device) {
-    usb_hub_t* hub = device->ctx;
+static void usb_hub_release(void* ctx) {
+    usb_hub_t* hub = ctx;
 
     hub->thread_done = true;
     completion_signal(&hub->completion);
     thrd_join(hub->thread, NULL);
     usb_hub_free(hub);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t usb_hub_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_hub_unbind,
     .release = usb_hub_release,
 };

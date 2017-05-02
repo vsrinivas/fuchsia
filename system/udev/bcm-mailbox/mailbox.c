@@ -324,9 +324,9 @@ static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
     return ret;
 }
 
-static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
-                                    const void* in_buf, size_t in_len,
-                                    void* out_buf, size_t out_len) {
+static mx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
+                                        const void* in_buf, size_t in_len,
+                                        void* out_buf, size_t out_len, size_t* out_actual) {
     bcm_fb_desc_t fbdesc;
     uint8_t macid[6];
 
@@ -338,13 +338,15 @@ static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
         memcpy(&fbdesc, in_buf, in_len);
         bcm_vc_get_framebuffer(&fbdesc);
         memcpy(out_buf, &fbdesc, out_len);
-        return out_len;
+        *out_actual = out_len;
+        return NO_ERROR;
 
     case IOCTL_BCM_GET_MACID:
 
         bcm_get_macid(macid);
         memcpy(out_buf, macid, out_len);
-        return out_len;
+        *out_actual = out_len;
+        return NO_ERROR;
     case IOCTL_BCM_GET_CLOCKRATE:
         // Input buffer should be exactly 4 bytes long and should contain the
         // ID of the target clock. Output buffer should also be exactly 4 bytes
@@ -358,7 +360,8 @@ static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
         if (rc != NO_ERROR)
             return rc;
 
-        return out_len;
+        *out_actual = out_len;
+        return NO_ERROR;
     }
     return ERR_NOT_SUPPORTED;
 }
@@ -388,10 +391,13 @@ static mx_display_protocol_t vc_display_proto = {
 };
 
 static mx_protocol_device_t mailbox_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = mailbox_device_ioctl,
 };
 
-static mx_protocol_device_t empty_device_proto = {};
+static mx_protocol_device_t empty_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+};
 
 static mx_device_prop_t mailbox_props[] = {
     {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},

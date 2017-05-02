@@ -13,15 +13,18 @@
 
 // null is the /dev/null device.
 
-static ssize_t null_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    return 0;
+static mx_status_t null_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    *actual = 0;
+    return NO_ERROR;
 }
 
-static ssize_t null_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    return count;
+static mx_status_t null_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
+    *actual = count;
+    return NO_ERROR;
 }
 
 static mx_protocol_device_t null_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = null_read,
     .write = null_write,
 };

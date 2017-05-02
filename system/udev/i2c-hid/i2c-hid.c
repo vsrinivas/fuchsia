@@ -116,16 +116,17 @@ static mx_status_t i2c_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
     if (out == NULL) {
         return ERR_NO_MEMORY;
     }
-    ssize_t ret = device_op_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
-                                  buf, sizeof(buf), out, desc_len);
-    if (ret < 0) {
-        printf("i2c-hid: could not read HID report descriptor: %zd\n", ret);
+    size_t actual = 0;
+    mx_status_t status = device_op_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
+                                    buf, sizeof(buf), out, desc_len, &actual);
+    if (status < 0) {
+        printf("i2c-hid: could not read HID report descriptor: %d\n", status);
         free(out);
         return ERR_NOT_SUPPORTED;
     }
 
     *data = out;
-    *len = desc_len;
+    *len = actual;
     return NO_ERROR;
 }
 
@@ -192,9 +193,13 @@ static int i2c_hid_irq_thread(void* arg) {
     // IRQ, we just poll.
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
-        ssize_t ret = device_op_read(dev->i2cdev, buf, len, 0);
-        if (ret < 2) {
-            printf("i2c-hid: short read (%zd < 2)!!!\n", ret);
+        size_t actual = 0;
+        mx_status_t status = device_op_read(dev->i2cdev, buf, len, 0, &actual);
+        if (status < 0) {
+            return status;
+        }
+        if (actual < 2) {
+            printf("i2c-hid: short read (%zd < 2)!!!\n", actual);
             continue;
         }
 
@@ -203,8 +208,8 @@ static int i2c_hid_irq_thread(void* arg) {
             // nothing to read
             continue;
         }
-        if (ret < report_len) {
-            printf("i2c-hid: short read (%zd < %u)!!!\n", ret, report_len);
+        if (actual < report_len) {
+            printf("i2c-hid: short read (%zd < %u)!!!\n", actual, report_len);
             continue;
         }
         mtx_lock(&dev->lock);
@@ -219,12 +224,12 @@ static int i2c_hid_irq_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t i2c_hid_release(mx_device_t* dev) {
+static void i2c_hid_release(void* ctx) {
     MX_PANIC("cannot release an i2c hid device yet!\n");
-    return ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t i2c_hid_dev_ops = {
+    .version = DEVICE_OPS_VERSION,
     .release = i2c_hid_release,
 };
 
@@ -238,9 +243,10 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     *data++ = 0x01;
     *data++ = 0x00;
     uint8_t out[4];
-    ssize_t ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out));
-    if (ret < 0) {
-        printf("i2c-hid: could not read HID descriptor: %zd\n", ret);
+    size_t actual = 0;
+    mx_status_t ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
+    if (ret < 0 || actual != sizeof(out)) {
+        printf("i2c-hid: could not read HID descriptor: %d\n", ret);
         return ERR_NOT_SUPPORTED;
     }
     i2c_hid_desc_t* i2c_hid_desc_hdr = (i2c_hid_desc_t*)out;
@@ -254,9 +260,10 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     i2chid->hiddesc = malloc(desc_len);
 
     i2c_hid_prepare_write_read_buffer(buf, 2, desc_len);
-    ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len);
-    if (ret < 0) {
-        printf("i2c-hid: could not read HID descriptor: %zd\n", ret);
+    actual = 0;
+    ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len, &actual);
+    if (ret < 0 || actual != desc_len) {
+        printf("i2c-hid: could not read HID descriptor: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
         return ERR_NOT_SUPPORTED;
@@ -297,7 +304,7 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
     if (ret != thrd_success) {
-        printf("i2c-hid: could not create irq thread: %zd\n", ret);
+        printf("i2c-hid: could not create irq thread: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
         // TODO: map thrd_* status codes to ERR_* status codes

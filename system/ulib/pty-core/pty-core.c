@@ -46,40 +46,43 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
 
 // pty client device operations
 
-static ssize_t pty_client_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    pty_client_t* pc = dev->ctx;
+static mx_status_t pty_client_read(void* ctx, void* buf, size_t count, mx_off_t off,
+                                   size_t* actual) {
+    pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
 
     mtx_lock(&ps->lock);
     bool was_full = pty_fifo_is_full(&pc->fifo);
-    size_t actual = pty_fifo_read(&pc->fifo, buf, count);
+    size_t length = pty_fifo_read(&pc->fifo, buf, count);
     if (pty_fifo_is_empty(&pc->fifo)) {
         device_state_clr(pc->mxdev, DEV_STATE_READABLE);
     }
-    if (was_full && actual) {
+    if (was_full && length) {
         device_state_set(ps->mxdev, DEV_STATE_WRITABLE);
     }
     mtx_unlock(&ps->lock);
 
-    if (actual > 0) {
-        return actual;
+    if (length > 0) {
+        *actual =length;
+        return NO_ERROR;
     } else {
         return (pc->flags & PTY_CLI_PEER_CLOSED) ? ERR_PEER_CLOSED : ERR_SHOULD_WAIT;
     }
 }
 
-static ssize_t pty_client_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    pty_client_t* pc = dev->ctx;
+static mx_status_t pty_client_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+                                    size_t* actual) {
+    pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
 
     ssize_t r;
 
     mtx_lock(&ps->lock);
     if (pc->flags & PTY_CLI_ACTIVE) {
-        size_t actual;
-        r = ps->recv(ps, buf, count, &actual);
+        size_t length;
+        r = ps->recv(ps, buf, count, &length);
         if (r == NO_ERROR) {
-            r = actual;
+            *actual = length;
         } else if (r == ERR_SHOULD_WAIT) {
             device_state_clr(pc->mxdev, DEV_STATE_WRITABLE);
         }
@@ -129,10 +132,10 @@ static void pty_adjust_signals_locked(pty_client_t* pc) {
 }
 
 
-static ssize_t pty_client_ioctl(mx_device_t* dev, uint32_t op,
+static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
                                 const void* in_buf, size_t in_len,
-                                void* out_buf, size_t out_len) {
-    pty_client_t* pc = dev->ctx;
+                                void* out_buf, size_t out_len, size_t* out_actual) {
+    pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
 
     switch (op) {
@@ -157,7 +160,8 @@ static ssize_t pty_client_ioctl(mx_device_t* dev, uint32_t op,
         wsz->width = ps->width;
         wsz->height = ps->height;
         mtx_unlock(&ps->lock);
-        return sizeof(pty_window_size_t);
+        *out_actual = sizeof(pty_window_size_t);
+        return NO_ERROR;
     }
     case IOCTL_PTY_MAKE_ACTIVE: {
         if (in_len != sizeof(uint32_t)) {
@@ -195,19 +199,20 @@ static ssize_t pty_client_ioctl(mx_device_t* dev, uint32_t op,
         *((uint32_t*) out_buf) = events;
         device_state_clr(pc->mxdev, PTY_SIGNAL_EVENT);
         mtx_unlock(&ps->lock);
-        return sizeof(uint32_t);
+        *out_actual = sizeof(uint32_t);
+        return NO_ERROR;
     }
     default:
         if (ps->ioctl != NULL) {
-            return ps->ioctl(ps, op, in_buf, in_len, out_buf, out_len);
+            return ps->ioctl(ps, op, in_buf, in_len, out_buf, out_len, out_actual);
         } else {
             return ERR_NOT_SUPPORTED;
         }
     }
 }
 
-static mx_status_t pty_client_release(mx_device_t* dev) {
-    pty_client_t* pc = dev->ctx;
+static void pty_client_release(void* ctx) {
+    pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
 
     mtx_lock(&ps->lock);
@@ -242,14 +247,12 @@ static mx_status_t pty_client_release(mx_device_t* dev) {
         }
     }
 
-    free(pc);
     xprintf("pty cli %p (id=%u) release\n", pc, pc->id);
-
-    return NO_ERROR;
+    free(pc);
 }
 
-mx_status_t pty_client_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
-    pty_client_t* pc = dev->ctx;
+mx_status_t pty_client_openat(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
+    pty_client_t* pc = ctx;
     pty_server_t* ps = pc->srv;
     uint32_t id = strtoul(path, NULL, 0);
     // only controlling clients may create additional clients
@@ -264,8 +267,9 @@ mx_status_t pty_client_openat(mx_device_t* dev, mx_device_t** out, const char* p
 }
 
 mx_protocol_device_t pc_ops = {
+    .version = DEVICE_OPS_VERSION,
     // .open = default, allow cloning
-    .openat = pty_client_openat,
+    .open_at = pty_client_openat,
     .release = pty_client_release,
     .read = pty_client_read,
     .write = pty_client_write,
@@ -401,14 +405,14 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
     mtx_unlock(&ps->lock);
 }
 
-mx_status_t pty_server_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
-    pty_server_t* ps = dev->ctx;
+mx_status_t pty_server_openat(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
+    pty_server_t* ps = ctx;
     uint32_t id = strtoul(path, NULL, 0);
     return pty_openat(ps, out, id, flags);
 }
 
-mx_status_t pty_server_release(mx_device_t* dev) {
-    pty_server_t* ps = dev->ctx;
+void pty_server_release(void* ctx) {
+    pty_server_t* ps = ctx;
 
     mtx_lock(&ps->lock);
     // inform clients that server is gone
@@ -428,8 +432,6 @@ mx_status_t pty_server_release(mx_device_t* dev) {
             free(ps);
         }
     }
-
-    return NO_ERROR;
 }
 
 void pty_server_init(pty_server_t* ps) {

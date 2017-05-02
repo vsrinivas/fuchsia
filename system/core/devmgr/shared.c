@@ -7,6 +7,7 @@
 #include "devmgr.h"
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include <launchpad/launchpad.h>
 #include <magenta/processargs.h>

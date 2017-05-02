@@ -80,8 +80,8 @@ static usb_bus_protocol_t _bus_protocol = {
     .hub_device_removed = usb_bus_device_removed,
 };
 
-static void usb_bus_unbind(mx_device_t* dev) {
-    usb_bus_t* bus = dev->ctx;
+static void usb_bus_unbind(void* ctx) {
+    usb_bus_t* bus = ctx;
     bus->hci_protocol->set_bus_device(bus->hci_mxdev, NULL);
 
     for (size_t i = 0; i < bus->max_device_count; i++) {
@@ -93,14 +93,14 @@ static void usb_bus_unbind(mx_device_t* dev) {
     }
 }
 
-static mx_status_t usb_bus_release(mx_device_t* dev) {
-    usb_bus_t* bus = dev->ctx;
+static void usb_bus_release(void* ctx) {
+    usb_bus_t* bus = ctx;
     free(bus->devices);
     free(bus);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t usb_bus_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_bus_unbind,
     .release = usb_bus_release,
 };

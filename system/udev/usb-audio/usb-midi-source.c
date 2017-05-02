@@ -65,8 +65,8 @@ static void usb_midi_source_read_complete(iotxn_t* txn, void* cookie) {
     mtx_unlock(&source->mutex);
 }
 
-static void usb_midi_source_unbind(mx_device_t* dev) {
-    usb_midi_source_t* source = dev->ctx;
+static void usb_midi_source_unbind(void* ctx) {
+    usb_midi_source_t* source = ctx;
     source->dead = true;
     update_signals(source);
     device_remove(source->mxdev);
@@ -83,14 +83,13 @@ static void usb_midi_source_free(usb_midi_source_t* source) {
     free(source);
 }
 
-static mx_status_t usb_midi_source_release(mx_device_t* dev) {
-    usb_midi_source_t* source = dev->ctx;
+static void usb_midi_source_release(void* ctx) {
+    usb_midi_source_t* source = ctx;
     usb_midi_source_free(source);
-    return NO_ERROR;
 }
 
-static mx_status_t usb_midi_source_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    usb_midi_source_t* source = dev->ctx;
+static mx_status_t usb_midi_source_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    usb_midi_source_t* source = ctx;
     mx_status_t result;
 
     mtx_lock(&source->mutex);
@@ -114,8 +113,8 @@ static mx_status_t usb_midi_source_open(mx_device_t* dev, mx_device_t** dev_out,
     return result;
 }
 
-static mx_status_t usb_midi_source_close(mx_device_t* dev, uint32_t flags) {
-    usb_midi_source_t* source = dev->ctx;
+static mx_status_t usb_midi_source_close(void* ctx, uint32_t flags) {
+    usb_midi_source_t* source = ctx;
 
     mtx_lock(&source->mutex);
     source->open = false;
@@ -124,8 +123,9 @@ static mx_status_t usb_midi_source_close(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
-static ssize_t usb_midi_source_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-    usb_midi_source_t* source = dev->ctx;
+static mx_status_t usb_midi_source_read(void* ctx, void* data, size_t len, mx_off_t off,
+                                        size_t* actual) {
+    usb_midi_source_t* source = ctx;
 
     if (source->dead) {
         return ERR_PEER_CLOSED;
@@ -145,7 +145,7 @@ static ssize_t usb_midi_source_read(mx_device_t* dev, void* data, size_t len, mx
 
     // MIDI events are 4 bytes. We can ignore the zeroth byte
     iotxn_copyfrom(txn, data, 3, 1);
-    status = get_midi_message_length(*((uint8_t *)data));
+    *actual = get_midi_message_length(*((uint8_t *)data));
     list_remove_head(&source->completed_reads);
     list_add_head(&source->free_read_reqs, &txn->node);
     while ((node = list_remove_head(&source->free_read_reqs)) != NULL) {
@@ -159,14 +159,16 @@ out:
     return status;
 }
 
-static ssize_t usb_midi_source_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf,
-                                    size_t in_len, void* out_buf, size_t out_len) {
+static mx_status_t usb_midi_source_ioctl(void* ctx, uint32_t op, const void* in_buf,
+                                         size_t in_len, void* out_buf, size_t out_len,
+                                         size_t* out_actual) {
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SOURCE;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     }
 
@@ -174,6 +176,7 @@ static ssize_t usb_midi_source_ioctl(mx_device_t* dev, uint32_t op, const void* 
 }
 
 static mx_protocol_device_t usb_midi_source_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_midi_source_unbind,
     .release = usb_midi_source_release,
     .open = usb_midi_source_open,

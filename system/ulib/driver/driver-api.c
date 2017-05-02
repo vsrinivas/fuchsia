@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/compiler.h>
+#include <ddk/device.h>
 #include <driver/driver-api.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,7 +23,10 @@ __EXPORT void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
 __EXPORT mx_status_t device_add2(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
     mx_device_t* dev;
 
-    if (args->version != DEVICE_ADD_ARGS_VERSION) {
+    if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
+        return ERR_INVALID_ARGS;
+    }
+    if (!args->ops || args->ops->version != DEVICE_OPS_VERSION) {
         return ERR_INVALID_ARGS;
     }
     if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_BUSDEV)) {
@@ -68,6 +72,23 @@ __EXPORT mx_status_t device_create(const char* name, void* ctx,
                                    mx_protocol_device_t* ops, mx_driver_t* driver,
                                    mx_device_t** out) {
     return API->device_create(name, ctx, ops, driver, out);
+}
+
+__EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,
+                                                 void** protocol) {
+    if (dev->ops->get_protocol) {
+        return dev->ops->get_protocol(dev->ctx, proto_id, protocol);
+    }
+
+    if (proto_id == MX_PROTOCOL_DEVICE) {
+        *protocol = dev->ops;
+        return NO_ERROR;
+    }
+    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
+        *protocol = dev->protocol_ops;
+        return NO_ERROR;
+    }
+    return ERR_NOT_SUPPORTED;
 }
 
 __EXPORT void device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {

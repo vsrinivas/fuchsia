@@ -667,7 +667,7 @@ static mx_status_t x86_pt_cpu_mode_free(ipt_device_t* ipt_dev) {
 
 // The DDK interface
 
-static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+static mx_status_t ipt_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
     // TODO(dje): For now we only support ToPA.
     if (!ipt_config_output_topa)
         return ERR_NOT_SUPPORTED;
@@ -675,7 +675,7 @@ static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
     // TODO(dje): What's the best way to allow only one open at a time?
     // [We could allow multiple, but multiple clients trying to control
     // tracing is problematic so just punt for now..]
-    ipt_device_t* ipt_dev = dev->ctx;
+    ipt_device_t* ipt_dev = ctx;
     if (ipt_dev->opened)
         return ERR_ALREADY_BOUND;
 
@@ -697,14 +697,14 @@ static mx_status_t ipt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
     return NO_ERROR;
 }
 
-static mx_status_t ipt_close(mx_device_t* dev, uint32_t flags) {
-    ipt_device_t* ipt_dev = dev->ctx;
+static mx_status_t ipt_close(void* ctx, uint32_t flags) {
+    ipt_device_t* ipt_dev = ctx;
 
     ipt_dev->opened = false;
     return NO_ERROR;
 }
 
-static ssize_t ipt_set_mode(ipt_device_t* ipt_dev,
+static mx_status_t ipt_set_mode(ipt_device_t* ipt_dev,
                             const void* cmd, size_t cmdlen,
                             void* reply, size_t max) {
     if (max != 0)
@@ -716,9 +716,9 @@ static ssize_t ipt_set_mode(ipt_device_t* ipt_dev,
     return x86_pt_set_mode(ipt_dev, mode);
 }
 
-static ssize_t ipt_alloc_buffer(ipt_device_t* ipt_dev,
+static mx_status_t ipt_alloc_buffer(ipt_device_t* ipt_dev,
                                 const void* cmd, size_t cmdlen,
-                                void* reply, size_t max) {
+                                void* reply, size_t max, size_t* out_actual) {
     ioctl_ipt_buffer_config_t config;
     if (cmdlen != sizeof(config))
         return ERR_INVALID_ARGS;
@@ -730,10 +730,11 @@ static ssize_t ipt_alloc_buffer(ipt_device_t* ipt_dev,
     if (status != NO_ERROR)
         return status;
     memcpy(reply, &index, sizeof(index));
-    return sizeof(index);
+    *out_actual = sizeof(index);
+    return NO_ERROR;
 }
 
-static ssize_t ipt_assign_buffer_thread(ipt_device_t* ipt_dev,
+static mx_status_t ipt_assign_buffer_thread(ipt_device_t* ipt_dev,
                                         const void* cmd, size_t cmdlen,
                                         void* reply, size_t max) {
     ioctl_ipt_assign_buffer_thread_t assign;
@@ -745,7 +746,7 @@ static ssize_t ipt_assign_buffer_thread(ipt_device_t* ipt_dev,
     return x86_pt_assign_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
 }
 
-static ssize_t ipt_release_buffer_thread(ipt_device_t* ipt_dev,
+static mx_status_t ipt_release_buffer_thread(ipt_device_t* ipt_dev,
                                          const void* cmd, size_t cmdlen,
                                          void* reply, size_t max) {
     ioctl_ipt_assign_buffer_thread_t assign;
@@ -757,9 +758,9 @@ static ssize_t ipt_release_buffer_thread(ipt_device_t* ipt_dev,
     return x86_pt_release_buffer_thread(ipt_dev, assign.descriptor, assign.thread);
 }
 
-static ssize_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
+static mx_status_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
                                      const void* cmd, size_t cmdlen,
-                                     void* reply, size_t max) {
+                                     void* reply, size_t max, size_t* out_actual) {
     uint32_t index;
     ioctl_ipt_buffer_config_t config;
 
@@ -784,12 +785,13 @@ static ssize_t ipt_get_buffer_config(ipt_device_t* ipt_dev,
                   "addr range size mismatch");
     memcpy(config.addr_ranges, per_trace->addr_ranges, sizeof(per_trace->addr_ranges));
     memcpy(reply, &config, sizeof(config));
-    return sizeof(config);
+    *out_actual = sizeof(config);
+    return NO_ERROR;
 }
 
-static ssize_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
+static mx_status_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
                                    const void* cmd, size_t cmdlen,
-                                   void* reply, size_t max) {
+                                   void* reply, size_t max, size_t* out_actual) {
     if (ipt_dev->active)
         return ERR_BAD_STATE;
 
@@ -810,12 +812,13 @@ static ssize_t ipt_get_buffer_info(ipt_device_t* ipt_dev,
     // Note: If this is a circular buffer this is just where tracing stopped.
     data.capture_end = compute_capture_size(ipt_dev, per_trace);
     memcpy(reply, &data, sizeof(data));
-    return sizeof(data);
+    *out_actual = sizeof(data);
+    return NO_ERROR;
 }
 
-static ssize_t ipt_get_buffer_handle(ipt_device_t* ipt_dev,
+static mx_status_t ipt_get_buffer_handle(ipt_device_t* ipt_dev,
                                      const void* cmd, size_t cmdlen,
-                                     void* reply, size_t max) {
+                                     void* reply, size_t max, size_t* out_actual) {
     ioctl_ipt_buffer_handle_req_t req;
     mx_handle_t h;
 
@@ -836,10 +839,11 @@ static ssize_t ipt_get_buffer_handle(ipt_device_t* ipt_dev,
     if (status < 0)
         return status;
     memcpy(reply, &h, sizeof(h));
-    return sizeof(h);
+    *out_actual = sizeof(h);
+    return NO_ERROR;
 }
 
-static ssize_t ipt_free_buffer(ipt_device_t* ipt_dev,
+static mx_status_t ipt_free_buffer(ipt_device_t* ipt_dev,
                                const void* cmd, size_t cmdlen,
                                void* reply, size_t max) {
     uint32_t index;
@@ -854,24 +858,24 @@ static ssize_t ipt_free_buffer(ipt_device_t* ipt_dev,
     return 0;
 }
 
-static ssize_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
+static mx_status_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
                           const void* cmd, size_t cmdlen,
-                          void* reply, size_t max) {
+                          void* reply, size_t max, size_t* out_actual) {
     switch (op) {
     case IOCTL_IPT_SET_MODE:
         return ipt_set_mode(ipt_dev, cmd, cmdlen, reply, max);
     case IOCTL_IPT_ALLOC_BUFFER:
-        return ipt_alloc_buffer(ipt_dev, cmd, cmdlen, reply, max);
+        return ipt_alloc_buffer(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_ASSIGN_BUFFER_THREAD:
         return ipt_assign_buffer_thread(ipt_dev, cmd, cmdlen, reply, max);
     case IOCTL_IPT_RELEASE_BUFFER_THREAD:
         return ipt_release_buffer_thread(ipt_dev, cmd, cmdlen, reply, max);
    case IOCTL_IPT_GET_BUFFER_CONFIG:
-        return ipt_get_buffer_config(ipt_dev, cmd, cmdlen, reply, max);
+        return ipt_get_buffer_config(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_GET_BUFFER_INFO:
-        return ipt_get_buffer_info(ipt_dev, cmd, cmdlen, reply, max);
+        return ipt_get_buffer_info(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_GET_BUFFER_HANDLE:
-        return ipt_get_buffer_handle(ipt_dev, cmd, cmdlen, reply, max);
+        return ipt_get_buffer_handle(ipt_dev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_IPT_FREE_BUFFER:
         return ipt_free_buffer(ipt_dev, cmd, cmdlen, reply, max);
 
@@ -897,21 +901,21 @@ static ssize_t ipt_ioctl1(ipt_device_t* ipt_dev, uint32_t op,
     }
 }
 
-static ssize_t ipt_ioctl(mx_device_t* dev, uint32_t op,
+static mx_status_t ipt_ioctl(void* ctx, uint32_t op,
                          const void* cmd, size_t cmdlen,
-                         void* reply, size_t max) {
-    ipt_device_t* ipt_dev = dev->ctx;
+                         void* reply, size_t max, size_t* out_actual) {
+    ipt_device_t* ipt_dev = ctx;
 
     // TODO(dje): Switch to c++ so that we can use AutoLock.
     mtx_lock(&ipt_dev->lock);
-    ssize_t result = ipt_ioctl1(ipt_dev, op, cmd, cmdlen, reply, max);
+    ssize_t result = ipt_ioctl1(ipt_dev, op, cmd, cmdlen, reply, max, out_actual);
     mtx_unlock(&ipt_dev->lock);
 
     return result;
 }
 
-static mx_status_t ipt_release(mx_device_t* dev) {
-    ipt_device_t* ipt_dev = dev->ctx;
+static void ipt_release(void* ctx) {
+    ipt_device_t* ipt_dev = ctx;
 
     // TODO(dje): Neither of these should fail. What to do?
     // For now flag things as busted and prevent further use.
@@ -919,11 +923,10 @@ static mx_status_t ipt_release(mx_device_t* dev) {
     x86_pt_cpu_mode_free(ipt_dev);
 
     free(ipt_dev);
-
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t ipt_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .open = ipt_open,
     .close = ipt_close,
     .ioctl = ipt_ioctl,

@@ -311,13 +311,18 @@ static void sanitize_rtc(rtc_t* rtc) {
 }
 
 // Implement ioctl protocol.
-static ssize_t intel_rtc_ioctl(mx_device_t* dev, uint32_t op,
-                               const void* in_buf, size_t in_len,
-                               void* out_buf, size_t out_len) {
+static mx_status_t intel_rtc_ioctl(void* ctx, uint32_t op,
+                                   const void* in_buf, size_t in_len,
+                                   void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
-    case IOCTL_RTC_GET:
-        return intel_rtc_get(out_buf, out_len);
-
+    case IOCTL_RTC_GET: {
+        ssize_t ret = intel_rtc_get(out_buf, out_len);
+        if (ret < 0) {
+            return ret;
+        }
+        *out_actual = ret;
+        return NO_ERROR;
+    }
     case IOCTL_RTC_SET:
         return intel_rtc_set(in_buf, in_len);
     }
@@ -325,6 +330,7 @@ static ssize_t intel_rtc_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = intel_rtc_ioctl,
 };
 

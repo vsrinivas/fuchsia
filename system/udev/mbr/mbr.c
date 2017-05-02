@@ -68,6 +68,7 @@ typedef struct __PACKED mbr {
 
 typedef struct mbrpart_device {
     mx_device_t* mxdev;
+    mx_device_t* parent;
     mbr_partition_entry_t partition;
     block_info_t info;
     atomic_int writercount;
@@ -88,30 +89,33 @@ static uint64_t getsize(mbrpart_device_t* dev) {
     return dev->partition.sector_partition_length * ((uint64_t) dev->info.block_size);
 }
 
-static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
-                         size_t cmdlen, void* reply, size_t max) {
-    mbrpart_device_t* device = dev->ctx;
+static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
+                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    mbrpart_device_t* device = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
-        return sizeof(*info);
+        *out_actual = sizeof(*info);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
-        ssize_t retval = ERR_NOT_FOUND;
         char* guid = reply;
         if (max < GPT_GUID_LEN)
             return ERR_BUFFER_TOO_SMALL;
         if (device->partition.type == PARTITION_TYPE_DATA) {
             memcpy(guid, data_guid, GPT_GUID_LEN);
-            retval = GPT_GUID_LEN;
+            *out_actual = GPT_GUID_LEN;
+            return NO_ERROR;
         } else if (device->partition.type == PARTITION_TYPE_SYS) {
             memcpy(guid, sys_guid, GPT_GUID_LEN);
-            retval = GPT_GUID_LEN;
+            *out_actual = GPT_GUID_LEN;
+            return NO_ERROR;
+        } else {
+            return ERR_NOT_FOUND;
         }
-        return retval;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
         return ERR_NOT_SUPPORTED;
@@ -119,23 +123,23 @@ static ssize_t mbr_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
         memset(name, 0, max);
-        strncpy(name, dev->name, max);
-        return strnlen(name, max);
+        strncpy(name, device_get_name(device->mxdev), max);
+        *out_actual = strnlen(name, max);
+        return NO_ERROR;
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return device_op_ioctl(dev->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
+        return device_op_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return ERR_NOT_SUPPORTED;
     }
-    return 0;
 }
 
-static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     // Sanity check to ensure that we're not writing past
-    mbrpart_device_t* device = dev->ctx;
+    mbrpart_device_t* device = ctx;
 
     const uint64_t off_lba = txn->offset / device->info.block_size;
     const uint64_t first = device->partition.start_sector_lba;
@@ -156,27 +160,26 @@ static void mbr_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Move the offset to the start of the partition when forwarding this
     // request to the block device.
     txn->offset = first * device->info.block_size + txn->offset;
-    iotxn_queue(dev->parent, txn);
+    iotxn_queue(device->parent, txn);
 }
 
-static mx_off_t mbr_getsize(mx_device_t* dev) {
-    return getsize(dev->ctx);
+static mx_off_t mbr_getsize(void* ctx) {
+    return getsize(ctx);
 }
 
-static void mbr_unbind(mx_device_t* dev) {
-    mbrpart_device_t* device = dev->ctx;
+static void mbr_unbind(void* ctx) {
+    mbrpart_device_t* device = ctx;
     device_remove(device->mxdev);
 }
 
-static mx_status_t mbr_release(mx_device_t* dev) {
-    mbrpart_device_t* device = dev->ctx;
+static void mbr_release(void* ctx) {
+    mbrpart_device_t* device = ctx;
     free(device);
-    return NO_ERROR;
 }
 
-static mx_status_t mbr_open(mx_device_t* dev, mx_device_t** dev_out,
+static mx_status_t mbr_open(void* ctx, mx_device_t** dev_out,
                             uint32_t flags) {
-    mbrpart_device_t* device = dev->ctx;
+    mbrpart_device_t* device = ctx;
     mx_status_t status = NO_ERROR;
     if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
         xprintf("Partition cannot be opened as writable (open elsewhere)\n");
@@ -185,8 +188,8 @@ static mx_status_t mbr_open(mx_device_t* dev, mx_device_t** dev_out,
     return status;
 }
 
-static mx_status_t mbr_close(mx_device_t* dev, uint32_t flags) {
-    mbrpart_device_t* device = dev->ctx;
+static mx_status_t mbr_close(void* ctx, uint32_t flags) {
+    mbrpart_device_t* device = ctx;
     if (is_writer(flags)) {
         atomic_fetch_sub(&device->writercount, 1);
     }
@@ -194,6 +197,7 @@ static mx_status_t mbr_close(mx_device_t* dev, uint32_t flags) {
 }
 
 static mx_protocol_device_t mbr_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = mbr_ioctl,
     .iotxn_queue = mbr_iotxn_queue,
     .get_size = mbr_getsize,
@@ -211,9 +215,10 @@ static int mbr_bind_thread(void* arg) {
     iotxn_t* txn = NULL;
 
     block_info_t block_info;
+    size_t actual;
     ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                                 &block_info, sizeof(block_info));
-    if (rc < 0) {
+                                 &block_info, sizeof(block_info), &actual);
+    if (rc < 0 || actual != sizeof(block_info)) {
         xprintf("mbr: Could not get block size for dev=%s, retcode = %zd\n",
                 dev->name, rc);
         goto unbind;
@@ -287,6 +292,7 @@ static int mbr_bind_thread(void* arg) {
             xprintf("mbr: out of memory\n");
             goto unbind;
         }
+        pdev->parent = dev;
 
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;

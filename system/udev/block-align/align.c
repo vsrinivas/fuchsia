@@ -26,15 +26,16 @@
 
 typedef struct align_device {
     mx_device_t* mxdev;
+    mx_device_t* parent;
     uint64_t blksize;
 } align_device_t;
 
 // implement device protocol:
 
-static ssize_t align_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
-                           size_t cmdlen, void* reply, size_t max) {
-    mx_device_t* parent = dev->parent;
-    return device_op_ioctl(parent, op, cmd, cmdlen, reply, max);
+static mx_status_t align_ioctl(void* ctx, uint32_t op, const void* cmd,
+                               size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    align_device_t* device = ctx;
+    return device_op_ioctl(device->parent, op, cmd, cmdlen, reply, max, out_actual);
 }
 
 static void aligned_write_complete(iotxn_t* txn_aligned, void* cookie) {
@@ -74,10 +75,9 @@ done:
     iotxn_complete(txn, status, actual);
 }
 
-static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    align_device_t* device = dev->ctx;
+static void align_iotxn_queue(void* ctx, iotxn_t* txn) {
+    align_device_t* device = ctx;
     uint64_t blksize = device->blksize;
-    mx_device_t* parent = dev->parent;
 
     // In the case that the request is:
     //  1) Already aligned, or
@@ -85,7 +85,7 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // Don't alter it.
     if ((txn->offset % blksize == 0 && txn->length % blksize == 0) ||
         (txn->opcode != IOTXN_OP_READ && txn->opcode != IOTXN_OP_WRITE)) {
-        iotxn_queue(parent, txn);
+        iotxn_queue(device->parent, txn);
         return;
     }
 
@@ -121,26 +121,27 @@ static void align_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     txn_aligned->length = length_aligned;
     txn_aligned->complete_cb = aligned_read_complete;
     txn_aligned->cookie = txn;
-    txn->context = parent;
-    iotxn_queue(parent, txn_aligned);
+    txn->context = device->parent;
+    iotxn_queue(device->parent, txn_aligned);
 }
 
-static mx_off_t align_getsize(mx_device_t* dev) {
-    mx_device_t* parent = dev->parent;
-    return device_op_get_size(parent);
+static mx_off_t align_getsize(void* ctx) {
+    align_device_t* device = ctx;
+    return device_op_get_size(device->parent);
 }
 
-static void align_unbind(mx_device_t* dev) {
-    device_remove(dev);
+static void align_unbind(void* ctx) {
+    align_device_t* device = ctx;
+    device_remove(device->mxdev);
 }
 
-static mx_status_t align_release(mx_device_t* dev) {
-    align_device_t* device = dev->ctx;
+static void align_release(void* ctx) {
+    align_device_t* device = ctx;
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t align_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = align_ioctl,
     .iotxn_queue = align_iotxn_queue,
     .get_size = align_getsize,
@@ -153,12 +154,17 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     if (!device) {
         return ERR_NO_MEMORY;
     }
+    device->parent = dev;
 
     block_info_t info;
-    ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info));
+    size_t actual = 0;
+    mx_status_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0, &info, sizeof(info),
+                                     &actual);
     if (rc < 0) {
         free(device);
         return rc;
+    } else if (actual != sizeof(info)) {
+        return ERR_INTERNAL;
     }
     device->blksize = info.block_size;
 

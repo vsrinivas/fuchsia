@@ -42,6 +42,7 @@
 // framebuffer
 static gfx_surface g_hw_gfx;
 static mx_device_t* g_fb_device;
+static mx_device_t* g_root_device;
 static mx_display_protocol_t* g_fb_display_protocol;
 
 static thrd_t g_input_poll_thread;
@@ -264,8 +265,8 @@ void vc_get_battery_info(vc_battery_info_t* info) {
 
 // implement device protocol:
 
-static mx_status_t vc_device_release(mx_device_t* dev) {
-    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
+static void vc_device_release(void* ctx) {
+    vc_device_t* vc = static_cast<vc_device_t*>(ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -303,27 +304,36 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
     if (g_active_vc) {
         vc_device_render(g_active_vc);
     }
-    return NO_ERROR;
 }
 
-static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
+static mx_status_t vc_device_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    vc_device_t* vc = static_cast<vc_device_t*>(ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
     ssize_t result = mx_hid_fifo_read(&vc->fifo, buf, count);
     if (mx_hid_fifo_size(&vc->fifo) == 0) {
-        device_state_clr(dev, DEV_STATE_READABLE);
+        device_state_clr(vc->mxdev, DEV_STATE_READABLE);
     }
 
-    if (result == 0)
+    if (result == 0) {
         result = ERR_SHOULD_WAIT;
-    return result;
+    } else {
+        *actual = result;
+        result = NO_ERROR;
+    }
+    return (mx_status_t)result;
 }
 
-ssize_t vc_device_op_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
-    return vc_device_write(vc, buf, count, off);
+static mx_status_t vc_device_op_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+                                      size_t* actual) {
+    vc_device_t* vc = static_cast<vc_device_t*>(ctx);
+    ssize_t result = vc_device_write(vc, buf, count, off);
+    if (result >= 0) {
+        *actual = result;
+        result = NO_ERROR;
+    }
+    return (mx_status_t)result;
 }
 
 ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t off) {
@@ -352,8 +362,9 @@ ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t
     return count;
 }
 
-static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    vc_device_t* vc = static_cast<vc_device_t*>(dev->ctx);
+static mx_status_t vc_device_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                                   void* reply, size_t max, size_t* out_actual) {
+    vc_device_t* vc = static_cast<vc_device_t*>(ctx);
 
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -365,7 +376,8 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         }
         dims->width = vc->columns;
         dims->height = vc_device_rows(vc);
-        return sizeof(*dims);
+        *out_actual = sizeof(*dims);
+        return NO_ERROR;
     }
     case IOCTL_CONSOLE_SET_ACTIVE_VC:
         return vc_set_console_to_active(vc);
@@ -385,7 +397,8 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         if (status < 0) {
             return status;
         } else {
-            return sizeof(ioctl_display_get_fb_t);
+            *out_actual = sizeof(ioctl_display_get_fb_t);
+            return NO_ERROR;
         }
     }
     case IOCTL_DISPLAY_FLUSH_FB:
@@ -416,7 +429,7 @@ static mx_protocol_device_t vc_device_proto;
 extern mx_driver_t _driver_vc_root;
 
 // opening the root device returns a new vc device instance
-static mx_status_t vc_do_root_open(mx_device_t* dev, vc_device_t** vc_out, uint32_t flags) {
+static mx_status_t vc_do_root_open(vc_device_t* dev, vc_device_t** vc_out, uint32_t flags) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     mx_status_t status;
@@ -441,7 +454,7 @@ static mx_status_t vc_do_root_open(mx_device_t* dev, vc_device_t** vc_out, uint3
         args.proto_id = MX_PROTOCOL_CONSOLE;
         args.flags = DEVICE_ADD_INSTANCE;
 
-        status = device_add2(dev, &args, &device->mxdev);
+        status = device_add2(g_root_device, &args, &device->mxdev);
         if (status != NO_ERROR) {
             vc_device_free(device);
             return status;
@@ -463,7 +476,8 @@ static mx_status_t vc_do_root_open(mx_device_t* dev, vc_device_t** vc_out, uint3
     return NO_ERROR;
 }
 
-static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+static mx_status_t vc_root_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    auto dev = reinterpret_cast<vc_device_t*>(ctx);
     vc_device_t* vc;
     mx_status_t status = vc_do_root_open(dev, &vc, flags);
     if (status != NO_ERROR) {
@@ -635,10 +649,8 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     args.ops = &vc_root_proto;
     args.proto_id = MX_PROTOCOL_CONSOLE;
 
-    mx_device_t* device;
-    status = device_add2(dev, &args, &device);
+    status = device_add2(dev, &args, &g_root_device);
     if (status != NO_ERROR) {
-        free(device);
         return status;
     }
 
@@ -670,11 +682,13 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 static mx_driver_ops_t vc_root_driver_ops;
 
 __attribute__((constructor)) static void initialize() {
+    vc_device_proto.version = DEVICE_OPS_VERSION;
     vc_device_proto.release = vc_device_release;
     vc_device_proto.read = vc_device_read;
     vc_device_proto.write = vc_device_op_write;
     vc_device_proto.ioctl = vc_device_ioctl;
 
+    vc_root_proto.version = DEVICE_OPS_VERSION;
     vc_root_proto.open = vc_root_open;
 
     vc_root_driver_ops.version = DRIVER_OPS_VERSION,

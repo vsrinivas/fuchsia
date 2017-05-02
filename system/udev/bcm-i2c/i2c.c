@@ -106,25 +106,25 @@ static mx_status_t bcm_read_fifo(bcm_i2c_t* ctx, uint8_t* data, uint32_t len){
     return NO_ERROR;
 }
 
-static ssize_t i2cread(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+static mx_status_t bcm_i2c_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
 
-    bcm_i2c_t* ctx = dev->ctx;
-    mx_status_t status = bcm_read_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
+    bcm_i2c_t* i2c_ctx = ctx;
+    mx_status_t status = bcm_read_fifo(i2c_ctx,(uint8_t*)buf,(uint32_t)count);
     if (status == NO_ERROR) {
-        return count;
-    } else {
-        return -1;
+        *actual = count;
     }
+    return status;
 }
 
-static ssize_t i2cwrite(mx_device_t* dev, const void* buf, size_t count, mx_off_t off){
+static mx_status_t bcm_i2c_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
 
-    bcm_i2c_t* ctx = dev->ctx;
+    bcm_i2c_t* i2c_ctx = ctx;
 
-    mx_status_t status = bcm_write_fifo(ctx,(uint8_t*)buf,(uint32_t)count);
+    mx_status_t status = bcm_write_fifo(i2c_ctx,(uint8_t*)buf,(uint32_t)count);
 
     if (status == NO_ERROR) {
-        return count;
+        *actual = count;
+        return NO_ERROR;
     } else {
         return -1;
     }
@@ -173,12 +173,9 @@ static mx_status_t bcm_i2c_slave_transfer(bcm_i2c_t* ctx, const void* in_buf, si
     return NO_ERROR;
 }
 
-static ssize_t bcm_i2c_ioctl(
-    mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-    void* out_buf, size_t out_len) {
-
-
-    bcm_i2c_t* ctx = dev->ctx;
+static mx_status_t bcm_i2c_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                             void* out_buf, size_t out_len, size_t* out_actual) {
+    bcm_i2c_t* i2c_ctx = ctx;
     int ret;
 
     switch (op) {
@@ -189,7 +186,7 @@ static ssize_t bcm_i2c_ioctl(
             return ERR_INVALID_ARGS;
 
         if (args->chip_address_width == 7) {
-            ret =  bcm_i2c_set_slave_addr(ctx,args->chip_address);
+            ret =  bcm_i2c_set_slave_addr(i2c_ctx,args->chip_address);
         } else {
             return ERR_INVALID_ARGS;
         }
@@ -200,7 +197,7 @@ static ssize_t bcm_i2c_ioctl(
         break;
     }
     case IOCTL_I2C_SLAVE_TRANSFER: {
-        ret = bcm_i2c_slave_transfer(ctx, in_buf, in_len, out_buf, out_len);
+        ret = bcm_i2c_slave_transfer(i2c_ctx, in_buf, in_len, out_buf, out_len);
         break;
     }
     case IOCTL_I2C_BUS_SET_FREQUENCY: {
@@ -211,15 +208,16 @@ static ssize_t bcm_i2c_ioctl(
         return ERR_INVALID_ARGS;
     }
 
-    if (ret == NO_ERROR)
-        return in_len;
-    else
-        return ret;
+    if (ret == NO_ERROR && out_len > 0 && out_actual) {
+        *out_actual = out_len;
+    }
+    return ret;
 }
 
 static mx_protocol_device_t i2c_device_proto = {
-    .read = i2cread,
-    .write = i2cwrite,
+    .version = DEVICE_OPS_VERSION,
+    .read = bcm_i2c_read,
+    .write = bcm_i2c_write,
     .ioctl = bcm_i2c_ioctl,
 };
 

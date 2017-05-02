@@ -22,12 +22,11 @@
 
 // kpci is a driver that communicates with the kernel to publish a list of pci devices.
 
-static mx_status_t kpci_release(mx_device_t* dev) {
-    kpci_device_t* device = dev->ctx;
+static void kpci_release(void* ctx) {
+    kpci_device_t* device = ctx;
     mx_handle_close(device->handle);
     device_destroy(device->mxdev);
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t kpci_device_proto = {

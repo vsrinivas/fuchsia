@@ -55,7 +55,7 @@ mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_devic
                                   mx_driver_t* driver, mx_device_t** out);
 void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
 void devhost_device_set_bindable(mx_device_t* dev, bool bindable);
-mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out,
+mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out,
                                  const char* path, uint32_t flags);
 mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags);
 void devhost_device_destroy(mx_device_t* dev);

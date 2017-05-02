@@ -38,6 +38,7 @@
 
 typedef struct gptpart_device {
     mx_device_t* mxdev;
+    mx_device_t* parent;
 
     gpt_entry_t gpt_entry;
 
@@ -91,75 +92,80 @@ static bool prepare_txn(gptpart_device_t* dev, iotxn_t* txn) {
 
 // implement device protocol:
 
-static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    gptpart_device_t* device = dev->ctx;
+static mx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                         void* reply, size_t max, size_t* out_actual) {
+    gptpart_device_t* device = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
         memcpy(info, &device->info, sizeof(*info));
-        return sizeof(*info);
+        *out_actual = sizeof(*info);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
         if (max < GPT_GUID_LEN) return ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
         return GPT_GUID_LEN;
+        *out_actual = GPT_GUID_LEN;
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
         char* guid = reply;
         if (max < GPT_GUID_LEN) return ERR_BUFFER_TOO_SMALL;
         memcpy(guid, device->gpt_entry.guid, GPT_GUID_LEN);
-        return GPT_GUID_LEN;
+        *out_actual = GPT_GUID_LEN;
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
         memset(name, 0, max);
         // save room for the null terminator
         utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
-        return strnlen(name, GPT_NAME_LEN / 2);
+        *out_actual = strnlen(name, GPT_NAME_LEN / 2);
+        return NO_ERROR;
     }
     case IOCTL_DEVICE_SYNC: {
         // Propagate sync to parent device
-        return device_op_ioctl(dev->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
+        return device_op_ioctl(device->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0, NULL);
     }
     default:
         return ERR_NOT_SUPPORTED;
     }
 }
 
-static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    gptpart_device_t* device = dev->ctx;
+static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
+    gptpart_device_t* device = ctx;
     if (!prepare_txn(device, txn)) {
         iotxn_complete(txn, NO_ERROR, 0);
     } else {
-        iotxn_queue(dev->parent, txn);
+        iotxn_queue(device->parent, txn);
     }
 }
 
-static mx_off_t gpt_getsize(mx_device_t* dev) {
-    gptpart_device_t* device = dev->ctx;
+static mx_off_t gpt_getsize(void* ctx) {
+    gptpart_device_t* device = ctx;
     return getsize(device);
 }
 
-static void gpt_unbind(mx_device_t* dev) {
-    gptpart_device_t* device = dev->ctx;
+static void gpt_unbind(void* ctx) {
+    gptpart_device_t* device = ctx;
     device_remove(device->mxdev);
 }
 
-static mx_status_t gpt_release(mx_device_t* dev) {
-    gptpart_device_t* device = dev->ctx;
+static void gpt_release(void* ctx) {
+    gptpart_device_t* device = ctx;
     free(device);
-    return NO_ERROR;
 }
 
 static inline bool is_writer(uint32_t flags) {
     return (flags & O_RDWR || flags & O_WRONLY);
 }
 
-static mx_status_t gpt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    gptpart_device_t* device = dev->ctx;
+static mx_status_t gpt_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    gptpart_device_t* device = ctx;
     mx_status_t status = NO_ERROR;
     if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
         printf("Partition cannot be opened as writable (open elsewhere)\n");
@@ -168,8 +174,8 @@ static mx_status_t gpt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t fl
     return status;
 }
 
-static mx_status_t gpt_close(mx_device_t* dev, uint32_t flags) {
-    gptpart_device_t* device = dev->ctx;
+static mx_status_t gpt_close(void* ctx, uint32_t flags) {
+    gptpart_device_t* device = ctx;
     if (is_writer(flags)) {
         atomic_fetch_sub(&device->writercount, 1);
     }
@@ -177,6 +183,7 @@ static mx_status_t gpt_close(mx_device_t* dev, uint32_t flags) {
 }
 
 static mx_protocol_device_t gpt_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = gpt_ioctl,
     .iotxn_queue = gpt_iotxn_queue,
     .get_size = gpt_getsize,
@@ -223,7 +230,7 @@ static void gpt_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, u
         iotxn_release(txn);
         device->callbacks->complete(cookie, ERR_INVALID_ARGS);
     } else {
-        iotxn_queue(dev->parent, txn);
+        iotxn_queue(device->parent, txn);
     }
 }
 
@@ -247,7 +254,7 @@ static void gpt_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, 
         iotxn_release(txn);
         device->callbacks->complete(cookie, ERR_INVALID_ARGS);
     } else {
-        iotxn_queue(dev->parent, txn);
+        iotxn_queue(device->parent, txn);
     }
 }
 
@@ -275,9 +282,10 @@ static int gpt_bind_thread(void* arg) {
 
     unsigned partitions = 0; // used to keep track of number of partitions found
     block_info_t block_info;
+    size_t actual = 0;
     ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
-                                 &block_info, sizeof(block_info));
-    if (rc < 0) {
+                                 &block_info, sizeof(block_info), &actual);
+    if (rc < 0 || actual != sizeof(block_info)) {
         xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, dev->name);
         goto unbind;
     }
@@ -351,6 +359,7 @@ static int gpt_bind_thread(void* arg) {
             iotxn_release(txn);
             goto unbind;
         }
+        device->parent = dev;
 
         iotxn_copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {

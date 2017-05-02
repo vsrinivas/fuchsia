@@ -11,16 +11,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-static ssize_t zero_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+static mx_status_t zero_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
     memset(buf, 0, count);
-    return count;
+    *actual = count;
+    return NO_ERROR;
 }
 
-static ssize_t zero_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
+static mx_status_t zero_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+                              size_t* actual) {
     return ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t zero_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = zero_read,
     .write = zero_write,
 };

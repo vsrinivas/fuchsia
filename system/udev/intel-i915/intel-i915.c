@@ -93,18 +93,18 @@ static mx_display_protocol_t intel_i915_display_proto = {
 
 // implement device protocol
 
-static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
-    intel_i915_device_t* device = dev->ctx;
+static mx_status_t intel_i915_open(void* ctx, mx_device_t** out, uint32_t flags) {
+    intel_i915_device_t* device = ctx;
     intel_i915_enable_backlight(device, true);
     return NO_ERROR;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* dev, uint32_t flags) {
+static mx_status_t intel_i915_close(void* ctx, uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t intel_i915_release(mx_device_t* dev) {
-    intel_i915_device_t* device = dev->ctx;
+static void intel_i915_release(void* ctx) {
+    intel_i915_device_t* device = ctx;
     intel_i915_enable_backlight(device, false);
 
     if (device->regs) {
@@ -118,10 +118,10 @@ static mx_status_t intel_i915_release(mx_device_t* dev) {
     }
 
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t intel_i915_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .open = intel_i915_open,
     .close = intel_i915_close,
     .release = intel_i915_release,

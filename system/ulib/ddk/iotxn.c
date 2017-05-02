@@ -442,7 +442,23 @@ out:
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     // don't assert not queued here, since iotxns are allowed to be requeued
     txn->pflags |= IOTXN_PFLAG_QUEUED;
-    device_op_iotxn_queue(dev, txn);
+
+    if (dev->ops->iotxn_queue) {
+        dev->ops->iotxn_queue(dev->ctx, txn);
+    } else {
+        mx_status_t status;
+        size_t actual = 0;
+        void* buf;
+        iotxn_mmap(txn, &buf);
+        if (txn->opcode == IOTXN_OP_READ) {
+            status = device_op_read(dev, buf, txn->length, txn->offset, &actual);
+        } else if (txn->opcode == IOTXN_OP_WRITE) {
+            status = device_op_write(dev, buf, txn->length, txn->offset, &actual);
+        } else {
+            status = ERR_NOT_SUPPORTED;
+        }
+        iotxn_complete(txn, status, actual);
+    }
 }
 
 void iotxn_init(iotxn_t* txn, mx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length) {

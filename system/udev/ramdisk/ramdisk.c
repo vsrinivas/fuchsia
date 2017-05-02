@@ -35,6 +35,10 @@ typedef struct ramdisk_device {
     char name[NAME_MAX];
 } ramdisk_device_t;
 
+typedef struct ramdisk_instance {
+    mx_device_t* mxdev;
+} ramdisk_instance_t;
+
 static uint64_t sizebytes(ramdisk_device_t* rdev) {
     return rdev->blk_size * rdev->blk_count;
 }
@@ -110,13 +114,13 @@ static block_ops_t ramdisk_block_ops = {
 
 // implement device protocol:
 
-static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
-                             size_t cmdlen, void* reply, size_t max) {
-    ramdisk_device_t* ramdev = dev->ctx;
+static mx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd,
+                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    ramdisk_device_t* ramdev = ctx;
 
     switch (op) {
     case IOCTL_RAMDISK_UNLINK: {
-        device_remove(dev);
+        device_remove(ramdev->mxdev);
         return NO_ERROR;
     }
     // Block Protocol
@@ -124,17 +128,19 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
         char* name = reply;
         memset(name, 0, max);
         strncpy(name, ramdev->name, max);
-        return strnlen(name, max);
+        *out_actual = strnlen(name, max);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_GET_INFO: {
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        ramdisk_get_info(dev, info);
-        return sizeof(*info);
+        ramdisk_get_info(ramdev->mxdev, info);
+        *out_actual = sizeof(*info);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_RR_PART: {
-        return device_rebind(dev);
+        return device_rebind(ramdev->mxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         // Wow, we sync so quickly!
@@ -145,8 +151,8 @@ static ssize_t ramdisk_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
 }
 
-static void ramdisk_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    ramdisk_device_t* ramdev = dev->ctx;
+static void ramdisk_iotxn_queue(void* ctx, iotxn_t* txn) {
+    ramdisk_device_t* ramdev = ctx;
 
     mx_status_t status = constrain_args(ramdev, &txn->offset, &txn->length);
     if (status != NO_ERROR) {
@@ -172,25 +178,26 @@ static void ramdisk_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     }
 }
 
-static mx_off_t ramdisk_getsize(mx_device_t* dev) {
-    return sizebytes(dev->ctx);
+static mx_off_t ramdisk_getsize(void* ctx) {
+    return sizebytes(ctx);
 }
 
-static void ramdisk_unbind(mx_device_t* dev) {
-    device_remove(dev);
+static void ramdisk_unbind(void* ctx) {
+    ramdisk_device_t* ramdev = ctx;
+    device_remove(ramdev->mxdev);
 }
 
-static mx_status_t ramdisk_release(mx_device_t* dev) {
-    ramdisk_device_t* ramdev = dev->ctx;
+static void ramdisk_release(void* ctx) {
+    ramdisk_device_t* ramdev = ctx;
     if (ramdev->vmo != MX_HANDLE_INVALID) {
         mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
         mx_handle_close(ramdev->vmo);
     }
     free(ramdev);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t ramdisk_instance_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = ramdisk_ioctl,
     .iotxn_queue = ramdisk_iotxn_queue,
     .get_size = ramdisk_getsize,
@@ -200,8 +207,8 @@ static mx_protocol_device_t ramdisk_instance_proto = {
 
 // implement device protocol:
 
-static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
-                            size_t cmdlen, void* reply, size_t max) {
+static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
+                            size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     switch (op) {
     case IOCTL_RAMDISK_CONFIG: {
         if (cmdlen != sizeof(ramdisk_ioctl_config_t)) {
@@ -256,36 +263,44 @@ static ssize_t ramctl_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
     }
 }
 
-static void ramctl_unbind(mx_device_t* dev) {
-    device_remove(dev);
+static void ramctl_unbind(void* ctx) {
+    ramdisk_instance_t* instance = ctx;
+    device_remove(instance->mxdev);
 }
 
 static mx_protocol_device_t ramctl_instance_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = ramctl_ioctl,
     .unbind = ramctl_unbind,
 };
 
-static mx_status_t ramctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    mx_device_t* instance_dev;
+static mx_status_t ramctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    ramdisk_instance_t* instance = calloc(1, sizeof(ramdisk_instance_t));
+    if (!instance) {
+        return ERR_NO_MEMORY;
+    }
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ramctl-instance",
+        .ctx = instance,
         .driver = &_driver_ramdisk,
         .ops = &ramctl_instance_proto,
         .flags = DEVICE_ADD_INSTANCE,
     };
 
     mx_status_t status;
-    if ((status = device_add2(dev, &args, &instance_dev)) < 0) {
+    if ((status = device_add2(ramdisk_ctl_dev, &args, &instance->mxdev)) < 0) {
+        free(instance);
         return status;
     }
 
-    *dev_out = instance_dev;
+    *dev_out = instance->mxdev;
     return NO_ERROR;
 }
 
 static mx_protocol_device_t ramdisk_ctl_proto = {
+    .version = DEVICE_OPS_VERSION,
     .open = ramctl_open,
 };
 

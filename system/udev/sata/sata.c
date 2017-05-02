@@ -41,6 +41,7 @@ extern mx_driver_t _driver_ahci;
 
 typedef struct sata_device {
     mx_device_t* mxdev;
+    mx_device_t* parent;
 
     block_callbacks_t* callbacks;
 
@@ -157,8 +158,8 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
 
 static mx_protocol_device_t sata_device_proto;
 
-static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    sata_device_t* device = dev->ctx;
+static void sata_iotxn_queue(void* ctx, iotxn_t* txn) {
+    sata_device_t* device = ctx;
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
@@ -183,7 +184,7 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     pdata->max_cmd = device->max_cmd;
     pdata->port = device->port;
 
-    iotxn_queue(dev->parent, txn);
+    iotxn_queue(device->parent, txn);
 }
 
 static void sata_sync_complete(iotxn_t* txn, void* cookie) {
@@ -197,8 +198,9 @@ static void sata_get_info(sata_device_t* dev, block_info_t* info) {
     info->max_transfer_size = AHCI_MAX_PRDS * PAGE_SIZE; // fully discontiguous
 }
 
-static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    sata_device_t* device = dev->ctx;
+static mx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
+                              size_t max, size_t* out_actual) {
+    sata_device_t* device = ctx;
     // TODO implement other block ioctls
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
@@ -206,11 +208,12 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
         sata_get_info(device, info);
-        return sizeof(*info);
+        *out_actual = sizeof(*info);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
-        return device_rebind(dev);
+        return device_rebind(device->mxdev);
     }
     case IOCTL_DEVICE_SYNC: {
         iotxn_t* txn;
@@ -225,7 +228,7 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
         txn->length = 0;
         txn->complete_cb = sata_sync_complete;
         txn->cookie = &completion;
-        iotxn_queue(dev, txn);
+        iotxn_queue(device->mxdev, txn);
         completion_wait(&completion, MX_TIME_INFINITE);
         status = txn->status;
         iotxn_release(txn);
@@ -236,18 +239,18 @@ static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t
     }
 }
 
-static mx_off_t sata_getsize(mx_device_t* dev) {
-    sata_device_t* device = dev->ctx;
+static mx_off_t sata_getsize(void* ctx) {
+    sata_device_t* device = ctx;
     return device->capacity;
 }
 
-static mx_status_t sata_release(mx_device_t* dev) {
-    sata_device_t* device = dev->ctx;
+static void sata_release(void* ctx) {
+    sata_device_t* device = ctx;
     free(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t sata_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = sata_ioctl,
     .iotxn_queue = sata_iotxn_queue,
     .get_size = sata_getsize,
@@ -330,6 +333,7 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
         xprintf("sata: out of memory\n");
         return ERR_NO_MEMORY;
     }
+    device->parent = dev;
 
     device->port = port;
 

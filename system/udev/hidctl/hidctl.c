@@ -18,15 +18,19 @@
 #define from_hid_device(d) containerof(d, hidctl_instance_t, hiddev)
 
 mx_driver_t _driver_hidctl;
-static mx_device_t* hidctl_dev;
 
 typedef struct hidctl_instance {
     mx_device_t* mxdev;
+    mx_device_t* parent;
     mx_hid_device_t hiddev;
 
     uint8_t* hid_report_desc;
     size_t hid_report_desc_len;
 } hidctl_instance_t;
+
+typedef struct hidctl_root {
+    mx_device_t* mxdev;
+} hidctl_root_t;
 
 mx_status_t hidctl_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type, void** data, size_t* len) {
     if (desc_type != HID_DESC_TYPE_REPORT) {
@@ -89,7 +93,7 @@ static ssize_t hidctl_set_config(hidctl_instance_t* dev, const void* in_buf, siz
     dev->hid_report_desc = malloc(cfg->rpt_desc_len);
     memcpy(dev->hid_report_desc, cfg->rpt_desc, cfg->rpt_desc_len);
 
-    mx_status_t status = hid_add_device(&_driver_hidctl, &dev->hiddev, hidctl_dev);
+    mx_status_t status = hid_add_device(&_driver_hidctl, &dev->hiddev, dev->parent);
     if (status != NO_ERROR) {
         hid_release_device(&dev->hiddev);
         free(dev->hid_report_desc);
@@ -100,19 +104,19 @@ static ssize_t hidctl_set_config(hidctl_instance_t* dev, const void* in_buf, siz
     return status;
 }
 
-static ssize_t hidctl_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+static ssize_t hidctl_read(void* ctx, void* buf, size_t count, mx_off_t off) {
     return 0;
 }
 
-static ssize_t hidctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    hidctl_instance_t* inst = dev->ctx;
+static ssize_t hidctl_write(void* ctx, const void* buf, size_t count, mx_off_t off) {
+    hidctl_instance_t* inst = ctx;
     hid_io_queue(&inst->hiddev, buf, count);
     return count;
 }
 
-static ssize_t hidctl_ioctl(mx_device_t* dev, uint32_t op,
+static ssize_t hidctl_ioctl(void* ctx, uint32_t op,
         const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    hidctl_instance_t* inst = dev->ctx;
+    hidctl_instance_t* inst = ctx;
     switch (op) {
     case IOCTL_HID_CTL_CONFIG:
         return hidctl_set_config(inst, in_buf, in_len);
@@ -121,16 +125,14 @@ static ssize_t hidctl_ioctl(mx_device_t* dev, uint32_t op,
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t hidctl_release(mx_device_t* dev) {
-    hidctl_instance_t* inst = dev->ctx;
+static void hidctl_release(void* ctx) {
+    hidctl_instance_t* inst = ctx;
     hid_release_device(&inst->hiddev);
     if (inst->hid_report_desc) {
         free(inst->hid_report_desc);
         device_remove(&inst->hiddev.dev);
     }
-    device_destroy(inst->mxdev);
     free(inst);
-    return NO_ERROR;
 }
 
 mx_protocol_device_t hidctl_instance_proto = {
@@ -140,11 +142,13 @@ mx_protocol_device_t hidctl_instance_proto = {
     .release = hidctl_release,
 };
 
-static mx_status_t hidctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+static mx_status_t hidctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    hidctl_root_t* root = ctx;
     hidctl_instance_t* inst = calloc(1, sizeof(hidctl_instance_t));
     if (inst == NULL) {
         return ERR_NO_MEMORY;
     }
+    inst->parent = root->mxdev;
 
     mx_status_t status;
     if ((status = device_create("hidctl-inst", inst, &hidctl_instance_proto, &_driver_hidctl,
@@ -153,7 +157,7 @@ static mx_status_t hidctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t
         return status;
     }
 
-    status = device_add_instance(inst->mxdev, dev);
+    status = device_add_instance(inst->mxdev, root->mxdev);
     if (status != NO_ERROR) {
         printf("hidctl: could not open instance: %d\n", status);
         device_destroy(inst->mxdev);
@@ -164,18 +168,34 @@ static mx_status_t hidctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t
     return NO_ERROR;
 }
 
+static void hidctl_root_release(void* ctx) {
+    hidctl_root_t* root = ctx;
+    device_destroy(root->mxdev);
+    free(root);
+}
+ 
 static mx_protocol_device_t hidctl_device_proto = {
     .open = hidctl_open,
+    .release = hidctl_root_release,
 };
 
 static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
-    if (device_create("hidctl", NULL, &hidctl_device_proto, driver, &hidctl_dev) == NO_ERROR) {
-        mx_status_t status;
-        if ((status = device_add(hidctl_dev, parent)) < 0) {
-            device_destroy(hidctl_dev);
-            return status;
-        }
+    hidctl_root_t* root = calloc(1, sizeof(hidctl_root_t));
+    if (!root) {
+        return ERR_NO_MEMORY;
     }
+
+    mx_status_t status;
+    if ((status = device_create("hidctl", root, &hidctl_device_proto, driver, &root->mxdev)) < 0) {
+        free(root);
+        return status;
+    }   
+    if ((status = device_add(root->mxdev, parent)) < 0) {
+        device_destroy(root->mxdev);
+        free(root);
+        return status;
+    }
+
     return NO_ERROR;
 }
 

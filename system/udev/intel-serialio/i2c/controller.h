@@ -125,6 +125,7 @@ enum {
 
 typedef struct intel_serialio_i2c_device {
     mx_device_t* mxdev;
+    mx_device_t* pcidev;
 
     intel_serialio_i2c_regs* regs;
     volatile uint32_t* soft_reset;

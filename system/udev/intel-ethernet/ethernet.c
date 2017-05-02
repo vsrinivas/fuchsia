@@ -119,17 +119,17 @@ static ethmac_protocol_t ethmac_ops = {
     .send = eth_send,
 };
 
-static mx_status_t eth_release(mx_device_t* dev) {
-    ethernet_device_t* edev = dev->ctx;
+static void eth_release(void* ctx) {
+    ethernet_device_t* edev = ctx;
     eth_reset_hw(&edev->eth);
     edev->pci->enable_bus_master(edev->pcidev, true);
     mx_handle_close(edev->irqh);
     mx_handle_close(edev->ioh);
     free(edev);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t device_ops = {
+    .version = DEVICE_OPS_VERSION,
     .release = eth_release,
 };
 

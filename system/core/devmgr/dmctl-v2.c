@@ -14,21 +14,29 @@
 #include <magenta/device/dmctl.h>
 #include <mxio/loader-service.h>
 
+static mx_device_t* dmctl_dev;
+
 static mxio_multiloader_t* multiloader;
 
-static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
+static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+                               size_t* actual) {
     dc_msg_t msg;
     uint32_t msglen;
     if (dc_msg_pack(&msg, &msglen, buf, count, NULL, NULL) < 0) {
         return ERR_INVALID_ARGS;
     }
     msg.op = DC_OP_DM_COMMAND;
-    return dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0);
+    mx_status_t status = dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, NULL, 0);
+    if (status >= 0) {
+        *actual = status;
+        status = NO_ERROR;
+    }
+    return status;
 }
 
-static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
-                           const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
+static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
+                               const void* in_buf, size_t in_len,
+                               void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL:
         if (in_len != 0 || out_buf == NULL || out_len != sizeof(mx_handle_t)) {
@@ -44,13 +52,15 @@ static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
             return out_channel;
         }
         memcpy(out_buf, &out_channel, sizeof(mx_handle_t));
-        return sizeof(mx_handle_t);
+        *out_actual = sizeof(mx_handle_t);
+        return NO_ERROR;
     default:
         return ERR_INVALID_ARGS;
     }
 }
 
 static mx_protocol_device_t dmctl_device_ops = {
+    .version = DEVICE_OPS_VERSION,
     .write = dmctl_write,
     .ioctl = dmctl_ioctl,
 };
@@ -69,9 +79,8 @@ mx_status_t dmctl_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
         .ops = &dmctl_device_ops,
     };
 
-    mx_device_t* dev;
     mx_status_t status;
-    if ((status = device_add2(parent, &args, &dev)) < 0) {
+    if ((status = device_add2(parent, &args, &dmctl_dev)) < 0) {
         return status;
     }
 

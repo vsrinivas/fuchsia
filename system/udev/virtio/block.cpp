@@ -45,10 +45,10 @@ namespace virtio {
 // DDK level ops
 
 // queue an iotxn. iotxn's are always completed by its complete() op
-void BlockDevice::virtio_block_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    LTRACEF("dev %p, txn %p\n", dev, txn);
+void BlockDevice::virtio_block_iotxn_queue(void* ctx, iotxn_t* txn) {
+    LTRACEF("ctx %p, txn %p\n", ctx, txn);
 
-    BlockDevice* bd = static_cast<BlockDevice*>(dev->ctx);
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
 
     switch (txn->opcode) {
     case IOTXN_OP_READ: {
@@ -68,19 +68,19 @@ void BlockDevice::virtio_block_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
 // optional: return the size (in bytes) of the readable/writable space
 // of the device.  Will default to 0 (non-seekable) if this is unimplemented
-mx_off_t BlockDevice::virtio_block_get_size(mx_device_t* dev) {
-    LTRACEF("dev %p\n", dev);
+mx_off_t BlockDevice::virtio_block_get_size(void* ctx) {
+    LTRACEF("ctx %p\n", ctx);
 
-    BlockDevice* bd = static_cast<BlockDevice*>(dev->ctx);
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
 
     return bd->GetSize();
 }
 
-ssize_t BlockDevice::virtio_block_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                                        void* reply, size_t max) {
-    LTRACEF("dev %p, op %u\n", dev, op);
+mx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                        void* reply, size_t max, size_t* out_actual) {
+    LTRACEF("ctx %p, op %u\n", ctx, op);
 
-    BlockDevice* bd = static_cast<BlockDevice*>(dev->ctx);
+    BlockDevice* bd = static_cast<BlockDevice*>(ctx);
 
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
@@ -90,11 +90,12 @@ ssize_t BlockDevice::virtio_block_ioctl(mx_device_t* dev, uint32_t op, const voi
         memset(info, 0, sizeof(*info));
         info->block_size = bd->GetBlockSize();
         info->block_count = bd->GetSize() / bd->GetBlockSize();
-        return sizeof(*info);
+        *out_actual = sizeof(*info);
+        return NO_ERROR;
     }
     case IOCTL_BLOCK_RR_PART: {
         // rebind to reread the partition table
-        return device_rebind(dev);
+        return device_rebind(bd->device());
     }
     default:
         return ERR_NOT_SUPPORTED;

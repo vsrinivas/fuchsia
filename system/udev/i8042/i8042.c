@@ -706,14 +706,14 @@ static hidbus_protocol_t hidbus_ops = {
     .set_protocol = i8042_set_protocol,
 };
 
-static mx_status_t i8042_release(mx_device_t* dev) {
-    i8042_device_t* i8042 = dev->ctx;
+static void i8042_release(void* ctx) {
+    i8042_device_t* i8042 = ctx;
     free(i8042);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t i8042_dev_proto = {
-    .release = i8042_release,
+     .version = DEVICE_OPS_VERSION,
+   .release = i8042_release,
 };
 
 static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_device_t* parent) {

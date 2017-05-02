@@ -110,10 +110,7 @@ static mx_status_t devmgr_control(const char* cmd) {
     return ERR_NOT_SUPPORTED;
 }
 
-
-
-
-static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
+static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
     char cmd[1024];
     if (count < sizeof(cmd)) {
         memcpy(cmd, buf, count);
@@ -121,14 +118,18 @@ static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, mx_o
     } else {
         return ERR_INVALID_ARGS;
     }
-    return devmgr_control(cmd);
+    mx_status_t status = devmgr_control(cmd);
+    if (status == NO_ERROR) {
+        *actual = count;
+    }
+    return status;
 }
 
 static mxio_multiloader_t* multiloader = NULL;
 
-static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
-                           const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
+static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
+                               const void* in_buf, size_t in_len,
+                               void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
     case IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL:
         if (in_len != 0 || out_buf == NULL || out_len != sizeof(mx_handle_t)) {
@@ -144,13 +145,15 @@ static ssize_t dmctl_ioctl(mx_device_t* dev, uint32_t op,
             return out_channel;
         }
         memcpy(out_buf, &out_channel, sizeof(mx_handle_t));
-        return sizeof(mx_handle_t);
+        *out_actual = sizeof(mx_handle_t);
+        return NO_ERROR;
     default:
         return ERR_INVALID_ARGS;
     }
 }
 
 static mx_protocol_device_t dmctl_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .write = dmctl_write,
     .ioctl = dmctl_ioctl,
 };

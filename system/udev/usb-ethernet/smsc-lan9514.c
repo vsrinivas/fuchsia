@@ -455,14 +455,13 @@ static void lan9514_free(lan9514_t* eth) {
     free(eth);
 }
 
-static mx_status_t lan9514_release(mx_device_t* device) {
-    lan9514_t* eth = get_lan9514(device);
+static void lan9514_release(void* ctx) {
+    lan9514_t* eth = ctx;
     lan9514_free(eth);
-    return NO_ERROR;
 }
 
-static void lan9514_unbind(mx_device_t* device) {
-    lan9514_t* eth = get_lan9514(device);
+static void lan9514_unbind(void* ctx) {
+    lan9514_t* eth = ctx;
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
@@ -473,6 +472,7 @@ static void lan9514_unbind(mx_device_t* device) {
 }
 
 static mx_protocol_device_t lan9514_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = lan9514_unbind,
     .release = lan9514_release,
 };

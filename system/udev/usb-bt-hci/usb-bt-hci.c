@@ -390,10 +390,10 @@ done:
     return 0;
 }
 
-static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len) {
+static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                            void* out_buf, size_t out_len, size_t* out_actual) {
     ssize_t result = ERR_NOT_SUPPORTED;
-    hci_t* hci = device->ctx;
+    hci_t* hci = ctx;
 
     mtx_lock(&hci->mutex);
 
@@ -419,7 +419,8 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
         }
 
         *reply = remote_end;
-        result = sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        result = NO_ERROR;
     } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
         mx_handle_t* reply = out_buf;
         if (out_len < sizeof(*reply)) {
@@ -442,7 +443,8 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
         }
 
         *reply = remote_end;
-        result = sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        result = NO_ERROR;
     } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
         mx_handle_t* reply = out_buf;
         if (out_len < sizeof(*reply)) {
@@ -465,13 +467,14 @@ static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, s
         }
 
         *reply = remote_end;
-        result = sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        result = NO_ERROR;
     }
 
     hci_build_read_wait_items_locked(hci);
 
     // Kick off the hci_read_thread if it's not already running.
-    if (result >= 0 && !hci->read_thread_running) {
+    if (result == NO_ERROR && !hci->read_thread_running) {
         thrd_t read_thread;
         thrd_create_with_name(&read_thread, hci_read_thread, hci, "hci_read_thread");
         hci->read_thread_running = true;
@@ -483,8 +486,8 @@ done:
     return result;
 }
 
-static void hci_unbind(mx_device_t* device) {
-    hci_t* hci = device->ctx;
+static void hci_unbind(void* ctx) {
+    hci_t* hci = ctx;
 
     // Close the transport channels so that the host stack is notified of device removal.
     mtx_lock(&hci->mutex);
@@ -498,8 +501,8 @@ static void hci_unbind(mx_device_t* device) {
     device_remove(hci->mxdev);
 }
 
-static mx_status_t hci_release(mx_device_t* device) {
-    hci_t* hci = device->ctx;
+static void hci_release(void* ctx) {
+    hci_t* hci = ctx;
 
     mtx_lock(&hci->mutex);
 
@@ -517,11 +520,10 @@ static mx_status_t hci_release(mx_device_t* device) {
     mtx_unlock(&hci->mutex);
 
     free(hci);
-
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t hci_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = hci_ioctl,
     .unbind = hci_unbind,
     .release = hci_release,

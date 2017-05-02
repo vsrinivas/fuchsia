@@ -38,8 +38,8 @@ static mx_handle_t get_sysinfo_job_root(void) {
 mx_handle_t get_sysinfo_job_root(void);
 #endif
 
-static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen,
-                             void* reply, size_t max) {
+static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                             void* reply, size_t max, size_t* out_actual) {
     switch (op) {
     case IOCTL_SYSINFO_GET_ROOT_JOB: {
         if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
@@ -50,7 +50,8 @@ static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, siz
             return ERR_NOT_SUPPORTED;
         } else {
             memcpy(reply, &h, sizeof(mx_handle_t));
-            return sizeof(mx_handle_t);
+            *out_actual = sizeof(mx_handle_t);
+            return NO_ERROR;
         }
     }
     case IOCTL_SYSINFO_GET_ROOT_RESOURCE: {
@@ -66,7 +67,8 @@ static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, siz
             return status;
         }
         memcpy(reply, &h, sizeof(mx_handle_t));
-        return sizeof(mx_handle_t);
+        *out_actual = sizeof(mx_handle_t);
+        return NO_ERROR;
     }
     default:
         return ERR_INVALID_ARGS;
@@ -74,6 +76,7 @@ static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, siz
 }
 
 static mx_protocol_device_t sysinfo_ops = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = sysinfo_ioctl,
 };
 

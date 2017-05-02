@@ -155,7 +155,8 @@ static input_report_size_t hid_get_report_size_by_id(hid_device_t* hid,
     return 0;
 }
 
-static mx_status_t hid_get_protocol(hid_device_t* hid, void* out_buf, size_t out_len) {
+static mx_status_t hid_get_protocol(hid_device_t* hid, void* out_buf, size_t out_len,
+                                    size_t* out_actual) {
     if (out_len < sizeof(int)) return ERR_INVALID_ARGS;
 
     int* reply = out_buf;
@@ -165,33 +166,41 @@ static mx_status_t hid_get_protocol(hid_device_t* hid, void* out_buf, size_t out
     } else if (hid->info.dev_class == HID_DEV_CLASS_POINTER) {
         *reply = INPUT_PROTO_MOUSE;
     }
-    return sizeof(*reply);
+    *out_actual = sizeof(*reply);
+    return NO_ERROR;
 }
 
-static mx_status_t hid_get_hid_desc_size(hid_device_t* hid, void* out_buf, size_t out_len) {
+static mx_status_t hid_get_hid_desc_size(hid_device_t* hid, void* out_buf, size_t out_len,
+                                         size_t* out_actual) {
     if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
 
     size_t* reply = out_buf;
     *reply = hid->hid_report_desc_len;
-    return sizeof(*reply);
+    *out_actual = sizeof(*reply);
+    return NO_ERROR;
 }
 
-static mx_status_t hid_get_hid_desc(hid_device_t* hid, void* out_buf, size_t out_len) {
+static mx_status_t hid_get_hid_desc(hid_device_t* hid, void* out_buf, size_t out_len,
+                                    size_t* out_actual) {
     if (out_len < hid->hid_report_desc_len) return ERR_INVALID_ARGS;
 
     memcpy(out_buf, hid->hid_report_desc, hid->hid_report_desc_len);
-    return hid->hid_report_desc_len;
+    *out_actual = hid->hid_report_desc_len;
+    return NO_ERROR;
 }
 
-static mx_status_t hid_get_num_reports(hid_device_t* hid, void* out_buf, size_t out_len) {
+static mx_status_t hid_get_num_reports(hid_device_t* hid, void* out_buf, size_t out_len,
+                                       size_t* out_actual) {
     if (out_len < sizeof(size_t)) return ERR_INVALID_ARGS;
 
     size_t* reply = out_buf;
     *reply = hid->num_reports;
-    return sizeof(*reply);
+    *out_actual = sizeof(*reply);
+    return NO_ERROR;
 }
 
-static mx_status_t hid_get_report_ids(hid_device_t* hid, void* out_buf, size_t out_len) {
+static mx_status_t hid_get_report_ids(hid_device_t* hid, void* out_buf, size_t out_len,
+                                      size_t* out_actual) {
     if (out_len < hid->num_reports * sizeof(input_report_id_t))
         return ERR_INVALID_ARGS;
 
@@ -199,11 +208,12 @@ static mx_status_t hid_get_report_ids(hid_device_t* hid, void* out_buf, size_t o
     for (size_t i = 0; i < hid->num_reports; i++) {
         *reply++ = (input_report_id_t)hid->sizes[i].id;
     }
-    return hid->num_reports * sizeof(input_report_id_t);
+    *out_actual =  hid->num_reports * sizeof(input_report_id_t);
+    return NO_ERROR;
 }
 
 static mx_status_t hid_get_report_size(hid_device_t* hid, const void* in_buf, size_t in_len,
-                                           void* out_buf, size_t out_len) {
+                                       void* out_buf, size_t out_len, size_t* out_actual) {
     if (in_len < sizeof(input_get_report_size_t)) return ERR_INVALID_ARGS;
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
@@ -211,13 +221,16 @@ static mx_status_t hid_get_report_size(hid_device_t* hid, const void* in_buf, si
 
     input_report_size_t* reply = out_buf;
     *reply = hid_get_report_size_by_id(hid, inp->id, inp->type);
-    if (*reply == 0)
+    if (*reply == 0) {
         return ERR_INVALID_ARGS;
+    }
 
-    return sizeof(*reply);
+    *out_actual = sizeof(*reply);
+    return NO_ERROR;
 }
 
-static ssize_t hid_get_max_input_reportsize(hid_device_t* hid, void* out_buf, size_t out_len) {
+static ssize_t hid_get_max_input_reportsize(hid_device_t* hid, void* out_buf, size_t out_len,
+                                            size_t* out_actual) {
     if (out_len < sizeof(input_report_size_t)) return ERR_INVALID_ARGS;
 
     input_report_size_t* reply = out_buf;
@@ -229,12 +242,12 @@ static ssize_t hid_get_max_input_reportsize(hid_device_t* hid, void* out_buf, si
     }
 
     *reply = bits_to_bytes(*reply);
-
-    return sizeof(*reply);
+    *out_actual = sizeof(*reply);
+    return NO_ERROR;
 }
 
 static mx_status_t hid_get_report(hid_device_t* hid, const void* in_buf, size_t in_len,
-                                      void* out_buf, size_t out_len) {
+                                  void* out_buf, size_t out_len, size_t* out_actual) {
     if (in_len < sizeof(input_get_report_t)) return ERR_INVALID_ARGS;
     const input_get_report_t* inp = in_buf;
 
@@ -242,7 +255,12 @@ static mx_status_t hid_get_report(hid_device_t* hid, const void* in_buf, size_t 
     if (needed == 0) return ERR_INVALID_ARGS;
     if (out_len < (size_t)needed) return ERR_BUFFER_TOO_SMALL;
 
-    return hid_op_get_report(hid, inp->type, inp->id, out_buf, out_len);
+    mx_status_t status = hid_op_get_report(hid, inp->type, inp->id, out_buf, out_len);
+    if (status >= 0) {
+        *out_actual = status;
+        status = NO_ERROR;
+    }
+    return status;
 }
 
 static mx_status_t hid_set_report(hid_device_t* hid, const void* in_buf, size_t in_len) {
@@ -259,8 +277,9 @@ static mx_status_t hid_set_report(hid_device_t* hid, const void* in_buf, size_t 
 }
 
 
-static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    hid_instance_t* hid = dev->ctx;
+static mx_status_t hid_read_instance(void* ctx, void* buf, size_t count, mx_off_t off,
+                                     size_t* actual) {
+    hid_instance_t* hid = ctx;
 
     if (hid->flags & HID_FLAGS_DEAD) {
         return ERR_PEER_CLOSED;
@@ -296,39 +315,45 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
         device_state_clr(hid->mxdev, DEV_STATE_READABLE);
     }
     mtx_unlock(&hid->fifo.lock);
-    return r ? r : (ssize_t)ERR_SHOULD_WAIT;
+    if (r > 0) {
+        *actual = r;
+        r = NO_ERROR;
+    } else if (r == 0) {
+        r = ERR_SHOULD_WAIT;
+    }
+    return r;
 }
 
-static ssize_t hid_ioctl_instance(mx_device_t* dev, uint32_t op,
-        const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    hid_instance_t* hid = dev->ctx;
+static mx_status_t hid_ioctl_instance(void* ctx, uint32_t op,
+        const void* in_buf, size_t in_len, void* out_buf, size_t out_len, size_t* out_actual) {
+    hid_instance_t* hid = ctx;
     if (hid->flags & HID_FLAGS_DEAD) return ERR_PEER_CLOSED;
 
     switch (op) {
     case IOCTL_INPUT_GET_PROTOCOL:
-        return hid_get_protocol(hid->base, out_buf, out_len);
+        return hid_get_protocol(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_REPORT_DESC_SIZE:
-        return hid_get_hid_desc_size(hid->base, out_buf, out_len);
+        return hid_get_hid_desc_size(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_REPORT_DESC:
-        return hid_get_hid_desc(hid->base, out_buf, out_len);
+        return hid_get_hid_desc(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_NUM_REPORTS:
-        return hid_get_num_reports(hid->base, out_buf, out_len);
+        return hid_get_num_reports(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_REPORT_IDS:
-        return hid_get_report_ids(hid->base, out_buf, out_len);
+        return hid_get_report_ids(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_REPORT_SIZE:
-        return hid_get_report_size(hid->base, in_buf, in_len, out_buf, out_len);
+        return hid_get_report_size(hid->base, in_buf, in_len, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_MAX_REPORTSIZE:
-        return hid_get_max_input_reportsize(hid->base, out_buf, out_len);
+        return hid_get_max_input_reportsize(hid->base, out_buf, out_len, out_actual);
     case IOCTL_INPUT_GET_REPORT:
-        return hid_get_report(hid->base, in_buf, in_len, out_buf, out_len);
+        return hid_get_report(hid->base, in_buf, in_len, out_buf, out_len, out_actual);
     case IOCTL_INPUT_SET_REPORT:
         return hid_set_report(hid->base, in_buf, in_len);
     }
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t hid_close_instance(mx_device_t* dev, uint32_t flags) {
-    hid_instance_t* hid = dev->ctx;
+static mx_status_t hid_close_instance(void* ctx, uint32_t flags) {
+    hid_instance_t* hid = ctx;
     hid->flags |= HID_FLAGS_DEAD;
     mtx_lock(&hid->base->instance_lock);
     // TODO: refcount the base device and call stop if no instances are open
@@ -357,14 +382,14 @@ static void hid_downref(hid_device_t* hid) {
     }
 }
 
-static mx_status_t hid_release_instance(mx_device_t* dev) {
-    hid_instance_t* hid = dev->ctx;
+static void hid_release_instance(void* ctx) {
+    hid_instance_t* hid = ctx;
     hid_downref(hid->base);
     free(hid);
-    return NO_ERROR;
 }
 
 mx_protocol_device_t hid_instance_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = hid_read_instance,
     .ioctl = hid_ioctl_instance,
     .close = hid_close_instance,
@@ -637,9 +662,13 @@ static mx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
     // maximum HID input report size is only 60 bytes, we should not need a
     // reassembly buffer.
     input_report_size_t max_report_size = 0;
-    ssize_t res = hid_get_max_input_reportsize(dev, &max_report_size, sizeof(max_report_size));
-    if ((res < 0) || !max_report_size) {
-        return (res < 0) ? ((mx_status_t)res) : ERR_INTERNAL;
+    size_t actual = 0;
+    mx_status_t res = hid_get_max_input_reportsize(dev, &max_report_size, sizeof(max_report_size),
+                                                   &actual);
+    if (res < 0) {
+        return res;
+    } else if (!max_report_size || actual != sizeof(max_report_size)) {
+        return ERR_INTERNAL;
     }
 
     dev->rbuf = malloc(max_report_size);
@@ -651,16 +680,15 @@ static mx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_status_t hid_release_device(mx_device_t* dev) {
-    hid_device_t* hid = dev->ctx;
+static void hid_release_device(void* ctx) {
+    hid_device_t* hid = ctx;
     hid_downref(hid);
-    return NO_ERROR;
 }
 
 extern mx_driver_t _driver_hid;
 
-static mx_status_t hid_open_device(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    hid_device_t* hid = dev->ctx;
+static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    hid_device_t* hid = ctx;
 
     hid_instance_t* inst = calloc(1, sizeof(hid_instance_t));
     if (inst == NULL) {
@@ -678,7 +706,7 @@ static mx_status_t hid_open_device(mx_device_t* dev, mx_device_t** dev_out, uint
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    mx_status_t status = status = device_add2(dev, &args, &inst->mxdev);
+    mx_status_t status = status = device_add2(hid->mxdev, &args, &inst->mxdev);
     if (status != NO_ERROR) {
         printf("hid: error creating instance %d\n", status);
         free(inst);
@@ -695,8 +723,8 @@ static mx_status_t hid_open_device(mx_device_t* dev, mx_device_t** dev_out, uint
     return NO_ERROR;
 }
 
-static void hid_unbind_device(mx_device_t* dev) {
-    hid_device_t* hid = dev->ctx;
+static void hid_unbind_device(void* ctx) {
+    hid_device_t* hid = ctx;
     mtx_lock(&hid->instance_lock);
     hid_instance_t* instance;
     foreach_instance(hid, instance) {
@@ -708,6 +736,7 @@ static void hid_unbind_device(mx_device_t* dev) {
 }
 
 mx_protocol_device_t hid_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .open = hid_open_device,
     .unbind = hid_unbind_device,
     .release = hid_release_device,

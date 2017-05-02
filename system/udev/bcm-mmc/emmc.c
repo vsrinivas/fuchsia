@@ -308,7 +308,7 @@ static mx_status_t emmc_await_irq(emmc_t* emmc) {
     return NO_ERROR;
 }
 
-static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
+static void emmc_iotxn_queue(void* ctx, iotxn_t* txn) {
     // Ensure that the offset is some multiple of the block size, we don't allow
     // writes that are partway into a block.
     if (txn->offset % SDHC_BLOCK_SIZE) {
@@ -326,7 +326,7 @@ static void emmc_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
         return;
     }
 
-    emmc_t* emmc = dev->ctx;
+    emmc_t* emmc = ctx;
     mx_status_t st;
     mtx_lock(&emmc->mtx);
 
@@ -548,10 +548,10 @@ static mx_status_t emmc_set_voltage(emmc_t* emmc, uint32_t new_voltage) {
     return NO_ERROR;
 }
 
-static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
+static mx_status_t emmc_ioctl(void* ctx, uint32_t op,
                           const void* in_buf, size_t in_len,
-                          void* out_buf, size_t out_len) {
-    emmc_t* emmc = dev->ctx;
+                          void* out_buf, size_t out_len, size_t* out_actual) {
+    emmc_t* emmc = ctx;
     uint32_t* arg;
     arg = (uint32_t*)in_buf;
     if (in_len < sizeof(*arg))
@@ -572,18 +572,18 @@ static ssize_t emmc_ioctl(mx_device_t* dev, uint32_t op,
     return ERR_NOT_SUPPORTED;
 }
 
-static void emmc_unbind(mx_device_t* device) {
-    emmc_t* emmc = device->ctx;
+static void emmc_unbind(void* ctx) {
+    emmc_t* emmc = ctx;
     device_remove(emmc->mxdev);
 }
 
-static mx_status_t emmmc_release(mx_device_t* device) {
-    emmc_t* emmc = device->ctx;
+static void emmmc_release(void* ctx) {
+    emmc_t* emmc = ctx;
     free(emmc);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t emmc_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .iotxn_queue = emmc_iotxn_queue,
     .ioctl = emmc_ioctl,
     .unbind = emmc_unbind,

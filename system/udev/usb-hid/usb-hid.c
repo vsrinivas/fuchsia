@@ -190,18 +190,19 @@ static hidbus_protocol_t usb_hid_bus_ops = {
     .set_protocol = usb_hid_set_protocol,
 };
 
-static void usb_hid_unbind(mx_device_t* dev) {
-    device_remove(dev);
+static void usb_hid_unbind(void* ctx) {
+    usb_hid_device_t* hid = ctx;
+    device_remove(hid->mxdev);
 }
 
-static mx_status_t usb_hid_release(mx_device_t* dev) {
-    usb_hid_device_t* hid = dev->ctx;
+static void usb_hid_release(void* ctx) {
+    usb_hid_device_t* hid = ctx;
     iotxn_release(hid->txn);
     free(hid);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t usb_hid_dev_ops = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_hid_unbind,
     .release = usb_hid_release,
 };

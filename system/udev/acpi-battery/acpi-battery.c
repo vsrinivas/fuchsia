@@ -42,8 +42,8 @@ typedef struct acpi_battery_device {
     uint32_t capacity_remaining;
 } acpi_battery_device_t;
 
-static ssize_t acpi_battery_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    acpi_battery_device_t* device = dev->ctx;
+static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    acpi_battery_device_t* device = ctx;
     mtx_lock(&device->lock);
     ssize_t rc = 0;
     int pct;
@@ -61,10 +61,15 @@ static ssize_t acpi_battery_read(mx_device_t* dev, void* buf, size_t count, mx_o
         rc += 1; // null terminator
     }
     mtx_unlock(&device->lock);
-    return rc;
+    if (rc < 0) {
+        return rc;
+    }
+    *actual = rc;
+    return NO_ERROR;
 }
 
 static mx_protocol_device_t acpi_battery_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = acpi_battery_read,
     // TODO(yky): release
 };

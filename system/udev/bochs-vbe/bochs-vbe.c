@@ -160,8 +160,8 @@ static mx_display_protocol_t bochs_vbe_display_proto = {
 
 // implement device protocol
 
-static mx_status_t bochs_vbe_release(mx_device_t* dev) {
-    bochs_vbe_device_t* vdev = dev->ctx;
+static void bochs_vbe_release(void* ctx) {
+    bochs_vbe_device_t* vdev = ctx;
 
     if (vdev->regs) {
         mx_handle_close(vdev->regs_handle);
@@ -174,11 +174,10 @@ static mx_status_t bochs_vbe_release(mx_device_t* dev) {
     }
 
     free(vdev);
-
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t bochs_vbe_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .release = bochs_vbe_release,
 };
 

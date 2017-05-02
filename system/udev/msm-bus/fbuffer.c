@@ -108,7 +108,9 @@ static mx_display_protocol_t msm_display_proto = {
     .get_framebuffer = msm_get_framebuffer,
     .flush = msm_flush_framebuffer};
 
-static mx_protocol_device_t msm_device_proto = {};
+static mx_protocol_device_t msm_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+};
 
 mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
 

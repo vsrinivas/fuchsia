@@ -17,22 +17,24 @@
 #include <string.h>
 #include <threads.h>
 
-static ssize_t ktrace_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    uint32_t actual;
-    mx_status_t status = mx_ktrace_read(get_root_resource(),
-                                        buf, off, count, &actual);
-    return status != NO_ERROR ? (ssize_t)status : (ssize_t)actual;
+static mx_status_t ktrace_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
+    uint32_t length;
+    mx_status_t status = mx_ktrace_read(get_root_resource(), buf, off, count, &length);
+    if (status == NO_ERROR) {
+        *actual = length;
+    }
+    return status;
 }
 
-static mx_off_t ktrace_get_size(mx_device_t* dev) {
+static mx_off_t ktrace_get_size(void* ctx) {
     uint32_t size;
     mx_status_t status = mx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
     return status != NO_ERROR ? (mx_off_t)status : (mx_off_t)size;
 }
 
-static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
+static mx_status_t ktrace_ioctl(void* ctx, uint32_t op,
                             const void* cmd, size_t cmdlen,
-                            void* reply, size_t max) {
+                            void* reply, size_t max, size_t* out_actual) {
     switch (op) {
     case IOCTL_KTRACE_GET_HANDLE: {
         if (max < sizeof(mx_handle_t)) {
@@ -45,7 +47,8 @@ static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
             return status;
         }
         *((mx_handle_t*) reply) = h;
-        return sizeof(mx_handle_t);
+        *out_actual = sizeof(mx_handle_t);
+        return NO_ERROR;
     }
     case IOCTL_KTRACE_ADD_PROBE: {
         char name[MX_MAX_NAME_LEN];
@@ -59,7 +62,8 @@ static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
             return status;
         }
         *((uint32_t*) reply) = status;
-        return sizeof(uint32_t);
+        *out_actual = sizeof(uint32_t);
+        return NO_ERROR;
     }
     default:
         return ERR_INVALID_ARGS;
@@ -67,6 +71,7 @@ static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 static mx_protocol_device_t ktrace_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .read = ktrace_read,
     .ioctl = ktrace_ioctl,
     .get_size = ktrace_get_size,

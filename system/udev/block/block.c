@@ -24,6 +24,7 @@
 
 typedef struct blkdev {
     mx_device_t* mxdev;
+    mx_device_t* parent;
     block_ops_t* blockops;
 
     mtx_t lock;
@@ -46,7 +47,7 @@ static int blockserver_thread(void* arg) {
     return 0;
 }
 
-static ssize_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
+static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
     if (out_len < sizeof(mx_handle_t)) {
         return ERR_INVALID_ARGS;
     }
@@ -81,9 +82,9 @@ done:
     return status;
 }
 
-static ssize_t blkdev_attach_vmo(blkdev_t* bdev,
+static mx_status_t blkdev_attach_vmo(blkdev_t* bdev,
                                  const void* in_buf, size_t in_len,
-                                 void* out_buf, size_t out_len) {
+                                 void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len < sizeof(mx_handle_t)) || (out_len < sizeof(vmoid_t))) {
         return ERR_INVALID_ARGS;
     }
@@ -99,16 +100,16 @@ static ssize_t blkdev_attach_vmo(blkdev_t* bdev,
     if ((status = blockserver_attach_vmo(bdev->bs, h, out_buf)) != NO_ERROR) {
         goto done;
     }
+    *out_actual = sizeof(vmoid_t);
 
-    status = sizeof(vmoid_t);
 done:
     mtx_unlock(&bdev->lock);
     return status;
 }
 
-static ssize_t blkdev_alloc_txn(blkdev_t* bdev,
+static mx_status_t blkdev_alloc_txn(blkdev_t* bdev,
                                 const void* in_buf, size_t in_len,
-                                void* out_buf, size_t out_len) {
+                                void* out_buf, size_t out_len, size_t* out_actual) {
     if ((in_len != 0) || (out_len < sizeof(txnid_t))) {
         return ERR_INVALID_ARGS;
     }
@@ -123,17 +124,16 @@ static ssize_t blkdev_alloc_txn(blkdev_t* bdev,
     if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != NO_ERROR) {
         goto done;
     }
+    *out_actual = sizeof(vmoid_t);
 
-    status = sizeof(txnid_t);
 done:
     mtx_unlock(&bdev->lock);
     return status;
 }
 
-static ssize_t blkdev_free_txn(blkdev_t* bdev,
-                               const void* in_buf, size_t in_len,
-                               void* out_buf, size_t out_len) {
-    if ((in_len != sizeof(txnid_t)) || (out_len != 0)) {
+static mx_status_t blkdev_free_txn(blkdev_t* bdev,
+                               const void* in_buf, size_t in_len) {
+    if (in_len != sizeof(txnid_t)) {
         return ERR_INVALID_ARGS;
     }
 
@@ -152,7 +152,7 @@ done:
     return status;
 }
 
-static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
+static mx_status_t blkdev_fifo_close(blkdev_t* bdev) {
     mtx_lock(&bdev->lock);
     if (bdev->bs != NULL) {
         blockserver_shutdown(bdev->bs);
@@ -170,48 +170,48 @@ static ssize_t blkdev_fifo_close(blkdev_t* bdev) {
 
 // implement device protocol:
 
-static ssize_t blkdev_ioctl(mx_device_t* dev, uint32_t op, const void* cmd,
-                            size_t cmdlen, void* reply, size_t max) {
-    blkdev_t* blkdev = dev->ctx;
+static mx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
+                            size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    blkdev_t* blkdev = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_FIFOS:
         return blkdev_get_fifos(blkdev, reply, max);
     case IOCTL_BLOCK_ATTACH_VMO:
-        return blkdev_attach_vmo(blkdev, cmd, cmdlen, reply, max);
+        return blkdev_attach_vmo(blkdev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_BLOCK_ALLOC_TXN:
-        return blkdev_alloc_txn(blkdev, cmd, cmdlen, reply, max);
+        return blkdev_alloc_txn(blkdev, cmd, cmdlen, reply, max, out_actual);
     case IOCTL_BLOCK_FREE_TXN:
-        return blkdev_free_txn(blkdev, cmd, cmdlen, reply, max);
+        return blkdev_free_txn(blkdev, cmd, cmdlen);
     case IOCTL_BLOCK_FIFO_CLOSE:
         return blkdev_fifo_close(blkdev);
-    default: {
-        mx_device_t* parent = dev->parent;
-        return device_op_ioctl(parent, op, cmd, cmdlen, reply, max);
-    }
+    default:
+        return device_op_ioctl(blkdev->parent, op, cmd, cmdlen, reply, max, out_actual);
     }
 }
 
-static void blkdev_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    iotxn_queue(dev->parent, txn);
+static void blkdev_iotxn_queue(void* ctx, iotxn_t* txn) {
+    blkdev_t* blkdev = ctx;
+    iotxn_queue(blkdev->parent, txn);
 }
 
-static mx_off_t blkdev_get_size(mx_device_t* dev) {
-    mx_device_t* parent = dev->parent;
-    return device_op_get_size(parent);
+static mx_off_t blkdev_get_size(void* ctx) {
+    blkdev_t* blkdev = ctx;
+    return device_op_get_size(blkdev->parent);
 }
 
-static void blkdev_unbind(mx_device_t* dev) {
-    device_remove(dev);
+static void blkdev_unbind(void* ctx) {
+    blkdev_t* blkdev = ctx;
+    device_remove(blkdev->mxdev);
 }
 
-static mx_status_t blkdev_release(mx_device_t* dev) {
-    blkdev_t* blkdev = dev->ctx;
+static void blkdev_release(void* ctx) {
+    blkdev_t* blkdev = ctx;
     blkdev_fifo_close(blkdev);
     free(blkdev);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t blkdev_ops = {
+    .version = DEVICE_OPS_VERSION,
     .ioctl = blkdev_ioctl,
     .iotxn_queue = blkdev_iotxn_queue,
     .get_size = blkdev_get_size,
@@ -225,6 +225,7 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         return ERR_NO_MEMORY;
     }
     mtx_init(&bdev->lock, mtx_plain);
+    bdev->parent = dev;
 
     mx_status_t status;
     if (device_op_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {

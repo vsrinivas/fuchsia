@@ -126,14 +126,14 @@ usb_hci_protocol_t xhci_hci_protocol = {
     .get_max_transfer_size = xhci_get_max_transfer_size,
 };
 
-static void xhci_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
+static void xhci_iotxn_queue(void* ctx, iotxn_t* txn) {
+    xhci_t* xhci = ctx;
     usb_protocol_data_t* data = iotxn_pdata(txn, usb_protocol_data_t);
     mx_status_t status;
 
-    if (txn->length > xhci_get_max_transfer_size(device, data->device_id, data->ep_address)) {
+    if (txn->length > xhci_get_max_transfer_size(xhci->mxdev, data->device_id, data->ep_address)) {
         status = ERR_INVALID_ARGS;
     } else {
-        xhci_t* xhci = device->ctx;
         status = xhci_queue_transfer(xhci, txn);
     }
 
@@ -142,24 +142,24 @@ static void xhci_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     }
 }
 
-static void xhci_unbind(mx_device_t* device) {
+static void xhci_unbind(void* ctx) {
+    xhci_t* xhci = ctx;
     xprintf("xhci_unbind\n");
-    xhci_t* xhci = device->ctx;
 
     if (xhci->bus_mxdev) {
         device_remove(xhci->bus_mxdev);
     }
 }
 
-static mx_status_t xhci_release(mx_device_t* device) {
-     xhci_t* xhci = device->ctx;
+static void xhci_release(void* ctx) {
+     xhci_t* xhci = ctx;
 
    // FIXME(voydanoff) - there is a lot more work to do here
     free(xhci);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t xhci_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .iotxn_queue = xhci_iotxn_queue,
     .unbind = xhci_unbind,
     .release = xhci_release,

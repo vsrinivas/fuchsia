@@ -284,7 +284,8 @@ static int eth_tx_thread(void* arg) {
     return 0;
 }
 
-static ssize_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len) {
+static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
+                                    size_t* out_actual) {
     if (out_len < sizeof(eth_fifos_t)) {
         return ERR_INVALID_ARGS;
     }
@@ -312,7 +313,8 @@ static ssize_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_le
     fifos->tx_depth = FIFO_DEPTH;
     fifos->rx_depth = FIFO_DEPTH;
 
-    return sizeof(*fifos);
+    *out_actual = sizeof(*fifos);
+    return NO_ERROR;
 }
 
 static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
@@ -409,11 +411,11 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
     return NO_ERROR;
 }
 
-static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
-                         const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len) {
+static mx_status_t eth_ioctl(void* ctx, uint32_t op,
+                             const void* in_buf, size_t in_len,
+                             void* out_buf, size_t out_len, size_t* out_actual) {
 
-    ethdev_t* edev = dev->ctx;
+    ethdev_t* edev = ctx;
     mtx_lock(&edev->edev0->lock);
     mx_status_t status;
     if (edev->state & ETHDEV_DEAD) {
@@ -433,12 +435,13 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
                 info->features |= ETH_FEATURE_WLAN;
             }
             info->mtu = edev->edev0->info.mtu;
-            status = sizeof(*info);
+            *out_actual = sizeof(*info);
+            status = NO_ERROR;
         }
         break;
     }
     case IOCTL_ETHERNET_GET_FIFOS:
-        status = eth_get_fifos_locked(edev, out_buf, out_len);
+        status = eth_get_fifos_locked(edev, out_buf, out_len, out_actual);
         break;
     case IOCTL_ETHERNET_SET_IOBUF:
         status = eth_set_iobuf_locked(edev, in_buf, in_len);
@@ -457,7 +460,7 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
         break;
     default:
         // TODO: consider if we want this under the edev0->lock or not
-        status = device_op_ioctl(edev->edev0->mac, op, in_buf, in_len, out_buf, out_len);
+        status = device_op_ioctl(edev->edev0->mac, op, in_buf, in_len, out_buf, out_len, out_actual);
         break;
     }
 
@@ -509,15 +512,14 @@ static void eth_kill_locked(ethdev_t* edev) {
     xprintf("eth: all resources released\n");
 }
 
-static mx_status_t eth_release(mx_device_t* dev) {
-    ethdev_t* edev = dev->ctx;
+static void eth_release(void* ctx) {
+    ethdev_t* edev = ctx;
     eth0_downref(edev->edev0);
     free(edev);
-    return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t eth_close(mx_device_t* dev, uint32_t flags) {
-    ethdev_t* edev = dev->ctx;
+static mx_status_t eth_close(void* ctx, uint32_t flags) {
+    ethdev_t* edev = ctx;
 
     mtx_lock(&edev->edev0->lock);
     eth_stop_locked(edev);
@@ -529,6 +531,7 @@ static mx_status_t eth_close(mx_device_t* dev, uint32_t flags) {
 }
 
 static mx_protocol_device_t ethdev_ops = {
+    .version = DEVICE_OPS_VERSION,
     .close = eth_close,
     .ioctl = eth_ioctl,
     .release = eth_release,
@@ -538,8 +541,8 @@ static ethernet_protocol_t ethernet_ops = {};
 
 mx_driver_t _driver_ethernet;
 
-static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
-    ethdev0_t* edev0 = dev->ctx;
+static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
+    ethdev0_t* edev0 = ctx;
 
     ethdev_t* edev;
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
@@ -559,7 +562,7 @@ static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     };
 
     mx_status_t status;
-    if ((status = device_add2(dev, &args, &edev->mxdev)) < 0) {
+    if ((status = device_add2(edev0->mxdev, &args, &edev->mxdev)) < 0) {
         free(edev);
         return status;
     }
@@ -573,8 +576,8 @@ static mx_status_t eth0_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
     return NO_ERROR;
 }
 
-static void eth0_unbind(mx_device_t* dev) {
-    ethdev0_t* edev0 = dev->ctx;
+static void eth0_unbind(void* ctx) {
+    ethdev0_t* edev0 = ctx;
 
     mtx_lock(&edev0->lock);
 
@@ -590,16 +593,16 @@ static void eth0_unbind(mx_device_t* dev) {
 
     mtx_unlock(&edev0->lock);
 
-    device_remove(dev);
+    device_remove(edev0->mxdev);
 }
 
-static mx_status_t eth0_release(mx_device_t* dev) {
-    ethdev0_t* edev0 = dev->ctx;
+static void eth0_release(void* ctx) {
+    ethdev0_t* edev0 = ctx;
     eth0_downref(edev0);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t ethdev0_ops = {
+    .version = DEVICE_OPS_VERSION,
     .open = eth0_open,
     .unbind = eth0_unbind,
     .release = eth0_release,

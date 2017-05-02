@@ -62,8 +62,8 @@ static void usb_midi_sink_write_complete(iotxn_t* txn, void* cookie) {
     mtx_unlock(&sink->mutex);
 }
 
-static void usb_midi_sink_unbind(mx_device_t* dev) {
-    usb_midi_sink_t* sink = dev->ctx;
+static void usb_midi_sink_unbind(void* ctx) {
+    usb_midi_sink_t* sink = ctx;
     sink->dead = true;
     update_signals(sink);
     completion_signal(&sink->free_write_completion);
@@ -78,14 +78,13 @@ static void usb_midi_sink_free(usb_midi_sink_t* sink) {
     free(sink);
 }
 
-static mx_status_t usb_midi_sink_release(mx_device_t* dev) {
-    usb_midi_sink_t* sink = dev->ctx;
+static void usb_midi_sink_release(void* ctx) {
+    usb_midi_sink_t* sink = ctx;
     usb_midi_sink_free(sink);
-    return NO_ERROR;
 }
 
-static mx_status_t usb_midi_sink_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
-    usb_midi_sink_t* sink = dev->ctx;
+static mx_status_t usb_midi_sink_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
+    usb_midi_sink_t* sink = ctx;
     mx_status_t result;
 
     mtx_lock(&sink->mutex);
@@ -100,8 +99,8 @@ static mx_status_t usb_midi_sink_open(mx_device_t* dev, mx_device_t** dev_out, u
     return result;
 }
 
-static mx_status_t usb_midi_sink_close(mx_device_t* dev, uint32_t flags) {
-    usb_midi_sink_t* sink = dev->ctx;
+static mx_status_t usb_midi_sink_close(void* ctx, uint32_t flags) {
+    usb_midi_sink_t* sink = ctx;
 
     mtx_lock(&sink->mutex);
     sink->open = false;
@@ -110,15 +109,16 @@ static mx_status_t usb_midi_sink_close(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
-static ssize_t usb_midi_sink_write(mx_device_t* dev, const void* data, size_t length,
-                                   mx_off_t offset) {
-    usb_midi_sink_t* sink = dev->ctx;
+static mx_status_t usb_midi_sink_write(void* ctx, const void* data, size_t length,
+                                       mx_off_t offset, size_t* actual) {
+    usb_midi_sink_t* sink = ctx;
 
     if (sink->dead) {
         return ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = length;
+    mx_status_t status = NO_ERROR;
+    size_t out_actual = length;
 
     const uint8_t* src = (uint8_t *)data;
 
@@ -159,17 +159,22 @@ static ssize_t usb_midi_sink_write(mx_device_t* dev, const void* data, size_t le
 
 out:
     update_signals(sink);
+    if (status == NO_ERROR) {
+        *actual = out_actual;
+    }
     return status;
 }
 
-static ssize_t usb_midi_sink_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf,
-                                    size_t in_len, void* out_buf, size_t out_len) {
+static mx_status_t usb_midi_sink_ioctl(void* ctx, uint32_t op, const void* in_buf,
+                                       size_t in_len, void* out_buf, size_t out_len,
+                                       size_t* out_actual) {
     switch (op) {
     case IOCTL_MIDI_GET_DEVICE_TYPE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = MIDI_TYPE_SINK;
-        return sizeof(*reply);
+        *out_actual = sizeof(*reply);
+        return NO_ERROR;
     }
     }
 
@@ -177,6 +182,7 @@ static ssize_t usb_midi_sink_ioctl(mx_device_t* dev, uint32_t op, const void* in
 }
 
 static mx_protocol_device_t usb_midi_sink_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .unbind = usb_midi_sink_unbind,
     .release = usb_midi_sink_release,
     .open = usb_midi_sink_open,

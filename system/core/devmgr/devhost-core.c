@@ -46,75 +46,47 @@ mtx_t __devhost_api_lock = MTX_INIT;
 
 static mx_device_t* root_dev;
 
-static mx_status_t default_get_protocol(mx_device_t* dev, uint32_t proto_id, void** proto) {
-    if (proto_id == MX_PROTOCOL_DEVICE) {
-        *proto = dev->ops;
-        return NO_ERROR;
-    }
-    if ((proto_id == dev->protocol_id) && (dev->protocol_ops != NULL)) {
-        *proto = dev->protocol_ops;
-        return NO_ERROR;
-    }
-    return ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t default_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
+static mx_status_t default_open(void* ctx, mx_device_t** out, uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t default_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
+static mx_status_t default_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_close(mx_device_t* dev, uint32_t flags) {
+static mx_status_t default_close(void* ctx, uint32_t flags) {
     return NO_ERROR;
 }
 
-static mx_status_t default_release(mx_device_t* dev) {
+static void default_unbind(void* ctx) {
+}
+
+static void default_release(void* ctx) {
+}
+
+static mx_status_t default_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
+static mx_status_t default_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
     return ERR_NOT_SUPPORTED;
 }
 
-static ssize_t default_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    return ERR_NOT_SUPPORTED;
-}
-
-static void default_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
-    ssize_t rc;
-    void* buf;
-    iotxn_mmap(txn, &buf);
-    if (txn->opcode == IOTXN_OP_READ) {
-        rc = device_op_read(dev, buf, txn->length, txn->offset);
-    } else if (txn->opcode == IOTXN_OP_WRITE) {
-        rc = device_op_write(dev, buf, txn->length, txn->offset);
-    } else {
-        rc = ERR_NOT_SUPPORTED;
-    }
-    if (rc < 0) {
-        iotxn_complete(txn, rc, 0);
-    } else {
-        iotxn_complete(txn, NO_ERROR, rc);
-    }
-}
-
-static mx_off_t default_get_size(mx_device_t* dev) {
+static mx_off_t default_get_size(void* ctx) {
     return 0;
 }
 
-static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
+static mx_status_t default_ioctl(void* ctx, uint32_t op,
                              const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len) {
+                             void* out_buf, size_t out_len, size_t* out_actual) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_suspend(mx_device_t* dev) {
+static mx_status_t default_suspend(void* ctx, uint32_t flags) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_resume(mx_device_t* dev) {
+static mx_status_t default_resume(void* ctx, uint32_t flags) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -320,14 +292,13 @@ static mx_status_t device_validate(mx_device_t* dev) {
 
     // install default methods if needed
     mx_protocol_device_t* ops = dev->ops;
-    DEFAULT_IF_NULL(ops, get_protocol)
     DEFAULT_IF_NULL(ops, open);
-    DEFAULT_IF_NULL(ops, openat);
+    DEFAULT_IF_NULL(ops, open_at);
     DEFAULT_IF_NULL(ops, close);
+    DEFAULT_IF_NULL(ops, unbind);
     DEFAULT_IF_NULL(ops, release);
     DEFAULT_IF_NULL(ops, read);
     DEFAULT_IF_NULL(ops, write);
-    DEFAULT_IF_NULL(ops, iotxn_queue);
     DEFAULT_IF_NULL(ops, get_size);
     DEFAULT_IF_NULL(ops, ioctl);
     DEFAULT_IF_NULL(ops, suspend);
@@ -600,7 +571,7 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
 }
 #endif
 
-mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
+mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
         return ERR_BAD_STATE;
