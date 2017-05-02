@@ -56,13 +56,15 @@ static mx_protocol_device_t sysinfo_ops = {
 // implement driver object:
 
 mx_status_t sysinfo_init(mx_driver_t* driver) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "sysinfo",
+        .driver = driver,
+        .ops = &sysinfo_ops,
+    };
+
     mx_device_t* dev;
-    if (device_create("sysinfo", NULL, &sysinfo_ops, driver, &dev) == NO_ERROR) {
-        if (device_add(dev, driver_get_misc_device()) < 0) {
-            free(dev);
-        }
-    }
-    return NO_ERROR;
+    return device_add2(driver_get_misc_device(), &args, &dev);
 }
 
 static mx_driver_ops_t sysinfo_driver_ops = {
