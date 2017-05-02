@@ -88,4 +88,20 @@ void OperationBase::DoneFinish(ftl::WeakPtr<OperationContainer> container) {
   }
 }
 
+OperationBase::FlowTokenBase::FlowTokenBase() : refcount_(new int) {
+  *refcount_ = 1;
+}
+
+OperationBase::FlowTokenBase::FlowTokenBase(const FlowTokenBase& other)
+    : refcount_(other.refcount_) {
+  ++*refcount_;
+}
+
+OperationBase::FlowTokenBase::~FlowTokenBase() {
+  --*refcount_;
+  if (*refcount_ == 0) {
+    delete refcount_;
+  }
+}
+
 }  // namespace modular

@@ -65,49 +65,44 @@ class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
 
  private:
   void Run() override {
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                                          << " Page.GetSnapshot() " << status;
-                           Done(nullptr);
-                           return;
-                         }
+    FlowToken flow(this, &story_data_);
 
-                         Cont();
-                       });
+    page_->GetSnapshot(
+        page_snapshot_.NewRequest(), nullptr, nullptr,
+        [this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            return;
+          }
+
+          Cont(flow);
+        });
   }
 
-  void Cont() {
-    page_snapshot_->Get(
-        to_array(MakeStoryKey(story_id_)),
-        [this](ledger::Status status, mx::vmo value) {
-          if (status != ledger::Status::OK) {
-            // It's always OK if the story is not found, all clients
-            // handle the null case.
-            if (status != ledger::Status::KEY_NOT_FOUND) {
-              FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                             << " PageSnapshot.Get() " << status;
-            }
-            Done(nullptr);
-            return;
-          }
+  void Cont(FlowToken flow) {
+    page_snapshot_
+        ->Get(to_array(MakeStoryKey(story_id_)),
+              [this, flow](ledger::Status status, mx::vmo value) {
+                if (status != ledger::Status::OK) {
+                  // It's always OK if the story is not found, all clients
+                  // handle the null case.
+                  if (status != ledger::Status::KEY_NOT_FOUND) {
+                    FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                                   << " PageSnapshot.Get() " << status;
+                  }
+                  return;
+                }
 
-          std::string value_as_string;
-          if (!mtl::StringFromVmo(value, &value_as_string)) {
-            FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                           << "Unable to extract data.";
-            Done(nullptr);
-            return;
-          }
+                std::string value_as_string;
+                if (!mtl::StringFromVmo(value, &value_as_string)) {
+                  FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                                 << "Unable to extract data.";
+                  return;
+                }
 
-          if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
-            Done(nullptr);
-            return;
-          }
-
-          Done(std::move(story_data_));
-        });
+                if (!XdrRead(value_as_string, &story_data_, XdrStoryData)) {
+                  story_data_.reset();
+                }
+              });
   };
 
   ledger::Page* const page_;  // not owned

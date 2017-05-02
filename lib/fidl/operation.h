@@ -129,6 +129,8 @@ class OperationBase {
   ftl::WeakPtr<OperationContainer> DoneStart();
   void DoneFinish(ftl::WeakPtr<OperationContainer> container);
 
+  class FlowTokenBase;
+
  private:
   // Used by the implementation of DoneBase() to remove this instance from the
   // container.
@@ -159,6 +161,8 @@ class Operation : public OperationBase {
     DoneFinish(std::move(container));
   }
 
+  class FlowToken;
+
  private:
   ResultCall result_call_;
 
@@ -183,10 +187,93 @@ class Operation<void> : public OperationBase {
     DoneFinish(std::move(container));
   }
 
+  class FlowToken;
+
  private:
   ResultCall result_call_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
+};
+
+// The instance of FlowToken at which the refcount reaches zero in the
+// destructor calls Done() on the Operation it holds a reference of.
+//
+// It is an inner class of Operation so that it has access to Done(), which is
+// protected.
+//
+// Why this is ref counted, not moved:
+//
+// 1. Some flows of control branch into multiple parallel branches, and then its
+//    subtle to figure out which one to move it along.
+//
+// 2. To move something onto a capture list is more verbose than to just copy
+//    it, so it would defeat the purpose of being simpler to write than the
+//    status quo.
+//
+// 3. A lambda with something that is moveonly on its capture list is not
+//    copyable anymore, and one of the points of Operation was to only have
+//    copyable continuations.
+//
+// NOTE: You cannot mix flow tokens and explicit Done() calls. Once an Operation
+// uses a flow token, this is how Done() is called, and calling Done()
+// explicitly would call it twice.
+//
+// The parts that are not dependent on the template parameter are factored off
+// into a base class, so the template specialization for T = void (below)
+// becomes less verbose.
+class OperationBase::FlowTokenBase {
+ public:
+  FlowTokenBase();
+  FlowTokenBase(const FlowTokenBase& other);
+  ~FlowTokenBase();
+
+ protected:
+  int refcount() const { return *refcount_; }
+
+ private:
+  int* const refcount_;  // shared between copies of FlowToken.
+};
+
+template<typename T>
+class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
+ public:
+  FlowToken(Operation<T>* const op, T* const result) :
+      op_(op), result_(result) {}
+
+  FlowToken(const FlowToken& other) :
+      FlowTokenBase(other), op_(other.op_), result_(other.result_) {}
+
+  ~FlowToken() {
+    // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
+    if (refcount() == 1) {
+      op_->Done(std::move(*result_));
+    }
+  }
+
+ private:
+  Operation<T>* const op_;  // not owned
+  T* const result_;         // not owned
+};
+
+// TODO(mesch): There surely must be a way to write this as one class. But the
+// missing argument of Done() when the template parameter type is void makes
+// this difficult.
+class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
+ public:
+  FlowToken(Operation<void>* const op) : op_(op) {}
+
+  FlowToken(const FlowToken& other) :
+    FlowTokenBase(other), op_(other.op_) {}
+
+  ~FlowToken() {
+    // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
+    if (refcount() == 1) {
+      op_->Done();
+    }
+  }
+
+ private:
+  Operation<void>* const op_;  // not owned
 };
 
 // Following is a list of commonly used operations.
