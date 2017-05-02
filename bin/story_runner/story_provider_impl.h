@@ -129,15 +129,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
   // The bindings for this instance.
   fidl::BindingSet<StoryProvider> bindings_;
 
-  // We can only accept binding requests once the instance is fully
-  // initalized. So we queue them up initially.
-  bool ready_{};
-  std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
-
   AppConfigPtr story_shell_;
-
-  // A list of IDs of *all* stories available on a user's ledger.
-  std::unordered_set<std::string> story_ids_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 

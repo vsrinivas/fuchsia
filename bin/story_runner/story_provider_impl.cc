@@ -4,10 +4,6 @@
 
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unordered_set>
 #include <vector>
 
 #include "application/lib/app/connect.h"
@@ -25,35 +21,6 @@
 namespace modular {
 
 namespace {
-
-void InitStoryId() {
-  // If rand() is not seeded, it always returns the same sequence of numbers.
-  srand(time(nullptr));
-}
-
-// Generates a unique randomly generated string of |length| size to be
-// used as a story id.
-std::string MakeStoryId(std::unordered_set<std::string>* const story_ids,
-                        const size_t length) {
-  std::function<char()> randchar = [] {
-    const char charset[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-    const size_t max_index = (sizeof(charset) - 1);
-    return charset[rand() % max_index];
-  };
-
-  std::string id(length, 0);
-  std::generate_n(id.begin(), length, randchar);
-
-  if (story_ids->find(id) != story_ids->end()) {
-    return MakeStoryId(story_ids, length);
-  }
-
-  story_ids->insert(id);
-  return id;
-}
 
 // Serialization and deserialization of StoryData and StoryInfo to and
 // from JSON.
@@ -236,14 +203,14 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<void> {
 // 1. Create a page for the new story.
 // 2. Create a new StoryData structure pointing to this new page and save it
 //    to the root page.
-class StoryProviderImpl::CreateStoryCall : Operation<void> {
+// 3. Returns the Story ID of the newly created story.
+class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
  public:
   CreateStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
                   ledger::Page* const root_page,
                   StoryProviderImpl* const story_provider_impl,
                   const fidl::String& url,
-                  const fidl::String& story_id,
                   FidlStringMap extra_info,
                   fidl::String root_json,
                   ResultCall result_call)
@@ -252,7 +219,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
         root_page_(root_page),
         story_provider_impl_(story_provider_impl),
         url_(url),
-        story_id_(story_id),
         extra_info_(std::move(extra_info)),
         root_json_(std::move(root_json)) {
     Ready();
@@ -260,30 +226,42 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
 
  private:
   void Run() override {
-    std::string story_page_id{MakeStoryKey(story_id_)};
-    story_data_ = StoryData::New();
-    story_data_->story_page_id = to_array(story_page_id);
-    ledger_->GetPage(to_array(story_page_id), story_page_.NewRequest(),
+    ledger_->GetPage(nullptr, story_page_.NewRequest(),
                      [this](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
+                         FTL_LOG(ERROR) << "CreateStoryCall()"
                                         << " Ledger.GetPage() " << status;
-                         Done();
+                         Done(std::move(story_id_));
                          return;
                        }
 
-                       story_data_->story_info = StoryInfo::New();
-                       auto* const story_info = story_data_->story_info.get();
-                       story_info->url = url_;
-                       story_info->id = story_id_;
-                       story_info->is_running = false;
-                       story_info->state = StoryState::INITIAL;
-                       story_info->extra = std::move(extra_info_);
-                       story_info->extra.mark_non_null();
+                       story_page_->GetId([this](fidl::Array<uint8_t> id) {
+                           story_page_id_ = std::move(id);
 
-                       new WriteStoryDataCall(&operation_queue_, root_page_,
-                                              std::move(story_data_),
-                                              [this] { Cont(); });
+                           // TODO(security), cf. FW-174. This ID is exposed in
+                           // public services such as
+                           // StoryProvider.PreviousStories(),
+                           // StoryController.GetInfo(),
+                           // ModuleContext.GetStoryId(). We need to ensure this
+                           // doesn't expose internal information by being a
+                           // page ID.
+                           story_id_ = to_hex_string(story_page_id_);
+
+                           story_data_ = StoryData::New();
+                           story_data_->story_page_id = story_page_id_.Clone();
+                           story_data_->story_info = StoryInfo::New();
+                           auto* const story_info = story_data_->story_info.get();
+                           story_info->url = url_;
+                           story_info->id = story_id_;
+                           story_info->is_running = false;
+                           story_info->state = StoryState::INITIAL;
+                           story_info->extra = std::move(extra_info_);
+                           story_info->extra.mark_non_null();
+
+                           new WriteStoryDataCall(&operation_queue_, root_page_,
+                                                  std::move(story_data_),
+                                                  [this] { Cont(); });
+                         });
                      });
   }
 
@@ -294,7 +272,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
     // We ensure that root data has been written before this operation is
     // done.
     controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
-                              [this] { Done(); });
+                              [this] { Done(std::move(story_id_)); });
   }
 
   ledger::Ledger* const ledger_;                  // not owned
@@ -302,13 +280,15 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String module_name_;
   const fidl::String url_;
-  const fidl::String story_id_;
   FidlStringMap extra_info_;
   fidl::String root_json_;
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;
   std::unique_ptr<StoryImpl> controller_;
+
+  fidl::Array<uint8_t> story_page_id_;
+  fidl::String story_id_;  // This is the result of the Operation.
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -318,7 +298,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<void> {
 
 class StoryProviderImpl::DeleteStoryCall : Operation<void> {
  public:
-  using StoryIdSet = std::unordered_set<std::string>;
   using ControllerMap =
       std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
@@ -326,14 +305,12 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
   DeleteStoryCall(OperationContainer* const container,
                   ledger::Page* const page,
                   const fidl::String& story_id,
-                  StoryIdSet* const story_ids,
                   ControllerMap* const story_controllers,
                   const bool already_deleted,
                   ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
         story_id_(story_id),
-        story_ids_(story_ids),
         story_controllers_(story_controllers),
         already_deleted_(already_deleted) {
     Ready();
@@ -364,8 +341,6 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
   }
 
   void TearDown() {
-    story_ids_->erase(story_id_);
-
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
       Done();
@@ -394,7 +369,6 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
  private:
   ledger::Page* const page_;  // not owned
   const fidl::String story_id_;
-  StoryIdSet* const story_ids_;
   ControllerMap* const story_controllers_;
   const bool already_deleted_;  // True if called from OnChange();
 
@@ -608,34 +582,12 @@ StoryProviderImpl::StoryProviderImpl(
       story_shell_(std::move(story_shell)),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider) {
-  // We must initialize story_ids_ with the IDs of currently existing
-  // stories *before* we can process any calls that might create a new
-  // story. Hence we bind the interface request only after this call
-  // completes.
-  new PreviousStoriesCall(
-      &operation_queue_, root_page_, [this](fidl::Array<fidl::String> stories) {
-        for (auto& story_id : stories) {
-          story_ids_.insert(story_id.get());
-        }
-
-        InitStoryId();  // So MakeStoryId() returns something more random.
-
-        for (auto& request : requests_) {
-          bindings_.AddBinding(this, std::move(request));
-        }
-        requests_.clear();
-        ready_ = true;
-      });
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
 void StoryProviderImpl::Connect(fidl::InterfaceRequest<StoryProvider> request) {
-  if (ready_) {
-    bindings_.AddBinding(this, std::move(request));
-  } else {
-    requests_.emplace_back(std::move(request));
-  }
+  bindings_.AddBinding(this, std::move(request));
 }
 
 void StoryProviderImpl::PurgeController(const std::string& story_id) {
@@ -693,11 +645,9 @@ void StoryProviderImpl::SetStoryState(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,
                                     const CreateStoryCallback& callback) {
-  const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStory() " << module_url;
   new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, module_url,
-                      story_id, FidlStringMap(), fidl::String(),
-                      [callback, story_id] { callback(story_id); });
+                      FidlStringMap(), fidl::String(), callback);
 }
 
 // |StoryProvider|
@@ -706,17 +656,16 @@ void StoryProviderImpl::CreateStoryWithInfo(
     FidlStringMap extra_info,
     const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
-  const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, module_url,
-                      story_id, std::move(extra_info), std::move(root_json),
-                      [callback, story_id] { callback(story_id); });
+                      std::move(extra_info), std::move(root_json),
+                      callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
                       &story_controllers_, false /* already_deleted */,
                       callback);
 }
@@ -753,9 +702,6 @@ void StoryProviderImpl::OnChange(const std::string& key,
     return;
   }
 
-  // If this is a new story, guard against double using its key.
-  story_ids_.insert(story_data->story_info->id.get());
-
   watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
       watcher->OnChange(story_data->story_info.Clone());
     });
@@ -773,7 +719,7 @@ void StoryProviderImpl::OnDelete(const std::string& key) {
       watcher->OnDelete(story_id);
     });
 
-  new DeleteStoryCall(&operation_queue_, root_page_, story_id, &story_ids_,
+  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
                       &story_controllers_, true /* already_deleted */,
                       [] {});
 }
