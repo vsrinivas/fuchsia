@@ -26,13 +26,15 @@ static mx_protocol_device_t zero_device_proto = {
 };
 
 mx_status_t zero_init(mx_driver_t* driver) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "zero",
+        .driver = driver,
+        .ops = &zero_device_proto,
+    };
+
     mx_device_t* dev;
-    if (device_create("zero", NULL, &zero_device_proto, driver, &dev) == NO_ERROR) {
-        if (device_add(dev, driver_get_root_device()) < 0) {
-            free(dev);
-        }
-    }
-    return NO_ERROR;
+    return device_add2(driver_get_root_device(), &args, &dev);
 }
 
 static mx_driver_ops_t zero_driver_ops = {
