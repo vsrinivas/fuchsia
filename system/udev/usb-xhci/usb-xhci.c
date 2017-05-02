@@ -25,6 +25,8 @@
 
 #define MAX_SLOTS 255
 
+extern mx_driver_t _driver_usb_xhci;
+
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     xprintf("xhci_add_new_device\n");
 
@@ -45,35 +47,6 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     }
 
     xhci->bus_protocol->remove_device(xhci->bus_mxdev, slot_id);
-}
-
-static int xhci_irq_thread(void* arg) {
-    xhci_t* xhci = (xhci_t*)arg;
-    xprintf("xhci_irq_thread start\n");
-
-    // xhci_start will block, so do this part here instead of in usb_xhci_bind
-    xhci_start(xhci);
-
-    device_add(xhci->mxdev, xhci->parent);
-    xhci->parent = NULL;
-
-    while (1) {
-        mx_status_t wait_res;
-
-        wait_res = mx_interrupt_wait(xhci->irq_handle);
-        if (wait_res != NO_ERROR) {
-            if (wait_res != ERR_CANCELED) {
-                printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
-            }
-            mx_interrupt_complete(xhci->irq_handle);
-            break;
-        }
-
-        mx_interrupt_complete(xhci->irq_handle);
-        xhci_handle_interrupt(xhci, xhci->legacy_irq_mode);
-    }
-    xprintf("xhci_irq_thread done\n");
-    return 0;
 }
 
 static void xhci_set_bus_device(mx_device_t* device, mx_device_t* busdev) {
@@ -182,7 +155,6 @@ static mx_status_t xhci_release(mx_device_t* device) {
      xhci_t* xhci = device->ctx;
 
    // FIXME(voydanoff) - there is a lot more work to do here
-    device_destroy(xhci->mxdev);
     free(xhci);
     return NO_ERROR;
 }
@@ -192,6 +164,48 @@ static mx_protocol_device_t xhci_device_proto = {
     .unbind = xhci_unbind,
     .release = xhci_release,
 };
+
+static int xhci_irq_thread(void* arg) {
+    xhci_t* xhci = (xhci_t*)arg;
+    xprintf("xhci_irq_thread start\n");
+
+    // xhci_start will block, so do this part here instead of in usb_xhci_bind
+    xhci_start(xhci);
+
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb-xhci",
+        .ctx = xhci,
+        .driver = &_driver_usb_xhci,
+        .ops = &xhci_device_proto,
+        .proto_id = MX_PROTOCOL_USB_HCI,
+        .proto_ops = &xhci_hci_protocol,
+    };
+
+    mx_status_t status = device_add2(xhci->parent, &args, &xhci->mxdev);
+    if (status != NO_ERROR) {
+        free(xhci);
+        return status;
+    }
+
+    while (1) {
+        mx_status_t wait_res;
+
+        wait_res = mx_interrupt_wait(xhci->irq_handle);
+        if (wait_res != NO_ERROR) {
+            if (wait_res != ERR_CANCELED) {
+                printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            }
+            mx_interrupt_complete(xhci->irq_handle);
+            break;
+        }
+
+        mx_interrupt_complete(xhci->irq_handle);
+        xhci_handle_interrupt(xhci, xhci->legacy_irq_mode);
+    }
+    xprintf("xhci_irq_thread done\n");
+    return 0;
+}
 
 static mx_status_t usb_xhci_bind(mx_driver_t* driver, mx_device_t* dev, void** cookie) {
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
@@ -279,11 +293,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* driver, mx_device_t* dev, void** c
     if (status != NO_ERROR) {
         goto error_return;
     }
-    status = device_create("usb-xhci", xhci, &xhci_device_proto, driver, &xhci->mxdev);
-    if (status != NO_ERROR) {
-        goto error_return;
-    }
-    device_set_protocol(xhci->mxdev, MX_PROTOCOL_USB_HCI, &xhci_hci_protocol);
 
     thrd_t thread;
     thrd_create_with_name(&thread, xhci_irq_thread, xhci, "xhci_irq_thread");
@@ -295,12 +304,15 @@ error_return:
     if (xhci) {
         free(xhci);
     }
-    if (irq_handle != MX_HANDLE_INVALID)
+    if (irq_handle != MX_HANDLE_INVALID) {
         mx_handle_close(irq_handle);
-    if (mmio_handle != MX_HANDLE_INVALID)
+    }
+    if (mmio_handle != MX_HANDLE_INVALID) {
         mx_handle_close(mmio_handle);
-    if (cfg_handle != MX_HANDLE_INVALID)
+    }
+    if (cfg_handle != MX_HANDLE_INVALID) {
         mx_handle_close(cfg_handle);
+    }
     return status;
 }
 
