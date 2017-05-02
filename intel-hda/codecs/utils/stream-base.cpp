@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string.h>
+#include <mxtl/auto_call.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
 #include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
@@ -43,18 +44,35 @@ IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
     snprintf(dev_name_, sizeof(dev_name_), "%s-stream-%03u", is_input_ ? "input" : "output", id_);
 }
 
+IntelHDAStreamBase::~IntelHDAStreamBase() {
+}
+
 void IntelHDAStreamBase::PrintDebugPrefix() const {
     printf("[%s] ", dev_name_);
 }
 
-mx_status_t IntelHDAStreamBase::Activate(const mxtl::RefPtr<DispatcherChannel>& codec_channel) {
+mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
+                                         const mxtl::RefPtr<DispatcherChannel>& codec_channel) {
     MX_DEBUG_ASSERT(codec_channel != nullptr);
 
     mxtl::AutoLock obj_lock(&obj_lock_);
-    if (shutting_down_ || (codec_channel_ != nullptr))
+    if (is_active() || (codec_channel_ != nullptr))
         return ERR_BAD_STATE;
 
-    // Remember our codec channel
+    MX_DEBUG_ASSERT(parent_codec_ == nullptr);
+
+    // Remember our parent codec and our codec channel.  If something goes wrong
+    // during activation, make sure we let go of these references.
+    //
+    // Note; the cleanup lambda needs to have thread analysis turned off because
+    // the compiler is not quite smart enough to figure out that the obj_lock
+    // AutoLock will destruct (and release the lock) after the AutoCall runs,
+    // and that the AutoCall will never leave this scope.
+    auto cleanup = mxtl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+        parent_codec_.reset();
+        codec_channel_.reset();
+    });
+    parent_codec_  = mxtl::move(parent_codec);
     codec_channel_ = codec_channel;
 
     // Allow our implementation to send its initial stream setup commands to the
@@ -70,14 +88,22 @@ mx_status_t IntelHDAStreamBase::Activate(const mxtl::RefPtr<DispatcherChannel>& 
     req.hdr.cmd = IHDA_CODEC_REQUEST_STREAM;
     req.input  = is_input();
 
-    return codec_channel_->Write(&req, sizeof(req));
+    res = codec_channel_->Write(&req, sizeof(req));
+    if (res != NO_ERROR)
+        return res;
+
+    cleanup.cancel();
+    return NO_ERROR;
 }
 
 void IntelHDAStreamBase::Deactivate() {
     {
         mxtl::AutoLock obj_lock(&obj_lock_);
         DEBUG_LOG("Deactivating stream\n");
-        shutting_down_ = true;  // prevent any new connections.
+
+        // Clear out our parent_codec_ pointer.  This will mark us as being
+        // inactive and prevent any new connections from being made.
+        parent_codec_.reset();
 
         // We should already have been removed from our codec's active stream list
         // at this point.
@@ -124,44 +150,45 @@ void IntelHDAStreamBase::Deactivate() {
     DEBUG_LOG("Deactivate complete\n");
 }
 
-mx_status_t IntelHDAStreamBase::PublishDevice(mx_driver_t* codec_driver,
-                                              mx_device_t* codec_device) {
-    mxtl::AutoLock obj_lock(&obj_lock_);
-
-    if ((codec_driver == nullptr) || (codec_device == nullptr)) return ERR_INVALID_ARGS;
-    if (shutting_down_ || (parent_device_ != nullptr)) return ERR_BAD_STATE;
+mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
+    if (!is_active() || (parent_device_ != nullptr)) return ERR_BAD_STATE;
+    MX_DEBUG_ASSERT(parent_codec_ != nullptr);
 
     // Initialize our device and fill out the protocol hooks
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = dev_name_;
     args.ctx = this;
-    args.driver = codec_driver;
+    args.driver = parent_codec_->codec_driver();
     args.ops = &STREAM_DEVICE_THUNKS;
     args.proto_id = (is_input() ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT);
 
     // Publish the device.
-    mx_status_t res = device_add(codec_device, &args, &stream_device_);
+    mx_status_t res = device_add(parent_codec_->codec_device(), &args, &stream_device_);
     if (res != NO_ERROR) {
         LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
         return res;
     }
 
     // Record our parent.
-    parent_device_ = codec_device;
+    parent_device_ = parent_codec_->codec_device();
 
     return NO_ERROR;
 }
 
 mx_status_t IntelHDAStreamBase::ProcessSendCORBCmd(const ihda_proto::SendCORBCmdResp& resp) {
-    return NO_ERROR;
+    mxtl::AutoLock obj_lock(&obj_lock_);
+
+    if (!is_active()) return ERR_BAD_STATE;
+
+    return OnCommandResponseLocked(CodecResponse(resp.data, resp.data_ex));
 }
 
 mx_status_t IntelHDAStreamBase::ProcessRequestStream(const ihda_proto::RequestStreamResp& resp) {
     mxtl::AutoLock obj_lock(&obj_lock_);
     mx_status_t res;
 
-    if (shutting_down_) return ERR_BAD_STATE;
+    if (!is_active()) return ERR_BAD_STATE;
 
     res = SetDMAStreamLocked(resp.stream_id, resp.stream_tag);
     if (res != NO_ERROR) {
@@ -191,7 +218,7 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     mx_status_t res = NO_ERROR;
 
     // Are we shutting down?
-    if (shutting_down_) return ERR_BAD_STATE;
+    if (!is_active()) return ERR_BAD_STATE;
 
     // If we don't have a set format operation in flight, or the stream channel
     // has been closed, this set format operation has been canceled.  Do not
@@ -294,7 +321,7 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
         return ERR_BAD_STATE;
 
     // Do not allow any new connections if we are in the process of shutting down
-    if (shutting_down_)
+    if (!is_active())
         return ERR_BAD_STATE;
 
     // Attempt to allocate a new driver channel and bind it to us.
@@ -412,7 +439,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     // If we have lost our connection to the codec device, or are in the process
     // of shutting down, there is nothing further we can do.  Fail the request
     // and close the connection to the caller.
-    if (shutting_down_ || (codec_channel_ == nullptr))
+    if (!is_active() || (codec_channel_ == nullptr))
         return ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(channel == stream_channel_.get());

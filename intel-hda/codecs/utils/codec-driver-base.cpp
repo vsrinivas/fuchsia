@@ -189,14 +189,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
 
     case IHDA_CODEC_REQUEST_STREAM:
         CHECK_RESP(IHDA_CODEC_REQUEST_STREAM, request_stream);
-
-        res = stream->ProcessRequestStream(resp.request_stream);
-        if (res != NO_ERROR)
-            return res;
-
-        // Now that our stream has it's DMA channel assigned to it, it is time
-        // to publish our stream's device node.
-        return stream->PublishDevice(codec_driver_, codec_device_);
+        return stream->ProcessRequestStream(resp.request_stream);
 
     case IHDA_CODEC_SET_STREAM_FORMAT: {
         CHECK_RESP_ALLOW_HANDLE(IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt);
@@ -309,7 +302,7 @@ mx_status_t IntelHDACodecDriverBase::ActivateStream(
     }
 
     // Go ahead and activate the stream.
-    return stream->Activate(device_channel);
+    return stream->Activate(mxtl::WrapRefPtr(this), device_channel);
 }
 
 mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {

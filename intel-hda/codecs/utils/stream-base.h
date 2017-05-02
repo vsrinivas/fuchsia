@@ -22,22 +22,23 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+class IntelHDACodecDriverBase;
+
 class IntelHDAStreamBase : public DispatcherChannel::Owner,
                            public mxtl::WAVLTreeContainable<mxtl::RefPtr<IntelHDAStreamBase>> {
 public:
-    mx_status_t Activate(const mxtl::RefPtr<DispatcherChannel>& codec_channel)
+    mx_status_t Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
+                         const mxtl::RefPtr<DispatcherChannel>& codec_channel)
         __TA_EXCLUDES(obj_lock_);
 
     void Deactivate() __TA_EXCLUDES(obj_lock_);
-    mx_status_t PublishDevice(mx_driver_t* codec_driver,
-                              mx_device_t* codec_device) __TA_EXCLUDES(obj_lock_);
 
-    mx_status_t ProcessSendCORBCmd  (const ihda_proto::SendCORBCmdResp& resp)
+    mx_status_t ProcessSendCORBCmd(const ihda_proto::SendCORBCmdResp& resp)
         __TA_EXCLUDES(obj_lock_);
     mx_status_t ProcessRequestStream(const ihda_proto::RequestStreamResp& resp)
         __TA_EXCLUDES(obj_lock_);
-    mx_status_t ProcessSetStreamFmt (const ihda_proto::SetStreamFmtResp& resp,
-                                     mx::channel&& ring_buffer_channel) __TA_EXCLUDES(obj_lock_);
+    mx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
+                                    mx::channel&& ring_buffer_channel) __TA_EXCLUDES(obj_lock_);
 
     uint32_t id()       const { return id_; }
     bool     is_input() const { return is_input_; }
@@ -47,18 +48,28 @@ protected:
     friend class mxtl::RefPtr<IntelHDAStreamBase>;
 
     IntelHDAStreamBase(uint32_t id, bool is_input);
-    virtual ~IntelHDAStreamBase() { }
+    virtual ~IntelHDAStreamBase();
+
+    // Properties available to subclasses.
+    uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) { return dma_stream_tag_; }
+    const mxtl::RefPtr<IntelHDACodecDriverBase>& parent_codec() const
+        __TA_REQUIRES(obj_lock_) { return parent_codec_; }
+    bool is_active() const __TA_REQUIRES(obj_lock_) { return parent_codec() != nullptr; }
+
+    // Methods callable from subclasses
+    mx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);
 
     // Overloads to control stream behavior.
     virtual mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
     virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_) { }
-    virtual mx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
+    virtual mx_status_t OnDMAAssignedLocked()
+        __TA_REQUIRES(obj_lock_) { return PublishDeviceLocked(); }
+    virtual mx_status_t OnCommandResponseLocked(const CodecResponse& resp)
+        __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
     virtual mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_) { return ERR_NOT_SUPPORTED; }
     virtual mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock_) { return ERR_INTERNAL; }
-
-    uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) { return dma_stream_tag_; }
 
     // Debug logging
     virtual void PrintDebugPrefix() const;
@@ -97,8 +108,9 @@ private:
 
     mxtl::Mutex obj_lock_;
 
-    bool shutting_down_ __TA_GUARDED(obj_lock_) = false;
-    mxtl::RefPtr<DispatcherChannel> codec_channel_ __TA_GUARDED(obj_lock_);
+    mxtl::RefPtr<IntelHDACodecDriverBase> parent_codec_  __TA_GUARDED(obj_lock_);
+    mxtl::RefPtr<DispatcherChannel>       codec_channel_ __TA_GUARDED(obj_lock_);
+
     uint16_t dma_stream_id_  __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_ID;
     uint8_t  dma_stream_tag_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_TAG;
 
