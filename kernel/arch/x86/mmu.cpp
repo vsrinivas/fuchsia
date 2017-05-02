@@ -542,7 +542,6 @@ static pt_entry_t* _map_alloc_page(void) {
     vm_page_t* p;
 
     pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr, &p));
-    DEBUG_ASSERT(page_ptr);
     if (!page_ptr)
         return nullptr;
 
@@ -727,7 +726,15 @@ static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, pt_entry_t* table,
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
             status_t status = x86_mmu_split<PageTable>(aspace, page_vaddr, e);
             if (status != NO_ERROR) {
-                panic("Need to implement recovery from split failure");
+                // If split fails, just unmap the whole thing, and let a
+                // subsequent page fault clean it up.
+                unmap_entry<PageTable>(aspace, new_cursor->vaddr, e);
+                unmapped = true;
+
+                const size_t size = (new_cursor->size > ps) ? ps : new_cursor->size;
+                new_cursor->vaddr += size;
+                new_cursor->size -= size;
+                DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
             }
         }
 
@@ -1011,7 +1018,18 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, pt_entry_t* table,
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
             ret = x86_mmu_split<PageTable>(aspace, page_vaddr, e);
             if (ret != NO_ERROR) {
-                goto err;
+                // If we failed to split the table, just unmap it.  Subsequent
+                // page faults will bring it back in.
+                MappingCursor cursor;
+                cursor.vaddr = new_cursor->vaddr;
+                cursor.size = ps;
+
+                MappingCursor tmp_cursor;
+                x86_mmu_remove_mapping<PageTable>(aspace, table, cursor, &tmp_cursor);
+
+                const size_t size = (new_cursor->size > ps) ? ps : new_cursor->size;
+                new_cursor->vaddr += size;
+                new_cursor->size -= size;
             }
         }
 
@@ -1021,6 +1039,8 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, pt_entry_t* table,
                                                                      *new_cursor, &cursor);
         *new_cursor = cursor;
         if (ret != NO_ERROR) {
+            // Currently this can't happen
+            ASSERT(false);
             goto err;
         }
         DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
