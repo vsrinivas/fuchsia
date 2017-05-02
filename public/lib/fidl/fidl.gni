@@ -534,7 +534,12 @@ template("fidl") {
   dart_package("${target_name}_dart") {
     package_name = dart_package_name
     source_dir = target_gen_dir
-    analysis_options = "//lib/fidl/dart/analysis_options_fidl"
+    # Disable analysis. FIDL targets in a same build file will share a gen (and
+    # therefore source) directory which confuses the analyzer trying to process
+    # every single file in the directory but not having the right packages set
+    # up.
+    disable_analysis = true
+    #analysis_options = "//lib/fidl/dart/analysis_options_fidl"
 
     deps = [
       "//lib/fidl/dart",
