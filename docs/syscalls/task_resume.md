@@ -37,7 +37,45 @@ suspended already, **task_resume**() will resume it immediately.  A subsequent
 
 ### RESUMING FROM EXCEPTION
 
-TODO: Document this
+Resuming from exceptions uses the same mechanism as resuming from
+suspensions: **task_resume**(). An option is passed specifying that
+the task is being resumed from an exception: **MX_RESUME_EXCEPTION**.
+
+Note that a thread can be both suspended and in an exception, each
+requiring separate calls to **task_resume**() with appropriate options.
+
+There are two ways to resume from an exception, depending on whether
+one wants the thread to resume where it left off, which in the case
+of an architectural exception generally means retrying the offending
+instruction, or give the next handler in the search order a chance
+to handle the exception.
+See [task_bind_exception_port](task_bind_exception_port.md)
+for a description of exception processing.
+
+To resume a thread where it left off:
+
+```
+mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+```
+
+To pass the exception on to the next handler in the search order,
+pass **MX_RESUME_TRY_NEXT** in addition to
+**MX_RESUME_EXCEPTION**:
+
+```
+mx_status_t status = mx_task_resume(thread,
+                                    MX_RESUME_EXCEPTION |
+                                    MX_RESUME_TRY_NEXT);
+```
+
+Note that even though exceptions are sent to handlers in a specific
+order, there is no way for the caller of **mx_task_resume**()
+to verify it is that handler. Anyone with appropriate rights
+can resume a thread from an exception. It is up to exception
+handlers to not trip over each other, as well as all other
+software calling **mx_task_resume**() with **MX_RESUME_EXCEPTION**.
+
+[//]: MG-562 documents this issue
 
 ## RETURN VALUE
 
@@ -51,7 +89,8 @@ In the event of failure, a negative error value is returned.
 **ERR_WRONG_TYPE** *handle* is not a thread handle.
 
 **ERR_BAD_STATE**  The task is not in a state where resuming is possible (e.g.
-it is dead)
+it is dead or **MX_RESUME_EXCEPTION** was passed but the thread is not in an
+exception).
 
 **ERR_INVALID_ARGS** *options* is not a valid combination.
 
