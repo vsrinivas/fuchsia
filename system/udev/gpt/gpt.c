@@ -150,7 +150,6 @@ static void gpt_unbind(mx_device_t* dev) {
 
 static mx_status_t gpt_release(mx_device_t* dev) {
     gptpart_device_t* device = dev->ctx;
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -353,17 +352,8 @@ static int gpt_bind_thread(void* arg) {
             goto unbind;
         }
 
-        char name[128];
-        snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
-        status = device_create(name, device, &gpt_proto, drv, &device->mxdev);
-        if (status != NO_ERROR) {
-            free(device);
-            continue;
-        }
-
         iotxn_copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
         if (device->gpt_entry.type[0] == 0) {
-            device_destroy(device->mxdev);
             free(device);
             continue;
         }
@@ -379,10 +369,21 @@ static int gpt_bind_thread(void* arg) {
         xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
                 device->mxdev->name, type_guid, partition_guid, pname);
 
-        device_set_protocol(device->mxdev, MX_PROTOCOL_BLOCK_CORE, &gpt_block_ops);
-        if (device_add(device->mxdev, dev) != NO_ERROR) {
+        char name[128];
+        snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
+
+        device_add_args_t args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = name,
+            .ctx = device,
+            .driver = drv,
+            .ops = &gpt_proto,
+            .proto_id = MX_PROTOCOL_BLOCK_CORE,
+            .proto_ops = &gpt_block_ops,
+        };
+
+        if (device_add2(dev, &args, &device->mxdev) != NO_ERROR) {
             printf("gpt device_add failed\n");
-            device_destroy(device->mxdev);
             free(device);
             continue;
         }
