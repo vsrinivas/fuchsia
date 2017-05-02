@@ -15,6 +15,7 @@
 #include <pty-core/pty-fifo.h>
 #include <magenta/device/pty.h>
 
+extern mx_driver_t _driver_ptmx;
 // pty server device
 
 typedef struct pty_server_dev {
@@ -121,21 +122,22 @@ static mx_status_t ptmx_open(mx_device_t* dev, mx_device_t** out, uint32_t flags
 
     pty_server_init(&psd->srv);
     psd->srv.recv = psd_recv;
-
-    mx_status_t status;
-    if ((status = device_create("pty", psd, &psd_ops, NULL, &psd->srv.mxdev)) < 0) {
-        free(psd);
-        return status;
-    }
-    device_set_protocol(psd->srv.mxdev, MX_PROTOCOL_PTY, NULL);
-
     mtx_init(&psd->lock, mtx_plain);
     psd->fifo.head = 0;
     psd->fifo.tail = 0;
 
-    status = device_add_instance(psd->srv.mxdev, dev);
-    if (status < 0) {
-        device_destroy(psd->srv.mxdev);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "pty",
+        .ctx = psd,
+        .driver = &_driver_ptmx,
+        .ops = &psd_ops,
+        .proto_id = MX_PROTOCOL_PTY,
+        .flags = DEVICE_ADD_INSTANCE,
+    };
+
+    mx_status_t status;
+    if ((status = device_add2(dev, &args, &psd->srv.mxdev)) < 0) {
         free(psd);
         return status;
     }
@@ -151,15 +153,15 @@ static mx_protocol_device_t ptmx_ops = {
 };
 
 static mx_status_t ptmx_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ptmx",
+        .driver = drv,
+        .ops = &ptmx_ops,
+    };
+
     mx_device_t* dev;
-    mx_status_t status;
-    if ((status = device_create("ptmx", NULL, &ptmx_ops, drv, &dev)) < 0) {
-        return status;
-    }
-    if ((status = device_add(dev, parent)) < 0) {
-        return status;
-    }
-    return NO_ERROR;
+    return device_add2(parent, &args, &dev);
 }
 
 static mx_driver_ops_t ptmx_driver_ops = {

@@ -238,12 +238,10 @@ static mx_status_t pty_client_release(mx_device_t* dev) {
         if (ps->release) {
             ps->release(ps);
         } else {
-            device_destroy(ps->mxdev);
             free(ps);
         }
     }
 
-    device_destroy(pc->mxdev);
     free(pc);
     xprintf("pty cli %p (id=%u) release\n", pc, pc->id);
 
@@ -287,10 +285,6 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
     pc->fifo.head = 0;
     pc->fifo.tail = 0;
     mx_status_t status;
-    if ((status = device_create("pty", pc, &pc_ops, NULL, &pc->mxdev)) < 0) {
-        free(pc);
-        return status;
-    }
 
     mtx_lock(&ps->lock);
     // require that client ID is unique
@@ -298,16 +292,30 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
     list_for_every_entry(&ps->clients, c, pty_client_t, node) {
         if (c->id == id) {
             mtx_unlock(&ps->lock);
-            device_destroy(pc->mxdev);
             free(pc);
             return ERR_INVALID_ARGS;
         }
     }
-
-    // success: add new client to clients list, etc
     list_add_tail(&ps->clients, &pc->node);
+    mtx_unlock(&ps->lock);
+
     pc->srv = ps;
     ps->refcount++;
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "pty",
+        .ctx = pc,
+        .ops = &pc_ops,
+        .flags = DEVICE_ADD_INSTANCE,
+    };
+
+    status = device_add2(ps->mxdev, &args, &pc->mxdev);
+    if (status < 0) {
+        pty_client_release(pc->mxdev);
+        return status;
+    }
+
     if (ps->active == NULL) {
         pty_make_active_locked(ps, pc);
     }
@@ -315,15 +323,8 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
         ps->control = pc;
         pc->flags |= PTY_CLI_CONTROL;
     }
-    mtx_unlock(&ps->lock);
-
+ 
     xprintf("pty cli %p (id=%u) created (srv %p)\n", pc, pc->id, ps);
-
-    status = device_add_instance(pc->mxdev, ps->mxdev);
-    if (status < 0) {
-        pty_client_release(pc->mxdev);
-        return status;
-    }
 
     mtx_lock(&ps->lock);
     pty_adjust_signals_locked(pc);
@@ -424,7 +425,6 @@ mx_status_t pty_server_release(mx_device_t* dev) {
         if (ps->release) {
             ps->release(ps);
         } else {
-            device_destroy(ps->mxdev);
             free(ps);
         }
     }
