@@ -174,8 +174,9 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
         // key code sequences in that case.
         mx_hid_fifo_write(&dev->fifo, output, length);
 
-        device_state_set(dev->mxdev, DEV_STATE_READABLE);
-
+        if (dev->mxdev) {
+            device_state_set(dev->mxdev, DEV_STATE_READABLE);
+        }
         vc_device_scroll_viewport_bottom(dev);
     }
 }
@@ -415,7 +416,7 @@ static mx_protocol_device_t vc_device_proto;
 extern mx_driver_t _driver_vc_root;
 
 // opening the root device returns a new vc device instance
-static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+static mx_status_t vc_do_root_open(mx_device_t* dev, vc_device_t** vc_out, uint32_t flags) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     mx_status_t status;
@@ -424,20 +425,23 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
         return status;
     }
 
-    // init the new device
-    char name[8];
-    snprintf(name, sizeof(name), "vc%u", g_vc_count);
-    status = device_create(name, device, &vc_device_proto, &_driver_vc_root, &device->mxdev);
-    if (status != NO_ERROR) {
-        vc_device_free(device);
-        return status;
-    }
-
+    // if called normally, add the instance
+    // if dev is null, we're creating the log console
     if (dev) {
-        // if called normally, add the instance
-        // if dev is null, we're creating the log console
-        device_set_protocol(device->mxdev, MX_PROTOCOL_CONSOLE, NULL);
-        status = device_add_instance(device->mxdev, dev);
+        // init the new device
+        char name[8];
+        snprintf(name, sizeof(name), "vc%u", g_vc_count);
+
+        device_add_args_t args = {};
+        args.version = DEVICE_ADD_ARGS_VERSION;
+        args.name = name;
+        args.ctx = device;
+        args.driver = &_driver_vc_root;
+        args.ops = &vc_device_proto;
+        args.proto_id = MX_PROTOCOL_CONSOLE;
+        args.flags = DEVICE_ADD_INSTANCE;
+
+        status = device_add2(dev, &args, &device->mxdev);
         if (status != NO_ERROR) {
             vc_device_free(device);
             return status;
@@ -455,12 +459,22 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
         vc_device_render(g_active_vc);
     }
 
-    *dev_out = device->mxdev;
+    *vc_out = device;
+    return NO_ERROR;
+}
+
+static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    vc_device_t* vc;
+    mx_status_t status = vc_do_root_open(dev, &vc, flags);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    *dev_out = vc->mxdev;
     return NO_ERROR;
 }
 
 static int vc_log_reader_thread(void* arg) {
-    auto* dev = reinterpret_cast<mx_device_t*>(arg);
+    auto dev = reinterpret_cast<vc_device_t*>(arg);
     mx_handle_t h;
 
     if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
@@ -484,15 +498,15 @@ static int vc_log_reader_thread(void* arg) {
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                  rec->pid, rec->tid);
-        vc_device_op_write(dev, tmp, strlen(tmp), 0);
-        vc_device_op_write(dev, rec->data, rec->datalen, 0);
+        vc_device_write(dev, tmp, strlen(tmp), 0);
+        vc_device_write(dev, rec->data, rec->datalen, 0);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-            vc_device_op_write(dev, "\n", 1, 0);
+            vc_device_write(dev, "\n", 1, 0);
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
-    vc_device_op_write(dev, oops, strlen(oops), 0);
+    vc_device_write(dev, oops, strlen(oops), 0);
 
     return 0;
 }
@@ -614,9 +628,17 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     }
 
     // publish the root vc device. opening this device will create a new vc
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = VC_DEVNAME;
+    args.driver = &_driver_vc_root;
+    args.ops = &vc_root_proto;
+    args.proto_id = MX_PROTOCOL_CONSOLE;
+
     mx_device_t* device;
-    status = device_create(VC_DEVNAME, NULL, &vc_root_proto, drv, &device);
+    status = device_add2(dev, &args, &device);
     if (status != NO_ERROR) {
+        free(device);
         return status;
     }
 
@@ -628,19 +650,14 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
 
-    device_set_protocol(device, MX_PROTOCOL_CONSOLE, NULL);
-    status = device_add(device, dev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-
     g_vc_initialized = true;
     xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n",
             dev->name, info.width, info.height, info.stride, info.format);
 
-    if (vc_root_open(NULL, &dev, 0) == NO_ERROR) {
+    vc_device_t* vc;
+    if (vc_do_root_open(NULL, &vc, 0) == NO_ERROR) {
         thrd_t t;
-        thrd_create_with_name(&t, vc_log_reader_thread, dev, "vc-log-reader");
+        thrd_create_with_name(&t, vc_log_reader_thread, vc, "vc-log-reader");
     }
 
     thrd_t u;
@@ -648,10 +665,6 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
                           "vc-battery-dir-poll");
 
     return NO_ERROR;
-fail:
-    free(device);
-    // TODO clean up threads
-    return status;
 }
 
 static mx_driver_ops_t vc_root_driver_ops;

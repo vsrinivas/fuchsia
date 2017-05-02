@@ -536,14 +536,15 @@ fail:
 }
 
 void vc_device_free(vc_device_t* device) {
-    if (device->mxdev)
-        device_destroy(device->mxdev);
-    if (device->st_gfx)
+    if (device->st_gfx) {
         gfx_surface_destroy(device->st_gfx);
-    if (device->gfx_vmo)
+    }
+    if (device->gfx_vmo) {
         mx_handle_close(device->gfx_vmo);
-    if (device->gfx)
+    }
+    if (device->gfx) {
         free(device->gfx);
+    }
     free(device->text_buf);
     free(device->scrollback_buf);
     free(device);
