@@ -45,7 +45,7 @@ mx_status_t Device::Bind() {
         return static_cast<Device*>(dev->ctx)->SetChannel(options, chan);
     };
 
-    device_set_protocol_id(device_, MX_PROTOCOL_WLANMAC, &wlanmac_ops_);
+    device_set_protocol(device_, MX_PROTOCOL_WLANMAC, &wlanmac_ops_);
 
     // squash unused member error
     // TODO: use test_ops_ for setting up output and control handles

@@ -9,7 +9,7 @@ group("testing") {
   ]
 }
 
-shared_library("wlan-test-driver") {
+static_library("libwlan-test-driver") {
   sources = [
     "binding.c",
     "driver.cpp",
@@ -28,8 +28,8 @@ shared_library("wlan-test-driver") {
   ]
 
   deps = [
-    "//magenta/system/ulib/mx(//build/toolchain/fuchsia:${target_cpu}-shared)",
-    "//magenta/system/ulib/mxtl(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
   ]
 
   libs = [
@@ -37,11 +37,17 @@ shared_library("wlan-test-driver") {
   ]
 }
 
+shared_library("wlan-test-driver") {
+  deps = [
+    ":libwlan-test-driver(//build/toolchain/fuchsia:${target_cpu}-shared)",
+  ]
+}
+
 executable("wlan-test-util") {
   sources = [ "wlan-testutil.cpp" ]
 
   deps = [
-    "//magenta/system/ulib/mx(//build/toolchain/fuchsia:${target_cpu}-shared)",
-    "//magenta/system/ulib/mxtl(//build/toolchain/fuchsia:${target_cpu}-shared)",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
   ]
 }
