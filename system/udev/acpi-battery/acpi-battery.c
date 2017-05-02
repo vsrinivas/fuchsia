@@ -123,15 +123,18 @@ static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         printf("acpi-battery: polling thread did not start (%d)\n", rc);
     }
 
-    mx_status_t status;
-    if ((status = device_create("acpi-battery", device, &acpi_battery_device_proto, drv, &device->mxdev)) < 0) {
-        free(device);
-        return status;
-    }
-    device_set_protocol(device->mxdev, MX_PROTOCOL_BATTERY, NULL);
-    if ((status = device_add(device->mxdev, dev)) < 0) {
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "acpi-battery",
+        .ctx = device,
+        .driver = drv,
+        .ops = &acpi_battery_device_proto,
+        .proto_id = MX_PROTOCOL_BATTERY,
+    };
+
+    mx_status_t status = device_add2(dev, &args, &device->mxdev);
+    if (status != NO_ERROR) {
         printf("acpi-battery: could not add device! err=%d\n", status);
-        device_destroy(device->mxdev);
         free(device);
         return status;
     }
