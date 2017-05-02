@@ -74,12 +74,20 @@ mx_status_t Device::Bind() {
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
     if (status != NO_ERROR) {
         errorf("could not create port: %d\n", status);
-        device_destroy(device_);
         return status;
     }
     work_thread_ = std::thread(&Device::MainLoop, this);
 
-    status = device_add(device_, wlanmac_device_);
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "wlan";
+    args.ctx = this;
+    args.driver = driver_;
+    args.ops = &device_ops_;
+    args.proto_id = MX_PROTOCOL_ETHERMAC;
+    args.proto_ops = &ethmac_ops_;
+
+    status = device_add2(wlanmac_device_, &args, &device_);
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
@@ -89,7 +97,6 @@ mx_status_t Device::Bind() {
         if (work_thread_.joinable()) {
             work_thread_.join();
         }
-        device_destroy(device_);
     } else {
         debugf("device added\n");
     }
@@ -113,7 +120,6 @@ mx_status_t Device::Release() {
             work_thread_.join();
         }
     }
-    device_destroy(device_);
     delete this;
     return NO_ERROR;
 }
