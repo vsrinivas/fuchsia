@@ -143,16 +143,17 @@ mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     }
     tpm_base = (void*)(tmp);
 
-    mx_device_t* dev;
-    status = device_create("tpm", NULL, &tpm_device_proto, driver, &dev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-    device_set_protocol(dev, MX_PROTOCOL_TPM, NULL);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "tpm",
+        .driver = driver,
+        .ops = &tpm_device_proto,
+        .proto_id = MX_PROTOCOL_TPM,
+    };
 
-    status = device_add(dev, parent);
+    mx_device_t* dev;
+    status =  device_add2(parent, &args, &dev);
     if (status != NO_ERROR) {
-        free(dev);
         return status;
     }
 
@@ -207,7 +208,6 @@ cleanup_device:
         mx_handle_close(irq_handle);
     }
     device_remove(dev);
-    free(dev);
     return status;
 #else
     return ERR_NOT_SUPPORTED;
