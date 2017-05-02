@@ -9,6 +9,7 @@ executable("integration") {
 
   deps = [
     ":context_engine_test",
+    ":resolver_test",
     ":suggestion_engine_test",
   ]
 }
@@ -21,10 +22,23 @@ source_set("context_engine_test") {
   ]
 
   deps = [
-    ":common",
+    ":context_common",
     "//application/lib/app",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
+  ]
+}
+
+source_set("resolver_test") {
+  testonly = true
+
+  sources = [
+    "resolver_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/services/resolver",
   ]
 }
 
@@ -36,7 +50,7 @@ source_set("suggestion_engine_test") {
   ]
 
   deps = [
-    ":common",
+    ":context_common",
     ":test_suggestion_listener",
     "//application/lib/app",
     "//apps/maxwell/services/context",
@@ -51,19 +65,34 @@ source_set("suggestion_engine_test") {
 
 # TODO(rosswang): move utils to a subdirectory
 
-source_set("common") {
+source_set("context_common") {
   testonly = true
 
   sources = [
     "context_engine_test_base.h",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}
+
+source_set("common") {
+  testonly = true
+
+  sources = [
     "test.cc",
     "test.h",
   ]
 
   deps = [
     "//application/lib/app",
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src:application_environment_host_impl",
     "//apps/maxwell/src/user:agent_launcher",
     "//lib/mtl",

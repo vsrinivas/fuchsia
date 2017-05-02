@@ -7,8 +7,8 @@
 #include "application/lib/app/connect.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
-#include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
+#include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
 
@@ -33,14 +33,14 @@ modular::AgentControllerPtr startStoryInfoAgent(
         visible_stories_provider) {
   app::ServiceProviderPtr agent_services;
   modular::AgentControllerPtr controller;
-  component_context->ConnectToAgent("file:///system/apps/acquirers/story_info_main",
+  component_context->ConnectToAgent(
+      "file:///system/apps/acquirers/story_info_main",
       agent_services.NewRequest(), controller.NewRequest());
 
-  auto initializer = app::ConnectToService<StoryInfoInitializer>(
-      agent_services.get());
-  initializer->Initialize(
-      std::move(story_provider), std::move(focus_provider),
-      std::move(visible_stories_provider));
+  auto initializer =
+      app::ConnectToService<StoryInfoInitializer>(agent_services.get());
+  initializer->Initialize(std::move(story_provider), std::move(focus_provider),
+                          std::move(visible_stories_provider));
 
   return controller;
 }
@@ -87,8 +87,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         action_log_services_.get());
   }
 
-  resolver_services_ =
-      startServiceProviderApp("file:///system/apps/resolver_main");
+  resolver_services_ = startServiceProviderApp("file:///system/apps/resolver");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
   startAgent("file:///system/apps/agents/mi_dashboard.dartx");
