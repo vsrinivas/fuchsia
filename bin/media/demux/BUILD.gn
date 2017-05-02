@@ -2,12 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 source_set("demux") {
   sources = [
     "demux.h",
+    "reader.h",
     "reader_cache.cc",
     "reader_cache.h",
-    "reader.h",
     "sparse_byte_buffer.cc",
     "sparse_byte_buffer.h",
   ]
@@ -19,10 +21,8 @@ source_set("demux") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "media_demux_tests"
-
-  testonly = true
 
   sources = [
     "test/sparse_byte_buffer_test.cc",
@@ -30,7 +30,5 @@ executable("tests") {
 
   deps = [
     ":demux",
-    "//apps/test_runner/src:gtest_main",
-    "//third_party/gtest",
   ]
 }

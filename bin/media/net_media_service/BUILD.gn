@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 executable("net_media_service") {
   sources = [
     "main.cc",
@@ -45,7 +47,7 @@ source_set("serialization") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "net_media_service_tests"
 
   testonly = true
@@ -56,7 +58,5 @@ executable("tests") {
 
   deps = [
     ":serialization",
-    "//apps/test_runner/src:gtest_main",
-    "//third_party/gtest",
   ]
 }

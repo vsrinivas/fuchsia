@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 source_set("timeline") {
   sources = [
     "timeline.h",
@@ -17,10 +19,8 @@ source_set("timeline") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "media_lib_timeline_tests"
-
-  testonly = true
 
   sources = [
     "test/timeline_function_test.cc",
@@ -29,8 +29,6 @@ executable("tests") {
 
   deps = [
     ":timeline",
-    "//apps/test_runner/src:gtest_main",
     "//lib/mtl",
-    "//third_party/gtest",
   ]
 }

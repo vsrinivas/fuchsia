@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 source_set("transport") {
   sources = [
     "fifo_allocator.cc",
@@ -29,10 +31,8 @@ source_set("transport") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "media_lib_transport_tests"
-
-  testonly = true
 
   sources = [
     "test/shared_buffer_set_allocator_test.cc",
@@ -41,8 +41,6 @@ executable("tests") {
 
   deps = [
     ":transport",
-    "//apps/test_runner/src:gtest_main",
     "//lib/mtl",
-    "//third_party/gtest",
   ]
 }

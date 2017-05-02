@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 source_set("util") {
   sources = [
     "callback_joiner.cc",
@@ -26,10 +28,8 @@ source_set("util") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "media_util_tests"
-
-  testonly = true
 
   sources = [
     "test/incident_test.cc",
@@ -38,7 +38,5 @@ executable("tests") {
 
   deps = [
     ":util",
-    "//apps/test_runner/src:gtest_main",
-    "//third_party/gtest",
   ]
 }

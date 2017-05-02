@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/test_runner/test.gni")
+
 source_set("audio") {
   sources = [
-    "gain.h",
     "gain.cc",
+    "gain.h",
     "level.cc",
     "level.h",
     "lpcm_reformatter.cc",
@@ -13,10 +15,10 @@ source_set("audio") {
     "lpcm_util.cc",
     "lpcm_util.h",
     "mixdown_table.h",
+    "mixer.h",
     "mixer_input.h",
     "mixer_input_impl.cc",
     "mixer_input_impl.h",
-    "mixer.h",
     "usb_audio_enum.cc",
     "usb_audio_enum.h",
     "usb_audio_source.cc",
@@ -31,10 +33,8 @@ source_set("audio") {
   ]
 }
 
-executable("tests") {
+test("tests") {
   output_name = "media_audio_tests"
-
-  testonly = true
 
   sources = [
     "test/level_test.cc",
@@ -46,7 +46,5 @@ executable("tests") {
     ":audio",
     "//apps/media/lib/timeline",
     "//apps/media/src/framework_create",
-    "//apps/test_runner/src:gtest_main",
-    "//third_party/gtest",
   ]
 }
