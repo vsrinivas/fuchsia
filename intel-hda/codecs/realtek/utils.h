@@ -17,12 +17,10 @@ struct CommandListEntry {
 
 struct StreamProperties {
     uint32_t stream_id;
-    uint16_t conv_nid;
-    uint16_t pc_nid;
+    uint16_t afg_nid;   // NID of the audio function group this stream belongs to.
+    uint16_t conv_nid;  // NID of the converter used by this stream.
+    uint16_t pc_nid;    // NID of the pin converter used by this stream.
     bool     is_input;
-    bool     headphone_out;
-    uint8_t  conv_unity_gain_lvl;
-    uint8_t  pc_unity_gain_lvl;
 };
 
 }  // namespace codecs

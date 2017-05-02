@@ -166,6 +166,10 @@ enum class CodecParam : uint8_t {
     VOLUME_KNOB_CAPS         = 0x13,  // Section 7.3.4.15
 };
 
+static inline constexpr CodecParam AMP_CAPS(bool is_input) {
+    return is_input ?  CodecParam::INPUT_AMP_CAPS : CodecParam::OUTPUT_AMP_CAPS;
+}
+
 // Sections 7.3.3.1, 7.3.4, 7.3.6, Table 140
 static inline constexpr CodecVerb GET_PARAM(CodecParam param) {
     return SP_VERB<0xF00>(static_cast<uint8_t>(param));

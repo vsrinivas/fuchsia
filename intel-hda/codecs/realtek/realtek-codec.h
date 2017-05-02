@@ -21,8 +21,7 @@ public:
 
     mx_status_t Init(mx_driver_t* driver, mx_device_t* codec_dev);
     mx_status_t Start() override;
-    mx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) override;
-    mx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) override;
+    mx_status_t ProcessSolicitedResponse(const CodecResponse& resp) override;
 
 protected:
     void PrintDebugPrefix() const override;
@@ -31,7 +30,7 @@ protected:
     mx_status_t SetupAcer12();
     mx_status_t SetupIntelNUC();
     mx_status_t RunCommandList(const CommandListEntry* cmds, size_t cmd_count);
-    mx_status_t CreateAndPublishStreams(const StreamProperties* streams, size_t stream_cnt);
+    mx_status_t CreateAndStartStreams(const StreamProperties* streams, size_t stream_cnt);
 
 private:
     friend class mxtl::RefPtr<RealtekCodec>;
