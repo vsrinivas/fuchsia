@@ -26,6 +26,9 @@ class IntelHDACodecDriverBase : public DispatcherChannel::Owner {
 public:
     virtual void Shutdown();
 
+    mx_driver_t* codec_driver() const { return codec_driver_; }
+    mx_device_t* codec_device() const { return codec_device_; }
+
 protected:
     static constexpr uint32_t CODEC_TID = 0xFFFFFFFF;
 
