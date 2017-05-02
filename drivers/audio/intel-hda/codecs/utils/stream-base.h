@@ -55,10 +55,17 @@ protected:
     virtual ~IntelHDAStreamBase();
 
     // Properties available to subclasses.
-    uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) { return dma_stream_tag_; }
-    const mxtl::RefPtr<IntelHDACodecDriverBase>& parent_codec() const
-        __TA_REQUIRES(obj_lock_) { return parent_codec_; }
-    bool is_active() const __TA_REQUIRES(obj_lock_) { return parent_codec() != nullptr; }
+    uint8_t dma_stream_tag() const __TA_REQUIRES(obj_lock_) {
+        return dma_stream_tag_;
+    }
+
+    const mxtl::RefPtr<IntelHDACodecDriverBase>& parent_codec() const __TA_REQUIRES(obj_lock_) {
+        return parent_codec_;
+    }
+
+    bool is_active() const __TA_REQUIRES(obj_lock_) {
+        return parent_codec() != nullptr;
+    }
 
     // Methods callable from subclasses
     mx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);

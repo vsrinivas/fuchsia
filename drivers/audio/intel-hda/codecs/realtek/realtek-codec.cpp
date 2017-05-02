@@ -79,11 +79,6 @@ mx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     return res;
 }
 
-mx_status_t RealtekCodec::ProcessUnsolicitedResponse(const CodecResponse& resp) {
-    DEBUG_LOG("Unsolicited : %08x %08x\n", resp.data, resp.data_ex);
-    return NO_ERROR;
-}
-
 mx_status_t RealtekCodec::SetupCommon() {
     // Common startup commands
     static const CommandListEntry START_CMDS[] = {
@@ -194,9 +189,6 @@ mx_status_t RealtekCodec::SetupAcer12() {
 
         // Power up the top level Audio Function group.
         {  1u, SET_POWER_STATE(HDA_PS_D0) },
-
-        // Enable unsolicited codec responses from the headphone pin complex.
-        { 33u, SET_UNSOLICITED_RESP_CTRL(true, 0x00) },
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));
@@ -208,27 +200,23 @@ mx_status_t RealtekCodec::SetupAcer12() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id           = 1,
-          .conv_nid            = 3,
-          .pc_nid              = 33,
-          .is_input            = false,
-          .headphone_out       = true,
-          .conv_unity_gain_lvl = 87,
-          .pc_unity_gain_lvl   = 0,
+        { .stream_id = 1,
+          .afg_nid   = 1,
+          .conv_nid  = 3,
+          .pc_nid    = 33,
+          .is_input  = false,
         },
 
         // Speakers
-        { .stream_id           = 2,
-          .conv_nid            = 2,
-          .pc_nid              = 20,
-          .is_input            = false,
-          .headphone_out       = false,
-          .conv_unity_gain_lvl = 87,
-          .pc_unity_gain_lvl   = 0,
+        { .stream_id = 2,
+          .afg_nid   = 1,
+          .conv_nid  = 2,
+          .pc_nid    = 20,
+          .is_input  = false,
         },
     };
 
-    res = CreateAndPublishStreams(STREAMS, countof(STREAMS));
+    res = CreateAndStartStreams(STREAMS, countof(STREAMS));
     if (res != NO_ERROR) {
         LOG("Failed to create and publish streams for Acer12 (res %d)\n", res);
         return res;
@@ -260,9 +248,6 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
 
         // Power up the top level Audio Function group.
         {  1u, SET_POWER_STATE(HDA_PS_D0) },
-
-        // Enable unsolicited codec responses from the headphone pin complex.
-        { 33u, SET_UNSOLICITED_RESP_CTRL(true, 0x00) },
     };
 
     res = RunCommandList(START_CMDS, countof(START_CMDS));
@@ -274,17 +259,15 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id           = 1,
-          .conv_nid            = 2,
-          .pc_nid              = 33,
-          .is_input            = false,
-          .headphone_out       = true,
-          .conv_unity_gain_lvl = 87,
-          .pc_unity_gain_lvl   = 0,
+        { .stream_id = 1,
+          .afg_nid   = 1,
+          .conv_nid  = 2,
+          .pc_nid    = 33,
+          .is_input  = false,
         },
     };
 
-    res = CreateAndPublishStreams(STREAMS, countof(STREAMS));
+    res = CreateAndStartStreams(STREAMS, countof(STREAMS));
     if (res != NO_ERROR) {
         LOG("Failed to create and publish streams for Intel NUC (res %d)\n", res);
         return res;
@@ -301,7 +284,7 @@ mx_status_t RealtekCodec::RunCommandList(const CommandListEntry* cmds, size_t cm
 
     for (size_t i = 0; i < cmd_count; ++i) {
         const auto& cmd = cmds[i];
-        DEBUG_LOG("SEND nid %hu verb 0x%05x\n", cmd.nid, cmd.verb.val);
+        VERBOSE_LOG("SEND: nid %2hu verb 0x%05x\n", cmd.nid, cmd.verb.val);
         res = SendCodecCommand(cmd.nid, cmd.verb, true);
         if (res != NO_ERROR) {
             LOG("Failed to send codec command %zu/%zu (nid %hu verb 0x%05x) (res %d)\n",
@@ -313,8 +296,8 @@ mx_status_t RealtekCodec::RunCommandList(const CommandListEntry* cmds, size_t cm
     return NO_ERROR;
 }
 
-mx_status_t RealtekCodec::CreateAndPublishStreams(const StreamProperties* streams,
-                                                  size_t stream_cnt) {
+mx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
+                                                size_t stream_cnt) {
     mx_status_t res;
 
     if (streams == nullptr)
