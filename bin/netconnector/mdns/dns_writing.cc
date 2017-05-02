@@ -121,6 +121,12 @@ PacketWriter& operator<<(PacketWriter& writer,
 }
 
 PacketWriter& operator<<(PacketWriter& writer,
+                         const DnsResourceDataOpt& value) {
+  uint16_t length = value.options_.size();
+  return writer << length << value.options_;
+}
+
+PacketWriter& operator<<(PacketWriter& writer,
                          const DnsResourceDataNSec& value) {
   return writer << value.next_domain_ << value.bits_;
 }
@@ -159,6 +165,9 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
       break;
     case DnsType::kSrv:
       writer << value.srv_;
+      break;
+    case DnsType::kOpt:
+      writer << value.opt_;
       break;
     case DnsType::kNSec:
       writer << value.nsec_;

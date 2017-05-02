@@ -66,10 +66,7 @@ PacketReader& operator>>(PacketReader& reader, DnsName& value) {
 
   ReadNameLabels(reader, chars);
 
-  if (chars.size() == 0) {
-    FTL_DLOG(ERROR) << "zero domain name labels";
-    reader.MarkUnhealthy();
-  } else if (reader.healthy()) {
+  if (reader.healthy()) {
     value.dotted_string_ = std::string(chars.data(), chars.size());
   }
 
@@ -181,6 +178,19 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataSrv& value) {
   return reader;
 }
 
+PacketReader& operator>>(PacketReader& reader, DnsResourceDataOpt& value) {
+  uint16_t length;
+  reader >> length;
+  if (!reader.healthy()) {
+    return reader;
+  }
+
+  value.options_.resize(length);
+  reader.GetBytes(length, value.options_.data());
+
+  return reader;
+}
+
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataNSec& value) {
   // |reader.bytes_remaining()| must be set to the length of the NSEC data
   // before calling this operator overload.
@@ -248,6 +258,10 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
     case DnsType::kSrv:
       new (&value.srv_) DnsResourceDataSrv();
       reader >> value.srv_;
+      break;
+    case DnsType::kOpt:
+      new (&value.opt_) DnsResourceDataOpt();
+      reader >> value.opt_;
       break;
     case DnsType::kNSec: {
       new (&value.txt_) DnsResourceDataNSec();

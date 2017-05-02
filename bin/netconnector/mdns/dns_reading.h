@@ -38,6 +38,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataPtr& value);
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value);
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataAaaa& value);
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataSrv& value);
+PacketReader& operator>>(PacketReader& reader, DnsResourceDataOpt& value);
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataNSec& value);
 PacketReader& operator>>(PacketReader& reader, DnsResource& value);
 PacketReader& operator>>(PacketReader& reader, DnsMessage& value);

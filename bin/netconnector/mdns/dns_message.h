@@ -242,6 +242,11 @@ struct DnsResourceDataSrv {
   DnsName target_;
 };
 
+// Additional data for type 'OPT' resource records.
+struct DnsResourceDataOpt {
+  std::vector<uint8_t> options_;
+};
+
 // Additional data for type 'NSEC' resource records.
 struct DnsResourceDataNSec {
   DnsName next_domain_;
@@ -273,6 +278,7 @@ struct DnsResource {
     DnsResourceDataTxt txt_;
     DnsResourceDataAaaa aaaa_;
     DnsResourceDataSrv srv_;
+    DnsResourceDataOpt opt_;
     DnsResourceDataNSec nsec_;
   };
 };

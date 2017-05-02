@@ -102,6 +102,11 @@ DnsResource::DnsResource(const std::string& name, DnsType type)
       time_to_live_ = kShortTimeToLive;
       cache_flush_ = true;
       break;
+    case DnsType::kOpt:
+      new (&opt_) DnsResourceDataOpt();
+      time_to_live_ = kShortTimeToLive;
+      cache_flush_ = true;
+      break;
     case DnsType::kNSec:
       new (&nsec_) DnsResourceDataNSec();
       time_to_live_ = kLongTimeToLive;
@@ -141,6 +146,9 @@ DnsResource::DnsResource(const DnsResource& other) {
     case DnsType::kSrv:
       srv_ = other.srv_;
       break;
+    case DnsType::kOpt:
+      opt_ = other.opt_;
+      break;
     case DnsType::kNSec:
       nsec_ = other.nsec_;
       break;
@@ -178,6 +186,9 @@ DnsResource& DnsResource::operator=(const DnsResource& other) {
     case DnsType::kSrv:
       srv_ = other.srv_;
       break;
+    case DnsType::kOpt:
+      opt_ = other.opt_;
+      break;
     case DnsType::kNSec:
       nsec_ = other.nsec_;
       break;
@@ -210,6 +221,9 @@ DnsResource::~DnsResource() {
       break;
     case DnsType::kSrv:
       srv_.~DnsResourceDataSrv();
+      break;
+    case DnsType::kOpt:
+      opt_.~DnsResourceDataOpt();
       break;
     case DnsType::kNSec:
       nsec_.~DnsResourceDataNSec();

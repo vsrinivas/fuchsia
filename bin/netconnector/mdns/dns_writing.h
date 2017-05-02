@@ -36,6 +36,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value);
 PacketWriter& operator<<(PacketWriter& writer,
                          const DnsResourceDataAaaa& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataSrv& value);
+PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataOpt& value);
 PacketWriter& operator<<(PacketWriter& writer,
                          const DnsResourceDataNSec& value);
 PacketWriter& operator<<(PacketWriter& writer, const DnsMessage& value);
