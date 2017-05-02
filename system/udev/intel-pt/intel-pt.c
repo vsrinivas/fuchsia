@@ -918,7 +918,6 @@ static mx_status_t ipt_release(mx_device_t* dev) {
     x86_pt_cpu_mode_stop(ipt_dev);
     x86_pt_cpu_mode_free(ipt_dev);
 
-    device_destroy(ipt_dev->mxdev);
     free(ipt_dev);
 
     return NO_ERROR;
@@ -940,14 +939,16 @@ static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     if (!ipt_dev)
         return ERR_NO_MEMORY;
 
-    mx_status_t status;
-    if ((status = device_create("intel-pt", ipt_dev, &ipt_device_proto, driver, &ipt_dev->mxdev)) < 0) {
-        free(ipt_dev);
-        return status;
-    }
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "intel-pt",
+        .ctx = ipt_dev,
+        .driver = driver,
+        .ops = &ipt_device_proto,
+    };
 
-    if ((status = device_add(ipt_dev->mxdev, parent)) < 0) {
-        device_destroy(ipt_dev->mxdev);
+    mx_status_t status;
+    if ((status = device_add2(parent, &args, &ipt_dev->mxdev)) < 0) {
         free(ipt_dev);
         return status;
     }
