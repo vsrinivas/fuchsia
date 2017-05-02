@@ -126,6 +126,28 @@ available. Unfortunately the installer can not resize partitions in a way that
 will preserve the data on them, if you need this, please repartition the disk
 with some other tool.
 
+The installer requires that its target drive contains a GPT. Your drive may not
+have a GPT if this is the first time you've used it or you've done a low-level
+format of the drive. To add a GPT locate your drive with 'lsblk'
+
+```
+> lsblk
+ID     DEV        DRV      SIZE      TYPE          LABEL       FLAGS
+000    block      block     28G                                REMOVABLE
+001    block      block    1023M     efi system    EFI SYSTEM  REMOVABLE
+002    block      block     27GB     data          FAT PARTITION REMOVABLE
+003    block      block    232GB
+```
+
+In this case device 003 is what we want based on it not being labeled removable
+and its size being the same size as the internal storage drive. To add a GPT to
+it we can use the GPT tool and then reboot.
+
+```
+> gpt init /dev/class/block/003
+> dm reboot
+```
+
 Start the installer
 
 ```
