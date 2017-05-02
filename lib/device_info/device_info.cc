@@ -21,7 +21,6 @@ constexpr char kSyncDeviceProfile[] = "/data/modular/device/profile.config";
 std::string LoadDeviceProfile() {
   std::string device_profile;
 
-  WaitForMinfs();
   if (!files::IsDirectory(kDeviceInfoDirectory))
     files::CreateDirectory(kDeviceInfoDirectory);
 
@@ -37,7 +36,6 @@ std::string LoadDeviceProfile() {
 std::string LoadDeviceID(const std::string& user) {
   std::string device_id;
 
-  WaitForMinfs();
   if (!files::IsDirectory(kDeviceInfoDirectory))
     files::CreateDirectory(kDeviceInfoDirectory);
 
