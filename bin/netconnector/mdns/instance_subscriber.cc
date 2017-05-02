@@ -9,6 +9,13 @@
 
 namespace netconnector {
 namespace mdns {
+namespace {
+
+// static
+static constexpr ftl::TimeDelta kMaxQueryInterval =
+    ftl::TimeDelta::FromSeconds(60 * 60);
+
+}  // namespace
 
 InstanceSubscriber::InstanceSubscriber(MdnsAgent::Host* host,
                                        const std::string& service_name,
@@ -32,18 +39,16 @@ void InstanceSubscriber::Start() {
 void InstanceSubscriber::Wake() {
   host_->SendQuestion(question_, ftl::TimePoint::Now());
 
-  if (query_delay_ == 0) {
-    query_delay_ = 1;
+  if (query_delay_ == ftl::TimeDelta::Zero()) {
+    query_delay_ = ftl::TimeDelta::FromSeconds(1);
   } else {
-    query_delay_ *= 2;
+    query_delay_ = query_delay_ * 2;
     if (query_delay_ > kMaxQueryInterval) {
       query_delay_ = kMaxQueryInterval;
     }
   }
 
-  host_->WakeAt(
-      shared_from_this(),
-      ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(query_delay_));
+  host_->WakeAt(shared_from_this(), ftl::TimePoint::Now() + query_delay_);
 }
 
 void InstanceSubscriber::ReceiveQuestion(const DnsQuestion& question) {}
