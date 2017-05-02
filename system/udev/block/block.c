@@ -207,7 +207,6 @@ static void blkdev_unbind(mx_device_t* dev) {
 static mx_status_t blkdev_release(mx_device_t* dev) {
     blkdev_t* blkdev = dev->ctx;
     blkdev_fifo_close(blkdev);
-    device_destroy(blkdev->mxdev);
     free(blkdev);
     return NO_ERROR;
 }
@@ -225,6 +224,7 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
+    mtx_init(&bdev->lock, mtx_plain);
 
     mx_status_t status;
     if (device_op_get_protocol(dev, MX_PROTOCOL_BLOCK_CORE, (void**)&bdev->blockops)) {
@@ -232,20 +232,22 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         goto fail;
     }
 
-    if ((status = device_create("block", bdev, &blkdev_ops, drv, &bdev->mxdev)) < 0) {
-        goto fail;
-    }
-    mtx_init(&bdev->lock, mtx_plain);
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "block",
+        .ctx = bdev,
+        .driver = drv,
+        .ops = &blkdev_ops,
+        .proto_id = MX_PROTOCOL_BLOCK,
+    };
 
-    device_set_protocol(bdev->mxdev, MX_PROTOCOL_BLOCK, NULL);
-    if ((status = device_add(bdev->mxdev, dev)) != NO_ERROR) {
-        goto fail_add;
+    status = device_add2(dev, &args, &bdev->mxdev);
+    if (status != NO_ERROR) {
+        goto fail;
     }
 
     return NO_ERROR;
 
-fail_add:
-    device_destroy(bdev->mxdev);
 fail:
     free(bdev);
     return status;
