@@ -29,13 +29,15 @@ static mx_protocol_device_t null_device_proto = {
 // implement driver object:
 
 mx_status_t null_init(mx_driver_t* driver) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "null",
+        .driver = driver,
+        .ops = &null_device_proto,
+    };
+
     mx_device_t* dev;
-    if (device_create("null", NULL, &null_device_proto, driver, &dev) == NO_ERROR) {
-        if (device_add(dev, driver_get_root_device()) < 0) {
-            free(dev);
-        }
-    }
-    return NO_ERROR;
+    return device_add2(driver_get_root_device(), &args, &dev);
 }
 
 mx_driver_t _driver_null;
