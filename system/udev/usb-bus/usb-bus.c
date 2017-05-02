@@ -95,7 +95,6 @@ static void usb_bus_unbind(mx_device_t* dev) {
 
 static mx_status_t usb_bus_release(mx_device_t* dev) {
     usb_bus_t* bus = dev->ctx;
-    device_destroy(bus->mxdev);
     free(bus->devices);
     free(bus);
     return NO_ERROR;
@@ -130,20 +129,21 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
         return ERR_NO_MEMORY;
     }
 
-    mx_status_t status = device_create("usb_bus", bus, &usb_bus_device_proto, driver, &bus->mxdev);
-    if (status != NO_ERROR) {
-        free(bus->devices);
-        free(bus);
-        return status; 
-    }
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb_bus",
+        .ctx = bus,
+        .driver = driver,
+        .ops = &usb_bus_device_proto,
+        .proto_id = MX_PROTOCOL_USB_BUS,
+        .proto_ops = &_bus_protocol,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
 
-    device_set_protocol(bus->mxdev, MX_PROTOCOL_USB_BUS, &_bus_protocol);
-    device_set_bindable(bus->mxdev, false);
-    status = device_add(bus->mxdev, device);
+    mx_status_t status = device_add2(device, &args, &bus->mxdev);
     if (status == NO_ERROR) {
         hci_protocol->set_bus_device(device, bus->mxdev);
     } else {
-        device_destroy(bus->mxdev);
         free(bus->devices);
         free(bus);
     }

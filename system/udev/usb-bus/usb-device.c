@@ -205,7 +205,6 @@ static mx_status_t usb_device_release(mx_device_t* device) {
         }
         free(dev->config_descs);
     }
-    device_destroy(dev->mxdev);
     free(dev);
 
     return NO_ERROR;
@@ -379,19 +378,20 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
 
     char name[16];
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
-    status = device_create(name, dev, &usb_device_proto, &_driver_usb_bus, &dev->mxdev);
-    if (status != NO_ERROR) {
-        free(dev);
-        return status; 
-    }
 
-    device_set_protocol(dev->mxdev, MX_PROTOCOL_USB, NULL);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = dev,
+        .driver = &_driver_usb_bus,
+        .ops = &usb_device_proto,
+        .proto_id = MX_PROTOCOL_USB,
+        // Do not allow binding to root of a composite device.
+        // Clients will bind to the child interfaces instead.
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
 
-    // Do not allow binding to root of a composite device.
-    // Clients will bind to the child interfaces instead.
-    device_set_bindable(dev->mxdev, false);
-
-    status = device_add(dev->mxdev, parent);
+    status = device_add2(parent, &args, &dev->mxdev);
     if (status == NO_ERROR) {
         *out_device = dev;
     } else {
@@ -401,7 +401,6 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     return usb_device_add_interfaces(dev, configs[0]);
 
 error_exit:
-    device_destroy(dev->mxdev);
     if (configs) {
         for (int i = 0; i < num_configurations; i++) {
             if (configs[i]) free(configs[i]);
