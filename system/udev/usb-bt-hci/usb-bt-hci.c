@@ -516,7 +516,6 @@ static mx_status_t hci_release(mx_device_t* device) {
 
     mtx_unlock(&hci->mutex);
 
-    device_destroy(hci->mxdev);
     free(hci);
 
     return NO_ERROR;
@@ -573,11 +572,6 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         printf("Not enough memory for hci_t\n");
         return ERR_NO_MEMORY;
     }
-    mx_status_t status = device_create("usb_bt_hci", hci, &hci_device_proto, driver, &hci->mxdev);
-    if (status != NO_ERROR) {
-        free(hci);
-        return status;
-    }
 
     list_initialize(&hci->free_event_reqs);
     list_initialize(&hci->free_acl_read_reqs);
@@ -586,6 +580,8 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     mtx_init(&hci->mutex, mtx_plain);
 
     hci->usb_mxdev = device;
+
+    mx_status_t status = NO_ERROR;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);
@@ -626,8 +622,16 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
-    device_set_protocol(hci->mxdev, MX_PROTOCOL_BLUETOOTH_HCI, NULL);
-    status = device_add(hci->mxdev, device);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb_bt_hci",
+        .ctx = hci,
+        .driver = driver,
+        .ops = &hci_device_proto,
+        .proto_id = MX_PROTOCOL_BLUETOOTH_HCI,
+    };
+
+    status = device_add2(device, &args, &hci->mxdev);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:
