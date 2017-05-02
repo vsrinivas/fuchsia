@@ -53,17 +53,21 @@ class Service {
     std::string job_name = ftl::StringPrintf("tcp:%d", port);
     status = job_.set_property(MX_PROP_NAME, job_name.data(), job_name.size());
 
+    Wait();
+  }
+
+ private:
+  void Wait() {
     waiter_.Wait([this](mx_status_t success, uint32_t events) {
       int conn = accept(sock_, NULL, NULL);
       if (conn < 0) {
         FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
       }
       Launch(conn);
-
+      Wait();
     }, sock_, EPOLLIN);
   }
 
- private:
   void Launch(int conn) {
     launchpad_t* lp;
     launchpad_create(job_.get(), argv_[0], &lp);
