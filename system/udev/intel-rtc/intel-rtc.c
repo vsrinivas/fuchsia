@@ -339,15 +339,16 @@ static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** 
         return status;
     }
 
-    mx_device_t* dev;
-    status = device_create("rtc", NULL, &intel_rtc_device_proto, drv, &dev);
-    if (status != NO_ERROR) {
-        return status;
-    }
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "rtc",
+        .driver = drv,
+        .ops = &intel_rtc_device_proto,
+    };
 
-    status = device_add(dev, parent);
+    mx_device_t* dev;
+    status = device_add2(parent, &args, &dev);
     if (status != NO_ERROR) {
-        free(dev);
         return status;
     }
 
