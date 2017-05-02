@@ -245,15 +245,18 @@ static int i2c_bootstrap_thread(void *arg) {
     char id[5];
     snprintf(id,sizeof(id),"i2c%u",i2c_ctx->dev_id);
 
-    status = device_create(id, i2c_ctx, &i2c_device_proto, i2c_ctx->driver, &i2c_ctx->mxdev);
-    if (status != NO_ERROR) {
-        goto i2c_err;
-    }
-    status = device_add(i2c_ctx->mxdev, i2c_ctx->parent);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = id,
+        .ctx = i2c_ctx,
+        .driver = i2c_ctx->driver,
+        .ops = &i2c_device_proto,
+    };
+
+    status = device_add2(i2c_ctx->parent, &args, &i2c_ctx->mxdev);
 
     if (status == NO_ERROR) return 0;
 
-    device_destroy(i2c_ctx->mxdev);
 i2c_err:
     if (i2c_ctx)
         free(i2c_ctx);

@@ -393,6 +393,26 @@ static mx_protocol_device_t mailbox_device_proto = {
 
 static mx_protocol_device_t empty_device_proto = {};
 
+static mx_device_prop_t mailbox_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_MAILBOX},
+};
+
+static mx_device_prop_t emmc_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_EMMC},
+};
+
+static mx_device_prop_t i2c_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C},
+};
+
+static mx_device_prop_t pcm_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_PCM},
+};
+
 mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
@@ -409,18 +429,18 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
     mailbox_regs = (uint32_t*)(page_base + PAGE_REG_DELTA);
 
     mx_device_t* rpc_mxdev;
-    status = device_create("bcm-vc-rpc", NULL, &mailbox_device_proto, driver, &rpc_mxdev);
-    if (status != NO_ERROR)
-        return status;
+    device_add_args_t vc_rpc_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-vc-rpc",
+        .driver = driver,
+        .ops = &mailbox_device_proto,
+        .props = mailbox_props,
+        .prop_count = countof(mailbox_props),
+    };
 
-    rpc_mxdev->props = calloc(2, sizeof(mx_device_prop_t));
-    rpc_mxdev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    rpc_mxdev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_MAILBOX};
-    rpc_mxdev->prop_count = 2;
-
-    status = device_add_with_props(rpc_mxdev, parent, rpc_mxdev->props, rpc_mxdev->prop_count);
+    status = device_add2(parent, &vc_rpc_args, &rpc_mxdev);
     if (status != NO_ERROR) {
-        goto rpc_fail;
+        return status;
     }
 
     bcm_fb_desc_t framebuff_descriptor;
@@ -441,13 +461,6 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
 
     bcm_vc_get_framebuffer(&framebuff_descriptor);
 
-    status = device_create("bcm-vc-fbuff", NULL, &empty_device_proto, driver, &disp_mxdev);
-    if (status != NO_ERROR) {
-        goto rpc_fail;
-    }
-
-    device_set_protocol(disp_mxdev, MX_PROTOCOL_DISPLAY, &vc_display_proto);
-
     disp_info.format = MX_PIXEL_FORMAT_ARGB_8888;
     disp_info.width = 800;
     disp_info.height = 480;
@@ -457,84 +470,80 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
                        bcm_vc_framebuffer.fb_size, disp_info.format,
                        disp_info.width, disp_info.height, disp_info.stride);
 
-    status = device_add(disp_mxdev, parent);
+
+    device_add_args_t vc_fbuff_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-vc-fbuff",
+        .driver = driver,
+        .ops = &empty_device_proto,
+        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_ops = &vc_display_proto,
+    };
+
+    status = device_add2(parent, &vc_fbuff_args, &disp_mxdev);
     if (status != NO_ERROR) {
-        goto disp_fail;
+        return status;
     }
 
     bcm_vc_poweron(bcm_dev_sd);
 
     // Publish this mock device to allow the eMMC device to bind to.
     mx_device_t* sdmmc_mxdev;
-    status = device_create("bcm-sdmmc", NULL, &empty_device_proto, driver, &sdmmc_mxdev);
+    device_add_args_t sdmmc_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-sdmmc",
+        .driver = driver,
+        .ops = &empty_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = emmc_props,
+        .prop_count = countof(emmc_props),
+    };
+
+    status = device_add2(parent, &sdmmc_args, &sdmmc_mxdev);
     if (status != NO_ERROR) {
-        goto disp_fail;
-    }
-    sdmmc_mxdev->props = calloc(2, sizeof(mx_device_prop_t));
-    sdmmc_mxdev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    sdmmc_mxdev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_EMMC};
-    sdmmc_mxdev->prop_count = 2;
-    device_set_protocol(sdmmc_mxdev, MX_PROTOCOL_SOC, NULL);
-    status = device_add_with_props(sdmmc_mxdev, parent, sdmmc_mxdev->props,
-                                   sdmmc_mxdev->prop_count);
-    if (status != NO_ERROR) {
-        goto sdmmc_fail;
+        return status;
     }
 
     bcm_vc_poweron(bcm_dev_usb);
-
 
     // Publish this mock device to allow the i2c device to bind to.
 
     bcm_vc_poweron(bcm_dev_i2c1);
     mx_device_t* i2c_mxdev;
-    status = device_create("bcm-i2c", NULL, &empty_device_proto, driver, &i2c_mxdev);
+    device_add_args_t i2c_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-i2c",
+        .driver = driver,
+        .ops = &empty_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = i2c_props,
+        .prop_count = countof(i2c_props),
+    };
+
+    status = device_add2(parent, &i2c_args, &i2c_mxdev);
     if (status != NO_ERROR) {
-        goto sdmmc_fail;
-    }
-    i2c_mxdev->props = calloc(2, sizeof(mx_device_prop_t));
-    i2c_mxdev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    i2c_mxdev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_I2C};
-    i2c_mxdev->prop_count = 2;
-    device_set_protocol(i2c_mxdev, MX_PROTOCOL_SOC, NULL);
-    status = device_add_with_props(i2c_mxdev, parent, i2c_mxdev->props, i2c_mxdev->prop_count);
-    if (status != NO_ERROR) {
-        goto i2c_fail;
+        return status;
     }
 
     // Publish this mock device to allow the pcm device to bind to.
 
     mx_device_t* pcm_mxdev;
-    status = device_create("bcm-pcm", NULL, &empty_device_proto, driver, &pcm_mxdev);
-    if (status != NO_ERROR) {
-        goto i2c_fail;
-    }
-    pcm_mxdev->props = calloc(2, sizeof(mx_device_prop_t));
-    pcm_mxdev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    pcm_mxdev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_PCM};
-    pcm_mxdev->prop_count = 2;
-    device_set_protocol(pcm_mxdev, MX_PROTOCOL_SOC, NULL);
-    status = device_add_with_props(pcm_mxdev, parent, pcm_mxdev->props, pcm_mxdev->prop_count);
-    if (status != NO_ERROR) {
-        goto pcm_fail;
-    }
-    return NO_ERROR;
+    device_add_args_t pcm_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-pcm",
+        .driver = driver,
+        .ops = &empty_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = pcm_props,
+        .prop_count = countof(pcm_props),
+    };
 
-pcm_fail:
-    free(pcm_mxdev->props);
-    device_destroy(pcm_mxdev);
-i2c_fail:
-    free(i2c_mxdev->props);
-    device_destroy(i2c_mxdev);
-sdmmc_fail:
-    free(sdmmc_mxdev->props);
-    device_destroy(sdmmc_mxdev);
-disp_fail:
-    device_destroy(disp_mxdev);
-rpc_fail:
-    free(rpc_mxdev->props);
-    device_destroy(rpc_mxdev);
-    return status;
+    status = device_add2(parent, &pcm_args, &pcm_mxdev);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    return NO_ERROR;
 }
 
 static mx_driver_ops_t bcm_mailbox_bind = {

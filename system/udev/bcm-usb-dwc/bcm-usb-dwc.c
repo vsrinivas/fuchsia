@@ -850,10 +850,6 @@ static void dwc_handle_irq(dwc_usb_t* dwc) {
 static int dwc_irq_thread(void* arg) {
     dwc_usb_t* dwc = (dwc_usb_t*)arg;
 
-    // TODO: handle errors from device_add
-    device_add(dwc->mxdev, dwc->parent);
-    dwc->parent = NULL;
-
     while (1) {
         mx_status_t wait_res;
 
@@ -1758,13 +1754,6 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         goto error_return;
     }
 
-    st = device_create("bcm-usb-dwc", usb_dwc, &dwc_device_proto, drv, &usb_dwc->mxdev);
-    if (st != NO_ERROR) {
-        goto error_return;
-    }
-
-    device_set_protocol(usb_dwc->mxdev, MX_PROTOCOL_USB_HCI, &dwc_hci_protocol);
-
     // Initialize all the channel completions.
     for (size_t i = 0; i < NUM_HOST_CHANNELS; i++) {
         usb_dwc->channel_complete[i] = COMPLETION_INIT;
@@ -1777,7 +1766,22 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     if ((st = create_default_device(usb_dwc)) != NO_ERROR) {
         xprintf("usb_dwc_bind failed to create default device. retcode = %d\n",
                 st);
-        goto error_return_created;
+        goto error_return;
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-usb-dwc",
+        .ctx = usb_dwc,
+        .driver = drv,
+        .ops = &dwc_device_proto,
+        .proto_id = MX_PROTOCOL_USB_HCI,
+        .proto_ops = &dwc_hci_protocol,
+    };
+
+    if ((st = device_add2(dev, &args, &usb_dwc->mxdev)) != NO_ERROR) {
+        free(usb_dwc);
+        return st;
     }
 
     // Thread that responds to requests for the root hub.
@@ -1794,8 +1798,6 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     xprintf("usb_dwc_bind success!\n");
     return NO_ERROR;
 
-error_return_created:
-    device_destroy(usb_dwc->mxdev);
 error_return:
     if (usb_dwc)
         free(usb_dwc);

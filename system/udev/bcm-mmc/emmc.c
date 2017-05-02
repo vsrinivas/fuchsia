@@ -579,7 +579,6 @@ static void emmc_unbind(mx_device_t* device) {
 
 static mx_status_t emmmc_release(mx_device_t* device) {
     emmc_t* emmc = device->ctx;
-    device_destroy(emmc->mxdev);
     free(emmc);
     return NO_ERROR;
 }
@@ -754,13 +753,6 @@ static int emmc_bootstrap_thread(void *arg) {
     regs->irqen = 0;
     regs->irq = 0xffffffff;
 
-    // Create the device.
-    st = device_create("bcm-emmc", emmc, &emmc_device_proto, drv, &emmc->mxdev);
-    if (st != NO_ERROR) {
-        goto out;
-    }
-    device_set_protocol(emmc->mxdev, MX_PROTOCOL_SDMMC, NULL);
-
     // Create a thread to handle IRQs.
     thrd_t irq_thrd;
     int thrd_rc = thrd_create_with_name(&irq_thrd, emmc_irq_thread, emmc,
@@ -771,16 +763,24 @@ static int emmc_bootstrap_thread(void *arg) {
     }
     thrd_detach(irq_thrd);
 
-    st = device_add(emmc->mxdev, emmc->parent);
+    // Create the device.
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-emmc",
+        .ctx = emmc,
+        .driver = drv,
+        .ops = &emmc_device_proto,
+        .proto_id = MX_PROTOCOL_SDMMC,
+    };
+
+    st = device_add2(emmc->parent, &args, &emmc->mxdev);
     if (st != NO_ERROR) {
-        goto out_err_add;
+        goto out;
     }
 
     // Everything went okay, exit the bootstrap thread!
     return 0;
 
-out_err_add:
-    device_destroy(emmc->mxdev);
 out:
     if (emmc)
         free(emmc);

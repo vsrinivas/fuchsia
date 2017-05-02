@@ -398,7 +398,6 @@ set_stream_done:
 
 static mx_status_t pcm_audio_sink_release(mx_device_t* device) {
     bcm_pcm_t* ctx = device->ctx;
-    device_destroy(ctx->mxdev);
     free(ctx);
     return NO_ERROR;
 }
@@ -689,14 +688,16 @@ static int pcm_bootstrap_thread(void* arg) {
     if (status != NO_ERROR)
         goto pcm_err;
 
-    status = device_create("pcm0", pcm_ctx, &pcm_audio_ctx_device_proto, pcm_ctx->driver,
-                           &pcm_ctx->mxdev);
-    if (status != NO_ERROR)
-        goto pcm_err;
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "pcm0",
+        .ctx = pcm_ctx,
+        .driver = pcm_ctx->driver,
+        .ops = &pcm_audio_ctx_device_proto,
+        .proto_id = MX_PROTOCOL_AUDIO2_OUTPUT,
+    };
 
-    device_set_protocol(pcm_ctx->mxdev, MX_PROTOCOL_AUDIO2_OUTPUT, NULL);
-
-    status = device_add(pcm_ctx->mxdev, pcm_ctx->parent);
+    status = device_add2(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
     if (status != NO_ERROR)
         goto pcm_err;
 
@@ -704,7 +705,6 @@ static int pcm_bootstrap_thread(void* arg) {
 
 pcm_err:
     if (pcm_ctx) {
-        device_destroy(pcm_ctx->mxdev);
         free(pcm_ctx);
     }
 
