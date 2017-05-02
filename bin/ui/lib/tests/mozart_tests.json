@@ -1,0 +1,22 @@
+{
+  "tests":[
+    {
+      "name":"input_tests",
+      "exec":"input_apptests",
+      "copy":{
+        "/system/apps":[
+          "input_apptests"
+        ]
+      }
+    },
+    {
+      "name":"view_manager_apptests",
+      "exec":"view_manager_apptests",
+      "copy":{
+        "/system/apps":[
+          "view_manager_apptests"
+        ]
+      }
+    }
+  ]
+}
