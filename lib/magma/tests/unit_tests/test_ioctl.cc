@@ -23,16 +23,3 @@ TEST(MagmaIoctl, DISPLAY_GET_FB)
 
     close(fd);
 }
-
-TEST(MagmaIoctl, GET_TRACE_MANAGER_CHANNEL)
-{
-    int fd = open(kDisplayPath, O_RDWR);
-    ASSERT_GE(fd, 0);
-
-    mx_handle_t handle = MX_HANDLE_INVALID;
-    int ret =
-        mxio_ioctl(fd, IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL, nullptr, 0, &handle, sizeof(handle));
-    close(fd);
-    EXPECT_EQ(ret, 4);
-    EXPECT_NE(0, handle);
-}

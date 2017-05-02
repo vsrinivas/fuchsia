@@ -8,10 +8,6 @@ group("tools") {
   deps = [
     ":magma_info",
   ]
-
-  if (magma_enable_tracing) {
-    deps += [ "tracing/src/trace" ]
-  }
 }
 
 executable("magma_info") {

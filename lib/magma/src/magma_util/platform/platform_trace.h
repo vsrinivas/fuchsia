@@ -20,8 +20,6 @@ namespace magma {
 class PlatformTrace {
 public:
     static void Initialize();
-
-    static PlatformTrace* GetInstance();
 };
 
 } // namespace magma

@@ -51,9 +51,9 @@ extern "C" {
 #include "platform_trace.h"
 
 #ifdef MAGMA_ENABLE_TRACING
+#include "application/lib/app/application_context.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "magma_util/application_context/application_context.h"
 #include <thread>
 #endif
 
@@ -3002,7 +3002,7 @@ void TraceInit()
     std::thread trace_thread = std::thread([] {
         mtl::MessageLoop loop;
 
-        auto app_context = faux::ApplicationContext::CreateFromStartupInfo();
+        auto app_context = app::ApplicationContext::CreateFromStartupInfo();
         if (!app_context) {
             printf("vkcube: no app context environment, can't trace\n");
             return;

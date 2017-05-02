@@ -187,19 +187,6 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf,
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
-        case IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL: {
-            DLOG("IOCTL_MAGMA_GET_TRACE_MANAGER_CHANNEL");
-            mx::channel local, remote;
-            mx::channel::create(0, &local, &remote);
-            *reinterpret_cast<uint32_t*>(out_buf) = remote.release();
-            auto platform_trace =
-                static_cast<magma::MagentaPlatformTrace*>(magma::PlatformTrace::GetInstance());
-            platform_trace->ConnectToService(std::move(local));
-            *out_actual = sizeof(uint32_t);
-            result = NO_ERROR;
-            break;
-        }
-
         case IOCTL_MAGMA_QUERY: {
             DLOG("IOCTL_MAGMA_QUERY");
             const uint64_t* param = reinterpret_cast<const uint64_t*>(in_buf);
