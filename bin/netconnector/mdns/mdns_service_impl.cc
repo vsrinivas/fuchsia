@@ -5,6 +5,7 @@
 #include "apps/netconnector/src/mdns/mdns_service_impl.h"
 
 #include "apps/netconnector/src/mdns/mdns_fidl_util.h"
+#include "apps/netconnector/src/mdns/mdns_names.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {
@@ -68,6 +69,14 @@ void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,
 void MdnsServiceImpl::SubscribeToService(
     const fidl::String& service_name,
     fidl::InterfaceRequest<MdnsServiceSubscription> subscription_request) {
+  if (!MdnsNames::IsValidServiceName(service_name)) {
+    FTL_LOG(ERROR)
+        << "Client supplied invalid service name " << service_name
+        << " in call to SubscribeToService, resetting subscription request.";
+    subscription_request = nullptr;
+    return;
+  }
+
   auto iter = subscriptions_by_service_name_.find(service_name);
 
   if (iter == subscriptions_by_service_name_.end()) {
@@ -85,6 +94,12 @@ void MdnsServiceImpl::PublishServiceInstance(const fidl::String& service_name,
                                              const fidl::String& instance_name,
                                              uint16_t port,
                                              fidl::Array<fidl::String> text) {
+  if (!MdnsNames::IsValidServiceName(service_name)) {
+    FTL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+                   << " in call to PublishServiceInstance, ignoring.";
+    return;
+  }
+
   mdns_.PublishServiceInstance(service_name, instance_name,
                                IpPort::From_uint16_t(port),
                                text.To<std::vector<std::string>>());
@@ -93,6 +108,12 @@ void MdnsServiceImpl::PublishServiceInstance(const fidl::String& service_name,
 void MdnsServiceImpl::UnpublishServiceInstance(
     const fidl::String& service_name,
     const fidl::String& instance_name) {
+  if (!MdnsNames::IsValidServiceName(service_name)) {
+    FTL_LOG(ERROR) << "Client supplied invalid service name " << service_name
+                   << " in call to UnpublishServiceInstance, ignoring.";
+    return;
+  }
+
   mdns_.UnpublishServiceInstance(service_name, instance_name);
 }
 
