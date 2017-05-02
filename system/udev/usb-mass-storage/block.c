@@ -79,18 +79,10 @@ static mx_off_t ums_block_get_size(mx_device_t* device) {
     return dev->block_size * dev->total_blocks;
 }
 
-static mx_status_t ums_block_release(mx_device_t* device) {
-    ums_block_t* dev = device->ctx;
-    device_destroy(dev->mxdev);
-    // ums_block_t is inline with ums_t, so don't try to free it here
-    return NO_ERROR;
-}
-
 static mx_protocol_device_t ums_block_proto = {
     .iotxn_queue = ums_block_queue,
     .ioctl = ums_block_ioctl,
     .get_size = ums_block_get_size,
-    .release = ums_block_release,
 };
 
 static void ums_async_set_callbacks(mx_device_t* device, block_callbacks_t* cb) {
@@ -148,19 +140,20 @@ static block_ops_t ums_block_ops = {
 };
 
 mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
-    char name[16];
-    snprintf(name, sizeof(name), "ums-lun-%02d", dev->lun);
-    mx_status_t status = device_create(name, dev, &ums_block_proto, &_driver_usb_mass_storage,
-                                       &dev->mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-    device_set_protocol(dev->mxdev, MX_PROTOCOL_BLOCK_CORE, &ums_block_ops);
     dev->cb = NULL;
 
-    status = device_add(dev->mxdev, ums->mxdev);
-    if (status != NO_ERROR) {
-        device_destroy(dev->mxdev);
-    }
-    return status;
+    char name[16];
+    snprintf(name, sizeof(name), "ums-lun-%02d", dev->lun);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = dev,
+        .driver = &_driver_usb_mass_storage,
+        .ops = &ums_block_proto,
+        .proto_id = MX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &ums_block_ops,
+    };
+
+    return device_add2(ums->mxdev, &args, &dev->mxdev);
 }

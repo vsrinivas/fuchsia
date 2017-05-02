@@ -453,7 +453,6 @@ static mx_status_t ums_release(mx_device_t* device) {
         iotxn_release(ums->csw_iotxn);
     }
 
-    device_destroy(ums->mxdev);
     free(ums);
     return NO_ERROR;
 }
@@ -574,13 +573,16 @@ static int ums_worker_thread(void* arg) {
     }
 
     // Add root device, which will contain block devices for logical units
-    status = device_create("usb-mass-storage", ums, &ums_device_proto, &_driver_usb_mass_storage,
-                           &ums->mxdev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-    device_set_bindable(ums->mxdev, false);
-    status = device_add(ums->mxdev, ums->usb_mxdev);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb-mass-storage",
+        .ctx = ums,
+        .driver = &_driver_usb_mass_storage,
+        .ops = &ums_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    status = device_add2(ums->usb_mxdev, &args, &ums->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }
