@@ -33,6 +33,8 @@ def main():
                         action="store_true", default=False)
     parser.add_argument("--ignore-skia", help="Disable Skia settings - for Skia-less builds",
                         action="store_true", default=False)
+    parser.add_argument("--with-dart-analysis", help="Run Dart analysis as part of the build",
+                        action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
     (args, passthrough) = parser.parse_known_args()
     if args.release:
@@ -58,6 +60,9 @@ def main():
         gn_args += " skia_use_fontconfig=false"
         gn_args += " skia_use_libwebp=false"
         gn_args += " skia_use_sfntly=false"
+
+    if args.with_dart_analysis:
+        gn_args += " run_dart_analysis=true"
 
     gn_args += " modules=\"" + args.modules + "\""
 
