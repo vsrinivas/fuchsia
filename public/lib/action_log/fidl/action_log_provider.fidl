@@ -1,0 +1,23 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+struct UserAction {
+  string component_url;
+  string method;
+  // JSON-string
+  string parameters;
+};
+
+[ServiceName="maxwell.ActionLogProvider"]
+interface ActionLogProvider {
+  // When a new action is logged, a UserAction is sent to |listener|.
+  Subscribe(ActionLogListener listener);
+};
+
+interface ActionLogListener {
+  // Receives an action that was just logged.
+  OnAction(UserAction action);
+};
