@@ -167,13 +167,16 @@ void NetConnectorImpl::AddServiceAgent(
 
 void NetConnectorImpl::StartMdns() {
   // TODO(dalesat): Temporary hack until we have a real gethostname. Remove.
+  if (++mdns_start_attempts_ > 6) {
+    return;
+  }
   if (host_name_ == "fuchsia" || host_name_ == "fuchsia-0") {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() {
           host_name_ = GetHostName();
           StartMdns();
         },
-        ftl::TimeDelta::FromSeconds(1));
+        ftl::TimeDelta::FromSeconds(5));
     return;
   }
 
