@@ -10,6 +10,7 @@
 
 #include "apps/netconnector/src/mdns/mdns_agent.h"
 #include "apps/netconnector/src/socket_address.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace netconnector {
 namespace mdns {
@@ -49,8 +50,6 @@ class InstanceSubscriber
   void Quit() override;
 
  private:
-  static constexpr uint32_t kMaxQueryInterval = 60 * 60;
-
   struct InstanceInfo {
     std::string instance_name_;
     std::string target_;
@@ -93,7 +92,7 @@ class InstanceSubscriber
   ServiceInstanceCallback callback_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
-  uint32_t query_delay_ = 0;
+  ftl::TimeDelta query_delay_;
   std::shared_ptr<DnsQuestion> question_;
 };
 
