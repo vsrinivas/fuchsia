@@ -1,8 +1,17 @@
 {
     "labels": [
+        "//drivers/wifi/mediatek/rt5370:rt5370-with-firmware",
         "//drivers/wifi/wlan"
     ],
     "drivers": [
+        {
+            "binary": "rt5370.so",
+            "bootfs_path": "lib/driver/rt5370.so"
+        },
+        {
+            "binary": "rt2870.bin",
+            "bootfs_path": "lib/firmware/rt2870.bin"
+        },
         {
             "binary": "wlan.so",
             "bootfs_path": "lib/driver/wlan.so"
