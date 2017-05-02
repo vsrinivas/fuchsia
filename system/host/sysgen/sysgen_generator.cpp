@@ -6,9 +6,10 @@
 #include <ctime>
 
 #include "generator.h"
+#include "header_generator.h"
 #include "kernel_invocation_generator.h"
 #include "rust_binding_generator.h"
-#include "header_generator.h"
+#include "vdso_wrapper_generator.h"
 
 #include "sysgen_generator.h"
 
@@ -31,88 +32,104 @@ const map<string, string> kernel_attrs = {
     {"noreturn", "__attribute__((__noreturn__))"},
 };
 
+static TestWrapper test_wrapper;
+static vector<CallWrapper*> wrappers = {&test_wrapper};
+
+static VdsoWrapperGenerator vdso_wrapper_generator(
+    "mx_",         // external function name (points to wrapper)
+    "_mx_",        // wrapper function name
+    "VDSO_mx_",    // vdso-internal name (points to wrapper)
+    "SYSCALL_mx_", // syscall implementation name
+    wrappers);
+
 static KernelInvocationGenerator kernel_code(
-            "sys_",                     // function prefix
-            "ret",                      // variable to assign invocation result to
-            "uint64_t",                 // type of result variable
-            "arg");                     // prefix for syscall arguments);
+    "sys_",     // function prefix
+    "ret",      //  variable to assign invocation result to
+    "uint64_t", // type of result variable
+    "arg");     // prefix for syscall arguments);
 
 static HeaderGenerator user_header(
-            "extern ",                          // function prefix
-            vector<string>({"mx_", "_mx_"}),    // function name prefixes
-            "void",                             // no-args special type
-            false,
-            user_attrs,
-            false);
+    "extern ",                       // function prefix
+    vector<string>({"mx_", "_mx_"}), // function name prefixes
+    "void",                          // no-args special type
+    false,                           // wrap pointers
+    user_attrs,
+    false); // skip vdso calls
 
 static HeaderGenerator vdso_header(
-            "__attribute__((visibility(\"hidden\"))) extern ",  // function prefix
-            vector<string>({"VDSO_mx_"}),                       // function name prefixes
-            "void",                                             // no-args special type
-            false,
-            user_attrs,
-            false);
+    "__attribute__((visibility(\"hidden\"))) extern ", // function prefix
+    vector<string>({"VDSO_mx_"}),                      // function name prefixes
+    "void",                                            // no-args special type
+    false,
+    user_attrs,
+    true);
 
 static HeaderGenerator kernel_header(
-            "",
-            vector<string>({"sys_"}),
-            "",
-            true,
-            kernel_attrs,
-            true);
+    "",
+    vector<string>({"sys_"}),
+    "",
+    true,
+    kernel_attrs,
+    true);
 
 static X86AssemblyGenerator x86_generator(
-            "m_syscall",                // syscall macro name
-            "mx_");                     // syscall name prefix
+    "m_syscall", // syscall macro name
+    "mx_",       // syscall name prefix
+    wrappers);
 
 static Arm64AssemblyGenerator arm64_generator(
-            "m_syscall",                // syscall macro name
-            "mx_");                     // syscall name prefix
+    "m_syscall", // syscall macro name
+    "mx_",       // syscall name prefix
+    wrappers);
 
 static SyscallNumbersGenerator syscall_num_generator("#define MX_SYS_");
 
-static RustBindingGenerator rust_bindings;
+static RustBindingGenerator rust_binding_generator;
 static TraceInfoGenerator trace_generator;
 
 const map<string, const Generator&> type_to_generator = {
     // The user header, pure C.
-    { "user-header", user_header },
+    {"user-header", user_header},
 
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
-    { "vdso-header", vdso_header },
+    {"vdso-header", vdso_header},
 
     // The kernel header, C++.
-    { "kernel-header", kernel_header },
+    {"kernel-header", kernel_header},
 
     // The kernel C++ code. A switch statement set.
-    { "kernel-code", kernel_code },
+    {"kernel-code", kernel_code},
 
     //  The assembly file for x86-64.
-    { "x86-asm", x86_generator },
+    {"x86-asm", x86_generator},
 
     //  The assembly include file for ARM64.
-    { "arm-asm", arm64_generator },
+    {"arm-asm", arm64_generator},
 
     // A C header defining MX_SYS_* syscall number macros.
-    { "numbers", syscall_num_generator },
+    {"numbers", syscall_num_generator},
 
     // The trace subsystem data, to be interpreted as an array of structs.
-    { "trace", trace_generator },
+    {"trace", trace_generator},
 
     // Rust bindings.
-    { "rust", rust_bindings },
+    {"rust", rust_binding_generator},
+
+    // vDSO wrappers for additional behaviour in user space.
+    {"vdso-wrappers", vdso_wrapper_generator},
 };
 
 const map<string, string> type_to_default_suffix = {
-  {"user-header",   ".user.h"} ,
-  {"vdso-header",   ".vdso.h"},
-  {"kernel-header", ".kernel.h"},
-  {"kernel-code",   ".kernel.inc"},
-  {"x86-asm",   ".x86-64.S"},
-  {"arm-asm",   ".arm64.S"},
-  {"numbers",   ".syscall-numbers.h"},
-  {"trace",   ".trace.inc"},
-  {"rust",    ".rs"},
+    {"user-header", ".user.h"},
+    {"vdso-header", ".vdso.h"},
+    {"kernel-header", ".kernel.h"},
+    {"kernel-code", ".kernel.inc"},
+    {"x86-asm", ".x86-64.S"},
+    {"arm-asm", ".arm64.S"},
+    {"numbers", ".syscall-numbers.h"},
+    {"trace", ".trace.inc"},
+    {"rust", ".rs"},
+    {"vdso-wrappers", ".vdso-wrappers.inc"},
 };
 
 const map<string, string>& get_type_to_default_suffix() {
@@ -153,9 +170,9 @@ bool SysgenGenerator::generate_one(const string& output_file, const Generator& g
     }
 
     if (!std::all_of(calls_.begin(), calls_.end(),
-                    [&generator, &ofile](const Syscall& sc) {
-                        return generator.syscall(ofile, sc);
-                    })) {
+                     [&generator, &ofile](const Syscall& sc) {
+                         return generator.syscall(ofile, sc);
+                     })) {
         print_error("generation failed", output_file);
         return false;
     }

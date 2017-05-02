@@ -6,30 +6,33 @@
 
 #include "syscalls_priv.h"
 
-int sys_syscall_test_0(void) {
+mx_status_t sys_syscall_test_0(void) {
     return 0;
 }
-int sys_syscall_test_1(int a) {
+mx_status_t sys_syscall_test_1(int a) {
     return a;
 }
-int sys_syscall_test_2(int a, int b) {
+mx_status_t sys_syscall_test_2(int a, int b) {
     return a + b;
 }
-int sys_syscall_test_3(int a, int b, int c) {
+mx_status_t sys_syscall_test_3(int a, int b, int c) {
     return a + b + c;
 }
-int sys_syscall_test_4(int a, int b, int c, int d) {
+mx_status_t sys_syscall_test_4(int a, int b, int c, int d) {
     return a + b + c + d;
 }
-int sys_syscall_test_5(int a, int b, int c, int d, int e) {
+mx_status_t sys_syscall_test_5(int a, int b, int c, int d, int e) {
     return a + b + c + d + e;
 }
-int sys_syscall_test_6(int a, int b, int c, int d, int e, int f) {
+mx_status_t sys_syscall_test_6(int a, int b, int c, int d, int e, int f) {
     return a + b + c + d + e + f;
 }
-int sys_syscall_test_7(int a, int b, int c, int d, int e, int f, int g) {
+mx_status_t sys_syscall_test_7(int a, int b, int c, int d, int e, int f, int g) {
     return a + b + c + d + e + f + g;
 }
-int sys_syscall_test_8(int a, int b, int c, int d, int e, int f, int g, int h) {
+mx_status_t sys_syscall_test_8(int a, int b, int c, int d, int e, int f, int g, int h) {
     return a + b + c + d + e + f + g + h;
+}
+mx_status_t sys_syscall_test_wrapper(int a, int b, int c) {
+    return a + b + c;
 }

@@ -23,6 +23,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mx_system_get_version.cpp \
     $(LOCAL_DIR)/mx_ticks_get.cpp \
     $(LOCAL_DIR)/mx_ticks_per_second.cpp \
+    $(LOCAL_DIR)/syscall-wrappers.cpp \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \

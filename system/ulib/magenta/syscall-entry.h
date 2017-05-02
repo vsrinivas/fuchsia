@@ -5,25 +5,34 @@
 #pragma once
 
 .macro syscall_entry_begin name
-.globl _\name
-.type _\name,STT_FUNC
-_\name:
+.globl SYSCALL_\name
+.hidden SYSCALL_\name
+.type SYSCALL_\name,STT_FUNC
+SYSCALL_\name:
 .cfi_startproc
 .endm
 
-.macro syscall_entry_end name
+.macro syscall_entry_end name with_aliases=1
 .cfi_endproc
-.size _\name, . - _\name
+.size SYSCALL_\name, . - SYSCALL_\name
+
+// For wrapper functions, aliasing is handled by the generator.
+.if \with_aliases
+.globl _\name
+.type _\name,STT_FUNC
+_\name = SYSCALL_\name
+.size _\name, . - SYSCALL_\name
 
 .weak \name
 .type \name,STT_FUNC
-\name = _\name
-.size \name, . - _\name
+\name = SYSCALL_\name
+.size \name, . - SYSCALL_\name
 
 .globl VDSO_\name
 .hidden VDSO_\name
 .type VDSO_\name,STT_FUNC
-VDSO_\name = _\name
-.size VDSO_\name, . - _\name
+VDSO_\name = SYSCALL_\name
+.size VDSO_\name, . - SYSCALL_\name
+.endif
 
 .endm

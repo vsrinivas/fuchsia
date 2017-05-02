@@ -8,7 +8,7 @@ using std::map;
 using std::string;
 
 static const string add_attribute(map<string, string> attributes,
-    const string& attribute) {
+                                  const string& attribute) {
     auto ft = attributes.find(attribute);
     return (ft == attributes.end()) ? string() : ft->second;
 }
@@ -25,28 +25,11 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) const {
 
         os << function_prefix_;
 
-        // writes "[return-type] prefix_[syscall-name]("
-        os << sc.return_type() << " " << syscall_name << "(";
+        write_syscall_signature_line(os, sc, name_prefix, "\n", "\n" + string(indent_spaces, ' '),
+                                     allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso(),
+                                     no_args_type_);
 
-       // Writes all arguments.
-        sc.for_each_kernel_arg([&](const TypeSpec& arg) {
-            os << "\n" << string(indent_spaces, ' ')
-               << arg.as_cpp_declaration(
-                        allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso()) << ",";
-        });
-
-        if (!os.good()) {
-            return false;
-        }
-
-        if (sc.num_kernel_args() > 0) {
-            // remove the comma.
-            os.seekp(-1, std::ios_base::end);
-        } else {
-            os << no_args_type_;
-        }
-
-        os << ") ";
+        os << " ";
 
         // Writes attributes after arguments.
         for (const auto& attr : sc.attributes) {
