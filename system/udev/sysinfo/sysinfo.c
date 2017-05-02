@@ -10,9 +10,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
+#if DEVHOST_V2
+#include <magenta/process.h>
+#include <magenta/processargs.h>
+#define ID_HJOBROOT 4
+static mtx_t sysinfo_lock = MTX_INIT;
+static mx_handle_t sysinfo_job_root;
 
+static mx_handle_t get_sysinfo_job_root(void) {
+    mtx_lock(&sysinfo_lock);
+    if (sysinfo_job_root == MX_HANDLE_INVALID) {
+        sysinfo_job_root = mx_get_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
+    }
+    mtx_unlock(&sysinfo_lock);
+
+    mx_handle_t h;
+    if ((sysinfo_job_root != MX_HANDLE_INVALID) &&
+        (mx_handle_duplicate(sysinfo_job_root, MX_RIGHT_SAME_RIGHTS, &h) == NO_ERROR)) {
+        return h;
+    }
+
+    return MX_HANDLE_INVALID;
+}
+#else
 mx_handle_t get_sysinfo_job_root(void);
+#endif
 
 static ssize_t sysinfo_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen,
                              void* reply, size_t max) {
@@ -53,24 +77,38 @@ static mx_protocol_device_t sysinfo_ops = {
     .ioctl = sysinfo_ioctl,
 };
 
-// implement driver object:
-
-mx_status_t sysinfo_init(mx_driver_t* driver) {
+mx_status_t sysinfo_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "sysinfo",
-        .driver = driver,
+        .driver = drv,
         .ops = &sysinfo_ops,
     };
 
     mx_device_t* dev;
-    return device_add2(driver_get_misc_device(), &args, &dev);
+    return device_add2(parent, &args, &dev);
 }
+
+#if !DEVHOST_V2
+mx_status_t sysinfo_init(mx_driver_t* drv) {
+    return sysinfo_bind(drv, driver_get_misc_device(), NULL);
+}
+#endif
 
 static mx_driver_ops_t sysinfo_driver_ops = {
     .version = DRIVER_OPS_VERSION,
+#if DEVHOST_V2
+    .bind = sysinfo_bind,
+#else
     .init = sysinfo_init,
+#endif
 };
 
+#if DEVHOST_V2
+MAGENTA_DRIVER_BEGIN(sysinfo, sysinfo_driver_ops, "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
+MAGENTA_DRIVER_END(sysinfo)
+#else
 MAGENTA_DRIVER_BEGIN(sysinfo, sysinfo_driver_ops, "magenta", "0.1", 0)
 MAGENTA_DRIVER_END(sysinfo)
+#endif

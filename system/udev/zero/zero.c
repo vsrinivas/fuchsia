@@ -25,21 +25,31 @@ static mx_protocol_device_t zero_device_proto = {
     .write = zero_write,
 };
 
-mx_status_t zero_init(mx_driver_t* driver) {
+mx_status_t zero_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "zero",
-        .driver = driver,
+        .driver = drv,
         .ops = &zero_device_proto,
     };
 
     mx_device_t* dev;
-    return device_add2(driver_get_root_device(), &args, &dev);
+    return device_add2(parent, &args, &dev);
 }
+
+#if !DEVHOST_V2
+mx_status_t zero_init(mx_driver_t* drv) {
+    return zero_bind(drv, driver_get_root_device(), NULL);
+}
+#endif
 
 static mx_driver_ops_t zero_driver_ops = {
     .version = DRIVER_OPS_VERSION,
+#if DEVHOST_V2
+    .bind = zero_bind,
+#else
     .init = zero_init,
+#endif
 };
 
 MAGENTA_DRIVER_BEGIN(zero, zero_driver_ops, "magenta", "0.1", 0)

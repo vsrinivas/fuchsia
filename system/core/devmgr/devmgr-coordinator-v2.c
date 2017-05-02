@@ -13,6 +13,11 @@
 #include "devcoordinator.h"
 #include "log.h"
 
+//TODO: these are copied from devhost.h
+#define ID_HJOBROOT 4
+mx_handle_t get_sysinfo_job_root(void);
+
+
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
@@ -79,6 +84,7 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, 0));
 
     mx_handle_t h;
+    //TODO: limit root resource to root devhost only
     mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &h);
     launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
 
@@ -87,6 +93,10 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
                          PA_HND(PA_MXIO_ROOT, 0));
+
+    //TODO: limit root job access to root devhost only
+    launchpad_add_handle(lp, get_sysinfo_job_root(),
+                         PA_HND(PA_USER0, ID_HJOBROOT));
 
     // Inherit devmgr's environment (including kernel cmdline)
     launchpad_clone(lp, LP_CLONE_ENVIRON | LP_CLONE_MXIO_ROOT);
@@ -622,6 +632,12 @@ void coordinator(void) {
     acpi_init();
 
     do_publish(&root_device, &misc_device);
+
+    // bind "built-in" root devices first
+    driver_t drv = {
+        .libname = "driver/root.so",
+    };
+    dc_attempt_bind(&drv, &root_device);
 
     enumerate_drivers();
 
