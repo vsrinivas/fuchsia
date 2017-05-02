@@ -133,15 +133,16 @@ void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
   context_publisher_->Publish(CreateKey("visible_count"), std::to_string(ids.size()));
 }
 
-void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info) {
+void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
+                                 modular::StoryState state) {
   const std::string id = info->id.get();
 
   std::string url_json;
   modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);
   context_publisher_->Publish(CreateKey(id, "url"), url_json);
-  std::string state = StoryStateToString(info->state);
+  std::string state_text = StoryStateToString(state);
   std::string state_json;
-  modular::XdrWrite(&state_json, &state, modular::XdrFilter<std::string>);
+  modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
   context_publisher_->Publish(CreateKey(id, "state"), state_json);
   context_publisher_->Publish(CreateKey(id, "deleted"), "false");
 }

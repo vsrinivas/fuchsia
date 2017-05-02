@@ -62,7 +62,7 @@ class StoryInfoAcquirer : public modular::Agent,
   void OnVisibleStoriesChange(fidl::Array<fidl::String> ids) override;
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr info) override;
+  void OnChange(modular::StoryInfoPtr info, modular::StoryState state) override;
   void OnDelete(const fidl::String& story_id) override;
 
   ContextPublisherPtr context_publisher_;

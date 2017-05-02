@@ -843,9 +843,9 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bazzle_dazzle";
   story_info->id = "";
-  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
-  story_provider()->NotifyStoryChanged(std::move(story_info));
+  story_provider()->NotifyStoryChanged(std::move(story_info),
+                                       modular::StoryState::INITIAL);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -870,9 +870,9 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
-  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
-  story_provider()->NotifyStoryChanged(std::move(story_info));
+  story_provider()->NotifyStoryChanged(std::move(story_info),
+                                       modular::StoryState::INITIAL);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -894,9 +894,9 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
-  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
-  story_provider()->NotifyStoryChanged(std::move(story_info));
+  story_provider()->NotifyStoryChanged(std::move(story_info),
+                                       modular::StoryState::INITIAL);
 
   for (int i = 0; i < 2; i++) {
     auto create_story = CreateStory::New();

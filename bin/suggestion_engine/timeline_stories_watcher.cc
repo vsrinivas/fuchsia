@@ -18,7 +18,8 @@ TimelineStoriesWatcher::TimelineStoriesWatcher(
   (*story_provider)->Watch(std::move(handle));
 }
 
-void TimelineStoriesWatcher::OnChange(modular::StoryInfoPtr story_info) {
+void TimelineStoriesWatcher::OnChange(modular::StoryInfoPtr story_info,
+                                      modular::StoryState state) {
   id_to_url_.emplace(story_info->id.get(), story_info->url.get());
 
   if (story_urls_.insert(story_info->url.get()).second) {

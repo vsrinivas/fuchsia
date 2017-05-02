@@ -132,7 +132,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                       // TODO(thatguy): We should not be std::move()ing
                       // story_controller *while we're calling it*.
                       [ this, controller = std::move(story_controller) ](
-                          modular::StoryInfoPtr story_info) {
+                          modular::StoryInfoPtr story_info,
+                          modular::StoryState state) {
                         FTL_LOG(INFO) << "Requesting focus for story_id "
                                       << story_info->id;
                         focus_provider_ptr_->Request(story_info->id);
