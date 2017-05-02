@@ -125,8 +125,8 @@ static mx_status_t eth_release(mx_device_t* dev) {
     edev->pci->enable_bus_master(edev->pcidev, true);
     mx_handle_close(edev->irqh);
     mx_handle_close(edev->ioh);
-    free(dev);
-    return ERR_NOT_SUPPORTED;
+    free(edev);
+    return NO_ERROR;
 }
 
 static mx_protocol_device_t device_ops = {
@@ -205,13 +205,17 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
     eth_setup_buffers(&edev->eth, io_buffer_virt(&edev->buffer), io_buffer_phys(&edev->buffer));
     eth_init_hw(&edev->eth);
 
-    r = device_create("intel-ethernet", edev, &device_ops, drv, &edev->mxdev);
-    if (r < 0) {
-        printf("eth: cannot create device %d\n", r);
-        goto fail;
-    }
-    device_set_protocol(edev->mxdev, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
-    if (device_add(edev->mxdev, dev)) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "intel-ethernet",
+        .ctx = edev,
+        .driver = drv,
+        .ops = &device_ops,
+        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_ops = &ethmac_ops,
+    };
+
+    if (device_add2(dev, &args, &edev->mxdev)) {
         goto fail;
     }
 
@@ -229,7 +233,6 @@ fail:
         mx_handle_close(edev->irqh);
         mx_handle_close(edev->ioh);
     }
-    device_destroy(edev->mxdev);
     free(edev);
     return ERR_NOT_SUPPORTED;
 }
