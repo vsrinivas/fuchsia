@@ -475,7 +475,6 @@ static void ahci_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 static mx_status_t ahci_release(mx_device_t* dev) {
     // FIXME - join threads created by this driver
     ahci_device_t* device = dev->ctx;
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -732,13 +731,6 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         return ERR_NO_MEMORY;
     }
 
-    status = device_create("ahci", device, &ahci_device_proto, drv, &device->mxdev);
-    if (status < 0) {
-        xprintf("ahci: error %d in device_create\n", status);
-        free(device);
-        return status;
-    }
-
     // map register window
     status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != NO_ERROR) {
@@ -806,7 +798,16 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     }
 
     // add the device for the controller
-    status = device_add(device->mxdev, dev);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ahci",
+        .ctx = device,
+        .driver = drv,
+        .ops = &ahci_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         xprintf("ahci: error %d in device_add\n", status);
         goto fail;
@@ -823,7 +824,6 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     return NO_ERROR;
 fail:
     // FIXME unmap, and join any threads created above
-    device_destroy(device->mxdev);
     free(device);
     return status;
 }

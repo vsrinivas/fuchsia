@@ -37,6 +37,8 @@
 #define SATA_FLAG_DMA   (1 << 0)
 #define SATA_FLAG_LBA48 (1 << 1)
 
+extern mx_driver_t _driver_ahci;
+
 typedef struct sata_device {
     mx_device_t* mxdev;
 
@@ -54,12 +56,12 @@ static void sata_device_identify_complete(iotxn_t* txn, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
 
-static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* controller) {
+static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* controller, const char* name) {
     // send IDENTIFY DEVICE
     iotxn_t* txn;
     mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, 512);
     if (status != NO_ERROR) {
-        xprintf("%s: error %d allocating iotxn\n", device_get_name(dev->mxdev), status);
+        xprintf("%s: error %d allocating iotxn\n", name, status);
         return status;
     }
 
@@ -78,7 +80,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     completion_wait(&completion, MX_TIME_INFINITE);
 
     if (txn->status != NO_ERROR) {
-        xprintf("%s: error %d in device identify\n", device_get_name(dev->mxdev), txn->status);
+        xprintf("%s: error %d in device identify\n", name, txn->status);
         return txn->status;
     }
     assert(txn->actual == 512);
@@ -90,7 +92,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
     iotxn_release(txn);
 
     char str[41]; // model id is 40 chars
-    xprintf("%s: dev info\n", device_get_name(dev->mxdev));
+    xprintf("%s: dev info\n", name);
     snprintf(str, SATA_DEVINFO_SERIAL_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_SERIAL));
     xprintf("  serial=%s\n", str);
     snprintf(str, SATA_DEVINFO_FW_REV_LEN + 1, "%s", (char*)(devinfo + SATA_DEVINFO_FW_REV));
@@ -241,7 +243,6 @@ static mx_off_t sata_getsize(mx_device_t* dev) {
 
 static mx_status_t sata_release(mx_device_t* dev) {
     sata_device_t* device = dev->ctx;
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -330,30 +331,31 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
         return ERR_NO_MEMORY;
     }
 
-    char name[8];
-    snprintf(name, sizeof(name), "sata%d", port);
-    mx_status_t status = device_create(name, device, &sata_device_proto, dev->driver,
-                                       &device->mxdev);
-    if (status < 0) {
-        free(device);
-        return status;
-    }
-
     device->port = port;
 
+    char name[8];
+    snprintf(name, sizeof(name), "sata%d", port);
+
     // send device identify
-    status = sata_device_identify(device, dev);
+    mx_status_t status = sata_device_identify(device, dev, name);
     if (status < 0) {
-        device_destroy(device->mxdev);
         free(device);
         return status;
     }
 
     // add the device
-    device_set_protocol(device->mxdev, MX_PROTOCOL_BLOCK_CORE, &sata_block_ops);
-    status = device_add(device->mxdev, dev);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = device,
+        .driver = &_driver_ahci,
+        .ops = &sata_device_proto,
+        .proto_id = MX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &sata_block_ops,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
     if (status < 0) {
-        device_destroy(device->mxdev);
         free(device);
         return status;
     }
