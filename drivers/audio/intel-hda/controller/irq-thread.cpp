@@ -152,18 +152,24 @@ void IntelHDAController::ProcessRIRB() {
                   caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
 
         if (!resp.unsolicited()) {
-            // If this was a solicited response, there needs to be an in-flight
-            // job waiting at the head of the in-flight queue which triggered
-            // it.
-            if (in_flight_corb_jobs_.is_empty()) {
-                LOG("Received solicited response for codec address (%u) [0x%08x, 0x%08x] "
-                    "but no in-flight job is waiting for it\n",
-                    caddr, resp.data, resp.data_ex);
-                continue;
-            }
+            mxtl::unique_ptr<CodecCmdJob> job;
 
-            // Grab the front of the in-flight queue.
-            auto job = in_flight_corb_jobs_.pop_front();
+            {
+                mxtl::AutoLock corb_lock(&corb_lock_);
+
+                // If this was a solicited response, there needs to be an in-flight
+                // job waiting at the head of the in-flight queue which triggered
+                // it.
+                if (in_flight_corb_jobs_.is_empty()) {
+                    LOG("Received solicited response for codec address (%u) [0x%08x, 0x%08x] "
+                        "but no in-flight job is waiting for it\n",
+                        caddr, resp.data, resp.data_ex);
+                    continue;
+                }
+
+                // Grab the front of the in-flight queue.
+                job = in_flight_corb_jobs_.pop_front();
+            }
 
             // Sanity checks complete.  Pass the response and the job which
             // triggered it on to the codec.

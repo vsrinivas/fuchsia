@@ -176,7 +176,7 @@ private:
     unsigned int   corb_space_         TA_GUARDED(corb_lock_) = 0;
     unsigned int   corb_max_in_flight_ TA_GUARDED(corb_lock_) = 0;
 
-    mxtl::Mutex    rirb_lock_          TA_ACQ_AFTER(corb_lock_);
+    mxtl::Mutex    rirb_lock_          TA_ACQ_BEFORE(corb_lock_);
     CodecResponse* rirb_               TA_GUARDED(rirb_lock_) = nullptr;
     unsigned int   rirb_entry_count_   TA_GUARDED(rirb_lock_) = 0;
     unsigned int   rirb_mask_          TA_GUARDED(rirb_lock_) = 0;
@@ -184,8 +184,10 @@ private:
     unsigned int   rirb_snapshot_cnt_  TA_GUARDED(rirb_lock_) = 0;
     CodecResponse  rirb_snapshot_[HDA_RIRB_MAX_ENTRIES] TA_GUARDED(rirb_lock_);
 
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> pending_corb_jobs_;
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_
+        TA_GUARDED(corb_lock_);
+    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> pending_corb_jobs_
+        TA_GUARDED(corb_lock_);
 
     mxtl::Mutex codec_lock_;
     mxtl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
