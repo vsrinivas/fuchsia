@@ -117,7 +117,6 @@ static mx_status_t intel_i915_release(mx_device_t* dev) {
         device->framebuffer_handle = -1;
     }
 
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -171,12 +170,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         goto fail;
     }
 
-    // create and add the display (char) device
-    status = device_create("intel_i915_disp", device, &intel_i915_device_proto, drv, &device->mxdev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
@@ -198,8 +191,18 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
                        format, width, height, stride);
 
-    device_set_protocol(device->mxdev, MX_PROTOCOL_DISPLAY, &intel_i915_display_proto);
-    status = device_add(device->mxdev, dev);
+    // create and add the display (char) device
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "intel_i915_disp",
+        .ctx = device,
+        .driver = drv,
+        .ops = &intel_i915_device_proto,
+        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_ops = &intel_i915_display_proto,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }
@@ -210,7 +213,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     return NO_ERROR;
 
 fail:
-    device_destroy(device->mxdev);
     free(device);
     return status;
 }
