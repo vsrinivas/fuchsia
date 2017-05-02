@@ -277,19 +277,19 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     printf("  version id:      %x\n", i2chid->hiddesc->wVersionID);
 #endif
 
-    mx_status_t status = device_create("i2c-hid", i2chid, &i2c_hid_dev_ops, drv, &i2chid->mxdev);
-    if (status != NO_ERROR) {
-        printf("i2c-hid: could not create device: %d\n", status);
-        free(i2chid->hiddesc);
-        free(i2chid);
-        return status;
-    }
-    device_set_protocol(i2chid->mxdev, MX_PROTOCOL_HIDBUS, &i2c_hidbus_ops);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "i2c-hid",
+        .ctx = i2chid,
+        .driver = drv,
+        .ops = &i2c_hid_dev_ops,
+        .proto_id = MX_PROTOCOL_HIDBUS,
+        .proto_ops = &i2c_hidbus_ops,
+    };
 
-    status = device_add(i2chid->mxdev, i2chid->i2cdev);
+    mx_status_t status = device_add2(i2chid->i2cdev, &args, &i2chid->mxdev);
     if (status != NO_ERROR) {
         printf("i2c-hid: could not add device: %d\n", status);
-        device_destroy(i2chid->mxdev);
         free(i2chid->hiddesc);
         free(i2chid);
         return status;
@@ -298,7 +298,6 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
     if (ret != thrd_success) {
         printf("i2c-hid: could not create irq thread: %zd\n", ret);
-        device_destroy(i2chid->mxdev);
         free(i2chid->hiddesc);
         free(i2chid);
         // TODO: map thrd_* status codes to ERR_* status codes
