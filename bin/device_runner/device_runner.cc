@@ -70,6 +70,7 @@ class Settings {
         command_line.HasOption("ledger_repository_for_testing");
     user_auth_config_file = command_line.HasOption("user_auth_config_file");
     ignore_monitor = command_line.HasOption("ignore_monitor");
+    no_minfs = command_line.HasOption("no_minfs");
 
     ParseShellArgs(
         command_line.GetOptionValueWithDefault("device_shell_args", ""),
@@ -96,6 +97,7 @@ class Settings {
       --ledger_repository_for_testing
       --user_auth_config_file
       --ignore_monitor
+      --no_minfs
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/userpicker_device_shell".
@@ -119,6 +121,7 @@ class Settings {
   bool ledger_repository_for_testing;
   bool user_auth_config_file;
   bool ignore_monitor;
+  bool no_minfs;
 
  private:
   void ParseShellArgs(const std::string& value,
@@ -235,7 +238,9 @@ class DeviceRunnerApp : DeviceShellContext, UserProvider {
     // 2. Get login data for users of the device.
     // There might not be a file of users persisted. If config file doesn't
     // exist, move forward with no previous users.
-    WaitForMinfs();
+    if (!settings_.no_minfs) {
+      WaitForMinfs();
+    }
     if (files::IsFile(kUsersConfigurationFile)) {
       std::string serialized_users;
       if (!files::ReadFileToString(kUsersConfigurationFile,
