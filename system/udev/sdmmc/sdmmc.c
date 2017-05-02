@@ -116,7 +116,6 @@ static void sdmmc_unbind(mx_device_t* device) {
 
 static mx_status_t sdmmc_release(mx_device_t* device) {
     sdmmc_t* sdmmc = device->ctx;
-    device_destroy(sdmmc->mxdev);
     free(sdmmc);
     return NO_ERROR;
 }
@@ -452,14 +451,18 @@ static int sdmmc_bootstrap_thread(void* arg) {
         } while (false);
     }
 
-    st = device_create( "sdmmc", sdmmc, &sdmmc_device_proto, &_driver_sdmmc, &sdmmc->mxdev);
-    if (st != NO_ERROR) {
-         goto err;
-    }
-
     sdmmc->sdmmc_mxdev = dev;
-    device_set_protocol(sdmmc->mxdev, MX_PROTOCOL_BLOCK, NULL);
-    st = device_add(sdmmc->mxdev, dev);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "sdmmc",
+        .ctx = sdmmc,
+        .driver = &_driver_sdmmc,
+        .ops = &sdmmc_device_proto,
+        .proto_id = MX_PROTOCOL_BLOCK,
+    };
+
+    st = device_add2(dev, &args, &sdmmc->mxdev);
     if (st != NO_ERROR) {
          goto err;
     }
@@ -469,7 +472,6 @@ static int sdmmc_bootstrap_thread(void* arg) {
     return 0;
 err:
     if (sdmmc) {
-        device_destroy(sdmmc->mxdev);
         free(sdmmc);
     }
 
