@@ -118,7 +118,6 @@ static mx_status_t test_device_release(mx_device_t* dev) {
     if (device->control != MX_HANDLE_INVALID) {
         mx_handle_close(device->control);
     }
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -152,17 +151,18 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
         return ERR_NO_MEMORY;
     }
 
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = devname,
+        .ctx = device,
+        .driver = &_driver_test,
+        .ops = &test_device_proto,
+        .proto_id = MX_PROTOCOL_TEST,
+        .proto_ops = &test_test_proto,
+    };
+
     mx_status_t status;
-    if ((status = device_create(devname, device, &test_device_proto, &_driver_test,
-                                &device->mxdev)) != NO_ERROR) {
-        free(device);
-        return status;
-    }
-
-    device_set_protocol(device->mxdev, MX_PROTOCOL_TEST, &test_test_proto);
-
-    if ((status = device_add(device->mxdev, dev)) != NO_ERROR) {
-        device_destroy(device->mxdev);
+    if ((status = device_add2(dev, &args, &device->mxdev)) != NO_ERROR) {
         free(device);
         return status;
     }
@@ -170,25 +170,20 @@ static ssize_t test_ioctl(mx_device_t* dev, uint32_t op, const void* in, size_t 
     return snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
 }
 
-static mx_status_t test_release(mx_device_t* dev) {
-    device_destroy(dev);
-    return NO_ERROR;
-}
-
 static mx_protocol_device_t test_root_proto = {
     .ioctl = test_ioctl,
-    .release = test_release,
 };
 
 static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+    device_add_args_t args = {
+       .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "test",
+        .driver = drv,
+        .ops = &test_root_proto,
+    };
+
     mx_device_t* device;
-    if (device_create("test", NULL, &test_root_proto, drv, &device) == NO_ERROR) {
-        if (device_add(device, dev) < 0) {
-            printf("test: device_add() failed\n");
-            device_destroy(device);
-        }
-    }
-    return NO_ERROR;
+    return device_add2(dev, &args, &device);
 }
 
 static mx_driver_ops_t test_driver_ops = {
