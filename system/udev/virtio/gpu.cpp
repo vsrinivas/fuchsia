@@ -423,22 +423,25 @@ mx_status_t GpuDevice::virtio_gpu_start() {
 
     LTRACEF("publishing device\n");
 
-    // initialize the mx_device and publish us
-    // point the ctx of our DDK device at ourself
-    auto status = device_create("virtio-gpu", this, &device_ops_, driver_, &device_);
-    if (status < 0) {
-        return status;
-    }
-
     display_proto_ops_.set_mode = virtio_gpu_set_mode;
     display_proto_ops_.get_mode = virtio_gpu_get_mode;
     display_proto_ops_.get_framebuffer = virtio_gpu_get_framebuffer;
     display_proto_ops_.flush = virtio_gpu_flush;
 
-    device_set_protocol(device_, MX_PROTOCOL_DISPLAY, &display_proto_ops_);
-    status = device_add(device_, bus_device_);
+    // initialize the mx_device and publish us
+    // point the ctx of our DDK device at ourself
+
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "virtio-gpu";
+    args.ctx = this;
+    args.driver = driver_;
+    args.ops = &device_ops_;
+    args.proto_id = MX_PROTOCOL_DISPLAY;
+    args.proto_ops = &display_proto_ops_;
+
+    auto status = device_add2(bus_device_, &args, &bus_device_);
     if (status < 0) {
-        device_destroy(device_);
         device_ = nullptr;
         return status;
     }
