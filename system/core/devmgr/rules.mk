@@ -131,3 +131,27 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
+
+
+
+ifeq ($(ENABLE_DEVHOST_V2),true)
+
+MODULE := $(LOCAL_DIR).dmctl
+
+MODULE_TYPE := driver
+
+MODULE_NAME := dmctl
+
+MODULE_SRCS := \
+	$(LOCAL_DIR)/dmctl-v2.c \
+	$(LOCAL_DIR)/devhost-shared.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
+
+MODULE_DEFINES := DEVHOST_V2=1
+
+include make/module.mk
+
+endif

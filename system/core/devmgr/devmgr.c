@@ -16,6 +16,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
+#include <mxio/loader-service.h>
 #include <mxio/watcher.h>
 #include <mxio/util.h>
 #include <stdio.h>
@@ -359,6 +360,10 @@ int main(int argc, char** argv) {
     // We won't use it any more (no dlopen calls in this process).
     mx_handle_t loader_svc = dl_set_loader_service(MX_HANDLE_INVALID);
     mx_handle_close(loader_svc);
+
+    // Ensure that devmgr doesn't try to connect to the global
+    // loader sevice (as this leads to deadlocks in devhost v2)
+    mxio_force_local_loader_service();
 
     devmgr_io_init();
 

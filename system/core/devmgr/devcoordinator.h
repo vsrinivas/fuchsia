@@ -175,6 +175,9 @@ typedef struct {
 #define DC_OP_ADD_DEVICE     0x80000011
 #define DC_OP_REMOVE_DEVICE  0x80000012
 
+// Host->Coord Ops for DmCtl
+#define DC_OP_DM_COMMAND     0x80000020
+
 mx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args);

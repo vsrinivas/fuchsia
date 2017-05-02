@@ -6,12 +6,74 @@
 #include <string.h>
 
 #include <launchpad/launchpad.h>
+#include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 
 #include <ddk/driver.h>
+
+#include "acpi.h"
 #include "devcoordinator.h"
 #include "log.h"
+
+static void dc_dump_state(void);
+
+extern mx_handle_t application_launcher;
+
+static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
+    if (len == 4) {
+        if (!memcmp(cmd, "dump", 4)) {
+            dc_dump_state();
+            return NO_ERROR;
+        }
+        if (!memcmp(cmd, "help", 4)) {
+            printf("dump        - dump device tree\n"
+                   "poweroff    - power off the system\n"
+                   "shutdown    - power off the system\n"
+                   "reboot      - reboot the system\n"
+                   "kerneldebug - send a command to the kernel\n"
+                   "ktraceoff   - stop kernel tracing\n"
+                   "ktraceon    - start kernel tracing\n"
+                   "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
+                   );
+            return NO_ERROR;
+        }
+    }
+    if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
+        devhost_acpi_reboot();
+        return NO_ERROR;
+    }
+    if (len == 8) {
+        if (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8)) {
+            devhost_acpi_poweroff();
+            return NO_ERROR;
+        }
+        if (!memcmp(cmd, "ktraceon", 8)) {
+            mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, NULL);
+            return NO_ERROR;
+        }
+    }
+    if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, NULL);
+        mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
+        return NO_ERROR;
+    }
+    if ((len > 9) && !memcmp(cmd, "acpi-ps0:", 9)) {
+        char arg[len - 8];
+        memcpy(arg, cmd + 9, len - 9);
+        arg[len - 9] = 0;
+        devhost_acpi_ps0(arg);
+        return NO_ERROR;
+    }
+    if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
+        return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
+    }
+    if ((len > 1) && (cmd[0] == '@')) {
+        return mx_channel_write(application_launcher, 0, cmd, len, NULL, 0);
+    }
+    printf("dmctl: unknown command '%.*s'\n", (int) len, cmd);
+    return ERR_NOT_SUPPORTED;
+}
 
 //TODO: these are copied from devhost.h
 #define ID_HJOBROOT 4
@@ -42,6 +104,31 @@ static device_t misc_device = {
     .pending = LIST_INITIAL_VALUE(misc_device.pending),
     .refcount = 1,
 };
+
+static void dc_dump_device(device_t* dev, size_t indent) {
+    mx_koid_t pid = dev->host ? dev->host->koid : 0;
+    if (pid == 0) {
+        printf("%*s[%s]\n", (int) (indent * 3), "", dev->name);
+    } else {
+        printf("%*s[%s] pid=%zu%s%s\n",
+               (int) (indent * 3), "", dev->name, pid,
+               dev->flags & DEV_CTX_BUSDEV ? " busdev" : "",
+               dev->flags & DEV_CTX_SHADOW ? " shadow" : "");
+    }
+    device_t* child;
+    if (dev->shadow) {
+        indent++;
+        dc_dump_device(dev->shadow, indent);
+    }
+    list_for_every_entry(&dev->children, child, device_t, node) {
+        dc_dump_device(child, indent + 1);
+    }
+}
+
+static void dc_dump_state(void) {
+    dc_dump_device(&root_device, 0);
+    dc_dump_device(&misc_device, 1);
+}
 
 static void dc_handle_new_device(device_t* dev);
 
@@ -296,6 +383,14 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         return ERR_INTERNAL;
     }
 
+    // Only ADD_DEVICE takes handles.
+    // For all other ops, silently close any passed handles.
+    if ((hcount != 0) && (msg.op != DC_OP_ADD_DEVICE)) {
+        while (hcount > 0) {
+            mx_handle_close(hin[--hcount]);
+        }
+    }
+
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
         log(RPC_IN, "devcoord: rpc: add device '%s' args='%s'\n", name, args);
@@ -305,25 +400,19 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         break;
 
     case DC_OP_REMOVE_DEVICE:
-        if (hcount != 0) {
-            r = ERR_INVALID_ARGS;
-            goto fail;
-        }
         log(RPC_IN, "devcoord: rpc: remove device '%s'\n", dev->name);
         if ((r = dc_remove_device(dev)) == NO_ERROR) {
             goto done;
         }
         break;
 
-    case DC_OP_STATUS:
+    case DC_OP_DM_COMMAND:
+        r = handle_dmctl_write(msg.datalen, data);
+        break;
+
+    case DC_OP_STATUS: {
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
-        if (hcount != 0) {
-            while (hcount > 0) {
-                mx_handle_close(hin[--hcount]);
-                return NO_ERROR;
-            }
-        }
         pending_t* pending = list_remove_tail_type(&dev->pending, pending_t, node);
         if (pending == NULL) {
             log(ERROR, "devcoord: rpc: spurious status message\n");
@@ -340,7 +429,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         }
         free(pending);
         return NO_ERROR;
-
+    }
     default:
         log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
         r = ERR_NOT_SUPPORTED;
@@ -613,8 +702,6 @@ void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
 
 //TODO: The acpisvc needs to become the acpi bus device
 //      For now, we launch it manually here so PCI can work
-#include "acpi.h"
-
 static void acpi_init(void) {
     mx_status_t status = devhost_launch_acpisvc(devhost_job);
     if (status != NO_ERROR) {
@@ -638,6 +725,8 @@ void coordinator(void) {
         .libname = "driver/root.so",
     };
     dc_attempt_bind(&drv, &root_device);
+    drv.libname = "driver/dmctl.so";
+    dc_attempt_bind(&drv, &misc_device);
 
     enumerate_drivers();
 
