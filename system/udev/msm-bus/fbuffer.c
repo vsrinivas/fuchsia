@@ -121,27 +121,23 @@ mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     status = msm_parse_framebuffer(v);
     if (status != NO_ERROR)
         return status;
-
-    status = device_create("msm-fb", NULL, &msm_device_proto, driver, &disp_device);
-    if (status != NO_ERROR)
-        return status;
-
-    device_set_protocol(disp_device, MX_PROTOCOL_DISPLAY, &msm_display_proto);
     status = mx_set_framebuffer(get_root_resource(), msm_framebuffer,
                                 msm_framebuffer_size, disp_info.format,
                                 disp_info.width, disp_info.height, disp_info.stride);
     if (status != NO_ERROR) {
-        device_destroy(disp_device);
         return status;
     }
 
-    status = device_add(disp_device, parent);
-    if (status != NO_ERROR) {
-        device_destroy(disp_device);
-        return status;
-    }
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "msm-fb",
+        .driver = driver,
+        .ops = &msm_device_proto,
+        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_ops = &msm_display_proto,
+    };
 
-    return NO_ERROR;
+    return device_add2(parent, &args, &disp_device);
 }
 
 static mx_driver_ops_t msm_fb_driver_ops = {
