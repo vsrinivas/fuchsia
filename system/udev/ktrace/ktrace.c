@@ -73,15 +73,15 @@ static mx_protocol_device_t ktrace_device_proto = {
 };
 
 static mx_status_t ktrace_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ktrace",
+        .driver = drv,
+        .ops = &ktrace_device_proto,
+    };
+
     mx_device_t* dev;
-    if (device_create("ktrace", NULL, &ktrace_device_proto, drv, &dev) == NO_ERROR) {
-        mx_status_t status;
-        if ((status = device_add(dev, parent)) < 0) {
-            free(dev);
-            return status;
-        }
-    }
-    return NO_ERROR;
+    return device_add2(parent, &args, &dev);
 }
 
 static mx_driver_ops_t ktrace_driver_ops = {
