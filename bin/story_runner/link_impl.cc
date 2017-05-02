@@ -52,10 +52,12 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
   });
 
   story_storage_->WatchLink(
-      link_path, [this](const fidl::String& json) { OnChange(json); });
+      link_path, this, [this](const fidl::String& json) { OnChange(json); });
 }
 
-LinkImpl::~LinkImpl() = default;
+LinkImpl::~LinkImpl() {
+  story_storage_->DropWatcher(this);
+}
 
 void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
   if (ready_) {
@@ -304,8 +306,20 @@ void LinkImpl::RemoveConnection(LinkConnection* const connection) {
   FTL_DCHECK(it != connections_.end());
   connections_.erase(it, connections_.end());
 
+  // The link must be fully synced before we can call the orphaned handler
+  // because the write storage call calls back onto this. Also, we must check
+  // whether it's still orphaned again after Sync, because a once orphaned link
+  // can acquire new connections because it can be connected to by name. This
+  // requires that the orphaned handler executes synchronously.
+  //
+  // TODO(mesch): This is still not correct as it leaves the possibility that
+  // another set operation was executed after Sync().
   if (connections_.empty() && orphaned_handler_) {
-    orphaned_handler_();
+    Sync([this] {
+	if (connections_.empty() && orphaned_handler_) {
+	  orphaned_handler_();
+	}
+      });
   }
 }
 
@@ -317,7 +331,7 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
       [this] { impl_->RemoveConnection(this); });
 }
 
-LinkConnection::~LinkConnection() {}
+LinkConnection::~LinkConnection() = default;
 
 void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), false);

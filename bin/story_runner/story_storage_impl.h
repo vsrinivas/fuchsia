@@ -20,6 +20,8 @@
 
 namespace modular {
 
+class LinkImpl;
+  
 // A wrapper around a ledger page to store links in a story that runs
 // asynchronous operations pertaining to one Story instance in a
 // dedicated OperationQueue instance.
@@ -48,7 +50,9 @@ class StoryStorageImpl : public PageClient {
                        const LinkPathPtr& link_path,
                        const SyncCallback& callback);
 
-  void WatchLink(const LinkPathPtr& link_path, const DataCallback& watcher);
+  void WatchLink(const LinkPathPtr& link_path, LinkImpl* impl,
+		 const DataCallback& watcher);
+  void DropWatcher(LinkImpl* impl);
   void Sync(const SyncCallback& callback);
 
  private:
@@ -57,7 +61,12 @@ class StoryStorageImpl : public PageClient {
 
   // Clients to notify when the value of a given link changes in the
   // ledger page. The first element in the pair is the key for the link path.
-  std::vector<std::pair<std::string, DataCallback>> watchers_;
+  struct WatcherEntry {
+    std::string key;
+    LinkImpl* impl;  // Not owned.
+    DataCallback watcher;
+  };
+  std::vector<WatcherEntry> watchers_;
 
   // The ledger page the story data is stored in.
   ledger::Page* const story_page_;

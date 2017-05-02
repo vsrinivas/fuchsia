@@ -356,8 +356,17 @@ void StoryStorageImpl::WriteModuleData(const fidl::Array<fidl::String>& module_p
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
+				 LinkImpl* const impl,
                                  const DataCallback& watcher) {
-  watchers_.emplace_back(std::make_pair(MakeLinkKey(link_path), watcher));
+  watchers_.emplace_back(WatcherEntry{MakeLinkKey(link_path), impl, watcher});
+}
+
+void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
+  auto f = std::find_if(
+      watchers_.begin(), watchers_.end(),
+      [impl](auto& entry) { return entry.impl == impl; });
+  FTL_DCHECK(f != watchers_.end());
+  watchers_.erase(f);
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {
@@ -366,8 +375,8 @@ void StoryStorageImpl::Sync(const SyncCallback& callback) {
 
 void StoryStorageImpl::OnChange(const std::string& key, const std::string& value) {
   for (auto& watcher_entry : watchers_) {
-    if (key == watcher_entry.first) {
-      watcher_entry.second(value);
+    if (key == watcher_entry.key) {
+      watcher_entry.watcher(value);
     }
   }
 }
