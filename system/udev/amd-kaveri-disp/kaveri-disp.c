@@ -78,7 +78,6 @@ static mx_status_t kaveri_disp_release(mx_device_t* dev) {
         device->framebuffer_handle = -1;
     }
 
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -123,12 +122,6 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
         goto fail;
     }
 
-    // create and add the display (char) device
-    status = device_create("amd_kaveri_disp", device, &kaveri_disp_device_proto, drv, &device->mxdev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
@@ -139,17 +132,28 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
         di->stride = stride;
     } else {
         status = ERR_NOT_SUPPORTED;
-        goto fail_add;
+        goto fail;
     }
     di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     mx_set_framebuffer(get_root_resource(), device->framebuffer, device->framebuffer_size,
                        format, width, height, stride);
 
-    device_set_protocol(device->mxdev, MX_PROTOCOL_DISPLAY, &kaveri_disp_display_proto);
-    status = device_add(device->mxdev, dev);
+
+    // create and add the display (char) device
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "amd_kaveri_disp",
+        .ctx = device,
+        .driver = drv,
+        .ops = &kaveri_disp_device_proto,
+        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_ops = &kaveri_disp_display_proto,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
-        goto fail_add;
+        goto fail;
     }
 
     printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
@@ -159,8 +163,6 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
 
     return NO_ERROR;
 
-fail_add:
-    device_destroy(device->mxdev);
 fail:
     free(device);
     return status;
