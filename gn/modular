@@ -134,6 +134,10 @@
             "bootfs_path": "apps/modular_tests/queue_persistence_test_module"
         },
         {
+            "binary": "remote_invoker_test",
+            "bootfs_path": "apps/modular_tests/remote_invoker_test"
+        },
+        {
             "binary": "run_component",
             "bootfs_path": "apps/run_component"
         },
