@@ -25,6 +25,8 @@
     } while (0)
 #endif
 
+extern mx_driver_t _driver_usb_hub;
+
 typedef struct usb_hub {
     // the device we are publishing
     mx_device_t* mxdev;
@@ -231,7 +233,6 @@ static void usb_hub_unbind(mx_device_t* device) {
 
 static mx_status_t usb_hub_free(usb_hub_t* hub) {
     iotxn_release(hub->status_request);
-    device_destroy(hub->mxdev);
     free(hub);
     return NO_ERROR;
 }
@@ -283,8 +284,16 @@ static int usb_hub_thread(void* arg) {
         usb_hub_enable_port(hub, i);
     }
 
-    device_set_bindable(hub->mxdev, false);
-    result = device_add(hub->mxdev, hub->usb_device);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "usb-hub",
+        .ctx = hub,
+        .driver = &_driver_usb_hub,
+        .ops = &usb_hub_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    result = device_add2(hub->usb_device, &args, &hub->mxdev);
     if (result != NO_ERROR) {
         usb_hub_free(hub);
         return result;
@@ -379,17 +388,12 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void**
         return ERR_NO_MEMORY;
     }
 
-    mx_status_t status;
-    if ((status = device_create("usb-hub", hub, &usb_hub_device_proto, driver, &hub->mxdev)) < 0) {
-        free(hub);
-        return status;
-    }
-
     hub->usb_device = device;
     hub->hub_speed = usb_get_speed(device);
     hub->bus_device = bus_device;
     hub->bus_protocol = bus_protocol;
 
+    mx_status_t status = NO_ERROR;
     iotxn_t* txn = usb_alloc_iotxn(ep_addr, max_packet_size);
     if (!txn) {
         status = ERR_NO_MEMORY;
