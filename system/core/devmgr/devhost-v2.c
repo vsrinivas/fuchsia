@@ -381,50 +381,29 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
     iostate_t* ios = calloc(1, sizeof(*ios));
     if (ios == NULL) {
         r = ERR_NO_MEMORY;
-        goto fail_alloc;
+        goto fail;
     }
+
+    dc_msg_t msg;
+    uint32_t msglen;
+    if ((r = dc_msg_pack(&msg, &msglen,
+                         child->props, child->prop_count * sizeof(mx_device_prop_t),
+                         child->name, businfo)) < 0) {
+        goto fail;
+    }
+    msg.op = DC_OP_ADD_DEVICE;
+    msg.protocol_id = child->protocol_id;
 
     // handles: remote endpoint, resource (optional)
     mx_handle_t hrpc, handle[2];
     if ((r = mx_channel_create(0, &hrpc, handle)) < 0) {
-        goto fail_create;
+        goto fail;
     }
     handle[1] = resource;
 
-    dc_msg_t msg;
-    dc_status_t rsp;
-    mx_channel_call_args_t args = {
-        .wr_bytes = &msg,
-        .wr_handles = handle,
-        .rd_bytes = &rsp,
-        .rd_handles = NULL,
-        .wr_num_handles = (resource != MX_HANDLE_INVALID) ? 2 : 1,
-        .rd_num_bytes = sizeof(rsp),
-        .rd_num_handles = 0,
-    };
-    if ((r = dc_msg_pack(&msg, &args.wr_num_bytes,
-                         child->props, child->prop_count * sizeof(mx_device_prop_t),
-                         child->name, businfo)) < 0) {
-        goto fail_write;
-    }
-    msg.txid = 1;
-    msg.op = DC_OP_ADD_DEVICE;
-    msg.protocol_id = child->protocol_id;
-    mx_status_t rdstatus;
-    if ((r = mx_channel_call(parent->rpc, 0, MX_TIME_INFINITE,
-                             &args, &args.rd_num_bytes, &args.rd_num_handles,
-                             &rdstatus)) < 0) {
-        log(ERROR, "devhost: rpc:device_add write failed: %d\n", r);
-        goto fail_write;
-    }
-    if (rdstatus < 0) {
-        log(ERROR, "devhost: rpc:device_add read failed: %d\n", rdstatus);
-        r = rdstatus;
-    } else if (args.rd_num_bytes != sizeof(rsp)) {
-        log(ERROR, "devhost: rpc:device_add bad response\n");
-        r = ERR_INTERNAL;
-    } else if ((r = rsp.status) < 0) {
-        log(ERROR, "devhost: rpc:device_add remote error: %d\n", r);
+    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen,
+                        handle, (resource != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
+        log(ERROR, "devhost: rpc:device_add failed: %d\n", r);
     } else {
         ios->dev = child;
         ios->ph.handle = hrpc;
@@ -434,21 +413,17 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
             child->rpc = hrpc;
             return NO_ERROR;
         }
-    }
 
+    }
     mx_handle_close(hrpc);
     free(ios);
     return r;
 
-fail_write:
-    mx_handle_close(hrpc);
-    mx_handle_close(handle[0]);
-fail_create:
-    free(ios);
-fail_alloc:
+fail:
     if (resource != MX_HANDLE_INVALID) {
         mx_handle_close(resource);
     }
+    free(ios);
     return r;
 }
 
@@ -459,44 +434,17 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     const char* path = mkdevpath(dev, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] remove\n", path);
     dc_msg_t msg;
-    dc_status_t rsp;
-    mx_channel_call_args_t args = {
-        .wr_bytes = &msg,
-        .wr_handles = NULL,
-        .rd_bytes = &rsp,
-        .rd_handles = NULL,
-        .wr_num_handles = 0,
-        .rd_num_bytes = sizeof(rsp),
-        .rd_num_handles = 0,
-    };
+    uint32_t msglen;
     mx_status_t r;
-    if ((r = dc_msg_pack(&msg, &args.wr_num_bytes,
-                         NULL, 0, NULL, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &msglen, NULL, 0, NULL, NULL)) < 0) {
         return r;
     }
-    msg.txid = 1;
     msg.op = DC_OP_REMOVE_DEVICE;
     msg.protocol_id = 0;
-    mx_status_t rdstatus;
-    if ((r = mx_channel_call(dev->rpc, 0, MX_TIME_INFINITE,
-                             &args, &args.rd_num_bytes, &args.rd_num_handles,
-                             &rdstatus)) < 0) {
-        log(ERROR, "devhost: rpc:device_remove write failed: %d\n", r);
-        return r;
+    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0)) < 0) {
+        log(ERROR, "devhost: rpc:device_remove failed: %d\n", r);
     }
-    if (rdstatus < 0) {
-        log(ERROR, "devhost: rpc:device_remove read failed: %d\n", rdstatus);
-        return rdstatus;
-    }
-    if (args.rd_num_bytes != sizeof(rsp)) {
-        log(ERROR, "devhost: rpc:device_remove bad response\n");
-        return ERR_INTERNAL;
-    }
-    if (rsp.status < 0) {
-        log(ERROR, "devhost: rpc:device_remove remote error: %d\n", r);
-        return rsp.status;
-    }
-    return NO_ERROR;
+    return r;
 }
 
 mx_status_t devhost_device_rebind(mx_device_t* dev) {

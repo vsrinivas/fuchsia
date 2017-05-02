@@ -101,7 +101,40 @@ mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
     return NO_ERROR;
 }
 
+mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
+                       mx_handle_t* handles, size_t hcount) {
+    dc_status_t rsp;
+    mx_channel_call_args_t args = {
+        .wr_bytes = msg,
+        .wr_handles = handles,
+        .rd_bytes = &rsp,
+        .rd_handles = NULL,
+        .wr_num_bytes = msglen,
+        .wr_num_handles = hcount,
+        .rd_num_bytes = sizeof(rsp),
+        .rd_num_handles = 0,
+    };
 
+    //TODO: incrementing txids
+    msg->txid = 1;
+    mx_status_t r, rdstatus;
+    if ((r = mx_channel_call(h, 0, MX_TIME_INFINITE,
+                             &args, &args.rd_num_bytes, &args.rd_num_handles,
+                             &rdstatus)) < 0) {
+        for (size_t n = 0; n < hcount; n++) {
+            mx_handle_close(handles[n]);
+        }
+        return r;
+    }
+    if (rdstatus < 0) {
+        return rdstatus;
+    }
+    if (args.rd_num_bytes != sizeof(rsp)) {
+        return ERR_INTERNAL;
+    }
+
+    return rsp.status;
+}
 
 mx_status_t port_init(port_t* port) {
     zprintf("port_init(%p)\n", port);
