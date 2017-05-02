@@ -8,9 +8,4 @@ dart_package("dart") {
   infer_package_name = true
 
   source_dir = "."
-
-  deps = [
-    "//application/lib/app/dart",
-    "//apps/maxwell/services/context:context_dart",
-  ]
 }
