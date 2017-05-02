@@ -10,7 +10,10 @@ It currently supports files up to 512MB in size.
 
  * Create a disk image which stores MinFS
 ```shell
+(Linux)
 $ truncate --size=16G blk.bin
+(Mac)
+$ mkfile -n 16g blk.bin
 ```
  * Execute the run magenta script on your platform with the '--' to pass
    arguments directly to QEMU and then use '-hda' to point to the file. If you
