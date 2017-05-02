@@ -170,7 +170,6 @@ static void mbr_unbind(mx_device_t* dev) {
 
 static mx_status_t mbr_release(mx_device_t* dev) {
     mbrpart_device_t* device = dev->ctx;
-    device_destroy(device->mxdev);
     free(device);
     return NO_ERROR;
 }
@@ -289,20 +288,24 @@ static int mbr_bind_thread(void* arg) {
             goto unbind;
         }
 
-        char name[128];
-        snprintf(name, sizeof(name), "%sp%u", dev->name, partition_count);
-        if ((st = device_create(name, pdev, &mbr_proto, &_driver_mbr, &pdev->mxdev)) != NO_ERROR) {
-            free(pdev);
-            continue;
-        }
-
-        device_set_protocol(pdev->mxdev, MX_PROTOCOL_BLOCK, NULL);
         memcpy(&pdev->partition, entry, sizeof(*entry));
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));
-        if ((st = device_add(pdev->mxdev, dev)) != NO_ERROR) {
+
+        char name[128];
+        snprintf(name, sizeof(name), "%sp%u", dev->name, partition_count);
+
+        device_add_args_t args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = name,
+            .ctx = pdev,
+            .driver = &_driver_mbr,
+            .ops = &mbr_proto,
+            .proto_id = MX_PROTOCOL_BLOCK,
+        };
+
+        if ((st = device_add2(dev, &args, &pdev->mxdev)) != NO_ERROR) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
-            device_destroy(pdev->mxdev);
             free(pdev);
             continue;
         }
