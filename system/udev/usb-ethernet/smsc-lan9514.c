@@ -452,7 +452,6 @@ static void lan9514_free(lan9514_t* eth) {
     }
     mtx_unlock(&eth->mutex);
 
-    free(eth->device);
     free(eth);
 }
 
@@ -634,19 +633,26 @@ static int lan9514_start_thread(void* arg) {
 
     lan9514_reset(eth);
 
-    status = device_create("usb-ethernet", NULL, &lan9514_device_proto, eth->driver, &eth->device);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "smsc-lan9514",
+        .ctx = eth,
+        .driver = eth->driver,
+        .ops = &lan9514_device_proto,
+        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_ops = &ethmac_ops,
+    };
+
+    status = device_add2(eth->usb_device, &args, &eth->device);
     if (status < 0) {
         printf("lan9514: failed to create device: %d\n", status);
-        goto fail;
+        lan9514_free(eth);
+        return status;
     }
 
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
-
-    eth->device->ctx = eth;
-    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
-    status = device_add(eth->device, eth->usb_device);
 
     while (true) {
         uint16_t temp;
@@ -704,7 +710,6 @@ static int lan9514_start_thread(void* arg) {
     }
 teardown:
     lan9514_unbind(eth->device);
-fail:
     printf("LAN9514: driver failing with status=%d\n", status);
     return status;
 }

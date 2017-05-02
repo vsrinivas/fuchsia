@@ -376,9 +376,6 @@ static void ax88179_unbind(mx_device_t* device) {
 }
 
 static void ax88179_free(ax88179_t* eth) {
-    // wait for thread to finish before cleaning up
-    thrd_join(eth->thread, NULL);
-
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
@@ -388,12 +385,15 @@ static void ax88179_free(ax88179_t* eth) {
     }
     iotxn_release(eth->interrupt_req);
 
-    free(eth->device);
     free(eth);
 }
 
 static mx_status_t ax88179_release(mx_device_t* device) {
     ax88179_t* eth = get_ax88179(device);
+
+    // wait for thread to finish before cleaning up
+    thrd_join(eth->thread, NULL);
+
     ax88179_free(eth);
     return NO_ERROR;
 }
@@ -589,16 +589,19 @@ static int ax88179_thread(void* arg) {
     }
 
     // Create the device
-    status = device_create("ax88179", NULL, &ax88179_device_proto, eth->driver, &eth->device);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ax88179",
+        .ctx = eth,
+        .driver = eth->driver,
+        .ops = &ax88179_device_proto,
+        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_ops = &ethmac_ops,
+    };
+
+    status = device_add2(eth->usb_device, &args, &eth->device);
     if (status < 0) {
         printf("ax88179: failed to create device: %d\n", status);
-        goto fail;
-    }
-
-    eth->device->ctx = eth;
-    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
-    status = device_add(eth->device, eth->usb_device);
-    if (status != NO_ERROR) {
         goto fail;
     }
 

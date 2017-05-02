@@ -303,8 +303,6 @@ static void ax88772b_free(ax88772b_t* eth) {
     while ((txn = list_remove_head_type(&eth->free_intr_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
-
-    free(eth->device);
     free(eth);
 }
 
@@ -453,7 +451,17 @@ static int ax88772b_start_thread(void* arg) {
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    status = device_create("usb-ethernet", NULL, &ax88772b_device_proto, eth->driver, &eth->device);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "ax88772b",
+        .ctx = eth,
+        .driver = eth->driver,
+        .ops = &ax88772b_device_proto,
+        .proto_id = MX_PROTOCOL_ETHERMAC,
+        .proto_ops = &ethmac_ops,
+    };
+
+    status = device_add2(eth->usb_device, &args, &eth->device);
     if (status < 0) {
         printf("ax8872b: failed to create device: %d\n", status);
         goto fail;
@@ -462,11 +470,7 @@ static int ax88772b_start_thread(void* arg) {
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
-
-    eth->device->ctx = eth;
-    device_set_protocol(eth->device, MX_PROTOCOL_ETHERMAC, &ethmac_ops);
-    status = device_add(eth->device, eth->usb_device);
-    if (status == NO_ERROR) return NO_ERROR;
+    return NO_ERROR;
 
 fail:
     ax88772b_free(eth);
