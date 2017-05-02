@@ -24,6 +24,10 @@
             "bootfs_path": "apps/hello_material"
         },
         {
+            "binary": "input_apptests",
+            "bootfs_path": "apps/input_apptests"
+        },
+        {
             "binary": "input_manager_service",
             "bootfs_path": "apps/input_manager_service"
         },
