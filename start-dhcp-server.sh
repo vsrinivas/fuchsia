@@ -84,7 +84,7 @@ then
   if $DARWIN
   then
     DNSMASQ_PID_NAME=$( (ps -A -o comm $DNSMASQ_PID || true) | tail +2)
-    if [[ "$DNSMASQ_PID_NAME" -ne "$DNSMASQ" ]]
+    if [[ "$DNSMASQ_PID_NAME" != "$DNSMASQ" ]]
     then
       # There's a PID file but the process name isn't right.
       unset DNSMASQ_PID
