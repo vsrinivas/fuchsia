@@ -42,7 +42,7 @@ class FakeController : public FakeControllerBase {
     uint64_t le_event_mask;
 
     // BD_ADDR (BR/EDR) or Public Device Address (LE)
-    common::DeviceAddress bd_addr;
+    common::DeviceAddressBytes bd_addr;
 
     // Local supported features and commands.
     uint64_t lmp_features_page0;

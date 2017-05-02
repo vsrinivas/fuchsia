@@ -88,7 +88,7 @@ class ACLDataChannelTest : public ::testing::Test {
   void AddLEConnection(ConnectionHandle handle) {
     FTL_DCHECK(conn_map_.find(handle) == conn_map_.end());
     // Set some defaults so that all values are non-zero.
-    LEConnectionParams params(LEPeerAddressType::kPublic, common::DeviceAddress(),
+    LEConnectionParams params(LEPeerAddressType::kPublic, common::DeviceAddressBytes(),
                               defaults::kLEConnectionIntervalMin,
                               defaults::kLEConnectionIntervalMax,
                               defaults::kLEConnectionIntervalMin,  // conn_interval

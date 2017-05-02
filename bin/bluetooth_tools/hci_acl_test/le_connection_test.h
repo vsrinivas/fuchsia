@@ -30,7 +30,7 @@ namespace hci_acl_test {
 class LEConnectionTest final {
  public:
   LEConnectionTest();
-  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddress& dst_addr);
+  bool Run(ftl::UniqueFD hci_dev_fd, const bluetooth::common::DeviceAddressBytes& dst_addr);
 
  private:
   // Initializes the data channel and sends a LE connection request to |dst_addr_|. Exits the
@@ -61,7 +61,7 @@ class LEConnectionTest final {
 
   ftl::RefPtr<bluetooth::hci::Transport> hci_;
   mtl::MessageLoop message_loop_;
-  bluetooth::common::DeviceAddress dst_addr_;
+  bluetooth::common::DeviceAddressBytes dst_addr_;
   bluetooth::hci::CommandChannel::EventHandlerId le_conn_complete_handler_id_;
   bluetooth::hci::CommandChannel::EventHandlerId disconn_handler_id_;
   std::unordered_map<bluetooth::hci::ConnectionHandle, ftl::RefPtr<bluetooth::hci::Connection>>

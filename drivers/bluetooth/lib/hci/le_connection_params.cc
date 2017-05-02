@@ -12,7 +12,7 @@ namespace bluetooth {
 namespace hci {
 
 LEConnectionParams::LEConnectionParams(LEPeerAddressType peer_address_type,
-                                       const common::DeviceAddress& peer_address,
+                                       const common::DeviceAddressBytes& peer_address,
                                        uint16_t conn_interval_min, uint16_t conn_interval_max,
                                        uint16_t conn_interval, uint16_t conn_latency,
                                        uint16_t supervision_timeout)
@@ -27,7 +27,7 @@ LEConnectionParams::LEConnectionParams(LEPeerAddressType peer_address_type,
 }
 
 LEConnectionParams::LEConnectionParams(LEPeerAddressType peer_address_type,
-                                       const common::DeviceAddress& peer_address)
+                                       const common::DeviceAddressBytes& peer_address)
     : LEConnectionParams(peer_address_type, peer_address, defaults::kLEConnectionIntervalMin,
                          defaults::kLEConnectionIntervalMax, 0x0000, 0x0000,
                          defaults::kLESupervisionTimeout) {}

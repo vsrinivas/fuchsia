@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 
   ftl::SetLogSettings(log_settings);
 
-  bluetooth::common::DeviceAddress dst_addr;
+  bluetooth::common::DeviceAddressBytes dst_addr;
   if (!dst_addr.SetFromString(cl.positional_args()[0])) {
     std::cout << "Invalid BD_ADDR: " << cl.positional_args()[0] << std::endl;
     return EXIT_FAILURE;

@@ -12,21 +12,21 @@
 namespace bluetooth {
 namespace common {
 
-DeviceAddress::DeviceAddress() {
+DeviceAddressBytes::DeviceAddressBytes() {
   SetToZero();
 }
 
-DeviceAddress::DeviceAddress(std::initializer_list<uint8_t> bytes) {
+DeviceAddressBytes::DeviceAddressBytes(std::initializer_list<uint8_t> bytes) {
   FTL_DCHECK(bytes.size() == bytes_.size());
   std::copy(bytes.begin(), bytes.end(), bytes_.begin());
 }
 
-DeviceAddress::DeviceAddress(const std::string& bdaddr_string) {
+DeviceAddressBytes::DeviceAddressBytes(const std::string& bdaddr_string) {
   // Use FTL_CHECK to prevent this from being compiled out on non-debug builds.
   FTL_CHECK(SetFromString(bdaddr_string));
 }
 
-bool DeviceAddress::SetFromString(const std::string& bdaddr_string) {
+bool DeviceAddressBytes::SetFromString(const std::string& bdaddr_string) {
   // There are 17 characters in XX:XX:XX:XX:XX:XX
   if (bdaddr_string.size() != 17) return false;
 
@@ -43,14 +43,45 @@ bool DeviceAddress::SetFromString(const std::string& bdaddr_string) {
   return true;
 }
 
-std::string DeviceAddress::ToString() const {
+std::string DeviceAddressBytes::ToString() const {
   return ftl::StringPrintf("%02X:%02X:%02X:%02X:%02X:%02X", bytes_[5], bytes_[4], bytes_[3],
                            bytes_[2], bytes_[1], bytes_[0]);
 }
 
-void DeviceAddress::SetToZero() {
+void DeviceAddressBytes::SetToZero() {
   bytes_.fill(0);
+}
+
+std::size_t DeviceAddressBytes::Hash() const {
+  uint64_t bytes_as_int = (bytes_[0] | (bytes_[1] << 1) | (bytes_[2] << 2) |
+                           (bytes_[3] << 3) | (bytes_[4] << 4) | bytes_[5] << 5);
+  std::hash<uint64_t> hash_func;
+  return hash_func(bytes_as_int);
+}
+
+DeviceAddress::DeviceAddress() : type_(Type::kBREDR) {}
+
+DeviceAddress::DeviceAddress(Type type, const std::string& bdaddr_string)
+    : type_(type), value_(bdaddr_string) {}
+
+DeviceAddress::DeviceAddress(Type type, const DeviceAddressBytes& value)
+    : type_(type), value_(value) {}
+
+std::size_t DeviceAddress::Hash() const {
+  std::size_t const h1(std::hash<int>{}(static_cast<int>(type_)));
+  std::size_t h2 = value_.Hash();
+
+  return h1 ^ (h2 << 1);
 }
 
 }  // namespace common
 }  // namespace bluetooth
+
+namespace std {
+
+hash<::bluetooth::common::DeviceAddress>::result_type hash<::bluetooth::common::DeviceAddress>::
+operator()(argument_type const& value) const {
+  return value.Hash();
+}
+
+}  // namespace std

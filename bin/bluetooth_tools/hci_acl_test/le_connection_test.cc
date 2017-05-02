@@ -21,7 +21,7 @@ namespace hci_acl_test {
 
 LEConnectionTest::LEConnectionTest() : le_conn_complete_handler_id_(0u), disconn_handler_id_(0u) {}
 
-bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddress& dst_addr) {
+bool LEConnectionTest::Run(ftl::UniqueFD hci_dev_fd, const common::DeviceAddressBytes& dst_addr) {
   FTL_DCHECK(hci_dev_fd.is_valid());
 
   auto hci_dev = std::make_unique<hci::MagentaDeviceWrapper>(std::move(hci_dev_fd));

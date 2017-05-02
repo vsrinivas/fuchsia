@@ -443,7 +443,7 @@ struct ReadBDADDRReturnParams {
   // See enum Status in hci_constants.h.
   Status status;
 
-  common::DeviceAddress bd_addr;
+  common::DeviceAddressBytes bd_addr;
 } __PACKED;
 
 // =======================================================
@@ -620,7 +620,7 @@ struct LEConnectionCompleteSubeventParams {
   LEPeerAddressType peer_address_type;
 
   // Public Device Address or Random Device Address of the peer device.
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
 
   // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
   // Time: N * 1.25 ms
@@ -652,7 +652,7 @@ struct LEAdvertisingReportData {
 
   // Public Device Address, Random Device Address, Public Identity Address or
   // Random (static) Identity Address of the advertising device.
-  common::DeviceAddress address;
+  common::DeviceAddressBytes address;
 
   // Length of the advertising data payload.
   uint8_t length_data;
@@ -827,10 +827,10 @@ struct LEEnhancedConnectionCompleteSubeventParams {
 
   // Public Device Address, or Random Device Address, Public Identity Address or Random (static)
   // Identity Address of the device to be connected.
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
 
-  common::DeviceAddress local_resolvable_private_address;
-  common::DeviceAddress peer_resolvable_private_address;
+  common::DeviceAddressBytes local_resolvable_private_address;
+  common::DeviceAddressBytes peer_resolvable_private_address;
 
   // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
   // Time: N * 1.25 ms
@@ -862,12 +862,12 @@ struct LEDirectedAdvertisingReportData {
 
   // Public Device Address, Random Device Address, Public Identity Address or Random (static)
   // Identity Address of the advertising device.
-  common::DeviceAddress address;
+  common::DeviceAddressBytes address;
 
   // By default this is set to LEAddressType::kRandom and |direct_address| will contain a random
   // device address.
   LEAddressType direct_address_type;
-  common::DeviceAddress direct_address;
+  common::DeviceAddressBytes direct_address;
 
   // Range: -127 <= N <= +20
   // Units: dBm
@@ -917,7 +917,7 @@ struct LEExtendedAdvertisingReportData {
 
   // Public Device Address, Random Device Address, Public Identity Address or Random (static)
   // Identity Address of the advertising device.
-  common::DeviceAddress address;
+  common::DeviceAddressBytes address;
 
   // Indicates the PHY used to send the advertising PDU on the primary advertising channel. Legacy
   // PDUs always use LEPHY::kLE1M
@@ -954,7 +954,7 @@ struct LEExtendedAdvertisingReportData {
 
   // Public Device Address, Random Device Address, Public Identity Address or Random (static)
   // Identity Address of the target device.
-  common::DeviceAddress direct_address;
+  common::DeviceAddressBytes direct_address;
 
   // Length of the data field.
   uint8_t data_length;
@@ -992,7 +992,7 @@ struct LEPeriodicAdvertisingSyncEstablishedSubeventParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the advertiser.
-  common::DeviceAddress advertiser_address;
+  common::DeviceAddressBytes advertiser_address;
 
   // Advertiser_PHY.
   LEPHY advertiser_phy;
@@ -1076,7 +1076,7 @@ struct LEScanRequestReceivedSubeventParams {
 
   // Public Device Address, Random Device Address, Public Identity Address or Random (static)
   // Identity Address of the scanning device.
-  common::DeviceAddress scanner_address;
+  common::DeviceAddressBytes scanner_address;
 } __PACKED;
 
 // LE Channel Selection Algorithm Event (v5.0) (LE)
@@ -1212,7 +1212,7 @@ struct LEReadLocalSupportedFeaturesReturnParams {
 constexpr OpCode kLESetRandomAddress = LEControllerCommandOpCode(0x0005);
 
 struct LESetRandomAddressCommandParams {
-  common::DeviceAddress random_address;
+  common::DeviceAddressBytes random_address;
 } __PACKED;
 
 // =================================================
@@ -1241,7 +1241,7 @@ struct LESetAdvertisingParametersCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or
   // Random (static) Identity Address of the device to be connected.
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
 
   // (See the constants kLEAdvertisingChannel* in hci_constants.h for possible values).
   uint8_t adv_channel_map;
@@ -1352,7 +1352,7 @@ struct LECreateConnectionCommandParams {
 
   GenericEnableParam initiator_filter_policy;
   LEAddressType peer_address_type;
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
   LEOwnAddressType own_address_type;
 
   // Range: see kLEConnectionInterval[Min|Max] in hci_constants.h
@@ -1407,7 +1407,7 @@ struct LEAddDeviceToWhiteListCommandParams {
   LEPeerAddressType address_type;
 
   // Public Device Address or Random Device Address of the device to be added to the White List.
-  common::DeviceAddress address;
+  common::DeviceAddressBytes address;
 } __PACKED;
 
 // ====================================================
@@ -1420,7 +1420,7 @@ struct LERemoveDeviceFromWhiteListCommandParams {
   LEPeerAddressType address_type;
 
   // Public Device Address or Random Device Address of the device to be removed from the White List.
-  common::DeviceAddress address;
+  common::DeviceAddressBytes address;
 } __PACKED;
 
 // ========================================
@@ -1838,7 +1838,7 @@ struct LEAddDeviceToResolvingListCommandParams {
   LEPeerAddressType peer_identity_address_type;
 
   // Public or Random (static) Identity address of the peer device
-  common::DeviceAddress peer_identity_address;
+  common::DeviceAddressBytes peer_identity_address;
 
   // IRK (Identity Resolving Key) of the peer device
   common::UInt128 peer_irk;
@@ -1856,7 +1856,7 @@ struct LERemoveDeviceFromResolvingListCommandParams {
   LEPeerAddressType peer_identity_address_type;
 
   // Public or Random (static) Identity address of the peer device
-  common::DeviceAddress peer_identity_address;
+  common::DeviceAddressBytes peer_identity_address;
 } __PACKED;
 
 // ===========================================
@@ -1884,7 +1884,7 @@ struct LEReadPeerResolvableAddressCommandParams {
   LEPeerAddressType peer_identity_address_type;
 
   // Public or Random (static) Identity address of the peer device.
-  common::DeviceAddress peer_identity_address;
+  common::DeviceAddressBytes peer_identity_address;
 } __PACKED;
 
 struct LEReadPeerResolvableAddressReturnParams {
@@ -1892,7 +1892,7 @@ struct LEReadPeerResolvableAddressReturnParams {
   Status status;
 
   // Resolvable Private Address being used by the peer device.
-  common::DeviceAddress peer_resolvable_address;
+  common::DeviceAddressBytes peer_resolvable_address;
 } __PACKED;
 
 // ====================================================
@@ -1904,7 +1904,7 @@ struct LEReadLocalResolvableAddressCommandParams {
   LEPeerAddressType peer_identity_address_type;
 
   // Public or Random (static) Identity address of the peer device
-  common::DeviceAddress peer_identity_address;
+  common::DeviceAddressBytes peer_identity_address;
 } __PACKED;
 
 struct LEReadLocalResolvableAddressReturnParams {
@@ -1912,7 +1912,7 @@ struct LEReadLocalResolvableAddressReturnParams {
   Status status;
 
   // Resolvable Private Address being used by the local device.
-  common::DeviceAddress local_resolvable_address;
+  common::DeviceAddressBytes local_resolvable_address;
 } __PACKED;
 
 // ====================================================
@@ -2068,7 +2068,7 @@ struct LESetAdvertisingSetRandomAddressCommandParams {
   AdvertisingHandle adv_handle;
 
   // Random Device Address.
-  common::DeviceAddress adv_random_address;
+  common::DeviceAddressBytes adv_random_address;
 } __PACKED;
 
 // ==========================================================
@@ -2096,7 +2096,7 @@ struct LESetExtendedAdvertisingParametersCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the device to be connected.
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
 
   LEAdvFilterPolicy adv_filter_policy;
 
@@ -2383,7 +2383,7 @@ struct LEExtendedCreateConnectionCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the device to be connected.
-  common::DeviceAddress peer_address;
+  common::DeviceAddressBytes peer_address;
 
   // See the kLEPHYBit* constants in hci_constants.h for possible bitfield values.
   uint8_t initiating_phys;
@@ -2413,7 +2413,7 @@ struct LEPeriodicAdvertisingCreateSyncCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the advertiser.
-  common::DeviceAddress advertiser_address;
+  common::DeviceAddressBytes advertiser_address;
 
   // The number of periodic advertising packets that can be skipped after a successful receive.
   //
@@ -2460,7 +2460,7 @@ struct LEAddDeviceToPeriodicAdvertiserListCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the advertiser.
-  common::DeviceAddress advertiser_address;
+  common::DeviceAddressBytes advertiser_address;
 
   // Advertising SID subfield in the ADI field used to identify the Periodic Advertising.
   uint8_t advertising_sid;
@@ -2477,7 +2477,7 @@ struct LERemoveDeviceFromPeriodicAdvertiserListCommandParams {
 
   // Public Device Address, Random Device Address, Public Identity Address, or Random (static)
   // Identity Address of the advertiser.
-  common::DeviceAddress advertiser_address;
+  common::DeviceAddressBytes advertiser_address;
 
   // Advertising SID subfield in the ADI field used to identify the Periodic Advertising.
   uint8_t advertising_sid;
@@ -2549,7 +2549,7 @@ struct LESetPrivacyModeCommandParams {
   LEPeerAddressType peer_identity_address_type;
 
   // Public Identity Address or Random (static) Identity Address of the advertiser.
-  common::DeviceAddress peer_identity_address;
+  common::DeviceAddressBytes peer_identity_address;
 
   // The privacy mode to be used for the given entry on the resolving list.
   LEPrivacyMode privacy_mode;

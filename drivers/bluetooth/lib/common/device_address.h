@@ -6,22 +6,24 @@
 
 #include <array>
 #include <initializer_list>
+#include <string>
 
 namespace bluetooth {
 namespace common {
 
-// Represents a 48-bit BD_ADDR.
-class DeviceAddress {
+// Represents a 48-bit BD_ADDR. This data structure can be directly serialized into HCI command
+// payloads.
+class DeviceAddressBytes {
  public:
   // The default constructor initializes the address to 00:00:00:00:00:00.
-  DeviceAddress();
+  DeviceAddressBytes();
 
   // Initializes the contents from |bytes|.
-  explicit DeviceAddress(std::initializer_list<uint8_t> bytes);
+  explicit DeviceAddressBytes(std::initializer_list<uint8_t> bytes);
 
   // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
   // ASCII encoded two-digit hexadecimal integer.
-  explicit DeviceAddress(const std::string& bdaddr_string);
+  explicit DeviceAddressBytes(const std::string& bdaddr_string);
 
   // Resets the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
   // ASCII encoded two-digit hexadecimal integer. Returns false if |bdaddr_string| is badly
@@ -40,15 +42,81 @@ class DeviceAddress {
   void SetToZero();
 
   // Comparison operators.
-  inline bool operator==(const DeviceAddress& other) const { return bytes_ == other.bytes_; }
-  inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
+  inline bool operator==(const DeviceAddressBytes& other) const { return bytes_ == other.bytes_; }
+  inline bool operator!=(const DeviceAddressBytes& other) const { return !(*this == other); }
+  inline bool operator<(const DeviceAddressBytes& other) const { return bytes_ < other.bytes_; }
+
+  // Returns a hash of the contents of this address.
+  std::size_t Hash() const;
 
  private:
   // The raw bytes of the BD_ADDR stored in little-endian byte order.
   std::array<uint8_t, 6> bytes_;
 };
 
-static_assert(sizeof(DeviceAddress) == 6, "DeviceAddress must take up exactly 6 bytes");
+static_assert(sizeof(DeviceAddressBytes) == 6, "DeviceAddressBytes must take up exactly 6 bytes");
+
+// DeviceAddress represents a Bluetooth device address, encapsulating the 48-bit device address and
+// the address type. A DeviceAddress is comparable and can be used as a key in ordered and unordered
+// associative STL containers.
+class DeviceAddress {
+ public:
+  // Bluetooth device address types.
+  enum class Type {
+    // BD_ADDR as used in Bluetooth Classic.
+    kBREDR,
+
+    // Low Energy Address types.
+    kLEPublic,
+    kLERandom,
+    kLEAnonymous,
+  };
+
+  // The default constructor initializes the address to 00:00:00:00:00:00 and the type to
+  // Type::kBREDR.
+  DeviceAddress();
+
+  // Initializes the contents from a string of the form XX:XX:XX:XX:XX:XX where each "XX" is an
+  // ASCII encoded two-digit hexadecimal integer.
+  DeviceAddress(Type type, const std::string& bdaddr_string);
+
+  // Initializes the contents from raw data.
+  DeviceAddress(Type type, const DeviceAddressBytes& value);
+
+  Type type() const { return type_; }
+  const DeviceAddressBytes& value() const { return value_; }
+
+  // Comparison operators. The equality and less-than operators are needed to support unordered and
+  // ordered containers, respectively.
+  inline bool operator==(const DeviceAddress& other) const {
+    return type_ == other.type_ && value_ == other.value_;
+  }
+  inline bool operator!=(const DeviceAddress& other) const { return !(*this == other); }
+  inline bool operator<(const DeviceAddress& other) const {
+    // Treat |type_| as the higher-order bits
+    return type_ < other.type_ || (type_ == other.type_ && value_ < other.value_);
+  }
+
+  // Returns a hash of the contents of this address.
+  std::size_t Hash() const;
+
+ private:
+  Type type_;
+  DeviceAddressBytes value_;
+};
 
 }  // namespace common
 }  // namespace bluetooth
+
+// Custom specialization of std::hash to support unordered associative containers.
+namespace std {
+
+template <>
+struct hash<::bluetooth::common::DeviceAddress> {
+  using argument_type = ::bluetooth::common::DeviceAddress;
+  using result_type = std::size_t;
+
+  result_type operator()(argument_type const& value) const;
+};
+
+}  // namespace std

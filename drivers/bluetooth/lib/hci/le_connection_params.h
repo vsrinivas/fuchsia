@@ -13,9 +13,10 @@ namespace hci {
 // Represents the set of connection parameters that are used in a LE logical link.
 class LEConnectionParams final {
  public:
-  LEConnectionParams(LEPeerAddressType peer_address_type, const common::DeviceAddress& peer_address,
-                     uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t conn_interval,
-                     uint16_t conn_latency, uint16_t supervision_timeout);
+  LEConnectionParams(LEPeerAddressType peer_address_type,
+                     const common::DeviceAddressBytes& peer_address, uint16_t conn_interval_min,
+                     uint16_t conn_interval_max, uint16_t conn_interval, uint16_t conn_latency,
+                     uint16_t supervision_timeout);
 
   // Initializes the connection parameters to the defaults defined in defaults.h.
   // Sets the Connection Latency and Connection Interval parameters to 0x0000.
@@ -23,7 +24,7 @@ class LEConnectionParams final {
   // This constructor is useful when initializing connection parameters to be used in a
   // HCI_LE_Create_Connection command.
   LEConnectionParams(LEPeerAddressType peer_address_type,
-                     const common::DeviceAddress& peer_address);
+                     const common::DeviceAddressBytes& peer_address);
 
   // These return the minimum and maximum allowed connection intervals. The connection interval
   // indicates the frequency of link layer connection events over which data channel PDUs can be
@@ -48,11 +49,11 @@ class LEConnectionParams final {
   LEPeerAddressType peer_address_type() const { return peer_address_type_; }
 
   // The device address of the peer device.
-  const common::DeviceAddress& peer_address() const { return peer_address_; }
+  const common::DeviceAddressBytes& peer_address() const { return peer_address_; }
 
  private:
   LEPeerAddressType peer_address_type_;
-  common::DeviceAddress peer_address_;
+  common::DeviceAddressBytes peer_address_;
   uint16_t conn_interval_min_;
   uint16_t conn_interval_max_;
   uint16_t conn_interval_;
