@@ -678,32 +678,42 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 		return mx.ErrBadState
 	}
 	if opt := val.Unpack(); opt != nil {
-		err := ios.ep.GetSockOpt(opt)
 		switch o := opt.(type) {
 		case tcpip.ErrorOption:
 			errno := uint32(0)
+			err := ios.ep.GetSockOpt(o)
 			if err != nil {
 				errno = uint32(errStatus(err)) // TODO: convert from err?
 			}
 			binary.LittleEndian.PutUint32(val.optval[:], errno)
 			val.optlen = c_socklen(4)
-		case *tcpip.SendBufferSizeOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.SendBufferSizeOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case *tcpip.ReceiveBufferSizeOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.ReceiveBufferSizeOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case *tcpip.ReceiveQueueSizeOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.ReceiveQueueSizeOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case *tcpip.NoDelayOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.NoDelayOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case *tcpip.ReuseAddressOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.ReuseAddressOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
-		case *tcpip.V6OnlyOption:
-			binary.LittleEndian.PutUint32(val.optval[:], uint32(*o))
+		case tcpip.V6OnlyOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
+			val.optlen = c_socklen(4)
+		case tcpip.MulticastTTLOption:
+			ios.ep.GetSockOpt(&o)
+			binary.LittleEndian.PutUint32(val.optval[:], uint32(o))
 			val.optlen = c_socklen(4)
 		default:
 			binary.LittleEndian.PutUint32(val.optval[:], 0)

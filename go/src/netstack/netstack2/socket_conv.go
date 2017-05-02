@@ -65,6 +65,11 @@ func (v *c_mxrio_sockopt_req_reply) Unpack() interface{} {
 		case IP_TTL:
 		case IP_MULTICAST_IF:
 		case IP_MULTICAST_TTL:
+			if len(v.optval) < 1 {
+				log.Printf("sockopt: bad argument to IP_MULTICAST_TTL")
+				return nil
+			}
+			return tcpip.MulticastTTLOption(v.optval[0])
 		case IP_MULTICAST_LOOP:
 		case IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP:
 			mreq := c_ip_mreq{}

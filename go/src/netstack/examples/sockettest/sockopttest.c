@@ -125,6 +125,7 @@ struct sock_opts {
     {"SO_TYPE", SOL_SOCKET, SO_TYPE, sock_str_int},
     {"IP_TOS", IPPROTO_IP, IP_TOS, sock_str_int},
     {"IP_TTL", IPPROTO_IP, IP_TTL, sock_str_int},
+    {"IP_MULTICAST_TTL", IPPROTO_IP, IP_MULTICAST_TTL, sock_str_int},
     {"IPV6_UNICAST_HOPS", IPPROTO_IPV6, IPV6_UNICAST_HOPS, sock_str_int},
     {"IPV6_V6ONLY", IPPROTO_IPV6, IPV6_V6ONLY, sock_str_flag},
     {"TCP_NODELAY", IPPROTO_TCP, TCP_NODELAY, sock_str_flag},
@@ -148,14 +149,17 @@ int main(int argc, char** argv) {
 
   for (ptr = sock_opts_table; ptr->opt_str != NULL; ptr++) {
     int fd = -1;
+    int sock_type = SOCK_STREAM;
+    if (ptr->opt_name == IP_MULTICAST_TTL)
+      sock_type = SOCK_DGRAM;
     switch (ptr->opt_level) {
       case SOL_SOCKET:
       case IPPROTO_IP:
       case IPPROTO_TCP:
-        fd = socket(AF_INET, SOCK_STREAM, 0);
+        fd = socket(AF_INET, sock_type, 0);
         break;
       case IPPROTO_IPV6:
-        fd = socket(AF_INET6, SOCK_STREAM, 0);
+        fd = socket(AF_INET6, sock_type, 0);
         break;
     }
 
@@ -184,7 +188,7 @@ int main(int argc, char** argv) {
         new_val.i_val = 0xdeadbeef;
         if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &len) == -1) {
           printf("getsockopt error (%d)\n", errno);
-        } else if (new_val.i_val == val.i_val) {
+        } else if (new_val.i_val != (int)0xdeadbeef) {
           printf("setsockopt success = %s\n", (*ptr->opt_val_str)(&val, len));
         } else {
           printf("setsockopt unchanged\n");
