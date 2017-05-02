@@ -197,7 +197,6 @@ static void usb_hid_unbind(mx_device_t* dev) {
 static mx_status_t usb_hid_release(mx_device_t* dev) {
     usb_hid_device_t* hid = dev->ctx;
     iotxn_release(hid->txn);
-    device_destroy(hid->mxdev);
     free(hid);
     return NO_ERROR;
 }
@@ -277,20 +276,20 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         usbhid->txn->complete_cb = usb_interrupt_callback;
         usbhid->txn->cookie = usbhid;
 
-        mx_status_t status = device_create("usb-hid", usbhid, &usb_hid_dev_ops, drv, &usbhid->mxdev);
-        if (status != NO_ERROR) {
-            usb_desc_iter_release(&iter);
-            iotxn_release(usbhid->txn);
-            free(usbhid);
-            return status;
-        }
-        device_set_protocol(usbhid->mxdev, MX_PROTOCOL_HIDBUS, &usb_hid_bus_ops);
+        device_add_args_t args = {
+            .version = DEVICE_ADD_ARGS_VERSION,
+            .name = "usb-hid",
+            .ctx = usbhid,
+            .driver = drv,
+            .ops = &usb_hid_dev_ops,
+            .proto_id = MX_PROTOCOL_HIDBUS,
+            .proto_ops = &usb_hid_bus_ops,
+        };
 
-        status = device_add(usbhid->mxdev, dev);
+        mx_status_t status = device_add2(dev, &args, &usbhid->mxdev);
         if (status != NO_ERROR) {
             usb_desc_iter_release(&iter);
             iotxn_release(usbhid->txn);
-            device_destroy(usbhid->mxdev);
             free(usbhid);
             return status;
         }
