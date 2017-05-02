@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_
+#ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_
+#define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_
 
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 
-namespace view_manager {
+namespace mozart {
 namespace test {
 
 class MockViewAssociate : public mozart::ViewAssociate {
@@ -31,6 +31,6 @@ class MockViewAssociate : public mozart::ViewAssociate {
 };
 
 }  // namespace test
-}  // namespace view_manager
+}  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_
+#endif  // APPS_MOZART_LIB_TESTS_MOCKS_MOCK_VIEW_ASSOCIATE_H_

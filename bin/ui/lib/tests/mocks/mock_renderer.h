@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_RENDERER_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_RENDERER_H_
+#ifndef APPS_MOZART_LIB_TESTS_MOCKS_MOCK_RENDERER_H_
+#define APPS_MOZART_LIB_TESTS_MOCKS_MOCK_RENDERER_H_
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composition/renderers.fidl.h"
 
-namespace view_manager {
+namespace mozart {
 namespace test {
 
 class MockRenderer : public mozart::Renderer,
@@ -46,6 +46,6 @@ class MockRenderer : public mozart::Renderer,
 };
 
 }  // namespace test
-}  // namespace view_manager
+}  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCKS_MOCK_RENDERER_H_
+#endif  // APPS_MOZART_LIB_TESTS_MOCKS_MOCK_RENDERER_H_
