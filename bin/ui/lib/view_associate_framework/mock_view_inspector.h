@@ -48,9 +48,6 @@ class MockViewInspector : public ViewInspector {
                           const ActivateFocusChainCallback& callback) override;
   void HasFocus(mozart::ViewTokenPtr view_token,
                 const HasFocusCallback& callback) override;
-  void GetSoftKeyboardContainer(
-      mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
 
  private:
   std::unordered_map<uint32_t, HitTester*> hit_testers_;

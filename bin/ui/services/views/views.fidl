@@ -114,12 +114,6 @@ interface View {
   // See |InputConnection|.
   GetServiceProvider(app.ServiceProvider& service_provider);
 
-  // This is a way for views to offer services to the compositor.
-  //
-  // In particular this should be used to let know which view is implementing
-  // able to show an IME.
-  OfferServiceProvider(app.ServiceProvider? service_provider);
-
   // Creates the view's scene, replacing any previous scene the view
   // might have had.
   //

@@ -29,8 +29,6 @@ class ViewImpl : public mozart::View,
   void GetToken(const mozart::View::GetTokenCallback& callback) override;
   void GetServiceProvider(fidl::InterfaceRequest<app::ServiceProvider>
                               service_provider_request) override;
-  void OfferServiceProvider(
-      fidl::InterfaceHandle<app::ServiceProvider> service_provider) override;
   void CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) override;
   void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;

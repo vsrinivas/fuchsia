@@ -143,10 +143,6 @@ class ViewRegistry : public mozart::ViewInspector {
                           const ActivateFocusChainCallback& callback) override;
   void HasFocus(mozart::ViewTokenPtr view_token,
                 const HasFocusCallback& callback) override;
-  void GetSoftKeyboardContainer(
-      mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container)
-      override;
 
  private:
   // LIFETIME
