@@ -72,9 +72,7 @@ static void usb_midi_source_unbind(mx_device_t* dev) {
     device_remove(source->mxdev);
 }
 
-static mx_status_t usb_midi_source_release(mx_device_t* dev) {
-    usb_midi_source_t* source = dev->ctx;
-
+static void usb_midi_source_free(usb_midi_source_t* source) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
@@ -82,8 +80,12 @@ static mx_status_t usb_midi_source_release(mx_device_t* dev) {
     while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
-    device_destroy(source->mxdev);
     free(source);
+}
+
+static mx_status_t usb_midi_source_release(mx_device_t* dev) {
+    usb_midi_source_t* source = dev->ctx;
+    usb_midi_source_free(source);
     return NO_ERROR;
 }
 
@@ -188,15 +190,6 @@ mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int
         return ERR_NO_MEMORY;
     }
 
-    char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-midi-source-%d\n", index);
-    mx_status_t status = device_create(name, source, &usb_midi_source_device_proto, driver,
-                                       &source->mxdev);
-    if (status != NO_ERROR) {
-        free(source);
-        return status;
-    }
-
     list_initialize(&source->free_read_reqs);
     list_initialize(&source->completed_reads);
     source->usb_mxdev = device;
@@ -208,7 +201,7 @@ mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, packet_size);
         if (!txn) {
-            usb_midi_source_release(source->mxdev);
+            usb_midi_source_free(source);
             return ERR_NO_MEMORY;
         }
         txn->length = packet_size;
@@ -217,11 +210,22 @@ mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int
         list_add_head(&source->free_read_reqs, &txn->node);
     }
 
-    device_set_protocol(source->mxdev, MX_PROTOCOL_MIDI, NULL);
-    status = device_add(source->mxdev, source->usb_mxdev);
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "usb-midi-source-%d\n", index);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = source,
+        .driver = driver,
+        .ops = &usb_midi_source_device_proto,
+        .proto_id = MX_PROTOCOL_MIDI,
+    };
+
+    mx_status_t status = device_add2(device, &args, &source->mxdev);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_midi_source_create\n");
-        usb_midi_source_release(source->mxdev);
+        usb_midi_source_free(source);
     }
 
     return status;

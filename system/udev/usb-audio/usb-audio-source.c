@@ -96,9 +96,7 @@ static void usb_audio_source_unbind(mx_device_t* dev) {
     device_remove(source->mxdev);
 }
 
-static mx_status_t usb_audio_source_release(mx_device_t* dev) {
-    usb_audio_source_t* source = dev->ctx;
-
+static void usb_audio_source_free(usb_audio_source_t* source) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
@@ -106,9 +104,13 @@ static mx_status_t usb_audio_source_release(mx_device_t* dev) {
     while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
-    device_destroy(source->mxdev);
     free(source->sample_rates);
     free(source);
+}
+
+static mx_status_t usb_audio_source_release(mx_device_t* dev) {
+    usb_audio_source_t* source = dev->ctx;
+    usb_audio_source_free(source);
     return NO_ERROR;
 }
 
@@ -341,17 +343,7 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
         return ERR_NO_MEMORY;
     }
     source->channels = format_desc->bNrChannels;
-
-    char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-audio-source-%d\n", index);
-    mx_status_t status = device_create(name, source, &usb_audio_source_device_proto, driver,
-                                       &source->mxdev);
-    if (status != NO_ERROR) {
-        free(source->sample_rates);
-        free(source);
-        return status;
-    }
-
+    
     list_initialize(&source->free_read_reqs);
     list_initialize(&source->completed_reads);
 
@@ -365,7 +357,7 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(source->ep_addr, packet_size);
         if (!txn) {
-            usb_audio_source_release(source->mxdev);
+            usb_audio_source_free(source);
             return ERR_NO_MEMORY;
         }
         txn->length = packet_size;
@@ -378,11 +370,23 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
     // this may stall if only one sample rate is supported, so ignore error
     usb_audio_set_sample_rate(source->usb_mxdev, source->ep_addr, source->sample_rate);
 
-    device_set_protocol(source->mxdev, MX_PROTOCOL_AUDIO, NULL);
-    status = device_add(source->mxdev, source->usb_mxdev);
+
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "usb-audio-source-%d\n", index);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = source,
+        .driver = driver,
+        .ops = &usb_audio_source_device_proto,
+        .proto_id = MX_PROTOCOL_AUDIO,
+    };
+
+    mx_status_t status = device_add2(device, &args, &source->mxdev);
     if (status != NO_ERROR) {
-        printf("device_add failed in usb_audio_bind\n");
-        usb_audio_source_release(source->mxdev);
+        printf("device_add failed in usb_audio_source_create\n");
+        usb_audio_source_free(source);
     }
 
     return status;

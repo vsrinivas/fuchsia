@@ -70,15 +70,17 @@ static void usb_midi_sink_unbind(mx_device_t* dev) {
     device_remove(sink->mxdev);
 }
 
-static mx_status_t usb_midi_sink_release(mx_device_t* dev) {
-    usb_midi_sink_t* sink = dev->ctx;
-
+static void usb_midi_sink_free(usb_midi_sink_t* sink) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&sink->free_write_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
-    device_destroy(sink->mxdev);
     free(sink);
+}
+
+static mx_status_t usb_midi_sink_release(mx_device_t* dev) {
+    usb_midi_sink_t* sink = dev->ctx;
+    usb_midi_sink_free(sink);
     return NO_ERROR;
 }
 
@@ -191,16 +193,6 @@ mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int i
         return ERR_NO_MEMORY;
     }
 
-    char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-midi-sink-%d\n", index);
-    mx_status_t status = device_create(name, sink, &usb_midi_sink_device_proto, driver,
-                                       &sink->mxdev);
-    if (status != NO_ERROR) {
-        free(sink);
-        return status;
-    }
-
-    device_set_protocol(sink->mxdev, MX_PROTOCOL_MIDI, NULL);
     list_initialize(&sink->free_write_reqs);
     sink->usb_mxdev = device;
 
@@ -211,7 +203,7 @@ mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int i
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(ep->bEndpointAddress, usb_ep_max_packet(ep));
         if (!txn) {
-            usb_midi_sink_release(sink->mxdev);
+            usb_midi_sink_free(sink);
             return ERR_NO_MEMORY;
         }
         txn->length = packet_size;
@@ -221,10 +213,22 @@ mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int i
     }
     completion_signal(&sink->free_write_completion);
 
-    status = device_add(sink->mxdev, sink->usb_mxdev);
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "usb-midi-sink-%d\n", index);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = sink,
+        .driver = driver,
+        .ops = &usb_midi_sink_device_proto,
+        .proto_id = MX_PROTOCOL_MIDI,
+    };
+
+    mx_status_t status = device_add2(device, &args, &sink->mxdev);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_midi_sink_create\n");
-        usb_midi_sink_release(sink->mxdev);
+        usb_midi_sink_free(sink);
     }
 
     return status;

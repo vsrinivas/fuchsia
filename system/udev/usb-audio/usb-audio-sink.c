@@ -102,16 +102,18 @@ static void usb_audio_sink_unbind(mx_device_t* dev) {
     device_remove(sink->mxdev);
 }
 
-static mx_status_t usb_audio_sink_release(mx_device_t* dev) {
-    usb_audio_sink_t* sink = dev->ctx;
-
+static void usb_audio_sink_free(usb_audio_sink_t* sink) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&sink->free_write_reqs, iotxn_t, node)) != NULL) {
         iotxn_release(txn);
     }
-    device_destroy(sink->mxdev);
     free(sink->sample_rates);
     free(sink);
+}
+
+static mx_status_t usb_audio_sink_release(mx_device_t* dev) {
+    usb_audio_sink_t* sink = dev->ctx;
+    usb_audio_sink_free(sink);
     return NO_ERROR;
 }
 
@@ -372,17 +374,6 @@ mx_status_t usb_audio_sink_create(mx_driver_t* driver, mx_device_t* device, int 
         return ERR_NO_MEMORY;
     }
 
-    char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "usb-audio-sink-%d\n", index);
-    mx_status_t status = device_create(name, sink, &usb_audio_sink_device_proto, driver,
-                                       &sink->mxdev);
-    if (status != NO_ERROR) {
-        free(sink->sample_rates);
-        free(sink);
-        return status;
-    }
-
-
     list_initialize(&sink->free_write_reqs);
 
     sink->usb_mxdev = device;
@@ -394,7 +385,7 @@ mx_status_t usb_audio_sink_create(mx_driver_t* driver, mx_device_t* device, int 
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(sink->ep_addr, packet_size);
         if (!txn) {
-            usb_audio_sink_release(sink->mxdev);
+            usb_audio_sink_free(sink);
             return ERR_NO_MEMORY;
         }
         txn->length = packet_size;
@@ -416,16 +407,27 @@ mx_status_t usb_audio_sink_create(mx_driver_t* driver, mx_device_t* device, int 
                                                        sink->sample_rate);
         if (status != NO_ERROR) {
             printf("usb_audio_set_sample_rate failed in usb_audio_sink_create\n");
-            usb_audio_sink_release(sink->mxdev);
+            usb_audio_sink_free(sink);
             return status;
         }
     }
 
-    device_set_protocol(sink->mxdev, MX_PROTOCOL_AUDIO, NULL);
-    status = device_add(sink->mxdev, sink->usb_mxdev);
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "usb-audio-sink-%d\n", index);
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = sink,
+        .driver = driver,
+        .ops = &usb_audio_sink_device_proto,
+        .proto_id = MX_PROTOCOL_AUDIO,
+    };
+
+    mx_status_t status = device_add2(device, &args, &sink->mxdev);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_audio_sink_create\n");
-        usb_audio_sink_release(sink->mxdev);
+        usb_audio_sink_free(sink);
     }
 
     return status;
