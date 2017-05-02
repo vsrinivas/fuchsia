@@ -173,7 +173,6 @@ static mx_status_t bochs_vbe_release(mx_device_t* dev) {
         vdev->framebuffer_handle = -1;
     }
 
-    device_destroy(vdev->mxdev);
     free(vdev);
 
     return NO_ERROR;
@@ -218,23 +217,26 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** coo
         goto fail;
     }
 
-    // create and add the display (char) device
-    status = device_create("bochs_vbe", device, &bochs_vbe_device_proto, drv, &device->mxdev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-
-    device_set_protocol(device->mxdev, MX_PROTOCOL_DISPLAY, &bochs_vbe_display_proto);
-
     device->info.format = MX_PIXEL_FORMAT_RGB_565;
     device->info.width = 1024;
     device->info.height = 768;
     device->info.stride = 1024;
     set_hw_mode(device);
 
-    status = device_add(device->mxdev, dev);
+    // create and add the display (char) device
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bochs_vbe",
+        .ctx = device,
+        .driver = drv,
+        .ops = &bochs_vbe_device_proto,
+        .proto_id = MX_PROTOCOL_DISPLAY,
+        .proto_ops = &bochs_vbe_display_proto,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
-        goto fail_created;
+        goto fail;
     }
 
     xprintf("initialized bochs_vbe display driver, reg=0x%x regsize=0x%x fb=0x%x fbsize=0x%x\n",
@@ -242,8 +244,6 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** coo
 
     return NO_ERROR;
 
-fail_created:
-    device_destroy(device->mxdev);
 fail:
     free(device);
     return status;
