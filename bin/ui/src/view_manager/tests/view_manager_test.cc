@@ -4,24 +4,24 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
+#include "apps/mozart/lib/tests/mocks/mock_renderer.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_associate.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_container_listener.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_listener.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_tree_listener.h"
+#include "apps/mozart/lib/tests/test_with_message_loop.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "apps/mozart/src/view_manager/tests/mocks/mock_renderer.h"
-#include "apps/mozart/src/view_manager/tests/mocks/mock_view_associate.h"
-#include "apps/mozart/src/view_manager/tests/mocks/mock_view_container_listener.h"
-#include "apps/mozart/src/view_manager/tests/mocks/mock_view_listener.h"
-#include "apps/mozart/src/view_manager/tests/mocks/mock_view_tree_listener.h"
-#include "apps/mozart/src/view_manager/tests/test_with_message_loop.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/time/time_point.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 extern mozart::ViewManagerPtr g_view_manager;
 
 namespace view_manager {
 namespace test {
 
-class ViewManagerTest : public TestWithMessageLoop {};
+class ViewManagerTest : public mozart::test::TestWithMessageLoop {};
 
 TEST_F(ViewManagerTest, CreateAViewManager) {
   ASSERT_TRUE(g_view_manager.is_bound());
@@ -32,7 +32,7 @@ TEST_F(ViewManagerTest, CreateAView) {
 
   // Create and bind a mock view listener
   mozart::ViewListenerPtr view_listener;
-  MockViewListener mock_view_listener;
+  mozart::test::MockViewListener mock_view_listener;
   fidl::Binding<mozart::ViewListener> view_listener_binding(
       &mock_view_listener, view_listener.NewRequest());
 
@@ -44,8 +44,10 @@ TEST_F(ViewManagerTest, CreateAView) {
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
-  auto view_token_callback = [&view_token_callback_invokecount](
-      mozart::ViewTokenPtr token) { view_token_callback_invokecount++; };
+  auto view_token_callback =
+      [&view_token_callback_invokecount](mozart::ViewTokenPtr token) {
+        view_token_callback_invokecount++;
+      };
 
   EXPECT_EQ(0, view_token_callback_invokecount);
   view->GetToken(view_token_callback);
@@ -58,7 +60,7 @@ TEST_F(ViewManagerTest, CreateAView) {
 TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
-  MockViewListener parent_mock_view_listener;
+  mozart::test::MockViewListener parent_mock_view_listener;
   fidl::Binding<mozart::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
@@ -74,7 +76,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
   // Create and bind a mock view listener for a child view
   mozart::ViewListenerPtr child_view_listener;
-  MockViewListener child_mock_view_listener;
+  mozart::test::MockViewListener child_mock_view_listener;
   fidl::Binding<mozart::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, child_view_listener.NewRequest());
 
@@ -97,8 +99,10 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
-  auto view_token_callback = [&view_token_callback_invokecount](
-      mozart::ViewTokenPtr token) { view_token_callback_invokecount++; };
+  auto view_token_callback =
+      [&view_token_callback_invokecount](mozart::ViewTokenPtr token) {
+        view_token_callback_invokecount++;
+      };
 
   EXPECT_EQ(0, view_token_callback_invokecount);
   child_view->GetToken(view_token_callback);
@@ -122,7 +126,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Create tree
   mozart::ViewTreePtr tree;
   mozart::ViewTreeListenerPtr tree_listener;
-  MockViewTreeListener mock_tree_view_listener;
+  mozart::test::MockViewTreeListener mock_tree_view_listener;
   fidl::Binding<mozart::ViewTreeListener> tree_listener_binding(
       &mock_tree_view_listener, tree_listener.NewRequest());
   g_view_manager->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
@@ -132,20 +136,20 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   mozart::ViewContainerPtr tree_container;
   tree->GetContainer(tree_container.NewRequest());
   mozart::ViewContainerListenerPtr tree_container_listener;
-  MockViewContainerListener mock_tree_container_listener;
+  mozart::test::MockViewContainerListener mock_tree_container_listener;
   fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding(
       &mock_tree_container_listener, tree_container_listener.NewRequest());
   tree_container->SetListener(std::move(tree_container_listener));
 
   mozart::RendererPtr renderer;
-  MockRenderer mock_renderer;
+  mozart::test::MockRenderer mock_renderer;
   fidl::Binding<mozart::Renderer> renderer_binding(&mock_renderer,
                                                    renderer.NewRequest());
   tree->SetRenderer(std::move(renderer));
 
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
-  MockViewListener parent_mock_view_listener;
+  mozart::test::MockViewListener parent_mock_view_listener;
   fidl::Binding<mozart::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
@@ -175,7 +179,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   // Create and bind a mock view listener for a child view
   mozart::ViewListenerPtr child_view_listener;
-  MockViewListener child_mock_view_listener(
+  mozart::test::MockViewListener child_mock_view_listener(
       [&invalidation_count, child_view_width,
        child_view_height](mozart::ViewInvalidationPtr invalidation) {
         EXPECT_TRUE(invalidation->properties);
@@ -218,14 +222,14 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 }
 
 TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
-  // Create and bind a MockViewAssociate
+  // Create and bind a mozart::test::MockViewAssociate
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-  MockViewAssociate mock_view_associate;
+  mozart::test::MockViewAssociate mock_view_associate;
   fidl::Binding<mozart::ViewAssociate> view_associate_binding(
       &mock_view_associate, associate.NewRequest());
 
-  // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
-  // should be called back
+  // Call ViewManager::RegisterViewAssociate.
+  // mozart::test::MockViewAssociate::Connect should be called back
   EXPECT_EQ(0, mock_view_associate.connect_invokecount);
   mozart::ViewAssociateOwnerPtr view_associate_owner;
   g_view_manager->RegisterViewAssociate(std::move(associate),
@@ -242,14 +246,14 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
   int owner_connection_error_callback_invokecount = 0;
 
   {
-    // Create and bind a MockViewAssociate
+    // Create and bind a mozart::test::MockViewAssociate
     fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-    MockViewAssociate mock_view_associate;
+    mozart::test::MockViewAssociate mock_view_associate;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding(
         &mock_view_associate, associate.NewRequest());
 
-    // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
-    // should be called back
+    // Call ViewManager::RegisterViewAssociate.
+    // mozart::test::MockViewAssociate::Connect should be called back
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
     g_view_manager->RegisterViewAssociate(std::move(associate),
@@ -278,9 +282,9 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
 }
 
 TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
-  // Create and bind a MockViewAssociate
+  // Create and bind a mozart::test::MockViewAssociate
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-  MockViewAssociate mock_view_associate;
+  mozart::test::MockViewAssociate mock_view_associate;
   fidl::Binding<mozart::ViewAssociate> view_associate_binding(
       &mock_view_associate, associate.NewRequest());
 
@@ -295,8 +299,8 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
   {
     mozart::ViewAssociateOwnerPtr view_associate_owner;
 
-    // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
-    // should be called back
+    // Call ViewManager::RegisterViewAssociate.
+    // mozart::test::MockViewAssociate::Connect should be called back
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
     g_view_manager->RegisterViewAssociate(std::move(associate),

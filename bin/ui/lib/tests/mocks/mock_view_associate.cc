@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/tests/mocks/mock_view_associate.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_associate.h"
 
-namespace view_manager {
+namespace mozart {
 namespace test {
 
 MockViewAssociate::MockViewAssociate() {}
@@ -29,4 +29,4 @@ void MockViewAssociate::ConnectToViewTreeService(
     mx::channel client_handle) {}
 
 }  // namespace test
-}  // namespace view_manager
+}  // namespace mozart

@@ -6,28 +6,29 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":view_manager_apptests",
+    ":input_apptests",
   ]
 }
 
-executable("view_manager_apptests") {
-  output_name = "view_manager_apptests"
+executable("input_apptests") {
+  output_name = "input_apptests"
 
   testonly = true
 
   sources = [
+    "input_test.cc",
     "main.cc",
-    "view_associate_table_test.cc",
-    "view_manager_test.cc",
   ]
 
   deps = [
+    "//application/lib/app",
     "//apps/mozart/lib/tests",
     "//apps/mozart/lib/tests/mocks",
     "//apps/mozart/lib/view_associate_framework:mocks",
-    "//apps/mozart/src/view_manager:lib",
+    "//apps/mozart/services/input",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
+    "//lib/mtl",
     "//third_party/gtest",
   ]
 }
