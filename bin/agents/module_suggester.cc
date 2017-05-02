@@ -28,7 +28,7 @@ struct ProposalContent {
 
 const std::unordered_map<std::string, ProposalContent> kNextStories({
     {"Open Mail",
-     {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, "",
+     {"file:///system/apps/email/story", 0xff4285f4 /*Blue from Inbox*/, "",
       ""}},
     {"Video Player",
      {"file:///system/apps/media_player_flutter",
