@@ -7,7 +7,9 @@ executable("listen") {
     "listen.cc",
   ]
   deps = [
+    "//application/lib/app",
     "//lib/ftl",
+    "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]
   libs = [ "launchpad" ]

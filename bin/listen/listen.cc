@@ -6,7 +6,10 @@
 #include <errno.h>
 #include <launchpad/launchpad.h>
 #include <magenta/process.h>
+#include <map>
+#include <memory>
 #include <mx/job.h>
+#include <mxio/io.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdio.h>
@@ -14,20 +17,20 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <unistd.h>
-#include <map>
-#include <memory>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
+#include "application/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/mtl/tasks/fd_waiter.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 class Service {
  public:
-  Service(int port, int argc, const char** argv)
-      : port_(port), argc_(argc), argv_(argv) {
+  Service(int port, int argc, const char** argv) : port_(port), argc_(argc), argv_(argv) {
     sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
       FTL_LOG(FATAL) << "Failed to create socket: " << strerror(errno);
@@ -38,8 +41,7 @@ class Service {
     addr.sin6_port = htons(port_);
     addr.sin6_addr = in6addr_any;
     if (bind(sock_, (struct sockaddr*)&addr, sizeof addr) < 0) {
-      FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": "
-                     << strerror(errno);
+      FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": " << strerror(errno);
     }
 
     if (listen(sock_, 10) < 0) {
@@ -50,8 +52,18 @@ class Service {
     FTL_CHECK(status == 0);
     std::string job_name = ftl::StringPrintf("tcp:%d", port);
     status = job_.set_property(MX_PROP_NAME, job_name.data(), job_name.size());
+
+    waiter_.Wait([this](mx_status_t success, uint32_t events) {
+      int conn = accept(sock_, NULL, NULL);
+      if (conn < 0) {
+        FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
+      }
+      Launch(conn);
+
+    }, sock_, EPOLLIN);
   }
 
+ private:
   void Launch(int conn) {
     launchpad_t* lp;
     launchpad_create(job_.get(), argv_[0], &lp);
@@ -77,14 +89,11 @@ class Service {
     }
   }
 
-  int sock() { return sock_; }
-  int port() { return port_; }
-
- private:
   int port_;
   int argc_;
   const char** argv_;
   int sock_;
+  mtl::FDWaiter waiter_;
   mx::job job_;
 };
 
@@ -94,6 +103,8 @@ void usage(const char* command) {
 }
 
 int main(int argc, const char** argv) {
+  mtl::MessageLoop message_loop;
+
   if (argc < 2) {
     usage(argv[0]);
   }
@@ -103,17 +114,15 @@ int main(int argc, const char** argv) {
   if (port == 0 || end == argv[1] || *end != '\0') {
     usage(argv[0]);
   }
+
+  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+
   std::vector<std::string> command_line;
   for (int i = 2; i < argc; i++) {
     command_line.push_back(std::string(argv[i]));
   }
 
   Service service(port, argc - 2, argv + 2);
-  for (;;) {
-    int conn = accept(service.sock(), NULL, NULL);
-    if (conn < 0) {
-      FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
-    }
-    service.Launch(conn);
-  }
+
+  message_loop.Run();
 }
