@@ -146,19 +146,20 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
   value.strings_.clear();
 
   while (reader.bytes_remaining() != 0) {
-    const char* start = reinterpret_cast<const char*>(reader.Bytes(0));
-    size_t length = strnlen(start, reader.bytes_remaining());
+    uint8_t length;
+    reader >> length;
 
-    if (length == reader.bytes_remaining()) {
-      FTL_DLOG(ERROR) << "Unterminated string in TXT record.";
+    if (length > reader.bytes_remaining()) {
+      FTL_DLOG(ERROR) << "Bad string length, offset "
+                      << reader.bytes_consumed();
       reader.MarkUnhealthy();
       return reader;
     }
 
-    std::string s(start);
-    value.strings_.emplace_back(s);
+    const char* start = reinterpret_cast<const char*>(reader.Bytes(length));
 
-    reader.Bytes(length + 1);
+    std::string s(start, length);
+    value.strings_.emplace_back(s);
   }
 
   FTL_DCHECK(reader.healthy());
@@ -179,14 +180,14 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataSrv& value) {
 }
 
 PacketReader& operator>>(PacketReader& reader, DnsResourceDataOpt& value) {
-  uint16_t length;
-  reader >> length;
-  if (!reader.healthy()) {
-    return reader;
-  }
+  // |reader.bytes_remaining()| must be set to the length of the OPT data
+  // before calling this operator overload.
 
-  value.options_.resize(length);
-  reader.GetBytes(length, value.options_.data());
+  value.options_.resize(reader.bytes_remaining());
+  reader.GetBytes(reader.bytes_remaining(), value.options_.data());
+
+  FTL_DCHECK(reader.healthy());
+  FTL_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -259,10 +260,16 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       new (&value.srv_) DnsResourceDataSrv();
       reader >> value.srv_;
       break;
-    case DnsType::kOpt:
+    case DnsType::kOpt: {
       new (&value.opt_) DnsResourceDataOpt();
+      size_t bytes_remaining = reader.bytes_remaining();
+      reader.SetBytesRemaining(data_size);
       reader >> value.opt_;
-      break;
+      if (reader.healthy()) {
+        FTL_DCHECK(reader.bytes_remaining() == 0);
+        reader.SetBytesRemaining(bytes_remaining - data_size);
+      }
+    } break;
     case DnsType::kNSec: {
       new (&value.txt_) DnsResourceDataNSec();
       size_t bytes_remaining = reader.bytes_remaining();
