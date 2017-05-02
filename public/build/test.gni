@@ -1,0 +1,22 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This template creates an executable containing a gtest main function
+# that runs all tests and reports test results to test_runner.
+template("test") {
+  executable(target_name) {
+    testonly = true
+    forward_variables_from(invoker, "*", [ "configs" ])
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    deps += [ "//apps/test_runner/src:gtest_main" ]
+  }
+}
