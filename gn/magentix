@@ -1,5 +1,6 @@
 {
     "imports": [
+        "magenta_benchmarks",
         "netstack",
         "sbase",
         "vim"
