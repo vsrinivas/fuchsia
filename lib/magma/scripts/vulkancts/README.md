@@ -1,18 +1,9 @@
-1. Patch mesa + magma to use jemalloc
-
-git clone https://fuchsia.googlesource.com/third_party/jemalloc third_party/jemalloc
-git fetch https://fuchsia.googlesource.com/third_party/jemalloc refs/changes/46/16946/2 && git cherry-pick FETCH_HEAD
-git fetch https://fuchsia.googlesource.com/third_party/jemalloc refs/changes/47/16947/2 && git cherry-pick FETCH_HEAD
-
-git fetch https://fuchsia.googlesource.com/magma refs/changes/91/17091/3 && git cherry-pick FETCH_HEAD
-
-git fetch https://fuchsia.googlesource.com/third_party/mesa refs/changes/56/16856/5 && git cherry-pick FETCH_HEAD
-git fetch https://fuchsia.googlesource.com/third_party/mesa refs/changes/43/16943/3 && git cherry-pick FETCH_HEAD
-
-2. Fetch cts dependencies
+1. Fetch cts dependencies
 
 cd third_party/vulkan-cts
 python external/fetch_sources.py
+
+2. Ensure cmake is in your path
 
 3. Create test list cases
 
@@ -34,6 +25,10 @@ then reboot
 
 magma/scripts/vulkancts/build.sh && magma/scripts/vulkancts/copy.sh
 
+5. Make sure netstack is running
+
+netstack&
+
 6. Execute
 
-netruncmd magenta '/boot/bin/sh /data/vulkancts/run.sh'
+netruncmd : '/data/vulkancts/run.sh'
