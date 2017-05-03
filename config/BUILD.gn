@@ -42,6 +42,10 @@ config("compiler") {
         # build directory.
         "-Wl,-rpath=\$ORIGIN/",
       ]
+
+      libs = [
+        "pthread", # libc++ depends on pthreads
+      ]
     } else if (current_os == "mac") {
       configs += [ "//build/config/mac:compiler" ]
     }
