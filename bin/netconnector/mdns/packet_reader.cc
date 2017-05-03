@@ -74,19 +74,19 @@ PacketReader& PacketReader::operator>>(uint8_t& value) {
 
 PacketReader& PacketReader::operator>>(uint16_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh16(value);
+  value = be16toh(value);
   return *this;
 }
 
 PacketReader& PacketReader::operator>>(uint32_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh32(value);
+  value = be32toh(value);
   return *this;
 }
 
 PacketReader& PacketReader::operator>>(uint64_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh64(value);
+  value = be64toh(value);
   return *this;
 }
 
@@ -97,19 +97,19 @@ PacketReader& PacketReader::operator>>(int8_t& value) {
 
 PacketReader& PacketReader::operator>>(int16_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh16(value);
+  value = be16toh(value);
   return *this;
 }
 
 PacketReader& PacketReader::operator>>(int32_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh32(value);
+  value = be32toh(value);
   return *this;
 }
 
 PacketReader& PacketReader::operator>>(int64_t& value) {
   GetBytes(sizeof(value), &value);
-  value = betoh64(value);
+  value = be64toh(value);
   return *this;
 }
 

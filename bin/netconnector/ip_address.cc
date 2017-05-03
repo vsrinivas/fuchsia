@@ -83,7 +83,7 @@ IpAddress::IpAddress(uint16_t w0,
                      uint16_t w6,
                      uint16_t w7) {
   family_ = AF_INET;
-  uint16_t* words = v6_.__in6_union.__s6_addr16;
+  uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
   words[1] = htobe16(w1);
   words[2] = htobe16(w2);
@@ -97,7 +97,7 @@ IpAddress::IpAddress(uint16_t w0,
 IpAddress::IpAddress(uint16_t w0, uint16_t w7) {
   family_ = AF_INET;
   std::memset(&v6_, 0, sizeof(v6_));
-  uint16_t* words = v6_.__in6_union.__s6_addr16;
+  uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
   words[7] = htobe16(w7);
 }

@@ -56,7 +56,7 @@ SocketAddress::SocketAddress(uint16_t w0,
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
-  uint16_t* words = v6_.sin6_addr.__in6_union.__s6_addr16;
+  uint16_t* words = v6_.sin6_addr.s6_addr16;
   words[0] = htobe16(w0);
   words[1] = htobe16(w1);
   words[2] = htobe16(w2);
@@ -71,7 +71,7 @@ SocketAddress::SocketAddress(uint16_t w0, uint16_t w7, IpPort port) {
   std::memset(&v6_, 0, sizeof(v6_));
   v6_.sin6_family = AF_INET6;
   v6_.sin6_port = port.as_in_port_t();
-  uint16_t* words = v6_.sin6_addr.__in6_union.__s6_addr16;
+  uint16_t* words = v6_.sin6_addr.s6_addr16;
   words[0] = htobe16(w0);
   words[7] = htobe16(w7);
 }

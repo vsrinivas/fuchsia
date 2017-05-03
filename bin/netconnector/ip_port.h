@@ -59,7 +59,7 @@ class IpPort {
 
   // Returns a |uint16_t| value for the port. This value is host-endian,
   // suitable for displaying to humans, etc.
-  uint16_t as_uint16_t() const { return betoh16(value_); }
+  uint16_t as_uint16_t() const { return be16toh(value_); }
 
   explicit operator bool() const { return is_valid(); }
 

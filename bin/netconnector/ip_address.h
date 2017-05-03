@@ -74,9 +74,9 @@ class IpAddress {
     return v6_;
   }
 
-  const uint8_t* as_bytes() const { return v6_.__in6_union.__s6_addr; }
+  const uint8_t* as_bytes() const { return v6_.s6_addr; }
 
-  const uint16_t* as_words() const { return v6_.__in6_union.__s6_addr16; }
+  const uint16_t* as_words() const { return v6_.s6_addr16; }
 
   size_t byte_count() const {
     return is_v4() ? sizeof(in_addr) : sizeof(in6_addr);
