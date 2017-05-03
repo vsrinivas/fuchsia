@@ -3,7 +3,7 @@
         "init"
     ],
     "labels": [
-        "//application/src:application_manager",
+        "//application",
         "//apps/modular/src/bootstrap"
     ],
     "binaries": [
