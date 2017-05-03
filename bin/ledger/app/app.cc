@@ -20,6 +20,7 @@
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -32,6 +33,7 @@ namespace ledger {
 constexpr ftl::StringView kPersistentFileSystem = "/data";
 constexpr ftl::StringView kMinFsName = "minfs";
 constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
+constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
 
 // App is the main entry point of the Ledger application.
 //
@@ -125,9 +127,13 @@ void WaitForData() {
 }  // namespace ledger
 
 int main(int argc, const char** argv) {
-  // Poll until /data is persistent. This is need to retrieve the Ledger
-  // configuration.
-  ledger::WaitForData();
+  const auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+
+  if (!command_line.HasOption(ledger::kNoMinFsFlag.ToString())) {
+    // Poll until /data is persistent. This is need to retrieve the Ledger
+    // configuration.
+    ledger::WaitForData();
+  }
 
   ledger::App app;
   if (!app.Start()) {
