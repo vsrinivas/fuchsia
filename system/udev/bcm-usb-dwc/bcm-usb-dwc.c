@@ -1206,6 +1206,8 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
             transfer.size = txn->length - req->bytes_transferred;
 
+            iotxn_cacheop(txn, IOTXN_CACHE_CLEAN_INVALIDATE, 0, transfer.size);
+
             if (req->bytes_transferred == 0) {
                 transfer.packet_id = DWC_TOGGLE_DATA1;
             } else {
