@@ -10,63 +10,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "drivers/audio/intel-hda/utils/codec-caps.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
+#include "drivers/audio/intel-hda/utils/codec-state.h"
 
 namespace audio {
 namespace intel_hda {
-
-/* Bitfield definitions for the PCM Size/Rate property.  See section 7.3.4.7 */
-static constexpr uint32_t IHDA_PCM_SIZE_32BITS    = (1u << 20); // 32-bit PCM samples supported
-static constexpr uint32_t IHDA_PCM_SIZE_24BITS    = (1u << 19); // 24-bit PCM samples supported
-static constexpr uint32_t IHDA_PCM_SIZE_20BITS    = (1u << 18); // 20-bit PCM samples supported
-static constexpr uint32_t IHDA_PCM_SIZE_16BITS    = (1u << 17); // 16-bit PCM samples supported
-static constexpr uint32_t IHDA_PCM_SIZE_8BITS     = (1u << 16); // 8-bit PCM samples supported
-
-static constexpr uint32_t IHDA_PCM_RATE_384000    = (1u << 11); // 384000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_192000    = (1u << 10); // 192000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_176400    = (1u <<  9); // 176400 Hz
-static constexpr uint32_t IHDA_PCM_RATE_96000     = (1u <<  8); // 96000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_88200     = (1u <<  7); // 88200 Hz
-static constexpr uint32_t IHDA_PCM_RATE_48000     = (1u <<  6); // 48000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_44100     = (1u <<  5); // 44100 Hz
-static constexpr uint32_t IHDA_PCM_RATE_32000     = (1u <<  4); // 32000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_22050     = (1u <<  3); // 22050 Hz
-static constexpr uint32_t IHDA_PCM_RATE_16000     = (1u <<  2); // 16000 Hz
-static constexpr uint32_t IHDA_PCM_RATE_11025     = (1u <<  1); // 11025 Hz
-static constexpr uint32_t IHDA_PCM_RATE_8000      = (1u <<  0); // 8000 Hz
-
-/* Bitfield definitions for the PCM Formats property.  See section 7.3.4.8 */
-static constexpr uint32_t IHDA_PCM_FORMAT_AC3     = (1u <<  2); // Dolby Digital AC-3 / ATSC A.52
-static constexpr uint32_t IHDA_PCM_FORMAT_FLOAT32 = (1u <<  1); // 32-bit float
-static constexpr uint32_t IHDA_PCM_FORMAT_PCM     = (1u <<  0); // PCM
-
-/* Bitfield definitions for Supported Power States.  See section 7.3.4.12 */
-static constexpr uint32_t IHDA_PWR_STATE_EPSS     = (1u << 31);
-static constexpr uint32_t IHDA_PWR_STATE_CLKSTOP  = (1u << 30);
-static constexpr uint32_t IHDA_PWR_STATE_S3D3COLD = (1u << 29);
-static constexpr uint32_t IHDA_PWR_STATE_D3COLD   = (1u <<  4);
-static constexpr uint32_t IHDA_PWR_STATE_D3       = (1u <<  3);
-static constexpr uint32_t IHDA_PWR_STATE_D2       = (1u <<  2);
-static constexpr uint32_t IHDA_PWR_STATE_D1       = (1u <<  1);
-static constexpr uint32_t IHDA_PWR_STATE_D0       = (1u <<  0);
-
-/* Defined pin capability flags.  See section 7.3.4.9 and Fig. 90 */
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_IMPEDANCE_SENSE  = (1u << 0);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_TRIGGER_REQUIRED     = (1u << 1);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_PRESENCE_DETECT  = (1u << 2);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_DRIVE_HEADPHONES = (1u << 3);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_OUTPUT           = (1u << 4);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_INPUT            = (1u << 5);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_BALANCED_IO          = (1u << 6);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_HDMI                 = (1u << 7);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_VREF_HIZ             = (1u << 8);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_VREF_50_PERCENT      = (1u << 9);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_VREF_GROUND          = (1u << 10);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_VREF_80_PERCENT      = (1u << 12);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_VREF_100_PERCENT     = (1u << 13);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_CAN_EAPD             = (1u << 16);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_DISPLAY_PORT         = (1u << 24);
-static constexpr uint32_t AW_PIN_CAPS_FLAG_HIGH_BIT_RATE        = (1u << 27);
 
 struct AudioWidgetState;
 using  AudioWidgetStatePtr = mxtl::unique_ptr<AudioWidgetState>;
@@ -74,18 +23,6 @@ using  AudioWidgetStatePtr = mxtl::unique_ptr<AudioWidgetState>;
 struct FunctionGroupState;
 struct AudioFunctionGroupState;
 using  FunctionGroupStatePtr = mxtl::unique_ptr<FunctionGroupState>;
-
-struct AmpCaps {
-    // Bit packing documented in Section 7.3.4.10
-    AmpCaps() { }
-    explicit AmpCaps(uint32_t raw_data) : raw_data_(raw_data) { }
-    uint32_t raw_data_ = 0;
-
-    bool     can_mute()  const { return (raw_data_ & 0x80000000) != 0; }
-    uint32_t step_size() const { return ((raw_data_ >> 16) & 0x7f) + 1; }
-    uint32_t num_steps() const { return ((raw_data_ >>  8) & 0x7f) + 1; }
-    uint32_t offset()    const { return ((raw_data_ >>  0) & 0x7f); }
-};
 
 struct PowerState {
     // Section 7.3.4.12 : Supported Power States
@@ -108,57 +45,6 @@ struct UnsolicitedResponseState {
 };
 
 struct AudioWidgetState {
-    /* Defined audio widget types.  See Table 138 */
-    enum class Type : uint8_t {
-        OUTPUT      = 0x0,
-        INPUT       = 0x1,
-        MIXER       = 0x2,
-        SELECTOR    = 0x3,
-        PIN_COMPLEX = 0x4,
-        POWER       = 0x5,
-        VOLUME_KNOB = 0x6,
-        BEEP_GEN    = 0x7,
-        VENDOR      = 0xf,
-    };
-
-    struct Caps {
-        static constexpr uint32_t FLAG_INPUT_AMP_PRESENT   = (1u << 1);
-        static constexpr uint32_t FLAG_OUTPUT_AMP_PRESENT  = (1u << 2);
-        static constexpr uint32_t FLAG_AMP_PARAM_OVERRIDE  = (1u << 3);
-        static constexpr uint32_t FLAG_FORMAT_OVERRIDE     = (1u << 4);
-        static constexpr uint32_t FLAG_STRIP_SUPPORTED     = (1u << 5);
-        static constexpr uint32_t FLAG_PROC_WIDGET         = (1u << 6);
-        static constexpr uint32_t FLAG_CAN_SEND_UNSOL      = (1u << 7);
-        static constexpr uint32_t FLAG_HAS_CONN_LIST       = (1u << 8);
-        static constexpr uint32_t FLAG_DIGITAL             = (1u << 9);
-        static constexpr uint32_t FLAG_HAS_POWER_CTL       = (1u << 10);
-        static constexpr uint32_t FLAG_CAN_LR_SWAP         = (1u << 11);
-        static constexpr uint32_t FLAG_HAS_CONTENT_PROT    = (1u << 12);
-
-        explicit Caps(uint32_t raw_data) : raw_data_(raw_data) { }
-
-        /* Raw data format documented in section 7.3.4.6 */
-        Type type()        const { return static_cast<Type>((raw_data_ >> 20) & 0xF); }
-        uint8_t delay()    const { return static_cast<uint8_t>((raw_data_ >> 16) & 0xF); }
-        uint8_t ch_count() const { return static_cast<uint8_t>((((raw_data_ >> 12) & 0xE) |
-                                                                 (raw_data_ & 0x1)) + 1); }
-
-        bool input_amp_present()  const { return (raw_data_ & FLAG_INPUT_AMP_PRESENT)  != 0; }
-        bool output_amp_present() const { return (raw_data_ & FLAG_OUTPUT_AMP_PRESENT) != 0; }
-        bool amp_param_override() const { return (raw_data_ & FLAG_AMP_PARAM_OVERRIDE) != 0; }
-        bool format_override()    const { return (raw_data_ & FLAG_FORMAT_OVERRIDE)    != 0; }
-        bool strip_supported()    const { return (raw_data_ & FLAG_STRIP_SUPPORTED)    != 0; }
-        bool proc_widget()        const { return (raw_data_ & FLAG_PROC_WIDGET)        != 0; }
-        bool can_send_unsol()     const { return (raw_data_ & FLAG_CAN_SEND_UNSOL)     != 0; }
-        bool has_conn_list()      const { return (raw_data_ & FLAG_HAS_CONN_LIST)      != 0; }
-        bool digital()            const { return (raw_data_ & FLAG_DIGITAL)            != 0; }
-        bool has_power_ctl()      const { return (raw_data_ & FLAG_HAS_POWER_CTL)      != 0; }
-        bool can_lr_swap()        const { return (raw_data_ & FLAG_CAN_LR_SWAP)        != 0; }
-        bool has_content_prot()   const { return (raw_data_ & FLAG_HAS_CONTENT_PROT)   != 0; }
-
-        const uint32_t raw_data_;
-    };
-
     struct StreamFormat {
         // Stream format bitfields documented in section 3.7.1
         static constexpr uint16_t FLAG_NON_PCM = (1u << 15);
@@ -202,33 +88,6 @@ struct AudioWidgetState {
         AmpState amp_state_;
     };
 
-    // Section 7.3.3.15 and Table 92
-    struct PinSenseState {
-        bool     presence_detect() const { return (raw_data_ & 0x80000000u) != 0; }
-        bool     eld_valid()       const { return (raw_data_ & 0x40000000u) != 0; }
-        uint32_t impedance()       const { return (raw_data_ & 0x7fffffffu); }
-        uint32_t raw_data_;
-    };
-
-    // Section 7.3.3.16
-    struct EAPDState {
-        bool btl()     const { return (raw_data_ & 0x1u) != 0; }
-        bool eapd()    const { return (raw_data_ & 0x2u) != 0; }
-        bool lr_swap() const { return (raw_data_ & 0x4u) != 0; }
-        uint32_t raw_data_;
-    };
-
-    // Section 7.3.3.12.  Present only in pin complexes
-    struct PinWidgetCtrlState {
-        bool   hp_amp_enb()  const { return (raw_data_ & (1u << 7)) != 0; }
-        bool   output_enb()  const { return (raw_data_ & (1u << 6)) != 0; }
-        bool   input_enb()   const { return (raw_data_ & (1u << 5)) != 0; }
-        VRefEn vref_enb()    const { return static_cast<VRefEn>(raw_data_ & 0xf); }
-        EPT    ept()         const { return static_cast<EPT>(raw_data_ & 0x3); }
-
-        uint8_t raw_data_;
-    };
-
     // Section 7.3.3.31.  Present only in pin complexes
     struct ConfigDefaults {
         uint8_t port_connectivity() const { return static_cast<uint8_t>((raw_data_ >> 30) & 0x03); }
@@ -244,9 +103,9 @@ struct AudioWidgetState {
         uint32_t raw_data_;
     };
 
-    explicit AudioWidgetState(const Caps& caps) : caps_(caps) { }
+    explicit AudioWidgetState(const AudioWidgetCaps& caps) : caps_(caps) { }
 
-    const Caps caps_;
+    const AudioWidgetCaps caps_;
     const AudioFunctionGroupState* afg_ = nullptr;
     uint16_t nid_;
 
@@ -340,32 +199,15 @@ protected:
 };
 
 struct AudioFunctionGroupState : public FunctionGroupState {
-    // Section 7.3.4.5 : AFG Caps
-    // Note: delays are expressed in audio frames.  If a path delay value is 0,
-    // the delay should be computed by summing the delays of the widget chain
-    // used to create either the input or output paths.
-    struct Caps {
-        static constexpr uint32_t FLAG_HAS_BEEP_GEN = (1u << 16);
-
-        Caps() : raw_data_(0) { }
-        explicit Caps(uint32_t raw_data) : raw_data_(raw_data) { }
-
-        bool     has_beep_gen()      const { return (raw_data_ & FLAG_HAS_BEEP_GEN) != 0; }
-        uint8_t  path_input_delay()  const { return static_cast<uint8_t>((raw_data_ >> 8) & 0xF); }
-        uint8_t  path_output_delay() const { return static_cast<uint8_t>(raw_data_ & 0xF); }
-
-        uint32_t raw_data_;
-    };
-
     AudioFunctionGroupState() : FunctionGroupState(Type::AUDIO) { }
 
-    Caps     caps_;
+    AudioFunctionGroupCaps caps_;
     uint32_t default_pcm_size_rate_; // Section 7.3.4.7 : Supported PCM sizes and rates
     uint32_t default_pcm_formats_;   // Section 7.3.4.8 : Supported PCM formats
 
     // Section 7.3.4.10 : Amplifier capabilities
-    AmpCaps  default_input_amp_caps_;
-    AmpCaps  default_output_amp_caps_;
+    AmpCaps default_input_amp_caps_;
+    AmpCaps default_output_amp_caps_;
 
     // Sections 7.3.4.12 & 7.3.3.10.
     PowerState power_;

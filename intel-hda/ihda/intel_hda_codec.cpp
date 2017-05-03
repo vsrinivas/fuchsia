@@ -165,18 +165,18 @@ static mx_status_t ParseAWPinWidgetCtrl(AudioWidgetState& widget, const CodecRes
 }
 
 static mx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecResponse& resp) {
-    AudioWidgetState::Caps caps(resp.data);
+    AudioWidgetCaps caps(resp.data);
 
     switch (caps.type()) {
-    case AudioWidgetState::Type::OUTPUT:
-    case AudioWidgetState::Type::INPUT:
-    case AudioWidgetState::Type::MIXER:
-    case AudioWidgetState::Type::SELECTOR:
-    case AudioWidgetState::Type::PIN_COMPLEX:
-    case AudioWidgetState::Type::POWER:
-    case AudioWidgetState::Type::VOLUME_KNOB:
-    case AudioWidgetState::Type::BEEP_GEN:
-    case AudioWidgetState::Type::VENDOR:
+    case AudioWidgetCaps::Type::OUTPUT:
+    case AudioWidgetCaps::Type::INPUT:
+    case AudioWidgetCaps::Type::MIXER:
+    case AudioWidgetCaps::Type::SELECTOR:
+    case AudioWidgetCaps::Type::PIN_COMPLEX:
+    case AudioWidgetCaps::Type::POWER:
+    case AudioWidgetCaps::Type::VOLUME_KNOB:
+    case AudioWidgetCaps::Type::BEEP_GEN:
+    case AudioWidgetCaps::Type::VENDOR:
         break;
     default:
         return ERR_INVALID_ARGS;
@@ -520,19 +520,19 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     mx_status_t res;
 
     switch (widget.caps_.type()) {
-    case AudioWidgetState::Type::INPUT:
+    case AudioWidgetCaps::Type::INPUT:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_AUDIO_INPUT_CAPS,
                          "Failed to fetch INPUT_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
-    case AudioWidgetState::Type::OUTPUT:
+    case AudioWidgetCaps::Type::OUTPUT:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_AUDIO_OUTPUT_CAPS,
                          "Failed to fetch OUTPUT_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
-    case AudioWidgetState::Type::PIN_COMPLEX:
+    case AudioWidgetCaps::Type::PIN_COMPLEX:
         if (widget.caps_.digital()) {
             RUN_COMMAND_LIST(widget, widget.nid_, FETCH_DIGITAL_PIN_COMPLEX_CAPS,
                              "Failed to fetch DIGITAL_PIN_COMPLEX_CAPS for audio widget "
@@ -544,33 +544,33 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
         }
         break;
 
-    case AudioWidgetState::Type::MIXER:
+    case AudioWidgetCaps::Type::MIXER:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_MIXER_CAPS,
                          "Failed to fetch MIXER_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
-    case AudioWidgetState::Type::SELECTOR:
+    case AudioWidgetCaps::Type::SELECTOR:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_SELECTOR_CAPS,
                          "Failed to fetch SELECTOR_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
-    case AudioWidgetState::Type::POWER:
+    case AudioWidgetCaps::Type::POWER:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_POWER_CAPS,
                          "Failed to fetch POWER_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
-    case AudioWidgetState::Type::VOLUME_KNOB:
+    case AudioWidgetCaps::Type::VOLUME_KNOB:
         RUN_COMMAND_LIST(widget, widget.nid_, FETCH_VOLUME_KNOB_CAPS,
                          "Failed to fetch VOLUME_KNOB_CAPS for audio widget (nid %hu)",
                          widget.nid_);
         break;
 
     // We don't currently fetch any state for beep generators or vendor widgets.
-    case AudioWidgetState::Type::BEEP_GEN:
-    case AudioWidgetState::Type::VENDOR:
+    case AudioWidgetCaps::Type::BEEP_GEN:
+    case AudioWidgetCaps::Type::VENDOR:
         break;
 
     default:
@@ -606,8 +606,8 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     }
 
     // If this is an input or output converter widget, read the currently configured format.
-    if ((widget.caps_.type() == AudioWidgetState::Type::INPUT) ||
-        (widget.caps_.type() == AudioWidgetState::Type::OUTPUT)) {
+    if ((widget.caps_.type() == AudioWidgetCaps::Type::INPUT) ||
+        (widget.caps_.type() == AudioWidgetCaps::Type::OUTPUT)) {
         CodecResponse resp;
 
         res = DoCodecCmd(widget.nid_, GET_CONVERTER_FORMAT, &resp);
@@ -623,7 +623,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     // If this is a pin complex, and it supports presence detection, and the
     // JackOverride bit has not been set in the config defaults, query the pin
     // sense.
-    if ((widget.caps_.type() == AudioWidgetState::Type::PIN_COMPLEX) &&
+    if ((widget.caps_.type() == AudioWidgetCaps::Type::PIN_COMPLEX) &&
         (widget.pin_caps_ & AW_PIN_CAPS_FLAG_CAN_PRESENCE_DETECT) &&
         (!widget.cfg_defaults_.jack_detect_override())) {
 
@@ -678,7 +678,7 @@ mx_status_t IntelHDACodec::ReadAudioWidgetState(AudioWidgetState& widget) {
     if (widget.caps_.input_amp_present()) {
         // If this a mixer, read the individual input amp state for each of the mixer inputs.
         // Otherwise, just read the common input amp state.
-        if (widget.caps_.type() == AudioWidgetState::Type::MIXER) {
+        if (widget.caps_.type() == AudioWidgetCaps::Type::MIXER) {
             for (uint8_t i = 0; i < widget.conn_list_len_; ++i) {
                 res = ReadAmpState(widget.nid_, true, i,
                                    widget.input_amp_caps_,
@@ -767,7 +767,7 @@ mx_status_t IntelHDACodec::ReadConnList(AudioWidgetState& widget) {
     // so we can report it.  Otherwise, the currently connected NID must be the
     // same as the first entry in the list, or this is a mixer widget in which
     // case it is always connected to all of the entries in the connection list.
-    if (widget.caps_.type() != AudioWidgetState::Type::MIXER) {
+    if (widget.caps_.type() != AudioWidgetCaps::Type::MIXER) {
         if (widget.conn_list_len_ == 1) {
             widget.connected_nid_ = widget.conn_list_[0].nid_;
             widget.connected_nid_ndx_ = 0;

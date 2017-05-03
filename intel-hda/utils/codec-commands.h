@@ -86,8 +86,8 @@ struct CodecResponse {
 
     uint32_t caddr()        const { return (data_ex & 0xF); }
     bool     unsolicited()  const { return (data_ex & 0x10) != 0; }
-    uint32_t unsol_tag()    const { return ((data >> 26) & 0x3F); }
-    uint32_t unsol_subtag() const { return ((data >> 21) & 0x1F); }
+    uint8_t  unsol_tag()    const { return static_cast<uint8_t>((data >> 26) & 0x3F); }
+    uint8_t  unsol_subtag() const { return static_cast<uint8_t>((data >> 21) & 0x1F); }
     uint32_t unsol_data()   const { return (data & ((1u << 21) - 1)); }
 
 } __PACKED;

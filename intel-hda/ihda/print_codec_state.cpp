@@ -24,17 +24,17 @@ const char* ToString(const FunctionGroupState::Type& val) {
     }
 }
 
-const char* ToString(const AudioWidgetState::Type& val) {
+const char* ToString(const AudioWidgetCaps::Type& val) {
     switch (val) {
-        case AudioWidgetState::Type::OUTPUT:      return "OUTPUT";
-        case AudioWidgetState::Type::INPUT:       return "INPUT";
-        case AudioWidgetState::Type::MIXER:       return "MIXER";
-        case AudioWidgetState::Type::SELECTOR:    return "SELECTOR";
-        case AudioWidgetState::Type::PIN_COMPLEX: return "PIN_COMPLEX";
-        case AudioWidgetState::Type::POWER:       return "POWER";
-        case AudioWidgetState::Type::VOLUME_KNOB: return "VOLUME_KNOB";
-        case AudioWidgetState::Type::BEEP_GEN:    return "BEEP_GEN";
-        case AudioWidgetState::Type::VENDOR:      return "VENDOR";
+        case AudioWidgetCaps::Type::OUTPUT:      return "OUTPUT";
+        case AudioWidgetCaps::Type::INPUT:       return "INPUT";
+        case AudioWidgetCaps::Type::MIXER:       return "MIXER";
+        case AudioWidgetCaps::Type::SELECTOR:    return "SELECTOR";
+        case AudioWidgetCaps::Type::PIN_COMPLEX: return "PIN_COMPLEX";
+        case AudioWidgetCaps::Type::POWER:       return "POWER";
+        case AudioWidgetCaps::Type::VOLUME_KNOB: return "VOLUME_KNOB";
+        case AudioWidgetCaps::Type::BEEP_GEN:    return "BEEP_GEN";
+        case AudioWidgetCaps::Type::VENDOR:      return "VENDOR";
         default:                                  return "<unknown>";
     }
 }
@@ -291,14 +291,14 @@ static const flag_lut_entry_t PCM_FMT_FLAGS[] = {
 };
 
 static const flag_lut_entry_t AW_CAPS_FLAGS[] = {
-    { AudioWidgetState::Caps::FLAG_AMP_PARAM_OVERRIDE, "AmpParamOverride" },
-    { AudioWidgetState::Caps::FLAG_FORMAT_OVERRIDE,    "FormatOverride" },
-    { AudioWidgetState::Caps::FLAG_STRIP_SUPPORTED,    "StripingSupported" },
-    { AudioWidgetState::Caps::FLAG_PROC_WIDGET,        "HasProcessingControls" },
-    { AudioWidgetState::Caps::FLAG_CAN_SEND_UNSOL,     "CanSendUnsolicited" },
-    { AudioWidgetState::Caps::FLAG_DIGITAL,            "Digital" },
-    { AudioWidgetState::Caps::FLAG_CAN_LR_SWAP,        "CanSwapLR" },
-    { AudioWidgetState::Caps::FLAG_HAS_CONTENT_PROT,   "HasContentProtection" },
+    { AudioWidgetCaps::FLAG_AMP_PARAM_OVERRIDE, "AmpParamOverride" },
+    { AudioWidgetCaps::FLAG_FORMAT_OVERRIDE,    "FormatOverride" },
+    { AudioWidgetCaps::FLAG_STRIPE_SUPPORTED,   "StripingSupported" },
+    { AudioWidgetCaps::FLAG_PROC_WIDGET,        "HasProcessingControls" },
+    { AudioWidgetCaps::FLAG_CAN_SEND_UNSOL,     "CanSendUnsolicited" },
+    { AudioWidgetCaps::FLAG_DIGITAL,            "Digital" },
+    { AudioWidgetCaps::FLAG_CAN_LR_SWAP,        "CanSwapLR" },
+    { AudioWidgetCaps::FLAG_HAS_CONTENT_PROT,   "HasContentProtection" },
 };
 
 static const flag_lut_entry_t PIN_CAPS_FLAGS[] = {
@@ -351,7 +351,7 @@ static void ihda_dump_conn_list(const AudioWidgetState& widget) {
     }
 
     // Mixers are always connected to all of the inputs on their connection lists.
-    if (widget.caps_.type() != AudioWidgetState::Type::MIXER) {
+    if (widget.caps_.type() != AudioWidgetCaps::Type::MIXER) {
         if (widget.connected_nid_ndx_ < widget.conn_list_len_) {
             printf(" : [*%hu, ndx %u]\n", widget.connected_nid_, widget.connected_nid_ndx_);
         } else {
@@ -390,7 +390,7 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
     printf(FMT("%u\n"), "MaxChan", widget.caps_.ch_count());
 
     if (widget.caps_.input_amp_present()) {
-        if (widget.caps_.type() != AudioWidgetState::Type::MIXER) {
+        if (widget.caps_.type() != AudioWidgetCaps::Type::MIXER) {
             printf(FMT(""), "InputAmp");
             Dump(widget.input_amp_caps_, &widget.input_amp_state_);
         } else {
@@ -419,14 +419,14 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
         DUMP_FLAGS(widget.pcm_formats_, PCM_FMT_FLAGS, "", "none");
     }
 
-    if ((widget.caps_.type() == AudioWidgetState::Type::INPUT) ||
-        (widget.caps_.type() == AudioWidgetState::Type::OUTPUT)) {
+    if ((widget.caps_.type() == AudioWidgetCaps::Type::INPUT) ||
+        (widget.caps_.type() == AudioWidgetCaps::Type::OUTPUT)) {
         printf(FMT(""), "Cur Format");
         Dump(widget.cur_format_);
         printf(FMT("tag (%u) chan (%u)\n"), "Tag/Chan", widget.stream_tag_, widget.stream_chan_);
     }
 
-    if (widget.caps_.type() == AudioWidgetState::Type::PIN_COMPLEX) {
+    if (widget.caps_.type() == AudioWidgetCaps::Type::PIN_COMPLEX) {
         if (widget.pin_sense_valid_) {
             const char* pstring = widget.pin_sense_.presence_detect() ? "Plugged" : "Unplugged";
             if (widget.caps_.digital()) {
@@ -452,7 +452,7 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
    if (widget.caps_.can_lr_swap())
        printf(FMT("%s\n"), "L/R Swap", widget.eapd_state_.lr_swap() ? "Swapped" : "Normal");
 
-   if (widget.caps_.type() == AudioWidgetState::Type::PIN_COMPLEX) {
+   if (widget.caps_.type() == AudioWidgetCaps::Type::PIN_COMPLEX) {
        if (widget.pin_caps_ & AW_PIN_CAPS_FLAG_CAN_INPUT)
            printf(FMT("%s\n"), "Input",
                    widget.pin_widget_ctrl_.input_enb() ? "Enabled" : "Disabled");
@@ -524,7 +524,7 @@ static void ihda_dump_widget(const AudioWidgetState& widget, uint32_t id, uint32
         printf(FMT("%u\n"), "Proc Coefficients", widget.processing_coefficient_count_);
     }
 
-    if (widget.caps_.type() == AudioWidgetState::Type::VOLUME_KNOB) {
+    if (widget.caps_.type() == AudioWidgetCaps::Type::VOLUME_KNOB) {
         printf(FMT("%s\n"), "Vol Knob Type",  widget.vol_knob_is_delta_ ? "delta" : "absolute");
         printf(FMT("%u\n"), "Vol Knob Steps", widget.vol_knob_steps_);
     }
