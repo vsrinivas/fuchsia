@@ -261,12 +261,12 @@ finished:
 // between both the codec and stream base classes.
 mx_status_t IntelHDAStreamBase::SendCodecCommandLocked(uint16_t  nid,
                                                        CodecVerb verb,
-                                                       bool      no_ack) {
+                                                       Ack       do_ack) {
     if (codec_channel_ == nullptr) return ERR_BAD_STATE;
 
     ihda_codec_send_corb_cmd_req_t cmd;
 
-    cmd.hdr.cmd = no_ack ? IHDA_CODEC_SEND_CORB_CMD_NOACK : IHDA_CODEC_SEND_CORB_CMD;
+    cmd.hdr.cmd = (do_ack == Ack::NO) ? IHDA_CODEC_SEND_CORB_CMD_NOACK : IHDA_CODEC_SEND_CORB_CMD;
     cmd.hdr.transaction_id = id();
     cmd.nid = nid;
     cmd.verb = verb.val;
