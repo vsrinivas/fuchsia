@@ -32,7 +32,20 @@ declare_args() {
 
   # Use link time optimization (LTO).
   use_lto = false
+
+  # magenta build project
+  magenta_project = ""
 }
+
+if (magenta_project == "") {
+  if (current_cpu == "arm64") {
+    magenta_project = "magenta-qemu-arm64"
+  } else if (current_cpu == "x64") {
+    magenta_project = "magenta-pc-x86-64"
+  }
+}
+assert(magenta_project != "", "unable to set default magenta build project")
+
 
 is_android = false
 is_fuchsia = false

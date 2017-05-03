@@ -8,10 +8,8 @@ assert(current_toolchain == "//build/toolchain/fuchsia:${target_cpu}-sysroot")
 
 if (target_cpu == "x64") {
   fuchsia_target_arch = "x86_64"
-  magenta_build_dir = "build-magenta-pc-x86-64"
 } else if (target_cpu == "arm64") {
   fuchsia_target_arch = "aarch64"
-  magenta_build_dir = "build-magenta-qemu-arm64"
 }
 
 if (host_cpu == "arm64") {
@@ -27,7 +25,7 @@ if (host_os == "mac") {
   clang_os = "darwin"
 }
 
-magenta_build_dir = rebase_path("//out/build-magenta/$magenta_build_dir")
+magenta_build_dir = rebase_path("//out/build-magenta/build-$magenta_project")
 magenta_sysroot_list = magenta_build_dir + "/sysroot.list"
 toolchain_sysroot = rebase_path(
         "//buildtools/toolchain/clang+llvm-$clang_cpu-$clang_os/$fuchsia_target_arch-fuchsia")
