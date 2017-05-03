@@ -38,10 +38,6 @@
 
 #define LOCAL_TRACE 0
 
-extern "C" {
-uint64_t get_tsc_ticks_per_ms(void);
-};
-
 // For reading general purpose integer registers, we can allocate in
 // an inline array and save the malloc. Assume 64 registers as a
 // conservative estimate for an architecture with 32 general purpose

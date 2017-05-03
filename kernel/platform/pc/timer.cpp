@@ -98,12 +98,6 @@ static struct fp_32_64 tsc_per_ns;
 // HPET calibration values
 static struct fp_32_64 ns_per_hpet;
 
-// TODO: move this to a common header
-uint64_t get_tsc_ticks_per_ms(void);
-uint64_t get_tsc_ticks_per_ms(void) {
-    return tsc_ticks_per_ms;
-}
-
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
 

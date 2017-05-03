@@ -6,6 +6,7 @@
 
 #include <debug.h>
 #include <err.h>
+#include <platform.h>
 #include <string.h>
 
 #include <arch/ops.h>
@@ -18,11 +19,9 @@
 #include <magenta/user_thread.h>
 
 #if __x86_64__
-uint64_t get_tsc_ticks_per_ms(void);
 #define ktrace_timestamp() rdtsc();
-#define ktrace_ticks_per_ms() get_tsc_ticks_per_ms()
+#define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
 #else
-#include <platform.h>
 #define ktrace_timestamp() current_time()
 #define ktrace_ticks_per_ms() (1000000)
 #endif
