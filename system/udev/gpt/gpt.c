@@ -74,20 +74,8 @@ static uint64_t getsize(gptpart_device_t* dev) {
     return lbacount * dev->info.block_size;
 }
 
-static bool prepare_txn(gptpart_device_t* dev, iotxn_t* txn) {
-    // sanity check
-    uint64_t off_lba = txn->offset / dev->info.block_size;
-    uint64_t first = dev->gpt_entry.first_lba;
-    uint64_t last = dev->gpt_entry.last_lba;
-    if (first + off_lba > last) {
-        xprintf("%s: offset 0x%" PRIx64 " is past the end of partition!\n", dev->device.name, txn->offset);
-        return false;
-    }
-    // constrain if too many bytes are requested
-    txn->length = MIN((last - (first + off_lba) + 1) * dev->info.block_size, txn->length);
-    // adjust offset
-    txn->offset = first * dev->info.block_size + txn->offset;
-    return true;
+static mx_off_t to_parent_offset(gptpart_device_t* dev, mx_off_t offset) {
+    return offset + dev->gpt_entry.first_lba * dev->info.block_size;
 }
 
 // implement device protocol:
@@ -138,7 +126,19 @@ static mx_status_t gpt_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd
 
 static void gpt_iotxn_queue(void* ctx, iotxn_t* txn) {
     gptpart_device_t* device = ctx;
-    if (!prepare_txn(device, txn)) {
+    if (txn->offset % device->info.block_size) {
+        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        return;
+    }
+    if (txn->offset > getsize(device)) {
+        iotxn_complete(txn, ERR_OUT_OF_RANGE, 0);
+        return;
+    }
+    // transactions from read()/write() may be truncated
+    txn->length = ROUNDDOWN(txn->length, device->info.block_size);
+    txn->length = MIN(txn->length, getsize(device) - txn->offset);
+    txn->offset = to_parent_offset(device, txn->offset);
+    if (txn->length == 0) {
         iotxn_complete(txn, NO_ERROR, 0);
     } else {
         iotxn_queue(device->parent, txn);
@@ -210,52 +210,39 @@ static void gpt_block_complete(iotxn_t* txn, void* cookie) {
     iotxn_release(txn);
 }
 
-static void gpt_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    gptpart_device_t* device = dev->ctx;
-    mx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
-        device->callbacks->complete(cookie, status);
+static void block_do_txn(gptpart_device_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_info_t* info = &dev->info;
+    if ((dev_offset % info->block_size) || (length % info->block_size)) {
+        dev->callbacks->complete(cookie, ERR_INVALID_ARGS);
+        return;
+    }
+    uint64_t size = getsize(dev);
+    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
+        dev->callbacks->complete(cookie, ERR_OUT_OF_RANGE);
         return;
     }
 
-    txn->opcode = IOTXN_OP_READ;
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+        dev->callbacks->complete(cookie, status);
+        return;
+    }
+    txn->opcode = opcode;
     txn->length = length;
-    txn->offset = dev_offset;
+    txn->offset = to_parent_offset(dev, dev_offset);
     txn->complete_cb = gpt_block_complete;
     txn->cookie = cookie;
-    memcpy(txn->extra, &device, sizeof(gptpart_device_t*));
+    memcpy(txn->extra, &dev, sizeof(gptpart_device_t*));
+    iotxn_queue(dev->parent, txn);
+}
 
-    if (!prepare_txn(device, txn)) {
-        iotxn_release(txn);
-        device->callbacks->complete(cookie, ERR_INVALID_ARGS);
-    } else {
-        iotxn_queue(device->parent, txn);
-    }
+static void gpt_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn((gptpart_device_t*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 static void gpt_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
-    gptpart_device_t* device = dev->ctx;
-    mx_status_t status;
-    iotxn_t* txn;
-    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
-        device->callbacks->complete(cookie, status);
-        return;
-    }
-
-    txn->opcode = IOTXN_OP_WRITE;
-    txn->length = length;
-    txn->offset = dev_offset;
-    txn->complete_cb = gpt_block_complete;
-    txn->cookie = cookie;
-    memcpy(txn->extra, &device, sizeof(gptpart_device_t*));
-
-    if (!prepare_txn(device, txn)) {
-        iotxn_release(txn);
-        device->callbacks->complete(cookie, ERR_INVALID_ARGS);
-    } else {
-        iotxn_queue(device->parent, txn);
-    }
+    block_do_txn((gptpart_device_t*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
 }
 
 static block_ops_t gpt_block_ops = {

@@ -90,7 +90,8 @@ static uint64_t getsize(mbrpart_device_t* dev) {
 }
 
 static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
-                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+                             size_t cmdlen, void* reply, size_t max,
+                             size_t* out_actual) {
     mbrpart_device_t* device = ctx;
     switch (op) {
     case IOCTL_BLOCK_GET_INFO: {
@@ -136,31 +137,29 @@ static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
+static mx_off_t to_parent_offset(mbrpart_device_t* dev, mx_off_t offset) {
+    return offset + dev->partition.start_sector_lba * dev->info.block_size;
+}
+
 static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
-
-    // Sanity check to ensure that we're not writing past
-    mbrpart_device_t* device = ctx;
-
-    const uint64_t off_lba = txn->offset / device->info.block_size;
-    const uint64_t first = device->partition.start_sector_lba;
-    const uint64_t last = first + device->partition.sector_partition_length;
-
-    // Offset can be in the range [first, last)
-    if (first + off_lba >= last) {
-        xprintf("mbr: %s offset 0x%" PRIx64 " is past the end of partition!\n",
-                dev->name, txn->offset);
+    mbrpart_device_t* dev = ctx;
+    if (txn->offset % dev->info.block_size) {
         iotxn_complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
-
-    // Truncate the read if too many bytes are requested.
-    txn->length = MIN((last - (first + off_lba)) * device->info.block_size,
-                      txn->length);
-
-    // Move the offset to the start of the partition when forwarding this
-    // request to the block device.
-    txn->offset = first * device->info.block_size + txn->offset;
-    iotxn_queue(device->parent, txn);
+    if (txn->offset > getsize(dev)) {
+        iotxn_complete(txn, ERR_OUT_OF_RANGE, 0);
+        return;
+    }
+    // transactions from read()/write() may be truncated
+    txn->length = ROUNDDOWN(txn->length, dev->info.block_size);
+    txn->length = MIN(txn->length, getsize(dev) - txn->offset);
+    txn->offset = to_parent_offset(dev, txn->offset);
+    if (txn->length == 0) {
+        iotxn_complete(txn, NO_ERROR, 0);
+    } else {
+        iotxn_queue(dev->parent, txn);
+    }
 }
 
 static mx_off_t mbr_getsize(void* ctx) {
