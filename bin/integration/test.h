@@ -29,21 +29,11 @@ Predicate operator&&(const Predicate& a, const Predicate& b);
 Predicate operator||(const Predicate& a, const Predicate& b);
 Predicate operator!(const Predicate& a);
 
-// Converts a closure to a tautology. This is useful in combination with the
-// Boolean operators above to add side effects to predicates, for example
-// fataling on a deadline.
-template <typename Closure>
-Predicate SideEffect(Closure side_effect) {
-  return [side_effect] {
-    side_effect();
-    return true;
-  };
-}
-
 #define PREDICATE(condition) [&] { return condition; }
-// Convenience macro that wraps "condition" in a Predicate.
+// Convenience macro that wraps |condition| in a |Predicate|.
 #define WAIT_UNTIL(condition) WaitUntil(PREDICATE(condition))
 
+// Becomes true after |duration|.
 Predicate Deadline(const ftl::TimeDelta& duration);
 
 // Sleeps for a time while processing messages.
@@ -70,19 +60,18 @@ constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
 //
 // This is a macro rather than a function to preserve the file and line number
 // of the failed assertion.
-#define ASYNC_CHECK_DIAG(condition, diagnostic)                         \
-  {                                                                     \
-    auto deadline = Deadline(kAsyncCheckMax);                           \
-    auto check = PREDICATE(condition);                                  \
-    do {                                                                \
-      WaitUntil(check || deadline && SideEffect([&] {                   \
-                           FTL_LOG(FATAL)                               \
-                               << "Deadline exceeded for async check: " \
-                               << diagnostic;                           \
-                         }));                                           \
-      auto steady = Deadline(kAsyncCheckSteady);                        \
-      WaitUntil(steady || !check);                                      \
-    } while (!(condition));                                             \
+#define ASYNC_CHECK_DIAG(condition, diagnostic)                        \
+  {                                                                    \
+    auto deadline = Deadline(kAsyncCheckMax);                          \
+    auto check = PREDICATE(condition);                                 \
+    do {                                                               \
+      WaitUntil(check || deadline);                                    \
+      if (!(condition) && deadline()) {                                \
+        FAIL() << "Deadline exceeded for async check: " << diagnostic; \
+      }                                                                \
+      auto steady = Deadline(kAsyncCheckSteady);                       \
+      WaitUntil(steady || !check);                                     \
+    } while (!(condition));                                            \
   }
 
 #define ASYNC_CHECK(condition) ASYNC_CHECK_DIAG(condition, #condition)
@@ -98,9 +87,8 @@ class MaxwellTestBase : public ::testing::Test {
   MaxwellTestBase();
   virtual ~MaxwellTestBase() = default;
 
-  void StartAgent(
-      const std::string& url,
-      std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
+  void StartAgent(const std::string& url,
+                  std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
     agent_launcher_->StartAgent(url, std::move(env_host));
   }
 
@@ -114,8 +102,7 @@ class MaxwellTestBase : public ::testing::Test {
 
  private:
   maxwell::ApplicationEnvironmentHostImpl test_environment_host_;
-  fidl::Binding<app::ApplicationEnvironmentHost>
-      test_environment_host_binding_;
+  fidl::Binding<app::ApplicationEnvironmentHost> test_environment_host_binding_;
   app::ApplicationEnvironmentPtr test_environment_;
   app::ApplicationLauncherPtr test_launcher_;
   std::unique_ptr<maxwell::AgentLauncher> agent_launcher_;

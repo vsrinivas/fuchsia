@@ -30,3 +30,12 @@ TEST_F(ResolverTest, ResolveToModule) {
   ASYNC_EQ(1, modules.size());
   EXPECT_EQ("https://www.example.com/hello", modules[0]->component_id);
 }
+
+// Ensure that invalid JSON does not result in a call that never completes.
+TEST_F(ResolverTest, ResolveWithInvalidData) {
+  bool completed = false;
+  resolver_->ResolveModules(
+      "foo contract", "not valid JSON",
+      [&](fidl::Array<resolver::ModuleInfoPtr> modules_) { completed = true; });
+  ASYNC_CHECK(completed);
+}

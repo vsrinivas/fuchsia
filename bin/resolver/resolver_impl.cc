@@ -134,7 +134,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
         if (!!json_data) {
           if (data.Parse(json_data.get().c_str()).HasParseError()) {
             FTL_LOG(WARNING) << "Parse error.";
-            callback(nullptr);
+            callback(fidl::Array<ModuleInfoPtr>::New(0));
             return;
           }
         }
