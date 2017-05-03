@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/tests/mocks/mock_renderer.h"
+#include "apps/mozart/src/view_manager/tests/mocks/mock_renderer.h"
 
-#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/ftl/time/time_delta.h"
 
-namespace mozart {
+namespace view_manager {
 namespace test {
 
 MockRenderer::MockRenderer() {}
@@ -69,4 +69,4 @@ void MockRenderer::HitTest(mozart::PointFPtr point,
 }
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace view_manager

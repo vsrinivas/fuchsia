@@ -16,18 +16,19 @@ executable("view_manager_apptests") {
   testonly = true
 
   sources = [
-    "main.cc",
     "view_associate_table_test.cc",
     "view_manager_test.cc",
+    "test_with_message_loop.cc",
+    "test_with_message_loop.h",
+    "main.cc",
   ]
 
   deps = [
-    "//apps/mozart/lib/tests",
-    "//apps/mozart/lib/tests/mocks",
-    "//apps/mozart/lib/view_associate_framework:mocks",
+    "mocks",
     "//apps/mozart/src/view_manager:lib",
+    "//apps/mozart/lib/view_associate_framework:mocks",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
-    "//third_party/gtest",
+    "//third_party/gtest"
   ]
 }

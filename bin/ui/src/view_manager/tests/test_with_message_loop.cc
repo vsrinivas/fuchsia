@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
+#include "apps/mozart/src/view_manager/tests/test_with_message_loop.h"
 
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace mozart {
+namespace view_manager {
 namespace test {
 
 bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
@@ -30,4 +30,4 @@ bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
 }
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace view_manager

@@ -18,7 +18,7 @@
     }                                                           \
   }
 
-namespace mozart {
+namespace view_manager {
 namespace test {
 
 class TestWithMessageLoop : public ::testing::Test {
@@ -41,6 +41,6 @@ class TestWithMessageLoop : public ::testing::Test {
 };
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace view_manager
 
 #endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_TEST_WITH_MESSAGE_LOOP_H_

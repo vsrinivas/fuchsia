@@ -4,16 +4,16 @@
 
 #include "apps/mozart/src/view_manager/view_associate_table.h"
 
-#include "apps/mozart/lib/tests/mocks/mock_view_associate.h"
-#include "apps/mozart/lib/tests/test_with_message_loop.h"
 #include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
+#include "apps/mozart/src/view_manager/tests/mocks/mock_view_associate.h"
+#include "apps/mozart/src/view_manager/tests/test_with_message_loop.h"
 
 namespace view_manager {
 namespace test {
 
-class ViewAssociateTableTest : public mozart::test::TestWithMessageLoop {};
+class ViewAssociateTableTest : public TestWithMessageLoop {};
 
 TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
   // Create a mock view registry
@@ -23,9 +23,9 @@ TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
   ViewAssociateTable view_associate_table;
 
   {
-    // Create and bind a mozart::test::MockViewAssociate
+    // Create and bind a MockViewAssociate
     mozart::ViewAssociatePtr associate;
-    mozart::test::MockViewAssociate mock_view_associate;
+    MockViewAssociate mock_view_associate;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding(
         &mock_view_associate, associate.NewRequest());
 
@@ -54,9 +54,9 @@ TEST_F(ViewAssociateTableTest, MultipleViewAssociates) {
   ViewAssociateTable view_associate_table;
 
   {
-    // Create and bind a mozart::test::MockViewAssociate
+    // Create and bind a MockViewAssociate
     mozart::ViewAssociatePtr associate_one;
-    mozart::test::MockViewAssociate mock_view_associate_one;
+    MockViewAssociate mock_view_associate_one;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding_one(
         &mock_view_associate_one, associate_one.NewRequest());
 
@@ -70,9 +70,10 @@ TEST_F(ViewAssociateTableTest, MultipleViewAssociates) {
     RUN_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 1);
     EXPECT_EQ((size_t)1, view_associate_table.associate_count());
 
-    // Create and bind a second mozart::test::MockViewAssociate
+
+    // Create and bind a second MockViewAssociate
     mozart::ViewAssociatePtr associate_two;
-    mozart::test::MockViewAssociate mock_view_associate_two;
+    MockViewAssociate mock_view_associate_two;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding_two(
         &mock_view_associate_two, associate_two.NewRequest());
 

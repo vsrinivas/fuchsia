@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/tests/mocks/mock_view_tree_listener.h"
+#include "apps/mozart/src/view_manager/tests/mocks/mock_view_tree_listener.h"
 
-namespace mozart {
+namespace view_manager {
 namespace test {
 
 MockViewTreeListener::MockViewTreeListener() : callback_(nullptr) {}
@@ -24,4 +24,4 @@ void MockViewTreeListener::OnRendererDied(
 }
 
 }  // namespace test
-}  // namespace mozart
+}  // namespace view_manager
