@@ -32,6 +32,20 @@ flatbuffer("byte_storage") {
   extra_configs = [ "//apps/ledger/src:ledger_config" ]
 }
 
+flatbuffer("byte_storage_test") {
+  testonly = true
+
+  sources = [
+    "bytes_test.fbs",
+  ]
+
+  deps = [
+    ":byte_storage",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
@@ -41,6 +55,7 @@ source_set("unittests") {
 
   deps = [
     ":convert",
+    ":byte_storage_test",
     "//third_party/gtest",
   ]
 

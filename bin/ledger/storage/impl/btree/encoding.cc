@@ -32,7 +32,7 @@ KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
 
 Entry ToEntry(const EntryStorage* entry_storage) {
   return Entry{convert::ToString(entry_storage->key()),
-               convert::ToString(entry_storage->object_id()),
+               convert::ToString(entry_storage->object()),
                ToKeyPriority(entry_storage->priority())};
 }
 }  // namespace
@@ -90,8 +90,8 @@ std::string EncodeNode(uint8_t level,
           [&builder, &entries](size_t i) {
             const auto& entry = entries[i];
             return CreateEntryStorage(
-                builder, convert::ToByteStorage(&builder, entry.key),
-                convert::ToIdStorage(entry.object_id),
+                builder, convert::ToFlatBufferVector(&builder, entry.key),
+                convert::ToFlatBufferVector(&builder, entry.object_id),
                 ToKeyPriorityStorage(entry.priority));
           }));
 

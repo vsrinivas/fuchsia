@@ -15,11 +15,11 @@ fidl::Array<uint8_t> ExtendedStringView::ToArray() {
   return result;
 }
 
-flatbuffers::Offset<ByteStorage> ExtendedStringView::ToByteStorage(
+flatbuffers::Offset<flatbuffers::Vector<uint8_t>>
+ExtendedStringView::ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder) {
-  return CreateByteStorage(
-      *builder, builder->CreateVector(
-                    reinterpret_cast<const unsigned char*>(data()), size()));
+  return builder->CreateVector(reinterpret_cast<const unsigned char*>(data()),
+                               size());
 }
 
 fidl::Array<uint8_t> ToArray(ExtendedStringView value) {
@@ -30,10 +30,10 @@ std::string ToString(ExtendedStringView value) {
   return value.ToString();
 }
 
-flatbuffers::Offset<ByteStorage> ToByteStorage(
+flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder,
     ExtendedStringView value) {
-  return value.ToByteStorage(builder);
+  return value.ToFlatBufferVector(builder);
 }
 
 }  // namespace convert

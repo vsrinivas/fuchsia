@@ -4,10 +4,6 @@
 
 namespace convert;
 
-table ByteStorage {
-  bytes: [ubyte];
-}
-
 struct IdStorage {
   b00: ubyte;
   b01: ubyte;
@@ -42,5 +38,3 @@ struct IdStorage {
   b30: ubyte;
   b31: ubyte;
 }
-
-root_type ByteStorage;

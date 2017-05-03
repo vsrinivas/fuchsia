@@ -9,8 +9,8 @@ namespace storage;
 enum KeyPriorityStorage : byte { EAGER = 0, LAZY = 1 }
 
 table EntryStorage {
-  key: convert.ByteStorage;
-  object_id: convert.IdStorage;
+  key: [ubyte];
+  object: [ubyte];
   priority: KeyPriorityStorage;
 }
 

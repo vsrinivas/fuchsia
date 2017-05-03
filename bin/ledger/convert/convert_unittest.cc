@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/convert/convert.h"
 
+#include "apps/ledger/src/convert/bytes_test_generated.h"
 #include "gtest/gtest.h"
 
 namespace convert {
@@ -61,16 +62,17 @@ TEST(Convert, ToStringView) {
   EXPECT_EQ(str, result.ToString());
 }
 
-TEST(Convert, ToByteStorage) {
+TEST(Convert, ToFlatBufferVector) {
   flatbuffers::FlatBufferBuilder builder;
 
   std::string str = "Hello";
   ExtendedStringView str_view = str;
 
-  auto bytes = str_view.ToByteStorage(&builder);
-  builder.Finish(bytes);
+  auto bytes = str_view.ToFlatBufferVector(&builder);
+  builder.Finish(CreateBytesTest(builder, bytes));
 
-  ExtendedStringView result = GetByteStorage(builder.GetCurrentBufferPointer());
+  ExtendedStringView result =
+      GetBytesTest(builder.GetCurrentBufferPointer())->bytes();
   EXPECT_EQ(str, result);
 }
 

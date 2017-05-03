@@ -134,8 +134,9 @@ TEST(EncodingTest, Errors) {
           static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
               [&](size_t i) {
                 return CreateEntryStorage(
-                    builder, convert::ToByteStorage(&builder, "hello"),
-                    convert::ToIdStorage(MakeObjectId("world")),
+                    builder, convert::ToFlatBufferVector(&builder, "hello"),
+                    convert::ToFlatBufferVector(&builder,
+                                                MakeObjectId("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       builder.CreateVectorOfStructs(children, 2)));
@@ -150,8 +151,9 @@ TEST(EncodingTest, Errors) {
           static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
               [&](size_t i) {
                 return CreateEntryStorage(
-                    builder, convert::ToByteStorage(&builder, "hello"),
-                    convert::ToIdStorage(MakeObjectId("world")),
+                    builder, convert::ToFlatBufferVector(&builder, "hello"),
+                    convert::ToFlatBufferVector(&builder,
+                                                MakeObjectId("world")),
                     KeyPriorityStorage::KeyPriorityStorage_EAGER);
               })),
       builder.CreateVectorOfStructs(children, 0)));

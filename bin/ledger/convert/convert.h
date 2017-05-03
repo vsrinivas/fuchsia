@@ -33,10 +33,9 @@ class ExtendedStringView : public ftl::StringView {
       : ftl::StringView(string_view) {}
   template <size_t N>
   constexpr ExtendedStringView(const char (&str)[N]) : ftl::StringView(str) {}
-  ExtendedStringView(const ByteStorage* byte_storage)
-      : ftl::StringView(
-            reinterpret_cast<const char*>(byte_storage->bytes()->data()),
-            byte_storage->bytes()->size()) {}
+  ExtendedStringView(const flatbuffers::Vector<uint8_t>* byte_storage)
+      : ftl::StringView(reinterpret_cast<const char*>(byte_storage->data()),
+                        byte_storage->size()) {}
   ExtendedStringView(const IdStorage* id_storage)
       : ftl::StringView(reinterpret_cast<const char*>(id_storage),
                         sizeof(IdStorage)) {}
@@ -49,7 +48,7 @@ class ExtendedStringView : public ftl::StringView {
 
   fidl::Array<uint8_t> ToArray();
 
-  flatbuffers::Offset<ByteStorage> ToByteStorage(
+  flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
       flatbuffers::FlatBufferBuilder* builder);
 };
 
@@ -74,8 +73,8 @@ fidl::Array<uint8_t> ToArray(ExtendedStringView value);
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);
 
-// Store the given value as a ByteStorage in the given builder.
-flatbuffers::Offset<ByteStorage> ToByteStorage(
+// Store the given value as a FlatBufferVector in the given builder.
+flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder,
     ExtendedStringView value);
 
