@@ -42,13 +42,7 @@ mx_status_t Device::Bind() {
         return WLAN_DEV(dev->ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len);
     };
 
-    auto status = device_create("wlan", this, &device_ops_, driver_, &device_);
-    if (status != NO_ERROR) {
-        warnf("device_create failed: %d\n", status);
-        return status;
-    }
-
-    status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
+    auto status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
     if (status != NO_ERROR) {
         warnf("could not query wlan mac device: %d\n", status);
     }
@@ -68,8 +62,6 @@ mx_status_t Device::Bind() {
     wlanmac_ifc_.recv = [](void* cookie, void* data, size_t length, uint32_t flags) {
         WLAN_DEV(cookie)->Recv(data, length, flags);
     };
-
-    device_set_protocol(device_, MX_PROTOCOL_ETHERMAC, &ethmac_ops_);
 
     status = mx::port::create(MX_PORT_OPT_V2, &port_);
     if (status != NO_ERROR) {
