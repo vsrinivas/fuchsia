@@ -628,6 +628,12 @@ syscall hypervisor_op
         result: any[result_len] OUT, result_len: uint32_t)
     returns (mx_status_t);
 
+# System Control
+
+syscall system_mexec
+   (kernel: mx_handle_t, bootimage: mx_handle_t)
+   returns (mx_status_t);
+
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (int);

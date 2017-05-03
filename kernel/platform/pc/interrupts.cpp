@@ -283,6 +283,10 @@ unsigned int remap_interrupt(unsigned int vector) {
     return apic_io_isa_to_global(static_cast<uint8_t>(vector));
 }
 
+void shutdown_interrupts(void) {
+    PANIC_UNIMPLEMENTED;
+}
+
 #ifdef WITH_DEV_PCIE
 status_t x86_alloc_msi_block(uint requested_irqs,
                              bool can_target_64bit,
