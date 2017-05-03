@@ -24,7 +24,8 @@
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                      mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
                      const char* name)
-    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, parent.aspace_.get(), &parent, name),
+    : VmAddressRegionOrMapping(base, size, vmar_flags,
+                               parent.aspace_.get(), &parent, name),
       object_(mxtl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
     LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
@@ -32,12 +33,12 @@ VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_
 }
 
 VmMapping::~VmMapping() {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx\n", this, name_, aspace_.get(), base_, size_);
 }
 
 size_t VmMapping::AllocatedPagesLocked() const {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (state_ != LifeCycleState::ALIVE) {
@@ -47,7 +48,7 @@ size_t VmMapping::AllocatedPagesLocked() const {
 }
 
 void VmMapping::Dump(uint depth, bool verbose) const {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
@@ -66,7 +67,7 @@ void VmMapping::Dump(uint depth, bool verbose) const {
 }
 
 status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, new_arch_mmu_flags);
 
     if (!IS_PAGE_ALIGNED(base)) {
@@ -230,7 +231,7 @@ status_t VmMapping::Unmap(vaddr_t base, size_t size) {
 }
 
 status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(size) && IS_PAGE_ALIGNED(base));
     DEBUG_ASSERT(base >= base_ && base - base_ < size_);
@@ -300,7 +301,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 }
 
 status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     LTRACEF("region %p '%s' obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
             this, name_, object_offset_, size_, offset, len);
@@ -367,7 +368,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
 }
 
 status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
@@ -431,7 +432,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 
 status_t VmMapping::DecommitRange(size_t offset, size_t len,
                                   size_t* decommitted) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     LTRACEF("%p '%s' [%#zx+%#zx], offset %#zx, len %#zx\n",
             this, name_, base_, size_, offset, len);
 
@@ -448,7 +449,7 @@ status_t VmMapping::DecommitRange(size_t offset, size_t len,
 }
 
 status_t VmMapping::DestroyLocked() {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -488,7 +489,7 @@ status_t VmMapping::DestroyLocked() {
 }
 
 status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);

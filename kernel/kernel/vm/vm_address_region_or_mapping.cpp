@@ -19,18 +19,19 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-VmAddressRegionOrMapping::VmAddressRegionOrMapping(uint32_t magic,
-                                                   vaddr_t base, size_t size, uint32_t flags,
-                                                   VmAspace* aspace, VmAddressRegion* parent,
-                                                   const char* name)
-    : magic_(magic), state_(LifeCycleState::NOT_READY), base_(base), size_(size), flags_(flags),
-      aspace_(aspace), parent_(parent) {
+VmAddressRegionOrMapping::VmAddressRegionOrMapping(
+    vaddr_t base, size_t size, uint32_t flags,
+    VmAspace* aspace, VmAddressRegion* parent, const char* name)
+    : state_(LifeCycleState::NOT_READY), base_(base), size_(size),
+      flags_(flags), aspace_(aspace), parent_(parent) {
 
     strlcpy(name_, name, sizeof(name_));
     LTRACEF("%p '%s'\n", this, name_);
 }
 
 status_t VmAddressRegionOrMapping::Destroy() {
+    canary_.Assert();
+
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return ERR_BAD_STATE;
@@ -47,17 +48,16 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
     }
 
     DEBUG_ASSERT(!subregion_list_node_.InContainer());
-
-    // clear the magic
-    magic_ = 0;
 }
 
 bool VmAddressRegionOrMapping::IsAliveLocked() const {
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     return state_ == LifeCycleState::ALIVE;
 }
 
 mxtl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
+    canary_.Assert();
     if (is_mapping()) {
         return nullptr;
     }
@@ -65,6 +65,7 @@ mxtl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
 }
 
 mxtl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
+    canary_.Assert();
     if (!is_mapping()) {
         return nullptr;
     }

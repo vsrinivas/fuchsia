@@ -10,6 +10,7 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_page_list.h>
 #include <magenta/thread_annotations.h>
+#include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
@@ -122,6 +123,9 @@ public:
     // Dump debug info
     virtual void Dump(uint depth, bool verbose) const = 0;
 
+private:
+    mxtl::Canary<mxtl::magic("VMRM")> canary_;
+
 protected:
     // friend VmAddressRegion so it can access DestroyLocked
     friend VmAddressRegion;
@@ -140,7 +144,7 @@ protected:
         DEAD
     };
 
-    VmAddressRegionOrMapping(uint32_t magic, vaddr_t base, size_t size, uint32_t flags,
+    VmAddressRegionOrMapping(vaddr_t base, size_t size, uint32_t flags,
                              VmAspace* aspace, VmAddressRegion* parent, const char* name);
 
     // Check if the given *arch_mmu_flags* are allowed under this
@@ -165,9 +169,6 @@ protected:
     // Transition from NOT_READY to READY, and add references to self to related
     // structures.
     virtual void Activate() = 0;
-
-    // magic value
-    uint32_t magic_;
 
     // current state of the VMAR.  If LifeCycleState::DEAD, then all other
     // fields are invalid.
@@ -238,8 +239,6 @@ public:
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:
-    static const uint32_t kMagic = 0x564d4152; // VMAR
-
     // constructor for use in creating a VmAddressRegionDummy
     explicit VmAddressRegion();
 
@@ -256,7 +255,6 @@ protected:
     // Remove *region* from the subregion list
     void RemoveSubregion(VmAddressRegionOrMapping* region);
 
-    ~VmAddressRegion() override;
     friend mxtl::RefPtr<VmAddressRegion>;
 
 private:
@@ -265,6 +263,8 @@ private:
                                      WAVLTreeTraits>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);
+
+    mxtl::Canary<mxtl::magic("VMAR")> canary_;
 
     // private constructors, use Create...() instead
     VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags);
@@ -434,8 +434,6 @@ public:
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:
-    static const uint32_t kMagic = 0x564d4150; // VMAP
-
     ~VmMapping() override;
     friend mxtl::RefPtr<VmMapping>;
 
@@ -447,6 +445,8 @@ protected:
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);
+
+    mxtl::Canary<mxtl::magic("VMAP")> canary_;
 
     // allow VmAddressRegion to manipulate VmMapping internals for construction
     // and bookkeeping

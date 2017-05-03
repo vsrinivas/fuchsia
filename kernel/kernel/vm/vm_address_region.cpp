@@ -22,7 +22,7 @@
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
-    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags | VMAR_CAN_RWX_FLAGS,
+    : VmAddressRegionOrMapping(base, size, vmar_flags | VMAR_CAN_RWX_FLAGS,
                                &aspace, nullptr, "root") {
 
     // We add in CAN_RWX_FLAGS above, since an address space can't usefully
@@ -33,8 +33,8 @@ VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, ui
 
 VmAddressRegion::VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size,
                                  uint32_t vmar_flags, const char* name)
-    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, parent.aspace_.get(), &parent,
-                               name) {
+    : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(),
+                               &parent, name) {
 
     LTRACEF("%p '%s'\n", this, name_);
 }
@@ -48,13 +48,9 @@ VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
 }
 
 VmAddressRegion::VmAddressRegion()
-    : VmAddressRegionOrMapping(kMagic, 0, 0, 0, nullptr, nullptr, "dummy") {
+    : VmAddressRegionOrMapping(0, 0, 0, nullptr, nullptr, "dummy") {
 
     LTRACEF("%p '%s'\n", this, name_);
-}
-
-VmAddressRegion::~VmAddressRegion() {
-    DEBUG_ASSERT(magic_ == kMagic);
 }
 
 status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
@@ -232,7 +228,7 @@ status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t
                                              mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                                              uint arch_mmu_flags, const char* name,
                                              mxtl::RefPtr<VmAddressRegionOrMapping>* out) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(vmo);
     DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
@@ -257,7 +253,7 @@ status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t
 }
 
 status_t VmAddressRegion::DestroyLocked() {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -301,7 +297,7 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr)
 }
 
 mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     // Find the first region with a base greather than *addr*.  If a region
     // exists for *addr*, it will be immediately before it.
@@ -314,7 +310,7 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t
 }
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     if (state_ != LifeCycleState::ALIVE) {
@@ -329,7 +325,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
 }
 
 status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     mxtl::RefPtr<VmAddressRegion> vmar(this);
@@ -465,7 +461,7 @@ not_found:
 
 status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
                                           vaddr_t* spot) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
@@ -484,7 +480,7 @@ status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint 
 }
 
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     DEBUG_ASSERT(ve != nullptr);
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     for (auto& child : subregions_) {
@@ -510,7 +506,7 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
 }
 
 void VmAddressRegion::Dump(uint depth, bool verbose) const {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
@@ -530,7 +526,7 @@ void VmAddressRegion::Activate() {
 }
 
 status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     if (size == 0 || !IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
@@ -617,7 +613,7 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
 }
 
 status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
-    DEBUG_ASSERT(magic_ == kMagic);
+    canary_.Assert();
 
     if (size == 0 || !IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
