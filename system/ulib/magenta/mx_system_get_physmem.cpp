@@ -10,5 +10,4 @@ uint64_t _mx_system_get_physmem(void) {
     return DATA_CONSTANTS.physmem;
 }
 
-__typeof(mx_system_get_physmem) mx_system_get_physmem
-    __attribute__((weak, alias("_mx_system_get_physmem")));
+VDSO_PUBLIC_ALIAS(mx_system_get_physmem);

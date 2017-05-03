@@ -4,6 +4,8 @@
 
 #include <magenta/status.h>
 
+#include "private.h"
+
 const char* _mx_status_get_string(mx_status_t status) {
     switch (status) {
     case NO_ERROR: return "NO_ERROR";
@@ -48,8 +50,7 @@ const char* _mx_status_get_string(mx_status_t status) {
     }
 }
 
-__typeof(mx_status_get_string) mx_status_get_string
-    __attribute__((weak, alias("_mx_status_get_string")));
+VDSO_PUBLIC_ALIAS(mx_status_get_string);
 
 // Generated with:
 // grep '#define'  system/public/magenta/errors.h | grep -v NO_ERROR |

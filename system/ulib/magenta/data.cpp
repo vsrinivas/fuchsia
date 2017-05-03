@@ -4,8 +4,6 @@
 
 #include "private.h"
 
-#include <magenta/compiler.h>
-
 // This must be allocated in the image and not go into .bss.
 // The compiler uses .bss for things initialized to all zero
 // even when they're const, so give it a nonzero initializer

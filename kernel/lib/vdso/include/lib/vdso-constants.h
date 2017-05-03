@@ -7,11 +7,10 @@
 #pragma once
 
 // This file is used both in the kernel and in the vDSO implementation.
-// So it must be compatible with both C and C++, and with both the
-// kernel and userland header environments.  It must use only the basic
-// types so that struct layouts match exactly in both contexts.
+// So it must be compatible with both the kernel and userland header
+// environments.  It must use only the basic types so that struct
+// layouts match exactly in both contexts.
 
-#include <stddef.h>
 #include <stdint.h>
 
 // This struct contains constants that are initialized by the kernel

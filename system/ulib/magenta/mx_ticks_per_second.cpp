@@ -11,5 +11,4 @@ uint64_t _mx_ticks_per_second(void) {
     return DATA_CONSTANTS.ticks_per_second;
 }
 
-__typeof(mx_ticks_per_second) mx_ticks_per_second
-    __attribute__((weak, alias("_mx_ticks_per_second")));
+VDSO_PUBLIC_ALIAS(mx_ticks_per_second);

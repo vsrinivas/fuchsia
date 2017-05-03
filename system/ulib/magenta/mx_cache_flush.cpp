@@ -40,5 +40,4 @@ mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
     return NO_ERROR;
 }
 
-__typeof(mx_cache_flush) mx_cache_flush
-    __attribute__((weak, alias("_mx_cache_flush")));
+VDSO_PUBLIC_ALIAS(mx_cache_flush);

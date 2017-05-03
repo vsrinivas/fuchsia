@@ -11,11 +11,10 @@ uint32_t _mx_system_get_num_cpus(void) {
     return DATA_CONSTANTS.max_num_cpus;
 }
 
-__typeof(mx_system_get_num_cpus) mx_system_get_num_cpus
-    __attribute__((weak, alias("_mx_system_get_num_cpus")));
+VDSO_PUBLIC_ALIAS(mx_system_get_num_cpus);
 
 // Deprecated compatibility aliases.
-__typeof(mx_system_get_num_cpus) _mx_num_cpus
-    __attribute__((weak, alias("_mx_system_get_num_cpus")));
-__typeof(mx_system_get_num_cpus) mx_num_cpus
-    __attribute__((weak, alias("_mx_system_get_num_cpus")));
+decltype(mx_system_get_num_cpus) _mx_num_cpus
+    __WEAK_ALIAS("_mx_system_get_num_cpus");
+decltype(mx_system_get_num_cpus) mx_num_cpus
+    __WEAK_ALIAS("_mx_system_get_num_cpus");

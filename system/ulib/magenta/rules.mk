@@ -14,15 +14,15 @@ MODULE_COMPILEFLAGS := -ffreestanding
 MODULE_HEADER_DEPS := kernel/lib/vdso
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/data.c \
-    $(LOCAL_DIR)/mx_cache_flush.c \
-    $(LOCAL_DIR)/mx_deadline_after.c \
-    $(LOCAL_DIR)/mx_status_get_string.c \
-    $(LOCAL_DIR)/mx_system_get_num_cpus.c \
-    $(LOCAL_DIR)/mx_system_get_physmem.c \
-    $(LOCAL_DIR)/mx_system_get_version.c \
-    $(LOCAL_DIR)/mx_ticks_get.c \
-    $(LOCAL_DIR)/mx_ticks_per_second.c \
+    $(LOCAL_DIR)/data.cpp \
+    $(LOCAL_DIR)/mx_cache_flush.cpp \
+    $(LOCAL_DIR)/mx_deadline_after.cpp \
+    $(LOCAL_DIR)/mx_status_get_string.cpp \
+    $(LOCAL_DIR)/mx_system_get_num_cpus.cpp \
+    $(LOCAL_DIR)/mx_system_get_physmem.cpp \
+    $(LOCAL_DIR)/mx_system_get_version.cpp \
+    $(LOCAL_DIR)/mx_ticks_get.cpp \
+    $(LOCAL_DIR)/mx_ticks_per_second.cpp \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \
@@ -49,7 +49,7 @@ MODULE_LDFLAGS := -T scripts/rodso.ld
 
 # Explicit dependency to make sure the file gets generated first.
 # MODULE_SRCDEPS is overkill for this since only one file uses it.
-$(BUILDDIR)/$(LOCAL_DIR)/$(LOCAL_DIR)/mx_system_get_version.c.o: \
+$(BUILDDIR)/$(LOCAL_DIR)/$(LOCAL_DIR)/mx_system_get_version.cpp.o: \
     $(BUILDDIR)/config-buildid.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)
 

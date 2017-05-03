@@ -21,11 +21,10 @@ uint64_t _mx_ticks_get(void) {
 #endif
 }
 
-__typeof(mx_ticks_get) mx_ticks_get
-    __attribute__((weak, alias("_mx_ticks_get")));
+VDSO_PUBLIC_ALIAS(mx_ticks_get);
 
 // At boot time the kernel can decide to redirect the {_,}mx_ticks_get
 // dynamic symbol table entries to point to this instead.  See VDso::VDso.
-__attribute__((visibility("hidden"))) uint64_t CODE_soft_ticks_get(void) {
+uint64_t CODE_soft_ticks_get(void) {
     return VDSO_mx_time_get(MX_CLOCK_MONOTONIC);
 }

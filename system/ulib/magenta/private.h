@@ -4,15 +4,24 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 
 // This defines the struct shared with the kernel.
 #include <lib/vdso-constants.h>
 
-extern const struct vdso_constants DATA_CONSTANTS
-    __attribute__((visibility("hidden")));
+extern __LOCAL const struct vdso_constants DATA_CONSTANTS;
+
+extern "C" {
 
 // This declares the VDSO_mx_* aliases for the vDSO entry points.
 // Calls made from within the vDSO must use these names rather than
 // the public names so as to avoid PLT entries.
 #include <magenta/syscall-vdso-definitions.h>
+
+__LOCAL decltype(mx_ticks_get) CODE_soft_ticks_get;
+
+};
+
+// Code should define '_mx_foo' and then do 'VDSO_PUBLIC_ALIAS(mx_foo);'.
+#define VDSO_PUBLIC_ALIAS(name) decltype(name) name __WEAK_ALIAS("_" #name)
