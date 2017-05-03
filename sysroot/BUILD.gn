@@ -6,9 +6,6 @@
 # that the target toolchain uses as input.
 assert(current_toolchain == "//build/toolchain/fuchsia:${target_cpu}-sysroot")
 
-# This stores some computed values useful for sysroot assembly. It's not
-# generally useful outside of the sysroot assembly steps.
-
 if (target_cpu == "x64") {
   fuchsia_target_arch = "x86_64"
   magenta_build_dir = "build-magenta-pc-x86-64"
@@ -17,10 +14,18 @@ if (target_cpu == "x64") {
   magenta_build_dir = "build-magenta-qemu-arm64"
 }
 
+if (host_cpu == "arm64") {
+  clang_cpu = "aarch64"
+} else if (host_cpu == "x64") {
+  clang_cpu = "x86_64"
+} else {
+  assert(false, "Host CPU not supported")
+}
+
 magenta_build_dir = rebase_path("//out/build-magenta/$magenta_build_dir")
 magenta_sysroot_list = magenta_build_dir + "/sysroot.list"
 toolchain_sysroot = rebase_path(
-        "//buildtools/toolchain/clang+llvm-$fuchsia_target_arch-$host_os/$fuchsia_target_arch-fuchsia")
+        "//buildtools/toolchain/clang+llvm-$clang_cpu-$host_os/$fuchsia_target_arch-fuchsia")
 
 group("sysroot") {
   deps = [
