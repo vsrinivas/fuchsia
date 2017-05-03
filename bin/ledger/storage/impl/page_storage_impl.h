@@ -9,6 +9,7 @@
 
 #include <set>
 
+#include "apps/ledger/src/callback/pending_operation.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/db_impl.h"
@@ -104,7 +105,6 @@ class PageStorageImpl : public PageStorage {
 
  private:
   friend class PageStorageImplAccessorForTest;
-  class FileWriter;
 
   void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
                   ChangeSource source,
@@ -134,7 +134,7 @@ class PageStorageImpl : public PageStorage {
   std::set<ObjectId, convert::StringViewComparator> untracked_objects_;
   std::string objects_dir_;
   std::string staging_dir_;
-  std::vector<std::unique_ptr<FileWriter>> writers_;
+  callback::PendingOperationManager pending_operation_manager_;
   PageSyncDelegate* page_sync_;
 };
 

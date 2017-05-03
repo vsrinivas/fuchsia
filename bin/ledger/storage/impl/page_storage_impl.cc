@@ -210,9 +210,7 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
   uint64_t size_;
 };
 
-}  // namespace
-
-class PageStorageImpl::FileWriter {
+class FileWriter {
  public:
   FileWriter(ftl::RefPtr<ftl::TaskRunner> main_runner,
              ftl::RefPtr<ftl::TaskRunner> io_runner,
@@ -286,6 +284,8 @@ class PageStorageImpl::FileWriter {
 
   ftl::WeakPtrFactory<FileWriter> weak_ptr_factory_;
 };
+
+}  // namespace
 
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                  ftl::RefPtr<ftl::TaskRunner> io_runner,
@@ -768,23 +768,12 @@ void PageStorageImpl::AddObject(
     const std::function<void(Status, ObjectId)>& callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
-  auto file_writer = std::make_unique<FileWriter>(main_runner_, io_runner_,
-                                                  staging_dir_, objects_dir_);
-  FileWriter* file_writer_ptr = file_writer.get();
-  writers_.push_back(std::move(file_writer));
+  auto file_writer =
+      pending_operation_manager_.Manage(std::make_unique<FileWriter>(
+          main_runner_, io_runner_, staging_dir_, objects_dir_));
 
-  auto cleanup = [this, file_writer_ptr]() {
-    auto writer_it =
-        std::find_if(writers_.begin(), writers_.end(),
-                     [file_writer_ptr](const std::unique_ptr<FileWriter>& c) {
-                       return c.get() == file_writer_ptr;
-                     });
-    FTL_DCHECK(writer_it != writers_.end());
-    writers_.erase(writer_it);
-  };
-
-  file_writer_ptr->Start(std::move(data), size, [
-    cleanup = std::move(cleanup), callback = std::move(traced_callback)
+  (*file_writer.first)->Start(std::move(data), size, [
+    cleanup = std::move(file_writer.second), callback = std::move(traced_callback)
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();
