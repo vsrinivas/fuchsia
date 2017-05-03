@@ -52,6 +52,8 @@ mx_status_t sys_nanosleep(mx_time_t deadline) {
         return NO_ERROR;
     }
 
+    // This syscall is declared as "blocking" in syscalls.sysgen, so a higher
+    // layer will automatically retry if we return ERR_INTERRUPTED_RETRY.
     return magenta_sleep(deadline);
 }
 
