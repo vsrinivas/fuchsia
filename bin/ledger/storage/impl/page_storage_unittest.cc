@@ -592,19 +592,6 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
   storage_.reset();
 }
 
-TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
-  ObjectData data("Some data");
-
-  storage_->AddObjectFromLocal(
-      mtl::WriteStringToSocket(data.value), -1,
-      [this](Status returned_status, ObjectId returned_object_id) {
-        EXPECT_EQ(Status::OK, returned_status);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
-}
-
 TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
   ObjectData data("Some data");
 

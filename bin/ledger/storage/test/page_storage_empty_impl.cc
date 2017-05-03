@@ -104,7 +104,7 @@ void PageStorageEmptyImpl::AddObjectFromSync(
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
     mx::socket data,
-    int64_t size,
+    uint64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");

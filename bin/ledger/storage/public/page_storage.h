@@ -124,7 +124,7 @@ class PageStorage {
   // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
       mx::socket data,
-      int64_t size,
+      uint64_t size,
       const std::function<void(Status, ObjectId)>& callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an
   // an error will be returned through the given |callback|. If |location| is

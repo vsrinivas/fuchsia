@@ -108,10 +108,9 @@ interface Page {
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
-  // will be the content of the socket. If |size| is not negative, the
-  // content size must be equal to |size|, otherwise the call will fail. If
-  // |size| is negative, no validation is done.
-  CreateReference(int64 size, handle<socket> data)
+  // will be the content of the socket. The content size must be equal to
+  // |size|, otherwise the call will fail.
+  CreateReference(uint64 size, handle<socket> data)
       => (Status status, Reference? reference);
 
   // Transactions.

@@ -141,7 +141,7 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
   }
 
   void Start(mx::socket source,
-             int64_t expected_size,
+             uint64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     expected_size_ = expected_size;
     callback_ = std::move(callback);
@@ -178,7 +178,7 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
       return;
     }
     fd_.reset();
-    if (expected_size_ >= 0 && size_ != static_cast<size_t>(expected_size_)) {
+    if (size_ != expected_size_) {
       FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
                      << expected_size_ << ", but received: " << size_;
       callback_(Status::IO_ERROR, "");
@@ -206,7 +206,7 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
   std::string file_path_;
   ftl::UniqueFD fd_;
   glue::SHA256StreamingHash hash_;
-  int64_t expected_size_;
+  uint64_t expected_size_;
   uint64_t size_;
 };
 
@@ -239,7 +239,7 @@ class PageStorageImpl::FileWriter {
   }
 
   void Start(mx::socket source,
-             int64_t expected_size,
+             uint64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
 
@@ -590,7 +590,7 @@ void PageStorageImpl::AddObjectFromSync(
 
 void PageStorageImpl::AddObjectFromLocal(
     mx::socket data,
-    int64_t size,
+    uint64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   AddObject(std::move(data), size,
             [ this, callback = std::move(callback) ](Status status,
@@ -764,7 +764,7 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
 
 void PageStorageImpl::AddObject(
     mx::socket data,
-    int64_t size,
+    uint64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");

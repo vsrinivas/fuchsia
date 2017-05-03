@@ -66,7 +66,7 @@ class PageDelegate {
 
   void Delete(fidl::Array<uint8_t> key, const Page::DeleteCallback& callback);
 
-  void CreateReference(int64_t size,
+  void CreateReference(uint64_t size,
                        mx::socket data,
                        const Page::CreateReferenceCallback& callback);
 

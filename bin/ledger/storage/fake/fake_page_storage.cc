@@ -103,11 +103,11 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 
 void FakePageStorage::AddObjectFromLocal(
     mx::socket data,
-    int64_t size,
+    uint64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   std::string value;
   mtl::BlockingCopyToString(std::move(data), &value);
-  if (size >= 0 && value.size() != static_cast<size_t>(size)) {
+  if (value.size() != static_cast<size_t>(size)) {
     callback(Status::IO_ERROR, "");
     return;
   }

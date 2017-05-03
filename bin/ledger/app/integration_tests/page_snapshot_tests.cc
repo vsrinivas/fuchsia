@@ -356,17 +356,6 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[1].Equals(ToArray(entries[3]->value)));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceNegativeSize) {
-  const std::string big_data(1'000'000, 'a');
-
-  PagePtr page = GetTestPage();
-
-  page->CreateReference(
-      -1, StreamDataToSocket(big_data),
-      [](Status status, ReferencePtr ref) { EXPECT_EQ(Status::OK, status); });
-  ASSERT_TRUE(page.WaitForIncomingResponse());
-}
-
 TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceWrongSize) {
   const std::string big_data(1'000'000, 'a');
 

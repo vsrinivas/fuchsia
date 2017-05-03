@@ -148,10 +148,10 @@ void PageDelegate::Delete(fidl::Array<uint8_t> key,
                    std::move(callback));
 }
 
-// CreateReference(int64 size, handle<socket> data)
+// CreateReference(uint64 size, handle<socket> data)
 //   => (Status status, Reference reference);
 void PageDelegate::CreateReference(
-    int64_t size,
+    uint64_t size,
     mx::socket data,
     const Page::CreateReferenceCallback& callback) {
   storage_->AddObjectFromLocal(

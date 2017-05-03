@@ -43,7 +43,7 @@ class PageImpl : public Page {
   void Delete(fidl::Array<uint8_t> key,
               const DeleteCallback& callback) override;
 
-  void CreateReference(int64_t size,
+  void CreateReference(uint64_t size,
                        mx::socket data,
                        const CreateReferenceCallback& callback) override;
 

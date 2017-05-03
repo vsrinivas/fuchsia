@@ -73,9 +73,9 @@ void PageImpl::Delete(fidl::Array<uint8_t> key,
   delegate_->Delete(std::move(key), std::move(timed_callback));
 }
 
-// CreateReference(int64 size, handle<socket> data)
+// CreateReference(uint64 size, handle<socket> data)
 //   => (Status status, Reference reference);
-void PageImpl::CreateReference(int64_t size,
+void PageImpl::CreateReference(uint64_t size,
                                mx::socket data,
                                const CreateReferenceCallback& callback) {
   auto timed_callback =

@@ -78,7 +78,7 @@ class PageStorageImpl : public PageStorage {
                          const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
       mx::socket data,
-      int64_t size,
+      uint64_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
       ObjectIdView object_id,
@@ -112,7 +112,7 @@ class PageStorageImpl : public PageStorage {
   Status ContainsCommit(CommitIdView id);
   bool IsFirstCommit(CommitIdView id);
   void AddObject(mx::socket data,
-                 int64_t size,
+                 uint64_t size,
                  const std::function<void(Status, ObjectId)>& callback);
   void GetObjectFromSync(
       ObjectIdView object_id,
