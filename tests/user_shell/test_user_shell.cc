@@ -70,10 +70,10 @@ class Settings {
 // A simple link watcher implementation that after every 5 updates of a Link
 // invokes a "continue" callback. Used to push the test sequence forward after a
 // module in the test story was running for a bit.
-class LinkWatcherImpl : modular::LinkWatcher {
+class LinkChangeCountWatcherImpl : modular::LinkWatcher {
  public:
-  LinkWatcherImpl() : binding_(this) {}
-  ~LinkWatcherImpl() override = default;
+  LinkChangeCountWatcherImpl() : binding_(this) {}
+  ~LinkChangeCountWatcherImpl() override = default;
 
   // Registers itself as watcher on the given link. Only one link at a time can
   // be watched.
@@ -97,20 +97,20 @@ class LinkWatcherImpl : modular::LinkWatcher {
     }
   }
 
-  int data_count_{0};
+  int data_count_{};
   std::function<void()> continue_;
   fidl::Binding<modular::LinkWatcher> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
 };
 
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to DONE state. Used to push the test
 // sequence forward when the test story is done.
-class StoryWatcherImpl : modular::StoryWatcher {
+class StoryDoneWatcherImpl : modular::StoryWatcher {
  public:
-  StoryWatcherImpl() : binding_(this) {}
-  ~StoryWatcherImpl() override = default;
+  StoryDoneWatcherImpl() : binding_(this) {}
+  ~StoryDoneWatcherImpl() override = default;
 
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
@@ -147,7 +147,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   std::function<void()> continue_;
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
   bool on_module_added_called_ = false;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
 };
 
 // A simple story modules watcher implementation that just logs the
@@ -220,10 +220,10 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
 
 // A simple story provider watcher implementation. Just logs observed state
 // transitions.
-class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
+class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
  public:
-  StoryProviderWatcherImpl() : binding_(this) {}
-  ~StoryProviderWatcherImpl() override = default;
+  StoryProviderStateWatcherImpl() : binding_(this) {}
+  ~StoryProviderStateWatcherImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
@@ -240,7 +240,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
 
   // |StoryProviderWatcher|
   void OnDelete(const fidl::String& story_id) override {
-    FTL_LOG(INFO) << "StoryProviderWatcherImpl::OnDelete() " << story_id;
+    FTL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
 
     if (++on_delete_called_ == 1) {
       on_delete_called_once_.Pass();
@@ -267,7 +267,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   // |StoryProviderWatcher|
   void OnChange(const modular::StoryInfoPtr story_info,
                 const modular::StoryState story_state) override {
-    FTL_LOG(INFO) << "StoryProviderWatcherImpl::OnChange() "
+    FTL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnChange() "
                   << " id " << story_info->id << " state " << story_state
                   << " url " << story_info->url;
 
@@ -316,7 +316,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   // change notifications for it.
   std::set<std::string> deleted_stories_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
 
 // Tests the machinery available to a user shell implementation. This is invoked
@@ -364,7 +364,7 @@ class TestUserShellApp
 
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_watcher_.Watch(&story_provider_);
+    story_provider_state_watcher_.Watch(&story_provider_);
 
     TestStoryProvider_GetStoryInfo_Null();
   }
@@ -404,7 +404,7 @@ class TestUserShellApp
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(fidl::Array<fidl::String> stories) {
-    if (stories.size() == 0) {
+    if (stories.empty()) {
       get_story_info_.Pass();
       TestStory1();
       return;
@@ -468,10 +468,10 @@ class TestUserShellApp
   // what user shell it's running.
   void TestStory1_SetRootLink() {
     story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                               root_.NewRequest());
+                               root_link_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
-    root_->Set(
+    root_link_->Set(
         fidl::Array<fidl::String>::From(segments),
         modular::JsonValueToString(modular::JsonValue(kTestUserShellApp)));
 
@@ -485,23 +485,24 @@ class TestUserShellApp
       story_provider_->GetController(story_info_->id,
                                      story_controller_.NewRequest());
       story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                                 root_.NewRequest());
+                                 root_link_.NewRequest());
     }
 
-    link_watcher_.Watch(&root_);
-    link_watcher_.Continue([this, round] { TestStory1_Cycle(round); });
+    link_change_count_watcher_.Continue(
+        [this, round] { TestStory1_Cycle(round); });
+    link_change_count_watcher_.Watch(&root_link_);
 
-    story_watcher_.Watch(&story_controller_);
-    story_watcher_.Continue([this] {
+    story_done_watcher_.Continue([this] {
       story_controller_->Stop([this] {
         TeardownStoryController();
         story1_run_.Pass();
 
         // When the story is done, we start the next one.
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this] { TestStory2(); }, ftl::TimeDelta::FromSeconds(20));
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+            [this] { TestStory2(); });
       });
     });
+    story_done_watcher_.Watch(&story_controller_);
 
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
@@ -539,7 +540,7 @@ class TestUserShellApp
                     // in TeardownStoryController().
                     story_provider_->RunningStories(
                         [this, round](fidl::Array<fidl::String> story_ids) {
-                          auto n = count(story_ids.begin(), story_ids.begin(),
+                          auto n = count(story_ids.begin(), story_ids.end(),
                                          story_info_->id);
                           FTL_DCHECK(n == 0);
 
@@ -547,7 +548,7 @@ class TestUserShellApp
                         });
                   });
             },
-            ftl::TimeDelta::FromSeconds(10));
+            ftl::TimeDelta::FromSeconds(2));
       });
     });
   }
@@ -633,22 +634,21 @@ class TestUserShellApp
     story_controller_->Start(story_view.NewRequest());
     view_->ConnectView(std::move(story_view));
 
-    story_controller_->GetInfo(
-        [this](modular::StoryInfoPtr info, modular::StoryState state) {
-          story2_run_.Pass();
+    story_controller_->GetInfo([this](modular::StoryInfoPtr info,
+                                      modular::StoryState state) {
+      story2_run_.Pass();
 
-          FTL_LOG(INFO) << "StoryState after Start(): " << state;
+      FTL_LOG(INFO) << "StoryState after Start(): " << state;
 
-          if (state != modular::StoryState::STARTING &&
-              state != modular::StoryState::RUNNING) {
-            modular::testing::Fail(
-                "StoryState after Start() must be STARTING or RUNNING.");
-          }
+      if (state != modular::StoryState::STARTING &&
+          state != modular::StoryState::RUNNING) {
+        modular::testing::Fail(
+            "StoryState after Start() must be STARTING or RUNNING.");
+      }
 
-          mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-              [this] { TestStory2_DeleteStory(); },
-              ftl::TimeDelta::FromSeconds(20));
-        });
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+          [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(5));
+    });
   }
 
   TestPoint story2_delete_{"Story2 Delete"};
@@ -683,28 +683,28 @@ class TestUserShellApp
   }
 
   void TeardownStoryController() {
-    story_watcher_.Reset();
+    story_done_watcher_.Reset();
     story_modules_watcher_.Reset();
     story_links_watcher_.Reset();
-    link_watcher_.Reset();
+    link_change_count_watcher_.Reset();
     story_controller_.reset();
-    root_.reset();
+    root_link_.reset();
   }
 
   const Settings settings_;
 
-  StoryProviderWatcherImpl story_provider_watcher_;
-  StoryWatcherImpl story_watcher_;
+  StoryProviderStateWatcherImpl story_provider_state_watcher_;
+  StoryDoneWatcherImpl story_done_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
   StoryLinksWatcherImpl story_links_watcher_;
-  LinkWatcherImpl link_watcher_;
+  LinkChangeCountWatcherImpl link_change_count_watcher_;
 
   std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
-  modular::LinkPtr root_;
+  modular::LinkPtr root_link_;
   modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 

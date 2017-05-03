@@ -22,7 +22,7 @@ namespace {
 
 constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-constexpr int kValueHandoffDuration = 1;
+constexpr int kAnimationDelayInMs = 200;
 
 constexpr char kModuleName[] = "Module2Impl";
 
@@ -169,7 +169,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
           store_.MarkDirty();
           store_.ModelChanged();
         },
-        ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
+        ftl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
   }
 
   std::unique_ptr<Module2View> view_;
