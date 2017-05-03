@@ -8,6 +8,8 @@ source_set("public") {
     "commit_watcher.h",
     "constants.cc",
     "constants.h",
+    "data_source.cc",
+    "data_source.h",
     "iterator.h",
     "journal.h",
     "ledger_storage.h",
@@ -21,6 +23,7 @@ source_set("public") {
 
   public_deps = [
     "//apps/ledger/src/convert",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
   ]
