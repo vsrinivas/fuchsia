@@ -101,6 +101,8 @@ std::ostream& operator<<(std::ostream& os, DnsType value) {
       return os << "AAAA";
     case DnsType::kSrv:
       return os << "SRV";
+    case DnsType::kOpt:
+      return os << "OPT";
     case DnsType::kNSec:
       return os << "NSEC";
     case DnsType::kAny:
@@ -197,6 +199,10 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataSrv& value) {
   return os << begl << "target: " << value.target_;
 }
 
+std::ostream& operator<<(std::ostream& os, const DnsResourceDataOpt& value) {
+  return os << begl << "options: " << value.options_;
+}
+
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataNSec& value) {
   os << begl << "next_domain: " << value.next_domain_ << std::endl;
   return os << begl << "bits: " << value.bits_;
@@ -231,6 +237,9 @@ std::ostream& operator<<(std::ostream& os, const DnsResource& value) {
       break;
     case DnsType::kSrv:
       os << value.srv_;
+      break;
+    case DnsType::kOpt:
+      os << value.opt_;
       break;
     case DnsType::kNSec:
       os << value.nsec_;

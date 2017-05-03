@@ -12,10 +12,10 @@
 namespace netconnector {
 namespace mdns {
 
-// Note: DnsResourceDataTxt and DnsResourceDataNSec must be read with a reader
-// whose 'bytes remaining' has been set to the length of the item to be read.
-// This is their size needs to be known in order to read them. See the overload
-// for DnsResource to see how this is done.
+// Note: DnsResourceDataTxt, DnsResourceDataOpt and DnsResourceDataNSec must be
+// read with a reader whose 'bytes remaining' has been set to the length of the
+// item to be read. This is their size needs to be known in order to read them.
+// See the overload for DnsResource to see how this is done.
 
 template <typename T>
 PacketReader& operator>>(PacketReader& reader, std::shared_ptr<T>& value) {

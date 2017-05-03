@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
+
 #include "apps/netconnector/src/mdns/dns_writing.h"
 #include "lib/ftl/logging.h"
 
@@ -103,10 +105,15 @@ PacketWriter& operator<<(PacketWriter& writer,
 PacketWriter& operator<<(PacketWriter& writer,
                          const DnsResourceDataTxt& value) {
   for (auto& string : value.strings_) {
-    writer.PutBytes(string.size() + 1, string.data());
+    if (string.size() > std::numeric_limits<uint8_t>::max()) {
+      continue;
+    }
+
+    writer << static_cast<uint8_t>(string.size());
+    writer.PutBytes(string.size(), string.data());
   }
 
-  return writer;
+  return writer << static_cast<uint8_t>(0);
 }
 
 PacketWriter& operator<<(PacketWriter& writer,
