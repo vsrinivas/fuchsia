@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <launchpad/launchpad.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls/object.h>
 
 #include "application/lib/app/application_context.h"
@@ -20,11 +21,16 @@ int main(int argc, char** argv) {
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   test_runner->Identify(executable);
 
+  app::ApplicationEnvironmentPtr environment;
+  app_context->environment()->Duplicate(environment.NewRequest());
   launchpad_t* launchpad;
   launchpad_create(0, executable, &launchpad);
   launchpad_load_from_file(launchpad, executable);
   launchpad_clone(launchpad, LP_CLONE_ALL);
   launchpad_set_args(launchpad, argc - 1, argv + 1);
+  launchpad_add_handle(launchpad,
+                       environment.PassInterfaceHandle().PassHandle().release(),
+                       MX_HND_TYPE_APPLICATION_ENVIRONMENT);
 
   const char* error;
   mx_handle_t handle;
@@ -35,8 +41,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  status = mx_object_wait_one(
-      handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+  status =
+      mx_object_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
   if (status != NO_ERROR) {
     test_runner->Fail("Failed to wait for exit");
     test_runner->Teardown();
@@ -44,8 +50,8 @@ int main(int argc, char** argv) {
   }
 
   mx_info_process_t proc_info;
-  status = mx_object_get_info(
-      handle, MX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
+  status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info,
+                              sizeof(proc_info), NULL, NULL);
   mx_handle_close(handle);
   if (status < 0) {
     test_runner->Fail("Failed to get return code");
