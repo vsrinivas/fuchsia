@@ -17,6 +17,7 @@ class ResponsePrinter {
     if (response->error) {
       printf("Got error: %d (%s)\n", response->error->code,
              response->error->description.get().c_str());
+      exit(1);
     } else {
       PrintResponse(response);
       PrintResponseBody(std::move(response->body->get_stream()));
@@ -68,8 +69,7 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  WGetApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
 #if USE_ENVIRONMENT_SERVICE
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
