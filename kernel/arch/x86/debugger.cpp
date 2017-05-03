@@ -20,85 +20,85 @@ uint arch_num_regsets(void)
 
 static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t *buf_size)
 {
-    mx_x86_64_general_regs_t *gr = (mx_x86_64_general_regs_t *)grp;
+    mx_x86_64_general_regs_t *out = (mx_x86_64_general_regs_t *)grp;
 
     uint32_t provided_buf_size = *buf_size;
-    *buf_size = sizeof(*gr);
+    *buf_size = sizeof(*out);
 
     // Do "buffer too small" checks first. No point in prohibiting the caller
     // from finding out the needed size just because the thread is currently
     // running.
-    if (provided_buf_size < sizeof(*gr))
+    if (provided_buf_size < sizeof(*out))
         return ERR_BUFFER_TOO_SMALL;
 
     if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
-    x86_iframe_t *p = thread->exception_context->frame;
+    x86_iframe_t *in = thread->exception_context->frame;
 
     // TODO: We could get called while processing a synthetic exception where
     // there is no frame.
-    if (p == NULL)
+    if (in == NULL)
         return ERR_NOT_SUPPORTED;
 
-    gr->rax = p->rax;
-    gr->rbx = p->rbx;
-    gr->rcx = p->rcx;
-    gr->rdx = p->rdx;
-    gr->rsi = p->rsi;
-    gr->rdi = p->rdi;
-    gr->rbp = p->rbp;
-    gr->rsp = p->user_sp;
-    gr->r8 = p->r8;
-    gr->r9 = p->r9;
-    gr->r10 = p->r10;
-    gr->r11 = p->r11;
-    gr->r12 = p->r12;
-    gr->r13 = p->r13;
-    gr->r14 = p->r14;
-    gr->r15 = p->r15;
-    gr->rip = p->ip;
-    gr->rflags = p->flags;
+    out->rax = in->rax;
+    out->rbx = in->rbx;
+    out->rcx = in->rcx;
+    out->rdx = in->rdx;
+    out->rsi = in->rsi;
+    out->rdi = in->rdi;
+    out->rbp = in->rbp;
+    out->rsp = in->user_sp;
+    out->r8 = in->r8;
+    out->r9 = in->r9;
+    out->r10 = in->r10;
+    out->r11 = in->r11;
+    out->r12 = in->r12;
+    out->r13 = in->r13;
+    out->r14 = in->r14;
+    out->r15 = in->r15;
+    out->rip = in->ip;
+    out->rflags = in->flags;
 
     return NO_ERROR;
 }
 
 static status_t arch_set_general_regs(struct thread *thread, const void *grp, uint32_t buf_size)
 {
-    const mx_x86_64_general_regs_t *gr = (const mx_x86_64_general_regs_t *)grp;
+    const mx_x86_64_general_regs_t *in = (const mx_x86_64_general_regs_t *)grp;
 
-    if (buf_size != sizeof(*gr))
+    if (buf_size != sizeof(*in))
         return ERR_INVALID_ARGS;
 
     if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
-    x86_iframe_t *p = thread->exception_context->frame;
+    x86_iframe_t *out = thread->exception_context->frame;
 
     // TODO: We could get called while processing a synthetic exception where
     // there is no frame.
-    if (p == NULL)
+    if (out == NULL)
         return ERR_NOT_SUPPORTED;
 
-    p->rax = gr->rax;
-    p->rbx = gr->rbx;
-    p->rcx = gr->rcx;
-    p->rdx = gr->rdx;
-    p->rsi = gr->rsi;
-    p->rdi = gr->rdi;
-    p->rbp = gr->rbp;
-    p->user_sp = gr->rsp;
-    p->r8 = gr->r8;
-    p->r9 = gr->r9;
-    p->r10 = gr->r10;
-    p->r11 = gr->r11;
-    p->r12 = gr->r12;
-    p->r13 = gr->r13;
-    p->r14 = gr->r14;
-    p->r15 = gr->r15;
-    p->ip = gr->rip;
-    p->flags = gr->rflags;
-    p->flags &= ~X86_FLAGS_RESERVED;
+    out->rax = in->rax;
+    out->rbx = in->rbx;
+    out->rcx = in->rcx;
+    out->rdx = in->rdx;
+    out->rsi = in->rsi;
+    out->rdi = in->rdi;
+    out->rbp = in->rbp;
+    out->user_sp = in->rsp;
+    out->r8 = in->r8;
+    out->r9 = in->r9;
+    out->r10 = in->r10;
+    out->r11 = in->r11;
+    out->r12 = in->r12;
+    out->r13 = in->r13;
+    out->r14 = in->r14;
+    out->r15 = in->r15;
+    out->ip = in->rip;
+    out->flags = in->rflags;
+    out->flags &= ~X86_FLAGS_RESERVED;
 
     return NO_ERROR;
 }
