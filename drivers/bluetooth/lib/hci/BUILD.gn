@@ -47,6 +47,7 @@ source_set("test_support") {
     "fake_controller.h",
     "fake_controller_base.cc",
     "fake_controller_base.h",
+    "test_base.h",
     "test_controller.cc",
     "test_controller.h",
   ]
@@ -68,6 +69,7 @@ source_set("tests") {
     "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
     "packet_unittest.cc",
+    "sequential_command_runner_unittest.cc",
   ]
 
   deps = [

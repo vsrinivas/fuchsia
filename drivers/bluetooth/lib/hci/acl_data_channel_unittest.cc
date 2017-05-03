@@ -10,18 +10,16 @@
 
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/device_wrapper.h"
+#include "apps/bluetooth/lib/hci/test_base.h"
 #include "apps/bluetooth/lib/hci/test_controller.h"
 #include "apps/bluetooth/lib/hci/transport.h"
-#include "lib/ftl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace bluetooth {
 namespace hci {
 namespace test {
 namespace {
 
-class ACLDataChannelTest : public ::testing::Test {
+class ACLDataChannelTest : public TransportTest<TestController> {
  public:
   ACLDataChannelTest() = default;
   ~ACLDataChannelTest() override = default;
@@ -29,60 +27,11 @@ class ACLDataChannelTest : public ::testing::Test {
  protected:
   // ::testing::Test overrides:
   void SetUp() override {
-    mx::channel cmd0, cmd1;
-    mx::channel acl0, acl1;
-    mx_status_t status = mx::channel::create(0, &cmd0, &cmd1);
-    ASSERT_EQ(NO_ERROR, status);
-    status = mx::channel::create(0, &acl0, &acl1);
-    ASSERT_EQ(NO_ERROR, status);
+    TransportTest<TestController>::SetUp();
 
-    auto hci_dev = std::make_unique<DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
-    transport_ = hci::Transport::Create(std::move(hci_dev));
-    test_controller_ = std::make_unique<TestController>(std::move(cmd1), std::move(acl1));
-
-    transport_->Initialize();
-    test_controller_->Start();
-  }
-
-  void TearDown() override {
-    transport_ = nullptr;
-    test_controller_ = nullptr;
-  }
-
-  bool InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info,
-                                const DataBufferInfo& le_buffer_info) {
-    if (!transport_->InitializeACLDataChannel(
-            bredr_buffer_info, le_buffer_info,
-            std::bind(&ACLDataChannelTest::LookUpConnection, this, std::placeholders::_1))) {
-      return false;
-    }
-
-    transport_->acl_data_channel()->SetDataRxHandler(
-        std::bind(&ACLDataChannelTest::OnDataReceived, this, std::placeholders::_1),
-        message_loop_.task_runner());
-
-    return true;
-  }
-
-  void PostDelayedQuitTask(int64_t seconds) {
-    message_loop_.task_runner()->PostDelayedTask([this] { message_loop_.PostQuitTask(); },
-                                                 ftl::TimeDelta::FromSeconds(seconds));
-  }
-
-  void RunMessageLoopWithTimeout(int64_t seconds) {
-    // Use PostQuitTask() to queue up the quit task after all pending tasks have been drained.
-    PostDelayedQuitTask(seconds);
-    message_loop_.Run();
-  }
-
-  ftl::RefPtr<Connection> LookUpConnection(ConnectionHandle handle) {
-    auto iter = conn_map_.find(handle);
-    if (iter == conn_map_.end()) return nullptr;
-    return iter->second;
-  }
-
-  void OnDataReceived(common::DynamicByteBuffer acl_data_bytes) {
-    if (data_received_cb_) data_received_cb_(std::move(acl_data_bytes));
+    // This test never sets up command/event expections (as it only uses the data endpoint) so
+    // always start the test controller during SetUp().
+    test_device()->Start();
   }
 
   void AddLEConnection(ConnectionHandle handle) {
@@ -97,22 +46,19 @@ class ACLDataChannelTest : public ::testing::Test {
     conn_map_[handle] = Connection::NewLEConnection(handle, Connection::Role::kMaster, params);
   }
 
-  Transport* transport() const { return transport_.get(); }
-  CommandChannel* cmd_channel() const { return transport_->command_channel(); }
-  ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
-  TestController* test_controller() const { return test_controller_.get(); }
-  mtl::MessageLoop* message_loop() { return &message_loop_; }
-
-  void set_data_received_cb(const ACLDataChannel::DataReceivedCallback& cb) {
-    data_received_cb_ = cb;
+  void SetUpConnectionLookUpCallback() {
+    set_connection_lookup_callback(
+        std::bind(&ACLDataChannelTest::LookUpConnection, this, std::placeholders::_1));
   }
 
  private:
-  ACLDataChannel::DataReceivedCallback data_received_cb_;
+  ftl::RefPtr<Connection> LookUpConnection(ConnectionHandle handle) {
+    auto iter = conn_map_.find(handle);
+    if (iter == conn_map_.end()) return nullptr;
+    return iter->second;
+  }
+
   std::unordered_map<ConnectionHandle, ftl::RefPtr<Connection>> conn_map_;
-  ftl::RefPtr<Transport> transport_;
-  std::unique_ptr<TestController> test_controller_;
-  mtl::MessageLoop message_loop_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ACLDataChannelTest);
 };
@@ -151,6 +97,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
   constexpr ConnectionHandle kHandle1 = 0x0002;
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets), DataBufferInfo());
+  SetUpConnectionLookUpCallback();
 
   // This should fail because the connection doesn't exist.
   common::DynamicByteBuffer buffer(ACLDataTxPacket::GetMinBufferSize(1));
@@ -185,7 +132,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
       PostDelayedQuitTask(1);
     }
   };
-  test_controller()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Correct MTU on kHandle0 should succeed.
   buffer = common::DynamicByteBuffer(ACLDataTxPacket::GetMinBufferSize(kMaxMTU));
@@ -206,7 +153,7 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
     EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
   }
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   // kMaxNumPackets is 5. The controller should have received 3 packets on kHandle0 and 2 on
   // kHandle1
@@ -220,9 +167,9 @@ TEST_F(ACLDataChannelTest, SendPacketBREDRBuffer) {
                                      0x01, 0x00, 0x03, 0x00,  // 3 packets on handle 0x0001
                                      0x02, 0x00, 0x02, 0x00   // 2 packets on handle 0x0002
                                      );
-  test_controller()->SendCommandChannelPacket(event_buffer);
+  test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -237,6 +184,7 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
   constexpr ConnectionHandle kHandle1 = 0x0002;
 
   InitializeACLDataChannel(DataBufferInfo(), DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
+  SetUpConnectionLookUpCallback();
   AddLEConnection(kHandle0);
   AddLEConnection(kHandle1);
 
@@ -265,7 +213,7 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
       PostDelayedQuitTask(1);
     }
   };
-  test_controller()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
   for (int i = 0; i < 10; ++i) {
@@ -277,7 +225,7 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
     EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
   }
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   // CommandChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
   // received 3 packets on kHandle0 and 2 on kHandle1
@@ -291,9 +239,9 @@ TEST_F(ACLDataChannelTest, SendPacketLEBuffer) {
                                      0x01, 0x00, 0x03, 0x00,  // 3 packets on handle 0x0001
                                      0x02, 0x00, 0x02, 0x00   // 2 packets on handle 0x0002
                                      );
-  test_controller()->SendCommandChannelPacket(event_buffer);
+  test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -310,6 +258,7 @@ TEST_F(ACLDataChannelTest, SendPacketBothBuffers) {
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
+  SetUpConnectionLookUpCallback();
   AddLEConnection(kHandle0);
   AddLEConnection(kHandle1);
 
@@ -338,7 +287,7 @@ TEST_F(ACLDataChannelTest, SendPacketBothBuffers) {
       PostDelayedQuitTask(1);
     }
   };
-  test_controller()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
   for (int i = 0; i < 10; ++i) {
@@ -350,7 +299,7 @@ TEST_F(ACLDataChannelTest, SendPacketBothBuffers) {
     EXPECT_TRUE(acl_data_channel()->SendPacket(std::move(buffer)));
   }
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   // CommandChannel should be looking at kLEMaxNumPackets, which is 5. The controller should have
   // received 3 packets on kHandle0 and 2 on kHandle1
@@ -364,9 +313,9 @@ TEST_F(ACLDataChannelTest, SendPacketBothBuffers) {
                                      0x01, 0x00, 0x03, 0x00,  // 3 packets on handle 0x0001
                                      0x02, 0x00, 0x02, 0x00   // 2 packets on handle 0x0002
                                      );
-  test_controller()->SendCommandChannelPacket(event_buffer);
+  test_device()->SendCommandChannelPacket(event_buffer);
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   EXPECT_EQ(5, handle0_packet_count);
   EXPECT_EQ(5, handle1_packet_count);
@@ -418,15 +367,16 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
       handle0_processed_count = 0;
       handle1_processed_count = 0;
       handle2_processed_count = 0;
-      test_controller()->SendCommandChannelPacket(event_buffer);
+      test_device()->SendCommandChannelPacket(event_buffer);
     }
 
     if (total_packet_count == kExpectedTotalPacketCount) message_loop()->PostQuitTask();
   };
-  test_controller()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
+  SetUpConnectionLookUpCallback();
   AddLEConnection(kHandle0);
   AddLEConnection(kHandle1);
   AddLEConnection(kHandle2);
@@ -453,7 +403,7 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
 
   // Use a 10 second timeout in case the test fails and the message loop isn't stoppped by |data_cb|
   // above.
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   if (t1.joinable()) t1.join();
   if (t2.joinable()) t2.join();
@@ -471,6 +421,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
 
   // It doesn't matter what we set the buffer values to since we're testing incoming packets.
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets), DataBufferInfo());
+  SetUpConnectionLookUpCallback();
 
   constexpr size_t kExpectedPacketCount = 2u;
   size_t num_rx_packets = 0u;
@@ -488,7 +439,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
     else
       FTL_NOTREACHED();
   };
-  set_data_received_cb(data_rx_cb);
+  set_data_received_callback(data_rx_cb);
 
   // Malformed packet: smaller than the ACL header.
   auto invalid0 = common::CreateStaticByteBuffer(0x01, 0x00, 0x00);
@@ -503,13 +454,13 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
   auto valid1 = common::CreateStaticByteBuffer(0x02, 0x00, 0x01, 0x00, 0x00);
 
   message_loop()->task_runner()->PostTask([&, this] {
-    test_controller()->SendACLDataChannelPacket(invalid0);
-    test_controller()->SendACLDataChannelPacket(invalid1);
-    test_controller()->SendACLDataChannelPacket(valid0);
-    test_controller()->SendACLDataChannelPacket(valid1);
+    test_device()->SendACLDataChannelPacket(invalid0);
+    test_device()->SendACLDataChannelPacket(invalid1);
+    test_device()->SendACLDataChannelPacket(valid0);
+    test_device()->SendACLDataChannelPacket(valid1);
   });
 
-  RunMessageLoopWithTimeout(10);
+  RunMessageLoop(10);
 
   EXPECT_EQ(kExpectedPacketCount, num_rx_packets);
   EXPECT_EQ(0x0001, packet0_handle);
@@ -518,6 +469,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
 
 TEST_F(ACLDataChannelTest, TransportClosedCallback) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
+  SetUpConnectionLookUpCallback();
 
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] {
@@ -526,13 +478,14 @@ TEST_F(ACLDataChannelTest, TransportClosedCallback) {
   };
   transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
 
-  message_loop()->task_runner()->PostTask([this] { test_controller()->CloseACLDataChannel(); });
-  RunMessageLoopWithTimeout(10);
+  message_loop()->task_runner()->PostTask([this] { test_device()->CloseACLDataChannel(); });
+  RunMessageLoop(10);
   EXPECT_TRUE(closed_cb_called);
 }
 
 TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
+  SetUpConnectionLookUpCallback();
 
   int closed_cb_count = 0;
   auto closed_cb = [&closed_cb_count, this] { closed_cb_count++; };
@@ -540,11 +493,11 @@ TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
 
   // We'll send closed events for both channels. The closed callback should get invoked only once.
   message_loop()->task_runner()->PostTask([this] {
-    test_controller()->CloseACLDataChannel();
-    test_controller()->CloseCommandChannel();
+    test_device()->CloseACLDataChannel();
+    test_device()->CloseCommandChannel();
   });
 
-  RunMessageLoopWithTimeout(2);
+  RunMessageLoop(2);
   EXPECT_EQ(1, closed_cb_count);
 }
 
