@@ -324,8 +324,9 @@ class DeviceRunnerApp : DeviceShellContext,
 
       auto user_id = std::to_string(random_number);
       auto ledger_repository_path = kLedgerDataBaseDir + user_id;
-      LoginInternal(user_id, user_id, ledger_repository_path,
-            std::move(view_owner_request), std::move(user_controller_request));
+      LoginInternal(user_id, user_id, nullptr  /* server_name */,
+                    ledger_repository_path, std::move(view_owner_request),
+                    std::move(user_controller_request));
       return;
     }
 
@@ -350,7 +351,9 @@ class DeviceRunnerApp : DeviceShellContext,
     }
 
     // Get the LedgerRepository for the user.
-    std::string user_id = account_id;
+    // |user_id| has to be something that is the same across devices. Currently,
+    // we take it as input from the user. TODO(alhaad): Infer it from id token.
+    std::string user_id = found_user->display_name()->str();
     std::string ledger_repository_path = kLedgerDataBaseDir + user_id;
 
     if (settings_.ledger_repository_for_testing) {
@@ -368,8 +371,10 @@ class DeviceRunnerApp : DeviceShellContext,
     }
 
     FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-    LoginInternal(user_id, found_user->device_name()->str(), ledger_repository_path,
-          std::move(view_owner_request), std::move(user_controller_request));
+    LoginInternal(user_id, found_user->device_name()->str(),
+                  found_user->server_name()->str(), ledger_repository_path,
+                  std::move(view_owner_request),
+                  std::move(user_controller_request));
   }
 
   // |UserProvider|
@@ -490,6 +495,7 @@ class DeviceRunnerApp : DeviceShellContext,
 
   void LoginInternal(const std::string& user_id,
              const std::string& device_name,
+             const fidl::String& server_name,
              const std::string& local_ledger_path,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
              fidl::InterfaceRequest<UserController> user_controller_request) {
@@ -497,7 +503,7 @@ class DeviceRunnerApp : DeviceShellContext,
     // TODO: Take the cloud sync server name as Login() parameter from the
     // device shell and/or from the user db.
     ledger_repository_factory_->GetRepository(
-        local_ledger_path, fidl::String(""), ledger_repository.NewRequest(),
+        local_ledger_path, server_name, ledger_repository.NewRequest(),
         [](ledger::Status status) {
           FTL_DCHECK(status == ledger::Status::OK)
               << "GetRepository failed: " << status;
