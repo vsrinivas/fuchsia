@@ -37,7 +37,8 @@ void OutputSamples(std::ostream& out,
   double average = Average(values);
   double std_dev = StdDev(values, average);
 
-  out << "avg " << average << unit << "out of " << values.size() << " samples. "
+  out << "avg " << average << unit << " out of " << values.size()
+      << " samples. "
       << "(std dev " << std_dev << ")";
 }
 
