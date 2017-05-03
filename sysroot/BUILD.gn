@@ -22,10 +22,15 @@ if (host_cpu == "arm64") {
   assert(false, "Host CPU not supported")
 }
 
+clang_os = host_os
+if (host_os == "mac") {
+  clang_os = "darwin"
+}
+
 magenta_build_dir = rebase_path("//out/build-magenta/$magenta_build_dir")
 magenta_sysroot_list = magenta_build_dir + "/sysroot.list"
 toolchain_sysroot = rebase_path(
-        "//buildtools/toolchain/clang+llvm-$clang_cpu-$host_os/$fuchsia_target_arch-fuchsia")
+        "//buildtools/toolchain/clang+llvm-$clang_cpu-$clang_os/$fuchsia_target_arch-fuchsia")
 
 group("sysroot") {
   deps = [
