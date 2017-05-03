@@ -341,13 +341,30 @@ void Record::ProcessMeasurements(ftl::Closure on_done) {
   FTL_DCHECK(ticks_per_second);
   std::vector<measure::Result> results =
       measure::ComputeResults(options_.measurements, ticks, ticks_per_second);
+
+  // Fail and quit if any of the measurements has empty results. This is so that
+  // we can notice when benchmarks break (e.g. in CQ or on perfbots).
+  for (auto& result : results) {
+    if (result.samples.empty()) {
+      err() << "No results for measurement \"" << result.label << "\", quitting"
+            << std::endl;
+      exit(1);
+    }
+  }
   OutputResults(out(), results);
 
   if (options_.upload_results) {
     network::NetworkServicePtr network_service =
         context()->ConnectToEnvironmentService<network::NetworkService>();
     UploadResults(out(), err(), std::move(network_service),
-                  options_.upload_metadata, results, std::move(on_done));
+                  options_.upload_metadata,
+                  results, [on_done = std::move(on_done)](bool succeeded) {
+                    if (!succeeded) {
+                      err() << "dashboard upload failed" << std::endl;
+                      exit(1);
+                    }
+                    on_done();
+                  });
   } else {
     on_done();
   }

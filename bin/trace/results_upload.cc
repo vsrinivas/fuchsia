@@ -156,7 +156,7 @@ void UploadResults(std::ostream& out,
                    network::NetworkServicePtr network_service,
                    const UploadMetadata& upload_metadata,
                    const std::vector<measure::Result>& results,
-                   ftl::Closure on_done) {
+                   std::function<void(bool)> on_done) {
   network::URLLoaderPtr url_loader;
   network_service->CreateURLLoader(url_loader.NewRequest());
   network::URLLoader* url_loader_ptr = url_loader.get();
@@ -164,7 +164,7 @@ void UploadResults(std::ostream& out,
       MakeRequest(upload_metadata.server_url, Encode(upload_metadata, results));
   url_loader.set_connection_error_handler([on_done, &err] {
     err << "connection to url loader closed unexpectedly" << std::endl;
-    on_done();
+    on_done(false);
   });
 
   out << "starting upload to " << url_request->url << std::endl;
@@ -176,19 +176,19 @@ void UploadResults(std::ostream& out,
         if (url_response->error) {
           err << url_response->url << " network error "
               << url_response->error->description << std::endl;
-          on_done();
+          on_done(false);
           return;
         }
 
         if (url_response->status_code != 200) {
           err << url_response->url << " url_response status "
               << url_response->status_code << std::endl;
-          on_done();
+          on_done(false);
           return;
         }
 
         out << "upload succeeded" << std::endl;
-        on_done();
+        on_done(true);
       }));
 }
 

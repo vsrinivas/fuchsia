@@ -5,6 +5,7 @@
 #ifndef APPS_TRACING_SRC_TRACE_RESULTS_UPLOAD_H_
 #define APPS_TRACING_SRC_TRACE_RESULTS_UPLOAD_H_
 
+#include <functional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -12,7 +13,6 @@
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/measure/results.h"
 #include "apps/tracing/src/trace/spec.h"
-#include "lib/ftl/functional/closure.h"
 
 namespace tracing {
 
@@ -39,7 +39,7 @@ void UploadResults(std::ostream& out,
                    network::NetworkServicePtr network_service,
                    const UploadMetadata& upload_metadata,
                    const std::vector<measure::Result>& results,
-                   ftl::Closure on_done);
+                   std::function<void(bool)> on_done);
 
 }  // namespace tracing
 

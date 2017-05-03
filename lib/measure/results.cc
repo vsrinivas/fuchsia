@@ -44,7 +44,7 @@ Result ComputeSingle(Spec spec,
   result.unit = "ms";
 
   if (ticks.empty()) {
-    return {};
+    return result;
   }
 
   // Discard separators that are out of range and ensure that there is a final
