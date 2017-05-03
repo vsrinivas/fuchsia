@@ -775,8 +775,8 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
         info->state = MX_THREAD_STATE_DEAD;
         break;
     default:
-        DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
-                         static_cast<int>(excp_port_type));
+        DEBUG_ASSERT_MSG(false, "unexpected run state: %d",
+                         static_cast<int>(state));
         break;
     }
 
