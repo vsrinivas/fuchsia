@@ -70,20 +70,20 @@ static mx_status_t intel_serialio_i2c_add_slave(
     status = intel_serialio_i2c_find_slave(&slave, device, address);
     if (status == NO_ERROR) {
         status = ERR_ALREADY_EXISTS;
-        goto fail3;
-    } else if (status != ERR_NOT_FOUND) {
-        goto fail3;
+    }
+    if (status != ERR_NOT_FOUND) {
+        mtx_unlock(&device->mutex);
+        return status;
     }
 
-    slave = malloc(sizeof(*slave));
+    slave = calloc(1, sizeof(*slave));
     if (!slave) {
         status = ERR_NO_MEMORY;
-        goto fail2;
+        mtx_unlock(&device->mutex);
+        return status;
     }
-
-    status = intel_serialio_i2c_slave_device_init(dev, slave, width, address);
-    if (status < 0)
-        goto fail2;
+    slave->chip_address_width = width;
+    slave->chip_address = address;
 
     list_add_head(&device->slave_list, &slave->slave_list_node);
     mtx_unlock(&device->mutex);
@@ -95,32 +95,51 @@ static mx_status_t intel_serialio_i2c_add_slave(
     // Retrieve pci_config (again)
     pci_protocol_t* pci;
     status = device_op_get_protocol(dev->parent, MX_PROTOCOL_PCI, (void**)&pci);
-    if (status < 0)
+    if (status != NO_ERROR) {
         goto fail2;
+    }
 
     const pci_config_t* pci_config;
     mx_handle_t config_handle;
     status = pci->get_config(dev->parent, &pci_config, &config_handle);
-
-    if (status != NO_ERROR)
+    if (status != NO_ERROR) {
         goto fail2;
+    }
 
     int count = 0;
     slave->props[count++] = (mx_device_prop_t){BIND_PCI_VID, 0, pci_config->vendor_id};
     slave->props[count++] = (mx_device_prop_t){BIND_PCI_DID, 0, pci_config->device_id};
     slave->props[count++] = (mx_device_prop_t){BIND_I2C_ADDR, 0, address};
 
-    status = device_add_with_props(slave->mxdev, dev, slave->props, count);
-    if (status < 0)
+    char name[sizeof(address) * 2 + 2] = {
+            [sizeof(name) - 1] = '\0',
+    };
+    snprintf(name, sizeof(name) - 1, "%04x", address);
+
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = slave,
+        .driver = dev->driver,
+        .ops = &intel_serialio_i2c_slave_device_proto,
+        .props = slave->props,
+        .prop_count = count,
+    };
+
+    status = device_add2(dev, &args, &slave->mxdev);
+    if (status != NO_ERROR) {
         goto fail1;
+    }
 
     return NO_ERROR;
+
 fail1:
     mx_handle_close(config_handle);
 fail2:
-    free(slave);
-fail3:
+    mtx_lock(&device->mutex);
+    list_delete(&slave->slave_list_node);
     mtx_unlock(&device->mutex);
+    free(slave);
     return status;
 }
 
@@ -294,7 +313,6 @@ static ssize_t intel_serialio_i2c_ioctl(
 
 static mx_status_t intel_serialio_i2c_release(mx_device_t* dev) {
     intel_serialio_i2c_device_t* cont = dev->ctx;
-    device_destroy(cont->mxdev);
     free(cont);
     return NO_ERROR;
 }
@@ -451,13 +469,6 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     if (status < 0)
         goto fail;
 
-    char name[MX_DEVICE_NAME_MAX];
-    snprintf(name, sizeof(name), "i2c-bus-%04x", pci_config->device_id);
-    status = device_create(name, device, &intel_serialio_i2c_device_proto, drv, &device->mxdev);
-    if (status != NO_ERROR) {
-        goto fail;
-    }
-
     // This is a temporary workaround until we have full ACPI device
     // enumeration. If this is the I2C1 bus, we run _PS0 so the controller is
     // active.
@@ -482,9 +493,21 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
     if (status < 0)
         goto fail;
 
-    status = device_add(device->mxdev, dev);
-    if (status < 0)
+    char name[MX_DEVICE_NAME_MAX];
+    snprintf(name, sizeof(name), "i2c-bus-%04x", pci_config->device_id);
+
+   device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = name,
+        .ctx = device,
+        .driver = drv,
+        .ops = &intel_serialio_i2c_device_proto,
+    };
+
+    status = device_add2(dev, &args, &device->mxdev);
+    if (status < 0) {
         goto fail;
+    }
 
     xprintf(
         "initialized intel serialio i2c driver, "
@@ -507,7 +530,6 @@ fail:
         mx_handle_close(device->regs_handle);
     if (config_handle)
         mx_handle_close(config_handle);
-    device_destroy(device->mxdev);
     free(device);
 
     return status;

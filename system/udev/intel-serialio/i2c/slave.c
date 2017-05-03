@@ -324,40 +324,15 @@ static ssize_t intel_serialio_i2c_slave_ioctl(
 
 static mx_status_t intel_serialio_i2c_slave_release(mx_device_t* dev) {
     intel_serialio_i2c_slave_device_t* slave = dev->ctx;
-    device_destroy(slave->mxdev);
     free(slave);
     return NO_ERROR;
 }
 
 // Implement the device protocol for the slave devices.
 
-static mx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
+mx_protocol_device_t intel_serialio_i2c_slave_device_proto = {
     .read = intel_serialio_i2c_slave_read,
     .write = intel_serialio_i2c_slave_write,
     .ioctl = intel_serialio_i2c_slave_ioctl,
     .release = intel_serialio_i2c_slave_release,
 };
-
-// Initialize a slave device structure.
-
-mx_status_t intel_serialio_i2c_slave_device_init(
-    mx_device_t* cont, intel_serialio_i2c_slave_device_t* slave,
-    uint8_t width, uint16_t address) {
-    mx_status_t status = NO_ERROR;
-
-    char name[sizeof(address) * 2 + 2] = {
-            [sizeof(name) - 1] = '\0',
-    };
-    snprintf(name, sizeof(name) - 1, "%04x", address);
-
-    status = device_create(name, slave, &intel_serialio_i2c_slave_device_proto, cont->driver,
-            &slave->mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
-    slave->chip_address_width = width;
-    slave->chip_address = address;
-
-    return status;
-}
