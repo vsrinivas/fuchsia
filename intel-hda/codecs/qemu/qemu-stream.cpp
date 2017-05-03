@@ -26,7 +26,7 @@ mx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bo
     for (size_t i = 0; i < count; ++i) {
         const auto& verb = list[i];
 
-        mx_status_t res = SendCodecCommandLocked(converter_nid_, verb, false);
+        mx_status_t res = SendCodecCommandLocked(converter_nid_, verb, Ack::NO);
         if ((res != NO_ERROR) && !force_all)
             return res;
 

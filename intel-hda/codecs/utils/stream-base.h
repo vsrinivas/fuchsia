@@ -47,6 +47,11 @@ public:
 protected:
     friend class mxtl::RefPtr<IntelHDAStreamBase>;
 
+    enum class Ack {
+        NO,
+        YES,
+    };
+
     IntelHDAStreamBase(uint32_t id, bool is_input);
     virtual ~IntelHDAStreamBase();
 
@@ -74,13 +79,13 @@ protected:
     // Debug logging
     virtual void PrintDebugPrefix() const;
 
-    mx_status_t SendCodecCommandLocked(uint16_t nid, CodecVerb verb, bool no_ack)
+    mx_status_t SendCodecCommandLocked(uint16_t nid, CodecVerb verb, Ack do_ack)
         __TA_REQUIRES(obj_lock_);
 
-    mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb,
-                                 bool no_ack) __TA_EXCLUDES(obj_lock_) {
+    mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, Ack do_ack)
+        __TA_EXCLUDES(obj_lock_) {
         mxtl::AutoLock obj_lock(&obj_lock_);
-        return SendCodecCommandLocked(nid, verb, no_ack);
+        return SendCodecCommandLocked(nid, verb, do_ack);
     }
 
     // Exposed to derived class for thread annotations.

@@ -29,7 +29,7 @@ mx_status_t RealtekStream::RunCmdListLocked(const CommandListEntry* list,
     for (size_t i = 0; i < count; ++i) {
         const auto& entry = list[i];
 
-        mx_status_t res = SendCodecCommandLocked(entry.nid, entry.verb, false);
+        mx_status_t res = SendCodecCommandLocked(entry.nid, entry.verb, Ack::NO);
         if ((res != NO_ERROR) && !force_all)
             return res;
 
