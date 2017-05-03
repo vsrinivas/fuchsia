@@ -47,6 +47,7 @@ namespace {
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v1.db";
+constexpr char kLedgerNoMinfsWaitFlag[] = "--no_minfs_wait";
 
 class Settings {
  public:
@@ -272,7 +273,8 @@ class DeviceRunnerApp : DeviceShellContext,
     app::ServiceProviderPtr ledger_services;
     auto ledger_launch_info = app::ApplicationLaunchInfo::New();
     ledger_launch_info->url = kLedgerAppUrl;
-    ledger_launch_info->arguments = nullptr;
+    ledger_launch_info->arguments = fidl::Array<fidl::String>::New(1);
+    ledger_launch_info->arguments[0] = kLedgerNoMinfsWaitFlag;
     ledger_launch_info->services = ledger_services.NewRequest();
 
     app_context_->launcher()->CreateApplication(
