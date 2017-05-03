@@ -14,6 +14,8 @@ source_set("callback") {
     "destruction_sentinel.cc",
     "destruction_sentinel.h",
     "operation_serializer.h",
+    "pending_operation.cc",
+    "pending_operation.h",
     "trace_callback.h",
     "waiter.h",
   ]
@@ -37,6 +39,7 @@ source_set("unittests") {
     "cancellable_unittest.cc",
     "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
+    "pending_operation_unittest.cc",
     "waiter_unittest.cc",
   ]
 
