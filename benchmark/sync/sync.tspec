@@ -2,7 +2,7 @@
   "test_suite_name": "fuchsia.ledger",
   "app": "ledger_benchmark_sync",
   "args": ["--entry-count=10", "--value-size=100"],
-  "categories": ["benchmark"],
+  "categories": ["benchmark", "ledger"],
   "duration": 60,
   "measure": [
     {
