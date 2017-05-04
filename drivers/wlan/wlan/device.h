@@ -43,8 +43,9 @@ class Device {
 
     // ddk/device
     void Unbind();
-    mx_status_t Release();
-    ssize_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
+    void Release();
+    mx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                      size_t* out_actual);
 
     // ddk/protocol/ethernet
     mx_status_t Query(uint32_t options, ethmac_info_t* info);

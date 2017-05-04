@@ -35,11 +35,12 @@ Device::~Device() {
 mx_status_t Device::Bind() {
     debugfn();
 
-    device_ops_.unbind = [](mx_device_t* dev){ WLAN_DEV(dev->ctx)->Unbind(); };
-    device_ops_.release = [](mx_device_t* dev) { return WLAN_DEV(dev->ctx)->Release(); };
-    device_ops_.ioctl = [](mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) {
-        return WLAN_DEV(dev->ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len);
+    device_ops_.version = DEVICE_OPS_VERSION;
+    device_ops_.unbind = [](void* ctx){ WLAN_DEV(ctx)->Unbind(); };
+    device_ops_.release = [](void* ctx) { WLAN_DEV(ctx)->Release(); };
+    device_ops_.ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                           void* out_buf, size_t out_len, size_t* out_actual) {
+        return WLAN_DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     };
 
     auto status = wlanmac_ops_->query(wlanmac_device_, 0u, &ethmac_info_);
@@ -101,7 +102,7 @@ void Device::Unbind() {
     device_remove(device_);
 }
 
-mx_status_t Device::Release() {
+void Device::Release() {
     debugfn();
     if (port_.is_valid()) {
         auto status = SendShutdown();
@@ -113,15 +114,15 @@ mx_status_t Device::Release() {
         }
     }
     delete this;
-    return NO_ERROR;
 }
 
-ssize_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+mx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                          size_t out_len, size_t* out_actual) {
     debugfn();
     if (op != IOCTL_WLAN_GET_CHANNEL) {
         return ERR_NOT_SUPPORTED;
     }
-    if (out_buf == nullptr || out_len < sizeof(mx_handle_t)) {
+    if (out_buf == nullptr || out_actual == nullptr || out_len < sizeof(mx_handle_t)) {
         return ERR_BUFFER_TOO_SMALL;
     }
 
@@ -133,7 +134,8 @@ ssize_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_
 
     mx_handle_t* outh = static_cast<mx_handle_t*>(out_buf);
     *outh = out.release();
-    return sizeof(mx_handle_t);
+    *out_actual = sizeof(mx_handle_t);
+    return NO_ERROR;
 }
 
 mx_status_t Device::Query(uint32_t options, ethmac_info_t* info) {

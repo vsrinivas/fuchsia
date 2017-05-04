@@ -14,15 +14,16 @@ Device::Device(mx_driver_t* driver, mx_device_t* device, test_protocol_t* test_o
 
 mx_status_t Device::Bind() {
     std::printf("wlan::testing::Device::Bind()\n");
-    device_ops_.unbind = [](mx_device_t* dev) {
-        static_cast<Device*>(dev->ctx)->Unbind();
+    device_ops_.version = DEVICE_OPS_VERSION;
+    device_ops_.unbind = [](void* ctx) {
+        static_cast<Device*>(ctx)->Unbind();
     };
-    device_ops_.release = [](mx_device_t* dev) -> mx_status_t {
-        return static_cast<Device*>(dev->ctx)->Release();
+    device_ops_.release = [](void* ctx) {
+        static_cast<Device*>(ctx)->Release();
     };
-    device_ops_.ioctl = [](mx_device_t* dev, uint32_t ops, const void* in_buf, size_t in_len,
-                           void* out_buf, size_t out_len) -> ssize_t {
-        return static_cast<Device*>(dev->ctx)->Ioctl(ops, in_buf, in_len, out_buf, out_len);
+    device_ops_.ioctl = [](void* ctx, uint32_t ops, const void* in_buf, size_t in_len,
+                           void* out_buf, size_t out_len, size_t* out_actual) -> mx_status_t {
+        return static_cast<Device*>(ctx)->Ioctl(ops, in_buf, in_len, out_buf, out_len, out_actual);
     };
 
     wlanmac_ops_.query = [](mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
@@ -62,13 +63,13 @@ void Device::Unbind() {
     device_remove(device_);
 }
 
-mx_status_t Device::Release() {
+void Device::Release() {
     std::printf("wlan::testing::Device::Release()\n");
     delete this;
-    return NO_ERROR;
 }
 
-ssize_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+mx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                          size_t out_len, size_t* out_actual) {
     return ERR_NOT_SUPPORTED;
 }
 
