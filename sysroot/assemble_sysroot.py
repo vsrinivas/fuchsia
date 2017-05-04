@@ -15,21 +15,28 @@ import sys
 # names are in ignore_list. Does not copy files that appear to be identical.
 # This is very similar to shutil.copytree except that it compares files before
 # copying to avoid touching files whose contents match.
-def copy_tree(source, dest, ignore_list):
+# Returns whether it copied any files.
+def copy_tree(source, dest):
+    copied_anything = False
     for entry in os.walk(source):
         dirpath, dirnames, filenames = entry
+        # Skip the 'debug-info' directory as that contains files that change even when there's no
+        # need to recompile or relink.
+        if 'debug-info' in dirnames:
+            dirnames.remove('debug-info')
         reldir = os.path.relpath(dirpath, source)
         destdir = os.path.join(dest, reldir)
         if not os.path.exists(destdir):
             os.makedirs(destdir)
         for filename in filenames:
-            if dirpath == source and filename in ignore_list:
-                continue
             source_file = os.path.join(dirpath, filename)
             dest_file = os.path.join(destdir, filename)
             if os.path.exists(source_file) and os.path.exists(dest_file) and filecmp.cmp(source_file, dest_file):
                 continue
             shutil.copy(source_file, dest_file)
+            sys.stderr.write('Copied %s\n' % source_file)
+            copied_anything = True
+    return copied_anything
 
 
 def main():
@@ -42,12 +49,13 @@ def main():
     args = parser.parse_args()
 
     # Copy everything from the magenta sysroot.
-    copy_tree(args.magenta_sysroot, args.sysroot, [])
-    copy_tree(args.toolchain_sysroot, args.sysroot, [])
+    copied_anything = copy_tree(args.magenta_sysroot, args.sysroot)
+    copied_anything = copy_tree(args.toolchain_sysroot, args.sysroot) or copied_anything
 
-    stamp_path = os.path.relpath(args.sysroot_stamp)
-    with open(stamp_path, 'w') as stamp_file:
-        stamp_file.truncate()
+    if copied_anything:
+        stamp_path = os.path.relpath(args.sysroot_stamp)
+        with open(stamp_path, 'w') as stamp_file:
+            stamp_file.truncate()
 
     return 0
 
