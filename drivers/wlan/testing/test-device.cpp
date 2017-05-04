@@ -55,7 +55,7 @@ mx_status_t Device::Bind() {
     args.proto_id = MX_PROTOCOL_WLANMAC;
     args.proto_ops = &wlanmac_ops_;
 
-    return device_add2(test_device_, &args, &device_);
+    return device_add(test_device_, &args, &device_);
 }
 
 void Device::Unbind() {

@@ -80,7 +80,7 @@ mx_status_t Device::Bind() {
     args.proto_id = MX_PROTOCOL_ETHERMAC;
     args.proto_ops = &ethmac_ops_;
 
-    status = device_add2(wlanmac_device_, &args, &device_);
+    status = device_add(wlanmac_device_, &args, &device_);
     if (status != NO_ERROR) {
         errorf("could not add device err=%d\n", status);
         auto shutdown_status = SendShutdown();
