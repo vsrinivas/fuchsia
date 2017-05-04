@@ -174,6 +174,8 @@ typedef struct {
 #define DC_OP_STATUS         0x80000010
 #define DC_OP_ADD_DEVICE     0x80000011
 #define DC_OP_REMOVE_DEVICE  0x80000012
+#define DC_OP_BIND_DEVICE    0x80000013
+#define DC_OP_REBIND_DEVICE  0x00000014
 
 // Host->Coord Ops for DmCtl
 #define DC_OP_DM_COMMAND     0x80000020

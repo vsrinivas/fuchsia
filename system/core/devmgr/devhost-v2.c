@@ -427,32 +427,37 @@ fail:
     return r;
 }
 
-// Send message to devcoordinator informing it that this device
-// is being removed.  Called under devhost api lock.
-mx_status_t devhost_remove(mx_device_t* dev) {
+static mx_status_t devhost_simple_rpc(mx_device_t* dev, uint32_t op,
+                                      const char* args, const char* opname) {
     char buffer[512];
     const char* path = mkdevpath(dev, buffer, sizeof(buffer));
-    log(RPC_OUT, "devhost[%s] remove\n", path);
+    log(RPC_OUT, "devhost[%s] %s args='%s'\n", path, opname, args ? args : "");
     dc_msg_t msg;
     uint32_t msglen;
     mx_status_t r;
-    if ((r = dc_msg_pack(&msg, &msglen, NULL, 0, NULL, NULL)) < 0) {
+    if ((r = dc_msg_pack(&msg, &msglen, NULL, 0, NULL, args)) < 0) {
         return r;
     }
-    msg.op = DC_OP_REMOVE_DEVICE;
+    msg.op = op;
     msg.protocol_id = 0;
     if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0)) < 0) {
-        log(ERROR, "devhost: rpc:device_remove failed: %d\n", r);
+        log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
     }
     return r;
 }
 
+// Send message to devcoordinator informing it that this device
+// is being removed.  Called under devhost api lock.
+mx_status_t devhost_remove(mx_device_t* dev) {
+    return devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
+}
+
 mx_status_t devhost_device_rebind(mx_device_t* dev) {
-    return ERR_NOT_SUPPORTED;
+    return devhost_simple_rpc(dev, DC_OP_REBIND_DEVICE, NULL, "rebind-device");
 }
 
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
-    return ERR_NOT_SUPPORTED;
+    return devhost_simple_rpc(dev, DC_OP_BIND_DEVICE, drv_name, "bind-device");
 }
 
 extern driver_api_t devhost_api;

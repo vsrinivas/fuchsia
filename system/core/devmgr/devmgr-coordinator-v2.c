@@ -83,6 +83,7 @@ mx_handle_t get_sysinfo_job_root(void);
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
+static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
 
 static mx_handle_t devhost_job;
 static port_t dc_port;
@@ -269,7 +270,7 @@ static mx_status_t dc_add_device(device_t* parent,
     if (hcount == 0) {
         return ERR_INVALID_ARGS;
     }
-    if (msg->namelen >= MX_DEVICE_NAME_MAX) {
+    if (msg->namelen > MX_DEVICE_NAME_MAX) {
         return ERR_INVALID_ARGS;
     }
     if (msg->datalen % sizeof(mx_device_prop_t)) {
@@ -337,8 +338,8 @@ static mx_status_t dc_add_device(device_t* parent,
 static mx_status_t dc_remove_device(device_t* dev) {
     if (dev->flags & DEV_CTX_IMMORTAL) {
         log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
+        return ERR_BAD_STATE;
     } else {
-        printf("REMOVE %p %s\n", dev, dev->name);
         dev->flags |= DEV_CTX_DEAD;
 
         // remove from devfs, preventing further OPEN attempts
@@ -357,6 +358,39 @@ static mx_status_t dc_remove_device(device_t* dev) {
         }
     }
     return NO_ERROR;
+}
+
+static mx_status_t dc_bind_device(device_t* dev, const char* drvname) {
+    size_t tmplen = strlen(drvname) + 12;
+    char tmp[tmplen];
+    snprintf(tmp, tmplen, "driver/%s.so", drvname);
+    log(INFO, "devcoord: dc_bind_device() '%s' '%s'\n", drvname, tmp);
+
+    // shouldn't be possible to get a bind request for a shadow device
+    if (dev->flags & DEV_CTX_SHADOW) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    //TODO: disallow if we're in the middle of enumeration, etc
+    driver_t* drv;
+    list_for_every_entry(&list_drivers, drv, driver_t, node) {
+        if (!strcmp(drv->libname, tmp)) {
+            if (dc_is_bindable(drv, dev->protocol_id,
+                               dev->props, dev->prop_count, false)) {
+                log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
+                    drv->name, dev->name);
+                dc_attempt_bind(drv, dev);
+            }
+            break;
+        }
+    }
+
+    return NO_ERROR;
+};
+
+static mx_status_t dc_rebind_device(device_t* dev) {
+    log(INFO, "devcoord: dc_rebind_device() '%s'\n", dev->name);
+    return ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t dc_handle_device_read(device_t* dev) {
@@ -393,17 +427,27 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
-        log(RPC_IN, "devcoord: rpc: add device '%s' args='%s'\n", name, args);
-        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) == NO_ERROR) {
-            goto done;
+        log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
+        if ((r = dc_add_device(dev, hin, hcount, &msg, name, args, data)) < 0) {
+            while (hcount > 0) {
+                mx_handle_close(hin[--hcount]);
+            }
         }
         break;
 
     case DC_OP_REMOVE_DEVICE:
-        log(RPC_IN, "devcoord: rpc: remove device '%s'\n", dev->name);
-        if ((r = dc_remove_device(dev)) == NO_ERROR) {
-            goto done;
-        }
+        log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
+        r = dc_remove_device(dev);
+        break;
+
+    case DC_OP_BIND_DEVICE:
+        log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
+        r = dc_bind_device(dev, args);
+        break;
+
+    case DC_OP_REBIND_DEVICE:
+        log(RPC_IN, "devcoord: rpc: rebind-device '%s'\n", dev->name);
+        r = dc_rebind_device(dev);
         break;
 
     case DC_OP_DM_COMMAND:
@@ -421,7 +465,7 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         switch (pending->op) {
         case PENDING_BIND:
             if (msg.status != NO_ERROR) {
-                log(ERROR, "devcoord: rpc: bind device '%s' status %d\n",
+                log(ERROR, "devcoord: rpc: bind-driver '%s' status %d\n",
                     dev->name, msg.status);
             }
             //TODO: try next driver, clear BOUND flag
@@ -430,16 +474,13 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         free(pending);
         return NO_ERROR;
     }
+
     default:
         log(ERROR, "devcoord: invalid rpc op %08x\n", msg.op);
         r = ERR_NOT_SUPPORTED;
         break;
     }
 
-fail:
-    while (hcount > 0) {
-        mx_handle_close(hin[--hcount]);
-    }
 done:
     ;
     dc_status_t dcs = {
