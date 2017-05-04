@@ -220,10 +220,16 @@ if [ "$NET" -eq 2 ]; then
 fi
 
 if [ "$NET" -ne 0 ]; then
+    MAC=""
+    if [ "$NET" -eq 2 ]; then
+        HASH=$(echo $IFNAME | shasum)
+        SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+        MAC=",mac=52:54:00$SUFFIX"
+    fi
     if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
-        ARGS+=" -device e1000,netdev=net0"
+        ARGS+=" -device e1000,netdev=net0${MAC}"
     else
-        ARGS+=" -device virtio-net-pci,netdev=net0"
+        ARGS+=" -device virtio-net-pci,netdev=net0${MAC}"
     fi
 fi
 
