@@ -70,8 +70,12 @@ fail:
 
 __EXPORT mx_status_t device_create(const char* name, void* ctx,
                                    mx_protocol_device_t* ops, mx_driver_t* driver,
-                                   mx_device_t** out) {
-    return API->device_create(name, ctx, ops, driver, out);
+                                   uint32_t proto_id, void* proto_ops, mx_device_t** out) {
+    mx_status_t status = API->device_create(name, ctx, ops, driver, out);
+    if (status == NO_ERROR) {
+        API->device_set_protocol(*out, proto_id, proto_ops);
+    }
+    return status;
 }
 
 __EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,

@@ -96,11 +96,9 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
         status = device_add(parent, &args, &device->mxdev);
     } else {
-        status = device_create(name, device, &kpci_device_proto, drv, &device->mxdev);
+        status = device_create(name, device, &kpci_device_proto, drv,
+                               MX_PROTOCOL_PCI, &_pci_protocol, &device->mxdev);
         if (status == NO_ERROR) {
-            // TODO (voydanoff) device_set_protocol can be folded into device_create()
-            device_set_protocol(device->mxdev, MX_PROTOCOL_PCI, &_pci_protocol);
-
             // TODO (voydanoff) devhost_create_pcidev() requires that we write directly into the mx_device_t here.
             // This can be cleaned up after we remove devhost_create_pcidev()
             device->mxdev->props = device->props;

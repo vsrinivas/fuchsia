@@ -114,7 +114,8 @@ mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t
 // it immediately.
 
 mx_status_t device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
-                          mx_driver_t* driver, mx_device_t** out);
+                          mx_driver_t* driver, uint32_t proto_id, void* proto_ops,
+                          mx_device_t** out);
 // device_create() is used to create a device without adding it to the devmgr.
 // This should only be used in mx_driver_ops_t create() callbacks for creating bus device children.
 
