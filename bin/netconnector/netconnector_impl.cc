@@ -65,8 +65,6 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
 
   // Running as the listener.
 
-  host_name_ = GetHostName();
-
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
         fidl::Array<fidl::String> device_names =
@@ -166,23 +164,21 @@ void NetConnectorImpl::AddServiceAgent(
 }
 
 void NetConnectorImpl::StartMdns() {
-  // TODO(dalesat): Temporary hack until we have a real gethostname. Remove.
-  if (++mdns_start_attempts_ > 6) {
-    return;
-  }
-  if (host_name_ == "fuchsia" || host_name_ == "fuchsia-0") {
+  // TODO: Remove this check when NET-79 is fixed.
+  if (!NetworkIsReady()) {
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() {
-          host_name_ = GetHostName();
-          StartMdns();
-        },
-        ftl::TimeDelta::FromSeconds(5));
+        [this]() { StartMdns(); }, ftl::TimeDelta::FromSeconds(5));
     return;
   }
 
-  FTL_LOG(INFO) << "NetConnector starting, host name " << host_name_;
+  host_name_ = GetHostName();
 
-  mdns_service_impl_.Start(host_name_);
+  if (!mdns_service_impl_.Start(host_name_)) {
+    FTL_LOG(ERROR) << "mDNS failed to start";
+    return;
+  }
+
+  FTL_LOG(INFO) << "mDNS started, host name " << host_name_;
 
   mdns_service_impl_.PublishServiceInstance(kFuchsiaServiceName, host_name_,
                                             kPort, std::vector<std::string>());

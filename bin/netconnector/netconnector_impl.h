@@ -95,9 +95,6 @@ class NetConnectorImpl : public NetConnector {
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 
-  // TODO(dalesat): Temporary hack until we have a real gethostname. Remove.
-  uint32_t mdns_start_attempts_ = 0;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };
 

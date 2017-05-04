@@ -19,13 +19,8 @@ void MdnsServiceImpl::AddBinding(fidl::InterfaceRequest<MdnsService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void MdnsServiceImpl::Start(const std::string& host_name) {
-  if (!mdns_.Start(host_name)) {
-    FTL_LOG(ERROR) << "Failed to start mDNS";
-    return;
-  }
-
-  FTL_LOG(INFO) << "mDNS starting";
+bool MdnsServiceImpl::Start(const std::string& host_name) {
+  return mdns_.Start(host_name);
 }
 
 void MdnsServiceImpl::SubscribeToService(

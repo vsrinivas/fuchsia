@@ -21,7 +21,7 @@ class MdnsServiceImpl : public MdnsService {
 
   void AddBinding(fidl::InterfaceRequest<MdnsService> request);
 
-  void Start(const std::string& host_name);
+  bool Start(const std::string& host_name);
 
   // Registers interest in the specified service.
   void SubscribeToService(const std::string& service_name,
