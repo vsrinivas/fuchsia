@@ -30,25 +30,28 @@ mx_driver_t*          IntelHDAController::driver_;
 mxtl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device interface thunks
-#define DEV(_dev)  static_cast<IntelHDAController*>((_dev)->ctx)
+#define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
 mx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
+    .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
-    .openat       = nullptr,
+    .open_at      = nullptr,
     .close        = nullptr,
-    .unbind       = [](mx_device_t* dev) { DEV(dev)->DeviceShutdown(); },
-    .release      = [](mx_device_t* dev) -> mx_status_t { return DEV(dev)->DeviceRelease(); },
+    .unbind       = [](void* ctx) { DEV(ctx)->DeviceShutdown(); },
+    .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
     .read         = nullptr,
     .write        = nullptr,
     .iotxn_queue  = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](mx_device_t* dev,
+    .ioctl        = [](void*        ctx,
                        uint32_t     op,
                        const void*  in_buf,
                        size_t       in_len,
                        void*        out_buf,
-                       size_t       out_len) -> ssize_t {
-                        return DEV(dev)->DeviceIoctl(op, in_buf, in_len, out_buf, out_len);
+                       size_t       out_len,
+                       size_t*      out_actual) -> mx_status_t {
+                        return DEV(ctx)->DeviceIoctl(op, in_buf, in_len, out_buf, out_len,
+                                                     out_actual);
                    },
     .suspend      = nullptr,
     .resume       = nullptr,
@@ -200,7 +203,6 @@ void IntelHDAController::DeviceShutdown() {
 mx_status_t IntelHDAController::DeviceRelease() {
     // Take our unmanaged reference back from our published device node.
     auto thiz = mxtl::internal::MakeRefPtrNoAdopt(this);
-    device_destroy(dev_node_);
 
     // ASSERT that we have been properly shut down, then release the DDK's
     // reference to our state as we allow thiz to go out of scope.

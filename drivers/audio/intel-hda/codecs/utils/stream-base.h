@@ -84,11 +84,12 @@ private:
     mx_status_t DoSetStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
 
-    ssize_t DeviceIoctl(uint32_t op,
-                        const void* in_buf,
-                        size_t in_len,
-                        void* out_buf,
-                        size_t out_len) __TA_EXCLUDES(obj_lock_);
+    mx_status_t DeviceIoctl(uint32_t op,
+                            const void* in_buf,
+                            size_t in_len,
+                            void* out_buf,
+                            size_t out_len,
+                            size_t* out_actual) __TA_EXCLUDES(obj_lock_);
 
     const uint32_t id_;
     const bool     is_input_;

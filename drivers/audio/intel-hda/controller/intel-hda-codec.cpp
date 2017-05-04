@@ -49,26 +49,26 @@ void IntelHDACodec::PrintDebugPrefix() const {
 
 #define DEV (static_cast<IntelHDACodec*>(codec_dev->ctx))
 mx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
+    .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
-    .openat       = nullptr,
+    .open_at      = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
-    .release      = [](mx_device_t* codec_dev) -> mx_status_t {
-                        device_destroy(codec_dev);
-                        return NO_ERROR;
-                    },
+    .release      = nullptr,
     .read         = nullptr,
     .write        = nullptr,
     .iotxn_queue  = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](mx_device_t* codec_dev,
+    .ioctl        = [](void* ctx,
                       uint32_t op,
                       const void* in_buf,
                       size_t in_len,
                       void* out_buf,
-                      size_t out_len) -> ssize_t {
-                        return DEV->DeviceIoctl(op, in_buf, in_len, out_buf, out_len);
+                      size_t out_len,
+                      size_t* out_actual) -> mx_status_t {
+                        return reinterpret_cast<IntelHDACodec*>(ctx)->
+                            DeviceIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
                    },
     .suspend      = nullptr,
     .resume       = nullptr,
@@ -224,19 +224,21 @@ mx_status_t IntelHDACodec::PublishDevice() {
     snprintf(name, sizeof(name), "intel-hda-codec-%03u", codec_id_);
 
     // Initialize our device and fill out the protocol hooks
-    mx_status_t res = device_create(name, this, &CODEC_DEVICE_THUNKS, IntelHDAController::driver(),
-                                    &dev_node_);
-    if (res != NO_ERROR) {
-        LOG("Failed to create codec device for \"%s\" (res %d)\n", name, res);
-        return res;
-    }
-    device_set_protocol(dev_node_, MX_PROTOCOL_IHDA_CODEC, &CODEC_PROTO_THUNKS);
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = name;
+    args.ctx = this;
+    args.driver = IntelHDAController::driver();
+    args.ops =  &CODEC_DEVICE_THUNKS;
+    args.proto_id = MX_PROTOCOL_IHDA_CODEC;
+    args.proto_ops = &CODEC_PROTO_THUNKS;
+    args.props = dev_props_;
+    args.prop_count = countof(dev_props_);
 
     // Publish the device.
-    res = device_add_with_props(dev_node_, controller_.dev_node(), dev_props_, countof(dev_props_));
+    mx_status_t res = device_add2(controller_.dev_node(), &args, &dev_node_);
     if (res != NO_ERROR) {
         LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
-        device_destroy(dev_node_);
         return res;
     }
 

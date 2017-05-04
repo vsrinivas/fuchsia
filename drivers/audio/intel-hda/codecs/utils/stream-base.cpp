@@ -16,24 +16,22 @@ namespace intel_hda {
 namespace codecs {
 
 mx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
+    .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
     .open         = nullptr,
-    .openat       = nullptr,
+    .open_at      = nullptr,
     .close        = nullptr,
     .unbind       = nullptr,
-    .release      = [](mx_device_t* stream_dev) -> mx_status_t {
-                        device_destroy(stream_dev);
-                        return NO_ERROR;
-                    },
+    .release      = nullptr,
     .read         = nullptr,
     .write        = nullptr,
     .iotxn_queue  = nullptr,
     .get_size     = nullptr,
-    .ioctl        = [](mx_device_t* stream_dev, uint32_t op,
+    .ioctl        = [](void* ctx, uint32_t op,
                        const void* in_buf, size_t in_len,
-                       void* out_buf, size_t out_len) -> ssize_t {
-                        return reinterpret_cast<IntelHDAStreamBase*>(stream_dev->ctx)->
-                            DeviceIoctl(op, in_buf, in_len, out_buf, out_len);
+                       void* out_buf, size_t out_len, size_t* out_actual) -> mx_status_t {
+                        return reinterpret_cast<IntelHDAStreamBase*>(ctx)->
+                            DeviceIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
                     },
     .suspend      = nullptr,
     .resume       = nullptr,
@@ -134,23 +132,18 @@ mx_status_t IntelHDAStreamBase::PublishDevice(mx_driver_t* codec_driver,
     if (shutting_down_ || (parent_device_ != nullptr)) return ERR_BAD_STATE;
 
     // Initialize our device and fill out the protocol hooks
-    mx_status_t res = device_create(dev_name_, this, &STREAM_DEVICE_THUNKS, codec_driver,
-                                    &stream_device_);
-    if (res != NO_ERROR) {
-        LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
-        return res;
-    }
-    if (is_input()) {
-        device_set_protocol(stream_device_, MX_PROTOCOL_AUDIO2_INPUT, nullptr);
-    } else {
-        device_set_protocol(stream_device_, MX_PROTOCOL_AUDIO2_OUTPUT, nullptr);
-    }
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = dev_name_;
+    args.ctx = this;
+    args.driver = codec_driver;
+    args.ops = &STREAM_DEVICE_THUNKS;
+    args.proto_id = (is_input() ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT);
 
     // Publish the device.
-    res = device_add(stream_device_, codec_device);
+    mx_status_t res = device_add2(codec_device, &args, &stream_device_);
     if (res != NO_ERROR) {
         LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
-        device_destroy(stream_device_);
         return res;
     }
 
@@ -270,16 +263,21 @@ mx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
     return NO_ERROR;
 }
 
-ssize_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
-                                        const void* in_buf,
-                                        size_t in_len,
-                                        void* out_buf,
-                                        size_t out_len) {
+mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
+                                            const void* in_buf,
+                                            size_t in_len,
+                                            void* out_buf,
+                                            size_t out_len,
+                                            size_t* out_actual) {
     // The only IOCTL we support is get channel.
-    if ((op != AUDIO2_IOCTL_GET_CHANNEL) ||
-        (out_buf == nullptr)           ||
-        (out_len != sizeof(mx_handle_t)))
+    if (op != AUDIO2_IOCTL_GET_CHANNEL) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if ((out_buf == nullptr) ||
+        (out_actual == nullptr) ||
+        (out_len != sizeof(mx_handle_t))) {
         return ERR_INVALID_ARGS;
+    }
 
     // Enter the object lock and check to see if we are already bound to a
     // channel.  Currently, we do not support binding to multiple channels at
@@ -309,6 +307,7 @@ ssize_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     if (res == NO_ERROR) {
         stream_channel_ = channel;
         *(reinterpret_cast<mx_handle_t*>(out_buf)) = client_endpoint.release();
+        *out_actual = sizeof(mx_handle_t);
     }
 
     return res;

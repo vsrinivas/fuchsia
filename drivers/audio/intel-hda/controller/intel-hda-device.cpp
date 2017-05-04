@@ -16,13 +16,18 @@ namespace audio {
 namespace intel_hda {
 
 template <typename DeviceType>
-ssize_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
-                                                const void* in_buf, size_t in_len,
-                                                void* out_buf, size_t out_len) {
-    if ((op != IHDA_IOCTL_GET_CHANNEL) ||
-        (out_buf == nullptr) ||
-        (out_len != sizeof(mx_handle_t)))
+mx_status_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
+                                                    const void* in_buf, size_t in_len,
+                                                    void* out_buf, size_t out_len,
+                                                    size_t* out_actual) {
+    if (op != IHDA_IOCTL_GET_CHANNEL) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if ((out_buf == nullptr) ||
+        (out_actual == nullptr) ||
+        (out_len != sizeof(mx_handle_t))) {
         return ERR_INVALID_ARGS;
+    }
 
     auto channel = DispatcherChannelAllocator::New();
     if (channel == nullptr)
@@ -30,7 +35,10 @@ ssize_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
 
     mx::channel out_channel;
     mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &out_channel);
-    *(reinterpret_cast<mx_handle_t*>(out_buf)) = out_channel.release();
+    if (res == NO_ERROR) {
+        *(reinterpret_cast<mx_handle_t*>(out_buf)) = out_channel.release();
+        *out_actual = sizeof(mx_handle_t);
+    }
 
     return res;
 }
