@@ -141,7 +141,7 @@ mx_status_t IntelHDAStreamBase::PublishDevice(mx_driver_t* codec_driver,
     args.proto_id = (is_input() ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT);
 
     // Publish the device.
-    mx_status_t res = device_add2(codec_device, &args, &stream_device_);
+    mx_status_t res = device_add(codec_device, &args, &stream_device_);
     if (res != NO_ERROR) {
         LOG("Failed to add stream device for \"%s\" (res %d)\n", dev_name_, res);
         return res;

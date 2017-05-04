@@ -504,7 +504,7 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     args.ops = &CONTROLLER_DEVICE_THUNKS;
     args.proto_id = MX_PROTOCOL_IHDA;
 
-    res = device_add2(pci_dev_, &args, &dev_node_);
+    res = device_add(pci_dev_, &args, &dev_node_);
     if (res == NO_ERROR) {
         this->AddRef();
         SetState(State::OPERATING);

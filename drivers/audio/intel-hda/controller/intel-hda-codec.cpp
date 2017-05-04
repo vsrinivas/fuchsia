@@ -236,7 +236,7 @@ mx_status_t IntelHDACodec::PublishDevice() {
     args.prop_count = countof(dev_props_);
 
     // Publish the device.
-    mx_status_t res = device_add2(controller_.dev_node(), &args, &dev_node_);
+    mx_status_t res = device_add(controller_.dev_node(), &args, &dev_node_);
     if (res != NO_ERROR) {
         LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
         return res;
