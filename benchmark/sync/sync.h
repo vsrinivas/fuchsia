@@ -38,6 +38,10 @@ class SyncBenchmark : public ledger::PageWatcher {
  private:
   void RunSingle(int i);
 
+  void Backlog();
+
+  void VerifyBacklog();
+
   void ShutDown();
 
   std::unique_ptr<app::ApplicationContext> application_context_;
@@ -47,10 +51,15 @@ class SyncBenchmark : public ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
+  files::ScopedTempDir gamma_tmp_dir_;
   app::ApplicationControllerPtr alpha_controller_;
   app::ApplicationControllerPtr beta_controller_;
+  app::ApplicationControllerPtr gamma_controller_;
+  ledger::LedgerPtr gamma_;
+  fidl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
+  ledger::PagePtr gamma_page_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SyncBenchmark);
 };
