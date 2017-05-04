@@ -47,16 +47,16 @@ The hash chunk is optional.
     - Must be 1.
     - Identifies "SHA-256".
  * Hash data.
-  - 32 bit length of hash.
-    - Must be 32.
-  - Octets of hash.
-    - The result of hashing the contents of archive from the start of the
-      archive until the end of the last chunk listed in the index with the
-      “octets of hash” replaced with zeros.
-    - Note: The hash includes all the chunks in the index but does not include
-      any of the content chunks, which are not in the index. If you wish to
-      check the integrity of the content chunks, include a directory hash
-      chunk.
+    - 32 bit length of hash.
+      - Must be 32.
+    - Octets of hash.
+      - The result of hashing the contents of archive from the start of the
+        archive until the end of the last chunk listed in the index with the
+        “octets of hash” replaced with zeros.
+      - Note: The hash includes all the chunks in the index but does not include
+        any of the content chunks, which are not in the index. If you wish to
+        check the integrity of the content chunks, include a directory hash
+        chunk.
 
 Note: We might want to replace this hash algorithm with the one we use in
 blobfs.
