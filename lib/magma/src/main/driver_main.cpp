@@ -424,7 +424,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     args.proto_id = MX_PROTOCOL_DISPLAY;
     args.proto_ops = &intel_i915_display_proto;
 
-    status = device_add2(mx_device, &args, &device->mxdev);
+    status = device_add(mx_device, &args, &device->mxdev);
     if (status != NO_ERROR) {
         delete(device);
         return DRET_MSG(status, "device_add failed");
