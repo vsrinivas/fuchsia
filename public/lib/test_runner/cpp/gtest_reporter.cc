@@ -10,29 +10,43 @@
 
 namespace test_runner {
 
-GoogleTestReporter::GoogleTestReporter(const std::string& identity) {
-  app_context_ = app::ApplicationContext::CreateFromStartupInfoNotChecked();
-  if (!app_context_->environment()) {
-    // Allow the tests to run without reporting.
-    return;
-  }
-
-  test_runner_ =
-      app_context_->ConnectToEnvironmentService<test_runner::TestRunner>();
-  test_runner_->Identify(identity);
-
-  testing::UnitTest::GetInstance()->listeners().Append(this);
+GoogleTestReporter::GoogleTestReporter(const std::string& identity)
+    : identity_(identity) {
+  thread_.Run();
+  thread_.TaskRunner()->PostTask([this] { InitOnThread(); });
 }
 
 GoogleTestReporter::~GoogleTestReporter() {
-  testing::UnitTest::GetInstance()->listeners().Release(this);
+  thread_.TaskRunner()->PostTask([this] { QuitOnThread(); });
+  thread_.Join();
 }
 
-void GoogleTestReporter::OnTestProgramEnd(const testing::UnitTest& test) {
-  if (test.Failed()) {
-    test_runner_->Fail("Failed");
+void GoogleTestReporter::InitOnThread() {
+  application_context_ =
+      app::ApplicationContext::CreateFromStartupInfoNotChecked();
+  if (application_context_->environment()) {
+    tracing::InitializeTracer(application_context_.get(), {identity_});
+    test_runner_ = application_context_
+                       ->ConnectToEnvironmentService<test_runner::TestRunner>();
+    test_runner_->Identify(identity_);
   }
-  test_runner_->Teardown();
 }
 
+void GoogleTestReporter::QuitOnThread() {
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
+
+void GoogleTestReporter::OnTestProgramEnd(const ::testing::UnitTest& test) {
+  bool failed = test.Failed();
+  thread_.TaskRunner()->PostTask([this, failed] {
+    if (!test_runner_) {
+      return;
+    }
+    if (failed) {
+      test_runner_->Fail("Failed");
+    }
+    test_runner_->Teardown();
+  });
+}
+
+}  // namespace test_runner

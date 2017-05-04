@@ -21,11 +21,12 @@ source_set("lib") {
 source_set("gtest_reporter") {
   testonly = true
   sources = [
-    "gtest_reporter.h",
     "gtest_reporter.cc",
+    "gtest_reporter.h",
   ]
   public_deps = [
     ":lib",
+    "//apps/tracing/lib/trace:provider",
     "//third_party/gtest",
   ]
 }

@@ -7,8 +7,10 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "gtest/gtest.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/threading/thread.h"
 
 namespace test_runner {
 
@@ -21,16 +23,21 @@ class GoogleTestReporter : public testing::EmptyTestEventListener {
  public:
   // identity uniquely identifies this client to the TestRunner service.
   explicit GoogleTestReporter(const std::string& identity);
-  virtual ~GoogleTestReporter() override;
+  ~GoogleTestReporter() override;
+
+  void InitOnThread();
+
+  void QuitOnThread();
 
   // testing::EmptyTestEventListener override.
-  // This gets called when all of the tests are done running.
-  void OnTestProgramEnd(const ::testing::UnitTest&) override;
+  // This gets called when all of the tests are done running
+  void OnTestProgramEnd(const ::testing::UnitTest& test) override;
 
  private:
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  const std::string identity_;
+  mtl::Thread thread_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
   TestRunnerPtr test_runner_;
-  mtl::MessageLoop message_loop_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleTestReporter);
 };

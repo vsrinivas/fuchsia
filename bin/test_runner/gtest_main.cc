@@ -6,7 +6,11 @@
 #include "gtest/gtest.h"
 
 int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
   test_runner::GoogleTestReporter reporter(argv[0]);
-  return RUN_ALL_TESTS();
+
+  testing::InitGoogleTest(&argc, argv);
+  testing::UnitTest::GetInstance()->listeners().Append(&reporter);
+  int status = RUN_ALL_TESTS();
+  testing::UnitTest::GetInstance()->listeners().Release(&reporter);
+  return status;
 }
