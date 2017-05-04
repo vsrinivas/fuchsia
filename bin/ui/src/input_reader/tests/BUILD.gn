@@ -26,6 +26,7 @@ executable("input_apptests") {
     "//apps/mozart/lib/tests/mocks",
     "//apps/mozart/lib/view_associate_framework:mocks",
     "//apps/mozart/services/input",
+    "//apps/test_runner/services:test_runner",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
     "//lib/mtl",

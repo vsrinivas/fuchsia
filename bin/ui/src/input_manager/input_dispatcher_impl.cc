@@ -283,6 +283,8 @@ void InputDispatcherImpl::OnHitTestResult(
           DeliverEvent(std::move(pending_events_.front()));
           PopAndScheduleNextEvent();
         });
+  } else {
+    PopAndScheduleNextEvent();
   }
 }
 

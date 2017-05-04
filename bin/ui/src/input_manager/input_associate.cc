@@ -164,6 +164,8 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
   if (it == input_connections_by_view_token_.end()) {
     FTL_VLOG(1)
         << "DeliverEvent: dropped because there was no input connection";
+    if (callback)
+      callback(false);
     return;
   }
 

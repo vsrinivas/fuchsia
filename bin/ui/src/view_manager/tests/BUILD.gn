@@ -26,6 +26,7 @@ executable("view_manager_apptests") {
     "//apps/mozart/lib/tests/mocks",
     "//apps/mozart/lib/view_associate_framework:mocks",
     "//apps/mozart/src/view_manager:lib",
+    "//apps/test_runner/services:test_runner",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",
