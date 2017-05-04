@@ -17,17 +17,22 @@ import platform
 import subprocess
 import sys
 
-ossuffix = "linux"
+clangos = "linux"
 if platform.platform().startswith("Darwin"):
-    ossuffix = "darwin"
+    clangos = "darwin"
 CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
-                           "clang+llvm-x86_64-%s" % ossuffix, "bin", "clang-format")
+                           "clang+llvm-x86_64-%s" % clangos, "bin", "clang-format")
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
+gotoolos = "linux64"
+if platform.platform().startswith("Darwin"):
+    gotoolos = "mac"
+GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, gotoolos, "go", "bin", "gofmt")
 
 C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes", "-i"]
 DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
+GO_CMD = [GO_TOOL, "-w"]
 
 EXT_TO_COMMAND = {
     ".cc": C_CMD,
@@ -35,6 +40,7 @@ EXT_TO_COMMAND = {
     ".dart": DART_CMD,
     ".gn": GN_CMD,
     ".gni": GN_CMD,
+    ".go": GO_CMD,
     ".h": C_CMD,
     ".hh": C_CMD,
     ".hpp": C_CMD,
