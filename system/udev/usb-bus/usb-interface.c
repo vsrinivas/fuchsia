@@ -345,7 +345,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         header = NEXT_DESCRIPTOR(header);
     }
 
-    // callback thread must be started before device_add_with_props() since it will recursively
+    // callback thread must be started before device_add() since it will recursively
     // bind other drivers to us before it returns.
     start_callback_thread(intf);
 

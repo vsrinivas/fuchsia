@@ -30,27 +30,52 @@ static void _driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     DM_UNLOCK();
 }
 
-static mx_status_t _device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
-                                  mx_driver_t* drv, mx_device_t** out) {
+static mx_status_t _device_add(mx_device_t* parent, device_add_args_t* args,
+                               mx_device_t** out) {
     mx_status_t r;
-    DM_LOCK();
-    r = devhost_device_create(name, ctx, ops, drv, out);
-    DM_UNLOCK();
-    return r;
-}
+    mx_device_t* dev = NULL;
 
-static void _device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
-    DM_LOCK();
-    devhost_device_set_protocol(dev, proto_id, proto_ops);
-    DM_UNLOCK();
-}
+    if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
+        return ERR_INVALID_ARGS;
+    }
+    if (!args->ops || args->ops->version != DEVICE_OPS_VERSION) {
+        return ERR_INVALID_ARGS;
+    }
+    if (args->flags & ~(DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_BUSDEV)) {
+        return ERR_INVALID_ARGS;
+    }
+    if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & DEVICE_ADD_BUSDEV)) {
+        return ERR_INVALID_ARGS;
+    }
 
-static mx_status_t _device_add(mx_device_t* dev, mx_device_t* parent,
-                               mx_device_prop_t* props, uint32_t prop_count,
-                               const char* businfo, mx_handle_t resource) {
-    mx_status_t r;
     DM_LOCK();
-    r = devhost_device_add(dev, parent, props, prop_count, businfo, resource);
+    r = devhost_device_create(args->name, args->ctx, args->ops, args->driver, &dev);
+    if (r != NO_ERROR) {
+        DM_UNLOCK();
+        return r;
+    }
+    if (args->proto_id) {
+        devhost_device_set_protocol(dev, args->proto_id, args->proto_ops);
+    }
+    if (args->flags & DEVICE_ADD_NON_BINDABLE) {
+        devhost_device_set_bindable(dev, false);
+    }
+
+    if (args->flags & DEVICE_ADD_BUSDEV) {
+        r = devhost_device_add(dev, parent, args->props, args->prop_count, args->busdev_args,
+                               args->rsrc);
+    } else if (args->flags & DEVICE_ADD_INSTANCE) {
+        dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
+        r = devhost_device_add(dev, parent, NULL, 0, NULL, MX_HANDLE_INVALID);
+    } else {
+        r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL, MX_HANDLE_INVALID);
+    }
+    if (r == NO_ERROR) {
+        *out = dev;
+    } else {
+        devhost_device_destroy(dev);
+    }
+
     DM_UNLOCK();
     return r;
 }
@@ -80,18 +105,6 @@ static mx_status_t _device_rebind(mx_device_t* dev) {
     r = devhost_device_rebind(dev);
     DM_UNLOCK();
     return r;
-}
-
-static void _device_destroy(mx_device_t* dev) {
-    DM_LOCK();
-    devhost_device_destroy(dev);
-    DM_UNLOCK();
-}
-
-static void _device_set_bindable(mx_device_t* dev, bool bindable) {
-    DM_LOCK();
-    devhost_device_set_bindable(dev, bindable);
-    DM_UNLOCK();
 }
 
 mx_status_t device_bind(mx_device_t* dev, const char* drv_libname) {
@@ -135,14 +148,9 @@ static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_
 
 driver_api_t devhost_api = {
     .driver_unbind = _driver_unbind,
-    .device_create = _device_create,
-    .device_set_protocol = _device_set_protocol,
     .device_add = _device_add,
-    .device_add_instance = _device_add_instance,
     .device_remove = _device_remove,
     .device_rebind = _device_rebind,
-    .device_destroy = _device_destroy,
-    .device_set_bindable = _device_set_bindable,
     .get_root_resource = _get_root_resource,
     .load_firmware = _load_firmware,
 };
