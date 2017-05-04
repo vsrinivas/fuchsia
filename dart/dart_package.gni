@@ -178,6 +178,8 @@ template("dart_package") {
       action(target_name) {
         script = "//build/dart/run_analysis.py"
 
+        depfile = "$target_gen_dir/$target_name.analysis.d"
+
         output_file = "$target_gen_dir/$target_name.analyzed"
 
         outputs = [
@@ -197,6 +199,10 @@ template("dart_package") {
           rebase_path(options_file),
           "--stamp",
           rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
         ]
 
         deps = [

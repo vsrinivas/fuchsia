@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import os
 import subprocess
 import sys
 
@@ -22,17 +23,29 @@ def main():
                         required=True)
     parser.add_argument('--stamp', help='File to touch when analysis succeeds',
                         required=True)
+    parser.add_argument('--depname', help='Name of the depfile target',
+                        required=True)
+    parser.add_argument('--depfile', help='Path to the depfile to generate',
+                        required=True)
     args = parser.parse_args()
+
+    with open(args.depfile, 'w') as depfile:
+        depfile.write('%s: ' % args.depname)
+        for dirpath, dirnames, filenames in os.walk(args.source_dir):
+            for filename in filenames:
+                _, extension = os.path.splitext(filename)
+                if extension == '.dart':
+                    depfile.write('%s ' % (os.path.join(dirpath, filename)))
 
     call_args = [
         args.dartanalyzer,
-        "--packages=%s" % args.dot_packages,
-        "--dart-sdk=%s" % args.dart_sdk,
-        "--options=%s" % args.options,
+        '--packages=%s' % args.dot_packages,
+        '--dart-sdk=%s' % args.dart_sdk,
+        '--options=%s' % args.options,
         args.source_dir,
-        "--fatal-warnings",
-        "--fatal-hints",
-        "--fatal-lints",
+        '--fatal-warnings',
+        '--fatal-hints',
+        '--fatal-lints',
     ]
 
     call = subprocess.Popen(call_args, stdout=subprocess.PIPE,
