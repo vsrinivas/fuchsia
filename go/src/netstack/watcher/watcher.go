@@ -34,7 +34,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	}
 	w := &Watcher{
 		C: make(chan string),
-		f: os.NewFile(uintptr(syscall.OpenMXIO(m)), dir + " watcher"),
+		f: os.NewFile(uintptr(syscall.OpenMXIO(m)), dir+" watcher"),
 		h: mx.Channel{Handle: h},
 	}
 	go w.start()
@@ -89,15 +89,15 @@ type errorString string
 func (e errorString) Error() string { return string(e) }
 
 func ioctlDeviceWatchDir(m mxio.MXIO) (h mx.Handle, err error) {
-	const ioctlFamilyDevice = 0x01
-	const op = 1 // IOCTL_DEVICE_WATCH_DIR
-	num := mxio.IoctlNum(mxio.IoctlKindGetHandle, ioctlFamilyDevice, op)
+	const ioctlFamilyVFS = 0x02
+	const op = 7 // IOCTL_VFS_WATCH_DIR
+	num := mxio.IoctlNum(mxio.IoctlKindGetHandle, ioctlFamilyVFS, op)
 	hs, err := m.Ioctl(num, nil, nil)
 	if err != nil {
-		return 0, errorString("IOCTL_DEVICE_WATCH_DIR: " + err.Error())
+		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}
 	if len(hs) != 1 {
-		return 0, errorString("IOCTL_DEVICE_WATCH_DIR: bad number of handles")
+		return 0, errorString("IOCTL_VFS_WATCH_DIR: bad number of handles")
 	}
 	return hs[0], nil
 }
