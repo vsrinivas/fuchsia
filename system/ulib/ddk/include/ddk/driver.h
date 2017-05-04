@@ -114,12 +114,9 @@ mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t
 // it immediately.
 
 mx_status_t device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
-                          mx_driver_t* driver, mx_device_t** out)
-  __attribute__((deprecated("use device_add instead")));
-// Devices are created by device_create().  The mx_device_t will be completely
-// written during initialization, and after initialization and before calling
-// device_add() they driver may only modify the protocol_id and protocol_ops
-// fields of the mx_device_t.
+                          mx_driver_t* driver, mx_device_t** out);
+// device_create() is used to create a device without adding it to the devmgr.
+// This should only be used in mx_driver_ops_t create() callbacks for creating bus device children.
 
 mx_status_t device_add_deprecated(mx_device_t* device, mx_device_t* parent)
   __attribute__((deprecated("use device_add instead")));
