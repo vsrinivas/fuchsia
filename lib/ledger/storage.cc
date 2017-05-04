@@ -31,6 +31,13 @@ std::string MakeFocusKey(const fidl::String& device_name) {
   return kFocusKeyPrefix + device_name.get();
 }
 
+std::string MakeMessageQueuesPrefix(const std::string& component_namespace) {
+  std::string key{kMessageQueueTokenKeyPrefix};
+  key.append(StringEscape(component_namespace, kSeparator, kEscaper));
+  key.append(kSeparator);
+  return key;
+}
+
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
                                      const std::string& queue_name) {

@@ -295,12 +295,14 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
                   ledger::Page* const page,
                   const fidl::String& story_id,
                   ControllerMap* const story_controllers,
+                  MessageQueueManager* const message_queue_manager,
                   const bool already_deleted,
                   ResultCall result_call)
       : Operation(container, std::move(result_call)),
         page_(page),
         story_id_(story_id),
         story_controllers_(story_controllers),
+        message_queue_manager_(message_queue_manager),
         already_deleted_(already_deleted) {
     Ready();
   }
@@ -351,7 +353,8 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
     // through the run loop.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
       story_controllers_->erase(story_id_);
-      Done();
+      message_queue_manager_->DeleteNamespace(
+          EncodeModuleComponentNamespace(story_id_), [this] { Done(); });
     });
   }
 
@@ -359,6 +362,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
   ledger::Page* const page_;  // not owned
   const fidl::String story_id_;
   ControllerMap* const story_controllers_;
+  MessageQueueManager* const message_queue_manager_;
   const bool already_deleted_;  // True if called from OnChange();
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
@@ -629,8 +633,9 @@ void StoryProviderImpl::CreateStoryWithInfo(
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
   new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                      &story_controllers_, false /* already_deleted */,
-                      callback);
+                      &story_controllers_,
+                      component_context_info_.message_queue_manager,
+                      false /* already_deleted */, callback);
 }
 
 // |StoryProvider|
@@ -704,7 +709,9 @@ void StoryProviderImpl::OnDelete(const std::string& key) {
   });
 
   new DeleteStoryCall(&operation_queue_, root_page_, story_id,
-                      &story_controllers_, true /* already_deleted */, [] {});
+                      &story_controllers_,
+                      component_context_info_.message_queue_manager,
+                      true /* already_deleted */, [] {});
 }
 
 }  // namespace modular

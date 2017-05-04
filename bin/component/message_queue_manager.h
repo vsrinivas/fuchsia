@@ -44,6 +44,9 @@ class MessageQueueManager {
                           const std::string& component_instance_id,
                           const std::string& queue_name);
 
+  void DeleteNamespace(const std::string& component_namespace,
+                       ftl::Closure done);
+
   void GetMessageSender(const std::string& queue_token,
                         fidl::InterfaceRequest<MessageSender> request);
 
@@ -119,6 +122,7 @@ class MessageQueueManager {
   class GetMessageSenderCall;
   class ObtainMessageQueueCall;
   class DeleteMessageQueueCall;
+  class DeleteNamespaceCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MessageQueueManager);
 };
