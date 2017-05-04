@@ -56,7 +56,7 @@ struct intel_i915_device_t {
 static int magma_start(intel_i915_device_t* dev);
 static int magma_stop(intel_i915_device_t* dev);
 
-#define get_i915_device(dev) ((intel_i915_device_t *)dev->ctx)
+#define get_i915_device(ctx) ((intel_i915_device_t *)ctx)
 
 static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
 {
@@ -73,7 +73,7 @@ static mx_status_t intel_i915_set_mode(mx_device_t* dev, mx_display_info_t* info
 static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info)
 {
     assert(info);
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(dev->ctx);
     memcpy(info, &device->info, sizeof(mx_display_info_t));
     return NO_ERROR;
 }
@@ -81,7 +81,7 @@ static mx_status_t intel_i915_get_mode(mx_device_t* dev, mx_display_info_t* info
 static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuffer)
 {
     assert(framebuffer);
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(dev->ctx);
     (*framebuffer) = device->framebuffer_addr;
     return NO_ERROR;
 }
@@ -105,7 +105,7 @@ static inline void clflush_range(void* start, size_t size)
 
 static void intel_i915_flush(mx_device_t* dev)
 {
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(dev->ctx);
     // Don't incur overhead of flushing when console's not visible
     if (device->console_visible)
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
@@ -113,7 +113,7 @@ static void intel_i915_flush(mx_device_t* dev)
 
 static void intel_i915_acquire_or_release_display(mx_device_t* dev)
 {
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(dev->ctx);
     DLOG("intel_i915_acquire_or_release_display");
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
@@ -146,14 +146,14 @@ static mx_display_protocol_t intel_i915_display_proto = {
 
 // implement device protocol
 
-static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t flags)
+static mx_status_t intel_i915_open(void* ctx, mx_device_t** out, uint32_t flags)
 {
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(ctx);
     intel_i915_enable_backlight(device, true);
     return NO_ERROR;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* mx_device, uint32_t flags) { return NO_ERROR; }
+static mx_status_t intel_i915_close(void* ctx, uint32_t flags) { return NO_ERROR; }
 
 static int reset_placeholder(intel_i915_device_t* device)
 {
@@ -176,10 +176,11 @@ static int reset_placeholder(intel_i915_device_t* device)
     return NO_ERROR;
 }
 
-static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void* in_buf,
-                                size_t in_len, void* out_buf, size_t out_len)
+static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf,
+                                    size_t in_len, void* out_buf, size_t out_len,
+                                    size_t* out_actual)
 {
-    intel_i915_device_t* device = get_i915_device(mx_device);
+    intel_i915_device_t* device = get_i915_device(ctx);
 
     DASSERT(device->magma_system_device);
 
@@ -194,7 +195,8 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             auto platform_trace =
                 static_cast<magma::MagentaPlatformTrace*>(magma::PlatformTrace::GetInstance());
             platform_trace->ConnectToService(std::move(local));
-            return sizeof(uint32_t);
+            *out_actual = sizeof(uint32_t);
+            result = NO_ERROR;
             break;
         }
 
@@ -215,7 +217,8 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
                         return DRET_MSG(ERR_INVALID_ARGS, "unhandled param 0x%" PRIx64, *value_out);
             }
             DLOG("query param 0x%" PRIx64 " returning 0x%" PRIx64, *param, *value_out);
-            result = sizeof(*value_out);
+            *out_actual = sizeof(*value_out);
+            result = NO_ERROR;
             break;
         }
         case IOCTL_MAGMA_CONNECT: {
@@ -243,7 +246,8 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
                 return DRET(ERR_INVALID_ARGS);
 
             *device_handle_out = connection->GetHandle();
-            result = sizeof(*device_handle_out);
+            *out_actual = sizeof(*device_handle_out);
+            result = NO_ERROR;
 
             device->magma_system_device->StartConnectionThread(std::move(connection));
 
@@ -253,7 +257,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
         case IOCTL_MAGMA_DUMP_STATUS: {
             DLOG("IOCTL_MAGMA_DUMP_STATUS");
             std::unique_lock<std::mutex> lock(device->magma_mutex);
-            intel_i915_device_t* device = get_i915_device(mx_device);
+            intel_i915_device_t* device = get_i915_device(ctx);
             if (device->magma_system_device)
                 device->magma_system_device->DumpStatus();
             result = NO_ERROR;
@@ -268,7 +272,8 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             device->console_buffer->duplicate_handle(
                 reinterpret_cast<uint32_t*>(&description->vmo));
             description->info = device->info;
-            result = sizeof(ioctl_display_get_fb_t);
+            *out_actual = sizeof(ioctl_display_get_fb_t);
+            result = NO_ERROR;
             break;
         }
 
@@ -290,10 +295,10 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     return result;
 }
 
-static mx_status_t intel_i915_release(mx_device_t* dev)
+static void intel_i915_release(void* ctx)
 {
     DLOG("intel_i915_release");
-    intel_i915_device_t* device = get_i915_device(dev);
+    intel_i915_device_t* device = get_i915_device(ctx);
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
 
@@ -301,12 +306,11 @@ static mx_status_t intel_i915_release(mx_device_t* dev)
 
     magma_stop(device);
 
-    device_destroy(device->mxdev);
     delete(device);
-    return NO_ERROR;
 }
 
 static mx_protocol_device_t intel_i915_device_proto = {
+    .version = DEVICE_OPS_VERSION,
     .open = intel_i915_open,
     .close = intel_i915_close,
     .ioctl = intel_i915_ioctl,
@@ -329,13 +333,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 
     // map resources and initialize the device
     auto device = new intel_i915_device_t;
-
-    status = device_create("intel_i915_disp", device, &intel_i915_device_proto, mx_driver,
-                           &device->mxdev);
-    if (status < 0) {
-        delete device;
-        return DRET_MSG(status, "device_create failed");
-    }
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
@@ -369,7 +366,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
 
     if (!device->console_buffer->MapCpu(&device->framebuffer_addr)) {
-        device_destroy(device->mxdev);
         delete(device);
         return DRET_MSG(ERR_NO_MEMORY, "Failed to map framebuffer");
     }
@@ -386,7 +382,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     // writing the log somewhere it can be recovered then triggering a reboot.
     uint32_t handle;
     if (!device->console_buffer->duplicate_handle(&handle)) {
-        device_destroy(device->mxdev);
         delete(device);
         return DRET_MSG(ERR_INTERNAL, "Failed to duplicate framebuffer handle");
     }
@@ -403,7 +398,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 
     device->magma_driver = std::unique_ptr<MagmaDriver>(MagmaDriver::Create());
     if (!device->magma_driver) {
-        device_destroy(device->mxdev);
         delete(device);
         return DRET_MSG(ERR_INTERNAL, "MagmaDriver::Create failed");
     }
@@ -413,19 +407,25 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     magma_indriver_test(mx_device);
 #endif
 
-    device_set_protocol(device->mxdev, MX_PROTOCOL_DISPLAY, &intel_i915_display_proto);
     device->parent_device = mx_device;
 
     status = magma_start(device);
     if (status != NO_ERROR) {
-        device_destroy(device->mxdev);
         delete(device);
         return DRET_MSG(status, "magma_start failed");
     }
 
-    status = device_add(device->mxdev, mx_device);
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "intel_i915_disp";
+    args.ctx = device;
+    args.driver = mx_driver;
+    args.ops = &intel_i915_device_proto;
+    args.proto_id = MX_PROTOCOL_DISPLAY;
+    args.proto_ops = &intel_i915_display_proto;
+
+    status = device_add2(mx_device, &args, &device->mxdev);
     if (status != NO_ERROR) {
-        device_destroy(device->mxdev);
         delete(device);
         return DRET_MSG(status, "device_add failed");
     }
