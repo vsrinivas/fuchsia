@@ -631,6 +631,9 @@ status_t UserThread::ExceptionHandlerExchange(
     }
 
     // Continue to wait for the exception response if we get suspended.
+    // If it is suspended, the suspension will be processed after the
+    // exception response is received (requiring a second resume).
+    // Exceptions and suspensions are essentially treated orthogonally.
 
     status_t status;
     do {
