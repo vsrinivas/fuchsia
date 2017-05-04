@@ -16,6 +16,8 @@
 #include "devcoordinator.h"
 #include "log.h"
 
+uint32_t log_flags = LOG_ERROR | LOG_INFO;
+
 static void dc_dump_state(void);
 
 extern mx_handle_t application_launcher;
@@ -71,7 +73,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if ((len > 1) && (cmd[0] == '@')) {
         return mx_channel_write(application_launcher, 0, cmd, len, NULL, 0);
     }
-    printf("dmctl: unknown command '%.*s'\n", (int) len, cmd);
+    log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ERR_NOT_SUPPORTED;
 }
 
@@ -79,8 +81,6 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
 #define ID_HJOBROOT 4
 mx_handle_t get_sysinfo_job_root(void);
 
-
-uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
@@ -232,6 +232,8 @@ static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
 
 // called when device children or shadows are removed
 static void dc_release_device(device_t* dev) {
+    log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name, dev->refcount);
+
     dev->refcount--;
     if (dev->refcount > 0) {
         return;
@@ -242,7 +244,7 @@ static void dc_release_device(device_t* dev) {
         return;
     }
 
-    log(INFO, "devcoord: dev %p (name='%s') destroyed\n", dev, dev->name);
+    log(DEVLC, "devcoord: destroy dev %p name='%s'\n", dev, dev->name);
 
     do_unpublish(dev);
 
@@ -324,11 +326,16 @@ static mx_status_t dc_add_device(device_t* parent,
         return r;
     }
 
+    dev->refcount = 1;
+    dev->parent = parent;
     list_add_tail(&parent->children, &dev->node);
     parent->refcount++;
 
-    log(DEVFS, "devcoord: publish '%s' props=%u args='%s'\n",
-        dev->name, dev->prop_count, dev->args);
+    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (child)\n",
+        parent, parent->name, parent->refcount);
+
+    log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
+        dev, dev->name, dev->prop_count, dev->args, dev->parent);
 
     queue_work(&dev->work, WORK_DEVICE_ADDED, 0);
     return NO_ERROR;
@@ -340,6 +347,7 @@ static mx_status_t dc_remove_device(device_t* dev) {
         log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
         return ERR_BAD_STATE;
     } else {
+        log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name, dev->parent);
         dev->flags |= DEV_CTX_DEAD;
 
         // remove from devfs, preventing further OPEN attempts
@@ -354,7 +362,7 @@ static mx_status_t dc_remove_device(device_t* dev) {
                 list_delete(&dev->node);
             }
             dev->parent = NULL;
-            dc_release_device(dev->parent);
+            dc_release_device(parent);
         }
     }
     return NO_ERROR;
@@ -598,6 +606,8 @@ static mx_status_t dc_create_shadow(device_t* parent) {
     dev->parent = parent;
     parent->shadow = dev;
     parent->refcount++;
+    log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (shadow)\n",
+        parent, parent->name, parent->refcount);
     return NO_ERROR;
 }
 

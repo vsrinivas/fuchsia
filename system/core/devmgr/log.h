@@ -14,7 +14,7 @@
 #define LOG_RPC_OUT  0x020
 #define LOG_RPC_RIO  0x040
 #define LOG_DEVFS    0x100
-
+#define LOG_DEVLC    0x200
 #define LOG_ALL      0x177
 
 extern uint32_t log_flags;
