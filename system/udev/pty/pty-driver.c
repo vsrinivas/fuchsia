@@ -143,7 +143,7 @@ static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
     };
 
     mx_status_t status;
-    if ((status = device_add2(pty_root, &args, &psd->srv.mxdev)) < 0) {
+    if ((status = device_add(pty_root, &args, &psd->srv.mxdev)) < 0) {
         free(psd);
         return status;
     }
@@ -166,7 +166,7 @@ static mx_status_t ptmx_bind(mx_driver_t* drv, mx_device_t* parent, void** cooki
         .ops = &ptmx_ops,
     };
 
-    return device_add2(parent, &args, &pty_root);
+    return device_add(parent, &args, &pty_root);
 }
 
 static mx_driver_ops_t ptmx_driver_ops = {

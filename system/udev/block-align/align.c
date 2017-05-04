@@ -181,7 +181,7 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     };
 
     mx_status_t status;
-    if ((status = device_add2(dev, &args, &device->mxdev)) != NO_ERROR) {
+    if ((status = device_add(dev, &args, &device->mxdev)) != NO_ERROR) {
         free(device);
         return status;
     }

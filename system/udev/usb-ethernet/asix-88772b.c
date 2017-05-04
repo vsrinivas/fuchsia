@@ -461,7 +461,7 @@ static int ax88772b_start_thread(void* arg) {
         .proto_ops = &ethmac_ops,
     };
 
-    status = device_add2(eth->usb_device, &args, &eth->device);
+    status = device_add(eth->usb_device, &args, &eth->device);
     if (status < 0) {
         printf("ax8872b: failed to create device: %d\n", status);
         goto fail;

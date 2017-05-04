@@ -215,7 +215,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         .proto_ops = &ethmac_ops,
     };
 
-    if (device_add2(dev, &args, &edev->mxdev)) {
+    if (device_add(dev, &args, &edev->mxdev)) {
         goto fail;
     }
 

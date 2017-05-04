@@ -699,7 +699,7 @@ static int pcm_bootstrap_thread(void* arg) {
         .proto_id = MX_PROTOCOL_AUDIO2_OUTPUT,
     };
 
-    status = device_add2(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
+    status = device_add(pcm_ctx->parent, &args, &pcm_ctx->mxdev);
     if (status != NO_ERROR)
         goto pcm_err;
 

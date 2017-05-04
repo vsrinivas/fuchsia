@@ -127,7 +127,7 @@ static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
             .prop_count = countof(batt_dev->props),
         };
 
-        status = device_add2(dev, &args, &batt_dev->mxdev);
+        status = device_add(dev, &args, &batt_dev->mxdev);
         if (status != NO_ERROR) {
             free(batt_dev);
             goto fail;

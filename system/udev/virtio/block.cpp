@@ -175,7 +175,7 @@ mx_status_t BlockDevice::Init() {
     args.ops = &device_ops_;
     args.proto_id = MX_PROTOCOL_BLOCK;
 
-    auto status = device_add2(bus_device_, &args, &device_);
+    auto status = device_add(bus_device_, &args, &device_);
     if (status < 0) {
         device_ = nullptr;
         return status;

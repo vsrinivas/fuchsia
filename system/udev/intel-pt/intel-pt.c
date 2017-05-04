@@ -951,7 +951,7 @@ static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     };
 
     mx_status_t status;
-    if ((status = device_add2(parent, &args, &ipt_dev->mxdev)) < 0) {
+    if ((status = device_add(parent, &args, &ipt_dev->mxdev)) < 0) {
         free(ipt_dev);
         return status;
     }

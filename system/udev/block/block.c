@@ -242,7 +242,7 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         .proto_id = MX_PROTOCOL_BLOCK,
     };
 
-    status = device_add2(dev, &args, &bdev->mxdev);
+    status = device_add(dev, &args, &bdev->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }

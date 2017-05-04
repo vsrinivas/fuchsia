@@ -314,7 +314,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    status = device_add2(ps->mxdev, &args, &pc->mxdev);
+    status = device_add(ps->mxdev, &args, &pc->mxdev);
     if (status < 0) {
         pty_client_release(pc->mxdev);
         return status;

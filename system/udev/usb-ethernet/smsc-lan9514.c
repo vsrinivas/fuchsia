@@ -643,7 +643,7 @@ static int lan9514_start_thread(void* arg) {
         .proto_ops = &ethmac_ops,
     };
 
-    status = device_add2(eth->usb_device, &args, &eth->device);
+    status = device_add(eth->usb_device, &args, &eth->device);
     if (status < 0) {
         printf("lan9514: failed to create device: %d\n", status);
         lan9514_free(eth);

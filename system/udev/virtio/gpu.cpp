@@ -440,7 +440,7 @@ mx_status_t GpuDevice::virtio_gpu_start() {
     args.proto_id = MX_PROTOCOL_DISPLAY;
     args.proto_ops = &display_proto_ops_;
 
-    auto status = device_add2(bus_device_, &args, &bus_device_);
+    auto status = device_add(bus_device_, &args, &bus_device_);
     if (status < 0) {
         device_ = nullptr;
         return status;

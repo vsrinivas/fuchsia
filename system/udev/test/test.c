@@ -172,7 +172,7 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
     };
 
     mx_status_t status;
-    if ((status = device_add2(root->mxdev, &args, &device->mxdev)) != NO_ERROR) {
+    if ((status = device_add(root->mxdev, &args, &device->mxdev)) != NO_ERROR) {
         free(device);
         return status;
     }
@@ -201,7 +201,7 @@ static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
     };
 
     mx_device_t* device;
-    return device_add2(dev, &args, &device);
+    return device_add(dev, &args, &device);
 }
 
 static mx_driver_ops_t test_driver_ops = {

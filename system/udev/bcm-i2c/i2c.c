@@ -251,7 +251,7 @@ static int i2c_bootstrap_thread(void *arg) {
         .ops = &i2c_device_proto,
     };
 
-    status = device_add2(i2c_ctx->parent, &args, &i2c_ctx->mxdev);
+    status = device_add(i2c_ctx->parent, &args, &i2c_ctx->mxdev);
 
     if (status == NO_ERROR) return 0;
 

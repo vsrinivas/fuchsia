@@ -388,7 +388,7 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
         .proto_id = MX_PROTOCOL_AUDIO,
     };
 
-    mx_status_t status = device_add2(device, &args, &source->mxdev);
+    mx_status_t status = device_add(device, &args, &source->mxdev);
     if (status != NO_ERROR) {
         printf("device_add failed in usb_audio_source_create\n");
         usb_audio_source_free(source);

@@ -202,7 +202,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         .proto_ops = &intel_i915_display_proto,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }

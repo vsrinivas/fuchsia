@@ -250,7 +250,7 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             .proto_ops = &ramdisk_block_ops,
         };
 
-        if ((status = device_add2(ramdisk_ctl_dev, &args, &ramdev->mxdev)) != NO_ERROR) {
+        if ((status = device_add(ramdisk_ctl_dev, &args, &ramdev->mxdev)) != NO_ERROR) {
             mx_vmar_unmap(mx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
             mx_handle_close(ramdev->vmo);
             free(ramdev);
@@ -290,7 +290,7 @@ static mx_status_t ramctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags)
     };
 
     mx_status_t status;
-    if ((status = device_add2(ramdisk_ctl_dev, &args, &instance->mxdev)) < 0) {
+    if ((status = device_add(ramdisk_ctl_dev, &args, &instance->mxdev)) < 0) {
         free(instance);
         return status;
     }
@@ -312,7 +312,7 @@ static mx_status_t ramdisk_driver_bind(mx_driver_t* driver, mx_device_t* parent,
         .ops = &ramdisk_ctl_proto,
     };
 
-    return device_add2(parent, &args, &ramdisk_ctl_dev);
+    return device_add(parent, &args, &ramdisk_ctl_dev);
 }
 
 static mx_driver_ops_t ramdisk_driver_ops = {

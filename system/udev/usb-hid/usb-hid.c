@@ -287,7 +287,7 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
             .proto_ops = &usb_hid_bus_ops,
         };
 
-        mx_status_t status = device_add2(dev, &args, &usbhid->mxdev);
+        mx_status_t status = device_add(dev, &args, &usbhid->mxdev);
         if (status != NO_ERROR) {
             usb_desc_iter_release(&iter);
             iotxn_release(usbhid->txn);

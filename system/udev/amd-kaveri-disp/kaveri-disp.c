@@ -151,7 +151,7 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
         .proto_ops = &kaveri_disp_display_proto,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }

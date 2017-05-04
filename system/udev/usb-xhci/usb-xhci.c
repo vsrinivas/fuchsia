@@ -182,7 +182,7 @@ static int xhci_irq_thread(void* arg) {
         .proto_ops = &xhci_hci_protocol,
     };
 
-    mx_status_t status = device_add2(xhci->parent, &args, &xhci->mxdev);
+    mx_status_t status = device_add(xhci->parent, &args, &xhci->mxdev);
     if (status != NO_ERROR) {
         free(xhci);
         return status;

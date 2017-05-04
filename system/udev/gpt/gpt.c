@@ -391,7 +391,7 @@ static int gpt_bind_thread(void* arg) {
             .proto_ops = &gpt_block_ops,
         };
 
-        if (device_add2(dev, &args, &device->mxdev) != NO_ERROR) {
+        if (device_add(dev, &args, &device->mxdev) != NO_ERROR) {
             printf("gpt device_add failed\n");
             free(device);
             continue;

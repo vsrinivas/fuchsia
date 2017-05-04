@@ -444,7 +444,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .prop_count = countof(mailbox_props),
     };
 
-    status = device_add2(parent, &vc_rpc_args, &rpc_mxdev);
+    status = device_add(parent, &vc_rpc_args, &rpc_mxdev);
     if (status != NO_ERROR) {
         return status;
     }
@@ -486,7 +486,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .proto_ops = &vc_display_proto,
     };
 
-    status = device_add2(parent, &vc_fbuff_args, &disp_mxdev);
+    status = device_add(parent, &vc_fbuff_args, &disp_mxdev);
     if (status != NO_ERROR) {
         return status;
     }
@@ -505,7 +505,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .prop_count = countof(emmc_props),
     };
 
-    status = device_add2(parent, &sdmmc_args, &sdmmc_mxdev);
+    status = device_add(parent, &sdmmc_args, &sdmmc_mxdev);
     if (status != NO_ERROR) {
         return status;
     }
@@ -526,7 +526,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .prop_count = countof(i2c_props),
     };
 
-    status = device_add2(parent, &i2c_args, &i2c_mxdev);
+    status = device_add(parent, &i2c_args, &i2c_mxdev);
     if (status != NO_ERROR) {
         return status;
     }
@@ -544,7 +544,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .prop_count = countof(pcm_props),
     };
 
-    status = device_add2(parent, &pcm_args, &pcm_mxdev);
+    status = device_add(parent, &pcm_args, &pcm_mxdev);
     if (status != NO_ERROR) {
         return status;
     }

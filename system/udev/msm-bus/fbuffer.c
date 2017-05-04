@@ -139,7 +139,7 @@ mx_status_t fb_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
         .proto_ops = &msm_display_proto,
     };
 
-    return device_add2(parent, &args, &disp_device);
+    return device_add(parent, &args, &disp_device);
 }
 
 static mx_driver_ops_t msm_fb_driver_ops = {

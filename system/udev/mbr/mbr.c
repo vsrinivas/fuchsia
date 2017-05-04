@@ -310,7 +310,7 @@ static int mbr_bind_thread(void* arg) {
             .proto_id = MX_PROTOCOL_BLOCK,
         };
 
-        if ((st = device_add2(dev, &args, &pdev->mxdev)) != NO_ERROR) {
+        if ((st = device_add(dev, &args, &pdev->mxdev)) != NO_ERROR) {
             xprintf("mbr: device_add failed, retcode = %d\n", st);
             free(pdev);
             continue;

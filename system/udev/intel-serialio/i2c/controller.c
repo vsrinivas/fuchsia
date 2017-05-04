@@ -129,7 +129,7 @@ static mx_status_t intel_serialio_i2c_add_slave(
         .prop_count = count,
     };
 
-    status = device_add2(device->mxdev, &args, &slave->mxdev);
+    status = device_add(device->mxdev, &args, &slave->mxdev);
     if (status != NO_ERROR) {
         goto fail1;
     }
@@ -496,7 +496,7 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
         .ops = &intel_serialio_i2c_device_proto,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status < 0) {
         goto fail;
     }

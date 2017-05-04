@@ -454,7 +454,7 @@ static mx_status_t vc_do_root_open(vc_device_t* dev, vc_device_t** vc_out, uint3
         args.proto_id = MX_PROTOCOL_CONSOLE;
         args.flags = DEVICE_ADD_INSTANCE;
 
-        status = device_add2(g_root_device, &args, &device->mxdev);
+        status = device_add(g_root_device, &args, &device->mxdev);
         if (status != NO_ERROR) {
             vc_device_free(device);
             return status;
@@ -649,7 +649,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     args.ops = &vc_root_proto;
     args.proto_id = MX_PROTOCOL_CONSOLE;
 
-    status = device_add2(dev, &args, &g_root_device);
+    status = device_add(dev, &args, &g_root_device);
     if (status != NO_ERROR) {
         return status;
     }

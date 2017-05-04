@@ -294,7 +294,7 @@ static int usb_hub_thread(void* arg) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    result = device_add2(hub->usb_device, &args, &hub->mxdev);
+    result = device_add(hub->usb_device, &args, &hub->mxdev);
     if (result != NO_ERROR) {
         usb_hub_free(hub);
         return result;

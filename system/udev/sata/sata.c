@@ -358,7 +358,7 @@ mx_status_t sata_bind(mx_device_t* dev, int port) {
         .proto_ops = &sata_block_ops,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status < 0) {
         free(device);
         return status;

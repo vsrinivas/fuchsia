@@ -633,7 +633,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         .proto_id = MX_PROTOCOL_BLUETOOTH_HCI,
     };
 
-    status = device_add2(device, &args, &hci->mxdev);
+    status = device_add(device, &args, &hci->mxdev);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:

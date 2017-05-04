@@ -706,7 +706,7 @@ static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t fl
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    mx_status_t status = status = device_add2(hid->mxdev, &args, &inst->mxdev);
+    mx_status_t status = status = device_add(hid->mxdev, &args, &inst->mxdev);
     if (status != NO_ERROR) {
         printf("hid: error creating instance %d\n", status);
         free(inst);
@@ -916,7 +916,7 @@ static mx_status_t hid_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
         .proto_id = MX_PROTOCOL_INPUT,
     };
 
-    status = device_add2(hiddev->hid_mxdev, &args, &hiddev->mxdev);
+    status = device_add(hiddev->hid_mxdev, &args, &hiddev->mxdev);
     if (status != NO_ERROR) {
         printf("hid: device_add failed for HID device: %d\n", status);
         goto fail;

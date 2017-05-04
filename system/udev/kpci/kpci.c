@@ -94,7 +94,7 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
     if ((status = device_create("pci", NULL, &kpci_device_proto, drv, &pcidev)) < 0) {
         return status;
     }
-    if ((status = device_add(pcidev, parent)) < 0) {
+    if ((status = device_add_deprecated(pcidev, parent)) < 0) {
         device_destroy(pcidev);
         return status;
     }
@@ -181,7 +181,7 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
     // make the pci root non-bindable
     device_set_bindable(kpci_root_dev, false);
 
-    if (device_add(kpci_root_dev, driver_get_root_device()) < 0) {
+    if (device_add_deprecated(kpci_root_dev, driver_get_root_device()) < 0) {
         free(kpci_root_dev);
         return NO_ERROR;
     } else {

@@ -463,7 +463,7 @@ static int sdmmc_bootstrap_thread(void* arg) {
         .proto_id = MX_PROTOCOL_BLOCK,
     };
 
-    st = device_add2(dev, &args, &sdmmc->mxdev);
+    st = device_add(dev, &args, &sdmmc->mxdev);
     if (st != NO_ERROR) {
          goto err;
     }

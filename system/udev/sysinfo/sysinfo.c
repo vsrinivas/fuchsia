@@ -89,7 +89,7 @@ mx_status_t sysinfo_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     };
 
     mx_device_t* dev;
-    return device_add2(parent, &args, &dev);
+    return device_add(parent, &args, &dev);
 }
 
 #if !DEVHOST_V2

@@ -294,7 +294,7 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         .proto_ops = &i2c_hidbus_ops,
     };
 
-    mx_status_t status = device_add2(i2chid->i2cdev, &args, &i2chid->mxdev);
+    mx_status_t status = device_add(i2chid->i2cdev, &args, &i2chid->mxdev);
     if (status != NO_ERROR) {
         printf("i2c-hid: could not add device: %d\n", status);
         free(i2chid->hiddesc);

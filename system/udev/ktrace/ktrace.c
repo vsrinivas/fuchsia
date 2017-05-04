@@ -86,7 +86,7 @@ static mx_status_t ktrace_bind(mx_driver_t* drv, mx_device_t* parent, void** coo
     };
 
     mx_device_t* dev;
-    return device_add2(parent, &args, &dev);
+    return device_add(parent, &args, &dev);
 }
 
 static mx_driver_ops_t ktrace_driver_ops = {

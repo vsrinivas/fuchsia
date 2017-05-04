@@ -140,7 +140,7 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    mx_status_t status = device_add2(device, &args, &bus->mxdev);
+    mx_status_t status = device_add(device, &args, &bus->mxdev);
     if (status == NO_ERROR) {
         hci_protocol->set_bus_device(device, bus->mxdev);
     } else {

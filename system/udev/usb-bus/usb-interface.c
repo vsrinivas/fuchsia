@@ -288,7 +288,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         .prop_count = prop_count,
     };
 
-    status = device_add2(device->mxdev, &args, &intf->mxdev);
+    status = device_add(device->mxdev, &args, &intf->mxdev);
     if (status != NO_ERROR) {
         stop_callback_thread(intf);
         list_delete(&intf->node);
@@ -367,7 +367,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         .prop_count = prop_count,
     };
 
-    mx_status_t status = device_add2(device->mxdev, &args, &intf->mxdev);
+    mx_status_t status = device_add(device->mxdev, &args, &intf->mxdev);
     if (status != NO_ERROR) {
         stop_callback_thread(intf);
         list_delete(&intf->node);

@@ -233,7 +233,7 @@ static mx_status_t bochs_vbe_bind(mx_driver_t* drv, mx_device_t* dev, void** coo
         .proto_ops = &bochs_vbe_display_proto,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }

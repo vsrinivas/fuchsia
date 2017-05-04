@@ -807,7 +807,7 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add2(dev, &args, &device->mxdev);
+    status = device_add(dev, &args, &device->mxdev);
     if (status != NO_ERROR) {
         xprintf("ahci: error %d in device_add\n", status);
         goto fail;

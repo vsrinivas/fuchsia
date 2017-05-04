@@ -80,7 +80,7 @@ mx_status_t dmctl_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     };
 
     mx_status_t status;
-    if ((status = device_add2(parent, &args, &dmctl_dev)) < 0) {
+    if ((status = device_add(parent, &args, &dmctl_dev)) < 0) {
         return status;
     }
 

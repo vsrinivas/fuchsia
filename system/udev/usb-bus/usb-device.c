@@ -403,7 +403,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add2(parent, &args, &dev->mxdev);
+    status = device_add(parent, &args, &dev->mxdev);
     if (status == NO_ERROR) {
         *out_device = dev;
     } else {

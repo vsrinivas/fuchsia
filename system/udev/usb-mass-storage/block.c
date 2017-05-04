@@ -157,5 +157,5 @@ mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .proto_ops = &ums_block_ops,
     };
 
-    return device_add2(ums->mxdev, &args, &dev->mxdev);
+    return device_add(ums->mxdev, &args, &dev->mxdev);
 }

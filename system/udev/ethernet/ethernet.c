@@ -562,7 +562,7 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
     };
 
     mx_status_t status;
-    if ((status = device_add2(edev0->mxdev, &args, &edev->mxdev)) < 0) {
+    if ((status = device_add(edev0->mxdev, &args, &edev->mxdev)) < 0) {
         free(edev);
         return status;
     }
@@ -654,7 +654,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         .proto_id = MX_PROTOCOL_ETHERNET,
     };
 
-    if ((status = device_add2(dev, &args, &edev0->mxdev)) < 0) {
+    if ((status = device_add(dev, &args, &edev0->mxdev)) < 0) {
         goto fail;
     }
 

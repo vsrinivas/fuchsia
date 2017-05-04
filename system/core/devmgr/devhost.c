@@ -186,7 +186,7 @@ static int devhost_cmdline(int argc, char** argv) {
         return -1;
     }
     if (the_misc_device) {
-        if ((status = device_add(the_misc_device, the_root_device)) < 0) {
+        if ((status = device_add_deprecated(the_misc_device, the_root_device)) < 0) {
             printf("devhost: cannot install misc device: %d\n", status);
             return -1;
         }

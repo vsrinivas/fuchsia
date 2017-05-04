@@ -353,7 +353,7 @@ static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** 
     };
 
     mx_device_t* dev;
-    status = device_add2(parent, &args, &dev);
+    status = device_add(parent, &args, &dev);
     if (status != NO_ERROR) {
         return status;
     }

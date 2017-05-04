@@ -1782,7 +1782,7 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         .proto_ops = &dwc_hci_protocol,
     };
 
-    if ((st = device_add2(dev, &args, &usb_dwc->mxdev)) != NO_ERROR) {
+    if ((st = device_add(dev, &args, &usb_dwc->mxdev)) != NO_ERROR) {
         free(usb_dwc);
         return st;
     }

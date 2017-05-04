@@ -119,7 +119,7 @@ static mx_status_t console_bind(mx_driver_t* drv, mx_device_t* parent, void** co
         .ops = &console_device_proto,
     };
 
-    mx_status_t status = device_add2(parent, &args, &console->mxdev);
+    mx_status_t status = device_add(parent, &args, &console->mxdev);
     if (status != NO_ERROR) {
         printf("console: device_add() failed\n");
         free(console);

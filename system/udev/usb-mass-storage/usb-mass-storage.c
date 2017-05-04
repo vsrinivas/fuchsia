@@ -582,7 +582,7 @@ static int ums_worker_thread(void* arg) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add2(ums->usb_mxdev, &args, &ums->mxdev);
+    status = device_add(ums->usb_mxdev, &args, &ums->mxdev);
     if (status != NO_ERROR) {
         goto fail;
     }

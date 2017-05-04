@@ -20,7 +20,7 @@ __EXPORT void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     API->driver_unbind(drv, dev);
 }
 
-__EXPORT mx_status_t device_add2(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
+__EXPORT mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
     mx_device_t* dev;
 
     if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
@@ -101,7 +101,7 @@ __EXPORT mx_status_t device_add_busdev(mx_device_t* dev, mx_device_t* parent,
     return API->device_add(dev, parent, props, prop_count, args, rsrc);
 }
 
-__EXPORT mx_status_t device_add(mx_device_t* dev, mx_device_t* parent) {
+__EXPORT mx_status_t device_add_deprecated(mx_device_t* dev, mx_device_t* parent) {
     return API->device_add(dev, parent, NULL, 0, NULL, 0);
 }
 

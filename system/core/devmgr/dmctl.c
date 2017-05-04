@@ -172,7 +172,7 @@ mx_status_t dmctl_init(mx_driver_t* driver) {
     };
 
     mx_device_t* dev;
-    mx_status_t s = device_add2(driver_get_misc_device(), &args, &dev);
+    mx_status_t s = device_add(driver_get_misc_device(), &args, &dev);
     if (s != NO_ERROR) {
         return s;
     }

@@ -773,7 +773,7 @@ static int emmc_bootstrap_thread(void *arg) {
         .proto_id = MX_PROTOCOL_SDMMC,
     };
 
-    st = device_add2(emmc->parent, &args, &emmc->mxdev);
+    st = device_add(emmc->parent, &args, &emmc->mxdev);
     if (st != NO_ERROR) {
         goto out;
     }

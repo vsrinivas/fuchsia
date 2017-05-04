@@ -756,7 +756,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_devi
         .proto_ops = &hidbus_ops,
     };
 
-    return device_add2(parent, &args, &dev->mxdev);
+    return device_add(parent, &args, &dev->mxdev);
 }
 
 static int i8042_init_thread(void* arg) {
