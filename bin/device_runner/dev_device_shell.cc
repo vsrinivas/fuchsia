@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the DeviceShell service that passes a dummy user
-// name to its UserProvider.
+// Implementation of the DeviceShell service that passes a command line
+// configurable user name to its UserProvider, and is able to run a story with a
+// single module through its life cycle.
 
 #include <memory>
 
@@ -22,7 +23,8 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_name =
         command_line.GetOptionValueWithDefault("device_name", "magenta");
-    user = command_line.GetOptionValueWithDefault("user", "user1");
+    // default user is incognito
+    user = command_line.GetOptionValueWithDefault("user", "");
   }
 
   std::string device_name;
