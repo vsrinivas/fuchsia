@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:application.lib.app.dart/app.dart';
+import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
-import 'package:lib.fidl.dart/bindings.dart';
 import 'package:path/path.dart' as path;
 
 const _configDir = "/system/data/mi_dashboard";
@@ -24,9 +23,23 @@ Directory _webrootDirectory;
 
 var _activeWebsockets = new List<WebSocket>();
 
-final _contextCache = new Map<String,String>();
+final _contextCache = new Map<String, String>();
 final _contextProvider = new ContextProviderProxy();
-final _contextListener = new _ContextListenerImpl();
+final _contextListener = new ContextListenerImpl((ContextUpdate update) {
+  // Cache all context values that we receive
+  update.values.forEach((String key, String value) {
+    // print("[DASHBOARD UPDATE] ${key}: ${value}");
+    _contextCache[key] = value;
+  });
+
+  // Send updates to all active websockets
+  if (_activeWebsockets.length > 0) {
+    String message = JSON.encode({"type": "context", "data": update.values});
+    _activeWebsockets.forEach((socket) {
+      socket.add(message);
+    });
+  }
+});
 
 void main(List args) {
   // Get a handle to the ContextProvider service
@@ -41,34 +54,8 @@ void main(List args) {
   _contextProvider.subscribe(query, _contextListener.getHandle());
 
   // Read the config file from disk
-  var configFile = new File(path.join(_configDir,_configFilename));
-  configFile.readAsString(encoding: ASCII)
-    .then(parseConfigAndStart);
-}
-
-class _ContextListenerImpl extends ContextListener {
-  final ContextListenerBinding _binding = new ContextListenerBinding();
-
-  _ContextListenerImpl();
-
-  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
-
-  @override
-  void onUpdate(ContextUpdate update) {
-    // Cache all context values that we receive
-    update.values.forEach((String key, String value) {
-      // print("[DASHBOARD UPDATE] ${key}: ${value}");
-      _contextCache[key] = value;
-    });
-
-    // Send updates to all active websockets
-    if (_activeWebsockets.length > 0) {
-      String message = JSON.encode({"type":"context","data":update.values});
-      _activeWebsockets.forEach((socket) {
-        socket.add(message);
-      });
-    }
-  }
+  var configFile = new File(path.join(_configDir, _configFilename));
+  configFile.readAsString(encoding: ASCII).then(parseConfigAndStart);
 }
 
 void parseConfigAndStart(var configString) {
@@ -82,27 +69,23 @@ void parseConfigAndStart(var configString) {
   // webroot property
   if (configMap.containsKey(_webrootPropertyName))
     _webrootPath = configMap[_webrootPropertyName];
-  _webrootDirectory = new Directory(path.join(_configDir,_webrootPath));
+  _webrootDirectory = new Directory(path.join(_configDir, _webrootPath));
 
   // Start the web server
   print("[INFO] Starting MI Dashboard web server on port ${_port}...");
-  HttpServer
-      .bind(InternetAddress.ANY_IP_V6, _port)
-      .then((server) {
-        server.listen(handleRequest);
-      });
+  HttpServer.bind(InternetAddress.ANY_IP_V6, _port).then((server) {
+    server.listen(handleRequest);
+  });
 }
 
 void handleRequest(HttpRequest request) {
   // Identify websocket requests
   if (request.requestedUri.path.startsWith("/ws")) {
-    WebSocketTransformer
-      .upgrade(request)
-      .then((socket) {
-        _activeWebsockets.add(socket);
-        socket.listen(handleWebsocketRequest);
-        sendAllContextDataToWebsocket(socket);
-      });
+    WebSocketTransformer.upgrade(request).then((socket) {
+      _activeWebsockets.add(socket);
+      socket.listen(handleWebsocketRequest);
+      sendAllContextDataToWebsocket(socket);
+    });
   } else {
     // Identify requests requiring return of context data
     // Such requests will begin with /data/<service>/...
@@ -113,11 +96,11 @@ void handleRequest(HttpRequest request) {
       // print("Returning data for service ${serviceName}");
 
       // we are returning JSON
-      request.response.headers.contentType
-        = new ContentType("application", "json", charset: "utf-8");
+      request.response.headers.contentType =
+          new ContentType("application", "json", charset: "utf-8");
 
       // Figure out what service data to return
-      switch(serviceName) {
+      switch (serviceName) {
         case 'context':
           //   /data/context/<topic>
           //     return JSON data from the context service for the given topic
@@ -131,9 +114,9 @@ void handleRequest(HttpRequest request) {
             return;
           }
 
-          // TODO(jwnichols): Report data from other intelligence services. E.g.,
-          //   /data/actionlog/...
-          //   /data/suggestions/...
+        // TODO(jwnichols): Report data from other intelligence services. E.g.,
+        //   /data/actionlog/...
+        //   /data/suggestions/...
       }
       // Nothing handled the request, so respond with a 404
       send404(request.response);
@@ -141,21 +124,21 @@ void handleRequest(HttpRequest request) {
       // Find the referenced file
       // path.join does not work in this case, possibly because the request path
       // may start with a /, so using a simple string concatenation instead
-      var requestPath = "${_webrootDirectory.path}/${request.requestedUri.path}";
-      if (requestPath.endsWith('/'))
-        requestPath += "index.html";
+      var requestPath =
+          "${_webrootDirectory.path}/${request.requestedUri.path}";
+      if (requestPath.endsWith('/')) requestPath += "index.html";
       var requestFile = new File(requestPath);
       requestFile.exists().then((exists) {
-          if (exists) {
-            // Make sure the referenced file is within the webroot
-            if (requestFile.uri.path.startsWith(_webrootDirectory.path)) {
-              sendFile(requestFile, request.response);
-              return;
-            }
-          } else {
-            send404(request.response);
+        if (exists) {
+          // Make sure the referenced file is within the webroot
+          if (requestFile.uri.path.startsWith(_webrootDirectory.path)) {
+            sendFile(requestFile, request.response);
+            return;
           }
-        });
+        } else {
+          send404(request.response);
+        }
+      });
     }
   }
 }
@@ -164,27 +147,25 @@ sendFile(File requestFile, HttpResponse response) async {
   // Set the content type correctly based on the file name suffix
   // The content type is text/plain if the suffix isn't identified
   if (requestFile.path.endsWith("html")) {
-    response.headers.contentType
-      = new ContentType("text", "html", charset: "utf-8");
+    response.headers.contentType =
+        new ContentType("text", "html", charset: "utf-8");
   } else if (requestFile.path.endsWith("json")) {
-    response.headers.contentType
-      = new ContentType("application", "json", charset: "utf-8");
+    response.headers.contentType =
+        new ContentType("application", "json", charset: "utf-8");
   } else if (requestFile.path.endsWith("js")) {
-    response.headers.contentType
-      = new ContentType("application", "javascript", charset: "utf-8");
+    response.headers.contentType =
+        new ContentType("application", "javascript", charset: "utf-8");
   } else if (requestFile.path.endsWith("css")) {
-    response.headers.contentType
-      = new ContentType("text", "css", charset: "utf-8");
+    response.headers.contentType =
+        new ContentType("text", "css", charset: "utf-8");
   } else if (requestFile.path.endsWith("jpg") ||
-             requestFile.path.endsWith("jpeg")) {
-    response.headers.contentType
-      = new ContentType("image", "jpeg");
+      requestFile.path.endsWith("jpeg")) {
+    response.headers.contentType = new ContentType("image", "jpeg");
   } else if (requestFile.path.endsWith("png")) {
-    response.headers.contentType
-      = new ContentType("image", "png");
+    response.headers.contentType = new ContentType("image", "png");
   } else {
-    response.headers.contentType
-      = new ContentType("text", "plain", charset: "utf-8");
+    response.headers.contentType =
+        new ContentType("text", "plain", charset: "utf-8");
   }
 
   // Send the contents of the file
@@ -204,6 +185,6 @@ void handleWebsocketRequest(var event) {
 }
 
 void sendAllContextDataToWebsocket(WebSocket socket) {
-  String message = JSON.encode({"type":"context","data":_contextCache});
+  String message = JSON.encode({"type": "context", "data": _contextCache});
   socket.add(message);
 }

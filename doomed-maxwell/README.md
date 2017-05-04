@@ -11,11 +11,20 @@ Before running, follow the instructions at the Fuchsia
 Maxwell services are launched by Modular on startup with the `default` build
 module.
 
+## Fuchsia Intelligence Dashboard
+
+Maxwell serves a diagnostic dashboard on port 4000. To access it on most Fuchsia
+development setups (including EdgeRouter and QEMU), watch the startup logs for
+the DHCP announcement. Point your browser to port 4000 of that IP after logging
+into Fuchsia.
+
+At present, the dashboard includes a context dump. More features to follow.
+
 ## Testing
 
-To run the Maxwell tests in a running Fuchsia environment:
+To run the Maxwell integration tests in a running Fuchsia environment:
 
-    @ /system/test/maxwell_test
+    @ /system/test/maxwell/integration
 
 A spurious error like
 
@@ -34,3 +43,7 @@ unstable version:
     fgen --args kronk_dev=true
 
 (and then rebuild)
+
+## Other Docs
+
+* [Module Manifest](docs/module_manifest.md)

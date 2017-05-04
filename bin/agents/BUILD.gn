@@ -2,30 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//apps/dart_content_handler/dart_app.gni")
-
 group("agents") {
   deps = [
     # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
     ":module_suggester",
-    ":module_suggester_dart",
-    ":mi_dashboard",
-  ]
-}
-
-dart_app("mi_dashboard") {
-  output_name = "agents/mi_dashboard.dartx"
-
-  main_dart = "mi_dashboard/main.dart"
-
-  deps = [
-    "//application/lib/app/dart",
-    "//apps/maxwell/lib/context/dart",
-    "//apps/maxwell/services/context:context_dart",
-    "//lib/fidl/dart",
-    "//third_party/dart-pkg/pub/http",
+    "//apps/maxwell/src/agents/mi_dashboard",
+    "//apps/maxwell/src/agents/module_suggester_dart",
   ]
 }
 
@@ -77,17 +61,5 @@ executable("module_suggester") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
-  ]
-}
-
-dart_app("module_suggester_dart") {
-  output_name = "agents/module_suggester.dartx"
-
-  main_dart = "module_suggester_dart/main.dart"
-
-  deps = [
-    "//application/lib/app/dart",
-    "//apps/maxwell/services/suggestion:suggestion_dart",
-    "//apps/web_runner/lib/dart:web_view",
   ]
 }
