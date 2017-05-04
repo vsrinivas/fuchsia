@@ -19,12 +19,11 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-r] [-t target] [-o outdir] [-d destdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-r] [-t target] [-o outdir]\n' "$0" && exit 1
 }
 
 build() {
-  local target="$1" outdir="$2" destdir="$3" clean="$4" release="$5"
-  local sysroot="${destdir}/${target}-fuchsia"
+  local target="$1" outdir="$2" clean="$3" release="$4"
   local magenta_buildroot="${outdir}/build-magenta"
 
   if [[ "${clean}" = "true" ]]; then
@@ -39,8 +38,6 @@ build() {
 
   local magenta_sysroot="${magenta_buildroot}/build-${magenta_target}/sysroot"
 
-  rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
-
   pushd "${ROOT_DIR}/magenta"
   rm -rf -- "${magenta_sysroot}"
   # build the sysroot for the target architecture
@@ -48,17 +45,6 @@ build() {
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   popd
-
-  cp -r -- \
-    "${magenta_sysroot}/include" \
-    "${magenta_sysroot}/lib" \
-    "${sysroot}"
-
-  if [[ -d "${magenta_sysroot}/debug-info" ]]; then
-    cp -r -- \
-      "${magenta_sysroot}/debug-info" \
-      "${sysroot}"
-  fi
 
   # These are magenta headers for use in building host tools outside
   # of the magenta tree.
@@ -74,13 +60,11 @@ build() {
 declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
-declare DESTDIR="${DESTDIR:-${OUTDIR}/sysroot}"
 declare RELEASE="${RELEASE:-false}"
 
 while getopts "cd:t:o:r" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
-    d) DESTDIR="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     r) RELEASE="true" ;;
     t) TARGET="${OPTARG}" ;;
@@ -88,6 +72,6 @@ while getopts "cd:t:o:r" opt; do
   esac
 done
 
-readonly CLEAN TARGET OUTDIR DESTDIR RELEASE
+readonly CLEAN TARGET OUTDIR RELEASE
 
-build "${TARGET}" "${OUTDIR}" "${DESTDIR}" "${CLEAN}" "${RELEASE}"
+build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${RELEASE}"
