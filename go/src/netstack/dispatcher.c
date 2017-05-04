@@ -17,7 +17,7 @@
 #include <mxio/remoteio.h>
 #include <mxio/socket.h>
 
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
@@ -103,7 +103,7 @@ mx_handle_t devmgr_connect(void) {
   if ((status = mx_channel_create(0, &h, &vnode_handle)) != NO_ERROR) {
     close(fd);
     return status;
-  } else if ((status = ioctl_devmgr_mount_fs(fd, &vnode_handle)) != NO_ERROR) {
+  } else if ((status = ioctl_vfs_mount_fs(fd, &vnode_handle)) != NO_ERROR) {
     mx_handle_close(h);
     mx_handle_close(vnode_handle);
     close(fd);
