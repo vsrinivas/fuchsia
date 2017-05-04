@@ -200,8 +200,7 @@ static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         .ops = &test_root_proto,
     };
 
-    mx_device_t* device;
-    return device_add(dev, &args, &device);
+    return device_add(dev, &args, &root->mxdev);
 }
 
 static mx_driver_ops_t test_driver_ops = {
