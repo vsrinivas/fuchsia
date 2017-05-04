@@ -5,7 +5,7 @@
 #include "apps/modular/lib/util/filesystem.h"
 
 #include <fcntl.h>
-#include <magenta/device/devmgr.h>
+#include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <unistd.h>
 #include <memory>
@@ -33,7 +33,7 @@ void WaitForMinfs() {
     ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
     FTL_DCHECK(fd.is_valid());
     char out[128];
-    ssize_t len = ioctl_devmgr_query_fs(fd.get(), out, sizeof(out));
+    ssize_t len = ioctl_vfs_query_fs(fd.get(), out, sizeof(out));
     FTL_DCHECK(len >= 0);
 
     ftl::StringView fs_name(out, len);
