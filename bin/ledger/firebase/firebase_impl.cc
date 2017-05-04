@@ -61,7 +61,9 @@ FirebaseImpl::WatchData::~WatchData() {}
 FirebaseImpl::FirebaseImpl(ledger::NetworkService* network_service,
                            const std::string& db_id,
                            const std::string& prefix)
-    : network_service_(network_service), api_url_(BuildApiUrl(db_id, prefix)) {}
+    : network_service_(network_service), api_url_(BuildApiUrl(db_id, prefix)) {
+  FTL_DCHECK(network_service_);
+}
 
 FirebaseImpl::~FirebaseImpl() {}
 

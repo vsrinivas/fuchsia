@@ -39,7 +39,7 @@ std::string ToString(const mx::vmo& vmo) {
 
 class PageImplTest : public test::TestWithMessageLoop {
  public:
-  PageImplTest() : environment_(nullptr, nullptr) {}
+  PageImplTest() : environment_(message_loop_.task_runner(), nullptr) {}
   ~PageImplTest() override {}
 
  protected:

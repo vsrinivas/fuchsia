@@ -10,15 +10,15 @@
 
 namespace ledger {
 
-namespace {}  // namespace
-
 Environment::Environment(ftl::RefPtr<ftl::TaskRunner> main_runner,
                          NetworkService* network_service,
                          ftl::RefPtr<ftl::TaskRunner> io_runner)
     : main_runner_(std::move(main_runner)),
       network_service_(network_service),
       coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()),
-      io_runner_(std::move(io_runner)) {}
+      io_runner_(std::move(io_runner)) {
+  FTL_DCHECK(main_runner_);
+}
 
 Environment::~Environment() {
   if (io_thread_.joinable()) {

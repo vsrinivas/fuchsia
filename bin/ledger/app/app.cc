@@ -57,13 +57,11 @@ class App : public LedgerController {
       return false;
     }
 
-    if (config.use_sync) {
-      network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
-          loop_.task_runner(), [this] {
-            return application_context_
-                ->ConnectToEnvironmentService<network::NetworkService>();
-          });
-    }
+    network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
+        loop_.task_runner(), [this] {
+          return application_context_
+              ->ConnectToEnvironmentService<network::NetworkService>();
+        });
     environment_ = std::make_unique<Environment>(loop_.task_runner(),
                                                  network_service_.get());
 
