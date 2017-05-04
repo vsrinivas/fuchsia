@@ -348,7 +348,9 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 				<-notifyCh
 				continue
 			} else if err == tcpip.ErrClosedForReceive {
-				log.Printf("TODO loopDgramRead closed")
+				if debug2 {
+					log.Printf("TODO loopDgramRead closed")
+				}
 				// TODO _, err := ios.dataHandle.Write(nil, MX_SOCKET_HALF_CLOSE)
 				return
 			}
@@ -775,10 +777,6 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 }
 
 func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
-	if debug {
-		log.Printf("opIoctl op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
-	}
-
 	switch msg.Op() {
 	case IOCTL_NETC_GET_IF_INFO:
 		rep := c_netc_get_if_info{}
@@ -807,6 +805,10 @@ func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 		rep.n_info = index
 		rep.Encode(msg)
 		return mx.ErrOk
+	}
+
+	if debug {
+		log.Printf("opIoctl op=0x%x, datalen=%d", msg.Op(), msg.Datalen)
 	}
 
 	return mx.ErrInvalidArgs
