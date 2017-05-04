@@ -1010,5 +1010,35 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
   }
 }
 
+TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+
+  std::unique_ptr<Commit> commit1 = CommitImpl::FromContentAndParents(
+      storage_.get(), RandomId(kObjectIdSize), std::move(parent));
+  CommitId id1 = commit1->GetId();
+
+  parent.clear();
+  parent.emplace_back(commit1->Clone());
+
+  std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
+              storage_.get(), RandomId(kObjectIdSize), std::move(parent));
+  CommitId id2 = commit2->GetId();
+
+  FakeCommitWatcher watcher;
+  storage_->AddCommitWatcher(&watcher);
+
+  storage_->AddCommitFromLocal(std::move(commit1), ftl::MakeCopyable([
+    this, commit2 = std::move(commit2)
+  ](Status status) mutable { EXPECT_EQ(Status::OK, status);
+    storage_->AddCommitFromLocal(std::move(commit2), [](Status status) {
+      EXPECT_EQ(Status::OK, status);
+    });
+  }));
+
+  EXPECT_EQ(2, watcher.commit_count);
+  EXPECT_EQ(id2, watcher.last_commit_id);
+}
+
 }  // namespace
 }  // namespace storage

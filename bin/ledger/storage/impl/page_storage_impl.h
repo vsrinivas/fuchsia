@@ -7,6 +7,7 @@
 
 #include "apps/ledger/src/storage/public/page_storage.h"
 
+#include <queue>
 #include <set>
 
 #include "apps/ledger/src/callback/pending_operation.h"
@@ -120,9 +121,8 @@ class PageStorageImpl : public PageStorage {
           callback);
   std::string GetFilePath(ObjectIdView object_id) const;
 
-  // Notifies the registered watchers with the given |commits|.
-  void NotifyWatchers(const std::vector<std::unique_ptr<const Commit>>& commits,
-                      ChangeSource source);
+  // Notifies the registered watchers with the |commits| in commit_to_send_.
+  void NotifyWatchers();
 
   const ftl::RefPtr<ftl::TaskRunner> main_runner_;
   const ftl::RefPtr<ftl::TaskRunner> io_runner_;
@@ -136,6 +136,7 @@ class PageStorageImpl : public PageStorage {
   std::string staging_dir_;
   callback::PendingOperationManager pending_operation_manager_;
   PageSyncDelegate* page_sync_;
+  std::queue<std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>> commits_to_send_;
 };
 
 }  // namespace storage

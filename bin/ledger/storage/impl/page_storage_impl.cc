@@ -679,11 +679,13 @@ void PageStorageImpl::GetCommitContentsDiff(
                      std::move(on_next_diff), std::move(on_done));
 }
 
-void PageStorageImpl::NotifyWatchers(
-    const std::vector<std::unique_ptr<const Commit>>& commits,
-    ChangeSource source) {
-  for (CommitWatcher* watcher : watchers_) {
-    watcher->OnNewCommits(commits, source);
+void PageStorageImpl::NotifyWatchers() {
+  while (!commits_to_send_.empty()) {
+    auto to_send = std::move(commits_to_send_.front());
+    for (CommitWatcher* watcher : watchers_) {
+      watcher->OnNewCommits(std::move(to_send.second), to_send.first);
+    }
+    commits_to_send_.pop();
   }
 }
 
@@ -742,12 +744,14 @@ void PageStorageImpl::AddCommits(
   }
 
   Status s = batch->Execute();
+  bool notify_watchers = commits_to_send_.empty();
+  commits_to_send_.emplace(source, std::move(commits));
   callback(s);
-  if (s != Status::OK) {
-    return;
+
+  if (s == Status::OK && notify_watchers) {
+    NotifyWatchers();
   }
 
-  NotifyWatchers(std::move(commits), source);
 }
 
 Status PageStorageImpl::ContainsCommit(CommitIdView id) {
