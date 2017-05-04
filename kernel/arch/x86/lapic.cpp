@@ -79,11 +79,6 @@ static void *apic_virt_base;
 #define LVT_DELIVERY_PENDING (1 << 12)
 #define LVT_MASKED (1 << 16)
 
-// LVT Timer bitmasks
-#define LVT_TIMER_MODE_ONESHOT (0 << 17)
-#define LVT_TIMER_MODE_PERIODIC (1 << 17)
-#define LVT_TIMER_MODE_TSC_DEADLINE (2 << 17)
-
 static void apic_error_init(void);
 static void apic_timer_init(void);
 

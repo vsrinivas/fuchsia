@@ -13,6 +13,8 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <kernel/sched.h>
+#include <kernel/timer.h>
 #include <mxtl/algorithm.h>
 #include <platform/pc/timer.h>
 
@@ -40,7 +42,7 @@ static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 static const uint8_t kModRMRegMask = 0b00111000;
 
-static const uint32_t kInterruptValid = 1u << 31;
+static const uint32_t kInterruptInfoValid = 1u << 31;
 
 ExitInfo::ExitInfo() {
     exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
@@ -62,6 +64,8 @@ ExitInfo::ExitInfo() {
         vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
     dprintf(SPEW, "guest activity state: %#" PRIx32 "\n",
         vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
+    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
     dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
 }
 
@@ -82,10 +86,45 @@ static void next_rip(const ExitInfo& exit_info) {
     vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
 }
 
-static status_t handle_external_interrupt() {
+static void set_interrupt(LocalApicState* local_apic_state) {
+    if (local_apic_state->active_interrupt != kInvalidInterrupt) {
+        uint32_t interrupt_info = kInterruptInfoValid | local_apic_state->active_interrupt;
+        vmcs_write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
+        local_apic_state->active_interrupt = kInvalidInterrupt;
+    }
+}
+
+void interrupt_window_exiting(bool enable) {
+    uint32_t controls = vmcs_read(VmcsField32::PROCBASED_CTLS);
+    if (enable) {
+        controls |= PROCBASED_CTLS_INT_WINDOW_EXITING;
+    }
+    else {
+        controls &= ~PROCBASED_CTLS_INT_WINDOW_EXITING;
+    }
+    vmcs_write(VmcsField32::PROCBASED_CTLS, controls);
+}
+
+static status_t handle_external_interrupt(const ExitInfo& exit_info,
+                                          LocalApicState* local_apic_state) {
     DEBUG_ASSERT(arch_ints_disabled());
     arch_enable_ints();
     arch_disable_ints();
+
+    if (vmcs_read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
+        // If interrupts are enabled, we inject any active interrupts.
+        set_interrupt(local_apic_state);
+    } else if (local_apic_state->active_interrupt != kInvalidInterrupt) {
+        // If interrupts are disabled, we set VM exit on interrupt enable.
+        interrupt_window_exiting(true);
+    }
+    return NO_ERROR;
+}
+
+static status_t handle_interrupt_window(const ExitInfo& exit_info,
+                                        LocalApicState* local_apic_state) {
+    interrupt_window_exiting(false);
+    set_interrupt(local_apic_state);
     return NO_ERROR;
 }
 
@@ -126,16 +165,11 @@ static status_t handle_cpuid(const ExitInfo& exit_info, GuestState* guest_state)
 }
 
 static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic_state) {
-    // TODO(abdulla): Validate that we're here for a timer.
-    if (local_apic_state->tsc_deadline > rdtsc()) {
-        lk_time_t deadline = ticks_to_nanos(local_apic_state->tsc_deadline);
-        // TODO(abdulla): Use an interruptible sleep here, so that we can:
-        // a) Continue to deliver interrupts to the guest.
-        // b) Kill the hypervisor while a guest is halted.
-        thread_sleep(deadline);
-    }
-    local_apic_state->tsc_deadline = 0;
-    vmcs_write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, kInterruptValid | X86_INT_APIC_TIMER);
+    // TODO(abdulla): Use an interruptible sleep here, so that we can:
+    // a) Continue to deliver interrupts to the guest.
+    // b) Kill the hypervisor while a guest is halted.
+    event_wait(&local_apic_state->event);
+    set_interrupt(local_apic_state);
     next_rip(exit_info);
     return NO_ERROR;
 }
@@ -184,6 +218,22 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
+static uint32_t* apic_reg(LocalApicState* local_apic_state, ApicRegister reg) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->virtual_apic);
+    return reinterpret_cast<uint32_t*>(addr + static_cast<uint16_t>(reg));
+}
+
+static handler_return deadline_callback(timer_t* timer, lk_time_t now, void* arg) {
+    LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
+    DEBUG_ASSERT(local_apic_state->active_interrupt == kInvalidInterrupt);
+
+    uint32_t* lvt_timer = apic_reg(local_apic_state, ApicRegister::LVT_TIMER);
+    local_apic_state->active_interrupt = *lvt_timer & LVT_TIMER_VECTOR_MASK;
+    local_apic_state->tsc_deadline = 0;
+    event_signal(&local_apic_state->event, false);
+    return INT_NO_RESCHEDULE;
+}
+
 static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
                              LocalApicState* local_apic_state) {
     switch (guest_state->rcx) {
@@ -201,10 +251,20 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
         next_rip(exit_info);
         return NO_ERROR;
-    case X86_MSR_IA32_TSC_DEADLINE:
+    case X86_MSR_IA32_TSC_DEADLINE: {
+        uint32_t* reg = apic_reg(local_apic_state, ApicRegister::LVT_TIMER);
+        if ((*reg & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
+            return ERR_INVALID_ARGS;
         next_rip(exit_info);
+        timer_cancel(&local_apic_state->timer);
+        local_apic_state->active_interrupt = kInvalidInterrupt;
         local_apic_state->tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & 0xffffffff);
+        if (local_apic_state->tsc_deadline > 0) {
+            lk_time_t deadline = ticks_to_nanos(local_apic_state->tsc_deadline);
+            timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback, local_apic_state);
+        }
         return NO_ERROR;
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }
@@ -413,12 +473,6 @@ void apply_inst(const Instruction& inst, T* value) {
         *value = get_value<T>(inst);
 }
 
-template<typename T>
-T* apic_reg(LocalApicState* local_apic_state, ApicRegister reg) {
-    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->virtual_apic);
-    return reinterpret_cast<T*>(addr + static_cast<uint16_t>(reg));
-}
-
 static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_state,
                                    LocalApicState* local_apic_state,
                                    GuestPhysicalAddressSpace* gpas) {
@@ -453,8 +507,7 @@ static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_
     case ApicRegister::SVR:
     case ApicRegister::ESR:
     case ApicRegister::LVT_TIMER:
-        // TODO(abdulla): Correctly handle LVT_TIMER.
-    case ApicRegister::LVT_ERROR:
+    case ApicRegister::LVT_ERROR: {
         next_rip(exit_info);
         // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
         // ESR, software should first write to it.
@@ -462,8 +515,15 @@ static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_
         // Therefore, we ignore writes to the ESR.
         if (!inst.read && apic_access_info.reg == ApicRegister::ESR)
             return NO_ERROR;
-        uint32_t* addr = apic_reg<uint32_t>(local_apic_state, apic_access_info.reg);
-        apply_inst(inst, addr);
+        uint32_t* reg = apic_reg(local_apic_state, apic_access_info.reg);
+        apply_inst(inst, reg);
+        return NO_ERROR;
+    }
+    case ApicRegister::INITIAL_COUNT:
+        uint32_t count = get_value<uint32_t>(inst);
+        if (inst.read || count > 0)
+            return ERR_NOT_SUPPORTED;
+        next_rip(exit_info);
         return NO_ERROR;
     }
     return ERR_NOT_SUPPORTED;
@@ -557,7 +617,10 @@ status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_stat
 
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
-        return handle_external_interrupt();
+        return handle_external_interrupt(exit_info, local_apic_state);
+    case ExitReason::INTERRUPT_WINDOW:
+        dprintf(SPEW, "handling interrupt window\n\n");
+        return handle_interrupt_window(exit_info, local_apic_state);
     case ExitReason::CPUID:
         dprintf(SPEW, "handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);

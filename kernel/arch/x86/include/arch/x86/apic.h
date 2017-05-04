@@ -16,7 +16,14 @@ __BEGIN_CDECLS
 #define APIC_PHYS_BASE              0xfee00000
 #define IA32_APIC_BASE_BSP          (1u << 8)
 #define IA32_APIC_BASE_XAPIC_ENABLE (1u << 11)
-#define NUM_ISA_IRQS 16
+#define NUM_ISA_IRQS                16
+
+// LVT Timer bitmasks
+#define LVT_TIMER_VECTOR_MASK       0x000000ff
+#define LVT_TIMER_MODE_MASK         0x00060000
+#define LVT_TIMER_MODE_ONESHOT      (0u << 17)
+#define LVT_TIMER_MODE_PERIODIC     (1u << 17)
+#define LVT_TIMER_MODE_TSC_DEADLINE (2u << 17)
 
 enum apic_interrupt_delivery_mode {
     // Unless you know what you're doing, you want FIXED.

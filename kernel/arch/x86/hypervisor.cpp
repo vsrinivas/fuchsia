@@ -415,6 +415,9 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     status = local_apic_state_.virtual_apic_page.Alloc(vmx_info, 0);
     if (status != NO_ERROR)
         return status;
+    timer_initialize(&local_apic_state_.timer);
+    event_init(&local_apic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
+    local_apic_state_.active_interrupt = kInvalidInterrupt;
     local_apic_state_.tsc_deadline = 0;
     local_apic_state_.virtual_apic = local_apic_state_.virtual_apic_page.VirtualAddress();
 
@@ -541,7 +544,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PINBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PINBASED_CTLS),
                               // External interrupts cause a VM exit.
-                              PINBASED_CTLS_EXTINT_EXITING |
+                              PINBASED_CTLS_EXT_INT_EXITING |
                               // Non-maskable interrupts cause a VM exit.
                               PINBASED_CTLS_NMI_EXITING,
                               0);
@@ -552,6 +555,8 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
     status = set_vmcs_control(VmcsField32::PROCBASED_CTLS,
                               read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
                               read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
+                              // Enable VM exit when interrupts are enabled.
+                              PROCBASED_CTLS_INT_WINDOW_EXITING |
                               // Enable VM exit on HLT instruction.
                               PROCBASED_CTLS_HLT_EXITING |
                               // Enable TPR virtualization.
@@ -572,6 +577,10 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
                               PROCBASED_CTLS_CR8_STORE_EXITING);
     if (status != NO_ERROR)
         return status;
+
+    // We only enable interrupt-window exiting above to ensure that the
+    // processor supports it for later use. So disable it for now.
+    interrupt_window_exiting(false);
 
     // Setup VM-exit VMCS controls.
     status = set_vmcs_control(VmcsField32::EXIT_CTLS,

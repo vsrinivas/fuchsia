@@ -18,6 +18,7 @@ struct VmxState;
 /* VM exit reasons. */
 enum class ExitReason : uint32_t {
     EXTERNAL_INTERRUPT          = 1u,
+    INTERRUPT_WINDOW            = 7u,
     CPUID                       = 10u,
     HLT                         = 12u,
     IO_INSTRUCTION              = 30u,
@@ -59,6 +60,7 @@ enum class ApicRegister : uint16_t {
     ESR             = 0x0280,
     LVT_TIMER       = 0x0320,
     LVT_ERROR       = 0x0370,
+    INITIAL_COUNT   = 0x0380,
 };
 
 /* Stores local APIC access info from the VMCS exit qualification field. */
@@ -77,9 +79,9 @@ struct Instruction {
     uint64_t* reg;
 };
 
+void interrupt_window_exiting(bool enable);
 status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestState* guest_state,
                             Instruction* inst);
-
 status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_state,
                         IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
                         FifoDispatcher* serial_fifo);

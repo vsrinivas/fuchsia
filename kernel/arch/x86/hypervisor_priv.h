@@ -10,9 +10,12 @@
 
 #include <arch/x86/hypervisor.h>
 #include <arch/x86/hypervisor_state.h>
+#include <kernel/event.h>
+#include <kernel/timer.h>
 
 static const uint64_t kIoApicPhysBase = 0xfec00000;
 static const uint8_t kIoApicRedirectOffsets = 0x36;
+static const uint32_t kInvalidInterrupt = UINT32_MAX >> 1;
 
 #define X86_MSR_IA32_FEATURE_CONTROL                0x003a      /* Feature control */
 #define X86_MSR_IA32_VMX_BASIC                      0x0480      /* Basic info */
@@ -139,6 +142,7 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS2_VPID                (1u << 5)
 
 /* PROCBASED_CTLS flags */
+#define PROCBASED_CTLS_INT_WINDOW_EXITING   (1u << 2)
 #define PROCBASED_CTLS_HLT_EXITING          (1u << 7)
 #define PROCBASED_CTLS_CR3_LOAD_EXITING     (1u << 15)
 #define PROCBASED_CTLS_CR3_STORE_EXITING    (1u << 16)
@@ -150,7 +154,7 @@ enum class VmcsFieldXX : uint64_t {
 #define PROCBASED_CTLS_PROCBASED_CTLS2      (1u << 31)
 
 /* PINBASED_CTLS flags */
-#define PINBASED_CTLS_EXTINT_EXITING        (1u << 0)
+#define PINBASED_CTLS_EXT_INT_EXITING       (1u << 0)
 #define PINBASED_CTLS_NMI_EXITING           (1u << 3)
 
 /* EXIT_CTLS flags */
@@ -247,6 +251,12 @@ struct AutoVmcsLoad {
 
 /* Stores the local APIC state across VM exits. */
 struct LocalApicState {
+    // Timer for APIC timer.
+    timer_t timer;
+    // Event for handling block on HLT.
+    event_t event;
+    // Active interrupt, one of enum x86_interrupt_vector or kInvalidInterrupt.
+    uint32_t active_interrupt;
     // TSC deadline.
     uint64_t tsc_deadline;
     // Virtual local APIC address.
