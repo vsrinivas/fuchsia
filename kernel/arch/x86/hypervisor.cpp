@@ -202,45 +202,6 @@ EptInfo::EptInfo() {
         BIT_SHIFT(ept_info, 26);
 }
 
-ExitInfo::ExitInfo() {
-    exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
-    exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
-    instruction_length = vmcs_read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
-    guest_physical_address = vmcs_read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
-    guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
-
-    if (exit_reason == ExitReason::EXTERNAL_INTERRUPT ||
-        exit_reason == ExitReason::HLT ||
-        exit_reason == ExitReason::IO_INSTRUCTION)
-        return;
-
-    dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
-    dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
-    dprintf(SPEW, "interruption information: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::EXIT_INTERRUPTION_INFORMATION));
-    dprintf(SPEW, "interruption error code: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::EXIT_INTERRUPTION_ERROR_CODE));
-    dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
-    dprintf(SPEW, "instruction information: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::EXIT_INSTRUCTION_INFORMATION));
-    dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
-    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n",
-        vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
-    dprintf(SPEW, "guest interruptibility state: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
-    dprintf(SPEW, "guest activity state: %#" PRIx32 "\n",
-        vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
-    dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
-}
-
-IoInfo::IoInfo(uint64_t qualification) {
-    bytes = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
-    input = BIT_SHIFT(qualification, 3);
-    string = BIT_SHIFT(qualification, 4);
-    repeat = BIT_SHIFT(qualification, 5);
-    port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
-}
-
 VmxPage::~VmxPage() {
     vm_page_t* page = paddr_to_vm_page(pa_);
     if (page != nullptr)
@@ -451,10 +412,11 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
 
     memset(&vmx_state_, 0, sizeof(vmx_state_));
 
-    local_apic_state_.tsc_deadline = 0;
     status = local_apic_state_.virtual_apic_page.Alloc(vmx_info, 0);
     if (status != NO_ERROR)
         return status;
+    local_apic_state_.tsc_deadline = 0;
+    local_apic_state_.virtual_apic = local_apic_state_.virtual_apic_page.VirtualAddress();
 
     memset(&io_apic_state_, 0, sizeof(io_apic_state_));
     return NO_ERROR;
@@ -549,7 +511,8 @@ static void edit_msr_list(VmxPage* msr_list_page, uint index, uint32_t msr, uint
     entry->value = value;
 }
 
-status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
+status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
+                           paddr_t msr_bitmaps_address) {
     status_t status = Clear();
     if (status != NO_ERROR)
         return status;
@@ -686,7 +649,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address) {
     vmcs_write(VmcsField64::EPT_POINTER, ept_pointer(pml4_address));
 
     // Setup APIC handling.
-    vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, APIC_PHYS_BASE);
+    vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, apic_access_address);
     vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS,
                local_apic_state_.virtual_apic_page.PhysicalAddress());
 
@@ -871,7 +834,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Setup(context->Pml4Address(), context->MsrBitmapsAddress());
+    return per_cpu->Setup(context->Pml4Address(), context->ApicAccessAddress(),
+                          context->MsrBitmapsAddress());
 }
 
 // static
@@ -957,6 +921,10 @@ VmcsContext::~VmcsContext() {
 
 paddr_t VmcsContext::Pml4Address() {
     return gpas_->Pml4Address();
+}
+
+paddr_t VmcsContext::ApicAccessAddress() {
+    return apic_address_page_.PhysicalAddress();
 }
 
 paddr_t VmcsContext::MsrBitmapsAddress() {

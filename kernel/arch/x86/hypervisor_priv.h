@@ -168,20 +168,6 @@ enum class VmcsFieldXX : uint64_t {
 /* LINK_POINTER values */
 #define LINK_POINTER_INVALIDATE             0xffffffffffffffff
 
-/* EXIT_REASON values */
-enum class ExitReason : uint32_t {
-    EXTERNAL_INTERRUPT          = 1u,
-    CPUID                       = 10u,
-    HLT                         = 12u,
-    IO_INSTRUCTION              = 30u,
-    RDMSR                       = 31u,
-    WRMSR                       = 32u,
-    ENTRY_FAILURE_GUEST_STATE   = 33u,
-    ENTRY_FAILURE_MSR_LOADING   = 34u,
-    EPT_VIOLATION               = 48u,
-    XSETBV                      = 55u,
-};
-
 /* GUEST_XX_ACCESS_RIGHTS flags */
 #define GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
 // See Volume 3, Section 24.4.1 for access rights format.
@@ -195,7 +181,6 @@ enum class ExitReason : uint32_t {
 #define GUEST_XX_ACCESS_RIGHTS_L            (1u << 13)
 // See Volume 3, Section 3.5 for valid system selectors types.
 #define GUEST_TR_ACCESS_RIGHTS_TSS_BUSY     (11u << 0)
-
 
 /* Stores VMX info from the IA32_VMX_BASIC MSR. */
 struct VmxInfo {
@@ -227,28 +212,6 @@ struct EptInfo {
     bool invept;
 
     EptInfo();
-};
-
-/* Stores VM exit info from VMCS fields. */
-struct ExitInfo {
-    ExitReason exit_reason;
-    uint64_t exit_qualification;
-    uint32_t instruction_length;
-    uint64_t guest_physical_address;
-    uint64_t guest_rip;
-
-    ExitInfo();
-};
-
-/* Stores IO instruction info from the VMCS exit qualification field. */
-struct IoInfo {
-    uint8_t bytes;
-    bool input;
-    bool string;
-    bool repeat;
-    uint16_t port;
-
-    IoInfo(uint64_t qualification);
 };
 
 /* VMX region to be used with both VMXON and VMCS. */
@@ -286,6 +249,8 @@ struct AutoVmcsLoad {
 struct LocalApicState {
     // TSC deadline.
     uint64_t tsc_deadline;
+    // Virtual local APIC address.
+    void* virtual_apic;
     // Virtual local APIC page.
     VmxPage virtual_apic_page;
 };
@@ -305,7 +270,8 @@ class VmcsPerCpu : public PerCpu {
 public:
     status_t Init(const VmxInfo& vmx_info) override;
     status_t Clear();
-    status_t Setup(paddr_t pml4_address, paddr_t msr_bitmaps_address);
+    status_t Setup(paddr_t pml4_address, paddr_t apic_access_address,
+                   paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
                    FifoDispatcher* serial_fifo);
 

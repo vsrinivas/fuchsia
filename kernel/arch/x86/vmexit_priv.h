@@ -15,6 +15,61 @@ struct IoApicState;
 struct LocalApicState;
 struct VmxState;
 
+/* VM exit reasons. */
+enum class ExitReason : uint32_t {
+    EXTERNAL_INTERRUPT          = 1u,
+    CPUID                       = 10u,
+    HLT                         = 12u,
+    IO_INSTRUCTION              = 30u,
+    RDMSR                       = 31u,
+    WRMSR                       = 32u,
+    ENTRY_FAILURE_GUEST_STATE   = 33u,
+    ENTRY_FAILURE_MSR_LOADING   = 34u,
+    APIC_ACCESS                 = 44u,
+    EPT_VIOLATION               = 48u,
+    XSETBV                      = 55u,
+};
+
+/* Stores VM exit info from VMCS fields. */
+struct ExitInfo {
+    ExitReason exit_reason;
+    uint64_t exit_qualification;
+    uint32_t instruction_length;
+    uint64_t guest_physical_address;
+    uint64_t guest_rip;
+
+    ExitInfo();
+};
+
+/* Stores IO instruction info from the VMCS exit qualification field. */
+struct IoInfo {
+    uint8_t bytes;
+    bool input;
+    bool string;
+    bool repeat;
+    uint16_t port;
+
+    IoInfo(uint64_t qualification);
+};
+
+enum class ApicRegister : uint16_t {
+    LOCAL_APIC_ID   = 0x0020,
+    EOI             = 0x00b0,
+    SVR             = 0x00f0,
+    ESR             = 0x0280,
+    LVT_TIMER       = 0x0320,
+    LVT_ERROR       = 0x0370,
+};
+
+/* Stores local APIC access info from the VMCS exit qualification field. */
+struct ApicAccessInfo {
+    ApicRegister reg;
+    uint8_t type;
+
+    ApicAccessInfo(uint64_t qualification);
+};
+
+/* Stores info from a decoded instruction. */
 struct Instruction {
     bool read;
     bool rex;

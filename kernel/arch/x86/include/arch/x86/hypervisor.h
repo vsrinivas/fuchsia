@@ -62,6 +62,7 @@ public:
     ~VmcsContext();
 
     paddr_t Pml4Address();
+    paddr_t ApicAccessAddress();
     paddr_t MsrBitmapsAddress();
     VmcsPerCpu* PerCpu();
     status_t Enter();

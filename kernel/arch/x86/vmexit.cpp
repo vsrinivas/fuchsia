@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
 #include <platform.h>
 #include <string.h>
 
@@ -32,11 +33,49 @@ static const uint8_t kIoApicVersion = 0x11;
 static const uint32_t kFirstRedirectOffset = 0x10;
 static const uint32_t kLastRedirectOffset = kFirstRedirectOffset + kIoApicRedirectOffsets - 1;
 
+static const uint8_t kApicAccessRead = 0;
+
 static const uint32_t kMaxInstructionLength = 15;
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 
 static const uint32_t kInterruptValid = 1u << 31;
+
+ExitInfo::ExitInfo() {
+    exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
+    exit_qualification = vmcs_read(VmcsFieldXX::EXIT_QUALIFICATION);
+    instruction_length = vmcs_read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
+    guest_physical_address = vmcs_read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
+    guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
+
+    if (exit_reason == ExitReason::EXTERNAL_INTERRUPT ||
+        exit_reason == ExitReason::HLT ||
+        exit_reason == ExitReason::IO_INSTRUCTION)
+        return;
+
+    dprintf(SPEW, "exit reason: %#" PRIx32 "\n", static_cast<uint32_t>(exit_reason));
+    dprintf(SPEW, "exit qualification: %#" PRIx64 "\n", exit_qualification);
+    dprintf(SPEW, "instruction length: %#" PRIx32 "\n", instruction_length);
+    dprintf(SPEW, "guest physical address: %#" PRIx64 "\n", guest_physical_address);
+    dprintf(SPEW, "guest linear address: %#" PRIx64 "\n",
+        vmcs_read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+    dprintf(SPEW, "guest activity state: %#" PRIx32 "\n",
+        vmcs_read(VmcsField32::GUEST_ACTIVITY_STATE));
+    dprintf(SPEW, "guest rip: %#" PRIx64 "\n", guest_rip);
+}
+
+IoInfo::IoInfo(uint64_t qualification) {
+    bytes = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
+    input = BIT_SHIFT(qualification, 3);
+    string = BIT_SHIFT(qualification, 4);
+    repeat = BIT_SHIFT(qualification, 5);
+    port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
+}
+
+ApicAccessInfo::ApicAccessInfo(uint64_t qualification) {
+    reg = static_cast<ApicRegister>(BITS(qualification, 11, 0));
+    type = static_cast<uint8_t>(BITS_SHIFT(qualification, 15, 12));
+}
 
 static void next_rip(const ExitInfo& exit_info) {
     vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
@@ -100,6 +139,26 @@ static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic
     return NO_ERROR;
 }
 
+static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
+                          FifoDispatcher* serial_fifo) {
+    next_rip(exit_info);
+#if WITH_LIB_MAGENTA
+    IoInfo io_info(exit_info.exit_qualification);
+    if (io_info.input) {
+        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort)
+            guest_state->rax = kUartStatusIdle;
+        return NO_ERROR;
+    }
+    if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
+        return NO_ERROR;
+    uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
+    uint32_t actual;
+    return serial_fifo->Write(data, io_info.bytes, &actual);
+#else // WITH_LIB_MAGENTA
+    return NO_ERROR;
+#endif // WITH_LIB_MAGENTA
+}
+
 static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
@@ -148,26 +207,6 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     default:
         return ERR_NOT_SUPPORTED;
     }
-}
-
-static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
-                          FifoDispatcher* serial_fifo) {
-    next_rip(exit_info);
-#if WITH_LIB_MAGENTA
-    IoInfo io_info(exit_info.exit_qualification);
-    if (io_info.input) {
-        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort)
-            guest_state->rax = kUartStatusIdle;
-        return NO_ERROR;
-    }
-    if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
-        return NO_ERROR;
-    uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
-    uint32_t actual;
-    return serial_fifo->Write(data, io_info.bytes, &actual);
-#else // WITH_LIB_MAGENTA
-    return NO_ERROR;
-#endif // WITH_LIB_MAGENTA
 }
 
 static status_t get_page(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
@@ -365,6 +404,70 @@ T get_value(const Instruction& inst) {
     return static_cast<T>(inst.reg != nullptr ? *inst.reg : inst.val);
 }
 
+template<typename T>
+void apply_inst(const Instruction& inst, T* value) {
+    if (inst.read)
+        *inst.reg = *value;
+    else
+        *value = get_value<T>(inst);
+}
+
+template<typename T>
+T* apic_reg(LocalApicState* local_apic_state, ApicRegister reg) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->virtual_apic);
+    return reinterpret_cast<T*>(addr + static_cast<uint16_t>(reg));
+}
+
+static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_state,
+                                   LocalApicState* local_apic_state,
+                                   GuestPhysicalAddressSpace* gpas) {
+    uint8_t inst_buf[kMaxInstructionLength];
+    uint32_t inst_len = exit_info.instruction_length;
+    status_t status = fetch_data(gpas, exit_info.guest_rip, inst_buf, inst_len);
+    if (status != NO_ERROR)
+        return status;
+
+    Instruction inst;
+    status = decode_instruction(inst_buf, inst_len, guest_state, &inst);
+    if (status != NO_ERROR)
+        return status;
+
+    ApicAccessInfo apic_access_info(exit_info.exit_qualification);
+    if (inst.read && apic_access_info.type != kApicAccessRead)
+        return ERR_BAD_STATE;
+
+    switch (apic_access_info.reg) {
+    case ApicRegister::LOCAL_APIC_ID:
+        if (!inst.read)
+            return ERR_NOT_SUPPORTED;
+        *inst.reg = 0;
+        next_rip(exit_info);
+        return NO_ERROR;
+    case ApicRegister::EOI:
+        // TODO(abdulla): Correctly handle EOI.
+        if (inst.read)
+            return ERR_INVALID_ARGS;
+        next_rip(exit_info);
+        return NO_ERROR;
+    case ApicRegister::SVR:
+    case ApicRegister::ESR:
+    case ApicRegister::LVT_TIMER:
+        // TODO(abdulla): Correctly handle LVT_TIMER.
+    case ApicRegister::LVT_ERROR:
+        next_rip(exit_info);
+        // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
+        // ESR, software should first write to it.
+        //
+        // Therefore, we ignore writes to the ESR.
+        if (!inst.read && apic_access_info.reg == ApicRegister::ESR)
+            return NO_ERROR;
+        uint32_t* addr = apic_reg<uint32_t>(local_apic_state, apic_access_info.reg);
+        apply_inst(inst, addr);
+        return NO_ERROR;
+    }
+    return ERR_NOT_SUPPORTED;
+}
+
 static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* guest_state,
                                      IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas) {
     if (exit_info.guest_physical_address < kIoApicPhysBase ||
@@ -389,35 +492,29 @@ static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* gues
     case IO_APIC_IOREGSEL:
         if (inst.read)
             return ERR_NOT_SUPPORTED;
-        next_rip(exit_info);
         io_apic_state->select = get_value<uint32_t>(inst);
+        next_rip(exit_info);
         return io_apic_state->select > UINT8_MAX ? ERR_INVALID_ARGS : NO_ERROR;
     case IO_APIC_IOWIN:
         switch (io_apic_state->select) {
         case IO_APIC_REG_ID:
+            apply_inst(inst, &io_apic_state->id);
             next_rip(exit_info);
-            if (inst.read)
-                *inst.reg = io_apic_state->id;
-            else
-                io_apic_state->id = get_value<uint32_t>(inst);
             return NO_ERROR;
         case IO_APIC_REG_VER:
             if (!inst.read || inst.reg == nullptr)
                 return ERR_NOT_SUPPORTED;
-            next_rip(exit_info);
             // There are two redirect offsets per redirection entry. We return
             // the maximum redirection entry index.
             //
             // From Intel 82093AA, Section 3.2.2.
             *inst.reg = (kIoApicRedirectOffsets / 2 - 1) << 16 | kIoApicVersion;
+            next_rip(exit_info);
             return NO_ERROR;
         case kFirstRedirectOffset ... kLastRedirectOffset: {
-            next_rip(exit_info);
             uint32_t i = io_apic_state->select - kFirstRedirectOffset;
-            if (inst.read)
-                *inst.reg = io_apic_state->redirect[i];
-            else
-                io_apic_state->redirect[i] = get_value<uint32_t>(inst);
+            apply_inst(inst, io_apic_state->redirect + i);
+            next_rip(exit_info);
             return NO_ERROR;
         }}
     }
@@ -477,6 +574,9 @@ status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_stat
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         dprintf(SPEW, "handling VM entry failure\n\n");
         return ERR_BAD_STATE;
+    case ExitReason::APIC_ACCESS:
+        dprintf(SPEW, "handling APIC access\n\n");
+        return handle_apic_access(exit_info, guest_state, local_apic_state, gpas);
     case ExitReason::EPT_VIOLATION:
         dprintf(SPEW, "handling EPT violation\n\n");
         return handle_ept_violation(exit_info, guest_state, io_apic_state, gpas);
