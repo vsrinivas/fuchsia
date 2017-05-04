@@ -44,6 +44,18 @@
 bool __dm_locked = false;
 mtx_t __devhost_api_lock = MTX_INIT;
 
+static mx_device_t* dev_create_parent;
+static mx_device_t* dev_create_device;
+
+mx_device_t* device_create_setup(mx_device_t* parent) {
+    DM_LOCK();
+    mx_device_t* dev = dev_create_device;
+    dev_create_parent = parent;
+    dev_create_device = NULL;
+    DM_UNLOCK();
+    return dev;
+}
+
 static mx_device_t* root_dev;
 
 static mx_status_t default_open(void* ctx, mx_device_t** out, uint32_t flags) {
@@ -353,15 +365,25 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
     if ((status = device_validate(dev)) < 0) {
         goto fail;
     }
-    if (parent == NULL) {
-        printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
-        status = ERR_NOT_SUPPORTED;
-        goto fail;
-    }
-    if (parent->flags & DEV_FLAG_DEAD) {
-        printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
-        status = ERR_BAD_STATE;
-        goto fail;
+    if (parent == dev_create_parent) {
+        // check for magic parent value indicating
+        // shadow device creation, and if so, ensure
+        // we don't add more than one shadow device
+        // per create() op...
+        if (dev_create_device != NULL) {
+            return ERR_BAD_STATE;
+        }
+    } else {
+        if (parent == NULL) {
+            printf("device_add: cannot add %p(%s) to NULL parent\n", dev, dev->name);
+            status = ERR_NOT_SUPPORTED;
+            goto fail;
+        }
+        if (parent->flags & DEV_FLAG_DEAD) {
+            printf("device add: %p: is dead, cannot add child %p\n", parent, dev);
+            status = ERR_BAD_STATE;
+            goto fail;
+        }
     }
 #if TRACE_ADD_REMOVE
     printf("devhost: device add: %p(%s) parent=%p(%s)\n",
@@ -388,7 +410,13 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
     // or, for instanced devices, by the last close
     dev_ref_acquire(dev);
 
-    if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+    // shadow devices are created through this handshake process
+    if (parent == dev_create_parent) {
+        dev_create_device = dev;
+        dev->flags |= DEV_FLAG_ADDED;
+        dev->flags &= (~DEV_FLAG_BUSY);
+        return NO_ERROR;
+    } else if (!(dev->flags & DEV_FLAG_INSTANCE)) {
         // add to the device tree
         dev_ref_acquire(parent);
         dev->parent = parent;

@@ -234,13 +234,16 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
                 log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             } else {
                 if (rec->drv.ops->create) {
-                    r = rec->drv.ops->create(&rec->drv, "shadow", args, hin[1],
-                                            &newios->dev);
+                    // magic cookie for device create handshake
+                    mx_device_t* parent = (void*) (uintptr_t) 0xa7a7a7a7;
+                    device_create_setup(parent);
+                    r = rec->drv.ops->create(&rec->drv, parent, "shadow", args, hin[1]);
+                    if ((newios->dev = device_create_setup(NULL)) == NULL) {
+                        log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
+                        r = ERR_BAD_STATE;
+                    }
                 } else {
                     r = ERR_NOT_SUPPORTED;
-                }
-                if (r == NO_ERROR) {
-                    r = devhost_device_install(newios->dev);
                 }
                 if (r < 0) {
                     log(ERROR, "devhost[%s] create (by '%s') failed: %d\n",

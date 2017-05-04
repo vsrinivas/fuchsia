@@ -112,6 +112,8 @@ mx_handle_t get_root_resource(void);
 mx_handle_t get_sysinfo_job_root(void);
 mx_handle_t get_app_launcher(void);
 
+mx_device_t* device_create_setup(mx_device_t* parent);
+
 // locking and lock debugging
 extern mtx_t __devhost_api_lock;
 extern bool __dm_locked;

@@ -41,9 +41,9 @@ typedef struct mx_driver_ops {
 
     // Only provided by bus manager drivers, create() is invoked to
     // instantiate a bus device instance in a new device host process
-    mx_status_t (*create)(mx_driver_t* driver,
+    mx_status_t (*create)(mx_driver_t* driver, mx_device_t* parent,
                           const char* name, const char* args,
-                          mx_handle_t resource, mx_device_t** out);
+                          mx_handle_t resource);
 
     // Last call before driver is unloaded.
     mx_status_t (*release)(mx_driver_t* driver);

@@ -35,8 +35,8 @@ static mx_protocol_device_t kpci_device_proto = {
 
 // initializes and optionally adds a new child device
 // device will be added if parent is not NULL
-static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t index,
-                                   mx_device_t* parent) {
+static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
+                                   uint32_t index, mx_device_t** out) {
     mx_pcie_get_nth_info_t info;
 
     mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
@@ -76,7 +76,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
     mx_status_t status;
     if (parent) {
-    char busdev_args[32];
+        char busdev_args[32];
         snprintf(busdev_args, sizeof(busdev_args), "%u", index);
 
         device_add_args_t args = {
@@ -96,6 +96,9 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
 
         status = device_add(parent, &args, &device->mxdev);
     } else {
+#if NEW_BUS_DRIVER
+        return ERR_BAD_STATE;
+#else
         status = device_create(name, device, &kpci_device_proto, drv,
                                MX_PROTOCOL_PCI, &_pci_protocol, &device->mxdev);
         if (status == NO_ERROR) {
@@ -104,6 +107,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
             device->mxdev->props = device->props;
             device->mxdev->prop_count = countof(device->props);
         }
+#endif
     }
 
     if (status == NO_ERROR) {
@@ -134,21 +138,21 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
     }
     for (uint32_t index = 0;; index++) {
         mx_device_t* dev;
-        if (kpci_init_child(drv, &dev, index, pcidev) != NO_ERROR) {
+        if (kpci_init_child(drv, pcidev, index, &dev) != NO_ERROR) {
             break;
         }
     }
     return NO_ERROR;
 }
 
-static mx_status_t kpci_drv_create(mx_driver_t* drv, const char* name,
-                                   const char* args, mx_handle_t resource,
-                                   mx_device_t** out) {
+static mx_status_t kpci_drv_create(mx_driver_t* drv, mx_device_t* parent,
+                                   const char* name, const char* args, mx_handle_t resource) {
     if (resource != MX_HANDLE_INVALID) {
         mx_handle_close(resource);
     }
     uint32_t index = strtoul(args, NULL, 10);
-    return kpci_init_child(drv, out, index, NULL);
+    mx_device_t* dev;
+    return kpci_init_child(drv, parent, index, &dev);
 }
 
 #else
@@ -157,7 +161,7 @@ static mx_driver_t __driver_kpci = {
 };
 
 mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
-    return kpci_init_child(&__driver_kpci, out, index, NULL);
+    return kpci_init_child(&__driver_kpci, NULL, index, out);
 }
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,
@@ -165,13 +169,6 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
 
 static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
     for (uint32_t index = 0;; index++) {
-#if ONLY_ONE_DEVHOST
-        mx_device_t* device;
-        if (kpci_init_child(drv, &device, index) != NO_ERROR) {
-            break;
-        }
-        device_add_with_props(device, parent, device->props, device->prop_count);
-#else
         mx_pcie_get_nth_info_t info;
         mx_handle_t h = mx_pci_get_nth_device(get_root_resource(), index, &info);
         if (h < 0) {
@@ -192,7 +189,6 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
 
         const char* args[2] = { "/boot/bin/devhost", arg1 };
         devhost_launch_devhost(parent, name, MX_PROTOCOL_PCI, procname, 2, (char**)args);
-#endif
     }
 
     return NO_ERROR;
