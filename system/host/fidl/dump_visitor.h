@@ -42,8 +42,8 @@ public:
     bool EndVisit(IdentifierConstant* identifier_constant) final;
     bool StartVisit(LiteralConstant* literal_constant) final;
     bool EndVisit(LiteralConstant* literal_constant) final;
-    bool StartVisit(Module* module) final;
-    bool EndVisit(Module* module) final;
+    bool StartVisit(ModuleName* module_name) final;
+    bool EndVisit(ModuleName* module_name) final;
     bool StartVisit(Using* import) final;
     bool EndVisit(Using* import) final;
     bool StartVisit(UsingList* import_list) final;

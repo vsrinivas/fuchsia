@@ -70,7 +70,7 @@ private:
 
     std::unique_ptr<Constant> ParseConstant();
 
-    std::unique_ptr<Module> ParseModule();
+    std::unique_ptr<ModuleName> ParseModuleName();
 
     std::unique_ptr<Using> ParseUsing();
     std::unique_ptr<UsingList> ParseUsingList();

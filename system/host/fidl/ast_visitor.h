@@ -41,8 +41,8 @@ struct Visitor {
     virtual bool EndVisit(IdentifierConstant* identifier_constant) { return true; }
     virtual bool StartVisit(LiteralConstant* literal_constant) { return true; }
     virtual bool EndVisit(LiteralConstant* literal_constant) { return true; }
-    virtual bool StartVisit(Module* module) { return true; }
-    virtual bool EndVisit(Module* module) { return true; }
+    virtual bool StartVisit(ModuleName* module_name) { return true; }
+    virtual bool EndVisit(ModuleName* module_name) { return true; }
     virtual bool StartVisit(Using* import) { return true; }
     virtual bool EndVisit(Using* import) { return true; }
     virtual bool StartVisit(UsingList* import_list) { return true; }
@@ -122,7 +122,7 @@ struct Visitor {
     virtual bool Traverse(Constant* constant);
     virtual bool Traverse(IdentifierConstant* identifier_constant);
     virtual bool Traverse(LiteralConstant* literal_constant);
-    virtual bool Traverse(Module* module);
+    virtual bool Traverse(ModuleName* module_name);
     virtual bool Traverse(Using* import);
     virtual bool Traverse(UsingList* import_list);
     virtual bool Traverse(Declaration* declaration);

@@ -176,11 +176,11 @@ bool CHeaderVisitor::EndVisit(LiteralConstant* literal_constant) {
     return true;
 }
 
-bool CHeaderVisitor::StartVisit(Module* module) {
+bool CHeaderVisitor::StartVisit(ModuleName* module_name) {
     return true;
 }
 
-bool CHeaderVisitor::EndVisit(Module* module) {
+bool CHeaderVisitor::EndVisit(ModuleName* module_name) {
     return true;
 }
 

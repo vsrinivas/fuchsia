@@ -207,15 +207,15 @@ bool DumpVisitor::EndVisit(LiteralConstant* literal_constant) {
     return true;
 }
 
-bool DumpVisitor::StartVisit(Module* module) {
+bool DumpVisitor::StartVisit(ModuleName* module_name) {
     printf("%*.sModule {\n", indent_, "");
     Push();
     return true;
 }
 
-bool DumpVisitor::EndVisit(Module* module) {
+bool DumpVisitor::EndVisit(ModuleName* module_name) {
     Pop();
-    printf("%*.s} Module\n", indent_, "");
+    printf("%*.s} ModuleName\n", indent_, "");
     return true;
 }
 

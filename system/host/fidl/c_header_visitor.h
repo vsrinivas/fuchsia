@@ -42,8 +42,8 @@ public:
     bool EndVisit(IdentifierConstant* identifier_constant) final;
     bool StartVisit(LiteralConstant* literal_constant) final;
     bool EndVisit(LiteralConstant* literal_constant) final;
-    bool StartVisit(Module* module) final;
-    bool EndVisit(Module* module) final;
+    bool StartVisit(ModuleName* module_name) final;
+    bool EndVisit(ModuleName* module_name) final;
     bool StartVisit(Using* import) final;
     bool EndVisit(Using* import) final;
     bool StartVisit(UsingList* import_list) final;
@@ -122,7 +122,7 @@ public:
     // bool Traverse(Constant* constant) final;
     // bool Traverse(IdentifierConstant* identifier_constant) final;
     // bool Traverse(LiteralConstant* literal_constant) final;
-    // bool Traverse(Module* module) final;
+    // bool Traverse(ModuleName* module_name) final;
     // bool Traverse(Using* import) final;
     bool Traverse(UsingList* import_list) final { return true; }
     // bool Traverse(Declaration* declaration) final;

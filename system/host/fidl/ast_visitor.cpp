@@ -181,12 +181,12 @@ bool Visitor::Traverse(LiteralConstant* literal_constant) {
     return true;
 }
 
-bool Visitor::Traverse(Module* module) {
-    TRY_TO(StartVisit(module));
+bool Visitor::Traverse(ModuleName* module_name) {
+    TRY_TO(StartVisit(module_name));
 
-    TRY_TO(Traverse(module->identifier.get()));
+    TRY_TO(Traverse(module_name->identifier.get()));
 
-    TRY_TO(EndVisit(module));
+    TRY_TO(EndVisit(module_name));
 
     return true;
 }

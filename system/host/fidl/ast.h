@@ -30,7 +30,7 @@ struct Node {
         // Constant,
         LiteralConstant,
         IdentifierConstant,
-        Module,
+        ModuleName,
         Using,
         UsingList,
         // EnumMemberValue,
@@ -278,15 +278,15 @@ struct LiteralConstant : Constant {
     }
 };
 
-struct Module : public Node {
-    Module(std::unique_ptr<CompoundIdentifier> identifier)
-        : Node(Kind::Module),
+struct ModuleName : public Node {
+    ModuleName(std::unique_ptr<CompoundIdentifier> identifier)
+        : Node(Kind::ModuleName),
           identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
 
     static bool isinstance(const Node* node) {
-        return node->kind == Kind::Module;
+        return node->kind == Kind::ModuleName;
     }
 };
 
@@ -717,7 +717,7 @@ struct DeclarationList : public Node {
 };
 
 struct File : public Node {
-    File(std::unique_ptr<Module> maybe_module,
+    File(std::unique_ptr<ModuleName> maybe_module,
          std::unique_ptr<UsingList> import_list,
          std::unique_ptr<DeclarationList> declaration_list)
         : Node(Kind::File),
@@ -725,7 +725,7 @@ struct File : public Node {
           import_list(std::move(import_list)),
           declaration_list(std::move(declaration_list)) {}
 
-    std::unique_ptr<Module> maybe_module;
+    std::unique_ptr<ModuleName> maybe_module;
     std::unique_ptr<UsingList> import_list;
     std::unique_ptr<DeclarationList> declaration_list;
 

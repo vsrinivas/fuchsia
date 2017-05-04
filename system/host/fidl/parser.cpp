@@ -150,7 +150,7 @@ std::unique_ptr<Constant> Parser::ParseConstant() {
     }
 }
 
-std::unique_ptr<Module> Parser::ParseModule() {
+std::unique_ptr<ModuleName> Parser::ParseModuleName() {
     if (PeekFor(Token::Kind::Module)) {
         ConsumeToken(Token::Kind::Module);
         if (!Ok())
@@ -161,7 +161,7 @@ std::unique_ptr<Module> Parser::ParseModule() {
         ConsumeToken(Token::Kind::Semicolon);
         if (!Ok())
             return Fail();
-        return make_unique<Module>(std::move(identifier));
+        return make_unique<ModuleName>(std::move(identifier));
     }
 
     return nullptr;
@@ -806,7 +806,7 @@ std::unique_ptr<DeclarationList> Parser::ParseDeclarationList() {
 }
 
 std::unique_ptr<File> Parser::ParseFile() {
-    auto module = ParseModule();
+    auto module_name = ParseModuleName();
     if (!Ok())
         return Fail();
     auto import_list = ParseUsingList();
@@ -819,7 +819,7 @@ std::unique_ptr<File> Parser::ParseFile() {
     if (!Ok())
         return Fail();
 
-    return make_unique<File>(std::move(module),
+    return make_unique<File>(std::move(module_name),
                              std::move(import_list),
                              std::move(declaration_list));
 }
