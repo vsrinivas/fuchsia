@@ -27,9 +27,9 @@ protected:
 
     void Shutdown() TA_EXCL(process_lock());
 
-    ssize_t DeviceIoctl(uint32_t op,
-                        const void* in_buf, size_t in_len,
-                        void* out_buf, size_t out_len)
+    mx_status_t DeviceIoctl(uint32_t op,
+                            const void* in_buf, size_t in_len,
+                            void* out_buf, size_t out_len, size_t* out_actual)
         TA_EXCL(process_lock());
 
 private:
