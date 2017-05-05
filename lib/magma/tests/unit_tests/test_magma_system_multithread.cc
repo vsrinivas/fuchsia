@@ -29,8 +29,7 @@ public:
             return DRETP(nullptr, "no device");
 
         return std::make_unique<TestMultithread>(
-            wait, std::unique_ptr<MagmaDriver>(driver),
-            std::shared_ptr<MagmaSystemDevice>(std::move(device)));
+            wait, std::move(driver), std::shared_ptr<MagmaSystemDevice>(std::move(device)));
     }
 
     TestMultithread(bool wait, std::unique_ptr<MagmaDriver> driver,

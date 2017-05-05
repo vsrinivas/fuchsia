@@ -383,7 +383,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 
     magma::PlatformTrace::Initialize();
 
-    device->magma_driver = std::unique_ptr<MagmaDriver>(MagmaDriver::Create());
+    device->magma_driver = MagmaDriver::Create();
     if (!device->magma_driver) {
         delete(device);
         return DRET_MSG(ERR_INTERNAL, "MagmaDriver::Create failed");

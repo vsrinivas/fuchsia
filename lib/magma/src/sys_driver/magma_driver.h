@@ -31,17 +31,13 @@ public:
         return std::make_unique<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
     }
 
-    static MagmaDriver* Create()
+    static std::unique_ptr<MagmaDriver> Create()
     {
         msd_driver_t* msd_drv = msd_driver_create();
-        if (!msd_drv) {
-            DLOG("msd_create returned null");
-            return nullptr;
-        }
+        if (!msd_drv)
+            return DRETP(nullptr, "msd_create returned null");
 
-        auto driver = new MagmaDriver(MsdDriverUniquePtr(msd_drv));
-
-        return driver;
+        return std::make_unique<MagmaDriver>(MsdDriverUniquePtr(msd_drv));
     }
 
 private:
