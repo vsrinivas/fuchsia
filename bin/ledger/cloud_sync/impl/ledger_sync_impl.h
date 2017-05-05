@@ -7,7 +7,6 @@
 
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/network/network_service.h"

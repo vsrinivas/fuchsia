@@ -9,7 +9,6 @@ source_set("environment") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/coroutine",
     "//apps/ledger/src/network",
     "//lib/ftl",

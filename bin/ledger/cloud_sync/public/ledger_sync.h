@@ -11,7 +11,6 @@
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"

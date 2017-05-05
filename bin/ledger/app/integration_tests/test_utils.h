@@ -60,12 +60,11 @@ class LedgerRepositoryFactoryContainer {
       const std::string& path,
       fidl::InterfaceRequest<LedgerRepositoryFactory> request)
       : environment_(task_runner, nullptr),
-        factory_impl_(configuration, &environment_),
+        factory_impl_(&environment_),
         factory_binding_(&factory_impl_, std::move(request)) {}
   ~LedgerRepositoryFactoryContainer() {}
 
  private:
-  configuration::Configuration configuration;
   Environment environment_;
   LedgerRepositoryFactoryImpl factory_impl_;
   fidl::Binding<LedgerRepositoryFactory> factory_binding_;

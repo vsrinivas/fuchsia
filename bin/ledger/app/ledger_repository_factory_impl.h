@@ -18,8 +18,7 @@ namespace ledger {
 
 class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
  public:
-  explicit LedgerRepositoryFactoryImpl(configuration::Configuration config,
-                                       ledger::Environment* environment);
+  explicit LedgerRepositoryFactoryImpl(ledger::Environment* environment);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -30,7 +29,6 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
 
-  const configuration::Configuration config_;
   ledger::Environment* const environment_;
   callback::AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
 

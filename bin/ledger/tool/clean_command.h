@@ -9,7 +9,6 @@
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service.h"

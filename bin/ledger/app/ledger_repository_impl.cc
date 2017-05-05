@@ -5,7 +5,6 @@
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
 #include "apps/tracing/lib/trace/event.h"

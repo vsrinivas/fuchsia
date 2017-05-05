@@ -21,8 +21,7 @@ interface LedgerRepositoryFactory {
   //     the innermost directory of |repository_path|. TODO(ppi): explicitly
   //     retrieve user name from the framework.
   // |server_id| id of the Firebase Db instance to use for cloud sync. Passing
-  //     an empty string defaults to settings configured in the global
-  //     configuration file. Passing null disables sync.
+  //     null disables sync.
   GetRepository(string repository_path,
                 string? server_id,
                 LedgerRepository& repository) => (Status status);

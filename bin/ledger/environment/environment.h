@@ -7,7 +7,6 @@
 
 #include <thread>
 
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "lib/ftl/macros.h"

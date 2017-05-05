@@ -17,9 +17,9 @@ executable("tool") {
 
   deps = [
     "//application/lib/app",
+    "//apps/ledger/src/app:lib",
     "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/glue/crypto",
     "//apps/network/services",

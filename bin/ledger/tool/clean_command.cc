@@ -7,8 +7,6 @@
 #include <string>
 
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
-#include "apps/ledger/src/configuration/configuration.h"
-#include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"

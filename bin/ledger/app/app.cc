@@ -13,8 +13,6 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/configuration/configuration.h"
-#include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -51,12 +49,6 @@ class App : public LedgerController {
   ~App() {}
 
   bool Start() {
-    configuration::Configuration config;
-    if (!LoadConfiguration(&config)) {
-      FTL_LOG(ERROR) << "Ledger is misconfigured, quitting.";
-      return false;
-    }
-
     network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
         loop_.task_runner(), [this] {
           return application_context_
@@ -65,8 +57,8 @@ class App : public LedgerController {
     environment_ = std::make_unique<Environment>(loop_.task_runner(),
                                                  network_service_.get());
 
-    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        std::move(config), environment_.get());
+    factory_impl_ =
+        std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(

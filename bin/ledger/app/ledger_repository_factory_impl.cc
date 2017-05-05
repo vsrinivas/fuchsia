@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
+#include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
@@ -24,51 +25,30 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
   return repository_path.substr(separator + 1);
 }
 
-cloud_sync::UserConfig GetUserConfig(
-    const configuration::Configuration& global_config,
-    const fidl::String& server_id,
-    ftl::StringView user_id) {
-  if (!server_id) {
+cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
+                                     ftl::StringView user_id) {
+  if (!server_id || server_id.size() == 0) {
     cloud_sync::UserConfig user_config;
     user_config.use_sync = false;
     return user_config;
   }
 
-  if (server_id.size()) {
-    cloud_sync::UserConfig user_config;
-    user_config.use_sync = true;
-    user_config.server_id = server_id.get();
-    user_config.user_id = user_id.ToString();
-    return user_config;
-  }
-
-  // |server_id| wasn't provided by Framework, default to the values from the
-  // global config file.
   cloud_sync::UserConfig user_config;
-  if (!global_config.use_sync) {
-    user_config.use_sync = false;
-    return user_config;
-  }
-
   user_config.use_sync = true;
-  user_config.server_id = global_config.sync_params.firebase_id;
+  user_config.server_id = server_id.get();
   user_config.user_id = user_id.ToString();
-  FTL_LOG(WARNING) << "Sync configuration not specified by Framework, "
-                   << "using the server id: " << user_config.server_id
-                   << " specified in the global config file";
   return user_config;
 }
 
 bool SaveConfigForDebugging(ftl::StringView user_id,
                             ftl::StringView repository_path,
                             const std::string& temp_dir) {
-  if (!files::WriteFileInTwoPhases(configuration::kLastUserIdPath.ToString(),
-                                   user_id, temp_dir)) {
+  if (!files::WriteFileInTwoPhases(kLastUserIdPath.ToString(), user_id,
+                                   temp_dir)) {
     return false;
   }
-  if (!files::WriteFileInTwoPhases(
-          configuration::kLastUserRepositoryPath.ToString(), repository_path,
-          temp_dir)) {
+  if (!files::WriteFileInTwoPhases(kLastUserRepositoryPath.ToString(),
+                                   repository_path, temp_dir)) {
     return false;
   }
   return true;
@@ -86,8 +66,8 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
     return true;
   }
 
-  std::string server_id_path = ftl::Concatenate(
-      {repository_path, "/", configuration::kServerIdFilename});
+  std::string server_id_path =
+      ftl::Concatenate({repository_path, "/", kServerIdFilename});
   if (files::IsFile(server_id_path)) {
     std::string previous_server_id;
     if (!files::ReadFileToString(server_id_path, &previous_server_id)) {
@@ -123,9 +103,8 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
 }  // namespace
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    configuration::Configuration config,
     ledger::Environment* environment)
-    : config_(config), environment_(environment) {}
+    : environment_(environment) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -140,8 +119,11 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
     ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
-    cloud_sync::UserConfig user_config =
-        GetUserConfig(config_, server_id, user_id);
+    cloud_sync::UserConfig user_config = GetUserConfig(server_id, user_id);
+    if (!user_config.use_sync) {
+      FTL_LOG(WARNING) << "No sync configuration set, "
+                       << "Ledger will work locally but won't sync";
+    }
     const std::string temp_dir =
         ftl::Concatenate({repository_path.get(), "/tmp"});
     if (!CheckSyncConfig(user_config, sanitized_path, temp_dir)) {

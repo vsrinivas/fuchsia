@@ -42,18 +42,16 @@ the cloud is world-readable and world-writable. Please don't store anything
 private, sensitive or real in Ledger yet.
 ***
 
-### Firebase
+### Configure
 
 Cloud sync is powered by Firebase. Either [configure](firebase.md) your own
 instance or use an existing correctly configured instance that your have
 permission to use.
 
-Once you picked the instance to use, pass the Firebase project ID (see the
-[Firebase configuration](firebase.md) doc) to `configure_ledger`:
-
-```
-configure_ledger --firebase_id=<FIREBASE_ID>
-```
+Once you picked the instance to use, add a new Fuchsia user in the device shell,
+entering the Firebase project ID (see the [Firebase configuration](firebase.md)
+doc) as the "server id". After login, Ledger data of this user will sync using
+the indicated Firebase instance.
 
 ### Diagnose
 
@@ -66,23 +64,6 @@ ledger_tool doctor
 If the provided information is not enough to resolve the problem, please file a
 bug and attach the output.
 
-### Toggling Cloud Sync off and on
-
-To disable sync:
-
-```
-configure_ledger --nosync
-```
-
-To enable it again:
-
-```
-configure_ledger --sync
-```
-
-The configuration tool remembers the Firebase settings even when the sync is
-off, so you don't need to pass them again.
-
 ## Reset Ledger
 
 ### Wipe the current user
@@ -91,10 +72,14 @@ To wipe all data (local and remote) of the current user, run the command:
 ```
 ledger_tool clean
 ```
-`ledger_tool clean` only clears Firebase for now, but not the associated Google
-Cloud Storage. This should not impact Ledger use; however, if you want to
-reclaim the space, use the visit `Storage / Files` in the [Firebase
-Console](https://console.firebase.google.com/) and delete all objects.
+
+*** aside
+**cloud storage**: `ledger_tool clean` only clears Firebase for now, but not the
+associated Google Cloud Storage blobs. This should not impact Ledger use and
+it's safe to leave them around. If you want to reclaim the space, the
+administrator of the Firebase instance can visit `Storage / Files` in the
+[Firebase Console](https://console.firebase.google.com/) and delete all objects.
+***
 
 ### Wipe all local state
 
@@ -104,7 +89,8 @@ To remove the locally persisted Ledger data for all users, you can run:
 $ rm -r /data/ledger
 ```
 
-Note that running this command also removes your current Ledger configuration
-(See (Configure Ledger)[#Firebase] on how to configure your Ledger). It
-does not remove your Cloud data; if configured for Cloud synchronization,
-Ledger will start downloading the missing data the next time it starts.
+*** note
+Running this command does not remove any data synced to the cloud; if the user
+has sync configured, Ledger will start downloading the missing data the next
+time it starts.
+***

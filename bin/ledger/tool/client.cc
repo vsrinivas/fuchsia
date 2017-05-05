@@ -8,10 +8,8 @@
 #include <unordered_set>
 
 #include "application/lib/app/connect.h"
+#include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/configuration/configuration.h"
-#include "apps/ledger/src/configuration/configuration_encoder.h"
-#include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/tool/clean_command.h"
 #include "apps/ledger/src/tool/doctor_command.h"
@@ -90,6 +88,9 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
       FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
       return nullptr;
     }
+    if (!user_config_.use_sync) {
+      std::cout << "the `doctor` command requires sync" << std::endl;
+    }
     return std::make_unique<DoctorCommand>(user_config_,
                                            network_service_.get());
   }
@@ -98,6 +99,9 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
     if (args.size() > 1) {
       FTL_LOG(ERROR) << "Too many arguments for the " << args[0] << " command";
       return nullptr;
+    }
+    if (!user_config_.use_sync) {
+      std::cout << "the `clean` command requires sync" << std::endl;
     }
     return std::make_unique<CleanCommand>(
         user_config_, user_repository_path_, network_service_.get(),
@@ -134,18 +138,11 @@ bool ClientApp::Initialize() {
 
   std::string repository_path;
   if (!ReadConfig()) {
-    std::cout << "Error: no Ledger configuration found." << std::endl;
+    std::cout << "Failed to retrieve user configuration" << std::endl;
     std::cout
         << "Hint: refer to the User Guide at "
         << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md"
         << std::endl;
-    return false;
-  }
-
-  if (!user_config_.use_sync) {
-    std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
-              << std::endl;
-    std::cout << "Hint: pass --firebase_id to `configure_ledger`" << std::endl;
     return false;
   }
 
@@ -159,7 +156,12 @@ bool ClientApp::Initialize() {
   }
   std::cout << std::endl;
   // Sync settings.
-  std::cout << " - firebase ID: " << user_config_.server_id << std::endl;
+  std::cout << " - firebase ID: ";
+  if (user_config_.use_sync) {
+    std::cout << user_config_.server_id << std::endl;
+  } else {
+    std::cout << " -- " << std::endl;
+  }
   std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
@@ -177,13 +179,6 @@ bool ClientApp::Initialize() {
 }
 
 bool ClientApp::ReadConfig() {
-  configuration::Configuration global_config;
-  if (!configuration::LoadConfiguration(&global_config)) {
-    return false;
-  }
-  user_config_.use_sync = global_config.use_sync;
-  user_config_.server_id = global_config.sync_params.firebase_id;
-
   std::string user_id_human_readable;
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
                                    &user_id_human_readable)) {
@@ -191,23 +186,31 @@ bool ClientApp::ReadConfig() {
     user_config_.user_id = ToHexString(user_id_human_readable);
     user_repository_path_ =
         ftl::Concatenate({"/data/ledger/", user_config_.user_id});
-    return true;
-  }
-
-  if (!files::IsFile(configuration::kLastUserIdPath.ToString()) ||
-      !files::ReadFileToString(configuration::kLastUserIdPath.ToString(),
-                               &user_config_.user_id) ||
-      !files::IsFile(configuration::kLastUserRepositoryPath.ToString()) ||
-      !files::ReadFileToString(
-          configuration::kLastUserRepositoryPath.ToString(),
-          &user_repository_path_)) {
+  } else if (files::IsFile(ledger::kLastUserIdPath.ToString()) &&
+             files::ReadFileToString(ledger::kLastUserIdPath.ToString(),
+                                     &user_config_.user_id) &&
+             files::IsFile(ledger::kLastUserRepositoryPath.ToString()) &&
+             files::ReadFileToString(ledger::kLastUserRepositoryPath.ToString(),
+                                     &user_repository_path_)) {
+    FTL_LOG(INFO) << "using the user id of the most recent Ledger run";
+  } else {
     FTL_LOG(ERROR) << "Failed to identify the most recent user ID, "
                    << "pick the user in Device Shell UI or pass the user ID "
                    << "to use in the --" << kUserIdFlag << " flag";
     return false;
   }
 
-  FTL_LOG(INFO) << "using the user id of the most recent Ledger run";
+  std::string server_id_path =
+      ftl::Concatenate({user_repository_path_, "/", ledger::kServerIdFilename});
+  if (!files::IsFile(server_id_path) ||
+      !files::ReadFileToString(server_id_path, &user_config_.server_id)) {
+    FTL_LOG(WARNING)
+        << "Failed to read server id of the user, assuming no sync.";
+    user_config_.use_sync = false;
+  } else {
+    user_config_.use_sync = true;
+  }
+
   return true;
 }
 

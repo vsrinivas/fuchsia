@@ -11,7 +11,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
-#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/tool/command.h"
