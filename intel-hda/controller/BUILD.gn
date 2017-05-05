@@ -33,5 +33,9 @@ shared_library("ihda-controller") {
         "//magenta/system/ulib/mxtl",
     ]
 
+    libs = [
+      "driver",
+    ]
+
     cflags = [ "-Wno-address-of-packed-member" ]
 }
