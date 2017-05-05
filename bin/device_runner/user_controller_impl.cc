@@ -12,10 +12,15 @@
 
 namespace modular {
 
+namespace {
+
+constexpr char kUserRunnerUri[] = "file:///system/apps/user_runner";
+
+}  // namespace
+
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
     const std::string& device_name,
-    const std::string& user_runner,
     const AppConfig& user_shell,
     const AppConfig& story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
@@ -30,7 +35,7 @@ UserControllerImpl::UserControllerImpl(
       done_(done) {
   // 1. Launch UserRunner in the current environment.
   auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = user_runner;
+  launch_info->url = kUserRunnerUri;
   app::ServiceProviderPtr services;
   launch_info->services = services.NewRequest();
   app_context->launcher()->CreateApplication(

@@ -60,7 +60,6 @@ class UserControllerImpl : UserController {
   UserControllerImpl(
       std::shared_ptr<app::ApplicationContext> app_context,
       const std::string& device_name,
-      const std::string& user_runner,
       const AppConfig& user_shell,
       const AppConfig& story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,

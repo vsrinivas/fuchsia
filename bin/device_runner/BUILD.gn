@@ -23,6 +23,8 @@ executable("device_runner") {
     "device_runner.cc",
     "user_controller_impl.cc",
     "user_controller_impl.h",
+    "user_provider_impl.cc",
+    "user_provider_impl.h",
   ]
 
   deps = [
