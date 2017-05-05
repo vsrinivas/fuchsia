@@ -63,4 +63,8 @@ typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
 typedef uint64_t u_int64_t;
 
+#define KB (1024UL)
+#define MB (1024UL * KB)
+#define GB (1024UL * MB)
+
 #endif

@@ -10,10 +10,6 @@
 
 /* top level defines for the x86 mmu */
 /* NOTE: the top part can be included from assembly */
-#define KB                (1024UL)
-#define MB                (1024UL*1024UL)
-#define GB                (1024UL*1024UL*1024UL)
-
 #define X86_MMU_PG_P            0x0001          /* P    Valid                   */
 #define X86_MMU_PG_RW           0x0002          /* R/W  Read/Write              */
 #define X86_MMU_PG_U            0x0004          /* U/S  User/Supervisor         */
