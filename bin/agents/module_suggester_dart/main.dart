@@ -5,6 +5,7 @@
 import 'dart:convert' show JSON;
 import 'dart:io';
 import 'package:application.lib.app.dart/app.dart';
+import 'package:apps.maxwell.lib.dart/decomposition.dart';
 import 'package:apps.maxwell.services.suggestion/ask_handler.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/proposal.fidl.dart';
 import 'package:apps.maxwell.services.suggestion/proposal_publisher.fidl.dart';
@@ -102,9 +103,12 @@ class _AskHandlerImpl extends AskHandler {
           appUrl: 'file:///system/apps/music_artist',
           headline: 'Listen to Kanye',
           color: 0xFF9C27B0, // Material Purple 500,
-          initialData: JSON.encode(
-            {"spotify:artistId": "5K4W6rqBFWDnAN6FQUkS6x"},
-          ),
+          initialData: JSON.encode({
+            'view': decomposeUri(new Uri(
+                scheme: 'spotify',
+                host: 'artist',
+                path: '5K4W6rqBFWDnAN6FQUkS6x'))
+          }),
         ),
       );
     }
@@ -116,9 +120,12 @@ class _AskHandlerImpl extends AskHandler {
           appUrl: 'file:///system/apps/music_artist',
           headline: 'Listen to Portugal. The Man',
           color: 0xFF9C27B0, // Material Purple 500,
-          initialData: JSON.encode(
-            {"spotify:artistId": "4kI8Ie27vjvonwaB2ePh8T"},
-          ),
+          initialData: JSON.encode({
+            'view': decomposeUri(new Uri(
+                scheme: 'spotify',
+                host: 'artist',
+                path: '4kI8Ie27vjvonwaB2ePh8T'))
+          }),
         ),
       );
     }
