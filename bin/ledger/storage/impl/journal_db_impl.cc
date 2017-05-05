@@ -208,6 +208,13 @@ void JournalDBImpl::Commit(
             callback(status, nullptr);
             return;
           }
+          // If the commit is a no-op, returns early.
+          if (parents.size() == 1 &&
+              parents.front()->GetRootId() == object_id) {
+            FTL_DCHECK(new_nodes.empty());
+            callback(Rollback(), std::move(parents.front()));
+            return;
+          }
           std::unique_ptr<storage::Commit> commit =
               CommitImpl::FromContentAndParents(page_storage_, object_id,
                                                 std::move(parents));

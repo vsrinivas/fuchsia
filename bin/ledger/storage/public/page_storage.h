@@ -83,6 +83,13 @@ class PageStorage {
                                   const CommitId& right,
                                   std::unique_ptr<Journal>* journal) = 0;
 
+  // Merge the 2 given commits. The 2 commits must have the same content. The
+  // result is a deterministic commit that only depend on the parents.
+  virtual void MergeIdenticalCommits(
+      std::unique_ptr<const storage::Commit> left,
+      std::unique_ptr<const storage::Commit> right,
+      std::function<void(Status)> callback) = 0;
+
   // Registers the given |CommitWatcher| which will be notified on new commits.
   virtual Status AddCommitWatcher(CommitWatcher* watcher) = 0;
   // Unregisters the given CommitWatcher.

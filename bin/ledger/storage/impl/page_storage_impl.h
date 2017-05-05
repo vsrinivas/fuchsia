@@ -62,6 +62,9 @@ class PageStorageImpl : public PageStorage {
   Status StartMergeCommit(const CommitId& left,
                           const CommitId& right,
                           std::unique_ptr<Journal>* journal) override;
+  void MergeIdenticalCommits(std::unique_ptr<const storage::Commit> left,
+                             std::unique_ptr<const storage::Commit> right,
+                             std::function<void(Status)> callback) override;
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void GetUnsyncedCommits(

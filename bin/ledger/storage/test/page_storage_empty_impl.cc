@@ -53,6 +53,14 @@ Status PageStorageEmptyImpl::StartMergeCommit(
   return Status::NOT_IMPLEMENTED;
 }
 
+void PageStorageEmptyImpl::MergeIdenticalCommits(
+    std::unique_ptr<const storage::Commit> left,
+    std::unique_ptr<const storage::Commit> right,
+    std::function<void(Status)> callback) {
+  FTL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED);
+}
+
 Status PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* watcher) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;

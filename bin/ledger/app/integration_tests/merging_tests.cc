@@ -646,7 +646,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   std::vector<std::string> page2_keys;
   for (int i = 0; i < N; ++i) {
-    page2_keys.push_back(ftl::StringPrintf("page1_key_%02d", i));
+    page2_keys.push_back(ftl::StringPrintf("page2_key_%02d", i));
     page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"),
                status_ok_callback);
     EXPECT_TRUE(page2.WaitForIncomingResponse());
@@ -676,9 +676,9 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   std::vector<std::string> values;
   values.resize(N, "value");
   // Left change is the most recent, so the one made on |page2|.
-  EXPECT_TRUE(ChangesMatch(page1_keys, values, change_left->changes));
+  EXPECT_TRUE(ChangesMatch(page2_keys, values, change_left->changes));
   // Right change comes from |page1|.
-  EXPECT_TRUE(ChangesMatch(page2_keys, values, change_right->changes));
+  EXPECT_TRUE(ChangesMatch(page1_keys, values, change_right->changes));
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {

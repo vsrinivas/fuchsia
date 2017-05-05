@@ -97,6 +97,7 @@ void MergeResolver::CheckConflicts() {
 
 void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   FTL_DCHECK(heads.size() >= 2);
+  FTL_DCHECK(std::is_sorted(heads.begin(), heads.end()));
 
   merge_in_progress_ = true;
   auto cleanup = ftl::MakeAutoCall([this] {
@@ -123,6 +124,21 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   waiter->Finalize(ftl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
       storage::Status status,
       std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
+    // Check if the 2 parents have the same content.
+    if (commits[0]->GetRootId() == commits[1]->GetRootId()) {
+      // In that case, the result must be a commit with the same content, and
+      // the smallest timestamp.
+      storage_->MergeIdenticalCommits(
+          std::move(commits[0]), std::move(commits[1]),
+          ftl::MakeCopyable([cleanup =
+                                 std::move(cleanup)](storage::Status status) {
+            if (status != storage::Status::OK) {
+              FTL_LOG(ERROR) << "Unable to merge identical commits.";
+            }
+          }));
+      return;
+    }
+
     // If the strategy has been changed, bail early.
     if (next_strategy_) {
       return;

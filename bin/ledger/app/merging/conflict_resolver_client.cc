@@ -38,6 +38,7 @@ ConflictResolverClient::ConflictResolverClient(
       on_done_(std::move(on_done)),
       merge_result_provider_binding_(this),
       weak_factory_(this) {
+  FTL_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
   FTL_DCHECK(on_done_);
 }
 

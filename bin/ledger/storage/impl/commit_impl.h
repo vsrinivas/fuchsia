@@ -22,6 +22,11 @@ class CommitImpl : public Commit {
                                                   CommitId id,
                                                   std::string storage_bytes);
 
+  static std::unique_ptr<Commit> FromIdenticalParents(
+      PageStorage* page_storage,
+      std::unique_ptr<const Commit> left,
+      std::unique_ptr<const Commit> right);
+
   static std::unique_ptr<Commit> FromContentAndParents(
       PageStorage* page_storage,
       ObjectIdView root_node_id,
