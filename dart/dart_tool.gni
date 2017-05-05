@@ -23,13 +23,26 @@ import("//build/dart/dart_package.gni")
 #
 #   output_name (optional)
 #     Name of the output file to generate. Defaults to $target_name.
+#
+#   analysis_options (optional)
+#     By default, a script to run the analyzer on the contents of the package is
+#     generated in the output directory. This parameter contains the path to an
+#     analysis options file for this target.
+#
+#   disable_analysis (optional)
+#     Prevents the analysis script from being generated.
 template("dart_tool") {
   assert(defined(invoker.main_dart), "Must specify main_dart file")
 
   dart_package_target_name = target_name + "_dart_package"
 
   dart_package(dart_package_target_name) {
-    forward_variables_from(invoker, [ "deps", "source_dir" ])
+    forward_variables_from(invoker, [
+      "analysis_options",
+      "deps",
+      "disable_analysis",
+      "source_dir"
+    ])
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
     } else {

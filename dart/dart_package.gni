@@ -144,11 +144,9 @@ template("dart_package") {
       # options file change the analysis script should remain unchanged.
       # However, this is a sanity check to ensure at build time that this
       # attribute points to a valid file.
-      if (defined(invoker.analysis_options)) {
-        inputs = [
-          invoker.analysis_options,
-        ]
-      }
+      inputs = [
+        options_file,
+      ]
 
       outputs = [
         invocation_file,
@@ -181,6 +179,10 @@ template("dart_package") {
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
         output_file = "$target_gen_dir/$target_name.analyzed"
+
+        inputs = [
+          options_file,
+        ]
 
         outputs = [
           output_file,
