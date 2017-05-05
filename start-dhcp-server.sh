@@ -142,6 +142,7 @@ fi
 echo Starting dnsmasq...
 # TODO: can we use --dhcp-host instead of --dhcp-range
 sudo $DNSMASQ \
+  --conf-file=/dev/null \
   --bind-interfaces \
   --interface=$INTERFACE \
   --except-interface=$LOOPBACK \
