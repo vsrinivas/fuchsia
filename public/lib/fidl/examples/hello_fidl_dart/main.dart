@@ -5,5 +5,6 @@
 import 'package:lib.fidl.examples.interfaces/hello.fidl.dart';
 
 void main(List args) {
+  // ignore: unused_local_variable
   HelloProxy hello;
 }

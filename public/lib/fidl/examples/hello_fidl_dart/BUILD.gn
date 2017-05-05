@@ -7,6 +7,8 @@ import("//apps/dart_content_handler/dart_app.gni")
 dart_app("hello_fidl_dart") {
   main_dart = "main.dart"
 
+  source_dir = "."
+
   deps = [
     "//lib/fidl/examples/interfaces:interfaces_dart",
     "//lib/fidl/dart",
