@@ -7,7 +7,6 @@ import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_controller.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
-import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:flutter/widgets.dart';
@@ -68,17 +67,17 @@ void main() {
 
     InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
 
-    ServiceProviderProxy incoming_services = new ServiceProviderProxy();
+    ServiceProviderProxy incomingServices = new ServiceProviderProxy();
 
     _module._moduleContext.startModule(
         'Escher Demo',
         'file:///system/apps/$appName',
         null, // pass our default link to the child
         null, // outgoing services
-        incoming_services.ctrl.request(),
+        incomingServices.ctrl.request(),
         moduleControllerPair.passRequest(),
         viewOwnerPair.passRequest());
 
-    return incoming_services;
+    return incomingServices;
   }));
 }

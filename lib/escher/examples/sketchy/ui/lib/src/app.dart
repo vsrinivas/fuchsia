@@ -27,9 +27,9 @@ class App extends StatefulWidget {
 //     forward them to the "sketchy" app.
 class AppState extends State<App> {
   final AppLauncher _appLauncher;
-  EscherDemoProxy _escherDemo = null;
+  EscherDemoProxy _escherDemo;
 
-  Offset _lastPoint = null;
+  Offset _lastPoint;
   int _touchId = 0;
 
   AppState(this._appLauncher);
@@ -81,7 +81,7 @@ class AppState extends State<App> {
 
   void onKey(RawKeyEvent event) {
     if (event is RawKeyDownEvent) {
-      RawKeyEventDataFuchsia data = event.data as RawKeyEventDataFuchsia;
+      RawKeyEventDataFuchsia data = event.data;
 
       // TODO: This works for ASCII letters, but not for ESCAPE key, etc.
       _escherDemo.handleKeyPress(data.codePoint);
