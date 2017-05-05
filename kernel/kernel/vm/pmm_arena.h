@@ -31,12 +31,12 @@ public:
     void Dump(bool dump_pages, bool dump_free_ranges);
 
     // accessors
-    const pmm_arena_info_t* info() const { return info_; }
-    const char* name() const { return info_->name; }
-    paddr_t base() const { return info_->base; }
-    size_t size() const { return info_->size; }
-    unsigned int flags() const { return info_->flags; }
-    unsigned int priority() const { return info_->priority; }
+    const pmm_arena_info_t& info() const { return info_; }
+    const char* name() const { return info_.name; }
+    paddr_t base() const { return info_.base; }
+    size_t size() const { return info_.size; }
+    unsigned int flags() const { return info_.flags; }
+    unsigned int priority() const { return info_.priority; }
     size_t free_count() const { return free_count_; };
 
     vm_page_t* get_page(size_t index) { return &page_array_[index]; }
@@ -54,18 +54,18 @@ public:
         uintptr_t page_array_base = reinterpret_cast<uintptr_t>(page_array_);
 
         return ((page_addr >= page_array_base) &&
-                (page_addr < (page_array_base + (info_->size / PAGE_SIZE) * VM_PAGE_STRUCT_SIZE)));
+                (page_addr < (page_array_base + (info_.size / PAGE_SIZE) * VM_PAGE_STRUCT_SIZE)));
     }
 
     paddr_t page_address_from_arena(const vm_page* page) const {
         uintptr_t page_addr = reinterpret_cast<uintptr_t>(page);
         uintptr_t page_array_base = reinterpret_cast<uintptr_t>(page_array_);
 
-        return ((paddr_t)(((page_addr - page_array_base) / VM_PAGE_STRUCT_SIZE) * PAGE_SIZE + info_->base));
+        return ((paddr_t)(((page_addr - page_array_base) / VM_PAGE_STRUCT_SIZE) * PAGE_SIZE + info_.base));
     }
 
     bool address_in_arena(paddr_t address) const {
-        return (address >= info_->base && address <= info_->base + info_->size - 1);
+        return (address >= info_.base && address <= info_.base + info_.size - 1);
     }
 
 private:
@@ -74,7 +74,7 @@ private:
     void CheckFreeFill(vm_page_t* page);
 #endif
 
-    const pmm_arena_info_t* info_ = nullptr;
+    const pmm_arena_info_t info_;
     vm_page_t* page_array_ = nullptr;
 
     size_t free_count_ = 0;

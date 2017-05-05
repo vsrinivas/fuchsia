@@ -79,11 +79,11 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
 };
 
 static pmm_arena_info_t arena = {
-    .name = "sdram",
-    .flags = PMM_ARENA_FLAG_KMAP,
-    .priority = 0,
-    .base = MEMBASE,
-    .size = MEMSIZE,
+    /* .name */     "sdram",
+    /* .flags */    PMM_ARENA_FLAG_KMAP,
+    /* .priority */ 0,
+    /* .base */     MEMBASE,
+    /* .size */     MEMSIZE,
 };
 
 static volatile int panic_started;

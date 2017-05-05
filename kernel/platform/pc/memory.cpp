@@ -10,6 +10,7 @@
 #include <platform/pc/bootloader.h>
 #include <magenta/boot/multiboot.h>
 #include <efi/boot-services.h>
+#include <string.h>
 #include <trace.h>
 
 #include "platform_p.h"
@@ -109,7 +110,7 @@ static int mem_arena_init(boot_addr_range_t *range)
         pmm_arena_info_t *arena = &mem_arenas[used];
         arena->base = base;
         arena->size = size;
-        arena->name = "memory";
+        snprintf(arena->name, sizeof(arena->name), "%s", "memory");
         arena->priority = 1;
         arena->flags = PMM_ARENA_FLAG_KMAP;
         used++;
@@ -421,7 +422,7 @@ static int platform_mem_range_init(void)
         return count;
 
     /* if still no ranges were found, make a safe guess */
-    mem_arenas[0].name = "memory";
+    snprintf(mem_arenas[0].name, sizeof(mem_arenas[0].name), "%s", "memory");
     mem_arenas[0].base = MEMBASE;
     mem_arenas[0].size = DEFAULT_MEMEND;
     mem_arenas[0].priority = 1;

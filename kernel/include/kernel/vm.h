@@ -95,7 +95,7 @@ static inline bool is_user_address_range(vaddr_t va, size_t len) {
 
 /* physical allocator */
 typedef struct pmm_arena_info {
-    const char* name;
+    char name[16];
 
     uint flags;
     uint priority;

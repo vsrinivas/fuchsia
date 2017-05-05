@@ -15,7 +15,7 @@
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 PmmArena::PmmArena(const pmm_arena_info_t* info)
-    : info_(info) {}
+    : info_(*info) {}
 
 PmmArena::~PmmArena() {}
 
@@ -52,7 +52,7 @@ void PmmArena::BootAllocArray() {
     size_t size = page_count * VM_PAGE_STRUCT_SIZE;
     void* raw_page_array = boot_alloc_mem(size);
 
-    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %zu\n", info_->base, info_->size,
+    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %zu\n", info_.base, info_.size,
             raw_page_array, size);
 
     memset(raw_page_array, 0, size);
