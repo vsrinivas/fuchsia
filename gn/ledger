@@ -29,10 +29,6 @@
             "bootfs_path": "apps/ledger_benchmark_sync"
         },
         {
-            "binary": "configure_ledger",
-            "bootfs_path": "bin/configure_ledger"
-        },
-        {
             "binary": "ledger_integration_tests",
             "bootfs_path": "test/ledger_integration_tests"
         },
