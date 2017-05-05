@@ -71,6 +71,7 @@ class TestAgentApp : public modular::SingleServiceApp<modular::Agent>,
     modular::testing::GetStore()->Put(
         "trigger_test_agent_stopped", "", [this, callback] {
           TEST_PASS("Trigger test agent exited");
+          modular::testing::Done();
           callback();
           mtl::MessageLoop::GetCurrent()->QuitNow();
         });

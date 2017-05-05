@@ -623,7 +623,7 @@ void MessageQueueManager::RegisterWatcher(
       FindQueueName(message_queue_tokens_,
                     MessageQueueInfo{component_namespace, component_instance_id,
                                      queue_name, ""});
-  if (token) {
+  if (!token) {
     pending_watcher_callbacks_[component_namespace][component_instance_id]
                               [queue_name] = watcher;
     return;

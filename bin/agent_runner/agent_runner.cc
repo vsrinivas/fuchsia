@@ -221,7 +221,6 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
   if (task_info->trigger_condition->is_queue_name()) {
     data.task_type = TriggerInfo::TYPE_QUEUE;
     data.queue_name = task_info->trigger_condition->get_queue_name().get();
-
   } else if (task_info->trigger_condition->is_alarm_in_seconds()) {
     data.task_type = TriggerInfo::TYPE_ALARM;
     data.alarm_in_seconds =

@@ -29,11 +29,14 @@ constexpr char kUnstoppableAgent[] =
 
 class ParentApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
+  static void New() {
+    new ParentApp();  // deletes itself in Stop()
+  }
 
  private:
+  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
+  ~ParentApp() override = default;
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
@@ -114,9 +117,12 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
+
+    auto binding = PassBinding();  // To invoke done() after delete this.
+    delete this;
     modular::testing::Teardown();
     done();
-    delete this;
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   modular::ModuleContextPtr module_context_;
@@ -139,7 +145,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  new ParentApp();
+  ParentApp::New();
   loop.Run();
   return 0;
 }
