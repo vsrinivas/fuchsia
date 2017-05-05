@@ -15,5 +15,6 @@ dart_package("flutter") {
     "//apps/mozart/services/geometry:geometry_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/meta",
   ]
 }

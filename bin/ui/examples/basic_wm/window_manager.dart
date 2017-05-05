@@ -27,6 +27,7 @@ class WindowTitleBar extends StatelessWidget {
   final VoidCallback onActivate;
   final GestureDragUpdateCallback onMoved;
 
+  @override
   Widget build(BuildContext context) {
     return new Container(
       height: _kWindowDecorationExtent,
@@ -45,7 +46,7 @@ class WindowTitleBar extends StatelessWidget {
                   borderRadius: const BorderRadius.only(
                     topLeft: _kWindowDecorationCorner,
                   ),
-                  backgroundColor: _kTitleBarColor,
+                  color: _kTitleBarColor,
                 ),
                 alignment: FractionalOffset.centerLeft,
                 padding: const EdgeInsets.only(left: 8.0),
@@ -60,7 +61,7 @@ class WindowTitleBar extends StatelessWidget {
                 borderRadius: const BorderRadius.only(
                   topRight: _kWindowDecorationCorner,
                 ),
-                backgroundColor: _kCloseColor,
+                color: _kCloseColor,
               ),
               alignment: FractionalOffset.center,
               child: new Icon(Icons.close),
@@ -77,6 +78,7 @@ class WindowResizer extends StatelessWidget {
 
   final GestureDragUpdateCallback onResized;
 
+  @override
   Widget build(BuildContext context) {
     return new GestureDetector(
       onPanUpdate: onResized,
@@ -87,7 +89,7 @@ class WindowResizer extends StatelessWidget {
           borderRadius: const BorderRadius.only(
             bottomRight: _kWindowDecorationCorner,
           ),
-          backgroundColor: _kTitleBarColor,
+          color: _kTitleBarColor,
         ),
       ),
     );
@@ -200,8 +202,8 @@ class WindowManager extends StatefulWidget {
 }
 
 class WindowManagerState extends State<WindowManager> {
-  List<Widget> _windows = <Widget>[];
-  Map<Widget, VoidCallback> _closeCallbacks = <Widget, VoidCallback>{};
+  final List<Widget> _windows = <Widget>[];
+  final Map<Widget, VoidCallback> _closeCallbacks = <Widget, VoidCallback>{};
 
   @override
   void initState() {

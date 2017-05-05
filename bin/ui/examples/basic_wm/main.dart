@@ -46,7 +46,7 @@ class ChildApplication {
 
   void close() {
     if (controller != null) {
-      controller.kill(() {});
+      controller.kill();
       controller.ctrl.close();
     }
   }
@@ -112,7 +112,7 @@ class ApplicationEnvironmentHostImpl extends ApplicationEnvironmentHost {
     _serviceProviders.add(impl);
   }
 
-  List<ServiceProviderImpl> _serviceProviders = <ServiceProviderImpl>[];
+  final List<ServiceProviderImpl> _serviceProviders = <ServiceProviderImpl>[];
 }
 
 final ApplicationEnvironmentHostImpl _environmentHost =

@@ -20,6 +20,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 import 'package:lib.fidl.dart/core.dart' as core;
+import 'package:meta/meta.dart';
 
 export 'package:apps.mozart.services.views/view_token.fidl.dart' show ViewOwner;
 
@@ -72,7 +73,7 @@ class _ViewContainerListenerImpl extends ViewContainerListener {
       new HashMap<int, ChildViewConnection>();
 }
 
-typedef ChildViewConnectionCallback(ChildViewConnection connection);
+typedef void ChildViewConnectionCallback(ChildViewConnection connection);
 final ChildViewConnectionCallback _emptyConnectionCallback =
     (ChildViewConnection c) {};
 
@@ -454,6 +455,7 @@ class ChildSceneLayer extends Layer {
 ///
 /// Requires a [MediaQuery] ancestor to provide appropriate media information to
 /// the child.
+@immutable
 class ChildView extends LeafRenderObjectWidget {
   /// Creates a widget that is replaced by content from another process.
   ChildView({ChildViewConnection connection, this.hitTestable: true})
@@ -466,7 +468,7 @@ class ChildView extends LeafRenderObjectWidget {
   /// Whether this child should be included during hit testing.
   ///
   /// Defaults to true.
-  bool hitTestable;
+  final bool hitTestable;
 
   @override
   _RenderChildView createRenderObject(BuildContext context) {

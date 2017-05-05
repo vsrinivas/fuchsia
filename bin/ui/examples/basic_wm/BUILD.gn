@@ -7,6 +7,8 @@ import("//flutter/build/flutter_app.gni")
 flutter_app("basic_wm") {
   main_dart = "main.dart"
 
+  source_dir = "."
+
   deps = [
     "//application/lib/app/dart",
     "//application/services:services_dart",
