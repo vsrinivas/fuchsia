@@ -78,10 +78,10 @@ class Service {
     launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
     // TODO: set up environment
 
-    // Transfer the socket as stdin.
-    launchpad_transfer_fd(lp, conn, STDIN_FILENO);
-    // Clone this process' stdout and stderr.
-    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+    // Transfer the socket as stdin and stdout
+    launchpad_clone_fd(lp, conn, STDIN_FILENO);
+    launchpad_transfer_fd(lp, conn, STDOUT_FILENO);
+    // Clone this process' stderr.
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
     mx_handle_t proc = 0;
