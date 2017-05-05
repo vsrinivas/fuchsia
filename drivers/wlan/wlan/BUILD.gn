@@ -22,7 +22,7 @@ static_library("libwlan") {
   ]
 
   libs = [
-    "ddk",
+    "driver",
   ]
 }
 
