@@ -9,6 +9,8 @@ dart_app("mi_dashboard") {
 
   main_dart = "main.dart"
 
+  source_dir = "."
+
   deps = [
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",

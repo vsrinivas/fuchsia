@@ -9,6 +9,8 @@ dart_app("module_suggester_dart") {
 
   main_dart = "main.dart"
 
+  source_dir = "."
+
   deps = [
     "//application/lib/app/dart",
     "//apps/maxwell/lib/dart",

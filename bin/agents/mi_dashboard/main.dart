@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
@@ -43,10 +45,10 @@ final _contextListener = new ContextListenerImpl((ContextUpdate update) {
 
 void main(List args) {
   // Get a handle to the ContextProvider service
-  final app_context = new ApplicationContext.fromStartupInfo();
-  connectToService(app_context.environmentServices, _contextProvider.ctrl);
+  final appContext = new ApplicationContext.fromStartupInfo();
+  connectToService(appContext.environmentServices, _contextProvider.ctrl);
   assert(_contextProvider.ctrl.isBound);
-  app_context.close();
+  appContext.close();
 
   // Subscribe to the topics in |_topics|.
   ContextQuery query = new ContextQuery();
@@ -58,7 +60,7 @@ void main(List args) {
   configFile.readAsString(encoding: ASCII).then(parseConfigAndStart);
 }
 
-void parseConfigAndStart(var configString) {
+void parseConfigAndStart(String configString) {
   // parse config file as JSON
   Map configMap = JSON.decode(configString);
 
@@ -143,7 +145,7 @@ void handleRequest(HttpRequest request) {
   }
 }
 
-sendFile(File requestFile, HttpResponse response) async {
+Future sendFile(File requestFile, HttpResponse response) async {
   // Set the content type correctly based on the file name suffix
   // The content type is text/plain if the suffix isn't identified
   if (requestFile.path.endsWith("html")) {
@@ -171,7 +173,7 @@ sendFile(File requestFile, HttpResponse response) async {
   // Send the contents of the file
   await requestFile.openRead().pipe(response);
 
-  response.close();
+  return response.close();
 }
 
 void send404(HttpResponse response) {
@@ -180,7 +182,7 @@ void send404(HttpResponse response) {
   response.close();
 }
 
-void handleWebsocketRequest(var event) {
+void handleWebsocketRequest(String event) {
   print("[INFO] websocket event was received!");
 }
 
