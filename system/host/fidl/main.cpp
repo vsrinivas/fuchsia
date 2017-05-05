@@ -6,94 +6,142 @@
 #include <string.h>
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "lib/c_generator.h"
 #include "lib/identifier_table.h"
 #include "lib/lexer.h"
+#include "lib/library.h"
 #include "lib/parser.h"
 #include "lib/source_manager.h"
 
-namespace fidl {
 namespace {
 
-enum struct Behavior {
-    None,
-    // TODO(kulakowski) Remove this when generation is landed.
-    GenerateDummyCFiles,
+[[noreturn]] void Usage() {
+    std::cout << "fidl usage:\n";
+    std::cout << "    fidl c-structs HEADER_PATH [FIDL_FILE...]\n";
+    std::cout << "        Parses the FIDL_FILEs and generates C structures\n";
+    std::cout << "        into HEADER_PATH.\n";
+    std::cout.flush();
+    exit(1);
+}
+
+class Arguments {
+public:
+    Arguments(int count, char** arguments)
+        : count_(count), arguments_(const_cast<const char**>(arguments)) {}
+
+    std::string Claim() {
+        if (count_ < 1) {
+            Usage();
+        }
+        std::string argument = arguments_[0];
+        --count_;
+        ++arguments_;
+        return argument;
+    }
+
+    bool Remaining() { return count_ > 0; }
+
+private:
+    int count_;
+    const char** arguments_;
 };
 
-bool TestParser(int file_count, char** file_names, Behavior behavior) {
-    SourceManager source_manager;
-    ErrorReporter error_reporter;
-    IdentifierTable identifier_table;
+std::fstream Open(std::string filename) {
+    std::fstream stream;
+    stream.open(filename, std::ios::out);
+    return stream;
+}
 
-    for (int idx = 0; idx < file_count; ++idx) {
-        const SourceFile* source_file = source_manager.CreateSource(file_names[idx]);
-        if (source_file == nullptr) {
-            fprintf(stderr, "Couldn't read in source data from %s\n", file_names[idx]);
+enum struct Behavior {
+    CStructs,
+};
+
+bool Parse(Arguments* args, fidl::SourceManager* source_manager,
+           fidl::IdentifierTable* identifier_table, fidl::ErrorReporter* error_reporter,
+           fidl::Library* library) {
+    while (args->Remaining()) {
+        std::string filename = args->Claim();
+        const fidl::SourceFile* source = source_manager->CreateSource(filename.data());
+        if (source == nullptr) {
+            fprintf(stderr, "Couldn't read in source data from %s\n", filename.data());
             return false;
         }
 
-        Lexer lexer(*source_file, &identifier_table);
-        Parser parser(&lexer, &error_reporter);
-
-        auto raw_ast = parser.Parse();
+        fidl::Lexer lexer(*source, identifier_table);
+        fidl::Parser parser(&lexer, error_reporter);
+        auto ast = parser.Parse();
         if (!parser.Ok()) {
-            error_reporter.PrintReports();
+            error_reporter->PrintReports();
             return false;
         }
+
+        if (!library->ConsumeFile(std::move(ast))) {
+            fprintf(stderr, "Parse failed!\n");
+            return false;
+        }
+    }
+
+    if (!library->Resolve()) {
+        fprintf(stderr, "Library resolution failed!\n");
+        return false;
     }
 
     return true;
 }
 
-int GenerateDummyFiles(const char* c_name, const char* h_name) {
-    printf("c name %s\n", c_name);
-    printf("h name %s\n", h_name);
-    std::fstream c_stream;
-    c_stream.open(c_name, std::ios::out);
-    c_stream << "int some_fidl_int;\n";
+bool GenerateC(fidl::Library* library, std::fstream header_output) {
+    std::ostringstream header_file;
+    fidl::CGenerator c_generator(library);
 
-    std::fstream h_stream;
-    h_stream.open(h_name, std::ios::out);
-    h_stream << "#pragma once\n"
-             << "extern int some_fidl_int;\n";
+    c_generator.ProduceCStructs(&header_file);
 
-    return 0;
+    header_output << "// header file\n";
+    header_output << header_file.str();
+    header_output.flush();
+
+    return true;
 }
 
 } // namespace
-} // namespace fidl
 
 int main(int argc, char* argv[]) {
-    if (argc < 3)
-        return 1;
-
+    Arguments args(argc, argv);
     // Parse the program name.
-    --argc;
-    ++argv;
+    args.Claim();
 
-    // Parse the behavior.
-    fidl::Behavior behavior;
-    if (!strncmp(argv[0], "none", 4)) {
-        behavior = fidl::Behavior::None;
-    } else if (!strncmp(argv[0], "dummy", 5)) {
-        behavior = fidl::Behavior::GenerateDummyCFiles;
-        if (argc != 3) {
+    std::string behavior_argument = args.Claim();
+    Behavior behavior;
+    std::fstream header_file;
+    if (behavior_argument == "c-structs") {
+        behavior = Behavior::CStructs;
+        // Parse a file name to write output to.
+        if (argc < 2) {
             return 1;
         }
+        header_file = Open(args.Claim());
     } else {
+        Usage();
+    }
+
+    fidl::SourceManager source_manager;
+    fidl::IdentifierTable identifier_table;
+    fidl::ErrorReporter error_reporter;
+    fidl::Library library;
+    if (!Parse(&args, &source_manager, &identifier_table, &error_reporter, &library)) {
         return 1;
     }
-    --argc;
-    ++argv;
 
-    if (behavior == fidl::Behavior::GenerateDummyCFiles) {
-        return fidl::GenerateDummyFiles(argv[0], argv[1]);
+    switch (behavior) {
+    case Behavior::CStructs: {
+        if (!GenerateC(&library, std::move(header_file))) {
+            return 1;
+        }
     }
-
-    return TestParser(argc, argv, behavior) ? 0 : 1;
+    }
 }

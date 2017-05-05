@@ -13,10 +13,14 @@ source_set("compiler") {
     "lib/ast.h",
     "lib/error_reporter.cpp",
     "lib/error_reporter.h",
+    "lib/c_generator.cpp",
+    "lib/c_generator.h",
     "lib/identifier_table.cpp",
     "lib/identifier_table.h",
     "lib/lexer.cpp",
     "lib/lexer.h",
+    "lib/library.cpp",
+    "lib/library.h",
     "lib/parser.cpp",
     "lib/parser.h",
     "lib/source_file.cpp",
@@ -28,6 +32,8 @@ source_set("compiler") {
     "lib/string_view.h",
     "lib/token.h",
     "lib/token_definitions.inc",
+    "lib/types.h",
+    "lib/type_shape.h",
   ]
 }
 

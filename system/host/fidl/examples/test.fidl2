@@ -1,0 +1,31 @@
+library test;
+
+struct Point {
+    int32 x;
+    int32 y;
+};
+
+enum Direction : uint32 {
+    Up = 0;
+    Down = 1;
+    Left = 2;
+    Right = 3;
+};
+
+struct ArraysOfPoints {
+    array<Point>:4 p;
+    ArraysOfPoints? more_points;
+};
+
+union Points {
+    Point one_point;
+    ArraysOfPoints many_points;
+};
+
+const uint32 NumberOfDirections = 4;
+
+interface Drawing {
+    1: Draw(Point p, Direction d);
+    2: DrawLots(Points ps);
+    3: event DrawSucceeded(uint32 draws);
+};

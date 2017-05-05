@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_LIB_PARSER_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_LIB_PARSER_H_
 
 #include <memory>
 
@@ -20,7 +21,7 @@ public:
         last_token_ = Lex();
     }
 
-    std::unique_ptr<File> Parse() { return ParseFile(); }
+    std::unique_ptr<ast::File> Parse() { return ParseFile(); }
 
     bool Ok() const { return ok_; }
 
@@ -55,45 +56,45 @@ private:
 
     decltype(nullptr) Fail();
 
-    std::unique_ptr<Identifier> ParseIdentifier();
-    std::unique_ptr<CompoundIdentifier> ParseCompoundIdentifier();
+    std::unique_ptr<ast::Identifier> ParseIdentifier();
+    std::unique_ptr<ast::CompoundIdentifier> ParseCompoundIdentifier();
 
-    std::unique_ptr<StringLiteral> ParseStringLiteral();
-    std::unique_ptr<NumericLiteral> ParseNumericLiteral();
-    std::unique_ptr<TrueLiteral> ParseTrueLiteral();
-    std::unique_ptr<FalseLiteral> ParseFalseLiteral();
-    std::unique_ptr<DefaultLiteral> ParseDefaultLiteral();
-    std::unique_ptr<Literal> ParseLiteral();
+    std::unique_ptr<ast::StringLiteral> ParseStringLiteral();
+    std::unique_ptr<ast::NumericLiteral> ParseNumericLiteral();
+    std::unique_ptr<ast::TrueLiteral> ParseTrueLiteral();
+    std::unique_ptr<ast::FalseLiteral> ParseFalseLiteral();
+    std::unique_ptr<ast::DefaultLiteral> ParseDefaultLiteral();
+    std::unique_ptr<ast::Literal> ParseLiteral();
 
-    std::unique_ptr<Constant> ParseConstant();
+    std::unique_ptr<ast::Constant> ParseConstant();
 
-    std::unique_ptr<Using> ParseUsing();
+    std::unique_ptr<ast::Using> ParseUsing();
 
-    std::unique_ptr<ArrayType> ParseArrayType();
-    std::unique_ptr<VectorType> ParseVectorType();
-    std::unique_ptr<StringType> ParseStringType();
-    std::unique_ptr<HandleType> ParseHandleType();
-    std::unique_ptr<PrimitiveType> ParsePrimitiveType();
-    std::unique_ptr<RequestType> ParseRequestType();
-    std::unique_ptr<Type> ParseType();
+    std::unique_ptr<ast::ArrayType> ParseArrayType();
+    std::unique_ptr<ast::VectorType> ParseVectorType();
+    std::unique_ptr<ast::StringType> ParseStringType();
+    std::unique_ptr<ast::HandleType> ParseHandleType();
+    std::unique_ptr<ast::PrimitiveType> ParsePrimitiveType();
+    std::unique_ptr<ast::RequestType> ParseRequestType();
+    std::unique_ptr<ast::Type> ParseType();
 
-    std::unique_ptr<ConstDeclaration> ParseConstDeclaration();
+    std::unique_ptr<ast::ConstDeclaration> ParseConstDeclaration();
 
-    std::unique_ptr<EnumMember> ParseEnumMember();
-    std::unique_ptr<EnumDeclaration> ParseEnumDeclaration();
+    std::unique_ptr<ast::EnumMember> ParseEnumMember();
+    std::unique_ptr<ast::EnumDeclaration> ParseEnumDeclaration();
 
-    std::unique_ptr<Parameter> ParseParameter();
-    std::unique_ptr<ParameterList> ParseParameterList();
-    std::unique_ptr<InterfaceMemberMethod> ParseInterfaceMemberMethod();
-    std::unique_ptr<InterfaceDeclaration> ParseInterfaceDeclaration();
+    std::unique_ptr<ast::Parameter> ParseParameter();
+    std::unique_ptr<ast::ParameterList> ParseParameterList();
+    std::unique_ptr<ast::InterfaceMemberMethod> ParseInterfaceMemberMethod();
+    std::unique_ptr<ast::InterfaceDeclaration> ParseInterfaceDeclaration();
 
-    std::unique_ptr<StructMember> ParseStructMember();
-    std::unique_ptr<StructDeclaration> ParseStructDeclaration();
+    std::unique_ptr<ast::StructMember> ParseStructMember();
+    std::unique_ptr<ast::StructDeclaration> ParseStructDeclaration();
 
-    std::unique_ptr<UnionMember> ParseUnionMember();
-    std::unique_ptr<UnionDeclaration> ParseUnionDeclaration();
+    std::unique_ptr<ast::UnionMember> ParseUnionMember();
+    std::unique_ptr<ast::UnionDeclaration> ParseUnionDeclaration();
 
-    std::unique_ptr<File> ParseFile();
+    std::unique_ptr<ast::File> ParseFile();
 
     Lexer* lexer_;
     ErrorReporter* error_reporter_;
@@ -103,3 +104,5 @@ private:
 };
 
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_HOST_FIDL_LIB_PARSER_H_

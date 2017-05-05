@@ -1,0 +1,65 @@
+library enums;
+
+enum int8_enum : int8 {
+    kNegativeOne = -1;
+    kOne = 1;
+};
+
+enum int16_enum : int16 {
+    kNegativeOne = -1;
+    kOne = 1;
+    kTwo = 2;
+};
+
+enum int32_enum : int32 {
+    kNegativeOne = -1;
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+};
+
+enum int64_enum : int64 {
+    kNegativeOne = -1;
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+    kFour = 4;
+};
+
+enum uint8_enum : uint8 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+    kFour = 4;
+    kFive = 5;
+};
+
+enum uint16_enum : uint16 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+    kFour = 4;
+    kFive = 5;
+    kSix = 6;
+};
+
+enum uint32_enum : uint32 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+    kFour = 4;
+    kFive = 5;
+    kSix = 6;
+    kSeven = 7;
+};
+
+enum uint64_enum : uint64 {
+    kOne = 1;
+    kTwo = 2;
+    kThree = 3;
+    kFour = 4;
+    kFive = 5;
+    kSix = 6;
+    kSeven = 7;
+    kEight = 8;
+};

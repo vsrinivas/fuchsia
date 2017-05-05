@@ -1,0 +1,29 @@
+library alignment;
+
+struct packing_0 {
+    int16 i16_0;
+    int32 i32_0;
+    int16 i16_1;
+};
+
+struct packing_1 {
+    int16 i16_0;
+    int8 i8_0;
+    int16 i16_1;
+    int8 i8_1;
+};
+
+struct packing_2 {
+    int16 i16_0;
+    int8 i8_0;
+    int8 i8_1;
+    int16 i16_1;
+};
+
+struct packing_3 {
+    int32 i32_0;
+    int64 i64_0;
+    int16 i16_0;
+    int32 i32_1;
+    int16 i16_1;
+};

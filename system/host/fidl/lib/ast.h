@@ -2,15 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_LIB_AST_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_LIB_AST_H_
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "token.h"
+#include "source_location.h"
+#include "types.h"
+
+// ASTs fresh out of the oven. This is a tree-shaped bunch of nodes
+// pretty much exactly corresponding to the grammar of a single fidl
+// file. File is the root of the tree, and consists of lists of
+// Declarations, and so on down to individual SourceLocations.
+
+// Each node owns its children via unique_ptr and vector. All tokens
+// here, like everywhere in the fidl compiler, are backed by a string
+// view whose contents are owned by a SourceManager.
+
+// An ast::File is produced by parsing a token stream. All of the
+// Files in a library are then flattened out into a Library.
 
 namespace fidl {
+namespace ast {
 
 enum struct Nullability {
     Nullable,
@@ -18,9 +33,10 @@ enum struct Nullability {
 };
 
 struct Identifier {
-    Identifier(Token identifier) : identifier(identifier) {}
+    explicit Identifier(SourceLocation location)
+        : location(location) {}
 
-    Token identifier;
+    SourceLocation location;
 };
 
 struct CompoundIdentifier {
@@ -32,50 +48,101 @@ struct CompoundIdentifier {
 
 struct Literal {
     virtual ~Literal() {}
+
+    enum struct Kind {
+        String,
+        Numeric,
+        True,
+        False,
+        Default,
+    };
+
+    explicit Literal(Kind kind)
+        : kind(kind) {}
+
+    const Kind kind;
 };
 
 struct StringLiteral : public Literal {
-    StringLiteral(Token literal) : literal(literal) {}
+    explicit StringLiteral(SourceLocation location)
+        : Literal(Kind::String), location(location) {}
 
-    Token literal;
+    SourceLocation location;
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(Token literal) : literal(literal) {}
+    NumericLiteral(SourceLocation location)
+        : Literal(Kind::Numeric), location(location) {}
 
-    Token literal;
+    SourceLocation location;
 };
 
-struct TrueLiteral : public Literal {};
+struct TrueLiteral : public Literal {
+    TrueLiteral()
+        : Literal(Kind::True) {}
+};
 
-struct FalseLiteral : public Literal {};
+struct FalseLiteral : public Literal {
+    FalseLiteral()
+        : Literal(Kind::False) {}
+};
 
-struct DefaultLiteral : public Literal {};
+struct DefaultLiteral : public Literal {
+    DefaultLiteral()
+        : Literal(Kind::Default) {}
+};
 
 struct Constant {
     virtual ~Constant() {}
+
+    enum struct Kind {
+        Identifier,
+        Literal,
+    };
+
+    explicit Constant(Kind kind)
+        : kind(kind) {}
+
+    const Kind kind;
 };
 
 struct IdentifierConstant : Constant {
-    IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
-        : identifier(std::move(identifier)) {}
+    explicit IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
+        : Constant(Kind::Identifier), identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
 };
 
 struct LiteralConstant : Constant {
-    LiteralConstant(std::unique_ptr<Literal> literal) : literal(std::move(literal)) {}
+    explicit LiteralConstant(std::unique_ptr<Literal> literal)
+        : Constant(Kind::Literal), literal(std::move(literal)) {}
 
     std::unique_ptr<Literal> literal;
 };
 
 struct Type {
     virtual ~Type() {}
+
+    enum struct Kind {
+        Array,
+        Vector,
+        String,
+        Handle,
+        Request,
+        Primitive,
+        Identifier,
+    };
+
+    explicit Type(Kind kind)
+        : kind(kind) {}
+
+    const Kind kind;
 };
 
 struct ArrayType : public Type {
     ArrayType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
-        : element_type(std::move(element_type)), element_count(std::move(element_count)) {}
+        : Type(Kind::Array), element_type(std::move(element_type)),
+          element_count(std::move(element_count)) {}
 
     std::unique_ptr<Type> element_type;
     std::unique_ptr<Constant> element_count;
@@ -84,7 +151,8 @@ struct ArrayType : public Type {
 struct VectorType : public Type {
     VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                Nullability nullability)
-        : element_type(std::move(element_type)),
+        : Type(Kind::Vector),
+          element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
@@ -94,61 +162,31 @@ struct VectorType : public Type {
 
 struct StringType : public Type {
     StringType(std::unique_ptr<Constant> maybe_element_count, Nullability nullability)
-        : maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
+        : Type(Kind::String), maybe_element_count(std::move(maybe_element_count)),
+          nullability(nullability) {}
 
     std::unique_ptr<Constant> maybe_element_count;
     Nullability nullability;
 };
 
 struct HandleType : public Type {
-    enum struct Subtype {
-        Handle,
-        Process,
-        Thread,
-        Vmo,
-        Channel,
-        Event,
-        Port,
-        Interrupt,
-        Iomap,
-        Pci,
-        Log,
-        Socket,
-        Resource,
-        Eventpair,
-        Job,
-        Vmar,
-        Fifo,
-        Hypervisor,
-        Guest,
-        Timer,
-    };
+    HandleType(types::HandleSubtype subtype, Nullability nullability)
+        : Type(Kind::Handle), subtype(subtype), nullability(nullability) {}
 
-    HandleType(Subtype subtype, Nullability nullability)
-        : subtype(subtype), nullability(nullability) {}
-
-    Subtype subtype;
+    types::HandleSubtype subtype;
     Nullability nullability;
 };
 
 struct RequestType : public Type {
     RequestType(std::unique_ptr<CompoundIdentifier> subtype, Nullability nullability)
-        : subtype(std::move(subtype)), nullability(nullability) {}
+        : Type(Kind::Request), subtype(std::move(subtype)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> subtype;
     Nullability nullability;
 };
 
-struct IdentifierType : public Type {
-    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, Nullability nullability)
-        : identifier(std::move(identifier)), nullability(nullability) {}
-
-    std::unique_ptr<CompoundIdentifier> identifier;
-    Nullability nullability;
-};
-
 struct PrimitiveType : public Type {
-    enum struct TypeKind {
+    enum struct Subtype {
         Bool,
         Status,
         Int8,
@@ -163,9 +201,18 @@ struct PrimitiveType : public Type {
         Float64,
     };
 
-    PrimitiveType(TypeKind type_kind) : type_kind(type_kind) {}
+    explicit PrimitiveType(Subtype subtype)
+        : Type(Kind::Primitive), subtype(subtype) {}
 
-    TypeKind type_kind;
+    Subtype subtype;
+};
+
+struct IdentifierType : public Type {
+    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, Nullability nullability)
+        : Type(Kind::Identifier), identifier(std::move(identifier)), nullability(nullability) {}
+
+    std::unique_ptr<CompoundIdentifier> identifier;
+    Nullability nullability;
 };
 
 struct Using {
@@ -186,29 +233,12 @@ struct ConstDeclaration {
     std::unique_ptr<Constant> constant;
 };
 
-struct EnumMemberValue {
-    virtual ~EnumMemberValue() {}
-};
-
-struct EnumMemberValueIdentifier : public EnumMemberValue {
-    EnumMemberValueIdentifier(std::unique_ptr<CompoundIdentifier> identifier)
-        : identifier(std::move(identifier)) {}
-
-    std::unique_ptr<CompoundIdentifier> identifier;
-};
-
-struct EnumMemberValueNumeric : public EnumMemberValue {
-    EnumMemberValueNumeric(std::unique_ptr<NumericLiteral> literal) : literal(std::move(literal)) {}
-
-    std::unique_ptr<NumericLiteral> literal;
-};
-
 struct EnumMember {
-    EnumMember(std::unique_ptr<Identifier> identifier, std::unique_ptr<EnumMemberValue> maybe_value)
-        : identifier(std::move(identifier)), maybe_value(std::move(maybe_value)) {}
+    EnumMember(std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value)
+        : identifier(std::move(identifier)), value(std::move(value)) {}
 
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<EnumMemberValue> maybe_value;
+    std::unique_ptr<Constant> value;
 };
 
 struct EnumDeclaration {
@@ -241,16 +271,16 @@ struct ParameterList {
 struct InterfaceMemberMethod {
     InterfaceMemberMethod(std::unique_ptr<NumericLiteral> ordinal,
                           std::unique_ptr<Identifier> identifier,
-                          std::unique_ptr<ParameterList> maybe_parameter_list,
+                          std::unique_ptr<ParameterList> maybe_request,
                           std::unique_ptr<ParameterList> maybe_response)
         : ordinal(std::move(ordinal)),
           identifier(std::move(identifier)),
-          maybe_parameter_list(std::move(maybe_parameter_list)),
+          maybe_request(std::move(maybe_request)),
           maybe_response(std::move(maybe_response)) {}
 
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<ParameterList> maybe_parameter_list;
+    std::unique_ptr<ParameterList> maybe_request;
     std::unique_ptr<ParameterList> maybe_response;
 };
 
@@ -342,4 +372,7 @@ struct File {
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
 };
 
+} // namespace ast
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_HOST_FIDL_LIB_AST_H_

@@ -19,7 +19,7 @@ public:
     constexpr StringView(const char* data, size_t size) : data_(data), size_(size) {}
     StringView(const char* string) : data_(string), size_(strlen(string)) {}
 
-    operator std::string() {
+    operator std::string() const {
         return std::string(data(), size());
     }
 
