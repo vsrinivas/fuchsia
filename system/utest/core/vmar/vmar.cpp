@@ -1010,7 +1010,7 @@ bool object_info_test() {
     mx_handle_t region;
     uintptr_t region_addr;
 
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t region_size = PAGE_SIZE * 10;
@@ -1272,7 +1272,7 @@ bool map_specific_overwrite_test() {
     uint8_t buf[1];
     size_t len;
 
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t mapping_size = 4 * PAGE_SIZE;
@@ -1356,7 +1356,7 @@ bool protect_split_test() {
     mx_handle_t vmo;
     uintptr_t mapping_addr;
 
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -1421,7 +1421,7 @@ bool protect_multiple_test() {
     uintptr_t mapping_addr[3];
     uintptr_t subregion_addr;
 
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     const size_t mapping_size = 4 * PAGE_SIZE;
     ASSERT_EQ(mx_vmo_create(mapping_size, 0, &vmo), NO_ERROR, "");

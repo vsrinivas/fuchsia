@@ -42,9 +42,9 @@ On success, **process_create**() returns **NO_ERROR**, a handle to the new proce
 
 ## ERRORS
 
-**ERR_BAD_HANDLE**  *job* is not a valid handle (only when not **MX_HANDLE_INVALID**).
+**ERR_BAD_HANDLE**  *job* is not a valid handle.
 
-**ERR_WRONG_TYPE**  *job* is not a job handle (only when not **MX_HANDLE_INVALID**).
+**ERR_WRONG_TYPE**  *job* is not a job handle.
 
 **ERR_ACCESS_DENIED**  *job* does not have the **MX_WRITE_RIGHT** right
 (only when not **MX_HANDLE_INVALID**).

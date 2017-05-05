@@ -261,23 +261,23 @@ private:
 
     mxtl::Canary<mxtl::magic("PROC")> canary_;
 
+    // the enclosing job
+    const mxtl::RefPtr<JobDispatcher> job_;
+
+    // Policy set by the Job during Create().
+    const pol_cookie_t policy_;
+
     // The process can belong to either of these lists independently.
     mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_weak_;
     mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>> dll_job_;
 
     mx_handle_t handle_rand_ = 0;
 
-    // Policy set by the Job during Create().
-    pol_cookie_t policy_ = kPolicyEmpty;
-
     // list of threads in this process
     mxtl::DoublyLinkedList<UserThread*> thread_list_ TA_GUARDED(state_lock_);
 
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;
-
-    // the enclosing job
-    const mxtl::RefPtr<JobDispatcher> job_;
 
     // our list of handles
     mutable Mutex handle_table_lock_; // protects |handles_|.

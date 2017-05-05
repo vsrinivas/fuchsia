@@ -238,13 +238,10 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<JobDispatcher> job;
-    if (job_handle != MX_HANDLE_INVALID) {
-        // TODO: don't accept invalid handle here.
-        // TODO: define process creation job rights.
-        auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_WRITE, &job);
-        if (status != NO_ERROR)
-            return status;
-    }
+    // TODO: define process creation job rights.
+    auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_WRITE, &job);
+    if (status != NO_ERROR)
+        return status;
 
     // create a new process dispatcher
     mxtl::RefPtr<Dispatcher> proc_dispatcher;

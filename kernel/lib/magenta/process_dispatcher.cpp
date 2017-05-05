@@ -69,15 +69,8 @@ mx_status_t ProcessDispatcher::Create(
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    // TODO(cpu): remove conditional check on Job and make |policy_| a const member.
-    if (job) {
-        // Process creation can fail if the job is in the middle of a
-        // killing operation.
-        if (!job->AddChildProcess(process.get()))
-            return ERR_BAD_STATE;
-
-        process->policy_ = job->GetPolicy();
-    }
+    if (!job->AddChildProcess(process.get()))
+        return ERR_BAD_STATE;
 
     status_t result = process->Initialize();
     if (result != NO_ERROR)
@@ -104,7 +97,7 @@ mx_status_t ProcessDispatcher::Create(
 ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
                                      mxtl::StringPiece name,
                                      uint32_t flags)
-    : job_(mxtl::move(job)), state_tracker_(0u) {
+    : job_(mxtl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
@@ -131,8 +124,7 @@ ProcessDispatcher::~ProcessDispatcher() {
 
     // Remove ourselves from the parent job's weak ref to us. Note that this might
     // have beeen called when transitioning State::DEAD. The Job can handle double calls.
-    if (job_)
-        job_->RemoveChildProcess(this);
+    job_->RemoveChildProcess(this);
 
     LTRACE_EXIT_OBJ;
 }
@@ -382,8 +374,7 @@ void ProcessDispatcher::SetStateLocked(State s) {
 
         // We remove ourselves from the parent Job weak ref (to us) list early, so
         // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
-        if (job_)
-            job_->RemoveChildProcess(this);
+        job_->RemoveChildProcess(this);
 
         // The PROC_CREATE record currently emits a uint32_t.
         uint32_t koid = static_cast<uint32_t>(get_koid());
