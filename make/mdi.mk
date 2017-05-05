@@ -19,15 +19,17 @@ MDIGEN := $(BUILDDIR)/tools/mdigen
 # add "MDI_" prefix and make header file symbols uppercase
 MDI_HEADER_OPTS := -p "MDI_" -u
 
-$(MDI_BIN): $(MDIGEN) $(MDI_SRCS) $(MDI_DEPS)
+# rule for building MDI binary blob
+$(MDI_BIN): $(MDIGEN) $(MDI_SRCS) $(MDI_INCLUDES)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
 	$(NOECHO)$(MDIGEN) -o $@ $(MDI_SRCS)
 
-$(MDI_HEADER): $(MDIGEN) $(MDI_SRCS) $(MDI_DEPS)
+# rule for generating MDI header file for C/C++ code
+$(MDI_HEADER): $(MDIGEN) $(MDI_INCLUDES)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
-	$(NOECHO)$(MDIGEN) $(MDI_SRCS) -h $@ $(MDI_HEADER_OPTS)
+	$(NOECHO)$(MDIGEN) $(MDI_INCLUDES) -h $@ $(MDI_HEADER_OPTS)
 
 GENERATED += $(MDI_BIN) $(MDI_HEADER)
 ADDITIONAL_BOOTDATA_ITEMS += $(MDI_BIN)

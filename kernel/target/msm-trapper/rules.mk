@@ -46,7 +46,7 @@ include make/fastboot.mk
 MDI_SRCS := \
     $(LOCAL_DIR)/trapper.mdi \
 
-MDI_DEPS := \
+MDI_INCLUDES := \
     kernel/include/mdi/kernel-defs.mdi \
 
 include make/mdi.mk

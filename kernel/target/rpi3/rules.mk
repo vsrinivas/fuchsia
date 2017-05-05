@@ -37,7 +37,7 @@ KERNEL_DEFINES += \
 MDI_SRCS := \
     $(LOCAL_DIR)/rpi3.mdi \
 
-MDI_DEPS := \
+MDI_INCLUDES := \
     kernel/include/mdi/kernel-defs.mdi \
 
 include make/mdi.mk
