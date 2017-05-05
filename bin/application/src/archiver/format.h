@@ -23,9 +23,7 @@ struct IndexChunk {
 };
 
 struct IndexEntry {
-  explicit IndexEntry(uint64_t type) : type(type) {}
-
-  uint64_t type;
+  uint64_t type = 0;
   uint64_t offset = 0;
   uint64_t length = 0;
 };
@@ -37,8 +35,9 @@ struct HashChunk {
 };
 
 struct DirectoryTableEntry {
-  uint32_t reserved0 = 0;
   uint32_t name_offset = 0;
+  uint16_t name_length = 0;
+  uint16_t reserved0 = 0;
   uint64_t data_offset = 0;
   uint64_t data_length = 0;
   uint64_t reserved1 = 0;
@@ -50,11 +49,6 @@ struct DirectoryHashChunk {
   // Hashes
 };
 
-struct PathData {
-  uint16_t length = 0;
-  // Path data
-};
+}  // namespace archive
 
-} // archive
-
-#endif // APPLICATION_SRC_ARCHIVER_FORMAT_H_
+#endif  // APPLICATION_SRC_ARCHIVER_FORMAT_H_

@@ -8,8 +8,8 @@
 namespace archive {
 class ArchiveWriter;
 
-bool ReadManifest(char* path, ArchiveWriter* writer);
+bool ReadManifest(const char* path, ArchiveWriter* writer);
 
-} // archive
+}  // namespace archive
 
-#endif // APPLICATION_SRC_ARCHIVER_MANIFEST_H_
+#endif  // APPLICATION_SRC_ARCHIVER_MANIFEST_H_

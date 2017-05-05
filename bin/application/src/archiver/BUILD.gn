@@ -4,10 +4,15 @@
 
 executable("archiver") {
   sources = [
+    "alignment.h",
     "archive_entry.cc",
     "archive_entry.h",
+    "archive_reader.cc",
+    "archive_reader.h",
     "archive_writer.cc",
     "archive_writer.h",
+    "file_operations.cc",
+    "file_operations.h",
     "format.h",
     "main.cc",
     "manifest.cc",

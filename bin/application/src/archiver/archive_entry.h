@@ -17,6 +17,7 @@ struct ArchiveEntry {
   ArchiveEntry(const ArchiveEntry& other) = delete;
   ArchiveEntry(ArchiveEntry&& other);
 
+  ArchiveEntry& operator=(const ArchiveEntry& other) = delete;
   ArchiveEntry& operator=(ArchiveEntry&& other);
 
   void swap(ArchiveEntry& other);
@@ -30,6 +31,6 @@ inline bool operator<(const ArchiveEntry& lhs, const ArchiveEntry& rhs) {
   return lhs.dst_path < rhs.dst_path;
 }
 
-} // archive
+}  // namespace archive
 
-#endif // APPLICATION_SRC_ARCHIVER_ARCHIVE_ENTRY_H_
+#endif  // APPLICATION_SRC_ARCHIVER_ARCHIVE_ENTRY_H_

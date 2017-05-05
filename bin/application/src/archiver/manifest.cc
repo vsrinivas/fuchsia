@@ -6,30 +6,33 @@
 
 #include <stdio.h>
 
-#include <fstream>
-
 #include "application/src/archiver/archive_entry.h"
 #include "application/src/archiver/archive_writer.h"
+#include "lib/ftl/files/file.h"
+#include "lib/ftl/strings/split_string.h"
 
 namespace archive {
 
-bool ReadManifest(char* path, ArchiveWriter* writer) {
-  std::ifstream in;
-  in.open(path);
-  if (!in.good()) {
-    fprintf(stderr, "error: failed to open '%s'\n", path);
+bool ReadManifest(const char* path, ArchiveWriter* writer) {
+  std::string manifest;
+  if (!files::ReadFileToString(path, &manifest)) {
+    fprintf(stderr, "error: Faile to read '%s'\n", path);
     return false;
   }
 
-  for (std::string line; std::getline(in, line); ) {
+  std::vector<ftl::StringView> lines =
+      ftl::SplitString(manifest, "\n", ftl::WhiteSpaceHandling::kKeepWhitespace,
+                       ftl::SplitResult::kSplitWantNonEmpty);
+
+  for (const auto& line : lines) {
     size_t offset = line.find('=');
     if (offset == std::string::npos)
       continue;
-    writer->Add(ArchiveEntry(line.substr(offset + 1), line.substr(0, offset)));
+    writer->Add(ArchiveEntry(line.substr(offset + 1).ToString(),
+                             line.substr(0, offset).ToString()));
   }
 
-  in.close();
   return true;
 }
 
-} // archive
+}  // namespace archive

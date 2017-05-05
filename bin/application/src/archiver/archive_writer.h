@@ -24,12 +24,12 @@ class ArchiveWriter {
 
  private:
   bool HasDuplicateEntries();
-  bool GetDirnamesLength(uint64_t* result) const;
 
   std::vector<ArchiveEntry> entries_;
   bool dirty_ = true;
+  uint64_t total_path_length_ = 0;
 };
 
-} // archive
+}  // namespace archive
 
-#endif // APPLICATION_SRC_ARCHIVER_ARCHIVE_WRITER_H_
+#endif  // APPLICATION_SRC_ARCHIVER_ARCHIVE_WRITER_H_
