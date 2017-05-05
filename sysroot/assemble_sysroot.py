@@ -34,7 +34,6 @@ def copy_tree(source, dest):
             if os.path.exists(source_file) and os.path.exists(dest_file) and filecmp.cmp(source_file, dest_file):
                 continue
             shutil.copy(source_file, dest_file)
-            sys.stderr.write('Copied %s\n' % source_file)
             copied_anything = True
     return copied_anything
 
