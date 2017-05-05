@@ -51,15 +51,12 @@ def main():
     call = subprocess.Popen(call_args, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     stdout, stderr = call.communicate()
-    # TODO(pylaligand): only print output if return code is non-zero once
-    # https://github.com/dart-lang/sdk/issues/29498 is fixed.
-    print(stdout + stderr)
+    if call.returncode:
+        print(stdout + stderr)
+        return 1
+
     with open(args.stamp, 'w') as stamp:
         stamp.write('Success!')
-
-    # TODO(pylaligand): return `call.returncode` once most of the codebase has
-    # been cleaned up.
-    return 0
 
 
 if __name__ == '__main__':
