@@ -71,9 +71,8 @@ class UserProviderImpl : UserProvider {
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;
 
-  // TODO(alhaad): The framework allows simultaneous logins, this should
-  // be an array of all logged in users.
-  std::unique_ptr<UserControllerImpl> user_controller_impl_;
+  std::unordered_map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
+      user_controllers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };

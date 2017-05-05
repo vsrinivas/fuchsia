@@ -72,7 +72,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
     // (which in-turn will call this |Logout| since we have not completed yet).
     user_watchers_.ForAllPtrs(
         [](UserWatcher* watcher) { watcher->OnLogout(); });
-    done_();
+    done_(this);
   });
 }
 

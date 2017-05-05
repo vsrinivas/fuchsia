@@ -55,7 +55,27 @@ void UserProviderImpl::Connect(fidl::InterfaceRequest<UserProvider> request) {
 }
 
 void UserProviderImpl::Teardown(const std::function<void()>& callback) {
-  user_controller_impl_->Logout(callback);
+  if (user_controllers_.empty()) {
+    callback();
+    return;
+  }
+
+  for (auto& it : user_controllers_) {
+    auto ptr = it.first;
+    auto cont = [this, ptr, callback] {
+      // This is okay because during teardown, |cont| is never invoked
+      // asynchronously.
+      user_controllers_.erase(ptr);
+      if (!user_controllers_.empty()) {
+        // Not the last callback.
+        return;
+      }
+
+      callback();
+    };
+
+    it.second->Logout(cont);
+  }
 }
 
 void UserProviderImpl::Login(
@@ -262,11 +282,12 @@ void UserProviderImpl::LoginInternal(
   account_provider_->GetTokenProviderFactory(
       user_id, token_provider_factory.NewRequest());
 
-  user_controller_impl_.reset(new UserControllerImpl(
+  auto controller = std::make_unique<UserControllerImpl>(
       app_context_, device_name, user_shell_, story_shell_,
       std::move(token_provider_factory), user_id, std::move(ledger_repository),
       std::move(view_owner_request), std::move(user_controller_request),
-      [this] { user_controller_impl_.reset(); }));
+      [this] (UserControllerImpl* c) { user_controllers_.erase(c); });
+  user_controllers_[controller.get()] = std::move(controller);
 }
 
 }  // namespace modular

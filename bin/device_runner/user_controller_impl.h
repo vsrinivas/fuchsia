@@ -55,7 +55,7 @@ class UserControllerImpl : UserController {
   // instance) to our owner, we do it using a callback supplied to us in our
   // constructor. (The alternative is to take in a DeviceRunnerApp*, which seems
   // a little specific and overscoped).
-  using DoneCallback = ftl::Closure;
+  using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
       std::shared_ptr<app::ApplicationContext> app_context,
