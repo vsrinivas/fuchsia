@@ -52,20 +52,17 @@ class DeviceMapImpl::QueryCall : Operation<fidl::Array<DeviceMapEntryPtr>> {
 
  private:
   void Run() override {
-    GetEntries(
-        (*snapshot_).get(),
-        kDeviceKeyPrefix,
-        &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "QueryCall() "
-                           << "GetEntries() " << status;
-            Done(std::move(data_));
-            return;
-          }
+    GetEntries((*snapshot_).get(), kDeviceKeyPrefix, &entries_,
+               nullptr /* next_token */, [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "QueryCall() "
+                                  << "GetEntries() " << status;
+                   Done(std::move(data_));
+                   return;
+                 }
 
-          Cont();
-        });
+                 Cont();
+               });
   }
 
   void Cont() {
@@ -118,8 +115,7 @@ void DeviceMapImpl::Query(const QueryCallback& callback) {
   new QueryCall(&operation_queue_, page_snapshot(), callback);
 }
 
-void DeviceMapImpl::OnChange(const std::string& key,
-                             const std::string& value) {
+void DeviceMapImpl::OnChange(const std::string& key, const std::string& value) {
   FTL_LOG(INFO) << "New Device: " << key;
 }
 

@@ -4,7 +4,6 @@
 
 #include "apps/modular/lib/fidl/app_client.h"
 
-
 namespace modular {
 
 AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,

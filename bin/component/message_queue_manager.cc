@@ -46,7 +46,8 @@ class MessageQueueConnection : public MessageQueue {
 // manipulate the message queue. Owned by |MessageQueueManager|.
 class MessageQueueStorage : MessageSender {
  public:
-  MessageQueueStorage(const std::string& queue_token, const std::string& file_name_)
+  MessageQueueStorage(const std::string& queue_token,
+                      const std::string& file_name_)
       : queue_token_(queue_token), queue_data_(file_name_) {}
 
   ~MessageQueueStorage() override = default;
@@ -198,7 +199,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   void Run() override {
     page_->GetSnapshot(
         snapshot_.NewRequest(), nullptr, nullptr,
-            [this](ledger::Status status) {
+        [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Ledger.GetSnapshot() " << status;
             Done(std::move(nullptr));
@@ -501,7 +502,8 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
 
-MessageQueueManager::MessageQueueManager(ledger::PagePtr page, const std::string& local_path)
+MessageQueueManager::MessageQueueManager(ledger::PagePtr page,
+                                         const std::string& local_path)
     : page_(std::move(page)), local_path_(local_path) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
@@ -557,7 +559,8 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     path.push_back('/');
     path.append(info.queue_token);
     path.append(".json");
-    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_token, std::move(path));
+    auto new_queue = std::make_unique<MessageQueueStorage>(info.queue_token,
+                                                           std::move(path));
     std::tie(it, inserted) = message_queues_.insert(
         std::make_pair(info.queue_token, std::move(new_queue)));
     FTL_DCHECK(inserted);

@@ -4,8 +4,8 @@
 
 group("all") {
   deps = [
-    ":story_runner",
     ":dummy_story_shell",
+    ":story_runner",
   ]
 }
 
@@ -13,10 +13,10 @@ source_set("story_runner") {
   sources = [
     "link_impl.cc",
     "link_impl.h",
-    "module_controller_impl.cc",
-    "module_controller_impl.h",
     "module_context_impl.cc",
     "module_context_impl.h",
+    "module_controller_impl.cc",
+    "module_controller_impl.h",
     "story_impl.cc",
     "story_impl.h",
     "story_provider_impl.cc",
@@ -66,4 +66,3 @@ executable("dummy_story_shell") {
     "//lib/mtl",
   ]
 }
-

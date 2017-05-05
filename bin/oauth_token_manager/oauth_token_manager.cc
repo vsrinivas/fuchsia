@@ -347,8 +347,8 @@ class OAuthTokenManagerApp::GoogleOAuthCall : Operation<void>,
     url += kClientId;
     web_view_->SetUrl(std::move(url));
 
-    app_->account_provider_context_->GetAuthenticationContext(account_->id,
-                                         auth_context_.NewRequest());
+    app_->account_provider_context_->GetAuthenticationContext(
+        account_->id, auth_context_.NewRequest());
     auth_context_->StartOverlay(std::move(view_owner));
   }
 

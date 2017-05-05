@@ -170,14 +170,14 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
     // Read initial Link data. We expect the shell to tell us what it
     // is.
     link_->Get(nullptr, [this](const fidl::String& json) {
-        rapidjson::Document doc;
-        doc.Parse(json);
-        if (doc.HasParseError()) {
-          FTL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
-        } else {
-          FTL_LOG(INFO) << "Recipe Module Link: "
-                        << modular::JsonValueToPrettyString(doc);
-        }
+      rapidjson::Document doc;
+      doc.Parse(json);
+      if (doc.HasParseError()) {
+        FTL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
+      } else {
+        FTL_LOG(INFO) << "Recipe Module Link: "
+                      << modular::JsonValueToPrettyString(doc);
+      }
     });
 
     constexpr char kModule1Link[] = "module1";
@@ -197,9 +197,9 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
 
     app::ServiceProviderPtr services_from_module1;
     module_context_->StartModuleInShell(
-        "module1", "file:///system/apps/example_module1",
-        kModule1Link, std::move(services_for_module1),
-        services_from_module1.NewRequest(), module1_.NewRequest(), "");
+        "module1", "file:///system/apps/example_module1", kModule1Link,
+        std::move(services_for_module1), services_from_module1.NewRequest(),
+        module1_.NewRequest(), "");
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -217,10 +217,9 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
           FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShell("module2",
-                                        "file:///system/apps/example_module2",
-                                        kModule2Link, nullptr,
-                                        nullptr, module2_.NewRequest(), "");
+    module_context_->StartModuleInShell(
+        "module2", "file:///system/apps/example_module2", kModule2Link, nullptr,
+        nullptr, module2_.NewRequest(), "");
 
     connections_.emplace_back(
         new LinkConnection(module1_link_.get(), module2_link_.get()));

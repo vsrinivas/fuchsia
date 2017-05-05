@@ -29,7 +29,7 @@ class Config {
 
   bool ReadFrom(const std::string& config_file);
 
-  bool Parse(const std::string& data, const std::string& config_file );
+  bool Parse(const std::string& data, const std::string& config_file);
 
   ServiceMap TakeServices() { return std::move(services_); }
   ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }

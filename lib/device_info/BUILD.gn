@@ -27,7 +27,7 @@ source_set("device_profile") {
   ]
 
   deps = [
-    "//lib/ftl",
     "//apps/modular/lib/rapidjson",
+    "//lib/ftl",
   ]
 }

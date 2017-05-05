@@ -208,16 +208,18 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 }
 
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
-  story_storage_->ReadLinkData(
-      link_path_, [this, done](const fidl::String& json) {
-        if (!json.is_null()) {
-          doc_.Parse(json.get());
-          //FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
-          //              << JsonValueToPrettyString(doc_);
-        }
+  story_storage_->ReadLinkData(link_path_,
+                               [this, done](const fidl::String& json) {
+                                 if (!json.is_null()) {
+                                   doc_.Parse(json.get());
+                                   // FTL_LOG(INFO) << "LinkImpl::ReadLinkData()
+                                   // "
+                                   //              <<
+                                   //              JsonValueToPrettyString(doc_);
+                                 }
 
-        done();
-      });
+                                 done();
+                               });
 }
 
 void LinkImpl::WriteLinkData(const std::function<void()>& done) {
@@ -225,8 +227,7 @@ void LinkImpl::WriteLinkData(const std::function<void()>& done) {
 }
 
 void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
-  story_storage_->WriteLinkData(link_path_, JsonValueToString(doc_),
-                                done);
+  story_storage_->WriteLinkData(link_path_, JsonValueToString(doc_), done);
 }
 
 void LinkImpl::DatabaseChanged(LinkConnection* const src) {
@@ -316,10 +317,10 @@ void LinkImpl::RemoveConnection(LinkConnection* const connection) {
   // another set operation was executed after Sync().
   if (connections_.empty() && orphaned_handler_) {
     Sync([this] {
-	if (connections_.empty() && orphaned_handler_) {
-	  orphaned_handler_();
-	}
-      });
+      if (connections_.empty() && orphaned_handler_) {
+        orphaned_handler_();
+      }
+    });
   }
 }
 

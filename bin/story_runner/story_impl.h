@@ -19,9 +19,9 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
@@ -132,7 +132,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
                     const SetInfoExtraCallback& callback) override;
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
   void GetLink(const fidl::String& name,
-                    fidl::InterfaceRequest<Link> request) override;
+               fidl::InterfaceRequest<Link> request) override;
   void Stop(const StopCallback& callback) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
   void AddModule(const fidl::String& module_name,

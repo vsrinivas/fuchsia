@@ -19,12 +19,15 @@ class StoryProviderMock : public StoryProvider {
   // Allows notification of watchers.
   void NotifyStoryChanged(modular::StoryInfoPtr story_info,
                           modular::StoryState story_state) {
-    watchers_.ForAllPtrs([&story_info, story_state](modular::StoryProviderWatcher* watcher) {
-      watcher->OnChange(story_info->Clone(), story_state);
-    });
+    watchers_.ForAllPtrs(
+        [&story_info, story_state](modular::StoryProviderWatcher* watcher) {
+          watcher->OnChange(story_info->Clone(), story_state);
+        });
   }
 
-  modular::StoryControllerMock story_controller() const { return controller_mock_; }
+  modular::StoryControllerMock story_controller() const {
+    return controller_mock_;
+  }
   std::string last_created_story() const { return last_created_story_; }
 
  private:

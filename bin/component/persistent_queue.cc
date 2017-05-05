@@ -10,7 +10,8 @@
 
 namespace modular {
 
-PersistentQueue::PersistentQueue(const std::string& file_name) : file_name_(file_name) {
+PersistentQueue::PersistentQueue(const std::string& file_name)
+    : file_name_(file_name) {
   std::string contents;
   if (files::ReadFileToString(file_name_, &contents)) {
     rapidjson::Document document;
@@ -19,7 +20,8 @@ PersistentQueue::PersistentQueue(const std::string& file_name) : file_name_(file
       FTL_LOG(ERROR) << "Expected " << file_name_ << " to contain a JSON array";
       return;
     }
-    for (rapidjson::Value::ConstValueIterator it = document.Begin(); it != document.End(); ++it) {
+    for (rapidjson::Value::ConstValueIterator it = document.Begin();
+         it != document.End(); ++it) {
       if (!it->IsString()) {
         FTL_LOG(ERROR) << "Expected a string but got: " << it;
         continue;

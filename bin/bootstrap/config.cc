@@ -65,14 +65,14 @@ Config::~Config() = default;
 bool Config::ReadFrom(const std::string& config_file) {
   std::string data;
   return files::ReadFileToString(config_file, &data) &&
-      Parse(data, config_file);
+         Parse(data, config_file);
 }
 
 bool Config::Parse(const std::string& string, const std::string& config_file) {
   modular::JsonDoc document;
   document.Parse(string);
-  FTL_CHECK(!document.HasParseError()) << "Could not parse file at "
-                                       << config_file;
+  FTL_CHECK(!document.HasParseError())
+      << "Could not parse file at " << config_file;
   if (!(document.IsObject() &&
         ParseServiceMap(document, kServices, &services_) &&
         ParseServiceMap(document, kAppLoaders, &app_loaders_)))

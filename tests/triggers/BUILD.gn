@@ -46,5 +46,7 @@ executable("trigger_test_agent") {
 }
 
 fidl("trigger_test_agent_interface") {
-  sources = ["trigger_test_agent_interface.fidl"]
+  sources = [
+    "trigger_test_agent_interface.fidl",
+  ]
 }

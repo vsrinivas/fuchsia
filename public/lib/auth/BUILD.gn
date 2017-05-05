@@ -9,7 +9,7 @@ import("//lib/fidl/fidl.gni")
 fidl("auth") {
   sources = [
     "account_provider.fidl",
-    "token_provider.fidl"
+    "token_provider.fidl",
   ]
 
   public_deps = [

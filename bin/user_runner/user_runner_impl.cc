@@ -89,7 +89,8 @@ UserRunnerImpl::UserRunnerImpl(
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserRunner> user_runner_request)
-    : binding_(new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
+    : binding_(
+          new fidl::Binding<UserRunner>(this, std::move(user_runner_request))),
       user_shell_context_binding_(this),
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
@@ -97,7 +98,7 @@ UserRunnerImpl::UserRunnerImpl(
                   std::string(kUserScopeLabelPrefix) + user_id.data()),
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)),
       device_name_(device_name) {
-  binding_->set_connection_error_handler([this] { Terminate([]{}); });
+  binding_->set_connection_error_handler([this] { Terminate([] {}); });
 
   // Show user shell.
 
@@ -229,13 +230,11 @@ UserRunnerImpl::UserRunnerImpl(
   maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
       maxwell_component_context_impl_.get()));
 
-
-
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
 
-  maxwell_.reset(new AppClientBase(
-      user_scope_.GetLauncher(), std::move(maxwell_config)));
+  maxwell_.reset(
+      new AppClientBase(user_scope_.GetLauncher(), std::move(maxwell_config)));
 
   maxwell::UserIntelligenceProviderFactoryPtr maxwell_factory;
   app::ConnectToService(maxwell_->services(), maxwell_factory.NewRequest());

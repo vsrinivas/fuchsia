@@ -14,8 +14,8 @@ fidl("agent") {
   deps = [
     "//application/services:service_provider",
     "//apps/maxwell/services/user",
-    "//apps/modular/services/auth",
     "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/auth",
     "//apps/modular/services/component",
   ]
 }

@@ -50,8 +50,7 @@ class LinkImpl {
   // request. The |module_path| is the series of module names (where
   // the last element is the module that created this Link) that this
   // Link is namespaced under.
-  LinkImpl(StoryStorageImpl* story_storage,
-           const LinkPathPtr& link_path);
+  LinkImpl(StoryStorageImpl* story_storage, const LinkPathPtr& link_path);
 
   ~LinkImpl();
 

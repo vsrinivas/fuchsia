@@ -8,8 +8,8 @@ import("//lib/fidl/fidl.gni")
 fidl("module") {
   sources = [
     "module.fidl",
-    "module_controller.fidl",
     "module_context.fidl",
+    "module_controller.fidl",
     "module_state.fidl",
   ]
 

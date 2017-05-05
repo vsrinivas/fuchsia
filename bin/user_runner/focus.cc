@@ -39,20 +39,17 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 
  private:
   void Run() override {
-    GetEntries(
-        (*snapshot_).get(),
-        kFocusKeyPrefix,
-        &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "QueryCall() "
-                           << "GetEntries() " << status;
-            Done(std::move(data_));
-            return;
-          }
+    GetEntries((*snapshot_).get(), kFocusKeyPrefix, &entries_,
+               nullptr /* next_token */, [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "QueryCall() "
+                                  << "GetEntries() " << status;
+                   Done(std::move(data_));
+                   return;
+                 }
 
-          Cont();
-        });
+                 Cont();
+               });
   }
 
   void Cont() {
@@ -91,8 +88,7 @@ FocusHandler::FocusHandler(const fidl::String& device_name,
                            ledger::Page* const page)
     : PageClient("FocusHandler", page, kFocusKeyPrefix),
       page_(page),
-      device_name_(device_name) {
-}
+      device_name_(device_name) {}
 
 FocusHandler::~FocusHandler() = default;
 
@@ -164,8 +160,7 @@ void FocusHandler::WatchRequest(
       FocusRequestWatcherPtr::Create(std::move(watcher)));
 }
 
-void FocusHandler::OnChange(const std::string& key,
-                            const std::string& value) {
+void FocusHandler::OnChange(const std::string& key, const std::string& value) {
   auto focus_info = FocusInfo::New();
   if (!XdrRead(value, &focus_info, XdrFocusInfo)) {
     return;

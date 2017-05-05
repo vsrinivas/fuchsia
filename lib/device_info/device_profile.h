@@ -14,7 +14,7 @@
 namespace modular {
 
 // Parses a device's profile JSON. Can be used to parse the current device or a
-// remote device's profile from the device map. 
+// remote device's profile from the device map.
 class DeviceProfile {
   DeviceProfile();
   ~DeviceProfile();

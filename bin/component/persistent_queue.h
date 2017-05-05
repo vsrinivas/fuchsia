@@ -17,9 +17,7 @@ namespace modular {
 class PersistentQueue {
  public:
   PersistentQueue(const std::string& file_name);
-  bool IsEmpty() const {
-    return queue_.empty();
-  }
+  bool IsEmpty() const { return queue_.empty(); }
 
   std::string Dequeue() {
     std::string value = queue_.front();

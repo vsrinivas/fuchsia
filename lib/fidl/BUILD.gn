@@ -119,7 +119,7 @@ source_set("single_service_view_app") {
 source_set("view_host") {
   sources = [
     "view_host.cc",
-    "view_host.h"
+    "view_host.h",
   ]
 
   deps = [

@@ -63,7 +63,8 @@ std::string EncodeLinkPath(const LinkPathPtr& link_path) {
   std::string output;
   output.append(EncodeModulePath(link_path->module_path));
   output.append(kSeparator);
-  output.append(StringEscape(link_path->link_name.get(), kCharsToEscape, kEscaper));
+  output.append(
+      StringEscape(link_path->link_name.get(), kCharsToEscape, kEscaper));
   return output;
 }
 

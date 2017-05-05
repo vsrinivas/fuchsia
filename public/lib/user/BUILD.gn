@@ -7,9 +7,9 @@ import("//lib/fidl/fidl.gni")
 # For consumption outside modular.
 fidl("user") {
   sources = [
-    "user_shell.fidl",
-    "user_context.fidl",
     "device_map.fidl",
+    "user_context.fidl",
+    "user_shell.fidl",
   ]
 
   public_deps = [
@@ -42,14 +42,15 @@ fidl("private") {
   ]
 
   deps = [
+    "//apps/ledger/services/internal",
     "//apps/modular/services/auth",
     "//apps/modular/services/config",
     "//apps/mozart/services/views",
-    "//apps/ledger/services/internal",
   ]
 
   visibility = [
     "//apps/modular/*",
+
     # Exposed for experimental user_runner implementation.
     "//apps/modules/exp/*",
   ]

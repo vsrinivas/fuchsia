@@ -4,8 +4,8 @@
 
 source_set("filesystem") {
   sources = [
-    "filesystem.h",
     "filesystem.cc",
+    "filesystem.h",
   ]
 
   deps = [
@@ -16,10 +16,10 @@ source_set("filesystem") {
 
 source_set("util") {
   sources = [
-    "string_escape.h",
     "string_escape.cc",
+    "string_escape.h",
   ]
-  
+
   deps = [
     "//lib/ftl",
   ]
@@ -27,12 +27,12 @@ source_set("util") {
 
 executable("modular_util_unittests") {
   testonly = true
-  
+
   sources = [
     "//lib/ftl/test/run_all_unittests.cc",
     "string_escape_unittest.cc",
   ]
-  
+
   deps = [
     ":util",
     "//lib/ftl",

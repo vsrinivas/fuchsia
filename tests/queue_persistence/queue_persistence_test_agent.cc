@@ -22,9 +22,7 @@ class TestAgentApp : modular::SingleServiceApp<modular::Agent>,
  private:
   using TestPoint = modular::testing::TestPoint;
 
-  TestAgentApp() {
-    modular::testing::Init(application_context(), __FILE__);
-  }
+  TestAgentApp() { modular::testing::Init(application_context(), __FILE__); }
 
   ~TestAgentApp() override {}
 
@@ -73,7 +71,8 @@ class TestAgentApp : modular::SingleServiceApp<modular::Agent>,
         "queue_persistence_test_agent_stopped", "", [this, callback] {
           TEST_PASS("Queue persistence test agent exited");
 
-          auto binding = PassBinding();  // To invoke callback() after delete this.
+          auto binding =
+              PassBinding();  // To invoke callback() after delete this.
           delete this;
           modular::testing::Done();
           callback();

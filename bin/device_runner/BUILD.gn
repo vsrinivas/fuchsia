@@ -6,9 +6,9 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 
 group("all") {
   deps = [
+    ":dev_device_shell",
     ":device_runner",
     ":device_runner_monitor",
-    ":dev_device_shell",
   ]
 }
 

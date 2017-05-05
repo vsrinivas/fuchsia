@@ -50,24 +50,22 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
 
  private:
   void Run() override {
-    page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                           << " Page.GetSnapshot() " << status;
-            Done(nullptr);
-            return;
-          }
+    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                       [this](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                                          << " Page.GetSnapshot() " << status;
+                           Done(nullptr);
+                           return;
+                         }
 
-          Cont();
-        });
+                         Cont();
+                       });
   }
 
   void Cont() {
     page_snapshot_->Get(
-        to_array(link_key_),
-        [this](ledger::Status status, mx::vmo value) {
+        to_array(link_key_), [this](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND) {
               // It's expected that the key is not found when the link is
@@ -118,15 +116,14 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
 
  private:
   void Run() override {
-    page_->Put(to_array(link_key_), to_array(data_),
-               [this](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR)
-                       << "WriteLinkDataCall() link key ="
-                       << link_key_ << ", Page.Put() " << status;
-                 }
-                 Done();
-               });
+    page_->Put(
+        to_array(link_key_), to_array(data_), [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "WriteLinkDataCall() link key =" << link_key_
+                           << ", Page.Put() " << status;
+          }
+          Done();
+        });
   }
 
   ledger::Page* const page_;  // not owned
@@ -136,8 +133,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
-class StoryStorageImpl::ReadModuleDataCall
-    : Operation<ModuleDataPtr> {
+class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
  public:
   ReadModuleDataCall(OperationContainer* const container,
                      ledger::Page* const page,
@@ -151,18 +147,17 @@ class StoryStorageImpl::ReadModuleDataCall
 
  private:
   void Run() override {
-    page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadModuleDataCall() "
-                           << "Page.GetSnapshot() " << status;
-            Done(nullptr);
-            return;
-          }
+    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                       [this](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "ReadModuleDataCall() "
+                                          << "Page.GetSnapshot() " << status;
+                           Done(nullptr);
+                           return;
+                         }
 
-          Cont();
-        });
+                         Cont();
+                       });
   }
 
   void Cont() {
@@ -215,35 +210,31 @@ class StoryStorageImpl::ReadAllModuleDataCall
 
  private:
   void Run() override {
-    page_->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadModuleDataCall() "
-                           << "Page.GetSnapshot() " << status;
-            Done(std::move(data_));
-            return;
-          }
+    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                       [this](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "ReadModuleDataCall() "
+                                          << "Page.GetSnapshot() " << status;
+                           Done(std::move(data_));
+                           return;
+                         }
 
-          Cont1();
-        });
+                         Cont1();
+                       });
   }
 
   void Cont1() {
-    GetEntries(
-        page_snapshot_.get(),
-        kModuleKeyPrefix,
-        &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
-                           << "GetEntries() " << status;
-            Done(std::move(data_));
-            return;
-          }
+    GetEntries(page_snapshot_.get(), kModuleKeyPrefix, &entries_,
+               nullptr /* next_token */, [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
+                                  << "GetEntries() " << status;
+                   Done(std::move(data_));
+                   return;
+                 }
 
-          Cont2();
-        });
+                 Cont2();
+               });
   }
 
   void Cont2() {
@@ -339,26 +330,25 @@ class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
 
  private:
   void Run() override {
+    auto per_device = PerDeviceStoryInfo::New();
+    per_device->device_id = device_id_;
+    per_device->story_id = story_id_;
+    per_device->timestamp = time(nullptr);
+    per_device->state = state_;
 
-  auto per_device = PerDeviceStoryInfo::New();
-  per_device->device_id = device_id_;
-  per_device->story_id = story_id_;
-  per_device->timestamp = time(nullptr);
-  per_device->state = state_;
+    std::string json;
+    XdrWrite(&json, &per_device, XdrPerDeviceStoryInfo);
 
-  std::string json;
-  XdrWrite(&json, &per_device, XdrPerDeviceStoryInfo);
+    page_->PutWithPriority(
+        to_array(MakePerDeviceKey(per_device->device_id)), to_array(json),
+        ledger::Priority::EAGER, [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "WriteDeviceDataCall() " << device_id_
+                           << " Page.PutWithPriority() " << status;
+          }
 
-  page_->PutWithPriority(
-      to_array(MakePerDeviceKey(per_device->device_id)), to_array(json),
-      ledger::Priority::EAGER, [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "WriteDeviceDataCall() " << device_id_
-                         << " Page.PutWithPriority() " << status;
-        }
-
-        Done();
-      });
+          Done();
+        });
   }
 
   ledger::Page* const page_;  // not owned
@@ -375,48 +365,47 @@ StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
-void StoryStorageImpl::ReadLinkData(
-    const LinkPathPtr& link_path,
-    const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, story_page_,
-                       link_path, callback);
+void StoryStorageImpl::ReadLinkData(const LinkPathPtr& link_path,
+                                    const DataCallback& callback) {
+  new ReadLinkDataCall(&operation_queue_, story_page_, link_path, callback);
 }
 
-void StoryStorageImpl::WriteLinkData(
-    const LinkPathPtr& link_path,
-    const fidl::String& data,
-    const SyncCallback& callback) {
+void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
+                                     const fidl::String& data,
+                                     const SyncCallback& callback) {
   new WriteLinkDataCall(&operation_queue_, story_page_, link_path, data,
                         callback);
 }
 
-void StoryStorageImpl::ReadModuleData(const fidl::Array<fidl::String>& module_path,
-                                      const ModuleDataCallback& callback) {
+void StoryStorageImpl::ReadModuleData(
+    const fidl::Array<fidl::String>& module_path,
+    const ModuleDataCallback& callback) {
   new ReadModuleDataCall(&operation_queue_, story_page_, module_path, callback);
 }
 
-void StoryStorageImpl::ReadAllModuleData(const AllModuleDataCallback& callback) {
+void StoryStorageImpl::ReadAllModuleData(
+    const AllModuleDataCallback& callback) {
   new ReadAllModuleDataCall(&operation_queue_, story_page_, callback);
 }
 
-void StoryStorageImpl::WriteModuleData(const fidl::Array<fidl::String>& module_path,
-                                       const fidl::String& module_url,
-                                       const LinkPathPtr& link_path,
-                                       const SyncCallback& callback) {
+void StoryStorageImpl::WriteModuleData(
+    const fidl::Array<fidl::String>& module_path,
+    const fidl::String& module_url,
+    const LinkPathPtr& link_path,
+    const SyncCallback& callback) {
   new WriteModuleDataCall(&operation_queue_, story_page_, module_path,
                           module_url, link_path, callback);
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
-				 LinkImpl* const impl,
+                                 LinkImpl* const impl,
                                  const DataCallback& watcher) {
   watchers_.emplace_back(WatcherEntry{MakeLinkKey(link_path), impl, watcher});
 }
 
 void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
-  auto f = std::find_if(
-      watchers_.begin(), watchers_.end(),
-      [impl](auto& entry) { return entry.impl == impl; });
+  auto f = std::find_if(watchers_.begin(), watchers_.end(),
+                        [impl](auto& entry) { return entry.impl == impl; });
   FTL_DCHECK(f != watchers_.end());
   watchers_.erase(f);
 }
@@ -433,7 +422,8 @@ void StoryStorageImpl::Sync(const SyncCallback& callback) {
   new SyncCall(&operation_queue_, callback);
 }
 
-void StoryStorageImpl::OnChange(const std::string& key, const std::string& value) {
+void StoryStorageImpl::OnChange(const std::string& key,
+                                const std::string& value) {
   for (auto& watcher_entry : watchers_) {
     if (key == watcher_entry.key) {
       watcher_entry.watcher(value);

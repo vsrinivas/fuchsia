@@ -12,14 +12,12 @@ namespace modular {
 
 PageClient::PageClient(const std::string& context,
                        ledger::Page* const page,
-                       const char* const prefix) :
-    binding_(this),
-    context_(context) {
+                       const char* const prefix)
+    : binding_(this), context_(context) {
   FTL_DCHECK(page);
   page->GetSnapshot(
-      NewRequest(),
-      prefix == nullptr ? nullptr : to_array(prefix), binding_.NewBinding(),
-      [this](ledger::Status status) {
+      NewRequest(), prefix == nullptr ? nullptr : to_array(prefix),
+      binding_.NewBinding(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
         }
@@ -61,8 +59,7 @@ void PageClient::OnChange(ledger::PageChangePtr page,
       const std::string& key = to_string(entry->key);
       std::string value;
       if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "PageClient::OnChange() "
-                       << context_ << ": "
+        FTL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
                        << "Unable to extract data.";
         continue;
       }
@@ -97,25 +94,25 @@ void GetEntries(ledger::PageSnapshot* const snapshot,
                 fidl::Array<uint8_t> token,
                 std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
-      prefix == nullptr ? nullptr : to_array(prefix),
-      std::move(token),
-      ftl::MakeCopyable([ snapshot, prefix, entries, callback = std::move(callback) ](
-          ledger::Status status, auto new_entries, auto next_token) mutable {
-                          if (status != ledger::Status::OK &&
-                              status != ledger::Status::PARTIAL_RESULT) {
-                            callback(status);
-                            return;
-                          }
-                          for (auto& entry : new_entries) {
-                            entries->push_back(std::move(entry));
-                          }
-                          if (status == ledger::Status::OK) {
-                            callback(ledger::Status::OK);
-                            return;
-                          }
-                          GetEntries(snapshot, prefix, entries, std::move(next_token),
-                                     std::move(callback));
-                        }));
+      prefix == nullptr ? nullptr : to_array(prefix), std::move(token),
+      ftl::MakeCopyable([
+        snapshot, prefix, entries, callback = std::move(callback)
+      ](ledger::Status status, auto new_entries, auto next_token) mutable {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status);
+          return;
+        }
+        for (auto& entry : new_entries) {
+          entries->push_back(std::move(entry));
+        }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK);
+          return;
+        }
+        GetEntries(snapshot, prefix, entries, std::move(next_token),
+                   std::move(callback));
+      }));
 }
 
 }  // namespace modular

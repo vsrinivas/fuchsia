@@ -19,8 +19,8 @@ source_set("agent_runner") {
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/services/agent",
-    "//apps/modular/services/auth",
     "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/auth",
     "//apps/modular/services/component",
     "//apps/modular/src/component",
     "//lib/fidl/cpp/bindings",
@@ -44,10 +44,9 @@ source_set("public") {
     "//apps/modular/lib/fidl:ledger",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/services/agent",
-    "//apps/modular/services/auth",
     "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/auth",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
 }
-

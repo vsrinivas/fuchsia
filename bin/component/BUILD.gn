@@ -25,4 +25,3 @@ source_set("component") {
     "//lib/mtl/vmo",
   ]
 }
-

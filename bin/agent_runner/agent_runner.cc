@@ -65,20 +65,17 @@ class AgentRunner::InitializeCall : Operation<void> {
 
  private:
   void Run() override {
-    GetEntries(
-        (*snapshot_).get(),
-        nullptr,
-        &entries_, nullptr /* next_token */,
-        [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "InitializeCall() "
-                           << "GetEntries() " << status;
-            Done();
-            return;
-          }
+    GetEntries((*snapshot_).get(), nullptr, &entries_, nullptr /* next_token */,
+               [this](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "InitializeCall() "
+                                  << "GetEntries() " << status;
+                   Done();
+                   return;
+                 }
 
-          Cont();
-        });
+                 Cont();
+               });
   }
 
   void Cont() {
@@ -88,13 +85,11 @@ class AgentRunner::InitializeCall : Operation<void> {
       return;
     }
     for (const auto& entry : entries_) {
-      std::string key(
-          reinterpret_cast<const char*>(entry->key.data()),
-          entry->key.size());
+      std::string key(reinterpret_cast<const char*>(entry->key.data()),
+                      entry->key.size());
       std::string value;
       if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR)
-            << "VMO for key " << key << " couldn't be copied.";
+        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
         return;
       }
       agent_runner_->AddedTrigger(key, std::move(value));
@@ -114,7 +109,7 @@ class AgentRunner::UpdateCall : Operation<void> {
              AgentRunner* const agent_runner,
              const std::string& key,
              const std::string& value)
-      : Operation(container, []{}),
+      : Operation(container, [] {}),
         agent_runner_(agent_runner),
         key_(key),
         value_(value) {
@@ -122,9 +117,7 @@ class AgentRunner::UpdateCall : Operation<void> {
   }
 
  private:
-  void Run() override {
-    agent_runner_->AddedTrigger(key_, value_);
-  }
+  void Run() override { agent_runner_->AddedTrigger(key_, value_); }
 
   AgentRunner* const agent_runner_;
   const std::string key_;
@@ -137,16 +130,12 @@ class AgentRunner::DeleteCall : Operation<void> {
   DeleteCall(OperationContainer* const container,
              AgentRunner* const agent_runner,
              const std::string& key)
-      : Operation(container, []{}),
-        agent_runner_(agent_runner),
-        key_(key) {
+      : Operation(container, [] {}), agent_runner_(agent_runner), key_(key) {
     Ready();
   }
 
  private:
-  void Run() override {
-    agent_runner_->DeletedTrigger(key_);
-  }
+  void Run() override { agent_runner_->DeletedTrigger(key_); }
 
   AgentRunner* const agent_runner_;
   const std::string key_;

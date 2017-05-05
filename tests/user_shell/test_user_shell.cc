@@ -85,15 +85,11 @@ class LinkWatcherImpl : modular::LinkWatcher {
   }
 
   // Deregisters itself from the watched link.
-  void Reset() {
-    binding_.Close();
-  }
+  void Reset() { binding_.Close(); }
 
   // Sets the function where to continue after enough changes were observed on
   // the link.
-  void Continue(std::function<void()> at) {
-    continue_ = at;
-  }
+  void Continue(std::function<void()> at) { continue_ = at; }
 
  private:
   // |LinkWatcher|
@@ -125,14 +121,10 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // Deregisters itself from the watched story.
-  void Reset() {
-    binding_.Close();
-  }
+  void Reset() { binding_.Close(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void()> at) {
-    continue_ = at;
-  }
+  void Continue(std::function<void()> at) { continue_ = at; }
 
  private:
   // |StoryWatcher|
@@ -174,9 +166,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
   }
 
   // Deregisters itself from the watched story provider.
-  void Reset() {
-    binding_.Close();
-  }
+  void Reset() { binding_.Close(); }
 
  private:
   // |StoryProviderWatcher|
@@ -209,8 +199,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   }
 
  private:
-  TestUserShellApp(const Settings& settings)
-      : settings_(settings) {
+  TestUserShellApp(const Settings& settings) : settings_(settings) {
     if (settings_.test) {
       modular::testing::Init(application_context(), __FILE__);
     }
@@ -252,13 +241,14 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
 
   void TestStoryProvider_GetStoryInfo_Null() {
-    story_provider_->GetStoryInfo("X", [this](modular::StoryInfoPtr story_info) {
-        if (story_info.is_null()) {
-          get_story_info_null_.Pass();
-        }
+    story_provider_->GetStoryInfo("X",
+                                  [this](modular::StoryInfoPtr story_info) {
+                                    if (story_info.is_null()) {
+                                      get_story_info_null_.Pass();
+                                    }
 
-        TestUserShellContext_GetLink();
-      });
+                                    TestUserShellContext_GetLink();
+                                  });
   }
 
   TestPoint get_link_{"UserShellContext.GetLink()"};
@@ -266,18 +256,18 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   void TestUserShellContext_GetLink() {
     user_shell_context_->GetLink(user_shell_link_.NewRequest());
     user_shell_link_->Get(nullptr, [this](const fidl::String& value) {
-        get_link_.Pass();
-        TestStoryProvider_PreviousStories();
-      });
+      get_link_.Pass();
+      TestStoryProvider_PreviousStories();
+    });
   }
 
   TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
 
   void TestStoryProvider_PreviousStories() {
     story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
-        previous_stories_.Pass();
-        TestStoryProvider_GetStoryInfo(std::move(stories));
-      });
+      previous_stories_.Pass();
+      TestStoryProvider_GetStoryInfo(std::move(stories));
+    });
   }
 
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
@@ -292,8 +282,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
     for (auto& story_id : stories) {
       story_provider_->GetStoryInfo(
-          story_id, [this, story_id, count, max = stories.size()](
-              modular::StoryInfoPtr story_info) {
+          story_id, [ this, story_id, count,
+                      max = stories.size() ](modular::StoryInfoPtr story_info) {
             ++*count;
 
             if (!story_info.is_null()) {
@@ -323,12 +313,12 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
         .Set(doc, true);
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
-    story_provider_->CreateStoryWithInfo(
-        url, FidlStringMap(), modular::JsonValueToString(doc),
-        [this](const fidl::String& story_id) {
-          story1_create_.Pass();
-          TestStory1_GetController(story_id);
-        });
+    story_provider_->CreateStoryWithInfo(url, FidlStringMap(),
+                                         modular::JsonValueToString(doc),
+                                         [this](const fidl::String& story_id) {
+                                           story1_create_.Pass();
+                                           TestStory1_GetController(story_id);
+                                         });
   }
 
   TestPoint story1_get_controller_{"Story1 GetController"};
@@ -349,8 +339,9 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     story_controller_->GetLink("root", root_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
-    root_->Set(fidl::Array<fidl::String>::From(segments),
-               modular::JsonValueToString(modular::JsonValue(kTestUserShellApp)));
+    root_->Set(
+        fidl::Array<fidl::String>::From(segments),
+        modular::JsonValueToString(modular::JsonValue(kTestUserShellApp)));
 
     TestStory1_Run(0);
   }
@@ -359,28 +350,25 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
   void TestStory1_Run(const int round) {
     if (!story_controller_) {
-      story_provider_->GetController(
-          story_info_->id, story_controller_.NewRequest());
+      story_provider_->GetController(story_info_->id,
+                                     story_controller_.NewRequest());
       story_controller_->GetLink("root", root_.NewRequest());
     }
 
     link_watcher_.Watch(&root_);
-    link_watcher_.Continue([this, round] {
-        TestStory1_Cycle(round);
-      });
+    link_watcher_.Continue([this, round] { TestStory1_Cycle(round); });
 
     story_watcher_.Watch(&story_controller_);
     story_watcher_.Continue([this] {
-        story_controller_->Stop([this] {
-            TearDownStoryController();
-            story1_run_.Pass();
+      story_controller_->Stop([this] {
+        TearDownStoryController();
+        story1_run_.Pass();
 
-            // When the story is done, we start the next one.
-            mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                [this] { TestStory2(); },
-                ftl::TimeDelta::FromSeconds(20));
-          });
+        // When the story is done, we start the next one.
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this] { TestStory2(); }, ftl::TimeDelta::FromSeconds(20));
       });
+    });
 
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
@@ -438,12 +426,12 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
         .Set(doc, true);
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
-    story_provider_->CreateStoryWithInfo(
-        url, FidlStringMap(), modular::JsonValueToString(doc),
-        [this](const fidl::String& story_id) {
-          story2_create_.Pass();
-          TestStory2_GetController(story_id);
-        });
+    story_provider_->CreateStoryWithInfo(url, FidlStringMap(),
+                                         modular::JsonValueToString(doc),
+                                         [this](const fidl::String& story_id) {
+                                           story2_create_.Pass();
+                                           TestStory2_GetController(story_id);
+                                         });
   }
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};
@@ -463,26 +451,27 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint story2_get_modules_{"Story2 Get Modules"};
 
   void TestStory2_GetModules() {
-    story_controller_->GetModules([this](fidl::Array<modular::ModuleDataPtr> modules) {
-      story2_get_modules_.Pass();
+    story_controller_->GetModules(
+        [this](fidl::Array<modular::ModuleDataPtr> modules) {
+          story2_get_modules_.Pass();
 
-      FTL_LOG(INFO) << "TestUserShell MODULES:";
-      for (const auto& module_data : modules) {
-        FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->url;
-        FTL_LOG(INFO) << "TestUserShell         link="
-            << module_data->default_link_path->link_name;
-        std::string path;
-        for (const auto& path_element : module_data->module_path) {
-          path.push_back(' ');
-          path.append(path_element);
-        }
-        if (path.size()) {
-          FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
-        }
-      }
+          FTL_LOG(INFO) << "TestUserShell MODULES:";
+          for (const auto& module_data : modules) {
+            FTL_LOG(INFO) << "TestUserShell MODULE: url=" << module_data->url;
+            FTL_LOG(INFO) << "TestUserShell         link="
+                          << module_data->default_link_path->link_name;
+            std::string path;
+            for (const auto& path_element : module_data->module_path) {
+              path.push_back(' ');
+              path.append(path_element);
+            }
+            if (path.size()) {
+              FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
+            }
+          }
 
-      TestStory2_Run();
-    });
+          TestStory2_Run();
+        });
   }
 
   TestPoint story2_run_{"Story2 Run"};
@@ -496,19 +485,16 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     story2_run_.Pass();
 
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] {
-          TestStory2_DeleteStory();
-        },
-        ftl::TimeDelta::FromSeconds(20));
+        [this] { TestStory2_DeleteStory(); }, ftl::TimeDelta::FromSeconds(20));
   }
 
   TestPoint story2_delete_{"Story2 Delete"};
 
   void TestStory2_DeleteStory() {
     story_provider_->DeleteStory(story_info_->id, [this]() {
-        story2_delete_.Pass();
-        user_context_->Logout();
-      });
+      story2_delete_.Pass();
+      user_context_->Logout();
+    });
   }
 
   TestPoint terminate_{"Terminate"};

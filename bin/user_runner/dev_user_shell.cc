@@ -146,8 +146,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-  }
+  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {

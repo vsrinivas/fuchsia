@@ -141,17 +141,16 @@ class StoryImpl::AddForCreateCall : Operation<void> {
       story_impl_->GetLinkPath(link_path, link_.NewRequest());
       link_->UpdateObject(nullptr, link_json_);
       link_->Sync([this] {
-          done_link_ = true;
-          CheckDone();
-        });
+        done_link_ = true;
+        CheckDone();
+      });
     }
 
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
 
-    new AddModuleCall(&operation_collection_, story_impl_,
-                      module_name_, module_url_, link_name_,
-                      [this] {
+    new AddModuleCall(&operation_collection_, story_impl_, module_name_,
+                      module_url_, link_name_, [this] {
                         done_module_ = true;
                         CheckDone();
                       });
@@ -183,7 +182,7 @@ class StoryImpl::StartCall : Operation<void> {
   StartCall(OperationContainer* const container,
             StoryImpl* const story_impl,
             fidl::InterfaceRequest<mozart::ViewOwner> request)
-      : Operation(container, []{}),
+      : Operation(container, [] {}),
         story_impl_(story_impl),
         request_(std::move(request)) {
     Ready();
@@ -209,14 +208,13 @@ class StoryImpl::StartCall : Operation<void> {
           for (auto& module_data : data) {
             if (module_data->module_path.size() == 1) {
               FTL_DCHECK(module_data->default_link_path->module_path.size() ==
-                           0)
-                    << "root module should not be started with a module-owned "
-                       "link";
+                         0)
+                  << "root module should not be started with a module-owned "
+                     "link";
               // TODO(vardhan): Make StartRootModule take a LinkPath so that it
               // can start non-root links.
               story_impl_->StartRootModule(
-                  module_data->module_path[0],
-                  module_data->url,
+                  module_data->module_path[0], module_data->url,
                   module_data->default_link_path->link_name);
             }
           }
@@ -229,7 +227,6 @@ class StoryImpl::StartCall : Operation<void> {
         });
   };
 
-
   StoryImpl* const story_impl_;  // not owned
   fidl::InterfaceRequest<mozart::ViewOwner> request_;
 
@@ -241,8 +238,7 @@ class StoryImpl::StopCall : Operation<void> {
   StopCall(OperationContainer* const container,
            StoryImpl* const story_impl,
            std::function<void()> done)
-      : Operation(container, done),
-        story_impl_(story_impl) {
+      : Operation(container, done), story_impl_(story_impl) {
     Ready();
   }
 
@@ -267,9 +263,8 @@ class StoryImpl::StopCall : Operation<void> {
       StopStoryShell();
     } else {
       for (auto& connection : story_impl_->connections_) {
-        connection.module_controller_impl->TearDown([this] {
-            ConnectionDown();
-          });
+        connection.module_controller_impl->TearDown(
+            [this] { ConnectionDown(); });
       }
     }
   }
@@ -285,9 +280,7 @@ class StoryImpl::StopCall : Operation<void> {
   }
 
   void StopStoryShell() {
-    story_impl_->story_shell_->Terminate([this] {
-        StoryShellDown();
-      });
+    story_impl_->story_shell_->Terminate([this] { StoryShellDown(); });
   }
 
   void StoryShellDown() {
@@ -349,7 +342,7 @@ class StoryImpl::DeleteCall : Operation<void> {
   DeleteCall(OperationContainer* const container,
              StoryImpl* const story_impl,
              std::function<void()> done)
-      : Operation(container, []{}),
+      : Operation(container, [] {}),
         story_impl_(story_impl),
         done_(std::move(done)) {
     Ready();
@@ -431,10 +424,7 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
             FTL_DCHECK(module_data);
             link_path_ = module_data->default_link_path.Clone();
             story_impl_->story_storage_impl_->WriteModuleData(
-                module_path_, query_, link_path_,
-                [ this ]() {
-                  Cont();
-                });
+                module_path_, query_, link_path_, [this]() { Cont(); });
           });
     }
   }
@@ -584,8 +574,8 @@ void StoryImpl::AddForCreate(const fidl::String& module_name,
 void StoryImpl::AddModule(const fidl::String& module_name,
                           const fidl::String& module_url,
                           const fidl::String& link_name) {
-  new AddModuleCall(&operation_queue_, this,
-                    module_name, module_url, link_name, []{});
+  new AddModuleCall(&operation_queue_, this, module_name, module_url, link_name,
+                    [] {});
 }
 
 // |StoryController|
@@ -724,8 +714,7 @@ void StoryImpl::GetLinkPath(const LinkPathPtr& link_path,
     return;
   }
 
-  auto* const link_impl =
-      new LinkImpl(story_storage_impl_.get(), link_path);
+  auto* const link_impl = new LinkImpl(story_storage_impl_.get(), link_path);
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(

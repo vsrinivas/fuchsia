@@ -121,7 +121,8 @@ void TodoApp::Initialize(
 
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr,
-      page_watcher_binding_.NewBinding(), HandleResponse("Watch"));
+                     page_watcher_binding_.NewBinding(),
+                     HandleResponse("Watch"));
   List(std::move(snapshot));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });

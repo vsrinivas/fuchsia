@@ -74,5 +74,7 @@ executable("component_context_unstoppable_agent") {
 }
 
 fidl("test_agent1_interface") {
-  sources = ["test_agent1_interface.fidl"]
+  sources = [
+    "test_agent1_interface.fidl",
+  ]
 }

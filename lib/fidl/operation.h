@@ -234,14 +234,14 @@ class OperationBase::FlowTokenBase {
   int* const refcount_;  // shared between copies of FlowToken.
 };
 
-template<typename T>
+template <typename T>
 class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
  public:
-  FlowToken(Operation<T>* const op, T* const result) :
-      op_(op), result_(result) {}
+  FlowToken(Operation<T>* const op, T* const result)
+      : op_(op), result_(result) {}
 
-  FlowToken(const FlowToken& other) :
-      FlowTokenBase(other), op_(other.op_), result_(other.result_) {}
+  FlowToken(const FlowToken& other)
+      : FlowTokenBase(other), op_(other.op_), result_(other.result_) {}
 
   ~FlowToken() {
     // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
@@ -262,8 +262,7 @@ class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
  public:
   FlowToken(Operation<void>* const op) : op_(op) {}
 
-  FlowToken(const FlowToken& other) :
-    FlowTokenBase(other), op_(other.op_) {}
+  FlowToken(const FlowToken& other) : FlowTokenBase(other), op_(other.op_) {}
 
   ~FlowToken() {
     // If refcount is 1 here, it will become 0 in ~FlowTokenBase.

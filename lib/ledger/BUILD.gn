@@ -4,8 +4,8 @@
 
 source_set("storage") {
   sources = [
-    "storage.h",
     "storage.cc",
+    "storage.h",
   ]
 
   deps = [

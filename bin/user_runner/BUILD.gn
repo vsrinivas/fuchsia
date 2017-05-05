@@ -15,11 +15,11 @@ executable("user_runner") {
     "conflict_resolver_impl.h",
     "device_map_impl.cc",
     "device_map_impl.h",
+    "focus.cc",
+    "focus.h",
     "user_runner.cc",
     "user_runner_impl.cc",
     "user_runner_impl.h",
-    "focus.cc",
-    "focus.h",
   ]
 
   deps = [
@@ -39,8 +39,8 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/config",
     "//apps/modular/services/agent",
+    "//apps/modular/services/config",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user:private",

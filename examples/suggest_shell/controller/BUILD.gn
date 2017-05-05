@@ -27,4 +27,3 @@ executable("suggest_shell_controller") {
     "//lib/mtl",
   ]
 }
-

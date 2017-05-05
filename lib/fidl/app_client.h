@@ -13,9 +13,9 @@
 #include "apps/modular/services/config/config.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
@@ -39,9 +39,7 @@ class AppClientBase {
   // Gives access to the service provider of the started application. Services
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
-  app::ServiceProvider* services() {
-    return services_.get();
-  }
+  app::ServiceProvider* services() { return services_.get(); }
 
   // Invokes the termination sequence for the service. The done callback is
   // invoked after the application controller connection is released either
@@ -77,9 +75,7 @@ class AppClient : public AppClientBase {
 
   ~AppClient() override = default;
 
-  fidl::InterfacePtr<Service>& primary_service() {
-    return service_;
-  }
+  fidl::InterfacePtr<Service>& primary_service() { return service_; }
 
  private:
   void ServiceTerminate(const std::function<void()>& done) override {
@@ -87,9 +83,7 @@ class AppClient : public AppClientBase {
     service_->Terminate(done);
   }
 
-  void ServiceReset() override {
-    service_.reset();
-  }
+  void ServiceReset() override { service_.reset(); }
 
   fidl::InterfacePtr<Service> service_;
   FTL_DISALLOW_COPY_AND_ASSIGN(AppClient);

@@ -18,6 +18,10 @@ group("tests") {
 }
 
 copy("modular_tests.json") {
-  sources = [ "modular_tests.json" ]
-  outputs = [ "$root_out_dir/modular_tests.json" ]
+  sources = [
+    "modular_tests.json",
+  ]
+  outputs = [
+    "$root_out_dir/modular_tests.json",
+  ]
 }
