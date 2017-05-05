@@ -50,6 +50,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
   MergeResolverTest()
       : environment_(message_loop_.task_runner(),
                      nullptr,
+                     ftl::TimeDelta(),
                      message_loop_.task_runner()) {}
   ~MergeResolverTest() override {}
 

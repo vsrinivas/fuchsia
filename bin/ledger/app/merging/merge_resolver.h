@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_APP_MERGING_MERGE_RESOLVER_H_
 #define APPS_LEDGER_SRC_APP_MERGING_MERGE_RESOLVER_H_
 
+#include <random>
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
@@ -49,6 +50,8 @@ class MergeResolver : public storage::CommitWatcher {
 
   storage::PageStorage* const storage_;
   Environment* const environment_;
+  std::uniform_int_distribution<uint64_t> wait_distribution_;
+  std::default_random_engine rng_;
   PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;

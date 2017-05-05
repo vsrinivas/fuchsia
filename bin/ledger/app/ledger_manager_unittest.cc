@@ -114,7 +114,8 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
 
 class LedgerManagerTest : public test::TestWithMessageLoop {
  public:
-  LedgerManagerTest() : environment_(message_loop_.task_runner(), nullptr) {}
+  LedgerManagerTest()
+      : environment_(message_loop_.task_runner(), nullptr, ftl::TimeDelta()) {}
 
   // test::TestWithMessageLoop:
   void SetUp() override {

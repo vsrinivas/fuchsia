@@ -13,12 +13,13 @@ namespace {
 TEST(Environment, NoIOThread) {
   // Check that the environment without an io_thread can be deleted correctly.
   mtl::MessageLoop loop;
-  Environment env(loop.task_runner(), nullptr);
+  Environment env(loop.task_runner(), nullptr, ftl::TimeDelta());
 }
 
 TEST(Environment, GivenIOThread) {
   mtl::MessageLoop loop;
-  Environment env(loop.task_runner(), nullptr, loop.task_runner());
+  Environment env(loop.task_runner(), nullptr, ftl::TimeDelta(),
+                  loop.task_runner());
 
   EXPECT_EQ(loop.task_runner(), env.GetIORunner());
 }
@@ -27,7 +28,7 @@ TEST(Environment, DefaultIOThread) {
   mtl::MessageLoop loop;
   int value = 0;
   {
-    Environment env(loop.task_runner(), nullptr);
+    Environment env(loop.task_runner(), nullptr, ftl::TimeDelta());
     auto io_runner = env.GetIORunner();
     io_runner->PostTask([&value] { value = 1; });
   }

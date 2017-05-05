@@ -33,6 +33,10 @@ constexpr ftl::StringView kMinFsName = "minfs";
 constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
 
+// Maximal time to wait before doing a merge to prevent multiple devices
+// competing on solving the same merge.
+constexpr ftl::TimeDelta kMaxMergingDelay = ftl::TimeDelta::FromSeconds(2);
+
 // App is the main entry point of the Ledger application.
 //
 // It is responsible for setting up the LedgerRepositoryFactory, which connects
@@ -54,8 +58,8 @@ class App : public LedgerController {
           return application_context_
               ->ConnectToEnvironmentService<network::NetworkService>();
         });
-    environment_ = std::make_unique<Environment>(loop_.task_runner(),
-                                                 network_service_.get());
+    environment_ = std::make_unique<Environment>(
+        loop_.task_runner(), network_service_.get(), kMaxMergingDelay);
 
     factory_impl_ =
         std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());

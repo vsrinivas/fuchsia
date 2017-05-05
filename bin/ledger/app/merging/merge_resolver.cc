@@ -15,6 +15,7 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/glue/crypto/rand.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -27,6 +28,8 @@ MergeResolver::MergeResolver(ftl::Closure on_destroyed,
                              storage::PageStorage* storage)
     : storage_(storage),
       environment_(environment),
+      wait_distribution_(0, environment_->max_merging_delay().ToMilliseconds()),
+      rng_(glue::RandUint64()),
       on_destroyed_(on_destroyed),
       weak_ptr_factory_(this) {
   storage_->AddCommitWatcher(this);
@@ -71,13 +74,13 @@ void MergeResolver::OnNewCommits(
 }
 
 void MergeResolver::PostCheckConflicts() {
-  mtl::MessageLoop::GetCurrent()
-      ->task_runner()
-      ->PostTask([weak_this_ptr = weak_ptr_factory_.GetWeakPtr()]() {
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [weak_this_ptr = weak_ptr_factory_.GetWeakPtr()]() {
         if (weak_this_ptr) {
           weak_this_ptr->CheckConflicts();
         }
-      });
+      },
+      ftl::TimeDelta::FromMilliseconds(wait_distribution_(rng_)));
 }
 void MergeResolver::CheckConflicts() {
   if (!strategy_ || merge_in_progress_) {
