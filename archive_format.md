@@ -75,14 +75,15 @@ empty directories.
 
 ### Directory table entry
 
- * 32 bits of zeros, reserved for future use.
  * Name.
     - 32 bit offset from the start of the directory names chunk to the path
       data, in bytes.
- * Offset.
+    - 16 bit length of name, in bytes.
+ * 16 bits of zeros, reserved for future use.
+ * Data.
     - 64 bit offset from start of archive to the start of the content chunk, in
       bytes.
- * 64 bit length of the data, in bytes.
+    - 64 bit length of the data, in bytes.
  * 64 bits of zeros, reserved for future use.
 
 ## Directory hash chunk (Type “DIRHASH-”)
@@ -116,7 +117,6 @@ not be UTF-8, which means that decoding might fail.
 
 ### Path data
 
- * 16 bit length of path, in bytes.
  * Octets of path.
     - Must not be empty.
     - Must not contain a 0x00 octet.
@@ -127,8 +127,6 @@ not be UTF-8, which means that decoding might fail.
        - Must not be empty.
        - Must not be exactly 0x2E ('.')
        - Must not be exactly 0x2E 0x2E ('..')
- * Zero padding to next 2 byte boundary (i.e., an extra zero byte if the path
-   has an odd length.)
 
 ## Content chunk
 
