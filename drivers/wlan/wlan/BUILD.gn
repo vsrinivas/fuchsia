@@ -21,9 +21,7 @@ static_library("libwlan") {
     "//magenta/system/ulib/mx",
   ]
 
-  libs = [
-    "driver",
-  ]
+  libs = [ "driver" ]
 }
 
 shared_library("wlan") {

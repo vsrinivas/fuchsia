@@ -32,9 +32,7 @@ static_library("libwlan-test-driver") {
     "//magenta/system/ulib/mxtl",
   ]
 
-  libs = [
-    "ddk",
-  ]
+  libs = [ "ddk" ]
 }
 
 shared_library("wlan-test-driver") {
@@ -44,7 +42,9 @@ shared_library("wlan-test-driver") {
 }
 
 executable("wlan-test-util") {
-  sources = [ "wlan-testutil.cpp" ]
+  sources = [
+    "wlan-testutil.cpp",
+  ]
 
   deps = [
     "//magenta/system/ulib/mx",

@@ -4,7 +4,7 @@
 
 group("wifi") {
   deps = [
-    "//drivers/wifi/wlan",
     "//drivers/wifi/testing",
+    "//drivers/wifi/wlan",
   ]
 }
