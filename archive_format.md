@@ -105,6 +105,7 @@ the content chunks. Path data must be sorted in increasing lexicographical
 octet order (e.g., as compared by memcmp).
 
  * Concatenated path data (no encoding specified).
+ * Zero padding to next 8 byte boundary.
 
 Note: The offsets used to index into the path data are 32 bits long, which means
 there is no reason to create a directory name chunk that is larger than 4 GB.
