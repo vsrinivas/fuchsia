@@ -176,6 +176,9 @@ Asset _convertAsset(dynamic json) {
         device: device,
         service: service,
       );
+
+    default:
+      throw new FormatException('Unknown asset type: $type');
   }
 }
 
