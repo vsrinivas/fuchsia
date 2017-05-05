@@ -149,20 +149,16 @@ std::unique_ptr<Constant> Parser::ParseConstant() {
 }
 
 std::unique_ptr<ModuleName> Parser::ParseModuleName() {
-    if (PeekFor(Token::Kind::Module)) {
-        ConsumeToken(Token::Kind::Module);
-        if (!Ok())
-            return Fail();
-        auto identifier = ParseCompoundIdentifier();
-        if (!Ok())
-            return Fail();
-        ConsumeToken(Token::Kind::Semicolon);
-        if (!Ok())
-            return Fail();
-        return std::make_unique<ModuleName>(std::move(identifier));
-    }
-
-    return nullptr;
+    ConsumeToken(Token::Kind::Module);
+    if (!Ok())
+        return Fail();
+    auto identifier = ParseCompoundIdentifier();
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::Semicolon);
+    if (!Ok())
+        return Fail();
+    return std::make_unique<ModuleName>(std::move(identifier));
 }
 
 std::unique_ptr<Using> Parser::ParseUsing() {

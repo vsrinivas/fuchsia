@@ -362,14 +362,14 @@ struct DeclarationList {
 };
 
 struct File {
-    File(std::unique_ptr<ModuleName> maybe_module,
+    File(std::unique_ptr<ModuleName> module,
          std::unique_ptr<UsingList> import_list,
          std::unique_ptr<DeclarationList> declaration_list)
-        : maybe_module(std::move(maybe_module)),
+        : module(std::move(module)),
           import_list(std::move(import_list)),
           declaration_list(std::move(declaration_list)) {}
 
-    std::unique_ptr<ModuleName> maybe_module;
+    std::unique_ptr<ModuleName> module;
     std::unique_ptr<UsingList> import_list;
     std::unique_ptr<DeclarationList> declaration_list;
 };

@@ -1,4 +1,4 @@
-module examples;
+module example_6;
 
 using "something";
 using "my.import.path";

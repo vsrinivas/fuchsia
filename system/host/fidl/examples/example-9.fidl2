@@ -1,3 +1,5 @@
+module example_9;
+
 enum EchoMe {
     zero = 0;
     one = 1;

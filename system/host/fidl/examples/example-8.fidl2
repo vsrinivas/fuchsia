@@ -1,3 +1,5 @@
+module example_8;
+
 struct foo {
     uint8 u8_0;
     uint64 u64_0;

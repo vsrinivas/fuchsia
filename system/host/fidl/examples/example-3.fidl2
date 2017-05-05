@@ -1,3 +1,5 @@
+module example_3;
+
 struct Point {
     // Abscissa
     int64 x;
