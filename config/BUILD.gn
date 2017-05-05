@@ -155,6 +155,10 @@ config("symbol_visibility_hidden") {
   cflags = [ "-fvisibility=hidden" ]
 }
 
+config("symbol_no_undefined") {
+  ldflags = [ "-Wl,--no-undefined" ]
+}
+
 config("shared_library_config") {
   configs = []
   cflags = []
