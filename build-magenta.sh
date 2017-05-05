@@ -23,7 +23,7 @@ usage() {
 }
 
 build() {
-  local target="$1" outdir="$2" clean="$3" release="$4"
+  local target="$1" outdir="$2" clean="$3" verbose="$4"
   local magenta_buildroot="${outdir}/build-magenta"
 
   if [[ "${clean}" = "true" ]]; then
@@ -36,15 +36,17 @@ build() {
     "*") echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 
-  local magenta_sysroot="${magenta_buildroot}/build-${magenta_target}/sysroot"
-
-  pushd "${ROOT_DIR}/magenta"
-  rm -rf -- "${magenta_sysroot}"
-  # build the sysroot for the target architecture
+  pushd "${ROOT_DIR}/magenta" > /dev/null
+  if [[ "${verbose}" = "true" ]]; then
+      export QUIET=0
+  else
+      export QUIET=1
+  fi
+  # build magenta (including its portion of the sysroot) for the target architecture
   make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target} BUILDDIR_SUFFIX=
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
-  popd
+  popd > /dev/null
 
   # These are magenta headers for use in building host tools outside
   # of the magenta tree.
@@ -60,18 +62,18 @@ build() {
 declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
-declare RELEASE="${RELEASE:-false}"
+declare VERBOSE="${VERBOSE:-false}"
 
-while getopts "cd:t:o:r" opt; do
+while getopts "cd:t:o:v" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
     o) OUTDIR="${OPTARG}" ;;
-    r) RELEASE="true" ;;
     t) TARGET="${OPTARG}" ;;
+    v) VERBOSE="true" ;;
     *) usage;;
   esac
 done
 
-readonly CLEAN TARGET OUTDIR RELEASE
+readonly CLEAN TARGET OUTDIR VERBOSE
 
-build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${RELEASE}"
+build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}"

@@ -323,12 +323,10 @@ function fset() {
       mset x86-64
       # TODO(jeffbrown): we should really align these
       export FUCHSIA_GEN_TARGET=x86-64
-      export FUCHSIA_SYSROOT_TARGET=x86_64
       ;;
     arm64)
       mset arm64
       export FUCHSIA_GEN_TARGET=aarch64
-      export FUCHSIA_SYSROOT_TARGET=aarch64
       ;;
     *)
       fset-usage
@@ -392,8 +390,6 @@ function fset() {
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
-  export FUCHSIA_SYSROOT_DIR="${MAGENTA_BUILD_DIR}/sysroot"
-  export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_SYSROOT_DIR}/build.rev"
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
   export GOPATH="${FUCHSIA_BUILD_DIR}"
@@ -477,7 +473,7 @@ function fgen() {
 
   echo "Generating ninja files..."
   rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
-  fbuild-sysroot-if-changed \
+  mbuild-if-changed \
     && fgen-internal "$@" \
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
@@ -515,11 +511,8 @@ END
 }
 
 function fbuild-sysroot() {
-  fcheck || return 1
-
-  echo "Building sysroot..." \
-    && (fgo && "./scripts/build-sysroot.sh" -t "${FUCHSIA_SYSROOT_TARGET}" "$@") \
-    && (mrev > "${FUCHSIA_SYSROOT_REV_CACHE}")
+  echo "Deprecated - just run fbuild"
+  mbuild
 }
 
 ### fbuild-sysroot-if-changed: only build sysroot if stale
@@ -532,17 +525,8 @@ END
 }
 
 function fbuild-sysroot-if-changed() {
-  fcheck || return 1
-
-  local last_rev
-  if [[ -f "${FUCHSIA_SYSROOT_REV_CACHE}" ]]; then
-    last_rev=$(cat "${FUCHSIA_SYSROOT_REV_CACHE}")
-  fi
-
-  if ! ([[ -d "${FUCHSIA_SYSROOT_DIR}" ]] \
-      && [[ "$(mrev)" == "${last_rev}" ]]); then
-    fbuild-sysroot "$@"
-  fi
+  echo "Deprecated - just run fbuild-if-changed"
+  mbuild-if-changed
 }
 
 ### fbuild: build fuchsia
@@ -572,7 +556,7 @@ function fbuild-internal() {
 function fbuild() {
   fcheck || return 1
 
-  fbuild-sysroot-if-changed \
+  mbuild-if-changed \
     && fgen-if-changed \
     && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
