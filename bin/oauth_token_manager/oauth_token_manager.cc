@@ -89,7 +89,8 @@ void Post(const std::string& request_body,
   auto encoded_request_body = UrlEncode(request_body);
 
   mx::vmo data;
-  FTL_DCHECK(mtl::VmoFromString(encoded_request_body, &data));
+  auto result = mtl::VmoFromString(encoded_request_body, &data);
+  FTL_DCHECK(result);
 
   network::URLRequestPtr request(network::URLRequest::New());
   request->url = "https://www.googleapis.com/oauth2/v4/token";
