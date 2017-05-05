@@ -100,6 +100,9 @@ set_defaults("static_library") {
 set_defaults("shared_library") {
   configs = _shared_library_target_configs
 }
+set_defaults("loadable_module") {
+  configs = _shared_library_target_configs
+}
 set_defaults("executable") {
   configs = _executable_target_configs
 }
