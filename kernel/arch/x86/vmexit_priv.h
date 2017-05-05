@@ -73,7 +73,7 @@ struct ApicAccessInfo {
 struct Instruction {
     bool read;
     bool rex;
-    uint64_t val;
+    uint32_t imm;
     uint64_t* reg;
 };
 

@@ -45,7 +45,7 @@ static bool decode_mov_89(void* context) {
     EXPECT_EQ(decode_instruction(mov, 2, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rcx, "");
 
     // mov %r10d, (%rax)
@@ -53,7 +53,7 @@ static bool decode_mov_89(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov, 3, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.r10, "");
 
     // mov %ebx, 0x10(%rax)
@@ -61,7 +61,7 @@ static bool decode_mov_89(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_1, 3, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rbx, "");
 
     // mov %ebx, 0x1000000(%rax)
@@ -69,7 +69,7 @@ static bool decode_mov_89(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_4, 6, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rbx, "");
 
     // mov %r12, 0x11(%rax)
@@ -77,7 +77,7 @@ static bool decode_mov_89(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov_disp, 4, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_TRUE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.r12, "");
 
     END_TEST;
@@ -100,7 +100,7 @@ static bool decode_mov_8b(void* context) {
     EXPECT_EQ(decode_instruction(mov, 2, &guest_state, &inst), NO_ERROR, "");
     EXPECT_TRUE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rcx, "");
 
     // mov (%rax), %r10d
@@ -108,7 +108,7 @@ static bool decode_mov_8b(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov, 3, &guest_state, &inst), NO_ERROR, "");
     EXPECT_TRUE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.r10, "");
 
     // mov 0x10(%rax), %ebx
@@ -116,7 +116,7 @@ static bool decode_mov_8b(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_1, 3, &guest_state, &inst), NO_ERROR, "");
     EXPECT_TRUE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rbx, "");
 
     // mov 0x10000000(%rax), %ebx
@@ -124,7 +124,7 @@ static bool decode_mov_8b(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_4, 6, &guest_state, &inst), NO_ERROR, "");
     EXPECT_TRUE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.rbx, "");
 
     // mov 0x11(rax), %r12
@@ -132,7 +132,7 @@ static bool decode_mov_8b(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov_disp, 4, &guest_state, &inst), NO_ERROR, "");
     EXPECT_TRUE(inst.read, "");
     EXPECT_TRUE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_state.r12, "");
 
     END_TEST;
@@ -157,7 +157,7 @@ static bool decode_mov_c7(void* context) {
     EXPECT_EQ(decode_instruction(mov, 6, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0x1u, "");
+    EXPECT_EQ(inst.imm, 0x1u, "");
     EXPECT_EQ(inst.reg, nullptr, "");
 
     // movq 0x1000000, (%rax)
@@ -165,7 +165,7 @@ static bool decode_mov_c7(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov, 7, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0x1000000u, "");
+    EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, nullptr, "");
 
     // movl 0x10, -0x1(%rbx)
@@ -173,7 +173,7 @@ static bool decode_mov_c7(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_1, 7, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0x10u, "");
+    EXPECT_EQ(inst.imm, 0x10u, "");
     EXPECT_EQ(inst.reg, nullptr, "");
 
     // movl 0x1000000, -0x1000000(%rbx)
@@ -181,7 +181,7 @@ static bool decode_mov_c7(void* context) {
     EXPECT_EQ(decode_instruction(mov_disp_4, 10, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0x1000000u, "");
+    EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, nullptr, "");
 
     // movq 0x1000000, -0x1(%rax)
@@ -189,7 +189,7 @@ static bool decode_mov_c7(void* context) {
     EXPECT_EQ(decode_instruction(rex_mov_disp, 8, &guest_state, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
     EXPECT_FALSE(inst.rex, "");
-    EXPECT_EQ(inst.val, 0x1000000u, "");
+    EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, nullptr, "");
 
     END_TEST;

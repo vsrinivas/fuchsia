@@ -38,6 +38,7 @@ static const uint8_t kApicAccessRead = 0;
 static const uint32_t kMaxInstructionLength = 15;
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
+static const uint8_t kModRMRegMask = 0b00111000;
 
 static const uint32_t kInterruptValid = 1u << 31;
 
@@ -281,7 +282,7 @@ static uint8_t displacement_size(uint8_t mod_rm) {
     case 0b10:
         return 4;
     default:
-        return (mod_rm & 0b11000111) == 0b00000101 ? 4 : 0;
+        return (mod_rm & ~kModRMRegMask) == 0b00000101 ? 4 : 0;
     }
 }
 
@@ -368,7 +369,7 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
             return ERR_OUT_OF_RANGE;
         inst->read = false;
         inst->rex = rex_w;
-        inst->val = 0;
+        inst->imm = 0;
         inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
         return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move r/m to r.
@@ -377,7 +378,7 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
             return ERR_OUT_OF_RANGE;
         inst->read = true;
         inst->rex = rex_w;
-        inst->val = 0;
+        inst->imm = 0;
         inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
         return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move imm to r/m.
@@ -385,13 +386,13 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
         const uint8_t imm_size = 4;
         if (inst_len != disp_size + imm_size + 2u)
             return ERR_OUT_OF_RANGE;
-        if ((mod_rm & 0b00111000) != 0)
+        if ((mod_rm & kModRMRegMask) != 0)
             return ERR_INVALID_ARGS;
         inst->read = false;
         inst->rex = false;
-        inst->val = 0;
+        inst->imm = 0;
         inst->reg = nullptr;
-        memcpy(&inst->val, inst_buf + disp_size + 2, imm_size);
+        memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
         return NO_ERROR;
     }
     default:
@@ -401,7 +402,7 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
 
 template<typename T>
 T get_value(const Instruction& inst) {
-    return static_cast<T>(inst.reg != nullptr ? *inst.reg : inst.val);
+    return static_cast<T>(inst.reg != nullptr ? *inst.reg : inst.imm);
 }
 
 template<typename T>
