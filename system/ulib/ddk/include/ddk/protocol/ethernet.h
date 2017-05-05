@@ -11,10 +11,6 @@
 
 __BEGIN_CDECLS;
 
-typedef struct ethernet_protocol {
-    // DEPRECATED
-} ethernet_protocol_t;
-
 #define ETH_MAC_SIZE 6
 
 // The ethermac interface supports a simple copying interface

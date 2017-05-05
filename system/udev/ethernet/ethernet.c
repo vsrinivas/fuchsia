@@ -537,8 +537,6 @@ static mx_protocol_device_t ethdev_ops = {
     .release = eth_release,
 };
 
-static ethernet_protocol_t ethernet_ops = {};
-
 mx_driver_t _driver_ethernet;
 
 static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
@@ -557,7 +555,6 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
         .driver = &_driver_ethernet,
         .ops = &ethdev_ops,
         .proto_id = MX_PROTOCOL_ETHERNET,
-        .proto_ops = &ethernet_ops,
         .flags = DEVICE_ADD_INSTANCE,
     };
 
