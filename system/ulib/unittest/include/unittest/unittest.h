@@ -164,6 +164,8 @@ int unittest_set_verbosity_level(int new_level);
         }                                                           \
     }
 
+#define TEST_CASE_ELEMENT(case_name) &_##case_name##_element
+
 /*
  * Test classes:
  *
@@ -424,6 +426,11 @@ struct test_result {
  * Runs all registered test cases and return results.
  */
 bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result);
+
+/*
+ * Runs a single test case.
+ */
+bool unittest_run_one_test(struct test_case_element* elem, test_type_t type);
 
 /*
  * Returns false if expected does not equal actual and prints msg and a hexdump8

@@ -16,6 +16,11 @@ void unittest_register_test_case(struct test_case_element* elem) {
     test_case_list = elem;
 }
 
+bool unittest_run_one_test(struct test_case_element* elem, test_type_t type) {
+    utest_test_type = type;
+    return elem->test_case();
+}
+
 bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result) {
     unsigned int n_tests = 0;
     unsigned int n_success = 0;
