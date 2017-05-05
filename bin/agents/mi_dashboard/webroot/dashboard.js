@@ -1,25 +1,53 @@
+const RECONNECT_TIMEOUT = 1000;
+
 var _webSocket = null;
+var _reconnectRetries = 0;
 
 $(function() {
-  _webSocket = new WebSocket('ws://' + window.location.host + '/ws');
-
-  _webSocket.onmessage = function(evt) {
-    // parse the JSON message
-    var message = JSON.parse(evt.data);
-    switch (message.type) {
-      case "context":
-        handleContextMessage(message);
-        break;
-
-      // TODO(jwnichols): actionlog, etc.
-
-      default:
-        // do nothing
-        console.log("[WARN] Websocket message with type " + message.type);
-        break;
-    }
-  }
+  connectWebSocket();
 })
+
+function connectWebSocket() {
+  _webSocket = new WebSocket('ws://' + window.location.host + '/ws');
+  _webSocket.onopen = handleWebSocketOpen;
+  _webSocket.onerror = handleWebSocketError;
+  _webSocket.onclose = handleWebSocketClose;
+  _webSocket.onmessage = handleWebSocketMessage;
+}
+
+function handleWebSocketOpen(evt) {
+  $('#connectedLabel').text("Connected");
+  // reset reconnect retry count
+  _reconnectRetries = 0;
+}
+
+function handleWebSocketError(evt) {
+  console.log("WebSocket Error: " + evt.toString());
+}
+
+function handleWebSocketClose(evt) {
+  $('#connectedLabel').text("Disconnected");
+
+  // attempt to reconnect
+  attemptReconnect();
+}
+
+function handleWebSocketMessage(evt) {
+  // parse the JSON message
+  var message = JSON.parse(evt.data);
+  switch (message.type) {
+    case "context":
+      handleContextMessage(message);
+      break;
+
+    // TODO(jwnichols): actionlog, etc.
+
+    default:
+      // do nothing
+      console.log("[WARN] Websocket message with type " + message.type);
+      break;
+  }
+}
 
 function handleContextMessage(message) {
   for (var topic in message.data) {
@@ -48,4 +76,14 @@ function handleContextMessage(message) {
             .toggleClass('text-danger', danger))));
     }
   }
+}
+
+function attemptReconnect() {
+  // exponential reconnect timeout
+  var timeout = Math.pow(2,_reconnectRetries) * RECONNECT_TIMEOUT;
+  _reconnectRetries++;
+  console.log("Attempting to reconnect after " + timeout);
+
+  // reconnect after the timeout
+  setTimeout(connectWebSocket,timeout);
 }

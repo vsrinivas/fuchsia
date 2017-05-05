@@ -85,7 +85,8 @@ void handleRequest(HttpRequest request) {
   if (request.requestedUri.path.startsWith("/ws")) {
     WebSocketTransformer.upgrade(request).then((socket) {
       _activeWebsockets.add(socket);
-      socket.listen(handleWebsocketRequest);
+      socket.listen(handleWebsocketRequest,
+                    onDone: () { handleWebsocketClose(socket); });
       sendAllContextDataToWebsocket(socket);
     });
   } else {
@@ -184,6 +185,11 @@ void send404(HttpResponse response) {
 
 void handleWebsocketRequest(String event) {
   print("[INFO] websocket event was received!");
+}
+
+void handleWebsocketClose(WebSocket socket) {
+  print("[INFO] Websocket closed (${_activeWebsockets.indexOf(socket)})");
+  _activeWebsockets.remove(socket);
 }
 
 void sendAllContextDataToWebsocket(WebSocket socket) {
