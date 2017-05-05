@@ -4,8 +4,8 @@
 
 group("application") {
   deps = [
-    "src:application_manager",
     "src/archiver",
     "src/archiver($host_toolchain)",
+    "src/manager",
   ]
 }

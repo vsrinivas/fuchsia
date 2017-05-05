@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/root_environment_host.h"
+#include "application/src/manager/root_environment_host.h"
 
 #include <utility>
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_COMMAND_LISTENER_H_
-#define APPLICATION_SRC_COMMAND_LISTENER_H_
+#ifndef APPLICATION_SRC_MANAGER_COMMAND_LISTENER_H_
+#define APPLICATION_SRC_MANAGER_COMMAND_LISTENER_H_
 
 #include <mx/channel.h>
 
-#include "application/src/application_environment_impl.h"
+#include "application/src/manager/application_environment_impl.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -49,4 +49,4 @@ class CommandListener : mtl::MessageLoopHandler {
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_COMMAND_LISTENER_H_
+#endif  // APPLICATION_SRC_MANAGER_COMMAND_LISTENER_H_

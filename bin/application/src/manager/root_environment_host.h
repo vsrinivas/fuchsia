@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_ROOT_ENVIRONMENT_HOST_H_
-#define APPLICATION_SRC_ROOT_ENVIRONMENT_HOST_H_
+#ifndef APPLICATION_SRC_MANAGER_ROOT_ENVIRONMENT_HOST_H_
+#define APPLICATION_SRC_MANAGER_ROOT_ENVIRONMENT_HOST_H_
 
 #include <memory>
 
 #include "application/services/application_environment_host.fidl.h"
 #include "application/services/service_provider.fidl.h"
-#include "application/src/application_environment_impl.h"
-#include "application/src/root_application_loader.h"
+#include "application/src/manager/application_environment_impl.h"
+#include "application/src/manager/root_application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -49,4 +49,4 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_ROOT_ENVIRONMENT_HOST_H_
+#endif  // APPLICATION_SRC_MANAGER_ROOT_ENVIRONMENT_HOST_H_

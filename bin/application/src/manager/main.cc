@@ -10,9 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "application/src/command_listener.h"
-#include "application/src/config.h"
-#include "application/src/root_environment_host.h"
+#include "application/src/manager/command_listener.h"
+#include "application/src/manager/config.h"
+#include "application/src/manager/root_environment_host.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/log_settings.h"

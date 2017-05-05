@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/application_controller_impl.h"
+#include "application/src/manager/application_controller_impl.h"
 
 #include <utility>
 
-#include "application/src/application_environment_impl.h"
+#include "application/src/manager/application_environment_impl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -54,7 +54,7 @@ void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
   FTL_DCHECK(pending & MX_TASK_TERMINATED);
 
   process_.reset();
-  
+
   environment_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.

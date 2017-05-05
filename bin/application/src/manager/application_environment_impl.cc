@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/application_environment_impl.h"
+#include "application/src/manager/application_environment_impl.h"
 
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
@@ -15,7 +15,7 @@
 #include <utility>
 
 #include "application/lib/app/connect.h"
-#include "application/src/url_resolver.h"
+#include "application/src/manager/url_resolver.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/handles/object_info.h"

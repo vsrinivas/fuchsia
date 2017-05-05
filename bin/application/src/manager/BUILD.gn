@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("application_manager") {
+executable("manager") {
+  output_name = "application_manager"
+
   sources = [
     "application_controller_impl.cc",
     "application_controller_impl.h",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_APPLICATION_ENVIRONMENT_IMPL_H_
-#define APPLICATION_SRC_APPLICATION_ENVIRONMENT_IMPL_H_
+#ifndef APPLICATION_SRC_MANAGER_APPLICATION_ENVIRONMENT_IMPL_H_
+#define APPLICATION_SRC_MANAGER_APPLICATION_ENVIRONMENT_IMPL_H_
 
 #include <iosfwd>
 #include <memory>
@@ -12,9 +12,9 @@
 
 #include "application/services/application_environment.fidl.h"
 #include "application/services/application_loader.fidl.h"
-#include "application/src/application_controller_impl.h"
-#include "application/src/application_environment_controller_impl.h"
-#include "application/src/application_runner_holder.h"
+#include "application/src/manager/application_controller_impl.h"
+#include "application/src/manager/application_environment_controller_impl.h"
+#include "application/src/manager/application_runner_holder.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -117,4 +117,4 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_APPLICATION_ENVIRONMENT_IMPL_H_
+#endif  // APPLICATION_SRC_MANAGER_APPLICATION_ENVIRONMENT_IMPL_H_

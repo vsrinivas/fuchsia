@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/config.h"
+#include "application/src/manager/config.h"
 
 #include <stdio.h>
 #include <utility>

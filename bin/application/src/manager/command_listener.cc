@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/command_listener.h"
+#include "application/src/manager/command_listener.h"
 
 #include <sstream>
 #include <utility>
