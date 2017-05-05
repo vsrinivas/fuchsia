@@ -10,7 +10,7 @@ import "./generator.dart";
 
 /// Widget representing a list of [TodoItem]s.
 class TodoListView extends StatefulWidget {
-  TodoListView(LinkConnector this._linkConnector);
+  TodoListView(this._linkConnector);
 
   final LinkConnector _linkConnector;
 
@@ -19,10 +19,10 @@ class TodoListView extends StatefulWidget {
 }
 
 class TodoListViewState extends State<TodoListView> {
-  LinkConnector _linkConnector;
+  final LinkConnector _linkConnector;
   final Generator _generator = new Generator();
   final List<TodoItem> _items = new List<TodoItem>();
-  TextEditingController _newTodoController = new TextEditingController();
+  final TextEditingController _newTodoController = new TextEditingController();
 
   TodoListViewState(this._linkConnector) {
     _linkConnector.setCallback((List<TodoItem> items) {

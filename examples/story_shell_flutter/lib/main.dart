@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/story_shell.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
-import 'package:apps.mozart.services.views/views.fidl.dart';
 import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
@@ -73,8 +71,8 @@ class StoryShellImpl extends StoryShell {
 
   /// StoryShell
   @override
-  void connectView(InterfaceHandle<ViewOwner> view, int view_id, int parent_id,
-      String view_type) {
+  void connectView(InterfaceHandle<ViewOwner> view, int viewId, int parentId,
+      String viewType) {
     _surfaceLayoutKey.currentState.addChild(view);
   }
 
@@ -89,6 +87,7 @@ class StoryShellImpl extends StoryShell {
 /// An implemenation of the [StoryShellFactory] interface.
 class StoryShellFactoryImpl extends StoryShellFactory {
   final StoryShellFactoryBinding _binding = new StoryShellFactoryBinding();
+  // ignore: unused_field
   StoryShellImpl _storyShell;
 
   /// Bind an [InterfaceRequest] for a [StoryShellFactory] interface to this.
@@ -96,6 +95,7 @@ class StoryShellFactoryImpl extends StoryShellFactory {
     _binding.bind(this, request);
   }
 
+  @override
   void create(InterfaceHandle<StoryContext> context,
       InterfaceRequest<StoryShell> request) {
     _storyShell = new StoryShellImpl(context)..bind(request);

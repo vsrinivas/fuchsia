@@ -57,6 +57,7 @@ class LinkConnector extends LinkWatcher {
 
   Future _setup() async {
     LinkProxy link = await _link;
+    // ignore: unawaited_futures
     link.ctrl.error.then((ProxyError error) {
       _log("Error on link " + error.toString());
     });
@@ -99,14 +100,14 @@ class LinkConnector extends LinkWatcher {
     int position = _items.length;
     TodoItem item = new TodoItem(text: text, position: position);
     _items.add(item);
-    _setLink();
+    return _setLink();
   }
 
   /// Removes the provided [TodoItem] from the current list.
   Future removeItem(TodoItem item) async {
     _log("Deleting item " + item.text);
     _items.removeAt(item.position);
-    _setLink();
+    return _setLink();
   }
 
   /// Places [item] at the [position] index within the todo list.
@@ -114,7 +115,7 @@ class LinkConnector extends LinkWatcher {
     _log("Insert " + item.text + " at position " + position.toString());
     _items.removeAt(item.position);
     _items.insert(position, new TodoItem(text: item.text, position: position));
-    _setLink();
+    return _setLink();
   }
 
   Future _setLink() async {

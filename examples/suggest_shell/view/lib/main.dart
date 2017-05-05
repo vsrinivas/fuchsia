@@ -20,7 +20,7 @@ void _log(String msg) {
   print('[SuggestShell View] $msg');
 }
 
-typedef void _ValueCallback(String);
+typedef void _ValueCallback(String value);
 typedef void _UpdateCallback();
 typedef void _StopCallback();
 
@@ -128,7 +128,7 @@ class _AppState {
 
 // The view state attached to the flutter view.
 class _HomeScreenState extends State<_HomeScreen> {
-  _HomeScreenState(_AppState this._state) {
+  _HomeScreenState(this._state) {
     _state.watch(() => setState(() {}));
   }
 
@@ -146,7 +146,7 @@ class _HomeScreenState extends State<_HomeScreen> {
     // in fuchsia right now. The workaround is to listen to raw keyboard
     // events and make sense of them as much as possible.
     return new RawKeyboardListener(
-        focused: true,
+        focusNode: new FocusNode(),
         onKey: _onKey,
         child: new Material(
             color: Colors.blue[200],
@@ -161,8 +161,10 @@ class _HomeScreenState extends State<_HomeScreen> {
     // HACK(mesch): Enter key presses as well as other control keys all
     // arrive as codePoint 0, so we don't use enter to finish input. We
     // just ignore all such key presses.
+    // ignore: undefined_getter
     if (e.runtimeType == RawKeyDownEvent && e.data.codePoint != 0) {
       setState(() {
+          // ignore: undefined_getter
           _value += new String.fromCharCode(e.data.codePoint);
           if (_value.endsWith('<<')) {
             _state.sendValue(_value.substring(0, _value.length - 2));
@@ -180,9 +182,8 @@ class _HomeScreenState extends State<_HomeScreen> {
 // whole life of the app instance.
 class _HomeScreen extends StatefulWidget {
   _HomeScreen({Key key, _AppState state})
-      : super(key: key),
-        _state = state {
-  }
+      : _state = state,
+        super(key: key);
 
   final _AppState _state;
 

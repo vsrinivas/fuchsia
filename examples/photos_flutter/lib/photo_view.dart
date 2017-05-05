@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 import 'photo.dart';
@@ -9,7 +10,7 @@ import 'photo.dart';
 class PhotoView extends StatelessWidget {
   final Photo _photo;
 
-  PhotoView({ Key key, Photo photo}) : super(key: key), this._photo = photo;
+  PhotoView({ Key key, Photo photo}) : this._photo = photo, super(key: key);
 
   @override
   Widget build(BuildContext context) {

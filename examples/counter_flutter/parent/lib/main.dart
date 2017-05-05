@@ -38,7 +38,7 @@ void _log(String msg) {
 
 typedef void _ValueCallback(int);
 typedef void _UpdateCallback();
-typedef void _ChildViewCallback(ChildViewConnection);
+typedef void _ChildViewCallback(ChildViewConnection connection);
 
 // This module produces two things: A connection to the view of its
 // child module, and updates of the value shared with that child module
@@ -185,8 +185,8 @@ class _AppState {
 
 class _HomeScreen extends StatefulWidget {
   _HomeScreen({Key key, _AppState state})
-      : super(key: key),
-        _state = state {
+      : _state = state,
+        super(key: key) {
     _log("HomeScreen()");
   }
 
@@ -200,7 +200,7 @@ class _HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  _HomeScreenState(_AppState this._state) {
+  _HomeScreenState(this._state) {
     _state.watch(() => setState(() {}));
   }
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:meta/meta.dart';
 
-import 'dummy_photo_storage.dart';
 import 'photo.dart';
 import 'photo_storage.dart';
 import 'photo_view.dart';
@@ -13,10 +13,11 @@ void _log(String msg) {
   print('[Photos Flutter Example] $msg');
 }
 
+@immutable
 class Home extends StatefulWidget {
-  PhotoStorage _storage;
+  final PhotoStorage _storage;
 
-  Home({ Key key, PhotoStorage storage}) : super(key: key), _storage = storage;
+  Home({ Key key, PhotoStorage storage}) : _storage = storage, super(key: key);
 
   @override
   _HomeState createState() => new _HomeState(_storage);
@@ -33,7 +34,6 @@ class _HomeState extends State<Home> {
     if (photos.isEmpty) {
       return new Text("Click on \"+\" to add photos.");
     }
-    final ThemeData theme = Theme.of(context);
     return new GridView.count(
       crossAxisCount: 3,
       childAspectRatio: 1.0,

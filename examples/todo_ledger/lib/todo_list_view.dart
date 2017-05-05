@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'todo_module.dart';
 
 class _TodoItem extends StatelessWidget {
-  _TodoItem({Key key, this.content, this.onDone}) : super(key: key) {}
+  _TodoItem({Key key, this.content, this.onDone}) : super(key: key);
 
   final String content;
   final VoidCallback onDone;
@@ -35,7 +35,7 @@ class _TodoItem extends StatelessWidget {
 }
 
 class TodoListView extends StatefulWidget {
-  TodoListView(TodoModule this._module);
+  TodoListView(this._module);
 
   final TodoModule _module;
 
@@ -46,7 +46,7 @@ class TodoListView extends StatefulWidget {
 class TodoListViewState extends State<TodoListView> {
   final double _appBarHeight = 120.0;
 
-  TodoListViewState(TodoModule this._module) {
+  TodoListViewState(this._module) {
     // TODO(ppi): decouple the widget from the module. This should go through
     // some class managing the model.
     _module.watch((Map<List<int>, String> items) => setState(() {

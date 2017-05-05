@@ -5,10 +5,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.ledger.services.public/ledger.fidl.dart';
 import 'package:apps.modular.services.component/component_context.fidl.dart';
-import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -16,7 +16,7 @@ import 'package:lib.fidl.dart/core.dart';
 
 import 'generator.dart';
 
-typedef void ItemsChangedCallback(Map);
+typedef void ItemsChangedCallback(Map<List<int>, String> map);
 
 void _log(String msg) {
   print('[Todo Ledger Example] $msg');
@@ -31,19 +31,19 @@ dynamic _handleResponse(String description) {
 }
 
 String _vmoToString(Vmo vmo) {
-  var size_result = vmo.getSize();
-  if (size_result.status != NO_ERROR) {
-    _log("Unable to retrieve vmo size: ${size_result.status}");
+  var sizeResult = vmo.getSize();
+  if (sizeResult.status != NO_ERROR) {
+    _log("Unable to retrieve vmo size: ${sizeResult.status}");
     return "";
   }
 
-  var data = new Uint8List(size_result.size);
-  var read_result = vmo.read(new ByteData.view(data.buffer));
-  if (read_result.status != NO_ERROR) {
-    _log("Unable to read from vmo: ${read_result.status}");
+  var data = new Uint8List(sizeResult.size);
+  var readResult = vmo.read(new ByteData.view(data.buffer));
+  if (readResult.status != NO_ERROR) {
+    _log("Unable to read from vmo: ${readResult.status}");
     return "";
   }
-  if (read_result.bytesRead != size_result.size) {
+  if (readResult.bytesRead != sizeResult.size) {
     _log("Unexpected count of bytes read.");
     return "";
   }
@@ -54,7 +54,7 @@ String _vmoToString(Vmo vmo) {
 class TodoModule extends Module implements PageWatcher {
   final ModuleBinding _binding = new ModuleBinding();
 
-  final PageWatcherBinding _page_watcher_binding = new PageWatcherBinding();
+  final PageWatcherBinding _pageWatcherBinding = new PageWatcherBinding();
 
   final LedgerProxy _ledger = new LedgerProxy();
 
@@ -87,7 +87,7 @@ class TodoModule extends Module implements PageWatcher {
 
     PageSnapshotProxy snapshot = new PageSnapshotProxy();
     _page.getSnapshot(snapshot.ctrl.request(), null,
-        _page_watcher_binding.wrap(this), _handleResponse("Watch"));
+        _pageWatcherBinding.wrap(this), _handleResponse("Watch"));
 
     _readItems(snapshot);
     _changeItems();
@@ -107,6 +107,7 @@ class TodoModule extends Module implements PageWatcher {
 
   /// Implementation of PageWatcher.onChange().
   @override
+  // ignore: type_annotate_public_apis
   void onChange(PageChange pageChange, ResultState resultState, callback) {
     if (resultState != ResultState.completed &&
         resultState != ResultState.partialStarted) {

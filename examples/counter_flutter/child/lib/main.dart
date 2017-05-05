@@ -126,8 +126,8 @@ class _AppState {
 
 class _HomeScreen extends StatefulWidget {
   _HomeScreen({Key key, _AppState state})
-      : super(key: key),
-        _state = state {
+      : _state = state,
+        super(key: key) {
     _log("HomeScreen()");
   }
 
@@ -141,7 +141,7 @@ class _HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  _HomeScreenState(_AppState this._state) {
+  _HomeScreenState(this._state) {
     _state.watch(() => setState(() {}));
   }
 

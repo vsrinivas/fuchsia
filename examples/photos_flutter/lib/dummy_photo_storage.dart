@@ -9,13 +9,16 @@ import 'photo_storage.dart';
 
 // An in memory cache for photos.
 class DummyPhotoStorage extends PhotoStorage {
-  List<Photo> _photos = <Photo>[];
+  final List<Photo> _photos = <Photo>[];
 
+  @override
   List<Photo> get photos => new List.unmodifiable(_photos);
 
+  @override
   void add(Photo photo) {
     _photos.add(photo);
   }
 
+  @override
   ImageProvider getImageProvider(Photo photo) => new NetworkImage(photo.url);
 }
