@@ -14,6 +14,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/device/device.h>
 #include <magenta/device/test.h>
+#include <unittest/unittest.h>
 
 static const char* test_drivers[] = {
     "ddktl_test",
@@ -22,11 +23,14 @@ static const char* test_drivers[] = {
 
 #define DEV_TEST "/dev/misc/test"
 
-static void do_one_test(int tfd, int i, mx_handle_t output) {
+static void do_one_test(int tfd, int i, mx_handle_t output, test_ioctl_test_report_t* report) {
     char devpath[1024];
     ssize_t rc = ioctl_test_create_device(tfd, test_drivers[i], strlen(test_drivers[i]) + 1, devpath, sizeof(devpath));
     if (rc < 0) {
         printf("driver-tests: error %zd creating device for %s\n", rc, test_drivers[i]);
+        report->n_tests = 1;
+        report->n_failed = 1;
+        return;
     }
 
     // TODO some waiting needed before opening..,
@@ -44,26 +48,40 @@ static void do_one_test(int tfd, int i, mx_handle_t output) {
 
     if (retry == 100) {
         printf("driver-tests: failed to open %s\n", devpath);
-        return;
+        report->n_tests = 1;
+        report->n_failed = 1;
+        goto end_device_created;
     }
 
-    ioctl_device_bind(fd, test_drivers[i], strlen(test_drivers[i]) + 1);
+    rc = ioctl_device_bind(fd, test_drivers[i], strlen(test_drivers[i]) + 1);
+    if (rc < 0) {
+        printf("driver-tests: error %zd binding to %s\n", rc, test_drivers[i]);
+        report->n_tests = 1;
+        report->n_failed = 1;
+        goto end_device_opened;
+    }
 
     mx_handle_t h;
     mx_status_t status = mx_handle_duplicate(output, MX_RIGHT_SAME_RIGHTS, &h);
     if (status != NO_ERROR) {
         printf("driver-tests: error %d duplicating output socket\n", status);
-        ioctl_test_destroy_device(fd);
-        close(fd);
-        return;
+        report->n_tests = 1;
+        report->n_failed = 1;
+        goto end_device_opened;
     }
 
     ioctl_test_set_output_socket(fd, &h);
 
-    test_ioctl_test_report_t report;
-    ioctl_test_run_tests(fd, NULL, 0, &report);
+    rc = ioctl_test_run_tests(fd, NULL, 0, report);
+    if (rc < 0) {
+        printf("driver-tests: error %zd running tests\n", rc);
+        report->n_tests = 1;
+        report->n_failed = 1;
+    }
 
+end_device_created:
     ioctl_test_destroy_device(fd);
+end_device_opened:
     close(fd);
 }
 
@@ -116,9 +134,17 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    test_ioctl_test_report_t final_report;
+    memset(&final_report, 0, sizeof(final_report));
+
     // bind test drivers
     for (unsigned i = 0; i < sizeof(test_drivers)/sizeof(char*); i++) {
-        do_one_test(fd, i, socket[1]);
+        test_ioctl_test_report_t one_report;
+        memset(&one_report, 0, sizeof(one_report));
+        do_one_test(fd, i, socket[1], &one_report);
+        final_report.n_tests += one_report.n_tests;
+        final_report.n_success += one_report.n_success;
+        final_report.n_failed += one_report.n_failed;
     }
     close(fd);
 
@@ -128,5 +154,13 @@ int main(int argc, char** argv) {
     thrd_join(t, NULL);
     mx_handle_close(socket[0]);
 
-    return 0;
+    unittest_printf_critical(
+            "\n====================================================\n");
+    unittest_printf_critical(
+            "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
+            final_report.n_tests, final_report.n_success, final_report.n_failed);
+    unittest_printf_critical(
+            "\n====================================================\n");
+
+    return final_report.n_failed == 0 ? 0 : -1;
 }

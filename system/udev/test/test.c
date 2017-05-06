@@ -104,9 +104,9 @@ static mx_status_t test_device_ioctl(void* ctx, uint32_t op, const void* in, siz
         if (outlen != sizeof(test_report_t)) {
             return ERR_BUFFER_TOO_SMALL;
         }
-        test_device_run_tests(dev->mxdev, (test_report_t*)out, in, inlen);
+        mx_status_t status = test_device_run_tests(dev->mxdev, (test_report_t*)out, in, inlen);
         *out_actual = sizeof(test_report_t);
-        return NO_ERROR;
+        return status;
 
     case IOCTL_TEST_DESTROY_DEVICE:
         device_remove(dev->mxdev);

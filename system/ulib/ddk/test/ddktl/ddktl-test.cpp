@@ -58,7 +58,7 @@ mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg
     update_test_report(unittest_run_one_test(test_case_ddktl_device, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddktl_ethernet_device, TEST_ALL), report);
     update_test_report(unittest_run_one_test(test_case_ddktl_wlan_device, TEST_ALL), report);
-    return report->n_failed == 0;
+    return report->n_failed == 0 ? NO_ERROR : ERR_INTERNAL;
 }
 
 }  // namespace

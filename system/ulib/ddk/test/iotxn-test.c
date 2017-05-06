@@ -236,7 +236,7 @@ static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const vo
     report->n_tests = 1;
     report->n_success = success ? 1 : 0;
     report->n_failed = success ? 0 : 1;
-    return success;
+    return success ? NO_ERROR : ERR_INTERNAL;
 }
 
 static mx_status_t iotxn_test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
