@@ -28,10 +28,6 @@ class VkVmoImageGenerator : public SkImageGenerator {
 
  private:
   ftl::RefPtr<mtl::SharedVmo> shared_vmo_ = nullptr;
-
-  // Memoize the results of any previous calls to onGenerateTexture.
-  GrContext* last_context_ = nullptr;
-  sk_sp<GrTextureProxy> last_texture_ = nullptr;
 };
 
 }  // namespace mozart

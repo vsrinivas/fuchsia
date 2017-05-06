@@ -139,10 +139,6 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
     GrContext* context,
     const SkImageInfo& info,
     const SkIPoint& origin) {
-  // Return memoized result if we have one.
-  if (last_texture_ != nullptr && last_context_ == context) {
-    return last_texture_;
-  }
 
   // TODO: Assert subset (described by |info| and |origin|) is equal to full
   // size.
@@ -264,9 +260,7 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
   tex->setRelease(&ReleaseTexture, texture_info);
 
   // More wrapping.
-  last_context_ = context;
-  last_texture_ = GrSurfaceProxy::MakeWrapped(tex);
-  return last_texture_;
+  return GrSurfaceProxy::MakeWrapped(tex);
 }
 
 }  // namespace mozart
