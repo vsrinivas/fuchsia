@@ -60,6 +60,10 @@
         {
             "binary": "context_repository_unittest",
             "bootfs_path": "test/maxwell/context_repository_unittest"
+        },
+        {
+            "binary": "context_coprocessors_unittest",
+            "bootfs_path": "test/maxwell/context_coprocessors_unittest"
         }
     ]
 }
