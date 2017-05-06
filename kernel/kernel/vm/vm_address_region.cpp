@@ -328,19 +328,14 @@ status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags) {
     canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
-    mxtl::RefPtr<VmAddressRegion> vmar(this);
-    while (1) {
-        mxtl::RefPtr<VmAddressRegionOrMapping> next(vmar->FindRegionLocked(va));
-        if (!next) {
-            return ERR_NOT_FOUND;
-        }
-
-        if (next->is_mapping()) {
+    for (auto vmar = WrapRefPtr(this);
+         auto next = vmar->FindRegionLocked(va);
+         vmar = next->as_vm_address_region()) {
+        if (next->is_mapping())
             return next->PageFault(va, pf_flags);
-        }
-
-        vmar = next->as_vm_address_region();
     }
+
+    return ERR_NOT_FOUND;
 }
 
 bool VmAddressRegion::IsRangeAvailableLocked(vaddr_t base, size_t size) {
