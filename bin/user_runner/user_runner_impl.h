@@ -97,8 +97,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::string device_name_;
 
-  // This component context is supplied to the user intelligence
-  // provider, below, so it can run agents and create message queues.
+  // This component context is supplied to the user intelligence provider,
+  // below, so it can run agents and create message queues.
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
@@ -108,11 +108,14 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
-  // Given to the user shell so it can store its own data. These data
-  // are shared between all user shells (so it's not private to the
-  // user shell *app*).
-  std::unique_ptr<LinkImpl> user_shell_link_;
+  // Given to the user shell so it can store its own data. These data are shared
+  // between all user shells (so it's not private to the user shell *app*).
+  //
+  // HACK(mesch): The user shell link must be defined *before* the link storage
+  // because it invokes a method of link storage (DropWatcher()) in its
+  // destructor, which must happen before the link storage is destroyed.
   std::unique_ptr<StoryStorageImpl> link_storage_;
+  std::unique_ptr<LinkImpl> user_shell_link_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
