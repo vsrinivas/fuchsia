@@ -430,6 +430,7 @@ mx_status_t minfs_check(Bcache* bc) {
     if (missing) {
         error("check: %u allocated block%s not in use\n",
               missing, missing > 1 ? "s" : "");
+        status = ERR_BAD_STATE;
     }
 
     missing = 0;
@@ -443,13 +444,14 @@ mx_status_t minfs_check(Bcache* bc) {
     if (missing) {
         error("check: %u allocated inode%s not in use\n",
               missing, missing > 1 ? "s" : "");
+        status = ERR_BAD_STATE;
     }
 
     //TODO: check allocated inodes that were abandoned
     //TODO: check allocated blocks that were not accounted for
     //TODO: check unallocated inodes where magic != 0
     fprintf(stderr, "check: okay\n");
-    return NO_ERROR;
+    return status;
 }
 
 } // namespace minfs
