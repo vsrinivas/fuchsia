@@ -20,6 +20,7 @@
 #endif
 
 #include "minfs-private.h"
+#include "writeback-queue.h"
 
 namespace {
 
@@ -61,40 +62,6 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
 
 namespace minfs {
 
-//TODO: better bitmap block read/write functions
-
-// TODO(smklein): Once vmo support is complete, we should write to bitmaps via VMOs, and naturally
-// delay flushing their dirty blocks to the disk, rather than using these helpers.
-
-// helper for updating many bitmap entries
-// if the next entry is in the same block, defer
-// write until a different block is needed
-mxtl::RefPtr<BlockNode> Minfs::BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk,
-                                              uint32_t n) {
-    uint32_t bitblock = n / kMinfsBlockBits; // Relative to bitmap
-    if (blk) {
-        uint32_t bitblock_old = blk->GetKey() - info_.abm_block;
-        if (bitblock_old == bitblock) {
-            // same block as before, nothing to do
-            return blk;
-        }
-        // write previous block to disk
-        const void* src = GetBlock(block_map_, bitblock_old);
-        memcpy(blk->data(), src, kMinfsBlockSize);
-        bc_->Put(blk, kBlockDirty);
-    }
-    return mxtl::RefPtr<BlockNode>(bc_->Get(info_.abm_block + bitblock));
-}
-
-void Minfs::BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk) {
-    if (blk) {
-        uint32_t bitblock = blk->GetKey() - info_.abm_block;
-        const void* src = GetBlock(block_map_, bitblock);
-        memcpy(blk->data(), src, kMinfsBlockSize);
-        bc_->Put(blk, kBlockDirty);
-    }
-}
-
 void VnodeMinfs::InodeSync(uint32_t flags) {
     // by default, c/mtimes are not updated to current time
     if (flags != kMxFsSyncDefault) {
@@ -114,7 +81,7 @@ void VnodeMinfs::InodeSync(uint32_t flags) {
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
 mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
-    mxtl::RefPtr<BlockNode> bitmap_blk = nullptr;
+    WritebackQueue<> txn(fs_->bc_, fs_->block_map_.StorageUnsafe()->GetData());
 
     bool doSync = false;
 
@@ -123,11 +90,10 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         if (inode_.dnum[bno] == 0) {
             continue;
         }
-        if ((bitmap_blk = fs_->BitmapBlockGet(bitmap_blk, inode_.dnum[bno])) == nullptr) {
-            return ERR_IO;
-        }
 
         fs_->block_map_.Clear(inode_.dnum[bno], inode_.dnum[bno] + 1);
+        uint32_t bitblock = inode_.dnum[bno] / kMinfsBlockBits;
+        txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
         inode_.dnum[bno] = 0;
         inode_.block_count--;
         doSync = true;
@@ -146,7 +112,6 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         }
         mxtl::RefPtr<BlockNode> blk = nullptr;
         if ((blk = fs_->bc_->Get(inode_.inum[indirect])) == nullptr) {
-            fs_->BitmapBlockPut(bitmap_blk);
             return ERR_IO;
         }
         uint32_t* entry = static_cast<uint32_t*>(blk->data());
@@ -166,11 +131,9 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
                 continue;
             }
 
-            if ((bitmap_blk = fs_->BitmapBlockGet(bitmap_blk, entry[direct])) == nullptr) {
-                fs_->bc_->Put(blk, iflags);
-                return ERR_IO;
-            }
             fs_->block_map_.Clear(entry[direct], entry[direct] + 1);
+            uint32_t bitblock = entry[direct] / kMinfsBlockBits;
+            txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
             entry[direct] = 0;
             iflags = kBlockDirty;
             inode_.block_count--;
@@ -183,11 +146,9 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
 
         if (delete_indirect)  {
             // release the direct block itself
-            bitmap_blk = fs_->BitmapBlockGet(bitmap_blk, inode_.inum[indirect]);
-            if (bitmap_blk == nullptr) {
-                return ERR_IO;
-            }
             fs_->block_map_.Clear(inode_.inum[indirect], inode_.inum[indirect] + 1);
+            uint32_t bitblock = inode_.inum[indirect] / kMinfsBlockBits;
+            txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
             inode_.inum[indirect] = 0;
             inode_.block_count--;
             doSync = true;
@@ -197,7 +158,6 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
     if (doSync) {
         InodeSync(kMxFsSyncDefault);
     }
-    fs_->BitmapBlockPut(bitmap_blk);
     return NO_ERROR;
 }
 

@@ -281,7 +281,11 @@ private:
     uint32_t blocksize_;
 };
 
+void* GetNthBlock(const void* data, uint32_t blkno);
+// Access the "blkno"-th block within the bitmap.
+// "blkno = 0" corresponds to the first block within the bitmap.
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
+// Same as GetBlock, but accessing by the "bitno"-th bit.
 void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
 
 } // namespace minfs

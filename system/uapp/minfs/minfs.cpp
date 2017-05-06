@@ -15,14 +15,18 @@
 #include <mxtl/unique_ptr.h>
 
 #include "minfs-private.h"
+#include "writeback-queue.h"
 
 namespace minfs {
 
+void* GetNthBlock(const void* data, uint32_t blkno) {
+    assert(kMinfsBlockSize <= (blkno + 1) * kMinfsBlockSize); // Avoid overflow
+    return (void*)((uintptr_t)(data) + (uintptr_t)(kMinfsBlockSize * blkno));
+}
+
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno) {
     assert(blkno * kMinfsBlockSize < bitmap.size()); // Accessing beyond end of bitmap
-    assert(kMinfsBlockSize <= (blkno + 1) * kMinfsBlockSize); // Avoid overflow
-    return (void*)((uintptr_t)(bitmap.StorageUnsafe()->GetData()) +
-                   (uintptr_t)(kMinfsBlockSize * blkno));
+    return GetNthBlock(bitmap.StorageUnsafe()->GetData(), blkno);
 }
 
 void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno) {
@@ -94,28 +98,21 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
         panic("inode not in bitmap");
     }
 
-    // obtain the block of the inode bitmap we need
-    mxtl::RefPtr<BlockNode> block_ibm;
-    if ((block_ibm = bc_->Get(info_.ibm_block + ibm_relative_bno)) == nullptr) {
-        return ERR_IO;
-    }
-
     // update and commit block to disk
     inode_map_.Clear(ino, ino + 1);
-    memcpy(block_ibm->data(), bmdata, kMinfsBlockSize);
-    bc_->Put(block_ibm, kBlockDirty);
+    bc_->Writeblk(info_.ibm_block + ibm_relative_bno, bmdata);
 
-    mxtl::RefPtr<BlockNode> bitmap_blk;
+    // We're going to be updating block bitmaps repeatedly.
+    WritebackQueue<> txn(bc_, block_map_.StorageUnsafe()->GetData());
 
     // release all direct blocks
     for (unsigned n = 0; n < kMinfsDirect; n++) {
         if (inode.dnum[n] == 0) {
             continue;
         }
-        if ((bitmap_blk = BitmapBlockGet(bitmap_blk, inode.dnum[n])) == nullptr) {
-            return ERR_IO;
-        }
         block_map_.Clear(inode.dnum[n], inode.dnum[n] + 1);
+        uint32_t bitblock = inode.dnum[n] / kMinfsBlockBits;
+        txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
     }
 
     // release all indirect blocks
@@ -125,7 +122,6 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
         }
         mxtl::RefPtr<BlockNode> blk;
         if ((blk = bc_->Get(inode.inum[n])) == nullptr) {
-            BitmapBlockPut(bitmap_blk);
             return ERR_IO;
         }
         uint32_t* entry = static_cast<uint32_t*>(blk->data());
@@ -134,20 +130,16 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
             if (entry[m] == 0) {
                 continue;
             }
-            if ((bitmap_blk = BitmapBlockGet(bitmap_blk, entry[m])) == nullptr) {
-                bc_->Put(blk, 0);
-                return ERR_IO;
-            }
             block_map_.Clear(entry[m], entry[m] + 1);
+            uint32_t bitblock = entry[m] / kMinfsBlockBits;
+            txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
         }
         bc_->Put(blk, 0);
         // release the direct block itself
-        if ((bitmap_blk = BitmapBlockGet(bitmap_blk, inode.inum[n])) == nullptr) {
-            return ERR_IO;
-        }
         block_map_.Clear(inode.inum[n], inode.inum[n] + 1);
+        uint32_t bitblock = inode.inum[n] / kMinfsBlockBits;
+        txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
     }
-    BitmapBlockPut(bitmap_blk);
 
     return NO_ERROR;
 }
@@ -169,26 +161,16 @@ mx_status_t Minfs::InoNew(const minfs_inode_t* inode, uint32_t* ino_out) {
         panic("inode not in bitmap");
     }
 
-    // obtain the block of the inode bitmap we need
-    mxtl::RefPtr<BlockNode> block_ibm;
-    if ((block_ibm = bc_->Get(info_.ibm_block + ibm_relative_bno)) == nullptr) {
-        inode_map_.Clear(ino, ino + 1);
-        return ERR_IO;
-    }
-
     // TODO(smklein): optional sanity check of both blocks
 
     // Write the inode back first
     if ((status = InodeSync(ino, inode)) != NO_ERROR) {
-        bc_->Put(block_ibm, 0);
         inode_map_.Clear(ino, ino + 1);
         return status;
     }
 
-    // write data to the bitmap in memory
-    memcpy(block_ibm->data(), bmdata, kMinfsBlockSize);
     // commit blocks to disk
-    bc_->Put(block_ibm, kBlockDirty);
+    bc_->Writeblk(info_.ibm_block + ibm_relative_bno, bmdata);
 
     *ino_out = ino;
     return NO_ERROR;
@@ -278,25 +260,16 @@ mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<Block
     void *bmdata = GetBitBlock(block_map_, &bmbno, bno); // bmbno relative to bitmap
     bmbno += info_.abm_block;                            // bmbno relative to block device
 
-    // obtain the block of the alloc bitmap we need
-    mxtl::RefPtr<BlockNode> block_abm;
-    if ((block_abm = bc_->Get(bmbno)) == nullptr) {
-        block_map_.Clear(bno, bno + 1);
-        return ERR_IO;
-    }
-
     // obtain the block we're allocating, if requested.
     if (out_block != nullptr) {
         if ((*out_block = bc_->GetZero(bno)) == nullptr) {
             block_map_.Clear(bno, bno + 1);
-            bc_->Put(block_abm, 0);
             return ERR_IO;
         }
     }
 
     // commit the bitmap
-    memcpy(block_abm->data(), bmdata, kMinfsBlockSize);
-    bc_->Put(block_abm, kBlockDirty);
+    bc_->Writeblk(bmbno, bmdata);
     *out_bno = bno;
     return NO_ERROR;
 }

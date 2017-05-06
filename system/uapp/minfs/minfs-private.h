@@ -68,17 +68,6 @@ public:
     // Does not modify inode bitmap.
     mx_status_t InodeSync(uint32_t ino, const minfs_inode_t* inode);
 
-    // When modifying bit 'n' in the bitmap, the following pattern may be used:
-    //   blk = nullptr;
-    //   blk = BitmapBlockGet(blk, n);
-    //   block_map.Access(n);
-    //   BitmapBlockPut(blk);
-    // To guarantee the in-memory bitmap is in sync with the on-disk bitmap. Repeated
-    // access to related (nearby) bits in the bitmap will defer writing to the disk
-    // until "BitmapBlockPut" is called.
-    mxtl::RefPtr<BlockNode> BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk, uint32_t n);
-    void BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk);
-
     mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
 
     Bcache* bc_;
