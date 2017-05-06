@@ -250,8 +250,6 @@ void UserProviderImpl::LoginInternal(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserController> user_controller_request) {
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
-  // TODO: Take the cloud sync server name as Login() parameter from the
-  // device shell and/or from the user db.
   ledger_repository_factory_->GetRepository(
       local_ledger_path, server_name, ledger_repository.NewRequest(),
       [](ledger::Status status) {
