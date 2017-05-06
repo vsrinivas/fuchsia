@@ -115,31 +115,14 @@ struct LiteralConstant : Constant {
     std::unique_ptr<Literal> literal;
 };
 
-struct ModuleName {
-    ModuleName(std::unique_ptr<CompoundIdentifier> identifier)
-        : identifier(std::move(identifier)) {}
-
-    std::unique_ptr<CompoundIdentifier> identifier;
-};
-
 struct Using {
-    Using(std::unique_ptr<StringLiteral> import_path)
-        : import_path(std::move(import_path)) {}
+    Using(std::unique_ptr<StringLiteral> using_path)
+        : using_path(std::move(using_path)) {}
 
-    std::unique_ptr<StringLiteral> import_path;
+    std::unique_ptr<StringLiteral> using_path;
 };
 
-struct UsingList {
-    UsingList(std::vector<std::unique_ptr<Using>> import_list)
-        : import_list(std::move(import_list)) {}
-
-    std::vector<std::unique_ptr<Using>> import_list;
-};
-
-struct Declaration {
-};
-
-struct ConstDeclaration : public Declaration {
+struct ConstDeclaration {
     ConstDeclaration(std::unique_ptr<Type> type,
                      std::unique_ptr<Identifier> identifier,
                      std::unique_ptr<Constant> constant)
@@ -179,41 +162,17 @@ struct EnumMember {
     std::unique_ptr<EnumMemberValue> maybe_value;
 };
 
-struct EnumBody {
-    EnumBody(std::vector<std::unique_ptr<EnumMember>> fields)
-        : fields(std::move(fields)) {}
-
-    std::vector<std::unique_ptr<EnumMember>> fields;
-};
-
-struct EnumDeclaration : public Declaration {
+struct EnumDeclaration {
     EnumDeclaration(std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<PrimitiveType> maybe_subtype,
-                    std::unique_ptr<EnumBody> body)
+                    std::vector<std::unique_ptr<EnumMember>> members)
         : identifier(std::move(identifier)),
           maybe_subtype(std::move(maybe_subtype)),
-          body(std::move(body)) {}
+          members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<PrimitiveType> maybe_subtype;
-    std::unique_ptr<EnumBody> body;
-};
-
-struct InterfaceMember {
-};
-
-struct InterfaceMemberConst : public InterfaceMember {
-    InterfaceMemberConst(std::unique_ptr<ConstDeclaration> const_declaration)
-        : const_declaration(std::move(const_declaration)) {}
-
-    std::unique_ptr<ConstDeclaration> const_declaration;
-};
-
-struct InterfaceMemberEnum : public InterfaceMember {
-    InterfaceMemberEnum(std::unique_ptr<EnumDeclaration> enum_declaration)
-        : enum_declaration(std::move(enum_declaration)) {}
-
-    std::unique_ptr<EnumDeclaration> enum_declaration;
+    std::vector<std::unique_ptr<EnumMember>> members;
 };
 
 struct Parameter {
@@ -233,18 +192,11 @@ struct ParameterList {
     std::vector<std::unique_ptr<Parameter>> parameter_list;
 };
 
-struct Response {
-    Response(std::unique_ptr<ParameterList> parameter_list)
-        : parameter_list(std::move(parameter_list)) {}
-
-    std::unique_ptr<ParameterList> parameter_list;
-};
-
-struct InterfaceMemberMethod : public InterfaceMember {
+struct InterfaceMemberMethod {
     InterfaceMemberMethod(std::unique_ptr<NumericLiteral> ordinal,
                           std::unique_ptr<Identifier> identifier,
                           std::unique_ptr<ParameterList> parameter_list,
-                          std::unique_ptr<Response> maybe_response)
+                          std::unique_ptr<ParameterList> maybe_response)
         : ordinal(std::move(ordinal)),
           identifier(std::move(identifier)),
           parameter_list(std::move(parameter_list)),
@@ -253,78 +205,52 @@ struct InterfaceMemberMethod : public InterfaceMember {
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<ParameterList> parameter_list;
-    std::unique_ptr<Response> maybe_response;
+    std::unique_ptr<ParameterList> maybe_response;
 };
 
-struct InterfaceBody {
-    InterfaceBody(std::vector<std::unique_ptr<InterfaceMember>> fields)
-        : fields(std::move(fields)) {}
-
-    std::vector<std::unique_ptr<InterfaceMember>> fields;
-};
-
-struct InterfaceDeclaration : public Declaration {
+struct InterfaceDeclaration {
     InterfaceDeclaration(std::unique_ptr<Identifier> identifier,
-                         std::unique_ptr<InterfaceBody> body)
+                         std::vector<std::unique_ptr<ConstDeclaration>> const_members,
+                         std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
+                         std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members)
         : identifier(std::move(identifier)),
-          body(std::move(body)) {}
+          const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)),
+          method_members(std::move(method_members)) {}
 
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<InterfaceBody> body;
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members;
 };
 
 struct StructMember {
-};
-
-struct StructMemberConst : public StructMember {
-    StructMemberConst(std::unique_ptr<ConstDeclaration> const_declaration)
-        : const_declaration(std::move(const_declaration)) {}
-
-    std::unique_ptr<ConstDeclaration> const_declaration;
-};
-
-struct StructMemberEnum : public StructMember {
-    StructMemberEnum(std::unique_ptr<EnumDeclaration> enum_declaration)
-        : enum_declaration(std::move(enum_declaration)) {}
-
-    std::unique_ptr<EnumDeclaration> enum_declaration;
-};
-
-struct StructDefaultValue {
-    StructDefaultValue(std::unique_ptr<Constant> const_declaration)
-        : const_declaration(std::move(const_declaration)) {}
-
-    std::unique_ptr<Constant> const_declaration;
-};
-
-struct StructMemberField : public StructMember {
-    StructMemberField(std::unique_ptr<Type> type,
+    StructMember(std::unique_ptr<Type> type,
                       std::unique_ptr<Identifier> identifier,
-                      std::unique_ptr<StructDefaultValue> maybe_default_value)
+                      std::unique_ptr<Constant> maybe_default_value)
         : type(std::move(type)),
           identifier(std::move(identifier)),
           maybe_default_value(std::move(maybe_default_value)) {}
 
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<StructDefaultValue> maybe_default_value;
+    std::unique_ptr<Constant> maybe_default_value;
 };
 
-struct StructBody {
-    StructBody(std::vector<std::unique_ptr<StructMember>> fields)
-        : fields(std::move(fields)) {}
-
-    std::vector<std::unique_ptr<StructMember>> fields;
-};
-
-struct StructDeclaration : public Declaration {
+struct StructDeclaration {
     StructDeclaration(std::unique_ptr<Identifier> identifier,
-                      std::unique_ptr<StructBody> body)
+                      std::vector<std::unique_ptr<ConstDeclaration>> const_members,
+                      std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
+                      std::vector<std::unique_ptr<StructMember>> members)
         : identifier(std::move(identifier)),
-          body(std::move(body)) {}
+          const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)),
+          members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<StructBody> body;
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<StructMember>> members;
 };
 
 struct UnionMember {
@@ -337,41 +263,45 @@ struct UnionMember {
     std::unique_ptr<Identifier> identifier;
 };
 
-struct UnionBody {
-    UnionBody(std::vector<std::unique_ptr<UnionMember>> fields)
-        : fields(std::move(fields)) {}
-
-    std::vector<std::unique_ptr<UnionMember>> fields;
-};
-
-struct UnionDeclaration : public Declaration {
+struct UnionDeclaration {
     UnionDeclaration(std::unique_ptr<Identifier> identifier,
-                     std::unique_ptr<UnionBody> body)
+                     std::vector<std::unique_ptr<ConstDeclaration>> const_members,
+                     std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
+                     std::vector<std::unique_ptr<UnionMember>> members)
         : identifier(std::move(identifier)),
-          body(std::move(body)) {}
+          const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)),
+          members(std::move(members)) {}
 
     std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<UnionBody> body;
-};
-
-struct DeclarationList {
-    DeclarationList(std::vector<std::unique_ptr<Declaration>> declaration_list)
-        : declaration_list(std::move(declaration_list)) {}
-
-    std::vector<std::unique_ptr<Declaration>> declaration_list;
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<UnionMember>> members;
 };
 
 struct File {
-    File(std::unique_ptr<ModuleName> module,
-         std::unique_ptr<UsingList> import_list,
-         std::unique_ptr<DeclarationList> declaration_list)
-        : module(std::move(module)),
-          import_list(std::move(import_list)),
-          declaration_list(std::move(declaration_list)) {}
+    File(std::unique_ptr<CompoundIdentifier> identifier,
+         std::vector<std::unique_ptr<Using>> using_list,
+         std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
+         std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
+         std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
+         std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
+         std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
+        : identifier(std::move(identifier)),
+          using_list(std::move(using_list)),
+          const_declaration_list(std::move(const_declaration_list)),
+          enum_declaration_list(std::move(enum_declaration_list)),
+          interface_declaration_list(std::move(interface_declaration_list)),
+          struct_declaration_list(std::move(struct_declaration_list)),
+          union_declaration_list(std::move(union_declaration_list)) {}
 
-    std::unique_ptr<ModuleName> module;
-    std::unique_ptr<UsingList> import_list;
-    std::unique_ptr<DeclarationList> declaration_list;
+    std::unique_ptr<CompoundIdentifier> identifier;
+    std::vector<std::unique_ptr<Using>> using_list;
+    std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
+    std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;
+    std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
+    std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
 };
 
 } // namespace fidl

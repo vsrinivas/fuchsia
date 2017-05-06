@@ -70,10 +70,7 @@ private:
 
     std::unique_ptr<Constant> ParseConstant();
 
-    std::unique_ptr<ModuleName> ParseModuleName();
-
     std::unique_ptr<Using> ParseUsing();
-    std::unique_ptr<UsingList> ParseUsingList();
 
     std::unique_ptr<HandleType> ParseHandleType();
     std::unique_ptr<PrimitiveType> ParsePrimitiveType();
@@ -83,30 +80,18 @@ private:
     std::unique_ptr<ConstDeclaration> ParseConstDeclaration();
 
     std::unique_ptr<EnumMember> ParseEnumMember();
-    std::unique_ptr<EnumBody> ParseEnumBody();
     std::unique_ptr<EnumDeclaration> ParseEnumDeclaration();
 
-    std::unique_ptr<InterfaceMemberConst> ParseInterfaceMemberConst();
-    std::unique_ptr<InterfaceMemberEnum> ParseInterfaceMemberEnum();
     std::unique_ptr<Parameter> ParseParameter();
     std::unique_ptr<ParameterList> ParseParameterList();
-    std::unique_ptr<Response> ParseResponse();
     std::unique_ptr<InterfaceMemberMethod> ParseInterfaceMemberMethod();
-    std::unique_ptr<InterfaceBody> ParseInterfaceBody();
     std::unique_ptr<InterfaceDeclaration> ParseInterfaceDeclaration();
 
-    std::unique_ptr<StructMemberConst> ParseStructMemberConst();
-    std::unique_ptr<StructMemberEnum> ParseStructMemberEnum();
-    std::unique_ptr<StructDefaultValue> ParseStructDefaultValue();
-    std::unique_ptr<StructMemberField> ParseStructMemberField();
-    std::unique_ptr<StructBody> ParseStructBody();
+    std::unique_ptr<StructMember> ParseStructMember();
     std::unique_ptr<StructDeclaration> ParseStructDeclaration();
 
     std::unique_ptr<UnionMember> ParseUnionMember();
-    std::unique_ptr<UnionBody> ParseUnionBody();
     std::unique_ptr<UnionDeclaration> ParseUnionDeclaration();
-
-    std::unique_ptr<DeclarationList> ParseDeclarationList();
 
     std::unique_ptr<File> ParseFile();
 

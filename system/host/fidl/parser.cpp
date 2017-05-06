@@ -33,6 +33,13 @@ namespace fidl {
     case Token::Kind::NumericLiteral: \
     case Token::Kind::StringLiteral
 
+namespace {
+enum {
+    More,
+    Done,
+};
+} // namespace
+
 std::unique_ptr<Identifier> Parser::ParseIdentifier() {
     auto identifier = ConsumeToken(Token::Kind::Identifier);
     if (!Ok())
@@ -48,21 +55,25 @@ std::unique_ptr<CompoundIdentifier> Parser::ParseCompoundIdentifier() {
     if (!Ok())
         return Fail();
 
-    for (;;) {
+    auto parse_component = [&components, this]() {
         switch (Peek()) {
         default:
-            return std::make_unique<CompoundIdentifier>(std::move(components));
+            return Done;
 
         case Token::Kind::Dot:
             ConsumeToken(Token::Kind::Dot);
-            if (!Ok())
-                return Fail();
-            components.emplace_back(ParseIdentifier());
-            if (!Ok())
-                return Fail();
-            break;
+            if (Ok())
+                components.emplace_back(ParseIdentifier());
+            return More;
         }
+    };
+
+    while (parse_component() == More) {
+        if (!Ok())
+            return Fail();
     }
+
+    return std::make_unique<CompoundIdentifier>(std::move(components));
 }
 
 std::unique_ptr<StringLiteral> Parser::ParseStringLiteral() {
@@ -148,19 +159,6 @@ std::unique_ptr<Constant> Parser::ParseConstant() {
     }
 }
 
-std::unique_ptr<ModuleName> Parser::ParseModuleName() {
-    ConsumeToken(Token::Kind::Module);
-    if (!Ok())
-        return Fail();
-    auto identifier = ParseCompoundIdentifier();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
-    return std::make_unique<ModuleName>(std::move(identifier));
-}
-
 std::unique_ptr<Using> Parser::ParseUsing() {
     ConsumeToken(Token::Kind::Using);
     if (!Ok())
@@ -173,23 +171,6 @@ std::unique_ptr<Using> Parser::ParseUsing() {
         return Fail();
 
     return std::make_unique<Using>(std::move(literal));
-}
-
-std::unique_ptr<UsingList> Parser::ParseUsingList() {
-    std::vector<std::unique_ptr<Using>> import_list;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<UsingList>(std::move(import_list));
-
-        case Token::Kind::Using:
-            import_list.emplace_back(ParseUsing());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
 }
 
 std::unique_ptr<HandleType> Parser::ParseHandleType() {
@@ -346,7 +327,7 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
     if (!Ok())
         return Fail();
 
-    std::unique_ptr<EnumMemberValue> field_value;
+    std::unique_ptr<EnumMemberValue> member_value;
 
     if (PeekFor(Token::Kind::Equal)) {
         ConsumeToken(Token::Kind::Equal);
@@ -358,7 +339,7 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
             auto compound_identifier = ParseCompoundIdentifier();
             if (!Ok())
                 return Fail();
-            field_value = std::make_unique<EnumMemberValueIdentifier>(std::move(compound_identifier));
+            member_value = std::make_unique<EnumMemberValueIdentifier>(std::move(compound_identifier));
             break;
         }
 
@@ -366,7 +347,7 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
             auto literal = ParseNumericLiteral();
             if (!Ok())
                 return Fail();
-            field_value = std::make_unique<EnumMemberValueNumeric>(std::move(literal));
+            member_value = std::make_unique<EnumMemberValueNumeric>(std::move(literal));
             break;
         }
 
@@ -380,27 +361,12 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
         return Fail();
 
     return std::make_unique<EnumMember>(std::move(identifier),
-                                        std::move(field_value));
-}
-
-std::unique_ptr<EnumBody> Parser::ParseEnumBody() {
-    std::vector<std::unique_ptr<EnumMember>> fields;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<EnumBody>(std::move(fields));
-
-        TOKEN_TYPE_CASES:
-            fields.emplace_back(ParseEnumMember());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
+                                        std::move(member_value));
 }
 
 std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
+    std::vector<std::unique_ptr<EnumMember>> members;
+
     ConsumeToken(Token::Kind::Enum);
     if (!Ok())
         return Fail();
@@ -419,9 +385,23 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
     ConsumeToken(Token::Kind::LeftCurly);
     if (!Ok())
         return Fail();
-    auto body = ParseEnumBody();
-    if (!Ok())
-        return Fail();
+
+    auto parse_member = [&members, this]() {
+        switch (Peek()) {
+        default:
+            return Done;
+
+        TOKEN_TYPE_CASES:
+            members.emplace_back(ParseEnumMember());
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            return Fail();
+    }
+
     ConsumeToken(Token::Kind::RightCurly);
     if (!Ok())
         return Fail();
@@ -431,23 +411,7 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
 
     return std::make_unique<EnumDeclaration>(std::move(identifier),
                                              std::move(subtype),
-                                             std::move(body));
-}
-
-std::unique_ptr<InterfaceMemberConst> Parser::ParseInterfaceMemberConst() {
-    auto const_decl = ParseConstDeclaration();
-    if (!Ok())
-        return Fail();
-
-    return std::make_unique<InterfaceMemberConst>(std::move(const_decl));
-}
-
-std::unique_ptr<InterfaceMemberEnum> Parser::ParseInterfaceMemberEnum() {
-    auto enum_decl = ParseEnumDeclaration();
-    if (!Ok())
-        return Fail();
-
-    return std::make_unique<InterfaceMemberEnum>(std::move(enum_decl));
+                                             std::move(members));
 }
 
 std::unique_ptr<Parameter> Parser::ParseParameter() {
@@ -493,27 +457,6 @@ std::unique_ptr<ParameterList> Parser::ParseParameterList() {
     return std::make_unique<ParameterList>(std::move(parameter_list));
 }
 
-std::unique_ptr<Response> Parser::ParseResponse() {
-    if (PeekFor(Token::Kind::Arrow)) {
-        ConsumeToken(Token::Kind::Arrow);
-        if (!Ok())
-            return Fail();
-        ConsumeToken(Token::Kind::LeftParen);
-        if (!Ok())
-            return Fail();
-        auto parameter_list = ParseParameterList();
-        if (!Ok())
-            return Fail();
-        ConsumeToken(Token::Kind::RightParen);
-        if (!Ok())
-            return Fail();
-
-        return std::make_unique<Response>(std::move(parameter_list));
-    }
-
-    return nullptr;
-}
-
 std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
     auto ordinal = ParseNumericLiteral();
     if (!Ok())
@@ -533,7 +476,23 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
     ConsumeToken(Token::Kind::RightParen);
     if (!Ok())
         return Fail();
-    auto response = ParseResponse();
+
+    std::unique_ptr<ParameterList> maybe_response;
+    if (PeekFor(Token::Kind::Arrow)) {
+        ConsumeToken(Token::Kind::Arrow);
+        if (!Ok())
+            return Fail();
+        ConsumeToken(Token::Kind::LeftParen);
+        if (!Ok())
+            return Fail();
+        maybe_response = ParseParameterList();
+        if (!Ok())
+            return Fail();
+        ConsumeToken(Token::Kind::RightParen);
+        if (!Ok())
+            return Fail();
+    }
+
     if (!Ok())
         return Fail();
     ConsumeToken(Token::Kind::Semicolon);
@@ -543,39 +502,14 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
     return std::make_unique<InterfaceMemberMethod>(std::move(ordinal),
                                                    std::move(identifier),
                                                    std::move(parameter_list),
-                                                   std::move(response));
-}
-
-std::unique_ptr<InterfaceBody> Parser::ParseInterfaceBody() {
-    std::vector<std::unique_ptr<InterfaceMember>> fields;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<InterfaceBody>(std::move(fields));
-
-        case Token::Kind::Const:
-            fields.emplace_back(ParseInterfaceMemberConst());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Enum:
-            fields.emplace_back(ParseInterfaceMemberEnum());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::NumericLiteral:
-            fields.emplace_back(ParseInterfaceMemberMethod());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
+                                                   std::move(maybe_response));
 }
 
 std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members;
+
     ConsumeToken(Token::Kind::Interface);
     if (!Ok())
         return Fail();
@@ -585,100 +519,72 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
     ConsumeToken(Token::Kind::LeftCurly);
     if (!Ok())
         return Fail();
-    auto body = ParseInterfaceBody();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::RightCurly);
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
 
-    return std::make_unique<InterfaceDeclaration>(std::move(identifier),
-                                                  std::move(body));
-}
+    auto parse_member = [&const_members, &enum_members, &method_members, this]() {
+        switch (Peek()) {
+        default:
+            ConsumeToken(Token::Kind::RightCurly);
+            if (Ok())
+                ConsumeToken(Token::Kind::Semicolon);
+            return Done;
 
-std::unique_ptr<StructMemberConst> Parser::ParseStructMemberConst() {
-    auto const_decl = ParseConstDeclaration();
-    if (!Ok())
-        return Fail();
+        case Token::Kind::Const:
+            const_members.emplace_back(ParseConstDeclaration());
+            return More;
 
-    return std::make_unique<StructMemberConst>(std::move(const_decl));
-}
+        case Token::Kind::Enum:
+            enum_members.emplace_back(ParseEnumDeclaration());
+            return More;
 
-std::unique_ptr<StructMemberEnum> Parser::ParseStructMemberEnum() {
-    auto enum_decl = ParseEnumDeclaration();
-    if (!Ok())
-        return Fail();
+        case Token::Kind::NumericLiteral:
+            method_members.emplace_back(ParseInterfaceMemberMethod());
+            return More;
+        }
+    };
 
-    return std::make_unique<StructMemberEnum>(std::move(enum_decl));
-}
-
-std::unique_ptr<StructDefaultValue> Parser::ParseStructDefaultValue() {
-    if (PeekFor(Token::Kind::Equal)) {
-        ConsumeToken(Token::Kind::Equal);
+    while (parse_member() == More) {
         if (!Ok())
             return Fail();
-        auto constant = ParseConstant();
-        if (!Ok())
-            return Fail();
-
-        return std::make_unique<StructDefaultValue>(std::move(constant));
     }
 
-    return nullptr;
+    return std::make_unique<InterfaceDeclaration>(std::move(identifier),
+                                                  std::move(const_members),
+                                                  std::move(enum_members),
+                                                  std::move(method_members));
 }
 
-std::unique_ptr<StructMemberField> Parser::ParseStructMemberField() {
+std::unique_ptr<StructMember> Parser::ParseStructMember() {
     auto type = ParseType();
     if (!Ok())
         return Fail();
     auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
-    auto default_value = ParseStructDefaultValue();
-    if (!Ok())
-        return Fail();
+
+    std::unique_ptr<Constant> maybe_default_value;
+    if (PeekFor(Token::Kind::Equal)) {
+        ConsumeToken(Token::Kind::Equal);
+        if (!Ok())
+            return Fail();
+        maybe_default_value = ParseConstant();
+        if (!Ok())
+            return Fail();
+    }
+
     ConsumeToken(Token::Kind::Semicolon);
     if (!Ok())
         return Fail();
 
-    return std::make_unique<StructMemberField>(std::move(type),
-                                               std::move(identifier),
-                                               std::move(default_value));
-}
-
-std::unique_ptr<StructBody> Parser::ParseStructBody() {
-    std::vector<std::unique_ptr<StructMember>> fields;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<StructBody>(std::move(fields));
-
-        case Token::Kind::Const:
-            fields.emplace_back(ParseStructMemberConst());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Enum:
-            fields.emplace_back(ParseStructMemberEnum());
-            if (!Ok())
-                return Fail();
-            break;
-
-        TOKEN_TYPE_CASES:
-            fields.emplace_back(ParseStructMemberField());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
+    return std::make_unique<StructMember>(std::move(type),
+                                          std::move(identifier),
+                                          std::move(maybe_default_value));
 }
 
 std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<StructMember>> members;
+
     ConsumeToken(Token::Kind::Struct);
     if (!Ok())
         return Fail();
@@ -688,18 +594,38 @@ std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
     ConsumeToken(Token::Kind::LeftCurly);
     if (!Ok())
         return Fail();
-    auto body = ParseStructBody();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::RightCurly);
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
+
+    auto parse_member = [&const_members, &enum_members, &members, this]() {
+        switch (Peek()) {
+        default:
+            ConsumeToken(Token::Kind::RightCurly);
+            if (Ok())
+                ConsumeToken(Token::Kind::Semicolon);
+            return Done;
+
+        case Token::Kind::Const:
+            const_members.emplace_back(ParseConstDeclaration());
+            return More;
+
+        case Token::Kind::Enum:
+            enum_members.emplace_back(ParseEnumDeclaration());
+            return More;
+
+        TOKEN_TYPE_CASES:
+            members.emplace_back(ParseStructMember());
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            return Fail();
+    }
 
     return std::make_unique<StructDeclaration>(std::move(identifier),
-                                               std::move(body));
+                                               std::move(const_members),
+                                               std::move(enum_members),
+                                               std::move(members));
 }
 
 std::unique_ptr<UnionMember> Parser::ParseUnionMember() {
@@ -717,24 +643,11 @@ std::unique_ptr<UnionMember> Parser::ParseUnionMember() {
                                          std::move(identifier));
 }
 
-std::unique_ptr<UnionBody> Parser::ParseUnionBody() {
-    std::vector<std::unique_ptr<UnionMember>> fields;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<UnionBody>(std::move(fields));
-
-        TOKEN_TYPE_CASES:
-            fields.emplace_back(ParseUnionMember());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
-}
-
 std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
+    std::vector<std::unique_ptr<ConstDeclaration>> const_members;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
+    std::vector<std::unique_ptr<UnionMember>> members;
+
     ConsumeToken(Token::Kind::Union);
     if (!Ok())
         return Fail();
@@ -744,9 +657,31 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
     ConsumeToken(Token::Kind::LeftCurly);
     if (!Ok())
         return Fail();
-    auto body = ParseUnionBody();
-    if (!Ok())
-        return Fail();
+
+    auto parse_member = [&const_members, &enum_members, &members, this]() {
+        switch (Peek()) {
+        default:
+            return Done;
+
+        case Token::Kind::Const:
+            const_members.emplace_back(ParseConstDeclaration());
+            return More;
+
+        case Token::Kind::Enum:
+            enum_members.emplace_back(ParseEnumDeclaration());
+            return More;
+
+        TOKEN_TYPE_CASES:
+            members.emplace_back(ParseUnionMember());
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            return Fail();
+    }
+
     ConsumeToken(Token::Kind::RightCurly);
     if (!Ok())
         return Fail();
@@ -755,67 +690,90 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
         return Fail();
 
     return std::make_unique<UnionDeclaration>(std::move(identifier),
-                                              std::move(body));
-}
-
-std::unique_ptr<DeclarationList> Parser::ParseDeclarationList() {
-    std::vector<std::unique_ptr<Declaration>> declaration_list;
-
-    for (;;) {
-        switch (Peek()) {
-        default:
-            return std::make_unique<DeclarationList>(std::move(declaration_list));
-
-        case Token::Kind::Const:
-            declaration_list.emplace_back(ParseConstDeclaration());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Enum:
-            declaration_list.emplace_back(ParseEnumDeclaration());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Interface:
-            declaration_list.emplace_back(ParseInterfaceDeclaration());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Struct:
-            declaration_list.emplace_back(ParseStructDeclaration());
-            if (!Ok())
-                return Fail();
-            break;
-
-        case Token::Kind::Union:
-            declaration_list.emplace_back(ParseUnionDeclaration());
-            if (!Ok())
-                return Fail();
-            break;
-        }
-    }
+                                              std::move(const_members),
+                                              std::move(enum_members),
+                                              std::move(members));
 }
 
 std::unique_ptr<File> Parser::ParseFile() {
-    auto module_name = ParseModuleName();
+    std::vector<std::unique_ptr<Using>> using_list;
+    std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
+    std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
+    std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;
+    std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
+    std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
+
+    ConsumeToken(Token::Kind::Module);
     if (!Ok())
         return Fail();
-    auto import_list = ParseUsingList();
+    auto identifier = ParseCompoundIdentifier();
     if (!Ok())
         return Fail();
-    auto declaration_list = ParseDeclarationList();
+    ConsumeToken(Token::Kind::Semicolon);
     if (!Ok())
         return Fail();
+
+    auto parse_using = [&using_list, this]() {
+        switch (Peek()) {
+        default:
+            return Done;
+
+        case Token::Kind::Using:
+            using_list.emplace_back(ParseUsing());
+            return More;
+        }
+    };
+
+    while (parse_using() == More) {
+        if (!Ok())
+            return Fail();
+    }
+
+    auto parse_declaration = [&const_declaration_list, &enum_declaration_list,
+                              &interface_declaration_list, &struct_declaration_list,
+                              &union_declaration_list, this]() {
+        switch (Peek()) {
+        default:
+            return Done;
+
+        case Token::Kind::Const:
+            const_declaration_list.emplace_back(ParseConstDeclaration());
+            return More;
+
+        case Token::Kind::Enum:
+            enum_declaration_list.emplace_back(ParseEnumDeclaration());
+            return More;
+
+        case Token::Kind::Interface:
+            interface_declaration_list.emplace_back(ParseInterfaceDeclaration());
+            return More;
+
+        case Token::Kind::Struct:
+            struct_declaration_list.emplace_back(ParseStructDeclaration());
+            return More;
+
+        case Token::Kind::Union:
+            union_declaration_list.emplace_back(ParseUnionDeclaration());
+            return More;
+        }
+    };
+
+    while (parse_declaration() == More) {
+        if (!Ok())
+            return Fail();
+    }
+
     ConsumeToken(Token::Kind::EndOfFile);
     if (!Ok())
         return Fail();
 
-    return std::make_unique<File>(std::move(module_name),
-                                  std::move(import_list),
-                                  std::move(declaration_list));
+    return std::make_unique<File>(std::move(identifier),
+                                  std::move(using_list),
+                                  std::move(const_declaration_list),
+                                  std::move(enum_declaration_list),
+                                  std::move(interface_declaration_list),
+                                  std::move(struct_declaration_list),
+                                  std::move(union_declaration_list));
 }
 
 } // namespace fidl
