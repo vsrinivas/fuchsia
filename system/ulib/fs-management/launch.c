@@ -43,7 +43,7 @@ mx_status_t launch_logs_async(int argc, const char** argv, mx_handle_t* handles,
     mx_status_t status;
     const char* errmsg;
     if ((status = launchpad_go(lp, NULL, &errmsg)) != NO_ERROR) {
-        printf("fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
     }
     return status;
 }
@@ -69,16 +69,28 @@ mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
     mx_handle_t proc;
     const char* errmsg;
     if ((status = launchpad_go(lp, &proc, &errmsg)) != NO_ERROR) {
-        printf("fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
         return status;
     }
 
     status = mx_object_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "launch: Error waiting for process to terminate\n");
+        mx_handle_close(proc);
+        return status;
+    }
+
+    mx_info_process_t info;
+    if ((status = mx_object_get_info(proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL)) < 0) {
+        fprintf(stderr, "launch: Failed to get process info\n");
+        mx_handle_close(proc);
+        return status;
     }
     mx_handle_close(proc);
-    return status;
+    if (!info.exited || info.return_code != 0) {
+        return ERR_BAD_STATE;
+    }
+    return NO_ERROR;
 }
 
 mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles,
@@ -89,7 +101,7 @@ mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles
     mx_status_t status;
     const char* errmsg;
     if ((status = launchpad_go(lp, NULL, &errmsg)) != NO_ERROR) {
-        printf("fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
+        fprintf(stderr, "fs-management: Cannot launch %s: %d: %s\n", argv[0], status, errmsg);
         return status;
     }
     return status;
