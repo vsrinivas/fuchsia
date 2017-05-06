@@ -33,8 +33,7 @@ public:
 
     void Deactivate() __TA_EXCLUDES(obj_lock_);
 
-    mx_status_t ProcessSendCORBCmd(const ihda_proto::SendCORBCmdResp& resp)
-        __TA_EXCLUDES(obj_lock_);
+    mx_status_t ProcessResponse(const CodecResponse& resp) __TA_EXCLUDES(obj_lock_);
     mx_status_t ProcessRequestStream(const ihda_proto::RequestStreamResp& resp)
         __TA_EXCLUDES(obj_lock_);
     mx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
@@ -69,7 +68,9 @@ protected:
     virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_) { }
     virtual mx_status_t OnDMAAssignedLocked()
         __TA_REQUIRES(obj_lock_) { return PublishDeviceLocked(); }
-    virtual mx_status_t OnCommandResponseLocked(const CodecResponse& resp)
+    virtual mx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
+        __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
+    virtual mx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
     virtual mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_) { return ERR_NOT_SUPPORTED; }
@@ -94,6 +95,10 @@ protected:
     // DispatcherChannel::Owner implementation
     mx_status_t ProcessChannel(DispatcherChannel* channel) final;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
+
+    // Unsolicited tag allocation for streams.
+    mx_status_t AllocateUnsolTagLocked(uint8_t* out_tag) __TA_REQUIRES(obj_lock_);
+    void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
 private:
     mx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
@@ -124,8 +129,9 @@ private:
 
     mxtl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(obj_lock_);
 
-    uint32_t set_format_tid_ __TA_GUARDED(obj_lock_) = AUDIO2_INVALID_TRANSACTION_ID;
-    uint16_t encoded_fmt_    __TA_GUARDED(obj_lock_);
+    uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO2_INVALID_TRANSACTION_ID;
+    uint16_t encoded_fmt_     __TA_GUARDED(obj_lock_);
+    uint32_t unsol_tag_count_ __TA_GUARDED(obj_lock_) = 0;
 
     static mx_status_t EncodeStreamFormat(const audio2_proto::StreamSetFmtReq& fmt,
                                           uint16_t* encoded_fmt_out);

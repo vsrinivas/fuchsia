@@ -7,6 +7,7 @@
 #include <mx/channel.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
+#include <string.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
 #include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
@@ -161,9 +162,31 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
             CHECK_RESP(IHDA_CODEC_SEND_CORB_CMD, send_corb);
 
             CodecResponse payload(resp.send_corb.data, resp.send_corb.data_ex);
-            return payload.unsolicited()
-                ? ProcessUnsolicitedResponse(payload)
-                : ProcessSolicitedResponse(payload);
+            if (!payload.unsolicited())
+                return ProcessSolicitedResponse(payload);
+
+            // If this is an unsolicited reponse, check to see if the tag is
+            // owned by a stream or not.  If it is, dispatch the payload to the
+            // stream, otherwise give it to the codec.
+            uint32_t stream_id;
+            mx_status_t res = MapUnsolTagToStreamId(payload.unsol_tag(), &stream_id);
+            if (res != NO_ERROR) {
+                DEBUG_LOG("Received unexpected unsolicited reponse (tag %u)\n",
+                          payload.unsol_tag());
+                return NO_ERROR;
+            }
+
+            if (stream_id == CODEC_TID)
+                return ProcessUnsolicitedResponse(payload);
+
+            auto stream = GetActiveStream(stream_id);
+            if (stream == nullptr) {
+                DEBUG_LOG("Received unsolicited reponse (tag %u) for inactive stream (id %u)\n",
+                          payload.unsol_tag(), stream_id);
+                return NO_ERROR;
+            } else {
+                return stream->ProcessResponse(payload);
+            }
         }
 
         default:
@@ -183,9 +206,18 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     MX_DEBUG_ASSERT(stream != nullptr);
 
     switch(resp.hdr.cmd) {
-    case IHDA_CODEC_SEND_CORB_CMD:
+    case IHDA_CODEC_SEND_CORB_CMD: {
         CHECK_RESP(IHDA_CODEC_SEND_CORB_CMD, send_corb);
-        return stream->ProcessSendCORBCmd(resp.send_corb);
+        CodecResponse payload(resp.send_corb.data, resp.send_corb.data_ex);
+
+        if (payload.unsolicited()) {
+            DEBUG_LOG("Unsolicited response sent directly to stream ID %u! (0x%08x, 0x%08x)\n",
+                      stream->id(), payload.data, payload.data_ex);
+            return ERR_INVALID_ARGS;
+        }
+
+        return stream->ProcessResponse(payload);
+    }
 
     case IHDA_CODEC_REQUEST_STREAM:
         CHECK_RESP(IHDA_CODEC_REQUEST_STREAM, request_stream);
@@ -305,6 +337,19 @@ mx_status_t IntelHDACodecDriverBase::ActivateStream(
     return stream->Activate(mxtl::WrapRefPtr(this), device_channel);
 }
 
+mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(const IntelHDAStreamBase& stream,
+                                                      uint8_t* out_tag) {
+    return AllocateUnsolTag(stream.id(), out_tag);
+}
+
+void IntelHDACodecDriverBase::ReleaseUnsolTag(const IntelHDAStreamBase& stream, uint8_t tag) {
+    return ReleaseUnsolTag(stream.id(), tag);
+}
+
+void IntelHDACodecDriverBase::ReleaseAllUnsolTags(const IntelHDAStreamBase& stream) {
+    return ReleaseAllUnsolTags(stream.id());
+}
+
 mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
     mxtl::RefPtr<IntelHDAStreamBase> stream;
     {
@@ -317,6 +362,64 @@ mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
 
     stream->Deactivate();
 
+    return NO_ERROR;
+}
+
+mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag) {
+    MX_DEBUG_ASSERT(out_tag != nullptr);
+    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+
+    static_assert(sizeof(free_unsol_tags_) == sizeof(long long int),
+                  "free_unsol_tags_ is not the same size as a long long int.  "
+                  "Cannot use ffsll to find the first set bit!");
+
+    uint32_t first_set = ffsll(free_unsol_tags_);
+    if (!first_set)
+      return ERR_NO_MEMORY;
+
+    --first_set;
+
+    *out_tag = first_set;
+    free_unsol_tags_ &= ~(1ull << first_set);
+    unsol_tag_to_stream_id_map_[first_set] = stream_id;
+    return NO_ERROR;
+
+}
+
+void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
+    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    uint64_t mask = uint64_t(1u) << tag;
+
+    MX_DEBUG_ASSERT(mask != 0);
+    MX_DEBUG_ASSERT(!(free_unsol_tags_ & mask));
+    MX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
+    MX_DEBUG_ASSERT(unsol_tag_to_stream_id_map_[tag] == stream_id);
+
+    free_unsol_tags_ |= mask;
+}
+
+void IntelHDACodecDriverBase::ReleaseAllUnsolTags(uint32_t stream_id) {
+    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+
+    for (uint32_t tmp = 0u; tmp < countof(unsol_tag_to_stream_id_map_); ++tmp) {
+        uint64_t mask = uint64_t(1u) << tmp;
+        if (!(free_unsol_tags_ & mask) && (unsol_tag_to_stream_id_map_[tmp] == stream_id)) {
+            free_unsol_tags_ |= mask;
+        }
+    }
+}
+
+mx_status_t IntelHDACodecDriverBase::MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id) {
+    MX_DEBUG_ASSERT(out_stream_id != nullptr);
+
+    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    uint64_t mask = uint64_t(1u) << tag;
+
+    if ((!mask) || (free_unsol_tags_ & mask))
+        return ERR_NOT_FOUND;
+
+    MX_DEBUG_ASSERT(tag < countof(unsol_tag_to_stream_id_map_));
+    *out_stream_id = unsol_tag_to_stream_id_map_[tag];
     return NO_ERROR;
 }
 
