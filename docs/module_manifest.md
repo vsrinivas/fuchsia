@@ -17,7 +17,7 @@ sections:
 
 * Identity & Module Contract
 * Dependencies (other services needed to run)
-* Data Preconditions
+* Data Preconditions or Schema
 * Display and Composition
 
 What's missing:
@@ -35,9 +35,11 @@ below for examples).
 
 A description of known contracts is available [here](known_contracts.md).
 
-## Data Preconditions
+## Data Preconditions / Schema
 
-Modules get their input in the form of a JSON document.
+Modules get their input in the form of a JSON document. Either data
+preconditions or a schema may be specified to govern how modules are resolved
+based on input data.
 
 **data_preconditions** : &lt;any&gt;
 
@@ -103,3 +105,9 @@ matches link data
 
 If the value is anything else, the match succeeds if the member is exactly equal
 (in type and value) to the member being tested.
+
+**data_schema**: &lt;JSON schema&gt;
+
+JSON schemas are described at [json-schema.org](http://json-schema.org). An
+interactive scratchpad to experiment with schemas is available at
+[jsonschemavalidator.net](http://www.jsonschemavalidator.net/).

@@ -7,11 +7,10 @@
 
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/stringbuffer.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
+#include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace resolver {
 
@@ -24,6 +23,10 @@ constexpr char kModuleFacetName[] = "fuchsia:module";
 using MatchScore = int;
 constexpr MatchScore kDefaultMatch = 0;
 constexpr MatchScore kNumericMatch = 4;  // https://xkcd.com/221/
+// We don't have visibility into schemas for match fidelity, so use the string
+// length of the serialized JSON schema document as a proxy with a scaling
+// factor.
+constexpr float kSchemaMatchFactor = .1f;
 
 // match function signature doc:
 //
@@ -119,12 +122,8 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
                      rapidjson::Value(contract.get().c_str(), contract.size()),
                      document.GetAllocator());
 
-  rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-  document.Accept(writer);
-
   fidl::Map<fidl::String, fidl::String> filter;
-  filter[kModuleFacetName] = buffer.GetString();
+  filter[kModuleFacetName] = modular::JsonValueToString(document);
 
   component_index_->FindComponentManifests(
       std::move(filter),
@@ -150,14 +149,27 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
           }
 
           const auto& url = (*it)->component->url;
-          if (data.IsNull() ||
-              !manifest[kModuleFacetName].HasMember("data_preconditions")) {
+          const auto& module_facet = manifest[kModuleFacetName];
+          if (module_facet.HasMember("data_schema")) {
+            const auto& schema_doc = module_facet["data_schema"];
+            rapidjson::SchemaDocument schema(schema_doc);
+            rapidjson::SchemaValidator validator(schema);
+            if (data.Accept(validator)) {
+              MatchScore score =
+                  (MatchScore)(modular::JsonValueToString(schema_doc).length() *
+                               kSchemaMatchFactor);
+              FTL_LOG(INFO) << "Resolved to " << url << " with score " << score;
+              raw_results.push_back({url, score});
+            }
+          } else if (data.IsNull() ||
+                     !module_facet.HasMember("data_preconditions")) {
+            FTL_LOG(INFO) << "Resolved to " << url << " with score "
+                          << kDefaultMatch << " (default)";
             raw_results.push_back({url, kDefaultMatch});
           } else {
             MatchScore score;
-            if (MatchDataPrecondition(
-                    manifest[kModuleFacetName]["data_preconditions"], data,
-                    &score)) {
+            if (MatchDataPrecondition(module_facet["data_preconditions"], data,
+                                      &score)) {
               FTL_LOG(INFO) << "Resolved to " << url << " with score " << score;
               raw_results.push_back({url, score});
             }

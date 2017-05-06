@@ -10,6 +10,7 @@ Map<String, dynamic> decomposeUri(final Uri uri) {
     'scheme': uri.scheme,
     'host': uri.host,
     'path': uri.path,
+    'path segments': uri.pathSegments,
     'query parameters': uri.queryParameters,
   };
 }

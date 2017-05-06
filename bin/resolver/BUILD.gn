@@ -13,6 +13,7 @@ executable("resolver") {
     "//application/lib/app",
     "//application/services:services_sync",
     "//apps/maxwell/services/resolver",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/component",
     "//lib/ftl",
     "//lib/mtl",
