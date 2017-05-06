@@ -22,7 +22,7 @@ function HELP {
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
     echo "-o <dir>             : build directory"
-    echo "-q <directory>       : location of qemu, defaults to looking on \$PATH"
+    echo "-q <directory>       : location of qemu, defaults to looking in ../buildtools/qemu/bin, then\$PATH"
     echo "-r                   : run release build"
     echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
     echo "-u <path>            : execute qemu startUp script, default is no script"
@@ -53,7 +53,6 @@ DO_KVM=0
 MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
-QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
 VNC=
@@ -138,6 +137,13 @@ if [ "$BUILD" -eq 1 ]; then
     else
         $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
     fi
+fi
+
+# by default use the qemu binary located in the fuchsia buildtools
+# repo if we can find it, but allow -q to override it for people
+# who want to use their own.
+if [[ -z $QEMUDIR ]] && [[ -d "../buildtools/qemu/bin" ]]; then
+    QEMUDIR="$PWD/../buildtools/qemu/bin/"
 fi
 
 # append the release path if requested
