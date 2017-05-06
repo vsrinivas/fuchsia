@@ -17,6 +17,7 @@ typedef struct fs_info {
     int (*mkfs)(const char* disk_path);
     int (*mount)(const char* disk_path, const char* mount_path);
     int (*unmount)(const char* mount_path);
+    int (*fsck)(const char* mount_path);
     bool can_be_mounted;
     bool can_mount_sub_filesystems;
     bool supports_hardlinks;
