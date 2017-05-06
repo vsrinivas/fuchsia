@@ -29,6 +29,11 @@ public:
     mx_driver_t* codec_driver() const { return codec_driver_; }
     mx_device_t* codec_device() const { return codec_device_; }
 
+    // Unsolicited tag allocation for streams
+    mx_status_t AllocateUnsolTag(const IntelHDAStreamBase& stream, uint8_t* out_tag);
+    void ReleaseUnsolTag(const IntelHDAStreamBase& stream, uint8_t tag);
+    void ReleaseAllUnsolTags(const IntelHDAStreamBase& stream);
+
 protected:
     static constexpr uint32_t CODEC_TID = 0xFFFFFFFF;
 
@@ -56,6 +61,10 @@ protected:
     mx_status_t ProcessChannel(DispatcherChannel* channel) final;
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
+    // Unsolicited tag allocation for codecs.
+    mx_status_t AllocateUnsolTag(uint8_t* out_tag) { return AllocateUnsolTag(CODEC_TID, out_tag); }
+    void ReleaseUnsolTag(uint8_t tag) { ReleaseUnsolTag(CODEC_TID, tag); }
+
     mxtl::RefPtr<IntelHDAStreamBase> GetActiveStream(uint32_t stream_id)
         __TA_EXCLUDES(active_streams_lock_);
     mx_status_t ActivateStream(const mxtl::RefPtr<IntelHDAStreamBase>& stream)
@@ -75,6 +84,12 @@ private:
         ihda_proto::RequestStreamResp request_stream;
         ihda_proto::SetStreamFmtResp  set_stream_fmt;
     };
+
+    // Unsolicited response tag to stream ID bookkeeping.
+    mx_status_t AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag);
+    void        ReleaseUnsolTag (uint32_t stream_id, uint8_t  tag);
+    void        ReleaseAllUnsolTags(uint32_t stream_id);
+    mx_status_t MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id);
 
     // Called in order to unlink this device from the controller driver.  After
     // this call returns, the codec driver is guaranteed that no calls to any of
@@ -101,6 +116,16 @@ private:
 
     mxtl::Mutex shutdown_lock_ __TA_ACQUIRED_BEFORE(device_channel_lock_, active_streams_lock_);
     bool        shutting_down_ __TA_GUARDED(shutdown_lock_) = false;
+
+    // State for tracking unsolicited response tag allocations.
+    //
+    // Note: If we wanted to save a bit of RAM, we could move this to a
+    // dynamically allocated list/tree based system.  For now, however, this LUT
+    // is dirt simple and does the job.
+    mxtl::Mutex unsol_tag_lock_;
+    uint64_t free_unsol_tags_ __TA_GUARDED(unsol_tag_lock_) = 0xFFFFFFFFFFFFFFFEu;
+    uint32_t unsol_tag_to_stream_id_map_[sizeof(free_unsol_tags_) << 3]
+        __TA_GUARDED(unsol_tag_lock_);
 };
 
 }  // namespace codecs

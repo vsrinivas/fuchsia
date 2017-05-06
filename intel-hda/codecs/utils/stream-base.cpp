@@ -101,6 +101,13 @@ void IntelHDAStreamBase::Deactivate() {
         mxtl::AutoLock obj_lock(&obj_lock_);
         DEBUG_LOG("Deactivating stream\n");
 
+        // Let go of any unsolicited stream tags we may be holding.
+        if (unsol_tag_count_) {
+            MX_DEBUG_ASSERT(parent_codec_ != nullptr);
+            parent_codec_->ReleaseAllUnsolTags(*this);
+            unsol_tag_count_ = 0;
+        }
+
         // Clear out our parent_codec_ pointer.  This will mark us as being
         // inactive and prevent any new connections from being made.
         parent_codec_.reset();
@@ -176,12 +183,18 @@ mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
     return NO_ERROR;
 }
 
-mx_status_t IntelHDAStreamBase::ProcessSendCORBCmd(const ihda_proto::SendCORBCmdResp& resp) {
+mx_status_t IntelHDAStreamBase::ProcessResponse(const CodecResponse& resp) {
     mxtl::AutoLock obj_lock(&obj_lock_);
 
-    if (!is_active()) return ERR_BAD_STATE;
+    if (!is_active()) {
+        DEBUG_LOG("Ignoring codec response (0x%08x, 0x%08x) for inactive stream id %u\n",
+                resp.data, resp.data_ex, id());
+        return NO_ERROR;
+    }
 
-    return OnCommandResponseLocked(CodecResponse(resp.data, resp.data_ex));
+    return resp.unsolicited()
+        ? OnUnsolicitedResponseLocked(resp)
+        : OnSolicitedResponseLocked(resp);
 }
 
 mx_status_t IntelHDAStreamBase::ProcessRequestStream(const ihda_proto::RequestStreamResp& resp) {
@@ -480,6 +493,24 @@ void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& chann
     // Our user just closed their stream channel...  Should we stop any DMA
     // which is currently in progress, or is this OK?
     stream_channel_.reset();
+}
+
+mx_status_t IntelHDAStreamBase::AllocateUnsolTagLocked(uint8_t* out_tag) {
+    if (!parent_codec_)
+        return ERR_BAD_STATE;
+
+    mx_status_t res = parent_codec_->AllocateUnsolTag(*this, out_tag);
+    if (res == NO_ERROR)
+        unsol_tag_count_++;
+
+    return res;
+}
+
+void IntelHDAStreamBase::ReleaseUnsolTagLocked(uint8_t tag) {
+    MX_DEBUG_ASSERT(unsol_tag_count_ > 0);
+    MX_DEBUG_ASSERT(parent_codec_ != nullptr);
+    parent_codec_->ReleaseUnsolTag(*this, tag);
+    unsol_tag_count_--;
 }
 
 // TODO(johngro) : Move this out to a utils library?
