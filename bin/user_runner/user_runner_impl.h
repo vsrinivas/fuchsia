@@ -105,10 +105,6 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
 
-  // Keeps connections to applications started here around so they are
-  // killed when this instance is deleted.
-  std::vector<app::ApplicationControllerPtr> application_controllers_;
-
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
