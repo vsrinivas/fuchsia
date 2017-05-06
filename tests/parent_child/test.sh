@@ -14,4 +14,4 @@ fi
 netcp ${FUCHSIA_BUILD_DIR}/parent_module :/system/apps/modular_tests/parent_module
 netcp ${FUCHSIA_BUILD_DIR}/child_module :/system/apps/modular_tests/child_module
 
-${FUCHSIA_DIR}/apps/test_runner/src/run_test "device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module"
+${FUCHSIA_DIR}/apps/test_runner/src/run_test "device_runner --user_shell=dev_user_shell --device_shell_args=--test --user_shell_args=--root_module=/system/apps/modular_tests/parent_module"

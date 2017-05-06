@@ -91,9 +91,7 @@ class Settings {
   }
 
   AppConfig device_shell;
-
   AppConfig user_shell;
-
   AppConfig story_shell;
 
   bool ledger_repository_for_testing;
@@ -129,10 +127,6 @@ class Settings {
 
     if (!arg.empty()) {
       args->push_back(arg);
-    }
-
-    for (auto& s : *args) {
-      FTL_LOG(INFO) << "ARG " << s;
     }
   }
 
@@ -262,8 +256,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   // TODO(vardhan): Signal the ledger application to tear down.
   void Shutdown() override {
     FTL_LOG(INFO) << "DeviceShellContext::Shutdown()";
-    auto cont = [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); };
-    user_provider_impl_->Teardown(cont);
+    user_provider_impl_->Teardown(
+        [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   }
 
   // |AccountProviderContext|

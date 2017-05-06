@@ -9,6 +9,8 @@
 #include <memory>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/testing/reporting.h"
+#include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "lib/ftl/command_line.h"
@@ -23,19 +25,28 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_name =
         command_line.GetOptionValueWithDefault("device_name", "magenta");
+
     // default user is incognito
     user = command_line.GetOptionValueWithDefault("user", "");
+
+    // If passed, runs as a test harness.
+    test = command_line.HasOption("test");
   }
 
   std::string device_name;
   std::string user;
+  bool test{};
 };
 
 class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
                           modular::UserWatcher {
  public:
   DevDeviceShellApp(const Settings& settings)
-      : settings_(settings), user_watcher_binding_(this) {}
+      : settings_(settings), user_watcher_binding_(this) {
+    if (settings_.test) {
+      modular::testing::Init(application_context(), __FILE__);
+    }
+  }
   ~DevDeviceShellApp() override = default;
 
  private:
@@ -74,6 +85,11 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   // |UserWatcher|
   void OnLogout() override {
     FTL_LOG(INFO) << "UserWatcher::OnLogout()";
+
+    if (settings_.test) {
+      modular::testing::Teardown();
+    }
+
     device_shell_context_->Shutdown();
   }
 

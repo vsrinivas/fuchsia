@@ -61,12 +61,10 @@ class Settings {
         "first_module", "file:///system/apps/example_recipe");
     second_module = command_line.GetOptionValueWithDefault(
         "second_module", "file:///system/apps/example_flutter_hello_world");
-    test = command_line.GetOptionValueWithDefault("test", "1") == "1";
   }
 
   std::string first_module;
   std::string second_module;
-  bool test{};
 };
 
 // A simple link watcher implementation that after every 5 updates of a Link
@@ -200,9 +198,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
  private:
   TestUserShellApp(const Settings& settings) : settings_(settings) {
-    if (settings_.test) {
-      modular::testing::Init(application_context(), __FILE__);
-    }
+    modular::testing::Init(application_context(), __FILE__);
   }
 
   ~TestUserShellApp() override = default;
@@ -510,18 +506,11 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     // asynchronously delete post Teardown() to the test runner, and finally
     // asynchronously stop the message queue.
 
-    const bool test = settings_.test;
     auto binding = PassBinding();  // To invoke done() after delete this.
 
     delete this;
 
-    if (test) {
-      // TODO(mesch): There is a race between test runner killing everything
-      // when it receives teardown and the user runner killing this when
-      // receiving done(). The solution would be to call Done() here and call
-      // Teardown() in dev_device_shell after logout.
-      modular::testing::Teardown();
-    }
+    modular::testing::Done();
 
     done();
 

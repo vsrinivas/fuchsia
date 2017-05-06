@@ -70,7 +70,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     stopped_.Pass();
     auto binding = PassBinding();  // To invoke done() after delete this.
     delete this;
-    modular::testing::Teardown();
+    modular::testing::Done();
     done();
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }

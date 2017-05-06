@@ -2,7 +2,7 @@
   "tests":[
     {
       "name":"user_shell",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=test_user_shell --story_shell=dummy_story_shell",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=test_user_shell --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps":[
           "test_user_shell"
@@ -11,7 +11,7 @@
     },
     {
       "name":"parent_child",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/parent_module",
       "copy":{
         "/system/apps/modular_tests":[
           "parent_module",
@@ -21,18 +21,19 @@
     },
     {
       "name":"component_context",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --story_shell=dummy_story_shell --user_shell_args=--root_module=/system/apps/modular_tests/component_context_test",
       "copy":{
         "/system/apps/modular_tests":[
           "component_context_test",
           "component_context_test_agent1",
-          "component_context_test_agent2"
+          "component_context_test_agent2",
+          "component_context_unstoppable_agent"
         ]
       }
     },
     {
       "name":"suggestion",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=suggestion_test_user_shell --story_shell=dummy_story_shell",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=suggestion_test_user_shell --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "suggestion_proposal_test_module"
@@ -44,7 +45,7 @@
     },
     {
       "name":"triggers",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dummy_story_shell",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/agent_trigger_test --story_shell=dummy_story_shell",
       "copy":{
         "/system/apps/modular_tests":[
           "agent_trigger_test",
@@ -54,7 +55,7 @@
     },
     {
       "name":"queue_persistence",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/queue_persistence_test_module",
       "copy":{
         "/system/apps/modular_tests":[
           "queue_persistence_test_agent",
@@ -64,7 +65,7 @@
     },
     {
       "name":"remote",
-      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test",
+      "exec":"device_runner --ledger_repository_for_testing --device_shell=dev_device_shell --device_shell_args=--test --user_shell=dev_user_shell --user_shell_args=--root_module=/system/apps/modular_tests/remote_invoker_test",
       "copy":{
         "/system/apps/modular_tests":[
           "remote_invoker_test"
