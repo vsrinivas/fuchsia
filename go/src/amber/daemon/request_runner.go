@@ -5,6 +5,7 @@
 package daemon
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,7 +15,8 @@ type RequestRunner struct {
 	LatestCheck time.Time
 	*time.Ticker
 	*SourceSet
-	done chan struct{}
+	done      chan struct{}
+	Processor func(*Package, Source) error
 }
 
 // Start begins the RequestRunner which will then check for a package at
@@ -58,6 +60,7 @@ func (pm *RequestRunner) check(t time.Time) {
 		return
 	}
 
+	fmt.Printf(".")
 	srcs := pm.SourceSet.Sources()
 
 	// TODO(jmatt) Actually return the result in a way that might be
@@ -66,10 +69,19 @@ func (pm *RequestRunner) check(t time.Time) {
 	for j := range targets {
 		for _, src := range srcs {
 			pkg, e := src.FetchUpdate(&targets[j])
-			if e == nil {
-				src.FetchPkg(pkg)
-				break
+			if e != nil {
+				if e != ErrNoUpdate && e != ErrUnknownPkg {
+					fmt.Printf("error getting update: %v\n", e)
+				}
+				continue
 			}
+			e = pm.Processor(pkg, src)
+			if e != nil {
+				fmt.Printf("error processing package %v\n", e)
+				continue
+			}
+			// TODO(jmatt) verify pkg on disk
+			targets[j] = *pkg
 		}
 	}
 

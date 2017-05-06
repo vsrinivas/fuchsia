@@ -6,11 +6,24 @@ package daemon
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
 	"time"
 )
+
+var letters = []rune("1234567890abcdef")
+
+func randSeq(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	runeLen := len(letters)
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(runeLen)]
+	}
+	return string(b)
+}
 
 type testSrc struct {
 	mu         sync.Mutex
@@ -21,12 +34,12 @@ type testSrc struct {
 func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
 	t.mu.Lock()
 	now := time.Now()
-	tList := t.UpdateReqs[pkg.String()]
+	tList := t.UpdateReqs[pkg.Name]
 	if tList == nil {
 		tList = []time.Time{}
 	}
 	tList = append(tList, now)
-	t.UpdateReqs[pkg.String()] = tList
+	t.UpdateReqs[pkg.Name] = tList
 	p := Package{Name: pkg.Name, Version: randSeq(6)}
 	t.getReqs[p.String()] = &struct{}{}
 	t.mu.Unlock()
@@ -37,13 +50,13 @@ func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
 
 func (t *testSrc) FetchPkg(pkg *Package) (*os.File, error) {
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	if t.getReqs[pkg.String()] == nil {
 		fmt.Println("ERROR: unknown update pkg requested")
 		return nil, ErrNoUpdateContent
 	}
 
 	delete(t.getReqs, pkg.String())
-	t.mu.Unlock()
 
 	fmt.Print("|")
 	return nil, nil
@@ -60,6 +73,11 @@ func (t *testSrc) Equals(o Source) bool {
 	default:
 		return false
 	}
+}
+
+func processPackage(pkg *Package, src Source) error {
+	_, err := src.FetchPkg(pkg)
+	return err
 }
 
 // TestDaemon tests daemon.go with a fake package source. The test runs for ~30
@@ -88,8 +106,9 @@ func TestDaemon(t *testing.T) {
 	jobs := []*UpdateRequest{job1, job2, job3}
 	d := NewDaemon(&srcSet)
 	startTime := time.Now()
+
 	for _, j := range jobs {
-		d.AddRequest(j)
+		d.AddRequest(j, processPackage)
 	}
 
 	// sleep for 30 seconds while we run
@@ -103,7 +122,7 @@ func TestDaemon(t *testing.T) {
 		for i := range jobs {
 			targets := jobs[i].GetTargets()
 			for j := range targets {
-				if targets[j].String() == k {
+				if targets[j].Name == k {
 					targJob = jobs[i]
 					break Outer
 				}

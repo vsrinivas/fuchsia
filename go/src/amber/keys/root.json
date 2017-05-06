@@ -1,0 +1,19 @@
+{
+	"encrypted": true,
+	"data": {
+		"kdf": {
+			"name": "scrypt",
+			"params": {
+				"N": 32768,
+				"r": 8,
+				"p": 1
+			},
+			"salt": "hvImKM9XW8eXssJNXqljpMwJPGrMPMYNgqRtEvXJ8z8="
+		},
+		"cipher": {
+			"name": "nacl/secretbox",
+			"nonce": "tafCk9s0NuDUmK3Q4KzRSbOTcu6o/FJn"
+		},
+		"ciphertext": "u9Woz9y7dSYkc2pkdmIf8t5W0BEYQFmjXm4naMi9dgAocQq9O18gCxQvHirHpyI7rB+8fjdgmY/493rngaofdYcvA8v+4Cx9mzmf0q/NkJWVAmAlEDwUs5napKzKJYABL4qx4pHYFThyUL8evPtYYPVvd8lYAJC4sMKzSbVxxukseMlICgcdg0XL759sYc4hoi/ooIzIItlcW5BD4lrimV8RlpxJB2zfuYG9wqhj/aICnvCCCEoRMv7KcXiQuwo0CkcKRkeEAnYvaaqB83F0Xhy0S2rNvVWlUNsNiq1DPWbndUO3CJv9OnmdwEkYfP2+lLnVoVMeSMgW3VMK6F6xY8WxZhviKfKede63S+mJlh5fvaM1uvtzKejb/MJRXRbbO4i2Ckk="
+	}
+}

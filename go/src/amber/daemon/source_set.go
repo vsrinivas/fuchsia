@@ -15,6 +15,13 @@ type SourceSet struct {
 	srcs []Source
 }
 
+func NewSourceSet() *SourceSet {
+	return &SourceSet{
+		srcs: []Source{},
+		mu:   sync.Mutex{},
+	}
+}
+
 // AddSource adds a source to our list of sources.
 func (s *SourceSet) AddSource(src Source) {
 	s.mu.Lock()

@@ -6,6 +6,10 @@ package daemon
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -32,11 +36,12 @@ func NewDaemon(s *SourceSet) *Daemon {
 
 // AddRequest starts monitoring for updates to the UpdateRequest supplied. This
 // monitoring can be canceled with a call to CancelRequest or CancelAll
-func (d *Daemon) AddRequest(req *UpdateRequest) {
+func (d *Daemon) AddRequest(req *UpdateRequest, f func(*Package, Source) error) {
 	rec := RequestRunner{
 		UpdateRequest: req,
 		LatestCheck:   time.Now().Add(-2 * req.UpdateInterval),
 		SourceSet:     d.srcs,
+		Processor:     f,
 	}
 
 	d.runners[*req] = &rec
@@ -71,4 +76,51 @@ func (d *Daemon) CancelAll() {
 
 	d.stopCount.Wait()
 	d.runners = make(map[UpdateRequest]*RequestRunner)
+}
+
+//var ErrInvalidPath = errors.New("pkgprocessor: invalid path, must start with /")
+type ErrProcessPackage string
+
+func NewErrProcessPackage(f string, args ...interface{}) error {
+	return ErrProcessPackage(fmt.Sprintf("processor: %s", fmt.Sprintf(f, args...)))
+}
+
+func (e ErrProcessPackage) Error() string {
+	return string(e)
+}
+
+func ProcessPackage(pkg *Package, src Source) error {
+	// this package processor can only deal with names that look like
+	// file paths
+	// TODO(jmatt) better checking that this could be a valid file path
+	if strings.Index(pkg.Name, "/") != 0 {
+		return NewErrProcessPackage("invalid path")
+	}
+
+	file, e := src.FetchPkg(pkg)
+	if e != nil {
+		return e
+	}
+	defer file.Close()
+	defer os.Remove(file.Name())
+
+	// take the long way to truncate in case this is a VMO filesystem
+	// which doesn't support truncate
+	e = os.Remove(pkg.Name)
+	if e != nil && !os.IsNotExist(e) {
+		return NewErrProcessPackage("couldn't remove old file %v", e)
+	}
+
+	dst, e := os.OpenFile(pkg.Name, os.O_RDWR|os.O_CREATE, 0666)
+	if e != nil {
+		return NewErrProcessPackage("couldn't open file to replace %v", e)
+	}
+	defer dst.Close()
+
+	_, e = io.Copy(dst, file)
+	// TODO(jmatt) validate file on disk, size, hash, etc
+	if e != nil {
+		return NewErrProcessPackage("couldn't write update to file %v", e)
+	}
+	return nil
 }
