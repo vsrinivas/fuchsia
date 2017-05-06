@@ -643,7 +643,6 @@ __NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
         if (map_size == 0)
             continue;
 
-        mx_status_t status;
         if (ph->p_flags & PF_W) {
             // TODO(mcgrathr,MG-698): When MG-698 is fixed, we can clone to
             // a size that's not whole pages, and then extending it with
