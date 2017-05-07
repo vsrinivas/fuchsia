@@ -168,8 +168,16 @@ func Free(n DirectoryNode, index int) (*direntry.Dirent, error) {
 			}
 			lastFreeIndex--
 		}
-		// Wipe out the direntry (implicitly) by writing the last free dirent
-		if err := write(n, direntry.LastFreeDirent(), lastFreeIndex); err != nil {
+		// Wipe out the direntry by writing the last free dirent.  Additionally, explicitly fill the
+		// rest of the cluster with zeros, as defined by the FAT specification:
+		//   "If [the last free marker is found], there are no allocated directory entries after
+		//   this one...  all of the DIR_Name[0] bytes in all the entries after this one are also
+		//   set to 0"
+		clusterSize := int(n.Metadata().Br.ClusterSize())
+		off := lastFreeIndex * direntry.DirentrySize
+		clusterRemainder := clusterSize - (off+direntry.DirentrySize)%clusterSize
+		buf := append(direntry.LastFreeDirent(), make([]byte, clusterRemainder)...)
+		if _, err := n.writeAt(buf, int64(off)); err != nil {
 			return nil, err
 		}
 		n.SetSize(int64(lastFreeIndex+1) * direntry.DirentrySize)
