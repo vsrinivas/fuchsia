@@ -155,9 +155,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
     if (is_vdso_code) {
         // For an executable mapping of the vDSO, allow only one per process
         // and only for the valid range of the image.
-        // TODO(mcgrathr): The "only one" rule is not enforced yet, because
-        // it breaks thread-injection-test.
-        if (//aspace_->vdso_code_mapping_ ||
+        if (aspace_->vdso_code_mapping_ ||
             !VDso::valid_code_mapping(vmo_offset, size)) {
             return ERR_ACCESS_DENIED;
         }

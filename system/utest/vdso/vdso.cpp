@@ -181,9 +181,7 @@ bool vdso_map_code_wrong_test() {
 }
 
 BEGIN_TEST_CASE(vdso_tests)
-// TODO(mcgrathr): The "only one" rule is not enforced yet, because
-// it breaks thread-injection-test.
-//RUN_TEST(vdso_map_twice_test);
+RUN_TEST(vdso_map_twice_test);
 RUN_TEST(vdso_map_code_wrong_test);
 RUN_TEST(vdso_map_change_test);
 END_TEST_CASE(vdso_tests)

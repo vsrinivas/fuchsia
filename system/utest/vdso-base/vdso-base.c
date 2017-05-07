@@ -105,9 +105,7 @@ bool vdso_map_test(void) {
 
     // Since we already have a vDSO mapping, loading it again should fail.
     void* h = dlopen_vmo(vmo, RTLD_LOCAL);
-    // TODO(mcgrathr): The "only one" rule is not enforced yet, because
-    // it breaks thread-injection-test.
-    EXPECT_NONNULL(h, "dlopen_vmo on vDSO VMO succeeded");
+    EXPECT_NULL(h, "dlopen_vmo on vDSO VMO succeeded");
 
     // Create a fresh process that doesn't already have a vDSO mapping.
     // We can't meaningfully test the other constraints on our own

@@ -63,15 +63,6 @@ int main(void) {
         return 1;
     }
 
-    // TODO(mcgrathr): Eventually we won't permit loading a second copy of
-    // the vDSO into a process.  Instead, we'll have some way to discover
-    // the vDSO mapping address and feed this to launchpad.
-    status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "launchpad_load_vdso: %d\n", status);
-        return 1;
-    }
-
     // The injected program gets an argument string telling it an
     // address in its own address space (aka the injectee process).
     char buf[32];

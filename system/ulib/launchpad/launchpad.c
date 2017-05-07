@@ -132,7 +132,16 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
         lp->errmsg = "no error";
     }
 
-    launchpad_add_handle(lp, proc, PA_PROC_SELF);
+    if (launchpad_add_handle(lp, proc, PA_PROC_SELF) == NO_ERROR) {
+        // If the process has an existing vDSO mapping, record it for
+        // use by launchpad_start_extra.
+        mx_status_t status = mx_object_get_property(
+            proc, MX_PROP_PROCESS_VDSO_BASE_ADDRESS,
+            &lp->vdso_base, sizeof(lp->vdso_base));
+        if (status != NO_ERROR)
+            lp_error(lp, status,
+                     "create: cannot get MX_PROP_PROCESS_VDSO_BASE_ADDRESS");
+    }
     launchpad_add_handle(lp, vmar, PA_VMAR_ROOT);
 
     *result = lp;
