@@ -649,8 +649,10 @@ static int do_random_ops(void* arg) {
             thrd_yield();
     }
 
-    // clean up
+    // Close the worker's personal fd (if it is open) and
+    // unlink the worker directory.
     fprintf(stderr, "work thread(%s) done\n", w->name);
+    task_close_fd(w);
     unlink(w->name);
 
     // currently, threads either return DONE or exit the test

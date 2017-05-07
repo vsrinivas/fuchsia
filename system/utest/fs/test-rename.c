@@ -117,6 +117,7 @@ bool test_rename_with_children(void) {
     fd = open("::dir/file", O_RDONLY, 06444);
     ASSERT_GT(fd, 0, "");
     ASSERT_TRUE(check_file_contents(fd, (uint8_t*) file_contents, strlen(file_contents)), "");
+    ASSERT_EQ(close(fd), 0, "");
 
     // Clean up
     ASSERT_EQ(unlink("::dir/dir1"), 0, "");
