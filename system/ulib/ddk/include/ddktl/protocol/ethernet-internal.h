@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddktl/device-internal.h>
 #include <magenta/types.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
