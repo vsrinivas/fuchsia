@@ -12,6 +12,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_DEPS += \
     third_party/lib/cryptolib \
     kernel/lib/mxtl \
+    kernel/lib/vdso \
     kernel/lib/user_copy
 
 MODULE_SRCS += \

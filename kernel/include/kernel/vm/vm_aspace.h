@@ -111,6 +111,8 @@ public:
                                size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
                                uint arch_mmu_flags);
 
+    uintptr_t vdso_base_address() const;
+
 protected:
     // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
     // changes to the aspace.

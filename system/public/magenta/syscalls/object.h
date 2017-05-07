@@ -191,6 +191,9 @@ typedef struct mx_info_maps {
 // Argument is the value of ld.so's _dl_debug_addr, a uintptr_t.
 #define MX_PROP_PROCESS_DEBUG_ADDR          5u
 
+// Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
+#define MX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
+
 // Values for mx_info_thread_t.state.
 #define MX_THREAD_STATE_NEW                 0u
 #define MX_THREAD_STATE_RUNNING             1u

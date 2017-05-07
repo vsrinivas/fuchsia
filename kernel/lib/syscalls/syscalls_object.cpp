@@ -428,6 +428,15 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_PROP_PROCESS_VDSO_BASE_ADDRESS: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+            if (!process)
+                return ERR_WRONG_TYPE;
+            uintptr_t value = process->aspace()->vdso_base_address();
+            return _value.reinterpret<uintptr_t>().copy_to_user(value);
+        }
         default:
             return ERR_INVALID_ARGS;
     }

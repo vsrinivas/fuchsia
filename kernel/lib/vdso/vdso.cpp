@@ -148,3 +148,7 @@ const VDso* VDso::Create() {
 
     return instance_;
 }
+
+uintptr_t VDso::base_address(const mxtl::RefPtr<VmMapping>& code_mapping) {
+    return code_mapping ? code_mapping->base() - VDSO_CODE_START : 0;
+}

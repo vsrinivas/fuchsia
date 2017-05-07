@@ -20,6 +20,7 @@
 #include <kernel/vm/vm_object_physical.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
+#include <lib/vdso.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
@@ -566,4 +567,9 @@ void VmAspace::InitializeAslr() {
 
     crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
     aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
+}
+
+uintptr_t VmAspace::vdso_base_address() const {
+    AutoLock a(&lock_);
+    return VDso::base_address(vdso_code_mapping_);
 }
