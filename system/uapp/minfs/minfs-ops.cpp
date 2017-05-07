@@ -459,10 +459,10 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
         size_t len = MINFS_DIRENT_SIZE;
         if ((status = ReadExactInternal(&de_next, len, off_next)) != NO_ERROR) {
             error("unlink: Failed to read next dirent\n");
-            goto fail;
+            return status;
         } else if ((status = validate_dirent(&de_next, len, off_next)) != NO_ERROR) {
             error("unlink: Read invalid dirent\n");
-            goto fail;
+            return status;
         }
         if (de_next.ino == 0) {
             coalesced_size += MinfsReclen(&de_next, off_next);
@@ -474,10 +474,10 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
         size_t len = MINFS_DIRENT_SIZE;
         if ((status = ReadExactInternal(&de_prev, len, off_prev)) != NO_ERROR) {
             error("unlink: Failed to read previous dirent\n");
-            goto fail;
+            return status;
         } else if ((status = validate_dirent(&de_prev, len, off_prev)) != NO_ERROR) {
             error("unlink: Read invalid dirent\n");
-            goto fail;
+            return status;
         }
         if (de_prev.ino == 0) {
             coalesced_size += MinfsReclen(&de_prev, off_prev);
@@ -487,15 +487,14 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
 
     if (!(de->reclen & kMinfsReclenLast) && (coalesced_size >= kMinfsReclenMask)) {
         // Should only be possible if the on-disk record format is corrupted
-        status = ERR_IO;
-        goto fail;
+        return ERR_IO;
     }
     de->ino = 0;
     de->reclen = static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) |
         (de->reclen & kMinfsReclenLast);
     // Erase dirent (replace with 'empty' dirent)
     if ((status = WriteExactInternal(de, MINFS_DIRENT_SIZE, off)) != NO_ERROR) {
-        goto fail;
+        return status;
     }
 
     if (de->reclen & kMinfsReclenLast) {
@@ -505,26 +504,29 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
     }
 
     inode_.dirent_count--;
-    // This effectively 'unlinks' the target node without deleting the direntry
-    childvn->inode_.link_count--;
 
     if (MinfsMagicType(childvn->inode_.magic) == kMinfsTypeDir) {
         // Child directory had '..' which pointed to parent directory
         inode_.link_count--;
-        if (childvn->inode_.link_count == 1) {
+    }
+    childvn->RemoveInodeLink();
+    return DIR_CB_SAVE_SYNC;
+}
+
+void VnodeMinfs::RemoveInodeLink() {
+    // This effectively 'unlinks' the target node without deleting the direntry
+    inode_.link_count--;
+    if (MinfsMagicType(inode_.magic) == kMinfsTypeDir) {
+        if (inode_.link_count == 1) {
             // Directories are initialized with two links, since they point
             // to themselves via ".". Thus, when they reach "one link", they
             // are only pointed to by themselves, and should be deleted.
-            childvn->inode_.link_count--;
-            childvn->flags_ |= kMinfsFlagDeletedDirectory;
+            inode_.link_count--;
+            flags_ |= kMinfsFlagDeletedDirectory;
         }
     }
 
-    childvn->InodeSync(kMxFsSyncMtime);
-    return DIR_CB_SAVE_SYNC;
-
-fail:
-    return status;
+    InodeSync(kMxFsSyncMtime);
 }
 
 // caller is expected to prevent unlink of "." or ".."
@@ -598,7 +600,12 @@ static mx_status_t cb_dir_attempt_rename(mxtl::RefPtr<VnodeMinfs> vndir, minfs_d
         return ERR_BAD_STATE;
     }
 
-    vn->inode_.link_count--;
+    // If we are renaming ON TOP of a directory, then we can skip
+    // updating the parent link count -- the old directory had a ".." entry to
+    // the parent (link count of 1), but the new directory will ALSO have a ".."
+    // entry, making the rename operation idempotent w.r.t. the parent link
+    // count.
+    vn->RemoveInodeLink();
 
     de->ino = args->ino;
     status = vndir->WriteExactInternal(de, DirentSize(de->namelen), offs->off);
@@ -1352,13 +1359,12 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
     } else if ((status = fs_->VnodeGet(&oldvn, args.ino)) < 0) {
         return status;
     } else if ((status = check_not_subdirectory(oldvn, newdir)) < 0) {
-        goto done;
+        return status;
     }
 
     // If either the 'src' or 'dst' must be directories, BOTH of them must be directories.
     if (!oldvn->IsDirectory() && (src_must_be_dir || dst_must_be_dir)) {
-        status = ERR_NOT_DIR;
-        goto done;
+        return ERR_NOT_DIR;
     }
 
     // if the entry for 'newname' exists, make sure it can be replaced by
@@ -1372,11 +1378,11 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
         // if 'newname' does not exist, create it
         args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newlen)));
         if ((status = newdir->ForEachDirent(&args, cb_dir_append)) < 0) {
-            goto done;
+            return status;
         }
         status = NO_ERROR;
     } else if (status != NO_ERROR) {
-        goto done;
+        return status;
     }
 
     // update the oldvn's entry for '..' if (1) it was a directory, and (2) it
@@ -1384,14 +1390,14 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
     if ((args.type == kMinfsTypeDir) && (ino_ != newdir->ino_)) {
         mxtl::RefPtr<fs::Vnode> vn_fs;
         if ((status = newdir->Lookup(&vn_fs, newname, newlen)) < 0) {
-            goto done;
+            return status;
         }
         auto vn = mxtl::RefPtr<VnodeMinfs>::Downcast(vn_fs);
         args.name = "..";
         args.len = 2;
         args.ino = newdir->ino_;
         if ((status = vn->ForEachDirent(&args, cb_dir_update_inode)) < 0) {
-            goto done;
+            return status;
         }
     }
 
@@ -1402,9 +1408,7 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
     // finally, remove oldname from its original position
     args.name = oldname;
     args.len = oldlen;
-    status = ForEachDirent(&args, cb_dir_force_unlink);
-done:
-    return status;
+    return ForEachDirent(&args, cb_dir_force_unlink);
 }
 
 mx_status_t VnodeMinfs::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> _target) {

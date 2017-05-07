@@ -175,13 +175,41 @@ bool test_link_count_rename(void) {
     ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent", 3), "");
     ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent/dir_child_a", 2), "");
 
-    // Remove all directories
+    // Rename a directory on top of an empty directory from a non-root directory
+    ASSERT_EQ(mkdir("::dir", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir/dir_child", 0755), 0, "");
+    ASSERT_TRUE(check_link_count("::dir", 3), "");
+    ASSERT_TRUE(check_link_count("::dir/dir_child", 2), "");
+    ASSERT_EQ(rename("::dir/dir_child", "::dir_parent_alt/dir_semi_parent/dir_child_a"), 0, "");
+    ASSERT_TRUE(check_link_count("::dir", 2), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt", 3), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent", 3), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent/dir_child_a", 2), "");
+
+    // Rename a file on top of a file from a non-root directory
+    ASSERT_EQ(unlink("::dir_parent_alt/dir_semi_parent/dir_child_a"), 0, "");
+    int fd = open("::dir/dir_child", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_TRUE(check_link_count("::dir", 2), "");
+    ASSERT_TRUE(check_link_count("::dir/dir_child", 1), "");
+    int fd2 = open("::dir_parent_alt/dir_semi_parent/dir_child_a", O_RDWR | O_CREAT | O_EXCL, 0644);
+    ASSERT_GT(fd2, 0, "");
+    ASSERT_EQ(rename("::dir/dir_child", "::dir_parent_alt/dir_semi_parent/dir_child_a"), 0, "");
+    ASSERT_TRUE(check_link_count("::dir", 2), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt", 3), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent", 2), "");
+    ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent/dir_child_a", 1), "");
+    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd2), 0, "");
+
+    // Clean up
     ASSERT_EQ(unlink("::dir_parent_alt/dir_semi_parent/dir_child_a"), 0, "");
     ASSERT_TRUE(check_link_count("::dir_parent_alt", 3), "");
     ASSERT_TRUE(check_link_count("::dir_parent_alt/dir_semi_parent", 2), "");
     ASSERT_EQ(unlink("::dir_parent_alt/dir_semi_parent"), 0, "");
     ASSERT_TRUE(check_link_count("::dir_parent_alt", 2), "");
     ASSERT_EQ(unlink("::dir_parent_alt"), 0, "");
+    ASSERT_EQ(unlink("::dir"), 0, "");
 
     END_TEST;
 }

@@ -145,6 +145,9 @@ public:
     static size_t GetHash(uint32_t key) { return INO_HASH(key); }
 
     mx_status_t UnlinkChild(mxtl::RefPtr<VnodeMinfs> child, minfs_dirent_t* de, DirectoryOffset* offs);
+    // Remove the link to a vnode (referring to inodes exclusively).
+    // Has no impact on direntries (or parent inode).
+    void RemoveInodeLink();
     mx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
     mx_status_t ReadExactInternal(void* data, size_t len, size_t off);
     mx_status_t WriteInternal(const void* data, size_t len, size_t off, size_t* actual);
