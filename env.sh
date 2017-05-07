@@ -113,10 +113,12 @@ function mset() {
     x86-64)
       export MAGENTA_PROJECT=magenta-pc-x86-64
       export MAGENTA_ARCH=x86-64
+      export MAGENTA_BUILD_TARGET=x86_64
       ;;
     arm64)
       export MAGENTA_PROJECT=magenta-qemu-arm64
       export MAGENTA_ARCH=arm64
+      export MAGENTA_BUILD_TARGET=aarch64
       ;;
     *)
       mset-usage
@@ -164,8 +166,8 @@ function mbuild() {
   mcheck || return 1
 
   echo "Building magenta..." \
-    && "${MAGENTA_DIR}/scripts/make-parallel" -C "${MAGENTA_DIR}" \
-         "BUILDROOT=${MAGENTA_BUILD_ROOT}" "${MAGENTA_PROJECT}" "$@" \
+    && "${FUCHSIA_SCRIPTS_DIR}/build-magenta.sh" \
+         -t "${MAGENTA_BUILD_TARGET}" "$@" \
     && (mrev > "${MAGENTA_BUILD_REV_CACHE}")
 }
 
