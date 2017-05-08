@@ -19,7 +19,7 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-r] [-t target] [-o outdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-v] [-t target] [-o outdir]\n' "$0" && exit 1
 }
 
 build() {
