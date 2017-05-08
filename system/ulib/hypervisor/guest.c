@@ -12,6 +12,18 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
+typedef struct e820entry {
+    uint64_t addr;
+    uint64_t size;
+    uint32_t type;
+} __PACKED e820entry_t;
+
+static const uint32_t kE820Ram = 1;
+static const uint32_t kE820Reserved = 2;
+
+static const uint64_t kAddr3500mb   = 0x00000000e0000000;
+static const uint64_t kAddr4000mb   = 0x0000000100000000;
+
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
@@ -104,23 +116,47 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
                                   uintptr_t bootdata_off) {
     if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
         return ERR_INVALID_ARGS;
-    const uint32_t bootdata_len = sizeof(bootdata_t) + sizeof(uint64_t);
+    const uint32_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
+                                  sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(e820entry_t) * 3);
     if (bootdata_off + bootdata_len > size)
         return ERR_BUFFER_TOO_SMALL;
 
-    bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
-    bootdata->type = BOOTDATA_CONTAINER;
-    bootdata->extra = BOOTDATA_MAGIC;
-    bootdata->length = bootdata_len;
+    bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
+    header->type = BOOTDATA_CONTAINER;
+    header->extra = BOOTDATA_MAGIC;
+    header->length = bootdata_len;
 
     bootdata_off = BOOTDATA_ALIGN(bootdata_off + sizeof(bootdata_t));
-    bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
     bootdata->type = BOOTDATA_ACPI_RSDP;
     bootdata->length = sizeof(uint64_t);
 
     bootdata_off = bootdata_off + sizeof(bootdata_t);
     uint64_t* acpi_rsdp = (uint64_t*)(addr + bootdata_off);
     *acpi_rsdp = acpi_off;
+
+    bootdata_off = BOOTDATA_ALIGN(bootdata_off + sizeof(uint64_t));
+    bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata->type = BOOTDATA_E820_TABLE;
+    bootdata->length = sizeof(e820entry_t) * 3;
+
+    bootdata_off = bootdata_off + sizeof(bootdata_t);
+    e820entry_t* entry = (e820entry_t*)(addr + bootdata_off);
+    memset(entry, 0, bootdata->length);
+    // 0 to min(size, 3500mb) is available.
+    entry[0].addr = 0;
+    entry[0].size = size < kAddr3500mb ? size : kAddr3500mb;
+    entry[0].type = kE820Ram;
+    // 3500mb to 4000mb is reserved.
+    entry[1].addr = kAddr3500mb;
+    entry[1].size = kAddr4000mb - kAddr3500mb;
+    entry[1].type = kE820Reserved;
+    // If size > 4000mb, then that region is available.
+    if (size > kAddr4000mb) {
+        entry[2].addr = kAddr4000mb;
+        entry[2].size = size - kAddr4000mb;
+        entry[2].type = kE820Ram;
+    }
 
     return NO_ERROR;
 }

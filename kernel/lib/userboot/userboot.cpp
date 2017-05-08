@@ -250,7 +250,7 @@ static int attempt_userboot() {
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
     if (rbase)
-        dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
+        dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
     auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
     auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);

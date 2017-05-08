@@ -121,9 +121,6 @@ static int mem_arena_init(boot_addr_range_t *range)
     return used;
 }
 
-#define E820_ENTRIES_OFFSET 0x1e8
-#define E820_MAP_OFFSET 0x2d0
-
 #define E820_RAM 1
 #define E820_RESERVED 2
 #define E820_ACPI 3
@@ -162,7 +159,7 @@ static void e820_range_advance(boot_addr_range_t *range)
         return;
     }
 
-    struct e820entry *entry = &seq->map[seq->index];
+    e820entry_t* entry = &seq->map[seq->index];
     range->base = entry->addr;
     range->size = entry->size;
     range->is_mem = (entry->type == E820_RAM) ? 1 : 0;
@@ -177,7 +174,7 @@ static int e820_range_init(boot_addr_range_t *range, e820_range_seq_t *seq)
 
     if (bootloader.e820_count) {
         seq->count = static_cast<int>(bootloader.e820_count);
-        seq->map = static_cast<struct e820entry *>(bootloader.e820_table);
+        seq->map = static_cast<e820entry_t*>(bootloader.e820_table);
         range->reset(range);
         return 1;
     }

@@ -14,8 +14,9 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
-static const uint64_t kVmoSize = 1 << 30;
+static const size_t kVmoSize = 1u << 30;
 static const uintptr_t kKernelLoadOffset = 0x100000;
+static const uintptr_t kBootdataOffset = 0x800000;
 
 // Header blob for magenta.bin
 typedef struct {
@@ -24,7 +25,8 @@ typedef struct {
     bootdata_kernel_t data_kernel;
 } magenta_kernel_t;
 
-static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry) {
+static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry,
+                                uintptr_t* end_off) {
     uintptr_t header_addr = addr + kKernelLoadOffset;
     int rc = read(fd, (void*)header_addr, sizeof(magenta_kernel_t));
     if (rc != sizeof(magenta_kernel_t)) {
@@ -44,12 +46,13 @@ static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry) 
 
     uintptr_t data_addr = header_addr + sizeof(magenta_kernel_t);
     rc = read(fd, (void*)data_addr, kVmoSize - data_addr);
-    if (rc < 0 || (uint64_t)rc < header->hdr_kernel.length - sizeof(bootdata_kernel_t)) {
+    if (rc < 0 || (size_t)rc < header->hdr_kernel.length - sizeof(bootdata_kernel_t)) {
         fprintf(stderr, "Failed to read Magenta kernel data\n");
         return ERR_IO;
     }
 
     *guest_entry = header->data_kernel.entry64;
+    *end_off = lseek(fd, 0, SEEK_CUR);
     return NO_ERROR;
 }
 
@@ -109,15 +112,14 @@ int main(int argc, char** argv) {
     }
 
     uintptr_t acpi_off;
-    uintptr_t acpi_end_off;
-    status = guest_create_acpi_table(addr, kVmoSize, &acpi_off, &acpi_end_off);
+    status = guest_create_acpi_table(addr, kVmoSize, &acpi_off);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create ACPI table\n");
         return status;
     }
     MX_ASSERT(pt_end_off <= acpi_off);
 
-    status = guest_create_bootdata(addr, kVmoSize, acpi_off, acpi_end_off);
+    status = guest_create_bootdata(addr, kVmoSize, acpi_off, kBootdataOffset);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create bootdata\n");
         return status;
@@ -130,10 +132,12 @@ int main(int argc, char** argv) {
     }
 
     uintptr_t guest_entry;
-    status = load_magenta(fd, addr, &guest_entry);
+    uintptr_t magenta_end_off;
+    status = load_magenta(fd, addr, &guest_entry, &magenta_end_off);
     close(fd);
     if (status != NO_ERROR)
         return status;
+    MX_ASSERT(magenta_end_off <= kBootdataOffset);
 
 #if __x86_64__
     uintptr_t guest_cr3 = 0;
@@ -144,7 +148,7 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    uint32_t guest_esi = acpi_end_off;
+    uint32_t guest_esi = kBootdataOffset;
     status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI, &guest_esi,
                               sizeof(guest_esi), NULL, 0);
     if (status != NO_ERROR) {
