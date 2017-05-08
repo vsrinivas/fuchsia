@@ -23,7 +23,7 @@ const char* test_root_path;
 char test_disk_path[PATH_MAX];
 fs_info_t* test_info;
 
-static const fsck_options_t test_fsck_options = {
+const fsck_options_t test_fsck_options = {
     .verbose = false,
     .never_modify = true,
     .always_modify = false,

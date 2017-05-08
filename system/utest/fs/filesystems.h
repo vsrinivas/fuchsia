@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fs-management/mount.h>
 #include <unittest/unittest.h>
 
 typedef struct fs_info {
@@ -34,6 +35,8 @@ extern char test_disk_path[];
 
 // Current filesystem's info
 extern fs_info_t* test_info;
+
+extern const fsck_options_t test_fsck_options;
 
 #define NUM_FILESYSTEMS 3
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
