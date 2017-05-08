@@ -39,6 +39,7 @@ source_set("user_intelligence_provider") {
     ":agent_launcher",
     ":intelligence_services",
     "//application/lib/app",
+    "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",

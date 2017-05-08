@@ -83,7 +83,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   {
     app::ServiceProviderPtr action_log_services_ =
         startServiceProviderApp("file:///system/apps/action_log");
-    action_log_factory_ = app::ConnectToService<maxwell::ActionLogFactory>(
+    user_action_log_ = app::ConnectToService<maxwell::UserActionLog>(
         action_log_services_.get());
   }
 
@@ -117,7 +117,7 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(
           std::move(scope), context_engine_.get(), suggestion_engine_.get(),
-          action_log_factory_.get()),
+          user_action_log_.get()),
       std::move(request));
 }
 

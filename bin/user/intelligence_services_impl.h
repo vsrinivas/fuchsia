@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/action_log/action_log.fidl.h"
+#include "apps/maxwell/services/action_log/user.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
 
@@ -20,7 +20,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   IntelligenceServicesImpl(ComponentScopePtr scope,
                            ContextEngine* context_engine,
                            SuggestionEngine* suggestion_engine,
-                           ActionLogFactory* action_log_factory);
+                           UserActionLog* user_action_log);
 
   void GetContextProvider(
       fidl::InterfaceRequest<ContextProvider> request) override;
@@ -31,13 +31,14 @@ class IntelligenceServicesImpl : public IntelligenceServices {
   void GetProposalPublisher(
       fidl::InterfaceRequest<ProposalPublisher> request) override;
 
-  void GetActionLog(fidl::InterfaceRequest<ActionLog> request) override;
+  void GetActionLog(
+      fidl::InterfaceRequest<ComponentActionLog> request) override;
 
  private:
   ComponentScopePtr scope_;
   ContextEngine* const context_engine_;        // Not owned.
   SuggestionEngine* const suggestion_engine_;  // Not owned.
-  ActionLogFactory* const action_log_factory_; // Not owned.
+  UserActionLog* const user_action_log_;       // Not owned.
 };
 
 }  // namespace maxwell
