@@ -196,6 +196,7 @@ typedef struct mx_info_maps {
 #define MX_THREAD_STATE_RUNNING             1u
 #define MX_THREAD_STATE_SUSPENDED           2u
 #define MX_THREAD_STATE_BLOCKED             3u
-#define MX_THREAD_STATE_DEAD                4u
+#define MX_THREAD_STATE_DYING               4u
+#define MX_THREAD_STATE_DEAD                5u
 
 __END_CDECLS

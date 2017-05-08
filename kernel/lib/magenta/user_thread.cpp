@@ -774,6 +774,8 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
         info->state = MX_THREAD_STATE_SUSPENDED;
         break;
     case UserThread::State::DYING:
+        info->state = MX_THREAD_STATE_DYING;
+        break;
     case UserThread::State::DEAD:
         info->state = MX_THREAD_STATE_DEAD;
         break;
