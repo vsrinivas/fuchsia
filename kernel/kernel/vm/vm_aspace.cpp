@@ -227,6 +227,11 @@ status_t VmAspace::Destroy() {
     LTRACEF("%p '%s'\n", this, name_);
 
     AutoLock guard(&lock_);
+
+    // Don't let a vDSO mapping prevent destroying a VMAR
+    // when the whole process is being destroyed.
+    vdso_code_mapping_.reset();
+
     // tear down and free all of the regions in our address space
     status_t status = root_vmar_->DestroyLocked();
     if (status != NO_ERROR && status != ERR_BAD_STATE) {

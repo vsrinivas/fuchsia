@@ -166,6 +166,8 @@ private:
     // architecturally specific part of the aspace
     arch_aspace_t arch_aspace_ = {};
 
+    mxtl::RefPtr<VmMapping> vdso_code_mapping_;
+
     // initialization routines need to construct the singleton kernel address space
     // at a particular points in the bootup process
     static void KernelAspaceInitPreHeap();

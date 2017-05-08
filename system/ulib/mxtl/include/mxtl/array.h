@@ -77,6 +77,14 @@ public:
         return ptr_[i];
     }
 
+    T* begin() const {
+        return ptr_;
+    }
+
+    T* end() const {
+        return &ptr_[count_];
+    }
+
 private:
     T* ptr_;
     size_t count_;

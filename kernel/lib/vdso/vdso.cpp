@@ -104,12 +104,24 @@ private:
 
 }; // anonymous namespace
 
-VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
+const VDso* VDso::instance_ = NULL;
+
+// Private constructor, can only be called by Create (below).
+VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {}
+
+// This is called exactly once, at boot time.
+const VDso* VDso::Create() {
+    ASSERT(!instance_);
+
+    AllocChecker ac;
+    instance_ = new(&ac) VDso();
+    ASSERT(ac.check());
+
     // Map a window into the VMO to write the vdso_constants struct.
     static_assert(sizeof(vdso_constants) == VDSO_DATA_CONSTANTS_SIZE,
                   "gen-rodso-code.sh is suspect");
     KernelVmoWindow<vdso_constants> constants_window(
-        "vDSO constants", vmo()->vmo(), VDSO_DATA_CONSTANTS);
+        "vDSO constants", instance_->vmo()->vmo(), VDSO_DATA_CONSTANTS);
     uint64_t per_second = ticks_per_second();
 
     // Initialize the constants that should be visible to the vDSO.
@@ -130,7 +142,9 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
         constants_window.data()->ticks_per_second = MX_SEC(1);
 
         // Adjust the mx_ticks_get entry point to be soft_ticks_get.
-        VDsoDynSymWindow dynsym_window(vmo()->vmo());
+        VDsoDynSymWindow dynsym_window(instance_->vmo()->vmo());
         REDIRECT_SYSCALL(dynsym_window, mx_ticks_get, soft_ticks_get);
     }
+
+    return instance_;
 }

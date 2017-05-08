@@ -37,6 +37,8 @@ typedef struct {
 // including wrong machine, wrong endian, etc. as well as a truncated file.
 #define ERR_ELF_BAD_FORMAT ERR_NOT_FOUND
 
+__BEGIN_CDECLS
+
 // Validate the ELF headers and fill in basic header information. 'hdr_buf'
 // represents bytes already read from the start of the file.
 mx_status_t elf_load_prepare(mx_handle_t vmo, const void* hdr_buf, size_t buf_sz,
@@ -60,5 +62,7 @@ mx_status_t elf_load_map_segments(mx_handle_t vmar_self,
 // Returns false if there was no PT_INTERP.
 bool elf_load_find_interp(const elf_phdr_t* phdrs, size_t phnum,
                           uintptr_t* interp_off, size_t* interp_len);
+
+__END_CDECLS
 
 #pragma GCC visibility pop

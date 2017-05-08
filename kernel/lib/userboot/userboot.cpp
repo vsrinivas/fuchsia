@@ -51,7 +51,7 @@ extern "C" const char userboot_image[];
 
 class UserbootImage : private RoDso {
 public:
-    explicit UserbootImage(VDso* vdso)
+    explicit UserbootImage(const VDso* vdso)
         : RoDso("userboot", userboot_image,
                 USERBOOT_CODE_END, USERBOOT_CODE_START),
           vdso_(vdso) {}
@@ -98,7 +98,7 @@ public:
     }
 
 private:
-    VDso* vdso_;
+    const VDso* vdso_;
 };
 
 }; // anonymous namespace
@@ -295,10 +295,10 @@ static int attempt_userboot() {
 
     handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar, vmar_rights);
 
-    VDso vdso;
-    handles[BOOTSTRAP_VDSO] = vdso.vmo_handle().release();
+    const VDso* vdso = VDso::Create();
+    handles[BOOTSTRAP_VDSO] = vdso->vmo_handle().release();
 
-    UserbootImage userboot(&vdso);
+    UserbootImage userboot(vdso);
     uintptr_t vdso_base = 0;
     uintptr_t entry = 0;
     status = userboot.Map(vmar, &vdso_base, &entry);

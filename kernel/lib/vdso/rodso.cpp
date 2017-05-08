@@ -30,7 +30,7 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     vmo_rights_ &= ~MX_RIGHT_WRITE;
 }
 
-HandleOwner RoDso::vmo_handle() {
+HandleOwner RoDso::vmo_handle() const {
     return HandleOwner(MakeHandle(vmo_, vmo_rights_));
 }
 
@@ -39,7 +39,7 @@ mx_status_t RoDso::MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
                               bool code,
                               size_t vmar_offset,
                               size_t start_offset,
-                              size_t end_offset) {
+                              size_t end_offset) const {
 
     uint32_t flags = MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ;
     if (code)
@@ -69,7 +69,7 @@ mx_status_t RoDso::MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
 }
 
 mx_status_t RoDso::Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                       size_t offset) {
+                       size_t offset) const {
     mx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
     if (status == NO_ERROR)
         status = MapSegment(mxtl::move(vmar), true,
