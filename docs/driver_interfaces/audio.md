@@ -245,7 +245,7 @@ Notes
 
 In order to select a stream format, applications send an
 `AUDIO2_STREAM_CMD_SET_FORMAT` message over the stream channel.  In the message,
-for uncompressed audio streamds, the application specifies
+for uncompressed audio streams, the application specifies
  * The frame rate of the stream in Hz using the `frames_per_second` field (in the
    case of an uncompressed audio stream).
  * The number of channels packed into each frame using the `channels` field.
@@ -274,11 +274,70 @@ channel as is mandated for a successful operation.
 
 ### Hardware gain control capability reporting
 
-> TODO: specify how this is done
+In order to determine a stream's gain control capabilities, applications send an
+`AUDIO2_STREAM_CMD_GET_GAIN` message over the stream channel.  No parameters
+need to be supplied with this message.  All stream drivers **must** respond to
+this message, regardless of whether or not the stream hardware is capable of any
+gain control.  All gain values are expressed using 32 bit floating point numbers
+expressed in dB.
+
+Drivers respond to this message with values which indicate the current gain
+settings of the stream, as well as the stream's gain control capabilities.
+Current gain settings are expressed using a bool/float tuple indicating if the
+stream is currently muted or not along with the current dB gain of the stream.
+Gain capabilities consist of bool and 3 floats.  The bool indicates whether or
+not the stream can be muted.  The floats give the minimum and maximum gain
+settings, along with the `gain step size`.  The `gain step size` indicates the
+smallest increment with which the gain can be controlled counting from the
+minimum gain value.
+
+For example, an amplifier which has 5 gain steps of 7.5 dB each and a maximum
+0 dB gain would indicate a range of (-30.0, 0.0) and a step size of 7.5.
+Amplifiers capable of functionally continuous gain control **may** encode their
+gain step size as 0.0.
+
+Regardless of mute capabilities, drivers for fixed gain streams **must** report
+their min/max gain as (0.0, 0.0).  The gain step size is meaningless in this
+situation, but drivers **should** report their step size as 0.0 in this
+situation.
 
 ### Setting hardware gain control levels
 
-> TODO: specify how this is done
+In order to change a stream's current gain settings, applications send an
+`AUDIO2_STREAM_CMD_SET_GAIN` message over the stream channel.  Two parameters
+are supplied with this message, a set of flags which control the request, and a
+float indicating the dB gain which should be applied to the stream.
+
+Three valid flags are currently defined.
+ * `AUDIO2_SGF_MUTE_VALID`.  Set when the application wishes to set the
+   muted/un-muted state of the stream.  Clear if the application wishes to
+   preserve the current muted/un-muted state.
+ * `AUDIO2_SGF_GAIN_VALID`.  Set when the application wishes to set the
+   dB gain state of the stream.  Clear if the application wishes to
+   preserve the current gain state.
+ * `AUDIO2_SGF_MUTE`.  Indicates the application's desired mute/un-mute state
+   for the stream.  Significant only if `AUDIO2_SGF_MUTE_VALID` is also set.
+
+Drivers **must** fail the request with an `ERR_INVALID_ARGS` result if the
+application's request is incompatible with the stream's capabilities.
+Incompatible requests include.
+ * The requested gain is less than the minimum support gain for the stream.
+ * The requested gain is more than the maximum support gain for the stream.
+ * Mute was requested, but the stream does not support an explicit mute.
+
+Presuming that the request is valid, drivers **should** round the request to the
+nearest supported gain step size.  For example, if a stream can control its
+gain on the range from -60.0 to 0.0 dB, a request to set the gain to -33.3 dB
+will result in a gain of -33.5 being applied.  A request for a gain of -33.2 dB
+will result in a gain of -33.0 being applied.
+
+Applications **may** choose not to receive an acknowledgement of a SET_GAIN
+command by setting the `AUDIO2_FLAG_NO_ACK` flag on their command.  No response
+message will be sent to the application, regardless of the success or failure of
+the command.  If an acknowledgement was requested by the application, drivers
+respond with a message indicating the success or failure of the operation as
+well as the current gain/mute status of the system (regardless of whether the
+request was a success).
 
 ## Determining outboard latency
 

@@ -22,6 +22,8 @@ __BEGIN_CDECLS
 typedef enum audio2_cmd {
     // Commands sent on the stream channel
     AUDIO2_STREAM_CMD_SET_FORMAT = 0x1000,
+    AUDIO2_STREAM_CMD_GET_GAIN   = 0x1001,
+    AUDIO2_STREAM_CMD_SET_GAIN   = 0x1002,
 
     // Commands sent on the ring buffer channel
     AUDIO2_RB_CMD_GET_FIFO_DEPTH = 0x2000,
@@ -31,6 +33,9 @@ typedef enum audio2_cmd {
 
     // Async notifications sent on the ring buffer channel.
     AUDIO2_RB_POSITION_NOTIFY    = 0x3000,
+
+    // Flags used to modify commands.
+    AUDIO2_FLAG_NO_ACK           = 0x80000000,
 } audio2_cmd_t;
 
 typedef struct audio2_cmd_hdr {
@@ -59,7 +64,19 @@ typedef enum audio2_sample_format {
                                      AUDIO2_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN,
 } audio2_sample_format_t;
 
+// audio2_set_gain_flags_t
+//
+// Flags used by the AUDIO2_STREAM_CMD_SET_GAIN message.
+//
+typedef enum audio2_set_gain_flags {
+    AUDIO2_SGF_MUTE_VALID = 0x1,        // Whether or not the mute flag is valid.
+    AUDIO2_SGF_GAIN_VALID = 0x2,        // Whether or not the gain float is valid.
+    AUDIO2_SGF_MUTE       = 0x80000000, // Whether or not to mute the stream.
+} audio2_set_gain_flags_t;
+
 // AUDIO2_STREAM_CMD_SET_FORMAT
+//
+// May not be used with the NO_ACK flag.
 typedef struct audio2_stream_cmd_set_format_req {
     audio2_cmd_hdr_t       hdr;
     uint32_t               frames_per_second;
@@ -74,6 +91,68 @@ typedef struct audio2_stream_cmd_set_format_resp {
     // Note: Upon success, a channel used to control the audio buffer will also
     // be returned.
 } audio2_stream_cmd_set_format_resp_t;
+
+// AUDIO2_STREAM_CMD_GET_GAIN
+//
+// Request that a gain notification be sent with the current details of the
+// streams current gain settings as well as gain setting capabilities.
+//
+// May not be used with the NO_ACK flag.
+typedef struct audio2_stream_cmd_get_gain_req {
+    audio2_cmd_hdr_t hdr;
+} audio2_stream_cmd_get_gain_req_t;
+
+typedef struct audio2_stream_cmd_get_gain_resp {
+    // TODO(johngro) : Is there value in exposing the gain step to the level
+    // above the lowest level stream interface, or should we have all drivers
+    // behave as if they have continuous control at all times?
+    audio2_cmd_hdr_t hdr;
+
+    bool             cur_mute;  // True if the amplifier is currently muted.
+    float            cur_gain;  // The current setting gain of the amplifier in dB
+
+    bool             can_mute;  // True if the amplifier is capable of muting
+    float            min_gain;  // The minimum valid gain setting, in dB
+    float            max_gain;  // The maximum valid gain setting, in dB
+    float            gain_step; // The smallest valid gain increment, counted from the minimum gain.
+} audio2_stream_cmd_get_gain_resp_t;
+
+// AUDIO2_STREAM_CMD_SET_GAIN
+//
+// Request that a stream change its gain settings to most closely match those
+// requested.  Gain values for Valid requests will be rounded to the nearest
+// gain step.  For example, if a stream can control its gain on the range from
+// -60.0 to 0.0 dB, a request to set the gain to -33.3 dB will result in a gain
+// of -33.5 being applied.
+//
+// Gain change requests outside of the capabilities of the stream's
+// amplifier will be rejected with a result of ERR_INVALID_ARGS.  Using the
+// previous example, requests for gains of -65.0 or +3dB would be rejected.
+// Similarly,  If an amplifier is capable of gain control but cannot mute, a
+// request to mute will be rejected.
+//
+// TODO(johngro) : Is this the correct behavior?  Should we just apply sensible
+// limits instead?  IOW - If the user requests a gain of -1000 dB, should we
+// just set the gain to -60dB?  Likewise, if they request mute but the amplifier
+// has no hard mute feature, should we just set the gain to the minimum
+// permitted gain?
+//
+// May be used with the NO_ACK flag.
+typedef struct audio2_stream_cmd_set_gain_req {
+    audio2_cmd_hdr_t        hdr;
+    audio2_set_gain_flags_t flags;
+    float                   gain;
+} audio2_stream_cmd_set_gain_req_t;
+
+typedef struct audio2_stream_cmd_set_gain_resp {
+    audio2_cmd_hdr_t hdr;
+    mx_status_t      result;
+
+    // The current gain settings observed immediately after processing the set
+    // gain request.
+    bool             cur_mute;
+    float            cur_gain;
+} audio2_stream_cmd_set_gain_resp_t;
 
 // AUDIO2_RB_CMD_GET_FIFO_DEPTH
 //
