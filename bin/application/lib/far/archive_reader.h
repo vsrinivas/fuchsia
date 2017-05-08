@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_ARCHIVER_ARCHIVE_READER_H_
-#define APPLICATION_SRC_ARCHIVER_ARCHIVE_READER_H_
+#ifndef APPLICATION_LIB_FAR_ARCHIVE_READER_H_
+#define APPLICATION_LIB_FAR_ARCHIVE_READER_H_
 
 #include <vector>
 
-#include "application/src/archiver/format.h"
+#include "application/lib/far/format.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -47,4 +47,4 @@ class ArchiveReader {
 
 }  // namespace archive
 
-#endif  // APPLICATION_SRC_ARCHIVER_ARCHIVE_READER_H_
+#endif  // APPLICATION_LIB_FAR_ARCHIVE_READER_H_

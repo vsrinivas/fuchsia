@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/archiver/archive_entry.h"
+#include "application/lib/far/archive_entry.h"
 
 #include <utility>
 
@@ -11,14 +11,13 @@ namespace archive {
 ArchiveEntry::ArchiveEntry() = default;
 
 ArchiveEntry::ArchiveEntry(std::string src_path, std::string dst_path)
-  : src_path(std::move(src_path)),
-    dst_path(std::move(dst_path)) {}
+    : src_path(std::move(src_path)), dst_path(std::move(dst_path)) {}
 
 ArchiveEntry::~ArchiveEntry() = default;
 
 ArchiveEntry::ArchiveEntry(ArchiveEntry&& other)
-  : src_path(std::move(other.src_path)),
-    dst_path(std::move(other.dst_path)) {}
+    : src_path(std::move(other.src_path)),
+      dst_path(std::move(other.dst_path)) {}
 
 ArchiveEntry& ArchiveEntry::operator=(ArchiveEntry&& other) {
   swap(other);
@@ -30,4 +29,4 @@ void ArchiveEntry::swap(ArchiveEntry& other) {
   dst_path.swap(other.dst_path);
 }
 
-} // archive
+}  // namespace archive

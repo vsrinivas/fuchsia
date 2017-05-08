@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_ARCHIVER_ARCHIVE_WRITER_H_
-#define APPLICATION_SRC_ARCHIVER_ARCHIVE_WRITER_H_
+#ifndef APPLICATION_LIB_FAR_ARCHIVE_WRITER_H_
+#define APPLICATION_LIB_FAR_ARCHIVE_WRITER_H_
 
 #include <stdint.h>
 
 #include <vector>
 
-#include "application/src/archiver/archive_entry.h"
+#include "application/lib/far/archive_entry.h"
 
 namespace archive {
 
@@ -32,4 +32,4 @@ class ArchiveWriter {
 
 }  // namespace archive
 
-#endif  // APPLICATION_SRC_ARCHIVER_ARCHIVE_WRITER_H_
+#endif  // APPLICATION_LIB_FAR_ARCHIVE_WRITER_H_

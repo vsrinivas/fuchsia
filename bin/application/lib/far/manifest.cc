@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/archiver/manifest.h"
+#include "application/lib/far/manifest.h"
 
 #include <stdio.h>
 
-#include "application/src/archiver/archive_entry.h"
-#include "application/src/archiver/archive_writer.h"
+#include "application/lib/far/archive_entry.h"
+#include "application/lib/far/archive_writer.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/strings/split_string.h"
 

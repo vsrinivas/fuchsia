@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "application/src/archiver/archive_writer.h"
+#include "application/lib/far/archive_writer.h"
 
 #include <fcntl.h>
 #include <stdint.h>
@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-#include "application/src/archiver/alignment.h"
-#include "application/src/archiver/file_operations.h"
-#include "application/src/archiver/format.h"
+#include "application/lib/far/alignment.h"
+#include "application/lib/far/file_operations.h"
+#include "application/lib/far/format.h"
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/unique_fd.h"
 

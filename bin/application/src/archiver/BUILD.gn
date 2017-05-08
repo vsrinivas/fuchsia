@@ -3,23 +3,14 @@
 # found in the LICENSE file.
 
 executable("archiver") {
+  output_name = "far"
+
   sources = [
-    "alignment.h",
-    "archive_entry.cc",
-    "archive_entry.h",
-    "archive_reader.cc",
-    "archive_reader.h",
-    "archive_writer.cc",
-    "archive_writer.h",
-    "file_operations.cc",
-    "file_operations.h",
-    "format.h",
     "main.cc",
-    "manifest.cc",
-    "manifest.h",
   ]
 
   deps = [
+    "//application/lib/far",
     "//lib/ftl",
   ]
 }
