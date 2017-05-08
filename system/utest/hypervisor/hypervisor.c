@@ -146,6 +146,10 @@ static bool guest_start_test(void) {
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
               NO_ERROR, "");
+    uint32_t guest_esi = 0;
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI,
+                               &guest_esi, sizeof(guest_esi), NULL, 0),
+              NO_ERROR, "");
 #endif // __x86_64__
 
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY,

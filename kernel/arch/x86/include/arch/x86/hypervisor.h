@@ -67,16 +67,19 @@ public:
     VmcsPerCpu* PerCpu();
     status_t Enter();
 
-    status_t set_cr3(uintptr_t guest_cr3);
-    uintptr_t cr3() const { return cr3_; }
     status_t set_entry(uintptr_t guest_entry);
     uintptr_t entry() const {  return entry_; }
+    status_t set_cr3(uintptr_t guest_cr3);
+    uintptr_t cr3() const { return cr3_; }
+    status_t set_esi(uint32_t guest_esi);
+    uint32_t esi() const { return esi_; }
     GuestPhysicalAddressSpace* gpas() const { return gpas_.get(); }
     FifoDispatcher* serial_fifo() const { return serial_fifo_.get(); }
 
 private:
-    uintptr_t cr3_ = UINTPTR_MAX;
     uintptr_t entry_ = UINTPTR_MAX;
+    uintptr_t cr3_ = UINTPTR_MAX;
+    uint32_t esi_ = UINT32_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     mxtl::RefPtr<FifoDispatcher> serial_fifo_;
 
@@ -92,6 +95,10 @@ using HypervisorContext = VmxonContext;
 using GuestContext = VmcsContext;
 
 
-/* Set the CR3 of the guest context.
+/* Set the initial CR3 of the guest context.
  */
 status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3);
+
+/* Set the initial ESI of the guest context.
+*/
+status_t x86_guest_set_esi(const mxtl::unique_ptr<GuestContext>& context, uint32_t guest_esi);

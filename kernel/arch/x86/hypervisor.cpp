@@ -814,17 +814,18 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
         x86_xsetbv(0, vmx_state_.guest_state.xcr0);
     }
 
-    if (!do_resume_) {
-        vmcs_write(VmcsFieldXX::GUEST_CR3, context.cr3());
+    if (!vmx_state_.resume) {
         vmcs_write(VmcsFieldXX::GUEST_RIP, context.entry());
+        vmcs_write(VmcsFieldXX::GUEST_CR3, context.cr3());
+        vmx_state_.guest_state.rsi = context.esi();
     }
 
-    status_t status = vmx_enter(&vmx_state_, do_resume_);
+    status_t status = vmx_enter(&vmx_state_);
     if (status != NO_ERROR) {
         uint64_t error = vmcs_read(VmcsField32::INSTRUCTION_ERROR);
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
-        do_resume_ = true;
+        vmx_state_.resume = true;
         status = vmexit_handler(&vmx_state_.guest_state, &local_apic_state_, &io_apic_state_, gpas,
                                 serial_fifo);
     }
@@ -935,6 +936,13 @@ VmcsPerCpu* VmcsContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
 }
 
+status_t VmcsContext::set_entry(uintptr_t guest_entry) {
+    if (guest_entry >= gpas_->size())
+        return ERR_INVALID_ARGS;
+    entry_ = guest_entry;
+    return NO_ERROR;
+}
+
 status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
     if (guest_cr3 >= gpas_->size() - PAGE_SIZE)
         return ERR_INVALID_ARGS;
@@ -942,10 +950,10 @@ status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
     return NO_ERROR;
 }
 
-status_t VmcsContext::set_entry(uintptr_t guest_entry) {
-    if (guest_entry >= gpas_->size())
+status_t VmcsContext::set_esi(uint32_t guest_esi) {
+    if (guest_esi >= gpas_->size())
         return ERR_INVALID_ARGS;
-    entry_ = guest_entry;
+    esi_ = guest_esi;
     return NO_ERROR;
 }
 
@@ -956,9 +964,11 @@ static int vmcs_launch(void* arg) {
 }
 
 status_t VmcsContext::Enter() {
+    if (entry_ == UINTPTR_MAX)
+        return ERR_BAD_STATE;
     if (cr3_ == UINTPTR_MAX)
         return ERR_BAD_STATE;
-    if (entry_ == UINTPTR_MAX)
+    if (esi_ == UINT32_MAX)
         return ERR_BAD_STATE;
     return percpu_exec(vmcs_launch, this);
 }
@@ -981,11 +991,15 @@ status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
     return context->Enter();
 }
 
+status_t arch_guest_set_entry(const mxtl::unique_ptr<GuestContext>& context,
+                              uintptr_t guest_entry) {
+    return context->set_entry(guest_entry);
+}
+
 status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3) {
     return context->set_cr3(guest_cr3);
 }
 
-status_t arch_guest_set_entry(const mxtl::unique_ptr<GuestContext>& context,
-                              uintptr_t guest_entry) {
-    return context->set_entry(guest_entry);
+status_t x86_guest_set_esi(const mxtl::unique_ptr<GuestContext>& context, uint32_t guest_esi) {
+    return context->set_esi(guest_esi);
 }

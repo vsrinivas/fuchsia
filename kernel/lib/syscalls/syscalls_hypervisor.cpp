@@ -97,6 +97,17 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
 
     return guest->set_cr3(guest_cr3);
 }
+
+static mx_status_t guest_set_esi(mx_handle_t handle, uint32_t guest_esi) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->set_esi(guest_esi);
+}
 #endif
 
 static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
@@ -131,6 +142,14 @@ static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
     }
     case MX_HYPERVISOR_OP_GUEST_ENTER:
         return guest_enter(handle);
+    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY: {
+        uintptr_t guest_entry;
+        if (args_len != sizeof(guest_entry))
+            return ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return guest_set_entry(handle, guest_entry);
+    }
 #if ARCH_X86_64
     case MX_HYPERVISOR_OP_GUEST_SET_CR3: {
         uintptr_t guest_cr3;
@@ -140,15 +159,15 @@ static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
             return ERR_INVALID_ARGS;
         return guest_set_cr3(handle, guest_cr3);
     }
-#endif // ARCH_X86_64
-    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY: {
-        uintptr_t guest_entry;
-        if (args_len != sizeof(guest_entry))
+    case MX_HYPERVISOR_OP_GUEST_SET_ESI: {
+        uint32_t guest_esi;
+        if (args_len != sizeof(guest_esi))
             return ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
+        if (args.copy_array_from_user(&guest_esi, sizeof(guest_esi)) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        return guest_set_entry(handle, guest_entry);
+        return guest_set_esi(handle, guest_esi);
     }
+#endif // ARCH_X86_64
     default:
         return ERR_INVALID_ARGS;
     }

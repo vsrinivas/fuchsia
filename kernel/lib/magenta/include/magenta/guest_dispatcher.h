@@ -26,6 +26,7 @@ public:
 
 #if ARCH_X86_64
     mx_status_t set_cr3(uintptr_t guest_cr3);
+    mx_status_t set_esi(uint32_t guest_esi);
 #endif // ARCH_X86_64
 
 private:

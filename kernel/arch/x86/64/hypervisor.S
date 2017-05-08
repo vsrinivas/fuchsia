@@ -11,7 +11,7 @@
 
 .text
 
-/* status_t vmx_enter(VmxState* vmx_state, bool resume) */
+/* status_t vmx_enter(VmxState* vmx_state) */
 FUNCTION(vmx_enter)
     // Store the return address.
     // We do this first to adjust the RSP we store.
@@ -30,15 +30,6 @@ FUNCTION(vmx_enter)
     pushfq
     popq HS_RFLAGS(%rdi)
 
-    // If we are resuming, jump to resume.
-    test %sil, %sil
-    jnz resume
-
-    // Launch the guest.
-    vmlaunch
-    jmp failure
-
-resume:
     // We are going to trample RDI, so move it to RSP. This also conveniently
     // mirrors the exit code.
     mov %rdi, %rsp
@@ -64,14 +55,30 @@ resume:
     mov GS_R14(%rsp), %r14
     mov GS_R15(%rsp), %r15
 
+    // If we are resuming, jump to resume.
+    testb $1, VS_RESUME(%rsp)
+    jnz resume
+
+    // Launch the guest.
+    vmlaunch
+    jmp failure
+
+resume:
     // Resume the guest.
     vmresume
-    mov %rsp, %rdi
 
 failure:
-    // Return ERR_INTERNAL. We will only be here if vmlaunch or vmresume failed.
+    // We will only be here if vmlaunch or vmresume failed.
+    // Restore host RDI and RSP.
+    mov %rsp, %rdi
+    mov HS_RSP(%rdi), %rsp
+
+    // Set up the return address.
+    pushq HS_RIP(%rdi)
+
+    // Return ERR_INTERNAL.
     mov $ERR_INTERNAL, %eax
-    jmp *HS_RIP(%rdi)
+    ret
 
 /* This is effectively the second-half of vmx_enter. When we return from a
  * VM exit, vmx_state argument is stored in RSP. We use this to restore the

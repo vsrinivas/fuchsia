@@ -8,32 +8,34 @@
 
 #include <magenta/compiler.h>
 
-#define HS_RIP     0
-#define HS_RSP     (HS_RIP + 8)
-#define HS_RBP     (HS_RSP + 8)
-#define HS_RBX     (HS_RBP + 8)
-#define HS_R12     (HS_RBX + 8)
-#define HS_R13     (HS_R12 + 8)
-#define HS_R14     (HS_R13 + 8)
-#define HS_R15     (HS_R14 + 8)
-#define HS_RFLAGS  (HS_R15 + 8)
+#define VS_RESUME   0
 
-#define GS_RAX     (HS_RFLAGS + 16)
-#define GS_RBX     (GS_RAX + 8)
-#define GS_RCX     (GS_RBX + 8)
-#define GS_RDX     (GS_RCX + 8)
-#define GS_RDI     (GS_RDX + 8)
-#define GS_RSI     (GS_RDI + 8)
-#define GS_RBP     (GS_RSI + 8)
-#define GS_R8      (GS_RBP + 8)
-#define GS_R9      (GS_R8 + 8)
-#define GS_R10     (GS_R9 + 8)
-#define GS_R11     (GS_R10 + 8)
-#define GS_R12     (GS_R11 + 8)
-#define GS_R13     (GS_R12 + 8)
-#define GS_R14     (GS_R13 + 8)
-#define GS_R15     (GS_R14 + 8)
-#define GS_CR2     (GS_R15 + 8)
+#define HS_RIP      (VS_RESUME + 8)
+#define HS_RSP      (HS_RIP + 8)
+#define HS_RBP      (HS_RSP + 8)
+#define HS_RBX      (HS_RBP + 8)
+#define HS_R12      (HS_RBX + 8)
+#define HS_R13      (HS_R12 + 8)
+#define HS_R14      (HS_R13 + 8)
+#define HS_R15      (HS_R14 + 8)
+#define HS_RFLAGS   (HS_R15 + 8)
+
+#define GS_RAX      (HS_RFLAGS + 16)
+#define GS_RBX      (GS_RAX + 8)
+#define GS_RCX      (GS_RBX + 8)
+#define GS_RDX      (GS_RCX + 8)
+#define GS_RDI      (GS_RDX + 8)
+#define GS_RSI      (GS_RDI + 8)
+#define GS_RBP      (GS_RSI + 8)
+#define GS_R8       (GS_RBP + 8)
+#define GS_R9       (GS_R8 + 8)
+#define GS_R10      (GS_R9 + 8)
+#define GS_R11      (GS_R10 + 8)
+#define GS_R12      (GS_R11 + 8)
+#define GS_R13      (GS_R12 + 8)
+#define GS_R14      (GS_R13 + 8)
+#define GS_R15      (GS_R14 + 8)
+#define GS_CR2      (GS_R15 + 8)
 
 #ifndef ASSEMBLY
 
@@ -84,9 +86,12 @@ struct GuestState {
 };
 
 struct VmxState {
+    bool resume;
     HostState host_state;
     GuestState guest_state;
 };
+
+static_assert(__offsetof(VmxState, resume) == VS_RESUME, "");
 
 static_assert(__offsetof(VmxState, host_state.rip) == HS_RIP, "");
 static_assert(__offsetof(VmxState, host_state.rsp) == HS_RSP, "");
@@ -120,7 +125,7 @@ __BEGIN_CDECLS
  * If we return 0, we have exited from the guest, otherwise we have failed to
  * launch the guest.
  */
-status_t vmx_enter(VmxState* vmx_state, bool resume);
+status_t vmx_enter(VmxState* vmx_state);
 
 /* Exit from the guest, and load the saved host state.
  * This function is never called directly, but is executed on exit from a guest.

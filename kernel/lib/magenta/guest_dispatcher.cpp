@@ -45,16 +45,22 @@ mx_status_t GuestDispatcher::Enter() {
     return arch_guest_enter(context_);
 }
 
+mx_status_t GuestDispatcher::set_entry(uintptr_t guest_entry) {
+    canary_.Assert();
+
+    return arch_guest_set_entry(context_, guest_entry);
+}
+
 #if ARCH_X86_64
 mx_status_t GuestDispatcher::set_cr3(uintptr_t guest_cr3) {
     canary_.Assert();
 
     return x86_guest_set_cr3(context_, guest_cr3);
 }
-#endif // ARCH_X86_64
 
-mx_status_t GuestDispatcher::set_entry(uintptr_t guest_entry) {
+mx_status_t GuestDispatcher::set_esi(uint32_t guest_esi) {
     canary_.Assert();
 
-    return arch_guest_set_entry(context_, guest_entry);
+    return x86_guest_set_esi(context_, guest_esi);
 }
+#endif // ARCH_X86_64

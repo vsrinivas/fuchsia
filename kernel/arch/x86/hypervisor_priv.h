@@ -276,7 +276,6 @@ public:
                    FifoDispatcher* serial_fifo);
 
 private:
-    bool do_resume_ = false;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxState vmx_state_;

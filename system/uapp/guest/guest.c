@@ -133,6 +133,14 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
+
+    uint32_t guest_esi = 0;
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI, &guest_esi,
+                              sizeof(guest_esi), NULL, 0);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to set guest ESI\n");
+        return status;
+    }
 #endif // __x86_64__
 
     status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY,

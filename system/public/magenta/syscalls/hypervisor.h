@@ -9,8 +9,10 @@
 #define MX_HYPERVISOR_OP_GUEST_CREATE       1u
 #define MX_HYPERVISOR_OP_GUEST_ENTER        2u
 
+#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY    3u
+
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_CR3      3u
+#define MX_HYPERVISOR_OP_GUEST_SET_CR3      4u
+#define MX_HYPERVISOR_OP_GUEST_SET_ESI      5u
 #endif // __x86_64__
 
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY    4u
