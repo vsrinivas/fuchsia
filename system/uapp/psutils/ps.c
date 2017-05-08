@@ -6,6 +6,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
+#include <task-utils/walker.h>
 
 #include <inttypes.h>
 #include <math.h>
@@ -15,7 +16,6 @@
 #include <string.h>
 
 #include "format.h"
-#include "processes.h"
 
 #define MAX_STATE_LEN (7 + 1)  // +1 for trailing NUL
 
@@ -210,10 +210,10 @@ int main(int argc, char** argv) {
     }
 
     int ret = 0;
-    mx_status_t status = walk_process_tree(job_callback, process_callback,
-                                           with_threads ? thread_callback : NULL);
+    mx_status_t status = walk_root_job_tree(job_callback, process_callback,
+                                            with_threads ? thread_callback : NULL);
     if (status != NO_ERROR) {
-        fprintf(stderr, "WARNING: walk_process_tree failed: %s (%d)\n",
+        fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);
         ret = 1;
     }

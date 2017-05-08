@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "processes.h"
-
-#include <magenta/device/sysinfo.h>
-#include <magenta/status.h>
+#include <task-utils/walker.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -13,6 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include <magenta/device/sysinfo.h>
+#include <magenta/status.h>
+#include <magenta/syscalls.h>
 
 typedef struct {
     mx_koid_t* entries;
@@ -27,9 +28,9 @@ static const size_t kNumInitialKoids = 128;
 // on top of what the kernel says is currently needed
 static const size_t kNumExtraKoids = 10;
 
-static mx_status_t walk_process_tree_internal(
-    job_callback_t job_callback, process_callback_t process_callback,
-    thread_callback_t thread_callback,
+static mx_status_t walk_job_tree_internal(
+    task_callback_t job_callback, task_callback_t process_callback,
+    task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth);
 
 static koid_table_t* make_koid_table(void) {
@@ -73,8 +74,7 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
                                     koid_table_byte_capacity(koids),
                                     &actual, &avail);
         if (status != NO_ERROR) {
-            fprintf(stderr, "ERROR: mx_object_get_info(%" PRIu64
-                    ", %s, ...) failed: %s (%d)\n",
+            fprintf(stderr, "ERROR: mx_object_get_info(%" PRIu64 ", %s, ...) failed: %s (%d)\n",
                     parent_koid, kind_name, mx_status_get_string(status), status);
             return status;
         }
@@ -85,8 +85,7 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
 
     // if we're still too small at least warn the user
     if (actual < avail) {
-        fprintf(stderr, "WARNING: mx_object_get_info(%" PRIu64
-                ", %s, ...) truncated %zu/%zu results\n",
+        fprintf(stderr, "WARNING: mx_object_get_info(%" PRIu64 ", %s, ...) truncated %zu/%zu results\n",
                 parent_koid, kind_name, avail - actual, avail);
     }
 
@@ -95,7 +94,7 @@ static mx_status_t fetch_children(mx_handle_t parent, mx_koid_t parent_koid,
 }
 
 static mx_status_t do_threads_worker(
-    koid_table_t* koids, thread_callback_t thread_callback,
+    koid_table_t* koids, task_callback_t thread_callback,
     mx_handle_t process, mx_koid_t process_koid, int depth) {
 
     mx_status_t status;
@@ -122,8 +121,7 @@ static mx_status_t do_threads_worker(
 
             mx_handle_close(child);
         } else {
-            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64
-                    ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
+            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64 ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
                     process_koid, koids->entries[n], mx_status_get_string(status), status);
         }
     }
@@ -132,7 +130,7 @@ static mx_status_t do_threads_worker(
 }
 
 static mx_status_t do_threads(
-    thread_callback_t thread_callback,
+    task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
@@ -144,7 +142,7 @@ static mx_status_t do_threads(
 
 static mx_status_t do_processes_worker(
     koid_table_t* koids,
-    process_callback_t process_callback, thread_callback_t thread_callback,
+    task_callback_t process_callback, task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     mx_status_t status;
@@ -179,8 +177,7 @@ static mx_status_t do_processes_worker(
 
             mx_handle_close(child);
         } else {
-            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64
-                    ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
+            fprintf(stderr, "WARNING: mx_object_get_child(%" PRIu64 ", (proc)%" PRIu64 ", ...) failed: %s (%d)\n",
                     job_koid, koids->entries[n], mx_status_get_string(status), status);
         }
     }
@@ -189,7 +186,7 @@ static mx_status_t do_processes_worker(
 }
 
 static mx_status_t do_processes(
-    process_callback_t process_callback, thread_callback_t thread_callback,
+    task_callback_t process_callback, task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
@@ -201,9 +198,9 @@ static mx_status_t do_processes(
 
 static mx_status_t do_jobs_worker(
     koid_table_t* koids,
-    job_callback_t job_callback,
-    process_callback_t process_callback,
-    thread_callback_t thread_callback,
+    task_callback_t job_callback,
+    task_callback_t process_callback,
+    task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     mx_status_t status;
@@ -230,7 +227,7 @@ static mx_status_t do_jobs_worker(
             }
 
             // recurse to its children
-            status = walk_process_tree_internal(
+            status = walk_job_tree_internal(
                 job_callback, process_callback, thread_callback,
                 child, koids->entries[n], depth + 1);
             // abort on failure
@@ -251,9 +248,9 @@ static mx_status_t do_jobs_worker(
 }
 
 static mx_status_t do_jobs(
-    job_callback_t job_callback,
-    process_callback_t process_callback,
-    thread_callback_t thread_callback,
+    task_callback_t job_callback,
+    task_callback_t process_callback,
+    task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
     koid_table_t* koids = make_koid_table();
@@ -263,38 +260,66 @@ static mx_status_t do_jobs(
     return status;
 }
 
-static mx_status_t walk_process_tree_internal(
-    job_callback_t job_callback, process_callback_t process_callback,
-    thread_callback_t thread_callback,
+static mx_status_t walk_job_tree_internal(
+    task_callback_t job_callback, task_callback_t process_callback,
+    task_callback_t thread_callback,
     mx_handle_t job, mx_koid_t job_koid, int depth) {
 
-    mx_status_t status;
-
-    status = do_processes(process_callback, thread_callback, job, job_koid, depth);
-    if (status != NO_ERROR) {
-        return status;
+    if (process_callback != NULL || thread_callback != NULL) {
+        mx_status_t status = do_processes(
+            process_callback, thread_callback, job, job_koid, depth);
+        if (status != NO_ERROR) {
+            return status;
+        }
     }
 
     return do_jobs(job_callback, process_callback, thread_callback,
                    job, job_koid, depth);
 }
 
-mx_status_t walk_process_tree(job_callback_t job_callback, process_callback_t process_callback,
-                              thread_callback_t thread_callback) {
+mx_status_t walk_job_tree(mx_handle_t root_job,
+                          task_callback_t job_callback,
+                          task_callback_t process_callback,
+                          task_callback_t thread_callback) {
+    mx_koid_t root_job_koid = 0;
+    mx_info_handle_basic_t info;
+    mx_status_t status = mx_object_get_info(root_job, MX_INFO_HANDLE_BASIC,
+                                            &info, sizeof(info), NULL, NULL);
+    if (status == NO_ERROR) {
+        root_job_koid = info.koid;
+    }
+    // Else keep going with a koid of zero.
+
+    if (job_callback) {
+        status = (job_callback)(/* depth */ 0, root_job, root_job_koid);
+        if (status != NO_ERROR) {
+            return status;
+        }
+    }
+    return walk_job_tree_internal(
+        job_callback, process_callback, thread_callback,
+        root_job, root_job_koid, /* depth */ 1);
+}
+
+mx_status_t walk_root_job_tree(task_callback_t job_callback,
+                               task_callback_t process_callback,
+                               task_callback_t thread_callback) {
     int fd = open("/dev/misc/sysinfo", O_RDWR);
     if (fd < 0) {
-        fprintf(stderr, "ps: cannot open sysinfo: %d\n", errno);
+        fprintf(stderr, "task-utils/walker: cannot open sysinfo: %d\n", errno);
         return ERR_NOT_FOUND;
     }
+
     mx_handle_t root_job;
-    if (ioctl_sysinfo_get_root_job(fd, &root_job) != sizeof(root_job)) {
-        fprintf(stderr, "ps: cannot obtain root job\n");
+    size_t n = ioctl_sysinfo_get_root_job(fd, &root_job);
+    close(fd);
+    if (n != sizeof(root_job)) {
+        fprintf(stderr, "task-utils/walker: cannot obtain root job\n");
         return ERR_NOT_FOUND;
     }
-    close(fd);
 
-    return walk_process_tree_internal(job_callback, process_callback, thread_callback,
-                                      root_job, 0, 0);
-
+    mx_status_t s = walk_job_tree(
+        root_job, job_callback, process_callback, thread_callback);
     mx_handle_close(root_job);
+    return s;
 }

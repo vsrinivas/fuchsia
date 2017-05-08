@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "processes.h"
+#include <magenta/syscalls.h>
+#include <task-utils/walker.h>
 
 const char* kill_name;
 int killed = 0;
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
 
     kill_name = argv[1];
 
-    walk_process_tree(NULL, process_callback, NULL);
+    walk_root_job_tree(NULL, process_callback, NULL);
     if (killed == 0) {
         fprintf(stderr, "no tasks found\n");
         return -1;

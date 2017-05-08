@@ -7,6 +7,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
+#include <task-utils/walker.h>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -15,7 +16,6 @@
 #include <string.h>
 
 #include "format.h"
-#include "processes.h"
 
 // Reads the mx_info_maps_t entries for the process.
 // Caller is responsible for the |out_maps| pointer.
@@ -184,7 +184,7 @@ mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid) {
 mx_status_t get_process(mx_koid_t koid, mx_handle_t* out) {
     desired_koid = koid;
     found_handle = MX_HANDLE_INVALID;
-    mx_status_t s = walk_process_tree(job_callback, process_callback, NULL);
+    mx_status_t s = walk_root_job_tree(job_callback, process_callback, NULL);
     if (s == NO_ERROR || s == VMAPS_FOUND_KOID) {
         desired_koid = 0;
         *out = found_handle;
