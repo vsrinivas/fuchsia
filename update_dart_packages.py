@@ -18,6 +18,7 @@ ROOT_PUBSPECS = [
     'dart/pkg/analyzer_cli',
     'dart/pkg/kernel',
     'dart/pkg/typed_mock',
+    'lib/flutter/examples/flutter_gallery',
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
     'lib/flutter/packages/flutter_tools',
@@ -42,6 +43,8 @@ def main():
     pub_path = os.path.join(host_path, 'dart-sdk', 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                  'importer', 'importer.py')
+    flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'lib', 'flutter');
+
     args = [importer_path]
     args.append('--pub')
     args.append(pub_path)
@@ -52,7 +55,7 @@ def main():
     for project in PROJECT_DEPENDENCIES:
         args.append(os.path.join(paths.FUCHSIA_ROOT, project))
 
-    subprocess.check_call(args)
+    subprocess.check_call(args, env={"FLUTTER_ROOT": flutter_root});
 
 
 if __name__ == '__main__':
