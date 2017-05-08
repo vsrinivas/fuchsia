@@ -40,15 +40,16 @@ static void send_query_ack(const ip6_addr* addr, uint16_t port,
 }
 
 static void advertise(void) {
-    uint8_t buffer[256];
+    uint8_t buffer[sizeof(nbmsg) + sizeof(advertise_data)];
     nbmsg* msg = (void*)buffer;
     msg->magic = NB_MAGIC;
     msg->cookie = 0;
     msg->cmd = NB_ADVERTISE;
     msg->arg = NB_VERSION_CURRENT;
-    memcpy(msg->data, advertise_data, sizeof(advertise_data));
-    udp6_send(buffer, sizeof(nbmsg) + sizeof(advertise_data),
-              &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT);
+    size_t data_len = strlen(advertise_data) + 1;
+    memcpy(msg->data, advertise_data, data_len);
+    udp6_send(buffer, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes,
+              NB_ADVERT_PORT, NB_SERVER_PORT);
 }
 
 void udp6_recv(void* data, size_t len,
