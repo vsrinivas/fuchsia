@@ -41,7 +41,9 @@ devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
         return NULL;
     }
     ios->dev = dev;
+#if !DEVHOST_V2
     mtx_init(&ios->lock, mtx_plain);
+#endif
     return ios;
 }
 
@@ -484,6 +486,9 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     devhost_iostate_t* ios = cookie;
     mx_status_t status;
     bool should_free_ios = false;
+#if DEVHOST_V2
+    return _devhost_rio_handler(msg, rh, ios, &should_free_ios);
+#else
     mtx_lock(&ios->lock);
     // if ios->dev is NULL, this is the "root" iostate of the
     // device (where OPEN transactions are passed from devfs)
@@ -500,5 +505,6 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     if (should_free_ios) {
         free(ios);
     }
+#endif
     return status;
 }

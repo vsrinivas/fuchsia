@@ -13,7 +13,7 @@ typedef struct port_handler port_handler_t;
 struct port_handler {
     mx_handle_t handle;
     mx_signals_t waitfor;
-    mx_status_t (*func)(port_handler_t* ph, mx_signals_t signals);
+    mx_status_t (*func)(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
 };
 
 typedef struct {
@@ -23,6 +23,8 @@ typedef struct {
 mx_status_t port_init(port_t* port);
 mx_status_t port_watch(port_t* port, port_handler_t* ph);
 mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
+mx_status_t port_cancel(port_t* port, port_handler_t* ph);
+mx_status_t port_queue(port_t* port, port_handler_t* ph, uint32_t evt);
 
 #if DEVMGR
 #include <fs/vfs.h>
@@ -59,6 +61,7 @@ struct dc_devhost {
     mx_handle_t hrpc;
     mx_handle_t proc;
     mx_koid_t koid;
+    int32_t refcount;
 };
 
 struct dc_device {

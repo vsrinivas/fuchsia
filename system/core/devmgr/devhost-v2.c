@@ -31,7 +31,7 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 #define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
-static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals);
+static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t msg);
 
 static port_t dh_port;
 
@@ -302,9 +302,22 @@ fail:
 }
 
 // handles devcoordinator rpc
-static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals) {
+static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     iostate_t* ios = ios_from_ph(ph);
 
+    if (evt != 0) {
+        // we send an event to request the destruction
+        // of an iostate, to ensure that's the *last*
+        // packet about the iostate that we get
+        free(ios);
+        return ERR_STOP;
+    }
+    if (ios->dead) {
+        // ports v2 does not let us cancel packets that are
+        // alread in the queue, so the dead flag enables us
+        // to ignore them
+        return ERR_STOP;
+    }
     if (signals & MX_CHANNEL_READABLE) {
         mx_status_t r = dh_handle_rpc_read(ph->handle, ios);
         if (r != NO_ERROR) {
@@ -314,7 +327,7 @@ static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals) {
         return r;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devhost: devmgr disconnected! fatal.\n");
+        log(ERROR, "devhost: devmgr disconnected! fatal. (ios=%p)\n", ios);
         exit(0);
     }
     log(ERROR, "devhost: no work? %08x\n", signals);
@@ -330,7 +343,7 @@ static mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t h, void* cookie) {
 };
 
 // handles remoteio rpc
-static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals) {
+static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     iostate_t* ios = ios_from_ph(ph);
 
     mx_status_t r;
@@ -414,6 +427,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
         ios->ph.func = dh_handle_dc_rpc;
         if ((r = port_watch(&dh_port, &ios->ph)) == NO_ERROR) {
             child->rpc = hrpc;
+            child->ios = ios;
             return NO_ERROR;
         }
 
@@ -452,7 +466,31 @@ static mx_status_t devhost_simple_rpc(mx_device_t* dev, uint32_t op,
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 mx_status_t devhost_remove(mx_device_t* dev) {
-    return devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
+    devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
+    devhost_iostate_t* ios = dev->ios;
+    if (ios == NULL) {
+        log(ERROR, "removing device %p, ios is NULL\n", dev);
+    } else {
+        log(INFO, "removing device %p, ios %p\n", dev, ios);
+        // make this iostate inactive
+        ios->dev = NULL;
+        ios->dead = true;
+
+        // ensure we get no further events
+        //TODO: this does not work yet, ports v2 limitation
+        port_cancel(&dh_port, &ios->ph);
+        ios->ph.handle = MX_HANDLE_INVALID;
+        dev->ios = NULL;
+
+        // shut down our rpc channel
+        mx_handle_close(dev->rpc);
+        dev->rpc = MX_HANDLE_INVALID;
+
+        // queue an event to destroy the iostate
+        port_queue(&dh_port, &ios->ph, 1);
+    }
+
+    return NO_ERROR;
 }
 
 mx_status_t devhost_device_rebind(mx_device_t* dev) {

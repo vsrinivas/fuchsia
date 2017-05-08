@@ -72,9 +72,11 @@ typedef struct devhost_iostate {
     mx_device_t* dev;
     size_t io_off;
     uint32_t flags;
-    mtx_t lock;
 #if DEVHOST_V2
+    bool dead;
     port_handler_t ph;
+#else
+    mtx_t lock;
 #endif
 } devhost_iostate_t;
 

@@ -82,7 +82,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
 mx_handle_t get_sysinfo_job_root(void);
 
 
-static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals);
+static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
 
 static mx_handle_t devhost_job;
@@ -230,6 +230,19 @@ static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
     return NO_ERROR;
 }
 
+static void dc_release_devhost(devhost_t* dh) {
+    log(INFO, "devcoord: release host %p\n", dh);
+    dh->refcount--;
+    if (dh->refcount > 0) {
+        return;
+    }
+    log(INFO, "devcoord: destroy host %p\n", dh);
+    mx_handle_close(dh->hrpc);
+    mx_task_kill(dh->proc);
+    mx_handle_close(dh->proc);
+    free(dh);
+}
+
 // called when device children or shadows are removed
 static void dc_release_device(device_t* dev) {
     log(DEVLC, "devcoord: release dev %p name='%s' ref=%d\n", dev, dev->name, dev->refcount);
@@ -248,12 +261,12 @@ static void dc_release_device(device_t* dev) {
 
     do_unpublish(dev);
 
-    if (dev->hrpc) {
+    if (dev->hrpc != MX_HANDLE_INVALID) {
         mx_handle_close(dev->hrpc);
         dev->hrpc = MX_HANDLE_INVALID;
         dev->ph.handle = MX_HANDLE_INVALID;
     }
-    if (dev->hrsrc) {
+    if (dev->hrsrc != MX_HANDLE_INVALID) {
         mx_handle_close(dev->hrsrc);
         dev->hrsrc = MX_HANDLE_INVALID;
     }
@@ -326,6 +339,9 @@ static mx_status_t dc_add_device(device_t* parent,
         return r;
     }
 
+    if (dev->host) {
+        dev->host->refcount++;
+    }
     dev->refcount = 1;
     dev->parent = parent;
     list_add_tail(&parent->children, &dev->node);
@@ -343,27 +359,37 @@ static mx_status_t dc_add_device(device_t* parent,
 
 // Remove device from parent
 static mx_status_t dc_remove_device(device_t* dev) {
-    if (dev->flags & DEV_CTX_IMMORTAL) {
-        log(ERROR, "devcoord: cannot remove dev %p (immortal)\n", dev);
+    if (dev->flags & DEV_CTX_DEAD) {
+        log(ERROR, "devcoord: cannot remove dev %p name='%s' twice!\n", dev, dev->name);
         return ERR_BAD_STATE;
-    } else {
-        log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name, dev->parent);
-        dev->flags |= DEV_CTX_DEAD;
+    }
+    if (dev->flags & DEV_CTX_IMMORTAL) {
+        log(ERROR, "devcoord: cannot remove dev %p name='%s' (immortal)\n", dev, dev->name);
+        return ERR_BAD_STATE;
+    }
 
-        // remove from devfs, preventing further OPEN attempts
-        do_unpublish(dev);
+    log(DEVLC, "devcoord: remove %p name='%s' parent=%p\n", dev, dev->name, dev->parent);
+    dev->flags |= DEV_CTX_DEAD;
 
-        // if we have a parent, disconnect and downref it
-        device_t* parent = dev->parent;
-        if (parent != NULL) {
-            if (dev->flags & DEV_CTX_SHADOW) {
-                parent->shadow = NULL;
-            } else {
-                list_delete(&dev->node);
-            }
-            dev->parent = NULL;
-            dc_release_device(parent);
+    // remove from devfs, preventing further OPEN attempts
+    do_unpublish(dev);
+
+    // detach from devhost
+    if (dev->host != NULL) {
+        dc_release_devhost(dev->host);
+        dev->host = NULL;
+    }
+
+    // if we have a parent, disconnect and downref it
+    device_t* parent = dev->parent;
+    if (parent != NULL) {
+        if (dev->flags & DEV_CTX_SHADOW) {
+            parent->shadow = NULL;
+        } else {
+            list_delete(&dev->node);
         }
+        dev->parent = NULL;
+        dc_release_device(parent);
     }
     return NO_ERROR;
 }
@@ -433,6 +459,9 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         }
     }
 
+    dc_status_t dcs;
+    dcs.txid = msg.txid;
+
     switch (msg.op) {
     case DC_OP_ADD_DEVICE:
         log(RPC_IN, "devcoord: rpc: add-device '%s' args='%s'\n", name, args);
@@ -445,8 +474,8 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
 
     case DC_OP_REMOVE_DEVICE:
         log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
-        r = dc_remove_device(dev);
-        break;
+        dc_remove_device(dev);
+        goto disconnect;
 
     case DC_OP_BIND_DEVICE:
         log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
@@ -490,47 +519,51 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     }
 
 done:
-    ;
-    dc_status_t dcs = {
-        .txid = msg.txid,
-        .status = r,
-    };
+    dcs.status = r;
     if ((r = mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0)) < 0) {
         return r;
     }
     return NO_ERROR;
-}
 
-void dc_destroy_device(device_t* dev) {
-    if (dev->flags & DEV_CTX_IMMORTAL) {
-        log(ERROR, "devcoord: cannot destroy dev %p (immortal)\n", dev);
-        return;
-    }
-    if (!(dev->flags & DEV_CTX_DEAD)) {
-        dc_remove_device(dev);
-    }
+disconnect:
+    dcs.status = NO_ERROR;
+    mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0);
+    return ERR_STOP;
 }
 
 #define dev_from_ph(ph) containerof(ph, device_t, ph)
 
 // handle inbound RPCs from devhost to devices
-static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals) {
+static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t msg) {
     device_t* dev = dev_from_ph(ph);
+    mx_status_t r;
 
     if (signals & MX_CHANNEL_READABLE) {
-        mx_status_t r = dc_handle_device_read(dev);
-        if (r != NO_ERROR) {
-            dc_destroy_device(dev);
+        if ((r = dc_handle_device_read(dev)) < 0) {
+            if (r != ERR_STOP) {
+                log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
+                    dev, dev->name, r);
+                dc_remove_device(dev);
+            }
+            goto detach;
         }
-        return r;
+        return NO_ERROR;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devcoord: device disconnected!\n");
-        dc_destroy_device(dev);
-        return ERR_PEER_CLOSED;
+        log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
+        r = ERR_PEER_CLOSED;
+        goto detach;
     }
     log(ERROR, "devcoord: no work? %08x\n", signals);
     return NO_ERROR;
+
+detach:
+    if (dev->hrpc != MX_HANDLE_INVALID) {
+        mx_handle_close(dev->hrpc);
+        dev->hrpc = MX_HANDLE_INVALID;
+        dev->ph.handle = MX_HANDLE_INVALID;
+    }
+    return r;
 }
 
 // send message to devhost, requesting the creation of a device
