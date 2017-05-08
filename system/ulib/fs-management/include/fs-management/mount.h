@@ -43,12 +43,19 @@ static const mount_options_t default_mount_options = {
 
 typedef struct fsck_options {
     bool verbose;
+    // At MOST one of the following '*_modify' flags may be true.
+    bool never_modify; // Fsck still looks for problems, but it does not try to resolve them.
+    bool always_modify; // Fsck never asks to resolve problems; it assumes it should fix them.
+    bool force; // Force fsck to check the filesystem integrity, even if it is marked as "clean".
 } fsck_options_t;
 
-#define NUM_FSCK_OPTIONS 1
+#define NUM_FSCK_OPTIONS 3
 
 static const fsck_options_t default_fsck_options = {
     .verbose = false,
+    .never_modify = false,
+    .always_modify = false,
+    .force = false,
 };
 
 typedef mx_status_t (*LaunchCallback)(int argc, const char** argv,
