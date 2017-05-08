@@ -29,6 +29,8 @@ class UserActionLogImpl : public UserActionLog {
   void Subscribe(
       fidl::InterfaceHandle<ActionLogListener> listener_handle) override;
 
+  void Duplicate(fidl::InterfaceRequest<UserActionLog> request) override;
+
   void BroadcastToSubscribers(const std::string& component_url,
                               const std::string& method,
                               const std::string& params);
@@ -37,6 +39,7 @@ class UserActionLogImpl : public UserActionLog {
   fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;
   fidl::InterfacePtrSet<ActionLogListener> subscribers_;
+  fidl::BindingSet<UserActionLog> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
 };

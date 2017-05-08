@@ -39,6 +39,9 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
  private:
   app::ServiceProviderPtr startServiceProviderApp(const std::string& url);
   void startAgent(const std::string& url);
+  void addAgentServices(const std::string& url,
+      maxwell::ApplicationEnvironmentHostImpl* agent_host);
+  void startMiDashboard();
 
   app::ApplicationContext* app_context_;  // Not owned.
 

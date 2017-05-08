@@ -47,6 +47,11 @@ void UserActionLogImpl::GetComponentActionLog(
                                   std::move(action_log_request));
 }
 
+void UserActionLogImpl::Duplicate(
+    fidl::InterfaceRequest<UserActionLog> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
 void UserActionLogImpl::Subscribe(
     fidl::InterfaceHandle<ActionLogListener> listener_handle) {
   ActionLogListenerPtr listener =

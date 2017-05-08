@@ -15,4 +15,6 @@ interface UserActionLog {
 
   // When a new action is logged, a UserAction is sent to |listener|.
   Subscribe(ActionLogListener listener);
+
+  Duplicate(UserActionLog& request);
 };

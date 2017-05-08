@@ -90,7 +90,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   resolver_services_ = startServiceProviderApp("file:///system/apps/resolver");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
-  startAgent("file:///system/apps/agents/mi_dashboard.dartx");
+  startMiDashboard();
   startAgent("file:///system/apps/agents/module_suggester");
   startAgent("file:///system/apps/agents/module_suggester.dartx");
   startAgent("file:///system/apps/concert_agent");
@@ -143,10 +143,27 @@ app::ServiceProviderPtr UserIntelligenceProviderImpl::startServiceProviderApp(
   return services;
 }
 
+void UserIntelligenceProviderImpl::startMiDashboard() {
+  const std::string& url = "file:///system/apps/agents/mi_dashboard.dartx";
+  auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
+      app_context_->environment().get());
+  addAgentServices(url, agent_host.get());
+  agent_host->AddService<maxwell::UserActionLog>(
+      [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
+        user_action_log_->Duplicate(std::move(request));
+      });
+  agent_launcher_.StartAgent(url, std::move(agent_host));
+}
+
 void UserIntelligenceProviderImpl::startAgent(const std::string& url) {
   auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
       app_context_->environment().get());
+  addAgentServices(url, agent_host.get());
+  agent_launcher_.StartAgent(url, std::move(agent_host));
+}
 
+void UserIntelligenceProviderImpl::addAgentServices(const std::string& url,
+    maxwell::ApplicationEnvironmentHostImpl* agent_host) {
   agent_host->AddService<maxwell::ContextPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
         auto scope = ComponentScope::New();
@@ -180,8 +197,6 @@ void UserIntelligenceProviderImpl::startAgent(const std::string& url) {
 
   agent_host->AddService<resolver::Resolver>(std::bind(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
-
-  agent_launcher_.StartAgent(url, std::move(agent_host));
 }
 
 //////////////////////////////////////////////////////////////////////////////
