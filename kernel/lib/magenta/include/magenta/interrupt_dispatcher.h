@@ -35,7 +35,7 @@ public:
     virtual status_t UserSignal() = 0;
 
     status_t WaitForInterrupt() {
-        return event_wait(&event_);
+        return event_wait_deadline(&event_, INFINITE_TIME, true);
     }
 
     virtual void on_zero_handles() final {
