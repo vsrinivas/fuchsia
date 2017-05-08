@@ -10,10 +10,7 @@ import "apps/modular/services/story/story_state.fidl";
 // UserRunner creates an instance of this service and passes it to the
 // UserShell so it can operate on stories for the user.
 //
-// If |StoryProvider| is closed, all associated |StoryController|
-// instances are closed too. However, running stories are not properly
-// stopped, so it's a bad idea for the user shell to close its story
-// provider connection while a story is still running.
+// Closing |StoryProvider| has no effect on the state of the framework.
 interface StoryProvider {
   // Creates a new story running the module at |url|. The returned
   // |story_id| can then be used to get a StoryController to perform

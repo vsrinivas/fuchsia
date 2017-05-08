@@ -118,6 +118,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void StopForDelete(const std::function<void()>& done);
 
   // Called by StoryProviderImpl.
+  void StopForTeardown(const std::function<void()>& done);
+
+  // Called by StoryProviderImpl.
   void AddForCreate(const fidl::String& module_name,
                     const fidl::String& module_url,
                     const fidl::String& link_name,

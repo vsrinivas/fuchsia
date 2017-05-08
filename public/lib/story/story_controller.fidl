@@ -12,6 +12,9 @@ import "apps/mozart/services/views/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a
 // single story. Created by StoryProvider.
+//
+// If |StoryController| is closed, the |StoryState| associated with this story
+// will not change.
 interface StoryController {
   // Gets information associated with the story.
   GetInfo() => (StoryInfo info, StoryState state);

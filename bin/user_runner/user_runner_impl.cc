@@ -273,14 +273,20 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
   FTL_LOG(INFO) << "UserRunner::Terminate()";
 
   user_shell_.AppTerminate([this, done] {
-    agent_runner_->Teardown([this, done] {
-      // First delete this, then invoke done, finally post stop.
-      std::unique_ptr<fidl::Binding<UserRunner>> binding = std::move(binding_);
-      delete this;
-      done();
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    // We teardown |story_provider_impl_| before |agent_runner_| because the
+    // modules running in a story might freak out if agents they are connected
+    // to go away while they are still running. On the other hand agents are
+    // meant to outlive story lifetimes.
+    story_provider_impl_->Teardown([this, done] {
+      agent_runner_->Teardown([this, done] {
+        // First delete this, then invoke done, finally post stop.
+        std::unique_ptr<fidl::Binding<UserRunner>> binding = std::move(binding_);
+        delete this;
+        done();
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
 
-      FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
+        FTL_LOG(INFO) << "UserRunner::Terminate(): deleted";
+      });
     });
   });
 }

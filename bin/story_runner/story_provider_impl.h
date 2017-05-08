@@ -47,11 +47,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
 
   void Connect(fidl::InterfaceRequest<StoryProvider> request);
 
-  // Called by StoryImpl.
-  //
-  // When the binding set of StoryImpl becomes empty, it asks its owner to
-  // delete it.
-  void PurgeController(const std::string& story_id);
+  void Teardown(const std::function<void()>& callback);
 
   // Called by StoryImpl.
   const Scope* user_scope() const { return user_scope_; }
@@ -171,6 +167,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
   class DeleteStoryCall;
   class GetControllerCall;
   class PreviousStoriesCall;
+  class TeardownCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

@@ -519,6 +519,36 @@ class StoryProviderImpl::PreviousStoriesCall
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
+class StoryProviderImpl::TeardownCall : Operation<void> {
+ public:
+  TeardownCall(OperationContainer* const container,
+               StoryProviderImpl* const story_provider_impl,
+               ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        story_provider_impl_(story_provider_impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow(this);
+    for (auto& it : story_provider_impl_->story_controllers_) {
+      // A new instance of |cont| gets creted for each running story. Each
+      // |const| has a copy of |flow| which only goes out-of-scope once the
+      // story corresponding to |it| stops.
+      it.second->StopForTeardown([this, story_id = it.first, flow] {
+        // It is okay to erase story_id because story provider binding has been
+        // closed and |cont| cannot be invoked asynchronously.
+        story_provider_impl_->story_controllers_.erase(story_id);
+      });
+    }
+   }
+
+  StoryProviderImpl* const story_provider_impl_;  // not owned
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
+};
+
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,
     const std::string& device_id,
@@ -542,16 +572,13 @@ void StoryProviderImpl::Connect(fidl::InterfaceRequest<StoryProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void StoryProviderImpl::PurgeController(const std::string& story_id) {
-  // TODO(mesch): This needs to go through a StopCall. The erase can be done in
-  // the callback of the StopCall.
-  //
-  // Otherwise it's not async safe: StoryImpl now holds a Page* which is owned
-  // even above StoryProviderImpl. Thus if a StoryImpl Operation is deleted
-  // while a Page method invocation is in progress, the method return callback
-  // will not be cancelled and will hit an Operation instance after it's
-  // deleted.
-  story_controllers_.erase(story_id);
+void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
+  // Closing all binding to this instance ensures that no new messages come
+  // in, though previous messages need to be processed. The stopping of stories
+  // is done on |operation_queue_| since that must strictly happen after all
+  // pending messgages have been processed.
+  bindings_.CloseAllBindings();
+  new TeardownCall(&operation_queue_, this, callback);
 }
 
 // |StoryProvider|

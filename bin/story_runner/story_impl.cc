@@ -517,9 +517,6 @@ StoryImpl::StoryImpl(const fidl::String& story_id,
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this),
       story_marker_impl_(new StoryMarkerImpl) {
-  bindings_.set_on_empty_set_handler(
-      [this] { story_provider_impl_->PurgeController(story_id_); });
-
   story_scope_.AddService<StoryMarker>(
       [this](fidl::InterfaceRequest<StoryMarker> request) {
         story_marker_impl_->Connect(std::move(request));
@@ -796,6 +793,10 @@ StoryState StoryImpl::GetStoryState() const {
 
 void StoryImpl::StopForDelete(const StopCallback& done) {
   new DeleteCall(&operation_queue_, this, done);
+}
+
+void StoryImpl::StopForTeardown(const StopCallback& done) {
+  new StopCall(&operation_queue_, this, done);
 }
 
 void StoryImpl::Stop(const StopCallback& done) {
