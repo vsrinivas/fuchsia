@@ -8,11 +8,12 @@ create a media player.
 The media player uses a file reader or a network reader. To use the file
 reader, you'll need to have an accessible file. Here's an example command line:
 
-    launch media_player --url=file:///data/vid.ogv
+    launch media_player /data/vid.ogv
 
-Here's an example using the network reader:
+Paths must be absolute (start with a '/'). Here's an example using the network
+reader:
 
-    launch media_player --url=http://example.com/vid.ogv
+    launch media_player http://example.com/vid.ogv
 
 By default, the media player is exposed via NetConnector under the service name
 'media_player'. The 'service' option can be used to change this:
@@ -27,7 +28,9 @@ In this case, the device name of the remote media player (as NetConnector
 understands device names) is 'myacer', and the service name for the media
 player is 'media_player'.
 
-Note that the '--service' and '--device' options are mutually exclusive.
+Note that the '--service' and '--device' options are mutually exclusive. A url
+or path must be supplied for local playback and may be supplied for remote
+control.
 
 The app responds to mouse clicks (touch on the Acer) and the keyboard. Mozart
 requires a touch to focus the keyboard. Touching anywhere but the progress bar
@@ -42,6 +45,8 @@ files.
 
 ## FORMAT SUPPORT
 
+Using the default ffmpeg profile, the following formats are supported.
+
 * Containers
   * MATROSKA (MKV)
   * OGG
@@ -50,5 +55,6 @@ files.
   * THEORA
   * VP3
   * VP8
+  * VP9
   * VORBIS
   * PCM (various)

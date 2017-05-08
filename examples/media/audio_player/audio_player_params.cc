@@ -4,6 +4,8 @@
 
 #include "apps/media/examples/audio_player/audio_player_params.h"
 
+#include <iostream>
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 
@@ -12,7 +14,33 @@ namespace examples {
 AudioPlayerParams::AudioPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  stay_ = !command_line.GetOptionValue("url", &url_);
+  bool url_found = false;
+
+  for (const std::string& arg : command_line.positional_args()) {
+    if (url_found) {
+      Usage();
+      std::cerr << "At most one url-or-path allowed\n";
+      return;
+    }
+
+    if (arg.compare(0, 1, "/") == 0) {
+      url_ = "file://";
+      url_.append(arg);
+      url_found = true;
+    } else if (arg.compare(0, 7, "http://") == 0 ||
+               arg.compare(0, 8, "https://") == 0 ||
+               arg.compare(0, 8, "file:///") == 0) {
+      url_ = arg;
+      url_found = true;
+    } else {
+      Usage();
+      std::cerr << "Url-or-path must start with '/' 'http://', 'https://' or "
+                   "'file:///'\n";
+      return;
+    }
+  }
+
+  stay_ = !url_found;
   stay_ = command_line.GetOptionValue("service", &service_name_) || stay_ ||
           command_line.HasOption("stay");
 
@@ -20,18 +48,16 @@ AudioPlayerParams::AudioPlayerParams(const ftl::CommandLine& command_line) {
 }
 
 void AudioPlayerParams::Usage() {
-  FTL_LOG(INFO) << "audio_player usage:";
-  FTL_LOG(INFO) << "    audio_player [ options ]";
-  FTL_LOG(INFO) << "options:";
-  FTL_LOG(INFO)
-      << "    --url=<url>          play content from <url> (files URLs are ok)";
-  FTL_LOG(INFO) << "    --service=<service>  set the service name (default is "
-                   "audio_player)";
-  FTL_LOG(INFO) << "    --stay               don't quit at end-of-stream";
-  FTL_LOG(INFO) << "The audio player terminates at end-of-stream if:";
-  FTL_LOG(INFO) << "   the URL option is used, and";
-  FTL_LOG(INFO) << "   the --service option is not used, and";
-  FTL_LOG(INFO) << "   the --stay option is not used";
+  std::cerr << "audio_player usage:\n";
+  std::cerr << "    audio_player [ options ] [ url-or-path ]\n";
+  std::cerr << "options:\n";
+  std::cerr << "    --service=<service>  set the service name (default is "
+               "audio_player)\n";
+  std::cerr << "    --stay               don't quit at end-of-stream\n";
+  std::cerr << "The audio player terminates at end-of-stream if:\n";
+  std::cerr << "   a url-or-path is supplied, and\n";
+  std::cerr << "   the --service option is not used, and\n";
+  std::cerr << "   the --stay option is not used\n";
 }
 
 }  // namespace examples

@@ -9,6 +9,9 @@ Run the app as follows:
 
     launch media_player_flutter
 
+The initial screen is a menu of content items that can be played. Touch one of
+the items to play it. Note that the default config file contains only one item.
+
 Flutter apps can't currently process command line parameters, and supporting
 text entry is problematic. For these reasons, media_player_flutter relies on
 a config file to determine what content to play. The app allows the user to

@@ -4,7 +4,8 @@
 
 #include "apps/media/examples/media_player/media_player_params.h"
 
-#include "lib/ftl/logging.h"
+#include <iostream>
+
 #include "lib/ftl/strings/split_string.h"
 
 namespace examples {
@@ -12,7 +13,32 @@ namespace examples {
 MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  command_line.GetOptionValue("url", &url_);
+  bool url_found = false;
+
+  for (const std::string& arg : command_line.positional_args()) {
+    if (url_found) {
+      Usage();
+      std::cerr << "At most one url-or-path allowed\n";
+      return;
+    }
+
+    if (arg.compare(0, 1, "/") == 0) {
+      url_ = "file://";
+      url_.append(arg);
+      url_found = true;
+    } else if (arg.compare(0, 7, "http://") == 0 ||
+               arg.compare(0, 8, "https://") == 0 ||
+               arg.compare(0, 8, "file:///") == 0) {
+      url_ = arg;
+      url_found = true;
+    } else {
+      Usage();
+      std::cerr << "Url-or-path must start with '/' 'http://', 'https://' or "
+                   "'file:///'\n";
+      return;
+    }
+  }
+
   bool service_found = command_line.GetOptionValue("service", &service_name_);
 
   std::string remote;
@@ -27,27 +53,30 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
 
     if (split.size() != 2) {
       Usage();
-      FTL_LOG(ERROR) << "Invalid --remote value";
+      std::cerr << "Invalid --remote value\n";
       return;
     }
 
     device_name_ = split[0].ToString();
     service_name_ = split[1].ToString();
+  } else if (!url_found) {
+    Usage();
+    return;
   }
 
   is_valid_ = true;
 }
 
 void MediaPlayerParams::Usage() {
-  FTL_LOG(INFO) << "media_player usage:";
-  FTL_LOG(INFO) << "    launch media_player [ options ]";
-  FTL_LOG(INFO) << "options:";
-  FTL_LOG(INFO) << "    --url=<url>                 read content from <url> "
-                   "(file urls are ok)";
-  FTL_LOG(INFO) << "    --service=<service>         set the service name "
-                   "(default is media_player)";
-  FTL_LOG(INFO) << "    --remote=<device>#<service> control a remote player";
-  FTL_LOG(INFO) << "The --service and --remote options are mutually exclusive.";
+  std::cerr << "media_player usage:\n";
+  std::cerr << "    launch media_player [ options ] [ url-or-path ]\n";
+  std::cerr << "options:\n";
+  std::cerr << "    --service=<service>         set the service name "
+               "(default is media_player)\n";
+  std::cerr << "    --remote=<device>#<service> control a remote player\n";
+  std::cerr << "The --service and --remote options are mutually exclusive.\n";
+  std::cerr
+      << "A url-or-path is required for local playback, optional for remote.\n";
 }
 
 }  // namespace examples
