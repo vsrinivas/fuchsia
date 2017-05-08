@@ -18,15 +18,8 @@ class SessionTest : public ::testing::Test,
                     public composer::ErrorReporter {
  public:
   // ::testing::Test virtual method.
-  void SetUp() override { session_ = std::make_unique<Session>(1, this, this); }
-
-  // ::testing::Test virtual method.
-  void TearDown() override {
-    reported_errors_.clear();
-    session_.reset();
-  }
-
-  std::unique_ptr<Session> NewSession();
+  void SetUp() override;
+  void TearDown() override;
 
  protected:
   // Implement ErrorReporter.
@@ -54,7 +47,7 @@ class SessionTest : public ::testing::Test,
     }
   }
 
-  std::unique_ptr<Session> session_;
+  SessionPtr session_;
   std::vector<std::string> reported_errors_;
 };
 

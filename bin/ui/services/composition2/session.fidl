@@ -11,13 +11,13 @@ module mozart2;
 import "apps/mozart/services/composition2/ops.fidl";
 
 interface Session {
-  // Enqueue a list of operations, which will not take effect until Commit() is
+  // Enqueue a list of operations, which will not take effect until Present() is
   // called.  It is allowable to call Enqueue() several times before calling
-  // Commit(); the effect is the same as if all operations had been concatenated
-  // into a single Enqueue() call.
+  // Present(); the effect is the same as if all operations had been
+  // concatenated into a single Enqueue() call.
   Enqueue(array<Op> op);
 
-  // Commit all previously enqueued operations.  In order to pipeline the
+  // Present all previously enqueued operations.  In order to pipeline the
   // preparation of the resources required to render the scene, two lists of
   // events are passed.
   //
@@ -48,7 +48,7 @@ interface Session {
   //   4) set one of the nodes above, say #5, to use Material #3.
   //   5) submit a Vulkan command-buffer which renders into Image #1, and
   //      will signal a VkSemaphore.
-  //   6) call Commit() with one wait-event (obtained from the VkSemaphore
+  //   6) call Present() with one wait-event (obtained from the VkSemaphore
   //      above) and one newly-created signal-event.
   //
   // After the steps above, Mozart will use the commited session state to render
@@ -57,7 +57,7 @@ interface Session {
   //   7) set Node #5 to use Material #4.
   //   8) submit a Vulkan command-buffer which renders into Image #1, and
   //      will signal a VkSemaphore.
-  //   9) call Commit() with one wait-event (obtained from the VkSemaphore
+  //   9) call Present() with one wait-event (obtained from the VkSemaphore
   //      above) and one newly-created signal-event.
   //
   // Finally, to continually draw new content, the client could repeat steps
@@ -76,7 +76,7 @@ interface Session {
   // Note: |wait_events| and |signal_events| are only necessary to synchronize
   // access to memory (and other external resources).  Any modification to
   // resources made via the Session API are automatically synchronized.
-  Commit(array<handle<event>> wait_events, array<handle<event>> signal_events);
+  Present(array<handle<event>> wait_events, array<handle<event>> signal_events);
 };
 
 interface SessionListener {

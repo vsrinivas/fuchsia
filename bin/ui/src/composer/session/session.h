@@ -17,13 +17,19 @@ namespace composer {
 
 typedef uint64_t SessionId;
 
+class Session;
+typedef ::ftl::RefPtr<Session> SessionPtr;
+
 struct SessionUpdate {
+  SessionPtr session;
   ::fidl::Array<mozart2::OpPtr> ops;
   ::fidl::Array<mx::event> wait_events;
   ::fidl::Array<mx::event> signal_events;
 };
 
-class Session {
+// TODO: use unsafe ref-counting for better performance (our architecture
+// guarantees that this is safe).
+class Session : public ftl::RefCountedThreadSafe<Session> {
  public:
   Session(SessionId id,
           SessionContext* context,
@@ -46,7 +52,12 @@ class Session {
   // the resource may continue to exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
-  ErrorReporter* error_reporter() const { return error_reporter_; }
+  void TearDown();
+
+  // Session becomes invalid once TearDown is called.
+  bool is_valid() const { return is_valid_; }
+
+  ErrorReporter* error_reporter() const;
 
   ResourceMap* resources() { return &resources_; }
 
@@ -87,13 +98,14 @@ class Session {
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
 
-  SessionId id_;
+  const SessionId id_;
   SessionContext* const context_;
-  ErrorReporter* const error_reporter_;
+  ErrorReporter* error_reporter_ = nullptr;
 
   ResourceMap resources_;
 
   size_t resource_count_ = 0;
+  bool is_valid_ = true;
 };
 
 }  // namespace composer

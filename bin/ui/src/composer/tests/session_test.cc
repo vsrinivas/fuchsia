@@ -8,6 +8,17 @@ namespace mozart {
 namespace composer {
 namespace test {
 
+void SessionTest::SetUp() {
+  session_ = ftl::MakeRefCounted<Session>(1, this, this);
+}
+
+// ::testing::Test virtual method.
+void SessionTest::TearDown() {
+  reported_errors_.clear();
+  session_->TearDown();
+  session_ = nullptr;
+}
+
 void SessionTest::ReportError(ftl::LogSeverity severity,
                               std::string error_string) {
 // Typically, we don't want to log expected errors when running the tests.

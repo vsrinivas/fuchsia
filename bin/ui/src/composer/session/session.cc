@@ -25,8 +25,7 @@ Session::Session(SessionId id,
 }
 
 Session::~Session() {
-  resources_.Clear();
-  FTL_DCHECK(resource_count_ == 0);
+  FTL_DCHECK(!is_valid_);
 }
 
 bool Session::ApplyOp(const mozart2::OpPtr& op) {
@@ -294,6 +293,21 @@ ResourcePtr Session::CreateMaterial(ResourceId id,
                                     float blue,
                                     float alpha) {
   return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha);
+}
+
+void Session::TearDown() {
+  if (!is_valid_) {
+    // TearDown already called.
+    return;
+  }
+  is_valid_ = false;
+  error_reporter_ = nullptr;
+  resources_.Clear();
+  FTL_DCHECK(resource_count_ == 0);
+}
+
+ErrorReporter* Session::error_reporter() const {
+  return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
 }  // namespace composer

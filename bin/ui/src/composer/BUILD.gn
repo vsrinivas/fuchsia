@@ -6,6 +6,8 @@ import("//apps/mozart/config.gni")
 
 source_set("common") {
   sources = [
+    "composer_impl.cc",
+    "composer_impl.h",
     "nodes/entity_node.cc",
     "nodes/entity_node.h",
     "nodes/node.cc",
@@ -26,6 +28,8 @@ source_set("common") {
     "session/session.h",
     "session/session.cc",
     "session/session_context.h",
+    "session/session_handler.h",
+    "session/session_handler.cc",
     "shapes/circle_shape.cc",
     "shapes/circle_shape.h",
     "shapes/shape.cc",
@@ -63,6 +67,7 @@ source_set("testing_common") {
   public_deps = [
     ":common",
     "//third_party/gtest",
+    "//apps/mozart/lib/tests",
   ]
 }
 
@@ -71,7 +76,11 @@ executable("apptests") {
 
   testonly = true
 
-  sources = []
+  sources = [
+    "tests/composer_apptest.cc",
+    "tests/composer_test.cc",
+    "tests/composer_test.h",
+  ]
 
   deps = [
     ":testing_common",
