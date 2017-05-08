@@ -15,7 +15,7 @@
 
 namespace modular {
 
-constexpr ftl::TimeDelta kStoryTearDownTimeout = ftl::TimeDelta::FromSeconds(1);
+constexpr ftl::TimeDelta kStoryTeardownTimeout = ftl::TimeDelta::FromSeconds(1);
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryImpl* const story_impl,
@@ -53,7 +53,7 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
       [this](ModuleWatcher* const watcher) { watcher->OnStateChange(state_); });
 }
 
-void ModuleControllerImpl::TearDown(std::function<void()> done) {
+void ModuleControllerImpl::Teardown(std::function<void()> done) {
   teardown_.push_back(done);
 
   if (teardown_.size() != 1) {
@@ -103,7 +103,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
   } else {
     module_->Stop(cont);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        cont, kStoryTearDownTimeout);
+        cont, kStoryTeardownTimeout);
   }
 }
 
@@ -114,7 +114,7 @@ void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {
-  TearDown(done);
+  Teardown(done);
 }
 
 }  // namespace modular

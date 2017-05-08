@@ -263,7 +263,7 @@ class StoryImpl::StopCall : Operation<void> {
       StopStoryShell();
     } else {
       for (auto& connection : story_impl_->connections_) {
-        connection.module_controller_impl->TearDown(
+        connection.module_controller_impl->Teardown(
             [this] { ConnectionDown(); });
       }
     }

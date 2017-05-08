@@ -312,7 +312,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
     // during StopForDelete(), which could be simpler.
 
     if (already_deleted_) {
-      TearDown();
+      Teardown();
 
     } else {
       page_->Delete(to_array(MakeStoryKey(story_id_)),
@@ -324,12 +324,12 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
                                        << " Page.Delete() " << status;
                       }
 
-                      TearDown();
+                      Teardown();
                     });
     }
   }
 
-  void TearDown() {
+  void Teardown() {
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
       Done();

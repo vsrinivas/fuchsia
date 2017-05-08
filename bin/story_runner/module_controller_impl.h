@@ -43,7 +43,7 @@ class ModuleControllerImpl : ModuleController {
   // watchers, then DisposeModule()s the connection and finally calls
   // done(). Thus, done must not reference anything in
   // ModuleController or the related ModuleContextImpl.
-  void TearDown(std::function<void()> done);
+  void Teardown(std::function<void()> done);
 
  private:
   // |ModuleController|
@@ -72,7 +72,7 @@ class ModuleControllerImpl : ModuleController {
   // watchers registered in the future to the current state.
   ModuleState state_{ModuleState::STARTING};
 
-  // Callbacks of TearDown() invocations. If there is one Stop()
+  // Callbacks of Teardown() invocations. If there is one Stop()
   // request pending, a second one is only queued, no second call to
   // Stop() is made.
   std::vector<std::function<void()>> teardown_;

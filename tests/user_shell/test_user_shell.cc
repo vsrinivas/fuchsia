@@ -361,7 +361,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     story_watcher_.Watch(&story_controller_);
     story_watcher_.Continue([this] {
       story_controller_->Stop([this] {
-        TearDownStoryController();
+        TeardownStoryController();
         story1_run_.Pass();
 
         // When the story is done, we start the next one.
@@ -388,7 +388,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
       FTL_DCHECK(!story_info.is_null());
       FTL_DCHECK(IsRunning(state));
       story_controller_->Stop([this, round] {
-        TearDownStoryController();
+        TeardownStoryController();
 
         // When the story stops, we start it again.
         mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
@@ -399,7 +399,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
                     FTL_DCHECK(!story_info.is_null());
 
                     // Can't use the StoryController here because we closed it
-                    // in TearDownStoryController().
+                    // in TeardownStoryController().
                     story_provider_->RunningStories(
                         [this, round](fidl::Array<fidl::String> story_ids) {
                           auto n = count(story_ids.begin(), story_ids.begin(),
@@ -528,7 +528,7 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
-  void TearDownStoryController() {
+  void TeardownStoryController() {
     story_watcher_.Reset();
     link_watcher_.Reset();
     story_controller_.reset();
