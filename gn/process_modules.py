@@ -71,6 +71,9 @@ class Amalgamation:
 
 
 def resolve_imports(import_queue, omit_files, build_root):
+    # Hack: Add cpp manifest until we derive runtime information from the
+    # package configs themselves.
+    import_queue.append('cpp')
     imported = set(import_queue)
     amalgamation = Amalgamation()
     amalgamation.omit_files = omit_files
@@ -117,16 +120,6 @@ def main():
         os.makedirs(manifest_dir)
     with open(os.path.join(args.manifest), "w") as manifest:
         manifest.write("user.bootfs:\n")
-        libs = ["libc++abi.so.1",
-                "libc++.so.2",
-                "libunwind.so.1"]
-        if args.arch == "x64":
-            sysroot_arch_name = "x86_64-fuchsia"
-        elif args.arch == "arm64":
-            sysroot_arch_name = "aarch64-fuchsia"
-        lib_root = os.path.join(args.build_root, "sysroot", "lib")
-        for lib in libs:
-            manifest.write("lib/%s=%s\n" % (lib, os.path.join(lib_root, lib)))
         for file in amalgamation.files:
             manifest.write("%s=%s\n" % (file["bootfs_path"], file["file"]))
         if args.autorun != "":
