@@ -7,10 +7,6 @@
     ],
     "binaries": [
         {
-            "binary": "libmsd-intel-gen-test.so",
-            "bootfs_path": "lib/driver/libmsd-intel-gen-test.so"
-        },
-        {
             "binary": "msd_intel_gen_nonhardware_tests",
             "bootfs_path": "test/msd_intel_gen_nonhardware_tests"
         },
@@ -61,6 +57,12 @@
         {
             "binary": "autorun",
             "bootfs_path": "autorun"
+        }
+    ],
+    "drivers": [
+        {
+            "binary": "libmsd-intel-gen-test.so",
+            "bootfs_path": "lib/driver/libmsd-intel-gen-test.so"
         }
     ]
 }

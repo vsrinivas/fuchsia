@@ -2,7 +2,7 @@
     "labels": [
         "//drivers/wifi/wlan"
     ],
-    "binaries": [
+    "drivers": [
         {
             "binary": "wlan.so",
             "bootfs_path": "lib/driver/wlan.so"

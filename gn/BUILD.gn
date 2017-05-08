@@ -22,14 +22,17 @@ group("default") {
 action("mkbootfs") {
   testonly = true
 
-  manifest_file = rebase_path("user.bootfs.manifest", "", target_gen_dir)
+  boot_manifest_file = rebase_path("boot.bootfs.manifest", "", target_gen_dir)
+  system_manifest_file = rebase_path("system.bootfs.manifest", "", target_gen_dir)
   depfile = "$target_gen_dir/mkbootfs.d"
   component_index = "$root_gen_dir/component_index.json"
 
   all_binaries = exec_script("process_modules.py",
                              [
-                               "--manifest",
-                               manifest_file,
+                               "--boot-manifest",
+                               boot_manifest_file,
+                               "--system-manifest",
+                               system_manifest_file,
                                "--modules",
                                modules,
                                "--omit-files",
@@ -48,10 +51,10 @@ action("mkbootfs") {
                              "list lines")
 
   script = "make_bootfs.py"
-  output_file = "$root_build_dir/user.bootfs"
+  system_bootfs = "$root_build_dir/user.bootfs"
   build_id_file = "$root_build_dir/ids.txt"
   outputs = [
-    output_file,
+    system_bootfs,
     build_id_file,
     component_index,
   ]
@@ -69,11 +72,13 @@ action("mkbootfs") {
 
   args = [
     "--output-file",
-    rebase_path(output_file),
+    rebase_path(system_bootfs),
     "--build-id-map",
     rebase_path(build_id_file),
-    "--manifest",
-    rebase_path(manifest_file),
+    "--boot-manifest",
+    rebase_path(boot_manifest_file),
+    "--system-manifest",
+    rebase_path(system_manifest_file),
     "--pre-binaries",
     rebase_path(magenta_bootdata),
   ]

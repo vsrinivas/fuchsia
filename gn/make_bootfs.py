@@ -33,21 +33,8 @@ def readobj_path():
     return os.path.join(
         paths.TOOLCHAIN_PATH, toolchain_name, 'bin', 'llvm-readobj')
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        description='Make a bootfs for loading into Magenta')
-    parser.add_argument('--output-file', help='Place to put built userfs')
-    parser.add_argument(
-        '--build-id-map', help='Place to put mapping from build id to paths')
-    parser.add_argument('--manifest', help='Location of manifest')
-    parser.add_argument('--pre-binaries', help='bootdata binaries to include before bootfs')
-    parser.add_argument('--post-binaries', help='bootdata binaries to include after bootfs')
-    args = parser.parse_args()
-
-    readobj = readobj_path()
-    buildids = []
-    with open(args.manifest) as manifest_contents:
+def parse_build_ids_from_manifest(manifest, buildids, readobj):
+    with open(manifest) as manifest_contents:
         for line in manifest_contents:
             equal_sign = line.find('=')
             if equal_sign == -1:
@@ -75,6 +62,25 @@ def main():
                         path = unstripped_path
                         break
                 buildids.append('%s %s\n' % (buildid, path))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Make a bootfs for loading into Magenta')
+    parser.add_argument('--output-file', help='Place to put built userfs')
+    parser.add_argument(
+        '--build-id-map', help='Place to put mapping from build id to paths')
+    parser.add_argument('--boot-manifest', help='Location of manifest for /boot')
+    parser.add_argument('--system-manifest', help='Location of manifest for /system')
+    parser.add_argument('--pre-binaries', help='bootdata binaries to include before bootfs')
+    parser.add_argument('--post-binaries', help='bootdata binaries to include after bootfs')
+    args = parser.parse_args()
+
+    readobj = readobj_path()
+    buildids = []
+    for manifest in [args.boot_manifest, args.system_manifest]:
+        if os.path.exists(manifest):
+            parse_build_ids_from_manifest(manifest, buildids, readobj)
     with open(args.build_id_map, 'w') as build_id_file:
         build_id_file.writelines(buildids)
 
@@ -82,7 +88,9 @@ def main():
     mkbootfs_cmd += ['-o', args.output_file]
     if args.pre_binaries:
         mkbootfs_cmd += [args.pre_binaries]
-    mkbootfs_cmd += [args.manifest]
+    if os.path.exists(args.boot_manifest):
+        mkbootfs_cmd += ["--target=boot", args.boot_manifest]
+    mkbootfs_cmd += ["--target=system", args.system_manifest]
     if args.post_binaries:
         mkbootfs_cmd += [args.post_binaries]
 

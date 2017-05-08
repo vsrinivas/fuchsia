@@ -7,15 +7,8 @@
         {
             "binary": "ihda",
             "bootfs_path": "bin/ihda"
-        },
-        {
-            "binary": "libaudio-dispatcher-pool.so",
-            "bootfs_path": "lib/libaudio-dispatcher-pool.so"
-        },
-        {
-            "binary": "libihda-codec-utils.so",
-            "bootfs_path": "lib/libihda-codec-utils.so"
-        },
+        }    ],
+    "drivers": [
         {
             "binary": "libihda-controller.so",
             "bootfs_path": "lib/driver/ihda-controller.so"
@@ -27,6 +20,15 @@
         {
             "binary": "librealtek-ihda-codec.so",
             "bootfs_path": "lib/driver/realtek-ihda-codec.so"
+        },
+        {
+            "binary": "libaudio-dispatcher-pool.so",
+            "bootfs_path": "lib/libaudio-dispatcher-pool.so"
+        },
+        {
+            "binary": "libihda-codec-utils.so",
+            "bootfs_path": "lib/libihda-codec-utils.so"
         }
+
     ]
 }

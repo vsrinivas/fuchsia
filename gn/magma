@@ -2,7 +2,7 @@
     "imports": [
         "magma-common"
     ],
-    "binaries": [
+    "drivers": [
         {
             "binary": "libmsd_vendor.so",
             "bootfs_path": "lib/driver/libmsd_vendor.so"
