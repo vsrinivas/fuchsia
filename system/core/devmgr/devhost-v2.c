@@ -31,7 +31,7 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 #define ios_from_ph(ph) containerof(ph, devhost_iostate_t, ph)
 
-static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t msg);
+static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
 
 static port_t dh_port;
 

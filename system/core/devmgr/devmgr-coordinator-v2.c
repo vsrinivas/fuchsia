@@ -108,13 +108,20 @@ static device_t misc_device = {
 
 static void dc_dump_device(device_t* dev, size_t indent) {
     mx_koid_t pid = dev->host ? dev->host->koid : 0;
-    if (pid == 0) {
-        printf("%*s[%s]\n", (int) (indent * 3), "", dev->name);
+    char extra[64];
+    if (log_flags & LOG_DEVLC) {
+        snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount);
     } else {
-        printf("%*s[%s] pid=%zu%s%s\n",
+        extra[0] = 0;
+    }
+    if (pid == 0) {
+        printf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
+    } else {
+        printf("%*s[%s] pid=%zu%s%s%s\n",
                (int) (indent * 3), "", dev->name, pid,
                dev->flags & DEV_CTX_BUSDEV ? " busdev" : "",
-               dev->flags & DEV_CTX_SHADOW ? " shadow" : "");
+               dev->flags & DEV_CTX_SHADOW ? " shadow" : "",
+               extra);
     }
     device_t* child;
     if (dev->shadow) {
@@ -391,6 +398,9 @@ static mx_status_t dc_remove_device(device_t* dev) {
         dev->parent = NULL;
         dc_release_device(parent);
     }
+
+    // release the ref held by the devhost
+    dc_release_device(dev);
     return NO_ERROR;
 }
 
@@ -534,7 +544,7 @@ disconnect:
 #define dev_from_ph(ph) containerof(ph, device_t, ph)
 
 // handle inbound RPCs from devhost to devices
-static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t msg) {
+static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     device_t* dev = dev_from_ph(ph);
     mx_status_t r;
 
@@ -551,6 +561,7 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
+        dc_remove_device(dev);
         r = ERR_PEER_CLOSED;
         goto detach;
     }
@@ -609,6 +620,8 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
         goto fail_watch;
     }
+    dev->host = dh;
+    dh->refcount++;
     return NO_ERROR;
 
 fail_write:
@@ -637,6 +650,7 @@ static mx_status_t dc_create_shadow(device_t* parent) {
     dev->flags = DEV_CTX_SHADOW;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
+    dev->refcount = 1;
     parent->shadow = dev;
     parent->refcount++;
     log(DEVLC, "devcoord: dev %p name='%s' ++ref=%d (shadow)\n",
@@ -800,6 +814,10 @@ static void acpi_init(void) {
 
 void coordinator(void) {
     log(INFO, "devmgr: coordinator()\n");
+
+    if (getenv("devmgr.verbose")) {
+        log_flags |= LOG_DEVLC;
+    }
     acpi_init();
 
     do_publish(&root_device, &misc_device);
