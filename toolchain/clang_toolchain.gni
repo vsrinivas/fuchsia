@@ -187,7 +187,6 @@ template("clang_toolchain") {
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
-      output_prefix = "lib"
       outputs = [
         outfile,
       ]
