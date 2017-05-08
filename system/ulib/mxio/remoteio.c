@@ -548,11 +548,17 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
     if (strncmp("/svc/", svcpath, 5)) {
         return ERR_NOT_FOUND;
     }
-    mx_handle_t svc = mxio_svc_root;
-    if (svc == MX_HANDLE_INVALID) {
+    return mxio_service_connect_at(mxio_svc_root, svcpath + 5, h);
+}
+
+mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle_t h) {
+    if (path == NULL) {
+        return ERR_INVALID_ARGS;
+    }
+    if (dir == MX_HANDLE_INVALID) {
         return ERR_UNAVAILABLE;
     }
-    return mxrio_connect(svc, h, MXRIO_OPEN, svcpath + 5);
+    return mxrio_connect(dir, h, MXRIO_OPEN, path);
 }
 
 mx_handle_t mxio_service_clone(mx_handle_t svc) {
