@@ -24,17 +24,28 @@ $(function() {
 function handleContextMessage(message) {
   for (var topic in message.data) {
     // make a pretty string for the topic's value
-    var topicValue = JSON.stringify(JSON.parse(message.data[topic]),null,2);
+    var topicValue;
+    var danger;
+    try {
+      topicValue = JSON.stringify(JSON.parse(message.data[topic]),null,2);
+      danger = false; // can't just leave it undefined;
+                      // .toggleClass has a 1-arg overload
+    } catch (e) {
+      topicValue = message.data[topic];
+      danger = true;
+    }
     var topicId = '#' + $.escapeSelector(topic);
     if ($(topicId).length > 0) {
       // element exists, update the value
-      $(topicId).html('<pre>' + topicValue + '</pre>');
+      $(topicId).find('pre').text(topicValue)
+        .toggleClass('text-danger', danger);
     } else {
       // element does not exist, add it to the table
-      $("#contextTBody").append('<tr><td>' + topic +
-                                '</td><td id="' + topic +
-                                '"><pre>' + topicValue +
-                                '</pre></td></tr>');
+      $('<tr/>').appendTo("#contextTBody")
+        .append($('<td/>').text(topic))
+        .append($('<td/>').attr('id', topic)
+          .append(($('<pre/>').text(topicValue)
+            .toggleClass('text-danger', danger))));
     }
   }
 }
