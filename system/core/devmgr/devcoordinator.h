@@ -62,7 +62,13 @@ struct dc_devhost {
     mx_handle_t proc;
     mx_koid_t koid;
     int32_t refcount;
+    uint32_t flags;
+
+    // list of all devices on this devhost
+    list_node_t devices;
 };
+
+#define DEV_HOST_DYING 1
 
 struct dc_device {
     mx_handle_t hrpc;
@@ -78,9 +84,22 @@ struct dc_device {
     VnodeDir* vnode;
     device_t* parent;
     device_t* shadow;
+
+    // listnode for this device in its parent's
+    // list-of-children
     list_node_t node;
+
+    // listnode for this device in its devhost's
+    // list-of-devices
+    list_node_t dhnode;
+
+    // list of all child devices of this device
     list_node_t children;
+
+    // list of outstanding requests from the devcoord
+    // to this device's devhost, awaiting a response
     list_node_t pending;
+
     char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
 };
@@ -111,9 +130,15 @@ typedef struct {
 // again until unbound.  Not allowed on MULTI_BIND ctx.
 #define DEV_CTX_BOUND      0x08
 
+// Device has been remove()'d
 #define DEV_CTX_DEAD       0x10
 
-#define DEV_CTX_SHADOW     0x20
+// Device has been pre-emptively removed()'d from a
+// dying devhost, and will be removed() one last time
+// when its rpc channel finally goes away
+#define DEV_CTX_UNDEAD     0x20
+
+#define DEV_CTX_SHADOW     0x40
 
 typedef struct dc_driver {
     const char* name;
