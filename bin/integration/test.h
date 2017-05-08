@@ -13,6 +13,14 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
+// 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
+constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(5);
+
+// In practice, 100 ms is actually a bit short, so this may occasionally falsely
+// succeed tests that should fail. Flakiness should thus be considered failure.
+constexpr auto kAsyncCheckSteady = ftl::TimeDelta::FromMilliseconds(100);
+constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
+
 void Yield();
 
 // Processes messages until the given predicate is true.
@@ -29,9 +37,17 @@ Predicate operator&&(const Predicate& a, const Predicate& b);
 Predicate operator||(const Predicate& a, const Predicate& b);
 Predicate operator!(const Predicate& a);
 
-#define PREDICATE(condition) [&] { return condition; }
-// Convenience macro that wraps |condition| in a |Predicate|.
-#define WAIT_UNTIL(condition) WaitUntil(PREDICATE(condition))
+#define PREDICATE(condition) [&] { return (bool)(condition); }
+// Convenience macro that wraps |condition| in a |Predicate| and applies a
+// timeout.
+#define WAIT_UNTIL(condition)                                         \
+  {                                                                   \
+    auto deadline = Deadline(kAsyncCheckMax);                         \
+    WaitUntil(PREDICATE(condition) || deadline);                      \
+    if (deadline()) {                                                 \
+      FAIL() << "Deadline exceeded while waiting for " << #condition; \
+    }                                                                 \
+  }
 
 // Becomes true after |duration|.
 Predicate Deadline(const ftl::TimeDelta& duration);
@@ -41,14 +57,6 @@ void Sleep(const ftl::TimeDelta& duration);
 
 // Sleep for a default reasonable time for apps to start up.
 void Sleep();
-
-// 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
-constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(5);
-
-// In practice, 100 ms is actually a bit short, so this may occasionally falsely
-// succeed tests that should fail. Flakiness should thus be considered failure.
-constexpr auto kAsyncCheckSteady = ftl::TimeDelta::FromMilliseconds(100);
-constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
 
 // Does a weak stability check on an async condition by waiting until the given
 // condition is true (max 5s) and then ensuring that the condition remains true

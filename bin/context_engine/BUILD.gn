@@ -2,17 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Directory-level alias.
-group("context_engine") {
-  deps = [
-    ":context_engine_main",
-  ]
-}
-
 source_set("context_publisher_impl") {
   sources = [
-    "context_publisher_impl.h",
     "context_publisher_impl.cc",
+    "context_publisher_impl.h",
   ]
 
   deps = [
@@ -24,13 +17,15 @@ source_set("context_publisher_impl") {
 
 source_set("context_provider_impl") {
   sources = [
-    "context_provider_impl.h",
     "context_provider_impl.cc",
+    "context_provider_impl.h",
   ]
 
   deps = [
     ":context_repository",
+    ":debug",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
   ]
 }
 
@@ -65,23 +60,34 @@ executable("context_repository_unittest") {
 
 source_set("context_engine_impl") {
   sources = [
-    "context_engine_impl.h",
     "context_engine_impl.cc",
+    "context_engine_impl.h",
   ]
 
   deps = [
     ":context_provider_impl",
     ":context_publisher_impl",
     ":context_repository",
+    ":debug",
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//lib/fidl/cpp/bindings",
   ]
 }
 
-executable("context_engine_main") {
-  output_name = "context_engine"
+source_set("debug") {
+  sources = [
+    "debug.cc",
+    "debug.h",
+  ]
 
+  deps = [
+    "//apps/maxwell/services/context:debug",
+    "//lib/fidl/cpp/bindings",
+  ]
+}
+
+executable("context_engine") {
   sources = [
     "context_engine_main.cc",
   ]

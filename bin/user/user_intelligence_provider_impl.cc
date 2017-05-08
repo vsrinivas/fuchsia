@@ -5,6 +5,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "application/lib/app/connect.h"
+#include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
@@ -65,14 +66,12 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   // Start dependent processes. We get some component-scope services from
   // these processes.
-  {
-    app::ServiceProviderPtr context_services_ =
-        startServiceProviderApp("file:///system/apps/context_engine");
-    context_engine_ =
-        app::ConnectToService<maxwell::ContextEngine>(context_services_.get());
-  }
+  context_services_ =
+      StartServiceProviderApp("file:///system/apps/context_engine");
+  context_engine_ =
+      app::ConnectToService<maxwell::ContextEngine>(context_services_.get());
   suggestion_services_ =
-      startServiceProviderApp("file:///system/apps/suggestion_engine");
+      StartServiceProviderApp("file:///system/apps/suggestion_engine");
   suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
       suggestion_services_.get());
 
@@ -82,25 +81,39 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 
   {
     app::ServiceProviderPtr action_log_services_ =
-        startServiceProviderApp("file:///system/apps/action_log");
+        StartServiceProviderApp("file:///system/apps/action_log");
     user_action_log_ = app::ConnectToService<maxwell::UserActionLog>(
         action_log_services_.get());
   }
 
-  resolver_services_ = startServiceProviderApp("file:///system/apps/resolver");
+  resolver_services_ = StartServiceProviderApp("file:///system/apps/resolver");
 
   // TODO(rosswang): Search the ComponentIndex and iterate through results.
-  startMiDashboard();
-  startAgent("file:///system/apps/agents/module_suggester");
-  startAgent("file:///system/apps/agents/module_suggester.dartx");
-  startAgent("file:///system/apps/concert_agent");
+  StartAgent("file:///system/apps/agents/module_suggester");
+  StartAgent("file:///system/apps/agents/module_suggester.dartx");
+  StartAgent("file:///system/apps/concert_agent");
 
 // Toggle using the "kronk_dev" gn arg (see README).
 #ifdef KRONK_DEV
-  startAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
+  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk-dev");
 #else
-  startAgent("https://storage.googleapis.com/maxwell-agents/kronk");
+  StartAgent("https://storage.googleapis.com/maxwell-agents/kronk");
 #endif
+
+  StartAgent(
+      "file:///system/apps/agents/mi_dashboard.dartx",
+      [=](const std::string& url, app::ServiceProviderImpl* agent_host) {
+        AddStandardServices(url, agent_host);
+        agent_host->AddService<maxwell::ContextDebug>(
+            [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
+              app::ConnectToService(context_services_.get(),
+                                    std::move(request));
+            });
+        agent_host->AddService<maxwell::UserActionLog>(
+            [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
+              user_action_log_->Duplicate(std::move(request));
+            });
+      });
 
   // Start privileged local Framework-style Agents.
   {
@@ -123,17 +136,15 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
 
 void UserIntelligenceProviderImpl::GetSuggestionProvider(
     fidl::InterfaceRequest<SuggestionProvider> request) {
-  app::ConnectToService<SuggestionProvider>(suggestion_services_.get(),
-                                            std::move(request));
+  app::ConnectToService(suggestion_services_.get(), std::move(request));
 }
 
 void UserIntelligenceProviderImpl::GetResolver(
     fidl::InterfaceRequest<resolver::Resolver> request) {
-  app::ConnectToService<resolver::Resolver>(resolver_services_.get(),
-                                            std::move(request));
+  app::ConnectToService(resolver_services_.get(), std::move(request));
 }
 
-app::ServiceProviderPtr UserIntelligenceProviderImpl::startServiceProviderApp(
+app::ServiceProviderPtr UserIntelligenceProviderImpl::StartServiceProviderApp(
     const std::string& url) {
   app::ServiceProviderPtr services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -143,27 +154,9 @@ app::ServiceProviderPtr UserIntelligenceProviderImpl::startServiceProviderApp(
   return services;
 }
 
-void UserIntelligenceProviderImpl::startMiDashboard() {
-  const std::string& url = "file:///system/apps/agents/mi_dashboard.dartx";
-  auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
-      app_context_->environment().get());
-  addAgentServices(url, agent_host.get());
-  agent_host->AddService<maxwell::UserActionLog>(
-      [this](fidl::InterfaceRequest<maxwell::UserActionLog> request) {
-        user_action_log_->Duplicate(std::move(request));
-      });
-  agent_launcher_.StartAgent(url, std::move(agent_host));
-}
-
-void UserIntelligenceProviderImpl::startAgent(const std::string& url) {
-  auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
-      app_context_->environment().get());
-  addAgentServices(url, agent_host.get());
-  agent_launcher_.StartAgent(url, std::move(agent_host));
-}
-
-void UserIntelligenceProviderImpl::addAgentServices(const std::string& url,
-    maxwell::ApplicationEnvironmentHostImpl* agent_host) {
+void UserIntelligenceProviderImpl::AddStandardServices(
+    const std::string& url,
+    app::ServiceProviderImpl* agent_host) {
   agent_host->AddService<maxwell::ContextPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
         auto scope = ComponentScope::New();
@@ -197,6 +190,23 @@ void UserIntelligenceProviderImpl::addAgentServices(const std::string& url,
 
   agent_host->AddService<resolver::Resolver>(std::bind(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
+}
+
+void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
+  StartAgent(url,
+             std::bind(&UserIntelligenceProviderImpl::AddStandardServices, this,
+                       std::placeholders::_1, std::placeholders::_2));
+}
+
+void UserIntelligenceProviderImpl::StartAgent(
+    const std::string& url,
+    ServiceProviderInitializer services) {
+  auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
+      app_context_->environment().get());
+
+  services(url, agent_host.get());
+
+  agent_launcher_.StartAgent(url, std::move(agent_host));
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -38,13 +38,24 @@
   </div>
   <div class="container spacing">
     <h3>Context topics</h3>
-      <p>
-        This section displays all of the context parameters currently recorded
-        in the system.
-      </p>
+    <p>
+      This section displays all of the context parameters currently recorded
+      in the system.
+    </p>
     <table class="table table-striped table-bordered table-hover table-responsive">
       <thead><tr><th>Topic</th><th>Value</th></tr></thead>
-      <tbody id="contextTBody">
+      <tbody id="context">
+      </tbody>
+    </table>
+
+    <h3>Context subscriptions</h3>
+    <p>
+      This section displays registered subscribers and topics they're
+      subscribed to.
+    </p>
+    <table class="table table-striped table-bordered table-hover table-responsive">
+      <thead><tr><th>Subscriber</th><th>Queries</th></tr></thead>
+      <tbody id="contextSubscriptions">
       </tbody>
     </table>
   </div>

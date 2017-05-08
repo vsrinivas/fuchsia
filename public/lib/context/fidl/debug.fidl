@@ -1,0 +1,30 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "context_provider.fidl";
+import "../user/scope.fidl";
+
+// Top-level service provider interface that vends services to read and write
+// context data.
+[ServiceName="maxwell.ContextDebug"]
+interface ContextDebug {
+  // When a subscription is established or closed, an update is sent to
+  // |listener|. Any already established subscriptions are sent immediately.
+  //
+  // The watch will stay active until the |listener| handle is closed.
+  WatchSubscribers(SubscriberListener listener);
+};
+
+interface SubscriberListener {
+  // Receives a snapshot of active subscriptions.
+  OnUpdate(array<SubscriberUpdate> subscriptions);
+};
+
+struct SubscriberUpdate {
+  ComponentScope subscriber;
+  // the nonempty collection of current active queries
+  array<ContextQuery> queries;
+};

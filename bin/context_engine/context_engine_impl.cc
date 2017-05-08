@@ -25,8 +25,9 @@ void ContextEngineImpl::GetPublisher(
 void ContextEngineImpl::GetProvider(
     ComponentScopePtr scope,
     fidl::InterfaceRequest<ContextProvider> request) {
-  provider_bindings_.AddBinding(
-      std::make_unique<ContextProviderImpl>(&repository_), std::move(request));
+  provider_bindings_.AddBinding(std::make_unique<ContextProviderImpl>(
+                                    std::move(scope), &repository_, &debug_),
+                                std::move(request));
 }
 
 }  // namespace maxwell

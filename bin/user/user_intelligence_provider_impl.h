@@ -37,14 +37,19 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
 
  private:
-  app::ServiceProviderPtr startServiceProviderApp(const std::string& url);
-  void startAgent(const std::string& url);
-  void addAgentServices(const std::string& url,
-      maxwell::ApplicationEnvironmentHostImpl* agent_host);
-  void startMiDashboard();
+  using ServiceProviderInitializer =
+      std::function<void(const std::string& url,
+                         app::ServiceProviderImpl* agent_host)>;
+  void AddStandardServices(const std::string& url,
+                           app::ServiceProviderImpl* agent_host);
+
+  app::ServiceProviderPtr StartServiceProviderApp(const std::string& url);
+  void StartAgent(const std::string& url);
+  void StartAgent(const std::string& url, ServiceProviderInitializer services);
 
   app::ApplicationContext* app_context_;  // Not owned.
 
+  app::ServiceProviderPtr context_services_;
   ContextEnginePtr context_engine_;
   app::ServiceProviderPtr suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;

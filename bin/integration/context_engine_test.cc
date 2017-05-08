@@ -10,6 +10,12 @@
 namespace maxwell {
 namespace {
 
+ComponentScopePtr CreateGlobalScope() {
+  auto scope = ComponentScope::New();
+  scope->set_global_scope(GlobalScope::New());
+  return scope;
+}
+
 class TestListener : public ContextListener {
  public:
   TestListener() : binding_(this) {}
@@ -23,6 +29,7 @@ class TestListener : public ContextListener {
     WaitUntil([this] { return last_update_ ? true : false; });
   }
 
+  ContextUpdate* PeekLast() { return last_update_.get(); }
   ContextUpdatePtr PopLast() { return std::move(last_update_); }
 
   // Binds a new handle to |binding_| and returns it.
@@ -38,10 +45,9 @@ class TestListener : public ContextListener {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() : ContextEngineTestBase() {
-    ComponentScopePtr scope = ComponentScope::New();
-    scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetProvider(scope.Clone(), provider_.NewRequest());
-    context_engine()->GetPublisher(scope.Clone(), publisher_.NewRequest());
+    context_engine()->GetProvider(CreateGlobalScope(), provider_.NewRequest());
+    context_engine()->GetPublisher(CreateGlobalScope(),
+                                   publisher_.NewRequest());
   }
 
  protected:
@@ -58,7 +64,8 @@ ContextQueryPtr CreateQuery(const std::string& topic) {
 }  // namespace
 
 TEST_F(ContextEngineTest, PublishAndSubscribe) {
-  // Show that we can publish to a topic and that we can subscribe to that topic.
+  // Show that we can publish to a topic and that we can subscribe to that
+  // topic.
   publisher_->Publish("topic", "foobar");
   publisher_->Publish("a_different_topic", "baz");
 
@@ -83,6 +90,36 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   publisher_->Publish("topic", "flkjsd");
   WAIT_UNTIL(listener1.PopLast());
   WAIT_UNTIL(listener2.PopLast());
+}
+
+TEST_F(ContextEngineTest, CloseListener) {
+  // Ensure that listeners can be closed individually.
+  TestListener listener2;
+  {
+    TestListener listener1;
+    provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+    provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  }
+
+  publisher_->Publish("topic", "don't crash");
+  WAIT_UNTIL(listener2.PopLast());
+}
+
+TEST_F(ContextEngineTest, CloseProvider) {
+  // After a provider is closed, its listeners should no longer recieve updates.
+  TestListener listener1;
+  provider_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+
+  // Close the provider and open a new one to ensure we're still running.
+  provider_.reset();
+  context_engine()->GetProvider(CreateGlobalScope(), provider_.NewRequest());
+
+  publisher_->Publish("topic", "please don't crash");
+  TestListener listener2;
+  provider_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+
+  WAIT_UNTIL(listener2.PopLast());
+  ASYNC_CHECK(!listener1.PeekLast());
 }
 
 }  // namespace maxwell

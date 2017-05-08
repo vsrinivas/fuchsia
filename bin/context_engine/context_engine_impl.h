@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
+#include "apps/maxwell/src/context_engine/debug.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
@@ -15,18 +18,19 @@ class ContextEngineImpl : public ContextEngine {
   ContextEngineImpl();
   ~ContextEngineImpl() override;
 
+  ContextDebug* debug() { return &debug_; }
+
  private:
   // |ContextEngine|
-  void GetPublisher(
-      ComponentScopePtr scope,
-      fidl::InterfaceRequest<ContextPublisher> request) override;
+  void GetPublisher(ComponentScopePtr scope,
+                    fidl::InterfaceRequest<ContextPublisher> request) override;
 
   // |ContextEngine|
-  void GetProvider(
-      ComponentScopePtr scope,
-      fidl::InterfaceRequest<ContextProvider> request) override;
+  void GetProvider(ComponentScopePtr scope,
+                   fidl::InterfaceRequest<ContextProvider> request) override;
 
   ContextRepository repository_;
+  ContextDebugImpl debug_;
 
   fidl::BindingSet<ContextPublisher, std::unique_ptr<ContextPublisher>>
       publisher_bindings_;

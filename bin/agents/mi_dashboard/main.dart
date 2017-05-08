@@ -9,6 +9,21 @@ import 'dart:io';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
+
+// TODO(rosswang): A note on the badness - Right now the generated package name
+// for the context:debug target is context..debug, and likewise user:scope is
+// user..scope. However, debug.fidl.dart imports user/scope.fidl.dart rather
+// than user..scope/scope.fidl.dart, which are "incompatible". However, fear
+// not -- user/scope.fidl.dart is available by depending on user:user_dart
+// rather than user:scope_dart.
+//
+// The Atom Dart analyzer is displeased in all cases.
+//
+// Per e-mail thread, the fix for this will probably come after FIDL 2. In the
+// meantime a less hacky workaround may be to just not use subtargets for FIDL.
+import 'package:apps.maxwell.services.context..debug/debug.fidl.dart';
+import 'package:apps.maxwell.services.user/scope.fidl.dart';
+
 import 'package:path/path.dart' as path;
 
 const _configDir = "/system/data/mi_dashboard";
@@ -23,6 +38,32 @@ int _port = _defaultPort;
 var _webrootPath = _defaultWebrootPath;
 Directory _webrootDirectory;
 
+// Some Dart FIDL bindings do have toJson methods, but not unions. Since we need
+// to do some converting anyway, might as well also unwrap the more nested FIDL
+// bindings.
+final JSON = new JsonCodec(toEncodable: (dynamic object) {
+  if (object is ComponentScope) {
+    switch (object.tag) {
+      case ComponentScopeTag.globalScope:
+        return {"type": "global"};
+      case ComponentScopeTag.moduleScope:
+        return {
+          "type": "module",
+          "url": object.moduleScope.url,
+          "storyId": object.moduleScope.storyId
+        };
+      case ComponentScopeTag.agentScope:
+        return {"type": "agent", "url": object.agentScope.url};
+      default:
+        return {"type": "unknown"};
+    }
+  } else if (object is ContextQuery) {
+    return object.topics;
+  } else {
+    return object.toJson();
+  }
+});
+
 var _activeWebsockets = new List<WebSocket>();
 
 final _contextCache = new Map<String, String>();
@@ -35,25 +76,52 @@ final _contextListener = new ContextListenerImpl((ContextUpdate update) {
   });
 
   // Send updates to all active websockets
-  if (_activeWebsockets.length > 0) {
-    String message = JSON.encode({"type": "context", "data": update.values});
-    _activeWebsockets.forEach((socket) {
+  if (_activeWebsockets.isNotEmpty) {
+    final String message = JSON.encode({"context.update": update.values});
+    for (final socket in _activeWebsockets) {
       socket.add(message);
-    });
+    }
   }
 });
 
+final _contextDebugBinding = new SubscriberListenerBinding();
+
+List<SubscriberUpdate> _contextSubscribersCache = [];
+
+class SubscriberListenerImpl extends SubscriberListener {
+  @override
+  void onUpdate(List<SubscriberUpdate> subscriptions) {
+    _contextSubscribersCache = subscriptions;
+    if (_activeWebsockets.isNotEmpty) {
+      final String message =
+          JSON.encode({"context.subscribers": subscriptions});
+      for (final socket in _activeWebsockets) {
+        socket.add(message);
+      }
+    }
+  }
+}
+
 void main(List args) {
-  // Get a handle to the ContextProvider service
+  final contextDebug = new ContextDebugProxy();
+
   final appContext = new ApplicationContext.fromStartupInfo();
   connectToService(appContext.environmentServices, _contextProvider.ctrl);
   assert(_contextProvider.ctrl.isBound);
+  connectToService(appContext.environmentServices, contextDebug.ctrl);
+  assert(contextDebug.ctrl.isBound);
+
   appContext.close();
 
   // Subscribe to the topics in |_topics|.
   ContextQuery query = new ContextQuery();
   query.topics = []; // empty list is the wildcard query
   _contextProvider.subscribe(query, _contextListener.getHandle());
+
+  // Watch subscription changes.
+  contextDebug.watchSubscribers(
+      _contextDebugBinding.wrap(new SubscriberListenerImpl()));
+  contextDebug.ctrl.close();
 
   // Read the config file from disk
   var configFile = new File(path.join(_configDir, _configFilename));
@@ -85,8 +153,9 @@ void handleRequest(HttpRequest request) {
   if (request.requestedUri.path.startsWith("/ws")) {
     WebSocketTransformer.upgrade(request).then((socket) {
       _activeWebsockets.add(socket);
-      socket.listen(handleWebsocketRequest,
-                    onDone: () { handleWebsocketClose(socket); });
+      socket.listen(handleWebsocketRequest, onDone: () {
+        handleWebsocketClose(socket);
+      });
       sendAllContextDataToWebsocket(socket);
     });
   } else {
@@ -104,7 +173,7 @@ void handleRequest(HttpRequest request) {
 
       // Figure out what service data to return
       switch (serviceName) {
-        case 'context':
+        case "context":
           //   /data/context/<topic>
           //     return JSON data from the context service for the given topic
           var topic = match.group(2);
@@ -129,7 +198,7 @@ void handleRequest(HttpRequest request) {
       // may start with a /, so using a simple string concatenation instead
       var requestPath =
           "${_webrootDirectory.path}/${request.requestedUri.path}";
-      if (requestPath.endsWith('/')) requestPath += "index.html";
+      if (requestPath.endsWith("/")) requestPath += "index.html";
       var requestFile = new File(requestPath);
       requestFile.exists().then((exists) {
         if (exists) {
@@ -193,6 +262,9 @@ void handleWebsocketClose(WebSocket socket) {
 }
 
 void sendAllContextDataToWebsocket(WebSocket socket) {
-  String message = JSON.encode({"type": "context", "data": _contextCache});
+  String message = JSON.encode({
+    "context.update": _contextCache,
+    "context.subscribers": _contextSubscribersCache
+  });
   socket.add(message);
 }

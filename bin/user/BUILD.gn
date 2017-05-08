@@ -41,6 +41,7 @@ source_set("user_intelligence_provider") {
     "//application/lib/app",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/context:debug",
     "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/services/user",

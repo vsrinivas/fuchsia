@@ -8,21 +8,34 @@
 
 namespace maxwell {
 
-ContextProviderImpl::ContextProviderImpl(ContextRepository* repository)
-    : repository_(repository) {}
-ContextProviderImpl::~ContextProviderImpl() = default;
+ContextProviderImpl::ContextProviderImpl(ComponentScopePtr scope,
+                                         ContextRepository* repository,
+                                         ContextDebugImpl* debug)
+    : scope_(std::move(scope)), repository_(repository), debug_(debug) {}
+ContextProviderImpl::~ContextProviderImpl() {
+  // Connection error handlers are not executed when closing from our side, so
+  // we need to clean up subscriptions ourselves.
+  for (auto& listener : listeners_) {
+    repository_->RemoveSubscription(listener.repo_subscription_id);
+    debug_->OnRemoveSubscription(listener.debug_subscription_id);
+  }
+};
 
 void ContextProviderImpl::Subscribe(
     ContextQueryPtr query,
     fidl::InterfaceHandle<ContextListener> listener) {
   ContextListenerPtr listener_ptr =
       ContextListenerPtr::Create(std::move(listener));
-  auto it = listeners_.emplace(listeners_.begin(), std::move(listener_ptr));
-  auto subscription_id =
-      repository_->AddSubscription(std::move(query), it->get());
-  it->set_connection_error_handler([this, it, subscription_id] {
+  auto it = listeners_.emplace(listeners_.begin());
+  it->listener = std::move(listener_ptr);
+  it->debug_subscription_id = debug_->OnAddSubscription(*scope_, *query);
+  it->repo_subscription_id =
+      repository_->AddSubscription(std::move(query), it->listener.get());
+
+  it->listener.set_connection_error_handler([=] {
     listeners_.erase(it);
-    repository_->RemoveSubscription(subscription_id);
+    repository_->RemoveSubscription(it->repo_subscription_id);
+    debug_->OnRemoveSubscription(it->debug_subscription_id);
   });
 }
 

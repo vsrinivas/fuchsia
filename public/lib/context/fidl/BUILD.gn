@@ -7,11 +7,22 @@ import("//lib/fidl/fidl.gni")
 fidl("context") {
   sources = [
     "context_engine.fidl",
-    "context_publisher.fidl",
     "context_provider.fidl",
+    "context_publisher.fidl",
   ]
 
   deps = [
+    "//apps/maxwell/services/user:scope",
+  ]
+}
+
+fidl("debug") {
+  sources = [
+    "debug.fidl",
+  ]
+
+  deps = [
+    ":context",
     "//apps/maxwell/services/user:scope",
   ]
 }
