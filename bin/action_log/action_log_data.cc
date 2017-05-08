@@ -12,8 +12,6 @@
 
 namespace maxwell {
 
-ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
-
 ActionLogger ActionLogData::GetActionLogger(const std::string& module_url) {
   return [this, module_url](const std::string& method, const std::string& params) {
     Append(module_url, method, params);
@@ -43,4 +41,4 @@ void ActionLogData::Append(
   action.Accept(writer);
 }
 
-}  // namespace maxwell
+}

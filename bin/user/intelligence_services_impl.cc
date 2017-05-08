@@ -4,20 +4,21 @@
 
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 
-#include "apps/maxwell/services/action_log/component.fidl.h"
-#include "apps/maxwell/services/action_log/user.fidl.h"
+#include "apps/maxwell/services/action_log/action_log.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 
 namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
-    ComponentScopePtr scope, ContextEngine* context_engine,
-    SuggestionEngine* suggestion_engine, UserActionLog* user_action_log)
+    ComponentScopePtr scope,
+    ContextEngine* context_engine,
+    SuggestionEngine* suggestion_engine,
+    ActionLogFactory* action_log_factory)
     : scope_(std::move(scope)),
       context_engine_(context_engine),
       suggestion_engine_(suggestion_engine),
-      user_action_log_(user_action_log) {}
+      action_log_factory_(action_log_factory) {}
 
 void IntelligenceServicesImpl::GetContextProvider(
     fidl::InterfaceRequest<ContextProvider> request) {
@@ -44,8 +45,8 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 }
 
 void IntelligenceServicesImpl::GetActionLog(
-    fidl::InterfaceRequest<ComponentActionLog> request) {
-  user_action_log_->GetComponentActionLog(scope_->Clone(), std::move(request));
+    fidl::InterfaceRequest<ActionLog> request) {
+  action_log_factory_->GetActionLog(scope_->Clone(), std::move(request));
 }
 
 }  // namespace maxwell

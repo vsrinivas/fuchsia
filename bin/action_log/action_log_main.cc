@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "apps/maxwell/services/action_log/user.fidl.h"
+#include "apps/maxwell/services/action_log/action_log.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_impl.h"
 
 #include "application/lib/app/application_context.h"
@@ -17,33 +17,33 @@ namespace {
 
 using namespace maxwell;
 
-class UserActionLogApp {
+class ActionLogFactoryApp {
  public:
-  UserActionLogApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    std::unique_ptr<UserActionLogImpl> factory_impl;
+  ActionLogFactoryApp()
+    : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    std::unique_ptr<ActionLogFactoryImpl> factory_impl;
     factory_impl_.swap(factory_impl);
 
     // Singleton service
-    context_->outgoing_services()->AddService<UserActionLog>(
-        [this](fidl::InterfaceRequest<UserActionLog> request) {
-          factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
-        });
+    context_->outgoing_services()->AddService<ActionLogFactory>([this](
+        fidl::InterfaceRequest<ActionLogFactory> request) {
+      factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
+    });
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> context_;
-  std::unique_ptr<UserActionLogImpl> factory_impl_;
-  fidl::BindingSet<UserActionLog> factory_bindings_;
+  std::unique_ptr<ActionLogFactoryImpl> factory_impl_;
+  fidl::BindingSet<ActionLogFactory> factory_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogFactoryApp);
 };
 
 } // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  UserActionLogApp app;
+  ActionLogFactoryApp app;
   loop.Run();
   return 0;
 }

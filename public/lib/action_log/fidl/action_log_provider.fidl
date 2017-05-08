@@ -11,8 +11,13 @@ struct UserAction {
   string parameters;
 };
 
+[ServiceName="maxwell.ActionLogProvider"]
+interface ActionLogProvider {
+  // When a new action is logged, a UserAction is sent to |listener|.
+  Subscribe(ActionLogListener listener);
+};
+
 interface ActionLogListener {
   // Receives an action that was just logged.
   OnAction(UserAction action);
 };
-

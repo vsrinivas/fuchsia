@@ -4,8 +4,13 @@
 
 module maxwell;
 
-// ComponentActionLog allows a component to log actions it implements as they
-// performed by the user.
-interface ComponentActionLog {
+import "../user/scope.fidl";
+
+[ServiceName="maxwell.ActionLogFactory"]
+interface ActionLogFactory {
+  GetActionLog(ComponentScope scope, ActionLog& action_log);
+};
+
+interface ActionLog {
   LogAction(string method, string parameters);
 };
