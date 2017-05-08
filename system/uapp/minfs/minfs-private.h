@@ -202,8 +202,6 @@ private:
 
     // Update the vnode's inode and write it to disk
     void InodeSync(uint32_t flags);
-    // Destroy the inode on disk (and free associated resources)
-    mx_status_t InodeDestroy();
 
     // Directories only
     mx_status_t ForEachDirent(DirArgs* args,

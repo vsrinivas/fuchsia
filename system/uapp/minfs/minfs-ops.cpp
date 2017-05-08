@@ -95,18 +95,6 @@ void Minfs::BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk) {
     }
 }
 
-mx_status_t VnodeMinfs::InodeDestroy() {
-    minfs_inode_t inode;
-
-    trace(MINFS, "InodeDestroy() ino=%u\n", ino_);
-
-    // save local copy, destroy inode on disk
-    memcpy(&inode, &inode_, sizeof(inode));
-    memset(&inode_, 0, sizeof(inode));
-    InodeSync(kMxFsSyncDefault);
-    return fs_->InoFree(inode, ino_);
-}
-
 void VnodeMinfs::InodeSync(uint32_t flags) {
     // by default, c/mtimes are not updated to current time
     if (flags != kMxFsSyncDefault) {
@@ -732,7 +720,7 @@ mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args,
 
 VnodeMinfs::~VnodeMinfs() {
     if (inode_.link_count == 0) {
-        InodeDestroy();
+        fs_->InoFree(inode_, ino_);
     }
 
     fs_->VnodeRelease(this);
