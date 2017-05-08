@@ -185,7 +185,10 @@ if out_file is None:
 primary_manifest = args.file_manifest
 if primary_manifest is None:
   primary_manifest = os.path.join(args.build_dir, "gen", "packages", "gn",
-                                  "user.bootfs.manifest")
+                                  "system.bootfs.manifest")
+# TODO: Allow configuring this with a command line argument.
+boot_manifest = os.path.join(args.build_dir, "gen", "packages", "gn",
+                              "boot.bootfs.manifest")
 mkbootfs_path = args.mkbootfs
 if mkbootfs_path is None:
   mkbootfs_path = os.path.join(args.build_dir, "..", "build-magenta", "tools",
@@ -226,6 +229,14 @@ if not compress_file(lz4_path, disk_path, compressed_disk, working_dir):
 if not (mkdir_fat(mmd_path, disk_path_efi, DIR_EFI, working_dir) and
         mkdir_fat(mmd_path, disk_path_efi, DIR_EFI_BOOT, working_dir)):
   sys.exit(-1)
+
+# Append contents of boot_manifest if it exists to provided bootdata.
+if os.path.exists(boot_manifest):
+    out_bootdata = os.path.join(args.build_dir, "installer.bootdata.bootfs")
+    bootdata_mkfs_cmd = [mkbootfs_path, "-c", "--target=boot", "-o", out_bootdata, bootdata,
+            boot_manifest]
+    subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
+    bootdata = out_bootdata
 
 if not (cp_fat(mcopy_path, disk_path_efi, bootloader, bootloader_remote_path,
                working_dir) and
