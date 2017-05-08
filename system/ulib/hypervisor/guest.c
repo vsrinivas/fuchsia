@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <hypervisor/guest.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
@@ -80,7 +81,7 @@ mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phy
     return NO_ERROR;
 }
 
-mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* pte_off) {
+mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off) {
     if (size % PAGE_SIZE != 0)
         return ERR_INVALID_ARGS;
     if (size > kMaxSize || size < kMinSize)
@@ -88,15 +89,40 @@ mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* pte_
 
 #if __x86_64__
     uint64_t aspace_off = 0;
-    *pte_off = 0;
-    *pte_off = page_table(addr, size - aspace_off, kPml4PageSize, *pte_off, &aspace_off, false);
-    *pte_off = page_table(addr, size - aspace_off, kPdpPageSize, *pte_off, &aspace_off, true);
-    *pte_off = page_table(addr, size - aspace_off, kPdPageSize, *pte_off, &aspace_off, true);
-    *pte_off = page_table(addr, size - aspace_off, kPtPageSize, *pte_off, &aspace_off, true);
+    *end_off = 0;
+    *end_off = page_table(addr, size - aspace_off, kPml4PageSize, *end_off, &aspace_off, false);
+    *end_off = page_table(addr, size - aspace_off, kPdpPageSize, *end_off, &aspace_off, true);
+    *end_off = page_table(addr, size - aspace_off, kPdPageSize, *end_off, &aspace_off, true);
+    *end_off = page_table(addr, size - aspace_off, kPtPageSize, *end_off, &aspace_off, true);
     return NO_ERROR;
 #else // __x86_64__
     return ERR_NOT_SUPPORTED;
 #endif // __x86_64__
+}
+
+mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
+                                  uintptr_t bootdata_off) {
+    if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off)
+        return ERR_INVALID_ARGS;
+    const uint32_t bootdata_len = sizeof(bootdata_t) + sizeof(uint64_t);
+    if (bootdata_off + bootdata_len > size)
+        return ERR_BUFFER_TOO_SMALL;
+
+    bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata->type = BOOTDATA_CONTAINER;
+    bootdata->extra = BOOTDATA_MAGIC;
+    bootdata->length = bootdata_len;
+
+    bootdata_off = BOOTDATA_ALIGN(bootdata_off + sizeof(bootdata_t));
+    bootdata = (bootdata_t*)(addr + bootdata_off);
+    bootdata->type = BOOTDATA_ACPI_RSDP;
+    bootdata->length = sizeof(uint64_t);
+
+    bootdata_off = bootdata_off + sizeof(bootdata_t);
+    uint64_t* acpi_rsdp = (uint64_t*)(addr + bootdata_off);
+    *acpi_rsdp = acpi_off;
+
+    return NO_ERROR;
 }
 
 mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* serial_fifo,

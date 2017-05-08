@@ -18,21 +18,33 @@ mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phy
 /**
  * Create an identity-mapped page table.
  *
- * @param addr The mapped address where the page table will be created.
- * @param size The size of the memory to map.
- * @param pte_offset The offset of the end of the page table.
+ * @param addr The mapped address of guest physical memory.
+ * @param size The size of guest physical memory.
+ * @param end_off The offset to the end of the page table.
  */
-mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* pte_off);
+mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
 
 /**
  * Create an ACPI 1.0 table.
  *
- * @param addr The mapped address of the guest physical memory.
+ * @param addr The mapped address of guest physical memory.
  * @param size The size of guest physical memory.
- * @param pte_off The offset of the end of the page table. Used to ensure we
- *                don't collide with the page table.
+ * @param begin_off The offset to the beginning of the ACPI table.
+ * @param end_off The offset to the end of the ACPI table.
  */
-mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_off);
+mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t* begin_off,
+                                    uintptr_t* end_off);
+
+/**
+ * Create bootdata for the guest.
+ *
+ * @param addr The mapped address of guest physical memory.
+ * @param size The size of guest physical memory.
+ * @param acpi_off The offset of the ACPI table.
+ * @param bootdata_off The offset to write the bootdata.
+ */
+mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_off,
+                                  uintptr_t bootdata_off);
 
 /**
  * Create a guest with the given VMO containing its physical memory.

@@ -30,12 +30,11 @@ static void* madt_subtable(void* base, uint32_t off, uint8_t type, uint8_t lengt
 }
 #endif // __x86_64__
 
-mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_off) {
+mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t* begin_off,
+                                    uintptr_t* end_off) {
 #if __x86_64__
     if (size < ACPI_HI_RSDP_WINDOW_BASE + ACPI_HI_RSDP_WINDOW_SIZE)
         return ERR_BUFFER_TOO_SMALL;
-    if (pte_off >= ACPI_HI_RSDP_WINDOW_BASE)
-        return ERR_OUT_OF_RANGE;
 
     // RSDP header. ACPI 1.0.
     ACPI_RSDP_COMMON* rsdp = (ACPI_RSDP_COMMON*)(addr + ACPI_HI_RSDP_WINDOW_BASE);
@@ -71,6 +70,8 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t pte_o
     local_apic->Id = 0;
     local_apic->LapicFlags = ACPI_MADT_ENABLED;
 
+    *begin_off = ACPI_HI_RSDP_WINDOW_BASE;
+    *end_off = ACPI_HI_RSDP_WINDOW_BASE + ACPI_HI_RSDP_WINDOW_SIZE;
     return NO_ERROR;
 #else // __x86_64__
     return ERR_NOT_SUPPORTED;

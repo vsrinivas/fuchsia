@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <hypervisor/guest.h>
+#include <magenta/assert.h>
 #include <magenta/boot/bootdata.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
@@ -100,16 +101,25 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    uintptr_t pte_off;
-    status = guest_create_page_table(addr, kVmoSize, &pte_off);
+    uintptr_t pt_end_off;
+    status = guest_create_page_table(addr, kVmoSize, &pt_end_off);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create page table\n");
         return status;
     }
 
-    status = guest_create_acpi_table(addr, kVmoSize, pte_off);
+    uintptr_t acpi_off;
+    uintptr_t acpi_end_off;
+    status = guest_create_acpi_table(addr, kVmoSize, &acpi_off, &acpi_end_off);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create ACPI table\n");
+        return status;
+    }
+    MX_ASSERT(pt_end_off <= acpi_off);
+
+    status = guest_create_bootdata(addr, kVmoSize, acpi_off, acpi_end_off);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to create bootdata\n");
         return status;
     }
 
@@ -134,7 +144,7 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    uint32_t guest_esi = 0;
+    uint32_t guest_esi = acpi_end_off;
     status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI, &guest_esi,
                               sizeof(guest_esi), NULL, 0);
     if (status != NO_ERROR) {
