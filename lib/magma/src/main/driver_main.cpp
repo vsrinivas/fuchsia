@@ -56,7 +56,10 @@ struct intel_i915_device_t {
 static int magma_start(intel_i915_device_t* dev);
 static int magma_stop(intel_i915_device_t* dev);
 
-#define get_i915_device(ctx) ((intel_i915_device_t *)ctx)
+intel_i915_device_t* get_i915_device(void* context)
+{
+    return static_cast<intel_i915_device_t*>(context);
+}
 
 static void intel_i915_enable_backlight(intel_i915_device_t* dev, bool enable)
 {
@@ -319,7 +322,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
         return DRET_MSG(status, "claim_device failed");
 
     // map resources and initialize the device
-    auto device = new intel_i915_device_t;
+    auto device = std::make_unique<intel_i915_device_t>();
 
     mx_display_info_t* di = &device->info;
     uint32_t format, width, height, stride, pitch;
@@ -352,10 +355,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 
     device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
 
-    if (!device->console_buffer->MapCpu(&device->framebuffer_addr)) {
-        delete(device);
+    if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
         return DRET_MSG(ERR_NO_MEMORY, "Failed to map framebuffer");
-    }
 
     // Placeholder is in tiled format
     device->placeholder_buffer =
@@ -368,10 +369,8 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     // won't be visible; however the plan is to move away from onscreen panics, instead
     // writing the log somewhere it can be recovered then triggering a reboot.
     uint32_t handle;
-    if (!device->console_buffer->duplicate_handle(&handle)) {
-        delete(device);
+    if (!device->console_buffer->duplicate_handle(&handle))
         return DRET_MSG(ERR_INTERNAL, "Failed to duplicate framebuffer handle");
-    }
 
     status = mx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, format,
                                     width, height, stride);
@@ -379,15 +378,13 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to magenta: %d", status);
 
     // TODO remove when the gfxconsole moves to user space
-    intel_i915_enable_backlight(device, true);
+    intel_i915_enable_backlight(device.get(), true);
 
     magma::PlatformTrace::Initialize();
 
     device->magma_driver = MagmaDriver::Create();
-    if (!device->magma_driver) {
-        delete(device);
+    if (!device->magma_driver)
         return DRET_MSG(ERR_INTERNAL, "MagmaDriver::Create failed");
-    }
 
 #if MAGMA_TEST_DRIVER
     DLOG("running magma indriver test");
@@ -396,29 +393,26 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
 
     device->parent_device = mx_device;
 
-    status = magma_start(device);
-    if (status != NO_ERROR) {
-        delete(device);
+    status = magma_start(device.get());
+    if (status != NO_ERROR)
         return DRET_MSG(status, "magma_start failed");
-    }
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "intel_i915_disp";
-    args.ctx = device;
+    args.ctx = device.get();
     args.driver = mx_driver;
     args.ops = &intel_i915_device_proto;
     args.proto_id = MX_PROTOCOL_DISPLAY;
     args.proto_ops = &intel_i915_display_proto;
 
     status = device_add(mx_device, &args, &device->mxdev);
-    if (status != NO_ERROR) {
-        delete(device);
+    if (status != NO_ERROR)
         return DRET_MSG(status, "device_add failed");
-    }
 
-    DLOG("initialized magma intel display driver, fb=0x%p fbsize=0x%lx", device->framebuffer_addr,
-         device->framebuffer_size);
+    device.release();
+
+    DLOG("initialized magma intel display driver");
 
 #if MAGMA_TEST_DRIVER
     constexpr uint32_t kArgc = 2;
