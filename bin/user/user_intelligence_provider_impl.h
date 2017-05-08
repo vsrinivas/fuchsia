@@ -5,6 +5,7 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
+#include "apps/maxwell/services/action_log/user.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
@@ -44,7 +45,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   ContextEnginePtr context_engine_;
   app::ServiceProviderPtr suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
-  ActionLogFactoryPtr action_log_factory_;
+  UserActionLogPtr user_action_log_;
   app::ServiceProviderPtr resolver_services_;
 
   AgentLauncher agent_launcher_;

@@ -6,8 +6,9 @@ import("//lib/fidl/fidl.gni")
 
 fidl("action_log") {
   sources = [
-    "action_log.fidl",
-    "action_log_provider.fidl",
+    "component.fidl",
+    "listener.fidl",
+    "user.fidl",
   ]
 
   deps = [

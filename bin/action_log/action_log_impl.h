@@ -8,33 +8,42 @@
 #include <string>
 #include <vector>
 
-#include "apps/maxwell/services/action_log/action_log.fidl.h"
+#include "apps/maxwell/services/action_log/component.fidl.h"
+#include "apps/maxwell/services/action_log/listener.fidl.h"
+#include "apps/maxwell/services/action_log/user.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_data.h"
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
 
-class ActionLogFactoryImpl : public ActionLogFactory {
- public:
-  ActionLogFactoryImpl();
+class UserActionLogImpl : public UserActionLog {
+  UserActionLogImpl();
 
  private:
-  // |ActionLogFactory|
-  void GetActionLog(
-      ComponentScopePtr scope,
-      fidl::InterfaceRequest<ActionLog> action_log_request) override;
+  void GetComponentActionLog(
+      maxwell::ComponentScopePtr scope,
+      fidl::InterfaceRequest<ComponentActionLog> action_log_request) override;
 
-  std::shared_ptr<ActionLogData> action_log_;
-  fidl::BindingSet<ActionLog, std::unique_ptr<ActionLog>>
-      module_action_log_bindings_;
+  void Subscribe(
+      fidl::InterfaceHandle<ActionLogListener> listener_handle) override;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogFactoryImpl);
+  void BroadcastToSubscribers(const std::string& component_url,
+                              const std::string& method,
+                              const std::string& params);
+
+  ActionLogData action_log_;
+  fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
+      action_log_bindings_;
+  fidl::InterfacePtrSet<ActionLogListener> subscribers_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
 };
 
-class ActionLogImpl : public ActionLog {
+class ComponentActionLogImpl : public ComponentActionLog {
  public:
-  ActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
+  ComponentActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
 
   void LogAction(const fidl::String& method,
                  const fidl::String& params) override;
@@ -42,6 +51,6 @@ class ActionLogImpl : public ActionLog {
  private:
   const ActionLogger log_action_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ActionLogImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
 }  // namespace maxwell
