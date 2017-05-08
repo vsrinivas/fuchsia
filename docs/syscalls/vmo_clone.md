@@ -28,8 +28,8 @@ Valid flags:
 - *MX_CLONE_COPY_ON_WRITE* - Create a copy-on-write clone. The cloned vmo will
 behave the same way the parent does, except that any write operation on the clone
 will bring in a copy of the page at the offset the write occurred. The new page in
-the cloned vmo is now a copy and may diverge from the parent. Any reads to from
-ranges outside of the parent vmo's size will contain zeros and writes will
+the cloned vmo is now a copy and may diverge from the parent. Any reads from
+ranges outside of the parent vmo's size will contain zeros, and writes will
 allocate new zero filled pages.
 
 *offset* must be page aligned.
