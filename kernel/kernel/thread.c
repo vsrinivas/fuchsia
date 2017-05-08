@@ -1434,6 +1434,24 @@ int wait_queue_wake_one(wait_queue_t *wait, bool reschedule, status_t wait_queue
     return ret;
 }
 
+thread_t *wait_queue_dequeue_one(wait_queue_t *wait, status_t wait_queue_error)
+{
+    thread_t *t;
+
+    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    t = list_remove_head_type(&wait->list, thread_t, queue_node);
+    if (t) {
+        wait->count--;
+        DEBUG_ASSERT(t->state == THREAD_BLOCKED);
+        t->blocked_status = wait_queue_error;
+        t->blocking_wait_queue = NULL;
+    }
+
+    return t;
+}
 
 /**
  * @brief  Wake all threads sleeping on a wait queue
@@ -1482,6 +1500,15 @@ int wait_queue_wake_all(wait_queue_t *wait, bool reschedule, status_t wait_queue
     sched_unblock_list(&list, reschedule);
 
     return ret;
+}
+
+bool wait_queue_is_empty(wait_queue_t *wait)
+{
+    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    return list_is_empty(&wait->list);
 }
 
 /**

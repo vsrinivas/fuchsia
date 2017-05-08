@@ -165,6 +165,11 @@ static inline uint64_t atomic_load_u64(volatile uint64_t *ptr)
     return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
 }
 
+static inline uint64_t atomic_load_u64_relaxed(volatile uint64_t *ptr)
+{
+    return __atomic_load_n(ptr, __ATOMIC_RELAXED);
+}
+
 static inline void atomic_store_u64(volatile uint64_t *ptr, uint64_t newval)
 {
     __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);

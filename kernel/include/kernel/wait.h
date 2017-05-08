@@ -54,12 +54,16 @@ status_t wait_queue_block(wait_queue_t *, lk_time_t deadline);
  */
 int wait_queue_wake_one(wait_queue_t *, bool reschedule, status_t wait_queue_error);
 int wait_queue_wake_all(wait_queue_t *, bool reschedule, status_t wait_queue_error);
+struct thread *wait_queue_dequeue_one(wait_queue_t *wait, status_t wait_queue_error);
 
 /*
  * remove the thread from whatever wait queue it's in.
  * return an error if the thread is not currently blocked (or is the current thread)
  */
 status_t thread_unblock_from_wait_queue(struct thread *t, status_t wait_queue_error);
+
+/* is the wait queue currently empty */
+bool wait_queue_is_empty(wait_queue_t *);
 
 __END_CDECLS;
 
