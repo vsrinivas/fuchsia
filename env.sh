@@ -259,6 +259,22 @@ function mrev() {
   (mgo && git rev-parse --verify HEAD)
 }
 
+### mlog: run magenta log listener
+
+function mlog-usage() {
+  cat >&2 <<END
+Usage: mlog [extra log listener args...]
+Runs magenta log listener.
+END
+}
+
+function mlog() {
+  mcheck || return 1
+
+  "${MAGENTA_TOOLS_DIR}/loglistener" "$@"
+}
+
+
 ### fgo: navigate to directory within fuchsia
 
 function fgo-usage() {
