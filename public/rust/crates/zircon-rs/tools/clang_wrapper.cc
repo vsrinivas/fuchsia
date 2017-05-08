@@ -82,14 +82,22 @@ string TargetTriple(const string& cmd) {
   return triple;
 }
 
-// Given the llvm triple, get the target identifier for the sysroot path.
-// Typical return value: "x86_64-fuchsia"
-string SysrootIdentifier(const string& triple) {
-  size_t pos = triple.find("-unknown-");
+// Given the path to the command, calculate the matching sysroot
+string SysrootPath(const string& self_path) {
+  const string out_dir_name = "out/";
+  size_t pos = self_path.find(out_dir_name);
   if (pos != string::npos) {
-    return triple.substr(0, pos + 1) + triple.substr(pos + 9);
+    size_t end_pos = self_path.find("/", pos+out_dir_name.length() + 1);
+    if (end_pos != string::npos) {
+        string sysroot_path = self_path.substr(0, end_pos) + "/sysroot";
+        struct stat stat_buf;
+        int status = stat(sysroot_path.c_str(), &stat_buf);
+        if (status == 0) {
+            return sysroot_path;
+        }
+    }
   }
-  return triple;
+  return "";
 }
 
 // Detect the host, get the host identifier (used to select a prebuilt toolchain).
@@ -164,11 +172,13 @@ int main(int argc, char** argv) {
   string cmd = GetCmd(argv[0]);
   string tool = InferTool(cmd);
   string triple = TargetTriple(cmd);
-  string sysroot_id = SysrootIdentifier(triple);
   vector<string> args = CollectArgs(argc, argv);
 
   string newcmd = root + "buildtools/toolchain/clang+llvm-" + host + "/bin/" + tool;
-  string sysroot = root + "out/sysroot/" + sysroot_id;
+  string sysroot = SysrootPath(self_path);
+  if (sysroot.empty()) {
+    Die("Can't find sysroot from wrapper path");
+  }
   vector<string> newargs;
   newargs.push_back(newcmd);
   if (tool != "llvm-ar") {
