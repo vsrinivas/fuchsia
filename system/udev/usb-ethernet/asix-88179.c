@@ -205,36 +205,46 @@ static mx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
 static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
     xprintf("request len %" PRIu64"\n", request->actual);
 
+    if (request->actual < 4) {
+        printf("ax88179_recv short packet\n");
+        return ERR_INTERNAL;
+    }
+
+    uint8_t* read_data = NULL;
+    iotxn_mmap(request, (void*)&read_data);
+
+    ptrdiff_t rxhdr_off = request->actual - sizeof(ax88179_rx_hdr_t);
+    ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
+    xprintf("rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
+    if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
+        printf("%s bad packet\n", __func__);
+        return ERR_IO_DATA_INTEGRITY;
+    }
+
     size_t offset = 0;
     size_t packet = 0;
 
-    while (offset < request->actual) {
-        if (request->actual < 4) {
-            printf("ax88179_recv short packet\n");
-            return ERR_INTERNAL;
-        }
-
-        uint8_t* read_data = NULL;
-        iotxn_mmap(request, (void*)&read_data);
-
-        ptrdiff_t rxhdr_off = request->actual - sizeof(ax88179_rx_hdr_t);
-        ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
-        xprintf("rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
-        if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
-            printf("%s bad packet\n", __func__);
-            return ERR_IO_DATA_INTEGRITY;
-        }
-
+    while (packet < rxhdr->num_pkts) {
         xprintf("next packet: %zd\n", packet);
         ptrdiff_t pkt_idx = packet++ * sizeof(uint32_t);
         uint32_t* pkt_hdr = (uint32_t*)(read_data + rxhdr->pkt_hdr_off + pkt_idx);
-        if ((uintptr_t)pkt_hdr >= (uintptr_t)(read_data + request->actual)) {
-            printf("%s packet header out of bounds %p > %p\n", __func__, pkt_hdr,
-                    read_data + request->actual);
+        if ((uintptr_t)pkt_hdr >= (uintptr_t)rxhdr) {
+            printf("%s packet header out of bounds, packet header=%p rx header=%p\n",
+                    __func__, pkt_hdr, rxhdr);
             return ERR_IO_DATA_INTEGRITY;
         }
         uint16_t pkt_len = le16toh((*pkt_hdr & AX88179_RX_PKTLEN) >> 16);
         xprintf("pkt_hdr: %0#x pkt_len: %u\n", *pkt_hdr, pkt_len);
+        if (pkt_len < 2) {
+            printf("%s short packet (len=%u)\n", __func__,  pkt_len);
+            return ERR_IO_DATA_INTEGRITY;
+        }
+        if (offset + pkt_len > rxhdr->pkt_hdr_off) {
+            printf("%s invalid packet length %u > %lu bytes remaining\n",
+                    __func__, pkt_len, rxhdr->pkt_hdr_off - offset);
+            return ERR_IO_DATA_INTEGRITY;
+        }
+
         bool drop = false;
         if (*pkt_hdr & AX88179_RX_DROPPKT) {
             xprintf("%s DropPkt\n", __func__);
