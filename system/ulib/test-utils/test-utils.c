@@ -300,6 +300,15 @@ mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid)
     return thread;
 }
 
+mx_info_thread_t tu_thread_get_info(mx_handle_t thread)
+{
+    mx_info_thread_t info;
+    mx_status_t status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
+    if (status < 0)
+        tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    return info;
+}
+
 int tu_run_program(const char *progname, int argc, const char** argv)
 {
     launchpad_t* lp;

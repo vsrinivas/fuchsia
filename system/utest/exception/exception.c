@@ -1094,10 +1094,7 @@ static bool unbind_rebind_while_stopped_test(void)
         tu_fatal("mx_object_get_child", status);
 
     // Verify mx_info_thread_t indicates waiting for debugger response.
-    mx_info_thread_t info;
-    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
-    if (status < 0)
-        tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    mx_info_thread_t info = tu_thread_get_info(thread);
     EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "unexpected thread state");
     EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "wrong exception port type");
 
@@ -1122,9 +1119,7 @@ static bool unbind_rebind_while_stopped_test(void)
     wait_process_exit_from_debugger(eport, child, tid);
 
     // We should still be able to get info on the thread.
-    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
-    if (status < 0)
-        tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    info = tu_thread_get_info(thread);
     EXPECT_EQ(info.state, MX_THREAD_STATE_DEAD, "unexpected thread state");
     EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "wrong exception port type at thread exit");
 

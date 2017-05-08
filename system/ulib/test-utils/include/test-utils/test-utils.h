@@ -135,6 +135,10 @@ mx_koid_t tu_get_related_koid(mx_handle_t handle);
 
 mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid);
 
+// Return mx_info_thread_t of |thread|.
+
+mx_info_thread_t tu_thread_get_info(mx_handle_t thread);
+
 // Run a program and wait for it to exit.
 // Any error in trying to run the program is fatal.
 // The result is the return code of the child process.

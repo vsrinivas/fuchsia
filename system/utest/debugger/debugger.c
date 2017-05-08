@@ -141,19 +141,39 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
         mx_exception_packet_t packet;
         if (!read_exception(eport, &packet))
             return false;
+        mx_koid_t tid = packet.report.context.tid;
+
         if (packet.report.header.type == MX_EXCP_THREAD_STARTING) {
             unittest_printf("wait-inf: inferior started\n");
-            if (!resume_inferior(inferior, packet.report.context.tid))
+            if (!resume_inferior(inferior, tid))
                 return false;
             continue;
         } else if (packet.report.header.type == MX_EXCP_THREAD_EXITING) {
-            unittest_printf("wait-inf: thread %" PRId64 " exited\n", packet.report.context.tid);
+            mx_handle_t thread;
+            mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+            // If the process has exited then the kernel may have reaped the
+            // thread already. Check.
+            if (status != ERR_NOT_FOUND) {
+                mx_info_thread_t info = tu_thread_get_info(thread);
+                // The thread could still transition to DEAD here (if the
+                // process exits), so check for either DYING or DEAD.
+                EXPECT_TRUE(info.state == MX_THREAD_STATE_DYING ||
+                            info.state == MX_THREAD_STATE_DEAD, "");
+                if (info.state == MX_THREAD_STATE_DYING)
+                    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
+                else
+                    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "");
+                tu_handle_close(thread);
+            } else {
+                EXPECT_TRUE(tu_process_has_exited(inferior), "");
+            }
+            unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
             // A thread is gone, but we only care about the process.
-            if (!resume_inferior(inferior, packet.report.context.tid))
+            if (!resume_inferior(inferior, tid))
                 return false;
             continue;
         } else if (packet.report.header.type == MX_EXCP_GONE) {
-            if (packet.report.context.tid == 0) {
+            if (tid == 0) {
                 // process is gone
                 unittest_printf("wait-inf: inferior gone\n");
                 break;
@@ -167,7 +187,6 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
             ASSERT_EQ(false, true, "wait-inf: unexpected exception type");
         }
 
-        mx_koid_t tid = packet.report.context.tid;
         mx_handle_t thread;
         mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
         ASSERT_EQ(status, 0, "mx_object_get_child failed");
