@@ -107,6 +107,8 @@ static const char* state_string(const mx_info_thread_t* info) {
                 return "susp";
             case MX_THREAD_STATE_BLOCKED:
                 return "blocked";
+            case MX_THREAD_STATE_DYING:
+                return "dying";
             case MX_THREAD_STATE_DEAD:
                 return "dead";
             default:
