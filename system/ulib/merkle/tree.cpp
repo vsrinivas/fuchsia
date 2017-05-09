@@ -98,6 +98,7 @@ mx_status_t Tree::CreateFinal(void* tree, Digest* digest) {
             return rc;
         }
         hash += Digest::kLength;
+
         if (offset_ == offsets_[level_]) {
             ++level_;
         }
@@ -250,11 +251,22 @@ mx_status_t Tree::SetLengths(size_t data_len, size_t tree_len) {
 
 void Tree::HashNode(const void* data) {
     const uint8_t* bytes = static_cast<const uint8_t*>(data) + offset_;
+    uint64_t offset = offset_;
+    if (offsets_.size() > 0 && level_ != 0) {
+        offset -= offsets_[level_ - 1];
+    }
     digest_.Init();
-    uint64_t locality = static_cast<uint64_t>(offset_ | level_);
+    uint64_t locality = offset | level_;
     digest_.Update(&locality, sizeof(locality));
-    if (level_ == 0 && (data_len_ - offset_) < kNodeSize) {
-        digest_.Update(bytes, data_len_ - offset_);
+    size_t to_digest = data_len_ - offset_;
+    if (level_ == 0 && to_digest < kNodeSize) {
+        digest_.Update(bytes, to_digest);
+        if (to_digest != 0) {
+            size_t pad_len = kNodeSize - to_digest;
+            uint8_t pad[pad_len];
+            memset(pad, 0, pad_len);
+            digest_.Update(pad, pad_len);
+        }
         offset_ = data_len_;
     } else {
         digest_.Update(bytes, kNodeSize);
@@ -272,7 +284,7 @@ mx_status_t Tree::HashData(const void* data, size_t length, void* tree) {
     while (length > 0) {
         if (offset_ % kNodeSize == 0) {
             digest_.Init();
-            uint64_t locality = static_cast<uint64_t>(offset_ | level_);
+            uint64_t locality = offset_ | level_;
             digest_.Update(&locality, sizeof(locality));
         }
         size_t left = static_cast<size_t>(kNodeSize - (offset_ % kNodeSize));
@@ -283,6 +295,12 @@ mx_status_t Tree::HashData(const void* data, size_t length, void* tree) {
         length -= left;
         if (offset_ != data_len_ && offset_ % kNodeSize != 0) {
             break;
+        }
+        size_t pad_len = kNodeSize - (offset_ % kNodeSize);
+        if (pad_len != kNodeSize) {
+            uint8_t pad[pad_len];
+            memset(pad, 0, pad_len);
+            digest_.Update(pad, pad_len);
         }
         digest_.Final();
         if (!hashes) {

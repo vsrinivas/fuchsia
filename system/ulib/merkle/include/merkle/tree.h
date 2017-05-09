@@ -149,7 +149,7 @@ private:
 
     // These fields are used in walking the tree during creation and/or
     // verification.
-    size_t level_;
+    uint64_t level_;
     uint64_t offset_;
     mxtl::Array<Range> ranges_;
 

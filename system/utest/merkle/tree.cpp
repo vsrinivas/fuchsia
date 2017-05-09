@@ -38,9 +38,9 @@ const char* kOneNodeDigest =
 const char* kSmallDigest =
     "733ac7663521c2aadf131471b3ada067b0d29366ad258737c08d855398304d03";
 const char* kLargeDigest =
-    "a8b50b94432e0065c77bfca2daf8dc8b1e42140b6062e4d0d66cd8a5682c6a3f";
+    "26af21232d940f91ab8a44e5136255230fe04732d3718009130e7bc514bdd480";
 const char* kUnalignedDigest =
-    "c0b65085c6c717ff91ebc3ac4f7ac153cde2ae531e85f3bee12aac3f81219112";
+    "ec80578cb472963f0986fc4b079678fe727ec6941527f691d2d7fa0c1a7797e3";
 
 // These tests use anonymously scoped globals to reduce the amount of repetitive
 // test setup.
