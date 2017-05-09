@@ -24,7 +24,9 @@
 
 static void kpci_release(void* ctx) {
     kpci_device_t* device = ctx;
-    mx_handle_close(device->handle);
+    if (device->handle != MX_HANDLE_INVALID) {
+        mx_handle_close(device->handle);
+    }
     free(device);
 }
 
@@ -36,7 +38,7 @@ static mx_protocol_device_t kpci_device_proto = {
 // initializes and optionally adds a new child device
 // device will be added if parent is not NULL
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
-                                   uint32_t index, mx_device_t** out) {
+                                   uint32_t index, bool save_handle, mx_device_t** out) {
     mx_pcie_get_nth_info_t info;
 
     mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
@@ -50,7 +52,12 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
         return ERR_NO_MEMORY;
     }
     memcpy(&device->info, &info, sizeof(info));
-    device->handle = handle;
+    if (save_handle) {
+        device->handle = handle;
+    } else {
+        mx_handle_close(handle);
+        handle = MX_HANDLE_INVALID;
+    }
     device->index = index;
 
     char name[20];
@@ -113,7 +120,9 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
     if (status == NO_ERROR) {
         *out = device->mxdev;
     } else {
-        mx_handle_close(handle);
+        if (handle != MX_HANDLE_INVALID) {
+            mx_handle_close(handle);
+        }
         free(device);
     }
 
@@ -138,7 +147,8 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
     }
     for (uint32_t index = 0;; index++) {
         mx_device_t* dev;
-        if (kpci_init_child(drv, pcidev, index, &dev) != NO_ERROR) {
+        // don't hang onto the PCI handle - we don't need it any more
+        if (kpci_init_child(drv, pcidev, index, false, &dev) != NO_ERROR) {
             break;
         }
     }
@@ -152,7 +162,7 @@ static mx_status_t kpci_drv_create(mx_driver_t* drv, mx_device_t* parent,
     }
     uint32_t index = strtoul(args, NULL, 10);
     mx_device_t* dev;
-    return kpci_init_child(drv, parent, index, &dev);
+    return kpci_init_child(drv, parent, index, true, &dev);
 }
 
 #else
@@ -161,7 +171,7 @@ static mx_driver_t __driver_kpci = {
 };
 
 mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
-    return kpci_init_child(&__driver_kpci, NULL, index, out);
+    return kpci_init_child(&__driver_kpci, NULL, index, true, out);
 }
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,
