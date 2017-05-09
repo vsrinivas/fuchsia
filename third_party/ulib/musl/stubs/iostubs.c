@@ -4,6 +4,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 #include <errno.h>
@@ -458,3 +459,9 @@ static int stub_ttyname_r(int fd, char* name, size_t size) {
     return -1;
 }
 weak_alias(stub_ttyname_r, ttyname_r);
+
+static int stub_uname(struct utsname* uts) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_uname, uname);

@@ -475,7 +475,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/setpriority.c \
     $(LOCAL_DIR)/src/misc/setrlimit.c \
     $(LOCAL_DIR)/src/misc/syslog.c \
-    $(LOCAL_DIR)/src/misc/uname.c \
     $(LOCAL_DIR)/src/misc/wordexp.c \
     $(LOCAL_DIR)/src/mman/madvise.c \
     $(LOCAL_DIR)/src/mman/mlock.c \

@@ -56,6 +56,7 @@
 #define IOCTL_FAMILY_SDMMC          0x23
 #define IOCTL_FAMILY_WLAN           0x24
 #define IOCTL_FAMILY_PTY            0x25
+#define IOCTL_FAMILY_NETCONFIG      0x26
 
 // IOCTL constructor
 // --K-FFNN
