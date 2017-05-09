@@ -18,6 +18,14 @@ using SampleFormat     = audio2_sample_format_t;
 using StreamSetFmtReq  = audio2_stream_cmd_set_format_req_t;
 using StreamSetFmtResp = audio2_stream_cmd_set_format_resp_t;
 
+// AUDIO2_STREAM_CMD_GET_GAIN
+using GetGainReq  = audio2_stream_cmd_get_gain_req;
+using GetGainResp = audio2_stream_cmd_get_gain_resp;
+
+// AUDIO2_STREAM_CMD_SET_GAIN
+using SetGainReq  = audio2_stream_cmd_set_gain_req;
+using SetGainResp = audio2_stream_cmd_set_gain_resp;
+
 // AUDIO2_RB_CMD_GET_FIFO_DEPTH
 using RingBufGetFifoDepthReq  = audio2_rb_cmd_get_fifo_depth_req_t;
 using RingBufGetFifoDepthResp = audio2_rb_cmd_get_fifo_depth_resp_t;

@@ -71,18 +71,20 @@ protected:
     mx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);
 
     // Overloads to control stream behavior.
-    virtual mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
-    virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_) { }
-    virtual mx_status_t OnDMAAssignedLocked()
-        __TA_REQUIRES(obj_lock_) { return PublishDeviceLocked(); }
+    virtual mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_);
+    virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_);
+    virtual mx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_);
     virtual mx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
-        __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
+        __TA_REQUIRES(obj_lock_);
     virtual mx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
-        __TA_REQUIRES(obj_lock_) { return NO_ERROR; }
+        __TA_REQUIRES(obj_lock_);
     virtual mx_status_t BeginChangeStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
-        __TA_REQUIRES(obj_lock_) { return ERR_NOT_SUPPORTED; }
+        __TA_REQUIRES(obj_lock_);
     virtual mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
-        __TA_REQUIRES(obj_lock_) { return ERR_INTERNAL; }
+        __TA_REQUIRES(obj_lock_);
+    virtual void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
+    virtual void OnSetGainLocked(const audio2_proto::SetGainReq& req,
+                                 audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
 
     // Debug logging
     virtual void PrintDebugPrefix() const;
@@ -111,6 +113,8 @@ private:
     mx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
     mx_status_t DoSetStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
+    mx_status_t DoGetGainLocked(const audio2_proto::GetGainReq& req) __TA_REQUIRES(obj_lock_);
+    mx_status_t DoSetGainLocked(const audio2_proto::SetGainReq& req) __TA_REQUIRES(obj_lock_);
 
     mx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf,

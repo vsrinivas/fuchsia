@@ -175,15 +175,19 @@ void IntelHDAStream::OnChannelClosed(const DispatcherChannel& channel) {
     }
 }
 
-#define PROCESS_CMD(_ioctl, _handler, _payload)     \
-case _ioctl:                                        \
-    if (req_size != sizeof(req._payload)) {         \
-        DEBUG_LOG("Bad " #_payload                  \
-                  " request length (%u != %zu)\n",  \
-                  req_size, sizeof(req._payload));  \
-        return ERR_INVALID_ARGS;                    \
-    }                                               \
-    return _handler(req._payload)
+#define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
+case _ioctl:                                                    \
+    if (req_size != sizeof(req._payload)) {                     \
+        DEBUG_LOG("Bad " #_ioctl                                \
+                  " response length (%u != %zu)\n",             \
+                  req_size, sizeof(req._payload));              \
+        return ERR_INVALID_ARGS;                                \
+    }                                                           \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
+        DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
+        return ERR_INVALID_ARGS;                                \
+    }                                                           \
+    return _handler(req._payload);
 mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
                                                  const RequestBufferType& req,
                                                  uint32_t req_size,
@@ -214,17 +218,19 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
     if (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)
         return ERR_INVALID_ARGS;
 
-    switch (req.hdr.cmd) {
-    PROCESS_CMD(AUDIO2_RB_CMD_GET_FIFO_DEPTH, ProcessGetFifoDepthLocked, get_fifo_depth);
-    PROCESS_CMD(AUDIO2_RB_CMD_GET_BUFFER,     ProcessGetBufferLocked,    get_buffer);
-    PROCESS_CMD(AUDIO2_RB_CMD_START,          ProcessStartLocked,        start);
-    PROCESS_CMD(AUDIO2_RB_CMD_STOP,           ProcessStopLocked,         stop);
+    // Strip the NO_ACK flag from the request before deciding the dispatch target.
+    auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
+    switch (cmd) {
+    HANDLE_REQ(AUDIO2_RB_CMD_GET_FIFO_DEPTH, get_fifo_depth, ProcessGetFifoDepthLocked, false);
+    HANDLE_REQ(AUDIO2_RB_CMD_GET_BUFFER,     get_buffer,     ProcessGetBufferLocked,    false);
+    HANDLE_REQ(AUDIO2_RB_CMD_START,          start,          ProcessStartLocked,        false);
+    HANDLE_REQ(AUDIO2_RB_CMD_STOP,           stop,           ProcessStopLocked,         false);
     default:
         DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
         return ERR_INVALID_ARGS;
     }
 }
-#undef PROCESS_CMD
+#undef HANDLE_REQ
 
 void IntelHDAStream::ProcessStreamIRQ() {
     // Regarless of whether we are currently active or not, make sure we ack any

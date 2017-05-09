@@ -430,14 +430,48 @@ send_fail_response:
     return res;
 }
 
-#define HANDLE_REQ(_ioctl, _payload, _handler)      \
-case _ioctl:                                        \
-    if (req_size != sizeof(req._payload)) {         \
-        DEBUG_LOG("Bad " #_payload                  \
-                  " reqonse length (%u != %zu)\n",  \
-                  req_size, sizeof(req._payload));  \
-        return ERR_INVALID_ARGS;                    \
-    }                                               \
+mx_status_t IntelHDAStreamBase::DoGetGainLocked(const audio2_proto::GetGainReq& req) {
+    audio2_proto::GetGainResp resp;
+
+    // Fill out the response header, then let the stream implementation fill out
+    // the payload.
+    resp.hdr = req.hdr;
+    OnGetGainLocked(&resp);
+
+    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
+    return stream_channel_->Write(&resp, sizeof(resp));
+}
+
+mx_status_t IntelHDAStreamBase::DoSetGainLocked(const audio2_proto::SetGainReq& req) {
+    if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK) {
+        OnSetGainLocked(req, nullptr);
+        return NO_ERROR;
+    }
+
+    audio2_proto::SetGainResp resp;
+    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
+
+    // Fill out the response header, then let the stream implementation fill out
+    // the payload.
+    resp.hdr = req.hdr;
+    OnSetGainLocked(req, &resp);
+
+    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
+    return stream_channel_->Write(&resp, sizeof(resp));
+}
+
+#define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
+case _ioctl:                                                    \
+    if (req_size != sizeof(req._payload)) {                     \
+        DEBUG_LOG("Bad " #_ioctl                                \
+                  " response length (%u != %zu)\n",             \
+                  req_size, sizeof(req._payload));              \
+        return ERR_INVALID_ARGS;                                \
+    }                                                           \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO2_FLAG_NO_ACK)) {  \
+        DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
+        return ERR_INVALID_ARGS;                                \
+    }                                                           \
     return _handler(req._payload);
 mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     MX_DEBUG_ASSERT(channel != nullptr);
@@ -460,6 +494,8 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     union {
         audio2_proto::CmdHdr          hdr;
         audio2_proto::StreamSetFmtReq set_format;
+        audio2_proto::GetGainReq      get_gain;
+        audio2_proto::SetGainReq      set_gain;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -475,8 +511,12 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
         (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
         return ERR_INVALID_ARGS;
 
-    switch (req.hdr.cmd) {
-        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked);
+    // Strip the NO_ACK flag from the request before deciding the dispatch target.
+    auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
+    switch (cmd) {
+        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked, false);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_GET_GAIN,   get_gain,   DoGetGainLocked,         false);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_GAIN,   set_gain,   DoSetGainLocked,         true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return ERR_NOT_SUPPORTED;
@@ -574,6 +614,69 @@ mx_status_t IntelHDAStreamBase::EncodeStreamFormat(const audio2_proto::StreamSet
     return ERR_NOT_SUPPORTED;
 }
 #undef MAKE_RATE
+
+/////////////////////////////////////////////////////////////////////
+//
+// Default handlers
+//
+/////////////////////////////////////////////////////////////////////
+mx_status_t IntelHDAStreamBase::OnActivateLocked() {
+    return NO_ERROR;
+}
+
+void IntelHDAStreamBase::OnDeactivateLocked() { }
+
+mx_status_t IntelHDAStreamBase::OnDMAAssignedLocked() {
+    return PublishDeviceLocked();
+}
+
+mx_status_t IntelHDAStreamBase::OnSolicitedResponseLocked(const CodecResponse& resp) {
+    return NO_ERROR;
+}
+
+mx_status_t IntelHDAStreamBase::OnUnsolicitedResponseLocked(const CodecResponse& resp) {
+    return NO_ERROR;
+}
+
+mx_status_t IntelHDAStreamBase::BeginChangeStreamFormatLocked(
+        const audio2_proto::StreamSetFmtReq& fmt) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t IntelHDAStreamBase::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
+    return ERR_INTERNAL;
+}
+
+void IntelHDAStreamBase::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
+    MX_DEBUG_ASSERT(out_resp != nullptr);
+
+    // By default we claim to have a fixed, un-mute-able gain stage.
+    out_resp->cur_mute  = false;
+    out_resp->cur_gain  = 0.0;
+
+    out_resp->can_mute  = false;
+    out_resp->min_gain  = 0.0;
+    out_resp->max_gain  = 0.0;
+    out_resp->gain_step = 0.0;
+}
+
+void IntelHDAStreamBase::OnSetGainLocked(const audio2_proto::SetGainReq& req,
+                                         audio2_proto::SetGainResp* out_resp) {
+    // Nothing to do if no response is expected.
+    if (out_resp == nullptr) {
+        MX_DEBUG_ASSERT(req.hdr.cmd & AUDIO2_FLAG_NO_ACK);
+        return;
+    }
+
+    bool illegal_mute = (req.flags & AUDIO2_SGF_MUTE_VALID) && (req.flags & AUDIO2_SGF_MUTE);
+    bool illegal_gain = (req.flags & AUDIO2_SGF_GAIN_VALID) && (req.gain != 0.0f);
+
+    out_resp->cur_mute = false;
+    out_resp->cur_gain = 0.0;
+    out_resp->result   = (illegal_mute || illegal_gain)
+                       ? ERR_INVALID_ARGS
+                       : NO_ERROR;
+}
 
 }  // namespace codecs
 }  // namespace intel_hda
