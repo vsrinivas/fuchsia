@@ -80,13 +80,6 @@ function download_gn() {
   download_tool gn "${FUCHSIA_URL_BASE}/gn/${HOST_PLATFORM}"
 }
 
-function download_cmake() {
-  # TODO(jamesr): the cmake and sdk tarballs are inconsistent about how they name
-  # the uploaded artifact and what directories they expect to be untarred from.
-  # There's no good reason for these to be different - unify them.
-  download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
-}
-
 function download_toolchain() {
   download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
 }
@@ -117,7 +110,6 @@ function download_gdb() {
 function download_all_default() {
   download_ninja
   download_gn
-  download_cmake
   download_toolchain
   download_rust
   download_go
@@ -142,11 +134,6 @@ case ${i} in
     ;;
   --gn)
     download_gn
-    has_arguments="true"
-    shift
-    ;;
-  --cmake)
-    download_cmake
     has_arguments="true"
     shift
     ;;
