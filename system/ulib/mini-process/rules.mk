@@ -13,8 +13,8 @@ MODULE_SRCS += \
 
 MODULE_SO_NAME := mini-process
 
-MODULE_LIBS := system/ulib/magenta
+MODULE_STATIC_LIBS := system/ulib/elfload
 
-MODULE_COMPILEFLAGS := $(NO_SAFESTACK)
+MODULE_LIBS := system/ulib/magenta system/ulib/c
 
 include make/module.mk

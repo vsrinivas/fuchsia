@@ -2,22 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <magenta/syscalls.h>
-#include <magenta/status.h>
+#include <dlfcn.h>
+#include <elfload/elfload.h>
+#include <magenta/process.h>
+#include <magenta/processargs.h>
 #include <magenta/stack.h>
+#include <magenta/status.h>
+#include <magenta/syscalls.h>
+#include <stdint.h>
 
-static void __attribute__((optimize("O0"))) minipr_thread_loop(void) {
-    volatile uint32_t val = 1;
-    while (val) {
-        // note that this loop never terminates and will staturate one core unless
-        // you take additional steps.
-        val += 2u;
+__NO_SAFESTACK static void minipr_thread_loop(mx_handle_t handle,
+                                              uintptr_t fnptr) {
+    if (fnptr == 0) {
+        // Busy-wait.
+        volatile uint32_t val = 1;
+        while (val) {
+            // Note that this loop never terminates and will staturate one
+            // core unless you take additional steps.
+            val += 2u;
+        }
+    } else {
+        __typeof(mx_nanosleep)* nanosleep_fn = (__typeof(mx_nanosleep)*)fnptr;
+        mx_status_t status;
+        do {
+            status = (*nanosleep_fn)(MX_TIME_INFINITE);
+        } while (status == NO_ERROR);
     }
+    __builtin_trap();
 }
 
 mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
-                                   mx_handle_t vmar, mx_handle_t transfered_handle) {
+                                   mx_handle_t vmar,
+                                   mx_handle_t transfered_handle,
+                                   bool busy_wait_no_vdso) {
+    Dl_info nanosleep_info;
+    if (dladdr((const void*)(uintptr_t)&mx_nanosleep, &nanosleep_info) == 0)
+        return ERR_INTERNAL;
+    uintptr_t nanosleep_offset = ((uintptr_t)nanosleep_info.dli_saddr -
+                                  (uintptr_t)nanosleep_info.dli_fbase);
+
     // Allocate a single VMO for the child. It doubles as the stack on the top and
     // as the executable code (minipr_thread_loop()) at the bottom. In theory the stack usage
     // is minimal, like 32 bytes or less.
@@ -41,10 +64,44 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     if (status < 0)
         goto exit;
 
+    uintptr_t nanosleep_fnptr = 0;
+    if (!busy_wait_no_vdso) {
+        // This is not thread-safe.  It steals the startup handle, so it's not
+        // compatible with also using launchpad (which also needs to steal the
+        // startup handle).
+        static mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
+        if (vdso_vmo == MX_HANDLE_INVALID) {
+            vdso_vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+            if (vdso_vmo == MX_HANDLE_INVALID) {
+                status = ERR_INTERNAL;
+                goto exit;
+            }
+        }
+
+        uintptr_t vdso_base = 0;
+        elf_load_header_t header;
+        uintptr_t phoff;
+        mx_status_t status = elf_load_prepare(vdso_vmo, NULL, 0,
+                                              &header, &phoff);
+        if (status == NO_ERROR) {
+            elf_phdr_t phdrs[header.e_phnum];
+            status = elf_load_read_phdrs(vdso_vmo, phdrs, phoff,
+                                         header.e_phnum);
+            if (status == NO_ERROR)
+                status = elf_load_map_segments(vmar, &header, phdrs, vdso_vmo,
+                                               NULL, &vdso_base, NULL);
+        }
+        if (status != NO_ERROR)
+            goto exit;
+
+        nanosleep_fnptr = vdso_base + nanosleep_offset;
+    }
+
     // Compute a valid starting SP for the machine's ABI.
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
-    status = mx_process_start(process, thread, stack_base, sp, transfered_handle, 0u);
+    status = mx_process_start(process, thread, stack_base, sp,
+                              transfered_handle, nanosleep_fnptr);
 
 exit:
     if (stack_vmo != MX_HANDLE_INVALID)
@@ -66,9 +123,10 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
     if (status < 0)
         goto exit;
 
-    status = start_mini_process_etc(*process, *thread, vmar, transfered_handle);
+    status = start_mini_process_etc(*process, *thread, vmar, transfered_handle,
+                                    false);
 
-    // On sucess the transfered_handle gets consumed.
+    // On success the transfered_handle gets consumed.
 
     if (status == NO_ERROR) {
         // We wait 10ms here to make sure that the thread has transitioned

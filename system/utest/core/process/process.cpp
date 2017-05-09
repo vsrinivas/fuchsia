@@ -97,7 +97,10 @@ bool kill_process_via_vmar_destroy() {
     mx_handle_t thread;
     ASSERT_EQ(mx_thread_create(proc, "th", 2u, 0u, &thread), NO_ERROR, "");
 
-    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
+    // Make the process busy-wait rather than using a vDSO call because
+    // if it maps in the vDSO then mx_vmar_destroy is prohibited.
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true),
+              NO_ERROR, "");
 
     // Destroying the root VMAR should cause the process to terminate.
     EXPECT_EQ(mx_vmar_destroy(vmar), NO_ERROR, "");
@@ -132,8 +135,10 @@ bool kill_process_handle_cycle() {
     EXPECT_EQ(mx_handle_duplicate(proc1, MX_RIGHT_SAME_RIGHTS, &dup1), NO_ERROR, "");
     EXPECT_EQ(mx_handle_duplicate(proc2, MX_RIGHT_SAME_RIGHTS, &dup2), NO_ERROR, "");
 
-    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, dup2), NO_ERROR, "");
-    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, dup1), NO_ERROR, "");
+    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, dup2, false)
+              , NO_ERROR, "");
+    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, dup1, false),
+              NO_ERROR, "");
 
     EXPECT_EQ(mx_handle_close(vmar2), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(vmar1), NO_ERROR, "");
@@ -204,8 +209,10 @@ bool kill_channel_handle_cycle() {
     // The process start with each one side of the channel. We don't have access to the
     // channel anymore.
 
-    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0]), NO_ERROR, "");
-    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1]), NO_ERROR, "");
+    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], false),
+              NO_ERROR, "");
+    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], false),
+              NO_ERROR, "");
 
     EXPECT_EQ(mx_handle_close(vmar2), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(vmar1), NO_ERROR, "");
@@ -270,7 +277,8 @@ bool info_reflects_process_state() {
     EXPECT_FALSE(info.exited, "process should not appear as exited");
 
     // Start the process and make (relatively) certain it's alive.
-    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
+    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, false),
+              NO_ERROR, "");
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), ERR_TIMED_OUT, "");
