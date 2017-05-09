@@ -92,3 +92,4 @@ else
 SHELLEXEC =
 endif
 
+HOST_ARCH := $(shell uname -m)

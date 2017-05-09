@@ -55,7 +55,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/minfs-check.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/mxalloc/alloc_checker.cpp \
-    system/ulib/mxcpp/pure_virtual.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
 
 MODULE_COMPILEFLAGS := \

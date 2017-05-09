@@ -203,12 +203,6 @@ ARCH_CFLAGS :=
 ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
-# Host compile flags
-HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
-HOST_CFLAGS := -std=c11
-HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
-HOST_ASMFLAGS :=
-
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
 
@@ -563,6 +557,25 @@ HOST_LD      := $(HOST_TOOLCHAIN_PREFIX)ld
 endif
 HOST_OBJCOPY := $(HOST_TOOLCHAIN_PREFIX)objcopy
 HOST_STRIP   := $(HOST_TOOLCHAIN_PREFIX)strip
+
+# Host compile flags
+HOST_COMPILEFLAGS := -Wall -g -O2 -Isystem/public -Isystem/private -I$(GENERATED_INCLUDES)
+HOST_CFLAGS := -std=c11
+HOST_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti
+HOST_LDFLAGS :=
+ifneq ($(HOST_USE_CLANG),)
+# We need to use our provided libc++ and libc++abi (and their pthread
+# dependency) rather than the host library. For host tools without
+# C++, ignore the unused arguments.
+HOST_CPPFLAGS += -stdlib=libc++
+HOST_LDFLAGS += -stdlib=libc++ -static-libstdc++
+# We don't need to link libc++abi.a on OS X.
+ifneq ($(HOST_PLATFORM),darwin)
+HOST_LDFLAGS += -Lprebuilt/downloads/clang+llvm-$(HOST_ARCH)-$(HOST_PLATFORM)/lib -Wl,-Bstatic -lc++abi -Wl,-Bdynamic -lpthread
+endif
+HOST_LDFLAGS += -Wno-unused-command-line-argument
+endif
+HOST_ASMFLAGS :=
 
 ifneq ($(HOST_USE_CLANG),)
 ifeq ($(HOST_PLATFORM),darwin)

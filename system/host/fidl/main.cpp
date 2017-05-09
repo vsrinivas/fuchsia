@@ -12,7 +12,6 @@
 
 #include "identifier_table.h"
 #include "lexer.h"
-#include "make_unique.h"
 #include "parser.h"
 #include "source_manager.h"
 
