@@ -75,6 +75,8 @@ public:
               std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
 private:
+    MsdIntelDevice();
+
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
     if (x)                                                                                         \
     DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
@@ -112,9 +114,6 @@ private:
     magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
     std::shared_ptr<GpuMappingCache> mapping_cache() override { return mapping_cache_; }
-
-private:
-    MsdIntelDevice();
 
     void StartDeviceThread();
 
