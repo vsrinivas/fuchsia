@@ -21,8 +21,9 @@ bool QueryMatches(const std::set<std::string>& updated_topics,
 
   // Otherwise any of |updated_topics| must appear in |query->topics|.
   for (const auto& query_topic : query->topics) {
-    if (updated_topics.count(query_topic) > 0)
+    if (updated_topics.count(query_topic) > 0) {
       return true;
+    }
   }
   return false;
 }
@@ -99,10 +100,23 @@ void ContextRepository::GetAllValuesInStoryScope(
   }
 }
 
+void ContextRepository::GetAllTopicsWithPrefix(
+    const std::string& prefix,
+    std::vector<std::string>* output) const {
+  auto it = values_.lower_bound(prefix);
+  // ~ is the last character in the ASCII table.
+  auto end = values_.lower_bound(prefix + "~");
+
+  for (; it != end; ++it) {
+    output->push_back(it->first);
+  }
+}
+
 void ContextRepository::SetInternal(const std::string& topic,
                                     const std::string* json_value) {
+  FTL_DCHECK(topic.find('\'') == std::string::npos) << topic;
   if (json_value != nullptr) {
-    FTL_LOG(INFO) << "ContextRepository::SetInternal(): " << topic << " = "
+    FTL_LOG(INFO) << "ContextRepository::SetInternal(): " << topic << "|" << topic.length() << " = "
                   << *json_value;
     values_[topic] = *json_value;
   } else {
@@ -153,7 +167,6 @@ ContextUpdatePtr ContextRepository::BuildContextUpdate(
       if (it != values_.end()) {
         if (!result)
           result = ContextUpdate::New();
-
         result->values[topic] = it->second;
       }
     }

@@ -9,11 +9,14 @@
 #include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/coprocessors/aggregate.h"
+#include "apps/maxwell/src/context_engine/coprocessors/focused_story.h"
 
 namespace maxwell {
 
 ContextEngineImpl::ContextEngineImpl() {
-  repository_.AddCoprocessor(new AggregateCoprocessor("focal_entities"));
+  repository_.AddCoprocessor(
+      new AggregateCoprocessor("explicit/focal_entities"));
+  repository_.AddCoprocessor(new FocusedStoryCoprocessor());
 }
 
 ContextEngineImpl::~ContextEngineImpl() = default;

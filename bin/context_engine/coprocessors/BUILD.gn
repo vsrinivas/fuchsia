@@ -6,6 +6,7 @@
 group("coprocessors") {
   public_deps = [
     ":aggregate",
+    ":focused_story",
   ]
 }
 
@@ -19,6 +20,7 @@ executable("coprocessors_unittest") {
 
   deps = [
     ":aggregate",
+    ":focused_story",
     "//apps/maxwell/src/context_engine:scope_utils",
     "//lib/mtl",
     "//third_party/gtest",
@@ -36,6 +38,20 @@ source_set("aggregate") {
     "//apps/maxwell/src/context_engine:scope_utils",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("focused_story") {
+  sources = [
+    "focused_story.h",
+    "focused_story.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/src/context_engine:context_repository",
+    "//apps/maxwell/src/context_engine:scope_utils",
+    "//apps/maxwell/services/context",
     "//third_party/rapidjson",
   ]
 }

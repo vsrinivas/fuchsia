@@ -5,6 +5,7 @@
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
+#include "apps/maxwell/src/context_engine/scope_utils.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
@@ -54,9 +55,7 @@ class TestListener : public ContextListener {
 
 class ContextEngineTest : public ContextEngineTestBase {
  public:
-  ContextEngineTest() : ContextEngineTestBase() {
-    InitAllGlobalScope();
-  }
+  ContextEngineTest() : ContextEngineTestBase() { InitAllGlobalScope(); }
 
  protected:
   void InitAllGlobalScope() {
@@ -87,8 +86,8 @@ ContextQueryPtr CreateQuery(const std::string& topic) {
 }  // namespace
 
 TEST_F(ContextEngineTest, PublishAndSubscribe) {
-  // Show that we can publish to a topic and that we can subscribe to that topic.
-  // Querying behavior and other Listener dynamics are tested elsewhere.
+  // Show that we can publish to a topic and that we can subscribe to that
+  // topic. Querying behavior and other Listener dynamics are tested elsewhere.
   InitAllGlobalScope();
   publisher_->Publish("topic", "foobar");
   publisher_->Publish("a_different_topic", "baz");
@@ -154,10 +153,10 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
   publisher_->Publish("/topic", "1");
 
   TestListener listener;
-  // 17363581645103e3247b10582a641dc is the SHA1 of "url".
-  const std::string kTopicString =
-      "/story/id/story_id/module/17363581645103e3247b10582a641dc/explicit/"
-      "topic";
+  // 81736358b1645103ae83247b10c5f82af641ddfc is the SHA1 of "url".
+  const char kSha1OfUrl[] = "81736358b1645103ae83247b10c5f82af641ddfc";
+  const std::string kTopicString = MakeModuleScopeTopic(
+      "story_id", kSha1OfUrl, "explicit/topic");
   provider_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
   listener.WaitForUpdate();
 

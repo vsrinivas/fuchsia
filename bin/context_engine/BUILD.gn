@@ -74,6 +74,7 @@ source_set("context_engine_impl") {
     "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/context_engine/coprocessors:aggregate",
+    "//apps/maxwell/src/context_engine/coprocessors:focused_story",
     "//lib/fidl/cpp/bindings",
   ]
 }

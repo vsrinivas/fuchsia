@@ -5,7 +5,7 @@
 #pragma once
 
 #include <list>
-#include <unordered_map>
+#include <map>
 
 #include "apps/maxwell/services/context/context_provider.fidl.h"
 
@@ -53,12 +53,16 @@ class ContextRepository {
                                 const std::string& topic,
                                 std::vector<std::string>* output) const;
 
+  // Stores into |output| all context topics with the given string prefix.
+  void GetAllTopicsWithPrefix(const std::string& prefix,
+                              std::vector<std::string>* output) const;
+
  private:
   void SetInternal(const std::string& topic, const std::string* json_value);
   ContextUpdatePtr BuildContextUpdate(const ContextQueryPtr& query);
 
   // Keyed by context topic.
-  std::unordered_map<std::string, std::string> values_;
+  std::map<std::string, std::string> values_;
 
   struct Subscription {
     ContextQueryPtr query;

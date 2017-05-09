@@ -22,7 +22,13 @@ ContextPublisherImpl::~ContextPublisherImpl() = default;
 void ContextPublisherImpl::Publish(const fidl::String& topic,
                                    const fidl::String& json_data) {
   // Rewrite the topic to be within the scope specified at construction time.
-  const auto scoped_topic = ScopeAndTopicToString(scope_, topic);
+  std::string local_topic = topic;
+  if (scope_->is_module_scope()) {
+    // If a Mod is publishing this, prefix its topic string with "explicit", to
+    // indicate that the Mod is explicitly publishing this value.
+    local_topic = ConcatTopic("explicit", topic);
+  }
+  const auto scoped_topic = ScopeAndTopicToString(scope_, local_topic);
 
   if (json_data) {
     repository_->Set(scoped_topic, json_data);
