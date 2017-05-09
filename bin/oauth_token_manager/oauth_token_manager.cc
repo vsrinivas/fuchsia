@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// OAuthTokenManagerApp is a simple auth service hack for fetching user OAuth
+// tokens to talk programmatically to backend apis. These apis are hosted or
+// integrated with Identity providers such as Google, Twitter, Spotify etc.
+
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -26,6 +30,7 @@
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/synchronization/sleep.h"
+#include "lib/ftl/time/time_point.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -44,12 +49,15 @@ constexpr char kClientId[] =
 constexpr char kGoogleOAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
-constexpr char kTokensFile[] = "/data/modular/device/tokens.db";
+constexpr char kCredentialsFile[] = "/data/modular/device/v1/creds.db";
 constexpr char kWebViewUrl[] =
     "https://fuchsia-build.storage.googleapis.com/apps/web_view/"
     "web_view_b034f1a588a20e87198b83fd37f4ff676b093b6c";
 
-constexpr auto kScopes = {"https://www.googleapis.com/auth/gmail.modify",
+constexpr auto kScopes = {"openid",
+                          "email",
+                          "https://www.googleapis.com/auth/assistant",
+                          "https://www.googleapis.com/auth/gmail.modify",
                           "https://www.googleapis.com/auth/userinfo.email",
                           "https://www.googleapis.com/auth/userinfo.profile",
                           "https://www.googleapis.com/auth/youtube.readonly",
@@ -173,8 +181,9 @@ class OAuthTokenManagerApp : AccountProvider {
   // Generate a random account id.
   std::string GenerateAccountId();
 
-  void AddRefreshTokenCall(const std::string& account_id,
-                           const std::function<void(std::string)>& callback);
+  void RefreshToken(const std::string& account_id,
+                    bool refresh_id_token,
+                    const std::function<void(std::string)>& callback);
 
   std::shared_ptr<app::ApplicationContext> application_context_;
 
@@ -187,14 +196,25 @@ class OAuthTokenManagerApp : AccountProvider {
   std::unordered_map<std::string, std::unique_ptr<TokenProviderFactoryImpl>>
       token_provider_factory_impls_;
 
-  rapidjson::Document all_tokens_;
+  // In-memory cache for long lived user credentials. This cache is populated
+  // from |kCredentialsFile| on Initialize.
+  // TODO(ukode): Replace rapidjson with a dedicated data structure for storing
+  // user credentials.
+  rapidjson::Document user_creds_;
+
+  // In-memory cache for short lived oauth tokens that resets on system reboots.
+  // Tokens are cached based on the expiration time set by the Identity
+  // provider.
+  // TODO(ukode): Replace rapidjson with a dedicated data structure for storing
+  // oauth tokens.
+  rapidjson::Document oauth_tokens_;
 
   // We are using operations here not to guard state across asynchronous calls
   // but rather to clean up state after an 'operation' is done.
   OperationCollection operation_collection_;
 
-  class GoogleRefreshCall;
-  class GoogleOAuthCall;
+  class GoogleOAuthTokensCall;
+  class GoogleUserCredsCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OAuthTokenManagerApp);
 };
@@ -220,27 +240,27 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
     token_provider_bindings_.AddBinding(this, std::move(request));
   }
 
-  // TODO(alhaad/ukode): The current implementation always refreshes as access
-  // token before returning it. Be smarter about it!
   // |TokenProvider|
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
-    if (!app_->all_tokens_.HasMember(account_id_) ||
-        !app_->all_tokens_[account_id_].HasMember("refresh_token")) {
+    if (!app_->user_creds_.HasMember(account_id_) ||
+        !app_->user_creds_[account_id_].HasMember("refresh_token")) {
+      FTL_LOG(INFO) << "User not found";
       callback(nullptr);
       return;
     }
-    app_->AddRefreshTokenCall(account_id_, callback);
+    app_->RefreshToken(account_id_, false, callback);
   }
 
   // |TokenProvider|
-  // TODO(alhaad/ukode): Id token might have expired, refresh it!
   void GetIdToken(const GetIdTokenCallback& callback) override {
-    if (!app_->all_tokens_.HasMember(account_id_) ||
-        !app_->all_tokens_[account_id_].HasMember("id_token")) {
+    if (!app_->user_creds_.HasMember(account_id_) ||
+        !app_->user_creds_[account_id_].HasMember("refresh_token")) {
+      FTL_LOG(INFO) << "User not found";
       callback(nullptr);
       return;
     }
-    callback(app_->all_tokens_[account_id_]["id_token"].GetString());
+
+    app_->RefreshToken(account_id_, true, callback);
   }
 
   // |TokenProvider|
@@ -257,14 +277,16 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   FTL_DISALLOW_COPY_AND_ASSIGN(TokenProviderFactoryImpl);
 };
 
-class OAuthTokenManagerApp::GoogleRefreshCall : Operation<void> {
+class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<void> {
  public:
-  GoogleRefreshCall(OperationContainer* const container,
-                    const std::string& account_id,
-                    OAuthTokenManagerApp* const app,
-                    const std::function<void(fidl::String)>& callback)
+  GoogleOAuthTokensCall(OperationContainer* const container,
+                        const std::string& account_id,
+                        const bool refresh_id_token,
+                        OAuthTokenManagerApp* const app,
+                        const std::function<void(fidl::String)>& callback)
       : Operation(container, [] {}),
         account_id_(account_id),
+        refresh_id_token_(refresh_id_token),
         app_(app),
         callback_(callback) {
     Ready();
@@ -273,7 +295,28 @@ class OAuthTokenManagerApp::GoogleRefreshCall : Operation<void> {
  private:
   void Run() override {
     std::string refresh_token =
-        app_->all_tokens_[account_id_]["refresh_token"].GetString();
+        app_->user_creds_[account_id_]["refresh_token"].GetString();
+
+    if (refresh_token.empty()) {
+      return Failure("User not found");
+    }
+
+    // Check for existing expiry time before fetching it from server.
+    if (app_->oauth_tokens_.HasMember(account_id_)) {
+      uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+      uint64_t creation_ts =
+          app_->oauth_tokens_[account_id_]["creation_ts"].GetUint64();
+      uint64_t token_expiry =
+          app_->oauth_tokens_[account_id_]["expires_in"].GetUint64();
+
+      if ((current_ts - creation_ts) < token_expiry) {
+        // access/id token is still valid.
+        return Success();
+      }
+    }
+
+    // Existing tokens expired, exchange refresh token for fresh access and
+    // id tokens.
     std::string request_body = "refresh_token=" + refresh_token +
                                "&client_id=" + kClientId +
                                "&grant_type=refresh_token";
@@ -283,11 +326,46 @@ class OAuthTokenManagerApp::GoogleRefreshCall : Operation<void> {
 
     Post(request_body, url_loader_.get(), [this] { Success(); },
          [this](const std::string error_message) { Failure(error_message); },
-         [this](rapidjson::Document doc) { return true; });
+         [this](rapidjson::Document doc) { return GetTokens(std::move(doc)); });
+  }
+
+  // Parses access and idtokens from token endpoint response and saves it to
+  // local token in-memory cache.
+  bool GetTokens(rapidjson::Document tokens) {
+    if (!tokens.HasMember("access_token")) {
+      return false;
+    };
+
+    if (refresh_id_token_ && !tokens.HasMember("id_token")) {
+      return false;
+    }
+
+    auto& allocator = app_->oauth_tokens_.GetAllocator();
+
+    if (app_->oauth_tokens_.HasMember(account_id_)) {
+      app_->oauth_tokens_.RemoveMember(account_id_);
+    }
+
+    // Add the token generation timestamp to |tokens| for caching.
+    std::string ts_key_name("creation_ts");
+    rapidjson::Value creation_ts_key(ts_key_name.c_str(), ts_key_name.size(),
+                                     tokens.GetAllocator());
+    uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    tokens.AddMember(creation_ts_key, creation_ts, tokens.GetAllocator());
+
+    app_->oauth_tokens_.AddMember(rapidjson::Value(account_id_, allocator),
+                                  tokens, allocator);
+
+    return true;
   }
 
   void Success() {
-    callback_(app_->all_tokens_[account_id_]["access_token"].GetString());
+    if (!refresh_id_token_) {
+      callback_(app_->oauth_tokens_[account_id_]["access_token"].GetString());
+    } else {
+      callback_(app_->oauth_tokens_[account_id_]["id_token"].GetString());
+    }
+
     Done();
   }
 
@@ -297,25 +375,26 @@ class OAuthTokenManagerApp::GoogleRefreshCall : Operation<void> {
     Done();
   }
 
-  std::string account_id_;
+  const std::string account_id_;
+  const bool refresh_id_token_;
   OAuthTokenManagerApp* const app_;
   const std::function<void(fidl::String)> callback_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleRefreshCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthTokensCall);
 };
 
 // TODO(alhaad): Use variadic template in |Operation|. That way, parameters to
 // |callback| can be returned as parameters to |Done()|.
-class OAuthTokenManagerApp::GoogleOAuthCall : Operation<void>,
-                                              web_view::WebRequestDelegate {
+class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
+                                                  web_view::WebRequestDelegate {
  public:
-  GoogleOAuthCall(OperationContainer* const container,
-                  AccountPtr account,
-                  OAuthTokenManagerApp* const app,
-                  const AddAccountCallback& callback)
+  GoogleUserCredsCall(OperationContainer* const container,
+                      AccountPtr account,
+                      OAuthTokenManagerApp* const app,
+                      const AddAccountCallback& callback)
       : Operation(container, [] {}),
         account_(std::move(account)),
         app_(app),
@@ -375,33 +454,55 @@ class OAuthTokenManagerApp::GoogleOAuthCall : Operation<void>,
 
     Post(request_body, url_loader_.get(), [this] { Success(); },
          [this](const std::string error_message) { Failure(error_message); },
-         [this](rapidjson::Document doc) { return SetToken(std::move(doc)); });
+         [this](rapidjson::Document doc) {
+           return SaveCredentials(std::move(doc));
+         });
   }
 
-  bool SetToken(rapidjson::Document tokens) {
+  // Parses refresh tokens from auth endpoint response and persists it in
+  // |kCredentialsFile|.
+  bool SaveCredentials(rapidjson::Document tokens) {
+    if (!tokens.HasMember("refresh_token")) {
+      return false;
+    };
+
+    // Keep only persistent refresh tokens in this db, other short lived tokens
+    // are saved only in in-memory cache.
+    if (tokens.HasMember("access_token")) {
+      tokens.RemoveMember("access_token");
+    };
+
+    if (tokens.HasMember("id_token")) {
+      tokens.RemoveMember("id_token");
+    };
+
     auto& account_id = account_->id;
-    auto& allocator = app_->all_tokens_.GetAllocator();
+    auto& allocator = app_->user_creds_.GetAllocator();
 
     // Remove any existing tokens for this account_id.
-    if (app_->all_tokens_.HasMember(account_id)) {
-      app_->all_tokens_.RemoveMember(account_id);
+    if (app_->user_creds_.HasMember(account_id)) {
+      app_->user_creds_.RemoveMember(account_id);
     }
 
-    app_->all_tokens_.AddMember(rapidjson::Value(account_id, allocator), tokens,
+    app_->user_creds_.AddMember(rapidjson::Value(account_id, allocator), tokens,
                                 allocator);
 
     // Save tokens to disk.
-    if (!files::CreateDirectory(files::GetDirectoryName(kTokensFile))) {
+    if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
       return false;
     }
-    auto serialized_tokens = modular::JsonValueToString(app_->all_tokens_);
-    if (!files::WriteFile(kTokensFile, serialized_tokens.data(),
+    auto serialized_tokens = modular::JsonValueToString(app_->user_creds_);
+    FTL_LOG(INFO) << "Tokens:" << serialized_tokens.data();
+
+    if (!files::WriteFile(kCredentialsFile, serialized_tokens.data(),
                           serialized_tokens.size())) {
+      FTL_DCHECK(false) << "Unable to write file " << kCredentialsFile;
       return false;
     }
 
     return true;
   }
+
   void Success() {
     callback_(std::move(account_), nullptr);
     auth_context_->StopOverlay();
@@ -451,7 +552,7 @@ class OAuthTokenManagerApp::GoogleOAuthCall : Operation<void>,
 
   fidl::BindingSet<web_view::WebRequestDelegate> web_request_delegate_bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleUserCredsCall);
 };
 
 OAuthTokenManagerApp::OAuthTokenManagerApp()
@@ -462,17 +563,20 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
         binding_.Bind(std::move(request));
       });
 
-  if (files::IsFile(kTokensFile)) {
+  if (files::IsFile(kCredentialsFile)) {
     std::string serialized_tokens;
-    if (!files::ReadFileToString(kTokensFile, &serialized_tokens)) {
-      FTL_DCHECK(false) << "Unable to read file " << kTokensFile;
+    if (!files::ReadFileToString(kCredentialsFile, &serialized_tokens)) {
+      FTL_DCHECK(false) << "Unable to read file " << kCredentialsFile;
     }
-    all_tokens_.Parse(serialized_tokens);
-    FTL_DCHECK(!all_tokens_.HasParseError());
+    user_creds_.Parse(serialized_tokens);
+    FTL_DCHECK(!user_creds_.HasParseError());
   } else {
     // Create an empty DOM.
-    all_tokens_.SetObject();
+    user_creds_.SetObject();
   }
+
+  // Create an empty DOM for token cache.
+  oauth_tokens_.SetObject();
 }
 
 void OAuthTokenManagerApp::Initialize(
@@ -508,8 +612,8 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
       callback(std::move(account), nullptr);
       return;
     case IdentityProvider::GOOGLE:
-      new GoogleOAuthCall(&operation_collection_, std::move(account), this,
-                          callback);
+      new GoogleUserCredsCall(&operation_collection_, std::move(account), this,
+                              callback);
       return;
     default:
       callback(nullptr, "Unrecognized Identity Provider");
@@ -522,10 +626,13 @@ void OAuthTokenManagerApp::GetTokenProviderFactory(
   new TokenProviderFactoryImpl(account_id, this, std::move(request));
 }
 
-void OAuthTokenManagerApp::AddRefreshTokenCall(
+void OAuthTokenManagerApp::RefreshToken(
     const std::string& account_id,
+    const bool refresh_id_token,
     const std::function<void(std::string)>& callback) {
-  new GoogleRefreshCall(&operation_collection_, account_id, this, callback);
+  FTL_LOG(INFO) << "OAuthTokenManagerApp::RefreshToken()";
+  new GoogleOAuthTokensCall(&operation_collection_, account_id,
+                            refresh_id_token, this, callback);
 }
 
 }  // namespace auth
