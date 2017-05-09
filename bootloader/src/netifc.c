@@ -60,6 +60,8 @@ struct eth_buffer_t {
 
 static efi_physical_addr eth_buffers_base = 0;
 static eth_buffer* eth_buffers = NULL;
+static int num_eth_buffers = 0;
+static int eth_buffers_avail = 0;
 
 void* eth_get_buffer(size_t sz) {
     eth_buffer* buf;
@@ -72,6 +74,7 @@ void* eth_get_buffer(size_t sz) {
     buf = eth_buffers;
     eth_buffers = buf->next;
     buf->next = NULL;
+    eth_buffers_avail--;
     return buf->data;
 }
 
@@ -85,6 +88,7 @@ void eth_put_buffer(void* data) {
             ;
     }
     buf->next = eth_buffers;
+    eth_buffers_avail++;
     eth_buffers = buf;
 }
 
@@ -260,8 +264,9 @@ int netifc_open(void) {
         return -1;
     }
 
+    num_eth_buffers = NUM_BUFFER_PAGES * 2;
     uint8_t* ptr = (void*)eth_buffers_base;
-    for (ret = 0; ret < (NUM_BUFFER_PAGES * 2); ret++) {
+    for (ret = 0; ret < num_eth_buffers; ret++) {
         eth_buffer* buf = (void*)ptr;
         buf->magic = ETH_BUFFER_MAGIC;
         eth_put_buffer(buf);
@@ -334,12 +339,15 @@ void netifc_poll(void) {
     uint32_t irq;
     void* txdone;
 
-    if ((r = snp->GetStatus(snp, &irq, &txdone))) {
-        return;
-    }
-
-    if (txdone) {
-        eth_put_buffer(txdone);
+    if (eth_buffers_avail < num_eth_buffers) {
+        // Only check for completion if we have operations in progress.
+        // Otherwise, the result of GetStatus is unreliable. See MG-759.
+        if ((r = snp->GetStatus(snp, &irq, &txdone))) {
+            return;
+        }
+        if (txdone) {
+            eth_put_buffer(txdone);
+        }
     }
 
     hsz = 0;
