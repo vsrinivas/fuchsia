@@ -43,20 +43,10 @@ struct TextRange {
 // Text selection is always directional. Direction should be determined by
 // comparing base and extent.
 struct TextSelection {
-  // The index of the first character in the range.
-  //
-  // If |start| and |end| are both -1, the text range is empty.
-  uint32 start;
-
-  // The next index after the characters in this range.
-  //
-  // If |start| and |end| are both -1, the text range is empty.
-  uint32 end;
-
   // The offset at which the selection originates.
   //
   // Might be larger than, smaller than, or equal to extent.
-  int32 base_offset;
+  int32 base;
 
   // The offset at which the selection terminates.
   //
@@ -65,7 +55,7 @@ struct TextSelection {
   // side of the selection, this is the location at which to paint the caret.
   //
   // Might be larger than, smaller than, or equal to base.
-  int32 extent_offset;
+  int32 extent;
 
   // If the the text range is collapsed and has more than one visual location
   // (e.g., occurs at a line break), which of the two locations to use when
