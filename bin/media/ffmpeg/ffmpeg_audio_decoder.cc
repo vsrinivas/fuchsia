@@ -4,9 +4,29 @@
 
 #include "apps/media/src/ffmpeg/ffmpeg_audio_decoder.h"
 
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
+namespace {
+
+#if !NDEBUG
+
+bool PtssRoughlyEqual(int64_t a,
+                      TimelineRate a_rate,
+                      int64_t b,
+                      TimelineRate b_rate) {
+  a = a *
+      TimelineRate::Product(TimelineRate::NsPerSecond, a_rate.Inverse(), false);
+  b = b *
+      TimelineRate::Product(TimelineRate::NsPerSecond, b_rate.Inverse(), false);
+  return std::abs(a - b) < Timeline::ns_from_ms(50);
+}
+
+#endif
+
+}  // namespace
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
@@ -28,12 +48,14 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
 FfmpegAudioDecoder::~FfmpegAudioDecoder() {}
 
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
+  incoming_pts_rate_ = packet->pts_rate();
+
   if (next_pts() == Packet::kUnknownPts) {
     if (packet->pts() == Packet::kUnknownPts) {
       FTL_DLOG(WARNING) << "No PTS established, using 0 by default.";
       set_next_pts(0);
     } else {
-      set_next_pts(packet->pts());
+      set_next_pts(packet->GetPts(pts_rate()));
     }
   }
 }
@@ -115,13 +137,22 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
   FTL_DCHECK(allocator);
 
-  int64_t pts = av_frame.pts;
-  if (pts == AV_NOPTS_VALUE) {
+  int64_t pts;
+  if (av_frame.pts == AV_NOPTS_VALUE) {
+    // No PTS supplied. Assume we're progressing normally.
     pts = next_pts();
-    set_next_pts(pts + av_frame.nb_samples);
+  } else if (incoming_pts_rate_ == pts_rate()) {
+    // PTS supplied in the preferred units.
+    pts = av_frame.pts;
   } else {
-    set_next_pts(pts);
+    // PTS isn't in preferred units. Assume we're progressing normally.
+    // TODO(dalesat): Might need to reset if pts and av_frame.pts diverge.
+    pts = next_pts();
+    FTL_DCHECK(
+        PtssRoughlyEqual(pts, pts_rate(), av_frame.pts, incoming_pts_rate_));
   }
+
+  set_next_pts(pts + av_frame.nb_samples);
 
   if (lpcm_util_) {
     // We need to interleave. The non-interleaved frames are in a buffer that

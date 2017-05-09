@@ -38,6 +38,8 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
 
   if (pts_rate() == TimelineRate::Zero) {
     set_pts_rate(packet->pts_rate());
+  } else {
+    packet->SetPtsRate(pts_rate());
   }
 
   // We put the pts here so it can be recovered later in CreateOutputPacket.

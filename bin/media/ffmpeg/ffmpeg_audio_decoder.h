@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <memory>
+
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/audio/lpcm_util.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
@@ -39,6 +42,9 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   // For interleaving, if needed.
   std::unique_ptr<StreamType> stream_type_;
+
+  // PTS rate from incoming packet.
+  TimelineRate incoming_pts_rate_;
 };
 
 }  // namespace media
