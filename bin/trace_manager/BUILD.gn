@@ -27,6 +27,7 @@ executable("trace_tests") {
   testonly = true
 
   deps = [
+    "//apps/test_runner/src:gtest_main",
     "//apps/tracing/lib/measure:unittests",
     "//apps/tracing/lib/trace:unittests",
     "//apps/tracing/src/trace:unittests",
