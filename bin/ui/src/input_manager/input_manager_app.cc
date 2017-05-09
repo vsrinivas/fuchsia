@@ -18,8 +18,9 @@ InputManagerApp::InputManagerApp()
 
   application_context_->outgoing_services()->AddService<mozart::ViewAssociate>(
       [this](fidl::InterfaceRequest<mozart::ViewAssociate> request) {
-        associate_bindings_.AddBinding(std::make_unique<InputAssociate>(),
-                                       std::move(request));
+        associate_bindings_.AddBinding(
+            std::make_unique<InputAssociate>(application_context_.get()),
+            std::move(request));
       });
 }
 

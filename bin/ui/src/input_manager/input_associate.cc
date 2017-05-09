@@ -8,11 +8,11 @@
 
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "lib/ftl/functional/make_copyable.h"
 
 namespace input_manager {
 
-InputAssociate::InputAssociate() {}
+InputAssociate::InputAssociate(app::ApplicationContext* application_context)
+    : application_context_(application_context) {}
 
 InputAssociate::~InputAssociate() {}
 
@@ -95,20 +95,10 @@ void InputAssociate::CreateTextInputService(
   FTL_DCHECK(request.is_pending());
   FTL_VLOG(1) << "CreateTextInputService: view_token=" << view_token;
 
-  // TODO monitor focus of this view to disconnect when lost
-  auto token = view_token.Clone();
-  inspector_->view_inspector()->HasFocus(
-      std::move(view_token), ftl::MakeCopyable([
-        this, token = std::move(token), request = std::move(request)
-      ](bool focused) mutable {
-        if (focused) {
-          const uint32_t view_token_value = token->value;
-          text_input_services_by_view_token_.emplace(
-              view_token_value,
-              std::unique_ptr<TextInputServiceImpl>(new TextInputServiceImpl(
-                  this, std::move(token), std::move(request))));
-        }
-      }));
+  text_input_services_by_view_token_.emplace(
+      view_token->value, std::make_unique<TextInputServiceImpl>(
+                             this, std::move(view_token), std::move(request),
+                             application_context_));
 }
 
 void InputAssociate::OnTextInputServiceDied(
@@ -159,6 +149,14 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
   FTL_DCHECK(event);
   FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
               << ", event=" << *event;
+
+  if (event->is_keyboard()) {
+    auto it = text_input_services_by_view_token_.find(view_token->value);
+    if (it != text_input_services_by_view_token_.end()) {
+      FTL_VLOG(1) << "DeliverEvent: Found Text Input Service, forward event";
+      it->second->InjectInput(event.Clone());
+    }
+  }
 
   auto it = input_connections_by_view_token_.find(view_token->value);
   if (it == input_connections_by_view_token_.end()) {

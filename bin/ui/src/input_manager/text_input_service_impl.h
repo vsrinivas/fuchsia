@@ -5,6 +5,7 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_TEXT_INPUT_SERVICE_IMPL_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_TEXT_INPUT_SERVICE_IMPL_H_
 
+#include "application/lib/app/application_context.h"
 #include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_events.fidl.h"
 #include "apps/mozart/services/input/text_input.fidl.h"
@@ -19,12 +20,13 @@ namespace input_manager {
 class InputAssociate;
 
 class TextInputServiceImpl : public mozart::TextInputService,
-                             mozart::InputMethodEditor {
+                             mozart::InputMethodEditor,
+                             mozart::InputMethodEditorClient {
  public:
-  TextInputServiceImpl(
-      InputAssociate* associate,
-      mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::TextInputService> request);
+  TextInputServiceImpl(InputAssociate* associate,
+                       mozart::ViewTokenPtr view_token,
+                       fidl::InterfaceRequest<mozart::TextInputService> request,
+                       app::ApplicationContext* application_context);
   ~TextInputServiceImpl();
 
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
@@ -40,16 +42,33 @@ class TextInputServiceImpl : public mozart::TextInputService,
   void SetState(mozart::TextInputStatePtr state) override;
   void SetKeyboardType(mozart::KeyboardType keyboard_type) override;
 
+  // |mozart::InputMethodEditorClient|
+  void DidUpdateState(mozart::TextInputStatePtr state,
+                      mozart::InputEventPtr event) override;
+
+  void InjectInput(mozart::InputEventPtr event);
+
  private:
   void OnEditorDied();
+  void OnClientDied();
+  void ConnectWithImeService(mozart::KeyboardType keyboard_type,
+                             mozart::TextInputStatePtr state);
+  void Reset();
+
+  // TODO Query to see if it is attached
+  bool hardware_keyboard_connected() { return true; }
 
   InputAssociate* const associate_;
   mozart::ViewTokenPtr view_token_;
   fidl::Binding<mozart::TextInputService> binding_;
+  // From the test input
   fidl::Binding<mozart::InputMethodEditor> editor_binding_;
   mozart::InputMethodEditorClientPtr client_;
-  mozart::KeyboardType keyboard_type_;
-  mozart::TextInputStatePtr state_;
+
+  // From the IME service
+  fidl::Binding<mozart::InputMethodEditorClient> client_binding_;
+  mozart::InputMethodEditorPtr editor_;
+
   mozart::SoftKeyboardContainerPtr container_;
   mozart::ImeServicePtr ime_service_;
 
