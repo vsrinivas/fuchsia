@@ -77,7 +77,11 @@ ViewTreeState* ViewTreeState::AsViewTreeState() {
 void ViewTreeState::RequestFocus(ViewStub* child_stub) {
   if (child_stub->is_unavailable())
     return;
-  active_focus_chain_ = child_stub->state()->focus_chain();
+  focused_view_ = child_stub->GetWeakPtr();
+}
+
+const mozart::FocusChain* ViewTreeState::focus_chain() {
+  return focused_view_ ? focused_view_->state()->focus_chain() : nullptr;
 }
 
 const std::string& ViewTreeState::FormattedLabel() const {
