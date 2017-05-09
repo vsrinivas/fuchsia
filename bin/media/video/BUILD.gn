@@ -20,6 +20,7 @@ source_set("video") {
     "//apps/media/src/util",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/geometry/cpp",
+    "//apps/tracing/lib/trace",
     "//lib/ftl",
   ]
 }

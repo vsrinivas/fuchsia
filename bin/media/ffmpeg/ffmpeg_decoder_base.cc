@@ -5,6 +5,7 @@
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
 #include "apps/media/src/ffmpeg/av_codec_context.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -35,6 +36,10 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input,
                                         bool new_input,
                                         PayloadAllocator* allocator,
                                         PacketPtr* output) {
+  TRACE_DURATION(
+      "motown", "DecodePacket", "type",
+      (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
+                                                           : "audio"));
   FTL_DCHECK(input);
   FTL_DCHECK(allocator);
   FTL_DCHECK(output);

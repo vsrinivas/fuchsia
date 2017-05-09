@@ -50,6 +50,8 @@ executable("media_service") {
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/views",
     "//apps/network/services",
+    "//apps/tracing/lib/trace",
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",
   ]

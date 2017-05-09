@@ -6,6 +6,7 @@
 
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -67,6 +68,7 @@ VideoRendererImpl::View::~View() {
 }
 
 void VideoRendererImpl::View::OnDraw() {
+  TRACE_DURATION("motown", "OnDraw");
   FTL_DCHECK(properties());
 
   auto update = mozart::SceneUpdate::New();

@@ -5,6 +5,7 @@
 #include "apps/media/src/video/video_converter.h"
 
 #include "apps/media/src/fidl/fidl_type_conversions.h"
+#include "apps/tracing/lib/trace/event.h"
 
 namespace media {
 
@@ -93,6 +94,7 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
                                   uint32_t view_height,
                                   void* payload,
                                   uint64_t payload_size) {
+  TRACE_DURATION("motown", "ConvertFrame");
   FTL_DCHECK(rgba_buffer != nullptr);
   FTL_DCHECK(view_width != 0);
   FTL_DCHECK(view_height != 0);

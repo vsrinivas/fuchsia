@@ -16,10 +16,12 @@
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 #include "apps/media/src/media_service/network_reader_impl.h"
 #include "apps/media/src/media_service/video_renderer_impl.h"
+#include "apps/tracing/lib/trace/provider.h"
 
 namespace media {
 
 MediaServiceImpl::MediaServiceImpl() {
+  tracing::InitializeTracer(application_context(), {"motown"});
   FLOG_INITIALIZE(application_context(), "media_service");
 
   application_context()->outgoing_services()->AddService<MediaService>(
