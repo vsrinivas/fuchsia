@@ -43,6 +43,9 @@ protected:
         __TA_REQUIRES(obj_lock()) final;
     mx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
         __TA_REQUIRES(obj_lock()) final;
+    void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnSetGainLocked(const audio2_proto::SetGainReq& req,
+                         audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     struct Command {
@@ -100,6 +103,8 @@ private:
     mx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
 
     mx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
+    float       ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
+    mx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
 
     // Setup state machine methods.
     mx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
@@ -123,6 +128,7 @@ private:
 
     // Setup state machine progress.
     uint32_t setup_progress_ __TA_GUARDED(obj_lock()) = 0;
+    bool            format_set_     __TA_GUARDED(obj_lock()) = false;
 
     // Current gain and plug detect settings.
     uint8_t cur_gain_steps_ __TA_GUARDED(obj_lock()) = 0;

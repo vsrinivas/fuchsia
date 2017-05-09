@@ -45,6 +45,36 @@ mx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
     return NO_ERROR;
 }
 
+float RealtekStream::ComputeCurrentGainLocked() {
+    return conv_.has_amp
+        ? conv_.min_gain + (cur_gain_steps_ * conv_.gain_step)
+        : 0.0f;
+}
+
+mx_status_t RealtekStream::SendGainUpdatesLocked() {
+    mx_status_t res;
+
+    if (conv_.has_amp) {
+        bool mute = conv_.amp_caps.can_mute() ? cur_mute_ : false;
+        res = RunCmdLocked({ props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
+                                                                      cur_gain_steps_,
+                                                                      is_input(), !is_input()) });
+        if (res != NO_ERROR)
+            return res;
+    }
+
+    if (pc_.has_amp) {
+        bool mute = pc_.amp_caps.can_mute() ? cur_mute_ : false;
+        res = RunCmdLocked({ props_.pc_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
+                                                                    pc_.amp_caps.offset(),
+                                                                    is_input(), !is_input()) });
+        if (res != NO_ERROR)
+            return res;
+    }
+
+    return NO_ERROR;
+}
+
 mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
     mxtl::unique_ptr<PendingCommand> pending_cmd;
     bool want_response = (cmd.thunk != nullptr);
@@ -137,6 +167,7 @@ mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio2_proto::Str
         return ERR_NOT_SUPPORTED;
 
     // Looks good, make sure that the converter is muted and not processing any stream tags.
+    format_set_ = false;
     return DisableConverterLocked();
 }
 
@@ -155,27 +186,67 @@ mx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) 
     if (res != NO_ERROR)
         return res;
 
-    if (conv_.has_amp) {
-        bool mute = conv_.amp_caps.can_mute() ? cur_mute_ : false;
-        res = RunCmdLocked({ props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
-                                                                      cur_gain_steps_,
-                                                                      is_input(), !is_input()) });
-        if (res != NO_ERROR)
-            return res;
-    }
+    res = SendGainUpdatesLocked();
+    if (res != NO_ERROR)
+        return res;
 
-    if (pc_.has_amp) {
-        bool mute = pc_.amp_caps.can_mute() ? cur_mute_ : false;
-        res = RunCmdLocked({ props_.pc_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
-                                                                    pc_.amp_caps.offset(),
-                                                                    is_input(), !is_input()) });
-        if (res != NO_ERROR)
-            return res;
-    }
-
-    return res;
+    format_set_ = true;
+    return NO_ERROR;
 }
 
+void RealtekStream::OnGetGainLocked(audio2_proto::GetGainResp* out_resp) {
+    MX_DEBUG_ASSERT(out_resp);
+
+    if (conv_.has_amp) {
+        out_resp->cur_gain  = ComputeCurrentGainLocked();
+        out_resp->min_gain  = conv_.min_gain;
+        out_resp->max_gain  = conv_.max_gain;
+        out_resp->gain_step = conv_.gain_step;
+    } else {
+        out_resp->cur_gain  = 0.0;
+        out_resp->min_gain  = 0.0;
+        out_resp->max_gain  = 0.0;
+        out_resp->gain_step = 0.0;
+    }
+
+    out_resp->cur_mute = cur_mute_;
+    out_resp->can_mute = can_mute();
+}
+
+void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
+                                    audio2_proto::SetGainResp* out_resp) {
+    mx_status_t res  = NO_ERROR;
+    bool mute_target = cur_mute_;
+    bool set_mute    = req.flags & AUDIO2_SGF_MUTE_VALID;
+    bool set_gain    = req.flags & AUDIO2_SGF_GAIN_VALID;
+
+    if (set_mute || set_gain) {
+        if (set_mute) {
+            if (!can_mute()) {
+                res = ERR_INVALID_ARGS;
+            } else {
+                mute_target = req.flags & AUDIO2_SGF_MUTE;
+            }
+        }
+
+        if ((res == NO_ERROR) && set_gain)
+            res = UpdateConverterGainLocked(req.gain);
+    }
+
+    if (res == NO_ERROR) {
+        cur_mute_ = mute_target;
+
+        // Don't bother sending any update to the converter if the format is not currently set.
+        if (format_set_)
+            res = SendGainUpdatesLocked();
+    }
+
+    if (out_resp != nullptr) {
+        out_resp->result    = res;
+        out_resp->cur_mute  = cur_mute_;
+        out_resp->cur_gain  = ComputeCurrentGainLocked();
+    }
+}
 
 mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
     MX_DEBUG_ASSERT(!(setup_progress_ & STREAM_PUBLISHED));
