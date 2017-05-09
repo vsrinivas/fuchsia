@@ -15,7 +15,11 @@ public:
     static mxtl::unique_ptr<AudioStream> Create(bool input, uint32_t dev_id);
 
     mx_status_t Open();
-    const char* name() const { return name_; }
+    mx_status_t DumpInfo();
+    mx_status_t SetMute(bool mute);
+    mx_status_t SetGain(float gain);
+
+    const char* name()  const { return name_; }
     bool        input() const { return input_; }
 
 protected:

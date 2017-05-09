@@ -23,10 +23,10 @@
 #include "audio-stream.h"
 
 template <typename ReqType, typename RespType>
-mx_status_t DoCall(const mx::channel& channel,
-                   const ReqType&     req,
-                   RespType*          resp,
-                   mx::handle*        resp_handle_out = nullptr) {
+mx_status_t DoCallImpl(const mx::channel& channel,
+                       const ReqType&     req,
+                       RespType*          resp,
+                       mx::handle*        resp_handle_out) {
     constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(100);
     mx_channel_call_args_t args;
 
@@ -62,7 +62,24 @@ mx_status_t DoCall(const mx::channel& channel,
         return ERR_INTERNAL;
     }
 
-    return resp->result;
+    return NO_ERROR;
+}
+
+template <typename ReqType, typename RespType>
+mx_status_t DoCall(const mx::channel& channel,
+                   const ReqType&     req,
+                   RespType*          resp,
+                   mx::handle*        resp_handle_out = nullptr) {
+    mx_status_t res = DoCallImpl(channel, req, resp, resp_handle_out);
+    return (res != NO_ERROR) ? res : resp->result;
+}
+
+template <typename ReqType, typename RespType>
+mx_status_t DoNoFailCall(const mx::channel& channel,
+                         const ReqType&     req,
+                         RespType*          resp,
+                         mx::handle*        resp_handle_out = nullptr) {
+    return DoCallImpl(channel, req, resp, resp_handle_out);
 }
 
 mxtl::unique_ptr<AudioStream> AudioStream::Create(bool input, uint32_t dev_id) {
@@ -105,6 +122,84 @@ mx_status_t AudioStream::Open() {
     }
 
     return NO_ERROR;
+}
+
+mx_status_t AudioStream::DumpInfo() {
+    mx_status_t res;
+    printf("Info for audio %s stream #%03u (%s)\n",
+            input_ ? "input" : "output", dev_id_, name_);
+
+    {   // Current gain settings and caps
+        audio2_stream_cmd_get_gain_req  req;
+        audio2_stream_cmd_get_gain_resp resp;
+
+        req.hdr.cmd = AUDIO2_STREAM_CMD_GET_GAIN;
+        req.hdr.transaction_id = 1;
+
+        res = DoNoFailCall(stream_ch_, req, &resp);
+        if (res != NO_ERROR) {
+            printf("Failed to fetch gain information! (res %d)\n", res);
+            return res;
+        }
+
+        printf("  Current Gain : %.2f dB (%smuted)\n", resp.cur_gain, resp.cur_mute ? "" : "un");
+        printf("  Gain Caps    : ");
+        if ((resp.min_gain == resp.max_gain) && (resp.min_gain == 0.0f)) {
+            printf("fixed 0 dB gain");
+        } else
+        if (resp.gain_step == 0.0f) {
+            printf("gain range [%.2f, %.2f] dB (continuous)", resp.min_gain, resp.max_gain);
+        } else {
+            printf("gain range [%.2f, %.2f] in %.2f dB steps",
+                    resp.min_gain, resp.max_gain, resp.gain_step);
+        }
+        printf("; %s mute\n", resp.can_mute ? "can" : "cannot");
+    }
+
+    // TODO(johngro) : Add other info (supported formats, plug detect, etc...)
+    // as we add commands to the protocol.
+
+    return NO_ERROR;
+}
+
+mx_status_t AudioStream::SetMute(bool mute) {
+    audio2_stream_cmd_set_gain_req  req;
+    audio2_stream_cmd_set_gain_resp resp;
+
+    req.hdr.cmd = AUDIO2_STREAM_CMD_SET_GAIN;
+    req.hdr.transaction_id = 1;
+    req.flags = mute
+              ? static_cast<audio2_set_gain_flags_t>(AUDIO2_SGF_MUTE_VALID | AUDIO2_SGF_MUTE)
+              : AUDIO2_SGF_MUTE_VALID;
+
+    mx_status_t res = DoCall(stream_ch_, req, &resp);
+    if (res != NO_ERROR)
+        printf("Failed to %smute stream! (res %d)\n", mute ? "" : "un", res);
+    else
+        printf("Stream is now %smuted\n", mute ? "" : "un");
+
+    return res;
+}
+
+mx_status_t AudioStream::SetGain(float gain) {
+    audio2_stream_cmd_set_gain_req  req;
+    audio2_stream_cmd_set_gain_resp resp;
+
+    req.hdr.cmd = AUDIO2_STREAM_CMD_SET_GAIN;
+    req.hdr.transaction_id = 1;
+    req.flags = AUDIO2_SGF_GAIN_VALID;
+    req.gain  = gain;
+
+    mx_status_t res = DoCall(stream_ch_, req, &resp);
+    if (res != NO_ERROR) {
+        printf("Failed to set gain to %.2f dB! (res %d)\n", gain, res);
+    } else {
+        printf("Gain is now %.2f dB.  Stream is %smuted.\n",
+                resp.cur_gain, resp.cur_mute ? "" : "un");
+    }
+
+    return res;
+
 }
 
 mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,

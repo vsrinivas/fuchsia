@@ -108,13 +108,13 @@ int main(int argc, const char** argv) {
     float tone_freq = 440.0;
     float tone_duration = 1.5;
     const char* wav_filename = nullptr;
-    float gain = -100.0;
+    float target_gain = -100.0;
 
     // Parse any additional arguments
     switch (cmd) {
     case Command::GAIN:
         if (arg >= argc) return -1;
-        if (sscanf(argv[arg], "%f", &gain) != 1) {
+        if (sscanf(argv[arg], "%f", &target_gain) != 1) {
             printf("Failed to parse gain \"%s\"\n", argv[arg]);
             return -1;
         }
@@ -174,18 +174,10 @@ int main(int argc, const char** argv) {
 
     // Execute the chosen command.
     switch (cmd) {
-    case Command::INFO:
-        printf("TODO(johngro) : Implement INFO\n");
-        break;
-    case Command::MUTE:
-        printf("TODO(johngro) : Implement MUTE\n");
-        break;
-    case Command::UNMUTE:
-        printf("TODO(johngro) : Implement UNMUTE\n");
-        break;
-    case Command::GAIN:
-        printf("TODO(johngro) : Implement GAIN\n");
-        break;
+    case Command::INFO:   return stream->DumpInfo();
+    case Command::MUTE:   return stream->SetMute(true);
+    case Command::UNMUTE: return stream->SetMute(false);
+    case Command::GAIN:   return stream->SetGain(target_gain);
 
     case Command::TONE: {
         if (stream->input()) {
