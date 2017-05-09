@@ -202,8 +202,7 @@ static mx_status_t finish_load_segment(
     return status;
 }
 
-static mx_status_t load_segment(mx_handle_t vmar_self,
-                                mx_handle_t vmar, size_t vmar_offset,
+static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
                                 mx_handle_t vmo, const elf_phdr_t* ph) {
     // The p_vaddr can start in the middle of a page, but the
     // semantics are that all the whole pages containing the
@@ -245,7 +244,7 @@ static mx_status_t load_segment(mx_handle_t vmar_self,
     return status;
 }
 
-mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t root_vmar,
+mx_status_t elf_load_map_segments(mx_handle_t root_vmar,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t phdrs[],
                                   mx_handle_t vmo,
@@ -260,7 +259,7 @@ mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t root_vmar,
     size_t vmar_offset = bias - vmar_base;
     for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)
-            status = load_segment(vmar_self, vmar, vmar_offset, vmo, &phdrs[i]);
+            status = load_segment(vmar, vmar_offset, vmo, &phdrs[i]);
     }
 
     if (status == NO_ERROR && segments_vmar != NULL)

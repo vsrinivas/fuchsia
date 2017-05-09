@@ -59,8 +59,7 @@ public:
                 }
                 if (really_load) {
                     status = elf_load_map_segments(
-                        mx_vmar_root_self(), root_vmar_.get(),
-                        &header, phdrs.get(), vdso_vmo.get(),
+                        root_vmar_.get(), &header, phdrs.get(), vdso_vmo.get(),
                         segments_vmar ? segments_vmar->get_address() : nullptr,
                         &vdso_base_, nullptr);
                 }

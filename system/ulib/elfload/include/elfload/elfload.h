@@ -49,9 +49,7 @@ mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t* phdrs,
                                 uintptr_t phoff, size_t phnum);
 
 // Load the image into the process.
-// TODO(mcgrathr): Remove the vmar_self argument when we no longer use it.
-mx_status_t elf_load_map_segments(mx_handle_t vmar_self,
-                                  mx_handle_t vmar,
+mx_status_t elf_load_map_segments(mx_handle_t vmar,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t* phdrs,
                                   mx_handle_t vmo,
