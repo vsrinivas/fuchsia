@@ -59,6 +59,8 @@ public:
     // Decrements dn->vnode link count by one (if it exists).
     void Detach();
 
+    bool HasChildren() const { return !children_.is_empty(); }
+
     // Look up the child dnode (within a parent directory) by name.
     // Returns NO_ERROR if the child is found.
     //

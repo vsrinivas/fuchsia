@@ -25,15 +25,18 @@ mx_status_t devfs_remove(VnodeDir* vn) {
     xprintf("devfs_remove(%p)\n", vn);
     vn->DetachRemote();
 
-    // if this vnode is a directory, delete its dnode
+    // If this vnode is a directory, delete its dnode
     if (vn->IsDirectory()) {
         xprintf("devfs_remove(%p) delete dnode\n", vn);
-        vn->dnode_->Detach();
-        vn->dnode_ = nullptr;
-    }
-
-    while (!vn->devices_.is_empty()) {
-        vn->devices_.pop_front()->Detach();
+        if (vn->dnode_->HasChildren()) {
+            // Detach the vnode, flag it to be deleted later.
+            vn->dnode_->RemoveFromParent();
+            vn->DetachDevice();
+            return NO_ERROR;
+        } else {
+            vn->dnode_->Detach();
+            vn->dnode_ = nullptr;
+        }
     }
 
     // The raw "vn" ptr was originally leaked from a RefPtr when

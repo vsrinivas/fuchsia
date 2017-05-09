@@ -38,7 +38,11 @@ static mxtl::RefPtr<VnodeDir> systemfs_root = nullptr;
 VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
-VnodeMemfs::~VnodeMemfs() {}
+VnodeMemfs::~VnodeMemfs() {
+    while (!devices_.is_empty()) {
+        devices_.pop_front()->Detach();
+    }
+}
 
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
 VnodeFile::~VnodeFile() {

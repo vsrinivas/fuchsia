@@ -29,6 +29,7 @@
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE                 1
 #define V_FLAG_MOUNT_READY            2
+#define V_FLAG_DEVICE_DETACHED        4
 #define V_FLAG_RESERVED_MASK 0x0000FFFF
 
 __BEGIN_CDECLS
@@ -240,7 +241,12 @@ public:
     // or endpoints, depending on context. For the purposes of our VFS layer,
     // during path traversal, devices are NOT treated as mount points, even though
     // they contain remote handles.
-    bool IsDevice() { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
+    bool IsDevice() const { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
+    void DetachDevice() {
+        MX_DEBUG_ASSERT(flags_ & V_FLAG_DEVICE);
+        flags_ |= V_FLAG_DEVICE_DETACHED;
+    }
+    bool IsDetachedDevice() const { return (flags_ & V_FLAG_DEVICE_DETACHED); }
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
     Vnode() : flags_(0) {};
