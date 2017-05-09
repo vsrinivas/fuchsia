@@ -8,16 +8,13 @@
 
 #include "audio-stream.h"
 
-class AudioSource;
-
-class AudioOutput : public AudioStream {
+class AudioInput : public AudioStream {
 public:
-    mx_status_t Play(AudioSource& source);
+    // TODO(johngro) : Add record-to-wav-file functionality
 
 private:
-    friend class mxtl::unique_ptr<AudioOutput>;
+    friend class mxtl::unique_ptr<AudioInput>;
     friend class AudioStream;
 
-    explicit AudioOutput(uint32_t dev_id) : AudioStream(false, dev_id) { }
+    explicit AudioInput(uint32_t dev_id) : AudioStream(true, dev_id) { }
 };
-

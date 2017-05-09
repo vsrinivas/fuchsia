@@ -13,75 +13,207 @@
 #include "sine-source.h"
 #include "wav-source.h"
 
+enum class Command {
+    INVALID,
+    INFO,
+    MUTE,
+    UNMUTE,
+    GAIN,
+    TONE,
+    PLAY,
+};
+
 void usage(const char* prog_name) {
     printf("usage:\n");
-    printf("%s [-d <dev_num>] [-t <freq> <duration>] [-w <file>]\n", prog_name);
-    printf("  -d : specify the output stream number to open.  Defaults to 0\n");
-    printf("  -t : specify the frequency and duration of a tone to play.\n");
-    printf("       Frequency is clamped on the range [15, 20000] Hz\n");
-    printf("       Duration is given in seconds and floored at 1mSec\n");
-    printf("       Default is 440 Hz for 1.5 seconds\n");
-    printf("  -w : specify the name of a WAV file to play instead of generating a tone\n");
+    printf("%s [-d <device specifier>] <cmd> <cmd params>\n", prog_name);
+    printf("\nDevice specifier\n");
+    printf("  Device specifiers are optional, but must occur before the command\n");
+    printf("  when supplied.  Parameters for devices specifiers take the form\n");
+    printf("  <input/output> <dev_num>.  If no device specifier is provided,\n");
+    printf("  output #0 will be chosen by default.\n");
+    printf("\nValid command are\n");
+    printf("info   : Fetches capability and status info for the specified stream\n");
+    printf("mute   : Mute the specified stream\n");
+    printf("unmute : Mute the specified stream\n");
+    printf("gain   : Params : <db_gain>\n");
+    printf("         Set the gain of the stream to the specified level\n");
+    printf("tone   : Params : [<freq>] [<duration>]\n");
+    printf("         Play a sinusoidal tone of the specified frequency for the\n");
+    printf("         specified duration.  Frequency is clamped on the range\n");
+    printf("         [15, 20000] Hz.  Duration is given in seconds and floored\n");
+    printf("         at 1mSec.  Default is 440 Hz for 1.5 seconds\n");
+    printf("play   : Params : <file>\n");
+    printf("         Play the specified WAV file on the selected output.\n");
 }
 
 int main(int argc, const char** argv) {
-    uint32_t dev = 0;
+    bool input = false;
+    uint32_t dev_num = 0;
+    Command cmd = Command::INVALID;
+    auto print_usage = mxtl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+    int arg = 1;
+
+    if (arg >= argc) return -1;
+    if (!strcmp("-d", argv[arg])) {
+        // Parse the input/output specifier.
+        if (++arg >= argc) return -1;
+        if (!strcmp("input", argv[arg])) {
+            input = true;
+        } else
+        if (!strcmp("output", argv[arg])) {
+            input = false;
+        } else {
+            printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
+            return -1;
+        }
+
+        // Parse the device ID specifier.
+        if (++arg >= argc) return -1;
+        if (sscanf(argv[arg], "%u", &dev_num) != 1) {
+            printf("Failed to parse argument ID \"%s\"\n", argv[arg]);
+            return -1;
+        }
+
+        // Move on to the command.
+        if (++arg >= argc) return -1;
+    }
+
+    // Parse the command
+    static const struct {
+        const char* name;
+        Command cmd;
+    } COMMANDS[] = {
+        { "info",   Command::INFO },
+        { "mute",   Command::MUTE },
+        { "unmute", Command::UNMUTE },
+        { "gain",   Command::GAIN },
+        { "tone",   Command::TONE },
+        { "play",   Command::PLAY },
+    };
+
+    for (const auto& entry : COMMANDS) {
+        if (!strcmp(entry.name, argv[arg])) {
+            cmd = entry.cmd;
+            break;
+        }
+    }
+
+    if (cmd == Command::INVALID) {
+        printf("Failed to parse command ID \"%s\"\n", argv[arg]);
+        return -1;
+    }
+
+    arg++;
+
     float tone_freq = 440.0;
     float tone_duration = 1.5;
     const char* wav_filename = nullptr;
-    auto print_usage = mxtl::MakeAutoCall([&]() { usage(argv[0]); });
+    float gain = -100.0;
 
-    for (int i = 1; i < argc; ++i) {
-        if (!strcmp("-d", argv[i])) {
-            if (((i + 1) >= argc) || (sscanf(argv[i + 1], "%u", &dev) != 1))
+    // Parse any additional arguments
+    switch (cmd) {
+    case Command::GAIN:
+        if (arg >= argc) return -1;
+        if (sscanf(argv[arg], "%f", &gain) != 1) {
+            printf("Failed to parse gain \"%s\"\n", argv[arg]);
+            return -1;
+        }
+        arg++;
+        break;
+
+    case Command::TONE:
+        if (arg < argc) {
+            if (sscanf(argv[arg], "%f", &tone_freq) != 1) {
+                printf("Failed to parse tone frequency \"%s\"\n", argv[arg]);
                 return -1;
-            i += 1;
-        } else
-        if (!strcmp("-t", argv[i])) {
-            if (((i + 2) >= argc) ||
-                (sscanf(argv[i + 1], "%f", &tone_freq) != 1) ||
-                (sscanf(argv[i + 2], "%f", &tone_duration) != 1))
-                return -1;
-            i += 2;
+            }
+            arg++;
+
+            if (arg < argc) {
+                if (sscanf(argv[arg], "%f", &tone_duration) != 1) {
+                    printf("Failed to parse tone duration \"%s\"\n", argv[arg]);
+                    return -1;
+                }
+                arg++;
+            }
 
             tone_freq = mxtl::clamp(tone_freq, 15.0f, 20000.0f);
             tone_duration = mxtl::max(tone_duration, 0.001f);
-        } else
-        if (!strcmp("-w", argv[i])) {
-            if ((i + 1) >= argc)
-                return -1;
-            wav_filename = argv[i + 1];
-            i += 1;
-
-        } else {
-            return -1;
         }
+        break;
+
+    case Command::PLAY:
+        if (arg >= argc) return -1;
+        wav_filename = argv[arg];
+        arg++;
+        break;
+
+    default:
+        break;
     }
+
+    if (arg != argc) {
+        printf("Invalid number of arguments.\n");
+        return -1;
+    }
+
+    // Argument parsing is done, we can cancel the usage dump.
     print_usage.cancel();
 
-    SineSource   sine_source(tone_freq, 1.0, tone_duration);
-    WAVSource    wav_source;
-    AudioSource* source;
-    mx_status_t  res;
+    // Open the selected stream.
+    auto stream = AudioStream::Create(input, dev_num);
+    if (stream == nullptr) {
+        printf("Out of memory!\n");
+        return ERR_NO_MEMORY;
+    }
 
-    if (wav_filename == nullptr) {
+    // No need to log in the case of failure.  Open has already done so.
+    mx_status_t res = stream->Open();
+    if (res != NO_ERROR)
+        return res;
+
+    // Execute the chosen command.
+    switch (cmd) {
+    case Command::INFO:
+        printf("TODO(johngro) : Implement INFO\n");
+        break;
+    case Command::MUTE:
+        printf("TODO(johngro) : Implement MUTE\n");
+        break;
+    case Command::UNMUTE:
+        printf("TODO(johngro) : Implement UNMUTE\n");
+        break;
+    case Command::GAIN:
+        printf("TODO(johngro) : Implement GAIN\n");
+        break;
+
+    case Command::TONE: {
+        if (stream->input()) {
+            printf("The \"tone\" command can only be used on output streams.\n");
+            return -1;
+        }
+
+        SineSource sine_source(tone_freq, 1.0, tone_duration);
         printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, tone_duration);
-        source = &sine_source;
-    } else {
+        return static_cast<AudioOutput*>(stream.get())->Play(sine_source);
+    }
+
+    case Command::PLAY: {
+        if (stream->input()) {
+            printf("The \"play\" command can only be used on output streams.\n");
+            return -1;
+        }
+
+        WAVSource wav_source;
         res = wav_source.Initialize(wav_filename);
         if (res != NO_ERROR)
             return res;
-        source = &wav_source;
+
+        return static_cast<AudioOutput*>(stream.get())->Play(wav_source);
     }
 
-    AudioOutput output;
-    {
-        char stream_name[128];
-        snprintf(stream_name, sizeof(stream_name), "/dev/class/audio2-output/%03u", dev);
-        res = output.Open(stream_name);
-        if (res != NO_ERROR)
-            return res;
+    default:
+        MX_DEBUG_ASSERT(false);
+        return -1;
     }
-
-    return output.Play(*source);
 }
