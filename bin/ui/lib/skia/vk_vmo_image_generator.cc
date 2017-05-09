@@ -139,7 +139,6 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
     GrContext* context,
     const SkImageInfo& info,
     const SkIPoint& origin) {
-
   // TODO: Assert subset (described by |info| and |origin|) is equal to full
   // size.
   VkResult err;
@@ -232,7 +231,7 @@ sk_sp<GrTextureProxy> VkVmoImageGenerator::onGenerateTexture(
   };
 
   GrBackendTexture backend_texture(getInfo().width(), getInfo().height(),
-                                   &gr_texture_info);
+                                   gr_texture_info);
 
   // Get a Skia texture.
   auto tex = context->resourceProvider()->wrapBackendTexture(
