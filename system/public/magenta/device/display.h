@@ -44,6 +44,16 @@ typedef struct mx_display_info {
 #define IOCTL_DISPLAY_SET_FULLSCREEN \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 4)
 
+// Get an event to signal display ownership changes
+// The event will be signaled with USER_SIGNAL_0 when
+// the virtual console takes control of the display,
+// and with USER_SIGNAL_1 when it is released for use
+// by other clients.
+//  in: none
+//  out: mx_handle_t
+#define IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 5)
+
 typedef struct {
     mx_handle_t vmo;
     mx_display_info_t info;
@@ -67,3 +77,6 @@ IOCTL_WRAPPER_IN(ioctl_display_flush_fb_region, IOCTL_DISPLAY_FLUSH_FB_REGION, i
 
 // ssize_t ioctl_display_set_fullscreen(int fd, uint32_t in);
 IOCTL_WRAPPER_IN(ioctl_display_set_fullscreen, IOCTL_DISPLAY_SET_FULLSCREEN, uint32_t);
+
+// ssize_t ioctl_display_get_ownership_change_event(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_display_get_ownership_change_event, IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT, mx_handle_t);

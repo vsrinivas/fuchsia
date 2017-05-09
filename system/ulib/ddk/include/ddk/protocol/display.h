@@ -17,6 +17,8 @@ __BEGIN_CDECLS;
  * protocol/display.h - display protocol definitions
  */
 
+typedef void (*mx_display_cb_t)(bool acquired);
+
 typedef struct mx_display_protocol {
     mx_status_t (*set_mode)(mx_device_t* dev, mx_display_info_t* info);
     // sets the display mode
@@ -39,6 +41,11 @@ typedef struct mx_display_protocol {
     // of the display, preventing other clients from scanning out buffers.
     // If the display is owned when when a new graphics client is created,
     // ownership will automatically be released.
+
+    void (*set_ownership_change_callback)(mx_device_t* dev, mx_display_cb_t callback);
+    // Registers a callback to be invoked when display ownership changes.
+    // The provided callback will be invoked with a value of true if the display
+    // has been acquired, false if it has been released.
 
 } mx_display_protocol_t;
 

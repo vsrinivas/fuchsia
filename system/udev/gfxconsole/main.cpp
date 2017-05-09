@@ -26,6 +26,7 @@
 #include <mxio/watcher.h>
 #include <mxtl/auto_lock.h>
 
+#include <magenta/atomic.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/object.h>
@@ -50,6 +51,11 @@ static thrd_t g_input_poll_thread;
 // single driver instance
 static bool g_vc_initialized = false;
 
+// remember whether the virtual console controls the display
+static int g_vc_owns_display = 1;
+
+static mx_handle_t g_vc_owner_event = MX_HANDLE_INVALID;
+
 mtx_t g_vc_lock = MTX_INIT;
 
 static struct list_node g_vc_list TA_GUARDED(g_vc_lock)
@@ -64,6 +70,15 @@ static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
 static void vc_device_toggle_framebuffer() {
     if (g_fb_display_protocol->acquire_or_release_display)
         g_fb_display_protocol->acquire_or_release_display(g_fb_device);
+}
+
+static void vc_display_ownership_callback(bool acquired) {
+    atomic_store(&g_vc_owns_display, acquired ? 1 : 0);
+    if (acquired) {
+        mx_object_signal(g_vc_owner_event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
+    } else {
+        mx_object_signal(g_vc_owner_event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
+    }
 }
 
 // Process key sequences that affect the console (scrolling, switching
@@ -133,7 +148,16 @@ static bool vc_handle_control_keys(uint8_t keycode,
             return true;
         }
         break;
+    }
+    return false;
+}
 
+// Process key sequences that affect the low-level control of the system
+// (switching display ownership, rebooting).  This returns whether this key press
+// was handled.
+static bool vc_handle_device_control_keys(uint8_t keycode,
+                                          int modifiers) TA_REQ(g_vc_lock) {
+    switch (keycode) {
     case HID_USAGE_KEY_DELETE:
         // Provide a CTRL-ALT-DEL reboot sequence
         if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
@@ -160,6 +184,15 @@ static bool vc_handle_control_keys(uint8_t keycode,
 static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     mxtl::AutoLock lock(&g_vc_lock);
 
+    // Handle device-level control keys
+    if (vc_handle_device_control_keys(keycode, modifiers))
+        return;
+
+    // Handle other keys only if we own the display
+    if (atomic_load(&g_vc_owns_display) == 0)
+        return;
+
+    // Handle other control keys
     if (vc_handle_control_keys(keycode, modifiers))
         return;
 
@@ -419,6 +452,20 @@ static mx_status_t vc_device_ioctl(void* ctx, uint32_t op, const void* cmd, size
         vc_device_set_fullscreen(vc, !!*(uint32_t*)cmd);
         return NO_ERROR;
     }
+    case IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT: {
+        if (max < sizeof(mx_handle_t)) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        auto* evt = reinterpret_cast<mx_handle_t*>(reply);
+        mx_rights_t client_rights = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ;
+        mx_status_t status = mx_handle_duplicate(g_vc_owner_event, client_rights, evt);
+        if (status < 0) {
+            return status;
+        } else {
+            *out_actual = sizeof(mx_handle_t);
+            return NO_ERROR;
+        }
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }
@@ -635,6 +682,19 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     // save some state
     g_fb_device = dev;
     g_fb_display_protocol = disp;
+
+    // The virtual console has released control of the display
+    g_vc_owns_display = false;
+
+    // Create display event
+    if ((status = mx_event_create(0, &g_vc_owner_event)) < 0) {
+        return status;
+    }
+
+    // Request notification of display ownership changes
+    if (disp->set_ownership_change_callback) {
+        disp->set_ownership_change_callback(dev, &vc_display_ownership_callback);
+    }
 
     // if the underlying device requires flushes, set the pointer to a flush op
     if (disp->flush) {
