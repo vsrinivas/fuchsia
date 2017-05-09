@@ -853,6 +853,8 @@ static void demo_prepare_buffers(struct demo *demo) {
         demo->height = surfCapabilities.currentExtent.height;
     }
 
+    printf("using resolution %ux%u\n", demo->width, demo->height);
+
     mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
         (float)demo->width / (float)demo->height, 0.1f, 100.0f);
 
@@ -2940,8 +2942,6 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         demo_init_connection(demo);
 
     demo_init_vk(demo);
-
-    printf("using resolution %ux%u\n", demo->width, demo->height);
 
     demo->spin_angle = 1.0f;
     demo->spin_increment = 0.2f;
