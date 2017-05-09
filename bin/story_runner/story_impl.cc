@@ -243,6 +243,7 @@ class StoryImpl::StopCall : Operation<void> {
   }
 
  private:
+  // StopCall may be run even on a story impl that is not running.
   void Run() {
     // At this point, we don't need to monitor the root modules for state
     // changes anymore, because the next state change of the story is triggered
@@ -280,13 +281,21 @@ class StoryImpl::StopCall : Operation<void> {
   }
 
   void StopStoryShell() {
-    story_impl_->story_shell_->Terminate([this] { StoryShellDown(); });
+    // It StopCall runs on a story that's not running, there is no story shell.
+    if (story_impl_->story_shell_) {
+      story_impl_->story_shell_->Terminate([this] { StoryShellDown(); });
+    } else {
+      StoryShellDown();
+    }
   }
 
   void StoryShellDown() {
     story_impl_->story_shell_controller_.reset();
     story_impl_->story_shell_.reset();
-
+    if (story_impl_->story_context_binding_.is_bound()) {
+      // Close() dchecks if called while not bound.
+      story_impl_->story_context_binding_.Close();
+    }
     StopLinks();
   }
 
