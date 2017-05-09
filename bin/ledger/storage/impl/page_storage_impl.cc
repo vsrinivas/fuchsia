@@ -481,15 +481,6 @@ Status PageStorageImpl::StartMergeCommit(const CommitId& left,
   return db_.CreateMergeJournal(left, right, journal);
 }
 
-void PageStorageImpl::MergeIdenticalCommits(
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right,
-    std::function<void(Status)> callback) {
-  auto commit =
-      CommitImpl::FromIdenticalParents(this, std::move(left), std::move(right));
-  AddCommitFromLocal(std::move(commit), std::move(callback));
-}
-
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
   watchers_.push_back(watcher);
   return Status::OK;

@@ -106,32 +106,6 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
                      std::move(storage_ptr)));
 }
 
-std::unique_ptr<Commit> CommitImpl::FromIdenticalParents(
-    PageStorage* page_storage,
-    std::unique_ptr<const Commit> left,
-    std::unique_ptr<const Commit> right) {
-  FTL_DCHECK(left->GetRootId() == right->GetRootId());
-  if (right->GetId() < left->GetId()) {
-    right.swap(left);
-  }
-
-  ObjectId root_node_id = left->GetRootId().ToString();
-  uint64_t generation =
-      std::max(left->GetGeneration(), right->GetGeneration()) + 1;
-  int64_t timestamp = std::min(left->GetTimestamp(), right->GetTimestamp());
-  std::vector<std::unique_ptr<const Commit>> parent_commits;
-  parent_commits.push_back(std::move(left));
-  parent_commits.push_back(std::move(right));
-
-  std::string storage_bytes = SerializeCommit(
-      generation, timestamp, root_node_id, std::move(parent_commits));
-
-  CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
-
-  return FromStorageBytes(page_storage, std::move(id),
-                          std::move(storage_bytes));
-}
-
 std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
     PageStorage* page_storage,
     ObjectIdView root_node_id,
@@ -151,10 +125,16 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
               return c1->GetId() < c2->GetId();
             });
   // Compute timestamp.
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  int64_t timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
-                      static_cast<int64_t>(tv.tv_usec) * 1000L;
+  int64_t timestamp;
+  if (parent_commits.size() == 2) {
+    timestamp = std::max(parent_commits[0]->GetTimestamp(),
+                         parent_commits[1]->GetTimestamp());
+  } else {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
+                static_cast<int64_t>(tv.tv_usec) * 1000L;
+  }
 
   std::string storage_bytes = SerializeCommit(
       generation, timestamp, root_node_id, std::move(parent_commits));

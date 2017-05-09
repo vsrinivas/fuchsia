@@ -129,16 +129,18 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
       std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
     // Check if the 2 parents have the same content.
     if (commits[0]->GetRootId() == commits[1]->GetRootId()) {
-      // In that case, the result must be a commit with the same content, and
-      // the smallest timestamp.
-      storage_->MergeIdenticalCommits(
-          std::move(commits[0]), std::move(commits[1]),
-          ftl::MakeCopyable([cleanup =
-                                 std::move(cleanup)](storage::Status status) {
-            if (status != storage::Status::OK) {
-              FTL_LOG(ERROR) << "Unable to merge identical commits.";
-            }
-          }));
+      // In that case, the result must be a commit with the same content.
+      std::unique_ptr<storage::Journal> journal;
+      storage_->StartMergeCommit(commits[0]->GetId(), commits[1]->GetId(),
+                                 &journal);
+      auto journal_ptr = journal.get();
+      journal_ptr->Commit(ftl::MakeCopyable([
+        journal = std::move(journal), cleanup = std::move(cleanup)
+      ](storage::Status status, std::unique_ptr<const storage::Commit>) {
+        if (status != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to merge identical commits.";
+        }
+      }));
       return;
     }
 

@@ -77,5 +77,20 @@ TEST_F(CommitImplTest, CloneCommit) {
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));
 }
 
+TEST_F(CommitImplTest, MergeCommitTimestamp) {
+  ObjectId root_node_id = RandomId(kObjectIdSize);
+
+  std::vector<std::unique_ptr<const Commit>> parents;
+  parents.emplace_back(new test::CommitRandomImpl());
+  parents.emplace_back(new test::CommitRandomImpl());
+  EXPECT_NE(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
+  auto max_timestamp =
+      std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      &page_storage_, root_node_id, std::move(parents));
+
+  EXPECT_EQ(max_timestamp, commit->GetTimestamp());
+}
+
 }  // namespace
 }  // namespace storage
