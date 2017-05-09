@@ -31,6 +31,10 @@
     {
       "name": "media_util_tests",
       "exec": "/system/test/media_util_tests"
+    },
+    {
+      "name": "trace_tests",
+      "exec": "/system/test/trace_tests"
     }
   ]
 }
