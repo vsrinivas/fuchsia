@@ -37,6 +37,10 @@ const char* kOneNodeDigest =
     "85a54736b35f5bc8ed6b1832f01faf3d6448f24fefa7054331a5e9bc16036b32";
 const char* kSmallDigest =
     "733ac7663521c2aadf131471b3ada067b0d29366ad258737c08d855398304d03";
+const char* kLargeDigest =
+    "a8b50b94432e0065c77bfca2daf8dc8b1e42140b6062e4d0d66cd8a5682c6a3f";
+const char* kUnalignedDigest =
+    "c0b65085c6c717ff91ebc3ac4f7ac153cde2ae531e85f3bee12aac3f81219112";
 
 // These tests use anonymously scoped globals to reduce the amount of repetitive
 // test setup.
@@ -300,13 +304,13 @@ bool CreateFinalIncompleteData(void) {
 
 bool Create(void) {
     BEGIN_TEST;
-    InitData(kSmall);
+    InitData(kLarge);
     Tree merkleTree;
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     Digest expected;
-    rc = expected.Parse(kSmallDigest, strlen(kSmallDigest));
+    rc = expected.Parse(kLargeDigest, strlen(kLargeDigest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     ASSERT_TRUE(gDigest == expected, "Incorrect root digest");
     END_TEST;
@@ -424,6 +428,10 @@ bool CreateDataUnaligned(void) {
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    Digest expected;
+    rc = expected.Parse(kUnalignedDigest, strlen(kUnalignedDigest));
+    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
+    ASSERT_TRUE(gDigest == expected, "Incorrect root digest");
     END_TEST;
 }
 
