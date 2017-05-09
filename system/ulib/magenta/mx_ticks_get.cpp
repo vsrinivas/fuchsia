@@ -25,6 +25,6 @@ VDSO_PUBLIC_ALIAS(mx_ticks_get);
 
 // At boot time the kernel can decide to redirect the {_,}mx_ticks_get
 // dynamic symbol table entries to point to this instead.  See VDso::VDso.
-uint64_t CODE_soft_ticks_get(void) {
+VDSO_KERNEL_EXPORT uint64_t CODE_soft_ticks_get(void) {
     return VDSO_mx_time_get(MX_CLOCK_MONOTONIC);
 }

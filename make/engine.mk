@@ -26,8 +26,12 @@ USE_CLANG ?= false
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USE_GOLD := false
+USE_LTO ?= false
+USE_THINLTO ?= false
 else
 USE_GOLD ?= true
+USE_LTO := false
+USE_THINLTO := false
 endif
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
@@ -155,9 +159,21 @@ USER_ASMFLAGS :=
 
 # Additional flags for dynamic linking, both for dynamically-linked
 # executables and for shared libraries.
-USER_DYNAMIC_LDFLAGS := \
+USER_LDFLAGS := \
     -z combreloc -z relro -z now -z text \
     --hash-style=gnu --eh-frame-hdr
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+ifeq ($(call TOBOOL,$(USE_LTO)),true)
+ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
+USER_COMPILEFLAGS += -flto=thin
+USER_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(BUILDDIR)/thinlto-cache
+else
+USER_COMPILEFLAGS += -flto -fwhole-program-vtables
+# Full LTO doesn't require any special ld flags.
+endif
+endif
+endif
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong
@@ -172,7 +188,7 @@ USER_COMPILEFLAGS += $(SAFESTACK)
 USER_CRT1_OBJ := $(BUILDDIR)/system/ulib/crt1.o
 
 # Additional flags for building shared libraries (ld -shared).
-USERLIB_SO_LDFLAGS := $(USER_DYNAMIC_LDFLAGS) -z defs
+USERLIB_SO_LDFLAGS := $(USER_LDFLAGS) -z defs
 
 # This is the string embedded into dynamically-linked executables
 # as PT_INTERP.  The launchpad library looks this up via the
@@ -182,7 +198,7 @@ USER_SHARED_INTERP := ld.so.1
 
 # Additional flags for building dynamically-linked executables.
 USERAPP_LDFLAGS := \
-    $(USER_DYNAMIC_LDFLAGS) -pie -dynamic-linker $(USER_SHARED_INTERP)
+    $(USER_LDFLAGS) -pie -dynamic-linker $(USER_SHARED_INTERP)
 
 ifeq ($(call TOBOOL,$(USE_GOLD)),false)
 # BFD ld stupidly insists on resolving dependency DSO's symbols when
@@ -614,6 +630,7 @@ USER_DEFINES += USER_COMPILEFLAGS=\"$(subst $(SPACE),_,$(USER_COMPILEFLAGS))\"
 USER_DEFINES += USER_CFLAGS=\"$(subst $(SPACE),_,$(USER_CFLAGS))\"
 USER_DEFINES += USER_CPPFLAGS=\"$(subst $(SPACE),_,$(USER_CPPFLAGS))\"
 USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
+USER_DEFINES += USER_LDFLAGS=\"$(subst $(SPACE),_,$(USER_LDFLAGS))\"
 
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))

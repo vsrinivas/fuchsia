@@ -25,3 +25,7 @@ __LOCAL decltype(mx_ticks_get) CODE_soft_ticks_get;
 
 // Code should define '_mx_foo' and then do 'VDSO_PUBLIC_ALIAS(mx_foo);'.
 #define VDSO_PUBLIC_ALIAS(name) decltype(name) name __WEAK_ALIAS("_" #name)
+
+// This symbol is expected to appear in the build-time vDSO symbol table so
+// kernel/lib/vdso/ code can use it.
+#define VDSO_KERNEL_EXPORT __attribute__((used))

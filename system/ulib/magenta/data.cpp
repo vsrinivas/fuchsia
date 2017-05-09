@@ -8,7 +8,7 @@
 // The compiler uses .bss for things initialized to all zero
 // even when they're const, so give it a nonzero initializer
 // to force it into the proper .rodata section.
-const struct vdso_constants DATA_CONSTANTS = {
+VDSO_KERNEL_EXPORT const struct vdso_constants DATA_CONSTANTS = {
     0xdeadbeef,
     0,
     0,
