@@ -133,13 +133,26 @@ static int bcm28xx_getc(bool wait) {
 
 static int bcm28xx_pputc(char c)
 {
-    // not implemented
-    return 0;
+    struct bcm283x_mu_regs* regs = (struct bcm283x_mu_regs*)MINIUART_BASE;
+
+    /* Wait until there is space in the FIFO */
+    while (!(readl(&regs->lsr) & MU_LSR_TX_EMPTY))
+        ;
+
+    /* Send the character */
+    writel(c, &regs->io);
+
+    return 1;
 }
 
 static int bcm28xx_pgetc(void) {
-    // not implemented
-    return -1;
+    volatile struct bcm283x_mu_regs* mu_regs =
+        (struct bcm283x_mu_regs*)MINIUART_BASE;
+
+    while((readl(&mu_regs->iir) & MU_IIR_BYTE_AVAIL) == 0)
+        ;
+
+    return readl(&mu_regs->io);
 }
 
 static const struct pdev_uart_ops uart_ops = {
