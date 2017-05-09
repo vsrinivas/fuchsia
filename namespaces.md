@@ -89,8 +89,8 @@ within a container (such as a directory).  Note that the name is a property
 of the container's table of sub-objects rather than a property of the object
 itself.
 
-For example, `cat` designates a furry object which may be located within
-some unspecified recipient of an `Open()` request.
+For example, `cat` designates a furry object located within some unspecified
+recipient of an `Open()` request.
 
 Objects are fundamentally nameless but they may be called many names by others.
 
@@ -124,10 +124,9 @@ sequence of object names designating a sequence of nested objects to be
 traversed in order to locate an object within a container (such as a
 directory).
 
-For example, `house/box/cat` designates a furry object which may be located
-within its containing object called `box` which may be located within its
-containing object called `house` which may be located within some unspecified
-recipient of an `Open()` request.
+For example, `house/box/cat` designates a furry object located within its
+containing object called `box` located within its containing object called
+`house` located within some unspecified recipient of an `Open()` request.
 
 An object relative path expression always traverses deeper into the namespace.
 Notably, the namespace does not directly support upwards traversal out of
@@ -159,14 +158,14 @@ protocol itself but they are often used so we describe them here.
   This namespace is denoted `/`.
 - A client may construct paths relative to its designated root namespace
   by prepending a single `/`.
-- A client may construct paths which traverse updates from containers using
+- A client may construct paths which traverse upwards from containers using
   `..` path segments by folding segments together (assuming the container's
   path is known) through a process known as client-side "canonicalization".
 - These features may be combined together.
 
 For example, `/places/house/box/../sofa/cat` designates a furry object
-which may be located at `places/house/sofa/cat` within some client
-designated "root" container.
+located at `places/house/sofa/cat` within some client designated "root"
+container.
 
 Client interpreted path expressions that contain these optional features
 are not valid arguments to a container's `Open()` method; they must be
