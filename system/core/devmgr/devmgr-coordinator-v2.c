@@ -475,10 +475,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
 }
 
 static mx_status_t dc_bind_device(device_t* dev, const char* drvname) {
-    size_t tmplen = strlen(drvname) + 12;
-    char tmp[tmplen];
-    snprintf(tmp, tmplen, "driver/%s.so", drvname);
-    log(INFO, "devcoord: dc_bind_device() '%s' '%s'\n", drvname, tmp);
+     log(INFO, "devcoord: dc_bind_device() '%s'\n", drvname);
 
     // shouldn't be possible to get a bind request for a shadow device
     if (dev->flags & DEV_CTX_SHADOW) {
@@ -488,7 +485,7 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvname) {
     //TODO: disallow if we're in the middle of enumeration, etc
     driver_t* drv;
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
-        if (!strcmp(drv->libname, tmp)) {
+        if (!strcmp(drv->name, drvname)) {
             if (dc_is_bindable(drv, dev->protocol_id,
                                dev->props, dev->prop_count, false)) {
                 log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
