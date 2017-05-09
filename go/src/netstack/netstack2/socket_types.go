@@ -167,8 +167,6 @@ const EAI_MEMORY = -10
 const EAI_SYSTEM = -11
 const EAI_OVERFLOW = -12
 
-const IOCTL_NETC_GET_IF_INFO = 10
-
 const NETC_IFF_UP = 1
 
 type c_socklen uint32

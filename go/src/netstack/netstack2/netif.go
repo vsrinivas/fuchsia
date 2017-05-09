@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"apps/netstack/deviceid"
 	"apps/netstack/eth"
 
 	"github.com/google/netstack/dhcp"
@@ -30,8 +31,9 @@ type netstack struct {
 	stack      *stack.Stack
 	dispatcher *socketServer
 
-	mu     sync.Mutex
-	netifs map[tcpip.NICID]*netif
+	mu       sync.Mutex
+	nodename string
+	netifs   map[tcpip.NICID]*netif
 }
 
 // A netif is a network interface.
@@ -188,6 +190,14 @@ func (ns *netstack) addEth(path string) error {
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
 		ns.mu.Unlock()
 		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
+	}
+	if nicid == 2 && ns.nodename == "" {
+		// This is the first real ethernet device on this host.
+		// No nodename has been configured for the network stack,
+		// so derive it from the MAC address.
+		var mac [6]byte
+		copy(mac[:], ep.linkAddr)
+		ns.nodename = deviceid.DeviceID(mac)
 	}
 	nif.nicid = nicid
 	nif.routes = defaultRouteTable(nicid, "")

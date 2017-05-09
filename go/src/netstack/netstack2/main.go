@@ -45,6 +45,9 @@ func main() {
 		log.Fatalf("ethernet: %v", err)
 	}
 
+	// TODO: plumb the magenta.nodename environment variable through
+	// initialization, just as devmgr does to netsvc. Set it here
+	// in the ns.nodename field.
 	ns := &netstack{
 		arena:      arena,
 		stack:      stk,

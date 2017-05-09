@@ -56,8 +56,6 @@ typedef struct {
   struct sockaddr_storage dns_server;
 } netc_set_dns_server_t;
 
-#define IOCTL_FAMILY_NETCONFIG 0xff
-
 #define IOCTL_NETC_GET_IF_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_NETCONFIG, 0)
 #define IOCTL_NETC_SET_IF_ADDR \

@@ -42,6 +42,11 @@ const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 
 const defaultNIC = 2
 
+var (
+	ioctlNetcGetIfInfo   = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 0)
+	ioctlNetcGetNodename = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 8)
+)
+
 func devmgrConnect() (mx.Handle, error) {
 	f, err := os.OpenFile("/dev/socket", O_DIRECTORY|O_RDWR, 0)
 	if err != nil {
@@ -750,7 +755,7 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
+func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) (status mx.Status) {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
@@ -758,15 +763,17 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 		}
 		return errStatus(err)
 	}
+	if debug2 {
+		defer func() {
+			log.Printf("bind(%s): %v", *addr, status)
+		}()
+	}
 
 	if ios.ep == nil {
 		if debug {
 			log.Printf("bind: no socket")
 		}
 		return mx.ErrBadState
-	}
-	if debug2 {
-		log.Printf("bind(%s)", *addr)
 	}
 	if err := ios.ep.Bind(*addr, nil); err != nil {
 		return errStatus(err)
@@ -777,8 +784,8 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) mx.Status {
 }
 
 func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
-	switch msg.Op() {
-	case IOCTL_NETC_GET_IF_INFO:
+	switch msg.IoctlOp() {
+	case ioctlNetcGetIfInfo:
 		rep := c_netc_get_if_info{}
 
 		s.ns.mu.Lock()
@@ -804,6 +811,14 @@ func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 		}
 		rep.n_info = index
 		rep.Encode(msg)
+		return mx.ErrOk
+	case ioctlNetcGetNodename:
+		s.ns.mu.Lock()
+		nodename := s.ns.nodename
+		s.ns.mu.Unlock()
+
+		msg.Datalen = uint32(copy(msg.Data[:msg.Arg], nodename))
+		msg.Data[msg.Datalen] = 0
 		return mx.ErrOk
 	}
 
@@ -895,7 +910,7 @@ func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) (status mx.Status) {
 	return mx.ErrOk
 }
 
-func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
+func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) (status mx.Status) {
 	if msg.Datalen == 0 {
 		if ios.transProto == udp.ProtocolNumber {
 			// connect() can be called with no address to
@@ -903,21 +918,26 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) mx.Status {
 			ios.ep.Shutdown(tcpip.ShutdownRead)
 			return mx.ErrOk
 		}
+		if debug {
+			log.Printf("connect: no input")
+		}
 		return mx.ErrInvalidArgs
 	}
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
-			log.Printf("connect bad input: %v", err)
+			log.Printf("connect: bad input: %v", err)
 		}
 		return errStatus(err)
+	}
+	if debug2 {
+		defer func() {
+			log.Printf("connect(%s): %v", *addr, status)
+		}()
 	}
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	if debug2 {
-		log.Printf("connect(%s)", *addr)
-	}
 	err = ios.ep.Connect(*addr)
 	if err == tcpip.ErrConnectStarted {
 		<-notifyCh
