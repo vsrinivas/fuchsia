@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -13,13 +13,16 @@ using modular::testing::TestPoint;
 
 namespace {
 
-class ChildApp : public modular::SingleServiceApp<modular::Module> {
+class ChildApp : modular::testing::ComponentBase<modular::Module> {
  public:
-  ChildApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~ChildApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
+  static void New() {
+    new ChildApp;  // deleted in Stop()
+  }
 
  private:
+  ChildApp() { TestInit(__FILE__); }
+  ~ChildApp() override = default;
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
@@ -34,9 +37,7 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
     modular::testing::GetStore()->Put("child_module_stop", "", [] {});
-    modular::testing::Done();
-    done();
-    delete this;
+    DeleteAndQuit(done);
   }
 
   modular::ModuleContextPtr module_context_;
@@ -49,7 +50,7 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  new ChildApp();
+  ChildApp::New();
   loop.Run();
   return 0;
 }

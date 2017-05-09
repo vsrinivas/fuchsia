@@ -5,7 +5,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -22,16 +22,20 @@ using modular::testing::TestPoint;
 namespace {
 
 class SuggestionTestUserShellApp
-    : public modular::StoryWatcher,
-      public maxwell::SuggestionListener,
-      public modular::SingleServiceApp<modular::UserShell> {
+    : modular::StoryWatcher,
+      maxwell::SuggestionListener,
+      modular::testing::ComponentBase<modular::UserShell> {
  public:
+  static void New() {
+    new SuggestionTestUserShellApp;  // Deleted in Terminate().
+  }
+
+ private:
   SuggestionTestUserShellApp() : story_watcher_binding_(this) {
-    modular::testing::Init(application_context(), __FILE__);
+    TestInit(__FILE__);
   }
   ~SuggestionTestUserShellApp() override = default;
 
- private:
   // |UserShell|
   void Initialize(fidl::InterfaceHandle<modular::UserContext> user_context,
                   fidl::InterfaceHandle<modular::UserShellContext>
@@ -57,10 +61,8 @@ class SuggestionTestUserShellApp
 
   // |UserShell|
   void Terminate(const TerminateCallback& done) override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
     TEST_PASS("Suggestion test user shell terminated");
-    modular::testing::Done();
-    done();
+    DeleteAndQuit(done);
   };
 
   void StartStoryById(const fidl::String& story_id) {
@@ -132,7 +134,7 @@ class SuggestionTestUserShellApp
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  SuggestionTestUserShellApp app;
+  SuggestionTestUserShellApp::New();
   loop.Run();
   return 0;
 }

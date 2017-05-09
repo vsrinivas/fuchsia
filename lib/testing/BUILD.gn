@@ -16,6 +16,22 @@ source_set("testing") {
   ]
 }
 
+source_set("component_base") {
+  testonly = true
+
+  sources = [
+    "component_base.h",
+  ]
+
+  public_deps = [
+    ":testing",
+    "//application/lib/app",
+    "//apps/modular/lib/fidl:single_service_app",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
 source_set("story_provider_mock") {
   testonly = true
 

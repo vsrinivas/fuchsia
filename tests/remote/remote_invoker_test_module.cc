@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/connect.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
@@ -23,16 +23,15 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
 
-class ParentApp : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
   static void New() {
-    new ParentApp();  // deletes itself in Stop()
+    new ParentApp;  // deletes itself in Stop()
   }
 
  private:
-  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~ParentApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
+  ParentApp() { TestInit(__FILE__); }
+  ~ParentApp() override = default;
 
   // |Module|
   void Initialize(
@@ -42,11 +41,13 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     module_context_.Bind(std::move(module_context));
     initialized_.Pass();
 
-    // Start a timer to call Story.Done in case the test agent misbehaves and we
-    // time out.
+    // Start a timer to quit in case the test agent misbehaves and we time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        [this, ptr = GetWeakPtr()] {
+          if (ptr) {
+            DeleteAndQuit([]{});
+          }
+        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
 
     remote_invoker_ =
         application_context()
@@ -68,11 +69,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    auto binding = PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done();
-    done();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    DeleteAndQuit(done);
   }
 
   modular::ModuleContextPtr module_context_;

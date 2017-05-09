@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -20,14 +20,14 @@ constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kChildModule[] =
     "file:///system/apps/modular_tests/child_module";
 
-class ParentApp : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
   static void New() {
-    new ParentApp();  // deletes itself in Stop()
+    new ParentApp;  // deletes itself in Stop()
   }
 
  private:
-  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
+  ParentApp() { TestInit(__FILE__); }
   ~ParentApp() override = default;
 
   // |Module|
@@ -42,26 +42,24 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
     modular::testing::GetStore()->Get("child_module_init",
                                       [this](const fidl::String&) {
-                                        module_->Stop([this] {
+                                        child_module_->Stop([this] {
                                           callback_.Pass();
                                           module_context_->Done();
                                         });
                                       });
 
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { delete this; },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        [this, ptr = GetWeakPtr()] {
+          if (ptr) {
+            DeleteAndQuit([]{});
+          }
+        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-
-    auto binding = PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done();
-    done();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    DeleteAndQuit(done);
   }
 
   void StartModule(const std::string& module_query) {
@@ -69,12 +67,12 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     constexpr char kChildLink[] = "child";
     constexpr char kChildModuleName[] = "child";
     module_context_->StartModule(kChildModuleName, module_query, kChildLink,
-                                 nullptr, nullptr, module_.NewRequest(),
+                                 nullptr, nullptr, child_module_.NewRequest(),
                                  module_view.NewRequest());
   }
 
   modular::ModuleContextPtr module_context_;
-  modular::ModuleControllerPtr module_;
+  modular::ModuleControllerPtr child_module_;
 
   TestPoint initialized_{"Parent module initialized"};
   TestPoint callback_{"Stop child callback invoked"};

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/connect.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
@@ -21,14 +21,14 @@ constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/apps/modular_tests/trigger_test_agent";
 
-class ParentApp : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
   static void New() {
-    new ParentApp();  // deletes itself in Stop()
+    new ParentApp;  // deletes itself in Stop()
   }
 
  private:
-  ParentApp() { modular::testing::Init(application_context(), __FILE__); }
+  ParentApp() { TestInit(__FILE__); }
   ~ParentApp() override = default;
 
   // |Module|
@@ -89,19 +89,17 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     // Start a timer to call Story.Done in case the test agent misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { module_context_->Done(); },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        [this, ptr = GetWeakPtr()] {
+          if (ptr) {
+            module_context_->Done();
+          }
+        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-
-    auto binding = PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done();
-    done();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    DeleteAndQuit(done);
   }
 
   modular::ModuleContextPtr module_context_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/agent/agent.fidl.h"
@@ -12,7 +12,7 @@
 
 namespace {
 
-class TestAgentApp : modular::SingleServiceApp<modular::Agent>,
+class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
                      modular::testing::QueuePersistenceAgentInterface {
  public:
   static void New() {
@@ -22,9 +22,8 @@ class TestAgentApp : modular::SingleServiceApp<modular::Agent>,
  private:
   using TestPoint = modular::testing::TestPoint;
 
-  TestAgentApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~TestAgentApp() override {}
+  TestAgentApp() { TestInit(__FILE__); }
+  ~TestAgentApp() override = default;
 
   TestPoint initialized_{"Queue persistence test agent initialized"};
 
@@ -70,13 +69,7 @@ class TestAgentApp : modular::SingleServiceApp<modular::Agent>,
     modular::testing::GetStore()->Put(
         "queue_persistence_test_agent_stopped", "", [this, callback] {
           TEST_PASS("Queue persistence test agent exited");
-
-          auto binding =
-              PassBinding();  // To invoke callback() after delete this.
-          delete this;
-          modular::testing::Done();
-          callback();
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          DeleteAndQuit(callback);
         });
   }
 

@@ -18,8 +18,8 @@ executable("child_module") {
     "child_module.cc",
   ]
   deps = [
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
@@ -34,8 +34,8 @@ executable("parent_module") {
     "parent_module.cc",
   ]
   deps = [
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",

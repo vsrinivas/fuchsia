@@ -5,7 +5,7 @@
 #include "application/lib/app/connect.h"
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -21,13 +21,16 @@ constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kProposalId[] =
     "file:///system/apps/moudlar_tests/suggestion_proposal_test#proposal";
 
-class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
+class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
  public:
-  SuggestionApp() { modular::testing::Init(application_context(), __FILE__); }
-
-  ~SuggestionApp() override { mtl::MessageLoop::GetCurrent()->PostQuitTask(); }
+  static void New() {
+    new SuggestionApp;  // deleted in Stop();
+  }
 
  private:
+  SuggestionApp() { TestInit(__FILE__); }
+  ~SuggestionApp() override = default;
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
@@ -74,16 +77,17 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
     });
 
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
-        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        [this, ptr = GetWeakPtr()] {
+          if (ptr) {
+            DeleteAndQuit([]{});
+          }
+        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    done();
-    modular::testing::Done();
-    mtl::MessageLoop::GetCurrent()->QuitNow();
+    DeleteAndQuit(done);
   }
 
   modular::ModuleContextPtr module_context_;
@@ -98,7 +102,7 @@ class SuggestionApp : public modular::SingleServiceApp<modular::Module> {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  SuggestionApp app;
+  SuggestionApp::New();
   loop.Run();
   return 0;
 }

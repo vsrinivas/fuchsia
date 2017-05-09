@@ -21,8 +21,8 @@ executable("agent_trigger_test") {
   ]
   deps = [
     ":trigger_test_agent_interface",
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
@@ -38,8 +38,8 @@ executable("trigger_test_agent") {
   ]
   deps = [
     ":trigger_test_agent_interface",
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
     "//lib/mtl",
   ]

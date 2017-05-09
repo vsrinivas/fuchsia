@@ -19,8 +19,8 @@ executable("suggestion_proposal_test_module") {
   ]
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
@@ -36,8 +36,8 @@ executable("suggestion_test_user_shell") {
   ]
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/user",

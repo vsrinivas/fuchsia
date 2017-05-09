@@ -20,8 +20,8 @@ executable("remote_invoker_test") {
   ]
   deps = [
     "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/testing",
+    "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/remote",

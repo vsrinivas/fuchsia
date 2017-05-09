@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/connect.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
+#include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
@@ -20,17 +20,14 @@ constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/apps/modular_tests/queue_persistence_test_agent";
 
-class ParentApp : public modular::SingleServiceApp<modular::Module> {
+class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
   static void New() {
-    new ParentApp();  // deletes itself in Stop()
+    new ParentApp;  // deletes itself in Stop()
   }
 
  private:
-  ParentApp() : weak_factory_(this) {
-    modular::testing::Init(application_context(), __FILE__);
-  }
-
+  ParentApp() { TestInit(__FILE__); }
   ~ParentApp() override = default;
 
   // |Module|
@@ -58,12 +55,10 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     // time out. If that happens, the agent will exit normally through Stop(),
     // but the test will fail because some TestPoints will not have been passed.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [ptr = weak_factory_.GetWeakPtr()] {
-          if (!ptr) {
-            return;
+        [this, ptr = GetWeakPtr()] {
+          if (ptr) {
+            module_context_->Done();
           }
-
-          ptr->module_context_->Done();
         },
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
@@ -129,12 +124,7 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-
-    auto binding = PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done();
-    done();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    DeleteAndQuit(done);
   }
 
   modular::ModuleContextPtr module_context_;
@@ -155,8 +145,6 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
   TestPoint agent_connected_again_{"Agent accepted connection, again"};
   TestPoint agent_received_message_{"Agent received message"};
   TestPoint agent_stopped_{"Agent stopped"};
-
-  ftl::WeakPtrFactory<ParentApp> weak_factory_;
 };
 
 }  // namespace
