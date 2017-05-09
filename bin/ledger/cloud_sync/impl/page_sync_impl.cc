@@ -60,9 +60,7 @@ void PageSyncImpl::Start() {
           return;
         }
 
-        for (auto& commit : commits) {
-          EnqueueUpload(std::move(commit));
-        }
+        HandleLocalCommits(std::move(commits));
 
         // Subscribe to notifications about new commits in Storage.
         storage_->AddCommitWatcher(this);
@@ -96,9 +94,13 @@ void PageSyncImpl::OnNewCommits(
     return;
   }
 
+  std::vector<std::unique_ptr<const storage::Commit>> cloned_commits;
+  cloned_commits.reserve(commits.size());
   for (const auto& commit : commits) {
-    EnqueueUpload(commit->Clone());
+    cloned_commits.push_back(commit->Clone());
   }
+
+  HandleLocalCommits(std::move(cloned_commits));
 }
 
 void PageSyncImpl::GetObject(
@@ -136,7 +138,7 @@ void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
-    std::move(std::begin(records), std::end(records),
+    std::move(records.begin(), records.end(),
               std::back_inserter(commits_to_download_));
     return;
   }
@@ -234,6 +236,33 @@ void PageSyncImpl::SetRemoteWatcher() {
 
   cloud_provider_->WatchCommits(last_commit_ts, this);
   remote_watch_set_ = true;
+}
+
+void PageSyncImpl::HandleLocalCommits(
+    std::vector<std::unique_ptr<const storage::Commit>> commits) {
+  std::vector<storage::CommitId> heads;
+  if (storage_->GetHeadCommitIds(&heads) != storage::Status::OK) {
+    HandleError("Failed to retrieve the current heads");
+    return;
+  }
+  FTL_DCHECK(!heads.empty());
+
+  if (heads.size() > 1u) {
+    // To many local heads, stage commits for upload but don't enqueue yet.
+    std::move(std::begin(commits), std::end(commits),
+              std::back_inserter(commits_staged_for_upload_));
+    return;
+  }
+
+  // Only one local head - enqueue the commits previously staged for upload,
+  // then the new commits.
+  for (auto& staged_commit : commits_staged_for_upload_) {
+    EnqueueUpload(std::move(staged_commit));
+  }
+  commits_staged_for_upload_.clear();
+  for (auto& commit : commits) {
+    EnqueueUpload(std::move(commit));
+  }
 }
 
 void PageSyncImpl::EnqueueUpload(

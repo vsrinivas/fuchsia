@@ -66,6 +66,13 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 
+  storage::Status GetHeadCommitIds(
+      std::vector<storage::CommitId>* commit_ids) override {
+    // Current tests only rely on the number of heads, not on the actual ids.
+    commit_ids->resize(head_count);
+    return storage::Status::OK;
+  }
+
   void GetCommit(storage::CommitIdView commit_id,
                  std::function<void(storage::Status,
                                     std::unique_ptr<const storage::Commit>)>
@@ -155,6 +162,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   // Commits to be returned from GetUnsyncedCommits calls.
   std::vector<std::unique_ptr<const storage::Commit>>
       unsynced_commits_to_return;
+  size_t head_count = 1;
   // Commits to be returned from GetCommit() calls.
   std::unordered_map<storage::CommitId, std::unique_ptr<const storage::Commit>>
       new_commits_to_return;
@@ -333,6 +341,45 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 }
 
+// Verifies that the backlog of commits to upload is not uploaded until there's
+// only one local head.
+TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
+  // Verify that two local commits are not uploaded when there is two local
+  // heads.
+  storage_.head_count = 2;
+  storage_.unsynced_commits_to_return.push_back(
+      std::make_unique<const TestCommit>("id0", "content0"));
+  storage_.unsynced_commits_to_return.push_back(
+      std::make_unique<const TestCommit>("id1", "content1"));
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_.Start();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(0u, cloud_provider_.received_commits.size());
+  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
+
+  // Add a new commit and reduce the number of heads to 1.
+  storage_.head_count = 1;
+  storage_.new_commits_to_return["id2"] =
+      std::make_unique<const TestCommit>("id2", "content2");
+  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+                          storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Verify that all local commits were uploaded.
+  ASSERT_EQ(3u, cloud_provider_.received_commits.size());
+  EXPECT_EQ("id0", cloud_provider_.received_commits[0].id);
+  EXPECT_EQ("content0", cloud_provider_.received_commits[0].content);
+  EXPECT_EQ("id1", cloud_provider_.received_commits[1].id);
+  EXPECT_EQ("content1", cloud_provider_.received_commits[1].content);
+  EXPECT_EQ("id2", cloud_provider_.received_commits[2].id);
+  EXPECT_EQ("content2", cloud_provider_.received_commits[2].content);
+  EXPECT_EQ(3u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id0"));
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
+}
+
 // Verfies that the new commits that PageSync is notified about through storage
 // watcher are uploaded to CloudProvider, with the exception of commits that
 // themselves come from sync.
@@ -369,6 +416,57 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
   EXPECT_EQ(2u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id3"));
+}
+
+// Verifies that new commits being added to storage are only uploaded while
+// there is only a single head.
+TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_.Start();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Add a new commit when there's only one head and verify that it is
+  // uploaded.
+  storage_.head_count = 1;
+  storage_.new_commits_to_return["id0"] =
+      std::make_unique<const TestCommit>("id0", "content0");
+  page_sync_.OnNewCommits(TestCommit::AsList("id0", "content0"),
+                          storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(page_sync_.IsIdle());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(1u, cloud_provider_.received_commits.size());
+  EXPECT_EQ("id0", cloud_provider_.received_commits[0].id);
+  EXPECT_EQ("content0", cloud_provider_.received_commits[0].content);
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id0"));
+
+  // Add another commit when there's two heads and verify that it is not
+  // uploaded.
+  cloud_provider_.received_commits.clear();
+  storage_.head_count = 2;
+  storage_.new_commits_to_return["id1"] =
+      std::make_unique<const TestCommit>("id1", "content1");
+  page_sync_.OnNewCommits(TestCommit::AsList("id1", "content1"),
+                          storage::ChangeSource::LOCAL);
+  EXPECT_TRUE(page_sync_.IsIdle());
+  ASSERT_EQ(0u, cloud_provider_.received_commits.size());
+  EXPECT_EQ(0u, storage_.commits_marked_as_synced.count("id1"));
+
+  // Add another commit bringing the number of heads down to one and verify that
+  // both commits are uploaded.
+  storage_.head_count = 1;
+  storage_.new_commits_to_return["id2"] =
+      std::make_unique<const TestCommit>("id2", "content2");
+  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+                          storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(page_sync_.IsIdle());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(2u, cloud_provider_.received_commits.size());
+  EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
+  EXPECT_EQ("content1", cloud_provider_.received_commits[0].content);
+  EXPECT_EQ("id2", cloud_provider_.received_commits[1].id);
+  EXPECT_EQ("content2", cloud_provider_.received_commits[1].content);
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id1"));
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 }
 
 // Verifies that existing commits are uploaded before the new ones.
