@@ -471,13 +471,23 @@ static mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void**
     return NO_ERROR;
 }
 
+#ifdef RASPBERRY_PI
+
 static mx_driver_ops_t bcm_mailbox_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = mailbox_bind,
 };
 
+#if DEVHOST_V2
+MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
+MAGENTA_DRIVER_END(bcm_mailbox)
+#else
 MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_PID, SOC_PID_BROADCOMM_RPI3),
 MAGENTA_DRIVER_END(bcm_mailbox)
+#endif // DEVHOST_V2
+
+#endif // RASPBERRY_PI
