@@ -145,11 +145,18 @@ static void dc_handle_new_device(device_t* dev);
 static list_node_t list_pending_work = LIST_INITIAL_VALUE(list_pending_work);
 static list_node_t list_unbound_devices = LIST_INITIAL_VALUE(list_unbound_devices);
 
-static inline void queue_work(work_t* work, uint32_t op, uint32_t arg) {
+static void queue_work(work_t* work, uint32_t op, uint32_t arg) {
     MX_ASSERT(work->op == WORK_IDLE);
     work->op = op;
     work->arg = arg;
     list_add_tail(&list_pending_work, &work->node);
+}
+
+static void cancel_work(work_t* work) {
+    if (work->op != WORK_IDLE) {
+        list_delete(&work->node);
+        work->op = WORK_IDLE;
+    }
 }
 
 static void process_work(work_t* work) {
@@ -281,7 +288,8 @@ static void dc_release_device(device_t* dev) {
     }
     dev->host = NULL;
 
-    //TODO: cancel any work items
+    cancel_work(&dev->work);
+
     //TODO: cancel any pending rpc responses
     free(dev);
 }
@@ -375,11 +383,11 @@ static mx_status_t dc_add_device(device_t* parent,
 // or process exit, which means we should remove all other
 // devices that share the devhost at the same time
 static mx_status_t dc_remove_device(device_t* dev, bool forced) {
-    if (dev->flags & DEV_CTX_UNDEAD) {
+    if (dev->flags & DEV_CTX_ZOMBIE) {
         // This device was removed due to its devhost dying
         // (process exit or some other channel on that devhost
         // closing), and is now receiving the final remove call
-        dev->flags &= (~DEV_CTX_UNDEAD);
+        dev->flags &= (~DEV_CTX_ZOMBIE);
         dc_release_device(dev);
         return NO_ERROR;
     }
@@ -421,15 +429,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
                     log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
                     exit(1);
                 }
-                // Since we're removing the device while its rpc channel
-                // still exists, we mark it with the special UNDEAD state
-                // and take an additional reference.  These will be consumed
-                // when its rpc channel is closed and remove() is called again.
-                log(DEVLC, "devcoord: device %p name='%s' becomes undead\n",
-                    next, next->name);
-                next->refcount++;
                 dc_remove_device(next, false);
-                next->flags |= DEV_CTX_UNDEAD;
                 last = next;
             }
 
@@ -469,8 +469,16 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
         dc_release_device(parent);
     }
 
-    // release the ref held by the devhost
-    dc_release_device(dev);
+    if (forced) {
+        // release the ref held by the devhost
+        dc_release_device(dev);
+    } else {
+        // Mark the device as a zombie but don't drop the
+        // (likely) final reference.  The caller needs to
+        // finish replying to the RPC and dropping the
+        // reference would close the RPC channel.
+        dev->flags |= DEV_CTX_ZOMBIE;
+    }
     return NO_ERROR;
 }
 
@@ -613,35 +621,26 @@ disconnect:
 // handle inbound RPCs from devhost to devices
 static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     device_t* dev = dev_from_ph(ph);
-    mx_status_t r;
 
     if (signals & MX_CHANNEL_READABLE) {
+        mx_status_t r;
         if ((r = dc_handle_device_read(dev)) < 0) {
             if (r != ERR_STOP) {
                 log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
                     dev, dev->name, r);
-                dc_remove_device(dev, true);
             }
-            goto detach;
+            dc_remove_device(dev, true);
+            return ERR_STOP;
         }
         return NO_ERROR;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
         dc_remove_device(dev, true);
-        r = ERR_PEER_CLOSED;
-        goto detach;
+        return ERR_STOP;
     }
     log(ERROR, "devcoord: no work? %08x\n", signals);
     return NO_ERROR;
-
-detach:
-    if (dev->hrpc != MX_HANDLE_INVALID) {
-        mx_handle_close(dev->hrpc);
-        dev->hrpc = MX_HANDLE_INVALID;
-        dev->ph.handle = MX_HANDLE_INVALID;
-    }
-    return r;
 }
 
 // send message to devhost, requesting the creation of a device

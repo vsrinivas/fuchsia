@@ -466,29 +466,36 @@ static mx_status_t devhost_simple_rpc(mx_device_t* dev, uint32_t op,
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 mx_status_t devhost_remove(mx_device_t* dev) {
-    devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
     devhost_iostate_t* ios = dev->ios;
     if (ios == NULL) {
         log(ERROR, "removing device %p, ios is NULL\n", dev);
-    } else {
-        log(INFO, "removing device %p, ios %p\n", dev, ios);
-        // make this iostate inactive
-        ios->dev = NULL;
-        ios->dead = true;
-
-        // ensure we get no further events
-        //TODO: this does not work yet, ports v2 limitation
-        port_cancel(&dh_port, &ios->ph);
-        ios->ph.handle = MX_HANDLE_INVALID;
-        dev->ios = NULL;
-
-        // shut down our rpc channel
-        mx_handle_close(dev->rpc);
-        dev->rpc = MX_HANDLE_INVALID;
-
-        // queue an event to destroy the iostate
-        port_queue(&dh_port, &ios->ph, 1);
+        return ERR_INTERNAL;
     }
+
+    log(INFO, "removing device %p, ios %p\n", dev, ios);
+
+    // Make this iostate inactive (stop accepting RPCs for it)
+    //
+    // If the remove is happening on a different thread than
+    // the rpc handler, the handler might observe the peer
+    // before devhost_simple_rpc() returns.
+    ios->dev = NULL;
+    ios->dead = true;
+
+    // ensure we get no further events
+    //TODO: this does not work yet, ports v2 limitation
+    port_cancel(&dh_port, &ios->ph);
+    ios->ph.handle = MX_HANDLE_INVALID;
+    dev->ios = NULL;
+
+    devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
+
+    // shut down our rpc channel
+    mx_handle_close(dev->rpc);
+    dev->rpc = MX_HANDLE_INVALID;
+
+    // queue an event to destroy the iostate
+    port_queue(&dh_port, &ios->ph, 1);
 
     return NO_ERROR;
 }

@@ -133,10 +133,12 @@ typedef struct {
 // Device has been remove()'d
 #define DEV_CTX_DEAD       0x10
 
-// Device has been pre-emptively removed()'d from a
-// dying devhost, and will be removed() one last time
-// when its rpc channel finally goes away
-#define DEV_CTX_UNDEAD     0x20
+// Device has been removed but its rpc channel is not
+// torn down yet.  The rpc transport will call remove
+// when it notices at which point the device will leave
+// the zombie state and drop the reference associated
+// with the rpc channel, allowing complete destruction.
+#define DEV_CTX_ZOMBIE     0x20
 
 #define DEV_CTX_SHADOW     0x40
 
