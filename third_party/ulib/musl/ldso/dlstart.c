@@ -57,6 +57,3 @@ dl_start_return_t _dl_start(
 
     return __dls2(start_arg, vdso);
 }
-
-// This defines _start to call _dl_start and then jump to the entry point.
-DL_START_ASM

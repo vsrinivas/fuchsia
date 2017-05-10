@@ -73,6 +73,8 @@ typedef struct {
     (dl_start_return_t) { (arg), (entry) }
 #endif
 
+dl_start_return_t _dl_start(void* start_arg, void* vdso)
+    __attribute__((__visibility__("hidden")));
 dl_start_return_t __dls2(void* start_arg, void* vdso)
     __attribute__((visibility("hidden")));
 
