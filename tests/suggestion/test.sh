@@ -4,14 +4,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Raw set of commands used to invoke the component_context test.
-# Eventually it would be nice to make tests configuration driven.
-if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
+if [ "$FUCHSIA_DIR" = "" ]; then
   echo "Please source //scripts/env.sh and run fset."
   exit -1;
 fi
 
-netcp ${FUCHSIA_BUILD_DIR}/suggestion_proposal_test_module :/system/apps/modular_tests/suggestion_proposal_test_module
-netcp ${FUCHSIA_BUILD_DIR}/suggestion_test_user_shell :/system/apps/suggestion_test_user_shell
-
-${FUCHSIA_DIR}/apps/test_runner/src/run_test "device_runner --device_shell=dev_device_shell --device_shell_args=--test --user_shell=suggestion_test_user_shell"
+$FUCHSIA_DIR/apps/modular/tests/test.sh --test_name=suggestion "$@"
