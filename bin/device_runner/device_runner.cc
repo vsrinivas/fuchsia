@@ -10,6 +10,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/util/filesystem.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
@@ -33,6 +34,22 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
+
+// Template specializations for fidl services that don't have a Terminate()
+// method.
+
+template<>
+void AppClient<auth::AccountProvider>::ServiceTerminate(
+    const std::function<void()>& done) {
+  service_.set_connection_error_handler(done);
+}
+
+template<>
+void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
+    const std::function<void()>& done) {
+  service_.set_connection_error_handler(done);
+}
+
 namespace {
 
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
@@ -81,12 +98,12 @@ class Settings {
       --no_minfs
     DEVICE_NAME: Name which user shell uses to identify this device.
     DEVICE_SHELL: URL of the device shell to run.
-                Defaults to "file:///system/apps/userpicker_device_shell".
+                Defaults to 'file:///system/apps/userpicker_device_shell'.
     USER_SHELL: URL of the user shell to run.
-                Defaults to "file:///system/apps/armadillo_user_shell".
+                Defaults to 'file:///system/apps/armadillo_user_shell'.
                 For integration testing use "dummy_user_shell".
     STORY_SHELL: URL of the story shell to run.
-                Defaults to "file:///system/apps/dummy_story_shell".
+                Defaults to 'file:///system/apps/dummy_story_shell'.
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
@@ -140,7 +157,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()),
         device_shell_context_binding_(this),
-        account_provider_context_(this) {
+        account_provider_context_binding_(this) {
     // 0a. Check if environment handle / services have been initialized.
     if (!app_context_->launcher()) {
       FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
@@ -183,28 +200,22 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
-    app::ServiceProviderPtr device_shell_services;
-    auto device_shell_launch_info = app::ApplicationLaunchInfo::New();
-    device_shell_launch_info->url = settings_.device_shell.url;
-    device_shell_launch_info->arguments = settings_.device_shell.args.Clone();
-    device_shell_launch_info->services = device_shell_services.NewRequest();
-
-    app_context_->launcher()->CreateApplication(
-        std::move(device_shell_launch_info),
-        device_shell_controller_.NewRequest());
+    device_shell_.reset(
+        new AppClient<DeviceShell>(
+            app_context_->launcher().get(),
+            settings_.device_shell.Clone()));
 
     mozart::ViewProviderPtr device_shell_view_provider;
-    ConnectToService(device_shell_services.get(),
+    ConnectToService(device_shell_->services(),
                      device_shell_view_provider.NewRequest());
-
-    ConnectToService(device_shell_services.get(), device_shell_.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    device_shell_->Initialize(device_shell_context_binding_.NewBinding());
+    device_shell_->primary_service()->Initialize(
+        device_shell_context_binding_.NewBinding());
 
     // 2. Wait for persistent data to come up.
     if (!settings_.no_minfs) {
@@ -212,39 +223,31 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     }
 
     // 3. Start OAuth Token Manager App.
-    app::ServiceProviderPtr token_manager_services;
-    auto token_manager_launch_info = app::ApplicationLaunchInfo::New();
-    token_manager_launch_info->url = "file:///system/apps/oauth_token_manager";
-    token_manager_launch_info->services = token_manager_services.NewRequest();
-    app_context_->launcher()->CreateApplication(
-        std::move(token_manager_launch_info),
-        token_manager_controller_.NewRequest());
-
-    auth::AccountProviderPtr account_provider;
-    ConnectToService(token_manager_services.get(),
-                     account_provider.NewRequest());
-    account_provider->Initialize(account_provider_context_.NewBinding());
+    AppConfigPtr token_manager_config = AppConfig::New();
+    token_manager_config->url = "file:///system/apps/oauth_token_manager";
+    token_manager_.reset(
+        new AppClient<auth::AccountProvider>(
+            app_context_->launcher().get(),
+            std::move(token_manager_config)));
+    token_manager_->primary_service()->Initialize(
+        account_provider_context_binding_.NewBinding());
 
     // 4. Start the ledger.
-    app::ServiceProviderPtr ledger_services;
-    auto ledger_launch_info = app::ApplicationLaunchInfo::New();
-    ledger_launch_info->url = kLedgerAppUrl;
-    ledger_launch_info->arguments = fidl::Array<fidl::String>::New(1);
-    ledger_launch_info->arguments[0] = kLedgerNoMinfsWaitFlag;
-    ledger_launch_info->services = ledger_services.NewRequest();
-
-    app_context_->launcher()->CreateApplication(
-        std::move(ledger_launch_info), ledger_controller_.NewRequest());
-
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
-    ConnectToService(ledger_services.get(),
-                     ledger_repository_factory.NewRequest());
+    AppConfigPtr ledger_config = AppConfig::New();
+    ledger_config->url = kLedgerAppUrl;
+    ledger_config->args = fidl::Array<fidl::String>::New(1);
+    ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
+    ledger_.reset(
+        new AppClient<ledger::LedgerRepositoryFactory>(
+            app_context_->launcher().get(),
+            std::move(ledger_config)));
 
     // 5. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
         app_context_, settings_.user_shell, settings_.story_shell,
-        std::move(ledger_repository_factory),
-        settings_.ledger_repository_for_testing, std::move(account_provider));
+        ledger_->primary_service().get(),
+        settings_.ledger_repository_for_testing,
+        token_manager_->primary_service().get());
   }
 
   // |DeviceShellContext|
@@ -253,18 +256,34 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   }
 
   // |DeviceShellContext|
-  // TODO(vardhan): Signal the ledger application to tear down.
   void Shutdown() override {
+    // TODO(mesch): Some of these could be done in parallel too. UserProvider
+    // must go first, but the order after user provider is for now rather
+    // arbitrary. We terminate device shell last so that in tests
+    // testing::Teardown() is invoked at the latest possible time. Right now it
+    // just demonstrates that AppTerminate() works as we like it to.
     FTL_LOG(INFO) << "DeviceShellContext::Shutdown()";
-    user_provider_impl_->Teardown(
-        [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+    user_provider_impl_->Teardown([this] {
+        FTL_LOG(INFO) << "- UserProvider down";
+        token_manager_->AppTerminate([this] {
+            FTL_LOG(INFO) << "- AuthProvider down";
+            ledger_->AppTerminate([this] {
+                FTL_LOG(INFO) << "- Ledger down";
+                device_shell_->AppTerminate([this] {
+                    FTL_LOG(INFO) << "- DeviceShell down";
+                    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+                  });
+              });
+          });
+      });
   }
 
   // |AccountProviderContext|
   void GetAuthenticationContext(
       const fidl::String& account_id,
       fidl::InterfaceRequest<AuthenticationContext> request) override {
-    device_shell_->GetAuthenticationContext(account_id, std::move(request));
+    device_shell_->primary_service()->GetAuthenticationContext(
+        account_id, std::move(request));
   }
 
   const Settings& settings_;  // Not owned nor copied.
@@ -274,14 +293,11 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   DeviceRunnerMonitorPtr monitor_;
 
   fidl::Binding<DeviceShellContext> device_shell_context_binding_;
-  fidl::Binding<auth::AccountProviderContext> account_provider_context_;
+  fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
 
-  app::ApplicationControllerPtr token_manager_controller_;
-
-  app::ApplicationControllerPtr device_shell_controller_;
-  DeviceShellPtr device_shell_;
-
-  app::ApplicationControllerPtr ledger_controller_;
+  std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
+  std::unique_ptr<AppClient<DeviceShell>> device_shell_;
+  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>> ledger_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };

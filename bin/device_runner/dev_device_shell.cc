@@ -70,6 +70,11 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   // |DeviceShell|
   void Terminate(const TerminateCallback& done) override {
     FTL_LOG(INFO) << "DeviceShell::Terminate()";
+
+    if (settings_.test) {
+      modular::testing::Teardown();
+    }
+
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     done();
   }
@@ -85,11 +90,6 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   // |UserWatcher|
   void OnLogout() override {
     FTL_LOG(INFO) << "UserWatcher::OnLogout()";
-
-    if (settings_.test) {
-      modular::testing::Teardown();
-    }
-
     device_shell_context_->Shutdown();
   }
 

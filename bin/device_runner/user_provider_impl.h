@@ -24,9 +24,9 @@ class UserProviderImpl : UserProvider {
   UserProviderImpl(std::shared_ptr<app::ApplicationContext> app_context,
                    const AppConfig& user_shell,
                    const AppConfig& story_shell,
-                   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
+                   ledger::LedgerRepositoryFactory* ledger_repository_factory,
                    bool ledger_repository_for_testing,
-                   auth::AccountProviderPtr account_provider);
+                   auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<UserProvider> request);
 
@@ -68,9 +68,9 @@ class UserProviderImpl : UserProvider {
   std::shared_ptr<app::ApplicationContext> app_context_;
   const AppConfig& user_shell_;   // Neither owned nor copied.
   const AppConfig& story_shell_;  // Neither owned nor copied.
-  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  ledger::LedgerRepositoryFactory* const ledger_repository_factory_;
   const bool ledger_repository_for_testing_;
-  auth::AccountProviderPtr account_provider_;
+  auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;
