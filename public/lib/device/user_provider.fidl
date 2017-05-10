@@ -29,6 +29,11 @@ interface UserProvider {
           string device_name, string server_name) =>
       (auth.Account? account, string? error_code);
 
+  // Removes information of a user from the local user database.
+  //
+  // |account_id| is received from either AddUser() or PreviousUsers().
+  RemoveUser(string account_id);
+
   // Uses the credentials provided in AddUser() to start a user session. This
   // would mean syncing with the user's ledger instance and displaying a user
   // shell with all of the user's stories.

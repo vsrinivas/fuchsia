@@ -227,26 +227,70 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
         std::string new_serialized_users = std::string(
             reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
             builder.GetSize());
-        if (!Parse(new_serialized_users)) {
-          callback(nullptr, "The user database seems corrupted.");
-          return;
-        }
 
-        // Save users to disk.
-        if (!files::CreateDirectory(
-                files::GetDirectoryName(kUsersConfigurationFile))) {
-          callback(nullptr, "Unable to create directory.");
-          return;
-        }
-        if (!files::WriteFile(kUsersConfigurationFile,
-                              new_serialized_users.data(),
-                              new_serialized_users.size())) {
-          callback(nullptr, "Unable to write file.");
+        std::string error;
+        if (!WriteUsersDb(new_serialized_users, &error)) {
+          callback(nullptr, error);
           return;
         }
 
         callback(std::move(account), error_code);
       });
+}
+
+// TODO(alhaad, security): This does not remove tokens stored by the token
+// manager. That should be done properly by invalidaing the tokens. Re-visit this!
+void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
+  if (!users_storage_) {
+    return;
+  }
+
+  flatbuffers::FlatBufferBuilder builder;
+  std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+  for (const auto* user : *(users_storage_->users())) {
+    if (user->id()->str() == account_id) {
+      continue;
+    }
+
+    users.push_back(modular::CreateUserStorage(
+        builder, builder.CreateString(user->id()),
+        user->identity_provider(),
+        builder.CreateString(user->device_name()),
+        builder.CreateString(user->server_name())));
+  }
+
+  builder.Finish(modular::CreateUsersStorage(
+      builder, builder.CreateVector(std::move(users))));
+  std::string new_serialized_users = std::string(
+      reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+      builder.GetSize());
+
+  std::string error;
+  if (!WriteUsersDb(new_serialized_users, &error)) {
+    FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
+  }
+}
+
+bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
+                                    std::string* const error) {
+  if (!Parse(serialized_users)) {
+    *error = "The user database seems corrupted.";
+    return false;
+  }
+
+  // Save users to disk.
+  if (!files::CreateDirectory(
+      files::GetDirectoryName(kUsersConfigurationFile))) {
+    *error = "Unable to create directory.";
+    return false;
+  }
+  if (!files::WriteFile(kUsersConfigurationFile,
+                        serialized_users.data(),
+                        serialized_users.size())) {
+    *error = "Unable to write file.";
+    return false;
+  }
+  return true;
 }
 
 bool UserProviderImpl::Parse(const std::string& serialized_users) {
