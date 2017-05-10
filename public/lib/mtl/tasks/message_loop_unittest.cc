@@ -5,6 +5,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <mx/channel.h>
+#include <mx/event.h>
 #include <mxio/io.h>
 
 #include <string>

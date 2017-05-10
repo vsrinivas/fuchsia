@@ -6,7 +6,6 @@
 #define LIB_MTL_TASKS_MESSAGE_LOOP_H_
 
 #include <magenta/types.h>
-#include <mx/event.h>
 #include <mx/port.h>
 
 #include <map>
@@ -120,7 +119,6 @@ class MessageLoop : public internal::TaskQueueDelegate {
   bool should_quit_ = false;
   bool is_running_ = false;
   std::priority_queue<internal::PendingTask> queue_;
-  mx::event event_;
   mx::port port_;
 
   // An ever increasing value assigned to each HandlerData::id. Used to detect

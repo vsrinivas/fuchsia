@@ -67,6 +67,13 @@ void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
   ftl::MutexLocker locker(&mutex_);
   FTL_DCHECK(!drop_incoming_tasks_);
   delegate_ = delegate;
+
+  if (!incoming_queue_.empty() && delegate_) {
+    // Notice that we're still holding mutex here. Chromium uses a reader/writer
+    // lock to avoid having to hold the queue mutex when calling back into the
+    // delegate.
+    delegate_->ScheduleDrainIncomingTasks();
+  }
 }
 
 void IncomingTaskQueue::ClearDelegate() {

@@ -17,7 +17,7 @@ namespace {
 
 thread_local MessageLoop* g_current;
 
-constexpr MessageLoop::HandlerKey kEventKey = 0;
+constexpr MessageLoop::HandlerKey kDrainKey = 0;
 
 }  // namespace
 
@@ -28,9 +28,7 @@ MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
-  FTL_CHECK(mx::event::create(0, &event_) == NO_ERROR);
   FTL_CHECK(mx::port::create(MX_PORT_OPT_V2, &port_) == NO_ERROR);
-  event_.wait_async(port_, kEventKey, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
   MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
@@ -189,6 +187,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   }
 
   // Deliver timeouts.
+  // FIXME(jeffbrown): If the port is always busy, we might never deliver
+  // timeouts to handlers which have already passed their deadline.
   if (wait_status == ERR_TIMED_OUT) {
     // TODO(abarth): Use a priority queue to track the nearest deadlines.
     std::vector<HandlerKey> keys;
@@ -200,20 +200,16 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     return now;
   }
 
-  FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE)
-      << "Received unexpected packet type: " << packet.type;
-  FTL_DCHECK(packet.status == NO_ERROR);
-
-  /// Reset signals on control channel.
-  if (packet.key == kEventKey) {
-    FTL_DCHECK(packet.signal.observed & MX_EVENT_SIGNALED);
-    mx_status_t rv = event_.signal(MX_EVENT_SIGNALED, 0u);
-    FTL_DCHECK(rv == NO_ERROR);
-    event_.wait_async(port_, kEventKey, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
+  // Drain the incoming queue when new tasks are available.
+  if (packet.key == kDrainKey) {
+    ReloadQueue();
     return now;
   }
 
   // Deliver pending signals.
+  FTL_CHECK(packet.type == MX_PKT_TYPE_SIGNAL_ONE)
+      << "Received unexpected packet type: " << packet.type;
+  FTL_DCHECK(packet.status == NO_ERROR);
   auto it = handler_data_.find(packet.key);
   if (it == handler_data_.end()) {
     // We can currently get packets for a key after we've canceled, but that's
@@ -251,8 +247,8 @@ void MessageLoop::PostQuitTask() {
 }
 
 void MessageLoop::ScheduleDrainIncomingTasks() {
-  mx_status_t status = event_.signal(0u, MX_EVENT_SIGNALED);
-  FTL_DCHECK(status == NO_ERROR);
+  mx_port_packet_t packet{.key = kDrainKey};
+  FTL_CHECK(port_.queue(&packet, 0u) == NO_ERROR);
 }
 
 bool MessageLoop::RunsTasksOnCurrentThread() {
@@ -260,9 +256,12 @@ bool MessageLoop::RunsTasksOnCurrentThread() {
 }
 
 ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
+  // Only consider tasks which are already in the queue.  We only reload
+  // the queue in response to a "drain packet" to ensure that we continue
+  // making forward progress handling port packet.  If we were to reload
+  // the queue here instead then we might starve handlers when the incoming
+  // tasks queue is very busy.
   FTL_DCHECK(!should_quit_);
-  ReloadQueue();
-
   while (!queue_.empty() && !should_quit_) {
     ftl::TimePoint next_run_time = queue_.top().target_time();
     if (next_run_time > now)
