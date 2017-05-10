@@ -13,7 +13,6 @@
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/strings/concatenate.h"
-#include "lib/ftl/strings/string_number_conversions.h"
 
 namespace storage {
 
@@ -43,6 +42,37 @@ constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
 constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
 
 constexpr ftl::StringView kSyncMetadata = "sync-metadata";
+
+template <typename I>
+I DeserializeNumber(ftl::StringView value) {
+  FTL_DCHECK(value.size() == sizeof(I));
+  return *reinterpret_cast<const I*>(value.data());
+}
+
+template <typename I>
+ftl::StringView SerializeNumber(const I& value) {
+  return ftl::StringView(reinterpret_cast<const char*>(&value), sizeof(I));
+}
+
+void ExtractSortedCommitsIds(
+    std::vector<std::pair<std::string, std::string>>* entries,
+    std::vector<CommitId>* commit_ids) {
+  std::sort(entries->begin(), entries->end(),
+            [](const std::pair<std::string, std::string>& p1,
+               const std::pair<std::string, std::string>& p2) {
+              auto t1 = DeserializeNumber<int64_t>(p1.second);
+              auto t2 = DeserializeNumber<int64_t>(p2.second);
+              if (t1 != t2) {
+                return t1 < t2;
+              }
+              return p1.first < p2.first;
+            });
+  commit_ids->clear();
+  commit_ids->reserve(entries->size());
+  for (std::pair<std::string, std::string>& entry : *entries) {
+    commit_ids->push_back(std::move(entry.first));
+  }
+}
 
 std::string GetHeadKeyFor(CommitIdView head) {
   return ftl::Concatenate({kHeadPrefix, head});
@@ -247,20 +277,21 @@ std::unique_ptr<DB::Batch> DbImpl::StartBatch() {
 }
 
 Status DbImpl::GetHeads(std::vector<CommitId>* heads) {
-  return GetByPrefix(convert::ToSlice(kHeadPrefix), heads);
+  std::vector<std::pair<std::string, std::string>> entries;
+  Status status = GetEntriesByPrefix(convert::ToSlice(kHeadPrefix), &entries);
+  if (status != Status::OK) {
+    return status;
+  }
+  ExtractSortedCommitsIds(&entries, heads);
+  return status;
 }
 
-Status DbImpl::AddHead(CommitIdView head) {
-  return Put(GetHeadKeyFor(head), "");
+Status DbImpl::AddHead(CommitIdView head, int64_t timestamp) {
+  return Put(GetHeadKeyFor(head), SerializeNumber(timestamp));
 }
 
 Status DbImpl::RemoveHead(CommitIdView head) {
   return Delete(GetHeadKeyFor(head));
-}
-
-Status DbImpl::ContainsHead(const CommitId& commit_id) {
-  std::string value;
-  return Get(GetHeadKeyFor(commit_id), &value);
 }
 
 Status DbImpl::GetCommitStorageBytes(CommitIdView commit_id,
@@ -368,7 +399,7 @@ Status DbImpl::GetJournalEntries(
 
 Status DbImpl::GetJournalValueCounter(const JournalId& journal_id,
                                       ftl::StringView value,
-                                      int* counter) {
+                                      int64_t* counter) {
   std::string counter_str;
   Status s = Get(GetJournalCounterKeyFor(journal_id, value), &counter_str);
   if (s == Status::NOT_FOUND) {
@@ -378,19 +409,19 @@ Status DbImpl::GetJournalValueCounter(const JournalId& journal_id,
   if (s != Status::OK) {
     return s;
   }
-  *counter = ftl::StringToNumber<int>(counter_str);
+  *counter = DeserializeNumber<int64_t>(counter_str);
   return Status::OK;
 }
 
 Status DbImpl::SetJournalValueCounter(const JournalId& journal_id,
                                       ftl::StringView value,
-                                      int counter) {
+                                      int64_t counter) {
   FTL_DCHECK(counter >= 0);
   if (counter == 0) {
     return Delete(GetJournalCounterKeyFor(journal_id, value));
   }
   return Put(GetJournalCounterKeyFor(journal_id, value),
-             ftl::NumberToString(counter));
+             SerializeNumber(counter));
 }
 Status DbImpl::GetJournalValues(const JournalId& journal_id,
                                 std::vector<std::string>* values) {
@@ -404,17 +435,7 @@ Status DbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
   if (s != Status::OK) {
     return s;
   }
-  std::sort(entries.begin(), entries.end(),
-            [](std::pair<std::string, std::string> a,
-               std::pair<std::string, std::string> b) {
-              return ftl::StringToNumber<int64_t>(a.second) <
-                     ftl::StringToNumber<int64_t>(b.second);
-            });
-  std::vector<CommitId> result;
-  for (std::pair<std::string, std::string>& entry : entries) {
-    result.push_back(entry.first);
-  }
-  commit_ids->swap(result);
+  ExtractSortedCommitsIds(&entries, commit_ids);
   return Status::OK;
 }
 
@@ -424,8 +445,7 @@ Status DbImpl::MarkCommitIdSynced(const CommitId& commit_id) {
 
 Status DbImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
                                     int64_t timestamp) {
-  return Put(GetUnsyncedCommitKeyFor(commit_id),
-             ftl::NumberToString(timestamp));
+  return Put(GetUnsyncedCommitKeyFor(commit_id), SerializeNumber(timestamp));
 }
 
 Status DbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {

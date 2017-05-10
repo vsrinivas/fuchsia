@@ -49,18 +49,16 @@ class DB {
   // Heads.
   // Finds all head commits and replaces the contents of |heads| with their ids.
   // Returns |OK| on success or |IO_ERROR| in case of an error reading the
-  // values. It is not an error if no heads are found.
+  // values. It is not an error if no heads are found. The resulting |heads| are
+  // ordered by the timestamp given at their insertion and if identical, by
+  // their id.
   virtual Status GetHeads(std::vector<CommitId>* heads) = 0;
 
   // Adds the given |head| in the set of commit heads.
-  virtual Status AddHead(CommitIdView head) = 0;
+  virtual Status AddHead(CommitIdView head, int64_t timestamp) = 0;
 
   // Removes the given |head| from the head commits.
   virtual Status RemoveHead(CommitIdView head) = 0;
-
-  // Returns |OK| if the commit with the given |commit_id| is head commits or
-  // |NOT_FOUND| if not.
-  virtual Status ContainsHead(const CommitId& commit_id) = 0;
 
   // Commits.
   // Finds the commit with the given |commit_id| and stores its represenation in
@@ -125,12 +123,12 @@ class DB {
   // Returns the number of times the given value is refererenced.
   virtual Status GetJournalValueCounter(const JournalId& journal_id,
                                         ftl::StringView value,
-                                        int* counter) = 0;
+                                        int64_t* counter) = 0;
 
   // Sets the number of times the given value is refererenced.
   virtual Status SetJournalValueCounter(const JournalId& journal_id,
                                         ftl::StringView value,
-                                        int counter) = 0;
+                                        int64_t counter) = 0;
 
   // Returns the set of values that are refererenced in the given journal, i.e.
   // all values for which the journal value counter is a positive number.

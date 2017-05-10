@@ -27,9 +27,8 @@ class DbImpl : public DB {
   Status Init() override;
   std::unique_ptr<Batch> StartBatch() override;
   Status GetHeads(std::vector<CommitId>* heads) override;
-  Status AddHead(CommitIdView head) override;
+  Status AddHead(CommitIdView head, int64_t timestamp) override;
   Status RemoveHead(CommitIdView head) override;
-  Status ContainsHead(const CommitId& commit_id) override;
   Status GetCommitStorageBytes(CommitIdView commit_id,
                                std::string* storage_bytes) override;
   Status AddCommitStorageBytes(const CommitId& commit_id,
@@ -57,10 +56,10 @@ class DbImpl : public DB {
                             convert::ExtendedStringView key) override;
   Status GetJournalValueCounter(const JournalId& journal_id,
                                 ftl::StringView value,
-                                int* counter) override;
+                                int64_t* counter) override;
   Status SetJournalValueCounter(const JournalId& journal_id,
                                 ftl::StringView value,
-                                int counter) override;
+                                int64_t counter) override;
   Status GetJournalValues(const JournalId& journal_id,
                           std::vector<std::string>* values) override;
   Status GetJournalEntries(

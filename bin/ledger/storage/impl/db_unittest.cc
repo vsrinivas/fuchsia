@@ -70,7 +70,7 @@ TEST_F(DBTest, HeadCommits) {
   EXPECT_TRUE(heads.empty());
 
   CommitId cid = RandomId(kCommitIdSize);
-  EXPECT_EQ(Status::OK, db_.AddHead(cid));
+  EXPECT_EQ(Status::OK, db_.AddHead(cid, glue::RandUint64()));
   EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
   EXPECT_EQ(1u, heads.size());
   EXPECT_EQ(cid, heads[0]);
@@ -78,6 +78,40 @@ TEST_F(DBTest, HeadCommits) {
   EXPECT_EQ(Status::OK, db_.RemoveHead(cid));
   EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
   EXPECT_TRUE(heads.empty());
+}
+
+TEST_F(DBTest, OrderHeadCommitsByTimestamp) {
+  std::vector<int64_t> timestamps = {std::numeric_limits<int64_t>::min(),
+                                     std::numeric_limits<int64_t>::max(), 0};
+
+  for (size_t i = 0; i < 10; ++i) {
+    int64_t ts;
+    do {
+      ts = glue::RandUint64();
+    } while (std::find(timestamps.begin(), timestamps.end(), ts) !=
+             timestamps.end());
+    timestamps.push_back(ts);
+  }
+
+  auto sorted_timestamps = timestamps;
+  std::sort(sorted_timestamps.begin(), sorted_timestamps.end());
+  auto random_ordered_timestamps = timestamps;
+  std::random_shuffle(random_ordered_timestamps.begin(),
+                      random_ordered_timestamps.end());
+
+  std::map<int64_t, CommitId> commits;
+  for (auto ts : random_ordered_timestamps) {
+    commits[ts] = RandomId(kCommitIdSize);
+    EXPECT_EQ(Status::OK, db_.AddHead(commits[ts], ts));
+  }
+
+  std::vector<CommitId> heads;
+  EXPECT_EQ(Status::OK, db_.GetHeads(&heads));
+  EXPECT_EQ(timestamps.size(), heads.size());
+
+  for (size_t i = 0; i < heads.size(); ++i) {
+    EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
+  }
 }
 
 TEST_F(DBTest, Commits) {

@@ -66,7 +66,7 @@ class JournalDBImpl : public Journal {
                 const CommitId& base);
 
   Status UpdateValueCounter(ObjectIdView object_id,
-                            const std::function<int(int)>& operation);
+                            const std::function<int64_t(int64_t)>& operation);
 
   void GetParents(
       std::function<void(Status,

@@ -26,13 +26,10 @@ std::unique_ptr<DbEmptyImpl::Batch> DbEmptyImpl::StartBatch() {
 Status DbEmptyImpl::GetHeads(std::vector<CommitId>* heads) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::AddHead(CommitIdView head) {
+Status DbEmptyImpl::AddHead(CommitIdView head, int64_t timestamp) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::RemoveHead(CommitIdView head) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status DbEmptyImpl::ContainsHead(const CommitId& commit_id) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::GetCommitStorageBytes(CommitIdView commit_id,
@@ -81,12 +78,12 @@ Status DbEmptyImpl::GetJournalEntries(
 }
 Status DbEmptyImpl::GetJournalValueCounter(const JournalId& journal_id,
                                            ftl::StringView value,
-                                           int* counter) {
+                                           int64_t* counter) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::SetJournalValueCounter(const JournalId& journal_id,
                                            ftl::StringView value,
-                                           int counter) {
+                                           int64_t counter) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::GetJournalValues(const JournalId& journal_id,

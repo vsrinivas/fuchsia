@@ -95,12 +95,12 @@ void MergeResolver::CheckConflicts() {
     // No conflict.
     return;
   }
+  heads.resize(2);
   ResolveConflicts(std::move(heads));
 }
 
 void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
-  FTL_DCHECK(heads.size() >= 2);
-  FTL_DCHECK(std::is_sorted(heads.begin(), heads.end()));
+  FTL_DCHECK(heads.size() == 2);
 
   merge_in_progress_ = true;
   auto cleanup = ftl::MakeAutoCall([this] {
@@ -127,6 +127,9 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   waiter->Finalize(ftl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
       storage::Status status,
       std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
+    FTL_DCHECK(commits.size() == 2);
+    FTL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
+
     // Check if the 2 parents have the same content.
     if (commits[0]->GetRootId() == commits[1]->GetRootId()) {
       // In that case, the result must be a commit with the same content.
@@ -153,12 +156,6 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
       FTL_LOG(ERROR) << "Failed to retrieve head commits.";
       return;
     }
-    FTL_DCHECK(commits.size() >= 2);
-    std::sort(commits.begin(), commits.end(),
-              [](const std::unique_ptr<const storage::Commit>& lhs,
-                 const std::unique_ptr<const storage::Commit>& rhs) {
-                return lhs->GetTimestamp() < rhs->GetTimestamp();
-              });
 
     // Merge the first two commits using the most recent one as the base.
     auto head1 = std::move(commits[0]);

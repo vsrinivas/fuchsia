@@ -69,17 +69,17 @@ const JournalId& JournalDBImpl::GetId() const {
 
 Status JournalDBImpl::UpdateValueCounter(
     ObjectIdView object_id,
-    const std::function<int(int)>& operation) {
+    const std::function<int64_t(int64_t)>& operation) {
   // Update the counter fo untracked objects only.
   if (!page_storage_->ObjectIsUntracked(object_id)) {
     return Status::OK;
   }
-  int counter;
+  int64_t counter;
   Status s = db_->GetJournalValueCounter(id_, object_id, &counter);
   if (s != Status::OK) {
     return s;
   }
-  int next_counter = operation(counter);
+  int64_t next_counter = operation(counter);
   FTL_DCHECK(next_counter >= 0);
   s = db_->SetJournalValueCounter(id_, object_id, next_counter);
   return s;
@@ -101,9 +101,9 @@ Status JournalDBImpl::Put(convert::ExtendedStringView key,
     return s;
   }
   if (object_id != prev_id) {
-    UpdateValueCounter(object_id, [](int counter) { return counter + 1; });
+    UpdateValueCounter(object_id, [](int64_t counter) { return counter + 1; });
     if (prev_entry_status == Status::OK) {
-      UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+      UpdateValueCounter(prev_id, [](int64_t counter) { return counter - 1; });
     }
   }
   return batch->Execute();
@@ -124,7 +124,7 @@ Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   }
 
   if (prev_entry_status == Status::OK) {
-    UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+    UpdateValueCounter(prev_id, [](int64_t counter) { return counter - 1; });
   }
   return batch->Execute();
 }

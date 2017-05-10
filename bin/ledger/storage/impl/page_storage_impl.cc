@@ -328,7 +328,7 @@ void PageStorageImpl::Init(std::function<void(Status)> callback) {
     return;
   }
   if (heads.empty()) {
-    s = db_.AddHead(kFirstPageCommitId);
+    s = db_.AddHead(kFirstPageCommitId, 0);
     if (s != Status::OK) {
       callback(s);
       return;
@@ -714,7 +714,7 @@ void PageStorageImpl::AddCommits(
     }
 
     // Update heads.
-    s = db_.AddHead(commit->GetId());
+    s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
     if (s != Status::OK) {
       callback(s);
       return;
