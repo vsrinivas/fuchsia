@@ -30,10 +30,10 @@ constexpr char kManifest[] = "manifest";
 constexpr char kFile[] = "file";
 constexpr char kOuput[] = "output";
 
-constexpr char kCreateUsuage[] =
+constexpr char kCreateUsage[] =
     "create --archive=<archive> --manifest=<manifest>";
-constexpr char kListUsuage[] = "list --archive=<archive>";
-constexpr char kExtractFileUsuage[] =
+constexpr char kListUsage[] = "list --archive=<archive>";
+constexpr char kExtractFileUsage[] =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
 bool GetOptionValue(const ftl::CommandLine& command_line,
@@ -43,8 +43,8 @@ bool GetOptionValue(const ftl::CommandLine& command_line,
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
             "error: Missing --%s argument.\n"
-            "Usuage: %s %s\n",
-            option, command_line.argv0().c_str(), usage);
+            "Usuage: far %s\n",
+            option, usage);
     return false;
   }
   return true;
@@ -52,11 +52,11 @@ bool GetOptionValue(const ftl::CommandLine& command_line,
 
 int Create(const ftl::CommandLine& command_line) {
   std::string archive_path;
-  if (!GetOptionValue(command_line, kArchive, kCreateUsuage, &archive_path))
+  if (!GetOptionValue(command_line, kArchive, kCreateUsage, &archive_path))
     return -1;
 
   std::string manifest_path;
-  if (!GetOptionValue(command_line, kManifest, kCreateUsuage, &manifest_path))
+  if (!GetOptionValue(command_line, kManifest, kCreateUsage, &manifest_path))
     return -1;
 
   archive::ArchiveWriter writer;
@@ -71,7 +71,7 @@ int Create(const ftl::CommandLine& command_line) {
 
 int List(const ftl::CommandLine& command_line) {
   std::string archive_path;
-  if (!GetOptionValue(command_line, kArchive, kListUsuage, &archive_path))
+  if (!GetOptionValue(command_line, kArchive, kListUsage, &archive_path))
     return -1;
 
   ftl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
@@ -88,16 +88,15 @@ int List(const ftl::CommandLine& command_line) {
 
 int ExtractFile(const ftl::CommandLine& command_line) {
   std::string archive_path;
-  if (!GetOptionValue(command_line, kArchive, kExtractFileUsuage,
-                      &archive_path))
+  if (!GetOptionValue(command_line, kArchive, kExtractFileUsage, &archive_path))
     return -1;
 
   std::string file_path;
-  if (!GetOptionValue(command_line, kFile, kExtractFileUsuage, &file_path))
+  if (!GetOptionValue(command_line, kFile, kExtractFileUsage, &file_path))
     return -1;
 
   std::string output_path;
-  if (!GetOptionValue(command_line, kOuput, kExtractFileUsuage, &output_path))
+  if (!GetOptionValue(command_line, kOuput, kExtractFileUsage, &output_path))
     return -1;
 
   ftl::UniqueFD fd(open(archive_path.c_str(), O_RDONLY));
@@ -111,21 +110,11 @@ int ExtractFile(const ftl::CommandLine& command_line) {
   return 0;
 }
 
-int RunCommand(const ftl::CommandLine& command_line) {
-  if (command_line.positional_args().empty()) {
-    fprintf(stderr,
-            "error: Missing command.\n"
-            "Usuage: %s <command> ...\n"
-            "  where <command> is %s.\n",
-            command_line.argv0().c_str(), kKnownCommands);
-    return -1;
-  }
-
-  const std::string& command = command_line.positional_args().front();
+int RunCommand(std::string command, const ftl::CommandLine& command_line) {
   if (command == kCreate) {
     return archive::Create(command_line);
   } else if (command == kList) {
-    return archive::Create(command_line);
+    return archive::List(command_line);
   } else if (command == kExtractFile) {
     return archive::ExtractFile(command_line);
   } else {
@@ -140,5 +129,15 @@ int RunCommand(const ftl::CommandLine& command_line) {
 }  // namespace archive
 
 int main(int argc, char** argv) {
-  return archive::RunCommand(ftl::CommandLineFromArgcArgv(argc, argv));
+  if (argc < 2) {
+    fprintf(stderr,
+            "error: Missing command.\n"
+            "Usuage: far <command> ...\n"
+            "  where <command> is %s.\n",
+            archive::kKnownCommands);
+    return -1;
+  }
+
+  return archive::RunCommand(argv[1],
+                             ftl::CommandLineFromArgcArgv(argc - 1, argv + 1));
 }
