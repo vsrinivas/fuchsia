@@ -5,6 +5,7 @@
 package wlan
 
 import (
+	"apps/netstack/eth"
 	mlme "apps/wlan/services/wlan_mlme"
 	bindings "fidl/bindings"
 	"fmt"
@@ -31,17 +32,17 @@ func NewClient(path string) (*Client, error) {
 	if m == nil {
 		return nil, fmt.Errorf("wlan: no mxio for %s fd: %d", path, f.Fd())
 	}
-	info, err := ioctlEthGetInfo(m)
+	info, err := eth.IoctlGetInfo(m)
 	if err != nil {
 		return nil, err
 	}
 
-	if info.features&ethFeatureWlan == 0 {
+	if info.Features&eth.FeatureWlan == 0 {
 		return nil, nil
 	}
 
 	log.Printf("found wlan device %q", path)
-	ch, err := ioctlWlanGetChannel(m)
+	ch, err := ioctlGetChannel(m)
 	if err != nil {
 		return nil, fmt.Errorf("could not get channel: %v", err)
 	}
