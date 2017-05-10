@@ -472,7 +472,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
         return ERR_INTERNAL;
     }
 
-    log(INFO, "removing device %p, ios %p\n", dev, ios);
+    log(DEVLC, "removing device %p, ios %p\n", dev, ios);
 
     // Make this iostate inactive (stop accepting RPCs for it)
     //

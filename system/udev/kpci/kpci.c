@@ -237,5 +237,11 @@ static mx_driver_ops_t kpci_driver_ops = {
 #endif
 };
 
+#if NEW_BUS_DRIVER
+MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
+MAGENTA_DRIVER_END(pci)
+#else
 MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 0)
 MAGENTA_DRIVER_END(pci)
+#endif

@@ -91,6 +91,7 @@ static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 
 static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
+    .protocol_id = MX_PROTOCOL_ROOT,
     .name = "root",
     .args = "root,,",
     .children = LIST_INITIAL_VALUE(root_device.children),
@@ -249,7 +250,7 @@ static mx_status_t dc_new_devhost(const char* name, devhost_t** out) {
 }
 
 static void dc_release_devhost(devhost_t* dh) {
-    log(INFO, "devcoord: release host %p\n", dh);
+    log(DEVLC, "devcoord: release host %p\n", dh);
     dh->refcount--;
     if (dh->refcount > 0) {
         return;
@@ -838,8 +839,7 @@ static void dc_handle_new_device(device_t* dev) {
 }
 
 // device binding program that pure (parentless)
-// misc devices use to get published in the
-// primary devhost
+// misc devices use to get published in the misc devhost
 static struct mx_bind_inst misc_device_binding =
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT);
 
@@ -848,17 +848,25 @@ static bool is_misc_driver(driver_t* drv) {
         (memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding)) == 0);
 }
 
+// device binding program that special root-level
+// devices use to get published in the root devhost
+static struct mx_bind_inst root_device_binding =
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT);
+
+static bool is_root_driver(driver_t* drv) {
+    return (drv->binding_size == sizeof(root_device_binding)) &&
+        (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
+}
+
 void coordinator_new_driver(driver_t* ctx) {
     //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
     list_add_tail(&list_drivers, &ctx->node);
 
-    if (!strcmp(ctx->name, "pci")) {
-        log(INFO, "driver: %s @ %s is PCI\n", ctx->name, ctx->libname);
+    if (is_root_driver(ctx)) {
         dc_attempt_bind(ctx, &root_device);
         return;
     }
     if (is_misc_driver(ctx)) {
-        log(INFO, "driver: %s @ %s is MISC\n", ctx->name, ctx->libname);
         dc_attempt_bind(ctx, &misc_device);
         return;
     }
@@ -901,12 +909,6 @@ void coordinator(void) {
     acpi_init();
 
     do_publish(&root_device, &misc_device);
-
-    // bind "built-in" root devices first
-    driver_t drv = {
-        .libname = "driver/root.so",
-    };
-    dc_attempt_bind(&drv, &root_device);
 
     enumerate_drivers();
 

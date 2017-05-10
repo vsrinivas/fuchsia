@@ -281,11 +281,11 @@ static mx_status_t device_validate(mx_device_t* dev) {
         printf("device add: %p(%s): NULL ops\n", dev, dev->name);
         return ERR_INVALID_ARGS;
     }
-    if (dev->protocol_id == MX_PROTOCOL_MISC_PARENT) {
-        // This protocol is only allowed for the special
-        // singleton misc parent device.
+    if ((dev->protocol_id == MX_PROTOCOL_MISC_PARENT) ||
+        (dev->protocol_id == MX_PROTOCOL_ROOT)) {
+        // These protocols is only allowed for the special
+        // singleton misc or root parent devices.
 #if DEVHOST_V2
-        printf("INVAL: MISC!\n");
         return ERR_INVALID_ARGS;
 #else
         if (dev != driver_get_misc_device()) {
