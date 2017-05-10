@@ -9,6 +9,7 @@ group("test-apps") {
     ":crash-test",
     ":exit-test",
     ":loop-test",
+    ":syscall-test",
     ":thread-test",
   ]
 }
@@ -34,6 +35,18 @@ executable("loop-test") {
 
   sources = [
     "loop-test.c",
+  ]
+}
+
+executable("syscall-test") {
+  testonly = true
+
+  sources = [
+    "syscall-test.c",
+  ]
+
+  libs = [
+    "magenta",
   ]
 }
 
