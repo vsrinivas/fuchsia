@@ -23,9 +23,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/minfs-check.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
     system/ulib/fs \
     system/ulib/mxalloc \
     system/ulib/mxtl \
+    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/bitmap \

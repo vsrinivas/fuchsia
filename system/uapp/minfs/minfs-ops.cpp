@@ -20,7 +20,7 @@
 #endif
 
 #include "minfs-private.h"
-#include "writeback-queue.h"
+#include "block-txn.h"
 
 namespace {
 
@@ -62,7 +62,7 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
 
 namespace minfs {
 
-void VnodeMinfs::InodeSync(uint32_t flags) {
+void VnodeMinfs::InodeSync(WriteTxn* txn, uint32_t flags) {
     // by default, c/mtimes are not updated to current time
     if (flags != kMxFsSyncDefault) {
         mx_time_t cur_time = minfs_gettime_utc();
@@ -75,13 +75,17 @@ void VnodeMinfs::InodeSync(uint32_t flags) {
         }
     }
 
-    fs_->InodeSync(ino_, &inode_);
+    fs_->InodeSync(txn, ino_, &inode_);
 }
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
-mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
-    WritebackQueue<> txn(fs_->bc_, fs_->block_map_.StorageUnsafe()->GetData());
+mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
+#ifdef __Fuchsia__
+    auto bbm_id = fs_->block_map_vmoid_;
+#else
+    auto bbm_id = fs_->block_map_.StorageUnsafe()->GetData();
+#endif
 
     bool doSync = false;
 
@@ -94,7 +98,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
 
         fs_->block_map_.Clear(inode_.dnum[bno], inode_.dnum[bno] + 1);
         uint32_t bitblock = inode_.dnum[bno] / kMinfsBlockBits;
-        txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
+        txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
         inode_.dnum[bno] = 0;
         inode_.block_count--;
         doSync = true;
@@ -140,7 +144,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
 
             fs_->block_map_.Clear(entry[direct], entry[direct] + 1);
             uint32_t bitblock = entry[direct] / kMinfsBlockBits;
-            txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
+            txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
             entry[direct] = 0;
             iflags = kBlockDirty;
             inode_.block_count--;
@@ -148,14 +152,18 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         // only update the indirect block if an entry was deleted
         if (iflags & kBlockDirty) {
             doSync = true;
+#ifdef __Fuchsia__
+            txn->Enqueue(vmoid_indirect_, indirect, inode_.inum[indirect], 1);
+#else
             fs_->bc_->Writeblk(inode_.inum[indirect], entry);
+#endif
         }
 
         if (delete_indirect)  {
             // release the direct block itself
             fs_->block_map_.Clear(inode_.inum[indirect], inode_.inum[indirect] + 1);
             uint32_t bitblock = inode_.inum[indirect] / kMinfsBlockBits;
-            txn.EnqueueDirty(bitblock, fs_->info_.abm_block + bitblock);
+            txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
             inode_.inum[indirect] = 0;
             inode_.block_count--;
             doSync = true;
@@ -163,26 +171,12 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
     }
 
     if (doSync) {
-        InodeSync(kMxFsSyncDefault);
+        InodeSync(txn, kMxFsSyncDefault);
     }
     return NO_ERROR;
 }
 
 #ifdef __Fuchsia__
-// Read data from disk at block 'bno', into the 'nth' logical block of the vmo.
-mx_status_t VnodeMinfs::FillBlock(mx_handle_t vmo, uint32_t n, uint32_t bno) {
-    // TODO(smklein): read directly from block device into vmo; no need to copy
-    // into an intermediate buffer.
-    char bdata[kMinfsBlockSize];
-    if (fs_->bc_->Readblk(bno, bdata)) {
-        return ERR_IO;
-    }
-    mx_status_t status = vmo_write_exact(vmo, bdata, n * kMinfsBlockSize, kMinfsBlockSize);
-    if (status != NO_ERROR) {
-        return status;
-    }
-    return NO_ERROR;
-}
 
 mx_status_t VnodeMinfs::InitIndirectVmo() {
     if (vmo_indirect_ != nullptr) {
@@ -194,18 +188,21 @@ mx_status_t VnodeMinfs::InitIndirectVmo() {
     if ((status = MappedVmo::Create(size, &vmo_indirect_)) != NO_ERROR) {
         return status;
     }
+    if ((status = fs_->bc_->AttachVmo(vmo_indirect_->GetVmo(),
+                                      &vmoid_indirect_)) != NO_ERROR) {
+        vmo_indirect_ = nullptr;
+        return status;
+    }
 
+    ReadTxn txn(fs_->bc_);
     for (uint32_t i = 0; i < kMinfsIndirect; i++) {
         uint32_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
-            if ((status = FillBlock(vmo_indirect_->GetVmo(), i, ibno)) != NO_ERROR) {
-                vmo_indirect_.reset();
-                return status;
-            }
+            txn.Enqueue(vmoid_indirect_, i, ibno, 1);
         }
     }
-    return NO_ERROR;
+    return txn.Flush();
 }
 
 // Since we cannot yet register the filesystem as a paging service (and cleanly
@@ -221,20 +218,25 @@ mx_status_t VnodeMinfs::InitVmo() {
     }
 
     mx_status_t status;
-    if ((status = mx_vmo_create(mxtl::roundup(inode_.size, kMinfsBlockSize), 0, &vmo_)) != NO_ERROR) {
+    if ((status = mx_vmo_create(mxtl::roundup(inode_.size, kMinfsBlockSize), 0,
+                                &vmo_)) != NO_ERROR) {
         error("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
+
+    if ((status = fs_->bc_->AttachVmo(vmo_, &vmoid_)) != NO_ERROR) {
+        mx_handle_close(vmo_);
+        return status;
+    }
+
+    ReadTxn txn(fs_->bc_);
 
     // Initialize all direct blocks
     uint32_t bno;
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
-            if ((status = FillBlock(vmo_, d, bno)) != NO_ERROR) {
-                error("Failed to fill bno %u; error: %d\n", bno, status);
-                goto fail_close_direct;
-            }
+            txn.Enqueue(vmoid_, d, bno, 1);
         }
     }
 
@@ -243,9 +245,9 @@ mx_status_t VnodeMinfs::InitVmo() {
         uint32_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
+
             // Only initialize the indirect vmo if it is being used.
             if ((status = InitIndirectVmo()) != NO_ERROR) {
-                error("Failed to init indirect vmo, error: %d\n", status);
                 goto fail_close_direct;
             }
 
@@ -258,18 +260,13 @@ mx_status_t VnodeMinfs::InitVmo() {
                 if ((bno = ientry[j]) != 0) {
                     fs_->ValidateBno(bno);
                     uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
-                    if ((status = FillBlock(vmo_, n, bno)) != NO_ERROR) {
-                        error("Failed to fill indirect: %d\n", status);
-                        goto fail_close_indirect;
-                    }
+                    txn.Enqueue(vmoid_, n, bno, 1);
                 }
             }
         }
     }
 
-    return NO_ERROR;
-fail_close_indirect:
-    vmo_indirect_.reset();
+    return txn.Flush();
 fail_close_direct:
     mx_handle_close(vmo_);
     return status;
@@ -277,18 +274,17 @@ fail_close_direct:
 #endif
 
 // Get the bno corresponding to the nth logical block within the file.
-mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
+mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
     uint32_t hint = 0;
     // direct blocks are simple... is there an entry in dnum[]?
     if (n < kMinfsDirect) {
-        if (((*bno = inode_.dnum[n]) == 0) && alloc) {
-            mx_status_t status = fs_->BlockNew(hint, bno);
+        if (((*bno = inode_.dnum[n]) == 0) && (txn != nullptr)) {
+            mx_status_t status = fs_->BlockNew(txn, hint, bno);
             if (status != NO_ERROR) {
                 return status;
             }
             inode_.dnum[n] = *bno;
             inode_.block_count++;
-            InodeSync(kMxFsSyncDefault);
         }
         fs_->ValidateBno(*bno);
         return NO_ERROR;
@@ -321,12 +317,12 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
 
     // look up the indirect bno
     if ((ibno = inode_.inum[i]) == 0) {
-        if (!alloc) {
+        if (txn == nullptr) {
             *bno = 0;
             return NO_ERROR;
         }
         // allocate a new indirect block
-        if ((status = fs_->BlockNew(hint, &ibno)) != NO_ERROR) {
+        if ((status = fs_->BlockNew(txn, hint, &ibno)) != NO_ERROR) {
             return status;
         }
 #ifdef __Fuchsia__
@@ -352,9 +348,9 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
     uint32_t* ientry = reinterpret_cast<uint32_t*>(idata);
 #endif
 
-    if (((*bno = ientry[j]) == 0) && alloc) {
+    if (((*bno = ientry[j]) == 0) && (txn != nullptr)) {
         // allocate a new block
-        status = fs_->BlockNew(hint, bno);
+        status = fs_->BlockNew(txn, hint, bno);
         if (status != NO_ERROR) {
             return status;
         }
@@ -365,8 +361,12 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
 
     if (iflags & kBlockDirty) {
         // Write back the indirect block if requested
+#ifdef __Fuchsia__
+        txn->Enqueue(vmoid_indirect_, i, ibno, 1);
+#else
         fs_->bc_->Writeblk(ibno, ientry);
-        InodeSync(kMxFsSyncDefault);
+#endif
+        InodeSync(txn, kMxFsSyncDefault);
     }
 
     fs_->ValidateBno(*bno);
@@ -391,14 +391,16 @@ mx_status_t VnodeMinfs::ReadExactInternal(void* data, size_t len, size_t off) {
     return NO_ERROR;
 }
 
-mx_status_t VnodeMinfs::WriteExactInternal(const void* data, size_t len, size_t off) {
+mx_status_t VnodeMinfs::WriteExactInternal(WriteTxn* txn, const void* data,
+                                           size_t len, size_t off) {
     size_t actual;
-    mx_status_t status = WriteInternal(data, len, off, &actual);
+    mx_status_t status = WriteInternal(txn, data, len, off, &actual);
     if (status != NO_ERROR) {
         return status;
     } else if (actual != len) {
         return ERR_IO;
     }
+    InodeSync(txn, kMxFsSyncMtime);
     return NO_ERROR;
 }
 
@@ -427,8 +429,8 @@ static mx_status_t do_next_dirent(minfs_dirent_t* de, DirectoryOffset* offs) {
     return DIR_CB_NEXT;
 }
 
-static mx_status_t cb_dir_find(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de, DirArgs* args,
-                               DirectoryOffset* offs) {
+static mx_status_t cb_dir_find(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de,
+                               DirArgs* args, DirectoryOffset* offs) {
     if ((de->ino != 0) && (de->namelen == args->len) &&
         (!memcmp(de->name, args->name, args->len))) {
         args->ino = de->ino;
@@ -450,7 +452,9 @@ bool VnodeMinfs::CanUnlink() const {
     return true;
 }
 
-mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dirent_t* de, DirectoryOffset* offs) {
+mx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
+                                    mxtl::RefPtr<VnodeMinfs> childvn,
+                                    minfs_dirent_t* de, DirectoryOffset* offs) {
     // Coalesce the current dirent with the previous/next dirent, if they
     // (1) exist and (2) are free.
     size_t off_prev = offs->off_prev;
@@ -502,14 +506,14 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
     de->reclen = static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) |
         (de->reclen & kMinfsReclenLast);
     // Erase dirent (replace with 'empty' dirent)
-    if ((status = WriteExactInternal(de, MINFS_DIRENT_SIZE, off)) != NO_ERROR) {
+    if ((status = WriteExactInternal(txn, de, MINFS_DIRENT_SIZE, off)) != NO_ERROR) {
         return status;
     }
 
     if (de->reclen & kMinfsReclenLast) {
         // Truncating the directory merely removed unused space; if it fails,
         // the directory contents are still valid.
-        TruncateInternal(off + MINFS_DIRENT_SIZE);
+        TruncateInternal(txn, off + MINFS_DIRENT_SIZE);
     }
 
     inode_.dirent_count--;
@@ -518,11 +522,11 @@ mx_status_t VnodeMinfs::UnlinkChild(mxtl::RefPtr<VnodeMinfs> childvn, minfs_dire
         // Child directory had '..' which pointed to parent directory
         inode_.link_count--;
     }
-    childvn->RemoveInodeLink();
+    childvn->RemoveInodeLink(txn);
     return DIR_CB_SAVE_SYNC;
 }
 
-void VnodeMinfs::RemoveInodeLink() {
+void VnodeMinfs::RemoveInodeLink(WriteTxn* txn) {
     // This effectively 'unlinks' the target node without deleting the direntry
     inode_.link_count--;
     if (MinfsMagicType(inode_.magic) == kMinfsTypeDir) {
@@ -535,7 +539,7 @@ void VnodeMinfs::RemoveInodeLink() {
         }
     }
 
-    InodeSync(kMxFsSyncMtime);
+    InodeSync(txn, kMxFsSyncMtime);
 }
 
 // caller is expected to prevent unlink of "." or ".."
@@ -559,7 +563,7 @@ static mx_status_t cb_dir_unlink(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
     if (!vn->CanUnlink()) {
         return ERR_BAD_STATE;
     }
-    return vndir->UnlinkChild(mxtl::move(vn), de, offs);
+    return vndir->UnlinkChild(args->txn, mxtl::move(vn), de, offs);
 }
 
 // same as unlink, but do not validate vnode
@@ -575,7 +579,7 @@ static mx_status_t cb_dir_force_unlink(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dir
     if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
         return status;
     }
-    return vndir->UnlinkChild(mxtl::move(vn), de, offs);
+    return vndir->UnlinkChild(args->txn, mxtl::move(vn), de, offs);
 }
 
 // Given a (name, inode, type) combination:
@@ -614,10 +618,10 @@ static mx_status_t cb_dir_attempt_rename(mxtl::RefPtr<VnodeMinfs> vndir, minfs_d
     // the parent (link count of 1), but the new directory will ALSO have a ".."
     // entry, making the rename operation idempotent w.r.t. the parent link
     // count.
-    vn->RemoveInodeLink();
+    vn->RemoveInodeLink(args->txn);
 
     de->ino = args->ino;
-    status = vndir->WriteExactInternal(de, DirentSize(de->namelen), offs->off);
+    status = vndir->WriteExactInternal(args->txn, de, DirentSize(de->namelen), offs->off);
     if (status != NO_ERROR) {
         return status;
     }
@@ -632,19 +636,24 @@ static mx_status_t cb_dir_update_inode(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dir
     }
 
     de->ino = args->ino;
-    mx_status_t status = vndir->WriteExactInternal(de, DirentSize(de->namelen), offs->off);
+    mx_status_t status = vndir->WriteExactInternal(args->txn, de,
+                                                   DirentSize(de->namelen),
+                                                   offs->off);
     if (status != NO_ERROR) {
         return status;
     }
     return DIR_CB_SAVE_SYNC;
 }
 
-static mx_status_t add_dirent(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* de, DirArgs* args, size_t off) {
+static mx_status_t add_dirent(mxtl::RefPtr<VnodeMinfs> vndir,
+                              minfs_dirent_t* de, DirArgs* args, size_t off) {
     de->ino = args->ino;
     de->type = static_cast<uint8_t>(args->type);
     de->namelen = static_cast<uint8_t>(args->len);
     memcpy(de->name, args->name, args->len);
-    mx_status_t status = vndir->WriteExactInternal(de, DirentSize(de->namelen), off);
+    mx_status_t status = vndir->WriteExactInternal(args->txn, de,
+                                                   DirentSize(de->namelen),
+                                                   off);
     if (status != NO_ERROR) {
         return status;
     }
@@ -679,7 +688,9 @@ static mx_status_t cb_dir_append(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
         // shrink existing entry
         bool was_last_record = de->reclen & kMinfsReclenLast;
         de->reclen = size;
-        mx_status_t status = vndir->WriteExactInternal(de, DirentSize(de->namelen), offs->off);
+        mx_status_t status = vndir->WriteExactInternal(args->txn, de,
+                                                       DirentSize(de->namelen),
+                                                       offs->off);
         if (status != NO_ERROR) {
             return status;
         }
@@ -704,9 +715,7 @@ static mx_status_t cb_dir_append(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
 //  'offs': Offset info about where in the directory this direntry is located.
 //          Since 'func' may create / remove surrounding dirents, it is responsible for
 //          updating the offset information to access the next dirent.
-mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args,
-                                      mx_status_t (*func)(mxtl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
-                                                          DirArgs*, DirectoryOffset*)) {
+mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) {
     char data[kMinfsMaxDirentSize];
     minfs_dirent_t* de = (minfs_dirent_t*) data;
     DirectoryOffset offs = {
@@ -728,7 +737,7 @@ mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args,
             break;
         case DIR_CB_SAVE_SYNC:
             inode_.seq_num++;
-            InodeSync(kMxFsSyncMtime);
+            InodeSync(args->txn, kMxFsSyncMtime);
             return NO_ERROR;
         case DIR_CB_DONE:
         default:
@@ -752,6 +761,11 @@ VnodeMinfs::~VnodeMinfs() {
     fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
     if (vmo_ != MX_HANDLE_INVALID) {
+        block_fifo_request_t request;
+        request.txnid = fs_->bc_->TxnId();
+        request.vmoid = vmoid_;
+        request.opcode = BLOCKIO_CLOSE_VMO;
+        fs_->bc_->Txn(&request, 1);
         mx_handle_close(vmo_);
     }
 #endif
@@ -810,7 +824,7 @@ mx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
         }
 
         uint32_t bno;
-        if ((status = GetBno(n, &bno, false)) != NO_ERROR) {
+        if ((status = GetBno(nullptr, n, &bno)) != NO_ERROR) {
             return status;
         }
         if (bno != 0) {
@@ -839,19 +853,21 @@ ssize_t VnodeMinfs::Write(const void* data, size_t len, size_t off) {
     if (IsDirectory()) {
         return ERR_NOT_FILE;
     }
+    WriteTxn txn(fs_->bc_);
     size_t actual;
-    mx_status_t status = WriteInternal(data, len, off, &actual);
+    mx_status_t status = WriteInternal(&txn, data, len, off, &actual);
     if (status != NO_ERROR) {
         return status;
     }
     if (actual != 0) {
-        InodeSync(kMxFsSyncMtime);  // Successful writes updates mtime
+        InodeSync(&txn, kMxFsSyncMtime);  // Successful writes updates mtime
     }
     return actual;
 }
 
 // Internal write. Usable on directories.
-mx_status_t VnodeMinfs::WriteInternal(const void* data, size_t len, size_t off, size_t* actual) {
+mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
+                                      size_t len, size_t off, size_t* actual) {
     if (len == 0) {
         *actual = 0;
         return NO_ERROR;
@@ -885,38 +901,21 @@ mx_status_t VnodeMinfs::WriteInternal(const void* data, size_t len, size_t off, 
             inode_.size = static_cast<uint32_t>(new_size);
         }
 
-        // TODO(smklein): If a failure occurs after writing to the VMO, but
-        // before updating the data to disk, then our in-memory representation
-        // of the file may not be consistent with the on-disk representation of
-        // the file. As a consequence, an error is returned (ERR_IO) rather than
-        // doing a partial read.
-
         // Update this block of the in-memory VMO
         if ((status = vmo_write_exact(vmo_, data, xfer_off, xfer)) != NO_ERROR) {
             return ERR_IO;
         }
 
         // Update this block on-disk
-        char bdata[kMinfsBlockSize];
-        // TODO(smklein): Can we write directly from the VMO to the block device,
-        // preventing the need for a 'bdata' variable?
-        if (xfer != kMinfsBlockSize) {
-            if (vmo_read_exact(vmo_, bdata, n * kMinfsBlockSize, kMinfsBlockSize) != NO_ERROR) {
-                return ERR_IO;
-            }
-        }
-        const void* wdata = (xfer != kMinfsBlockSize) ? bdata : data;
         uint32_t bno;
-        if ((status = GetBno(n, &bno, true)) != NO_ERROR) {
+        if ((status = GetBno(txn, n, &bno)) != NO_ERROR) {
             return status;
         }
         assert(bno != 0);
-        if (fs_->bc_->Writeblk(bno, wdata)) {
-            return ERR_IO;
-        }
+        txn->Enqueue(vmoid_, n, bno, 1);
 #else
         uint32_t bno;
-        if ((status = GetBno(n, &bno, true)) != NO_ERROR) {
+        if ((status = GetBno(txn, n, &bno)) != NO_ERROR) {
             goto done;
         }
         assert(bno != 0);
@@ -975,7 +974,8 @@ mx_status_t VnodeMinfs::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
     return LookupInternal(out, name, len);
 }
 
-mx_status_t VnodeMinfs::LookupInternal(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+mx_status_t VnodeMinfs::LookupInternal(mxtl::RefPtr<fs::Vnode>* out,
+                                       const char* name, size_t len) {
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;
@@ -1018,7 +1018,8 @@ mx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
     }
     if (dirty) {
         // write to disk, but don't overwrite the time
-        InodeSync(kMxFsSyncDefault);
+        WriteTxn txn(fs_->bc_);
+        InodeSync(&txn, kMxFsSyncDefault);
     }
     return NO_ERROR;
 }
@@ -1155,9 +1156,10 @@ mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
     // creating a directory?
     uint32_t type = S_ISDIR(mode) ? kMinfsTypeDir : kMinfsTypeFile;
 
+    WriteTxn txn(fs_->bc_);
     // mint a new inode and vnode for it
     mxtl::RefPtr<VnodeMinfs> vn;
-    if ((status = fs_->VnodeNew(&vn, type)) < 0) {
+    if ((status = fs_->VnodeNew(&txn, &vn, type)) < 0) {
         return status;
     }
 
@@ -1166,17 +1168,18 @@ mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
         char bdata[DirentSize(1) + DirentSize(2)];
         minfs_dir_init(bdata, vn->ino_, ino_);
         size_t expected = DirentSize(1) + DirentSize(2);
-        if (vn->WriteExactInternal(bdata, expected, 0) != NO_ERROR) {
+        if (vn->WriteExactInternal(&txn, bdata, expected, 0) != NO_ERROR) {
             return ERR_IO;
         }
         vn->inode_.dirent_count = 2;
-        vn->InodeSync(kMxFsSyncDefault);
+        vn->InodeSync(&txn, kMxFsSyncDefault);
     }
 
     // add directory entry for the new child node
     args.ino = vn->ino_;
     args.type = type;
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
+    args.txn = &txn;
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;
     }
@@ -1223,10 +1226,12 @@ mx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
     if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
         return ERR_BAD_STATE;
     }
+    WriteTxn txn(fs_->bc_);
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;
     args.type = must_be_dir ? kMinfsTypeDir : 0;
+    args.txn = &txn;
     return ForEachDirent(&args, cb_dir_unlink);
 }
 
@@ -1235,17 +1240,20 @@ mx_status_t VnodeMinfs::Truncate(size_t len) {
         return ERR_NOT_FILE;
     }
 
-    mx_status_t status = TruncateInternal(len);
+    WriteTxn txn(fs_->bc_);
+    mx_status_t status = TruncateInternal(&txn, len);
     if (status == NO_ERROR) {
         // Successful truncates update inode
-        InodeSync(kMxFsSyncMtime);
+        InodeSync(&txn, kMxFsSyncMtime);
     }
     return status;
 }
 
-mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
+mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
     mx_status_t r = 0;
 #ifdef __Fuchsia__
+    // TODO(smklein): We should only init up to 'len'; no need
+    // to read in the portion of a large file we plan on deleting.
     if (InitVmo() != NO_ERROR) {
         return ERR_IO;
     }
@@ -1260,7 +1268,7 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
         if (trunc_bno <= bno) {
             uint32_t start_bno = static_cast<uint32_t>((len % kMinfsBlockSize == 0) ?
                                                        trunc_bno : trunc_bno + 1);
-            if ((r = BlocksShrink(start_bno)) < 0) {
+            if ((r = BlocksShrink(txn, start_bno)) < 0) {
                 return r;
             }
 
@@ -1273,7 +1281,7 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
             uint32_t bno;
-            if (GetBno(static_cast<uint32_t>(len / kMinfsBlockSize), &bno, false) != NO_ERROR) {
+            if (GetBno(nullptr, static_cast<uint32_t>(len / kMinfsBlockSize), &bno) != NO_ERROR) {
                 return ERR_IO;
             }
             if (bno != 0) {
@@ -1307,7 +1315,7 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
             return ERR_INVALID_ARGS;
         }
         char zero = 0;
-        if ((r = WriteExactInternal(&zero, 1, len - 1)) != NO_ERROR) {
+        if ((r = WriteExactInternal(txn, &zero, 1, len - 1)) != NO_ERROR) {
             return r;
         }
     }
@@ -1386,6 +1394,8 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
 
     // if the entry for 'newname' exists, make sure it can be replaced by
     // the vnode behind 'oldname'.
+    WriteTxn txn(fs_->bc_);
+    args.txn = &txn;
     args.name = newname;
     args.len = newlen;
     args.ino = oldvn->ino_;
@@ -1458,16 +1468,18 @@ mx_status_t VnodeMinfs::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnod
         return (status == NO_ERROR) ? ERR_ALREADY_EXISTS : status;
     }
 
+    WriteTxn txn(fs_->bc_);
     args.ino = target->ino_;
     args.type = kMinfsTypeFile; // We can't hard link directories
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));
+    args.txn = &txn;
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;
     }
 
     // We have successfully added the vn to a new location. Increment the link count.
     target->inode_.link_count++;
-    target->InodeSync(kMxFsSyncDefault);
+    target->InodeSync(&txn, kMxFsSyncDefault);
 
     return NO_ERROR;
 }

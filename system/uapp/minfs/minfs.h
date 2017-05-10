@@ -11,6 +11,7 @@
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/type_support.h>
 #include <mxtl/unique_free_ptr.h>
 
 #include <magenta/types.h>
@@ -23,6 +24,7 @@
 #include "misc.h"
 
 #ifdef __Fuchsia__
+#include <block-client/client.h>
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
@@ -244,12 +246,17 @@ public:
 
     uint32_t Maxblk() const { return blockmax_; };
 
+#ifdef __Fuchsia__
+    mx_status_t AttachVmo(mx_handle_t vmo, vmoid_t* out);
+    mx_status_t Txn(block_fifo_request_t* requests, size_t count) {
+        return block_fifo_txn(fifo_client_, requests, count);
+    }
+    txnid_t TxnId() const { return txnid_; }
+#endif
+
     // acquire a block, reading from disk if necessary,
     // returning a handle and a pointer to the data
     mxtl::RefPtr<BlockNode> Get(uint32_t bno);
-    // acquire a block, not reading from disk, marking dirty,
-    // and clearing to all 0s
-    mxtl::RefPtr<BlockNode> GetZero(uint32_t bno);
 
     // release a block back to the cache
     // flags *must* contain kBlockDirty if it was modified
@@ -276,16 +283,44 @@ private:
     using HashTable = mxtl::HashTable<uint32_t, mxtl::RefPtr<BlockNode>, HashTableBucket>;
     HashTable hash_; // Map of all 'in use' blocks, accessible by bno
     BcacheLists lists_;
+#ifdef __Fuchsia__
+    fifo_client_t* fifo_client_; // Fast path to interact with block device
+    txnid_t txnid_; // TODO(smklein): One per thread
+#endif
     int fd_;
     uint32_t blockmax_;
     uint32_t blocksize_;
 };
 
-void* GetNthBlock(const void* data, uint32_t blkno);
-// Access the "blkno"-th block within the bitmap.
-// "blkno = 0" corresponds to the first block within the bitmap.
-void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
-// Same as GetBlock, but accessing by the "bitno"-th bit.
-void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
+
+namespace internal {
+
+template <typename T>
+struct GetBlockHelper;
+
+template <>
+struct GetBlockHelper <const void*> {
+    static void* get_block(const void* data, uint32_t blkno) {
+        assert(kMinfsBlockSize <= (blkno + 1) * kMinfsBlockSize); // Avoid overflow
+        return (void*)((uintptr_t)(data) + (uintptr_t)(kMinfsBlockSize * blkno));
+    }
+};
+
+template <>
+struct GetBlockHelper <const RawBitmap&> {
+    static void* get_block(const RawBitmap& bitmap, uint32_t blkno) {
+        assert(blkno * kMinfsBlockSize < bitmap.size()); // Accessing beyond end of bitmap
+        return GetBlockHelper<const void*>::get_block(bitmap.StorageUnsafe()->GetData(), blkno);
+    }
+};
+
+} // namespace internal
+
+// Access the "blkno"-th block within data.
+// "blkno = 0" corresponds to the first block within data.
+template <typename T>
+void* GetBlock(T data, uint32_t blkno) {
+    return internal::GetBlockHelper<T>::get_block(data, blkno);
+}
 
 } // namespace minfs

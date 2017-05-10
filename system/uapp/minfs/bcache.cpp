@@ -122,10 +122,6 @@ mxtl::RefPtr<BlockNode> Bcache::Get(uint32_t bno) {
     return Get(bno, kModeLoad);
 }
 
-mxtl::RefPtr<BlockNode> Bcache::GetZero(uint32_t bno) {
-    return Get(bno, kModeZero);
-}
-
 void Bcache::Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags) {
     trace(BCACHE, "bcache_put() bno=%u%s\n", blk->bno_, (flags & kBlockDirty) ? " DIRTY" : "");
     assert(blk->flags_ & kBlockBusy);
@@ -183,16 +179,49 @@ mx_status_t Bcache::Create(Bcache** out, int fd, uint32_t blockmax, uint32_t blo
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
+    mx_status_t status;
     while (num > 0) {
-        mx_status_t status;
         if ((status = BlockNode::Create(bc.get())) != NO_ERROR) {
             return status;
         }
         num--;
     }
+
+#ifdef __Fuchsia__
+    mx_handle_t fifo;
+    ssize_t r;
+
+    if ((r = ioctl_block_get_fifos(fd, &fifo)) < 0) {
+        return static_cast<mx_status_t>(r);
+    } else if ((r = ioctl_block_alloc_txn(fd, &bc->txnid_)) < 0) {
+        mx_handle_close(fifo);
+        return static_cast<mx_status_t>(r);
+    } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != NO_ERROR) {
+        ioctl_block_free_txn(fd, &bc->txnid_);
+        mx_handle_close(fifo);
+        return status;
+    }
+#endif
+
     *out = bc.release();
     return NO_ERROR;
 }
+
+#ifdef __Fuchsia__
+mx_status_t Bcache::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
+    mx_handle_t xfer_vmo;
+    mx_status_t status = mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    ssize_t r = ioctl_block_attach_vmo(fd_, &xfer_vmo, out);
+    if (r < 0) {
+        mx_handle_close(xfer_vmo);
+        return static_cast<mx_status_t>(r);
+    }
+    return NO_ERROR;
+}
+#endif
 
 int Bcache::Close() {
     return close(fd_);
@@ -200,7 +229,17 @@ int Bcache::Close() {
 
 Bcache::Bcache(int fd, uint32_t blockmax, uint32_t blocksize) :
     fd_(fd), blockmax_(blockmax), blocksize_(blocksize) {}
-Bcache::~Bcache() {}
+
+Bcache::~Bcache() {
+#ifdef __Fuchsia__
+    if (fifo_client_ != nullptr) {
+        ioctl_block_free_txn(fd_, &txnid_);
+        block_fifo_release_client(fifo_client_);
+        ioctl_block_fifo_close(fd_);
+    }
+    close(fd_);
+#endif
+}
 
 size_t BcacheLists::SizeAllSlow() const {
     return list_busy_.size_slow() + list_lru_.size_slow() + list_free_.size_slow();
