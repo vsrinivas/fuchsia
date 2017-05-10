@@ -100,5 +100,6 @@ static mx_driver_ops_t dmctl_driver_ops = {
     .bind = dmctl_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "magenta", "0.1", 0)
+MAGENTA_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(dmctl)

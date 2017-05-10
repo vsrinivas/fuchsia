@@ -456,7 +456,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
                 // AND our parent's devhost is not dying
                 // THEN we will want to rebind our parent
                 if (!(parent->flags & DEV_CTX_DEAD) &&
-                    (parent->host && !(parent->host->flags & DEV_HOST_DYING))) {
+                    ((parent->host == NULL) || !(parent->host->flags & DEV_HOST_DYING))) {
 
                     log(DEVLC, "devcoord: device %p name='%s' is unbound\n",
                         parent, parent->name);
@@ -818,10 +818,11 @@ static void dc_handle_new_device(device_t* dev) {
                 drv->name, dev->name);
 
             dc_attempt_bind(drv, dev);
-            break;
+            if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
+                break;
+            }
         }
     }
-
 }
 
 // device binding program that pure (parentless)
@@ -894,8 +895,6 @@ void coordinator(void) {
         .libname = "driver/root.so",
     };
     dc_attempt_bind(&drv, &root_device);
-    drv.libname = "driver/dmctl.so";
-    dc_attempt_bind(&drv, &misc_device);
 
     enumerate_drivers();
 
