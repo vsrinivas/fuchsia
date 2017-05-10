@@ -16,6 +16,8 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+static constexpr uintptr_t PRIVILEGED_CONNECTION_CTX = 0x1;
+
 mx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -319,33 +321,50 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
         return ERR_INVALID_ARGS;
     }
 
-    // Enter the object lock and check to see if we are already bound to a
-    // channel.  Currently, we do not support binding to multiple channels at
-    // the same time.
-    //
-    // TODO(johngro) : Relax this restriction.  We want a single privileged
-    // process to be allowed to bind to us and do things like set the stream
-    // format and get access to the stream DMA channel.  OTOH, other processes
-    // should be permitted to do things like query our supported formats,
-    // perhaps change our volume settings, and so on.
     mxtl::AutoLock obj_lock(&obj_lock_);
-
-    if (stream_channel_ != nullptr)
-        return ERR_BAD_STATE;
 
     // Do not allow any new connections if we are in the process of shutting down
     if (!is_active())
         return ERR_BAD_STATE;
 
-    // Attempt to allocate a new driver channel and bind it to us.
-    auto channel = DispatcherChannelAllocator::New();
+    // For now, block new connections if we currently have no privileged
+    // connection, but there is a SetFormat request in flight to the codec
+    // driver.  We are trying to avoid the following sequence...
+    //
+    // 1) A privileged connection starts a set format.
+    // 2) After we ask the controller to set the format, our privileged channel
+    //    is closed.
+    // 3) A new user connects.
+    // 4) The response to the first client's request arrives and gets sent
+    //    to the second client.
+    // 5) Confusion ensues.
+    //
+    // Denying new connections while the old request is in flight avoids this,
+    // but is generally a terrible solution.  What we should really do is tag
+    // the requests to the codec driver with a unique ID which we can use to
+    // filter responses.  One option might be to split the transaction ID so
+    // that a portion of the TID is used for stream routing, while another
+    // portion is used for requests like this.
+    uintptr_t ctx = (stream_channel_ == nullptr) ? PRIVILEGED_CONNECTION_CTX : 0;
+    if (ctx && (set_format_tid_ != AUDIO2_INVALID_TRANSACTION_ID))
+        return ERR_SHOULD_WAIT;
+
+    // Attempt to allocate a new driver channel and bind it to us.  If we don't
+    // already have a stream_channel_, flag this channel is the privileged
+    // connection (The connection which is allowed to do things like change
+    // formats).
+    auto channel = DispatcherChannelAllocator::New(ctx);
     if (channel == nullptr)
         return ERR_NO_MEMORY;
 
     mx::channel client_endpoint;
     mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &client_endpoint);
     if (res == NO_ERROR) {
-        stream_channel_ = channel;
+        if (ctx) {
+            MX_DEBUG_ASSERT(stream_channel_ == nullptr);
+            stream_channel_ = channel;
+        }
+
         *(reinterpret_cast<mx_handle_t*>(out_buf)) = client_endpoint.release();
         *out_actual = sizeof(mx_handle_t);
     }
@@ -353,10 +372,18 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     return res;
 }
 
-mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt) {
+mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* channel,
+                                                        const audio2_proto::StreamSetFmtReq& fmt) {
+    MX_DEBUG_ASSERT(channel != nullptr);
     ihda_proto::SetStreamFmtReq req;
     uint16_t encoded_fmt;
     mx_status_t res;
+
+    // Check to make sure that this channel is permitted to change formats.
+    if (!channel->owner_ctx()) {
+        res = ERR_ACCESS_DENIED;
+        goto send_fail_response;
+    }
 
     // If we don't have a DMA stream assigned to us, or there is already a set
     // format operation in flight, we cannot proceed.
@@ -422,42 +449,40 @@ send_fail_response:
     resp.hdr = fmt.hdr;
     resp.result = res;
 
-    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
-
-    res = stream_channel_->Write(&resp, sizeof(resp));
+    MX_DEBUG_ASSERT(channel != nullptr);
+    res = channel->Write(&resp, sizeof(resp));
     if (res != NO_ERROR)
         DEBUG_LOG("Failing to write %zu bytes in response (res %d)\n", sizeof(resp), res);
     return res;
 }
 
-mx_status_t IntelHDAStreamBase::DoGetGainLocked(const audio2_proto::GetGainReq& req) {
-    audio2_proto::GetGainResp resp;
-
+mx_status_t IntelHDAStreamBase::DoGetGainLocked(DispatcherChannel* channel,
+                                                const audio2_proto::GetGainReq& req) {
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
+    audio2_proto::GetGainResp resp;
     resp.hdr = req.hdr;
     OnGetGainLocked(&resp);
 
-    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
-    return stream_channel_->Write(&resp, sizeof(resp));
+    MX_DEBUG_ASSERT(channel != nullptr);
+    return channel->Write(&resp, sizeof(resp));
 }
 
-mx_status_t IntelHDAStreamBase::DoSetGainLocked(const audio2_proto::SetGainReq& req) {
+mx_status_t IntelHDAStreamBase::DoSetGainLocked(DispatcherChannel* channel,
+                                                const audio2_proto::SetGainReq& req) {
     if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK) {
         OnSetGainLocked(req, nullptr);
         return NO_ERROR;
     }
 
-    audio2_proto::SetGainResp resp;
-    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
-
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
+    audio2_proto::SetGainResp resp;
     resp.hdr = req.hdr;
     OnSetGainLocked(req, &resp);
 
-    MX_DEBUG_ASSERT(stream_channel_ != nullptr);
-    return stream_channel_->Write(&resp, sizeof(resp));
+    MX_DEBUG_ASSERT(channel != nullptr);
+    return channel->Write(&resp, sizeof(resp));
 }
 
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
@@ -472,24 +497,16 @@ case _ioctl:                                                    \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
         return ERR_INVALID_ARGS;                                \
     }                                                           \
-    return _handler(req._payload);
+    return _handler(channel, req._payload);
 mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     MX_DEBUG_ASSERT(channel != nullptr);
     mxtl::AutoLock obj_lock(&obj_lock_);
-
-    // If our stream channel has already been closed, just get out early.  There
-    // is not point in failing the request, the channel has already been
-    // deactivated.
-    if (stream_channel_ == nullptr)
-        return NO_ERROR;
 
     // If we have lost our connection to the codec device, or are in the process
     // of shutting down, there is nothing further we can do.  Fail the request
     // and close the connection to the caller.
     if (!is_active() || (codec_channel_ == nullptr))
         return ERR_BAD_STATE;
-
-    MX_DEBUG_ASSERT(channel == stream_channel_.get());
 
     union {
         audio2_proto::CmdHdr          hdr;
@@ -527,12 +544,11 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
 void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& channel) {
     mxtl::AutoLock obj_lock(&obj_lock_);
 
-    if (stream_channel_.get() != &channel)
-        return;
-
-    // Our user just closed their stream channel...  Should we stop any DMA
-    // which is currently in progress, or is this OK?
-    stream_channel_.reset();
+    // Is this the privileged stream channel?
+    if (channel.owner_ctx()) {
+        MX_DEBUG_ASSERT(&channel == stream_channel_.get());
+        stream_channel_.reset();
+    }
 }
 
 mx_status_t IntelHDAStreamBase::AllocateUnsolTagLocked(uint8_t* out_tag) {

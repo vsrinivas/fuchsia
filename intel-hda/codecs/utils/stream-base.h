@@ -111,10 +111,13 @@ protected:
 
 private:
     mx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
-    mx_status_t DoSetStreamFormatLocked(const audio2_proto::StreamSetFmtReq& fmt)
+    mx_status_t DoSetStreamFormatLocked(DispatcherChannel* channel,
+                                        const audio2_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
-    mx_status_t DoGetGainLocked(const audio2_proto::GetGainReq& req) __TA_REQUIRES(obj_lock_);
-    mx_status_t DoSetGainLocked(const audio2_proto::SetGainReq& req) __TA_REQUIRES(obj_lock_);
+    mx_status_t DoGetGainLocked(DispatcherChannel* channel, const audio2_proto::GetGainReq& req)
+        __TA_REQUIRES(obj_lock_);
+    mx_status_t DoSetGainLocked(DispatcherChannel* channel, const audio2_proto::SetGainReq& req)
+        __TA_REQUIRES(obj_lock_);
 
     mx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf,
