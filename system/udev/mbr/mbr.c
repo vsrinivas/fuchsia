@@ -139,7 +139,8 @@ static mx_status_t mbr_ioctl(void* ctx, uint32_t op, const void* cmd,
 }
 
 static mx_off_t to_parent_offset(mbrpart_device_t* dev, mx_off_t offset) {
-    return offset + dev->partition.start_sector_lba * dev->info.block_size;
+    return offset + (uint64_t)(dev->partition.start_sector_lba) *
+           (uint64_t)dev->info.block_size;
 }
 
 static void mbr_iotxn_queue(void* ctx, iotxn_t* txn) {
