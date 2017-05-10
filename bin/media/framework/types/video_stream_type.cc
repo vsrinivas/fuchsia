@@ -91,6 +91,8 @@ VideoStreamType::VideoStreamType(const std::string& encoding,
                                  uint32_t height,
                                  uint32_t coded_width,
                                  uint32_t coded_height,
+                                 uint32_t pixel_aspect_ratio_width,
+                                 uint32_t pixel_aspect_ratio_height,
                                  const std::vector<uint32_t> line_stride,
                                  const std::vector<uint32_t> plane_offset)
     : StreamType(StreamType::Medium::kVideo,
@@ -103,6 +105,8 @@ VideoStreamType::VideoStreamType(const std::string& encoding,
       height_(height),
       coded_width_(coded_width),
       coded_height_(coded_height),
+      pixel_aspect_ratio_width_(pixel_aspect_ratio_width),
+      pixel_aspect_ratio_height_(pixel_aspect_ratio_height),
       line_stride_(line_stride),
       plane_offset_(plane_offset),
       pixel_format_info_(InfoForPixelFormat(pixel_format)) {}
@@ -116,7 +120,8 @@ const VideoStreamType* VideoStreamType::video() const {
 std::unique_ptr<StreamType> VideoStreamType::Clone() const {
   return Create(encoding(), SafeClone(encoding_parameters()), profile(),
                 pixel_format(), color_space(), width(), height(), coded_width(),
-                coded_height(), line_stride(), plane_offset());
+                coded_height(), pixel_aspect_ratio_width(),
+                pixel_aspect_ratio_height(), line_stride(), plane_offset());
 }
 
 VideoStreamTypeSet::VideoStreamTypeSet(

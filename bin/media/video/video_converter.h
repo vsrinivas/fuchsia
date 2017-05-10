@@ -22,8 +22,11 @@ class VideoConverter {
   // RGBA output is assumed.
   void SetMediaType(const MediaTypePtr& media_type);
 
-  // Get the size of the video.
+  // Gets the size of the video.
   mozart::Size GetSize();
+
+  // Gets the pixel aspect ratio of the video.
+  mozart::Size GetPixelAspectRatio();
 
   // Converts the frame in the payload into the provided RGBA buffer.
   void ConvertFrame(uint8_t* rgba_buffer,

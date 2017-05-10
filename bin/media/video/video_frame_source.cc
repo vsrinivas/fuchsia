@@ -27,6 +27,7 @@ VideoFrameSource::VideoFrameSource()
              uint64_t version) {
         VideoRendererStatusPtr status = VideoRendererStatus::New();
         status->video_size = converter_.GetSize().Clone();
+        status->pixel_aspect_ratio = converter_.GetPixelAspectRatio().Clone();
         callback(version, std::move(status));
       });
 }

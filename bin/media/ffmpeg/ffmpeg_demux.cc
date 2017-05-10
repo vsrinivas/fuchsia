@@ -400,7 +400,7 @@ FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(
     const AVFormatContext& format_context,
     size_t index)
     : stream_(format_context.streams[index]), index_(index) {
-  stream_type_ = AvCodecContext::GetStreamType(*stream_->codecpar);
+  stream_type_ = AvCodecContext::GetStreamType(*stream_);
   pts_rate_ = TimelineRate(stream_->time_base.den, stream_->time_base.num);
 }
 

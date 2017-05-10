@@ -106,6 +106,10 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
          << std::endl;
       os << begl << "uint32_t coded_height: " << value.video()->coded_height()
          << std::endl;
+      os << begl << "uint32_t pixel_aspect_ratio_width: "
+         << value.video()->pixel_aspect_ratio_width() << std::endl;
+      os << begl << "uint32_t pixel_aspect_ratio_height: "
+         << value.video()->pixel_aspect_ratio_height() << std::endl;
       os << begl << "std::vector<uint32_t> line_stride: "
          << AsInlineVector<uint32_t>(value.video()->line_stride()) << std::endl;
       os << begl << "std::vector<uint32_t> plane_offset: "

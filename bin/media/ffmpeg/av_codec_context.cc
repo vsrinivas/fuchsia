@@ -203,6 +203,13 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
       VideoStreamType::Extent(from.coded_width, from.coded_height),
       &line_stride, &plane_offset);
 
+  uint32_t aspect_ratio_width = from.sample_aspect_ratio.num;
+  uint32_t aspect_ratio_height = from.sample_aspect_ratio.den;
+  if (aspect_ratio_width == 0 || aspect_ratio_height == 0) {
+    aspect_ratio_width = 1;
+    aspect_ratio_height = 1;
+  }
+
   return VideoStreamType::Create(
       from.codec == nullptr ? EncodingFromCodecId(from.codec_id)
                             : StreamType::kVideoEncodingUncompressed,
@@ -211,26 +218,36 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
           : Bytes::Create(from.extradata, from.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
       ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, from.coded_width, from.coded_height, line_stride,
-      plane_offset);
+      from.width, from.height, from.coded_width, from.coded_height,
+      aspect_ratio_width, aspect_ratio_height, line_stride, plane_offset);
 }
 
-// Creates a StreamType from AVCodecParameters describing a video type.
-std::unique_ptr<StreamType> StreamTypeFromVideoCodecParameters(
-    const AVCodecParameters& from) {
-  VideoStreamType::PixelFormat pixel_format =
-      PixelFormatFromAVPixelFormat(static_cast<AVPixelFormat>(from.format));
+// Creates a StreamType from an AVStream describing a video type.
+std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
+  const AVCodecParameters parameters = *from.codecpar;
+
+  VideoStreamType::PixelFormat pixel_format = PixelFormatFromAVPixelFormat(
+      static_cast<AVPixelFormat>(parameters.format));
+
+  AVRational pixel_aspect_ratio = {1, 1};
+  if (from.sample_aspect_ratio.num != 0 && from.sample_aspect_ratio.den != 0) {
+    pixel_aspect_ratio = from.sample_aspect_ratio;
+  } else if (parameters.sample_aspect_ratio.num != 0 &&
+             parameters.sample_aspect_ratio.den != 0) {
+    pixel_aspect_ratio = parameters.sample_aspect_ratio;
+  }
 
   return VideoStreamType::Create(
-      EncodingFromCodecId(from.codec_id),
-      from.extradata_size == 0
+      EncodingFromCodecId(parameters.codec_id),
+      parameters.extradata_size == 0
           ? nullptr
-          : Bytes::Create(from.extradata, from.extradata_size),
+          : Bytes::Create(parameters.extradata, parameters.extradata_size),
       VideoStreamType::VideoProfile::kNotApplicable, pixel_format,
-      ColorSpaceFromAVColorSpaceAndRange(from.color_space, from.color_range),
-      from.width, from.height, 0, 0, std::vector<uint32_t>(),
-      std::vector<uint32_t>());
-}
+      ColorSpaceFromAVColorSpaceAndRange(parameters.color_space,
+                                         parameters.color_range),
+      parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num,
+      pixel_aspect_ratio.den, std::vector<uint32_t>(), std::vector<uint32_t>());
+}  // namespace
 
 // Creates a StreamType from an AVCodecContext describing a data type.
 std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(
@@ -373,6 +390,8 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
   }
   context->coded_width = stream_type.coded_width();
   context->coded_height = stream_type.coded_height();
+  context->sample_aspect_ratio.num = stream_type.pixel_aspect_ratio_width();
+  context->sample_aspect_ratio.den = stream_type.pixel_aspect_ratio_height();
 
   if (stream_type.encoding_parameters()) {
     ExtraDataFromBytes(*stream_type.encoding_parameters(), context);
@@ -472,22 +491,22 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
 
 // static
 std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
-    const AVCodecParameters& from) {
-  switch (from.codec_type) {
+    const AVStream& from) {
+  switch (from.codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-      return StreamTypeFromAudioCodecParameters(from);
+      return StreamTypeFromAudioCodecParameters(*from.codecpar);
     case AVMEDIA_TYPE_VIDEO:
-      return StreamTypeFromVideoCodecParameters(from);
+      return StreamTypeFromVideoStream(from);
     case AVMEDIA_TYPE_UNKNOWN:
     // Treated as AVMEDIA_TYPE_DATA.
     case AVMEDIA_TYPE_DATA:
-      return StreamTypeFromDataCodecParameters(from);
+      return StreamTypeFromDataCodecParameters(*from.codecpar);
     case AVMEDIA_TYPE_SUBTITLE:
-      return StreamTypeFromSubtitleCodecParameters(from);
+      return StreamTypeFromSubtitleCodecParameters(*from.codecpar);
     case AVMEDIA_TYPE_ATTACHMENT:
     case AVMEDIA_TYPE_NB:
     default:
-      FTL_LOG(ERROR) << "unsupported code type " << from.codec_type;
+      FTL_LOG(ERROR) << "unsupported code type " << from.codecpar->codec_type;
       abort();
   }
 }

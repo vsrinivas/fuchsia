@@ -128,11 +128,14 @@ class VideoStreamType : public StreamType {
       uint32_t height,
       uint32_t coded_width,
       uint32_t coded_height,
+      uint32_t pixel_aspect_ratio_width,
+      uint32_t pixel_aspect_ratio_height,
       const std::vector<uint32_t> line_stride,
       const std::vector<uint32_t> plane_offset) {
     return std::unique_ptr<StreamType>(new VideoStreamType(
         encoding, std::move(encoding_parameters), profile, pixel_format,
-        color_space, width, height, coded_width, coded_height, line_stride,
+        color_space, width, height, coded_width, coded_height,
+        pixel_aspect_ratio_width, pixel_aspect_ratio_height, line_stride,
         plane_offset));
   }
 
@@ -145,6 +148,8 @@ class VideoStreamType : public StreamType {
                   uint32_t height,
                   uint32_t coded_width,
                   uint32_t coded_height,
+                  uint32_t pixel_aspect_ratio_width,
+                  uint32_t pixel_aspect_ratio_height,
                   const std::vector<uint32_t> line_stride,
                   const std::vector<uint32_t> plane_offset);
 
@@ -165,6 +170,14 @@ class VideoStreamType : public StreamType {
   uint32_t coded_width() const { return coded_width_; }
 
   uint32_t coded_height() const { return coded_height_; }
+
+  uint32_t pixel_aspect_ratio_width() const {
+    return pixel_aspect_ratio_width_;
+  }
+
+  uint32_t pixel_aspect_ratio_height() const {
+    return pixel_aspect_ratio_height_;
+  }
 
   const std::vector<uint32_t>& line_stride() const { return line_stride_; }
 
@@ -264,6 +277,8 @@ class VideoStreamType : public StreamType {
   uint32_t height_;
   uint32_t coded_width_;
   uint32_t coded_height_;
+  uint32_t pixel_aspect_ratio_width_;
+  uint32_t pixel_aspect_ratio_height_;
   std::vector<uint32_t> line_stride_;
   std::vector<uint32_t> plane_offset_;
   const PixelFormatInfo& pixel_format_info_;

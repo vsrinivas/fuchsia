@@ -27,4 +27,7 @@ interface VideoRenderer {
 struct VideoRendererStatus {
   // Size of the video currently being displayed.
   mozart.Size video_size;
+
+  // Relative dimensions of a pixel.
+  mozart.Size pixel_aspect_ratio;
 };

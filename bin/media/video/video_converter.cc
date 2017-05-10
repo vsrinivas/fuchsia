@@ -89,6 +89,18 @@ mozart::Size VideoConverter::GetSize() {
   return size;
 }
 
+mozart::Size VideoConverter::GetPixelAspectRatio() {
+  mozart::Size pixel_aspect_ratio;
+  if (video_stream_type_ != nullptr) {
+    pixel_aspect_ratio.width = video_stream_type_->pixel_aspect_ratio_width();
+    pixel_aspect_ratio.height = video_stream_type_->pixel_aspect_ratio_height();
+  } else {
+    pixel_aspect_ratio.width = 1;
+    pixel_aspect_ratio.height = 1;
+  }
+  return pixel_aspect_ratio;
+}
+
 void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
                                   uint32_t view_width,
                                   uint32_t view_height,

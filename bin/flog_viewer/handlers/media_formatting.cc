@@ -162,6 +162,11 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "height: " << value->height << std::endl;
   os << begl << "coded_width: " << value->coded_width << std::endl;
   os << begl << "coded_height: " << value->coded_height << std::endl;
+  os << begl << "pixel_aspect_ratio_width: " << value->pixel_aspect_ratio_width
+     << std::endl;
+  os << begl
+     << "pixel_aspect_ratio_height: " << value->pixel_aspect_ratio_height
+     << std::endl;
   os << begl << "line_stride: " << AsInlineArray<uint32_t>(value->line_stride)
      << std::endl;
   os << begl << "plane_offset: " << AsInlineArray<uint32_t>(value->plane_offset)
