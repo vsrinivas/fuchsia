@@ -27,6 +27,7 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/log.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
 #include <magenta/wait_set_dispatcher.h>
@@ -98,6 +99,12 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     if (options)
         return ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_EVENT);
+    if (res < 0)
+        return res;
+
+
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
@@ -108,8 +115,6 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
@@ -125,6 +130,11 @@ mx_status_t sys_eventpair_create(uint32_t options,
     if (options != 0u)  // No options defined/supported yet.
         return ERR_NOT_SUPPORTED;
 
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_EVPAIR);
+    if (res < 0)
+        return res;
+
     mxtl::RefPtr<Dispatcher> epd0, epd1;
     mx_rights_t rights;
     status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
@@ -139,7 +149,6 @@ mx_status_t sys_eventpair_create(uint32_t options,
     if (!h1)
         return ERR_NO_MEMORY;
 
-    auto up = ProcessDispatcher::GetCurrent();
     if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 

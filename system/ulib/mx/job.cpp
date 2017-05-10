@@ -19,4 +19,8 @@ mx_status_t job::create(mx_handle_t parent_job, uint32_t flags, job* result) {
     return status;
 }
 
+mx_status_t job::set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count) {
+    return mx_job_set_policy(get(), options, topic, policy, count);
+}
+
 } // namespace mx

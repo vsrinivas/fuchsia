@@ -18,6 +18,7 @@
 #include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 
 #include <mxtl/ref_ptr.h>
@@ -28,6 +29,11 @@
 
 mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
                             user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_FIFO);
+    if (res < 0)
+        return res;
+
     mxtl::RefPtr<Dispatcher> dispatcher0;
     mxtl::RefPtr<Dispatcher> dispatcher1;
     mx_rights_t rights;
@@ -43,7 +49,6 @@ mx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
     if (!handle1)
         return ERR_NO_MEMORY;
 
-    auto up = ProcessDispatcher::GetCurrent();
     if (_out0.copy_to_user(up->MapHandleToValue(handle0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     if (_out1.copy_to_user(up->MapHandleToValue(handle1)) != NO_ERROR)

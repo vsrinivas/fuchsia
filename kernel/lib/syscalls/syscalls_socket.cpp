@@ -19,6 +19,7 @@
 #include <magenta/handle_owner.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/socket_dispatcher.h>
+#include <magenta/syscalls/policy.h>
 
 #include <mxtl/ref_ptr.h>
 
@@ -31,6 +32,11 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
 
     if (options != 0u)
         return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_SOCKET);
+    if (res < 0)
+        return res;
 
     mxtl::RefPtr<Dispatcher> socket0, socket1;
     mx_rights_t rights;
@@ -45,8 +51,6 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
     HandleOwner h1(MakeHandle(mxtl::move(socket1), rights));
     if (!h1)
         return ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;

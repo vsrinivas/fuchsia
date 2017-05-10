@@ -32,6 +32,11 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
     if (options)
         return ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_VMO);
+    if (res < 0)
+        return res;
+
     // create a vm object
     mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, size);
     if (!vmo)
@@ -48,8 +53,6 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;

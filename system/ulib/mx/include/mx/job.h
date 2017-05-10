@@ -22,8 +22,9 @@ public:
         return *this;
     }
 
-    static mx_status_t create(mx_handle_t parent_job, uint32_t options,
-                              job* result);
+    static mx_status_t create(mx_handle_t parent_job, uint32_t options, job* result);
+
+    mx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count);
 };
 
 } // namespace mx

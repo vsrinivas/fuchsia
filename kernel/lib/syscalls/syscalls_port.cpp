@@ -15,6 +15,7 @@
 #include <magenta/port_dispatcher.h>
 #include <magenta/port_dispatcher_v2.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 
 #include <mxalloc/new.h>
@@ -31,6 +32,11 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     if (options & ~MX_PORT_OPT_V2)
         return ERR_INVALID_ARGS;
 
+    auto up = ProcessDispatcher::GetCurrent();
+    mx_status_t res = up->QueryPolicy(MX_POL_NEW_PORT);
+    if (res < 0)
+        return res;
+
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
@@ -46,8 +52,6 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle);
 
