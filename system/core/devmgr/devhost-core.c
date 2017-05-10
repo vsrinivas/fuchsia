@@ -572,32 +572,37 @@ mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
     dev->flags &= ~DEV_FLAG_BUSY;
     return NO_ERROR;
 }
+#endif
 
 mx_status_t devhost_device_rebind(mx_device_t* dev) {
-    dev->flags |= DEV_FLAG_REBIND;
+    dev->flags |= DEV_FLAG_BUSY;
 
     // remove children
-    mx_device_t* child = NULL;
-    mx_device_t* temp = NULL;
-    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
+    mx_device_t* child;
+    list_for_every_entry(&dev->children, child, mx_device_t, node) {
         devhost_device_remove(child);
     }
 
+    // notify children that they've been unbound
     devhost_unbind_children(dev);
 
     // detach from owner and downref
     if (dev->owner) {
+        if (dev->owner->ops->unbind) {
+            dev->owner->ops->unbind(dev->owner, dev, dev->owner_cookie);
+        }
         dev->owner = NULL;
         dev_ref_release(dev);
     }
 
+#if !DEVHOST_V2
     // probe the device again to bind
     devhost_device_probe_all(dev, false);
+#endif
 
-    dev->flags &= ~DEV_FLAG_REBIND;
+    dev->flags &= ~DEV_FLAG_BUSY;
     return NO_ERROR;
 }
-#endif
 
 mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags) {
     if (dev->flags & DEV_FLAG_DEAD) {
