@@ -17,7 +17,13 @@ GoogleTestReporter::GoogleTestReporter(const std::string& identity)
 }
 
 GoogleTestReporter::~GoogleTestReporter() {
-  thread_.TaskRunner()->PostTask([this] { QuitOnThread(); });
+  thread_.TaskRunner()->PostTask([this] {
+    // If we have a test runner, then the Teardown callback will quit this
+    // thread. Otherwise, we have to do it here.
+    if (!test_runner_) {
+      QuitOnThread();
+    }
+  });
   thread_.Join();
 }
 
@@ -45,7 +51,10 @@ void GoogleTestReporter::OnTestProgramEnd(const ::testing::UnitTest& test) {
     if (failed) {
       test_runner_->Fail("Failed");
     }
-    test_runner_->Teardown();
+    test_runner_->Teardown([this] {
+      test_runner_.reset();
+      QuitOnThread();
+    });
   });
 }
 

@@ -10,6 +10,16 @@
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+void ReportAndTeardown(test_runner::TestRunner* test_runner,
+                       int test_result,
+                       const char* error) {
+  if (test_result != 0) {
+    test_runner->Fail(error);
+  }
+  test_runner->Teardown([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  mtl::MessageLoop::GetCurrent()->Run();
+}
+
 // Runs a command specified by argv, and based on its exit code reports success
 // or failure to the TestRunner FIDL service.
 int main(int argc, char** argv) {
@@ -36,16 +46,14 @@ int main(int argc, char** argv) {
   mx_handle_t handle;
   mx_status_t status = launchpad_go(launchpad, &handle, &error);
   if (status < 0) {
-    test_runner->Fail(error);
-    test_runner->Teardown();
+    ReportAndTeardown(test_runner.get(), 1, error);
     return 1;
   }
 
   status =
       mx_object_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
   if (status != NO_ERROR) {
-    test_runner->Fail("Failed to wait for exit");
-    test_runner->Teardown();
+    ReportAndTeardown(test_runner.get(), 1, "Failed to wait for exit");
     return 1;
   }
 
@@ -54,15 +62,11 @@ int main(int argc, char** argv) {
                               sizeof(proc_info), NULL, NULL);
   mx_handle_close(handle);
   if (status < 0) {
-    test_runner->Fail("Failed to get return code");
-    test_runner->Teardown();
+    ReportAndTeardown(test_runner.get(), 1, "Failed to get return code");
     return 1;
   }
 
-  if (proc_info.return_code != 0) {
-    test_runner->Fail("Non-zero return code");
-  }
-
-  test_runner->Teardown();
+  ReportAndTeardown(test_runner.get(), proc_info.return_code,
+                    "Non-zero return code");
   return 0;
 }

@@ -59,7 +59,7 @@ TestRunnerImpl::TestRunnerImpl(
       // Client terminated but that was expected.
       termination_timer_.Stop();
       if (teardown_after_termination_) {
-        Teardown();
+        Teardown([]{});
       } else {
         test_run_context_->StopTrackingClient(this, false);
       }
@@ -89,11 +89,15 @@ void TestRunnerImpl::Fail(const fidl::String& log_message) {
   test_run_context_->Fail(log_message);
 }
 
-void TestRunnerImpl::Done() {
+void TestRunnerImpl::Done(const DoneCallback& callback) {
+  // Acknowledge that we got the Done() call.
+  callback();
   test_run_context_->StopTrackingClient(this, false);
 }
 
-void TestRunnerImpl::Teardown() {
+void TestRunnerImpl::Teardown(const TeardownCallback& callback) {
+  // Acknowledge that we got the Teardown() call.
+  callback();
   test_run_context_->Teardown(this);
 }
 
@@ -111,7 +115,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
                              binding_.set_connection_error_handler(nullptr);
                              Fail("Termination timed out.");
                              if (teardown_after_termination_) {
-                               Teardown();
+                               Teardown([]{});
                              }
                              test_run_context_->StopTrackingClient(this, false);
                            },
@@ -177,7 +181,9 @@ TestRunContext::TestRunContext(
 
   // If the child app closes, the test is reported as a failure.
   child_app_controller_.set_connection_error_handler([this] {
-    FTL_LOG(WARNING) << "Child app connection closed unexpectedly.";
+    FTL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
+                        "TestRunner clients = "
+                     << test_runner_clients_.size();
     test_runner_connection_->Teardown(test_id_, false);
   });
 }

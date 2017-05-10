@@ -51,9 +51,9 @@ class TestRunnerImpl : public TestRunner {
   // |TestRunner|
   void Fail(const fidl::String& log_message) override;
   // |TestRunner|
-  void Done() override;
+  void Done(const DoneCallback& callback) override;
   // |TestRunner|
-  void Teardown() override;
+  void Teardown(const TeardownCallback& callback) override;
   // |TestRunner|
   void WillTerminate(double withinSeconds) override;
   // |TestRunner|
