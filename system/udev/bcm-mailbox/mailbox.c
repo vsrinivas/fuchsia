@@ -11,6 +11,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/display.h>
 
 #include <magenta/syscalls.h>
@@ -73,7 +74,6 @@ typedef struct {
 } property_tag_get_clock_rate_t;
 #define BCM_MAILBOX_TAG_GET_CLOCKRATE   {0x00030002,8,4,0,0}
 
-
 typedef struct {
     uint32_t    tag;
 } property_tag_endtag_t;
@@ -112,12 +112,6 @@ static volatile uint32_t* mailbox_regs;
 
 // All devices are initially turned off.
 static uint32_t power_state = 0x0;
-
-static bcm_fb_desc_t bcm_vc_framebuffer;
-static uint8_t* vc_framebuffer = (uint8_t*)NULL;
-
-static mx_device_t* disp_mxdev;
-static mx_display_info_t disp_info;
 
 static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) {
     value = value | ch;
@@ -158,61 +152,6 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
     *result = (local_result >> 4);
 
     return attempts < MAX_MAILBOX_READ_ATTEMPTS ? NO_ERROR : ERR_IO;
-}
-
-static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
-    mx_status_t ret = NO_ERROR;
-    iotxn_t* txn;
-
-    if (!vc_framebuffer) {
-
-        // buffer needs to be aligned on 16 byte boundary, pad the alloc to make sure we have room to adjust
-        const size_t txnsize = sizeof(bcm_fb_desc_t) + 16;
-        ret = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, txnsize);
-        if (ret < 0)
-            return ret;
-
-        iotxn_physmap(txn);
-        MX_DEBUG_ASSERT(txn->phys_count == 1);
-        mx_paddr_t phys = iotxn_phys(txn);
-
-        // calculate offset in buffer that will provide 16 byte alignment (physical)
-        uint32_t offset = (16 - (phys % 16)) % 16;
-
-        iotxn_copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
-        iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
-
-        ret = mailbox_write(ch_framebuffer, (phys + offset + BCM_SDRAM_BUS_ADDR_BASE));
-        if (ret != NO_ERROR)
-            return ret;
-
-        uint32_t ack = 0x0;
-        ret = mailbox_read(ch_framebuffer, &ack);
-        if (ret != NO_ERROR)
-            return ret;
-
-        iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
-        iotxn_copyfrom(txn, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t), offset);
-
-        uintptr_t page_base;
-
-        // map framebuffer into userspace
-        mx_mmap_device_memory(
-            get_root_resource(),
-            bcm_vc_framebuffer.fb_p & 0x3fffffff, bcm_vc_framebuffer.fb_size,
-            MX_CACHE_POLICY_CACHED, &page_base);
-        vc_framebuffer = (uint8_t*)page_base;
-        memset(vc_framebuffer, 0x00, bcm_vc_framebuffer.fb_size);
-
-        iotxn_release(txn);
-    }
-    memcpy(fb_desc, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t));
-    return sizeof(bcm_fb_desc_t);
-}
-
-void vc_flush_framebuffer(mx_device_t* dev) {
-    mx_cache_flush(vc_framebuffer, bcm_vc_framebuffer.fb_size,
-                   MX_CACHE_FLUSH_DATA);
 }
 
 // Use the Videocore to power on/off devices.
@@ -327,76 +266,62 @@ static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
 static mx_status_t mailbox_device_ioctl(void* ctx, uint32_t op,
                                         const void* in_buf, size_t in_len,
                                         void* out_buf, size_t out_len, size_t* out_actual) {
-    bcm_fb_desc_t fbdesc;
-    uint8_t macid[6];
-
     switch (op) {
     case IOCTL_BCM_POWER_ON_USB:
         return bcm_vc_poweron(bcm_dev_usb);
-
-    case IOCTL_BCM_GET_FRAMEBUFFER:
-        memcpy(&fbdesc, in_buf, in_len);
-        bcm_vc_get_framebuffer(&fbdesc);
-        memcpy(out_buf, &fbdesc, out_len);
-        *out_actual = out_len;
-        return NO_ERROR;
-
-    case IOCTL_BCM_GET_MACID:
-
-        bcm_get_macid(macid);
-        memcpy(out_buf, macid, out_len);
-        *out_actual = out_len;
-        return NO_ERROR;
-    case IOCTL_BCM_GET_CLOCKRATE:
-        // Input buffer should be exactly 4 bytes long and should contain the
-        // ID of the target clock. Output buffer should also be exactly 4 bytes
-        // and will contain the clock rate of the target clock.
-        if (in_len != 4 || out_len != 4)
-            return ERR_INVALID_ARGS;
-
-        const uint32_t clockid = *((uint32_t*)(in_buf));
-
-        mx_status_t rc = bcm_get_clock_rate(clockid, (uint32_t*)out_buf);
-        if (rc != NO_ERROR)
-            return rc;
-
-        *out_actual = out_len;
-        return NO_ERROR;
+    default:
+        return ERR_NOT_SUPPORTED;
     }
-    return ERR_NOT_SUPPORTED;
 }
-
-static mx_status_t vc_set_mode(mx_device_t* dev, mx_display_info_t* info) {
-
-    return NO_ERROR;
-}
-
-static mx_status_t vc_get_mode(mx_device_t* dev, mx_display_info_t* info) {
-    assert(info);
-    memcpy(info, &disp_info, sizeof(mx_display_info_t));
-    return NO_ERROR;
-}
-
-static mx_status_t vc_get_framebuffer(mx_device_t* dev, void** framebuffer) {
-    assert(framebuffer);
-    (*framebuffer) = vc_framebuffer;
-    return NO_ERROR;
-}
-
-static mx_display_protocol_t vc_display_proto = {
-    .set_mode = vc_set_mode,
-    .get_mode = vc_get_mode,
-    .get_framebuffer = vc_get_framebuffer,
-    .flush = vc_flush_framebuffer
-};
 
 static mx_protocol_device_t mailbox_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = mailbox_device_ioctl,
 };
 
-static mx_protocol_device_t empty_device_proto = {
+static mx_status_t bcm_bus_get_macid(mx_device_t* device, uint8_t* out_mac) {
+    if (!out_mac) return ERR_INVALID_ARGS;
+    bcm_get_macid(out_mac);
+    return NO_ERROR;
+}
+
+static mx_status_t bcm_bus_get_clock_rate(mx_device_t* device, uint32_t id, uint32_t* out_clock) {
+    if (!out_clock) return ERR_INVALID_ARGS;
+    return bcm_get_clock_rate(id, out_clock);
+}
+
+static mx_status_t bcm_bus_set_framebuffer(mx_device_t* device, mx_paddr_t addr) {
+    mx_status_t ret = mailbox_write(ch_framebuffer, addr + BCM_SDRAM_BUS_ADDR_BASE);
+    if (ret != NO_ERROR)
+        return ret;
+
+    uint32_t ack = 0x0;
+    return mailbox_read(ch_framebuffer, &ack);
+}
+
+static bcm_bus_protocol_t bcm_bus_protocol = {
+    .get_macid = bcm_bus_get_macid,
+    .get_clock_rate = bcm_bus_get_clock_rate,
+    .set_framebuffer = bcm_bus_set_framebuffer,
+};
+
+static mx_protocol_device_t bus_device_proto;
+
+mx_status_t bus_device_get_protocol(void* ctx, uint32_t proto_id, void** protocol) {
+    if (proto_id == MX_PROTOCOL_BCM_BUS) {
+        *protocol = &bcm_bus_protocol;
+        return NO_ERROR;
+    }
+    if (proto_id == MX_PROTOCOL_DEVICE) {
+        *protocol = &bus_device_proto;
+        return NO_ERROR;
+    }
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_protocol_device_t bus_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = bus_device_get_protocol,
 };
 
 static mx_device_prop_t mailbox_props[] = {
@@ -419,7 +344,93 @@ static mx_device_prop_t pcm_props[] = {
     {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_PCM},
 };
 
-mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_device_prop_t usb_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_USB},
+};
+
+static mx_device_prop_t display_props[] = {
+    {BIND_SOC_VID, 0, SOC_VID_BROADCOMM},
+    {BIND_SOC_DID, 0, SOC_DID_BROADCOMM_DISPLAY},
+};
+
+// create child devices for our other drivers to bind to.
+// soon this will be replaced by creating devices from MDI.
+static void mailbox_publish_children(mx_driver_t* driver, mx_device_t* parent) {
+    mx_device_t* mxdev;
+
+    device_add_args_t sdmmc_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-sdmmc",
+        .driver = driver,
+        .ops = &bus_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = emmc_props,
+        .prop_count = countof(emmc_props),
+    };
+
+    if (device_add(parent, &sdmmc_args, &mxdev) != NO_ERROR) {
+        printf("mailbox_publish_children failed to add bcm-sdmmc device\n");
+    }
+
+    device_add_args_t i2c_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-i2c",
+        .driver = driver,
+        .ops = &bus_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = i2c_props,
+        .prop_count = countof(i2c_props),
+    };
+
+    if (device_add(parent, &i2c_args, &mxdev) != NO_ERROR) {
+        printf("mailbox_publish_children failed to add bcm-i2c device\n");
+    }
+
+    device_add_args_t pcm_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-pcm",
+        .driver = driver,
+        .ops = &bus_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = pcm_props,
+        .prop_count = countof(pcm_props),
+    };
+
+    if (device_add(parent, &pcm_args, &mxdev) != NO_ERROR) {
+        printf("mailbox_publish_children failed to add bcm-pcm device\n");
+    }
+
+    device_add_args_t usb_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-usb",
+        .driver = driver,
+        .ops = &bus_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = usb_props,
+        .prop_count = countof(usb_props),
+    };
+
+    if (device_add(parent, &usb_args, &mxdev) != NO_ERROR) {
+        printf("mailbox_publish_children failed to add bcm-usb device\n");
+    }
+
+    device_add_args_t display_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "bcm-display",
+        .driver = driver,
+        .ops = &bus_device_proto,
+        .proto_id = MX_PROTOCOL_SOC,
+        .props = display_props,
+        .prop_count = countof(display_props),
+    };
+
+    if (device_add(parent, &display_args, &mxdev) != NO_ERROR) {
+        printf("mailbox_publish_children failed to add bcm-display device\n");
+    }
+}
+
+static mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
     // Carve out some address space for the device -- it's memory mapped.
@@ -440,6 +451,8 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         .name = "bcm-vc-rpc",
         .driver = driver,
         .ops = &mailbox_device_proto,
+        .proto_id = MX_PROTOCOL_BCM_BUS,
+        .proto_ops = &bcm_bus_protocol,
         .props = mailbox_props,
         .prop_count = countof(mailbox_props),
     };
@@ -449,116 +462,22 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie
         return status;
     }
 
-    bcm_fb_desc_t framebuff_descriptor;
-
-    // For now these are set to work with the rpi 5" lcd didsplay
-    // TODO: add a mechanisms to specify and change settings outside the driver
-
-    framebuff_descriptor.phys_width = 800;
-    framebuff_descriptor.phys_height = 480;
-    framebuff_descriptor.virt_width = 800;
-    framebuff_descriptor.virt_height = 480;
-    framebuff_descriptor.pitch = 0;
-    framebuff_descriptor.depth = 32;
-    framebuff_descriptor.virt_x_offs = 0;
-    framebuff_descriptor.virt_y_offs = 0;
-    framebuff_descriptor.fb_p = 0;
-    framebuff_descriptor.fb_size = 0;
-
-    bcm_vc_get_framebuffer(&framebuff_descriptor);
-
-    disp_info.format = MX_PIXEL_FORMAT_ARGB_8888;
-    disp_info.width = 800;
-    disp_info.height = 480;
-    disp_info.stride = 800;
-
-    mx_set_framebuffer(get_root_resource(), vc_framebuffer,
-                       bcm_vc_framebuffer.fb_size, disp_info.format,
-                       disp_info.width, disp_info.height, disp_info.stride);
-
-
-    device_add_args_t vc_fbuff_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "bcm-vc-fbuff",
-        .driver = driver,
-        .ops = &empty_device_proto,
-        .proto_id = MX_PROTOCOL_DISPLAY,
-        .proto_ops = &vc_display_proto,
-    };
-
-    status = device_add(parent, &vc_fbuff_args, &disp_mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
     bcm_vc_poweron(bcm_dev_sd);
-
-    // Publish this mock device to allow the eMMC device to bind to.
-    mx_device_t* sdmmc_mxdev;
-    device_add_args_t sdmmc_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "bcm-sdmmc",
-        .driver = driver,
-        .ops = &empty_device_proto,
-        .proto_id = MX_PROTOCOL_SOC,
-        .props = emmc_props,
-        .prop_count = countof(emmc_props),
-    };
-
-    status = device_add(parent, &sdmmc_args, &sdmmc_mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
     bcm_vc_poweron(bcm_dev_usb);
-
-    // Publish this mock device to allow the i2c device to bind to.
-
     bcm_vc_poweron(bcm_dev_i2c1);
-    mx_device_t* i2c_mxdev;
-    device_add_args_t i2c_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "bcm-i2c",
-        .driver = driver,
-        .ops = &empty_device_proto,
-        .proto_id = MX_PROTOCOL_SOC,
-        .props = i2c_props,
-        .prop_count = countof(i2c_props),
-    };
 
-    status = device_add(parent, &i2c_args, &i2c_mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
-    // Publish this mock device to allow the pcm device to bind to.
-
-    mx_device_t* pcm_mxdev;
-    device_add_args_t pcm_args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "bcm-pcm",
-        .driver = driver,
-        .ops = &empty_device_proto,
-        .proto_id = MX_PROTOCOL_SOC,
-        .props = pcm_props,
-        .prop_count = countof(pcm_props),
-    };
-
-    status = device_add(parent, &pcm_args, &pcm_mxdev);
-    if (status != NO_ERROR) {
-        return status;
-    }
+    mailbox_publish_children(driver, rpc_mxdev);
 
     return NO_ERROR;
 }
 
-static mx_driver_ops_t bcm_mailbox_bind = {
+static mx_driver_ops_t bcm_mailbox_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = mailbox_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_bind, "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
-    BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_VIDEOCORE_BUS),
+    BI_MATCH_IF(EQ, BIND_SOC_PID, SOC_PID_BROADCOMM_RPI3),
 MAGENTA_DRIVER_END(bcm_mailbox)

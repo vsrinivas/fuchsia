@@ -42,5 +42,6 @@ DDK_PROTOCOL_DEF(PTY,            'pPTY', "pty", 0)
 DDK_PROTOCOL_DEF(IHDA,           'pHDA', "intel-hda", 0)
 DDK_PROTOCOL_DEF(IHDA_CODEC,     'pIHC', "intel-hda-codec", 0)
 DDK_PROTOCOL_DEF(TEST,           'pTST', "test", 0)
+DDK_PROTOCOL_DEF(BCM_BUS,        'pBCB', "bcm-bus", 0)
 #undef DDK_PROTOCOL_DEF
 #endif

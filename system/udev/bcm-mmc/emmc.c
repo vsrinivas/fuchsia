@@ -32,6 +32,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
+#include <ddk/protocol/bcm-bus.h>
 #include <ddk/protocol/sdmmc.h>
 
 // Magenta Includes
@@ -219,20 +220,6 @@ static mx_status_t mailbox_open_cb(int dirfd, int event, const char* fn, void* c
         return 1; // stop polling.
     }
     return NO_ERROR;
-}
-
-// Places a watch on the /dev/soc directory. Returns when the bcm-vc-rpc device
-// is found meaning that the mailbox device has become available.
-static mx_status_t await_mailbox_device(void) {
-    int dirfd;
-    if ((dirfd = open("/dev/soc/", O_DIRECTORY | O_RDONLY)) < 0) {
-        return ERR_IO;
-    }
-
-    mx_status_t st = mxio_watch_directory(dirfd, mailbox_open_cb, NULL);
-    close(dirfd);
-
-    return st;
 }
 
 static uint32_t get_clock_divider(const uint32_t base_clock,
@@ -603,14 +590,6 @@ static int emmc_bootstrap_thread(void *arg) {
     mx_driver_t* drv = ctx->drv;
     free(arg);
 
-    // This driver relies on the mailbox driver to obtain clock rates and
-    // power on the SD device. Wait for the mailbox driver to become available
-    // before proceeding.
-    if ((st = await_mailbox_device()) != NO_ERROR) {
-        xprintf("emmc: failed to await mailbox device, retcode = %d\n", st);
-        goto out;
-    }
-
     // Map the Device Registers so that we can perform MMIO against the device.
     volatile struct emmc_regs* regs;
     st = mx_mmap_device_memory(get_root_resource(), SDMMC_PAGE_START,
@@ -640,6 +619,13 @@ static int emmc_bootstrap_thread(void *arg) {
     if (!emmc) {
         xprintf("emmc: failed to allocate device, no memory!\n");
         st = ERR_NO_MEMORY;
+        goto out;
+    }
+
+    bcm_bus_protocol_t* bus_proto;
+    if (device_op_get_protocol(dev, MX_PROTOCOL_BCM_BUS, (void**)&bus_proto)) {
+        printf("emmc_bootstrap_thread could not find MX_PROTOCOL_BCM_BUS\n");
+        st = ERR_NOT_SUPPORTED;
         goto out;
     }
 
@@ -692,17 +678,8 @@ static int emmc_bootstrap_thread(void *arg) {
     // Configure the clock.
     uint32_t base_clock = 0;
     const uint32_t bcm28xX_core_clock_id = 1;
-    int fd = open("/dev/soc/bcm-vc-rpc", O_RDWR);
-    if (fd < 0) {
-        xprintf("emmc: failed to open mailbox rpc device, fd = %d\n", fd);
-        st = ERR_INTERNAL;
-        goto out;
-    }
-
-    st = ioctl_bcm_get_clock_rate(fd, &bcm28xX_core_clock_id, &base_clock);
-    close(fd);
-
-    if (st < 0 || base_clock == 0) {
+    st = bus_proto->get_clock_rate(dev, bcm28xX_core_clock_id, &base_clock);
+     if (st < 0 || base_clock == 0) {
         xprintf("emmc: failed to get base clock rate, retcode = %d\n", st);
         goto out;
     }
