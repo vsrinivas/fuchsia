@@ -7,6 +7,7 @@
 #include <mx/socket.h>
 
 #include "application/lib/app/connect.h"
+#include "apps/network/net_errors.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/logging.h"
 
@@ -40,17 +41,20 @@ NetworkReaderImpl::NetworkReaderImpl(
   network::URLRequestPtr url_request(network::URLRequest::New());
   url_request->url = url_;
   url_request->method = "HEAD";
+  url_request->auto_follow_redirects = true;
 
   url_loader_->Start(
       std::move(url_request), [this](network::URLResponsePtr response) {
-        // TODO(dalesat): Handle redirects.
         if (response->error) {
           FTL_LOG(ERROR) << "HEAD response error " << response->error->code
                          << " "
                          << (response->error->description
                                  ? response->error->description
                                  : "<no description>");
-          result_ = MediaResult::UNKNOWN_ERROR;
+          result_ =
+              response->error->code == network::NETWORK_ERR_NAME_NOT_RESOLVED
+                  ? MediaResult::NOT_FOUND
+                  : MediaResult::UNKNOWN_ERROR;
           ready_.Occur();
           return;
         }
