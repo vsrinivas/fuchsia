@@ -9,6 +9,7 @@
 #include <string>
 
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace glue {
 
@@ -16,7 +17,7 @@ class SHA256StreamingHash {
  public:
   SHA256StreamingHash();
   ~SHA256StreamingHash();
-  void Update(const void* input, size_t len);
+  void Update(ftl::StringView data);
   void Finish(std::string* output);
 
  private:

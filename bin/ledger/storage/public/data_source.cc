@@ -26,10 +26,11 @@ class StringLikeDataChunk : public DataSource::DataChunk {
 template <typename S>
 class StringLikeDataSource : public DataSource {
  public:
-  StringLikeDataSource(S value) : value_(std::move(value)) {}
+  StringLikeDataSource(S value)
+      : value_(std::move(value)), size_(value_.size()) {}
 
  private:
-  uint64_t GetSize() override { return value_.size(); }
+  uint64_t GetSize() override { return size_; }
 
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
@@ -42,6 +43,7 @@ class StringLikeDataSource : public DataSource {
   }
 
   S value_;
+  uint64_t size_;
 #ifndef NDEBUG
   bool called_ = false;
 #endif
@@ -141,6 +143,9 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
 
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     if (num_bytes > remaining_bytes_) {
+      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
+                     << expected_size_ << ", but received at least "
+                     << (num_bytes - remaining_bytes_) << " more.";
       socket_drainer_.reset();
       callback_(nullptr, Status::ERROR);
       return;
@@ -155,6 +160,9 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
   void OnDataComplete() override {
     socket_drainer_.reset();
     if (remaining_bytes_ != 0) {
+      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
+                     << expected_size_ << ", but received "
+                     << (expected_size_ - remaining_bytes_);
       callback_(nullptr, Status::ERROR);
       return;
     }

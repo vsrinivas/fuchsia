@@ -21,8 +21,8 @@ SHA256StreamingHash::SHA256StreamingHash()
   SHA256_Init(&context_->sha256);
 }
 
-void SHA256StreamingHash::Update(const void* input, size_t len) {
-  SHA256_Update(&context_->sha256, input, len);
+void SHA256StreamingHash::Update(ftl::StringView data) {
+  SHA256_Update(&context_->sha256, data.data(), data.size());
 }
 
 void SHA256StreamingHash::Finish(std::string* output) {

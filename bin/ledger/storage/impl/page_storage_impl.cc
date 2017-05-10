@@ -35,7 +35,6 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/concatenate.h"
-#include "lib/mtl/socket/socket_drainer.h"
 
 namespace storage {
 
@@ -122,17 +121,13 @@ Status StagingToDestination(size_t expected_size,
   return Status::OK;
 }
 
-class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
+class FileWriterOnIOThread {
  public:
   FileWriterOnIOThread(const std::string& staging_dir,
                        const std::string& object_dir)
-      : staging_dir_(staging_dir),
-        object_dir_(object_dir),
-        drainer_(this),
-        expected_size_(0),
-        size_(0u) {}
+      : staging_dir_(staging_dir), object_dir_(object_dir) {}
 
-  ~FileWriterOnIOThread() override {
+  ~FileWriterOnIOThread() {
     // Cleanup staging file.
     if (!file_path_.empty()) {
       fd_.reset();
@@ -140,10 +135,8 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
     }
   }
 
-  void Start(mx::socket source,
-             uint64_t expected_size,
+  void Start(std::unique_ptr<DataSource> data_source,
              std::function<void(Status, ObjectId)> callback) {
-    expected_size_ = expected_size;
     callback_ = std::move(callback);
     // Using mkstemp to create an unique file. XXXXXX will be replaced.
     file_path_ = staging_dir_ + "/XXXXXX";
@@ -154,43 +147,44 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
       callback_(Status::INTERNAL_IO_ERROR, "");
       return;
     }
-    drainer_.Start(std::move(source));
+    data_source_ = std::move(data_source);
+    data_source_->Get([this](std::unique_ptr<DataSource::DataChunk> chunk,
+                             DataSource::Status status) {
+      if (status == DataSource::Status::ERROR) {
+        callback_(Status::IO_ERROR, "");
+        return;
+      }
+      OnDataAvailable(chunk->Get());
+      if (status == DataSource::Status::DONE) {
+        OnDataComplete();
+      }
+    });
   }
 
  private:
-  // mtl::SocketDrainer::Client
-  void OnDataAvailable(const void* data, size_t num_bytes) override {
-    size_ += num_bytes;
-    hash_.Update(data, num_bytes);
-    if (!ftl::WriteFileDescriptor(fd_.get(), static_cast<const char*>(data),
-                                  num_bytes)) {
+  void OnDataAvailable(ftl::StringView data) {
+    hash_.Update(data);
+    if (!ftl::WriteFileDescriptor(fd_.get(), data.data(), data.size())) {
       FTL_LOG(ERROR) << "Error writing data to disk: " << strerror(errno);
       callback_(Status::INTERNAL_IO_ERROR, "");
       return;
     }
   }
 
-  // mtl::SocketDrainer::Client
-  void OnDataComplete() override {
+  void OnDataComplete() {
     if (fsync(fd_.get()) != 0) {
       FTL_LOG(ERROR) << "Unable to save to disk.";
       callback_(Status::INTERNAL_IO_ERROR, "");
       return;
     }
     fd_.reset();
-    if (size_ != expected_size_) {
-      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
-                     << expected_size_ << ", but received: " << size_;
-      callback_(Status::IO_ERROR, "");
-      return;
-    }
 
     std::string object_id;
     hash_.Finish(&object_id);
 
     std::string final_path = storage::GetFilePath(object_dir_, object_id);
-    Status status =
-        StagingToDestination(size_, file_path_, std::move(final_path));
+    Status status = StagingToDestination(data_source_->GetSize(), file_path_,
+                                         std::move(final_path));
     if (status != Status::OK) {
       callback_(Status::INTERNAL_IO_ERROR, "");
       return;
@@ -202,12 +196,10 @@ class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
   const std::string& staging_dir_;
   const std::string& object_dir_;
   std::function<void(Status, ObjectId)> callback_;
-  mtl::SocketDrainer drainer_;
+  std::unique_ptr<DataSource> data_source_;
   std::string file_path_;
   ftl::UniqueFD fd_;
   glue::SHA256StreamingHash hash_;
-  uint64_t expected_size_;
-  uint64_t size_;
 };
 
 class FileWriter {
@@ -236,27 +228,26 @@ class FileWriter {
     }
   }
 
-  void Start(mx::socket source,
-             uint64_t expected_size,
+  void Start(std::unique_ptr<DataSource> data_source,
              std::function<void(Status, ObjectId)> callback) {
     FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
 
     if (io_runner_->RunsTasksOnCurrentThread()) {
-      file_writer_on_io_thread_->Start(std::move(source), expected_size,
+      file_writer_on_io_thread_->Start(std::move(data_source),
                                        std::move(callback));
       return;
     }
     callback_ = std::move(callback);
     io_runner_->PostTask(ftl::MakeCopyable([
       this, weak_this = weak_ptr_factory_.GetWeakPtr(),
-      source = std::move(source), expected_size
+      data_source = std::move(data_source)
     ]() mutable {
       // Called on the io runner.
 
       // |this| cannot be deleted here, because if the destructor of FileWriter
       // has been called after Start and before this has been run, it is still
       // waiting on the lock to be released as the posts are run in-order.
-      file_writer_on_io_thread_->Start(std::move(source), expected_size, [
+      file_writer_on_io_thread_->Start(std::move(data_source), [
         weak_this, main_runner = main_runner_
       ](Status status, ObjectId object_id) {
         // Called on the io runner.
@@ -569,10 +560,9 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
 
 void PageStorageImpl::AddObjectFromSync(
     ObjectIdView object_id,
-    mx::socket data,
-    size_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status)>& callback) {
-  AddObject(std::move(data), size, [
+  AddObject(std::move(data_source), [
     this, object_id = object_id.ToString(), callback
   ](Status status, ObjectId found_id) {
     if (status != Status::OK) {
@@ -589,15 +579,13 @@ void PageStorageImpl::AddObjectFromSync(
 }
 
 void PageStorageImpl::AddObjectFromLocal(
-    mx::socket data,
-    uint64_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
-  AddObject(std::move(data), size,
-            [ this, callback = std::move(callback) ](Status status,
-                                                     ObjectId object_id) {
-              untracked_objects_.insert(object_id);
-              callback(status, std::move(object_id));
-            });
+  AddObject(std::move(data_source), [ this, callback = std::move(callback) ](
+                                        Status status, ObjectId object_id) {
+    untracked_objects_.insert(object_id);
+    callback(status, std::move(object_id));
+  });
 }
 
 void PageStorageImpl::GetObject(
@@ -767,8 +755,7 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
 }
 
 void PageStorageImpl::AddObject(
-    mx::socket data,
-    uint64_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
@@ -776,8 +763,9 @@ void PageStorageImpl::AddObject(
       pending_operation_manager_.Manage(std::make_unique<FileWriter>(
           main_runner_, io_runner_, staging_dir_, objects_dir_));
 
-  (*file_writer.first)->Start(std::move(data), size, [
-    cleanup = std::move(file_writer.second), callback = std::move(traced_callback)
+  (*file_writer.first)->Start(std::move(data_source), [
+    cleanup = std::move(file_writer.second),
+    callback = std::move(traced_callback)
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();
@@ -799,7 +787,7 @@ void PageStorageImpl::GetObjectFromSync(
       callback(status, nullptr);
       return;
     }
-    AddObjectFromSync(object_id, std::move(data), size, [
+    AddObjectFromSync(object_id, DataSource::Create(std::move(data), size), [
       this, callback = std::move(callback), object_id
     ](Status status) mutable {
       if (status != Status::OK) {

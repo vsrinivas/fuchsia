@@ -64,8 +64,8 @@ void TreeNode::FromEntries(PageStorage* page_storage,
                            std::function<void(Status, ObjectId)> callback) {
   FTL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = storage::EncodeNode(level, entries, children);
-  page_storage->AddObjectFromLocal(mtl::WriteStringToSocket(encoding),
-                                   encoding.length(), std::move(callback));
+  page_storage->AddObjectFromLocal(
+      storage::DataSource::Create(std::move(encoding)), std::move(callback));
 }
 
 int TreeNode::GetKeyCount() const {

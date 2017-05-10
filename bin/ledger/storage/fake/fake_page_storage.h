@@ -37,8 +37,7 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void AddObjectFromLocal(
-      mx::socket data,
-      uint64_t size,
+      std::unique_ptr<DataSource> data_source,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
       ObjectIdView object_id,

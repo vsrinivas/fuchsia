@@ -95,16 +95,14 @@ Status PageStorageEmptyImpl::MarkObjectSynced(ObjectIdView object_id) {
 
 void PageStorageEmptyImpl::AddObjectFromSync(
     ObjectIdView object_id,
-    mx::socket data,
-    size_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status)>& callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
-    mx::socket data,
-    uint64_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");

@@ -142,6 +142,9 @@ class ObjectData {
       : value(value),
         size(value.size()),
         object_id(glue::SHA256Hash(value.data(), value.size())) {}
+  std::unique_ptr<DataSource> ToDataSource() {
+    return DataSource::Create(mtl::WriteStringToSocket(value), size);
+  }
   const std::string value;
   const size_t size;
   const std::string object_id;
@@ -270,10 +273,9 @@ class PageStorageTest : public StorageTest {
     return commit->GetId();
   }
 
-  void TryAddFromLocal(const std::string& content,
-                       const ObjectId& expected_id) {
+  void TryAddFromLocal(std::string content, const ObjectId& expected_id) {
     storage_->AddObjectFromLocal(
-        mtl::WriteStringToSocket(content), content.size(),
+        DataSource::Create(std::move(content)),
         [this, &expected_id](Status returned_status, ObjectId object_id) {
           EXPECT_EQ(Status::OK, returned_status);
           EXPECT_EQ(expected_id, object_id);
@@ -546,7 +548,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToSocket(data.value), data.size,
+      data.ToDataSource(),
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
@@ -568,7 +570,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToSocket(data.value), data.size,
+      data.ToDataSource(),
       [](Status returned_status, ObjectId returned_object_id) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
@@ -580,7 +582,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToSocket(data.value), 123,
+      DataSource::Create(mtl::WriteStringToSocket(data.value), 123),
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.PostQuitTask();
@@ -592,8 +594,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
 TEST_F(PageStorageTest, AddObjectFromSync) {
   ObjectData data("Some data");
 
-  storage_->AddObjectFromSync(data.object_id,
-                              mtl::WriteStringToSocket(data.value), data.size,
+  storage_->AddObjectFromSync(data.object_id, data.ToDataSource(),
                               [this](Status returned_status) {
                                 EXPECT_EQ(Status::OK, returned_status);
                                 message_loop_.PostQuitTask();
@@ -611,8 +612,8 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
   ObjectData data("Some data");
   ObjectId wrong_id = RandomId(kObjectIdSize);
 
-  storage_->AddObjectFromSync(wrong_id, mtl::WriteStringToSocket(data.value),
-                              data.size, [this](Status returned_status) {
+  storage_->AddObjectFromSync(wrong_id, data.ToDataSource(),
+                              [this](Status returned_status) {
                                 EXPECT_EQ(Status::OBJECT_ID_MISMATCH,
                                           returned_status);
                                 message_loop_.PostQuitTask();
@@ -623,12 +624,13 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
 TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
   ObjectData data("Some data");
 
-  storage_->AddObjectFromSync(data.object_id,
-                              mtl::WriteStringToSocket(data.value), 123,
-                              [this](Status returned_status) {
-                                EXPECT_EQ(Status::IO_ERROR, returned_status);
-                                message_loop_.PostQuitTask();
-                              });
+  storage_->AddObjectFromSync(
+      data.object_id,
+      DataSource::Create(mtl::WriteStringToSocket(data.value), 123),
+      [this](Status returned_status) {
+        EXPECT_EQ(Status::IO_ERROR, returned_status);
+        message_loop_.PostQuitTask();
+      });
   EXPECT_FALSE(RunLoopWithTimeout());
 }
 

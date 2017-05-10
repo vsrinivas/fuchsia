@@ -89,11 +89,8 @@ void PageDelegate::PutWithPriority(
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
   auto tracked_callback = TrackCallback(std::move(callback));
-  // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
-  // until the socket is drained.
-  mx::socket socket = mtl::WriteStringToSocket(convert::ToStringView(value));
   storage_->AddObjectFromLocal(
-      std::move(socket), value.size(), ftl::MakeCopyable([
+      storage::DataSource::Create(std::move(value)), ftl::MakeCopyable([
         this, key = std::move(key), priority,
         callback = std::move(tracked_callback)
       ](storage::Status status, storage::ObjectId object_id) mutable {
@@ -155,7 +152,7 @@ void PageDelegate::CreateReference(
     mx::socket data,
     const Page::CreateReferenceCallback& callback) {
   storage_->AddObjectFromLocal(
-      std::move(data), size,
+      storage::DataSource::Create(std::move(data), size),
       [callback = std::move(callback)](storage::Status status,
                                        storage::ObjectId object_id) {
         if (status != storage::Status::OK) {

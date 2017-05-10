@@ -72,11 +72,11 @@ class PageImplTest : public test::TestWithMessageLoop {
     }
   }
 
-  storage::ObjectId AddObjectToStorage(const std::string& value_string) {
+  storage::ObjectId AddObjectToStorage(std::string value_string) {
     storage::Status status;
     storage::ObjectId object_id;
     fake_storage_->AddObjectFromLocal(
-        mtl::WriteStringToSocket(value_string), value_string.size(),
+        storage::DataSource::Create(std::move(value_string)),
         callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                           &object_id));
     EXPECT_FALSE(RunLoopWithTimeout());

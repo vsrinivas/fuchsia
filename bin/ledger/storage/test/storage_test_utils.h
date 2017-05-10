@@ -50,7 +50,7 @@ class StorageTest : public ::test::TestWithMessageLoop {
 
   // Adds a new object with the given value in the page storage and updates
   // |object| with the new value.
-  ::testing::AssertionResult AddObject(const std::string& value,
+  ::testing::AssertionResult AddObject(std::string value,
                                        std::unique_ptr<const Object>* object);
 
   // Creates a vector of entries, each of which has a key from "key00" to

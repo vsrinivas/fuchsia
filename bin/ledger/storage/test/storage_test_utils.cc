@@ -55,12 +55,12 @@ StorageTest::StorageTest(){};
 StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::AddObject(
-    const std::string& value,
+    std::string value,
     std::unique_ptr<const Object>* object) {
   Status status;
   ObjectId object_id;
   GetStorage()->AddObjectFromLocal(
-      mtl::WriteStringToSocket(value), value.size(),
+      DataSource::Create(std::move(value)),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &object_id));
   if (RunLoopWithTimeout()) {

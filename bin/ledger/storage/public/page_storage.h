@@ -9,10 +9,9 @@
 #include <memory>
 #include <utility>
 
-#include <mx/socket.h>
-
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
+#include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
@@ -115,16 +114,14 @@ class PageStorage {
   // returned in case of missmatch.
   virtual void AddObjectFromSync(
       ObjectIdView object_id,
-      mx::socket data,
-      size_t size,
+      std::unique_ptr<DataSource> data_source,
       const std::function<void(Status)>& callback) = 0;
   // Adds the given local object and passes the new object's id to the callback.
   // If |size| is not negative, the content size must be equal to |size|,
   // otherwise the call will fail and return |IO_ERROR| in the callback. If
   // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
-      mx::socket data,
-      uint64_t size,
+      std::unique_ptr<DataSource> data_source,
       const std::function<void(Status, ObjectId)>& callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an
   // an error will be returned through the given |callback|. If |location| is

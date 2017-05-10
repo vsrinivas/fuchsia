@@ -12,6 +12,7 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -102,18 +103,27 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 void FakePageStorage::AddObjectFromLocal(
-    mx::socket data,
-    uint64_t size,
+    std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
-  std::string value;
-  mtl::BlockingCopyToString(std::move(data), &value);
-  if (value.size() != static_cast<size_t>(size)) {
-    callback(Status::IO_ERROR, "");
-    return;
-  }
-  std::string object_id = ComputeObjectId(value);
-  objects_[object_id] = value;
-  callback(Status::OK, std::move(object_id));
+  auto value = std::make_unique<std::string>();
+  auto data_source_ptr = data_source.get();
+  data_source_ptr->Get(ftl::MakeCopyable([
+    this, data_source = std::move(data_source), value = std::move(value),
+    callback = std::move(callback)
+  ](std::unique_ptr<DataSource::DataChunk> chunk,
+    DataSource::Status status) mutable {
+    if (status == DataSource::Status::ERROR) {
+      callback(Status::IO_ERROR, "");
+      return;
+    }
+    auto view = chunk->Get();
+    value->append(view.data(), view.size());
+    if (status == DataSource::Status::DONE) {
+      std::string object_id = ComputeObjectId(*value);
+      objects_[object_id] = std::move(*value);
+      callback(Status::OK, std::move(object_id));
+    }
+  }));
 }
 
 void FakePageStorage::GetObject(

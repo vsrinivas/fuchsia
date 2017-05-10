@@ -110,12 +110,9 @@ void ConflictResolverClient::OnNextMergeResult(
     }
     case ValueSource::NEW: {
       if (merged_value->new_value->is_bytes()) {
-        // TODO(etiennej): Use asynchronous write, otherwise the run loop will
-        // block until the socket is drained.
-        mx::socket socket = mtl::WriteStringToSocket(
-            convert::ToStringView(merged_value->new_value->get_bytes()));
         storage_->AddObjectFromLocal(
-            std::move(socket), merged_value->new_value->get_bytes().size(),
+            storage::DataSource::Create(
+                std::move(merged_value->new_value->get_bytes())),
             ftl::MakeCopyable([callback = waiter->NewCallback()](
                 storage::Status status, storage::ObjectId object_id) {
               callback(status, std::move(object_id));
