@@ -201,7 +201,7 @@ static mx_status_t mxdir_open(mxio_t* io, const char* path,
                               mxio_t** out) {
     mxdir_t* dir = (mxdir_t*) io;
     mxvn_t* vn = dir->vn;
-    mx_status_t r;
+    mx_status_t r = NO_ERROR;
 
     mtx_lock(&dir->ns->lock);
     if ((path[0] == '.') && (path[1] == 0)) {
