@@ -163,11 +163,21 @@ std::unique_ptr<Using> Parser::ParseUsing() {
     ConsumeToken(Token::Kind::Using);
     if (!Ok())
         return Fail();
-    auto literal = ParseStringLiteral();
+    auto using_path = ParseCompoundIdentifier();
     if (!Ok())
         return Fail();
 
-    return std::make_unique<Using>(std::move(literal));
+    std::unique_ptr<Identifier> maybe_alias;
+    if (PeekFor(Token::Kind::As)) {
+        ConsumeToken(Token::Kind::As);
+        if (!Ok())
+            return Fail();
+        maybe_alias = ParseIdentifier();
+        if (!Ok())
+            return Fail();
+    }
+
+    return std::make_unique<Using>(std::move(using_path), std::move(maybe_alias));
 }
 
 std::unique_ptr<HandleType> Parser::ParseHandleType() {

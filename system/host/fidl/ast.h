@@ -116,10 +116,13 @@ struct LiteralConstant : Constant {
 };
 
 struct Using {
-    Using(std::unique_ptr<StringLiteral> using_path)
-        : using_path(std::move(using_path)) {}
+    Using(std::unique_ptr<CompoundIdentifier> using_path,
+          std::unique_ptr<Identifier> maybe_alias)
+        : using_path(std::move(using_path)),
+          maybe_alias(std::move(maybe_alias)) {}
 
-    std::unique_ptr<StringLiteral> using_path;
+    std::unique_ptr<CompoundIdentifier> using_path;
+    std::unique_ptr<Identifier> maybe_alias;
 };
 
 struct ConstDeclaration {
