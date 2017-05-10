@@ -25,9 +25,11 @@
 #include "hypervisor_priv.h"
 #include "vmexit_priv.h"
 
+#if WITH_LIB_MAGENTA
 static const uint16_t kUartReceiveIoPort = 0x3f8;
 static const uint16_t kUartStatusIoPort = 0x3fd;
 static const uint64_t kUartStatusIdle = 1u << 6;
+#endif
 
 static const uint64_t kIa32ApicBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
