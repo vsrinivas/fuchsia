@@ -173,7 +173,7 @@ int FN(stat)(const char* fn, struct stat* s) {
 
 int FL(utimes)(const char* fn, struct timeval t[2]);
 int FN(utimes)(const char* fn, struct timeval t[2]) {
-    char real_fn[PATH_MAX];
+    char real_fn[WPATH_MAX];
     PATH_WRAP(fn, real_fn);
     DO_REAL(utimes, real_fn, t);
 }
