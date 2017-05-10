@@ -366,7 +366,7 @@ static int gpt_bind_thread(void* arg) {
                 device->mxdev->name, type_guid, partition_guid, pname);
 
         char name[128];
-        snprintf(name, sizeof(name), "%sp%u", dev->name, partitions);
+        snprintf(name, sizeof(name), "%sp%u", device_get_name(dev), partitions);
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,

@@ -552,7 +552,7 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
     bcm_bus_protocol_t* bus_proto = NULL;
     while (busdev && device_op_get_protocol(busdev, MX_PROTOCOL_BCM_BUS, (void**)&bus_proto)
            != NO_ERROR) {
-        busdev = busdev->parent;
+        busdev = device_get_parent(busdev);
     }
     if (busdev && bus_proto) {
         uint8_t temp_mac[6];

@@ -36,7 +36,7 @@ typedef struct blkdev {
 static int blockserver_thread(void* arg) {
     blkdev_t* bdev = (blkdev_t*)arg;
     BlockServer* bs = bdev->bs;
-    blockserver_serve(bs, bdev->mxdev->parent, bdev->blockops);
+    blockserver_serve(bs, device_get_parent(bdev->mxdev), bdev->blockops);
 
     mtx_lock(&bdev->lock);
     bdev->bs = NULL;

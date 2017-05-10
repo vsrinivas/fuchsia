@@ -48,7 +48,7 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c
 
-MODULE_DEFINES := DEVMGR=1
+MODULE_DEFINES := DEVMGR=1 DDK_INTERNAL=1
 
 ifeq ($(ENABLE_DEVHOST_V2),true)
 MODULE_SRCS += \
@@ -85,7 +85,7 @@ DRIVERS := $(patsubst %/rules.mk,%,$(wildcard system/udev/*/driver.mk))
 -include $(DRIVERS)
 LOCAL_DIR := $(LOCAL_SAVEDIR)
 
-MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
+MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1 DDK_INTERNAL=1
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
@@ -116,7 +116,7 @@ MODULE_NAME := devhost2
 
 MODULE_TYPE := userapp
 
-MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
+MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1 DDK_INTERNAL=1
 
 MODULE_DEFINES += DEVHOST_V2=1
 MODULE_SRCS := \
@@ -150,7 +150,7 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
-MODULE_DEFINES := DEVHOST_V2=1
+MODULE_DEFINES := DEVHOST_V2=1 DDK_INTERNAL=1
 
 include make/module.mk
 

@@ -664,7 +664,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
 
     g_vc_initialized = true;
     xprintf("initialized vc on display %s, width=%u height=%u stride=%u format=%u\n",
-            dev->name, info.width, info.height, info.stride, info.format);
+            device_get_name(dev), info.width, info.height, info.stride, info.format);
 
     vc_device_t* vc;
     if (vc_do_root_open(NULL, &vc, 0) == NO_ERROR) {

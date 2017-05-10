@@ -169,7 +169,7 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
     device->blksize = info.block_size;
 
     char name[MX_DEVICE_NAME_MAX + 1];
-    snprintf(name, sizeof(name), "%s (aligned)", dev->name);
+    snprintf(name, sizeof(name), "%s (aligned)", device_get_name(dev));
 
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

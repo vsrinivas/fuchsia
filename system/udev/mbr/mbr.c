@@ -359,7 +359,7 @@ static int mbr_bind_thread(void* arg) {
         memcpy(&pdev->info, &block_info, sizeof(block_info));
 
         char name[128];
-        snprintf(name, sizeof(name), "%sp%u", dev->name, partition_count);
+        snprintf(name, sizeof(name), "%sp%u", device_get_name(dev), partition_count);
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
