@@ -13,6 +13,8 @@
 #define TRACE_NONCE_DECLARE(x)
 #define TRACE_ASYNC_BEGIN(category, name, id, args...)
 #define TRACE_ASYNC_END(category, name, id, args...)
+#define TRACE_SCOPE_GLOBAL 0
+#define TRACE_INSTANT(category, name, id, args...)
 #endif
 
 namespace magma {
