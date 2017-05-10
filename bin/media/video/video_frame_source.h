@@ -50,8 +50,9 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   // Determines if views should animate because presentation time is
   // progressing.
   bool views_should_animate() {
-    return current_timeline_function_.subject_delta() != 0 ||
-           pending_timeline_function_.subject_delta() != 0;
+    return !end_of_stream_published_ &&
+           (current_timeline_function_.subject_delta() != 0 ||
+            pending_timeline_function_.subject_delta() != 0);
   }
 
   // Gets status (see |VideoRenderer::GetStatus|).
