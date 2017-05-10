@@ -458,6 +458,7 @@ status_t VmMapping::DestroyLocked() {
     // subregions_.erase below).
     mxtl::RefPtr<VmMapping> self(this);
 
+#if WITH_LIB_VDSO
     // The vDSO code mapping can never be unmapped, not even
     // by VMAR destruction (except for process exit, of course).
     // TODO(mcgrathr): Turn this into a policy-driven process-fatal case
@@ -465,6 +466,7 @@ status_t VmMapping::DestroyLocked() {
     // never fail.
     if (aspace_->vdso_code_mapping_ == self)
         return ERR_ACCESS_DENIED;
+#endif
 
     // unmap our entire range
     status_t status = UnmapLocked(base_, size_);

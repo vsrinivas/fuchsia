@@ -14,6 +14,7 @@ MODULE_DEPS := \
     kernel/lib/crypto \
     kernel/lib/magenta \
     kernel/lib/user_copy \
+    kernel/lib/vdso \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls.cpp \

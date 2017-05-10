@@ -13,12 +13,15 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
-#include <lib/vdso.h>
 #include <mxtl/auto_lock.h>
 #include <new.h>
 #include <pow2.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
+
+#if WITH_LIB_VDSO
+#include <lib/vdso.h>
+#endif
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -133,9 +136,11 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
 
     // Notice if this is an executable mapping from the vDSO VMO
     // before we lose the VMO reference via mxtl::move(vmo).
+#if WITH_LIB_VDSO
     const bool is_vdso_code = (vmo &&
                                (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) &&
                                VDso::vmo_is_vdso(vmo));
+#endif
 
     AllocChecker ac;
     mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
@@ -152,6 +157,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         return ERR_NO_MEMORY;
     }
 
+#if WITH_LIB_VDSO
     if (is_vdso_code) {
         // For an executable mapping of the vDSO, allow only one per process
         // and only for the valid range of the image.
@@ -161,6 +167,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         }
         aspace_->vdso_code_mapping_ = mxtl::RefPtr<VmMapping>::Downcast(vmar);
     }
+#endif
 
     vmar->Activate();
     *out = mxtl::move(vmar);
@@ -565,12 +572,14 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
         return NO_ERROR;
     }
 
+#if WITH_LIB_VDSO
     // Any unmap spanning the vDSO code mapping is verboten.
     if (aspace_->vdso_code_mapping_ &&
         aspace_->vdso_code_mapping_->base() >= base &&
         aspace_->vdso_code_mapping_->base() - base < size) {
         return ERR_ACCESS_DENIED;
     }
+#endif
 
     const vaddr_t end_addr = base + size;
     const auto end = subregions_.lower_bound(end_addr);
@@ -677,9 +686,11 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
         if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
             return ERR_ACCESS_DENIED;
         }
+#if WITH_LIB_VDSO
         if (itr->as_vm_mapping() == aspace_->vdso_code_mapping_) {
             return ERR_ACCESS_DENIED;
         }
+#endif
 
         last_mapped = itr->base() + itr->size();
     }
