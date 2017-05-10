@@ -916,10 +916,12 @@ void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
   }
   auto tree_state = view->view_stub()->tree();
   auto chain = tree_state->focus_chain();
-  for (size_t index = 0; index < chain->chain.size(); ++index) {
-    if (chain->chain[index]->value == view_token->value) {
-      callback(true);
-      return;
+  if (chain) {
+    for (size_t index = 0; index < chain->chain.size(); ++index) {
+      if (chain->chain[index]->value == view_token->value) {
+        callback(true);
+        return;
+      }
     }
   }
   callback(false);
