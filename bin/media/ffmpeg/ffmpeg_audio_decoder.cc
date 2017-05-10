@@ -11,8 +11,6 @@
 namespace media {
 namespace {
 
-#if !NDEBUG
-
 bool PtssRoughlyEqual(int64_t a,
                       TimelineRate a_rate,
                       int64_t b,
@@ -23,8 +21,6 @@ bool PtssRoughlyEqual(int64_t a,
       TimelineRate::Product(TimelineRate::NsPerSecond, b_rate.Inverse(), false);
   return std::abs(a - b) < Timeline::ns_from_ms(50);
 }
-
-#endif
 
 }  // namespace
 
