@@ -148,9 +148,17 @@ void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
 }
 
 void FidlReader::FailReadAt(mx_status_t status) {
-  // TODO(dalesat): Expect some statuses here.
-  FTL_DCHECK(false) << "Unexpected status " << status;
-  result_ = Result::kUnknownError;
+  switch (status) {
+    case ERR_PEER_CLOSED:
+      result_ = Result::kInternalError;
+      break;
+    // TODO(dalesat): Expect more statuses here.
+    default:
+      FTL_LOG(ERROR) << "Unexpected status " << status;
+      result_ = Result::kUnknownError;
+      break;
+  }
+
   socket_.reset();
   socket_position_ = kUnknownSize;
   CompleteReadAt(result_);
