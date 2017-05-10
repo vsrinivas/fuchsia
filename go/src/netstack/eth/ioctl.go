@@ -11,13 +11,15 @@ import (
 	"syscall/mx/mxio"
 )
 
-type ethinfo struct {
-	features uint32
-	mtu      uint32
-	mac      [6]byte
+type EthInfo struct {
+	Features uint32
+	MTU      uint32
+	MAC      [6]byte
 	_        [2]byte
 	_        [12]uint32
 } // eth_info_t
+
+const FeatureWlan = 0x01
 
 type ethfifos struct {
 	// fifo handles
@@ -28,7 +30,6 @@ type ethfifos struct {
 	rxDepth uint32
 } // eth_fifos_t
 
-const ioctlKind = mxio.IoctlKindDefault
 const ioctlFamilyETH = 0x20 // IOCTL_FAMILY_ETH
 const (
 	ioctlOpGetInfo       = 0 // IOCTL_ETHERNET_GET_INFO,        IOCTL_KIND_DEFAULT
@@ -40,19 +41,19 @@ const (
 	ioctlOpTXListenStop  = 6 // IOCTL_ETHERNET_TX_LISTEN_STOP,  IOCTL_KIND_DEFAULT
 )
 
-func ioctlGetInfo(m mxio.MXIO) (info ethinfo, err error) {
+func IoctlGetInfo(m mxio.MXIO) (info EthInfo, err error) {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpGetInfo)
 	res := make([]byte, 64)
 	if _, err := m.Ioctl(num, nil, res); err != nil {
 		return info, fmt.Errorf("IOCTL_ETHERNET_GET_INFO: %v", err)
 	}
-	info.features = binary.LittleEndian.Uint32(res)
-	info.mtu = binary.LittleEndian.Uint32(res[4:])
-	copy(info.mac[:], res[8:])
+	info.Features = binary.LittleEndian.Uint32(res)
+	info.MTU = binary.LittleEndian.Uint32(res[4:])
+	copy(info.MAC[:], res[8:])
 	return info, nil
 }
 
-func ioctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
+func IoctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
 	num := mxio.IoctlNum(mxio.IoctlKindGetTwoHandles, ioctlFamilyETH, ioctlOpGetFifos)
 	res := make([]byte, 8)
 	h, err := m.Ioctl(num, nil, res)
@@ -69,7 +70,7 @@ func ioctlGetFifos(m mxio.MXIO) (fifos ethfifos, err error) {
 	return fifos, nil
 }
 
-func ioctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
+func IoctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
 	num := mxio.IoctlNum(mxio.IoctlKindSetHandle, ioctlFamilyETH, ioctlOpSetIobuf)
 	err := m.IoctlSetHandle(num, h)
 	if err != nil {
@@ -78,7 +79,7 @@ func ioctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
 	return nil
 }
 
-func ioctlStart(m mxio.MXIO) error {
+func IoctlStart(m mxio.MXIO) error {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStart)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
@@ -87,7 +88,7 @@ func ioctlStart(m mxio.MXIO) error {
 	return nil
 }
 
-func ioctlStop(m mxio.MXIO) error {
+func IoctlStop(m mxio.MXIO) error {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpStop)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {
@@ -96,7 +97,7 @@ func ioctlStop(m mxio.MXIO) error {
 	return nil
 }
 
-func ioctlTXListenStart(m mxio.MXIO) error {
+func IoctlTXListenStart(m mxio.MXIO) error {
 	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpTXListenStart)
 	_, err := m.Ioctl(num, nil, nil)
 	if err != nil {

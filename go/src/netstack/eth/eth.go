@@ -86,11 +86,11 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 	if m == nil {
 		return nil, fmt.Errorf("eth: no mxio for %s fd: %d", path, f.Fd())
 	}
-	info, err := ioctlGetInfo(m)
+	info, err := IoctlGetInfo(m)
 	if err != nil {
 		return nil, err
 	}
-	fifos, err := ioctlGetFifos(m)
+	fifos, err := IoctlGetFifos(m)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 	}
 
 	c := &Client{
-		MTU:       int(info.mtu),
+		MTU:       int(info.MTU),
 		f:         f,
 		tx:        fifos.tx,
 		rx:        fifos.rx,
@@ -115,7 +115,7 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 		recvbuf:   make([]bufferEntry, 0, rxDepth),
 		sendbuf:   make([]bufferEntry, 0, txDepth),
 	}
-	copy(c.MAC[:], info.mac[:])
+	copy(c.MAC[:], info.MAC[:])
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -124,7 +124,7 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 		c.closeLocked()
 		return nil, fmt.Errorf("eth: failed to duplicate vmo: %v", err)
 	}
-	if err := ioctlSetIobuf(m, h); err != nil {
+	if err := IoctlSetIobuf(m, h); err != nil {
 		c.closeLocked()
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 		c.closeLocked()
 		return nil, fmt.Errorf("eth: failed to load rx fifo: %v", err)
 	}
-	if err := ioctlStart(m); err != nil {
+	if err := IoctlStart(m); err != nil {
 		c.closeLocked()
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (c *Client) closeLocked() {
 	}
 
 	m := syscall.MXIOForFD(int(c.f.Fd()))
-	ioctlStop(m)
+	IoctlStop(m)
 
 	c.tx.Close()
 	c.rx.Close()
@@ -339,7 +339,7 @@ func (c *Client) WaitRecv() {
 // packets back to this ethernet client.
 func (c *Client) ListenTX() {
 	m := syscall.MXIOForFD(int(c.f.Fd()))
-	ioctlTXListenStart(m)
+	IoctlTXListenStart(m)
 }
 
 type State int
