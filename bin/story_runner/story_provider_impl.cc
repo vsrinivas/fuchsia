@@ -533,12 +533,11 @@ class StoryProviderImpl::TeardownCall : Operation<void> {
   void Run() override {
     FlowToken flow(this);
     for (auto& it : story_provider_impl_->story_controllers_) {
-      // A new instance of |cont| gets creted for each running story. Each
-      // |const| has a copy of |flow| which only goes out-of-scope once the
-      // story corresponding to |it| stops.
+      // Each callback has a copy of |flow| which only goes out-of-scope once
+      // the story corresponding to |it| stops.
       it.second->StopForTeardown([this, story_id = it.first, flow] {
         // It is okay to erase story_id because story provider binding has been
-        // closed and |cont| cannot be invoked asynchronously.
+        // closed and this callback cannot be invoked asynchronously.
         story_provider_impl_->story_controllers_.erase(story_id);
       });
     }
