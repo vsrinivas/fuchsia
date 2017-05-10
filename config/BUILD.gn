@@ -104,15 +104,15 @@ config("debug") {
 config("release") {
   defines = [ "NDEBUG=1" ]
   cflags = [
-    "-O2",
+    "-O3",
     "-fdata-sections",
     "-ffunction-sections",
   ]
-
+  ldflags = cflags
   if (current_os == "mac") {
-    ldflags = [ "-Wl,-dead_strip" ]
+    ldflags += [ "-Wl,-dead_strip" ]
   } else {
-    ldflags = [ "-Wl,--gc-sections" ]
+    ldflags += [ "-Wl,--gc-sections" ]
   }
 }
 
