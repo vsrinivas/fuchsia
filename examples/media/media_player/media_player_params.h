@@ -23,6 +23,8 @@ class MediaPlayerParams {
 
   const std::string& service_name() const { return service_name_; }
 
+  bool stay() const { return stay_; }
+
  private:
   void Usage();
 
@@ -32,6 +34,7 @@ class MediaPlayerParams {
   std::string url_;
   std::string device_name_;
   std::string service_name_;
+  bool stay_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerParams);
 };

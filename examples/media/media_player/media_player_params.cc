@@ -13,6 +13,8 @@ namespace examples {
 MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
+  stay_ = command_line.HasOption("stay");
+
   bool url_found = false;
 
   for (const std::string& arg : command_line.positional_args()) {
@@ -43,7 +45,7 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
 
   std::string remote;
   if (command_line.GetOptionValue("remote", &remote)) {
-    if (service_found) {
+    if (service_found || stay_) {
       Usage();
       return;
     }
@@ -59,7 +61,7 @@ MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
 
     device_name_ = split[0].ToString();
     service_name_ = split[1].ToString();
-  } else if (!url_found) {
+  } else if (!url_found && !stay_) {
     Usage();
     return;
   }
@@ -74,9 +76,11 @@ void MediaPlayerParams::Usage() {
   std::cerr << "    --service=<service>         set the service name "
                "(default is media_player)\n";
   std::cerr << "    --remote=<device>#<service> control a remote player\n";
+  std::cerr << "    --stay                      used to start the player with "
+               "no content for remote control";
   std::cerr << "The --service and --remote options are mutually exclusive.\n";
-  std::cerr
-      << "A url-or-path is required for local playback, optional for remote.\n";
+  std::cerr << "A url-or-path (or --stay) is required for local playback, "
+               "optional for remote.\n";
 }
 
 }  // namespace examples
