@@ -90,6 +90,14 @@ JSON file with the `--test_file` parameter. For example:
 $FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
+You can select a particular test to run by passing `run_test` the --test_name
+parameter in addition to the name of a JSON file with the `--test_file`
+parameter. For example:
+
+```
+$FUCHSIA_DIR/apps/test_runner/src/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json --test_name=parent_child
+```
+
 The JSON file looks similar to this:
 
 ```

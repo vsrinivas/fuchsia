@@ -44,15 +44,6 @@ def is_ipv4_address(address):
     return False
 
 
-def magenta_ipv6_to_fuchsia(mac):
-  parts = mac.split(":")
-
-  # Magenta uses 4d:fe. Link local is ff:fe.
-  parts[3] = parts[3][:2] + "ff"
-
-  return ":".join(parts)
-
-
 def start_log_listener(loglistener_path, hostname):
   starting_dirname = os.getcwd()
   loglistener_dirname = os.path.dirname(loglistener_path)
@@ -136,7 +127,7 @@ def run_test(sock, listener_process, command_str):
         # Consume the log output, whether or not we print it.
         log_output = read_log_listener(listener_process, test_id)
       else:
-        log_output = ''
+        log_output = ""
       if msg == "fail":
         print log_output
       return status
@@ -146,6 +137,24 @@ def run_test(sock, listener_process, command_str):
       error("UNRECOGNIZED STRING: %s" % line.strip())
 
   return status
+
+
+def translate_hostname_to_fuchsia_ipv6(fuchsia_tools_dir, hostname):
+  """ Get fuchsia ipv6 address from netaddr """
+  netaddr_path = fuchsia_tools_dir + "netaddr"
+  netaddr_cmd = [netaddr_path, "--fuchsia"]
+  # Workaround: netaddr doesn't support the default colon device.
+  if hostname != ":":
+    netaddr_cmd.append(hostname)
+  netaddr_process = subprocess.Popen(netaddr_cmd, stdout=subprocess.PIPE)
+  (output, err) = netaddr_process.communicate()
+  exit_code = netaddr_process.wait()
+
+  if exit_code != 0:
+    error("netaddr failed to resolve the server name")
+    return None
+
+  return output.rstrip()
 
 
 def get_device_table(fuchsia_tools_dir):
@@ -222,24 +231,25 @@ def get_ipv4_addrinfo(fuchsia_tools_dir, hostipv4, port):
 def get_ipv6_addrinfo(fuchsia_tools_dir, hostipv6, port):
   devices = get_device_table(fuchsia_tools_dir)
 
-  if hostipv6[:4] != "fe80":
-    hostipv6 = translate_name_to_ipv6(fuchsia_tools_dir, devices, hostipv6)
-  if hostipv6 is None:
-    return None
+  hostname = None
+  if hostipv6[:4] == "fe80":
+    hostipv6 = normalize_ipv6(hostipv6)
+    if hostipv6.find("%") <= 0:
+      error("ipv6 link local address must include the interface.")
+      return None, None
 
-  hostipv6 = normalize_ipv6(hostipv6)
-  if hostipv6.find("%") <= 0:
-    error("ipv6 address must include the interface.")
-    return None
+    hostname = translate_ipv6_to_name(devices, hostipv6)
+  else:
+    hostname = hostipv6
 
-  hostname = translate_ipv6_to_name(devices, hostipv6)
   if hostname is None:
-    return None
+    return None, None
 
-  # hostipv6 is now the *magenta* link local address, which works for netcp
-  # but does not allow us to talk to test_runner. So we need to calculate the
-  # "normal" Fuchsia link-local ipv6 address.
-  fuchsia_hostipv6 = magenta_ipv6_to_fuchsia(hostipv6)
+  fuchsia_hostipv6 = translate_hostname_to_fuchsia_ipv6(fuchsia_tools_dir,
+                                                        hostname)
+  if fuchsia_hostipv6 is None:
+    return None, None
+
   addrinfo = socket.getaddrinfo(fuchsia_hostipv6, port, socket.AF_INET6,
                                 socket.SOCK_STREAM)
   return hostname, addrinfo
@@ -295,13 +305,19 @@ def main(argv):
       type=str,
       default="")
   parser.add_argument(
+      "--test_name",
+      help="Use with --test_file to select a particular test.",
+      type=str,
+      default="")
+  parser.add_argument(
       "--sync",
-      help="If using test_file, copy the dependent files to the device.",
+      help="Use with --test_file to copy the dependent files to the device.",
       dest="sync_files",
       action="store_true")
   parser.add_argument(
       "--no-sync",
-      help="If using test_file, don't copy the dependent files to the device.",
+      help=
+      "Use with --test_file to disable copying the dependent files to the device.",
       dest="sync_files",
       action="store_false")
   parser.set_defaults(loglistener=True, sync_files=False)
@@ -359,16 +375,25 @@ def main(argv):
     else:
       # Run series of commands from test file
       status = 0
+      test_found = False
       with open(args.test_file) as f:
         tests = json.load(f)
         for test in tests["tests"]:
+          if args.test_name != "" and test["name"] != args.test_name:
+            continue
           print "%sRunning %s ..%s" % (color.BOLD, test["name"], color.END)
           sys.stdout.flush()
           if args.sync_files and "copy" in test:
             if not copy_files(fuchsia_tools_dir, hostname, test["copy"]):
               return 1
+          test_found = True
           if run_test(sock, listener_process, test["exec"]):
             status = 1
+        if args.test_name != "" and not test_found:
+          error("The test named '%s' was not found in %s." % (args.test_name,
+                                                              args.test_file))
+          status = 1
+
       return status
   finally:
     # 4. Cleanup
