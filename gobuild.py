@@ -37,9 +37,10 @@ def main():
         return 1
 
     sympaths = {
-        'apps': 'apps',
         'apps/amber': 'github.com/flynn/go-tuf',
         'apps/thinfs': 'fuchsia.googlesource.com/thinfs',
+        'apps/netstack': 'apps/netstack',
+        'apps/wlan': 'apps/wlan',
         'lib/fidl/go/src/fidl' : 'fidl',
         'third_party/golang/crypto': 'golang.org/x/crypto',
         'third_party/golibs/github.com/dustin/go-humanize': 'github.com/dustin/go-humanize',
