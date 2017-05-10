@@ -1,21 +1,9 @@
 #include "dynlink.h"
 #include <magenta/compiler.h>
+#include <stdatomic.h>
 #include <stddef.h>
 
 #define SHARED
-
-#ifndef GETFUNCSYM
-#define GETFUNCSYM(fp, sym, got)                                          \
-    do {                                                                  \
-        extern stage2_func sym __attribute__((__visibility__("hidden"))); \
-        static stage2_func* static_func_ptr = sym;                        \
-        __asm__ __volatile__(""                                           \
-                             : "+m"(static_func_ptr)                      \
-                             :                                            \
-                             : "memory");                                 \
-        *(fp) = static_func_ptr;                                          \
-    } while (0)
-#endif
 
 __NO_SAFESTACK __attribute__((__visibility__("hidden")))
 dl_start_return_t _dl_start(
@@ -63,9 +51,11 @@ dl_start_return_t _dl_start(
         *rel_addr = base + rel[2];
     }
 
-    stage2_func* dls2;
-    GETFUNCSYM(&dls2, __dls2, base + dyn[DT_PLTGOT]);
-    return dls2(start_arg, vdso);
+    // Make sure all the relocations have landed before calling __dls2,
+    // which relies on them.
+    atomic_signal_fence(memory_order_seq_cst);
+
+    return __dls2(start_arg, vdso);
 }
 
 // This defines _start to call _dl_start and then jump to the entry point.

@@ -18,13 +18,6 @@
                          : "r"(pc), "D"((unsigned long)(arg1)) \
                          : "memory")
 
-#define GETFUNCSYM(fp, sym, got)          \
-    __asm__(".hidden " #sym "\n"          \
-            "	lea " #sym "(%%rip),%0\n" \
-            : "=r"(*fp)                   \
-            :                             \
-            : "memory")
-
 // Call the C _dl_start, which returns a dl_start_return_t containing the
 // user entry point and its argument.  Then jump to that entry point with
 // the argument in the first argument register, pushing a zero return
