@@ -215,8 +215,8 @@ const struct __attribute__((packed)) {\
     MAGENTA_DRIVER_BEGIN_ETC(Driver,Ops,0,VendorName,Version,BindCount) \
 
 #define MAGENTA_DRIVER_END(Driver) }};\
-extern magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DECL; \
-magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DEF = { \
+extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DECL; \
+const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DEF = { \
     /* .driver = */ &MAGENTA_DRIVER_PASTE(_driver_,Driver),\
     /* .note = */ &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
 };
