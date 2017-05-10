@@ -130,14 +130,14 @@ static int mem_arena_init(boot_addr_range_t *range)
 #define E820_NVS 4
 #define E820_UNUSABLE 5
 
-struct e820entry {
+typedef struct e820entry {
     uint64_t addr;
     uint64_t size;
     uint32_t type;
-} __attribute__((packed));
+} __PACKED e820entry_t;
 
 typedef struct e820_range_seq {
-    struct e820entry *map;
+    e820entry_t* map;
     int index;
     int count;
 } e820_range_seq_t;
@@ -184,7 +184,6 @@ static int e820_range_init(boot_addr_range_t *range, e820_range_seq_t *seq)
 
     return 0;
 }
-
 
 typedef struct efi_range_seq {
     void* base;
@@ -282,10 +281,9 @@ static int efi_range_init(boot_addr_range_t *range, efi_range_seq_t *seq)
     }
 }
 
-
 typedef struct multiboot_range_seq {
-    multiboot_info_t *info;
-    memory_map_t *mmap;
+    multiboot_info_t* info;
+    memory_map_t* mmap;
     int index;
     int count;
 } multiboot_range_seq_t;
@@ -422,12 +420,15 @@ static int platform_mem_range_init(void)
         return count;
 
     /* if still no ranges were found, make a safe guess */
-    snprintf(mem_arenas[0].name, sizeof(mem_arenas[0].name), "%s", "memory");
-    mem_arenas[0].base = MEMBASE;
-    mem_arenas[0].size = DEFAULT_MEMEND;
-    mem_arenas[0].priority = 1;
-    mem_arenas[0].flags = PMM_ARENA_FLAG_KMAP;
-    return 1;
+    e820_range_init(&range, &e820_seq);
+    e820entry_t entry = {
+        .addr = MEMBASE,
+        .size = DEFAULT_MEMEND,
+        .type = E820_RAM,
+    };
+    e820_seq.map = &entry;
+    e820_seq.count = 1;
+    return mem_arena_init(&range);
 }
 
 static size_t cached_e820_entry_count;
