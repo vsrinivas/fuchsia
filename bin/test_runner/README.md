@@ -10,10 +10,10 @@ integration tests).
 ## Instructions
 
 #### Prerequisites
-- An instance of magenta running (on qemu or real device), configured with
-  networking. For example,
-  see
-  [networking configuration doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+- An instance of magenta running (on QEMU or real device), configured with
+  networking. For example, see [networking configuration
+  doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+  For QEMU, see also the warning below.
 
 - A build configuration that runs `test_runner` at startup. For example,
   `./package/gn/gen.py -m boot_test_modular`. Alternatively, you can run `@boot
@@ -22,11 +22,18 @@ integration tests).
 - The `FUCHSIA_` environment variables used below are set by sourcing
   `//scripts/env.sh`.
 
+*** note
+**QEMU**: `test_runner` doesn't currently work with the default networking
+setup (TO-292). The workaround is to pass the following flags to QEMU: `-device
+e1000,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8342-:8342` and then run
+`run_test --server 127.0.0.1 <other arguments>`.
+***
+
 #### Running the tests
 
 The script will automatically search for a Magenta device on the local
 subnet and use it. This discovery is performed using ipv6. This process
-works for both qemu and for real hardware, but not for the
+works for both QEMU and for real hardware, but not for the
 [Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
 
 Run a test using `//apps/test_runner/src/run_test`. For example:
@@ -36,7 +43,7 @@ $ $FUCHSIA_DIR/apps/test_runner/src/run_test "device_runner --ledger_repository_
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
-can watch the qemu console to see any console output written by test. In case of
+can watch the QEMU console to see any console output written by test. In case of
 a crash, this console output will also be dumped by `run_test`.
 
 You can also run a series of tests by supplying a JSON file describing the
@@ -64,7 +71,7 @@ $FUCHSIA_DIR/apps/test_runner/src/run_test --server rain-detour-glaze-donut ...
 
 #### Fuchsia test infrastructure
 
-For the Fuchsia automated test infrastructure, qemu is configured to
+For the Fuchsia automated test infrastructure, QEMU is configured to
 transparently route 127.0.0.1:8342 to a known IP address. ipv6 is not
 supported. `run_test` supports this environment by allowing you to specify an
 ipv4 address for the `--server` parameter. However, there are caveats:
@@ -120,4 +127,4 @@ Each test is an object with the following fields:
   to be copied to that directory. The `copy` field is optional. If absent,
   the files currently on the device will be used. You must pass the --sync
   flag to `run_test` to cause the files to be copied. This does not work
-  with qemu devices accessed with ipv4.
+  with QEMU devices accessed with ipv4.
