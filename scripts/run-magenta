@@ -320,5 +320,4 @@ CMDLINE+="kernel.halt_on_panic=true "
 
 # run qemu
 set -x
-$QEMU $ARGS -append "$CMDLINE" "$@"
-exit $?
+exec $QEMU $ARGS -append "$CMDLINE" "$@"
