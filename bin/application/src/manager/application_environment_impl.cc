@@ -53,6 +53,13 @@ void ForwardServiceRequestToFirstProcess(std::vector<uint32_t>* ids,
   request = MX_HANDLE_INVALID;
 }
 
+std::string GetLabelFromURL(const std::string& url) {
+  size_t last_slash = url.rfind('/');
+  if (last_slash == std::string::npos || last_slash + 1 == url.length())
+    return url;
+  return url.substr(last_slash + 1);
+}
+
 mx::process CreateProcess(
     const mx::job& job,
     ApplicationPackagePtr package,
@@ -78,10 +85,11 @@ mx::process CreateProcess(
 
   ForwardServiceRequestToFirstProcess(&ids, &handles);
 
-  const char* path_arg = launch_info->url.get().c_str();
+  std::string label = GetLabelFromURL(launch_info->url);
+
   std::vector<const char*> argv;
   argv.reserve(launch_info->arguments.size() + 1);
-  argv.push_back(path_arg);
+  argv.push_back(launch_info->url.get().c_str());
   for (const auto& argument : launch_info->arguments)
     argv.push_back(argument.get().c_str());
 
@@ -93,7 +101,7 @@ mx::process CreateProcess(
   // TODO(vardhan): The job passed to the child process (which will be
   // duplicated from this |job|) should not be killable.
   launchpad_t* lp;
-  launchpad_create(job.get(), path_arg, &lp);
+  launchpad_create(job.get(), label.c_str(), &lp);
   launchpad_load_from_vmo(lp, data.release());
   launchpad_set_args(lp, argv.size(), argv.data());
   launchpad_set_environ(lp, environ);
