@@ -92,6 +92,7 @@ static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .name = "root",
+    .args = "root,,",
     .children = LIST_INITIAL_VALUE(root_device.children),
     .pending = LIST_INITIAL_VALUE(root_device.pending),
     .refcount = 1,
@@ -101,6 +102,7 @@ static device_t misc_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_MISC_PARENT,
     .name = "misc",
+    .args = "misc,,",
     .children = LIST_INITIAL_VALUE(misc_device.children),
     .pending = LIST_INITIAL_VALUE(misc_device.pending),
     .refcount = 1,
@@ -645,7 +647,7 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
 
 // send message to devhost, requesting the creation of a device
 static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
-                                    const char* libname) {
+                                    const char* libname, const char* args) {
     dc_msg_t msg;
     uint32_t mlen;
     mx_status_t r;
@@ -655,7 +657,7 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     // otherwise we use the information from the device itself.
     device_t* info = (dev->flags & DEV_CTX_SHADOW) ? dev->parent : dev;
 
-    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, info->args)) < 0) {
+    if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, args)) < 0) {
         return r;
     }
 
@@ -770,21 +772,31 @@ static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
         return dh_bind_driver(dev, drv->libname);
     }
 
-    //TODO: generic discovery of driver for shadow devices
-    const char* libname = "";
-    const char* devhostname = "devhost";
-    if (dev->protocol_id == MX_PROTOCOL_PCI) {
-        libname = "driver/bus-pci.so";
-        devhostname = "devhost:pci";
-    } else if (dev->protocol_id == MX_PROTOCOL_MISC_PARENT) {
-        libname = "";
-        devhostname = "devhost:misc";
-    } else if (dev == &root_device) {
-        libname = "";
-        devhostname = "devhost:root";
+    // busdev args are "processname,driverlibname,args"
+    const char* arg0 = (dev->flags & DEV_CTX_SHADOW) ? dev->parent->args : dev->args;
+    const char* arg1 = strchr(arg0, ',');
+    if (arg1 == NULL) {
+        return ERR_INTERNAL;
+    }
+    arg1++;
+
+    const char* arg2 = strchr(arg1, ',');
+    if (arg2 == NULL) {
+        return ERR_INTERNAL;
+    }
+    arg2++;
+
+    size_t arg0len = arg1 - arg0 - 1;
+    size_t arg1len = arg2 - arg1 - 1;
+
+    char devhostname[32];
+    snprintf(devhostname, sizeof(devhostname), "devhost:%.*s", (int) arg0len, arg0);
+
+    char libname[64];
+    if (arg1len > 0) {
+        snprintf(libname, sizeof(libname), "driver/%.*s", (int) arg1len, arg1);
     } else {
-        log(ERROR, "devcoord: cannot create proto %x shadow (yet)\n", dev->protocol_id);
-        return ERR_NOT_SUPPORTED;
+        libname[0] = 0;
     }
 
     mx_status_t r;
@@ -799,7 +811,7 @@ static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
             return r;
         }
-        if ((r = dh_create_device(dev->shadow, dev->shadow->host, libname)) < 0) {
+        if ((r = dh_create_device(dev->shadow, dev->shadow->host, libname, arg2)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return r;
         }

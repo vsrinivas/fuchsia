@@ -83,8 +83,10 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
 
     mx_status_t status;
     if (parent) {
-        char busdev_args[32];
-        snprintf(busdev_args, sizeof(busdev_args), "%u", index);
+        char busdev_args[64];
+        snprintf(busdev_args, sizeof(busdev_args),
+                 "pci#%u:%04x:%04x,bus-pci.so,%u", index,
+                 info.vendor_id, info.device_id, index);
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
