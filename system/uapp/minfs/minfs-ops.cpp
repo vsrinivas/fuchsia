@@ -112,11 +112,15 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         if (start > bno) {
             continue;
         }
-        mxtl::RefPtr<BlockNode> blk = nullptr;
-        if ((blk = fs_->bc_->Get(inode_.inum[indirect])) == nullptr) {
-            return ERR_IO;
-        }
-        uint32_t* entry = static_cast<uint32_t*>(blk->data());
+#ifdef __Fuchsia__
+        MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
+        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+        uint32_t* entry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * indirect);
+#else
+        uint8_t idata[kMinfsBlockSize];
+        fs_->bc_->Readblk(inode_.inum[indirect], idata);
+        uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
+#endif
         uint32_t iflags = 0;
         bool delete_indirect = true; // can we delete the indirect block?
         // release the blocks pointed at by the entries in the indirect block
@@ -144,8 +148,8 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         // only update the indirect block if an entry was deleted
         if (iflags & kBlockDirty) {
             doSync = true;
+            fs_->bc_->Writeblk(inode_.inum[indirect], entry);
         }
-        fs_->bc_->Put(blk, iflags);
 
         if (delete_indirect)  {
             // release the direct block itself
@@ -165,17 +169,41 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
 }
 
 #ifdef __Fuchsia__
-// Read data from disk at block 'bno', into the 'nth' logical block of the file.
-mx_status_t VnodeMinfs::FillBlock(uint32_t n, uint32_t bno) {
+// Read data from disk at block 'bno', into the 'nth' logical block of the vmo.
+mx_status_t VnodeMinfs::FillBlock(mx_handle_t vmo, uint32_t n, uint32_t bno) {
     // TODO(smklein): read directly from block device into vmo; no need to copy
     // into an intermediate buffer.
     char bdata[kMinfsBlockSize];
     if (fs_->bc_->Readblk(bno, bdata)) {
         return ERR_IO;
     }
-    mx_status_t status = vmo_write_exact(vmo_, bdata, n * kMinfsBlockSize, kMinfsBlockSize);
+    mx_status_t status = vmo_write_exact(vmo, bdata, n * kMinfsBlockSize, kMinfsBlockSize);
     if (status != NO_ERROR) {
         return status;
+    }
+    return NO_ERROR;
+}
+
+mx_status_t VnodeMinfs::InitIndirectVmo() {
+    if (vmo_indirect_ != nullptr) {
+        return NO_ERROR;
+    }
+
+    constexpr size_t size = kMinfsBlockSize * kMinfsIndirect;
+    mx_status_t status;
+    if ((status = MappedVmo::Create(size, &vmo_indirect_)) != NO_ERROR) {
+        return status;
+    }
+
+    for (uint32_t i = 0; i < kMinfsIndirect; i++) {
+        uint32_t ibno;
+        if ((ibno = inode_.inum[i]) != 0) {
+            fs_->ValidateBno(ibno);
+            if ((status = FillBlock(vmo_indirect_->GetVmo(), i, ibno)) != NO_ERROR) {
+                vmo_indirect_.reset();
+                return status;
+            }
+        }
     }
     return NO_ERROR;
 }
@@ -203,9 +231,9 @@ mx_status_t VnodeMinfs::InitVmo() {
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
-            if ((status = FillBlock(d, bno)) != NO_ERROR) {
+            if ((status = FillBlock(vmo_, d, bno)) != NO_ERROR) {
                 error("Failed to fill bno %u; error: %d\n", bno, status);
-                return status;
+                goto fail_close_direct;
             }
         }
     }
@@ -213,31 +241,38 @@ mx_status_t VnodeMinfs::InitVmo() {
     // Initialize all indirect blocks
     for (uint32_t i = 0; i < kMinfsIndirect; i++) {
         uint32_t ibno;
-        mxtl::RefPtr<BlockNode> iblk;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
-            // TODO(smklein): Should there be a separate vmo for indirect blocks?
-            if ((iblk = fs_->bc_->Get(ibno)) == nullptr) {
-                return ERR_IO;
+            // Only initialize the indirect vmo if it is being used.
+            if ((status = InitIndirectVmo()) != NO_ERROR) {
+                error("Failed to init indirect vmo, error: %d\n", status);
+                goto fail_close_direct;
             }
-            uint32_t* ientry = static_cast<uint32_t*>(iblk->data());
 
-            const uint32_t direct_per_indirect = kMinfsBlockSize / sizeof(uint32_t);
+            MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
+            uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+            uint32_t* ientry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * i);
+
+            constexpr uint32_t direct_per_indirect = kMinfsBlockSize / sizeof(uint32_t);
             for (uint32_t j = 0; j < direct_per_indirect; j++) {
                 if ((bno = ientry[j]) != 0) {
-                    uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
                     fs_->ValidateBno(bno);
-                    if ((status = FillBlock(n, bno)) != NO_ERROR) {
-                        fs_->bc_->Put(iblk, 0);
-                        return status;
+                    uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
+                    if ((status = FillBlock(vmo_, n, bno)) != NO_ERROR) {
+                        error("Failed to fill indirect: %d\n", status);
+                        goto fail_close_indirect;
                     }
                 }
             }
-            fs_->bc_->Put(iblk, 0);
         }
     }
 
     return NO_ERROR;
+fail_close_indirect:
+    vmo_indirect_.reset();
+fail_close_direct:
+    mx_handle_close(vmo_);
+    return status;
 }
 #endif
 
@@ -247,7 +282,7 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
     // direct blocks are simple... is there an entry in dnum[]?
     if (n < kMinfsDirect) {
         if (((*bno = inode_.dnum[n]) == 0) && alloc) {
-            mx_status_t status = fs_->BlockNew(hint, bno, nullptr);
+            mx_status_t status = fs_->BlockNew(hint, bno);
             if (status != NO_ERROR) {
                 return status;
             }
@@ -255,6 +290,7 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
             inode_.block_count++;
             InodeSync(kMxFsSyncDefault);
         }
+        fs_->ValidateBno(*bno);
         return NO_ERROR;
     }
 
@@ -270,8 +306,17 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
         return ERR_OUT_OF_RANGE;
     }
 
+    mx_status_t status;
+#ifdef __Fuchsia__
+    // If the vmo_indirect_ vmo has not been created, make it now.
+    if ((status = InitIndirectVmo()) != NO_ERROR) {
+        return status;
+    }
+#else
+    uint8_t idata[kMinfsBlockSize];
+#endif
+
     uint32_t ibno;
-    mxtl::RefPtr<BlockNode> iblk;
     uint32_t iflags = 0;
 
     // look up the indirect bno
@@ -281,26 +326,36 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
             return NO_ERROR;
         }
         // allocate a new indirect block
-        mx_status_t status = fs_->BlockNew(0, &ibno, &iblk);
-        if (status != NO_ERROR) {
+        if ((status = fs_->BlockNew(hint, &ibno)) != NO_ERROR) {
             return status;
         }
+#ifdef __Fuchsia__
+        MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
+        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+        memset(reinterpret_cast<void*>(iaddr + kMinfsBlockSize * i), 0, kMinfsBlockSize);
+#else
+        memset(idata, 0, kMinfsBlockSize);
+        fs_->bc_->Writeblk(ibno, idata);
+#endif
+
         // record new indirect block in inode, note that we need to update
         inode_.block_count++;
         inode_.inum[i] = ibno;
         iflags = kBlockDirty;
-    } else {
-        if ((iblk = fs_->bc_->Get(ibno)) == nullptr) {
-            return ERR_IO;
-        }
     }
-    uint32_t* ientry = static_cast<uint32_t*>(iblk->data());
+#ifdef __Fuchsia__
+    MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
+    uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
+    uint32_t* ientry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * i);
+#else
+    fs_->bc_->Readblk(ibno, idata);
+    uint32_t* ientry = reinterpret_cast<uint32_t*>(idata);
+#endif
 
     if (((*bno = ientry[j]) == 0) && alloc) {
         // allocate a new block
-        mx_status_t status = fs_->BlockNew(hint, bno, nullptr);
+        status = fs_->BlockNew(hint, bno);
         if (status != NO_ERROR) {
-            fs_->bc_->Put(iblk, iflags);
             return status;
         }
         inode_.block_count++;
@@ -308,13 +363,13 @@ mx_status_t VnodeMinfs::GetBno(uint32_t n, uint32_t* bno, bool alloc) {
         iflags = kBlockDirty;
     }
 
-    // release indirect block, updating if necessary
-    // and update the inode as well if we changed it
-    fs_->bc_->Put(iblk, iflags);
     if (iflags & kBlockDirty) {
+        // Write back the indirect block if requested
+        fs_->bc_->Writeblk(ibno, ientry);
         InodeSync(kMxFsSyncDefault);
     }
 
+    fs_->ValidateBno(*bno);
     return NO_ERROR;
 }
 
@@ -685,12 +740,20 @@ mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args,
 
 VnodeMinfs::~VnodeMinfs() {
     if (inode_.link_count == 0) {
+#ifdef __Fuchsia__
+        if (InitIndirectVmo() == NO_ERROR) {
+            fs_->InoFree(vmo_indirect_.get(), inode_, ino_);
+        }
+#else
         fs_->InoFree(inode_, ino_);
+#endif
     }
 
     fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
-    mx_handle_close(vmo_);
+    if (vmo_ != MX_HANDLE_INVALID) {
+        mx_handle_close(vmo_);
+    }
 #endif
 }
 
@@ -1035,7 +1098,8 @@ fail:
 }
 
 #ifdef __Fuchsia__
-VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs), vmo_(MX_HANDLE_INVALID) {}
+VnodeMinfs::VnodeMinfs(Minfs* fs) :
+    fs_(fs), vmo_(MX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
 #else
 VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
 #endif

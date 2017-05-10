@@ -54,12 +54,15 @@ public:
     // remove a vnode from the hash map
     void VnodeRelease(VnodeMinfs* vn);
 
-    // Allocate a new data block and bcache_get_zero() it.
-    // Acquires the block if out_block is not null.
-    mx_status_t BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<BlockNode>* out_block);
+    // Allocate a new data block.
+    mx_status_t BlockNew(uint32_t hint, uint32_t* out_bno);
 
     // free ino in inode bitmap, release all blocks held by inode
-    mx_status_t InoFree(const minfs_inode_t& inode, uint32_t ino);
+    mx_status_t InoFree(
+#ifdef __Fuchsia__
+                        const MappedVmo* vmo_indirect,
+#endif
+                        const minfs_inode_t& inode, uint32_t ino);
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
@@ -177,10 +180,13 @@ private:
     mx_status_t Sync() final;
     mx_status_t AttachRemote(mx_handle_t) final;
 
+#ifdef __Fuchsia__
     mx_status_t InitVmo();
+    mx_status_t InitIndirectVmo();
+#endif
 
     // Read data from disk at block 'bno', into the 'nth' logical block of the file.
-    mx_status_t FillBlock(uint32_t n, uint32_t bno);
+    mx_status_t FillBlock(mx_handle_t vmo, uint32_t n, uint32_t bno);
 
     // Get the disk block 'bno' corresponding to the 'nth' logical block of the file.
     // Allocate the block if reqeusted.
@@ -209,6 +215,7 @@ private:
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
     mx_handle_t vmo_;
+    mxtl::unique_ptr<MappedVmo> vmo_indirect_;
 
 #endif
     // The vnode is acting as a mount point for a remote filesystem or device.

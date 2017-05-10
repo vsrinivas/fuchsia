@@ -91,7 +91,11 @@ Minfs::Minfs(Bcache* bc, const minfs_info_t* info) : bc_(bc) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
-mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
+mx_status_t Minfs::InoFree(
+#ifdef __Fuchsia__
+                           const MappedVmo* vmo_indirect,
+#endif
+                           const minfs_inode_t& inode, uint32_t ino) {
     // locate data and block offset of bitmap
     void *bmdata;
     uint32_t ibm_relative_bno;
@@ -113,6 +117,7 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
         if (inode.dnum[n] == 0) {
             continue;
         }
+        ValidateBno(inode.dnum[n]);
         block_count--;
         block_map_.Clear(inode.dnum[n], inode.dnum[n] + 1);
         uint32_t bitblock = inode.dnum[n] / kMinfsBlockBits;
@@ -124,11 +129,14 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
         if (inode.inum[n] == 0) {
             continue;
         }
-        mxtl::RefPtr<BlockNode> blk;
-        if ((blk = bc_->Get(inode.inum[n])) == nullptr) {
-            return ERR_IO;
-        }
-        uint32_t* entry = static_cast<uint32_t*>(blk->data());
+#ifdef __Fuchsia__
+        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect->GetData());
+        uint32_t* entry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * n);
+#else
+        uint8_t idata[kMinfsBlockSize];
+        bc_->Readblk(inode.inum[n], idata);
+        uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
+#endif
         // release the blocks pointed at by the entries in the indirect block
         for (unsigned m = 0; m < (kMinfsBlockSize / sizeof(uint32_t)); m++) {
             if (entry[m] == 0) {
@@ -139,7 +147,6 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
             uint32_t bitblock = entry[m] / kMinfsBlockBits;
             txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
         }
-        bc_->Put(blk, 0);
         // release the direct block itself
         block_count--;
         block_map_.Clear(inode.inum[n], inode.inum[n] + 1);
@@ -245,11 +252,10 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
 }
 
 // Allocate a new data block from the block bitmap.
-// Return the underlying block (obtained via Bcache::Get()), if 'out_block' is not nullptr.
 //
 // If hint is nonzero it indicates which block number to start the search for
 // free blocks from.
-mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<BlockNode> *out_block) {
+mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno) {
     size_t bitoff_start;
     mx_status_t status;
     if ((status = block_map_.Find(false, hint, block_map_.size(), 1, &bitoff_start)) != NO_ERROR) {
@@ -257,6 +263,7 @@ mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<Block
             return ERR_NO_SPACE;
         }
     }
+
     status = block_map_.Set(bitoff_start, bitoff_start + 1);
     assert(status == NO_ERROR);
     uint32_t bno = static_cast<uint32_t>(bitoff_start);
@@ -267,16 +274,9 @@ mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<Block
     void *bmdata = GetBitBlock(block_map_, &bmbno, bno); // bmbno relative to bitmap
     bmbno += info_.abm_block;                            // bmbno relative to block device
 
-    // obtain the block we're allocating, if requested.
-    if (out_block != nullptr) {
-        if ((*out_block = bc_->GetZero(bno)) == nullptr) {
-            block_map_.Clear(bno, bno + 1);
-            return ERR_IO;
-        }
-    }
-
     // commit the bitmap
     bc_->Writeblk(bmbno, bmdata);
+    ValidateBno(bno);
     *out_bno = bno;
     return NO_ERROR;
 }
