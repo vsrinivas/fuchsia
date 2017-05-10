@@ -10,9 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include "ast_visitor.h"
-#include "c_header_visitor.h"
-#include "dump_visitor.h"
 #include "identifier_table.h"
 #include "lexer.h"
 #include "make_unique.h"
@@ -42,8 +39,6 @@ bool MakeSourceData(const char* filename, std::string* out_source) {
 
 enum struct Behavior {
     None,
-    Dump,
-    CHeader,
 };
 
 bool TestParser(std::string source, Behavior behavior) {
@@ -57,23 +52,7 @@ bool TestParser(std::string source, Behavior behavior) {
         return false;
     }
 
-    std::unique_ptr<Visitor> visitor;
-    switch (behavior) {
-    case Behavior::None:
-        visitor = make_unique<Visitor>();
-        break;
-    case Behavior::Dump:
-        visitor = make_unique<DumpVisitor>();
-        break;
-    case Behavior::CHeader:
-        visitor = make_unique<CHeaderVisitor>();
-        break;
-    }
-
-    auto success = visitor->Traverse(raw_ast.get());
-    if (!success)
-        fprintf(stderr, "Traversal failed!\n");
-    return success;
+    return true;
 }
 
 } // namespace
@@ -86,10 +65,6 @@ int main(int argc, char* argv[]) {
     fidl::Behavior behavior;
     if (!strncmp(argv[1], "none", 4))
         behavior = fidl::Behavior::None;
-    else if (!strncmp(argv[1], "dump", 4))
-        behavior = fidl::Behavior::Dump;
-    else if (!strncmp(argv[1], "c-header", 8))
-        behavior = fidl::Behavior::CHeader;
     else
         return 1;
 

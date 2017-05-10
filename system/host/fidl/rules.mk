@@ -11,9 +11,6 @@ MODULE_TYPE := hostapp
 MODULE_COMPILEFLAGS := -O0 -g
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/ast_visitor.cpp \
-    $(LOCAL_DIR)/c_header_visitor.cpp \
-    $(LOCAL_DIR)/dump_visitor.cpp \
     $(LOCAL_DIR)/identifier_table.cpp \
     $(LOCAL_DIR)/lexer.cpp \
     $(LOCAL_DIR)/main.cpp \
