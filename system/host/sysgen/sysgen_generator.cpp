@@ -33,7 +33,8 @@ const map<string, string> kernel_attrs = {
 };
 
 static TestWrapper test_wrapper;
-static vector<CallWrapper*> wrappers = {&test_wrapper};
+static BlockingRetryWrapper blocking_wrapper;
+static vector<CallWrapper*> wrappers = {&test_wrapper, &blocking_wrapper};
 
 static VdsoWrapperGenerator vdso_wrapper_generator(
     "mx_",         // external function name (points to wrapper)

@@ -38,3 +38,12 @@ public:
     // Adds a postcondition that the result is < 50;
     void postCall(std::ofstream& os, const Syscall& sc, std::string return_var) const override;
 };
+
+// Wraps a syscall with the "blocking" attribute with code that will
+// automatically retry if interrupted.
+class BlockingRetryWrapper : public CallWrapper {
+public:
+    bool applies(const Syscall& sc) const override;
+    void preCall(std::ofstream& os, const Syscall& sc) const override;
+    void postCall(std::ofstream& os, const Syscall& sc, std::string return_var) const override;
+};

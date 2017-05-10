@@ -104,3 +104,16 @@ void TestWrapper::preCall(ofstream& os, const Syscall& sc) const {
 void TestWrapper::postCall(ofstream& os, const Syscall& sc, string return_var) const {
     os << in << "if (" << return_var << " > 50) return ERR_OUT_OF_RANGE;\n";
 }
+
+bool BlockingRetryWrapper::applies(const Syscall& sc) const {
+    return sc.is_blocking();
+}
+
+void BlockingRetryWrapper::preCall(ofstream& os, const Syscall& sc) const {
+    os << in << "do {\n";
+}
+
+void BlockingRetryWrapper::postCall(
+    ofstream& os, const Syscall& sc, string return_var) const {
+    os << in << "} while (unlikely(" << return_var << " == ERR_INTERRUPTED_RETRY));\n";
+}
