@@ -83,10 +83,6 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
   }
 
   if (args[0] == "inspect") {
-    if (args.size() < 2) {
-      FTL_LOG(ERROR) << "App id needed for inspect command.";
-      return nullptr;
-    }
     return std::make_unique<InspectCommand>(args, user_config_,
                                             user_repository_path_);
   }

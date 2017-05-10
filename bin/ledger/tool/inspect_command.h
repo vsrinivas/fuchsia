@@ -29,10 +29,18 @@ class InspectCommand : public Command {
 
  private:
   void ListPages(ftl::Closure on_done);
+
   void DisplayCommit(ftl::Closure on_done);
-  void PrintHelp(ftl::Closure on_done);
   void PrintCommit(std::unique_ptr<const storage::Commit> commit,
                    ftl::Closure on_done);
+
+  void DisplayCommitGraph(ftl::Closure on_done);
+  void DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
+                             storage::PageId page_id,
+                             ftl::Closure on_done);
+
+  void PrintHelp(ftl::Closure on_done);
+
   std::unique_ptr<storage::LedgerStorageImpl> GetLedgerStorage();
 
   std::unique_ptr<storage::PageStorage> storage_;

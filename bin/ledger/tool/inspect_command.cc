@@ -4,15 +4,24 @@
 
 #include "apps/ledger/src/tool/inspect_command.h"
 
+#include <fcntl.h>
+
 #include <cctype>
 #include <iostream>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/tool/convert.h"
+#include "lib/ftl/files/eintr_wrapper.h"
+#include "lib/ftl/files/file_descriptor.h"
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+#define FILE_CREATE_MODE 0666
 
 namespace tool {
 namespace {
@@ -40,6 +49,25 @@ std::string ToPrintable(ftl::StringView string) {
     return string.ToString();
   }
 }
+
+class FileStreamWriter {
+ public:
+  FileStreamWriter(const std::string& path)
+      : fd_(HANDLE_EINTR(creat(path.c_str(), FILE_CREATE_MODE))) {}
+
+  bool IsValid() { return fd_.is_valid(); }
+
+  FileStreamWriter& operator<<(ftl::StringView str) {
+    FTL_DCHECK(IsValid());
+    bool result = ftl::WriteFileDescriptor(fd_.get(), str.data(), str.size());
+    FTL_DCHECK(result);
+    return *this;
+  }
+
+ private:
+  ftl::UniqueFD fd_;
+};
+
 }  // namespace
 
 InspectCommand::InspectCommand(const std::vector<std::string>& args,
@@ -56,6 +84,8 @@ void InspectCommand::Start(ftl::Closure on_done) {
     ListPages(std::move(on_done));
   } else if (args_.size() == 5 && args_[2] == "commit") {
     DisplayCommit(std::move(on_done));
+  } else if (args_.size() == 4 && args_[2] == "commit_graph") {
+    DisplayCommitGraph(std::move(on_done));
   } else {
     PrintHelp(std::move(on_done));
   }
@@ -110,7 +140,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
     on_done();
     return;
   }
-  FTL_LOG(INFO) << "Commit id " << convert::ToHex(commit_id);
+
   ledger_storage->GetPageStorage(page_id, [
     this, commit_id, on_done = std::move(on_done)
   ](storage::Status status, std::unique_ptr<storage::PageStorage> storage) {
@@ -184,6 +214,83 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
   }));
 }
 
+void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
+  std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
+      GetLedgerStorage());
+  storage::PageId page_id;
+  if (!FromHexString(args_[3], &page_id)) {
+    FTL_LOG(ERROR) << "Unable to parse page id " << args_[3];
+    on_done();
+    return;
+  }
+  ledger_storage->GetPageStorage(
+      page_id, [ this, page_id, on_done = std::move(on_done) ](
+                   storage::Status status,
+                   std::unique_ptr<storage::PageStorage> storage) mutable {
+        if (status != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
+          on_done();
+          return;
+        }
+        storage_ = std::move(storage);
+        coroutine_service_.StartCoroutine(ftl::MakeCopyable([
+          this, page_id = std::move(page_id), on_done = std::move(on_done)
+        ](coroutine::CoroutineHandler * handler) mutable {
+          DisplayGraphCoroutine(handler, page_id, std::move(on_done));
+        }));
+      });
+}
+
+void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
+                                           storage::PageId page_id,
+                                           ftl::Closure on_done) {
+  std::unordered_set<storage::CommitId> commit_ids;
+  std::deque<storage::CommitId> to_explore;
+  std::vector<storage::CommitId> heads;
+  storage::Status status = storage_->GetHeadCommitIds(&heads);
+  if (status != storage::Status::OK) {
+    FTL_LOG(FATAL) << "Unable to get head commits due to error " << status;
+  }
+  commit_ids.insert(heads.begin(), heads.end());
+  to_explore.insert(to_explore.begin(), heads.begin(), heads.end());
+  std::string file_path =
+      "/tmp/" + app_id_ + "_" + convert::ToHex(page_id) + ".dot";
+  FileStreamWriter writer(file_path);
+  writer << "digraph {\n";
+  while (!to_explore.empty()) {
+    storage::CommitId commit_id = to_explore.front();
+    to_explore.pop_front();
+    storage::Status status;
+    std::unique_ptr<const storage::Commit> commit;
+    if (coroutine::SyncCall(
+            handler,
+            [this, &commit_id](
+                const std::function<void(
+                    storage::Status, std::unique_ptr<const storage::Commit>)>&
+                    callback) {
+              storage_->GetCommit(commit_id, std::move(callback));
+            },
+            &status, &commit)) {
+      FTL_NOTREACHED();
+    }
+    std::vector<storage::CommitIdView> parents = commit->GetParentIds();
+    for (storage::CommitIdView parent : parents) {
+      storage::CommitId parent_id = parent.ToString();
+      if (commit_ids.count(parent_id) == 1) {
+        continue;
+      }
+      commit_ids.insert(parent_id);
+      to_explore.push_back(parent_id);
+
+      writer << "C_" << convert::ToHex(parent) << " -> "
+             << "C_" << convert::ToHex(commit_id) << ";\n";
+    }
+  }
+  writer << "}\n";
+  std::cout << "Graph of commits stored in file " << file_path << std::endl;
+  on_done();
+}
+
 void InspectCommand::PrintHelp(ftl::Closure on_done) {
   std::cout
       << "inspect command: inspects the contents of a ledger.\n"
@@ -195,7 +302,8 @@ void InspectCommand::PrintHelp(ftl::Closure on_done) {
       << "           e.g.: modular_user_runner\n"
       << " - pages: list all pages available locally, with their head commits\n"
       << " - commit <page_id> <commit_id>: list the full contents at the "
-         "commit from the given page."
+         "commit from the given page.\n"
+      << " - commit_graph <page_id>: write the commit graph as a dot file."
       << std::endl;
   on_done();
 }
