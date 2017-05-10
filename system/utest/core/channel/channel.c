@@ -91,8 +91,8 @@ static bool channel_test(void) {
     status = mx_channel_create(0, &h[0], &h[1]);
     ASSERT_EQ(status, NO_ERROR, "error in channel create");
 
-    ASSERT_EQ(get_satisfied_signals(h[0]), MX_CHANNEL_WRITABLE, "");
-    ASSERT_EQ(get_satisfied_signals(h[1]), MX_CHANNEL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(get_satisfied_signals(h[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     _channel[0] = h[0];
     _channel[2] = h[1];
@@ -100,8 +100,10 @@ static bool channel_test(void) {
     static const uint32_t write_data = 0xdeadbeef;
     status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
     ASSERT_EQ(status, NO_ERROR, "error in message write");
-    ASSERT_EQ(get_satisfied_signals(_channel[0]), MX_CHANNEL_WRITABLE, "");
-    ASSERT_EQ(get_satisfied_signals(_channel[2]), MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE, "");
+    ASSERT_EQ(get_satisfied_signals(
+        _channel[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(get_satisfied_signals(
+        _channel[2]), MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_channel_create(0, &h[0], &h[1]);
     ASSERT_EQ(status, NO_ERROR, "error in channel create");
@@ -137,9 +139,10 @@ static bool channel_test(void) {
 
     EXPECT_EQ(thrd_join(thread, NULL), thrd_success, "error in thread join");
 
-    // Since the the other side of _channel[3] is closed, and the read thread read everything from it,
-    // the only satisfied/satisfiable signals should be "peer closed".
-    ASSERT_EQ(get_satisfied_signals(_channel[3]), MX_CHANNEL_PEER_CLOSED, "");
+    // Since the the other side of _channel[3] is closed, and the read thread read everything
+    // from it, the only satisfied/satisfiable signals should be "peer closed".
+    ASSERT_EQ(get_satisfied_signals(
+        _channel[3]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
 
     mx_handle_close(_channel[2]);
     mx_handle_close(_channel[3]);
@@ -186,7 +189,8 @@ static bool channel_close_test(void) {
     // Channels should gain PEER_CLOSED (and lose WRITABLE) if their peer is closed
     ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
-    ASSERT_EQ(get_satisfied_signals(channel[0]), MX_CHANNEL_PEER_CLOSED, "");
+    ASSERT_EQ(get_satisfied_signals(
+        channel[0]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
     ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
 
     ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
@@ -195,24 +199,30 @@ static bool channel_close_test(void) {
     mx_handle_t channel2[2];
     ASSERT_EQ(mx_channel_create(0, &channel2[0], &channel2[1]), NO_ERROR, "");
 
-    // Write channel1[0] to channel[0] (to be received by channel[1]) and channel2[0] to channel[1] (to be received
-    // by channel[0]).
+    // Write channel1[0] to channel[0] (to be received by channel[1])
+    // and channel2[0] to channel[1] (to be received by channel[0]).
     ASSERT_EQ(mx_channel_write(channel[0], 0u, NULL, 0u, &channel1[0], 1u), NO_ERROR, "");
     channel1[0] = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_channel_write(channel[1], 0u, NULL, 0u, &channel2[0], 1u), NO_ERROR, "");
     channel2[0] = MX_HANDLE_INVALID;
 
-    // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have peer closed.
+    // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have
+    // peer closed.
     ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
     channel[1] = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_object_wait_one(channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
-    ASSERT_EQ(get_satisfied_signals(channel2[1]), MX_CHANNEL_WRITABLE, "");
+    ASSERT_EQ(mx_object_wait_one(
+        channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    ASSERT_EQ(get_satisfied_signals(
+        channel2[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
-    // Close channel[0]; the former channel2[0] should be closed, so channel2[1] should have peer closed.
+    // Close channel[0]; the former channel2[0] should be closed, so channel2[1]
+    // should have peer closed.
     ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
     channel[0] = MX_HANDLE_INVALID;
-    ASSERT_EQ(get_satisfied_signals(channel1[1]), MX_CHANNEL_PEER_CLOSED, "");
-    ASSERT_EQ(mx_object_wait_one(channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    ASSERT_EQ(get_satisfied_signals(
+        channel1[1]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(mx_object_wait_one(
+        channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(channel1[1]), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(channel2[1]), NO_ERROR, "");
@@ -234,9 +244,11 @@ static bool channel_non_transferable(void) {
     ASSERT_EQ(status, NO_ERROR, "failed to get event info");
     mx_rights_t initial_event_rights = event_handle_info.rights;
     mx_handle_t non_transferable_event;
-    mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER, &non_transferable_event);
+    mx_handle_duplicate(
+        event, initial_event_rights & ~MX_RIGHT_TRANSFER, &non_transferable_event);
 
-    mx_status_t write_result = mx_channel_write(channel[0], 0u, NULL, 0, &non_transferable_event, 1u);
+    mx_status_t write_result = mx_channel_write(
+        channel[0], 0u, NULL, 0, &non_transferable_event, 1u);
     EXPECT_EQ(write_result, ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
     mx_status_t close_result = mx_handle_close(non_transferable_event);

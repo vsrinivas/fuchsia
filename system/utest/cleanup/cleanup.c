@@ -42,7 +42,7 @@ bool cleanup_test(void) {
                                  MX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     mx_handle_close(p1[0]);
     mx_handle_close(p1[1]);

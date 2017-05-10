@@ -44,7 +44,7 @@ constexpr size_t kMaxHandleCount = 256 * 1024u;
 // there are this many outstanding handles.
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
-// The handle arena and its mutex.
+// The handle arena and its mutex. It also guards Dispatcher::handle_count_.
 static Mutex handle_mutex;
 static mxtl::Arena TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
@@ -148,49 +148,87 @@ static void high_handle_count(size_t count) {
 }
 
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
-    AutoLock lock(&handle_mutex);
-    void* addr = handle_arena.Alloc();
-    if (addr == nullptr) {
-        const auto oh = outstanding_handles;
-        lock.release();
-        printf("WARNING: Could not allocate new handle (%zu outstanding)\n",
-               oh);
-        return nullptr;
+    uint32_t* handle_count = nullptr;
+    void* addr;
+    uint32_t base_value;
+
+    {
+        AutoLock lock(&handle_mutex);
+        addr = handle_arena.Alloc();
+        if (addr == nullptr) {
+            const auto oh = outstanding_handles;
+            lock.release();
+            printf("WARNING: Could not allocate new handle (%zu outstanding)\n",
+                   oh);
+            return nullptr;
+        }
+        if (++outstanding_handles > kHighHandleCount)
+            high_handle_count(outstanding_handles);
+
+        handle_count = dispatcher->get_handle_count_ptr();
+        (*handle_count)++;
+        if (*handle_count != 2u)
+            handle_count = nullptr;
+
+        base_value = GetNewHandleBaseValue(addr);
     }
-    if (++outstanding_handles > kHighHandleCount)
-        high_handle_count(outstanding_handles);
-    uint32_t base_value = GetNewHandleBaseValue(addr);
+
+    auto state_tracker = dispatcher->get_state_tracker();
+    if (state_tracker != nullptr)
+        state_tracker->UpdateLastHandleSignal(handle_count);
+
     return new (addr) Handle(mxtl::move(dispatcher), rights, base_value);
 }
 
-Handle* DupHandle(Handle* source, mx_rights_t rights) {
-    AutoLock lock(&handle_mutex);
-    void* addr = handle_arena.Alloc();
-    if (addr == nullptr) {
-        const auto oh = outstanding_handles;
-        lock.release();
-        printf(
-            "WARNING: Could not allocate duplicate handle (%zu outstanding)\n",
-            oh);
-        return nullptr;
+Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace) {
+    mxtl::RefPtr<Dispatcher> dispatcher(source->dispatcher());
+    uint32_t* handle_count;
+    void* addr;
+    uint32_t base_value;
+
+    {
+        AutoLock lock(&handle_mutex);
+        addr = handle_arena.Alloc();
+        if (addr == nullptr) {
+            const auto oh = outstanding_handles;
+            lock.release();
+            printf(
+                "WARNING: Could not allocate duplicate handle (%zu outstanding)\n", oh);
+            return nullptr;
+        }
+        if (++outstanding_handles > kHighHandleCount)
+            high_handle_count(outstanding_handles);
+
+        handle_count = dispatcher->get_handle_count_ptr();
+        (*handle_count)++;
+        if (*handle_count != 2u)
+            handle_count = nullptr;
+
+        base_value = GetNewHandleBaseValue(addr);
     }
-    if (++outstanding_handles > kHighHandleCount)
-        high_handle_count(outstanding_handles);
-    uint32_t base_value = GetNewHandleBaseValue(addr);
+
+    auto state_tracker = dispatcher->get_state_tracker();
+    if (!is_replace && (state_tracker != nullptr))
+        state_tracker->UpdateLastHandleSignal(handle_count);
+
     return new (addr) Handle(source, rights, base_value);
 }
 
 void DeleteHandle(Handle* handle) {
-    StateTracker* state_tracker = handle->dispatcher()->get_state_tracker();
+    mxtl::RefPtr<Dispatcher> dispatcher(handle->dispatcher());
+    auto state_tracker = dispatcher->get_state_tracker();
+
     if (state_tracker) {
         state_tracker->Cancel(handle);
     } else {
-        auto disp = handle->dispatcher();
         // This code is sad but necessary because certain dispatchers
         // have complicated Close() logic which cannot be untangled at
         // this time.
-        switch (disp->get_type()) {
+        switch (dispatcher->get_type()) {
             case MX_OBJ_TYPE_IOMAP: {
+                // DownCastDispatcher moves the reference so we need a copy
+                // because we use |dispatcher| after the cast.
+                auto disp = dispatcher;
                 auto iodisp = DownCastDispatcher<IoMappingDispatcher>(&disp);
                 if (iodisp)
                     iodisp->Close();
@@ -206,9 +244,32 @@ void DeleteHandle(Handle* handle) {
     // base_value for reuse the next time this slot is allocated.
     internal::TearDownHandle(handle);
 
-    AutoLock lock(&handle_mutex);
-    --outstanding_handles;
-    handle_arena.Free(handle);
+    bool zero_handles = false;
+    uint32_t* handle_count;
+    {
+        AutoLock lock(&handle_mutex);
+        --outstanding_handles;
+
+        handle_count = dispatcher->get_handle_count_ptr();
+        (*handle_count)--;
+        if (*handle_count == 0u)
+            zero_handles = true;
+        else if (*handle_count != 1u)
+            handle_count = nullptr;
+
+        handle_arena.Free(handle);
+    }
+
+    if (zero_handles) {
+        dispatcher->on_zero_handles();
+        return;
+    }
+
+    if (state_tracker)
+        state_tracker->UpdateLastHandleSignal(handle_count);
+
+    // If |dispatcher| is the last reference then the dispatcher object
+    // gets destroyed here.
 }
 
 bool HandleInRange(void* addr) {

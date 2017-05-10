@@ -24,10 +24,12 @@ class PolicyManager;
 // specific arena which makes their addresses come from a fixed range.
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 
-// Duplicate a handle created by MakeHandle().
-Handle* DupHandle(Handle* source, mx_rights_t rights);
+// Duplicate a handle created by MakeHandle(). If |is_replace| is true
+// then the logic to triger MX_SIGNAL_LAST_HANDLE is not executed.
+Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace);
 
-// Deletes a handle created by MakeHandle() or DupHandle().
+// Deletes a handle created by MakeHandle() or DupHandle(). This might
+// trigger MX_SIGNAL_LAST_HANDLE.
 void DeleteHandle(Handle* handle);
 
 // Maps an integer obtained by Handle->base_value() back to a Handle.

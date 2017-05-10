@@ -114,26 +114,10 @@ Objects may have up to 32 signals (represented by the mx_signals_t type and the 
 defines) which represent a piece of information about their current state.  Channels and Sockets,
 for example, may be READABLE or WRITABLE.  Processes or Threads may be TERMINATED.  And so on.
 
-There are also eight user-defined signals (MX_USER_SIGNAL_0 through MX_USER_SIGNAL_7), which may
-be manipulated with the [*mx_object_signal()*](syscalls/object_signal.md) syscall.
-
 Threads may wait for signals to become active on one or more Objects.
 
-
-## Other IPC: Events, Event Pairs, and User Signals
-
-An Event is the simplest Object, having no other state than its collection of active Signals.
-
-An Event Pair is one of a pair of Events that may signal each other.  A useful property of
-Event Pairs is that when one side of a pair goes away (all Handles to it have been
-closed), the PEER_CLOSED signal is asserted on the other side.
-
-The eight User Signals (MX_USER_SIGNAL_0 through MX_USER_SIGNAL_7) may be made active or inactive
-on any Object using the [*mx_object_signal()*](syscalls/object_signal.md) syscall.
-
-See: [event_create](syscalls/event_create.md),
-and [eventpair_create](syscalls/eventpair_create.md).
-
+There is a set of signals avaiable for all waitable objects. See
+[generic_signals](generic_signals.md) for more information.
 
 ## Waiting: Wait One, Wait Many, and Ports
 
@@ -152,6 +136,18 @@ See: [port_create](syscalls/port_create.md),
 [port_queue](syscalls/port_queue.md),
 [port_wait](syscalls/port_wait.md),
 [port_bind](syscalls/port_bind.md).
+
+
+## Events, Event Pairs.
+
+An Event is the simplest Object, having no other state than its collection of active Signals.
+
+An Event Pair is one of a pair of Events that may signal each other.  A useful property of
+Event Pairs is that when one side of a pair goes away (all Handles to it have been
+closed), the PEER_CLOSED signal is asserted on the other side.
+
+See: [event_create](syscalls/event_create.md),
+and [eventpair_create](syscalls/eventpair_create.md).
 
 
 ## Shared Memory: Virtual Memory Objects (VMOs)

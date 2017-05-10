@@ -26,7 +26,7 @@ public:
 
 class StateTracker {
 public:
-    StateTracker(mx_signals_t signals = 0u) : signals_(signals) { }
+    StateTracker(mx_signals_t signals = 0u) : signals_(signals | MX_SIGNAL_LAST_HANDLE) { }
 
     StateTracker(const StateTracker& o) = delete;
     StateTracker& operator=(const StateTracker& o) = delete;
@@ -53,6 +53,10 @@ public:
     // manner.  Waiters on strobe_mask will wake, but the tracked state is unmodified.
     void StrobeState(mx_signals_t strobe_mask);
 
+    // Nofity others with MX_SIGNAL_LAST_HANDLE if the value pointed by |count| is 1. This
+    // value is allowed to mutate by other threads while this call is executing.
+    void UpdateLastHandleSignal(uint32_t* count);
+
     mx_signals_t GetSignalsState() { return signals_; }
 
     using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
@@ -66,6 +70,9 @@ public:
     mx_status_t InvalidateCookie(CookieJar *cookiejar);
 
 private:
+    // Returns true if one of the observers have been signaled. False otherwise.
+    bool UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) TA_REQ(lock_);
+
     mxtl::Canary<mxtl::magic("STRK")> canary_;
 
     mx_signals_t signals_;

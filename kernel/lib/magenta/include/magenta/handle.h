@@ -56,7 +56,7 @@ private:
     // MakeHandle or DupHandle.
     friend Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher,
                               mx_rights_t rights);
-    friend Handle* DupHandle(Handle* source, mx_rights_t rights);
+    friend Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace);
     Handle(const Handle&) = delete;
     Handle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights,
            uint32_t base_value);
@@ -67,7 +67,7 @@ private:
     // Handle should never be destroyed by anything other than DeleteHandle,
     // which uses TearDownHandle to do the actual destruction.
     friend void internal::TearDownHandle(Handle* handle);
-    ~Handle();
+    ~Handle() = default;
 
     mx_koid_t process_id_;
     mxtl::RefPtr<Dispatcher> dispatcher_;

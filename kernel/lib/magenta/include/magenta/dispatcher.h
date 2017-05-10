@@ -15,7 +15,6 @@
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 
-#include <mxtl/atomic.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -62,9 +61,8 @@ public:
 
     mx_koid_t get_koid() const { return koid_; }
 
-    void add_handle();
-
-    void remove_handle();
+    // Updating |handle_count_| is done at the magenta handle management layer.
+    uint32_t* get_handle_count_ptr() { return &handle_count_; }
 
     // Interface for derived classes.
 
@@ -99,7 +97,7 @@ protected:
 
 private:
     const mx_koid_t koid_;
-    mxtl::atomic<int> handle_count_;
+    uint32_t handle_count_;
 };
 
 // Checks if a RefPtr<Dispatcher> points to a dispatcher of a given dispatcher subclass T and, if

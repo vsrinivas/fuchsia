@@ -14,7 +14,6 @@ Handle::Handle(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights,
       dispatcher_(mxtl::move(dispatcher)),
       rights_(rights),
       base_value_(base_value) {
-    dispatcher_->add_handle();
 }
 
 Handle::Handle(const Handle* rhs, mx_rights_t rights, uint32_t base_value)
@@ -22,11 +21,6 @@ Handle::Handle(const Handle* rhs, mx_rights_t rights, uint32_t base_value)
       dispatcher_(rhs->dispatcher_),
       rights_(rights),
       base_value_(base_value) {
-    dispatcher_->add_handle();
-}
-
-Handle::~Handle() {
-    dispatcher_->remove_handle();
 }
 
 mxtl::RefPtr<Dispatcher> Handle::dispatcher() const { return dispatcher_; }

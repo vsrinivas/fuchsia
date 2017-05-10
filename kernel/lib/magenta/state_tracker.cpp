@@ -84,13 +84,11 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
                                mx_signals_t set_mask) {
     canary_.Assert();
 
-    bool awoke_threads = false;
-
+    bool awoke_threads;
     ObserverList obs_to_remove;
 
     {
         AutoLock lock(&lock_);
-
         auto previous_signals = signals_;
         signals_ &= ~clear_mask;
         signals_ |= set_mask;
@@ -98,59 +96,69 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         if (previous_signals == signals_)
             return;
 
-        for (auto it = observers_.begin(); it != observers_.end();) {
-            awoke_threads = it->OnStateChange(signals_) || awoke_threads;
-            if (it->remove()) {
-                auto to_remove = it;
-                ++it;
-                obs_to_remove.push_back(observers_.erase(to_remove));
-            } else {
-                ++it;
-            }
-        }
+        awoke_threads = UpdateInternalLocked(&obs_to_remove, signals_);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads) {
+    if (awoke_threads)
         thread_preempt(false);
-    }
 }
 
 void StateTracker::StrobeState(mx_signals_t notify_mask) {
     canary_.Assert();
 
-    bool awoke_threads = false;
-
+    bool awoke_threads;
     ObserverList obs_to_remove;
 
     {
         AutoLock lock(&lock_);
-
         // include currently active signals as well
         notify_mask |= signals_;
-
-        for (auto it = observers_.begin(); it != observers_.end();) {
-            awoke_threads = it->OnStateChange(notify_mask) || awoke_threads;
-            if (it->remove()) {
-                auto to_remove = it;
-                ++it;
-                obs_to_remove.push_back(observers_.erase(to_remove));
-            } else {
-                ++it;
-            }
-        }
+        awoke_threads = UpdateInternalLocked(&obs_to_remove, notify_mask);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads) {
+    if (awoke_threads)
         thread_preempt(false);
+}
+
+void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
+    canary_.Assert();
+
+    if (count == nullptr)
+        return;
+
+    bool awoke_threads;
+    ObserverList obs_to_remove;
+
+    {
+        AutoLock lock(&lock_);
+
+        auto previous_signals = signals_;
+
+        // We assume here that the value pointed by |count| can mutate by
+        // other threads.
+        signals_ = (*count == 1u) ?
+            signals_ | MX_SIGNAL_LAST_HANDLE : signals_ & ~MX_SIGNAL_LAST_HANDLE;
+
+        if (previous_signals == signals_)
+            return;
+
+        awoke_threads = UpdateInternalLocked(&obs_to_remove, signals_);
     }
+
+    while (!obs_to_remove.is_empty()) {
+        obs_to_remove.pop_front()->OnRemoved();
+    }
+
+    if (awoke_threads)
+        thread_preempt(false);
 }
 
 mx_status_t StateTracker::SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie) {
@@ -195,4 +203,20 @@ mx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
 
     cookiejar->scope_ = MX_KOID_KERNEL;
     return NO_ERROR;
+}
+
+bool StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) {
+    bool awoke_threads = false;
+
+    for (auto it = observers_.begin(); it != observers_.end();) {
+        awoke_threads = it->OnStateChange(signals) || awoke_threads;
+        if (it->remove()) {
+            auto to_remove = it;
+            ++it;
+            obs_to_remove->push_back(observers_.erase(to_remove));
+        } else {
+            ++it;
+        }
+    }
+    return awoke_threads;
 }

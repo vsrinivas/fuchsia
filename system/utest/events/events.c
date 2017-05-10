@@ -24,7 +24,7 @@ static bool wait(mx_handle_t event, mx_handle_t quit_event) {
     if (ms < 0)
         return false;
 
-    return (items[1].pending == MX_EVENT_SIGNALED);
+    return (items[1].pending & MX_EVENT_SIGNALED);
 }
 
 static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t user_signal) {
@@ -40,7 +40,7 @@ static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t us
     if (ms < 0)
         return false;
 
-    return (items[1].pending == MX_EVENT_SIGNALED);
+    return (items[1].pending & MX_EVENT_SIGNALED);
 }
 
 static int thread_fn_1(void* arg) {
@@ -179,39 +179,45 @@ static bool wait_signals_test(void) {
 
     status = mx_object_wait_one(events[0], MX_EVENT_SIGNALED, mx_deadline_after(1u), &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(pending, 0u, "");
+    ASSERT_EQ(pending, MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_object_wait_many(items, 3, mx_deadline_after(1));
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_FALSE(items[0].pending || items[1].pending || items[2].pending, "")
+    ASSERT_EQ(items[0].pending, MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[1].pending, MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[2].pending, MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_object_wait_one(events[0], MX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(pending, 0u, "");
+    ASSERT_EQ(pending, MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_object_wait_many(items, 3, 0);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_FALSE(items[0].pending || items[1].pending || items[2].pending, "")
+    ASSERT_EQ(items[0].pending, MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[1].pending, MX_SIGNAL_LAST_HANDLE, "");
+    ASSERT_EQ(items[2].pending, MX_SIGNAL_LAST_HANDLE, "");
 
     ASSERT_GE(mx_object_signal(events[0], 0u, MX_EVENT_SIGNALED), 0, "Error during event signal");
 
     status = mx_object_wait_one(events[0], MX_EVENT_SIGNALED, mx_deadline_after(1u), &pending);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(pending, MX_EVENT_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "Error during wait call");
 
     status = mx_object_wait_many(items, 3, mx_deadline_after(1));
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(items[0].pending, MX_EVENT_SIGNALED, "Error during wait call");
+    ASSERT_EQ(items[0].pending,
+        MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "Error during wait call");
 
     status = mx_object_wait_one(events[0], MX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, NO_ERROR, "wait failed");
-    ASSERT_EQ(pending, MX_EVENT_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "Error during wait call");
 
     ASSERT_GE(mx_object_signal(events[0], MX_EVENT_SIGNALED, 0u), 0, "Error during event reset");
     ASSERT_GE(mx_object_signal(events[2], 0u, MX_EVENT_SIGNALED), 0, "Error during event signal");
     status = mx_object_wait_many(items, 3, mx_deadline_after(1));
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(items[2].pending, MX_EVENT_SIGNALED, "Error during wait call");
+    ASSERT_EQ(items[2].pending,
+        MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "Error during wait call");
 
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, thread_fn_closer, &events[1], "closer");

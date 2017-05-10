@@ -76,7 +76,7 @@ static mx_status_t crashlogger_run(const char* name, int argc, const char* const
     if (status != NO_ERROR) {
         // Leave reporting the error to the caller.
     } else {
-        if (signals == MX_TASK_TERMINATED) {
+        if (signals & MX_TASK_TERMINATED) {
             mx_info_process_t info;
             status = mx_object_get_info(child, MX_INFO_PROCESS, &info,
                                         sizeof(info), nullptr, nullptr);

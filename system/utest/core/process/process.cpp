@@ -33,7 +33,7 @@ bool kill_process_via_thread_close() {
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
     END_TEST;
@@ -55,7 +55,7 @@ bool kill_process_via_process_close() {
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
         thread, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     EXPECT_EQ(mx_handle_close(thread), NO_ERROR, "");
     END_TEST;
@@ -77,7 +77,7 @@ bool kill_process_via_thread_kill() {
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(thread), NO_ERROR, "");
@@ -108,7 +108,7 @@ bool kill_process_via_vmar_destroy() {
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     EXPECT_EQ(mx_handle_close(proc), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
@@ -163,7 +163,7 @@ bool kill_process_handle_cycle() {
 
     EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     EXPECT_EQ(mx_handle_close(thread2), NO_ERROR, "");
 
@@ -292,7 +292,7 @@ bool info_reflects_process_state() {
     ASSERT_EQ(mx_task_kill(proc), NO_ERROR, "");
     ASSERT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    ASSERT_EQ(signals, MX_TASK_TERMINATED, "");
+    ASSERT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     ASSERT_EQ(mx_object_get_info(
             proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");

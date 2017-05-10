@@ -8,7 +8,7 @@
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
-static void check_signals_state(mx_handle_t h, mx_signals_t satisfied, mx_signals_t satisfiable) {
+static void check_signals_state(mx_handle_t h, mx_signals_t satisfied) {
     mx_signals_t pending = 0;
     EXPECT_EQ(mx_object_wait_one(h, 0u, 0u, &pending), ERR_TIMED_OUT, "wrong wait result");
     EXPECT_EQ(pending, satisfied, "wrong satisfied state");
@@ -61,19 +61,19 @@ static bool signal_test(void) {
     ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
     ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
 
-    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_object_signal(h[0], 0u, MX_USER_SIGNAL_0), NO_ERROR, "object_signal failed");
-    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[0], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[1], MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_object_signal(h[0], MX_USER_SIGNAL_0, 0u), NO_ERROR, "object_signal failed");
-    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[1], MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[0], MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_handle_close(h[0]), NO_ERROR, "failed to close event pair handle");
-    check_signals_state(h[1], MX_EPAIR_PEER_CLOSED, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[1], MX_EPAIR_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE);
     EXPECT_EQ(mx_handle_close(h[1]), NO_ERROR, "failed to close event pair handle");
     END_TEST;
 }
@@ -86,32 +86,26 @@ static bool signal_peer_test(void) {
     ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
     ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
 
-    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
-
     EXPECT_EQ(mx_object_signal_peer(h[0], 0u, MX_USER_SIGNAL_0), NO_ERROR, "object_signal failed");
-    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[1], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_object_signal_peer(h[1], 0u, MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2), NO_ERROR,
               "object_signal failed");
-    check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2,
-                        MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[1], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2 | MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_object_signal_peer(h[0], MX_USER_SIGNAL_0, MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4),
               NO_ERROR, "object_signal failed");
-    check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2,
-                        MX_EPAIR_SIGNAL_MASK);
-    check_signals_state(h[1], MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4,
-                        MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2 | MX_SIGNAL_LAST_HANDLE);
+    check_signals_state(h[1], MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4 | MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_handle_close(h[0]), NO_ERROR, "failed to close event pair handle");
 
     // Signaled flags should remain satisfied but now should now also get peer closed (and
     // unsignaled flags should be unsatisfiable).
-    check_signals_state(h[1], MX_EPAIR_PEER_CLOSED | MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4,
-                        MX_EPAIR_PEER_CLOSED | MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4);
+    check_signals_state(h[1],
+        MX_EPAIR_PEER_CLOSED | MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4 | MX_SIGNAL_LAST_HANDLE);
 
     EXPECT_EQ(mx_handle_close(h[1]), NO_ERROR, "failed to close event pair handle");
 

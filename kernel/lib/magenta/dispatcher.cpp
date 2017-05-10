@@ -29,17 +29,6 @@ Dispatcher::~Dispatcher() {
 #endif
 }
 
-void Dispatcher::add_handle() {
-    handle_count_.fetch_add(1, mxtl::memory_order_relaxed);
-}
-
-void Dispatcher::remove_handle() {
-    if (handle_count_.fetch_sub(1, mxtl::memory_order_release) == 1) {
-        mxtl::atomic_thread_fence(mxtl::memory_order_acquire);
-        on_zero_handles();
-    }
-}
-
 status_t Dispatcher::add_observer(StateObserver* observer) {
     auto state_tracker = get_state_tracker();
     if (!state_tracker)
@@ -64,3 +53,4 @@ status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool pe
     state_tracker->UpdateState(clear_mask, set_mask);
     return NO_ERROR;
 }
+
