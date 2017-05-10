@@ -90,7 +90,7 @@ class AgentRunner::InitializeCall : Operation<void> {
       std::string value;
       if (!mtl::StringFromVmo(entry->value, &value)) {
         FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-        return;
+        continue;
       }
       agent_runner_->AddedTrigger(key, std::move(value));
     }
