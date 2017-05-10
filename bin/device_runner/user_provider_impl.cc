@@ -15,7 +15,7 @@ namespace modular {
 namespace {
 
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
-constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v1.db";
+constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v2.db";
 
 }  // namespace
 
@@ -87,7 +87,7 @@ void UserProviderImpl::Login(
   if (account_id.is_null() || account_id == "") {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     // When running in incogito mode, we generate a random number. This number
-    // serves as user_id, device_name and the filename for ledger repository.
+    // serves as account_id, device_name and the filename for ledger repository.
     uint32_t random_number;
     size_t random_size;
     mx_status_t status =
@@ -95,9 +95,9 @@ void UserProviderImpl::Login(
     FTL_CHECK(status == NO_ERROR);
     FTL_CHECK(sizeof random_number == random_size);
 
-    auto user_id = std::to_string(random_number);
-    auto ledger_repository_path = kLedgerDataBaseDir + user_id;
-    LoginInternal(user_id, user_id, nullptr /* server_name */,
+    auto random_id = std::to_string(random_number);
+    auto ledger_repository_path = kLedgerDataBaseDir + random_id;
+    LoginInternal(random_id, random_id, nullptr /* server_name */,
                   ledger_repository_path, std::move(view_owner_request),
                   std::move(user_controller_request));
     return;
@@ -143,7 +143,7 @@ void UserProviderImpl::Login(
   }
 
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-  LoginInternal(user_id, found_user->device_name()->str(),
+  LoginInternal(account_id, found_user->device_name()->str(),
                 found_user->server_name()->str(), ledger_repository_path,
                 std::move(view_owner_request),
                 std::move(user_controller_request));
@@ -197,6 +197,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
             users.push_back(modular::CreateUserStorage(
                 builder, builder.CreateString(user->id()),
                 user->identity_provider(),
+                builder.CreateString(user->display_name()),
                 builder.CreateString(user->device_name()),
                 builder.CreateString(user->server_name())));
           }
@@ -307,7 +308,7 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
 }
 
 void UserProviderImpl::LoginInternal(
-    const std::string& user_id,
+    const std::string& account_id,
     const std::string& device_name,
     const fidl::String& server_name,
     const std::string& local_ledger_path,
@@ -324,11 +325,11 @@ void UserProviderImpl::LoginInternal(
   // Get token provider factory for this user.
   auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
-      user_id, token_provider_factory.NewRequest());
+      account_id, token_provider_factory.NewRequest());
 
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, device_name, user_shell_, story_shell_,
-      std::move(token_provider_factory), user_id, std::move(ledger_repository),
+      std::move(token_provider_factory), account_id, std::move(ledger_repository),
       std::move(view_owner_request), std::move(user_controller_request),
       [this] (UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
