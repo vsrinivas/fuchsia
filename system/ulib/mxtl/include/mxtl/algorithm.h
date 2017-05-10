@@ -60,4 +60,40 @@ constexpr const T roundup(const T& val, const U& multiple) {
                 ((val + (multiple - 1)) / multiple) * multiple;
 }
 
+// Returns a pointer to the first element that is not less than |value|, or
+// |last| if no such element is found.
+//
+// Similar to <http://en.cppreference.com/w/cpp/algorithm/lower_bound>
+template<class T, class U>
+const T* lower_bound(const T* first, const T* last, const U& value) {
+    while (first < last) {
+        const T* probe = first + (last - first) / 2;
+        if (*probe < value) {
+            first = probe + 1;
+        } else {
+            last = probe;
+        }
+    }
+    return last;
+}
+
+// Returns a pointer to the first element that is not less than |value|, or
+// |last| if no such element is found.
+//
+// |comp| is used to compare the elements rather than operator<.
+//
+// Similar to <http://en.cppreference.com/w/cpp/algorithm/lower_bound>
+template<class T, class U, class Compare>
+const T* lower_bound(const T* first, const T* last, const U& value, Compare comp) {
+    while (first < last) {
+        const T* probe = first + (last - first) / 2;
+        if (comp(*probe, value)) {
+            first = probe + 1;
+        } else {
+            last = probe;
+        }
+    }
+    return last;
+}
+
 }  // namespace mxtl
