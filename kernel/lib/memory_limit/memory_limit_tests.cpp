@@ -49,7 +49,7 @@ static const mem_limit_ctx_t switch_alpha_12_ctx = {
     .found_ramdisk = 0,
 };
 
-// rpi3 has a single contiguous 2GB block of memory
+// rpi3 has a single contiguous 512MB block of memory
 static const test_range_t rpi3_ranges[] = {
     {0xffff000000000000, 0x20000000},
 };

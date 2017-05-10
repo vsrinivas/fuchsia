@@ -35,6 +35,7 @@
 #include <kernel/vm/vm_aspace.h>
 
 #include <lib/console.h>
+#include <lib/memory_limit.h>
 #if WITH_LIB_DEBUGLOG
 #include <lib/debuglog.h>
 #endif
@@ -475,6 +476,7 @@ static void platform_mdi_init(void) {
     pdev_init(&kernel_drivers);
 }
 
+extern int _end;
 void platform_early_init(void)
 {
     // QEMU does not put device tree pointer in the boot-time x2 register,
@@ -511,7 +513,27 @@ void platform_early_init(void)
     if (arena_size) {
         arena.size = arena_size;
     }
-    pmm_add_arena(&arena);
+
+    // check if a memory limit was passed in via kernel.memory-limit-mb and
+    // find memory ranges to use if one is found.
+    mem_limit_ctx_t ctx;
+    status_t status = mem_limit_init(&ctx);
+    if (status == NO_ERROR) {
+        // For these ranges we're using the base physical values
+        ctx.kernel_base = MEMBASE + KERNEL_LOAD_OFFSET;
+        ctx.kernel_size = (uintptr_t)&_end - ctx.kernel_base;
+        ctx.ramdisk_base = ramdisk_start_phys;
+        ctx.ramdisk_size = ramdisk_end_phys - ramdisk_start_phys;
+
+        // Figure out and add arenas based on the memory limit and our range of DRAM
+        status = mem_limit_add_arenas_from_range(&ctx, arena.base, arena.size, arena);
+    }
+
+    // If no memory limit was found, or adding arenas from the range failed, then add
+    // the existing global arena.
+    if (status != NO_ERROR) {
+        pmm_add_arena(&arena);
+    }
 
 #ifdef BOOTLOADER_RESERVE_START
     /* Allocate memory regions reserved by bootloaders for other functions */

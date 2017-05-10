@@ -28,6 +28,7 @@ ARM_CPU := cortex-a53
 MODULE_DEPS += \
 	kernel/lib/cbuf \
 	kernel/lib/mdi \
+	kernel/lib/memory_limit \
 	kernel/dev/bcm28xx \
 	kernel/dev/pcie \
 	kernel/dev/pdev \
