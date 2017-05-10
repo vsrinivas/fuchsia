@@ -12,6 +12,14 @@
             "bootfs_path": "apps/compositor_services_apptests"
         },
         {
+            "binary": "composer_apptests",
+            "bootfs_path": "test/composer_apptests"
+        },
+        {
+            "binary": "composer_unittests",
+            "bootfs_path": "test/composer_unittests"
+        },
+        {
             "binary": "geometry_util_unittest",
             "bootfs_path": "apps/geometry_util_unittest"
         },
