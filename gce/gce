@@ -1,0 +1,32 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+mydir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
+  source $mydir/env.sh
+fi
+
+usage() {
+	echo -n "$(basename $0) ["
+	(
+	cd $mydir;
+	ls *.sh | grep -v env.sh | cut -d . -f 1
+	) | tr "\n" "|"
+	echo "]"
+}
+
+if [[ $# = 0 ]] || [[ "help" = $1 ]]; then
+	usage
+	exit 1
+fi
+
+cmd=$1
+shift
+if [[ ! -f $mydir/$cmd.sh ]]; then
+	usage
+	exit 1
+fi
+
+exec $mydir/$cmd.sh "$@"

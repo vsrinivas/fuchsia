@@ -773,3 +773,5 @@ if [[ -n "${ZSH_VERSION}" ]]; then
   }
   zle -N accept-line fuchsia::zle::accept-line
 fi
+
+alias gce="$FUCHSIA_SCRIPTS_DIR/gce/gce"
