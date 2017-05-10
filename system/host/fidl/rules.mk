@@ -15,5 +15,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lexer.cpp \
     $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/parser.cpp \
+    $(LOCAL_DIR)/source_manager.cpp \
 
 include make/module.mk
