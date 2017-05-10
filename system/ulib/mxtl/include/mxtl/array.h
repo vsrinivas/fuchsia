@@ -26,7 +26,7 @@ public:
     }
 
     ~Array() {
-        delete[] ptr_;
+        reset();
     }
 
     Array& operator=(Array&& o) {
@@ -50,9 +50,10 @@ public:
     }
 
     void reset(T* t, size_t count) {
-        delete[] ptr_;
+        T* ptr = ptr_;
         ptr_ = t;
         count_ = count;
+        delete[] ptr;
     }
 
     void swap(Array& other) {
