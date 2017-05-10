@@ -1,9 +1,9 @@
-module examples_7;
+module examples_7
 
-using "¡🇷🇸h";
+using "¡🇷🇸h"
 
 // ¡🇷🇸🇷
 
 interface Hello {
   0: Say(string req) -> (string response);
-};
+}

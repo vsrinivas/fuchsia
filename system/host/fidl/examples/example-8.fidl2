@@ -1,7 +1,7 @@
-module example_8;
+module example_8
 
 struct foo {
     uint8 u8_0;
     uint64 u64_0;
     uint8 u8_1;
-};
+}

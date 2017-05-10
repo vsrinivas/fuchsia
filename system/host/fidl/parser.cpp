@@ -166,9 +166,6 @@ std::unique_ptr<Using> Parser::ParseUsing() {
     auto literal = ParseStringLiteral();
     if (!Ok())
         return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
 
     return std::make_unique<Using>(std::move(literal));
 }
@@ -313,9 +310,6 @@ std::unique_ptr<ConstDeclaration> Parser::ParseConstDeclaration() {
     auto constant = ParseConstant();
     if (!Ok())
         return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
 
     return std::make_unique<ConstDeclaration>(std::move(type),
                                               std::move(identifier),
@@ -356,10 +350,6 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
         }
     }
 
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
-
     return std::make_unique<EnumMember>(std::move(identifier),
                                         std::move(member_value));
 }
@@ -389,6 +379,7 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
     auto parse_member = [&members, this]() {
         switch (Peek()) {
         default:
+            ConsumeToken(Token::Kind::RightCurly);
             return Done;
 
         TOKEN_TYPE_CASES:
@@ -399,15 +390,11 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
 
     while (parse_member() == More) {
         if (!Ok())
+            Fail();
+        ConsumeToken(Token::Kind::Semicolon);
+        if (!Ok())
             return Fail();
     }
-
-    ConsumeToken(Token::Kind::RightCurly);
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
 
     return std::make_unique<EnumDeclaration>(std::move(identifier),
                                              std::move(subtype),
@@ -493,12 +480,6 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
             return Fail();
     }
 
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
-
     return std::make_unique<InterfaceMemberMethod>(std::move(ordinal),
                                                    std::move(identifier),
                                                    std::move(parameter_list),
@@ -524,8 +505,6 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
         switch (Peek()) {
         default:
             ConsumeToken(Token::Kind::RightCurly);
-            if (Ok())
-                ConsumeToken(Token::Kind::Semicolon);
             return Done;
 
         case Token::Kind::Const:
@@ -543,6 +522,9 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
     };
 
     while (parse_member() == More) {
+        if (!Ok())
+            Fail();
+        ConsumeToken(Token::Kind::Semicolon);
         if (!Ok())
             return Fail();
     }
@@ -571,10 +553,6 @@ std::unique_ptr<StructMember> Parser::ParseStructMember() {
             return Fail();
     }
 
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
-
     return std::make_unique<StructMember>(std::move(type),
                                           std::move(identifier),
                                           std::move(maybe_default_value));
@@ -599,8 +577,6 @@ std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
         switch (Peek()) {
         default:
             ConsumeToken(Token::Kind::RightCurly);
-            if (Ok())
-                ConsumeToken(Token::Kind::Semicolon);
             return Done;
 
         case Token::Kind::Const:
@@ -619,6 +595,9 @@ std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
 
     while (parse_member() == More) {
         if (!Ok())
+            Fail();
+        ConsumeToken(Token::Kind::Semicolon);
+        if (!Ok())
             return Fail();
     }
 
@@ -633,9 +612,6 @@ std::unique_ptr<UnionMember> Parser::ParseUnionMember() {
     if (!Ok())
         return Fail();
     auto identifier = ParseIdentifier();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
     if (!Ok())
         return Fail();
 
@@ -661,6 +637,7 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
     auto parse_member = [&const_members, &enum_members, &members, this]() {
         switch (Peek()) {
         default:
+            ConsumeToken(Token::Kind::RightCurly);
             return Done;
 
         case Token::Kind::Const:
@@ -679,15 +656,11 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
 
     while (parse_member() == More) {
         if (!Ok())
+            Fail();
+        ConsumeToken(Token::Kind::Semicolon);
+        if (!Ok())
             return Fail();
     }
-
-    ConsumeToken(Token::Kind::RightCurly);
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
-    if (!Ok())
-        return Fail();
 
     return std::make_unique<UnionDeclaration>(std::move(identifier),
                                               std::move(const_members),
@@ -707,9 +680,6 @@ std::unique_ptr<File> Parser::ParseFile() {
     if (!Ok())
         return Fail();
     auto identifier = ParseCompoundIdentifier();
-    if (!Ok())
-        return Fail();
-    ConsumeToken(Token::Kind::Semicolon);
     if (!Ok())
         return Fail();
 
