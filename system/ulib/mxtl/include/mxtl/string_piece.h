@@ -32,11 +32,32 @@ public:
         length_ = len;
     }
 
+    int compare(StringPiece other) const;
+
 private:
     // Pointer to string data, not necessarily null terminated
     const char* ptr_;
     // Length of the string data
     size_t length_;
 };
+
+bool operator==(StringPiece lhs, StringPiece rhs);
+bool operator!=(StringPiece lhs, StringPiece rhs);
+
+inline bool operator<(StringPiece lhs, StringPiece rhs) {
+  return lhs.compare(rhs) < 0;
+}
+
+inline bool operator>(StringPiece lhs, StringPiece rhs) {
+  return lhs.compare(rhs) > 0;
+}
+
+inline bool operator<=(StringPiece lhs, StringPiece rhs) {
+  return lhs.compare(rhs) <= 0;
+}
+
+inline bool operator>=(StringPiece lhs, StringPiece rhs) {
+  return lhs.compare(rhs) >= 0;
+}
 
 }  // namespace mxtl

@@ -37,6 +37,7 @@ source_set("mxtl") {
     "include/mxtl/type_support.h",
     "include/mxtl/unique_free_ptr.h",
     "include/mxtl/unique_ptr.h",
+    "string_piece.cpp",
   ]
 
   public_configs = [ ":mxtl_config" ]
