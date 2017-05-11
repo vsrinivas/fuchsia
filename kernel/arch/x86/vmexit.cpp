@@ -54,7 +54,6 @@ ExitInfo::ExitInfo() {
     guest_rip = vmcs_read(VmcsFieldXX::GUEST_RIP);
 
     if (exit_reason == ExitReason::EXTERNAL_INTERRUPT ||
-        exit_reason == ExitReason::HLT ||
         exit_reason == ExitReason::IO_INSTRUCTION)
         return;
 
@@ -627,6 +626,7 @@ status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_stat
         dprintf(SPEW, "handling CPUID instruction\n\n");
         return handle_cpuid(exit_info, guest_state);
     case ExitReason::HLT:
+        dprintf(SPEW, "handling HLT instruction\n\n");
         return handle_hlt(exit_info, local_apic_state);
     case ExitReason::IO_INSTRUCTION:
         return handle_io(exit_info, guest_state, serial_fifo);

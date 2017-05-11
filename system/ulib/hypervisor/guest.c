@@ -151,11 +151,15 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
     entry[1].addr = kAddr3500mb;
     entry[1].size = kAddr4000mb - kAddr3500mb;
     entry[1].type = kE820Reserved;
-    // If size > 4000mb, then that region is available.
     if (size > kAddr4000mb) {
+        // If size > 4000mb, then make that region available.
         entry[2].addr = kAddr4000mb;
         entry[2].size = size - kAddr4000mb;
         entry[2].type = kE820Ram;
+    } else {
+        // Else, remove the last entry.
+        header->length -= sizeof(e820entry_t);
+        bootdata->length -= sizeof(e820entry_t);
     }
 
     return NO_ERROR;
