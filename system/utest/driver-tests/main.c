@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
 #include <errno.h>
 #include <threads.h>
 
@@ -16,23 +17,14 @@
 #include <magenta/device/test.h>
 #include <unittest/unittest.h>
 
-static const char* test_drivers[] = {
-    "ddktl_test",
-    "iotxn_test",
-};
-
-static const char* test_driver_libs[] = {
-    "/boot/driver/ddktl-test.so",
-    "/boot/driver/iotxn-test.so",
-};
-
+#define DRIVER_TEST_DIR "/boot/driver/test"
 #define DEV_TEST "/dev/misc/test"
 
-static void do_one_test(int tfd, int i, mx_handle_t output, test_ioctl_test_report_t* report) {
+static void do_one_test(int tfd, const char* drv_libname, mx_handle_t output, test_ioctl_test_report_t* report) {
     char devpath[1024];
-    ssize_t rc = ioctl_test_create_device(tfd, test_drivers[i], strlen(test_drivers[i]) + 1, devpath, sizeof(devpath));
+    ssize_t rc = ioctl_test_create_device(tfd, drv_libname, strlen(drv_libname) + 1, devpath, sizeof(devpath));
     if (rc < 0) {
-        printf("driver-tests: error %zd creating device for %s\n", rc, test_drivers[i]);
+        printf("driver-tests: error %zd creating device for %s\n", rc, drv_libname);
         report->n_tests = 1;
         report->n_failed = 1;
         return;
@@ -58,9 +50,11 @@ static void do_one_test(int tfd, int i, mx_handle_t output, test_ioctl_test_repo
         goto end_device_created;
     }
 
-    rc = ioctl_device_bind(fd, test_driver_libs[i], strlen(test_driver_libs[i]));
+    char libpath[PATH_MAX];
+    int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
+    rc = ioctl_device_bind(fd, libpath, n);
     if (rc < 0) {
-        printf("driver-tests: error %zd binding to %s\n", rc, test_driver_libs[i]);
+        printf("driver-tests: error %zd binding to %s\n", rc, libpath);
         report->n_tests = 1;
         report->n_failed = 1;
         goto end_device_opened;
@@ -142,11 +136,25 @@ int main(int argc, char** argv) {
     test_ioctl_test_report_t final_report;
     memset(&final_report, 0, sizeof(final_report));
 
+    DIR* dir = opendir(DRIVER_TEST_DIR);
+    if (dir == NULL) {
+        printf("driver-tests: failed to open %s\n", DRIVER_TEST_DIR);
+        return -1;
+    }
+    int dfd = dirfd(dir);
+    if (dfd < 0) {
+        printf("driver-tests: failed to get fd for %s\n", DRIVER_TEST_DIR);
+        return -1;
+    }
+    struct dirent* de;
     // bind test drivers
-    for (unsigned i = 0; i < sizeof(test_drivers)/sizeof(char*); i++) {
+    while ((de = readdir(dir)) != NULL) {
+        if ((strcmp(de->d_name, ".") == 0) || (strcmp(de->d_name, "..") == 0)) {
+            continue;
+        }
         test_ioctl_test_report_t one_report;
         memset(&one_report, 0, sizeof(one_report));
-        do_one_test(fd, i, socket[1], &one_report);
+        do_one_test(fd, de->d_name, socket[1], &one_report);
         final_report.n_tests += one_report.n_tests;
         final_report.n_success += one_report.n_success;
         final_report.n_failed += one_report.n_failed;

@@ -31,7 +31,7 @@ MODULE := $(LOCAL_DIR).iotxn-test
 
 MODULE_NAME := iotxn-test
 
-MODULE_TYPE := driver
+MODULE_TYPE := drivertest
 
 TEST_DIR := $(LOCAL_DIR)/test
 
@@ -56,7 +56,7 @@ MODULE := $(LOCAL_DIR).ddktl-test
 
 MODULE_NAME := ddktl-test
 
-MODULE_TYPE := driver
+MODULE_TYPE := drivertest
 
 TEST_DIR := $(LOCAL_DIR)/test/ddktl
 

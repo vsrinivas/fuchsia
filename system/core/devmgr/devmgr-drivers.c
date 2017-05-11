@@ -104,6 +104,7 @@ static void find_loadable_drivers(const char* path) {
 
 void enumerate_drivers(void) {
     find_loadable_drivers("/boot/driver");
+    find_loadable_drivers("/boot/driver/test");
     find_loadable_drivers("/system/driver");
 
     //TODO: remove deprecated driver paths:
