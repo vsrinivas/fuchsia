@@ -24,35 +24,6 @@ struct dircookie_t {
 static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
               "vmofs dircookie too large to fit in IO state");
 
-static mx_status_t ReaddirStart(void* cookie, void* data, size_t len) {
-    dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    size_t pos = 0;
-    char* ptr = static_cast<char*>(data);
-    mx_status_t r;
-
-    if (c->last_id < 1) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, ".", 1,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
-        }
-        pos += r;
-        c->last_id = 1;
-    }
-
-    if (c->last_id < 2) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, "..", 2,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
-        }
-        pos += r;
-        c->last_id = 2;
-    }
-
-    return static_cast<mx_status_t>(pos);
-}
-
 // Vnode -----------------------------------------------------------------------
 
 Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
@@ -180,35 +151,34 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return NO_ERROR;
 }
 
-mx_status_t VnodeDir::Readdir(void* cookie, void* _data, size_t len) {
+mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    char* data = static_cast<char*>(_data);
+    fs::DirentFiller df(data, len);
     mx_status_t r = 0;
-
-    if (c->last_id < 2) {
-        r = ReaddirStart(cookie, data, len);
-        if (r < 0) {
-            return r;
+    if (c->last_id < 1) {
+        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return df.BytesFilled();
         }
+        c->last_id = 1;
     }
-
-    size_t pos = r;
-    char* ptr = static_cast<char*>(data);
+    if (c->last_id < 2) {
+        if ((r = df.Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return df.BytesFilled();
+        }
+        c->last_id = 2;
+    }
 
     for (size_t i = c->last_id - 2; i < children_.size(); ++i) {
         mxtl::StringPiece name = names_[i];
         const auto& child = children_[i];
         uint32_t vtype = child->GetVType();
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos,
-                                name.data(), name.length(), VTYPE_TO_DTYPE(vtype));
-        if (r < 0) {
+        if ((r = df.Next(name.data(), name.length(), VTYPE_TO_DTYPE(vtype))) != NO_ERROR) {
             break;
         }
-        pos += r;
         c->last_id = i + 2;
     }
 
-    return static_cast<mx_status_t>(pos);
+    return df.BytesFilled();
 }
 
 } // namespace vmofs

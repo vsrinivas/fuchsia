@@ -81,8 +81,8 @@ public:
     // ReaddirStart reads the canned "." and ".." entries that should appear
     // at the beginning of a directory.
     // On success, return the number of bytes read.
-    static mx_status_t ReaddirStart(void* cookie, void* data, size_t len);
-    mx_status_t Readdir(void* cookie, void* data, size_t len) const;
+    static mx_status_t ReaddirStart(fs::DirentFiller* df, void* cookie);
+    void Readdir(fs::DirentFiller* df, void* cookie) const;
 
     // Answers the question: "Is dn a subdirectory of this?"
     bool IsSubdirectory(mxtl::RefPtr<Dnode> dn) const;

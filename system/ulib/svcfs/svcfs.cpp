@@ -22,35 +22,6 @@ struct dircookie_t {
 static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
               "svcfs dircookie too large to fit in IO state");
 
-static mx_status_t ReaddirStart(void* cookie, void* data, size_t len) {
-    dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    size_t pos = 0;
-    char* ptr = static_cast<char*>(data);
-    mx_status_t r;
-
-    if (c->last_id < 1) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, ".", 1,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
-        }
-        pos += r;
-        c->last_id = 1;
-    }
-
-    if (c->last_id < 2) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, "..", 2,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
-        }
-        pos += r;
-        c->last_id = 2;
-    }
-
-    return static_cast<mx_status_t>(pos);
-}
-
 // ServiceProvider -------------------------------------------------------------
 
 ServiceProvider::~ServiceProvider() = default;
@@ -139,36 +110,36 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
 void VnodeDir::NotifyAdd(const char* name, size_t len) { watcher_.NotifyAdd(name, len); }
 mx_status_t VnodeDir::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
 
-mx_status_t VnodeDir::Readdir(void* cookie, void* _data, size_t len) {
+mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    char* data = static_cast<char*>(_data);
+    fs::DirentFiller df(data, len);
+
     mx_status_t r = 0;
-
-    if (c->last_id < 2) {
-        r = ReaddirStart(cookie, data, len);
-        if (r < 0) {
-            return r;
+    if (c->last_id < 1) {
+        if ((r = df.Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return df.BytesFilled();
         }
+        c->last_id = 1;
     }
-
-    size_t pos = r;
-    char* ptr = static_cast<char*>(data);
+    if (c->last_id < 2) {
+        if ((r = df.Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return df.BytesFilled();
+        }
+        c->last_id = 2;
+    }
 
     for (const VnodeSvc& vn : services_) {
         if (c->last_id >= vn.node_id()) {
             continue;
         }
-        uint32_t vtype = V_TYPE_FILE;
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos,
-                                vn.name().get(), vn.name().size(), VTYPE_TO_DTYPE(vtype));
-        if (r < 0) {
-            break;
+        if ((r = df.Next(vn.name().get(), vn.name().size(),
+                         VTYPE_TO_DTYPE(V_TYPE_FILE))) != NO_ERROR) {
+            return df.BytesFilled();
         }
-        pos += r;
         c->last_id = vn.node_id();
     }
 
-    return static_cast<mx_status_t>(pos);
+    return df.BytesFilled();
 }
 
 bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provider) {

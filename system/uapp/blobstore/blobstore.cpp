@@ -684,9 +684,8 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
               "Blobstore dircookie too large to fit in IO state");
 
 mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
+    fs::DirentFiller df(dirents, len);
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    char* data = static_cast<char*>(dirents);
-    size_t pos = 0; // Position from start of "dirents"
 
     for (size_t i = c->index; i < info_.inode_count; ++i) {
         if (node_map_[i].start_block >= kStartBlockMinimum) {
@@ -696,17 +695,14 @@ mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
             if (r < 0) {
                 return r;
             }
-            r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(data + pos), len - pos,
-                                    name, strlen(name), VTYPE_TO_DTYPE(V_TYPE_FILE));
-            if (r < 0) {
+            if ((r = df.Next(name, strlen(name), VTYPE_TO_DTYPE(V_TYPE_FILE))) != NO_ERROR) {
                 break;
             }
-            pos += r;
             c->index = i + 1;
         }
     }
 
-    return static_cast<mx_status_t>(pos);
+    return df.BytesFilled();
 }
 
 mx_status_t Blobstore::LookupBlob(const merkle::Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {

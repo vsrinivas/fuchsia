@@ -221,11 +221,14 @@ mx_status_t VnodeMemfs::Setattr(vnattr_t* attr) {
 }
 
 mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
+    fs::DirentFiller df(data, len);
     if (!IsDirectory()) {
         // This WAS a directory, but it has been deleted.
-        return Dnode::ReaddirStart(cookie, data, len);
+        Dnode::ReaddirStart(&df, cookie);
+        return df.BytesFilled();
     }
-    return dnode_->Readdir(cookie, data, len);
+    dnode_->Readdir(&df, cookie);
+    return df.BytesFilled();
 }
 
 // postcondition: reference taken on vn returned through "out"

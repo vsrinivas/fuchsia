@@ -153,64 +153,45 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 
 // Read the canned "." and ".." entries that should
 // appear at the beginning of a directory.
-mx_status_t Dnode::ReaddirStart(void* cookie, void* data, size_t len) {
+mx_status_t Dnode::ReaddirStart(fs::DirentFiller* df, void* cookie) {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    size_t pos = 0;
-    char* ptr = static_cast<char*>(data);
     mx_status_t r;
 
     if (c->order == 0) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, ".", 1,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
+        if ((r = df->Next(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return r;
         }
-        pos += r;
         c->order++;
     }
     if (c->order == 1) {
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos, "..", 2,
-                                VTYPE_TO_DTYPE(V_TYPE_DIR));
-        if (r < 0) {
-            return static_cast<mx_status_t>(pos);
+        if ((r = df->Next("..", 2, VTYPE_TO_DTYPE(V_TYPE_DIR))) != NO_ERROR) {
+            return r;
         }
-        pos += r;
         c->order++;
     }
-    return static_cast<mx_status_t>(pos);
+    return NO_ERROR;
 }
 
-mx_status_t Dnode::Readdir(void* cookie, void* _data, size_t len) const {
+void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
     dircookie_t* c = static_cast<dircookie_t*>(cookie);
-    char* data = static_cast<char*>(_data);
     mx_status_t r = 0;
 
     if (c->order <= 1) {
-        r = Dnode::ReaddirStart(cookie, data, len);
-        if (r < 0) {
-            return r;
+        if ((r = Dnode::ReaddirStart(df, cookie)) != NO_ERROR) {
+            return;
         }
     }
-
-    size_t pos = r;
-    char* ptr = static_cast<char*>(data);
 
     for (const auto& dn : children_) {
         if (dn.ordering_token_ < c->order) {
             continue;
         }
         uint32_t vtype = dn.IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE;
-        r = fs::vfs_fill_dirent(reinterpret_cast<vdirent_t*>(ptr + pos), len - pos,
-                                dn.name_.get(), dn.NameLen(),
-                                VTYPE_TO_DTYPE(vtype));
-        if (r < 0) {
-            break;
+        if ((r = df->Next(dn.name_.get(), dn.NameLen(), VTYPE_TO_DTYPE(vtype))) != NO_ERROR) {
+            return;
         }
         c->order = dn.ordering_token_ + 1;
-        pos += r;
     }
-
-    return static_cast<mx_status_t>(pos);
 }
 
 // Answers the question: "Is dn a subdirectory of this?"

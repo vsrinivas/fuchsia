@@ -1012,7 +1012,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
     trace(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
-    vdirent_t* out = reinterpret_cast<vdirent_t*>(dirents);
+    fs::DirentFiller df(dirents, len);
 
     if (!IsDirectory()) {
         return ERR_NOT_SUPPORTED;
@@ -1052,13 +1052,10 @@ mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
 
         if (de->ino) {
             mx_status_t status;
-            size_t len_remaining = len - (size_t)((uintptr_t)out - (uintptr_t)dirents);
-            if ((status = fs::vfs_fill_dirent(out, len_remaining, de->name,
-                                              de->namelen, de->type)) < 0) {
+            if ((status = df.Next(de->name, de->namelen, de->type)) != NO_ERROR) {
                 // no more space
                 goto done;
             }
-            out = (vdirent_t*)((uintptr_t)out + status);
         }
 
         off += MinfsReclen(de, off);
@@ -1068,7 +1065,7 @@ done:
     // save our place in the dircookie
     dc->off = off;
     dc->seqno = inode_.seq_num;
-    r = static_cast<size_t>(((uintptr_t) out - (uintptr_t)dirents));
+    r = df.BytesFilled();
     assert(r <= len); // Otherwise, we're overflowing the input buffer.
     return static_cast<mx_status_t>(r);
 

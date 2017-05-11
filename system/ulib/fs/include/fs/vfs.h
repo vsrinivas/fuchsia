@@ -90,6 +90,27 @@ private:
 
 #endif // __Fuchsia__
 
+// Helper class used to fill direntries during calls to Readdir.
+class DirentFiller {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(DirentFiller);
+
+    DirentFiller(void* ptr, size_t len);
+
+    // Attempts to add the name to the end of the dirent buffer
+    // which is returned by readdir.
+    mx_status_t Next(const char* name, size_t len, uint32_t type);
+
+    mx_status_t BytesFilled() const {
+        return static_cast<mx_status_t>(pos_);
+    }
+
+private:
+    char* ptr_;
+    size_t pos_;
+    const size_t len_;
+};
+
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
 //
@@ -280,9 +301,6 @@ struct Vfs {
     static mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
 #endif  // ifdef __Fuchsia__
 };
-
-mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
-                            const char* name, size_t len, uint32_t type);
 
 } // namespace fs
 
