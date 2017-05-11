@@ -475,7 +475,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
 
           page_->Delete(to_array(message_queue_key),
                         [message_queue_key](ledger::Status status) {
-                          if (status != legder::Status::OK) {
+                          if (status != ledger::Status::OK) {
                             FTL_LOG(ERROR)
                                 << "Error deleting key from ledger: "
                                 << message_queue_key << ", status=" << status;
@@ -483,7 +483,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
                         });
           page_->Delete(to_array(message_queue_token_key),
                         [message_queue_token_key](ledger::Status status) {
-                          if (status != legder::Status::OK) {
+                          if (status != ledger::Status::OK) {
                             FTL_LOG(ERROR) << "Error deleting key from ledger: "
                                            << message_queue_token_key
                                            << ", status=" << status;
