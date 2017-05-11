@@ -87,8 +87,9 @@ static SyscallNumbersGenerator syscall_num_generator("#define MX_SYS_");
 
 static RustBindingGenerator rust_binding_generator;
 static TraceInfoGenerator trace_generator;
+static CategoryGenerator category_generator;
 
-const map<string, const Generator&> type_to_generator = {
+const map<string, Generator&> type_to_generator = {
     // The user header, pure C.
     {"user-header", user_header},
 
@@ -118,6 +119,9 @@ const map<string, const Generator&> type_to_generator = {
 
     // vDSO wrappers for additional behaviour in user space.
     {"vdso-wrappers", vdso_wrapper_generator},
+
+    // Category list.
+    {"category", category_generator},
 };
 
 const map<string, string> type_to_default_suffix = {
@@ -131,13 +135,14 @@ const map<string, string> type_to_default_suffix = {
     {"trace", ".trace.inc"},
     {"rust", ".rs"},
     {"vdso-wrappers", ".vdso-wrappers.inc"},
+    {"category", ".category.inc"},
 };
 
 const map<string, string>& get_type_to_default_suffix() {
     return type_to_default_suffix;
 }
 
-const map<string, const Generator&>& get_type_to_generator() {
+const map<string, Generator&>& get_type_to_generator() {
     return type_to_generator;
 }
 
@@ -161,7 +166,7 @@ bool SysgenGenerator::verbose() const {
     return verbose_;
 }
 
-bool SysgenGenerator::generate_one(const string& output_file, const Generator& generator, const string& type) {
+bool SysgenGenerator::generate_one(const string& output_file, Generator& generator, const string& type) {
     std::ofstream ofile;
     ofile.open(output_file.c_str(), std::ofstream::out);
 

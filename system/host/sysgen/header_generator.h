@@ -26,7 +26,7 @@ public:
         allow_pointer_wrapping_(allow_pointer_wrapping),
         skip_vdso_calls_(skip_vdso_calls) {}
 
-    bool syscall(std::ofstream& os, const Syscall& sc) const override;
+    bool syscall(std::ofstream& os, const Syscall& sc) override;
 
 private:
     const std::string function_prefix_;

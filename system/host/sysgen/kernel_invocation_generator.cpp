@@ -22,7 +22,7 @@ static string invocation(std::ofstream& os, const string& out_var, const string&
     return "))";
 }
 
-bool KernelInvocationGenerator::syscall(std::ofstream& os, const Syscall& sc) const {
+bool KernelInvocationGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     if (sc.is_vdso())
         return true;
 

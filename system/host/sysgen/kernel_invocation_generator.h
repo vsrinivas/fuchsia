@@ -18,7 +18,7 @@ public:
         syscall_prefix_(syscall_prefix), return_var_(return_var),
         return_type_(return_type), arg_prefix_(arg_prefix) {}
 
-    bool syscall(std::ofstream& os, const Syscall& sc) const override;
+    bool syscall(std::ofstream& os, const Syscall& sc) override;
 
 private:
     const std::string syscall_prefix_;

@@ -649,9 +649,9 @@ syscall system_mexec
 # Test syscalls (keep at the end)
 
 syscall syscall_test_0() returns (mx_status_t);
-syscall syscall_test_1(a:int) returns (mx_status_t);
-syscall syscall_test_2(a:int, b:int) returns (mx_status_t);
-syscall syscall_test_3(a:int, b:int, c:int) returns (mx_status_t);
+syscall syscall_test_1 test_category1 (a:int) returns (mx_status_t);
+syscall syscall_test_2 test_category1 (a:int, b:int) returns (mx_status_t);
+syscall syscall_test_3 test_category2 (a:int, b:int, c:int) returns (mx_status_t);
 syscall syscall_test_4(a:int, b:int, c:int, d:int) returns (mx_status_t);
 syscall syscall_test_5(a:int, b:int, c:int, d:int, e:int) returns (mx_status_t);
 syscall syscall_test_6(a:int, b:int, c:int, d:int, e:int, f:int) returns (mx_status_t);

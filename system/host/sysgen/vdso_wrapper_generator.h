@@ -16,7 +16,7 @@ public:
         : external_prefix_(external_prefix), wrapper_prefix_(wrapper_prefix),
           vdso_prefix_(vdso_prefix), call_prefix_(call_prefix), wrappers_(call_wrappers) {}
 
-    bool syscall(std::ofstream& os, const Syscall& sc) const;
+    bool syscall(std::ofstream& os, const Syscall& sc);
 
 private:
     void pre_call(std::ofstream& os, const Syscall& sc) const;

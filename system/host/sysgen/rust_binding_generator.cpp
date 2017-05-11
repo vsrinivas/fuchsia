@@ -4,7 +4,7 @@
 
 #include "rust_binding_generator.h"
 
-bool RustBindingGenerator::header(std::ofstream& os) const {
+bool RustBindingGenerator::header(std::ofstream& os) {
     if (!Generator::header(os)) {
       return false;
     }
@@ -13,7 +13,7 @@ bool RustBindingGenerator::header(std::ofstream& os) const {
     return os.good();
 }
 
-bool RustBindingGenerator::footer(std::ofstream& os) const {
+bool RustBindingGenerator::footer(std::ofstream& os) {
     if (!Generator::footer(os)) {
       return false;
     }
@@ -21,7 +21,7 @@ bool RustBindingGenerator::footer(std::ofstream& os) const {
     return os.good();
 }
 
-bool RustBindingGenerator::syscall(std::ofstream& os, const Syscall& sc) const {
+bool RustBindingGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     os << "    pub fn mx_" << sc.name << "(";
 
     // Writes all arguments.

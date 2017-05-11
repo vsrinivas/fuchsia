@@ -13,7 +13,7 @@
 /* Generates the Rust bindings. */
 class RustBindingGenerator : public Generator {
 public:
-  bool header(std::ofstream& os) const override;
-  bool footer(std::ofstream& os) const override;
-  bool syscall(std::ofstream& os, const Syscall& sc) const override;
+  bool header(std::ofstream& os) override;
+  bool footer(std::ofstream& os) override;
+  bool syscall(std::ofstream& os, const Syscall& sc) override;
 };

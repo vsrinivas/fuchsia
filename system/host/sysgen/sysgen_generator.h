@@ -14,7 +14,7 @@
 #include "types.h"
 
 const std::map<std::string, std::string>& get_type_to_default_suffix();
-const std::map<std::string, const Generator&>& get_type_to_generator();
+const std::map<std::string, Generator&>& get_type_to_generator();
 
 class SysgenGenerator {
 public:
@@ -25,7 +25,7 @@ public:
 
 private:
     bool generate_one(const std::string& output_file,
-                      const Generator& generator, const std::string& type);
+                      Generator& generator, const std::string& type);
     void print_error(const char* what, const std::string& file);
 
     std::list<Syscall> calls_;

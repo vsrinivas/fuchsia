@@ -44,7 +44,7 @@ static bool none_apply(const Syscall& sc, const std::vector<CallWrapper*> wrappe
     return true;
 }
 
-bool VdsoWrapperGenerator::syscall(ofstream& os, const Syscall& sc) const {
+bool VdsoWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
     if (sc.is_vdso() || none_apply(sc, wrappers_)) {
         // Skip all calls implemented in the VDSO. They're on their own.
         return os.good();

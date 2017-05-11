@@ -13,7 +13,7 @@ static const string add_attribute(map<string, string> attributes,
     return (ft == attributes.end()) ? string() : ft->second;
 }
 
-bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) const {
+bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     if (skip_vdso_calls_ && sc.is_vdso()) {
         return true;
     }
