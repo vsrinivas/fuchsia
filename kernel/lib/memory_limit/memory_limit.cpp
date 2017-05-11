@@ -27,6 +27,7 @@ status_t mem_limit_init(mem_limit_ctx_t* ctx) {
 
     uint64_t limit = cmdline_get_uint64("kernel.memory-limit-mb", 0u);
     if (limit) {
+        printf("Kernel memory limit of %zu MB found.\n", limit);
         ctx->memory_limit = limit * MB;
         ctx->found_kernel = 0;
         ctx->found_ramdisk = 0;
@@ -203,4 +204,32 @@ status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t r
 
     LTRACEF("used %zu iov%s remaining memory %zu bytes\n", *used_cnt, (*used_cnt == 1) ? "," : "s,", ctx->memory_limit);
     return NO_ERROR;
+}
+
+status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+                                 size_t range_size, pmm_arena_info_t arena_template) {
+    size_t used;
+    iovec_t vecs[2];
+    status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
+
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // Use the arena template and add any we created from this range to the pmm
+    for (size_t i = 0; i < used; i++) {
+        auto arena = arena_template;
+        arena.base = reinterpret_cast<paddr_t>(vecs[i].iov_base);
+        arena.size = vecs[i].iov_len;
+
+        status = pmm_add_arena(&arena);
+
+        // If either vector failed then abort the rest of the operation. There is no
+        // valid situation where only the second vector is used.
+        if (status != NO_ERROR) {
+            break;
+        }
+    }
+
+    return status;
 }

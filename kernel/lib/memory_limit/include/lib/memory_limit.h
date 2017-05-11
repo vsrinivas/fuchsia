@@ -6,6 +6,7 @@
 #pragma once
 #include <iovec.h>
 #include <sys/types.h>
+#include <kernel/vm.h>
 
 __BEGIN_CDECLS
 
@@ -41,15 +42,31 @@ typedef struct mem_limit_ctx {
 // ctx->memory_limit to maintain state for future calls. The same is done
 // for found_kernel and found_ramdisk within ctx.
 //
-// @range_base: the start address of the range
-// @range_size: size of the range in bytes
+// @ctx A pointer to a ctx structure with kernel/ramdisk/limit values filled in.
+// @range_base: the start address of the range.
+// @range_size: size of the range in bytes.
 // @iovs[]: array of iovecs to stored returned vectors. Must have two entries.
-// @used_cnt: the number of entries filled in and returned in iovs[]
+// @used_cnt: the number of entries filled in and returned in iovs[].
 //
 // Returns NO_ERROR on completion, and ERR_INVALID_ARGS if parameters are
 // invalid.
 status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
                             iovec_t iovs[], size_t* used_cnt);
+
+// This is a higher level helper function for users of the library if they have
+// no special constraints around memory arenas needing special flags,
+// priorities, or names.
+//
+// @ctx A pointer to a ctx structure with kernel/ramdisk/limit values filled in.
+// @range_base: the start address of the range.
+// @range_size: size of the range in bytes
+// @arena_template: a structure containing the default values for flags,
+// priority, and name used for arenas created by this function.
+//
+// Returns NO_ERROR on completion, and ERR_INVALID_ARGS if parameters are
+// invalid
+status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+                                 size_t range_size, pmm_arena_info_t arena_template);
 
 // Checks if a memory limit exists and initializes the memory_limit member of ctx
 // if one is found.
