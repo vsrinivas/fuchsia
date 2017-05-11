@@ -52,8 +52,15 @@ class ComponentBase : protected SingleServiceApp<Component> {
     modular::testing::Init(Base::application_context(), file);
   }
 
-  ftl::WeakPtr<ComponentBase> GetWeakPtr() {
-    return weak_factory_.GetWeakPtr();
+  // Wraps the callback function into a layer that protects executing the
+  // callback in the argument against execution after this instance is deleted,
+  // using the weak pointer factory.
+  std::function<void()> Protect(std::function<void()> callback) {
+    return [ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
+      if (ptr) {
+        callback();
+      }
+    };
   }
 
   // Delete alone is used to simulate the "unstoppable agent".
@@ -72,9 +79,11 @@ class ComponentBase : protected SingleServiceApp<Component> {
  private:
   // This weak ptr factory is not the last member in the derived class, so it
   // cannot be used to protect code executed in member destructors against
-  // accessing this. But it is enough to protect calls to DeleteAndQuit() made
-  // from tasks posted to the run loop, which is its only purpose.
+  // accessing this. But it is enough to protect callbacks sent to the runloop
+  // against execution after the instance is deleted.
   ftl::WeakPtrFactory<ComponentBase> weak_factory_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
 };
 
 }  // namespace testing

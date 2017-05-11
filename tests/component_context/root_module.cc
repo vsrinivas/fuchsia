@@ -61,7 +61,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
           TestMessageQueue([this] {
             TestAgentController([this] {
               mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                  [this] { module_context_->Done(); }, kStoryDoneDelay);
+                  Protect([this] { module_context_->Done(); }),
+                  kStoryDoneDelay);
             });
           });
         });
@@ -74,18 +75,14 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     // After 500ms close the AgentController for the unstoppable agent.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { unstoppable_agent_controller_.reset(); },
+        Protect([this] { unstoppable_agent_controller_.reset(); }),
         ftl::TimeDelta::FromMilliseconds(500));
 
-    // Start a timer to call Story.Done in case the test agent misbehaves and we
+    // Start a timer to quit in case another test component misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, ptr = GetWeakPtr()] {
-          if (ptr) {
-            // Cannot be invoked on ptr, because it's protected.
-            DeleteAndQuit([]{});
-          }
-        }, kTimeout);
+        Protect([this] { DeleteAndQuit([]{}); }),
+        kTimeout);
   }
 
   // Tests message queues. Calls |done_cb| when completed successfully.

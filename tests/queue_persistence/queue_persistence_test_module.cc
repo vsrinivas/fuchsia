@@ -51,15 +51,12 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         "queue_persistence_test_agent_connected",
         [this](const fidl::String&) { AgentConnected(); });
 
-    // Start a timer to call Story.Done in case the test agent misbehaves and we
-    // time out. If that happens, the agent will exit normally through Stop(),
-    // but the test will fail because some TestPoints will not have been passed.
+    // Start a timer to call Story.Done() in case the test agent misbehaves and
+    // we time out. If that happens, the module will exit normally through
+    // Stop(), but the test will fail because some TestPoints will not have been
+    // passed.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, ptr = GetWeakPtr()] {
-          if (ptr) {
-            module_context_->Done();
-          }
-        },
+        Protect([this] { module_context_->Done(); }),
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 

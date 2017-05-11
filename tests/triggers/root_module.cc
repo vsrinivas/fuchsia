@@ -86,14 +86,11 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
               });
         });
 
-    // Start a timer to call Story.Done in case the test agent misbehaves and we
+    // Start a timer to quit in case another test component misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, ptr = GetWeakPtr()] {
-          if (ptr) {
-            module_context_->Done();
-          }
-        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        Protect([this] { module_context_->Done(); }),
+        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
   // |Module|

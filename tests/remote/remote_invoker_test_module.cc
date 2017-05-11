@@ -41,13 +41,11 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     module_context_.Bind(std::move(module_context));
     initialized_.Pass();
 
-    // Start a timer to quit in case the test agent misbehaves and we time out.
+    // Start a timer to quit in case another test component misbehaves and we
+    // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, ptr = GetWeakPtr()] {
-          if (ptr) {
-            DeleteAndQuit([]{});
-          }
-        }, ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        Protect([this] { DeleteAndQuit([]{}); }),
+        ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
 
     remote_invoker_ =
         application_context()
