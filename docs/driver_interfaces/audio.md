@@ -55,7 +55,7 @@ including.
  * Format negotiation
  * Hardware gain control
  * Determining outboard latency.
- * Plug detection notification (TBD)
+ * Plug detection notification.
  * Access control capability detection and signalling
  * Policy level stream purpose indication/Stream Association (TBD)
 
@@ -345,10 +345,77 @@ request was a success).
 
 ## Plug Detection
 
-> TODO: specify how asynchronous plug detection messages will be sent by the
-> driver to applications will be sent to applications by drivers.  In
-> particular, should such notifications be sent at all, or should
-> stream/ring-buffer channels simply be closed when connections are unplugged.
+In addition to streams being published/unpublished in response to being
+connected or disconnected to/from their bus, streams may have the ability to be
+plugged or unplugged at any given point in time.  For example, a set of USB
+headphones publish a new output stream when connected to USB, but be "hardwired"
+from a plug detection standpoint.  A different USB audio adapter with a standard
+3.5mm phono jack might publish an output stream when connected via USB, but
+might change its plugged/unplugged state as the user plugs/unplugs devices via
+the 3.5mm jack.
+
+The ability to query the currently plugged or unplugged state of a stream, and
+to register for asynchonous notifications of plug state changes (if supported)
+is handled via plug detection messages.
+
+### AUDIO2_STREAM_CMD_PLUG_DETECT
+
+In order to determine a stream's plug detection capabilities, current plug
+state, and to enable or disable for asynchronous plug detection notifications,
+applications send a `AUDIO2_STREAM_CMD_PLUG_DETECT` command over the stream
+channel.  Drivers respond with a set of `audio2_pd_notify_flags_t`, along with a
+timestamp referenced from MX_CLOCK_MONOTONIC indicating the last time the plug
+state changed.
+
+Three valid flags are currently defined.
+ * `AUDIO2_PDNF_HARDWIRED`.  Set when the stream hardware is considered to be
+   "hardwired".  In other words, the stream is considered to be connected as
+   long as the device is published.  Examples include a set of built in
+   speakers, a pair of USB headphones, or a plug-able audio device with no plug
+   detect functionality.
+ * `AUDIO2_PDNF_CAN_NOTIFY`.  Set when the stream hardware is capable of
+   asynchronously detecting that a device's plug state has changed and sending a
+   notification message if requested by the application.
+ * `AUDIO2_PDNF_PLUGGED`  Set when the stream hardware considers the
+   stream to be currently in the "plugged-in" state.
+
+Drivers for "hardwired" streams **should** always set the `CAN_NOTIFY` flag to
+false, and the `PLUGGED` flag to true.  In addition, the plug state time of the
+response to the `PLUG_DETECT` message **should** always be set to 0.
+
+Applications **may** choose not to receive an acknowledgement of a `PLUG_DETECT`
+command by setting the `AUDIO2_FLAG_NO_ACK` flag on their command.  No response
+message will be sent to the application, regardless of the success or failure of
+the command.  The most common use for this would be when an application wanted
+to disable asynchronous plug state detection messages and was not actually
+interested in the current plugged/unplugged state of the stream.
+
+### AUDIO2_STREAM_PLUG_DETECT_NOTIFY
+
+Applications may request that streams send them asynchronous notifications of
+plug state changes using the flags field of the `AUDIO2_STREAM_CMD_PLUG_DETECT`
+command.
+
+Two valid flags are currently defined.
+ * `AUDIO2_PDF_ENABLE NOTIFICATIONS` Set by applications in order to
+   request that `AUDIO2_STREAM_PLUG_DETECT_NOTIFY`
+ * `AUDIO2_PDF_DISABLE_NOTIFICATIONS` Set by applications in order to
+   stop new `AUDIO2_STREAM_PLUG_DETECT_NOTIFY` messages from being sent.
+
+In order to request the current plug state without altering the current
+notification enable/disable state, clients simply set neither flag by passing
+either 0, or the value `AUDIO2_PDF_NONE`.  Clients **should** not set both flags
+at the same time.  If they do, drivers **must** interpret this to mean that the
+final state of the system should be disabled.
+
+Applications which request asynchronous notifications of plug state changes
+**should** always check the `CAN_NOTIFY` flag in the driver response.  Streams
+may be capable of plug detection (`HARDWIRED` is not set), but may not be
+capable of detecting plug state changes asynchronously.  Applications may still
+learn of plug state changes, but will need to do so by polling with repeated
+`PLUG_DETECT` commands.  Drivers for streams which do not set the `CAN_NOTIFY`
+flag are free to ignore enable/disable notification requests from applications,
+and **must** not ever send an `AUDIO2_STREAM_PLUG_DETECT_NOTIFY` message.
 
 ## Access control capability detection and signaling
 

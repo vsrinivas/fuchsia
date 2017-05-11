@@ -21,22 +21,29 @@ __BEGIN_CDECLS
 
 typedef enum audio2_cmd {
     // Commands sent on the stream channel
-    AUDIO2_STREAM_CMD_SET_FORMAT = 0x1000,
-    AUDIO2_STREAM_CMD_GET_GAIN   = 0x1001,
-    AUDIO2_STREAM_CMD_SET_GAIN   = 0x1002,
+    AUDIO2_STREAM_CMD_SET_FORMAT     = 0x1000,
+    AUDIO2_STREAM_CMD_GET_GAIN       = 0x1001,
+    AUDIO2_STREAM_CMD_SET_GAIN       = 0x1002,
+    AUDIO2_STREAM_CMD_PLUG_DETECT    = 0x1003,
+
+    // Async notifications sent on the stream channel.
+    AUDIO2_STREAM_PLUG_DETECT_NOTIFY = 0x2000,
 
     // Commands sent on the ring buffer channel
-    AUDIO2_RB_CMD_GET_FIFO_DEPTH = 0x2000,
-    AUDIO2_RB_CMD_GET_BUFFER     = 0x2001,
-    AUDIO2_RB_CMD_START          = 0x2002,
-    AUDIO2_RB_CMD_STOP           = 0x2003,
+    AUDIO2_RB_CMD_GET_FIFO_DEPTH     = 0x3000,
+    AUDIO2_RB_CMD_GET_BUFFER         = 0x3001,
+    AUDIO2_RB_CMD_START              = 0x3002,
+    AUDIO2_RB_CMD_STOP               = 0x3003,
 
     // Async notifications sent on the ring buffer channel.
-    AUDIO2_RB_POSITION_NOTIFY    = 0x3000,
+    AUDIO2_RB_POSITION_NOTIFY        = 0x4000,
 
     // Flags used to modify commands.
-    AUDIO2_FLAG_NO_ACK           = 0x80000000,
+    AUDIO2_FLAG_NO_ACK               = 0x80000000,
 } audio2_cmd_t;
+
+static_assert(sizeof(audio2_cmd_t) == sizeof(uint32_t),
+              "audio2_cmd_t must be 32 bits!\n");
 
 typedef struct audio2_cmd_hdr {
     mx_txid_t    transaction_id;
@@ -64,6 +71,9 @@ typedef enum audio2_sample_format {
                                      AUDIO2_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN,
 } audio2_sample_format_t;
 
+static_assert(sizeof(audio2_sample_format_t) == sizeof(uint32_t),
+              "audio2_sample_format_t must be 32 bits!\n");
+
 // audio2_set_gain_flags_t
 //
 // Flags used by the AUDIO2_STREAM_CMD_SET_GAIN message.
@@ -73,6 +83,37 @@ typedef enum audio2_set_gain_flags {
     AUDIO2_SGF_GAIN_VALID = 0x2,        // Whether or not the gain float is valid.
     AUDIO2_SGF_MUTE       = 0x80000000, // Whether or not to mute the stream.
 } audio2_set_gain_flags_t;
+
+static_assert(sizeof(audio2_set_gain_flags_t) == sizeof(uint32_t),
+              "audio2_set_gain_flags_t must be 32 bits!\n");
+
+// audio2_pd_flags_t
+//
+// Flags used by AUDIO2_STREAM_CMD_PLUG_DETECT commands to enable or disable
+// asynchronous plug detect notifications.
+//
+typedef enum audio2_pd_flags {
+    AUDIO2_PDF_NONE                  = 0,
+    AUDIO2_PDF_ENABLE_NOTIFICATIONS  = 0x40000000,
+    AUDIO2_PDF_DISABLE_NOTIFICATIONS = 0x80000000,
+} audio2_pd_flags_t;
+
+static_assert(sizeof(audio2_pd_flags_t) == sizeof(uint32_t),
+              "audio2_pd_flags_t must be 32 bits!\n");
+
+// audio2_pd_notify_flags_t
+//
+// Flags used by responses to the AUDIO2_STREAM_CMD_PLUG_DETECT
+// message, and by AUDIO2_STREAM_PLUG_DETECT_NOTIFY messages.
+//
+typedef enum audio2_pd_notify_flags {
+    AUDIO2_PDNF_HARDWIRED  = 0x1,        // Stream is hardwired (will always be plugged in)
+    AUDIO2_PDNF_CAN_NOTIFY = 0x2,        // Stream is able to notify of plug state changes.
+    AUDIO2_PDNF_PLUGGED    = 0x80000000, // Stream is currently plugged in.
+} audio2_pd_notify_flags_t;
+
+static_assert(sizeof(audio2_pd_notify_flags_t) == sizeof(uint32_t),
+              "audio2_pd_resp_flags_t must be 32 bits!\n");
 
 // AUDIO2_STREAM_CMD_SET_FORMAT
 //
@@ -154,11 +195,43 @@ typedef struct audio2_stream_cmd_set_gain_resp {
     float            cur_gain;
 } audio2_stream_cmd_set_gain_resp_t;
 
+// AUDIO2_STREAM_CMD_PLUG_DETECT
+//
+// Trigger a plug detect operation and/or enable/disable asynchronous plug
+// detect notifications.
+//
+typedef struct audio2_stream_cmd_plug_detect_req {
+    audio2_cmd_hdr_t  hdr;
+    audio2_pd_flags_t flags;  // Options used to enable or disable notifications
+} audio2_stream_cmd_plug_detect_req_t;
+
+typedef struct audio2_stream_cmd_plug_detect_resp {
+    audio2_cmd_hdr_t         hdr;
+    audio2_pd_notify_flags_t flags;           // The current plug state and capabilities
+    mx_time_t                plug_state_time; // The time of the plug state last change.
+} audio2_stream_cmd_plug_detect_resp_t;
+
+// AUDIO2_STREAM_PLUG_DETECT_NOTIFY
+//
+// Message asynchronously in response to a plug state change to clients who have
+// registered for plug state notifications.
+//
+// Note: Solicited and unsolicited plug detect messages currently use the same
+// structure and contain the same information.  The difference between the two
+// is that Solicited messages, use AUDIO2_STREAM_CMD_PLUG_DETECT as the value of
+// the `cmd` field of their header and the transaction ID of the request sent by
+// the client.  Unsolicited messages use AUDIO2_STREAM_PLUG_DETECT_NOTIFY as the
+// value value of the `cmd` field of their header, and
+// AUDIO2_INVALID_TRANSACTION_ID for their transaction ID.
+typedef audio2_stream_cmd_plug_detect_resp_t audio2_stream_plug_detect_notify_t;
+
 // AUDIO2_RB_CMD_GET_FIFO_DEPTH
 //
 // TODO(johngro) : Is calling this "FIFO" depth appropriate?  Should it be some
 // direction neutral form of something like "max-read-ahead-amount" or something
 // instead?
+//
+// May be not used with the NO_ACK flag.
 typedef struct audio2_rb_cmd_get_fifo_depth_req {
     audio2_cmd_hdr_t hdr;
 } audio2_rb_cmd_get_fifo_depth_req_t;
