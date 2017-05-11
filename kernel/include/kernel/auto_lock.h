@@ -9,6 +9,10 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <mxtl/auto_lock.h>
+#include <mxtl/macros.h>
+
+// Various lock guard wrappers for kernel only locks
+// NOTE: wrapper for mutex_t is in mxtl/auto_lock.h
 
 class TA_SCOPED_CAP AutoSpinLock {
 public:
@@ -24,10 +28,7 @@ public:
     }
 
     // suppress default constructors
-    AutoSpinLock(const AutoSpinLock& am) = delete;
-    AutoSpinLock(AutoSpinLock&& c) = delete;
-    AutoSpinLock& operator=(const AutoSpinLock& am) = delete;
-    AutoSpinLock& operator=(AutoSpinLock&& c) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLock);
 
 private:
     void acquire() TA_ACQ() { spin_lock(spinlock_); }
@@ -48,10 +49,7 @@ public:
     }
 
     // suppress default constructors
-    AutoSpinLockIrqSave(const AutoSpinLockIrqSave& am) = delete;
-    AutoSpinLockIrqSave(AutoSpinLockIrqSave&& c) = delete;
-    AutoSpinLockIrqSave& operator=(const AutoSpinLockIrqSave& am) = delete;
-    AutoSpinLockIrqSave& operator=(AutoSpinLockIrqSave&& c) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLockIrqSave);
 
 private:
     void acquire() { spin_lock_irqsave(spinlock_, state_); }
