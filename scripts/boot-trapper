@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-KERNEL=build-magenta-msm-trapper/zmagenta.bin-dtb
-RAMDISK=build-magenta-msm-trapper/bootdata.bin
-CMDLINE="$@ magenta.soc.msm8998=0 gfxconsole.font=18x32 startup.keep-log-visible=true"
-
-#fastboot doesn't like empty -c, so add trailing space
-fastboot boot -n 4096 -c "$CMDLINE " $KERNEL $RAMDISK
