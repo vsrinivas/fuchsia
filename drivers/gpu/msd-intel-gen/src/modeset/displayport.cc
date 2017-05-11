@@ -101,12 +101,22 @@ bool DpAuxChannel::SendDpAuxMsgWithRetry(const DpAuxMessage* request, DpAuxMessa
 {
     // If the DisplayPort sink device isn't ready to handle an Aux message,
     // it can return an AUX_DEFER reply, which means we should retry the
-    // request.  The spec says "A DP Source device is required to retry at
-    // least seven times upon receiving AUX_DEFER before giving up the AUX
+    // request.
+    //
+    // The DisplayPort spec does not specify exactly how many retries we
+    // should do or how long we should retry for, except to say that we
+    // should do at least 7 retries, but that we might need to do a lot
+    // more retries.
+    //
+    // The spec says "A DP Source device is required to retry at least
+    // seven times upon receiving AUX_DEFER before giving up the AUX
     // transaction", from section 2.7.7.1.5.6.1 in v1.3.  (AUX_DEFER
     // replies were in earlier versions, but v1.3 clarified the number of
     // retries required.)
-    const int kMaxDefers = 8;
+    //
+    // We will probably need to increase the following number as we find
+    // slower displays or adaptors that require more retries.
+    const int kMaxDefers = 16;
 
     // Some DisplayPort sink devices time out on the first DP aux request
     // but succeed on later requests, so we need to retry for some timeouts
