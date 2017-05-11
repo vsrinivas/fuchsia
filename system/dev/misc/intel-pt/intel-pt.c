@@ -462,29 +462,29 @@ static mx_status_t x86_pt_alloc_buffer(ipt_device_t* ipt_dev,
         return MX_ERR_INVALID_ARGS;
 
     uint64_t settable_ctl_mask = (
-        IPT_CTL_OS_ALLOWED |
-        IPT_CTL_USER_ALLOWED |
-        IPT_CTL_TSC_EN |
-        IPT_CTL_DIS_RETC |
-        IPT_CTL_BRANCH_EN
+        IPT_CTL_OS_ALLOWED_MASK |
+        IPT_CTL_USER_ALLOWED_MASK |
+        IPT_CTL_TSC_EN_MASK |
+        IPT_CTL_DIS_RETC_MASK |
+        IPT_CTL_BRANCH_EN_MASK
         );
     if (ipt_config_ptwrite)
-        settable_ctl_mask |= IPT_CTL_PTW_EN | IPT_CTL_FUP_ON_PTW;
+        settable_ctl_mask |= IPT_CTL_PTW_EN_MASK | IPT_CTL_FUP_ON_PTW_MASK;
     if (ipt_config_cr3_filtering)
-        settable_ctl_mask |= IPT_CTL_CR3_FILTER;
+        settable_ctl_mask |= IPT_CTL_CR3_FILTER_MASK;
     if (ipt_config_mtc)
-        settable_ctl_mask |= IPT_CTL_MTC_EN | IPT_CTL_MTC_FREQ;
+        settable_ctl_mask |= IPT_CTL_MTC_EN_MASK | IPT_CTL_MTC_FREQ_MASK;
     if (ipt_config_power_events)
-        settable_ctl_mask |= IPT_CTL_POWER_EVENT_EN;
+        settable_ctl_mask |= IPT_CTL_POWER_EVENT_EN_MASK;
     if (ipt_config_ip_filtering)
-        settable_ctl_mask |= (IPT_CTL_ADDR0 |
-                              IPT_CTL_ADDR1 |
-                              IPT_CTL_ADDR2 |
-                              IPT_CTL_ADDR3);
+        settable_ctl_mask |= (IPT_CTL_ADDR0_MASK |
+                              IPT_CTL_ADDR1_MASK |
+                              IPT_CTL_ADDR2_MASK |
+                              IPT_CTL_ADDR3_MASK);
     if (ipt_config_psb)
-        settable_ctl_mask |= (IPT_CTL_CYC_EN |
-                              IPT_CTL_PSB_FREQ |
-                              IPT_CTL_CYC_THRESH);
+        settable_ctl_mask |= (IPT_CTL_CYC_EN_MASK |
+                              IPT_CTL_PSB_FREQ_MASK |
+                              IPT_CTL_CYC_THRESH_MASK);
     if ((config->ctl & ~settable_ctl_mask) != 0) {
         xprintf("bad ctl, requested 0x%" PRIx64 ", valid 0x%" PRIx64 "\n",
                 config->ctl, settable_ctl_mask);
@@ -581,7 +581,7 @@ static mx_status_t x86_pt_cpu_mode_start(ipt_device_t* ipt_dev) {
 
         mx_x86_pt_regs_t regs;
         regs.ctl = per_trace->ctl;
-        regs.ctl |= IPT_CTL_TOPA | IPT_CTL_TRACE_EN;
+        regs.ctl |= IPT_CTL_TOPA_MASK | IPT_CTL_TRACE_EN_MASK;
         regs.status = per_trace->status;
         regs.output_base = per_trace->output_base;
         regs.output_mask_ptrs = per_trace->output_mask_ptrs;

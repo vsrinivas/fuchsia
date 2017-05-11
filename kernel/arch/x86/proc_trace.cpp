@@ -226,7 +226,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
     uint32_t cpu = arch_curr_cpu_num();
     ipt_cpu_state_t* state = &context[cpu];
 
-    DEBUG_ASSERT(!(read_msr(IA32_RTIT_CTL) & IPT_CTL_TRACE_EN));
+    DEBUG_ASSERT(!(read_msr(IA32_RTIT_CTL) & IPT_CTL_TRACE_EN_MASK));
 
     // Load the ToPA configuration
     write_msr(IA32_RTIT_OUTPUT_BASE, state->output_base);
