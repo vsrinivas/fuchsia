@@ -124,6 +124,7 @@ class PageSyncImpl : public PageSync,
   cloud_provider::CloudProvider* const cloud_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const ftl::Closure on_error_;
+  const std::string log_prefix_;
 
   ftl::Closure on_idle_;
   ftl::Closure on_backlog_downloaded_;

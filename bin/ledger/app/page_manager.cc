@@ -36,8 +36,9 @@ PageManager::PageManager(
     environment_->main_runner()->PostDelayedTask(
         [weak_this = weak_factory_.GetWeakPtr()]() {
           if (weak_this && !weak_this->sync_backlog_downloaded_) {
-            FTL_LOG(WARNING) << "Timed out waiting for the initial sync, "
-                             << "using local data (might be stale or empty).";
+            FTL_LOG(INFO) << "Initial sync will continue in background, "
+                          << "in the meantime binding to local page data "
+                          << "(might be stale or empty).";
             weak_this->OnSyncBacklogDownloaded();
           }
         },
@@ -78,8 +79,8 @@ void PageManager::CheckEmpty() {
 
 void PageManager::OnSyncBacklogDownloaded() {
   if (sync_backlog_downloaded_) {
-    FTL_LOG(WARNING)
-        << "Initial sync finished. Clients will receive a change notification.";
+    FTL_LOG(INFO) << "Initial sync in background finished. "
+                  << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;
   for (auto& request : page_requests_) {

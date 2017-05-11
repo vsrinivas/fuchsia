@@ -25,6 +25,7 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
       cloud_provider_(cloud_provider),
       backoff_(std::move(backoff)),
       on_error_(on_error),
+      log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       weak_factory_(this) {
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
@@ -151,6 +152,14 @@ void PageSyncImpl::StartDownload() {
     HandleError("Failed to retrieve the sync metadata.");
     return;
   }
+  if (last_commit_ts.empty()) {
+    FTL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
+                << "retrieving all remote commits";
+  } else {
+    // TODO(ppi): print the timestamp out as human-readable wall time.
+    FTL_VLOG(1) << log_prefix_ << "starting sync again, "
+                << "retrieving commits uploaded after: " << last_commit_ts;
+  }
 
   // TODO(ppi): handle pagination when the response is huge.
   cloud_provider_->GetCommits(
@@ -159,9 +168,10 @@ void PageSyncImpl::StartDownload() {
              std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
           // Fetching the remote commits failed, schedule a retry.
-          FTL_LOG(WARNING)
-              << "Fetching the backlog of remote objects failed due to a "
-              << "connection error, status: " << cloud_status << ", retrying.";
+          FTL_LOG(WARNING) << log_prefix_
+                           << "fetching the remote commits failed due to a "
+                           << "connection error, status: " << cloud_status
+                           << ", retrying.";
           Retry([this] { StartDownload(); });
           return;
         }
@@ -169,11 +179,21 @@ void PageSyncImpl::StartDownload() {
 
         if (records.empty()) {
           // If there is no remote commits to add, announce that we're done.
+          FTL_VLOG(1) << log_prefix_
+                      << "initial sync finished, no new remote commits";
           BacklogDownloaded();
         } else {
+          FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
+                      << " (possibly) new remote commits, "
+                      << "adding them to storage.";
           // If not, fire the backlog download callback when the remote commits
           // are downloaded.
-          DownloadBatch(std::move(records), [this] { BacklogDownloaded(); });
+          const auto record_count = records.size();
+          DownloadBatch(std::move(records), [this, record_count] {
+            FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
+                        << record_count << " remote commits.";
+            BacklogDownloaded();
+          });
         }
       });
 }
@@ -284,8 +304,8 @@ void PageSyncImpl::EnqueueUpload(
       },
       [this] {
         FTL_LOG(WARNING)
-            << "Uploading a commit and its associated objects failed "
-            << "due to a connection error, retrying.";
+            << log_prefix_
+            << "commit upload failed due to a connection error, retrying.";
         Retry([this] { commit_uploads_.front().Start(); });
       });
 
@@ -307,7 +327,7 @@ void PageSyncImpl::Retry(ftl::Closure callable) {
 }
 
 void PageSyncImpl::HandleError(const char error_description[]) {
-  FTL_LOG(ERROR) << error_description << " Stopping sync.";
+  FTL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (local_watch_set_) {
     storage_->RemoveCommitWatcher(this);
   }
