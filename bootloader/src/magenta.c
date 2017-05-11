@@ -211,7 +211,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
     size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
 
     bootdata_t* bd = image;
-    if ((bd->type = BOOTDATA_CONTAINER) &&
+    if ((bd->type == BOOTDATA_CONTAINER) &&
         (bd->extra == BOOTDATA_MAGIC) &&
         (bd->flags == 0)) {
         return boot_magenta(img, sys, image, sz, ramdisk, rsz, cmdline, csz);
