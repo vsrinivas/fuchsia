@@ -1327,6 +1327,8 @@ __NO_SAFESTACK static void update_tls_size(void) {
  * linker itself, but some of the relocations performed may need to be
  * replaced later due to copy relocations in the main program. */
 
+static dl_start_return_t __dls3(void* start_arg);
+
 __NO_SAFESTACK __attribute__((__visibility__("hidden")))
 dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
@@ -1384,11 +1386,11 @@ dl_start_return_t __dls2(
 
     ldso.relocated = 0;
 
-    /* Call dynamic linker stage-3, __dls3, looking it up
-     * symbolically as a barrier against moving the address
-     * load across the above relocation processing. */
-    struct symdef dls3_def = find_sym(&ldso, "__dls3", 0);
-    return (*(stage3_func*)laddr(&ldso, dls3_def.sym->st_value))(start_arg);
+    // Make sure all the relocations have landed before calling __dls3,
+    // which relies on them.
+    atomic_signal_fence(memory_order_seq_cst);
+
+    return __dls3(start_arg);
 }
 
 /* Stage 3 of the dynamic linker is called with the dynamic linker/libc
@@ -1602,7 +1604,7 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     return laddr(&app, ehdr->e_entry);
 }
 
-__NO_SAFESTACK dl_start_return_t __dls3(void* start_arg) {
+__NO_SAFESTACK static dl_start_return_t __dls3(void* start_arg) {
     mx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;
