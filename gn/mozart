@@ -40,6 +40,10 @@
             "bootfs_path": "apps/hello_material"
         },
         {
+            "binary": "ime_service",
+            "bootfs_path": "apps/ime_service"
+        },
+        {
             "binary": "input_apptests",
             "bootfs_path": "apps/input_apptests"
         },
