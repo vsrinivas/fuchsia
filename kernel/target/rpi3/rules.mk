@@ -33,11 +33,4 @@ KERNEL_DEFINES += \
 	PLATFORM_SUPPORTS_PANIC_SHELL=1 \
 	BCM2837=1 \
 
-# build MDI
-MDI_SRCS := \
-    $(LOCAL_DIR)/rpi3.mdi \
-
-MDI_INCLUDES := \
-    kernel/include/mdi/kernel-defs.mdi \
-
-include make/mdi.mk
+MDI_SRCS += $(LOCAL_DIR)/rpi3.mdi

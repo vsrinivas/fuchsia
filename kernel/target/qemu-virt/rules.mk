@@ -37,12 +37,4 @@ KERNEL_DEFINES += \
 	BOOTLOADER_RESERVE_SIZE=$(BOOTLOADER_RESERVE_SIZE) \
 	PLATFORM_SUPPORTS_PANIC_SHELL=1 \
 
-# build MDI
-MDI_SRCS := \
-    $(LOCAL_DIR)/qemu.mdi \
-
-MDI_INCLUDES := \
-    kernel/include/mdi/kernel-defs.mdi \
-
-include make/mdi.mk
-
+MDI_SRCS += $(LOCAL_DIR)/qemu.mdi
