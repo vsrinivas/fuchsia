@@ -159,6 +159,17 @@ void magma_wait_rendering(magma_connection_t* connection, magma_buffer_t buffer)
     magma::PlatformIpcConnection::cast(connection)->WaitRendering(platform_buffer->id());
 }
 
+magma_status_t magma_display_get_size(int fd, magma_display_size* size_out)
+{
+    if (!size_out)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad size_out address");
+
+    int ret = mxio_ioctl(fd, IOCTL_MAGMA_DISPLAY_GET_SIZE, nullptr, 0, size_out, sizeof(*size_out));
+    if (ret < 0)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "mxio_ioctl failed: %d", ret);
+    return MAGMA_STATUS_OK;
+}
+
 void magma_display_page_flip(magma_connection_t* connection, magma_buffer_t buffer,
                              uint32_t wait_semaphore_count,
                              const magma_semaphore_t* wait_semaphores,

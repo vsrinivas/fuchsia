@@ -278,6 +278,25 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf,
             break;
         }
 #endif
+
+        case IOCTL_MAGMA_DISPLAY_GET_SIZE: {
+            DLOG("IOCTL_MAGMA_DISPLAY_GET_SIZE");
+            if (in_len != 0)
+                return DRET_MSG(ERR_INVALID_ARGS, "bad in_buf");
+            auto* value_out = static_cast<magma_display_size*>(out_buf);
+            if (!out_buf || out_len < sizeof(*value_out))
+                return DRET_MSG(ERR_INVALID_ARGS, "bad out_buf");
+
+            std::unique_lock<std::mutex> lock(device->magma_mutex);
+            if (device->magma_system_device) {
+                if (msd_device_display_get_size(device->magma_system_device->msd_dev(),
+                                                value_out) == MAGMA_STATUS_OK) {
+                    result = sizeof(*value_out);
+                }
+            }
+            break;
+        }
+
         default:
             DLOG("intel_i915_ioctl unhandled op 0x%x", op);
     }

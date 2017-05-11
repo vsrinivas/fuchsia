@@ -37,6 +37,10 @@ void msd_device_dump_status(struct msd_device_t* dev);
 // Opens a device for the given client. Returns null on failure
 struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id client_id);
 
+// Reads the size of the display in pixels.
+magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
+                                           struct magma_display_size* size_out);
+
 // Provides a buffer to be scanned out on the next vblank event.
 // The first |wait_semaphore_count| of |semaphores| will be waited upon prior to scanning
 // out the buffer.  The following |signal_semaphore_count| semaphores will be signalled when

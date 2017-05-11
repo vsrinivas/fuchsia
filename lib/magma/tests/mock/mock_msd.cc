@@ -30,6 +30,12 @@ void msd_device_destroy(msd_device_t* dev)
     delete MsdMockDevice::cast(dev);
 }
 
+magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
+                                           struct magma_display_size* size_out)
+{
+    return MAGMA_STATUS_INTERNAL_ERROR;
+}
+
 void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
                           magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
                           uint32_t signal_semaphore_count, msd_semaphore_t** semaphores)

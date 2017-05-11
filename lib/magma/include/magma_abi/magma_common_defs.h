@@ -88,6 +88,11 @@ struct magma_system_image_descriptor {
     magma_image_tiling_t tiling;
 } __attribute__((packed));
 
+struct magma_display_size {
+    uint32_t width;
+    uint32_t height;
+};
+
 #if defined(__cplusplus)
 }
 #endif
