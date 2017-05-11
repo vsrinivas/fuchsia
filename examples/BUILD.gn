@@ -10,7 +10,6 @@ group("examples") {
     "hello_component",
     "hello_world_cpp",
     "hello_world_flutter",
-    "https_flutter",
     "photos_flutter",
     "request_components",
     "story_shell_flutter",
