@@ -243,12 +243,9 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
         MX_DEBUG_ASSERT(regs_ != nullptr);
 
         ihda_get_ids_resp_t resp;
-        mx_status_t res;
-        if (((res = GetDevProperty(pci_dev_, BIND_PCI_VID, &resp.vid)) != NO_ERROR) ||
-            ((res = GetDevProperty(pci_dev_, BIND_PCI_DID, &resp.did)) != NO_ERROR))
-            return res;
-
         resp.hdr       = req.hdr;
+        resp.vid       = pci_dev_info_.vendor_id;
+        resp.did       = pci_dev_info_.device_id;
         resp.ihda_vmaj = REG_RD(&regs_->vmaj);
         resp.ihda_vmin = REG_RD(&regs_->vmin);
         resp.rev_id    = 0;

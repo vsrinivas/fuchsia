@@ -115,16 +115,8 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
 
     pci_dev_ = pci_dev;
 
-    // Fetch our BDF address and use it to generate our debug tag.
-    uint32_t bdf_addr;
-    if (GetDevProperty(pci_dev_, BIND_PCI_BDF_ADDR, &bdf_addr)) {
-        snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller %02x:%02x.%01x",
-                BIND_PCI_BDF_UNPACK_BUS(bdf_addr),
-                BIND_PCI_BDF_UNPACK_DEV(bdf_addr),
-                BIND_PCI_BDF_UNPACK_FUNC(bdf_addr));
-    } else {
-        snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller (unknown BDF)");
-    }
+    // Generate a default debug tag for now.
+    snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller (unknown BDF)");
 
     // The device had better be a PCI device, or we are very confused.
     res = device_op_get_protocol(pci_dev_, MX_PROTOCOL_PCI, reinterpret_cast<void**>(&pci_proto_));
@@ -133,8 +125,22 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
         return res;
     }
 
-    // Claim the device.
+    // Fetch our device info and use it to re-generate our debug tag once we
+    // know our BDF address.
     MX_DEBUG_ASSERT(pci_proto_ != nullptr);
+    res = pci_proto_->get_device_info(pci_dev_, &pci_dev_info_);
+    if (res != NO_ERROR) {
+        LOG("Failed to fetch basic PCI device info! (res %d)\n", res);
+        return res;
+    }
+
+    snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller %02x:%02x.%01x",
+             pci_dev_info_.bus_id,
+             pci_dev_info_.dev_id,
+             pci_dev_info_.func_id);
+
+
+    // Claim the device.
     res = pci_proto_->claim_device(pci_dev_);
     if (res != NO_ERROR) {
         LOG("Failed to claim PCI device! (res %d)\n", res);
