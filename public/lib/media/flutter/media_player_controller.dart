@@ -350,8 +350,12 @@ class MediaPlayerController extends ChangeNotifier {
     }
 
     if (status != null) {
+      double pixelAspectRatio =
+        status.pixelAspectRatio.width.toDouble() /
+        status.pixelAspectRatio.height.toDouble();
+
       _videoSize = new Size(
-        status.videoSize.width.toDouble(),
+        status.videoSize.width.toDouble() * pixelAspectRatio,
         status.videoSize.height.toDouble()
       );
 

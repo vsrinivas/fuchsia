@@ -74,6 +74,8 @@ MediaPlayerView::MediaPlayerView(
   // whether we get video.
   video_size_.width = 640u;
   video_size_.height = 100u;
+  pixel_aspect_ratio_.width = 1u;
+  pixel_aspect_ratio_.height = 1u;
 
   if (params.device_name().empty()) {
     // Get an audio renderer.
@@ -175,7 +177,9 @@ void MediaPlayerView::OnLayout() {
   auto view_properties = mozart::ViewProperties::New();
   view_properties->view_layout = mozart::ViewLayout::New();
   view_properties->view_layout->size = mozart::Size::New();
-  view_properties->view_layout->size->width = video_size_.width;
+  view_properties->view_layout->size->width =
+      (video_size_.width * pixel_aspect_ratio_.width) /
+      pixel_aspect_ratio_.height;
   view_properties->view_layout->size->height = video_size_.height;
   view_properties->view_layout->inset = mozart::Inset::New();
 
@@ -221,18 +225,23 @@ void MediaPlayerView::OnDraw() {
 
     // Shrink video to fit if needed.
     mozart::Rect content_rect;
-    if (max_content_size.width * video_size_.height <
-        max_content_size.height * video_size_.width) {
+
+    uint32_t video_width = video_size_.width * pixel_aspect_ratio_.width;
+    uint32_t video_height = video_size_.height * pixel_aspect_ratio_.height;
+
+    if (max_content_size.width * video_height <
+        max_content_size.height * video_width) {
       content_rect.width = max_content_size.width;
-      content_rect.height =
-          video_size_.height * max_content_size.width / video_size_.width;
+      content_rect.height = video_height * max_content_size.width / video_width;
     } else {
-      content_rect.width =
-          video_size_.width * max_content_size.height / video_size_.height;
+      content_rect.width = video_width * max_content_size.height / video_height;
       content_rect.height = max_content_size.height;
     }
-    float content_scale =
+
+    float content_scale_x =
         static_cast<float>(content_rect.width) / video_size_.width;
+    float content_scale_y =
+        static_cast<float>(content_rect.height) / video_size_.height;
 
     // Add back in the decorations and center within view.
     mozart::Rect ui_rect;
@@ -272,7 +281,7 @@ void MediaPlayerView::OnDraw() {
 
       auto video_node = mozart::Node::New();
       video_node->content_transform = mozart::Translate(
-          mozart::CreateScaleTransform(content_scale, content_scale),
+          mozart::CreateScaleTransform(content_scale_x, content_scale_y),
           content_rect.x, content_rect.y);
       video_node->op = mozart::NodeOp::New();
       video_node->op->set_scene(mozart::SceneNodeOp::New());
@@ -456,10 +465,13 @@ void MediaPlayerView::HandleVideoRendererStatusUpdates(
     media::VideoRendererStatusPtr status) {
   if (status) {
     // Process status received from the video renderer.
-    FTL_LOG(INFO) << "video_size " << status->video_size->width << "x"
-                  << status->video_size->height;
+    FTL_LOG(INFO) << "video size " << status->video_size->width << "x"
+                  << status->video_size->height << ", pixel aspect ratio "
+                  << status->pixel_aspect_ratio->width << "x"
+                  << status->pixel_aspect_ratio->height;
 
     video_size_ = *status->video_size;
+    pixel_aspect_ratio_ = *status->pixel_aspect_ratio;
 
     if (video_size_.width == 0 || video_size_.height == 0) {
       // Use a non-zero size so we get a progress bar.

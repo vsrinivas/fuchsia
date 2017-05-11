@@ -247,7 +247,7 @@ std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
                                          parameters.color_range),
       parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num,
       pixel_aspect_ratio.den, std::vector<uint32_t>(), std::vector<uint32_t>());
-}  // namespace
+}
 
 // Creates a StreamType from an AVCodecContext describing a data type.
 std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(

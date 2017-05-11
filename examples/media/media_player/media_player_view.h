@@ -81,6 +81,7 @@ class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
   mozart::ViewInfoPtr video_view_info_;
   mozart::ViewPropertiesPtr video_view_properties_;
   mozart::Size video_size_;
+  mozart::Size pixel_aspect_ratio_;
   uint32_t scene_version_ = 1u;
   State previous_state_ = State::kPaused;
   State state_ = State::kPaused;
