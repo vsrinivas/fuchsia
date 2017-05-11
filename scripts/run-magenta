@@ -22,7 +22,7 @@ function HELP {
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
     echo "-o <dir>             : build directory"
-    echo "-q <directory>       : location of qemu, defaults to looking in ../buildtools/qemu/bin, then\$PATH"
+    echo "-q <directory>       : location of qemu, defaults to looking in ../buildtools/qemu/bin, then \$PATH"
     echo "-r                   : run release build"
     echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
     echo "-u <path>            : execute qemu startUp script, default is no script"
@@ -53,6 +53,7 @@ DO_KVM=0
 MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
+QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
 VNC=
@@ -61,7 +62,7 @@ SMP=4
 INITRD=
 CMDLINE=""
 
-if [ $(uname -s) == "Darwin" ]; then
+if [[ "$(uname -s)" == "Darwin" ]]; then
   IFNAME="tap0"
 else
   IFNAME="qemu"
@@ -111,18 +112,18 @@ done
 shift $((OPTIND-1))
 
 # arch argument is non optional
-if [ "$ARCH" == "" ]; then
+if [[ -z $ARCH ]]; then
     echo must specify arch
     HELP
 fi
 
-if [ "$ARCH" = "x86-64" ]; then
+if [[ "$ARCH" == "x86-64" ]]; then
     PROJECT=magenta-pc-x86-64
 else
     PROJECT=magenta-qemu-$ARCH
 fi
 
-if [ "$CLANG" -eq 1 ]; then
+if (( $CLANG )); then
     BUILDDIR_SUFFIX=-clang
     BUILD_ARGS=USE_CLANG=true
 else
@@ -131,8 +132,8 @@ else
 fi
 
 # build the project if asked for
-if [ "$BUILD" -eq 1 ]; then
-    if [ "$RELEASE" -eq 1 ]; then
+if (( $BUILD )); then
+    if (( $RELEASE )); then
         $DIR/make-release $PROJECT $BUILD_ARGS || exit 1
     else
         $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
@@ -142,30 +143,30 @@ fi
 # by default use the qemu binary located in the fuchsia buildtools
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
-if [[ -z $QEMUDIR ]] && [[ -d "../buildtools/qemu/bin" ]]; then
-    QEMUDIR="$PWD/../buildtools/qemu/bin/"
+if [[ -z $QEMUDIR && -d "$DIR/../../buildtools/qemu/bin" ]]; then
+    QEMUDIR="$DIR/../../buildtools/qemu/bin/"
 fi
 
 # append the release path if requested
-if [ "$RELEASE" -eq 1 ]; then
+if (( $RELEASE )); then
     PROJECT=$PROJECT-release
 fi
 
-if [ "$BUILDDIR" == "" ]; then
+if [[ -z $BUILDDIR ]]; then
   BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
 fi
 
 # construct the args for qemu
 ARGS=" -m $MEMSIZE"
-if [ "$VNC" != "" ]; then
+if [[ -n $VNC ]]; then
     ARGS+=" -vnc $VNC"
 fi
 
-if [ "$GRAPHICS" -eq 0 ]; then
+if (( !$GRAPHICS  )); then
     ARGS+=" -nographic"
 else
     ARGS+=" -serial stdio"
-    if [ "$ARCH" = "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
+    if [[ "$ARCH" == "x86-64" && $VIRTIO == 0 ]]; then
         # Enable Bochs VBE device, which Magenta has a device for
         ARGS+=" -vga std"
     else
@@ -175,13 +176,13 @@ else
     fi
 fi
 
-if [ "$DISK" -eq 1 ]; then
+if (( $DISK )); then
     ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
-    if [ "$DISKTYPE" == "virtio" ]; then
+    if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
-    elif [ "$DISKTYPE" == "ahci" ]; then
+    elif [[ "$DISKTYPE" == "ahci" ]]; then
         ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
-    elif [ "$DISKTYPE" == "nvme" ]; then
+    elif [[ "$DISKTYPE" == "nvme" ]]; then
         ARGS+=" -device nvme,drive=mydisk,serial=magenta"
     else
         echo unrecognized disk type \"$DISKTYPE\"
@@ -189,32 +190,32 @@ if [ "$DISK" -eq 1 ]; then
     fi
 fi
 
-if [ "$NET" -eq 0 ]; then
+if (( !$NET )); then
   ARGS+=" -net none"
 fi
 
-if [ "$NET" -eq 1 ]; then
+if [[ $NET == 1 ]]; then
     ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0"
 fi
 
-if [ "$NET" -eq 2 ]; then
-    if [ $(uname -s) == "Darwin" ]; then
-        if [ ! -c "/dev/$IFNAME" ]; then
+if [[ $NET == 2 ]]; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        if [[ ! -c "/dev/$IFNAME" ]]; then
           echo "To use qemu with networking on macOS, install the tun/tap driver:"
           echo "http://tuntaposx.sourceforge.net/download.xhtml"
           exit 1
         fi
-        if [ ! -w "/dev/$IFNAME" ]; then
+        if [[ ! -w "/dev/$IFNAME" ]]; then
           echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
           echo "  sudo chown $USER /dev/$IFNAME"
           exit 1
         fi
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     else
-        CHECK=`tunctl -b -u $USER -t $IFNAME 2>/dev/null`
-        if [ "$CHECK" != "$IFNAME" ]; then
+        CHECK=$(tunctl -b -u $USER -t $IFNAME 2>/dev/null)
+        if [[ "$CHECK" != "$IFNAME" ]]; then
           echo "To use qemu with networking on Linux, configure tun/tap:"
-          if [ ! -x "/usr/sbin/tunctl" ]; then
+          if [[ ! -x "/usr/sbin/tunctl" ]]; then
             echo "sudo apt-get install uml-utilities"
           fi
           echo "sudo tunctl -u $USER -t $IFNAME"
@@ -225,21 +226,21 @@ if [ "$NET" -eq 2 ]; then
     fi
 fi
 
-if [ "$NET" -ne 0 ]; then
+if (( $NET )); then
     MAC=""
-    if [ "$NET" -eq 2 ]; then
+    if [[ $NET == 2 ]]; then
         HASH=$(echo $IFNAME | shasum)
         SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
         MAC=",mac=52:54:00$SUFFIX"
     fi
-    if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
+    if [[ "$ARCH" == "x86-64" ]] && [[ $VIRTIO == 0 ]]; then
         ARGS+=" -device e1000,netdev=net0${MAC}"
     else
         ARGS+=" -device virtio-net-pci,netdev=net0${MAC}"
     fi
 fi
 
-if [ "$AUDIO" != "" ]; then
+if [[ -n $AUDIO ]]; then
     ARGS+=" -soundhw hda"
     export QEMU_AUDIO_DRV=$AUDIO
     export QEMU_AUDIO_DAC_FIXED_FREQ=48000
@@ -260,12 +261,12 @@ if [ "$AUDIO" != "" ]; then
     esac
 fi
 
-if [ "$SMP" -ne 1 ]; then
+if [[ $SMP != 1 ]]; then
     ARGS+=" -smp $SMP"
 fi
 
 # start a few extra harmless virtio devices that can be ignored
-if [ "$VIRTIO" -ne 0 ]; then
+if (( $VIRTIO )); then
     ARGS+=" -device virtio-serial-pci"
     ARGS+=" -device virtio-rng-pci"
     ARGS+=" -device virtio-mouse-pci"
@@ -276,7 +277,7 @@ case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
         ARGS+=" -machine virt -kernel $BUILDDIR/magenta.elf"
-        if [ $DO_KVM -ne 0 ]; then
+        if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
         else
           ARGS+=" -cpu cortex-a53"
@@ -285,7 +286,7 @@ case $ARCH in
     x86-64)
         QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35 -kernel $BUILDDIR/magenta.bin"
-        if [ $DO_KVM -ne 0 ]; then
+        if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no"
         else
           ARGS+=" -cpu Haswell,+smap,-check"
@@ -298,9 +299,9 @@ case $ARCH in
 esac
 
 # ramdisk image
-if [ "$INITRD" != "" ]; then
+if [[ -n $INITRD ]]; then
     ARGS+=" -initrd $INITRD"
-elif [ -f "$BUILDDIR/bootdata.bin" ]; then
+elif [[ -f "$BUILDDIR/bootdata.bin" ]]; then
     ARGS+=" -initrd $BUILDDIR/bootdata.bin"
 fi
 
@@ -308,7 +309,7 @@ fi
 # argument.  This is last so that an explicit -c TERM=foo argument
 # goes into CMDLINE first.  Kernel command line words become environment
 # variables, and the first variable in the list wins for getenv calls.
-if [ "$TERM" != "" ]; then
+if [[ -n $TERM ]]; then
     CMDLINE+="TERM=$TERM "
 fi
 
