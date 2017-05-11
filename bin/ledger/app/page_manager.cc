@@ -77,6 +77,10 @@ void PageManager::CheckEmpty() {
 }
 
 void PageManager::OnSyncBacklogDownloaded() {
+  if (sync_backlog_downloaded_) {
+    FTL_LOG(WARNING)
+        << "Initial sync finished. Clients will receive a change notification.";
+  }
   sync_backlog_downloaded_ = true;
   for (auto& request : page_requests_) {
     BindPage(std::move(request));
