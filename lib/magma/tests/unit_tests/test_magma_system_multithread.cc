@@ -80,7 +80,8 @@ public:
             EXPECT_TRUE(connection->ImportBuffer(handle, &id));
             EXPECT_EQ(id, batch_buffer->id());
 
-            EXPECT_TRUE(InitBatchBuffer(batch_buffer.get()));
+            if (!InitBatchBuffer(batch_buffer.get()))
+                break; // Abort the test
 
             auto command_buffer = magma::PlatformBuffer::Create(PAGE_SIZE);
 

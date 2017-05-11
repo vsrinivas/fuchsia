@@ -72,7 +72,7 @@ public:
         void* vaddr;
         ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
 
-        EXPECT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
+        ASSERT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
 
         magma_submit_command_buffer(connection_, command_buffer, context_id_);

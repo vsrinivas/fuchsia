@@ -19,6 +19,14 @@ public:
 
     int fd() { return fd_; }
 
+    bool is_intel_gen()
+    {
+        uint64_t device_id;
+        if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
+            device_id = 0;
+        return TestPlatformDevice::is_intel_gen(device_id);
+    }
+
     ~TestBase() { close(fd_); }
 
 private:
@@ -33,14 +41,6 @@ public:
     {
         if (connection_)
             magma_close(connection_);
-    }
-
-    bool is_intel_gen()
-    {
-        uint64_t device_id;
-        if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
-            device_id = 0;
-        return TestPlatformDevice::is_intel_gen(device_id);
     }
 
     int32_t Test()
@@ -152,10 +152,11 @@ static void test_shutdown(uint32_t iters)
     for (uint32_t i = 0; i < iters; i++) {
         complete_count = 0;
 
+        TestBase test_base;
+        ASSERT_TRUE(test_base.is_intel_gen());
+
         std::thread looper(looper_thread_entry);
         std::thread looper2(looper_thread_entry);
-
-        TestBase test_base;
 
         uint32_t count = kRestartCount;
         while (complete_count < kMaxCount) {
