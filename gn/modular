@@ -70,10 +70,6 @@
             "bootfs_path": "apps/example_flutter_hello_world"
         },
         {
-            "binary": "gen/apps/modular/examples/https_flutter/example_flutter_https.flx",
-            "bootfs_path": "apps/example_flutter_https"
-        },
-        {
             "binary": "gen/apps/modular/examples/story_shell_flutter/example_flutter_story_shell.flx",
             "bootfs_path": "apps/example_flutter_story_shell"
         },
