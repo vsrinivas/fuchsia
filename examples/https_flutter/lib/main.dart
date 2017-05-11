@@ -77,15 +77,15 @@ class Home extends StatefulWidget {
 }
 
 enum Status {
-  LOADING,
-  SUCCESS,
-  ERROR,
+  loading,
+  success,
+  error,
 }
 
 const String url = 'https://www.google.com/';
 
 class _HomeState extends State<Home> {
-  Status status = Status.LOADING;
+  Status status = Status.loading;
   Exception exception;
   Error error;
   http.Response res;
@@ -98,10 +98,10 @@ class _HomeState extends State<Home> {
     try {
       _log('requesting: $url');
       res = await http.get(url);
-      status = Status.SUCCESS;
+      status = Status.success;
     } catch (e) {
       _log('HTTPS request errored: $e');
-      status = Status.ERROR;
+      status = Status.error;
       if (e is Exception) {
         exception = e;
       } else if (e is Error) {
@@ -126,7 +126,7 @@ class _HomeState extends State<Home> {
     Widget child;
 
     switch (status) {
-      case Status.LOADING:
+      case Status.loading:
         return new Scaffold(
             appBar: appBar,
             body: new Center(
@@ -134,13 +134,13 @@ class _HomeState extends State<Home> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: new Text('Loading...'))));
         break;
-      case Status.SUCCESS:
+      case Status.success:
         child = new Center(
             child: new Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: new Text('Success: $url - ${res.statusCode}')));
         break;
-      case Status.ERROR:
+      case Status.error:
         if (exception != null) {
           child = new Center(
               child: new Padding(
