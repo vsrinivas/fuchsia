@@ -5,11 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <efi/boot-services.h>
 #include <err.h>
 #include <kernel/vm.h>
-#include <platform/pc/bootloader.h>
 #include <magenta/boot/multiboot.h>
-#include <efi/boot-services.h>
+#include <platform/pc/bootloader.h>
+#include <platform/pc/memory.h>
 #include <string.h>
 #include <trace.h>
 
@@ -126,12 +127,6 @@ static int mem_arena_init(boot_addr_range_t *range)
 #define E820_ACPI 3
 #define E820_NVS 4
 #define E820_UNUSABLE 5
-
-typedef struct e820entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
-} __PACKED e820entry_t;
 
 typedef struct e820_range_seq {
     e820entry_t* map;

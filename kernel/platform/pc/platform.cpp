@@ -18,6 +18,7 @@
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
+#include <platform/pc/memory.h>
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <magenta/boot/bootdata.h>
@@ -104,7 +105,7 @@ static int process_bootitem(bootdata_t* bd, void* item) {
         break;
     case BOOTDATA_E820_TABLE:
         bootloader.e820_table = item;
-        bootloader.e820_count = bd->length / (8+8+4);
+        bootloader.e820_count = bd->length / sizeof(e820entry_t);
         break;
     case BOOTDATA_IGNORE:
         break;
