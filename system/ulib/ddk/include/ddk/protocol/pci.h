@@ -38,6 +38,7 @@ typedef struct pci_protocol {
     mx_status_t (*set_irq_mode)(mx_device_t* dev,
                                 mx_pci_irq_mode_t mode,
                                 uint32_t requested_irq_count);
+    mx_status_t (*get_device_info)(mx_device_t* dev, mx_pcie_device_info_t* out_info);
 } pci_protocol_t;
 
 __END_CDECLS;

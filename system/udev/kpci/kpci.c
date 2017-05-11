@@ -39,7 +39,7 @@ static mx_protocol_device_t kpci_device_proto = {
 // device will be added if parent is not NULL
 static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
                                    uint32_t index, bool save_handle, mx_device_t** out) {
-    mx_pcie_get_nth_info_t info;
+    mx_pcie_device_info_t info;
 
     mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
     if (handle < 0) {
@@ -181,7 +181,7 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
 
 static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
     for (uint32_t index = 0;; index++) {
-        mx_pcie_get_nth_info_t info;
+        mx_pcie_device_info_t info;
         mx_handle_t h = mx_pci_get_nth_device(get_root_resource(), index, &info);
         if (h < 0) {
             break;

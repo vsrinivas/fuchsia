@@ -261,7 +261,9 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     return NO_ERROR;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, user_ptr<mx_pcie_get_nth_info_t> out_info) {
+mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
+                                   uint32_t index,
+                                   user_ptr<mx_pcie_device_info_t> out_info) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
@@ -280,7 +282,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, user_ptr<m
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_pcie_get_nth_info_t info;
+    mx_pcie_device_info_t info;
     status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
     if (result != NO_ERROR)
         return result;
@@ -294,7 +296,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, user_ptr<m
 
     // TODO(andymutton): Change to use user_ptr copy
     if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info.get()),
-                            &info, sizeof(mx_pcie_get_nth_info_t)) != NO_ERROR)
+                            &info, sizeof(mx_pcie_device_info_t)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -581,7 +583,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_get_nth_info_t>) {
+mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_device_info_t>) {
     return ERR_NOT_SUPPORTED;
 }
 

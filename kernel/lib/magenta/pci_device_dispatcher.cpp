@@ -21,10 +21,10 @@
 constexpr mx_rights_t kDefaultPciDeviceRights =
     MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
-status_t PciDeviceDispatcher::Create(uint32_t                   index,
-                                     mx_pcie_get_nth_info_t*    out_info,
+status_t PciDeviceDispatcher::Create(uint32_t                  index,
+                                     mx_pcie_device_info_t*    out_info,
                                      mxtl::RefPtr<Dispatcher>* out_dispatcher,
-                                     mx_rights_t*               out_rights) {
+                                     mx_rights_t*              out_rights) {
     status_t status;
     mxtl::RefPtr<PciDeviceWrapper> device_wrapper;
 
@@ -45,7 +45,7 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
 }
 
 PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PciDeviceWrapper> device,
-                                         mx_pcie_get_nth_info_t* out_info)
+                                         mx_pcie_device_info_t* out_info)
     : device_(device) {
     const PcieDevice& dev = *device_->device();
 

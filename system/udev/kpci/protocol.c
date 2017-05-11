@@ -141,6 +141,17 @@ static mx_status_t pci_set_irq_mode(mx_device_t* dev,
     return mx_pci_set_irq_mode(device->handle, mode, requested_irq_count);
 }
 
+static mx_status_t pci_get_device_info(mx_device_t* dev, mx_pcie_device_info_t* out_info) {
+    if ((dev == NULL) || (out_info == NULL))
+        return ERR_INVALID_ARGS;
+
+    kpci_device_t* device = dev->ctx;
+    assert(device != NULL);
+
+    *out_info = device->info;
+    return NO_ERROR;
+}
+
 static pci_protocol_t _pci_protocol = {
     .claim_device = pci_claim_device,
     .enable_bus_master = pci_enable_bus_master,
@@ -151,4 +162,5 @@ static pci_protocol_t _pci_protocol = {
     .get_config = pci_get_config,
     .query_irq_mode_caps = pci_query_irq_mode_caps,
     .set_irq_mode = pci_set_irq_mode,
+    .get_device_info = pci_get_device_info,
 };

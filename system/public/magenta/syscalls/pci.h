@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 
 // Defines and structures related to mx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.
-typedef struct mx_pcie_get_nth_info {
+typedef struct mx_pcie_device_info {
     uint16_t vendor_id;
     uint16_t device_id;
 
@@ -25,7 +25,7 @@ typedef struct mx_pcie_get_nth_info {
     uint8_t  bus_id;
     uint8_t  dev_id;
     uint8_t  func_id;
-} mx_pcie_get_nth_info_t;
+} mx_pcie_device_info_t;
 
 #define MX_PCI_NO_IRQ_MAPPING UINT32_MAX
 
