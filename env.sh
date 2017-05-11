@@ -33,9 +33,9 @@ function envhelp() {
     # note: please keep these sorted
     cat <<END
 magenta functions:
-  mboot, mbuild, mbuild-if-changed, mcheck, mgo, mrev, mrun, mset, msymbolize
+  mboot, mbuild, mcheck, mgo, mrun, mset, msymbolize
 fuchsia functions:
-  fboot, fbuild, fbuild-sysroot, fbuild-sysroot-if-changed, fcheck, fgen,
+  fboot, fbuild, fbuild-sysroot, fcheck, fgen,
   fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize, ftrace
 END
     return
@@ -171,31 +171,12 @@ function mbuild() {
 
   echo "Building magenta..." \
     && "${FUCHSIA_SCRIPTS_DIR}/build-magenta.sh" \
-         -t "${MAGENTA_BUILD_TARGET}" "$@" \
-    && (mrev > "${MAGENTA_BUILD_REV_CACHE}")
-}
-
-### mbuild-if-changed: only build magenta if stale
-
-function mbuild-if-changed-usage() {
-  cat >&2 <<END
-Usage: mbuild-if-changed [extra make args...]
-Builds magenta only if HEAD revision has changed.
-END
+         -t "${MAGENTA_BUILD_TARGET}" "$@"
 }
 
 function mbuild-if-changed() {
-  mcheck || return 1
-
-  local last_rev
-  if [[ -f "${MAGENTA_BUILD_REV_CACHE}" ]]; then
-    last_rev=$(cat "${MAGENTA_BUILD_REV_CACHE}")
-  fi
-
-  if ! ([[ -d "${MAGENTA_BUILD_DIR}" ]] \
-      && [[ "$(mrev)" == "${last_rev}" ]]); then
-    mbuild "$@"
-  fi
+  echo "Deprecated - just run mbuild"
+  mbuild
 }
 
 ### mboot: run magenta bootserver
@@ -243,24 +224,6 @@ function msymbolize() {
 
   # TODO(jeffbrown): Fix symbolize to support arch other than x86-64
   "${MAGENTA_DIR}/scripts/symbolize" "$@"
-}
-
-### mrev: prints magenta HEAD revision
-
-function mrev-usage() {
-  cat >&2 <<END
-Usage: mrev
-Prints magenta HEAD revision from git work tree.
-END
-}
-
-function mrev() {
-  if [[ $# -ne 0 ]]; then
-    mrev-usage
-    return 1
-  fi
-
-  (mgo && git rev-parse --verify HEAD)
 }
 
 ### mlog: run magenta log listener
@@ -495,7 +458,7 @@ function fgen() {
 
   echo "Generating ninja files..."
   rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
-  mbuild-if-changed \
+  mbuild \
     && fgen-internal "$@" \
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
@@ -537,18 +500,9 @@ function fbuild-sysroot() {
   mbuild
 }
 
-### fbuild-sysroot-if-changed: only build sysroot if stale
-
-function fbuild-sysroot-if-changed-usage() {
-  cat >&2 <<END
-Usage: fbuild-sysroot-if-changed [extra build-sysroot.sh args...]
-Builds fuchsia system root only if magenta HEAD revision has changed.
-END
-}
-
 function fbuild-sysroot-if-changed() {
-  echo "Deprecated - just run fbuild-if-changed"
-  mbuild-if-changed
+  echo "Deprecated - just run mbuild"
+  mbuild
 }
 
 ### fbuild: build fuchsia
@@ -578,7 +532,7 @@ function fbuild-internal() {
 function fbuild() {
   fcheck || return 1
 
-  mbuild-if-changed \
+  mbuild \
     && fgen-if-changed \
     && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
