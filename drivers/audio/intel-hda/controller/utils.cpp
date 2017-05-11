@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//TODO: stop using dev->props and dev->prop_count
-#define DDK_INTERNAL
-
 #include <magenta/assert.h>
 #include <ddk/binding.h>
 #include <magenta/process.h>
@@ -25,40 +22,6 @@ static constexpr size_t   IHDA_PAGE_MASK = IHDA_PAGE_SIZE - 1;
 #ifdef PAGE_SIZE
 static_assert(IHDA_PAGE_SIZE == PAGE_SIZE, "PAGE_SIZE assumption mismatch!!");
 #endif  // PAGE_SIZE
-
-namespace {
-mx_status_t GetDevProperty(const mx_device_t* dev, uint16_t prop_id, uint32_t* out) {
-    if (!out)         return ERR_INVALID_ARGS;
-    if (!dev)         return ERR_INVALID_ARGS;
-    if (!dev->props)  return ERR_NOT_FOUND;
-
-    MX_DEBUG_ASSERT(out);
-
-    for (uint32_t i = 0; i < dev->prop_count; ++i) {
-        if (dev->props[i].id == prop_id) {
-            *out = dev->props[i].value;
-            return NO_ERROR;
-        }
-    }
-
-    return ERR_NOT_FOUND;
-}
-}
-
-template <typename T>
-mx_status_t GetDevProperty(const mx_device_t* dev, uint16_t prop_id, T* out) {
-    uint32_t    val;
-    mx_status_t res;
-
-    if ((res = GetDevProperty(dev, prop_id, &val)) == NO_ERROR)
-        *out = static_cast<T>(val);
-
-    return res;
-}
-
-template mx_status_t GetDevProperty<uint32_t>(const mx_device_t* dev, uint16_t id, uint32_t* out);
-template mx_status_t GetDevProperty<uint16_t>(const mx_device_t* dev, uint16_t id, uint16_t* out);
-template mx_status_t GetDevProperty<uint8_t> (const mx_device_t* dev, uint16_t id, uint8_t*  out);
 
 mx_status_t WaitCondition(mx_time_t timeout,
                           mx_time_t poll_interval,

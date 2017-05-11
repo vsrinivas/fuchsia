@@ -137,9 +137,10 @@ private:
     // Debug stuff
     char debug_tag_[MX_DEVICE_NAME_MAX] = { 0 };
 
-    // Upstream PCI device and protocol interface.
-    mx_device_t*    pci_dev_   = nullptr;
-    pci_protocol_t* pci_proto_ = nullptr;
+    // Upstream PCI device, protocol interface, and device info.
+    mx_device_t*          pci_dev_   = nullptr;
+    pci_protocol_t*       pci_proto_ = nullptr;
+    mx_pcie_device_info_t pci_dev_info_;
 
     // Unique ID and published HDA device node.
     const uint32_t id_;

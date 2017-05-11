@@ -12,9 +12,6 @@
 namespace audio {
 namespace intel_hda {
 
-template <typename T>
-mx_status_t GetDevProperty(const mx_device_t* dev, uint16_t prop_id, T* out);
-
 #define _SIC_ static inline constexpr
 template <typename T> _SIC_ T  OR(T x, T y) { return static_cast<T>(x | y); }
 template <typename T> _SIC_ T AND(T x, T y) { return static_cast<T>(x & y); }

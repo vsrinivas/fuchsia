@@ -246,17 +246,25 @@ mx_status_t IntelHDACodec::PublishDevice() {
 }
 
 mx_status_t IntelHDACodec::ParseVidDid(const CodecResponse& resp) {
-    uint32_t vid = (resp.data >> 16) & 0xFFFF;
-    SET_DEVICE_PROP(VID, vid);
-    SET_DEVICE_PROP(DID, resp.data & 0xFFFF);;
-    return (vid != 0) ? NO_ERROR : ERR_INTERNAL;
+    props_.vid = static_cast<uint16_t>((resp.data >> 16) & 0xFFFF);
+    props_.did = static_cast<uint16_t>(resp.data & 0xFFFF);
+
+    SET_DEVICE_PROP(VID, props_.vid);
+    SET_DEVICE_PROP(DID, props_.did);
+
+    return (props_.vid != 0) ? NO_ERROR : ERR_INTERNAL;
 }
 
 mx_status_t IntelHDACodec::ParseRevisionId(const CodecResponse& resp) {
-    SET_DEVICE_PROP(MAJOR_REV,   (resp.data >> 20) & 0xF);
-    SET_DEVICE_PROP(MINOR_REV,   (resp.data >> 16) & 0xF);
-    SET_DEVICE_PROP(VENDOR_REV,  (resp.data >>  8) & 0xFF);
-    SET_DEVICE_PROP(VENDOR_STEP,  resp.data & 0xFF);
+    props_.ihda_vmaj = static_cast<uint8_t>((resp.data >> 20) & 0xF);
+    props_.ihda_vmin = static_cast<uint8_t>((resp.data >> 16) & 0xF);
+    props_.rev_id    = static_cast<uint8_t>((resp.data >>  8) & 0xFF);
+    props_.step_id   = static_cast<uint8_t>(resp.data & 0xFF);
+
+    SET_DEVICE_PROP(MAJOR_REV,   props_.ihda_vmaj);
+    SET_DEVICE_PROP(MINOR_REV,   props_.ihda_vmin);
+    SET_DEVICE_PROP(VENDOR_REV,  props_.rev_id);
+    SET_DEVICE_PROP(VENDOR_STEP, props_.step_id);
 
     state_ = State::FINDING_DRIVER;
     return PublishDevice();
@@ -344,18 +352,13 @@ mx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel* channel,
     MX_DEBUG_ASSERT(channel != nullptr);
 
     ihda_proto::GetIDsResp resp;
-    mx_status_t res;
-    const auto d = dev_node_;
-
-    if (((res = GetDevProperty(d, BIND_IHDA_CODEC_VID,         &resp.vid))       != NO_ERROR) ||
-        ((res = GetDevProperty(d, BIND_IHDA_CODEC_DID,         &resp.did))       != NO_ERROR) ||
-        ((res = GetDevProperty(d, BIND_IHDA_CODEC_MAJOR_REV,   &resp.ihda_vmaj)) != NO_ERROR) ||
-        ((res = GetDevProperty(d, BIND_IHDA_CODEC_MINOR_REV,   &resp.ihda_vmin)) != NO_ERROR) ||
-        ((res = GetDevProperty(d, BIND_IHDA_CODEC_VENDOR_REV,  &resp.rev_id))    != NO_ERROR) ||
-        ((res = GetDevProperty(d, BIND_IHDA_CODEC_VENDOR_STEP, &resp.step_id))   != NO_ERROR))
-        return res;
-
-    resp.hdr = req.hdr;
+    resp.hdr       = req.hdr;
+    resp.vid       = props_.vid;
+    resp.did       = props_.did;
+    resp.ihda_vmaj = props_.ihda_vmaj;
+    resp.ihda_vmin = props_.ihda_vmin;
+    resp.rev_id    = props_.rev_id;
+    resp.step_id   = props_.step_id;
 
     return channel->Write(&resp, sizeof(resp));
 }
