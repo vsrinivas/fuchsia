@@ -15,13 +15,6 @@ ifneq (,$(EXTRA_BUILDRULES))
 -include $(EXTRA_BUILDRULES)
 endif
 
-# enable/disable the size output based on the ENABLE_BUILD_LISTFILES switch
-ifeq ($(ENABLE_BUILD_LISTFILES),true)
-SIZECMD:=$(SIZE)
-else
-SIZECMD:=true
-endif
-
 $(OUTLKBIN): $(OUTLKELF)
 	$(call BUILDECHO,generating image $@)
 	$(NOECHO)$(OBJCOPY) -O binary $< $@
@@ -30,8 +23,14 @@ $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	$(call BUILDECHO,linking $@)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(LINKER_SCRIPT) \
 		$(ALLMODULE_OBJS) $(EXTRA_OBJS) -o $@
-	$(NOECHO)$(SIZECMD) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
-	$(NOECHO)$(SIZECMD) $@
+# enable/disable the size output based on a combination of ENABLE_BUILD_LISTFILES
+# and QUIET
+ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
+ifeq ($(call TOBOOL,$(QUIET)),false)
+	$(NOECHO)$(SIZE) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
+	$(NOECHO)$(SIZE) $@
+endif
+endif
 
 $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	$(call BUILDECHO, generating $@)
