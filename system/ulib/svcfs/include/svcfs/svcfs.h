@@ -23,7 +23,6 @@ protected:
 
 class Vnode : public fs::Vnode {
 public:
-    mx_status_t Close() override final;
     mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) override final;
 
     ~Vnode() override;

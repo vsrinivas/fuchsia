@@ -81,10 +81,6 @@ mx_status_t VnodeMemfs::Open(uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_status_t VnodeMemfs::Close() {
-    return NO_ERROR;
-}
-
 ssize_t VnodeFile::Read(void* data, size_t len, size_t off) {
     if ((off >= length_) || (vmo_ == MX_HANDLE_INVALID)) {
         return 0;

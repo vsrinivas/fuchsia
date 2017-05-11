@@ -168,7 +168,6 @@ private:
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
     // by the VFS library.
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Close() final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
     mx_status_t Getattr(vnattr_t* a) final;

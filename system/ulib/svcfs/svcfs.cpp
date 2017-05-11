@@ -61,10 +61,6 @@ Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
 
 Vnode::~Vnode() = default;
 
-mx_status_t Vnode::Close() {
-    return NO_ERROR;
-}
-
 mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     return dispatcher_(h, (void*)vfs_handler, cookie);
 }

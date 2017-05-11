@@ -29,7 +29,6 @@ class Dnode;
 class VnodeMemfs : public fs::Vnode {
 public:
     virtual mx_status_t Open(uint32_t flags) override;
-    virtual mx_status_t Close() override;
     virtual mx_status_t Setattr(vnattr_t* a) override;
     virtual mx_status_t Sync() override;
     ssize_t Ioctl(uint32_t op, const void* in_buf,

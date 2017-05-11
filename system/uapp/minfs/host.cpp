@@ -126,7 +126,7 @@ int emu_close(int fd) {
     //TODO: fdtab lock
     file_t* f;
     FILE_WRAP(f, fd, close, fd);
-    fs::Vfs::Close(f->vn);
+    f->vn->Close();
     memset(f, 0, sizeof(file_t));
     return 0;
 }
@@ -215,7 +215,7 @@ int emu_unlink(const char* path) {
     mx_status_t status = fs::Vfs::Walk(fake_root, &vn, path + PREFIX_SIZE, &path);
     if (status == NO_ERROR) {
         status = vn->Unlink(path, strlen(path), false);
-        fs::Vfs::Close(vn);
+        vn->Close();
     }
     STATUS(status);
 }
@@ -253,7 +253,7 @@ int emu_stat(const char* fn, struct stat* s) {
         }
         vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
         if (cur != fake_root) {
-            fs::Vfs::Close(cur);
+            cur->Close();
         }
         cur = vn;
         fn = nextpath;
@@ -261,7 +261,7 @@ int emu_stat(const char* fn, struct stat* s) {
 
     status = do_stat(vn, s);
     if (vn != fake_root) {
-        fs::Vfs::Close(vn);
+        vn->Close();
     }
     STATUS(status);
 }
@@ -325,7 +325,7 @@ int emu_closedir(DIR* dirp) {
     }
 
     MINDIR* dir = (MINDIR*)dirp;
-    fs::Vfs::Close(dir->vn);
+    dir->vn->Close();
     free(dirp);
 
     return 0;

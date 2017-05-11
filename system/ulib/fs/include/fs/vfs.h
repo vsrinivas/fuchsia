@@ -125,7 +125,7 @@ public:
     virtual mx_status_t Open(uint32_t flags) = 0;
 
     // Closes vn. Typically, most Vnodes simply return "NO_ERROR".
-    virtual mx_status_t Close() = 0;
+    virtual mx_status_t Close();
 
     // Read data from vn at offset.
     virtual ssize_t Read(void* data, size_t len, size_t off) {
@@ -269,7 +269,6 @@ struct Vfs {
                             const char* oldname, const char* newname);
     static mx_status_t Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
                               const char* oldname, const char* newname);
-    static mx_status_t Close(mxtl::RefPtr<Vnode> vn); // TODO(smklein): This has questionable utility
     static ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len);
 

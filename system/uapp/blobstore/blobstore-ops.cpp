@@ -36,10 +36,6 @@ mx_status_t VnodeBlob::Open(uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_status_t VnodeBlob::Close() {
-    return NO_ERROR;
-}
-
 mx_status_t VnodeBlob::Readdir(void* cookie, void* dirents, size_t len) {
     if (!IsDirectory()) {
         return ERR_NOT_DIR;

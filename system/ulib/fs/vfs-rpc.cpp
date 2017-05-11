@@ -199,7 +199,7 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode>
         }
         return ERR_DISPATCHER_INDIRECT;
     }
-    case MXRIO_CLOSE:
+    case MXRIO_CLOSE: {
         {
             mxtl::AutoLock lock(&vfs_lock);
             if (ios->token != MX_HANDLE_INVALID) {
@@ -219,10 +219,11 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode>
         }
 
         // this will drop the ref on the vn
-        fs::Vfs::Close(vn);
+        mx_status_t status = vn->Close();
         ios->vn = nullptr;
         free(ios);
-        return NO_ERROR;
+        return status;
+    }
     case MXRIO_CLONE: {
         if (!(arg & MXRIO_OFLAG_PIPELINE)) {
             mxrio_object_t obj;

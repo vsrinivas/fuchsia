@@ -742,11 +742,6 @@ mx_status_t VnodeMinfs::Open(uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_status_t VnodeMinfs::Close() {
-    trace(MINFS, "minfs_close() vn=%p(#%u)\n", this, ino_);
-    return NO_ERROR;
-}
-
 ssize_t VnodeMinfs::Read(void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {

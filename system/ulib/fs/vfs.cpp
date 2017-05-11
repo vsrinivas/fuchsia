@@ -324,12 +324,6 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
     }
 }
 
-mx_status_t Vfs::Close(mxtl::RefPtr<Vnode> vn) {
-    trace(VFS, "vfs_close: vn=%p\n", vn.get());
-    mx_status_t r = vn->Close();
-    return r;
-}
-
 #ifdef __Fuchsia__
 mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     // default implementation adds this object to the mxio single
@@ -337,6 +331,10 @@ mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
     return mxio_dispatcher_add(vfs_dispatcher, h, (void*)vfs_handler, cookie);
 }
 #endif
+
+mx_status_t Vnode::Close() {
+    return NO_ERROR;
+}
 
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type) {
