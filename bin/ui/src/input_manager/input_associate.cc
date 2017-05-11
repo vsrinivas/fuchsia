@@ -71,9 +71,8 @@ void InputAssociate::CreateInputConnection(
 
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
-      view_token_value,
-      std::unique_ptr<InputConnectionImpl>(new InputConnectionImpl(
-          this, std::move(view_token), std::move(request))));
+      view_token_value, std::make_unique<InputConnectionImpl>(
+                            this, std::move(view_token), std::move(request)));
 }
 
 void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {
@@ -95,10 +94,11 @@ void InputAssociate::CreateTextInputService(
   FTL_DCHECK(request.is_pending());
   FTL_VLOG(1) << "CreateTextInputService: view_token=" << view_token;
 
+  const uint32_t view_token_value = view_token->value;
   text_input_services_by_view_token_.emplace(
-      view_token->value, std::make_unique<TextInputServiceImpl>(
-                             this, std::move(view_token), std::move(request),
-                             application_context_));
+      view_token_value, std::make_unique<TextInputServiceImpl>(
+                            this, std::move(view_token), std::move(request),
+                            application_context_));
 }
 
 void InputAssociate::OnTextInputServiceDied(
@@ -153,7 +153,8 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
   if (event->is_keyboard()) {
     auto it = text_input_services_by_view_token_.find(view_token->value);
     if (it != text_input_services_by_view_token_.end()) {
-      FTL_VLOG(1) << "DeliverEvent: Found Text Input Service, forward event";
+      FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
+                  << " Forwarding to Text Input Service.";
       it->second->InjectInput(event.Clone());
     }
   }

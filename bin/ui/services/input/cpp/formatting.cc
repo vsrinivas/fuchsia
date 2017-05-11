@@ -302,4 +302,33 @@ std::ostream& operator<<(std::ostream& os, const InputReport& value) {
   return os << "}";
 }
 
+std::ostream& operator<<(std::ostream& os, const TextSelection& value) {
+  return os << "{TextSelection: base=" << value.base
+            << ", extent=" << value.extent << ", affinity=";
+  switch (value.affinity) {
+    case mozart::TextAffinity::UPSTREAM:
+      os << "UPSTREAM";
+      break;
+    case mozart::TextAffinity::DOWNSTREAM:
+      os << "DOWNSTREAM";
+      break;
+    default:
+      os << "UNDEF";
+  }
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const TextRange& value) {
+  return os << "{TextRange: start=" << value.start << ", end=" << value.end
+            << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const TextInputState& value) {
+  os << "{TextInputState: revision=" << value.revision;
+  os << ", text='" << value.text << "'";
+  os << ", selection=" << *(value.selection);
+  os << ", composing=" << *(value.composing);
+  return os << "}";
+}
+
 }  // namespace mozart

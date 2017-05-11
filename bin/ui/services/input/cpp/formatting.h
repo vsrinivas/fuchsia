@@ -10,6 +10,8 @@
 #include "apps/mozart/services/input/input_event_constants.fidl.h"
 #include "apps/mozart/services/input/input_events.fidl.h"
 #include "apps/mozart/services/input/input_reports.fidl.h"
+#include "apps/mozart/services/input/text_editing.fidl.h"
+#include "apps/mozart/services/input/text_input.fidl.h"
 
 namespace mozart {
 
@@ -32,6 +34,11 @@ std::ostream& operator<<(std::ostream& os, const StylusReport& value);
 std::ostream& operator<<(std::ostream& os, const Touch& value);
 std::ostream& operator<<(std::ostream& os, const TouchscreenReport& value);
 std::ostream& operator<<(std::ostream& os, const InputReport& value);
+
+
+std::ostream& operator<<(std::ostream& os, const TextSelection& value);
+std::ostream& operator<<(std::ostream& os, const TextRange& value);
+std::ostream& operator<<(std::ostream& os, const TextInputState& value);
 
 }  // namespace mozart
 
