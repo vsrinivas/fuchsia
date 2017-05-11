@@ -50,6 +50,8 @@ class ExtendedStringView : public ftl::StringView {
 
   flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
       flatbuffers::FlatBufferBuilder* builder);
+
+  std::string ToHex();
 };
 
 // Returns the ExtendedStringView representation of the given value.
@@ -72,6 +74,9 @@ fidl::Array<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);
+
+// Returns the hexadecimal representation of the given value.
+std::string ToHex(ExtendedStringView value);
 
 // Store the given value as a FlatBufferVector in the given builder.
 flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(

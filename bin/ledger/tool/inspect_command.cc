@@ -28,9 +28,9 @@ std::string ToPrintable(ftl::StringView string) {
     if (!(isprint(i) || isspace(i))) {
       // Hex encoding takes 2 characters for each byte.
       if (string.size() > kDataSizeLimit / 2) {
-        return ToHexString(string.substr(0, kDataSizeLimit / 2)) + "...";
+        return convert::ToHex(string.substr(0, kDataSizeLimit / 2)) + "...";
       } else {
-        return ToHexString(string);
+        return convert::ToHex(string);
       }
     }
   }
@@ -74,19 +74,21 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
         ](storage::Status status,
                  std::unique_ptr<storage::PageStorage> storage) {
           if (status != storage::Status::OK) {
-            FTL_LOG(FATAL) << "Unable to retrieve page " << ToHexString(page_id)
-                           << " due to error " << status;
+            FTL_LOG(FATAL) << "Unable to retrieve page "
+                           << convert::ToHex(page_id) << " due to error "
+                           << status;
           }
-          std::cout << "Page " << ToHexString(page_id) << std::endl;
+          std::cout << "Page " << convert::ToHex(page_id) << std::endl;
           std::vector<storage::CommitId> heads;
           storage::Status get_status = storage->GetHeadCommitIds(&heads);
           if (get_status != storage::Status::OK) {
             FTL_LOG(FATAL) << "Unable to retrieve commits for page "
-                           << ToHexString(page_id) << " due to error "
+                           << convert::ToHex(page_id) << " due to error "
                            << status;
           }
           for (const storage::CommitId& commit_id : heads) {
-            std::cout << " head commit " << ToHexString(commit_id) << std::endl;
+            std::cout << " head commit " << convert::ToHex(commit_id)
+                      << std::endl;
           }
         }));
   }
@@ -108,7 +110,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
     on_done();
     return;
   }
-  FTL_LOG(INFO) << "Commit id " << ToHexString(commit_id);
+  FTL_LOG(INFO) << "Commit id " << convert::ToHex(commit_id);
   ledger_storage->GetPageStorage(page_id, [
     this, commit_id, on_done = std::move(on_done)
   ](storage::Status status, std::unique_ptr<storage::PageStorage> storage) {
@@ -122,9 +124,10 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
       this, commit_id, on_done = std::move(on_done)
     ](storage::Status status, std::unique_ptr<const storage::Commit> commit) {
       if (status != storage::Status::OK) {
-        FTL_LOG(ERROR) << "Unable to retrieve commit " << ToHexString(commit_id)
-                       << " on page " << ToHexString(storage_->GetId())
-                       << " due to error " << status;
+        FTL_LOG(ERROR) << "Unable to retrieve commit "
+                       << convert::ToHex(commit_id) << " on page "
+                       << convert::ToHex(storage_->GetId()) << " due to error "
+                       << status;
         on_done();
         return;
       }
@@ -139,7 +142,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
   std::cout << "Commit " << args_[4] << std::endl;
   std::cout << " timestamp " << commit->GetTimestamp() << std::endl;
   for (storage::CommitIdView parent_commit : commit->GetParentIds()) {
-    std::cout << " parent " << ToHexString(parent_commit) << std::endl;
+    std::cout << " parent " << convert::ToHex(parent_commit) << std::endl;
   }
   std::cout << "Page state at this commit: " << std::endl;
   coroutine_service_.StartCoroutine(ftl::MakeCopyable([

@@ -9,6 +9,10 @@
 
 namespace convert {
 
+namespace {
+const char kHexDigits[] = "0123456789ABCDEF";
+}
+
 fidl::Array<uint8_t> ExtendedStringView::ToArray() {
   fidl::Array<uint8_t> result = fidl::Array<uint8_t>::New(size());
   memcpy(result.data(), data(), size());
@@ -20,6 +24,16 @@ ExtendedStringView::ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder) {
   return builder->CreateVector(reinterpret_cast<const unsigned char*>(data()),
                                size());
+}
+
+std::string ExtendedStringView::ToHex() {
+  std::string result;
+  result.reserve(size() * 2);
+  for (unsigned char c : *this) {
+    result.push_back(kHexDigits[c >> 4]);
+    result.push_back(kHexDigits[c & 0xf]);
+  }
+  return result;
 }
 
 fidl::Array<uint8_t> ToArray(ExtendedStringView value) {
@@ -34,6 +48,10 @@ flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder,
     ExtendedStringView value) {
   return value.ToFlatBufferVector(builder);
+}
+
+std::string ToHex(ExtendedStringView value) {
+  return value.ToHex();
 }
 
 }  // namespace convert

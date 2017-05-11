@@ -15,10 +15,6 @@ namespace tool {
 // human-readable username to user ID.
 bool FromHexString(ftl::StringView hex_string, std::string* result);
 
-// Transformation currently used by DeviceRunner to translate human-readable
-// username to user ID.
-std::string ToHexString(ftl::StringView data);
-
 }  // namespace tool
 
 #endif  // APPS_LEDGER_SRC_TOOL_CLIENT_H_

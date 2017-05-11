@@ -44,8 +44,6 @@ const char kLevelDbDir[] = "/leveldb";
 const char kObjectDir[] = "/objects";
 const char kStagingDir[] = "/staging";
 
-const char kHexDigits[] = "0123456789ABCDEF";
-
 struct StringPointerComparator {
   using is_transparent = std::true_type;
 
@@ -62,19 +60,9 @@ struct StringPointerComparator {
   }
 };
 
-std::string ToHex(convert::ExtendedStringView string) {
-  std::string result;
-  result.reserve(string.size() * 2);
-  for (unsigned char c : string) {
-    result.push_back(kHexDigits[c >> 4]);
-    result.push_back(kHexDigits[c & 0xf]);
-  }
-  return result;
-}
-
 std::string GetFilePath(ftl::StringView objects_dir,
                         convert::ExtendedStringView object_id) {
-  std::string hex = ToHex(object_id);
+  std::string hex = convert::ToHex(object_id);
 
   FTL_DCHECK(hex.size() > 2);
   ftl::StringView hex_view = hex;
@@ -420,7 +408,7 @@ void PageStorageImpl::AddCommitsFromSync(
     std::unique_ptr<const Commit> commit =
         CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
     if (!commit) {
-      FTL_LOG(ERROR) << "Unable to add commit. Id: " << ToHex(id);
+      FTL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       callback(Status::FORMAT_ERROR);
       return;
     }
@@ -568,8 +556,9 @@ void PageStorageImpl::AddObjectFromSync(
     if (status != Status::OK) {
       callback(status);
     } else if (found_id != object_id) {
-      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: " << ToHex(object_id)
-                     << ". Found: " << ToHex(found_id);
+      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
+                     << convert::ToHex(object_id)
+                     << ". Found: " << convert::ToHex(found_id);
       files::DeletePath(GetFilePath(found_id), false);
       callback(Status::OBJECT_ID_MISMATCH);
     } else {
@@ -716,7 +705,7 @@ void PageStorageImpl::AddCommits(
         if (s != Status::OK) {
           FTL_LOG(ERROR) << "Failed to find parent commit \""
                          << ToHex(parent_id) << "\" of commit \""
-                         << ToHex(commit->GetId()) << "\"";
+                         << convert::ToHex(commit->GetId()) << "\"";
           if (s == Status::NOT_FOUND) {
             callback(Status::ILLEGAL_STATE);
           } else {

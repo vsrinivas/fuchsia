@@ -167,7 +167,7 @@ bool ClientApp::ReadConfig() {
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
                                    &user_id_human_readable)) {
     FTL_LOG(INFO) << "using the user id passed on the command line";
-    user_config_.user_id = ToHexString(user_id_human_readable);
+    user_config_.user_id = convert::ToHex(user_id_human_readable);
     user_repository_path_ =
         ftl::Concatenate({"/data/ledger/", user_config_.user_id});
   } else if (files::IsFile(ledger::kLastUserIdPath.ToString()) &&
