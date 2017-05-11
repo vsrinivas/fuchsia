@@ -203,7 +203,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void WatchCommits(const std::string& min_timestamp,
                     cloud_provider::CommitWatcher* watcher) override {
-    watch_commits_calls++;
+    watch_call_min_timestamps.push_back(min_timestamp);
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
         watcher, commit = std::move(record.commit),
@@ -262,7 +262,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
   std::unordered_map<std::string, std::string> objects_to_return;
 
-  unsigned int watch_commits_calls = 0u;
+  std::vector<std::string> watch_call_min_timestamps;
   unsigned int get_commits_calls = 0u;
   unsigned int get_object_calls = 0u;
   std::vector<cloud_provider::Commit> received_commits;
@@ -635,6 +635,21 @@ TEST_F(PageSyncImplTest, DownloadEmptyBacklog) {
   EXPECT_EQ(1, on_idle_calls);
 }
 
+// Verifies that the cloud watcher is registered for the timestamp of the most
+// recent commit downloaded from the backlog.
+TEST_F(PageSyncImplTest, RegisterWatcher) {
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id2", "content2", {}), "43"));
+
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
+  page_sync_.Start();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
+  EXPECT_EQ("43", cloud_provider_.watch_call_min_timestamps.front());
+}
+
 // Verifies that commit notifications about new commits in cloud provider are
 // received and passed to storage.
 TEST_F(PageSyncImplTest, ReceiveNotifications) {
@@ -666,21 +681,21 @@ TEST_F(PageSyncImplTest, RetryRemoteWatcher) {
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.watch_commits_calls == 1u) {
+    if (cloud_provider_.watch_call_min_timestamps.size() == 1u) {
       message_loop_.PostQuitTask();
     }
   });
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1u, cloud_provider_.watch_commits_calls);
+  EXPECT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
 
   page_sync_.OnConnectionError();
   message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.watch_commits_calls == 2u) {
+    if (cloud_provider_.watch_call_min_timestamps.size() == 2u) {
       message_loop_.PostQuitTask();
     }
   });
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(2u, cloud_provider_.watch_commits_calls);
+  EXPECT_EQ(2u, cloud_provider_.watch_call_min_timestamps.size());
 }
 
 // Verifies that if multiple remote commits are received while one batch is

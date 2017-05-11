@@ -195,10 +195,6 @@ void PageSyncImpl::DownloadBacklog() {
           // are downloaded.
           DownloadBatch(std::move(records), [this] { BacklogDownloaded(); });
         }
-
-        download_list_retrieved_ = true;
-        CheckIdle();
-        SetRemoteWatcher();
       });
 }
 
@@ -328,9 +324,12 @@ void PageSyncImpl::CheckIdle() {
 }
 
 void PageSyncImpl::BacklogDownloaded() {
+  download_list_retrieved_ = true;
   if (on_backlog_downloaded_) {
     on_backlog_downloaded_();
   }
+  CheckIdle();
+  SetRemoteWatcher();
 }
 
 }  // namespace cloud_sync
