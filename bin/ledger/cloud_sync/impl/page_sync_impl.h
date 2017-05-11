@@ -92,7 +92,11 @@ class PageSyncImpl : public PageSync,
  private:
   // Downloads the initial backlog of remote commits, and sets up the remote
   // watcher upon success.
-  void DownloadBacklog();
+  void StartDownload();
+
+  // Uploads the initial backlog of local unsynced commits, and sets up the
+  // storage watcher upon success.
+  void StartUpload();
 
   // Downloads the given batch of commits.
   void DownloadBatch(std::vector<cloud_provider::Record> record,

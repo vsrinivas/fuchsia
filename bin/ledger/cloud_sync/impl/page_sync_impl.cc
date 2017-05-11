@@ -45,27 +45,7 @@ void PageSyncImpl::Start() {
   started_ = true;
   storage_->SetSyncDelegate(this);
 
-  DownloadBacklog();
-
-  // Retrieve the backlog of the existing unsynced commits and enqueue them for
-  // upload.
-  // TODO(ppi): either switch to a paginating API or (better?) ensure that long
-  // backlogs of local commits are squashed in storage, as otherwise the list of
-  // commits can be possibly very big.
-  storage_->GetUnsyncedCommits(
-      [this](storage::Status status,
-             std::vector<std::unique_ptr<const storage::Commit>> commits) {
-        if (status != storage::Status::OK) {
-          HandleError("Failed to retrieve the unsynced commits");
-          return;
-        }
-
-        HandleLocalCommits(std::move(commits));
-
-        // Subscribe to notifications about new commits in Storage.
-        storage_->AddCommitWatcher(this);
-        local_watch_set_ = true;
-      });
+  StartDownload();
 }
 
 void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
@@ -160,7 +140,7 @@ void PageSyncImpl::OnMalformedNotification() {
   HandleError("Received a malformed remote commit notification.");
 }
 
-void PageSyncImpl::DownloadBacklog() {
+void PageSyncImpl::StartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
   auto status = storage_->GetSyncMetadata(&last_commit_ts);
@@ -182,7 +162,7 @@ void PageSyncImpl::DownloadBacklog() {
           FTL_LOG(WARNING)
               << "Fetching the backlog of remote objects failed due to a "
               << "connection error, status: " << cloud_status << ", retrying.";
-          Retry([this] { DownloadBacklog(); });
+          Retry([this] { StartDownload(); });
           return;
         }
         backoff_->Reset();
@@ -195,6 +175,28 @@ void PageSyncImpl::DownloadBacklog() {
           // are downloaded.
           DownloadBatch(std::move(records), [this] { BacklogDownloaded(); });
         }
+      });
+}
+
+void PageSyncImpl::StartUpload() {
+  // Retrieve the backlog of the existing unsynced commits and enqueue them for
+  // upload.
+  // TODO(ppi): either switch to a paginating API or (better?) ensure that long
+  // backlogs of local commits are squashed in storage, as otherwise the list of
+  // commits can be possibly very big.
+  storage_->GetUnsyncedCommits(
+      [this](storage::Status status,
+             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+        if (status != storage::Status::OK) {
+          HandleError("Failed to retrieve the unsynced commits");
+          return;
+        }
+
+        HandleLocalCommits(std::move(commits));
+
+        // Subscribe to notifications about new commits in Storage.
+        storage_->AddCommitWatcher(this);
+        local_watch_set_ = true;
       });
 }
 
@@ -328,8 +330,9 @@ void PageSyncImpl::BacklogDownloaded() {
   if (on_backlog_downloaded_) {
     on_backlog_downloaded_();
   }
-  CheckIdle();
   SetRemoteWatcher();
+  StartUpload();
+  CheckIdle();
 }
 
 }  // namespace cloud_sync
