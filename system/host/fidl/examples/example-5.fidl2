@@ -22,7 +22,7 @@ interface Thing {
     1: one_function(string s, bool b) -> ();
     enum thing {};
     0x2: two_function(string s, bool b);
-    const string foo = 3;
+    const string foo_string = "3";
     3: three_function(string s, request<Thing> r);
     4: four_function(string s, request<Thing> r) -> (handle<channel> r);
 }
