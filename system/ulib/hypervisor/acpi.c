@@ -11,7 +11,6 @@
 #include <acpica/acpi.h>
 #include <acpica/actables.h>
 
-static const uintptr_t kAcpiAddress = 0x000a0000;
 static const size_t kIoApicAddress = 0xfec00000;
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
@@ -32,16 +31,16 @@ static void* madt_subtable(void* base, uint32_t off, uint8_t type, uint8_t lengt
 }
 #endif // __x86_64__
 
-mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t* begin_off) {
+mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off) {
 #if __x86_64__
-    if (size < kAcpiAddress + PAGE_SIZE)
+    if (size < acpi_off + PAGE_SIZE)
         return ERR_BUFFER_TOO_SMALL;
 
     // RSDP header. ACPI 1.0.
-    ACPI_RSDP_COMMON* rsdp = (ACPI_RSDP_COMMON*)(addr + kAcpiAddress);
+    ACPI_RSDP_COMMON* rsdp = (ACPI_RSDP_COMMON*)(addr + acpi_off);
     ACPI_MAKE_RSDP_SIG(rsdp->Signature);
     memcpy(rsdp->OemId, "MX_HYP", ACPI_OEM_ID_SIZE);
-    rsdp->RsdtPhysicalAddress = kAcpiAddress + sizeof(ACPI_RSDP_COMMON);
+    rsdp->RsdtPhysicalAddress = acpi_off + sizeof(ACPI_RSDP_COMMON);
     rsdp->Checksum = acpi_checksum(rsdp, ACPI_RSDP_CHECKSUM_LENGTH);
 
     // RSDT header.
@@ -71,7 +70,6 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t* begi
     local_apic->Id = 0;
     local_apic->LapicFlags = ACPI_MADT_ENABLED;
 
-    *begin_off = kAcpiAddress;
     return NO_ERROR;
 #else // __x86_64__
     return ERR_NOT_SUPPORTED;

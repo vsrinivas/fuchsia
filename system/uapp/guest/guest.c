@@ -111,15 +111,13 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    uintptr_t acpi_off;
-    status = guest_create_acpi_table(addr, kVmoSize, &acpi_off);
+    status = guest_create_acpi_table(addr, kVmoSize, pt_end_off);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create ACPI table\n");
         return status;
     }
-    MX_ASSERT(pt_end_off <= acpi_off);
 
-    status = guest_create_bootdata(addr, kVmoSize, acpi_off, kBootdataOffset);
+    status = guest_create_bootdata(addr, kVmoSize, pt_end_off, kBootdataOffset);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create bootdata\n");
         return status;
