@@ -8,12 +8,11 @@
 #include <vector>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
-#include "apps/bluetooth/lib/hci/fake_controller_base.h"
+#include "apps/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/ftl/macros.h"
 
 namespace bluetooth {
-namespace hci {
-namespace test {
+namespace testing {
 
 // A CommandTransaction is used to set up an expectation for a command channel packet and the
 // events that should be sent back in response to it.
@@ -59,7 +58,7 @@ class TestController : public FakeControllerBase {
 
  private:
   // FakeControllerBase overrides:
-  void OnCommandPacketReceived(const CommandPacket& command_packet) override;
+  void OnCommandPacketReceived(const hci::CommandPacket& command_packet) override;
   void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) override;
 
   std::queue<CommandTransaction> cmd_transactions_;
@@ -69,6 +68,5 @@ class TestController : public FakeControllerBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(TestController);
 };
 
-}  // namespace test
-}  // namespace hci
+}  // namespace testing
 }  // namespace bluetooth

@@ -19,7 +19,9 @@ namespace hci {
 
 class CommandPacket;
 
-namespace test {
+}  // namespace hci
+
+namespace testing {
 
 // Abstract base for implementing a fake HCI controller endpoint. This can directly send
 // ACL data and event packets on request and forward outgoing ACL data packets to subclass
@@ -57,7 +59,7 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   const mx::channel& acl_data_channel() const { return acl_channel_; }
 
   // Called when there is an incoming command packet.
-  virtual void OnCommandPacketReceived(const CommandPacket& command_packet) = 0;
+  virtual void OnCommandPacketReceived(const hci::CommandPacket& command_packet) = 0;
 
   // Called when there is an outgoing ACL data packet.
   virtual void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) = 0;
@@ -83,6 +85,5 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
 };
 
-}  // namespace test
-}  // namespace hci
+}  // namespace testing
 }  // namespace bluetooth

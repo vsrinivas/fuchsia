@@ -9,13 +9,16 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/test_base.h"
-#include "apps/bluetooth/lib/hci/test_controller.h"
+#include "apps/bluetooth/lib/testing/test_base.h"
+#include "apps/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {
-namespace test {
 namespace {
+
+using ::bluetooth::testing::CommandTransaction;
+
+using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
 
 void NopStatusCallback(CommandChannel::TransactionId, Status) {}
 void NopCompleteCallback(CommandChannel::TransactionId, const EventPacket&) {}
@@ -48,7 +51,7 @@ class TestCallbackObject : public ftl::RefCountedThreadSafe<TestCallbackObject> 
   ftl::Closure deletion_cb_;
 };
 
-class CommandChannelTest : public TransportTest<TestController> {
+class CommandChannelTest : public TestingBase {
  public:
   CommandChannelTest() = default;
   ~CommandChannelTest() override = default;
@@ -519,6 +522,5 @@ TEST_F(CommandChannelTest, TransportClosedCallback) {
 }
 
 }  // namespace
-}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth

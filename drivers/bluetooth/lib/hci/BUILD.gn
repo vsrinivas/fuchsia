@@ -40,29 +40,6 @@ static_library("hci") {
   all_dependent_configs = [ "//apps/bluetooth:cpp_thread_safety" ]
 }
 
-# Test utilities
-source_set("test_support") {
-  testonly = true
-
-  sources = [
-    "fake_controller.cc",
-    "fake_controller.h",
-    "fake_controller_base.cc",
-    "fake_controller_base.h",
-    "test_base.h",
-    "test_controller.cc",
-    "test_controller.h",
-  ]
-
-  public_deps = [
-    ":hci",
-  ]
-
-  deps = [
-    "//third_party/gtest",
-  ]
-}
-
 source_set("tests") {
   testonly = true
 
@@ -77,7 +54,7 @@ source_set("tests") {
 
   deps = [
     ":hci",
-    ":test_support",
+    "//apps/bluetooth/lib/testing",
     "//third_party/gtest",
   ]
 }

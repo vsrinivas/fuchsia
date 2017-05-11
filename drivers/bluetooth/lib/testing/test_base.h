@@ -18,14 +18,12 @@
 // operations, including setting up a message loop, creating a stub HCI controller, etc.
 
 namespace bluetooth {
-namespace hci {
-
-class DeviceWrapper;
-
-namespace test {
+namespace testing {
 
 class FakeControllerBase;
 
+// GTest Test harness derivative. GTest uses the top-level "testing" namespace while the Bluetooth
+// test utilities are in "bluetooth::testing".
 template <class FakeControllerType>
 class TestBase : public ::testing::Test {
  public:
@@ -41,7 +39,7 @@ class TestBase : public ::testing::Test {
 
   // Initializes |test_device_| and returns the DeviceWrapper endpoint which can be passed to
   // classes that are under test.
-  std::unique_ptr<DeviceWrapper> SetUpTestDevice() {
+  std::unique_ptr<hci::DeviceWrapper> SetUpTestDevice() {
     mx::channel cmd0, cmd1;
     mx::channel acl0, acl1;
 
@@ -51,7 +49,7 @@ class TestBase : public ::testing::Test {
     status = mx::channel::create(0, &acl0, &acl1);
     FTL_DCHECK(MX_OK == status);
 
-    auto hci_dev = std::make_unique<DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
+    auto hci_dev = std::make_unique<hci::DummyDeviceWrapper>(std::move(cmd0), std::move(acl0));
     test_device_ = std::make_unique<FakeControllerType>(std::move(cmd1), std::move(acl1));
 
     return hci_dev;
@@ -94,9 +92,9 @@ class TransportTest : public TestBase<FakeControllerType> {
   virtual ~TransportTest() = default;
 
  protected:
-  // ::test::Test overrides:
+  // TestBase overrides:
   void SetUp() override {
-    transport_ = Transport::Create(TestBase<FakeControllerType>::SetUpTestDevice());
+    transport_ = hci::Transport::Create(TestBase<FakeControllerType>::SetUpTestDevice());
     transport_->Initialize();
   }
 
@@ -105,8 +103,8 @@ class TransportTest : public TestBase<FakeControllerType> {
     TestBase<FakeControllerType>::TearDown();
   }
 
-  bool InitializeACLDataChannel(const DataBufferInfo& bredr_buffer_info,
-                                const DataBufferInfo& le_buffer_info) {
+  bool InitializeACLDataChannel(const hci::DataBufferInfo& bredr_buffer_info,
+                                const hci::DataBufferInfo& le_buffer_info) {
     if (!transport_->InitializeACLDataChannel(
             bredr_buffer_info, le_buffer_info,
             std::bind(&TransportTest<FakeControllerType>::LookUpConnection, this,
@@ -121,35 +119,35 @@ class TransportTest : public TestBase<FakeControllerType> {
     return true;
   }
 
-  void set_data_received_callback(const ACLDataChannel::DataReceivedCallback& callback) {
+  void set_data_received_callback(const hci::ACLDataChannel::DataReceivedCallback& callback) {
     data_received_callback_ = callback;
   }
 
-  void set_connection_lookup_callback(const ACLDataChannel::ConnectionLookupCallback& callback) {
+  void set_connection_lookup_callback(
+      const hci::ACLDataChannel::ConnectionLookupCallback& callback) {
     connection_lookup_callback_ = callback;
   }
 
-  ftl::RefPtr<Transport> transport() const { return transport_; }
-  CommandChannel* cmd_channel() const { return transport_->command_channel(); }
-  ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
+  ftl::RefPtr<hci::Transport> transport() const { return transport_; }
+  hci::CommandChannel* cmd_channel() const { return transport_->command_channel(); }
+  hci::ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
 
  private:
   void OnDataReceived(common::DynamicByteBuffer acl_data_bytes) {
     if (data_received_callback_) data_received_callback_(std::move(acl_data_bytes));
   }
 
-  ftl::RefPtr<Connection> LookUpConnection(ConnectionHandle handle) {
+  ftl::RefPtr<hci::Connection> LookUpConnection(hci::ConnectionHandle handle) {
     if (!connection_lookup_callback_) return nullptr;
     return connection_lookup_callback_(handle);
   }
 
-  ACLDataChannel::DataReceivedCallback data_received_callback_;
-  ACLDataChannel::ConnectionLookupCallback connection_lookup_callback_;
-  ftl::RefPtr<Transport> transport_;
+  hci::ACLDataChannel::DataReceivedCallback data_received_callback_;
+  hci::ACLDataChannel::ConnectionLookupCallback connection_lookup_callback_;
+  ftl::RefPtr<hci::Transport> transport_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TransportTest);
 };
 
-}  // namespace test
-}  // namespace hci
+}  // namespace testing
 }  // namespace bluetooth

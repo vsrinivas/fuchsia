@@ -13,8 +13,7 @@
 #include "lib/mtl/threading/create_thread.h"
 
 namespace bluetooth {
-namespace hci {
-namespace test {
+namespace testing {
 
 FakeControllerBase::FakeControllerBase(mx::channel cmd_channel, mx::channel acl_data_channel)
     : cmd_channel_(std::move(cmd_channel)), acl_channel_(std::move(acl_data_channel)) {}
@@ -102,10 +101,11 @@ void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending)
 }
 
 void FakeControllerBase::HandleCommandPacket() {
-  common::StaticByteBuffer<kMaxCommandPacketPayloadSize> buffer;
+  common::StaticByteBuffer<hci::kMaxCommandPacketPayloadSize> buffer;
   uint32_t read_size;
-  mx_status_t status = cmd_channel_.read(0u, buffer.GetMutableData(), kMaxCommandPacketPayloadSize,
-                                         &read_size, nullptr, 0, nullptr);
+  mx_status_t status =
+      cmd_channel_.read(0u, buffer.GetMutableData(), hci::kMaxCommandPacketPayloadSize, &read_size,
+                        nullptr, 0, nullptr);
   FTL_DCHECK(status == MX_OK || status == MX_ERR_PEER_CLOSED);
   if (status < 0) {
     if (status == MX_ERR_PEER_CLOSED)
@@ -128,7 +128,7 @@ void FakeControllerBase::HandleCommandPacket() {
 }
 
 void FakeControllerBase::HandleACLPacket() {
-  common::StaticByteBuffer<ACLDataTxPacket::GetMinBufferSize(kMaxACLPayloadSize)> buffer;
+  common::StaticByteBuffer<hci::ACLDataTxPacket::GetMinBufferSize(hci::kMaxACLPayloadSize)> buffer;
   uint32_t read_size;
   mx_status_t status = acl_channel_.read(0u, buffer.GetMutableData(), buffer.GetSize(), &read_size,
                                          nullptr, 0, nullptr);
@@ -147,6 +147,5 @@ void FakeControllerBase::HandleACLPacket() {
   OnACLDataPacketReceived(view);
 }
 
-}  // namespace test
-}  // namespace hci
+}  // namespace testing
 }  // namespace bluetooth

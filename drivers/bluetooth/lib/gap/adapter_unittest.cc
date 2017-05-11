@@ -10,31 +10,33 @@
 
 #include "gtest/gtest.h"
 
-#include "apps/bluetooth/lib/hci/fake_controller.h"
-#include "apps/bluetooth/lib/hci/test_base.h"
+#include "apps/bluetooth/lib/testing/fake_controller.h"
+#include "apps/bluetooth/lib/testing/test_base.h"
 #include "lib/ftl/macros.h"
 
 namespace bluetooth {
 namespace gap {
 namespace {
 
-using TestBase = hci::test::TestBase<hci::test::FakeController>;
+using ::bluetooth::testing::FakeController;
 
-class AdapterTest : public TestBase {
+using TestingBase = ::bluetooth::testing::TestBase<FakeController>;
+
+class AdapterTest : public TestingBase {
  public:
   AdapterTest() = default;
   ~AdapterTest() override = default;
 
   void SetUp() override {
     transport_closed_called_ = false;
-    adapter_ = Adapter::Create(TestBase::SetUpTestDevice());
+    adapter_ = Adapter::Create(TestingBase::SetUpTestDevice());
     test_device()->Start();
   }
 
   void TearDown() override {
     if (adapter_->IsInitialized()) adapter_->ShutDown([] {});
     adapter_ = nullptr;
-    TestBase::TearDown();
+    TestingBase::TearDown();
   }
 
   void InitializeAdapter(const Adapter::InitializeCallback& callback) {
@@ -83,7 +85,7 @@ TEST_F(AdapterTest, InitializeFailureNoBufferInfo) {
   };
 
   // Enable LE support.
-  hci::test::FakeController::Settings settings;
+  FakeController::Settings settings;
   settings.lmp_features_page0 |= static_cast<uint64_t>(hci::LMPFeature::kLESupported);
   test_device()->set_settings(settings);
 
@@ -104,7 +106,7 @@ TEST_F(AdapterTest, InitializeSuccess) {
   };
 
   // Return valid buffer information and enable LE support. (This should succeed).
-  hci::test::FakeController::Settings settings;
+  FakeController::Settings settings;
   settings.lmp_features_page0 |= static_cast<uint64_t>(hci::LMPFeature::kLESupported);
   settings.le_acl_data_packet_length = 5;
   settings.le_total_num_acl_data_packets = 1;
@@ -128,7 +130,7 @@ TEST_F(AdapterTest, InitializeFailureHCICommandError) {
   };
 
   // Make all settings valid but make an HCI command fail.
-  hci::test::FakeController::Settings settings;
+  FakeController::Settings settings;
   settings.ApplyLEOnlyDefaults();
   test_device()->set_settings(settings);
   test_device()->SetDefaultResponseStatus(hci::kLEReadLocalSupportedFeatures,
@@ -151,7 +153,7 @@ TEST_F(AdapterTest, TransportClosedCallback) {
     message_loop()->QuitNow();
   };
 
-  hci::test::FakeController::Settings settings;
+  FakeController::Settings settings;
   settings.ApplyLEOnlyDefaults();
   test_device()->set_settings(settings);
 

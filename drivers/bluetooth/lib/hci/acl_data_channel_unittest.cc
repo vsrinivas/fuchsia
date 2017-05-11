@@ -10,24 +10,25 @@
 
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/defaults.h"
-#include "apps/bluetooth/lib/hci/test_base.h"
-#include "apps/bluetooth/lib/hci/test_controller.h"
 #include "apps/bluetooth/lib/hci/transport.h"
+#include "apps/bluetooth/lib/testing/test_base.h"
+#include "apps/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {
-namespace test {
 namespace {
 
-class ACLDataChannelTest : public TransportTest<TestController> {
+using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+
+class ACLDataChannelTest : public TestingBase {
  public:
   ACLDataChannelTest() = default;
   ~ACLDataChannelTest() override = default;
 
  protected:
-  // ::testing::Test overrides:
+  // TestBase overrides:
   void SetUp() override {
-    TransportTest<TestController>::SetUp();
+    TestingBase::SetUp();
 
     // This test never sets up command/event expections (as it only uses the data endpoint) so
     // always start the test controller during SetUp().
@@ -502,6 +503,5 @@ TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
 }
 
 }  // namespace
-}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth

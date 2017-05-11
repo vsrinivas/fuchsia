@@ -9,14 +9,13 @@
 #include <mx/channel.h>
 
 #include "apps/bluetooth/lib/common/device_address.h"
-#include "apps/bluetooth/lib/hci/fake_controller_base.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
+#include "apps/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/ftl/macros.h"
 
 namespace bluetooth {
-namespace hci {
-namespace test {
+namespace testing {
 
 // FakeController emulates a real Bluetooth controller. It can be configured to respond to HCI
 // commands in a predictable manner.
@@ -36,10 +35,8 @@ class FakeController : public FakeControllerBase {
     void ApplyLEConfig();
 
     // HCI settings.
-    // Default: HCIVersion::k5_0.
-    HCIVersion hci_version;
-    // Default: 1
-    uint8_t num_hci_command_packets;
+    hci::HCIVersion hci_version;      // Default: HCIVersion::k5_0.
+    uint8_t num_hci_command_packets;  // Default: 1
     uint64_t event_mask;
     uint64_t le_event_mask;
 
@@ -71,28 +68,28 @@ class FakeController : public FakeControllerBase {
 
   // Tells the FakeController to always respond to the given command opcode with the given HCI
   // status code.
-  void SetDefaultResponseStatus(OpCode opcode, Status status);
-  void ClearDefaultResponseStatus(OpCode opcode);
+  void SetDefaultResponseStatus(hci::OpCode opcode, hci::Status status);
+  void ClearDefaultResponseStatus(hci::OpCode opcode);
 
  private:
   // Sends a HCI_Command_Complete event in response to the command with |opcode| and using the given
   // data as the parameter payload.
-  void RespondWithCommandComplete(OpCode opcode, void* return_params, uint8_t return_params_size);
+  void RespondWithCommandComplete(hci::OpCode opcode, void* return_params,
+                                  uint8_t return_params_size);
 
   // If a default status has been configured for the given opcode, sends back an error response and
   // returns true. Returns false if no response was set.
-  bool MaybeRespondWithDefaultStatus(OpCode opcode);
+  bool MaybeRespondWithDefaultStatus(hci::OpCode opcode);
 
   // FakeControllerBase overrides:
-  void OnCommandPacketReceived(const CommandPacket& command_packet) override;
+  void OnCommandPacketReceived(const hci::CommandPacket& command_packet) override;
   void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) override;
 
   Settings settings_;
-  std::unordered_map<OpCode, Status> default_status_map_;
+  std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };
 
-}  // namespace test
-}  // namesapce hci
+}  // namespace testing
 }  // namespace bluetooth

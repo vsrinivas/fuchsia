@@ -32,7 +32,7 @@ source_set("tests") {
 
   deps = [
     ":gap",
-    "//apps/bluetooth/lib/hci:test_support",
+    "//apps/bluetooth/lib/testing",
     "//third_party/gtest",
   ]
 }

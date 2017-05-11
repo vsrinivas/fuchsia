@@ -13,8 +13,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace bluetooth {
-namespace hci {
-namespace test {
+namespace testing {
 
 CommandTransaction::CommandTransaction(const common::ByteBuffer& expected,
                                        const std::vector<const common::ByteBuffer*>& replies)
@@ -57,7 +56,7 @@ void TestController::SetDataCallback(const DataCallback& callback,
   data_task_runner_ = task_runner;
 }
 
-void TestController::OnCommandPacketReceived(const CommandPacket& command_packet) {
+void TestController::OnCommandPacketReceived(const hci::CommandPacket& command_packet) {
   ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
 
   auto& current = cmd_transactions_.front();
@@ -83,6 +82,5 @@ void TestController::OnACLDataPacketReceived(const common::ByteBuffer& acl_data_
       }));
 }
 
-}  // namespace test
-}  // namespace hci
+}  // namespace testing
 }  // namespace bluetooth

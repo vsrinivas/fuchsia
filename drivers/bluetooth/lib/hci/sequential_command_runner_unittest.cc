@@ -6,15 +6,18 @@
 
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
-#include "apps/bluetooth/lib/hci/test_base.h"
-#include "apps/bluetooth/lib/hci/test_controller.h"
+#include "apps/bluetooth/lib/testing/test_base.h"
+#include "apps/bluetooth/lib/testing/test_controller.h"
 
 namespace bluetooth {
 namespace hci {
-namespace test {
 namespace {
 
-class SequentialCommandRunnerTest : public TransportTest<TestController> {
+using ::bluetooth::testing::CommandTransaction;
+
+using TestingBase = ::bluetooth::testing::TransportTest<::bluetooth::testing::TestController>;
+
+class SequentialCommandRunnerTest : public TestingBase {
  public:
   SequentialCommandRunnerTest() = default;
   ~SequentialCommandRunnerTest() override = default;
@@ -301,6 +304,5 @@ TEST_F(SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 }
 
 }  // namespace
-}  // namespace test
 }  // namespace hci
 }  // namespace bluetooth
