@@ -75,6 +75,8 @@ struct dc_device {
     mx_handle_t hrsrc;
     port_handler_t ph;
     devhost_t* host;
+    const char* name;
+    const char* libname;
     const char* args;
     work_t work;
     uint32_t flags;
@@ -100,7 +102,6 @@ struct dc_device {
     // to this device's devhost, awaiting a response
     list_node_t pending;
 
-    char name[MX_DEVICE_NAME_MAX + 1];
     mx_device_prop_t props[];
 };
 

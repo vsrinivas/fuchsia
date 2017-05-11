@@ -93,6 +93,7 @@ static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_ROOT,
     .name = "root",
+    .libname = "",
     .args = "root,,",
     .children = LIST_INITIAL_VALUE(root_device.children),
     .pending = LIST_INITIAL_VALUE(root_device.pending),
@@ -103,6 +104,7 @@ static device_t misc_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_MISC_PARENT,
     .name = "misc",
+    .libname = "",
     .args = "misc,,",
     .children = LIST_INITIAL_VALUE(misc_device.children),
     .pending = LIST_INITIAL_VALUE(misc_device.pending),
@@ -111,7 +113,7 @@ static device_t misc_device = {
 
 static void dc_dump_device(device_t* dev, size_t indent) {
     mx_koid_t pid = dev->host ? dev->host->koid : 0;
-    char extra[64];
+    char extra[256];
     if (log_flags & LOG_DEVLC) {
         snprintf(extra, sizeof(extra), " dev=%p ref=%d", dev, dev->refcount);
     } else {
@@ -120,14 +122,13 @@ static void dc_dump_device(device_t* dev, size_t indent) {
     if (pid == 0) {
         printf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
     } else {
-        printf("%*s%c%s%c pid=%zu%s%s\n",
+        printf("%*s%c%s%c pid=%zu%s %s\n",
                (int) (indent * 3), "",
                dev->flags & DEV_CTX_SHADOW ? '<' : '[',
                dev->name,
                dev->flags & DEV_CTX_SHADOW ? '>' : ']',
-               pid,
-               dev->flags & DEV_CTX_BUSDEV ? " busdev" : "",
-               extra);
+               pid, extra,
+               dev->libname ? dev->libname : "");
     }
     device_t* child;
     if (dev->shadow) {
@@ -310,16 +311,14 @@ static mx_status_t dc_add_device(device_t* parent,
     if (hcount == 0) {
         return ERR_INVALID_ARGS;
     }
-    if (msg->namelen > MX_DEVICE_NAME_MAX) {
-        return ERR_INVALID_ARGS;
-    }
     if (msg->datalen % sizeof(mx_device_prop_t)) {
         return ERR_INVALID_ARGS;
     }
     device_t* dev;
     // allocate device struct, followed by space for props, followed
-    // by space for bus arguments
-    if ((dev = calloc(1, sizeof(*dev) + msg->datalen + msg->argslen + 1)) == NULL) {
+    // by space for bus arguments, followed by space for the name
+    size_t sz = sizeof(*dev) + msg->datalen + msg->argslen + msg->namelen + 2;
+    if ((dev = calloc(1, sz)) == NULL) {
         return ERR_NO_MEMORY;
     }
     list_initialize(&dev->children);
@@ -327,11 +326,31 @@ static mx_status_t dc_add_device(device_t* parent,
     dev->hrpc = handle[0];
     dev->hrsrc = (hcount > 1) ? handle[1] : MX_HANDLE_INVALID;
     dev->prop_count = msg->datalen / sizeof(mx_device_prop_t);
-    dev->args = (const char*) (dev->props + dev->prop_count);
-    memcpy(dev->props, data, msg->datalen);
-    memcpy((char*) (dev->props + dev->prop_count), args, msg->argslen + 1);
-    memcpy(dev->name, name, msg->namelen + 1);
     dev->protocol_id = msg->protocol_id;
+
+    char* text = (char*) (dev->props + dev->prop_count);
+    memcpy(text, args, msg->argslen + 1);
+    dev->args = text;
+
+    text += msg->argslen + 1;
+    memcpy(text, name, msg->namelen + 1);
+
+    char* text2 = strchr(text, ',');
+    if (text2 != NULL) {
+        *text2++ = 0;
+        dev->name = text2;
+        dev->libname = text;
+    } else {
+        dev->name = text;
+        dev->libname = "";
+    }
+
+    memcpy(dev->props, data, msg->datalen);
+
+    if (strlen(dev->name) > MX_DEVICE_NAME_MAX) {
+        free(dev);
+        return ERR_INVALID_ARGS;
+    }
 
     // If we have bus device args or resource handle
     // we are, by definition a bus device.
@@ -713,11 +732,19 @@ static mx_status_t dc_create_shadow(device_t* parent) {
         return NO_ERROR;
     }
 
-    device_t* dev = calloc(1, sizeof(mx_device_t));
+    size_t namelen = strlen(parent->name);
+    size_t liblen = strlen(parent->libname);
+    device_t* dev = calloc(1, sizeof(mx_device_t) + namelen + liblen + 2);
     if (dev == NULL) {
         return ERR_NO_MEMORY;
     }
-    memcpy(dev->name, parent->name, sizeof(dev->name));
+    char* text = (char*) (dev + 1);
+    memcpy(text, parent->name, namelen + 1);
+    dev->name = text;
+    text += namelen + 1;
+    memcpy(text, parent->libname, liblen + 1);
+    dev->libname = text;
+
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
     dev->flags = DEV_CTX_SHADOW;

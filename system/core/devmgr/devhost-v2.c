@@ -45,14 +45,28 @@ static iostate_t root_ios = {
 };
 
 typedef struct {
-    mx_driver_t drv;
+    mx_driver_t* drv;
+    const char* libname;
     list_node_t node;
     mx_status_t status;
-    const char* libname;
 } driver_rec_t;
 
 static list_node_t dh_drivers = LIST_INITIAL_VALUE(dh_drivers);
 
+static const char* drv_to_libname(mx_driver_t* drv) {
+    driver_rec_t* rec;
+    list_for_every_entry(&dh_drivers, rec, driver_rec_t, node) {
+        if (rec->drv == drv) {
+            char *name = strrchr(rec->libname, '/');
+            if (name) {
+                return name + 1;
+            } else {
+                return rec->libname;
+            }
+        }
+    }
+    return "unknown";
+}
 
 static const char* mkdevpath(mx_device_t* dev, char* path, size_t max) {
     if (dev == NULL) {
@@ -125,12 +139,10 @@ static mx_status_t dh_find_driver(const char* libname, driver_rec_t** out) {
         goto done;
     }
 
-    rec->drv.ops = di->driver->ops;
-    rec->drv.flags = di->driver->flags;
-    rec->drv.name = di->driver->name;
+    rec->drv = di->driver;
 
-    if (rec->drv.ops->init) {
-        rec->status = rec->drv.ops->init(&rec->drv);
+    if (rec->drv->ops->init) {
+        rec->status = rec->drv->ops->init(rec->drv);
         if (rec->status < 0) {
             log(ERROR, "devhost: driver '%s' failed in init: %d\n",
                 libname, rec->status);
@@ -234,11 +246,11 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
             if ((r = dh_find_driver(name, &rec)) < 0) {
                 log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             } else {
-                if (rec->drv.ops->create) {
+                if (rec->drv->ops->create) {
                     // magic cookie for device create handshake
                     mx_device_t* parent = (void*) (uintptr_t) 0xa7a7a7a7;
                     device_create_setup(parent);
-                    r = rec->drv.ops->create(&rec->drv, parent, "shadow", args, hin[1]);
+                    r = rec->drv->ops->create(rec->drv, parent, "shadow", args, hin[1]);
                     if ((newios->dev = device_create_setup(NULL)) == NULL) {
                         log(ERROR, "devhost[%s] driver create() failed to create a device!", path);
                         r = ERR_BAD_STATE;
@@ -273,8 +285,8 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         if ((r = dh_find_driver(name, &rec)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
-            if (rec->drv.ops->bind) {
-                r = rec->drv.ops->bind(&rec->drv, ios->dev, &ios->dev->owner_cookie);
+            if (rec->drv->ops->bind) {
+                r = rec->drv->ops->bind(rec->drv, ios->dev, &ios->dev->owner_cookie);
             } else {
                 r = ERR_NOT_SUPPORTED;
             }
@@ -394,6 +406,11 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
 
+    const char* libname = drv_to_libname(child->driver);
+    size_t namelen = strlen(libname) + strlen(child->name) + 2;
+    char name[namelen];
+    snprintf(name, namelen, "%s,%s", libname, child->name);
+
     mx_status_t r;
     iostate_t* ios = calloc(1, sizeof(*ios));
     if (ios == NULL) {
@@ -405,7 +422,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
     uint32_t msglen;
     if ((r = dc_msg_pack(&msg, &msglen,
                          child->props, child->prop_count * sizeof(mx_device_prop_t),
-                         child->name, businfo)) < 0) {
+                         name, businfo)) < 0) {
         goto fail;
     }
     msg.op = DC_OP_ADD_DEVICE;
