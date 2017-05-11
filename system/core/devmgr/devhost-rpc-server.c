@@ -222,11 +222,15 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
         } else if (!out_buf) {
             r = ERR_INVALID_ARGS;
         } else {
-            r = strlen(dev->driver->name);
+            const char* name = dev->driver->name;
+            if (name == NULL) {
+                name = "unknown";
+            }
+            r = strlen(name);
             if (out_len < (size_t)r) {
                 r = ERR_BUFFER_TOO_SMALL;
             } else {
-                strncpy(out_buf, dev->driver->name, r);
+                strncpy(out_buf, name, r);
             }
         }
         break;
