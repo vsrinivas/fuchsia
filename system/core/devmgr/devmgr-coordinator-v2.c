@@ -120,10 +120,13 @@ static void dc_dump_device(device_t* dev, size_t indent) {
     if (pid == 0) {
         printf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
     } else {
-        printf("%*s[%s] pid=%zu%s%s%s\n",
-               (int) (indent * 3), "", dev->name, pid,
+        printf("%*s%c%s%c pid=%zu%s%s\n",
+               (int) (indent * 3), "",
+               dev->flags & DEV_CTX_SHADOW ? '<' : '[',
+               dev->name,
+               dev->flags & DEV_CTX_SHADOW ? '>' : ']',
+               pid,
                dev->flags & DEV_CTX_BUSDEV ? " busdev" : "",
-               dev->flags & DEV_CTX_SHADOW ? " shadow" : "",
                extra);
     }
     device_t* child;
