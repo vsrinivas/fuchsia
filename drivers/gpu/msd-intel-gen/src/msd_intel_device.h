@@ -43,6 +43,7 @@ public:
     uint32_t device_id() { return device_id_; }
     uint32_t subslice_total() { return subslice_total_; }
     uint32_t eu_total() { return eu_total_; }
+    magma_display_size display_size() { return display_size_; }
 
     static MsdIntelDevice* cast(msd_device_t* dev)
     {
@@ -73,6 +74,8 @@ public:
     void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
               std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
               std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
+
+    void DisplayGetSize(magma_display_size* size_out);
 
 private:
     MsdIntelDevice();
@@ -151,6 +154,7 @@ private:
     void WaitThreadLoop();
 
     void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
+    void ReadDisplaySize();
 
     std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
@@ -165,6 +169,7 @@ private:
     uint32_t device_id_{};
     uint32_t subslice_total_{};
     uint32_t eu_total_{};
+    magma_display_size display_size_{};
 
     std::thread device_thread_;
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

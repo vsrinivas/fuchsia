@@ -206,6 +206,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     registers::AllEngineFault::clear(register_io_.get());
 
     QuerySliceInfo(&subslice_total_, &eu_total_);
+    ReadDisplaySize();
 
     interrupt_ = platform_device_->RegisterInterrupt();
     if (!interrupt_)
@@ -880,6 +881,18 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
     }
 }
 
+void MsdIntelDevice::ReadDisplaySize()
+{
+    // Read the main display's resolution from the register state, assuming
+    // that the display was set up by some previous modesetting code
+    // (typically the firmware's boot-time modesetting).
+    uint32_t pipe_number = 0;
+    registers::PipeRegs pipe(pipe_number);
+    auto surface_size = pipe.PlaneSurfaceSize().ReadFrom(register_io());
+    display_size_.width = surface_size.width_minus_1().get() + 1;
+    display_size_.height = surface_size.height_minus_1().get() + 1;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
@@ -908,6 +921,12 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 void msd_device_dump_status(msd_device_t* device)
 {
     MsdIntelDevice::cast(device)->DumpStatusToLog();
+}
+
+magma_status_t msd_device_display_get_size(msd_device_t* dev, magma_display_size* size_out)
+{
+    *size_out = MsdIntelDevice::cast(dev)->display_size();
+    return MAGMA_STATUS_OK;
 }
 
 void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
