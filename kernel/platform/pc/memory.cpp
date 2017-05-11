@@ -8,7 +8,9 @@
 #include <efi/boot-services.h>
 #include <err.h>
 #include <kernel/vm.h>
+#include <lib/memory_limit.h>
 #include <magenta/boot/multiboot.h>
+#include <platform.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/memory.h>
 #include <string.h>
@@ -20,10 +22,6 @@
 
 /* multiboot information passed in, if present */
 extern multiboot_info_t *_multiboot_info;
-
-/* statically allocate an array of pmm_arena_info_ts to be filled in at boot time */
-#define PMM_ARENAS 16
-static pmm_arena_info_t mem_arenas[PMM_ARENAS];
 
 struct addr_range {
     uint64_t base;
@@ -79,14 +77,23 @@ static void boot_addr_range_reset(boot_addr_range_t *range)
  * array with the ranges of memory it finds, compacted to the start of the
  * array. it returns the total count of arenas which have been populated.
  */
-static int mem_arena_init(boot_addr_range_t *range)
+extern int _end;
+static status_t mem_arena_init(boot_addr_range_t *range)
 {
-    int used = 0;
+    mem_limit_ctx ctx;
+    ctx.kernel_base = KERNEL_BASE + KERNEL_LOAD_OFFSET;
+    ctx.kernel_size = reinterpret_cast<uintptr_t>(&_end) - ctx.kernel_base;
+    ctx.ramdisk_base = reinterpret_cast<uintptr_t>(platform_get_ramdisk(&ctx.ramdisk_size));
 
-    for (range->reset(range), range->advance(range);
-         !range->is_reset && used < PMM_ARENAS;
-         range->advance(range)) {
+    bool have_limit = (mem_limit_init(&ctx) == NO_ERROR);
 
+    // Set up a base arena template to use
+    pmm_arena_info_t base_arena;
+    snprintf(base_arena.name, sizeof(base_arena.name), "%s", "memory");
+    base_arena.priority = 1;
+    base_arena.flags = PMM_ARENA_FLAG_KMAP;
+
+    for (range->reset(range), range->advance(range); !range->is_reset; range->advance(range)) {
         LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n",
                 range->base, range->size, range->is_mem ? "" : "not ");
 
@@ -108,18 +115,31 @@ static int mem_arena_init(boot_addr_range_t *range)
             size -= adjust;
         }
 
-        pmm_arena_info_t *arena = &mem_arenas[used];
-        arena->base = base;
-        arena->size = size;
-        snprintf(arena->name, sizeof(arena->name), "%s", "memory");
-        arena->priority = 1;
-        arena->flags = PMM_ARENA_FLAG_KMAP;
-        used++;
+        status_t status = NO_ERROR;
+        if (have_limit) {
+            status = mem_limit_add_arenas_from_range(&ctx, base, size, base_arena);
+        }
 
-        LTRACEF("Adding pmm range at %#" PRIxPTR " of %#zx bytes.\n", arena->base, arena->size);
+        // If there is no limit, or we failed to add arenas from processing
+        // ranges then add the original range.
+        if (!have_limit || status != NO_ERROR) {
+            auto arena = base_arena;
+            arena.base = base;
+            arena.size = size;
+
+            LTRACEF("Adding pmm range at %#" PRIxPTR " of %#zx bytes.\n", arena.base, arena.size);
+            status = pmm_add_arena(&arena);
+            // This will result in subsequent arenas not being added, but this
+            // is a fairly fatal event so it's justifiable.
+            if (status != NO_ERROR) {
+                TRACEF("Failed to add pmm range at %#" PRIxPTR "\n", arena.base);
+                return status;
+            }
+        }
+
     }
 
-    return used;
+    return NO_ERROR;
 }
 
 #define E820_RAM 1
@@ -388,28 +408,27 @@ static int addr_range_cmp(const void* p1, const void* p2)
     return 1;
 }
 
-static int platform_mem_range_init(void)
+static status_t platform_mem_range_init(void)
 {
     boot_addr_range_t range;
-    int count = 0;
 
     /* first try the efi memory table */
     efi_range_seq_t efi_seq;
     if (efi_range_init(&range, &efi_seq) &&
-        (count = mem_arena_init(&range)))
-        return count;
+        (mem_arena_init(&range) == NO_ERROR))
+        return NO_ERROR;
 
     /* then try getting range info from e820 */
     e820_range_seq_t e820_seq;
     if (e820_range_init(&range, &e820_seq) &&
-        (count = mem_arena_init(&range)))
-        return count;
+        (mem_arena_init(&range) == NO_ERROR))
+        return NO_ERROR;
 
     /* if no ranges were found, try multiboot */
     multiboot_range_seq_t multiboot_seq;
     if (multiboot_range_init(&range, &multiboot_seq) &&
-        (count = mem_arena_init(&range)))
-        return count;
+        (mem_arena_init(&range) == NO_ERROR))
+        return NO_ERROR;
 
     /* if still no ranges were found, make a safe guess */
     e820_range_init(&range, &e820_seq);
@@ -443,9 +462,9 @@ status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
 /* Discover the basic memory map */
 void platform_mem_init(void)
 {
-    int arena_count = platform_mem_range_init();
-    for (int i = 0; i < arena_count; i++)
-        pmm_add_arena(&mem_arenas[i]);
+    if (platform_mem_range_init() != NO_ERROR) {
+        TRACEF("Error adding arenas from provided memory tables.\n");
+    }
 
     // Cache the e820 entries so that they will be available for enumeration
     // later in the boot.
