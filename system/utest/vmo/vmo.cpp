@@ -10,10 +10,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <hexdump/hexdump.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
 #include "bench.h"

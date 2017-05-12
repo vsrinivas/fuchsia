@@ -20,11 +20,10 @@
 #include <magenta/syscalls.h>
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
+#include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
 #include <blktest/blktest.h>
-
-#include <hexdump/hexdump.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
 

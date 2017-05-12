@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <pretty/hexdump.h>
+
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
-
-#include <hexdump/hexdump.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

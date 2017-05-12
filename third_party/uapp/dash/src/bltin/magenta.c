@@ -15,8 +15,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <hexdump/hexdump.h>
 #include <magenta/syscalls.h>
+#include <pretty/hexdump.h>
 
 int mxc_dump(int argc, char** argv) {
     int fd;

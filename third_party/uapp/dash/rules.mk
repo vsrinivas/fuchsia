@@ -47,7 +47,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := sh
 
-MODULE_STATIC_LIBS := system/ulib/hexdump third_party/ulib/linenoise
+MODULE_STATIC_LIBS := system/ulib/pretty third_party/ulib/linenoise
 MODULE_LIBS := system/ulib/magenta system/ulib/launchpad system/ulib/c
 MODULE_LIBS += system/ulib/mxio  # Needed by ulib/linenoise
 

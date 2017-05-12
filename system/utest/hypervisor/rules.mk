@@ -24,6 +24,6 @@ MODULE_LIBS := \
     system/ulib/mxio \
     system/ulib/unittest \
 
-MODULE_STATIC_LIBS := system/ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/pretty
 
 include make/module.mk

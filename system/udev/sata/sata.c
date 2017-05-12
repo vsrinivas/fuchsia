@@ -7,8 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/block.h>
 
-#include <hexdump/hexdump.h>
 #include <magenta/types.h>
+#include <pretty/hexdump.h>
 #include <sync/completion.h>
 #include <sys/param.h>
 #include <assert.h>

@@ -9,9 +9,11 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/hexdump.c \
     $(LOCAL_DIR)/sizes.c
 
 MODULE_LIBS := \
+    system/ulib/mxio \
     system/ulib/c
 
 include make/module.mk

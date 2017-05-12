@@ -9,9 +9,9 @@
 #include <limits.h>
 #include <stdio.h>
 
-#include <hexdump/hexdump.h>
 #include <hw/inout.h>
 #include <mxtl/auto_lock.h>
+#include <pretty/hexdump.h>
 
 #include "trace.h"
 #include "virtio_priv.h"

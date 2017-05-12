@@ -1,0 +1,15 @@
+config("pretty_config") {
+  include_dirs = [ "include" ]
+}
+
+static_library("pretty") {
+  sources = [
+      "hexdump.c",
+      "sizes.c",
+  ]
+  public = [
+      "include/pretty/hexdump.h",
+      "include/pretty/sizes.h",
+  ]
+  public_configs = [ ":pretty_config" ]
+}

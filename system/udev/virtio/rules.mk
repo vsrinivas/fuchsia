@@ -17,7 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/virtio_c.c \
     $(LOCAL_DIR)/virtio_driver.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/hexdump system/ulib/mx system/ulib/mxtl system/ulib/mxcpp
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/pretty system/ulib/mx system/ulib/mxtl system/ulib/mxcpp
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 

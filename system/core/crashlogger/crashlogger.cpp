@@ -9,8 +9,6 @@
 #include <string.h>
 #include <threads.h>
 
-#include <hexdump/hexdump.h>
-
 #include <magenta/assert.h>
 #include <magenta/crashlogger.h>
 #include <magenta/process.h>
@@ -21,6 +19,7 @@
 #include <magenta/syscalls/port.h>
 #include <magenta/threads.h>
 #include <mxio/util.h>
+#include <pretty/hexdump.h>
 
 #include "backtrace.h"
 #include "dso-list.h"

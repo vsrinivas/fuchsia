@@ -17,6 +17,6 @@ MODULE_SO_NAME := unittest
 # N.B. mxio, and thus launchpad, cannot appear here. See ./README.md.
 MODULE_LIBS := system/ulib/c
 
-MODULE_STATIC_LIBS := system/ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/pretty
 
 include make/module.mk

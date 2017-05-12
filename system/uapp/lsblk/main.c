@@ -16,7 +16,7 @@
 
 #include <magenta/device/block.h>
 #include <magenta/device/device.h>
-#include <hexdump/hexdump.h>
+#include <pretty/hexdump.h>
 
 #define DEV_BLOCK "/dev/class/block"
 

@@ -11,7 +11,7 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := system/ulib/gpt system/ulib/hexdump
+MODULE_STATIC_LIBS := system/ulib/gpt system/ulib/pretty
 
 MODULE_LIBS := system/ulib/magenta system/ulib/mxio system/ulib/c
 

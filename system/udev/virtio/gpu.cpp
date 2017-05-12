@@ -5,10 +5,10 @@
 #include "gpu.h"
 
 #include <assert.h>
-#include <hexdump/hexdump.h>
 #include <inttypes.h>
 #include <magenta/compiler.h>
 #include <mxtl/auto_lock.h>
+#include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

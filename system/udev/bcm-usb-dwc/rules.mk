@@ -11,7 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/bcm-usb-dwc.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/hexdump third_party/udev/bcm-usb-dwc-regs system/ulib/sync system/ulib/bcm
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/pretty third_party/udev/bcm-usb-dwc-regs system/ulib/sync system/ulib/bcm
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta system/ulib/mxio
 

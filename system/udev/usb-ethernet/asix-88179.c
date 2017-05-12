@@ -7,9 +7,9 @@
 #include <ddk/driver.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
-#include <hexdump/hexdump.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
+#include <pretty/hexdump.h>
 #include <sync/completion.h>
 
 #include <inttypes.h>

@@ -10,8 +10,8 @@
 #include <ddk/protocol/hidbus.h>
 #include <magenta/hw/usb-hid.h>
 
-#include <hexdump/hexdump.h>
 #include <magenta/types.h>
+#include <pretty/hexdump.h>
 
 #include <stdio.h>
 #include <stdlib.h>

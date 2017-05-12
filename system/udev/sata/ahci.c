@@ -9,11 +9,11 @@
 #include <ddk/protocol/pci.h>
 
 #include <assert.h>
-#include <hexdump/hexdump.h>
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <magenta/assert.h>
+#include <pretty/hexdump.h>
 #include <sync/completion.h>
 #include <inttypes.h>
 #include <stdio.h>

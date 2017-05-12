@@ -5,11 +5,11 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <hexdump/hexdump.h>
 #include <hypervisor/guest.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
 static const uint64_t kVmoSize = 2 << 20;

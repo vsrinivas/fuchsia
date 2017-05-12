@@ -14,10 +14,10 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include <hexdump/hexdump.h>
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-hid.h>
 #include <magenta/device/usb.h>
+#include <pretty/hexdump.h>
 
 #define DEV_USB "/dev/class/usb"
 

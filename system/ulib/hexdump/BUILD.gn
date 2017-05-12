@@ -1,9 +1,0 @@
-config("hexdump_config") {
-  include_dirs = [ "include" ]
-}
-
-static_library("hexdump") {
-  sources = [ "hexdump.c"]
-  public = [ "include/hexdump/hexdump.h" ]
-  public_configs = [ ":hexdump_config" ]
-}

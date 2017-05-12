@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <hexdump/hexdump.h>
+#include <pretty/hexdump.h>
 
 /**
  * \brief Default function to dump unit test results

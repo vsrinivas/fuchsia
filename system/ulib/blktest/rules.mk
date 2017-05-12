@@ -16,7 +16,7 @@ MODULE_SO_NAME := blktest
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/sync \
-    system/ulib/hexdump \
+    system/ulib/pretty \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 
