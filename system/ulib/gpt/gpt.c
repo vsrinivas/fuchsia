@@ -97,13 +97,13 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
 
     if (priv->blocksize != 512) {
         printf("blocksize != 512 not supported\n");
-        return -1;
+        goto fail;
     }
 
     uint8_t mbr[512];
     int rc = lseek(fd, 0, SEEK_SET);
     if (rc < 0) {
-        return -1;
+        goto fail;
     }
     rc = read(fd, mbr, blocksize);
     if (rc < 0 || (uint64_t)rc != blocksize) {
