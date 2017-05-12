@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <magenta/assert.h>
+
 char* format_size(char* str, size_t str_size, size_t bytes) {
     static const char units[] = "BkMGTPE";
     static int num_units = sizeof(units) - 1;
@@ -17,7 +19,7 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
         // Even if NULL.
         return str;
     }
-    assert(str != NULL);
+    MX_DEBUG_ASSERT(str != NULL);
 
     int ui = 0;
     double db = bytes;
@@ -31,7 +33,7 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
     //   favor "1025k" or "1025.0k" over "1.0M").
     while (bytes >= 10000 || (bytes != 0 && (bytes & 1023) == 0)) {
         ui++;
-        assert(ui < num_units); // Will never exceed "E" with a 64-bit number.
+        MX_DEBUG_ASSERT(ui < num_units); // Can't happen with a 64-bit number.
         db /= 1024;
         if (bytes & 1023) {
             whole = false;
