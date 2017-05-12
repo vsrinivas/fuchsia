@@ -68,7 +68,10 @@ static ACPI_STATUS handle_prt(
         // Either we're handling the root complex (port_dev_id == UINT8_MAX), or
         // we're handling a root port, and if it's a root port, dev_id should
         // be 0.
-        assert(port_dev_id == UINT8_MAX || dev_id == 0);
+        if (port_dev_id != UINT8_MAX && dev_id != 0) {
+            // this is a weird entry, skip it
+            continue;
+        }
 
         uint32_t global_irq = MX_PCI_NO_IRQ_MAPPING;
         bool level_triggered = true;
