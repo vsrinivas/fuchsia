@@ -231,6 +231,10 @@ void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
         batch_download_.reset();
 
         if (commits_to_download_.empty()) {
+          if (!commits_staged_for_upload_.empty()) {
+            HandleLocalCommits(
+                std::vector<std::unique_ptr<const storage::Commit>>());
+          }
           CheckIdle();
           return;
         }
@@ -258,6 +262,13 @@ void PageSyncImpl::SetRemoteWatcher() {
 
 void PageSyncImpl::HandleLocalCommits(
     std::vector<std::unique_ptr<const storage::Commit>> commits) {
+  if (batch_download_) {
+    // If a commit is currently downloaded, stage the upload until it is done.
+    std::move(std::begin(commits), std::end(commits),
+              std::back_inserter(commits_staged_for_upload_));
+    return;
+  }
+
   std::vector<storage::CommitId> heads;
   if (storage_->GetHeadCommitIds(&heads) != storage::Status::OK) {
     HandleError("Failed to retrieve the current heads");

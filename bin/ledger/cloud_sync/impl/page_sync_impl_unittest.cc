@@ -380,6 +380,24 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 }
 
+// Verifies that sync pause uploading commits when it is downloading a commit.
+TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
+  storage_.should_delay_add_commit_confirmation = true;
+
+  page_sync_.Start();
+  page_sync_.OnRemoteCommit(cloud_provider::Commit("id1", "content1", {}),
+                            "44");
+  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+                          storage::ChangeSource::LOCAL);
+
+  EXPECT_FALSE(storage_.delayed_add_commit_confirmations.empty());
+  EXPECT_TRUE(cloud_provider_.received_commits.empty());
+
+  storage_.delayed_add_commit_confirmations.front()();
+
+  EXPECT_FALSE(cloud_provider_.received_commits.empty());
+}
+
 TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   // Verify that two local commits are not uploaded when there is two local
   // heads.
