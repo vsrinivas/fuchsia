@@ -21,7 +21,7 @@ constexpr char kUserRunnerUri[] = "file:///system/apps/user_runner";
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
     const std::string& device_name,
-    const AppConfig& user_shell,
+    AppConfigPtr user_shell,
     const AppConfig& story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     const std::string& user_id,
@@ -45,7 +45,7 @@ UserControllerImpl::UserControllerImpl(
   UserRunnerFactoryPtr user_runner_factory;
   app::ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(
-      user_id, device_name, user_shell.Clone(), story_shell.Clone(),
+      user_id, device_name, std::move(user_shell), story_shell.Clone(),
       std::move(token_provider_factory), std::move(ledger_repository),
       user_context_binding_.NewBinding(), std::move(view_owner_request),
       user_runner_.NewRequest());

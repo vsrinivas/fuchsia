@@ -23,13 +23,13 @@ constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v2.db";
 
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<app::ApplicationContext> app_context,
-    const AppConfig& user_shell,
+    const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     ledger::LedgerRepositoryFactory* const ledger_repository_factory,
     const bool ledger_repository_for_testing,
     auth::AccountProvider* const account_provider)
     : app_context_(app_context),
-      user_shell_(user_shell),
+      default_user_shell_(default_user_shell),
       story_shell_(story_shell),
       ledger_repository_factory_(ledger_repository_factory),
       ledger_repository_for_testing_(ledger_repository_for_testing),
@@ -328,8 +328,9 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
       });
 
 
+  auto user_shell = params->user_shell_config.is_null() ? default_user_shell_.Clone() : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_, device_name, user_shell_, story_shell_,
+      app_context_, device_name, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), account_id,
       std::move(ledger_repository), std::move(params->view_owner),
       std::move(params->user_controller),

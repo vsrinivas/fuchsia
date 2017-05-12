@@ -5,6 +5,7 @@
 module modular;
 
 import "apps/modular/services/auth/account/account.fidl";
+import "apps/modular/services/config/config.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
@@ -57,6 +58,11 @@ struct UserLoginParams {
 
   // If login fails, |user_controller| is closed.
   UserController& user_controller;
+
+  // Configuration of the user shell to run. It can be NULL which means that
+  // this configuration is picked up from command-line arguments to device
+  // runner.
+  AppConfig? user_shell_config;
 };
 
 // Provided by the |DeviceRunner| to the |DeviceShell| when it authenticates a

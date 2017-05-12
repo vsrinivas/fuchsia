@@ -22,7 +22,7 @@ struct UsersStorage;
 class UserProviderImpl : UserProvider {
  public:
   UserProviderImpl(std::shared_ptr<app::ApplicationContext> app_context,
-                   const AppConfig& user_shell,
+                   const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
                    ledger::LedgerRepositoryFactory* ledger_repository_factory,
                    bool ledger_repository_for_testing,
@@ -61,7 +61,7 @@ class UserProviderImpl : UserProvider {
   fidl::BindingSet<UserProvider> bindings_;
 
   std::shared_ptr<app::ApplicationContext> app_context_;
-  const AppConfig& user_shell_;   // Neither owned nor copied.
+  const AppConfig& default_user_shell_;   // Neither owned nor copied.
   const AppConfig& story_shell_;  // Neither owned nor copied.
   ledger::LedgerRepositoryFactory* const ledger_repository_factory_;
   const bool ledger_repository_for_testing_;
