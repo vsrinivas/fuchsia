@@ -24,7 +24,7 @@ namespace {
 // Delay between frames.
 // TODO(jeffbrown): Don't hardcode this.
 constexpr ftl::TimeDelta kHardwareRefreshInterval =
-    ftl::TimeDelta::FromMicroseconds(16667);
+    ftl::TimeDelta::FromMicroseconds(8000);
 
 // Amount of time it takes between flushing a frame and pixels lighting up.
 // TODO(jeffbrown): Tune this for A/V sync.
@@ -213,20 +213,20 @@ bool FramebufferOutput::InitializeRasterizer(RasterizerType rasterizer_type,
                                              mx_display_info_t* display_info) {
   FTL_DCHECK(display_info);
   auto weak = weak_ptr_factory_.GetWeakPtr();
-  RasterizeFrameFinishedCallback callback = [weak](
-      uint32_t frame_number, ftl::TimePoint submit_time,
-      ftl::TimePoint start_time, ftl::TimePoint finish_time) {
-    TRACE_ASYNC_END("gfx", "Rasterize", frame_number);
+  RasterizeFrameFinishedCallback callback =
+      [weak](uint32_t frame_number, ftl::TimePoint submit_time,
+             ftl::TimePoint start_time, ftl::TimePoint finish_time) {
+        TRACE_ASYNC_END("gfx", "Rasterize", frame_number);
 
-    // Need a weak reference because the task may outlive this.
-    weak->compositor_task_runner_->PostTask(
-        [weak, frame_number, submit_time, start_time, finish_time] {
-          if (weak) {
-            weak->OnFrameFinished(frame_number, submit_time, start_time,
-                                  finish_time);
-          }
-        });
-  };
+        // Need a weak reference because the task may outlive this.
+        weak->compositor_task_runner_->PostTask(
+            [weak, frame_number, submit_time, start_time, finish_time] {
+              if (weak) {
+                weak->OnFrameFinished(frame_number, submit_time, start_time,
+                                      finish_time);
+              }
+            });
+      };
 
   std::unique_ptr<Rasterizer> rasterizer;
   switch (rasterizer_type) {

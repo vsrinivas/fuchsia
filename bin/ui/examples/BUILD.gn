@@ -5,6 +5,7 @@
 group("examples") {
   deps = [
     "basic_wm",
+    "hello_composer",
     "hello_compositor",
     "hello_material",
     "jank",

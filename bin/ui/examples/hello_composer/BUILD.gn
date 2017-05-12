@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hello_composer") {
+  sources = [
+    "app.cc",
+  ]
+
+  deps = [
+    ":hello_composer_service",
+    "//application/lib/app",
+    "//apps/mozart/services/composition2",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("hello_composer_service") {
+  sources = [
+    "service.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/services/composition2",
+    "//apps/mozart/src/composer:common",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
