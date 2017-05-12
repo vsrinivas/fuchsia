@@ -132,13 +132,7 @@ bool ClientApp::Initialize() {
 
   std::cout << "parameters: " << std::endl;
   // User ID.
-  std::cout << " - user ID: " << user_config_.user_id;
-  std::string readable_id;
-  if (!user_config_.user_id.empty() &&
-      FromHexString(user_config_.user_id, &readable_id)) {
-    std::cout << " (" << readable_id << ")";
-  }
-  std::cout << std::endl;
+  std::cout << " - user ID: " << user_config_.user_id << std::endl;
   // Sync settings.
   std::cout << " - firebase ID: ";
   if (user_config_.use_sync) {
@@ -163,11 +157,9 @@ bool ClientApp::Initialize() {
 }
 
 bool ClientApp::ReadConfig() {
-  std::string user_id_human_readable;
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
-                                   &user_id_human_readable)) {
+                                   &user_config_.user_id)) {
     FTL_LOG(INFO) << "using the user id passed on the command line";
-    user_config_.user_id = convert::ToHex(user_id_human_readable);
     user_repository_path_ =
         ftl::Concatenate({"/data/ledger/", user_config_.user_id});
   } else if (files::IsFile(ledger::kLastUserIdPath.ToString()) &&
