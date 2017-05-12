@@ -31,7 +31,6 @@ class App : public mozart::ImeService {
       mozart::TextInputStatePtr initial_state,
       fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
       fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
-  void InjectInput(mozart::InputEventPtr event) override;
 
   void OnImeDisconnected(ImeImpl* ime);
 

@@ -15,8 +15,6 @@ executable("input_manager") {
     "input_manager_app.cc",
     "input_manager_app.h",
     "main.cc",
-    "text_input_service_impl.cc",
-    "text_input_service_impl.h",
     "view_hit_resolver.cc",
     "view_hit_resolver.h",
   ]

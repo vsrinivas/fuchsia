@@ -15,8 +15,6 @@ interface ImeService {
                        TextInputState initial_state,
                        InputMethodEditorClient client,
                        InputMethodEditor& editor);
-
-  InjectInput(InputEvent event);
 };
 
 // This is the service a view should expose when it can show and hide a

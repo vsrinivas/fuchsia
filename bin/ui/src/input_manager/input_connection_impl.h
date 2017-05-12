@@ -5,7 +5,10 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 
+#include "application/lib/app/application_context.h"
+#include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
+#include "apps/mozart/services/input/text_input.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -19,11 +22,14 @@ using OnEventDelivered = std::function<void(bool handled)>;
 
 // InputConnection implementation.
 // Binds incoming requests to the relevant view token.
-class InputConnectionImpl : public mozart::InputConnection {
+class InputConnectionImpl : public mozart::InputConnection,
+                            mozart::InputMethodEditor,
+                            mozart::InputMethodEditorClient {
  public:
   InputConnectionImpl(InputAssociate* associate,
                       mozart::ViewTokenPtr view_token,
-                      fidl::InterfaceRequest<mozart::InputConnection> request);
+                      fidl::InterfaceRequest<mozart::InputConnection> request,
+                      app::ApplicationContext* application_context);
   ~InputConnectionImpl() override;
 
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
@@ -39,14 +45,50 @@ class InputConnectionImpl : public mozart::InputConnection {
       fidl::InterfaceHandle<mozart::InputListener> listener) override;
   void SetViewHitTester(
       fidl::InterfaceHandle<mozart::ViewHitTester> listener) override;
+  void GetInputMethodEditor(
+      mozart::KeyboardType keyboard_type,
+      mozart::TextInputStatePtr initial_state,
+      fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
+      fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
+
+  // |mozart::InputMethodEditor|
+  void SetState(mozart::TextInputStatePtr state) override;
+  void SetKeyboardType(mozart::KeyboardType keyboard_type) override;
+  void InjectInput(mozart::InputEventPtr event) override;
+  void Show() override;
+  void Hide() override;
+
+  // |mozart::InputMethodEditorClient|
+  void DidUpdateState(mozart::TextInputStatePtr state,
+                      mozart::InputEventPtr event) override;
 
  private:
+  void OnEditorDied();
+  void OnClientDied();
+  void ConnectWithImeService(mozart::KeyboardType keyboard_type,
+                             mozart::TextInputStatePtr state);
+  void Reset();
+
+  // TODO(jpoichet) Query to see if it is attached
+  bool hardware_keyboard_connected() { return true; }
+
   InputAssociate* const associate_;
   mozart::ViewTokenPtr view_token_;
   mozart::InputListenerPtr event_listener_;
   mozart::ViewHitTesterPtr view_hit_listener_;
 
   fidl::Binding<mozart::InputConnection> binding_;
+
+  // From the test input
+  fidl::Binding<mozart::InputMethodEditor> editor_binding_;
+  mozart::InputMethodEditorClientPtr client_;
+
+  // From the IME service
+  fidl::Binding<mozart::InputMethodEditorClient> client_binding_;
+  mozart::InputMethodEditorPtr editor_;
+
+  mozart::SoftKeyboardContainerPtr container_;
+  mozart::ImeServicePtr ime_service_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };

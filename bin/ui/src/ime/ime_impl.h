@@ -26,12 +26,13 @@ class ImeImpl : public mozart::InputMethodEditor {
           fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request);
   ~ImeImpl();
 
-  void InjectInput(mozart::InputEventPtr event);
-
  private:
   // |mozart::InputMethodEditor|
   void SetKeyboardType(mozart::KeyboardType keyboard_type) override;
   void SetState(mozart::TextInputStatePtr state) override;
+  void InjectInput(mozart::InputEventPtr event) override;
+  void Show() override;
+  void Hide() override;
 
   void OnEditorDied();
 

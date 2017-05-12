@@ -13,7 +13,6 @@
 #include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 #include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
-#include "apps/mozart/src/input_manager/text_input_service_impl.h"
 #include "lib/ftl/macros.h"
 
 namespace input_manager {
@@ -49,7 +48,6 @@ class InputAssociate : public mozart::ViewAssociate {
   // Callbacks.
   void OnInputConnectionDied(InputConnectionImpl* connection);
   void OnInputDispatcherDied(InputDispatcherImpl* dispatcher);
-  void OnTextInputServiceDied(TextInputServiceImpl* text_input_service);
 
  private:
   void CreateInputConnection(
@@ -58,16 +56,11 @@ class InputAssociate : public mozart::ViewAssociate {
   void CreateInputDispatcher(
       mozart::ViewTreeTokenPtr view_tree_token,
       fidl::InterfaceRequest<mozart::InputDispatcher> request);
-  void CreateTextInputService(
-      mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::TextInputService> request);
 
   app::ApplicationContext* application_context_;
   ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<TextInputServiceImpl>>
-      text_input_services_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
       input_dispatchers_by_view_tree_token_;
 

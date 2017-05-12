@@ -33,18 +33,12 @@ struct TextInputState {
 interface InputMethodEditor {
   SetKeyboardType(KeyboardType keyboard_type);
   SetState(TextInputState state);
+  InjectInput(InputEvent event);
+  Show();
+  Hide();
 };
 
 // An interface to receive information from |TextInputService|.
 interface InputMethodEditorClient {
   DidUpdateState(TextInputState state, InputEvent? event);
-};
-
-// An interface to the system's text input control.
-[ServiceName="mozart::TextInputService"]
-interface TextInputService {
-  GetInputMethodEditor(KeyboardType keyboard_type,
-                       TextInputState initial_state,
-                       InputMethodEditorClient client,
-                       InputMethodEditor& editor);
 };

@@ -6,6 +6,7 @@ module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
 import "apps/mozart/services/input/input_events.fidl";
+import "apps/mozart/services/input/text_input.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // The input connection service allows a view to receive input events
@@ -26,6 +27,12 @@ interface InputConnection {
   //
   // If |listener| is null, then the previously set listener is removed.
   SetViewHitTester(ViewHitTester? listener);
+
+  // Retrieves an |InputMethodEditor| to handle text editing.
+  GetInputMethodEditor(KeyboardType keyboard_type,
+                       TextInputState initial_state,
+                       InputMethodEditorClient client,
+                       InputMethodEditor& editor);
 };
 
 // An interface applications may implement to receive events from an

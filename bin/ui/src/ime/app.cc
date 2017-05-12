@@ -45,13 +45,6 @@ void App::GetInputMethodEditor(
   ime_.emplace(ime_.end(), std::move(ime_impl));
 }
 
-void App::InjectInput(mozart::InputEventPtr event) {
-  FTL_VLOG(1) << "InjectInput: event=" << *event;
-  for (auto& it : ime_) {
-    it->InjectInput(event.Clone());
-  }
-}
-
 void App::OnImeDisconnected(ImeImpl* ime) {}
 
 }  // namespace ime

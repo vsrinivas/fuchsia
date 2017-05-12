@@ -44,6 +44,9 @@ void ImeImpl::SetState(mozart::TextInputStatePtr state) {
   state_ = std::move(state);
 }
 
+void ImeImpl::Show() {}
+void ImeImpl::Hide() {}
+
 void ImeImpl::InjectInput(mozart::InputEventPtr event) {
   FTL_DCHECK(event->is_keyboard());
   FTL_VLOG(1) << "InjectInput; event=" << *event;
