@@ -18,6 +18,8 @@ executable("hello_composer") {
 }
 
 executable("hello_composer_service") {
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
   sources = [
     "service.cc",
   ]
@@ -27,7 +29,16 @@ executable("hello_composer_service") {
     "//apps/mozart/services/composition2",
     "//apps/mozart/src/composer:common",
     "//lib/fidl/cpp/bindings",
+    "//lib/escher/escher",
+    "//lib/escher/examples/common",
     "//lib/ftl",
     "//lib/mtl",
+    "//magma:vulkan",
+  ]
+
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//third_party/glm",
   ]
 }
