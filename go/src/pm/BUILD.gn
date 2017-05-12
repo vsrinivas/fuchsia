@@ -1,0 +1,13 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+
+go_binary("pm") {
+  gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
+}
+
+# TODO(raggi): use an exec_script of `go list` to generate a list of test
+# packages and test binaries, then create a test group that contains them all
+# for fuchsia test builds. For now tests are run host side.
