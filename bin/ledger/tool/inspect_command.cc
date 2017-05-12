@@ -245,10 +245,31 @@ void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
 void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
                                            storage::PageId page_id,
                                            ftl::Closure on_done) {
+  storage::Status status;
+  std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
+  if (coroutine::SyncCall(
+          handler,
+          [this](const std::function<void(
+                     storage::Status,
+                     std::vector<std::unique_ptr<const storage::Commit>>)>&
+                     callback) {
+            storage_->GetUnsyncedCommits(std::move(callback));
+          },
+          &status, &unsynced_commits)) {
+    FTL_NOTREACHED();
+  }
+
+  std::unordered_set<storage::CommitId> unsynced_commit_ids;
+  std::for_each(unsynced_commits.begin(), unsynced_commits.end(),
+                [&unsynced_commit_ids](
+                    const std::unique_ptr<const storage::Commit>& commit) {
+                  unsynced_commit_ids.insert(commit->GetId());
+                });
+
   std::unordered_set<storage::CommitId> commit_ids;
   std::deque<storage::CommitId> to_explore;
   std::vector<storage::CommitId> heads;
-  storage::Status status = storage_->GetHeadCommitIds(&heads);
+  status = storage_->GetHeadCommitIds(&heads);
   if (status != storage::Status::OK) {
     FTL_LOG(FATAL) << "Unable to get head commits due to error " << status;
   }
@@ -289,6 +310,9 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     writer << "C_" << convert::ToHex(commit_id) << " [";
     if (parents.size() == 2) {
       writer << "shape=box, ";
+    }
+    if (unsynced_commit_ids.count(commit_id) != 0) {
+      writer << "bgcolor=red, ";
     }
     writer << "tooltip=\"timestamp="
            << ftl::NumberToString(commit->GetTimestamp())
