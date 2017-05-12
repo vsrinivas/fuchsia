@@ -30,12 +30,12 @@ struct TextRange {
   // The index of the first UTF-16 character in the range.
   //
   // If |start| and |end| are both -1, the text range is empty.
-  int32 start;
+  int64 start;
 
   // The next index after the UTF-16 characters in this range.
   //
   // If |start| and |end| are both -1, the text range is empty.
-  int32 end;
+  int64 end;
 };
 
 // A range of text that represents a selection.
@@ -46,7 +46,7 @@ struct TextSelection {
   // The offset at which the selection originates.
   //
   // Might be larger than, smaller than, or equal to extent.
-  int32 base;
+  int64 base;
 
   // The offset at which the selection terminates.
   //
@@ -55,7 +55,7 @@ struct TextSelection {
   // side of the selection, this is the location at which to paint the caret.
   //
   // Might be larger than, smaller than, or equal to base.
-  int32 extent;
+  int64 extent;
 
   // If the the text range is collapsed and has more than one visual location
   // (e.g., occurs at a line break), which of the two locations to use when
