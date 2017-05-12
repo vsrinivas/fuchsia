@@ -276,11 +276,10 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     std::vector<storage::CommitIdView> parents = commit->GetParentIds();
     for (storage::CommitIdView parent : parents) {
       storage::CommitId parent_id = parent.ToString();
-      if (commit_ids.count(parent_id) == 1) {
-        continue;
+      if (commit_ids.count(parent_id) != 1) {
+        commit_ids.insert(parent_id);
+        to_explore.push_back(parent_id);
       }
-      commit_ids.insert(parent_id);
-      to_explore.push_back(parent_id);
 
       writer << "C_" << convert::ToHex(parent) << " -> "
              << "C_" << convert::ToHex(commit_id) << ";\n";
