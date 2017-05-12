@@ -102,6 +102,8 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
     inode_map_.Clear(ino, ino + 1);
     bc_->Writeblk(info_.ibm_block + ibm_relative_bno, bmdata);
 
+    uint32_t block_count = inode.block_count;
+
     // We're going to be updating block bitmaps repeatedly.
     WritebackQueue<> txn(bc_, block_map_.StorageUnsafe()->GetData());
 
@@ -110,6 +112,7 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
         if (inode.dnum[n] == 0) {
             continue;
         }
+        block_count--;
         block_map_.Clear(inode.dnum[n], inode.dnum[n] + 1);
         uint32_t bitblock = inode.dnum[n] / kMinfsBlockBits;
         txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
@@ -130,17 +133,20 @@ mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
             if (entry[m] == 0) {
                 continue;
             }
+            block_count--;
             block_map_.Clear(entry[m], entry[m] + 1);
             uint32_t bitblock = entry[m] / kMinfsBlockBits;
             txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
         }
         bc_->Put(blk, 0);
         // release the direct block itself
+        block_count--;
         block_map_.Clear(inode.inum[n], inode.inum[n] + 1);
         uint32_t bitblock = inode.inum[n] / kMinfsBlockBits;
         txn.EnqueueDirty(bitblock, info_.abm_block + bitblock);
     }
 
+    MX_DEBUG_ASSERT(block_count == 0);
     return NO_ERROR;
 }
 
