@@ -90,6 +90,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         if (inode_.dnum[bno] == 0) {
             continue;
         }
+        fs_->ValidateBno(inode_.dnum[bno]);
 
         fs_->block_map_.Clear(inode_.dnum[bno], inode_.dnum[bno] + 1);
         uint32_t bitblock = inode_.dnum[bno] / kMinfsBlockBits;
@@ -106,6 +107,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
         if (inode_.inum[indirect] == 0) {
             continue;
         }
+        fs_->ValidateBno(inode_.inum[indirect]);
         unsigned bno = kMinfsDirect + (indirect + 1) * direct_per_indirect;
         if (start > bno) {
             continue;
@@ -122,6 +124,7 @@ mx_status_t VnodeMinfs::BlocksShrink(uint32_t start) {
             if (entry[direct] == 0) {
                 continue;
             }
+            fs_->ValidateBno(entry[direct]);
             unsigned bno = kMinfsDirect + indirect * direct_per_indirect + direct;
             if (start > bno) {
                 // This is a valid entry which exists in the indirect block
@@ -199,6 +202,7 @@ mx_status_t VnodeMinfs::InitVmo() {
     uint32_t bno;
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
+            fs_->ValidateBno(bno);
             if ((status = FillBlock(d, bno)) != NO_ERROR) {
                 error("Failed to fill bno %u; error: %d\n", bno, status);
                 return status;
@@ -211,6 +215,7 @@ mx_status_t VnodeMinfs::InitVmo() {
         uint32_t ibno;
         mxtl::RefPtr<BlockNode> iblk;
         if ((ibno = inode_.inum[i]) != 0) {
+            fs_->ValidateBno(ibno);
             // TODO(smklein): Should there be a separate vmo for indirect blocks?
             if ((iblk = fs_->bc_->Get(ibno)) == nullptr) {
                 return ERR_IO;
@@ -221,6 +226,7 @@ mx_status_t VnodeMinfs::InitVmo() {
             for (uint32_t j = 0; j < direct_per_indirect; j++) {
                 if ((bno = ientry[j]) != 0) {
                     uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
+                    fs_->ValidateBno(bno);
                     if ((status = FillBlock(n, bno)) != NO_ERROR) {
                         fs_->bc_->Put(iblk, 0);
                         return status;

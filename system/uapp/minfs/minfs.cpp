@@ -259,7 +259,7 @@ mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<Block
     status = block_map_.Set(bitoff_start, bitoff_start + 1);
     assert(status == NO_ERROR);
     uint32_t bno = static_cast<uint32_t>(bitoff_start);
-    assert(bno != 0); // Cannot allocate root block
+    ValidateBno(bno);
 
     // obtain the in-memory bitmap block
     uint32_t bmbno;

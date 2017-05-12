@@ -70,6 +70,11 @@ public:
 
     mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
 
+    void ValidateBno(uint32_t bno) const {
+        MX_DEBUG_ASSERT(info_.dat_block <= bno);
+        MX_DEBUG_ASSERT(bno < info_.block_count);
+    }
+
     Bcache* bc_;
     RawBitmap block_map_;
     minfs_info_t info_;
