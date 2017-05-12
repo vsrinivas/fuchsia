@@ -16,41 +16,57 @@ namespace {
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 }
 
-class AgentContextImpl::InitializeCall : Operation<void> {
+class AgentContextImpl::StartAndInitializeCall : Operation<void> {
  public:
-  InitializeCall(OperationContainer* const container,
-                 bool* const ready,
-                 Agent* const agent,
-                 fidl::Binding<AgentContext>* const agent_context_binding,
-                 ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        ready_(ready),
-        agent_context_binding_(agent_context_binding),
-        agent_(agent) {
+  StartAndInitializeCall(OperationContainer* const container,
+                 AgentContextImpl* const agent_context_impl)
+      : Operation(container, [] {}),
+        agent_context_impl_(agent_context_impl) {
     Ready();
   }
 
  private:
   void Run() override {
-    if (*ready_) {
-      // Means that the agent is already initialized.
-      Done();
-      return;
-    }
+    FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
+    FTL_DLOG(INFO) << "Starting new agent, url: " << agent_context_impl_->url_;
+
+    FlowToken flow(this);
+
+    // Start up the agent process.
+    auto launch_info = app::ApplicationLaunchInfo::New();
+    launch_info->url = agent_context_impl_->url_;
+    launch_info->services =
+        agent_context_impl_->application_services_.NewRequest();
+    agent_context_impl_->application_launcher_->CreateApplication(
+        std::move(launch_info),
+        agent_context_impl_->application_controller_.NewRequest());
+    ConnectToService(agent_context_impl_->application_services_.get(),
+                     agent_context_impl_->agent_.NewRequest());
+
+    // When the agent process dies, we remove it.
+    // TODO(alhaad): In the future we would want to detect a crashing agent and
+    // stop scheduling tasks for it.
+    agent_context_impl_->application_controller_.set_connection_error_handler(
+        [agent_context_impl = agent_context_impl_] {
+          agent_context_impl->MaybeStopAgent();
+        });
+
+    // When all the |AgentController| bindings go away maybe stop the agent.
+    agent_context_impl_->agent_controller_bindings_.set_on_empty_set_handler(
+        [agent_context_impl = agent_context_impl_] {
+          agent_context_impl->MaybeStopAgent();
+        });
 
     // TODO(alhaad): We should have a timer for an agent which does not return
     // its callback within some timeout.
-    agent_->Initialize(agent_context_binding_->NewBinding(), [this] {
-      *ready_ = true;
-      Done();
-    });
+    agent_context_impl_->agent_->Initialize(
+        agent_context_impl_->agent_context_binding_.NewBinding(),
+        [this, flow] { agent_context_impl_->state_ = State::RUNNING; });
   }
 
-  bool* const ready_;
-  fidl::Binding<AgentContext>* const agent_context_binding_;
-  Agent* const agent_;
+  AgentContextImpl* const agent_context_impl_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StartAndInitializeCall);
 };
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
@@ -58,59 +74,50 @@ class AgentContextImpl::InitializeCall : Operation<void> {
 class AgentContextImpl::StopCall : Operation<void> {
  public:
   StopCall(OperationContainer* const container,
-           bool* const ready,
            bool terminating,
-           int* const incomplete_task_count,
-           fidl::BindingSet<AgentController>* const agent_controller_bindings,
-           Agent* const agent,
-           const std::function<void()>& reset_agent_connection,
+           AgentContextImpl* const agent_context_impl,
            ResultCall result_call)
       : Operation(container, std::move(result_call)),
-        ready_(ready),
-        terminating_(terminating),
-        incomplete_task_count_(incomplete_task_count),
-        agent_controller_bindings_(agent_controller_bindings),
-        agent_(agent),
-        reset_agent_connection_(reset_agent_connection) {
+        agent_context_impl_(agent_context_impl),
+        terminating_(terminating) {
     Ready();
   }
 
  private:
   void Run() override {
-    if (!(*ready_)) {
-      // Means that the agent is already stopped.
-      Done();
+    FlowToken flow(this);
+
+    if (agent_context_impl_->state_ == State::TERMINATING) {
+      // Means that the agent is already stopping.
       return;
     }
 
-    if (terminating_ || (agent_controller_bindings_->size() == 0 &&
-                         *incomplete_task_count_ == 0)) {
-      Stop();
-      return;
+    if (terminating_ ||
+        (agent_context_impl_->agent_controller_bindings_.size() == 0 &&
+         agent_context_impl_->incomplete_task_count_ == 0)) {
+      Stop(flow);
     }
-
-    Done();
   }
 
-  void Stop() {
+  void Stop(FlowToken flow) {
+    agent_context_impl_->state_ = State::TERMINATING;
+
     auto kill_agent_once = std::make_shared<std::once_flag>();
-    auto kill_agent = [kill_agent_once, this]() mutable {
-      std::call_once(*kill_agent_once.get(), [this] {
-        reset_agent_connection_();
-        Done();
+    auto kill_agent = [kill_agent_once, flow, this]() mutable {
+      std::call_once(*kill_agent_once.get(), [flow, this] {
+        agent_context_impl_->application_controller_.reset();
+        agent_context_impl_->application_services_.reset();
+        agent_context_impl_->agent_.reset();
+        agent_context_impl_->agent_context_binding_.Close();
       });
     };
-    agent_->Stop(kill_agent);
+    agent_context_impl_->agent_->Stop(kill_agent);
     kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
                       kill_agent, kKillTimeout);
   }
 
-  bool* const ready_;
-  const bool terminating_;
-  int* const incomplete_task_count_;
-  fidl::BindingSet<AgentController>* const agent_controller_bindings_;
-  Agent* const agent_;
-  const std::function<void()> reset_agent_connection_;
+  AgentContextImpl* const agent_context_impl_;
+  const bool terminating_;  // is the agent runner terminating?
 
   ftl::OneShotTimer kill_timer_;
 
@@ -127,39 +134,24 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                               kAgentComponentNamespace,
                               url),
       token_provider_factory_(info.token_provider_factory),
-      user_intelligence_provider_(info.user_intelligence_provider) {}
+      user_intelligence_provider_(info.user_intelligence_provider) {
+  new StartAndInitializeCall(&operation_queue_, this);
+}
 
 AgentContextImpl::~AgentContextImpl() = default;
-
-void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
-  new StopCall(&operation_queue_, &ready_, true /* is_terminating */,
-               &incomplete_task_count_, &agent_controller_bindings_,
-               agent_.get(),
-               [this] {
-                 application_controller_.reset();
-                 application_services_.reset();
-                 agent_.reset();
-                 agent_context_binding_.Close();
-               },
-               [this, callback]() {
-                 agent_runner_->RemoveAgent(url_);
-                 callback();
-               });
-}
 
 void AgentContextImpl::NewConnection(
     const std::string& requestor_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  // First, make sure that the agent is ready.
-  MaybeInitializeAgent();
-
-  // Second, on the operation queue - forward the connection request.
+  // Queue adding the connection
   new SyncCall(&operation_queue_, ftl::MakeCopyable([
     this, requestor_url,
     incoming_services_request = std::move(incoming_services_request),
     agent_controller_request = std::move(agent_controller_request)
   ]() mutable {
+    FTL_CHECK(state_ == State::RUNNING);
+
     agent_->Connect(requestor_url, std::move(incoming_services_request));
 
     // Add a binding to the |controller|. When all the bindings go away
@@ -170,11 +162,8 @@ void AgentContextImpl::NewConnection(
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
-  // First, make sure that the agent is ready.
-  MaybeInitializeAgent();
-
-  // Second, on the operation queue - run the task.
   new SyncCall(&operation_queue_, [this, task_id] {
+    FTL_CHECK(state_ == State::RUNNING);
     // Increment the counter for number of incomplete tasks. Decrement it when
     // we receive its callback;
     incomplete_task_count_++;
@@ -216,53 +205,22 @@ void AgentContextImpl::DeleteTask(const fidl::String& task_id) {
 
 void AgentContextImpl::Done() {}
 
-void AgentContextImpl::MaybeInitializeAgent() {
-  // First, verify that the agent is connected.
-  new SyncCall(&operation_queue_, [this] {
-    if (ready_) {
-      // Connection is already present.
-      return;
-    }
-
-    // Start up the agent process.
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = url_;
-    launch_info->services = application_services_.NewRequest();
-    application_launcher_->CreateApplication(
-        std::move(launch_info), application_controller_.NewRequest());
-    ConnectToService(application_services_.get(), agent_.NewRequest());
-
-    // When the agent process dies, we remove it.
-    // TODO(alhaad): In the future we would want to detect a crashing agent and
-    // stop scheduling tasks for it.
-    application_controller_.set_connection_error_handler(
-        [this] { MaybeStopAgent(); });
-
-    // When all the |AgentController| bindings go away maybe stop the agent.
-    agent_controller_bindings_.set_on_empty_set_handler(
-        [this] { MaybeStopAgent(); });
-  });
-
-  // Second, make sure that the agent is initialized i.e. Agent.Initialize()
-  // has returned its callback.
-  new InitializeCall(&operation_queue_, &ready_, agent_.get(),
-                     &agent_context_binding_, [this] { ready_ = true; });
+void AgentContextImpl::MaybeStopAgent() {
+  new StopCall(&operation_queue_, false /* is agent runner terminating? */,
+               this,
+               [this] {
+                 agent_runner_->RemoveAgent(url_);
+                 // |this| is no longer valid at this point.
+               });
 }
 
-void AgentContextImpl::MaybeStopAgent() {
-  new StopCall(&operation_queue_, &ready_, false /* is_terminating */,
-               &incomplete_task_count_, &agent_controller_bindings_,
-               agent_.get(),
-               [this] {
-                 application_controller_.reset();
-                 application_services_.reset();
-                 agent_.reset();
-                 agent_context_binding_.Close();
-               },
-               [this] {
-                 // If there are no operation on the operation queue, delete
-                 // this agent.
+void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
+  new StopCall(&operation_queue_, true /* is agent runner terminating? */,
+               this,
+               [this, callback]() {
                  agent_runner_->RemoveAgent(url_);
+                 // |this| is no longer valid at this point.
+                 callback();
                });
 }
 

@@ -200,14 +200,42 @@ void AgentRunner::ConnectToAgent(
     return;
   }
 
-  MaybeRunAgent(agent_url)->NewConnection(requestor_url,
-                                          std::move(incoming_services_request),
-                                          std::move(agent_controller_request));
+  pending_agent_connections_[agent_url].push_back(
+      {requestor_url, std::move(incoming_services_request),
+       std::move(agent_controller_request)});
+
+  if (!IsAgentTerminating(agent_url)) {
+    ForwardConnectionsToAgent(agent_url);
+  }
 }
 
-void AgentRunner::RemoveAgent(const std::string& agent_url) {
+void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
   UpdateWatchers();
+
+  // At this point, if there were pending connections to this agent, we can
+  // start it up again and forward connections to it.
+  ForwardConnectionsToAgent(agent_url);
+}
+
+bool AgentRunner::IsAgentTerminating(const std::string& agent_url) {
+  auto found_it = running_agents_.find(agent_url);
+  return found_it != running_agents_.end() &&
+         found_it->second->state() == AgentContextImpl::State::TERMINATING;
+}
+
+void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
+  // Did we hold onto new connections as the previous one was exiting?
+  auto found_it = pending_agent_connections_.find(agent_url);
+  if (found_it != pending_agent_connections_.end()) {
+    for (auto& pending_connection : found_it->second) {
+      MaybeRunAgent(agent_url)->NewConnection(
+          pending_connection.requestor_url,
+          std::move(pending_connection.incoming_services_request),
+          std::move(pending_connection.agent_controller_request));
+    }
+    pending_agent_connections_.erase(found_it);
+  }
 }
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,

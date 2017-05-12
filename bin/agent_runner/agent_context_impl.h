@@ -61,6 +61,9 @@ class AgentContextImpl : AgentContext, AgentController {
   // Called by AgentRunner when a new task has been scheduled.
   void NewTask(const std::string& task_id);
 
+  enum class State { INITIALIZING, RUNNING, TERMINATING };
+  State state() { return state_; }
+
  private:
   // |AgentContext|
   void GetComponentContext(
@@ -77,11 +80,6 @@ class AgentContextImpl : AgentContext, AgentController {
   // |AgentContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
-
-  // Adds an operation on |operation_queue_|. This operation is immediately
-  // Done() if this agent is |ready_|. Else, we first setup agent connection and
-  // wait for Agent.Initialize() to complete.
-  void MaybeInitializeAgent();
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -107,8 +105,7 @@ class AgentContextImpl : AgentContext, AgentController {
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 
-  // |ready_| is true once Initialize() responds.
-  bool ready_{};
+  State state_ = State::INITIALIZING;
 
   // Number of times Agent.RunTask() was called but we're still waiting on its
   // completion callback.
@@ -117,7 +114,7 @@ class AgentContextImpl : AgentContext, AgentController {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class InitializeCall;
+  class StartAndInitializeCall;
   class StopCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);

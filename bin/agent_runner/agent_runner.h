@@ -63,7 +63,9 @@ class AgentRunner : AgentProvider, PageClient {
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
-  void RemoveAgent(const std::string& agent_url);
+  // NOTE: This should NOT take a const reference, since |agent_url| will die
+  // the moment we delete |AgentContextImpl|.
+  void RemoveAgent(std::string agent_url);
 
   // Agent at |agent_url| is run (if not already running) and Agent.RunTask() is
   // called with |task_id| as the agent specified identifier for the task when a
@@ -82,6 +84,12 @@ class AgentRunner : AgentProvider, PageClient {
   static void XdrTriggerInfo(XdrContext* const xdr, TriggerInfo* const data);
 
   AgentContextImpl* MaybeRunAgent(const std::string& agent_url);
+
+  // Returns true if the agent is running but is in a terminating state.
+  bool IsAgentTerminating(const std::string& agent_url);
+
+  // Will also start and initialize the agent as a consequence.
+  void ForwardConnectionsToAgent(const std::string& agent_url);
 
   void AddedTrigger(const std::string& key, std::string value);
   void DeletedTrigger(const std::string& key);
@@ -120,6 +128,17 @@ class AgentRunner : AgentProvider, PageClient {
   // agent URL -> { task id -> alarm in seconds }
   std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>>
       running_alarms_;
+
+  struct PendingConnectionEntry {
+    const std::string requestor_url;
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
+    fidl::InterfaceRequest<AgentController> agent_controller_request;
+  };
+  // agent URL -> pending connections to an agent
+  // This map holds connections to an agent that we hold onto while the existing
+  // agent is in a terminating state.
+  std::unordered_map<std::string, std::vector<struct PendingConnectionEntry>>
+      pending_agent_connections_;
 
   // agent URL -> modular.AgentContext
   std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>
