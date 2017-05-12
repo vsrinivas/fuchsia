@@ -5,7 +5,6 @@ env:
     - PROJECT=magenta-pc-x86-64
     - PROJECT=magenta-qemu-arm64
     - PROJECT=magenta-rpi3-arm64
-    - PROJECT=magenta-msm-trapper
 
     # kernel only, no-magenta builds
     - PROJECT=pc-x86-64-test
