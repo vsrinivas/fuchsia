@@ -10,7 +10,10 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
+#include <magenta/compiler.h>
 #include <unittest/unittest.h>
+
+__BEGIN_CDECLS;
 
 typedef struct fs_info {
     const char* name;
@@ -73,3 +76,5 @@ int teardown_fs_test(void);
         BEGIN_FS_TEST_CASE(case_name, thinfs, &FILESYSTEMS[2])   \
         CASE_TESTS                                               \
         END_FS_TEST_CASE(case_name, thinfs)
+
+__END_CDECLS;
