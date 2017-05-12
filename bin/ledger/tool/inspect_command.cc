@@ -19,6 +19,7 @@
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #define FILE_CREATE_MODE 0666
@@ -256,7 +257,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
   std::string file_path =
       "/tmp/" + app_id_ + "_" + convert::ToHex(page_id) + ".dot";
   FileStreamWriter writer(file_path);
-  writer << "digraph {\n";
+  writer << "digraph P_" << convert::ToHex(page_id) << " {\n";
   while (!to_explore.empty()) {
     storage::CommitId commit_id = to_explore.front();
     to_explore.pop_front();
@@ -284,6 +285,14 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
       writer << "C_" << convert::ToHex(parent) << " -> "
              << "C_" << convert::ToHex(commit_id) << ";\n";
     }
+
+    writer << "C_" << convert::ToHex(commit_id) << " [";
+    if (parents.size() == 2) {
+      writer << "shape=box, ";
+    }
+    writer << "tooltip=\"timestamp="
+           << ftl::NumberToString(commit->GetTimestamp())
+           << " root_id=" << convert::ToHex(commit->GetRootId()) << "\"];\n";
   }
   writer << "}\n";
   std::cout << "Graph of commits stored in file " << file_path << std::endl;
