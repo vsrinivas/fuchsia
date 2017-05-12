@@ -437,7 +437,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
 
     if ((r = dc_msg_rpc(parent->rpc, &msg, msglen,
                         handle, (resource != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
-        log(ERROR, "devhost: rpc:device_add failed: %d\n", r);
+        log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
         ios->dev = child;
         ios->ph.handle = hrpc;
