@@ -17,25 +17,49 @@ namespace benchmark {
 //
 // Parameters:
 //   --entry-count=<int> the number of entries to be put
+//   --transaction-size=<int> the size of a single transaction in number of put
+//     operations. If equal to 1, every put operation will be executed
+//     individually.
+//   --key-size=<int> the size of a single key in bytes
 //   --value-size=<int> the size of a single value in bytes
-//   --transaction whether puts should be bundled into a single transaction
+//   --update whether operations will update existing entries (put with existing
+//     keys and new values)
 class PutBenchmark {
  public:
-  PutBenchmark(int entry_count, int value_size, bool transaction);
+  PutBenchmark(int entry_count,
+               int transaction_size,
+               int key_size,
+               int value_size,
+               bool update);
 
   void Run();
 
  private:
-  void RunSingle(int i, int count);
-  void CommitAndMeasure();
+  // Initilizes the keys to be used in the benchmark. In case the benchmark is
+  // on updating entries, it also adds these keys in the ledger with some
+  // initial values.
+  void InitializeKeys(
+      std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
+  // Recursively adds entries using all given keys and random values, which are
+  // to be updated later in the benchmark.
+  void AddInitialEntries(
+      int i,
+      std::vector<fidl::Array<uint8_t>> keys,
+      std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done);
 
+  void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
+  void CommitAndRunNext(int i, std::vector<fidl::Array<uint8_t>> keys);
+
+  void CommitAndShutDown();
   void ShutDown();
 
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   const int entry_count_;
+  const int transaction_size_;
+  const int key_size_;
   const int value_size_;
-  const bool transaction_;
+  const bool update_;
 
   app::ApplicationControllerPtr ledger_controller_;
   ledger::PagePtr page_;

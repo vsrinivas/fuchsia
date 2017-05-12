@@ -7,18 +7,20 @@
 #include <string>
 
 #include "apps/ledger/benchmark/lib/convert.h"
+#include "apps/ledger/src/convert/convert.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/random/rand.h"
 #include "lib/ftl/strings/concatenate.h"
 
 namespace benchmark {
 
-// Builds a key as "<the given int>-<random data>", so that deterministic
-// ordering of entries can be ensured by using a different |i| value each time,
-// but the resultin b-tree nodes are always distinct.
-fidl::Array<uint8_t> MakeKey(int i) {
-  return ToArray(ftl::Concatenate(
-      {std::to_string(i), "-", std::to_string(ftl::RandUint64())}));
+fidl::Array<uint8_t> MakeKey(int i, size_t size) {
+  std::string i_str = std::to_string(i);
+  FTL_DCHECK(i_str.size() + 1 <= size);
+  auto rand_bytes = MakeValue(size - i_str.size() - 1);
+
+  return ToArray(
+      ftl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
 }
 
 // Builds a random value of the given length.

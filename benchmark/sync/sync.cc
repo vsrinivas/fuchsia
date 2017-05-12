@@ -24,6 +24,7 @@ constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/sync";
 constexpr ftl::StringView kEntryCountFlag = "entry-count";
 constexpr ftl::StringView kValueSizeFlag = "value-size";
 constexpr ftl::StringView kServerIdFlag = "server-id";
+constexpr size_t kKeySize = 100;
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
@@ -107,7 +108,7 @@ void SyncBenchmark::RunSingle(int i) {
     return;
   }
 
-  fidl::Array<uint8_t> key = benchmark::MakeKey(i);
+  fidl::Array<uint8_t> key = benchmark::MakeKey(i, kKeySize);
   fidl::Array<uint8_t> value = benchmark::MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", i);
   alpha_page_->Put(std::move(key), std::move(value),

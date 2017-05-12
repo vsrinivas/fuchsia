@@ -13,8 +13,8 @@ trace record --spec-file=/system/data/ledger/benchmark/put.tspec
 Benchmarks can also be traced directly, as any other app would be. For example:
 
 ```
-trace record --categories=benchmark,ledger \
-  ledger_benchmark_put --entry-count=10 --value-size=100
+trace record --categories=benchmark,ledger ledger_benchmark_put \
+  --entry-count=10 --transaction-size=1 --key-size=100 --value-size=100
 ```
 
 Some benchmarks exercise sync. To run these, pass the ID of a correctly

@@ -9,10 +9,10 @@
 
 namespace benchmark {
 
-// Builds a key as "<the given int>-<random data>", so that deterministic
-// ordering of entries can be ensured by using a different |i| value each time,
-// but the resultin b-tree nodes are always distinct.
-fidl::Array<uint8_t> MakeKey(int i);
+// Builds a key of the given length as "<the given int>-<random data>", so that
+// deterministic ordering of entries can be ensured by using a different |i|
+// value each time, but the resulting b-tree nodes are always distinct.
+fidl::Array<uint8_t> MakeKey(int i, size_t size);
 
 // Builds a random value of the given length.
 fidl::Array<uint8_t> MakeValue(size_t size);
