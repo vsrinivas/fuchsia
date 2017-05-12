@@ -7,6 +7,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
+#include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
 #include <inttypes.h>
@@ -14,8 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "format.h"
 
 // Reads the mx_info_maps_t entries for the process.
 // Caller is responsible for the |out_maps| pointer.

@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Utilities for formatting sizes to make them more human-readable.
+
 #pragma once
 
+#include <magenta/compiler.h>
+
 #include <stddef.h>
+
+__BEGIN_CDECLS
 
 // A buffer size (including trailing NUL) that's large enough for
 // any value formatted by format_size().
@@ -22,4 +28,8 @@
 //
 // |str_size| is the size of the memory pointed to by |str|,
 // including the trailing NUL.
-void format_size(char* str, size_t str_size, size_t bytes);
+//
+// Returns |str|.
+char* format_size(char* str, size_t str_size, size_t bytes);
+
+__END_CDECLS

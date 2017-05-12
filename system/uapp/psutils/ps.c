@@ -6,6 +6,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
+#include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
 #include <inttypes.h>
@@ -14,8 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "format.h"
 
 #define MAX_STATE_LEN (7 + 1)  // +1 for trailing NUL
 

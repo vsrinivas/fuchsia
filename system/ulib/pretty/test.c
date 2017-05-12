@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <pretty/sizes.h>
 #include <unittest/unittest.h>
-
-#include "format.h"
 
 typedef struct {
     size_t input;
@@ -76,9 +75,11 @@ bool format_size_test(void) {
     for (unsigned int i = 0; i < countof(format_size_test_cases); i++) {
         const format_size_test_case_t* tc = format_size_test_cases + i;
         memset(str, 0, sizeof(str));
-        format_size(str, sizeof(str), tc->input);
+        char* ret = format_size(str, sizeof(str), tc->input);
         snprintf(msg, sizeof(msg), "format_size(bytes=%zd)", tc->input);
         EXPECT_STR_EQ(tc->expected_output, str, /* len */ 128, msg);
+        // Should always return the input pointer.
+        EXPECT_EQ(&(str[0]), ret, msg);
     }
     END_TEST;
 }
@@ -94,10 +95,11 @@ bool format_size_short_buf_truncates(void) {
     for (size_t str_size = 0; str_size <= sizeof(expected_output);
          str_size++) {
         memset(buf, 0x55, sizeof(buf));
-        format_size(buf, str_size, input);
+        char* ret = format_size(buf, str_size, input);
 
         snprintf(msg, sizeof(msg),
                  "format_size(str_size=%zd, bytes=%zd)", str_size, input);
+        EXPECT_EQ(&(buf[0]), ret, msg);
         if (str_size > 2) {
             EXPECT_BYTES_EQ(
                 (uint8_t*)expected_output, (uint8_t*)buf, str_size - 1, msg);
@@ -110,10 +112,32 @@ bool format_size_short_buf_truncates(void) {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(psutils_tests)
+bool format_size_empty_str_succeeds(void) {
+    BEGIN_TEST;
+    static const size_t input = 1023 * 1024 + 1;
+
+    char c = 0x55;
+    char* ret = format_size(&c, 0, input);
+    EXPECT_EQ(&c, ret, "");
+    EXPECT_EQ(0x55, c, "");
+    END_TEST;
+}
+
+bool format_size_empty_null_str_succeeds(void) {
+    BEGIN_TEST;
+    static const size_t input = 1023 * 1024 + 1;
+
+    char* ret = format_size(NULL, 0, input);
+    EXPECT_EQ(NULL, ret, "");
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(pretty_tests)
 RUN_TEST(format_size_test)
 RUN_TEST(format_size_short_buf_truncates)
-END_TEST_CASE(psutils_tests)
+RUN_TEST(format_size_empty_str_succeeds)
+RUN_TEST(format_size_empty_null_str_succeeds)
+END_TEST_CASE(pretty_tests)
 
 int main(int argc, char** argv) {
     return unittest_run_all_tests(argc, argv) ? 0 : -1;

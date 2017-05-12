@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR).ps
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += $(LOCAL_DIR)/ps.c $(LOCAL_DIR)/format.c
+MODULE_SRCS += $(LOCAL_DIR)/ps.c
 
 MODULE_NAME := ps
 
@@ -18,6 +18,7 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
+    system/ulib/pretty \
     system/ulib/task-utils
 
 include make/module.mk
@@ -62,7 +63,7 @@ MODULE := $(LOCAL_DIR).vmaps
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += $(LOCAL_DIR)/format.c $(LOCAL_DIR)/vmaps.c
+MODULE_SRCS += $(LOCAL_DIR)/vmaps.c
 
 MODULE_NAME := vmaps
 
@@ -72,26 +73,7 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
-    system/ulib/task-utils
-
-include make/module.mk
-
-MODULE := $(LOCAL_DIR).test
-
-MODULE_TYPE := usertest
-
-MODULE_SRCS += \
-    $(LOCAL_DIR)/format.c \
-    $(LOCAL_DIR)/test.c
-
-MODULE_NAME := psutils-test
-
-MODULE_LIBS := \
-    system/ulib/unittest \
-    system/ulib/mxio \
-    system/ulib/c
-
-MODULE_STATIC_LIBS := \
+    system/ulib/pretty \
     system/ulib/task-utils
 
 include make/module.mk

@@ -2,16 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "format.h"
+#include <pretty/sizes.h>
 
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-void format_size(char* str, size_t str_size, size_t bytes) {
+char* format_size(char* str, size_t str_size, size_t bytes) {
     static const char units[] = "BkMGTPE";
     static int num_units = sizeof(units) - 1;
+
+    if (str_size == 0) {
+        // Even if NULL.
+        return str;
+    }
+    assert(str != NULL);
 
     int ui = 0;
     double db = bytes;
@@ -37,4 +43,5 @@ void format_size(char* str, size_t str_size, size_t bytes) {
     } else {
         snprintf(str, str_size, "%.1f%c", db, units[ui]);
     }
+    return str;
 }
