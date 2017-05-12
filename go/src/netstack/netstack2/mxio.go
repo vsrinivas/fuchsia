@@ -32,6 +32,7 @@ import (
 const debug = true
 const debug2 = false
 
+// TODO: replace MX_SOCKET_READABLE with mx.SignalSocketReadable, etc?
 const MX_SOCKET_HALF_CLOSE = 1
 const MX_SOCKET_READABLE = mx.SignalObject0
 const MX_SOCKET_WRITABLE = mx.SignalObject1
@@ -39,6 +40,7 @@ const MX_SOCKET_PEER_CLOSED = mx.SignalObject2
 const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
+const LOCAL_SIGNAL_CLOSING = mx.SignalUser5
 
 const defaultNIC = 2
 
@@ -119,8 +121,11 @@ type iostate struct {
 	dataHandle     mx.Handle
 	peerDataHandle mx.Handle // other end of dataHandle
 
-	mu   sync.Mutex
-	refs int
+	mu      sync.Mutex
+	refs    int
+	closing bool
+
+	writeBufFlushed chan struct{}
 }
 
 func (ios *iostate) acquire() {
@@ -152,7 +157,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	dataHandle := mx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
+	_, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
@@ -174,7 +179,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		case mx.ErrOk:
 			// NOP
 		case mx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
+			obs, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
 				// NOP
@@ -189,6 +194,9 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 				return
 			case obs&MX_SOCKET_READABLE != 0:
 				continue
+			case obs&LOCAL_SIGNAL_CLOSING != 0:
+				ios.writeBufFlushed <- struct{}{}
+				return
 			}
 		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 			return
@@ -399,7 +407,7 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 			return
 		case mx.ErrShouldWait:
-			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
 				return
@@ -408,6 +416,9 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 				case obs&mx.SignalChannelPeerClosed != 0:
 					return
 				case obs&MX_SOCKET_READABLE != 0:
+					continue
+				case obs&LOCAL_SIGNAL_CLOSING != 0:
+					ios.writeBufFlushed <- struct{}{}
 					continue
 				}
 			default:
@@ -448,10 +459,11 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, transProto tcpi
 	var peerS mx.Handle
 	if iosOrig == nil {
 		ios = &iostate{
-			transProto: transProto,
-			wq:         wq,
-			ep:         ep,
-			refs:       1,
+			transProto:      transProto,
+			wq:              wq,
+			ep:              ep,
+			refs:            1,
+			writeBufFlushed: make(chan struct{}),
 		}
 		switch transProto {
 		case tcp.ProtocolNumber:
@@ -1079,15 +1091,29 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *rio.Msg) mx.Status {
 }
 
 func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
-	if ios.ep != nil {
-		ios.dataHandle.Close() // loopShutdown closes ep
-		if ios.peerDataHandle != 0 {
-			ios.peerDataHandle.Close()
-		}
-	}
 	s.mu.Lock()
 	delete(s.io, cookie)
 	s.mu.Unlock()
+
+	if ios.ep != nil {
+		// Signal that we're about to close. This tells the write loop to finish flushing
+		// all the data from the dataHandle to the endpoint, and let us know when it's done.
+		err := mx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
+
+		go func() {
+			switch mxerror.Status(err) {
+			case mx.ErrOk:
+				<-ios.writeBufFlushed
+			default:
+				log.Printf("close: signal failed: %v", err)
+			}
+
+			ios.dataHandle.Close() // loopShutdown closes ep
+			if ios.peerDataHandle != 0 {
+				ios.peerDataHandle.Close()
+			}
+		}()
+	}
 }
 
 func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
