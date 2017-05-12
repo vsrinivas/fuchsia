@@ -13,6 +13,7 @@
 #include <mx/handle.h>
 #include <mx/vmo.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/auto_call.h>
 #include <mxtl/limits.h>
 #include <mxio/io.h>
 #include <stdio.h>
@@ -156,10 +157,50 @@ mx_status_t AudioStream::DumpInfo() {
         printf("; %s mute\n", resp.can_mute ? "can" : "cannot");
     }
 
+    {   // Current gain settings and caps
+        audio2_stream_cmd_plug_detect_resp resp;
+        res = GetPlugState(&resp);
+        if (res != NO_ERROR)
+            return res;
+
+        printf("  Plug State   : %splugged\n", resp.flags & AUDIO2_PDNF_PLUGGED ? "" : "un");
+        printf("  PD Caps      : %s\n", (resp.flags & AUDIO2_PDNF_HARDWIRED)
+                                        ? "hardwired"
+                                        : ((resp.flags & AUDIO2_PDNF_CAN_NOTIFY)
+                                            ? "dynamic (async)"
+                                            : "dynamic (synchronous)"));
+    }
+
     // TODO(johngro) : Add other info (supported formats, plug detect, etc...)
     // as we add commands to the protocol.
 
     return NO_ERROR;
+}
+
+mx_status_t AudioStream::GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
+                                      bool enable_notify) {
+    MX_DEBUG_ASSERT(out_state != nullptr);
+    audio2_stream_cmd_plug_detect_req req;
+
+    req.hdr.cmd = AUDIO2_STREAM_CMD_PLUG_DETECT;
+    req.hdr.transaction_id = 1;
+    req.flags = enable_notify ? AUDIO2_PDF_ENABLE_NOTIFICATIONS : AUDIO2_PDF_NONE;
+
+    mx_status_t res = DoNoFailCall(stream_ch_, req, out_state);
+    if (res != NO_ERROR)
+        printf("Failed to fetch plug detect information! (res %d)\n", res);
+
+    return res;
+}
+
+void AudioStream::DisablePlugNotifications() {
+    audio2_stream_cmd_plug_detect_req req;
+
+    req.hdr.cmd = static_cast<audio2_cmd_t>(AUDIO2_STREAM_CMD_PLUG_DETECT | AUDIO2_FLAG_NO_ACK);
+    req.hdr.transaction_id = 1;
+    req.flags = AUDIO2_PDF_DISABLE_NOTIFICATIONS;
+
+    stream_ch_.write(0, &req, sizeof(req), nullptr, 0);
 }
 
 mx_status_t AudioStream::SetMute(bool mute) {
@@ -199,7 +240,109 @@ mx_status_t AudioStream::SetGain(float gain) {
     }
 
     return res;
+}
 
+mx_status_t AudioStream::PlugMonitor(float duration) {
+    mx_time_t deadline = mx_deadline_after(MX_SEC(static_cast<double>(duration)));
+    audio2_stream_cmd_plug_detect_resp resp;
+    mx_status_t res = GetPlugState(&resp, true);
+    if (res != NO_ERROR)
+        return res;
+
+    mx_time_t last_plug_time = resp.plug_state_time
+                             ? resp.plug_state_time
+                             : mx_time_get(MX_CLOCK_MONOTONIC);
+    bool last_plug_state = (resp.flags & AUDIO2_PDNF_PLUGGED);
+    printf("Initial plug state is : %s.\n", last_plug_state ? "plugged" : "unplugged");
+
+    if (resp.flags & AUDIO2_PDNF_HARDWIRED) {
+        printf("Stream reports that it is hardwired, Monitoring is not possible.\n");
+        return NO_ERROR;
+
+    }
+
+    auto ReportPlugState = [&last_plug_time, &last_plug_state](bool plug_state,
+                                                               mx_time_t plug_time) {
+        if (plug_time == 0)
+            plug_time = mx_time_get(MX_CLOCK_MONOTONIC);
+
+        printf("Plug State now : %s (%.3lf sec since last change).\n",
+               plug_state ? "plugged" : "unplugged",
+               static_cast<double>(plug_time - last_plug_time) / 1000000000.0);
+
+        last_plug_state = plug_state;
+        last_plug_time  = plug_time;
+    };
+
+    if (resp.flags & AUDIO2_PDNF_CAN_NOTIFY) {
+        printf("Stream is capable of async notification.  Monitoring for %.2f seconds\n",
+                duration);
+
+        auto cleanup = mxtl::MakeAutoCall([this]() { DisablePlugNotifications(); });
+        while (true) {
+            mx_signals_t pending;
+            res = stream_ch_.wait_one(MX_CHANNEL_PEER_CLOSED | MX_CHANNEL_READABLE,
+                                      deadline, &pending);
+
+            if ((res != NO_ERROR) || (pending & MX_CHANNEL_PEER_CLOSED)) {
+                if (res != ERR_TIMED_OUT)
+                    printf("Error while waiting for plug notification (res %d)\n", res);
+
+                if (pending & MX_CHANNEL_PEER_CLOSED)
+                    printf("Peer closed while waiting for plug notification\n");
+
+                break;
+            }
+
+            MX_DEBUG_ASSERT(pending & MX_CHANNEL_READABLE);
+
+            audio2_stream_plug_detect_notify_t state;
+            uint32_t bytes_read;
+            res = stream_ch_.read(0, &state, sizeof(state), &bytes_read, nullptr, 0, nullptr);
+            if (res != NO_ERROR) {
+                printf("Read failure while waiting for plug notification (res %d)\n", res);
+                break;
+            }
+
+            if ((bytes_read != sizeof(state)) ||
+                (state.hdr.cmd != AUDIO2_STREAM_PLUG_DETECT_NOTIFY)) {
+                printf("Size/type mismatch while waiting for plug notification.  "
+                       "Got (%u/%u) Expected (%zu/%u)\n",
+                       bytes_read, state.hdr.cmd,
+                       sizeof(state), AUDIO2_STREAM_PLUG_DETECT_NOTIFY);
+                break;
+            }
+
+            bool plug_state = (state.flags & AUDIO2_PDNF_PLUGGED);
+            ReportPlugState(plug_state, state.plug_state_time);
+        }
+    } else {
+        printf("Stream is not capable of async notification.  Polling for %.2f seconds\n",
+                duration);
+
+        while (true) {
+            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+            if (now >= deadline)
+                break;
+
+            mx_time_t next_wake = mxtl::min(deadline, now + MX_MSEC(100u));
+            mx_nanosleep(next_wake);
+
+            mx_status_t res = GetPlugState(&resp, true);
+            if (res != NO_ERROR) {
+                printf("Failed to poll plug state (res %d)\n", res);
+                break;
+            }
+
+            bool plug_state = (resp.flags & AUDIO2_PDNF_PLUGGED);
+            if (plug_state != last_plug_state)
+                ReportPlugState(resp.flags, resp.plug_state_time);
+        }
+    }
+
+    printf("Monitoring finished.\n");
+
+    return NO_ERROR;
 }
 
 mx_status_t AudioStream::SetFormat(uint32_t frames_per_second,

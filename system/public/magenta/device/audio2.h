@@ -188,7 +188,6 @@ typedef struct audio2_stream_cmd_set_gain_req {
 typedef struct audio2_stream_cmd_set_gain_resp {
     audio2_cmd_hdr_t hdr;
     mx_status_t      result;
-
     // The current gain settings observed immediately after processing the set
     // gain request.
     bool             cur_mute;

@@ -18,6 +18,7 @@ public:
     mx_status_t DumpInfo();
     mx_status_t SetMute(bool mute);
     mx_status_t SetGain(float gain);
+    mx_status_t PlugMonitor(float duration);
 
     const char* name()  const { return name_; }
     bool        input() const { return input_; }
@@ -25,6 +26,9 @@ public:
 protected:
     friend class mxtl::unique_ptr<AudioStream>;
 
+    mx_status_t GetPlugState(audio2_stream_cmd_plug_detect_resp_t* out_state,
+                             bool enable_notify = false);
+    void        DisablePlugNotifications();
     mx_status_t SetFormat(uint32_t frames_per_second,
                           uint16_t channels,
                           audio2_sample_format_t sample_format);
