@@ -103,4 +103,5 @@ static void find_loadable_drivers(const char* path) {
 
 void enumerate_drivers(void) {
     find_loadable_drivers("/boot/lib/driver");
+    find_loadable_drivers("/system/lib/driver");
 }
