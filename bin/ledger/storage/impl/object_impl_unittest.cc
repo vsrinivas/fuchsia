@@ -9,6 +9,7 @@
 
 #include "apps/ledger/src/glue/crypto/base64.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/impl/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -43,7 +44,7 @@ class ObjectTest : public ::testing::Test {
   void SetUp() override {
     std::srand(0);
 
-    object_id_ = RandomString(32);
+    object_id_ = RandomString(kObjectHashSize);
     object_file_path_ = ObjectFilePathFor(object_dir_.path(), object_id_);
   }
 

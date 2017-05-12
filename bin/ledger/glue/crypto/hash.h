@@ -15,6 +15,8 @@ namespace glue {
 
 class SHA256StreamingHash {
  public:
+  constexpr static size_t kHashSize = 32;
+
   SHA256StreamingHash();
   ~SHA256StreamingHash();
   void Update(ftl::StringView data);

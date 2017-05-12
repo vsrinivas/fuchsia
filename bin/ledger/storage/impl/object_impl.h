@@ -7,8 +7,6 @@
 
 #include "apps/ledger/src/storage/public/object.h"
 
-#include <vector>
-
 namespace storage {
 
 class ObjectImpl : public Object {

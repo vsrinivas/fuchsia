@@ -17,6 +17,7 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
+#include "apps/ledger/src/storage/impl/constants.h"
 #include "apps/ledger/src/storage/impl/db_empty_impl.h"
 #include "apps/ledger/src/storage/impl/directory_reader.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
@@ -136,18 +137,41 @@ class FakeDbImpl : public DbEmptyImpl {
   PageStorageImpl* page_storage_;
 };
 
+// Passing PREVENT inline_behavior adds padding to the initial value, so that
+// the actual value is too big to be inlined.
 class ObjectData {
  public:
-  ObjectData(const std::string& value)
-      : value(value),
-        size(value.size()),
-        object_id(glue::SHA256Hash(value.data(), value.size())) {}
+  enum class InlineBehavior {
+    ALLOW,
+    PREVENT,
+  };
+  ObjectData(const std::string& value,
+             InlineBehavior inline_behavior = InlineBehavior::ALLOW)
+      : value(GetValue(value, inline_behavior)),
+        size(this->value.size()),
+        object_id(GetObjectId(this->value)) {}
   std::unique_ptr<DataSource> ToDataSource() {
     return DataSource::Create(mtl::WriteStringToSocket(value), size);
   }
   const std::string value;
   const size_t size;
   const std::string object_id;
+
+ private:
+  static std::string GetValue(std::string value,
+                              InlineBehavior inline_behavior) {
+    if (inline_behavior == InlineBehavior::PREVENT &&
+        value.size() < kObjectHashSize) {
+      value.resize(kObjectHashSize);
+    }
+    return value;
+  }
+  static std::string GetObjectId(const std::string& value) {
+    if (value.size() < kObjectHashSize) {
+      return value;
+    }
+    return glue::SHA256Hash(value.data(), value.size());
+  }
 };
 
 class PageStorageTest : public StorageTest {
@@ -378,8 +402,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   storage_->SetSyncDelegate(&sync);
 
   // Create a node with 2 values.
-  ObjectData lazy_value("Some data");
-  ObjectData eager_value("More data");
+  ObjectData lazy_value("Some data", ObjectData::InlineBehavior::PREVENT);
+  ObjectData eager_value("More data", ObjectData::InlineBehavior::PREVENT);
   std::vector<Entry> entries = {
       Entry{"key0", lazy_value.object_id, storage::KeyPriority::LAZY},
       Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
@@ -544,7 +568,7 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
-  ObjectData data("Some data");
+  ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
@@ -562,6 +586,27 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(data.value, file_content);
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+}
+
+TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
+  ObjectData data("Some data");
+
+  ObjectId object_id;
+  storage_->AddObjectFromLocal(
+      data.ToDataSource(),
+      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
+        EXPECT_EQ(Status::OK, returned_status);
+        object_id = std::move(returned_object_id);
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(data.object_id, object_id);
+  EXPECT_EQ(data.value, object_id);
+
+  std::string file_path = GetFilePath(object_id);
+  EXPECT_FALSE(files::IsFile(file_path));
   EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
 }
 
@@ -592,7 +637,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromSync) {
-  ObjectData data("Some data");
+  ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
 
   storage_->AddObjectFromSync(data.object_id, data.ToDataSource(),
                               [this](Status returned_status) {
@@ -609,7 +654,7 @@ TEST_F(PageStorageTest, AddObjectFromSync) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
-  ObjectData data("Some data");
+  ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
   ObjectId wrong_id = RandomId(kObjectIdSize);
 
   storage_->AddObjectFromSync(wrong_id, data.ToDataSource(),
@@ -622,7 +667,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
-  ObjectData data("Some data");
+  ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
 
   storage_->AddObjectFromSync(
       data.object_id,
@@ -876,7 +921,8 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   std::vector<ObjectId> object_ids;
   object_ids.resize(3);
   for (size_t i = 0; i < object_ids.size(); ++i) {
-    ObjectData value("value" + std::to_string(i));
+    ObjectData value("value" + std::to_string(i),
+                     ObjectData::InlineBehavior::PREVENT);
     std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
                                         value.object_id,
                                         storage::KeyPriority::EAGER}};

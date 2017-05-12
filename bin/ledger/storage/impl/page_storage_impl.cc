@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <utility>
 
 #include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/trace_callback.h"
@@ -22,6 +23,8 @@
 #include "apps/ledger/src/storage/impl/btree/diff.h"
 #include "apps/ledger/src/storage/impl/btree/iterator.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
+#include "apps/ledger/src/storage/impl/constants.h"
+#include "apps/ledger/src/storage/impl/inlined_object_impl.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -40,9 +43,14 @@ namespace storage {
 
 namespace {
 
+using StreamingHash = glue::SHA256StreamingHash;
+
 const char kLevelDbDir[] = "/leveldb";
 const char kObjectDir[] = "/objects";
 const char kStagingDir[] = "/staging";
+
+static_assert(kObjectHashSize == StreamingHash::kHashSize,
+              "Unexpected kObjectHashSize value");
 
 struct StringPointerComparator {
   using is_transparent = std::true_type;
@@ -187,16 +195,65 @@ class FileWriterOnIOThread {
   std::unique_ptr<DataSource> data_source_;
   std::string file_path_;
   ftl::UniqueFD fd_;
-  glue::SHA256StreamingHash hash_;
+  StreamingHash hash_;
 };
 
-class FileWriter {
+// Drains a data source into a storage object.
+class ObjectSourceHandler {
  public:
-  FileWriter(ftl::RefPtr<ftl::TaskRunner> main_runner,
+  ObjectSourceHandler() {}
+  virtual ~ObjectSourceHandler() {}
+
+  virtual void Start(std::function<void(Status, ObjectId)> callback) = 0;
+
+  static std::unique_ptr<ObjectSourceHandler> Create(
+      std::unique_ptr<DataSource> data_source,
+      ftl::RefPtr<ftl::TaskRunner> main_runner,
+      ftl::RefPtr<ftl::TaskRunner> io_runner,
+      const std::string& staging_dir,
+      const std::string& object_dir);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectSourceHandler);
+};
+
+class SmallObjectObjectSourceHandler : public ObjectSourceHandler {
+ public:
+  SmallObjectObjectSourceHandler(std::unique_ptr<DataSource> data_source)
+      : data_source_(std::move(data_source)) {}
+
+  void Start(std::function<void(Status, ObjectId)> callback) override {
+    callback_ = std::move(callback);
+
+    data_source_->Get([this](std::unique_ptr<DataSource::DataChunk> chunk,
+                             DataSource::Status status) {
+      if (status == DataSource::Status::ERROR) {
+        callback_(Status::IO_ERROR, "");
+        return;
+      }
+      auto view = chunk->Get();
+      content_.append(view.data(), view.size());
+      if (status == DataSource::Status::DONE) {
+        callback_(Status::OK, std::move(content_));
+      }
+    });
+  }
+
+ private:
+  std::unique_ptr<DataSource> data_source_;
+  std::string content_;
+  std::function<void(Status, ObjectId)> callback_;
+};
+
+class FileWriter : public ObjectSourceHandler {
+ public:
+  FileWriter(std::unique_ptr<DataSource> data_source,
+             ftl::RefPtr<ftl::TaskRunner> main_runner,
              ftl::RefPtr<ftl::TaskRunner> io_runner,
              const std::string& staging_dir,
              const std::string& object_dir)
-      : main_runner_(std::move(main_runner)),
+      : data_source_(std::move(data_source)),
+        main_runner_(std::move(main_runner)),
         io_runner_(std::move(io_runner)),
         file_writer_on_io_thread_(
             std::make_unique<FileWriterOnIOThread>(staging_dir, object_dir)),
@@ -216,26 +273,24 @@ class FileWriter {
     }
   }
 
-  void Start(std::unique_ptr<DataSource> data_source,
-             std::function<void(Status, ObjectId)> callback) {
+  void Start(std::function<void(Status, ObjectId)> callback) override {
     FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
 
     if (io_runner_->RunsTasksOnCurrentThread()) {
-      file_writer_on_io_thread_->Start(std::move(data_source),
+      file_writer_on_io_thread_->Start(std::move(data_source_),
                                        std::move(callback));
       return;
     }
     callback_ = std::move(callback);
     io_runner_->PostTask(ftl::MakeCopyable([
-      this, weak_this = weak_ptr_factory_.GetWeakPtr(),
-      data_source = std::move(data_source)
+      this, weak_this = weak_ptr_factory_.GetWeakPtr()
     ]() mutable {
       // Called on the io runner.
 
       // |this| cannot be deleted here, because if the destructor of FileWriter
       // has been called after Start and before this has been run, it is still
       // waiting on the lock to be released as the posts are run in-order.
-      file_writer_on_io_thread_->Start(std::move(data_source), [
+      file_writer_on_io_thread_->Start(std::move(data_source_), [
         weak_this, main_runner = main_runner_
       ](Status status, ObjectId object_id) {
         // Called on the io runner.
@@ -254,6 +309,7 @@ class FileWriter {
 
  private:
   std::mutex deletion_mutex_;
+  std::unique_ptr<DataSource> data_source_;
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
 
@@ -263,6 +319,21 @@ class FileWriter {
 
   ftl::WeakPtrFactory<FileWriter> weak_ptr_factory_;
 };
+
+std::unique_ptr<ObjectSourceHandler> ObjectSourceHandler::Create(
+    std::unique_ptr<DataSource> data_source,
+    ftl::RefPtr<ftl::TaskRunner> main_runner,
+    ftl::RefPtr<ftl::TaskRunner> io_runner,
+    const std::string& staging_dir,
+    const std::string& object_dir) {
+  if (data_source->GetSize() < kObjectHashSize) {
+    return std::make_unique<SmallObjectObjectSourceHandler>(
+        std::move(data_source));
+  }
+  return std::make_unique<FileWriter>(
+      std::move(data_source), std::move(main_runner), std::move(io_runner),
+      staging_dir, object_dir);
+}
 
 }  // namespace
 
@@ -582,6 +653,11 @@ void PageStorageImpl::GetObject(
     Location location,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
+  if (object_id.size() < kObjectHashSize) {
+    callback(Status::OK,
+             std::make_unique<InlinedObjectImpl>(object_id.ToString()));
+    return;
+  }
   std::string file_path = GetFilePath(object_id);
   if (!files::IsFile(file_path)) {
     if (location == Location::NETWORK) {
@@ -748,13 +824,13 @@ void PageStorageImpl::AddObject(
     const std::function<void(Status, ObjectId)>& callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
-  auto file_writer =
-      pending_operation_manager_.Manage(std::make_unique<FileWriter>(
-          main_runner_, io_runner_, staging_dir_, objects_dir_));
 
-  (*file_writer.first)->Start(std::move(data_source), [
-    cleanup = std::move(file_writer.second),
-    callback = std::move(traced_callback)
+  auto handler = pending_operation_manager_.Manage(
+      ObjectSourceHandler::Create(std::move(data_source), main_runner_,
+                                  io_runner_, staging_dir_, objects_dir_));
+
+  (*handler.first)->Start([
+    cleanup = std::move(handler.second), callback = std::move(traced_callback)
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();
