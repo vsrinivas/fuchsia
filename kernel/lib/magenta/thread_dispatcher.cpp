@@ -857,6 +857,9 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
     case ExceptionPort::Type::PROCESS:
         info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_PROCESS;
         break;
+    case ExceptionPort::Type::JOB:
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_JOB;
+        break;
     case ExceptionPort::Type::SYSTEM:
         info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_SYSTEM;
         break;

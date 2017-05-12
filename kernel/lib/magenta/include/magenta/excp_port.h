@@ -26,7 +26,7 @@ class PortDispatcher;
 class ExceptionPort : public mxtl::DoublyLinkedListable<mxtl::RefPtr<ExceptionPort>>
                     , public mxtl::RefCounted<ExceptionPort> {
 public:
-    enum class Type { NONE, DEBUGGER, THREAD, PROCESS, SYSTEM };
+    enum class Type { NONE, DEBUGGER, THREAD, PROCESS, JOB, SYSTEM };
 
     static mx_status_t Create(Type type, mxtl::RefPtr<PortDispatcher> port,
                               uint64_t port_key,
@@ -49,6 +49,7 @@ public:
     // Records the target that the ExceptionPort is bound to, so it can
     // unbind when the underlying PortDispatcher dies.
     void SetSystemTarget();
+    void SetTarget(const mxtl::RefPtr<JobDispatcher>& target);
     void SetTarget(const mxtl::RefPtr<ProcessDispatcher>& target);
     void SetTarget(const mxtl::RefPtr<ThreadDispatcher>& target);
 

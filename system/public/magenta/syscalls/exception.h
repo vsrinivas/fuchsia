@@ -154,6 +154,7 @@ typedef struct mx_exception_report {
 #define MX_EXCEPTION_PORT_TYPE_DEBUGGER (1u)
 #define MX_EXCEPTION_PORT_TYPE_THREAD   (2u)
 #define MX_EXCEPTION_PORT_TYPE_PROCESS  (3u)
-#define MX_EXCEPTION_PORT_TYPE_SYSTEM   (4u)
+#define MX_EXCEPTION_PORT_TYPE_JOB      (4u)
+#define MX_EXCEPTION_PORT_TYPE_SYSTEM   (5u)
 
 __END_CDECLS

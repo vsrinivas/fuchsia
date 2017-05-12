@@ -657,10 +657,7 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     }
 
     if (!quietly) {
-        AutoLock lock(&state_lock_);
-        for (auto& thread : thread_list_) {
-            thread.OnExceptionPortRemoval(eport);
-        }
+        OnExceptionPortRemoval(eport);
     }
     return true;
 }
@@ -673,6 +670,14 @@ mxtl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
 mxtl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
     AutoLock lock(&exception_lock_);
     return debugger_exception_port_;
+}
+
+void ProcessDispatcher::OnExceptionPortRemoval(
+        const mxtl::RefPtr<ExceptionPort>& eport) {
+    AutoLock lock(&state_lock_);
+    for (auto& thread : thread_list_) {
+        thread.OnExceptionPortRemoval(eport);
+    }
 }
 
 class FindProcessByKoid final : public JobEnumerator {

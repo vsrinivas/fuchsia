@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/excp_port.h>
 #include <magenta/policy_manager.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/state_tracker.h>
@@ -126,6 +127,12 @@ public:
     mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
     mxtl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
 
+    // exception handling support
+    mx_status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+    // Returns true if a port had been set.
+    bool ResetExceptionPort(bool quietly);
+    mxtl::RefPtr<ExceptionPort> exception_port();
+
 private:
     enum class State {
         READY,
@@ -178,6 +185,8 @@ private:
     RawProcessList procs_ TA_GUARDED(lock_);
 
     pol_cookie_t policy_ TA_GUARDED(lock_);
+
+    mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(lock_);
 
     // Global list of JobDispatchers, ordered by relative importance. Used to
     // find victims in low-resource situations.

@@ -14,6 +14,7 @@
 
 #include <magenta/port_dispatcher.h>
 #include <magenta/magenta.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 
@@ -39,6 +40,15 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     auto status = up->GetDispatcher(obj_handle, &dispatcher);
     if (status != MX_OK)
         return status;
+
+    auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+    if (job) {
+        if (debugger)
+            return MX_ERR_INVALID_ARGS;
+        return job->ResetExceptionPort(quietly)
+                   ? MX_OK
+                   : MX_ERR_BAD_STATE;  // No port was bound.
+    }
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
@@ -90,6 +100,22 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     status = up->GetDispatcher(obj_handle, &dispatcher);
     if (status != MX_OK)
         return status;
+
+    auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+    if (job) {
+        if (debugger)
+            return MX_ERR_INVALID_ARGS;
+        status = ExceptionPort::Create(ExceptionPort::Type::JOB,
+                                       mxtl::move(port), key, &eport);
+        if (status != MX_OK)
+            return status;
+        status = job->SetExceptionPort(eport);
+        if (status != MX_OK)
+            return status;
+
+        eport->SetTarget(job);
+        return MX_OK;
+    }
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {

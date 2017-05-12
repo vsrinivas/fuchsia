@@ -152,7 +152,8 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
-    // The process dispatcher can call us in its destructor or in Kill().
+    // The process dispatcher can call us in its destructor, Kill(),
+    // or RemoveThread().
     if (!ProcessDispatcher::JobListTraitsRaw::node_state(*process).InContainer())
         return;
     procs_.erase(*process);
@@ -432,4 +433,79 @@ status_t JobDispatcher::MakeMoreImportantThan(
     DEBUG_ASSERT(dll_importance_.InContainer());
 
     return MX_OK;
+}
+
+mx_status_t JobDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+    canary_.Assert();
+
+    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
+
+    AutoLock lock(&lock_);
+    if (exception_port_)
+        return MX_ERR_BAD_STATE;
+    exception_port_ = mxtl::move(eport);
+
+    return MX_OK;
+}
+
+class OnExceptionPortRemovalEnumerator final : public JobEnumerator {
+public:
+    OnExceptionPortRemovalEnumerator(mxtl::RefPtr<ExceptionPort> eport)
+        : eport_(mxtl::move(eport)) {}
+    OnExceptionPortRemovalEnumerator(const OnExceptionPortRemovalEnumerator&) = delete;
+
+private:
+    bool OnProcess(ProcessDispatcher* process) override {
+        process->OnExceptionPortRemoval(eport_);
+        // Keep looking.
+        return true;
+    }
+
+    mxtl::RefPtr<ExceptionPort> eport_;
+};
+
+bool JobDispatcher::ResetExceptionPort(bool quietly) {
+    canary_.Assert();
+
+    mxtl::RefPtr<ExceptionPort> eport;
+    {
+        AutoLock lock(&lock_);
+        exception_port_.swap(eport);
+        if (eport == nullptr) {
+            // Attempted to unbind when no exception port is bound.
+            return false;
+        }
+        // This method must guarantee that no caller will return until
+        // OnTargetUnbind has been called on the port-to-unbind.
+        // This becomes important when a manual unbind races with a
+        // PortDispatcher::on_zero_handles auto-unbind.
+        //
+        // If OnTargetUnbind were called outside of the lock, it would lead to
+        // a race (for threads A and B):
+        //
+        //   A: Calls ResetExceptionPort; acquires the lock
+        //   A: Sees a non-null exception_port_, swaps it into the eport local.
+        //      exception_port_ is now null.
+        //   A: Releases the lock
+        //
+        //   B: Calls ResetExceptionPort; acquires the lock
+        //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
+        //      hasn't yet been called for the port.
+        //
+        // So, call it before releasing the lock.
+        eport->OnTargetUnbind();
+    }
+
+    if (!quietly) {
+        OnExceptionPortRemovalEnumerator remover(eport);
+        if (!EnumerateChildren(&remover, true)) {
+            DEBUG_ASSERT(false);
+        }
+    }
+    return true;
+}
+
+mxtl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
+    AutoLock lock(&lock_);
+    return exception_port_;
 }

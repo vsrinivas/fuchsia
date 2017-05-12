@@ -211,6 +211,8 @@ public:
     bool ResetExceptionPort(bool debugger, bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
     mxtl::RefPtr<ExceptionPort> debugger_exception_port();
+    // |eport| can either be the process's eport or that of any parent job.
+    void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
 
     // The following two methods can be slow and inaccurate and should only be
     // called from diagnostics code.

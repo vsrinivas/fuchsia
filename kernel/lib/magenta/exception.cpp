@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <trace.h>
 
+#include <magenta/job_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 
@@ -40,59 +41,152 @@ static const char* excp_type_to_string(uint type) {
     }
 }
 
+// This isn't an "iterator" in the pure c++ sense. We don't need all that
+// complexity. I just couldn't think of a better term.
+//
+// Exception ports are tried in the following order:
+// - debugger
+// - thread
+// - process
+// - job (first owning job, then its parent job, and so on up to root job)
+// - system
+class ExceptionPortIterator final {
+public:
+    explicit ExceptionPortIterator(ThreadDispatcher* thread)
+      : thread_(thread),
+        previous_type_(ExceptionPort::Type::NONE) {
+    }
+
+    // Returns true with |out_eport| filled in for the next one to try.
+    // Returns false if there are no more to try.
+    bool Next(mxtl::RefPtr<ExceptionPort>* out_eport) {
+        mxtl::RefPtr<ExceptionPort> eport;
+        ExceptionPort::Type expected_type = ExceptionPort::Type::NONE;
+
+        while (previous_type_ != ExceptionPort::Type::SYSTEM) {
+            switch (previous_type_) {
+                case ExceptionPort::Type::NONE:
+                    eport = thread_->process()->debugger_exception_port();
+                    expected_type = ExceptionPort::Type::DEBUGGER;
+                    break;
+                case ExceptionPort::Type::DEBUGGER:
+                    eport = thread_->exception_port();
+                    expected_type = ExceptionPort::Type::THREAD;
+                    break;
+                case ExceptionPort::Type::THREAD:
+                    eport = thread_->process()->exception_port();
+                    expected_type = ExceptionPort::Type::PROCESS;
+                    break;
+                case ExceptionPort::Type::PROCESS:
+                    previous_job_ = thread_->process()->job();
+                    eport = previous_job_->exception_port();
+                    expected_type = ExceptionPort::Type::JOB;
+                    break;
+                case ExceptionPort::Type::JOB:
+                    previous_job_ = previous_job_->parent();
+                    if (previous_job_) {
+                        eport = previous_job_->exception_port();
+                        expected_type = ExceptionPort::Type::JOB;
+                    } else {
+                        eport = GetSystemExceptionPort();
+                        expected_type = ExceptionPort::Type::SYSTEM;
+                    }
+                    break;
+                default:
+                    ASSERT_MSG(0, "unexpected exception type %d",
+                               static_cast<int>(previous_type_));
+                    __UNREACHABLE;
+            }
+            previous_type_ = expected_type;
+            if (eport) {
+                DEBUG_ASSERT(eport->type() == expected_type);
+                *out_eport = mxtl::move(eport);
+                return true;
+            }
+        }
+
+        // Done, no more to try.
+        return false;
+    }
+
+private:
+    ThreadDispatcher* thread_;
+    ExceptionPort::Type previous_type_;
+    // Jobs are traversed up their hierarchy. This is the previous one.
+    mxtl::RefPtr<JobDispatcher> previous_job_;
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionPortIterator);
+};
+
 static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
-                                      ExceptionPort::Type expected_type,
                                       ThreadDispatcher* thread,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context,
                                       ThreadDispatcher::ExceptionStatus* estatus) {
-    if (!eport)
-        return MX_ERR_NOT_FOUND;
-
-    DEBUG_ASSERT(eport->type() == expected_type);
+    LTRACEF("Trying exception port type %d\n", static_cast<int>(eport->type()));
     auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
     LTRACEF("ExceptionHandlerExchange returned status %d, estatus %d\n", status, static_cast<int>(*estatus));
+
     return status;
 }
 
-static status_t try_debugger_exception_handler(ThreadDispatcher* thread,
-                                               const mx_exception_report_t* report,
-                                               const arch_exception_context_t* arch_context,
-                                               ThreadDispatcher::ExceptionStatus* estatus) {
-    LTRACE_ENTRY;
-    mxtl::RefPtr<ExceptionPort> eport = thread->process()->debugger_exception_port();
-    return try_exception_handler(eport, ExceptionPort::Type::DEBUGGER,
-                                 thread, report, arch_context, estatus);
-}
+enum handler_status_t {
+    // thread is to be resumed
+    HS_RESUME,
+    // thread was killed
+    HS_KILLED,
+    // exception not handled (process will be killed)
+    HS_NOT_HANDLED
+};
 
-static status_t try_thread_exception_handler(ThreadDispatcher* thread,
-                                             const mx_exception_report_t* report,
-                                             const arch_exception_context_t* arch_context,
-                                             ThreadDispatcher::ExceptionStatus* estatus) {
-    LTRACE_ENTRY;
-    mxtl::RefPtr<ExceptionPort> eport = thread->exception_port();
-    return try_exception_handler(eport, ExceptionPort::Type::THREAD,
-                                 thread, report, arch_context, estatus);
-}
+// Subroutine of magenta_exception_handler to simplify the code.
+// One useful thing this does is guarantee ExceptionPortIterator is properly
+// destructed.
+// |*out_processed| is set to a boolean indicating if at least one
+// handler processed the exception.
 
-static status_t try_process_exception_handler(ThreadDispatcher* thread,
-                                              const mx_exception_report_t* report,
-                                              const arch_exception_context_t* arch_context,
-                                              ThreadDispatcher::ExceptionStatus* estatus) {
-    LTRACE_ENTRY;
-    mxtl::RefPtr<ExceptionPort> eport = thread->process()->exception_port();
-    return try_exception_handler(eport, ExceptionPort::Type::PROCESS,
-                                 thread, report, arch_context, estatus);
-}
+static handler_status_t exception_handler_worker(uint exception_type,
+                                                 arch_exception_context_t* context,
+                                                 ThreadDispatcher* thread,
+                                                 bool* out_processed) {
+    *out_processed = false;
 
-static status_t try_system_exception_handler(ThreadDispatcher* thread,
-                                             const mx_exception_report_t* report,
-                                             const arch_exception_context_t* arch_context,
-                                             ThreadDispatcher::ExceptionStatus* estatus) {
-    LTRACE_ENTRY;
-    mxtl::RefPtr<ExceptionPort> eport = GetSystemExceptionPort();
-    return try_exception_handler(eport, ExceptionPort::Type::SYSTEM,
-                                 thread, report, arch_context, estatus);
+    mx_exception_report_t report;
+    ExceptionPort::BuildArchReport(&report, exception_type, context);
+
+    ExceptionPortIterator iter(thread);
+    mxtl::RefPtr<ExceptionPort> eport;
+
+    while (iter.Next(&eport)) {
+        // Initialize for paranoia's sake.
+        ThreadDispatcher::ExceptionStatus estatus = ThreadDispatcher::ExceptionStatus::UNPROCESSED;
+        auto status = try_exception_handler(eport, thread, &report, context, &estatus);
+        LTRACEF("handler returned %d/%d\n",
+                static_cast<int>(status), static_cast<int>(estatus));
+        switch (status) {
+        case MX_ERR_INTERNAL_INTR_KILLED:
+            // thread was killed, probably with mx_task_kill
+            return HS_KILLED;
+        case MX_OK:
+            switch (estatus) {
+            case ThreadDispatcher::ExceptionStatus::TRY_NEXT:
+                *out_processed = true;
+                break;
+            case ThreadDispatcher::ExceptionStatus::RESUME:
+                return HS_RESUME;
+            default:
+                ASSERT_MSG(0, "invalid exception status %d",
+                           static_cast<int>(estatus));
+                __UNREACHABLE;
+            }
+            break;
+        default:
+            ASSERT_MSG(0, "unexpected exception result %d", status);
+            __UNREACHABLE;
+        }
+    }
+
+    return HS_NOT_HANDLED;
 }
 
 // exception handler from low level architecturally-specific code
@@ -116,52 +210,20 @@ status_t magenta_exception_handler(uint exception_type,
         return MX_ERR_BAD_STATE;
     }
 
-    typedef status_t (Handler)(ThreadDispatcher* thread,
-                               const mx_exception_report_t* report,
-                               const arch_exception_context_t* arch_context,
-                               ThreadDispatcher::ExceptionStatus* estatus);
-
-    static Handler* const handlers[] = {
-        try_debugger_exception_handler,
-        try_thread_exception_handler,
-        try_process_exception_handler,
-        try_system_exception_handler
-    };
-
-    bool processed = false;
-    mx_exception_report_t report;
-    ExceptionPort::BuildArchReport(&report, exception_type, context);
-
-    for (size_t i = 0; i < countof(handlers); ++i) {
-        // Initialize for paranoia's sake.
-        ThreadDispatcher::ExceptionStatus estatus = ThreadDispatcher::ExceptionStatus::UNPROCESSED;
-        auto status = handlers[i](thread, &report, context, &estatus);
-        LTRACEF("handler returned %d/%d\n",
-                static_cast<int>(status), static_cast<int>(estatus));
-        switch (status) {
-        case MX_ERR_INTERNAL_INTR_KILLED:
-            // thread was killed, probably with mx_task_kill
+    bool processed;
+    handler_status_t hstatus = exception_handler_worker(exception_type, context,
+                                                        thread, &processed);
+    switch (hstatus) {
+        case HS_RESUME:
+            return MX_OK;
+        case HS_KILLED:
             thread->Exit();
             __UNREACHABLE;
-        case MX_ERR_NOT_FOUND:
-            continue;
-        case MX_OK:
-            switch (estatus) {
-            case ThreadDispatcher::ExceptionStatus::TRY_NEXT:
-                processed = true;
-                break;
-            case ThreadDispatcher::ExceptionStatus::RESUME:
-                return MX_OK;
-            default:
-                ASSERT_MSG(0, "invalid exception status %d",
-                           static_cast<int>(estatus));
-                __UNREACHABLE;
-            }
+        case HS_NOT_HANDLED:
             break;
         default:
-            ASSERT_MSG(0, "unexpected exception result %d", status);
+            ASSERT_MSG(0, "unexpected exception worker result %d", static_cast<int>(hstatus));
             __UNREACHABLE;
-        }
     }
 
     auto process = thread->process();
@@ -189,6 +251,5 @@ status_t magenta_exception_handler(uint exception_type,
 
     // should not get here
     panic("arch_exception_handler: fell out of thread exit somehow!\n");
-
-    return MX_ERR_NOT_SUPPORTED;
+    __UNREACHABLE;
 }

@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <magenta/exception.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
@@ -84,6 +85,19 @@ void ExceptionPort::SetSystemTarget() {
     bound_to_system_ = true;
 }
 
+void ExceptionPort::SetTarget(const mxtl::RefPtr<JobDispatcher>& target) {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT_MSG(type_ == Type::JOB,
+                     "unexpected type %d", static_cast<int>(type_));
+    DEBUG_ASSERT(!IsBoundLocked());
+    DEBUG_ASSERT(target != nullptr);
+    DEBUG_ASSERT(port_ != nullptr);
+    target_ = target;
+}
+
 void ExceptionPort::SetTarget(const mxtl::RefPtr<ProcessDispatcher>& target) {
     canary_.Assert();
 
@@ -139,27 +153,46 @@ void ExceptionPort::OnPortZeroHandles() {
         lock.release();
         // Simulate an unbinding to finish cleaning up.
         OnTargetUnbind();
-    } else if (type_ == Type::SYSTEM) {
-        DEBUG_ASSERT(bound_to_system_);
-        DEBUG_ASSERT(target_ == nullptr);
-        lock.release();  // The target may call our ::OnTargetUnbind
-        ResetSystemExceptionPort();
-    } else if (type_ == Type::PROCESS || type_ == Type::DEBUGGER) {
-        DEBUG_ASSERT(!bound_to_system_);
-        DEBUG_ASSERT(target_ != nullptr);
-        auto process = DownCastDispatcher<ProcessDispatcher>(&target_);
-        DEBUG_ASSERT(process != nullptr);
-        lock.release();  // The target may call our ::OnTargetUnbind
-        process->ResetExceptionPort(type_ == Type::DEBUGGER, default_quietness);
-    } else if (type_ == Type::THREAD) {
-        DEBUG_ASSERT(!bound_to_system_);
-        DEBUG_ASSERT(target_ != nullptr);
-        auto thread = DownCastDispatcher<ThreadDispatcher>(&target_);
-        DEBUG_ASSERT(thread != nullptr);
-        lock.release();  // The target may call our ::OnTargetUnbind
-        thread->ResetExceptionPort(default_quietness);
     } else {
-        PANIC("unexpected type %d", static_cast<int>(type_));
+        switch (type_) {
+            case Type::SYSTEM: {
+                DEBUG_ASSERT(bound_to_system_);
+                DEBUG_ASSERT(target_ == nullptr);
+                lock.release();  // The target may call our ::OnTargetUnbind
+                ResetSystemExceptionPort();
+                break;
+            }
+            case Type::JOB: {
+                DEBUG_ASSERT(!bound_to_system_);
+                DEBUG_ASSERT(target_ != nullptr);
+                auto job = DownCastDispatcher<JobDispatcher>(&target_);
+                DEBUG_ASSERT(job != nullptr);
+                lock.release();  // The target may call our ::OnTargetUnbind
+                job->ResetExceptionPort(default_quietness);
+                break;
+            }
+            case Type::PROCESS:
+            case Type::DEBUGGER: {
+                DEBUG_ASSERT(!bound_to_system_);
+                DEBUG_ASSERT(target_ != nullptr);
+                auto process = DownCastDispatcher<ProcessDispatcher>(&target_);
+                DEBUG_ASSERT(process != nullptr);
+                lock.release();  // The target may call our ::OnTargetUnbind
+                process->ResetExceptionPort(type_ == Type::DEBUGGER, default_quietness);
+                break;
+            }
+            case Type::THREAD: {
+                DEBUG_ASSERT(!bound_to_system_);
+                DEBUG_ASSERT(target_ != nullptr);
+                auto thread = DownCastDispatcher<ThreadDispatcher>(&target_);
+                DEBUG_ASSERT(thread != nullptr);
+                lock.release();  // The target may call our ::OnTargetUnbind
+                thread->ResetExceptionPort(default_quietness);
+                break;
+            }
+            default:
+                PANIC("unexpected type %d", static_cast<int>(type_));
+        }
     }
     // All cases must release the lock.
     DEBUG_ASSERT(!lock_.IsHeld());

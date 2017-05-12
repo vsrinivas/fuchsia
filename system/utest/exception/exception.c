@@ -134,12 +134,23 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 // This test assumes no presence of the "debugger API" and therefore we can't
 // resume from a segfault. Such a test is for the debugger API anyway.
 
-static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid, uint32_t flags)
+static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid,
+                                         uint32_t excp_port_type,
+                                         uint32_t flags)
 {
     mx_handle_t thread;
     mx_status_t status = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS, &thread);
     if (status < 0)
         tu_fatal("mx_object_get_child", status);
+
+    mx_info_thread_t info = tu_thread_get_info(thread);
+#if 0 // TODO(dje): there's a race here, fixed in subsequent patch
+    EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "");
+#endif
+    if (excp_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
+        EXPECT_EQ(info.wait_exception_port_type, excp_port_type, "");
+    }
+
     status = mx_task_resume(thread, MX_RESUME_EXCEPTION | flags);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
@@ -414,7 +425,7 @@ static int watchdog_thread_func(void* arg)
 }
 
 // Tests binding and unbinding behavior.
-// |object| must be a valid process or thread handle.
+// |object| must be a valid job, process, or thread handle.
 // |debugger| must only be set if |object| is a process handle. If set,
 // tests the behavior of binding the debugger eport; otherwise, binds
 // the non-debugger exception port.
@@ -452,6 +463,15 @@ static bool test_set_close_set(mx_handle_t object, bool debugger) {
               "resetting unbound exception port errantly succeeded");
 
     return true;
+}
+
+static bool job_set_close_set_test(void)
+{
+    BEGIN_TEST;
+    mx_handle_t job = tu_job_create(mx_job_default());
+    test_set_close_set(job, /* debugger */ false);
+    tu_handle_close(job);
+    END_TEST;
 }
 
 static bool process_set_close_set_test(void)
@@ -716,18 +736,53 @@ static bool dead_thread_mismatched_unbind_fails_test(void) {
 
 static void finish_basic_test(mx_handle_t child,
                               mx_handle_t eport, mx_handle_t our_channel,
-                              enum message crash_msg)
+                              enum message crash_msg, uint32_t excp_port_type)
 {
     send_msg(our_channel, crash_msg);
+
     mx_koid_t tid;
     if (read_and_verify_exception(eport, child, MX_EXCP_FATAL_PAGE_FAULT, &tid)) {
-        resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
+        resume_thread_from_exception(child, tid, excp_port_type, MX_RESUME_TRY_NEXT);
         tu_process_wait_signaled(child);
     }
 
     tu_handle_close(child);
     tu_handle_close(eport);
     tu_handle_close(our_channel);
+}
+
+static bool job_handler_test(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t job = tu_job_create(mx_job_default());
+    mx_handle_t child, our_channel;
+    start_test_child(job, NULL, &child, &our_channel);
+    mx_handle_t eport = tu_io_port_create();
+    tu_set_exception_port(job, eport, 0, 0);
+
+    finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_JOB);
+    tu_handle_close(job);
+    END_TEST;
+}
+
+static bool grandparent_job_handler_test(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t grandparent_job = tu_job_create(mx_job_default());
+    mx_handle_t parent_job = tu_job_create(grandparent_job);
+    mx_handle_t job = tu_job_create(parent_job);
+    mx_handle_t child, our_channel;
+    start_test_child(job, NULL, &child, &our_channel);
+    mx_handle_t eport = tu_io_port_create();
+    tu_set_exception_port(grandparent_job, eport, 0, 0);
+
+    finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_JOB);
+    tu_handle_close(job);
+    tu_handle_close(parent_job);
+    tu_handle_close(grandparent_job);
+    END_TEST;
 }
 
 static bool process_handler_test(void)
@@ -740,7 +795,7 @@ static bool process_handler_test(void)
     mx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(child, eport, 0, 0);
 
-    finish_basic_test(child, eport, our_channel, MSG_CRASH);
+    finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_PROCESS);
     END_TEST;
 }
 
@@ -757,7 +812,7 @@ static bool thread_handler_test(void)
     recv_msg_new_thread_handle(our_channel, &thread);
     tu_set_exception_port(thread, eport, 0, 0);
 
-    finish_basic_test(child, eport, our_channel, MSG_CRASH_AUX_THREAD);
+    finish_basic_test(child, eport, our_channel, MSG_CRASH_AUX_THREAD, MX_EXCEPTION_PORT_TYPE_THREAD);
 
     tu_handle_close(thread);
     END_TEST;
@@ -780,7 +835,7 @@ static bool debugger_handler_test(void)
     mx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
-    finish_basic_test(child, eport, our_channel, MSG_CRASH);
+    finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_DEBUGGER);
     END_TEST;
 }
 
@@ -804,7 +859,7 @@ static bool packet_pid_test(void)
     EXPECT_EQ(child_info.koid, packet_pid, "packet pid mismatch");
 
     send_msg(our_channel, MSG_DONE);
-    resume_thread_from_exception(child, packet_tid, 0);
+    resume_thread_from_exception(child, packet_tid, MX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
     wait_process_exit_from_debugger(eport, child, packet_tid);
 
     tu_handle_close(child);
@@ -825,7 +880,7 @@ static bool process_start_test(void)
     mx_koid_t tid;
     if (read_and_verify_exception(eport, child, MX_EXCP_THREAD_STARTING, &tid)) {
         send_msg(our_channel, MSG_DONE);
-        resume_thread_from_exception(child, tid, 0);
+        resume_thread_from_exception(child, tid, MX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
         wait_process_exit_from_debugger(eport, child, tid);
     }
 
@@ -994,7 +1049,7 @@ static bool trigger_test(void)
 
         mx_koid_t tid = MX_KOID_INVALID;
         (void) read_and_verify_exception(eport, child, MX_EXCP_THREAD_STARTING, &tid);
-        resume_thread_from_exception(child, tid, 0);
+        resume_thread_from_exception(child, tid, MX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
 
         mx_port_packet_t packet;
         if (read_exception(eport, &packet)) {
@@ -1005,7 +1060,9 @@ static bool trigger_test(void)
             if (packet.type != MX_EXCP_THREAD_EXITING) {
                 tid = packet.exception.tid;
                 verify_exception(&packet, child, excp_type);
-                resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
+                resume_thread_from_exception(child, tid,
+                                             MX_EXCEPTION_PORT_TYPE_DEBUGGER,
+                                             MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
                 if (read_and_verify_exception(eport, child, MX_EXCP_THREAD_EXITING, &tid2)) {
                     ASSERT_EQ(tid2, tid, "exiting tid mismatch");
@@ -1024,6 +1081,170 @@ static bool trigger_test(void)
 
     END_TEST;
 }
+
+typedef struct {
+    // The walkthrough stops at the grandparent job as we don't want
+    // crashlogger to see the exception: causes excessive noise in test output.
+    // It doesn't stop at the parent job as we want to exercise finding threads
+    // of processes of child jobs.
+    mx_handle_t grandparent_job;
+    mx_handle_t parent_job;
+    mx_handle_t job;
+
+    // the test process
+    mx_handle_t child;
+
+    // the test thread and its koid
+    mx_handle_t thread;
+    mx_koid_t tid;
+
+    mx_handle_t grandparent_job_eport;
+    mx_handle_t parent_job_eport;
+    mx_handle_t job_eport;
+    mx_handle_t child_eport;
+    mx_handle_t thread_eport;
+    mx_handle_t debugger_eport;
+
+    // the communication channel to the test process
+    mx_handle_t our_channel;
+} walkthrough_state_t;
+
+static void walkthrough_setup(walkthrough_state_t* state)
+{
+    state->grandparent_job = tu_job_create(mx_job_default());
+    state->parent_job = tu_job_create(state->grandparent_job);
+    state->job = tu_job_create(state->parent_job);
+
+    state->grandparent_job_eport = tu_io_port_create();
+    state->parent_job_eport = tu_io_port_create();
+    state->job_eport = tu_io_port_create();
+    state->child_eport = tu_io_port_create();
+    state->thread_eport = tu_io_port_create();
+    state->debugger_eport = tu_io_port_create();
+
+    start_test_child(state->job, NULL, &state->child, &state->our_channel);
+
+    send_msg(state->our_channel, MSG_CREATE_AUX_THREAD);
+    recv_msg_new_thread_handle(state->our_channel, &state->thread);
+    state->tid = tu_get_koid(state->thread);
+
+    tu_set_exception_port(state->grandparent_job, state->grandparent_job_eport, 0, 0);
+    tu_set_exception_port(state->parent_job, state->parent_job_eport, 0, 0);
+    tu_set_exception_port(state->job, state->job_eport, 0, 0);
+    tu_set_exception_port(state->child, state->child_eport, 0, 0);
+    tu_set_exception_port(state->thread, state->thread_eport, 0, 0);
+    tu_set_exception_port(state->child, state->debugger_eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+
+    // Non-debugger exception ports don't get synthetic exceptions like
+    // MX_EXCP_THREAD_STARTING. We have to trigger an architectural exception.
+    send_msg(state->our_channel, MSG_CRASH_AUX_THREAD);
+}
+
+static void walkthrough_close(mx_handle_t* handle)
+{
+    if (*handle != MX_HANDLE_INVALID) {
+        tu_handle_close(*handle);
+        *handle = MX_HANDLE_INVALID;
+    }
+}
+
+static void walkthrough_teardown(walkthrough_state_t* state)
+{
+    mx_task_kill(state->child);
+    tu_process_wait_signaled(state->child);
+
+    walkthrough_close(&state->thread);
+    walkthrough_close(&state->child);
+    walkthrough_close(&state->our_channel);
+    walkthrough_close(&state->job);
+    walkthrough_close(&state->parent_job);
+    walkthrough_close(&state->grandparent_job);
+
+    walkthrough_close(&state->debugger_eport);
+    walkthrough_close(&state->thread_eport);
+    walkthrough_close(&state->child_eport);
+    walkthrough_close(&state->job_eport);
+    walkthrough_close(&state->parent_job_eport);
+    walkthrough_close(&state->grandparent_job_eport);
+}
+
+static void walkthrough_read_and_verify_exception(const walkthrough_state_t* state,
+                                                  mx_handle_t eport)
+{
+    mx_koid_t exception_tid;
+    if (read_and_verify_exception(eport, state->child, MX_EXCP_FATAL_PAGE_FAULT, &exception_tid)) {
+        EXPECT_EQ(exception_tid, state->tid, "");
+    }
+}
+
+// Set up every kind of handler (except the system, we can't touch it), and
+// verify unbinding an exception port walks through each handler in the search
+// list (except the system exception handler which we can't touch).
+
+static bool unbind_walkthrough_by_reset_test(void)
+{
+    BEGIN_TEST;
+
+    walkthrough_state_t state;
+    walkthrough_setup(&state);
+
+    walkthrough_read_and_verify_exception(&state, state.debugger_eport);
+
+    tu_set_exception_port(state.child, MX_HANDLE_INVALID, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    walkthrough_read_and_verify_exception(&state, state.thread_eport);
+
+    tu_set_exception_port(state.thread, MX_HANDLE_INVALID, 0, 0);
+    walkthrough_read_and_verify_exception(&state, state.child_eport);
+
+    tu_set_exception_port(state.child, MX_HANDLE_INVALID, 0, 0);
+    walkthrough_read_and_verify_exception(&state, state.job_eport);
+
+    tu_set_exception_port(state.job, MX_HANDLE_INVALID, 0, 0);
+    walkthrough_read_and_verify_exception(&state, state.parent_job_eport);
+
+    tu_set_exception_port(state.parent_job, MX_HANDLE_INVALID, 0, 0);
+    walkthrough_read_and_verify_exception(&state, state.grandparent_job_eport);
+
+    walkthrough_teardown(&state);
+
+    END_TEST;
+}
+
+// Set up every kind of handler (except the system, we can't touch it), and
+// verify closing an exception port walks through each handler in the search
+// list (except the system exception handler which we can't touch).
+
+static bool unbind_walkthrough_by_close_test(void)
+{
+    BEGIN_TEST;
+
+    walkthrough_state_t state;
+    walkthrough_setup(&state);
+
+    walkthrough_read_and_verify_exception(&state, state.debugger_eport);
+
+    walkthrough_close(&state.debugger_eport);
+    walkthrough_read_and_verify_exception(&state, state.thread_eport);
+
+    walkthrough_close(&state.thread_eport);
+    walkthrough_read_and_verify_exception(&state, state.child_eport);
+
+    walkthrough_close(&state.child_eport);
+    walkthrough_read_and_verify_exception(&state, state.job_eport);
+
+    walkthrough_close(&state.job_eport);
+    walkthrough_read_and_verify_exception(&state, state.parent_job_eport);
+
+    walkthrough_close(&state.parent_job_eport);
+    walkthrough_read_and_verify_exception(&state, state.grandparent_job_eport);
+
+    walkthrough_teardown(&state);
+
+    END_TEST;
+}
+
+// This test is different than the walkthrough tests in that it tests
+// successful resumption of the child after the debugger port closes.
 
 static bool unbind_while_stopped_test(void)
 {
@@ -1098,11 +1319,6 @@ static bool unbind_rebind_while_stopped_test(void)
 
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
-    // Verify mx_info_thread_t indicates waiting for debugger response.
-    info = tu_thread_get_info(thread);
-    EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "unexpected thread state");
-    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "wrong exception port type");
-
     // Verify exception report matches current exception.
     mx_exception_report_t report;
     status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL);
@@ -1114,7 +1330,7 @@ static bool unbind_rebind_while_stopped_test(void)
 
     // Done verifying we got the same exception, send the child on its way
     // and tell it we're done.
-    resume_thread_from_exception(child, tid, 0);
+    resume_thread_from_exception(child, tid, MX_EXCEPTION_PORT_TYPE_DEBUGGER, 0);
     send_msg(our_channel, MSG_DONE);
 
     wait_process_exit_from_debugger(eport, child, tid);
@@ -1239,6 +1455,7 @@ static bool multiple_threads_registered_death_test(void)
 }
 
 BEGIN_TEST_CASE(exceptions_tests)
+RUN_TEST(job_set_close_set_test);
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(process_debugger_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
@@ -1251,6 +1468,8 @@ RUN_TEST(dead_process_debugger_matched_unbind_succeeds_test);
 RUN_TEST(dead_process_debugger_mismatched_unbind_fails_test);
 RUN_TEST(dead_thread_matched_unbind_succeeds_test);
 RUN_TEST(dead_thread_mismatched_unbind_fails_test);
+RUN_TEST(job_handler_test);
+RUN_TEST(grandparent_job_handler_test);
 RUN_TEST(process_handler_test);
 RUN_TEST(thread_handler_test);
 RUN_TEST(packet_pid_test);
@@ -1258,6 +1477,8 @@ RUN_TEST(process_start_test);
 RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
 RUN_TEST(trigger_test);
+RUN_TEST(unbind_walkthrough_by_reset_test);
+RUN_TEST(unbind_walkthrough_by_close_test);
 RUN_TEST(unbind_while_stopped_test);
 RUN_TEST(unbind_rebind_while_stopped_test);
 RUN_TEST(kill_while_stopped_at_start_test);

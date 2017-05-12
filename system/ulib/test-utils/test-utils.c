@@ -245,6 +245,15 @@ int tu_process_wait_exit(mx_handle_t process)
     return tu_process_get_return_code(process);
 }
 
+mx_handle_t tu_job_create(mx_handle_t job)
+{
+    mx_handle_t child_job;
+    mx_status_t status = mx_job_create(job, 0, &child_job);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return child_job;
+}
+
 mx_handle_t tu_io_port_create(void)
 {
     mx_handle_t handle;

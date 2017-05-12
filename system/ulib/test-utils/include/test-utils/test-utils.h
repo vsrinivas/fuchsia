@@ -107,6 +107,10 @@ int tu_process_get_return_code(mx_handle_t process);
 
 int tu_process_wait_exit(mx_handle_t process);
 
+// Create a child job of |job|.
+
+mx_handle_t tu_job_create(mx_handle_t job);
+
 // Create an io port.
 
 mx_handle_t tu_io_port_create(void);
