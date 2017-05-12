@@ -73,7 +73,8 @@ static mx_handle_t default_load_object(void* ignored,
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
         // When loading a script interpreter, we expect an absolute path.
         if (fn[0] != '/') {
-            fprintf(stderr, "dlsvc: invalid script interpreter '%s'\n", fn);
+            fprintf(stderr, "dlsvc: invalid script interpreter '%s' is "
+                    "not an absolute path\n", fn);
             return ERR_NOT_FOUND;
         }
         int fd = open(fn, O_RDONLY);
