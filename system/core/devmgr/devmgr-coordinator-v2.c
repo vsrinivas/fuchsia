@@ -218,7 +218,7 @@ static const char* devhost_bin = "/boot/bin/devhost2";
 static mx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
-    launchpad_create(devhost_job, name, &lp);
+    launchpad_create_with_jobs(devhost_job, 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
 
