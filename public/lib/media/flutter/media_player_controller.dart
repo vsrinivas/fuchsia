@@ -62,8 +62,10 @@ class MediaPlayerController extends ChangeNotifier {
   /// Opens a URI for playback. If there is no player or player proxy (because
   /// the controller has never been opened or has been closed), a new local
   /// player will be created. If there is a player or player proxy, the URL
-  /// will be set on it.
-  void open(Uri uri) {
+  /// will be set on it. |serviceName| indicates the name under which the
+  /// player will be published via NetConnector. It only applies when creating
+  /// a new local player.
+  void open(Uri uri, {String serviceName = 'media_player'}) {
     if (uri == null) {
       throw new ArgumentError.notNull('uri');
     }
@@ -75,7 +77,7 @@ class MediaPlayerController extends ChangeNotifier {
     } else {
       _active = true;
 
-      _createLocalPlayer(uri);
+      _createLocalPlayer(uri, serviceName);
 
       _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     }
@@ -155,7 +157,7 @@ class MediaPlayerController extends ChangeNotifier {
   }
 
   /// Creates a local player.
-  void _createLocalPlayer(Uri uri) {
+  void _createLocalPlayer(Uri uri, String serviceName) {
     InterfacePair<MediaRenderer> audioMediaRenderer =
       new InterfacePair<MediaRenderer>();
     _mediaService.createAudioRenderer(
@@ -190,7 +192,7 @@ class MediaPlayerController extends ChangeNotifier {
       mediaPlayer.passRequest(),
     );
 
-    _netMediaService.createNetMediaPlayer('media_player',
+    _netMediaService.createNetMediaPlayer(serviceName,
       mediaPlayer.passHandle(), _netMediaPlayer.ctrl.request());
 
     _netMediaPlayer.setUrl(uri.toString());
