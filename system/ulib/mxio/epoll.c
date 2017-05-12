@@ -223,6 +223,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         if (h == MX_HANDLE_INVALID) {
             // wait operation is not applicable to the handle
             r = ERR_INVALID_ARGS;
+            mxio_release(cookie->io);
+            free(cookie);
             goto end;
         }
 
