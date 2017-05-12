@@ -20,6 +20,8 @@ namespace netconnector {
 const IpPort NetConnectorImpl::kPort = IpPort::From_uint16_t(7777);
 // static
 const std::string NetConnectorImpl::kFuchsiaServiceName = "_fuchsia._tcp.";
+// static
+const std::string NetConnectorImpl::kLocalDeviceName = "local";
 
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
@@ -120,6 +122,11 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 void NetConnectorImpl::GetDeviceServiceProvider(
     const fidl::String& device_name,
     fidl::InterfaceRequest<app::ServiceProvider> request) {
+  if (device_name == host_name_ || device_name == kLocalDeviceName) {
+    responding_service_host_.AddBinding(std::move(request));
+    return;
+  }
+
   auto iter = params_->devices().find(device_name);
   if (iter == params_->devices().end()) {
     FTL_LOG(ERROR) << "Unrecognized device name " << device_name;

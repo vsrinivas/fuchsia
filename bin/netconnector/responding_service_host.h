@@ -32,6 +32,11 @@ class RespondingServiceHost {
     return static_cast<app::ServiceProvider*>(&service_provider_);
   }
 
+  // Adds a binding to the service provider.
+  void AddBinding(fidl::InterfaceRequest<app::ServiceProvider> request) {
+    service_provider_.AddBinding(std::move(request));
+  }
+
  private:
   std::unordered_map<std::string, app::ServiceProviderPtr>
       service_providers_by_name_;

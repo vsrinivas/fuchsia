@@ -69,6 +69,7 @@ class NetConnectorImpl : public NetConnector {
  private:
   static const IpPort kPort;
   static const std::string kFuchsiaServiceName;
+  static const std::string kLocalDeviceName;
 
   void AddDeviceServiceProvider(
       std::unique_ptr<DeviceServiceProvider> device_service_provider);
