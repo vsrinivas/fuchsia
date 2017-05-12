@@ -100,16 +100,11 @@ static void prepare_launch(launchpad_t* lp, const char* filename, int argc,
 }
 
 static mx_status_t launch(const char* filename, int argc, const char* const* argv,
-                          const char* const* envp, mx_handle_t* process) {
+                          const char* const* envp, mx_handle_t* process, const char** errmsg) {
     launchpad_t* lp = NULL;
     launchpad_create(0, filename, &lp);
     prepare_launch(lp, filename, argc, argv, envp, NULL);
-    const char* errmsg;
-    mx_status_t status;
-    if ((status = launchpad_go(lp, process, &errmsg)) < 0) {
-        //fprintf(stderr, "launch() failed: %d: %s\n", status, errmsg);
-    }
-    return status;
+    return launchpad_go(lp, process, errmsg);
 }
 
 // Add all function definitions to our nodelist, so we can package them up for a
@@ -126,7 +121,8 @@ addfuncdef(struct cmdentry *entry, void *token)
     }
 }
 
-mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t* process, int *fds)
+mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t* process, int *fds,
+                             const char** errmsg)
 {
     if (!orig_arg0)
         return ERR_NOT_FOUND;
@@ -171,21 +167,18 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
 
     prepare_launch(lp, orig_arg0, argc, (const char* const*)argv, envp, fds);
     launchpad_add_handle(lp, ast_vmo, PA_HND(PA_USER0, 0));
-    const char* errmsg;
-    if ((status = launchpad_go(lp, process, &errmsg)) < 0) {
-        //fprintf(stderr, "launch() failed: %d: %s\n", status, errmsg);
-    }
-    return status;
+    return launchpad_go(lp, process, errmsg);
 }
 
-int process_launch(int argc, const char* const* argv, const char* path, int index, mx_handle_t* process) {
+int process_launch(int argc, const char* const* argv, const char* path, int index, mx_handle_t* process,
+                   const char** errmsg) {
     mx_status_t status = NO_ERROR;
 
     // All exported variables
     const char* const* envp = (const char* const*)environment();
 
     if (strchr(argv[0], '/') != NULL) {
-        status = launch(argv[0], argc, argv, envp, process);
+        status = launch(argv[0], argc, argv, envp, process, errmsg);
         if (status == NO_ERROR)
             return 0;
     } else {
@@ -193,7 +186,7 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
         const char* filename = NULL;
         while (status != NO_ERROR && (filename = padvance(&path, argv[0])) != NULL) {
             if (--index < 0 && pathopt == NULL)
-                status = launch(filename, argc, argv, envp, process);
+                status = launch(filename, argc, argv, envp, process, errmsg);
             stunalloc(filename);
         }
     }

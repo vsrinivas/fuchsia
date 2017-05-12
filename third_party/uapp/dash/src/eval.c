@@ -32,6 +32,7 @@
  * SUCH DAMAGE.
  */
 
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -483,12 +484,13 @@ evalsubshell(union node *n, int flags)
 	if (backgnd)
 		n->type = NSUBSHELL;
 
-	mx_status_t exec_result = process_subshell(n, envp, &process, NULL);
+	const char* errmsg = NULL;
+	mx_status_t exec_result = process_subshell(n, envp, &process, NULL, &errmsg);
         if (exec_result == NO_ERROR) {
 		/* Process-tracking management */
 		forkparent(jp, n, backgnd, process);
         } else {
-		sh_error("Failed to create subshell (%d)", exec_result);
+		sh_error("Failed to create subshell (%s): %s", mx_status_get_string(exec_result), errmsg);
 		return exec_result;
 	}
 	status = 0;
@@ -572,8 +574,9 @@ evalpipe(union node *n, int flags)
 			fds[1] = STDOUT_FILENO;
 		}
 		mx_handle_t process;
+		const char* errmsg = NULL;
 		const char* const* envp = (const char* const*)environment();
-		mx_status_t status = process_subshell (lp->n, envp, &process, fds);
+		mx_status_t status = process_subshell (lp->n, envp, &process, fds, &errmsg);
 		if (fds[0] != STDIN_FILENO)
 			close(fds[0]);
 		if (fds[1] != STDOUT_FILENO)
@@ -583,13 +586,13 @@ evalpipe(union node *n, int flags)
 			forkparent(jp, lp->n, FORK_NOJOB, process);
 		} else {
 			freejob(jp);
-			sh_error("Failed to create shell");
+			sh_error("Failed to create shell: %s: %s", mx_status_get_string(status), errmsg);
 		}
 	}
 
 	if (n->npipe.backgnd == 0) {
 		status = waitforjob(jp);
-		TRACE(("evalpipe:  job done exit status %d\n", status));
+		TRACE(("evalpipe:  job done exit status: %s\n", mx_status_get_string(status)));
 	}
 	INTON;
 
@@ -623,13 +626,14 @@ evalbackcmd(union node *n, struct backcmd *result)
 		sh_error("Pipe call failed");
 	jp = makejob(n, 1);
 	mx_handle_t process;
+	const char* errmsg = NULL;
 	const char* const* envp = (const char* const*)environment();
 	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
-	mx_status_t status = process_subshell(n, envp, &process, &fds[0]);
+	mx_status_t status = process_subshell(n, envp, &process, &fds[0], &errmsg);
         close(pip[1]);
 	if (status != NO_ERROR) {
 		freejob(jp);
-		sh_error("Failed to create subshell");
+		sh_error("Failed to create subshell: %s: %s", mx_status_get_string(status), errmsg);
 	} else {
                 /* Process-tracking management */
 		forkparent(jp, n, FORK_NOJOB, process);
@@ -845,9 +849,11 @@ bail:
 	switch (cmdentry.cmdtype) {
 	default: {
 		mx_handle_t process = MX_HANDLE_INVALID;
-		status = process_launch(argc, (const char* const*)argv, path, cmdentry.u.index, &process);
+		const char* errmsg = NULL;
+		status = process_launch(argc, (const char* const*)argv, path,
+		                        cmdentry.u.index, &process, &errmsg);
 		if (status) {
-			sh_error("Cannot create child process");
+			sh_error("Cannot create child process: %s: %s", mx_status_get_string(status), errmsg);
 			break;
 		}
 		settitle(argv[0]);
