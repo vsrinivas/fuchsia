@@ -38,6 +38,7 @@ TextureCore::TextureCore(ResourceLifePreserver* life_preserver,
   sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
   sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
   sampler_info.anisotropyEnable = false;
+  sampler_info.maxAnisotropy = 1.0;
   sampler_info.unnormalizedCoordinates = use_unnormalized_coordinates;
   sampler_info.compareEnable = VK_FALSE;
   sampler_info.compareOp = vk::CompareOp::eAlways;
