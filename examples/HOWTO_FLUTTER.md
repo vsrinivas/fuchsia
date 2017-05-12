@@ -104,6 +104,7 @@ flutter_app("example_flutter_hello_world") {
   main_dart = "lib/main.dart"
   deps = [
     "//application/lib/app/dart",               # needed for ApplicationContext
+    "//apps/modular/services/module:module_dart", # module fidl dart bindings
     "//apps/modular/services/story:story_dart", # story fidl dart bindings
     "//apps/mozart/services/views:views_dart",  # view fidl dart bindings
     "//lib/fidl/dart",                          # fidl dart libraries
