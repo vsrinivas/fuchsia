@@ -5,6 +5,7 @@
 group("src") {
   deps = [
     "compositor",
+    "ime",
     "input",
     "input_manager",
     "input_reader",

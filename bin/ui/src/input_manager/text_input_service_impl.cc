@@ -29,6 +29,8 @@ TextInputServiceImpl::TextInputServiceImpl(
 
   app::ConnectToService(application_context->environment_services().get(),
                         ime_service_.NewRequest());
+  ime_service_.set_connection_error_handler(
+      [] { FTL_LOG(ERROR) << "IME Service Died."; });
 }
 
 TextInputServiceImpl::~TextInputServiceImpl() {}
@@ -42,9 +44,9 @@ void TextInputServiceImpl::GetInputMethodEditor(
   FTL_DCHECK(client);
   FTL_DCHECK(editor_request.is_pending());
 
-  FTL_VLOG(1) << "GetInputMethodEditor: view_token=" << *view_token_
-              << ", keyboard_type=" << keyboard_type
-              << ", initial_state=" << *initial_state;
+  FTL_LOG(INFO) << "GetInputMethodEditor: view_token=" << *view_token_
+                << ", keyboard_type=" << keyboard_type
+                << ", initial_state=" << *initial_state;
 
   Reset();
 
@@ -54,8 +56,8 @@ void TextInputServiceImpl::GetInputMethodEditor(
         client = std::move(client), keyboard_type,
         initial_state = std::move(initial_state)
       ](bool focused) mutable {
-        FTL_VLOG(1) << "GetInputMethodEditor: " << *view_token_ << " "
-                    << (focused ? "Focused" : "Not focused");
+        FTL_LOG(INFO) << "GetInputMethodEditor: " << *view_token_ << " "
+                      << (focused ? "Focused" : "Not focused");
 
         if (!focused)
           return;
@@ -85,8 +87,8 @@ void TextInputServiceImpl::GetInputMethodEditor(
 
 void TextInputServiceImpl::InjectInput(mozart::InputEventPtr event) {
   if (editor_) {
-    FTL_VLOG(1) << "InjectInput: view_token=" << *view_token_
-                << ", event=" << *event;
+    FTL_LOG(INFO) << "InjectInput: view_token=" << *view_token_
+                  << ", event=" << *event;
     ime_service_->InjectInput(std::move(event));
   }
 }
@@ -94,10 +96,10 @@ void TextInputServiceImpl::InjectInput(mozart::InputEventPtr event) {
 void TextInputServiceImpl::ConnectWithImeService(
     mozart::KeyboardType keyboard_type,
     mozart::TextInputStatePtr state) {
-  FTL_VLOG(1) << "ConnectWithImeService: view_token=" << *view_token_
-              << ", keyboard_type=" << keyboard_type
-              << ", initial_state=" << *state;
-
+  FTL_LOG(INFO) << "ConnectWithImeService: view_token=" << *view_token_
+                << ", keyboard_type=" << keyboard_type
+                << ", initial_state=" << *state;
+  FTL_DCHECK(ime_service_.is_bound());
   mozart::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
   client_binding_.set_connection_error_handler([this] { OnClientDied(); });
@@ -107,7 +109,7 @@ void TextInputServiceImpl::ConnectWithImeService(
 }
 
 void TextInputServiceImpl::OnEditorDied() {
-  FTL_VLOG(1) << "OnEditorDied";
+  FTL_LOG(INFO) << "OnEditorDied: Text 'field' disconnected";
   if (container_) {
     container_->Hide();
     container_.reset();
@@ -116,7 +118,7 @@ void TextInputServiceImpl::OnEditorDied() {
 }
 
 void TextInputServiceImpl::OnClientDied() {
-  FTL_VLOG(1) << "OnClientDied";
+  FTL_LOG(INFO) << "OnClientDied: ImeService disconnected.";
   Reset();
 }
 
@@ -134,8 +136,8 @@ void TextInputServiceImpl::Reset() {
 
 void TextInputServiceImpl::SetState(mozart::TextInputStatePtr state) {
   if (editor_) {
-    FTL_VLOG(1) << "SetState: view_token=" << *view_token_
-                << ", state=" << *state;
+    FTL_LOG(INFO) << "SetState: view_token=" << *view_token_
+                  << ", state=" << *state;
     editor_->SetState(std::move(state));
   } else {
     FTL_VLOG(2) << "Ignoring SetState: view_token=" << *view_token_
@@ -145,8 +147,8 @@ void TextInputServiceImpl::SetState(mozart::TextInputStatePtr state) {
 
 void TextInputServiceImpl::SetKeyboardType(mozart::KeyboardType keyboard_type) {
   if (editor_) {
-    FTL_VLOG(1) << "SetKeyboardType: view_token=" << *view_token_
-                << ", keyboard_type=" << keyboard_type;
+    FTL_LOG(INFO) << "SetKeyboardType: view_token=" << *view_token_
+                  << ", keyboard_type=" << keyboard_type;
     editor_->SetKeyboardType(keyboard_type);
   } else {
     FTL_VLOG(2) << "Ignoring SetKeyboardType: view_token=" << *view_token_
@@ -157,8 +159,8 @@ void TextInputServiceImpl::SetKeyboardType(mozart::KeyboardType keyboard_type) {
 void TextInputServiceImpl::DidUpdateState(mozart::TextInputStatePtr state,
                                           mozart::InputEventPtr event) {
   if (client_) {
-    FTL_VLOG(1) << "DidUpdateState: view_token=" << *view_token_
-                << ", state=" << *state;
+    FTL_LOG(INFO) << "DidUpdateState: view_token=" << *view_token_
+                  << ", state=" << *state;
     client_->DidUpdateState(std::move(state), std::move(event));
   } else {
     FTL_VLOG(2) << "Ignoring DidUpdateState: view_token=" << *view_token_
