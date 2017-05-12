@@ -4,6 +4,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
+#include "apps/mozart/lib/composer/session_helpers.h"
 #include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/services/composer/session.fidl.h"
 #include "lib/ftl/command_line.h"
@@ -18,7 +19,6 @@ class HelloComposerApp {
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         loop_(mtl::MessageLoop::GetCurrent()) {
     // Launch composer.
-
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file://system/apps/hello_composer_service";
     launch_info->services = services_.NewRequest();
@@ -29,7 +29,7 @@ class HelloComposerApp {
       loop_->QuitNow();
     });
 
-    // Create the composer.
+    // Connect to the composer service.
     app::ConnectToService(services_.get(), composer_.NewRequest());
   }
 

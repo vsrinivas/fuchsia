@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/composer/tests/session_helpers.h"
+#include "apps/mozart/lib/composer/session_helpers.h"
 
 namespace mozart {
-namespace composer {
-namespace test {
 
 // Helper function for all resource creation functions.
 static mozart2::OpPtr NewCreateResourceOp(uint32_t id,
@@ -249,6 +247,4 @@ mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id) {
   return op;
 }
 
-}  // namespace test
-}  // namespace composer
 }  // namespace mozart

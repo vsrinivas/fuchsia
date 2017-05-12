@@ -7,8 +7,6 @@
 #include "apps/mozart/services/composer/session.fidl.h"
 
 namespace mozart {
-namespace composer {
-namespace test {
 
 // Resource creation.
 mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo);
@@ -53,6 +51,4 @@ mozart2::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
 mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);
 
-}  // namespace test
-}  // namespace composer
 }  // namespace mozart

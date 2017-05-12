@@ -10,6 +10,7 @@ executable("hello_composer") {
   deps = [
     ":hello_composer_service",
     "//application/lib/app",
+    "//apps/mozart/lib/composer:session_helpers",
     "//apps/mozart/services/composer",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

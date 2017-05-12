@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/mozart/lib/composer/session_helpers.h"
 #include "apps/mozart/src/composer/tests/composer_test.h"
-#include "apps/mozart/src/composer/tests/session_helpers.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 

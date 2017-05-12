@@ -16,20 +16,20 @@ source_set("common") {
     "nodes/shape_node.h",
     "print_op.cc",
     "print_op.h",
-    "resources/link.h",
     "resources/link.cc",
-    "resources/material.h",
+    "resources/link.h",
     "resources/material.cc",
+    "resources/material.h",
     "resources/resource.cc",
     "resources/resource.h",
     "resources/resource_map.cc",
     "resources/resource_map.h",
     "resources/resource_type_info.h",
-    "session/session.h",
     "session/session.cc",
+    "session/session.h",
     "session/session_context.h",
-    "session/session_handler.h",
     "session/session_handler.cc",
+    "session/session_handler.h",
     "shapes/circle_shape.cc",
     "shapes/circle_shape.h",
     "shapes/shape.cc",
@@ -60,14 +60,13 @@ source_set("testing_common") {
 
   sources = [
     "tests/run_all_tests.cc",
-    "tests/session_helpers.cc",
-    "tests/session_helpers.h",
   ]
 
   public_deps = [
     ":common",
-    "//third_party/gtest",
+    "//apps/mozart/lib/composer:session_helpers",
     "//apps/mozart/lib/tests",
+    "//third_party/gtest",
   ]
 }
 
