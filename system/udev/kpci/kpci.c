@@ -85,7 +85,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
     if (parent) {
         char busdev_args[64];
         snprintf(busdev_args, sizeof(busdev_args),
-                 "pci#%u:%04x:%04x,bus-pci.so,%u", index,
+                 "pci#%u:%04x:%04x,%u", index,
                  info.vendor_id, info.device_id, index);
 
         device_add_args_t args = {

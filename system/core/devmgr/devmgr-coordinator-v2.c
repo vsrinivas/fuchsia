@@ -89,6 +89,35 @@ static mx_handle_t devhost_job;
 static port_t dc_port;
 static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 
+static driver_t* libname_to_driver(const char* libname) {
+    driver_t* drv;
+    list_for_every_entry(&list_drivers, drv, driver_t, node) {
+        if (!strcmp(libname, drv->libname)) {
+            return drv;
+        }
+    }
+    return NULL;
+}
+
+static mx_status_t libname_to_vmo(const char* libname, mx_handle_t* out) {
+    driver_t* drv = libname_to_driver(libname);
+    if (drv == NULL) {
+        log(ERROR, "devcoord: cannot find driver '%s'\n", libname);
+        return ERR_NOT_FOUND;
+    }
+    int fd = open(libname, O_RDONLY);
+    if (fd < 0) {
+        log(ERROR, "devcoord: cannot open driver '%s'\n", libname);
+        return ERR_IO;
+    }
+    mx_status_t r = mxio_get_vmo(fd, out);
+    close(fd);
+    if (r < 0) {
+        log(ERROR, "devcoord: cannot get driver vmo '%s'\n", libname);
+    }
+    return r;
+}
+
 static device_t root_device = {
     .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV | DEV_CTX_MULTI_BIND,
     .protocol_id = MX_PROTOCOL_ROOT,
@@ -532,11 +561,6 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvname) {
     return NO_ERROR;
 };
 
-static mx_status_t dc_rebind_device(device_t* dev) {
-    log(INFO, "devcoord: dc_rebind_device() '%s'\n", dev->name);
-    return ERR_NOT_SUPPORTED;
-}
-
 static mx_status_t dc_handle_device_read(device_t* dev) {
     dc_msg_t msg;
     mx_handle_t hin[2];
@@ -590,11 +614,6 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
     case DC_OP_BIND_DEVICE:
         log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
         r = dc_bind_device(dev, args);
-        break;
-
-    case DC_OP_REBIND_DEVICE:
-        log(RPC_IN, "devcoord: rpc: rebind-device '%s'\n", dev->name);
-        r = dc_rebind_device(dev);
         break;
 
     case DC_OP_DM_COMMAND:
@@ -670,7 +689,7 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
 
 // send message to devhost, requesting the creation of a device
 static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
-                                    const char* libname, const char* args) {
+                                    const char* args) {
     dc_msg_t msg;
     uint32_t mlen;
     mx_status_t r;
@@ -679,29 +698,41 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     // Shadow devices defer to the device they're shadowing,
     // otherwise we use the information from the device itself.
     device_t* info = (dev->flags & DEV_CTX_SHADOW) ? dev->parent : dev;
+    const char* libname = info->libname;
 
     if ((r = dc_msg_pack(&msg, &mlen, NULL, 0, libname, args)) < 0) {
         return r;
     }
 
-    mx_handle_t handle[2], hrpc;
+    uint32_t hcount = 0;
+    mx_handle_t handle[3], hrpc;
     if ((r = mx_channel_create(0, handle, &hrpc)) < 0) {
         return r;
     }
+    hcount++;
+
+    if (libname[0]) {
+        if ((r = libname_to_vmo(libname, handle + 1)) < 0) {
+            goto fail;
+        }
+        hcount++;
+        msg.op = DC_OP_CREATE_DEVICE;
+    } else {
+        msg.op = DC_OP_CREATE_DEVICE_STUB;
+    }
 
     if (info->hrsrc != MX_HANDLE_INVALID) {
-        if ((r = mx_handle_duplicate(info->hrsrc, MX_RIGHT_SAME_RIGHTS, handle + 1)) < 0) {
-            goto fail_duplicate;
+        if ((r = mx_handle_duplicate(info->hrsrc, MX_RIGHT_SAME_RIGHTS, handle + hcount)) < 0) {
+            goto fail;
         }
+        hcount++;
     }
 
     msg.txid = 0;
-    msg.op = DC_OP_CREATE_DEVICE;
     msg.protocol_id = dev->protocol_id;
 
-    if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, handle,
-                              (info->hrsrc != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
-        goto fail_write;
+    if ((r = mx_channel_write(dh->hrpc, 0, &msg, mlen, handle, hcount)) < 0) {
+        goto fail;
     }
 
     dev->hrpc = hrpc;
@@ -716,12 +747,10 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     list_add_tail(&dh->devices, &dev->dhnode);
     return NO_ERROR;
 
-fail_write:
-    if (info->hrsrc != MX_HANDLE_INVALID) {
-        mx_handle_close(handle[1]);
+fail:
+    while (hcount > 0) {
+        mx_handle_close(handle[--hcount]);
     }
-fail_duplicate:
-    mx_handle_close(handle[0]);
 fail_watch:
     mx_handle_close(hrpc);
     return r;
@@ -774,10 +803,16 @@ static mx_status_t dh_bind_driver(device_t* dev, const char* libname) {
         return r;
     }
 
+    mx_handle_t vmo;
+    if ((r = libname_to_vmo(libname, &vmo)) < 0) {
+        free(pending);
+        return r;
+    }
+
     msg.txid = 0;
     msg.op = DC_OP_BIND_DRIVER;
 
-    if ((r = mx_channel_write(dev->hrpc, 0, &msg, mlen, NULL, 0)) < 0) {
+    if ((r = mx_channel_write(dev->hrpc, 0, &msg, mlen, &vmo, 1)) < 0) {
         free(pending);
         return r;
     }
@@ -803,32 +838,17 @@ static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
         return dh_bind_driver(dev, drv->libname);
     }
 
-    // busdev args are "processname,driverlibname,args"
+    // busdev args are "processname,args"
     const char* arg0 = (dev->flags & DEV_CTX_SHADOW) ? dev->parent->args : dev->args;
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == NULL) {
         return ERR_INTERNAL;
     }
+    size_t arg0len = arg1 - arg0;
     arg1++;
-
-    const char* arg2 = strchr(arg1, ',');
-    if (arg2 == NULL) {
-        return ERR_INTERNAL;
-    }
-    arg2++;
-
-    size_t arg0len = arg1 - arg0 - 1;
-    size_t arg1len = arg2 - arg1 - 1;
 
     char devhostname[32];
     snprintf(devhostname, sizeof(devhostname), "devhost:%.*s", (int) arg0len, arg0);
-
-    char libname[64];
-    if (arg1len > 0) {
-        snprintf(libname, sizeof(libname), "driver/%.*s", (int) arg1len, arg1);
-    } else {
-        libname[0] = 0;
-    }
 
     mx_status_t r;
     if ((r = dc_create_shadow(dev)) < 0) {
@@ -842,7 +862,7 @@ static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev) {
             log(ERROR, "devcoord: dh_new_devhost: %d\n", r);
             return r;
         }
-        if ((r = dh_create_device(dev->shadow, dev->shadow->host, libname, arg2)) < 0) {
+        if ((r = dh_create_device(dev->shadow, dev->shadow->host, arg1)) < 0) {
             log(ERROR, "devcoord: dh_create_device: %d\n", r);
             return r;
         }

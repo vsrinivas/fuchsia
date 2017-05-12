@@ -147,9 +147,9 @@ typedef struct dc_driver {
     const char* name;
     const mx_bind_inst_t* binding;
     uint32_t binding_size;
+    uint32_t flags;
     struct list_node node;
     const char* libname;
-    uint32_t flags;
 } driver_ctx_t;
 
 #define DRIVER_NAME_LEN_MAX 64
@@ -198,18 +198,18 @@ typedef struct {
 } dc_status_t;
 
 // Coord->Host Ops
-#define DC_OP_CREATE_DEVICE  0x80000001
-#define DC_OP_BIND_DRIVER    0x80000002
+#define DC_OP_CREATE_DEVICE_STUB 0x80000001
+#define DC_OP_CREATE_DEVICE      0x80000002
+#define DC_OP_BIND_DRIVER        0x80000003
 
 // Host->Coord Ops
-#define DC_OP_STATUS         0x80000010
-#define DC_OP_ADD_DEVICE     0x80000011
-#define DC_OP_REMOVE_DEVICE  0x80000012
-#define DC_OP_BIND_DEVICE    0x80000013
-#define DC_OP_REBIND_DEVICE  0x00000014
+#define DC_OP_STATUS             0x80000010
+#define DC_OP_ADD_DEVICE         0x80000011
+#define DC_OP_REMOVE_DEVICE      0x80000012
+#define DC_OP_BIND_DEVICE        0x80000013
 
 // Host->Coord Ops for DmCtl
-#define DC_OP_DM_COMMAND     0x80000020
+#define DC_OP_DM_COMMAND         0x80000020
 
 mx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,

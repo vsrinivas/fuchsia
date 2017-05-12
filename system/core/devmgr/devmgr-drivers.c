@@ -78,7 +78,7 @@ static void find_loadable_drivers(const char* path) {
         if (de->d_name[0] == '.') {
             continue;
         }
-        int r = snprintf(libname, sizeof(libname), "driver/%s", de->d_name);
+        int r = snprintf(libname, sizeof(libname), "%s/%s", path, de->d_name);
         if ((r < 0) || (r >= (int)sizeof(libname))) {
             continue;
         }
@@ -92,9 +92,9 @@ static void find_loadable_drivers(const char* path) {
 
         if (status) {
             if (status == ERR_NOT_FOUND) {
-                printf("devhost: no driver info in '%s'\n", libname);
+                printf("devcoord: no driver info in '%s'\n", libname);
             } else {
-                printf("devhost: error reading info from '%s'\n", libname);
+                printf("devcoord: error reading info from '%s'\n", libname);
             }
         }
     }
