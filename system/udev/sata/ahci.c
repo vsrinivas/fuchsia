@@ -27,17 +27,6 @@
 #include "sata.h"
 
 // clang-format off
-#define INTEL_VID           (0x8086)
-#define LYNX_POINT_AHCI_DID (0x8c02)
-#define WILDCAT_AHCI_DID    (0x9c83)
-#define SUNRISE_AHCI_DID    (0x9d03)
-#define ICH9_AHCI_DID       (0x2922)
-#define SERIES_6_AHCI_DID   (0x1c02)
-#define SUNRISE_POINT_H_AHCI_DID (0xa102)
-
-#define AMD_AHCI_VID        (0x1022)
-#define AMD_FCH_AHCI_DID    (0x7801)
-
 #define TRACE 0
 
 #if TRACE
@@ -834,20 +823,9 @@ static mx_driver_ops_t ahci_driver_ops = {
 };
 
 // clang-format off
-MAGENTA_DRIVER_BEGIN(ahci, ahci_driver_ops, "magenta", "0.1", 13)
+MAGENTA_DRIVER_BEGIN(ahci, ahci_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
-    BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),
-    // intel devices
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, LYNX_POINT_AHCI_DID), // Simics
-    BI_MATCH_IF(EQ, BIND_PCI_DID, WILDCAT_AHCI_DID),    // Pixel2
-    BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
-    BI_MATCH_IF(EQ, BIND_PCI_DID, ICH9_AHCI_DID),       // QEMU
-    BI_MATCH_IF(EQ, BIND_PCI_DID, SERIES_6_AHCI_DID),   // 6x era chipset (Sandy/Ivy Bridge)
-    BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_POINT_H_AHCI_DID), // H110 chipset
-    BI_ABORT(),
-    // AMD devices
-    BI_LABEL(1),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_FCH_AHCI_DID),
-    BI_ABORT(),
+    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
+    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
+    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
 MAGENTA_DRIVER_END(ahci)
