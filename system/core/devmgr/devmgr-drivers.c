@@ -60,7 +60,7 @@ static void found_driver(magenta_note_driver_t* note, mx_bind_inst_t* bi, void* 
     }
 #endif
 
-    coordinator_new_driver(ctx);
+    coordinator_new_driver(ctx, note->version);
 }
 
 static void find_loadable_drivers(const char* path) {

@@ -160,7 +160,7 @@ void do_unpublish(device_t* dev);
 void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job);
 void coordinator(void);
 
-void coordinator_new_driver(driver_ctx_t* ctx);
+void coordinator_new_driver(driver_ctx_t* ctx, const char* version);
 
 void enumerate_drivers(void);
 

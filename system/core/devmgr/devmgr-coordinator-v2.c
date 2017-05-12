@@ -888,17 +888,13 @@ static bool is_root_driver(driver_t* drv) {
         (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
 }
 
-void coordinator_new_driver(driver_t* ctx) {
-    //printf("driver: %s @ %s\n", ctx->drv.name, ctx->libname);
-    list_add_tail(&list_drivers, &ctx->node);
-
-    if (is_root_driver(ctx)) {
-        dc_attempt_bind(ctx, &root_device);
-        return;
-    }
-    if (is_misc_driver(ctx)) {
-        dc_attempt_bind(ctx, &misc_device);
-        return;
+void coordinator_new_driver(driver_t* drv, const char* version) {
+    if (version[0] == '!') {
+        // debugging / development hack
+        // prioritize drivers with version "!..." over others
+        list_add_head(&list_drivers, &drv->node);
+    } else {
+        list_add_tail(&list_drivers, &drv->node);
     }
 }
 
@@ -941,6 +937,15 @@ void coordinator(void) {
     do_publish(&root_device, &misc_device);
 
     enumerate_drivers();
+
+    driver_t* drv;
+    list_for_every_entry(&list_drivers, drv, driver_t, node) {
+        if (is_root_driver(drv)) {
+            dc_attempt_bind(drv, &root_device);
+        } else if (is_misc_driver(drv)) {
+            dc_attempt_bind(drv, &misc_device);
+        }
+    }
 
     for (;;) {
         mx_status_t status;
