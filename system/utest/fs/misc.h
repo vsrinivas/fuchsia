@@ -11,7 +11,11 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <magenta/compiler.h>
+
 // Filesystem test utilities
+
+__BEGIN_CDECLS;
 
 #define ASSERT_STREAM_ALL(op, fd, buf, len) \
     ASSERT_EQ(op(fd, (buf), (len)), (ssize_t)(len), "");
@@ -40,7 +44,7 @@ bool check_remount(void);
 
 static inline uint32_t fnv1a32(const void* ptr, size_t len) {
     uint32_t n = FNV32_OFFSET_BASIS;
-    const uint8_t* data = ptr;
+    const uint8_t* data = (const uint8_t*) ptr;
     while (len-- > 0) {
         n = (n ^ (*data++)) * FNV32_PRIME;
     }
@@ -52,7 +56,7 @@ static inline uint32_t fnv1a32(const void* ptr, size_t len) {
 
 static inline uint64_t fnv1a64(const void* ptr, size_t len) {
     uint64_t n = FNV64_OFFSET_BASIS;
-    const uint8_t* data = ptr;
+    const uint8_t* data = (const uint8_t*) ptr;
     while (len-- > 0) {
         n = (n ^ (*data++)) * FNV64_PRIME;
     }
@@ -116,3 +120,5 @@ static inline void srand32(rand32_t* state, const char* str) {
 static inline void srand64(rand64_t* state, const char* str) {
     state->n = fnv1a64str(str);
 }
+
+__END_CDECLS;
