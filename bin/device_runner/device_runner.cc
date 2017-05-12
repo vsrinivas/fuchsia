@@ -67,7 +67,6 @@ class Settings {
 
     ledger_repository_for_testing =
         command_line.HasOption("ledger_repository_for_testing");
-    user_auth_config_file = command_line.HasOption("user_auth_config_file");
     ignore_monitor = command_line.HasOption("ignore_monitor");
     no_minfs = command_line.HasOption("no_minfs");
 
@@ -93,7 +92,6 @@ class Settings {
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
       --ledger_repository_for_testing
-      --user_auth_config_file
       --ignore_monitor
       --no_minfs
     DEVICE_NAME: Name which user shell uses to identify this device.
@@ -112,7 +110,6 @@ class Settings {
   AppConfig story_shell;
 
   bool ledger_repository_for_testing;
-  bool user_auth_config_file;
   bool ignore_monitor;
   bool no_minfs;
 
