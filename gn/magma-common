@@ -1,7 +1,6 @@
 {
     "imports": [
-        "boringssl_libcrypto",
-        "vulkan_loader_and_layers"
+        "boringssl_libcrypto"
     ],
     "labels": [
         "//magma:libmagma",
