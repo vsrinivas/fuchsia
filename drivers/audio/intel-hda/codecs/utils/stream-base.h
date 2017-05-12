@@ -73,6 +73,8 @@ protected:
     // Overloads to control stream behavior.
     virtual mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_);
     virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_);
+    virtual void        OnChannelDeactivateLocked(const DispatcherChannel& channel)
+        __TA_REQUIRES(obj_lock_);
     virtual mx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_);
     virtual mx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock_);
@@ -85,6 +87,10 @@ protected:
     virtual void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
     virtual void OnSetGainLocked(const audio2_proto::SetGainReq& req,
                                  audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
+    virtual void OnPlugDetectLocked(DispatcherChannel* response_channel,
+                                    const audio2_proto::PlugDetectReq& req,
+                                    audio2_proto::PlugDetectResp* out_resp)
+        __TA_REQUIRES(obj_lock_);
 
     // Debug logging
     virtual void PrintDebugPrefix() const;
@@ -118,6 +124,8 @@ private:
         __TA_REQUIRES(obj_lock_);
     mx_status_t DoSetGainLocked(DispatcherChannel* channel, const audio2_proto::SetGainReq& req)
         __TA_REQUIRES(obj_lock_);
+    mx_status_t DoPlugDetectLocked(DispatcherChannel* channel,
+                                   const audio2_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
 
     mx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf,

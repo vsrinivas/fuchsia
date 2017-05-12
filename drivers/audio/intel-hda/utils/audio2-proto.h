@@ -26,6 +26,13 @@ using GetGainResp = audio2_stream_cmd_get_gain_resp;
 using SetGainReq  = audio2_stream_cmd_set_gain_req;
 using SetGainResp = audio2_stream_cmd_set_gain_resp;
 
+// AUDIO2_STREAM_CMD_PLUG_DETECT
+using PlugDetectReq  = audio2_stream_cmd_plug_detect_req_t;
+using PlugDetectResp = audio2_stream_cmd_plug_detect_resp_t;
+
+// AUDIO2_STREAM_PLUG_DETECT_NOTIFY
+using PlugDetectNotify = audio2_stream_plug_detect_notify_t;
+
 // AUDIO2_RB_CMD_GET_FIFO_DEPTH
 using RingBufGetFifoDepthReq  = audio2_rb_cmd_get_fifo_depth_req_t;
 using RingBufGetFifoDepthResp = audio2_rb_cmd_get_fifo_depth_resp_t;

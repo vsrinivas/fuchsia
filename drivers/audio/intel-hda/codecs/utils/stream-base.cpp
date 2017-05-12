@@ -261,6 +261,7 @@ finished:
     // Something went fatally wrong when trying to send the result back to the
     // caller.  Close the stream channel.
     if ((res != NO_ERROR) && (stream_channel_ != nullptr)) {
+        OnChannelDeactivateLocked(*stream_channel_);
         stream_channel_->Deactivate(false);
         stream_channel_ = nullptr;
     }
@@ -485,6 +486,23 @@ mx_status_t IntelHDAStreamBase::DoSetGainLocked(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
+mx_status_t IntelHDAStreamBase::DoPlugDetectLocked(DispatcherChannel* channel,
+                                                   const audio2_proto::PlugDetectReq& req) {
+    if (req.hdr.cmd & AUDIO2_FLAG_NO_ACK) {
+        OnPlugDetectLocked(channel, req, nullptr);
+        return NO_ERROR;
+    }
+
+    // Fill out the response header, then let the stream implementation fill out
+    // the payload.
+    audio2_proto::PlugDetectResp resp;
+    resp.hdr = req.hdr;
+    OnPlugDetectLocked(channel, req, &resp);
+
+    MX_DEBUG_ASSERT(channel != nullptr);
+    return channel->Write(&resp, sizeof(resp));
+}
+
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
 case _ioctl:                                                    \
     if (req_size != sizeof(req._payload)) {                     \
@@ -513,6 +531,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
         audio2_proto::StreamSetFmtReq set_format;
         audio2_proto::GetGainReq      get_gain;
         audio2_proto::SetGainReq      set_gain;
+        audio2_proto::PlugDetectReq   plug_detect;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -528,12 +547,13 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
         (req.hdr.transaction_id == AUDIO2_INVALID_TRANSACTION_ID)))
         return ERR_INVALID_ARGS;
 
-    // Strip the NO_ACK flag from the request before deciding the dispatch target.
+    // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio2_proto::Cmd>(req.hdr.cmd & ~AUDIO2_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT, set_format, DoSetStreamFormatLocked, false);
-        HANDLE_REQ(AUDIO2_STREAM_CMD_GET_GAIN,   get_gain,   DoGetGainLocked,         false);
-        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_GAIN,   set_gain,   DoSetGainLocked,         true);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_FORMAT,  set_format,  DoSetStreamFormatLocked, false);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_GET_GAIN,    get_gain,    DoGetGainLocked,         false);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_SET_GAIN,    set_gain,    DoSetGainLocked,         true);
+        HANDLE_REQ(AUDIO2_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked,      true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return ERR_NOT_SUPPORTED;
@@ -543,6 +563,9 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
 
 void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& channel) {
     mxtl::AutoLock obj_lock(&obj_lock_);
+
+    // Let our subclass know that this channel is going away.
+    OnChannelDeactivateLocked(channel);
 
     // Is this the privileged stream channel?
     if (channel.owner_ctx()) {
@@ -641,6 +664,7 @@ mx_status_t IntelHDAStreamBase::OnActivateLocked() {
 }
 
 void IntelHDAStreamBase::OnDeactivateLocked() { }
+void IntelHDAStreamBase::OnChannelDeactivateLocked(const DispatcherChannel& channel) { }
 
 mx_status_t IntelHDAStreamBase::OnDMAAssignedLocked() {
     return PublishDeviceLocked();
@@ -692,6 +716,20 @@ void IntelHDAStreamBase::OnSetGainLocked(const audio2_proto::SetGainReq& req,
     out_resp->result   = (illegal_mute || illegal_gain)
                        ? ERR_INVALID_ARGS
                        : NO_ERROR;
+}
+
+void IntelHDAStreamBase::OnPlugDetectLocked(DispatcherChannel* response_channel,
+                                            const audio2_proto::PlugDetectReq& req,
+                                            audio2_proto::PlugDetectResp* out_resp) {
+    // Nothing to do if no response is expected.
+    if (out_resp == nullptr) {
+        MX_DEBUG_ASSERT(req.hdr.cmd & AUDIO2_FLAG_NO_ACK);
+        return;
+    }
+
+    out_resp->flags = static_cast<audio2_pd_notify_flags_t>(AUDIO2_PDNF_HARDWIRED |
+                                                            AUDIO2_PDNF_PLUGGED);
+    out_resp->plug_state_time = 0;
 }
 
 }  // namespace codecs
