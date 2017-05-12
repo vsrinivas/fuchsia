@@ -83,6 +83,10 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
 }
 
 static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
+    if (flags != 0) {
+        // TODO: support MSG_OOB
+        return ERR_NOT_SUPPORTED;
+    }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
@@ -108,6 +112,10 @@ static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
 }
 
 static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int flags) {
+    if (flags != 0) {
+        // TODO: support MSG_OOB
+        return ERR_NOT_SUPPORTED;
+    }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
@@ -353,6 +361,10 @@ static ssize_t mxsio_write_dgram(mxio_t* io, const void* data, size_t len) {
 }
 
 static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
+    if (flags != 0) {
+        // TODO: support MSG_OOB
+        return ERR_NOT_SUPPORTED;
+    }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address
@@ -406,6 +418,10 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
 }
 
 static ssize_t mxsio_sendmsg_dgram(mxio_t* io, const struct msghdr* msg, int flags) {
+    if (flags != 0) {
+        // TODO: MSG_OOB
+        return ERR_NOT_SUPPORTED;
+    }
     // TODO: support flags and control messages
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if connected, can't specify address

@@ -157,6 +157,10 @@ int listen(int fd, int backlog) {
 
 int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             int flags) {
+    if (flags & ~SOCK_NONBLOCK) {
+        return ERRNO(EINVAL);
+    }
+
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
