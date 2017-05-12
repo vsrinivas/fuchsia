@@ -8,8 +8,13 @@
 
 BUILDDIR="${1:-build-magenta-pc-x86-64}"
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
+BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
 
-echo "data/kernel.bin=$KERNEL" > /tmp/guest.manifest
+echo "
+data/kernel.bin=$KERNEL
+data/bootdata.bin=$BOOTDATA
+" > /tmp/guest.manifest
+
 $BUILDDIR/tools/mkbootfs \
     --target=boot \
     -o $BUILDDIR/bootdata-with-kernel.bin \

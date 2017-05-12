@@ -24,7 +24,7 @@ static void acpi_header(ACPI_TABLE_HEADER* header, const char* signature, uint32
 }
 
 static void* madt_subtable(void* base, uint32_t off, uint8_t type, uint8_t length) {
-    ACPI_SUBTABLE_HEADER* subtable = (ACPI_SUBTABLE_HEADER*)((uint8_t*)base + off);
+    ACPI_SUBTABLE_HEADER* subtable = (ACPI_SUBTABLE_HEADER*)(base + off);
     subtable->Type = type;
     subtable->Length = length;
     return subtable;

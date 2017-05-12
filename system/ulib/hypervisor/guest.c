@@ -121,26 +121,29 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
     if (bootdata_off + bootdata_len > size)
         return ERR_BUFFER_TOO_SMALL;
 
+    // Bootdata container.
     bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
     header->type = BOOTDATA_CONTAINER;
     header->extra = BOOTDATA_MAGIC;
     header->length = bootdata_len;
 
-    bootdata_off = BOOTDATA_ALIGN(bootdata_off + sizeof(bootdata_t));
+    // ACPI root table pointer.
+    bootdata_off += sizeof(bootdata_t);
     bootdata_t* bootdata = (bootdata_t*)(addr + bootdata_off);
     bootdata->type = BOOTDATA_ACPI_RSDP;
     bootdata->length = sizeof(uint64_t);
 
-    bootdata_off = bootdata_off + sizeof(bootdata_t);
+    bootdata_off += sizeof(bootdata_t);
     uint64_t* acpi_rsdp = (uint64_t*)(addr + bootdata_off);
     *acpi_rsdp = acpi_off;
 
-    bootdata_off = BOOTDATA_ALIGN(bootdata_off + sizeof(uint64_t));
+    // E820 memory map.
+    bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
     bootdata = (bootdata_t*)(addr + bootdata_off);
     bootdata->type = BOOTDATA_E820_TABLE;
     bootdata->length = sizeof(e820entry_t) * 3;
 
-    bootdata_off = bootdata_off + sizeof(bootdata_t);
+    bootdata_off += sizeof(bootdata_t);
     e820entry_t* entry = (e820entry_t*)(addr + bootdata_off);
     memset(entry, 0, bootdata->length);
     // 0 to min(size, 3500mb) is available.
@@ -158,8 +161,8 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
         entry[2].type = kE820Ram;
     } else {
         // Else, remove the last entry.
-        header->length -= sizeof(e820entry_t);
-        bootdata->length -= sizeof(e820entry_t);
+        header->length -= BOOTDATA_ALIGN(sizeof(e820entry_t));
+        bootdata->length -= BOOTDATA_ALIGN(sizeof(e820entry_t));
     }
 
     return NO_ERROR;
