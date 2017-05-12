@@ -18,13 +18,6 @@ static const size_t kVmoSize = 1u << 30;
 static const uintptr_t kKernelLoadOffset = 0x100000;
 static const uintptr_t kBootdataOffset = 0x800000;
 
-// Header blob for magenta.bin
-typedef struct {
-    bootdata_t hdr_file;
-    bootdata_t hdr_kernel;
-    bootdata_kernel_t data_kernel;
-} magenta_kernel_t;
-
 static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry,
                                 uintptr_t* end_off) {
     uintptr_t header_addr = addr + kKernelLoadOffset;

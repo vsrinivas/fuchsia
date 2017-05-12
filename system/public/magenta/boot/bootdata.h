@@ -111,6 +111,12 @@ typedef struct {
     uint64_t reserved;
 } bootdata_kernel_t;
 
+typedef struct {
+    bootdata_t hdr_file;
+    bootdata_t hdr_kernel;
+    bootdata_kernel_t data_kernel;
+} magenta_kernel_t;
+
 __END_CDECLS;
 #endif
 

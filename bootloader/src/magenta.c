@@ -45,12 +45,6 @@ static int add_bootdata(void** ptr, size_t* avail,
     return 0;
 }
 
-typedef struct {
-    bootdata_t hdr_file;
-    bootdata_t hdr_kernel;
-    bootdata_kernel_t data_kernel;
-} magenta_kernel_t;
-
 int boot_magenta(efi_handle img, efi_system_table* sys,
                  void* image, size_t isz, void* ramdisk, size_t rsz,
                  void* cmdline, size_t csz) {
