@@ -169,7 +169,10 @@ void ProcessDispatcher::Exit(int retcode) {
     {
         AutoLock lock(&state_lock_);
 
-        DEBUG_ASSERT(state_ == State::RUNNING);
+        // check that we're in the RUNNING state or we're racing with something
+        // else that has already pushed us until the DYING state
+        DEBUG_ASSERT_MSG(state_ == State::RUNNING || state_ == State::DYING,
+                "state is %s", StateToString(state_));
 
         retcode_ = retcode;
 
