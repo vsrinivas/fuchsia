@@ -860,15 +860,15 @@ class Rfcsr49 : public RfcsrRegister<49> {
     BIT_FIELD(ep, 6, 2);
 };
 
-class RxInfo : public BitField<uint16_t, uint32_t, 0> {
+class RxInfo : public AddressableBitField<uint16_t, uint32_t, 0> {
   public:
-    constexpr explicit RxInfo(uint32_t val) : BitField(val) {}
+    constexpr explicit RxInfo(uint32_t val) : AddressableBitField(val) {}
     BIT_FIELD(usb_dma_rx_pkt_len, 0, 16);
 };
 
-class RxDesc : public BitField<uint16_t, uint32_t, 0 /* unused */> {
+class RxDesc : public BitField<uint32_t> {
   public:
-    constexpr explicit RxDesc(uint32_t val) : BitField(val) {}
+    constexpr explicit RxDesc(uint32_t val) : BitField<uint32_t>(val) {}
     BIT_FIELD(ba, 0, 1);
     BIT_FIELD(data, 1, 1);
     BIT_FIELD(nulldata, 2, 1);
@@ -891,9 +891,9 @@ class RxDesc : public BitField<uint16_t, uint32_t, 0 /* unused */> {
     BIT_FIELD(plcp_signal, 20, 12);
 };
 
-class Rxwi0 : public BitField<uint16_t, uint32_t, 1> {
+class Rxwi0 : public AddressableBitField<uint16_t, uint32_t, 1> {
   public:
-    constexpr explicit Rxwi0(uint32_t val) : BitField(val) {}
+    constexpr explicit Rxwi0(uint32_t val) : AddressableBitField(val) {}
     BIT_FIELD(wcid, 0, 8);
     BIT_FIELD(key_idx, 8, 2);
     BIT_FIELD(bss_idx, 10, 3);
@@ -902,9 +902,9 @@ class Rxwi0 : public BitField<uint16_t, uint32_t, 1> {
     BIT_FIELD(tid, 28, 4);
 };
 
-class Rxwi1 : public BitField<uint16_t, uint32_t, 2> {
+class Rxwi1 : public AddressableBitField<uint16_t, uint32_t, 2> {
   public:
-    constexpr explicit Rxwi1(uint32_t val) : BitField(val) {}
+    constexpr explicit Rxwi1(uint32_t val) : AddressableBitField(val) {}
     BIT_FIELD(frag, 0, 4);
     BIT_FIELD(seq, 4, 12);
     BIT_FIELD(mcs, 16, 7);
@@ -914,22 +914,22 @@ class Rxwi1 : public BitField<uint16_t, uint32_t, 2> {
     BIT_FIELD(phy_mode, 30, 2);
 };
 
-class Rxwi2 : public BitField<uint16_t, uint32_t, 3> {
+class Rxwi2 : public AddressableBitField<uint16_t, uint32_t, 3> {
   public:
-    constexpr explicit Rxwi2(uint32_t val) : BitField(val) {}
+    constexpr explicit Rxwi2(uint32_t val) : AddressableBitField(val) {}
     BIT_FIELD(rssi0, 0, 8);
     BIT_FIELD(rssi1, 8, 8);
     BIT_FIELD(rssi2, 8, 8);
 };
 
-class Rxwi3 : public BitField<uint16_t, uint32_t, 4> {
+class Rxwi3 : public AddressableBitField<uint16_t, uint32_t, 4> {
   public:
-    constexpr explicit Rxwi3(uint32_t val) : BitField(val) {}
+    constexpr explicit Rxwi3(uint32_t val) : AddressableBitField(val) {}
     BIT_FIELD(snr0, 0, 8);
     BIT_FIELD(snr1, 8, 8);
 };
 
-class TxInfo : public BitField<uint16_t, uint32_t, 0> {
+class TxInfo : public BitField<uint32_t> {
   public:
     BIT_FIELD(tx_pkt_length, 0, 16);
     BIT_FIELD(wiv, 24, 1);
@@ -938,7 +938,7 @@ class TxInfo : public BitField<uint16_t, uint32_t, 0> {
     BIT_FIELD(tx_burst, 31, 1);
 };
 
-class Txwi0: public BitField<uint16_t, uint32_t, 0> {
+class Txwi0: public BitField<uint32_t> {
   public:
     BIT_FIELD(frag, 0, 1);
     BIT_FIELD(mmps, 1, 1);
@@ -955,7 +955,7 @@ class Txwi0: public BitField<uint16_t, uint32_t, 0> {
     BIT_FIELD(mimo, 31, 1);
 };
 
-class Txwi1 : public BitField<uint16_t, uint32_t, 1> {
+class Txwi1 : public BitField<uint32_t> {
   public:
     BIT_FIELD(ack, 0, 1);
     BIT_FIELD(nseq, 1, 1);
@@ -965,12 +965,12 @@ class Txwi1 : public BitField<uint16_t, uint32_t, 1> {
     BIT_FIELD(tx_packet_id, 28, 4);
 };
 
-class Txwi2 : public BitField<uint16_t, uint32_t, 2> {
+class Txwi2 : public BitField<uint32_t> {
   public:
     BIT_FIELD(iv, 0, 32);
 };
 
-class Txwi3 : public BitField<uint16_t, uint32_t, 3> {
+class Txwi3 : public BitField<uint32_t> {
   public:
     BIT_FIELD(eiv, 0, 32);
 };

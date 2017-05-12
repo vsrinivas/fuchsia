@@ -24,6 +24,7 @@ driver_module("rt5370") {
   defines = [ "MX_DEBUGLEVEL=2" ]
 
   deps = [
+    "//drivers/wifi/common",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
