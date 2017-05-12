@@ -26,7 +26,7 @@ cp $build_dir/user.bootfs $bootfs
 
 echo "Recommended bootserver command:"
 echo ""
-echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $fuchsia_root/out/user.bootfs"
+echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $fuchsia_root/out/user.bootfs -- magenta.autorun.system=/system/bin/magma_autorun"
 echo ""
 echo "Recommended loglistener command:"
 echo ""

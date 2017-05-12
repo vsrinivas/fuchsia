@@ -22,7 +22,6 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
-#include "magma_util/platform/magenta/magenta_platform_launcher.h"
 #include "magma_util/platform/magenta/magenta_platform_trace.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_buffer.h"
@@ -432,13 +431,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     device.release();
 
     DLOG("initialized magma intel display driver");
-
-#if MAGMA_TEST_DRIVER
-    constexpr uint32_t kArgc = 2;
-    const char* argv[kArgc]{"/boot/bin/sh", "/system/autorun"};
-    magma::MagentaPlatformLauncher::Launch(mx_job_default(), "autorun", kArgc, argv, nullptr,
-                                           nullptr, nullptr, 0);
-#endif
 
     return NO_ERROR;
 }
