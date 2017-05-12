@@ -39,23 +39,23 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &data_};
+
     GetEntries((*snapshot_).get(), kFocusKeyPrefix, &entries_,
-               nullptr /* next_token */, [this](ledger::Status status) {
+               nullptr /* next_token */, [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "QueryCall() "
                                   << "GetEntries() " << status;
-                   Done(std::move(data_));
                    return;
                  }
 
-                 Cont();
+                 Cont(flow);
                });
   }
 
-  void Cont() {
+  void Cont(FlowToken flow) {
     if (entries_.size() == 0) {
       // No existing entries.
-      Done(std::move(data_));
       return;
     }
 
@@ -74,8 +74,6 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
 
       data_.push_back(std::move(focus_info));
     }
-
-    Done(std::move(data_));
   }
 
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;

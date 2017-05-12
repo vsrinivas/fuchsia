@@ -89,11 +89,13 @@ std::string UrlEncode(const std::string& value) {
 
   return escaped.str();
 }
+
+// Exactly one of success_callback and failure_callback is ever invoked.
 void Post(const std::string& request_body,
           network::URLLoader* const url_loader,
           const std::function<void()>& success_callback,
-          const std::function<void(std::string)> failure_callback,
-          const std::function<bool(rapidjson::Document)> set_token_callback) {
+          const std::function<void(std::string)>& failure_callback,
+          const std::function<bool(rapidjson::Document)>& set_token_callback) {
   auto encoded_request_body = UrlEncode(request_body);
 
   mx::vmo data;
@@ -277,28 +279,30 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   FTL_DISALLOW_COPY_AND_ASSIGN(TokenProviderFactoryImpl);
 };
 
-class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<void> {
+class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
  public:
   GoogleOAuthTokensCall(OperationContainer* const container,
                         const std::string& account_id,
                         const bool refresh_id_token,
                         OAuthTokenManagerApp* const app,
                         const std::function<void(fidl::String)>& callback)
-      : Operation(container, [] {}),
+      : Operation(container, callback),
         account_id_(account_id),
         refresh_id_token_(refresh_id_token),
-        app_(app),
-        callback_(callback) {
+        app_(app) {
     Ready();
   }
 
  private:
   void Run() override {
-    std::string refresh_token =
+    FlowToken flow{this, &result_};
+
+    const std::string refresh_token =
         app_->user_creds_[account_id_]["refresh_token"].GetString();
 
     if (refresh_token.empty()) {
-      return Failure("User not found");
+      Failure(flow, "User not found");
+      return;
     }
 
     // Check for existing expiry time before fetching it from server.
@@ -311,21 +315,36 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<void> {
 
       if ((current_ts - creation_ts) < token_expiry) {
         // access/id token is still valid.
-        return Success();
+        Success(flow);
+        return;
       }
     }
 
     // Existing tokens expired, exchange refresh token for fresh access and
     // id tokens.
-    std::string request_body = "refresh_token=" + refresh_token +
-                               "&client_id=" + kClientId +
-                               "&grant_type=refresh_token";
+    const std::string request_body = "refresh_token=" + refresh_token +
+                                     "&client_id=" + kClientId +
+                                     "&grant_type=refresh_token";
+
     app_->application_context_->ConnectToEnvironmentService(
         network_service_.NewRequest());
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    Post(request_body, url_loader_.get(), [this] { Success(); },
-         [this](const std::string error_message) { Failure(error_message); },
+    // This flow exlusively branches below, so we need to put it in a shared
+    // container from which it can be removed once for all branches.
+    FlowTokenHolder branch{flow};
+
+    Post(request_body, url_loader_.get(),
+         [this, branch] {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Success(*flow);
+         },
+         [this, branch](const std::string error_message) {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Failure(*flow, error_message);
+         },
          [this](rapidjson::Document doc) { return GetTokens(std::move(doc)); });
   }
 
@@ -359,29 +378,26 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<void> {
     return true;
   }
 
-  void Success() {
+  void Success(FlowToken flow) {
     if (!refresh_id_token_) {
-      callback_(app_->oauth_tokens_[account_id_]["access_token"].GetString());
+      result_ = app_->oauth_tokens_[account_id_]["access_token"].GetString();
     } else {
-      callback_(app_->oauth_tokens_[account_id_]["id_token"].GetString());
+      result_ = app_->oauth_tokens_[account_id_]["id_token"].GetString();
     }
-
-    Done();
   }
 
-  void Failure(const std::string& error_message) {
+  void Failure(FlowToken flow, const std::string& error_message) {
     FTL_LOG(ERROR) << error_message;
-    callback_(nullptr);
-    Done();
   }
 
   const std::string account_id_;
   const bool refresh_id_token_;
   OAuthTokenManagerApp* const app_;
-  const std::function<void(fidl::String)> callback_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
+
+  fidl::String result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GoogleOAuthTokensCall);
 };
@@ -405,6 +421,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
  private:
   // |Operation|
   void Run() override {
+    // No FlowToken used here; calling Done() directly is more suitable, because
+    // of the flow of control through web_view::WebRequestDelegate.
+
     auto view_owner = SetupWebView();
 
     // Set a delegate which will parse incoming URLs for authorization code.
@@ -415,7 +434,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
         this, web_request_delegate.NewRequest());
     web_view_->SetWebRequestDelegate(std::move(web_request_delegate));
 
-    std::vector<std::string> scopes(kScopes.begin(), kScopes.end());
+    const std::vector<std::string> scopes(kScopes.begin(), kScopes.end());
     std::string joined_scopes = ftl::JoinStrings(scopes, "+");
 
     std::string url = kGoogleOAuthEndpoint;
@@ -424,18 +443,19 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
     url += kRedirectUri;
     url += "&client_id=";
     url += kClientId;
+
     web_view_->SetUrl(std::move(url));
 
     app_->account_provider_context_->GetAuthenticationContext(
         account_->id, auth_context_.NewRequest());
+
     auth_context_->StartOverlay(std::move(view_owner));
   }
 
   // |web_view::WebRequestDelegate|
   void WillSendRequest(const fidl::String& incoming_url) override {
-    std::string uri = incoming_url.get();
-    std::string prefix = kRedirectUri;
-    prefix += "?code=";
+    const std::string uri = incoming_url.get();
+    const std::string prefix = std::string{kRedirectUri} + "?code=";
     auto pos = uri.find(prefix);
     if (pos != 0) {
       return;
@@ -444,12 +464,14 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
     auto code = uri.substr(prefix.size(), std::string::npos);
     // There is a '#' character at the end.
     code.pop_back();
-    std::string request_body =
+
+    const std::string request_body =
         "code=" + code + "&redirect_uri=" + kRedirectUri +
         "&client_id=" + kClientId + "&grant_type=authorization_code";
 
     app_->application_context_->ConnectToEnvironmentService(
         network_service_.NewRequest());
+
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
     Post(request_body, url_loader_.get(), [this] { Success(); },

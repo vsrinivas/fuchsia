@@ -46,31 +46,32 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &page_id_};
+
     // TODO(planders) Use Zac's function to generate page id (once it's ready)
     ledger_->GetPage(to_array(device_id_), device_page_.NewRequest(),
-                     [this](ledger::Status status) {
+                     [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
-                         FTL_LOG(ERROR)
-                             << "Ledger GetPage returned status: " << status;
-                         Finish();
-                       } else {
-                         Cont1();
+                         FTL_LOG(ERROR) << "Ledger.GetPage() status=" << status;
+                         return;
                        }
+
+                       Cont1(flow);
                      });
   }
 
-  void Cont1() {
-    device_page_->StartTransaction([this](ledger::Status status) {
+  void Cont1(FlowToken flow) {
+    device_page_->StartTransaction([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "Ledger StartTransaction returned status: " << status;
-        Finish();
-      } else {
-        Cont2();
+        FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+        return;
       }
+
+      Cont2(flow);
     });
   }
 
-  void Cont2() {
+  void Cont2(FlowToken flow) {
     std::string json;
     StoryEntry story;
     story.story_id = story_id_;
@@ -80,37 +81,33 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
     // TODO(planders) use random key
     device_page_->PutWithPriority(
         to_array(timestamp_), to_array(json), ledger::Priority::EAGER,
-        [this](ledger::Status status) {
+        [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "Ledger PutWithPriority returned status: "
-                           << status;
-            Finish();
-          } else {
-            Cont3();
+            FTL_LOG(ERROR) << "Page.PutWithPriority() status=" << status;
+            return;
           }
+
+          Cont3(flow);
         });
   }
 
-  void Cont3() {
-    device_page_->Commit([this](ledger::Status status) {
+  void Cont3(FlowToken flow) {
+    device_page_->Commit([this, flow](ledger::Status status) {
       if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "Ledger Commit returned status: " << status;
-        Finish();
-      } else {
-        Cont4();
+        FTL_LOG(ERROR) << "Page.Commit() status=" << status;
+        return;
       }
+
+      Cont4(flow);
     });
   }
 
-  void Cont4() {
-    device_page_->GetId([this](fidl::Array<uint8_t> page_id) {
+  void Cont4(FlowToken flow) {
+    device_page_->GetId([this, flow](fidl::Array<uint8_t> page_id) {
       FTL_LOG(INFO) << "Retrieved page " << to_string(page_id);
       page_id_ = to_string(page_id);
-      Finish();
     });
   }
-
-  void Finish() { Done(std::move(page_id_)); }
 
   ledger::Ledger* const ledger_;  // not owned
   const fidl::String device_id_;

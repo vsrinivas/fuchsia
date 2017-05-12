@@ -50,52 +50,50 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &result_};
+
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this](ledger::Status status) {
+                       [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
                                           << " Page.GetSnapshot() " << status;
-                           Done(nullptr);
                            return;
                          }
 
-                         Cont();
+                         Cont(flow);
                        });
   }
 
-  void Cont() {
-    page_snapshot_->Get(
-        to_array(link_key_), [this](ledger::Status status, mx::vmo value) {
-          if (status != ledger::Status::OK) {
-            if (status != ledger::Status::KEY_NOT_FOUND) {
-              // It's expected that the key is not found when the link is
-              // accessed for the first time. Don't log an error then.
-              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                             << " PageSnapshot.Get() " << status;
-            }
-            Done(nullptr);
-            return;
-          }
+  void Cont(FlowToken flow) {
+    page_snapshot_->Get(to_array(link_key_), [this, flow](ledger::Status status,
+                                                          mx::vmo value) {
+      if (status != ledger::Status::OK) {
+        if (status != ledger::Status::KEY_NOT_FOUND) {
+          // It's expected that the key is not found when the link is
+          // accessed for the first time. Don't log an error then.
+          FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                         << " PageSnapshot.Get() " << status;
+        }
+        return;
+      }
 
-          std::string value_as_string;
-          if (value) {
-            if (!mtl::StringFromVmo(value, &value_as_string)) {
-              FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
-                             << " Unable to extract data.";
-              Done(nullptr);
-              return;
-            }
-          }
+      std::string value_as_string;
+      if (value) {
+        if (!mtl::StringFromVmo(value, &value_as_string)) {
+          FTL_LOG(ERROR) << "ReadLinkDataCall() " << link_key_
+                         << " Unable to extract data.";
+          return;
+        }
+      }
 
-          fidl::String result;
-          result.Swap(&value_as_string);
-          Done(result);
-        });
+      result_.Swap(&value_as_string);
+    });
   }
 
   ledger::Page* const page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
   const std::string link_key_;
+  fidl::String result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
@@ -116,14 +114,16 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
 
  private:
   void Run() override {
-    page_->Put(
-        to_array(link_key_), to_array(data_), [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "WriteLinkDataCall() link key =" << link_key_
-                           << ", Page.Put() " << status;
-          }
-          Done();
-        });
+    FlowToken flow{this};
+
+    page_->Put(to_array(link_key_), to_array(data_),
+               [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR)
+                       << "WriteLinkDataCall() link key =" << link_key_
+                       << ", Page.Put() " << status;
+                 }
+               });
   }
 
   ledger::Page* const page_;  // not owned
@@ -147,45 +147,42 @@ class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &result_};
+
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this](ledger::Status status) {
+                       [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "ReadModuleDataCall() "
                                           << "Page.GetSnapshot() " << status;
-                           Done(nullptr);
                            return;
                          }
 
-                         Cont();
+                         Cont(flow);
                        });
   }
 
-  void Cont() {
+  void Cont(FlowToken flow) {
     page_snapshot_->Get(
         to_array(MakeModuleKey(module_path_)),
-        [this](ledger::Status status, mx::vmo value) {
+        [this, flow](ledger::Status status, mx::vmo value) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "ReadModuleDataCall() "
                            << " PageSnapshot.GetEntries() " << status;
-            Done(nullptr);
             return;
           }
 
           std::string value_as_string;
           if (!mtl::StringFromVmo(value, &value_as_string)) {
             FTL_LOG(ERROR) << "Unable to extract data.";
-            Done(nullptr);
             return;
           }
 
-          ModuleDataPtr module_data;
-          if (!XdrRead(value_as_string, &module_data, XdrModuleData)) {
-            Done(nullptr);
+          if (!XdrRead(value_as_string, &result_, XdrModuleData)) {
+            result_.reset();
             return;
           }
 
-          FTL_DCHECK(!module_data.is_null());
-          Done(std::move(module_data));
+          FTL_DCHECK(!result_.is_null());
         });
   }
 
@@ -193,6 +190,7 @@ class StoryStorageImpl::ReadModuleDataCall : Operation<ModuleDataPtr> {
   ledger::PageSnapshotPtr page_snapshot_;
   const fidl::Array<fidl::String> module_path_;
   std::vector<ledger::EntryPtr> entries_;
+  ModuleDataPtr result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadModuleDataCall);
 };
@@ -210,34 +208,34 @@ class StoryStorageImpl::ReadAllModuleDataCall
 
  private:
   void Run() override {
+    FlowToken flow{this, &data_};
+
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this](ledger::Status status) {
+                       [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "ReadModuleDataCall() "
                                           << "Page.GetSnapshot() " << status;
-                           Done(std::move(data_));
                            return;
                          }
 
-                         Cont1();
+                         Cont1(flow);
                        });
   }
 
-  void Cont1() {
+  void Cont1(FlowToken flow) {
     GetEntries(page_snapshot_.get(), kModuleKeyPrefix, &entries_,
-               nullptr /* next_token */, [this](ledger::Status status) {
+               nullptr /* next_token */, [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
                                   << "GetEntries() " << status;
-                   Done(std::move(data_));
                    return;
                  }
 
-                 Cont2();
+                 Cont2(flow);
                });
   }
 
-  void Cont2() {
+  void Cont2(FlowToken flow) {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
@@ -255,8 +253,6 @@ class StoryStorageImpl::ReadAllModuleDataCall
 
       data_.push_back(std::move(module_data));
     }
-
-    Done(std::move(data_));
   }
 
   ledger::Page* page_;  // not owned
@@ -285,6 +281,8 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     auto module_data = ModuleData::New();
     module_data->url = module_url_;
     module_data->module_path = module_path_.Clone();
@@ -295,12 +293,11 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
 
     page_->PutWithPriority(
         to_array(MakeModuleKey(module_path_)), to_array(json),
-        ledger::Priority::EAGER, [this](ledger::Status status) {
+        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "WriteModuleDataCall() " << module_url_
                            << " Page.PutWithPriority() " << status;
           }
-          Done();
         });
   }
 
@@ -330,6 +327,8 @@ class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     auto per_device = PerDeviceStoryInfo::New();
     per_device->device_id = device_id_;
     per_device->story_id = story_id_;
@@ -341,13 +340,11 @@ class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
 
     page_->PutWithPriority(
         to_array(MakePerDeviceKey(per_device->device_id)), to_array(json),
-        ledger::Priority::EAGER, [this](ledger::Status status) {
+        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "WriteDeviceDataCall() " << device_id_
                            << " Page.PutWithPriority() " << status;
           }
-
-          Done();
         });
   }
 

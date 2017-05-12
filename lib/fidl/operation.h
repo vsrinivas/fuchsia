@@ -136,6 +136,10 @@ class OperationBase {
   // container.
   OperationContainer* const container_;
 
+  // Used by FlowTokenBase to suppress Done() calls after the Operation instance
+  // was deleted.
+  ftl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
 
@@ -162,6 +166,7 @@ class Operation : public OperationBase {
   }
 
   class FlowToken;
+  class FlowTokenHolder;
 
  private:
   ResultCall result_call_;
@@ -188,6 +193,7 @@ class Operation<void> : public OperationBase {
   }
 
   class FlowToken;
+  class FlowTokenHolder;
 
  private:
   ResultCall result_call_;
@@ -223,29 +229,31 @@ class Operation<void> : public OperationBase {
 // becomes less verbose.
 class OperationBase::FlowTokenBase {
  public:
-  FlowTokenBase();
+  FlowTokenBase(OperationBase* op);
   FlowTokenBase(const FlowTokenBase& other);
   ~FlowTokenBase();
 
  protected:
   int refcount() const { return *refcount_; }
+  bool weak_op() const { return weak_op_.get() != nullptr; }
 
  private:
   int* const refcount_;  // shared between copies of FlowToken.
+  ftl::WeakPtr<OperationBase> weak_op_;
 };
 
 template <typename T>
 class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
  public:
   FlowToken(Operation<T>* const op, T* const result)
-      : op_(op), result_(result) {}
+      : FlowTokenBase(op), op_(op), result_(result) {}
 
   FlowToken(const FlowToken& other)
       : FlowTokenBase(other), op_(other.op_), result_(other.result_) {}
 
   ~FlowToken() {
     // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
-    if (refcount() == 1) {
+    if (refcount() == 1 && weak_op()) {
       op_->Done(std::move(*result_));
     }
   }
@@ -260,13 +268,13 @@ class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
 // this difficult.
 class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
  public:
-  FlowToken(Operation<void>* const op) : op_(op) {}
+  FlowToken(Operation<void>* const op) : FlowTokenBase(op), op_(op) {}
 
   FlowToken(const FlowToken& other) : FlowTokenBase(other), op_(other.op_) {}
 
   ~FlowToken() {
     // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
-    if (refcount() == 1) {
+    if (refcount() == 1 && weak_op()) {
       op_->Done();
     }
   }
@@ -275,11 +283,72 @@ class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
   Operation<void>* const op_;  // not owned
 };
 
+// Sometimes the asynchronous flow of control that is represented by a FlowToken
+// branches, but is actually continued on exactly one branch. For example, when
+// a method is called on an external fidl service, and the callback from that
+// method is also scheduled as a timeout to avoid blocking the operation queue
+// in case the external service misbehaves and doesn't respond.
+//
+// In that situation, it would be wrong to place two copies of the flow token on
+// the capture list of both callbacks, because then the flow would only be
+// Done() once both callbacks are destroyed. In the case where the second
+// callback is a timeout, this might be really late.
+//
+// Instead, a single copy of the flow token is placed in a shared container, a
+// reference to which is placed on the capture list of both callbacks. The first
+// callback that is invoked removes the flow token from the shared container and
+// propagates it from there.
+//
+// That way, the flow token in the shared container also acts as call-once flag.
+//
+// The flow token holder is a simple wrapper of a shared ptr to a unique ptr. We
+// define it because such a nested smart pointer is rather unwieldy to write
+// every time.
+template <typename T>
+class Operation<T>::FlowTokenHolder {
+ public:
+  using FlowToken = Operation<T>::FlowToken;
+
+  FlowTokenHolder(const FlowToken& flow)
+      : ptr_(std::make_shared<std::unique_ptr<FlowToken>>(
+            std::make_unique<FlowToken>(flow))) {}
+
+  FlowTokenHolder(const FlowTokenHolder& other) : ptr_(other.ptr_) {}
+
+  // Calling this method again on any copy of the same FlowTokenHolder yields a
+  // nullptr. Clients can check for that to enforce call once semantics.
+  //
+  // The method is const because it only mutates the pointed to object. It's
+  // useful to exploit this loophole because this way lambdas that have a
+  // FlowTokenHolder on their capture list don't need to be mutable.
+  std::unique_ptr<FlowToken> Continue() const { return std::move(*ptr_); }
+
+ private:
+  std::shared_ptr<std::unique_ptr<FlowToken>> ptr_;
+};
+
+// TODO(mesch): Compiler insists on the specialized definition, even though the
+// generic definition should cover the void case too.
+class Operation<void>::FlowTokenHolder {
+ public:
+  using FlowToken = Operation<void>::FlowToken;
+
+  FlowTokenHolder(const FlowToken& flow)
+      : ptr_(std::make_shared<std::unique_ptr<FlowToken>>(
+            std::make_unique<FlowToken>(flow))) {}
+
+  FlowTokenHolder(const FlowTokenHolder& other) : ptr_(other.ptr_) {}
+
+  std::unique_ptr<FlowToken> Continue() const { return std::move(*ptr_); }
+
+ private:
+  std::shared_ptr<std::unique_ptr<FlowToken>> ptr_;
+};
+
 // Following is a list of commonly used operations.
 
-// An operation which immediately calls its result callback.
-// This is useful for making sure that all operations that run before this have
-// completed.
+// An operation which immediately calls its result callback. This is useful for
+// making sure that all operations that run before this have completed.
 class SyncCall : public Operation<void> {
  public:
   SyncCall(OperationContainer* const container, ResultCall result_call)

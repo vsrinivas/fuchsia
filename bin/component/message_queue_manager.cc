@@ -198,12 +198,12 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &result_};
     page_->GetSnapshot(
         snapshot_.NewRequest(), nullptr, nullptr,
-        [this](ledger::Status status) {
+        [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Ledger.GetSnapshot() " << status;
-            Done(std::move(nullptr));
             return;
           }
 
@@ -212,36 +212,31 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
 
           key_ = MakeMessageQueueTokenKey(component_namespace_,
                                           component_instance_id_, queue_name_);
-          snapshot_->Get(
-              to_array(key_), [this](ledger::Status status, mx::vmo value) {
-                if (status == ledger::Status::KEY_NOT_FOUND) {
-                  // Key wasn't found, that's not an error.
-                  Done(nullptr);
-                  return;
-                }
+          snapshot_->Get(to_array(key_), [this, flow](ledger::Status status,
+                                                      mx::vmo value) {
+            if (status == ledger::Status::KEY_NOT_FOUND) {
+              // Key wasn't found, that's not an error.
+              return;
+            }
 
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "Failed to get key " << key_;
-                  Done(nullptr);
-                  return;
-                }
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "Failed to get key " << key_;
+              return;
+            }
 
-                if (!value) {
-                  FTL_LOG(ERROR) << "Key " << key_ << " has no value";
-                  Done(nullptr);
-                  return;
-                }
+            if (!value) {
+              FTL_LOG(ERROR) << "Key " << key_ << " has no value";
+              return;
+            }
 
-                std::string queue_token;
-                if (!mtl::StringFromVmo(value, &queue_token)) {
-                  FTL_LOG(ERROR)
-                      << "VMO for key " << key_ << " couldn't be copied.";
-                  Done(nullptr);
-                  return;
-                }
-
-                Done(queue_token);
-              });
+            std::string queue_token;
+            if (!mtl::StringFromVmo(value, &queue_token)) {
+              FTL_LOG(ERROR)
+                  << "VMO for key " << key_ << " couldn't be copied.";
+              return;
+            }
+            result_ = queue_token;
+          });
         });
   }
 
@@ -251,6 +246,8 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   const std::string queue_name_;
   ledger::PageSnapshotPtr snapshot_;
   std::string key_;
+
+  fidl::String result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
@@ -272,56 +269,51 @@ class MessageQueueManager::GetMessageSenderCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     page_->GetSnapshot(
         snapshot_.NewRequest(), nullptr, nullptr,
-        [this](ledger::Status status) {
+        [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "Failed to get snapshot for page";
-            Done();
             return;
           }
 
           std::string key = MakeMessageQueueKey(token_);
-          snapshot_->Get(
-              to_array(key), [this](ledger::Status status, mx::vmo value) {
-                if (status != ledger::Status::OK) {
-                  if (status != ledger::Status::KEY_NOT_FOUND) {
-                    // It's expected that the key is not found when the link
-                    // is accessed for the first time. Don't log an error
-                    // then.
-                    FTL_LOG(ERROR) << "GetMessageSenderCall() " << token_
-                                   << " PageSnapshot.Get() " << status;
-                  }
-                  Done();
-                  return;
-                }
+          snapshot_->Get(to_array(key), [this, flow](ledger::Status status,
+                                                     mx::vmo value) {
+            if (status != ledger::Status::OK) {
+              if (status != ledger::Status::KEY_NOT_FOUND) {
+                // It's expected that the key is not found when the link
+                // is accessed for the first time. Don't log an error
+                // then.
+                FTL_LOG(ERROR) << "GetMessageSenderCall() " << token_
+                               << " PageSnapshot.Get() " << status;
+              }
+              return;
+            }
 
-                std::string value_as_string;
-                if (value) {
-                  if (!mtl::StringFromVmo(value, &value_as_string)) {
-                    FTL_LOG(ERROR) << "Unable to extract data.";
-                    Done();
-                    return;
-                  }
-                }
+            std::string value_as_string;
+            if (value) {
+              if (!mtl::StringFromVmo(value, &value_as_string)) {
+                FTL_LOG(ERROR) << "Unable to extract data.";
+                return;
+              }
+            }
 
-                if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
-                  Done();
-                  return;
-                }
+            if (!XdrRead(value_as_string, &result_, XdrMessageQueueInfo)) {
+              return;
+            }
 
-                if (!result_.is_complete()) {
-                  FTL_LOG(WARNING) << "Queue token " << result_.queue_token
-                                   << " not found in the ledger.";
-                  Done();
-                  return;
-                }
+            if (!result_.is_complete()) {
+              FTL_LOG(WARNING) << "Queue token " << result_.queue_token
+                               << " not found in the ledger.";
+              return;
+            }
 
-                message_queue_manager_->GetMessageQueueStorage(result_)
-                    ->AddMessageSenderBinding(std::move(request_));
-
-                Done();
-              });
+            message_queue_manager_->GetMessageQueueStorage(result_)
+                ->AddMessageSenderBinding(std::move(request_));
+          });
         });
   }
 
@@ -359,60 +351,82 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this](fidl::String token) {
+        message_queue_info_.queue_name, [this, flow](fidl::String token) {
           if (token) {
-            message_queue_info_.queue_token = token.get();
             // Queue token was found in the ledger.
-            Finish();
+            message_queue_info_.queue_token = token.get();
+            Finish(flow);
             return;
           }
 
-          // Not found in the ledger, time to create a new message
-          // queue.
-          message_queue_info_.queue_token = GenerateQueueToken();
-
-          std::string json;
-          XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
-
-          page_->StartTransaction([](ledger::Status status) {});
-
-          std::string message_queue_token_key = MakeMessageQueueTokenKey(
-              message_queue_info_.component_namespace,
-              message_queue_info_.component_instance_id,
-              message_queue_info_.queue_name);
-
-          page_->Put(to_array(message_queue_token_key),
-                     to_array(message_queue_info_.queue_token),
-                     [](ledger::Status status) {});
-
-          std::string message_queue_key =
-              MakeMessageQueueKey(message_queue_info_.queue_token);
-
-          page_->Put(to_array(message_queue_key), to_array(json),
-                     [](ledger::Status status) {});
-
-          page_->Commit([this](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FTL_LOG(ERROR) << "Error creating queue in ledger: " << status;
-              Done();
-              return;
-            }
-
-            FTL_LOG(INFO) << "Created queue in ledger: "
-                          << message_queue_info_.queue_token;
-
-            Finish();
-          });
-        });
+	  Cont(flow);
+	});
   }
 
-  void Finish() {
+  void Cont(FlowToken flow) {
+    // Not found in the ledger, time to create a new message
+    // queue.
+    message_queue_info_.queue_token = GenerateQueueToken();
+
+    page_->StartTransaction([](ledger::Status status) {
+	if (status != ledger::Status::OK) {
+	  FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+	}
+      });
+
+    const std::string message_queue_token_key = MakeMessageQueueTokenKey(
+	message_queue_info_.component_namespace,
+	message_queue_info_.component_instance_id,
+	message_queue_info_.queue_name);
+
+    page_->Put(
+	to_array(message_queue_token_key),
+	to_array(message_queue_info_.queue_token),
+	[key = message_queue_token_key](ledger::Status status) {
+	  if (status != ledger::Status::OK) {
+	    FTL_LOG(ERROR)
+	      << "Page.Put() " << key << ", status=" << status;
+	  }
+	});
+
+    const std::string message_queue_key =
+      MakeMessageQueueKey(message_queue_info_.queue_token);
+
+    std::string json;
+    XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
+
+    page_->Put(
+	to_array(message_queue_key),
+	to_array(json),
+	[key = message_queue_key](ledger::Status status) {
+	  if (status != ledger::Status::OK) {
+	    FTL_LOG(ERROR)
+	      << "Page.Put() " << key << ", status=" << status;
+	  }
+	});
+
+    page_->Commit(
+	[this, flow](ledger::Status status) {
+	  if (status != ledger::Status::OK) {
+	    FTL_LOG(ERROR) << "Page.Commit() status=" << status;
+	    return;
+	  }
+
+	  FTL_LOG(INFO) << "Created message queue: "
+			<< message_queue_info_.queue_token;
+
+	  Finish(flow);
+	});
+  }
+
+  void Finish(FlowToken flow) {
     message_queue_manager_->GetMessageQueueStorage(message_queue_info_)
         ->AddMessageQueueBinding(std::move(request_));
-    Done();
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
@@ -446,17 +460,18 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this](fidl::String token) {
+        message_queue_info_.queue_name, [this, flow](fidl::String token) {
           if (!token) {
             FTL_LOG(WARNING)
                 << "Request to delete queue " << message_queue_info_.queue_name
                 << " for component instance "
                 << message_queue_info_.component_instance_id
                 << " that wasn't found in the ledger";
-            Done();
             return;
           }
 
@@ -471,36 +486,41 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
               message_queue_info_.queue_name);
 
           // Delete the ledger entries.
-          page_->StartTransaction([](ledger::Status status) {});
+          page_->StartTransaction([](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+            }
+          });
 
-          page_->Delete(to_array(message_queue_key),
-                        [message_queue_key](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
-                            FTL_LOG(ERROR)
-                                << "Error deleting key from ledger: "
-                                << message_queue_key << ", status=" << status;
-                          }
-                        });
-          page_->Delete(to_array(message_queue_token_key),
-                        [message_queue_token_key](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
-                            FTL_LOG(ERROR) << "Error deleting key from ledger: "
-                                           << message_queue_token_key
-                                           << ", status=" << status;
-                          }
-                        });
+          page_->Delete(
+              to_array(message_queue_key), [key = message_queue_key](
+                                               ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR)
+                      << "Page.Delete() " << key << ", status=" << status;
+                }
+              });
+          page_->Delete(
+              to_array(message_queue_token_key), [key =
+                                                      message_queue_token_key](
+                                                     ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR)
+                      << "Page.Delete() " << key << ", status=" << status;
+                }
+              });
 
           message_queue_manager_->ClearMessageQueueStorage(message_queue_info_);
 
-          page_->Commit([this](ledger::Status status) {
-            if (status == ledger::Status::OK) {
-              FTL_LOG(INFO) << "Deleted queue from ledger: "
-                            << message_queue_info_.component_instance_id << "/"
-                            << message_queue_info_.queue_name;
-            } else {
-              FTL_LOG(ERROR) << "Error deleting queue from ledger: " << status;
+          page_->Commit([this, flow](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "Page.Commit() status=" << status;
+              return;
             }
-            Done();
+
+            FTL_LOG(INFO) << "Deleted queue: "
+                          << message_queue_info_.component_instance_id << "/"
+                          << message_queue_info_.queue_name;
           });
         });
   }
@@ -531,11 +551,12 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<void> {
 
  private:
   void Run() override {
-    FlowToken flow(this);
+    FlowToken flow{this};
     page_->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "Page.GetSnapshot() " << status;
+                           FTL_LOG(ERROR)
+                               << "Page.GetSnapshot() status=" << status;
                            return;
                          }
                          GetKeysToDelete(flow);
@@ -547,9 +568,7 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<void> {
                &component_entries_, nullptr,
                [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR)
-                       << "DeleteNamespaceCall::GetKeysToDelete() " << status;
-                   Done();
+                   FTL_LOG(ERROR) << "GetEntries() status=" << status;
                    return;
                  }
 
@@ -574,14 +593,14 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<void> {
   }
 
   void DeleteKeys(FlowToken flow) {
-    for (size_t i = 0; i < keys_to_delete_.size(); i++) {
-      page_->Delete(keys_to_delete_[i].Clone(),
-                    [this, i, flow](ledger::Status status) {
-                      if (status != ledger::Status::OK) {
-                        FTL_LOG(ERROR) << "Page.Delete(): Could not delete key "
-                                       << to_string(keys_to_delete_[i]);
-                      }
-                    });
+    for (size_t i = 0; i < keys_to_delete_.size(); ++i) {
+      page_->Delete(keys_to_delete_[i].Clone(), [this, i,
+                                                 flow](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "Page.Delete() " << to_string(keys_to_delete_[i])
+                         << ", status=" << status;
+        }
+      });
     }
   }
 

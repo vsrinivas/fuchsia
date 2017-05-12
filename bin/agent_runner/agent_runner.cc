@@ -65,25 +65,26 @@ class AgentRunner::InitializeCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     GetEntries((*snapshot_).get(), nullptr, &entries_, nullptr /* next_token */,
-               [this](ledger::Status status) {
+               [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "InitializeCall() "
                                   << "GetEntries() " << status;
-                   Done();
                    return;
                  }
 
-                 Cont();
+                 Cont(flow);
                });
   }
 
-  void Cont() {
+  void Cont(FlowToken flow) {
     if (entries_.size() == 0) {
       // No existing entries.
-      Done();
       return;
     }
+
     for (const auto& entry : entries_) {
       std::string key(reinterpret_cast<const char*>(entry->key.data()),
                       entry->key.size());
@@ -94,7 +95,6 @@ class AgentRunner::InitializeCall : Operation<void> {
       }
       agent_runner_->AddedTrigger(key, std::move(value));
     }
-    Done();
   }
 
   AgentRunner* const agent_runner_;
@@ -117,7 +117,10 @@ class AgentRunner::UpdateCall : Operation<void> {
   }
 
  private:
-  void Run() override { agent_runner_->AddedTrigger(key_, value_); }
+  void Run() override {
+    agent_runner_->AddedTrigger(key_, value_);
+    Done();
+  }
 
   AgentRunner* const agent_runner_;
   const std::string key_;
@@ -135,7 +138,10 @@ class AgentRunner::DeleteCall : Operation<void> {
   }
 
  private:
-  void Run() override { agent_runner_->DeletedTrigger(key_); }
+  void Run() override {
+    agent_runner_->DeletedTrigger(key_);
+    Done();
+  }
 
   AgentRunner* const agent_runner_;
   const std::string key_;

@@ -59,6 +59,7 @@ void OperationQueue::Hold(OperationBase* const o) {
 }
 
 ftl::WeakPtr<OperationContainer> OperationQueue::Drop(OperationBase* const o) {
+  FTL_DCHECK(!operations_.empty());
   FTL_DCHECK(operations_.front().get() == o);
   operations_.pop();
   return weak_ptr_factory_.GetWeakPtr();
@@ -70,7 +71,8 @@ void OperationQueue::Cont() {
   }
 }
 
-OperationBase::OperationBase(OperationContainer* const c) : container_(c) {}
+OperationBase::OperationBase(OperationContainer* const c)
+    : container_(c), weak_ptr_factory_(this) {}
 
 OperationBase::~OperationBase() = default;
 
@@ -88,12 +90,13 @@ void OperationBase::DoneFinish(ftl::WeakPtr<OperationContainer> container) {
   }
 }
 
-OperationBase::FlowTokenBase::FlowTokenBase() : refcount_(new int) {
+OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)
+    : refcount_(new int), weak_op_(op->weak_ptr_factory_.GetWeakPtr()) {
   *refcount_ = 1;
 }
 
 OperationBase::FlowTokenBase::FlowTokenBase(const FlowTokenBase& other)
-    : refcount_(other.refcount_) {
+    : refcount_(other.refcount_), weak_op_(other.weak_op_) {
   ++*refcount_;
 }
 

@@ -63,7 +63,7 @@ class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
 
  private:
   void Run() override {
-    FlowToken flow(this, &story_data_);
+    FlowToken flow{this, &story_data_};
 
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
                        [this, flow](ledger::Status status) {
@@ -124,6 +124,8 @@ class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     FTL_DCHECK(!story_data_.is_null());
 
     std::string json;
@@ -131,14 +133,12 @@ class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
 
     page_->PutWithPriority(
         to_array(MakeStoryKey(story_data_->story_info->id)), to_array(json),
-        ledger::Priority::EAGER, [this](ledger::Status status) {
+        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             const fidl::String& story_id = story_data_->story_info->id;
             FTL_LOG(ERROR) << "WriteStoryDataCall() " << story_id
                            << " Page.PutWithPriority() " << status;
           }
-
-          Done();
         });
   }
 
@@ -164,23 +164,24 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<void> {
 
  private:
   void Run() override {
-    new GetStoryDataCall(
-        &operation_queue_, page_, story_id_, [this](StoryDataPtr story_data) {
-          if (!story_data) {
-            // If the story doesn't exist, it was deleted and
-            // we must not bring it back.
-            Done();
-            return;
-          }
-          if (!mutate_(story_data.get())) {
-            // If no mutation happened, we're done.
-            Done();
-            return;
-          }
+    FlowToken flow{this};
 
-          new WriteStoryDataCall(&operation_queue_, page_,
-                                 std::move(story_data), [this] { Done(); });
-        });
+    new GetStoryDataCall(&operation_queue_, page_, story_id_,
+                         [this, flow](StoryDataPtr story_data) {
+                           if (!story_data) {
+                             // If the story doesn't exist, it was deleted and
+                             // we must not bring it back.
+                             return;
+                           }
+                           if (!mutate_(story_data.get())) {
+                             // If no mutation happened, we're done.
+                             return;
+                           }
+
+                           new WriteStoryDataCall(&operation_queue_, page_,
+                                                  std::move(story_data),
+                                                  [flow] {});
+                         });
   }
 
   ledger::Page* const page_;  // not owned
@@ -218,16 +219,17 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 
  private:
   void Run() override {
+    FlowToken flow{this, &story_id_};
+
     ledger_->GetPage(
-        nullptr, story_page_.NewRequest(), [this](ledger::Status status) {
+        nullptr, story_page_.NewRequest(), [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "CreateStoryCall()"
                            << " Ledger.GetPage() " << status;
-            Done(std::move(story_id_));
             return;
           }
 
-          story_page_->GetId([this](fidl::Array<uint8_t> id) {
+          story_page_->GetId([this, flow](fidl::Array<uint8_t> id) {
             story_page_id_ = std::move(id);
 
             // TODO(security), cf. FW-174. This ID is exposed in
@@ -249,19 +251,20 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             story_info->extra.mark_non_null();
 
             new WriteStoryDataCall(&operation_queue_, root_page_,
-                                   std::move(story_data_), [this] { Cont(); });
+                                   std::move(story_data_),
+                                   [this, flow] { Cont(flow); });
           });
         });
   }
 
-  void Cont() {
+  void Cont(FlowToken flow) {
     controller_ = std::make_unique<StoryImpl>(story_id_, std::move(story_page_),
                                               story_provider_impl_);
 
     // We ensure that root data has been written before this operation is
     // done.
     controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
-                              [this] { Done(std::move(story_id_)); });
+                              [flow] {});
   }
 
   ledger::Ledger* const ledger_;                  // not owned
@@ -309,16 +312,18 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
 
  private:
   void Run() override {
+    FlowToken flow{this};
+
     // TODO(mesch): If the order of StopForDelete() and deletion from ledger is
     // reversed, we don't need to bother with suppressing writes to the ledger
     // during StopForDelete(), which could be simpler.
 
     if (already_deleted_) {
-      Teardown();
+      Teardown(flow);
 
     } else {
       page_->Delete(to_array(MakeStoryKey(story_id_)),
-                    [this](ledger::Status status) {
+                    [this, flow](ledger::Status status) {
                       // Deleting a key that doesn't exist is OK, not
                       // KEY_NOT_FOUND.
                       if (status != ledger::Status::OK) {
@@ -326,35 +331,34 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
                                        << " Page.Delete() " << status;
                       }
 
-                      Teardown();
+                      Teardown(flow);
                     });
     }
   }
 
-  void Teardown() {
+  void Teardown(FlowToken flow) {
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
-      Done();
       return;
     }
 
     FTL_DCHECK(i->second.get() != nullptr);
-    i->second->StopForDelete([this] { Erase(); });
+    i->second->StopForDelete([this, flow] { Erase(flow); });
   }
 
-  void Erase() {
+  void Erase(FlowToken flow) {
     // Here we delete the instance from whose operation a result callback was
     // received. Thus we must assume that the callback returns to a method of
     // the instance. If we delete the instance right here, |this| would be
     // deleted not just for the remainder of this function here, but also for
     // the remainder of all functions above us in the callstack, including
     // functions that run as methods of other objects owned by |this| or
-    // provided to |this|.  To avoid such problems, the delete is invoked
+    // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this, flow] {
       story_controllers_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
-          EncodeModuleComponentNamespace(story_id_), [this] { Done(); });
+          EncodeModuleComponentNamespace(story_id_), [flow] {});
     });
   }
 
@@ -395,7 +399,7 @@ class StoryProviderImpl::GetControllerCall : Operation<void> {
 
  private:
   void Run() override {
-    FlowToken flow(this);
+    FlowToken flow{this};
 
     // Use the existing controller, if possible.
     auto i = story_controllers_->find(story_id_);
@@ -461,34 +465,34 @@ class StoryProviderImpl::PreviousStoriesCall
 
  private:
   void Run() override {
+    FlowToken flow{this, &story_ids_};
+
     page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this](ledger::Status status) {
+                       [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "PreviousStoriesCall() "
                                           << "Page.GetSnapshot() " << status;
-                           Done(std::move(story_ids_));
                            return;
                          }
 
-                         Cont1();
+                         Cont1(flow);
                        });
   }
 
-  void Cont1() {
+  void Cont1(FlowToken flow) {
     GetEntries(page_snapshot_.get(), kStoryKeyPrefix, &entries_,
-               nullptr /* next_token */, [this](ledger::Status status) {
+               nullptr /* next_token */, [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "PreviousStoriesCall() "
                                   << "GetEntries() " << status;
-                   Done(std::move(story_ids_));
                    return;
                  }
 
-                 Cont2();
+                 Cont2(flow);
                });
   }
 
-  void Cont2() {
+  void Cont2(FlowToken flow) {
     // TODO(mesch): Pagination might be needed here. If the list
     // of entries returned from the Ledger is too large, it might
     // also be too large to return from StoryProvider.
@@ -498,21 +502,18 @@ class StoryProviderImpl::PreviousStoriesCall
       if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
         FTL_LOG(ERROR) << "PreviousStoriesCall() "
                        << "Unable to extract data.";
-        Done(nullptr);
-        return;
+        continue;
       }
 
       StoryDataPtr story_data;
       if (!XdrRead(value_as_string, &story_data, XdrStoryData)) {
-        Done(nullptr);
-        return;
+        continue;
       }
 
       FTL_DCHECK(!story_data.is_null());
 
       story_ids_.push_back(story_data->story_info->id);
     }
-    Done(std::move(story_ids_));
   }
 
   ledger::Page* const page_;  // not owned
@@ -535,7 +536,8 @@ class StoryProviderImpl::TeardownCall : Operation<void> {
 
  private:
   void Run() override {
-    FlowToken flow(this);
+    FlowToken flow{this};
+
     for (auto& it : story_provider_impl_->story_controllers_) {
       // Each callback has a copy of |flow| which only goes out-of-scope once
       // the story corresponding to |it| stops.

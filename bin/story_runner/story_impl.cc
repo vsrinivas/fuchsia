@@ -65,6 +65,8 @@ class StoryImpl::AddModuleCall : Operation<void> {
 
  private:
   void Run() {
+    FlowToken flow{this};
+
     // There is no parent module; this is a root module.
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
@@ -74,11 +76,10 @@ class StoryImpl::AddModuleCall : Operation<void> {
     link_path->link_name = link_name_;
 
     story_impl_->story_storage_impl_->WriteModuleData(
-        module_path, module_url_, link_path, [this] {
+        module_path, module_url_, link_path, [this, flow] {
           if (story_impl_->IsRunning()) {
             story_impl_->StartRootModule(module_name_, module_url_, link_name_);
           }
-          Done();
         });
   };
 
@@ -101,12 +102,15 @@ class StoryImpl::GetModulesCall : Operation<fidl::Array<ModuleDataPtr>> {
 
  private:
   void Run() {
+    FlowToken flow(this, &result_);
+
     story_impl_->story_storage_impl_->ReadAllModuleData(
-        [this](fidl::Array<ModuleDataPtr> module_data) {
-          Done(std::move(module_data));
+        [this, flow](fidl::Array<ModuleDataPtr> module_data) {
+          result_ = std::move(module_data);
         });
   }
   StoryImpl* const story_impl_;
+  fidl::Array<ModuleDataPtr> result_;
   FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
 };
 
@@ -130,9 +134,17 @@ class StoryImpl::AddForCreateCall : Operation<void> {
 
  private:
   void Run() {
-    if (link_json_.is_null()) {
-      done_link_ = true;
-    } else {
+    // This flow branches and then joins on all the branches completing, which
+    // is just fine to track with a flow token.
+    //
+    // A callback like used below:
+    //
+    //  [flow] {}
+    //
+    // Just calls Done() when the last copy of it completes.
+    FlowToken flow{this};
+
+    if (!link_json_.is_null()) {
       // There is no module path; this link exists outside the scope of a
       // module.
       auto link_path = LinkPath::New();
@@ -140,26 +152,14 @@ class StoryImpl::AddForCreateCall : Operation<void> {
       link_path->link_name = link_name_;
       story_impl_->GetLinkPath(link_path, link_.NewRequest());
       link_->UpdateObject(nullptr, link_json_);
-      link_->Sync([this] {
-        done_link_ = true;
-        CheckDone();
-      });
+      link_->Sync([flow] {});
     }
 
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
 
     new AddModuleCall(&operation_collection_, story_impl_, module_name_,
-                      module_url_, link_name_, [this] {
-                        done_module_ = true;
-                        CheckDone();
-                      });
-  }
-
-  void CheckDone() {
-    if (done_link_ && done_module_) {
-      Done();
-    }
+                      module_url_, link_name_, [flow] {});
   }
 
   StoryImpl* const story_impl_;  // not owned
@@ -169,8 +169,6 @@ class StoryImpl::AddForCreateCall : Operation<void> {
   const fidl::String link_json_;
 
   LinkPtr link_;
-  bool done_link_{};
-  bool done_module_{};
 
   OperationCollection operation_collection_;
 
@@ -190,10 +188,11 @@ class StoryImpl::StartCall : Operation<void> {
 
  private:
   void Run() {
+    FlowToken flow{this};
+
     // If the story is running, we do nothing and close the view owner request.
     if (story_impl_->IsRunning()) {
       FTL_LOG(INFO) << "StoryImpl::StartCall() while already running: ignored.";
-      Done();
       return;
     }
 
@@ -204,7 +203,7 @@ class StoryImpl::StartCall : Operation<void> {
     // Start *all* the root modules, not just the first one, with their
     // respective links.
     story_impl_->story_storage_impl_->ReadAllModuleData(
-        [this](fidl::Array<ModuleDataPtr> data) {
+        [this, flow](fidl::Array<ModuleDataPtr> data) {
           for (auto& module_data : data) {
             if (module_data->module_path.size() == 1) {
               FTL_DCHECK(module_data->default_link_path->module_path.size() ==
@@ -220,10 +219,7 @@ class StoryImpl::StartCall : Operation<void> {
           }
 
           story_impl_->state_ = StoryState::STARTING;
-
           story_impl_->NotifyStateChange();
-
-          Done();
         });
   };
 

@@ -156,13 +156,16 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
 
-  // The ID of the story, its state and the context to obtain it from
-  // and persist it to.
+  // The ID of the story, its state and the context to obtain it from and
+  // persist it to.
   const fidl::String story_id_;
-  // This is the canonical source for state. The value in the ledger is just
-  // a write-behind copy of this value.
+
+  // This is the canonical source for state. The value in the ledger is just a
+  // write-behind copy of this value.
   StoryState state_{StoryState::INITIAL};
+
   StoryProviderImpl* const story_provider_impl_;
+
   ledger::PagePtr story_page_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
@@ -171,10 +174,11 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
 
   // Implements the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;
+
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
 
-  // Everything for the story shell. Relationships between modules are
-  // conveyed to the story shell using their instance IDs.
+  // Everything for the story shell. Relationships between modules are conveyed
+  // to the story shell using their instance IDs.
   app::ApplicationControllerPtr story_shell_controller_;
   StoryShellPtr story_shell_;
   fidl::Binding<StoryContext> story_context_binding_;
@@ -183,8 +187,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Needed to hold on to a running story. They get reset on Stop().
   fidl::BindingSet<ModuleWatcher> module_watcher_bindings_;
 
-  // The first ingredient of a story: Modules. For each Module in the
-  // Story, there is one Connection to it.
+  // The first ingredient of a story: Modules. For each Module in the Story,
+  // there is one Connection to it.
   struct Connection {
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
@@ -194,10 +198,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
 
-  // A dummy service that allows applications that can run both as
-  // modules in a story and standalone from the shell to determine
-  // whether they are in a story. See story_marker.fidl for more
-  // details.
+  // A dummy service that allows applications that can run both as modules in a
+  // story and standalone from the shell to determine whether they are in a
+  // story. See story_marker.fidl for more details.
   class StoryMarkerImpl;
   std::unique_ptr<StoryMarkerImpl> story_marker_impl_;
 

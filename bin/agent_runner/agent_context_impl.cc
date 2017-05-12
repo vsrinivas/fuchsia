@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 
+#include <memory>
+
 #include "application/lib/app/connect.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -12,7 +14,6 @@
 namespace modular {
 
 namespace {
-
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 }
 
@@ -29,7 +30,7 @@ class AgentContextImpl::StartAndInitializeCall : Operation<void> {
     FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
     FTL_DLOG(INFO) << "Starting new agent, url: " << agent_context_impl_->url_;
 
-    FlowToken flow(this);
+    FlowToken flow{this};
 
     // Start up the agent process.
     auto launch_info = app::ApplicationLaunchInfo::New();
@@ -73,7 +74,7 @@ class AgentContextImpl::StartAndInitializeCall : Operation<void> {
 class AgentContextImpl::StopCall : Operation<void> {
  public:
   StopCall(OperationContainer* const container,
-           bool terminating,
+           const bool terminating,
            AgentContextImpl* const agent_context_impl,
            ResultCall result_call)
       : Operation(container, std::move(result_call)),
@@ -84,7 +85,7 @@ class AgentContextImpl::StopCall : Operation<void> {
 
  private:
   void Run() override {
-    FlowToken flow(this);
+    FlowToken flow{this};
 
     if (agent_context_impl_->state_ == State::TERMINATING) {
       return;
@@ -100,15 +101,22 @@ class AgentContextImpl::StopCall : Operation<void> {
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
 
-    auto kill_agent_once = std::make_shared<std::once_flag>();
-    auto kill_agent = [kill_agent_once, flow, this]() mutable {
-      std::call_once(*kill_agent_once.get(), [flow, this] {
-        agent_context_impl_->application_controller_.reset();
-        agent_context_impl_->application_services_.reset();
-        agent_context_impl_->agent_.reset();
-        agent_context_impl_->agent_context_binding_.Close();
-      });
+    // This flow exlusively branches below, so we need to put it in a shared
+    // container from which it can be removed once for all branches.
+    FlowTokenHolder branch{flow};
+
+    auto kill_agent = [this, branch] {
+      std::unique_ptr<FlowToken> flow = branch.Continue();
+      if (!flow) {
+        return;
+      }
+
+      agent_context_impl_->application_controller_.reset();
+      agent_context_impl_->application_services_.reset();
+      agent_context_impl_->agent_.reset();
+      agent_context_impl_->agent_context_binding_.Close();
     };
+
     agent_context_impl_->agent_->Stop(kill_agent);
     kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
                       kill_agent, kKillTimeout);
@@ -116,7 +124,6 @@ class AgentContextImpl::StopCall : Operation<void> {
 
   AgentContextImpl* const agent_context_impl_;
   const bool terminating_;  // is the agent runner terminating?
-
   ftl::OneShotTimer kill_timer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
