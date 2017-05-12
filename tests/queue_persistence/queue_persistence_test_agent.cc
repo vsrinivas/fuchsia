@@ -66,9 +66,12 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
+    // Reset the message queue so we don't consume messages while we are
+    // terminating; we instead consume them when we start up again.
+    msg_queue_.reset();
+
     modular::testing::GetStore()->Put(
         "queue_persistence_test_agent_stopped", "", [this, callback] {
-          TEST_PASS("Queue persistence test agent exited");
           DeleteAndQuit(callback);
         });
   }
