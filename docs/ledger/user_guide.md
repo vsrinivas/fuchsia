@@ -94,3 +94,45 @@ Running this command does not remove any data synced to the cloud; if the user
 has sync configured, Ledger will start downloading the missing data the next
 time it starts.
 ***
+
+
+## Debug and inspect
+
+The `inspect` command of `ledger_tool` allows you to inspect the local state of
+the Ledger. It has three main subcommands:
+
+### Pages
+To get a list of local pages for the provided app, along with the current head
+commits, use the `pages` subcommand:
+
+```
+ledger_tool inspect <APP_NAME> pages
+```
+
+### Commits
+To get the metadata of a commit (timestamp, parents), as well as the contents
+of the page at this commit, use the `commit` subcommand:
+
+```
+ledger_tool inspect <APP_NAME> commit <PAGE_ID> <COMMIT_ID>
+```
+
+### Commit graph
+To get a graph of all commits of a page, use the `commit_graph` subcommand:
+
+```
+ledger_tool inspect <APP_NAME> commit_graph <PAGE_ID>
+```
+
+`commit_graph` writes a .dot file in `/tmp` containing the full commit graph of
+the provided page. One can then use `scp` to download the file to the host and
+compile it with dot. Use the SVG format to get additional information, such as
+the commit timestamp and the content hash as tooltips. Unsynced commits are
+displayed in red.
+
+Note that Ledger should not be running while `ledger_tool inspect` is used to
+avoid internal conflicts, so remember to use `killall ledger` beforehand, or
+run in headless mode. Thus, `ledger_tool inspect` can only be used post-mortem.
+
+Note also that this tool exposes commits, which are internal structures used by
+the Ledger and not exposed to clients.
