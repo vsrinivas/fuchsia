@@ -740,9 +740,10 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
 {
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
-    read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
-    resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
-    tu_process_wait_signaled(child);
+    if (read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid)) {
+        resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
+        tu_process_wait_signaled(child);
+    }
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -818,11 +819,11 @@ static bool process_start_test(void)
     // Now we own the child handle, and lp is destroyed.
 
     mx_koid_t tid;
-    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
-    send_msg(our_channel, MSG_DONE);
-    resume_thread_from_exception(child, tid, 0);
-
-    wait_process_exit_from_debugger(eport, child, tid);
+    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
+        send_msg(our_channel, MSG_DONE);
+        resume_thread_from_exception(child, tid, 0);
+        wait_process_exit_from_debugger(eport, child, tid);
+    }
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -871,8 +872,9 @@ static bool thread_gone_notification_test(void)
     send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
     mx_koid_t tid;
-    read_and_verify_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid);
-    ASSERT_GT(tid, 0u, "tid not >= 0");
+    if (read_and_verify_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid)) {
+        ASSERT_GT(tid, 0u, "tid not >= 0");
+    }
     // there's no reply to a "gone" notification
 
     // thrd_join doesn't provide a timeout, but we have the watchdog for that.
@@ -992,8 +994,8 @@ static bool trigger_test(void)
         child = tu_launch_mxio_fini(lp);
         // Now we own the child handle, and lp is destroyed.
 
-        mx_koid_t tid;
-        read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+        mx_koid_t tid = MX_KOID_INVALID;
+        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
         resume_thread_from_exception(child, tid, 0);
 
         mx_exception_packet_t packet;
@@ -1006,8 +1008,9 @@ static bool trigger_test(void)
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
                 resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
-                read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, false, &tid2);
-                ASSERT_EQ(tid2, tid, "exiting tid mismatch");
+                if (read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, false, &tid2)) {
+                    ASSERT_EQ(tid2, tid, "exiting tid mismatch");
+                }
             }
 
             // We've already seen tid's thread-exit report, so just skip that
@@ -1038,8 +1041,10 @@ static bool unbind_while_stopped_test(void)
     child = tu_launch_mxio_fini(lp);
     // Now we own the child handle, and lp is destroyed.
 
-    mx_koid_t tid;
-    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+    {
+        mx_koid_t tid;
+        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+    }
 
     // Now unbind the exception port and wait for the child to cleanly exit.
     // If this doesn't work the thread will stay blocked, we'll timeout, and
@@ -1147,22 +1152,22 @@ static bool kill_while_stopped_at_start_test(void)
     // Now we own the child handle, and lp is destroyed.
 
     mx_koid_t tid;
-    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
+        // Now kill the thread and wait for the child to exit.
+        // This assumes the inferior only has the one thread.
+        // If this doesn't work the thread will stay blocked, we'll timeout, and
+        // the watchdog will trigger.
+        mx_handle_t thread;
+        mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+        if (status < 0)
+            tu_fatal("mx_object_get_child", status);
+        mx_task_kill(thread);
+        tu_process_wait_signaled(child);
 
-    // Now kill the thread and wait for the child to exit.
-    // This assumes the inferior only has the one thread.
-    // If this doesn't work the thread will stay blocked, we'll timeout, and
-    // the watchdog will trigger.
-    mx_handle_t thread;
-    mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-    if (status < 0)
-        tu_fatal("mx_object_get_child", status);
-    mx_task_kill(thread);
-    tu_process_wait_signaled(child);
-
-    // Keep the thread handle open until after we know the process has exited
-    // to ensure the thread's handle lifetime doesn't affect process lifetime.
-    tu_handle_close(thread);
+        // Keep the thread handle open until after we know the process has exited
+        // to ensure the thread's handle lifetime doesn't affect process lifetime.
+        tu_handle_close(thread);
+    }
 
     tu_handle_close(child);
     tu_handle_close(eport);
