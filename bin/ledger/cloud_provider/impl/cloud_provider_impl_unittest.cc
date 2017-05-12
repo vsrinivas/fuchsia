@@ -17,6 +17,7 @@
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/mtl/socket/strings.h"
@@ -85,6 +86,13 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       callback(firebase::Status::OK);
       message_loop_.PostQuitTask();
     });
+  }
+
+  void Patch(
+      const std::string& key,
+      const std::string& data,
+      const std::function<void(firebase::Status status)>& callback) override {
+    FTL_NOTREACHED();
   }
 
   void Delete(

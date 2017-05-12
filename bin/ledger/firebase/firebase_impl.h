@@ -46,6 +46,9 @@ class FirebaseImpl : public Firebase {
   void Put(const std::string& key,
            const std::string& data,
            const std::function<void(Status status)>& callback) override;
+  void Patch(const std::string& key,
+             const std::string& data,
+             const std::function<void(Status status)>& callback) override;
   void Delete(const std::string& key,
               const std::function<void(Status status)>& callback) override;
   void Watch(const std::string& key,

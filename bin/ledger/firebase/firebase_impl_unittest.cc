@@ -159,6 +159,21 @@ TEST_F(FirebaseImplTest, Put) {
   EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
 }
 
+// Verifies that PATCH requests are handled correctly.
+TEST_F(FirebaseImplTest, Patch) {
+  fake_network_service_.SetStringResponse("\"ok\"", 200);
+  std::string data = R"({"name":"Alice"})";
+  firebase_.Patch("person", data, [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  });
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ("https://example.firebaseio.com/pre/fix/person.json",
+            fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("PATCH", fake_network_service_.GetRequest()->method);
+}
+
 // Verifies that DELETE requests are made correctly.
 TEST_F(FirebaseImplTest, Delete) {
   fake_network_service_.SetStringResponse("", 200);

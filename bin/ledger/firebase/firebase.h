@@ -40,6 +40,13 @@ class Firebase {
                    const std::string& data,
                    const std::function<void(Status status)>& callback) = 0;
 
+  // Adds or updates multiple keys under the given path. Data needs to be a
+  // JSON dictionary.
+  // https://firebase.google.com/docs/database/rest/save-data
+  virtual void Patch(const std::string& key,
+                     const std::string& data,
+                     const std::function<void(Status status)>& callback) = 0;
+
   // Deletes the data under the given path.
   virtual void Delete(const std::string& key,
                       const std::function<void(Status status)>& callback) = 0;

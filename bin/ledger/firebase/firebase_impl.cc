@@ -103,6 +103,17 @@ void FirebaseImpl::Put(const std::string& key,
           });
 }
 
+void FirebaseImpl::Patch(const std::string& key,
+                         const std::string& data,
+                         const std::function<void(Status status)>& callback) {
+  Request(BuildRequestUrl(key, ""), "PATCH", data,
+          [callback](Status status, const std::string& response) {
+            // Ignore the response body, which is the same data we sent to the
+            // server.
+            callback(status);
+          });
+}
+
 void FirebaseImpl::Delete(const std::string& key,
                           const std::function<void(Status status)>& callback) {
   Request(BuildRequestUrl(key, ""), "DELETE", "",
