@@ -4,6 +4,39 @@
 
 import("//build/config/fuchsia/rules.gni")
 
+config("wlan_config") {
+  include_dirs = [ "." ]
+
+  defines = [
+    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
+    "MX_DEBUGLEVEL=2",
+  ]
+
+  cflags = [ "-Wthread-safety" ]
+}
+
+source_set("mlme") {
+  sources = [
+    "element.cpp",
+    "element.h",
+    "logging.h",
+    "mac_frame.cpp",
+    "mac_frame.h",
+    "mlme.cpp",
+    "mlme.h",
+    "packet.cpp",
+    "packet.h",
+  ]
+
+  deps = [
+    "//apps/wlan/services:mlme_data_only",
+  ]
+
+  public_deps = [
+    "//magenta/system/ulib/mxtl",
+  ]
+}
+
 driver_module("wlan") {
   sources = [
     "binding.c",
@@ -11,23 +44,23 @@ driver_module("wlan") {
     "device.h",
     "driver.cpp",
     "logging.h",
-    "mlme.cpp",
-    "mlme.h",
-    "packet.cpp",
-    "packet.h",
   ]
 
   defines = [
     "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
     "MX_DEBUGLEVEL=2",
   ]
+
   cflags = [ "-Wthread-safety" ]
 
   deps = [
-    "//apps/wlan/services:mlme_data_only",
+    ":mlme(//build/toolchain/fuchsia:${target_cpu}-shared)",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
 
   libs = [ "driver" ]
+
+  # TODO(tkilbourn): use :wlan_config when driver_module supports configs
+  #configs += [ ":wlan_config" ]
 }

@@ -29,10 +29,12 @@ class Mlme {
     mx_status_t HandleTimeout(mx_time_t* next_timeout);
 
   private:
-    mx_status_t HandleCtrlPacket(const Packet* packet, mx_time_t* next_timeout);
-    mx_status_t HandleDataPacket(const Packet* packet, mx_time_t* next_timeout);
-    mx_status_t HandleMgmtPacket(const Packet* packet, mx_time_t* next_timeout);
-    mx_status_t HandleSvcPacket(const Packet* packet, mx_time_t* next_timeout);
+    mx_status_t HandleCtrlPacket(const Packet* packet);
+    mx_status_t HandleDataPacket(const Packet* packet);
+    mx_status_t HandleMgmtPacket(const Packet* packet);
+    mx_status_t HandleSvcPacket(const Packet* packet);
+
+    void SetNextTimeout(mx_time_t* next_timeout);
 
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;

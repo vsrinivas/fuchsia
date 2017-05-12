@@ -79,7 +79,7 @@ mx_status_t Device::QueuePacket(const void* data, size_t length, Packet::Source 
         return ERR_NO_RESOURCES;
     }
     auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
-    packet->SetSrc(src);
+    packet->set_src(src);
     packet->CopyFrom(data, length, 0);
     {
         std::lock_guard<std::mutex> lock(packet_queue_lock_);
@@ -291,7 +291,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         debugf("read %u bytes from channel_\n", read);
 
         auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
-        packet->SetSrc(Packet::Source::kService);
+        packet->set_src(Packet::Source::kService);
         {
             std::lock_guard<std::mutex> lock(packet_queue_lock_);
             packet_queue_.push_front(std::move(packet));

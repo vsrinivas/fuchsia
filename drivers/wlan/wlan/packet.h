@@ -47,12 +47,19 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
     Packet(mxtl::unique_ptr<Buffer> buffer, size_t len);
     size_t Capacity() const { return kBufferSize; }
 
-    void SetSrc(Source s) { src_ = s; }
-    Source Src() const { return src_; }
+    void set_src(Source s) { src_ = s; }
+    Source src() const { return src_; }
+
+    const uint8_t* data() const { return buffer_->data; }
+    size_t len() const { return len_; }
+
+    template <typename T>
+    const T* field(size_t offset) const {
+        if (offset + sizeof(T) > len_) return nullptr;
+        return reinterpret_cast<const T*>(buffer_->data + offset);
+    }
 
     void CopyFrom(const void* src, size_t len, size_t offset);
-    const uint8_t* Data() const { return buffer_->data; }
-    size_t Len() const { return len_; }
 
   private:
     mxtl::unique_ptr<Buffer> buffer_;

@@ -1,0 +1,41 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":element_tests",
+    ":mac_frame_tests",
+  ]
+}
+
+executable("element_tests") {
+  output_name = "wlan_element_unittest"
+
+  testonly = true
+
+  sources = [ "element_unittest.cpp" ]
+
+  deps = [
+    "//drivers/wifi/wlan:mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
+
+executable("mac_frame_tests") {
+  output_name = "wlan_mac_frame_unittest"
+
+  testonly = true
+
+  sources = [ "mac_frame_unittest.cpp" ]
+
+  deps = [
+    "//drivers/wifi/wlan:mlme",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//drivers/wifi/wlan:wlan_config" ]
+}
