@@ -1,6 +1,7 @@
 {
     "imports": [
-        "magma-common"
+        "magma-common",
+        "sbase"
     ],
     "labels": [
         "//magma/tests:autorun"
@@ -56,7 +57,7 @@
         },
         {
             "binary": "autorun",
-            "bootfs_path": "autorun"
+            "bootfs_path": "bin/magma_autorun"
         }
     ],
     "drivers": [
