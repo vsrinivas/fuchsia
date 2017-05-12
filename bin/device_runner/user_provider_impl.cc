@@ -63,7 +63,7 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 
   for (auto& it : user_controllers_) {
-    auto cont = [this, ptr = it.first, callback] {
+    auto cont = [ this, ptr = it.first, callback ] {
       // This is okay because during teardown, |cont| is never invoked
       // asynchronously.
       user_controllers_.erase(ptr);
@@ -80,13 +80,10 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 }
 
-void UserProviderImpl::Login(
-    const fidl::String& account_id,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<UserController> user_controller_request) {
+void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // If requested, run in incognito mode.
   // TODO(alhaad): Revisit clean-up of local ledger state for incognito mode.
-  if (account_id.is_null() || account_id == "") {
+  if (params->account_id.is_null() || params->account_id == "") {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     // When running in incogito mode, we generate a random number. This number
     // serves as account_id, device_name and the filename for ledger repository.
@@ -100,8 +97,7 @@ void UserProviderImpl::Login(
     auto random_id = std::to_string(random_number);
     auto ledger_repository_path = kLedgerDataBaseDir + random_id;
     LoginInternal(random_id, random_id, nullptr /* server_name */,
-                  ledger_repository_path, std::move(view_owner_request),
-                  std::move(user_controller_request));
+                  ledger_repository_path, std::move(params));
     return;
   }
 
@@ -110,7 +106,7 @@ void UserProviderImpl::Login(
   const UserStorage* found_user = nullptr;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
-      if (user->id()->str() == account_id) {
+      if (user->id()->str() == params->account_id) {
         found_user = user;
         break;
       }
@@ -145,10 +141,9 @@ void UserProviderImpl::Login(
   }
 
   FTL_LOG(INFO) << "UserProvider::Login() user: " << user_id;
-  LoginInternal(account_id, found_user->device_name()->str(),
+  LoginInternal(params->account_id, found_user->device_name()->str(),
                 found_user->server_name()->str(), ledger_repository_path,
-                std::move(view_owner_request),
-                std::move(user_controller_request));
+                std::move(params));
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
@@ -242,7 +237,8 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
 }
 
 // TODO(alhaad, security): This does not remove tokens stored by the token
-// manager. That should be done properly by invalidaing the tokens. Re-visit this!
+// manager. That should be done properly by invalidaing the tokens. Re-visit
+// this!
 void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
   if (!users_storage_) {
     return;
@@ -256,8 +252,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
     }
 
     users.push_back(modular::CreateUserStorage(
-        builder, builder.CreateString(user->id()),
-        user->identity_provider(),
+        builder, builder.CreateString(user->id()), user->identity_provider(),
         builder.CreateString(user->device_name()),
         builder.CreateString(user->server_name())));
   }
@@ -283,12 +278,11 @@ bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,
 
   // Save users to disk.
   if (!files::CreateDirectory(
-      files::GetDirectoryName(kUsersConfigurationFile))) {
+          files::GetDirectoryName(kUsersConfigurationFile))) {
     *error = "Unable to create directory.";
     return false;
   }
-  if (!files::WriteFile(kUsersConfigurationFile,
-                        serialized_users.data(),
+  if (!files::WriteFile(kUsersConfigurationFile, serialized_users.data(),
                         serialized_users.size())) {
     *error = "Unable to write file.";
     return false;
@@ -309,13 +303,11 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
   return true;
 }
 
-void UserProviderImpl::LoginInternal(
-    const std::string& account_id,
-    const std::string& device_name,
-    const fidl::String& server_name,
-    const std::string& local_ledger_path,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<UserController> user_controller_request) {
+void UserProviderImpl::LoginInternal(const std::string& account_id,
+                                     const std::string& device_name,
+                                     const fidl::String& server_name,
+                                     const std::string& local_ledger_path,
+                                     UserLoginParamsPtr params) {
   // Get token provider factory for this user.
   auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
@@ -338,9 +330,10 @@ void UserProviderImpl::LoginInternal(
 
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, device_name, user_shell_, story_shell_,
-      std::move(token_provider_factory), account_id, std::move(ledger_repository),
-      std::move(view_owner_request), std::move(user_controller_request),
-      [this] (UserControllerImpl* c) { user_controllers_.erase(c); });
+      std::move(token_provider_factory), account_id,
+      std::move(ledger_repository), std::move(params->view_owner),
+      std::move(params->user_controller),
+      [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
 }
 

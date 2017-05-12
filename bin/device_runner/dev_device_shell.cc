@@ -93,40 +93,47 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
     device_shell_context_->Shutdown();
   }
 
+  void Login(const std::string& account_id) {
+    auto params = modular::UserLoginParams::New();
+    params->account_id = account_id;
+    params->view_owner = std::move(view_owner_request_);
+    params->user_controller = user_controller_.NewRequest();
+    user_provider_->Login(std::move(params));
+    user_controller_->Watch(user_watcher_binding_.NewBinding());
+  }
+
   void Connect() {
     if (user_provider_ && view_owner_request_) {
+      if (settings_.user.empty()) {
+        // Incognito mode.
+        Login("");
+        return;
+      }
+
       user_provider_->PreviousUsers(
           [this](fidl::Array<modular::auth::AccountPtr> accounts) {
             FTL_LOG(INFO) << "Found " << accounts.size()
                           << " users in the user "
                           << "database";
 
-            if (!settings_.user.empty()) {
-              // Not running in incognito mode. Add the user if not already
-              // added.
-              bool account_found = false;
-              for (const auto& account : accounts) {
-                if (account->id == settings_.user) {
-                  account_found = true;
-                  break;
-                }
-              }
-              if (!account_found) {
-                user_provider_->AddUser(
-                    modular::auth::IdentityProvider::DEV, settings_.user,
-                    settings_.device_name, "" /* servername */,
-                    [this](modular::auth::AccountPtr account,
-                           const fidl::String& status) {
-
-                    });
+            // Not running in incognito mode. Add the user if not already
+            // added.
+            std::string account_id;
+            for (const auto& account : accounts) {
+              if (account->display_name == settings_.user) {
+                account_id = account->id;
+                break;
               }
             }
-
-            user_provider_->Login(std::move(settings_.user),
-                                  std::move(view_owner_request_),
-                                  user_controller_.NewRequest());
-            user_controller_->Watch(user_watcher_binding_.NewBinding());
-
+            if (account_id.empty()) {
+              user_provider_->AddUser(
+                  modular::auth::IdentityProvider::DEV, settings_.user,
+                  settings_.device_name, "" /* servername */,
+                  [this](modular::auth::AccountPtr account,
+                         const fidl::String& status) { Login(account->id); });
+            } else {
+              Login(account_id);
+            }
           });
     }
   }

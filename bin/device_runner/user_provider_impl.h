@@ -34,10 +34,7 @@ class UserProviderImpl : UserProvider {
 
  private:
   // |UserProvider|
-  void Login(
-      const fidl::String& account_id,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserController> user_controller_request) override;
+  void Login(UserLoginParamsPtr user_login_params) override;
 
   // |UserProvider|
   void PreviousUsers(const PreviousUsersCallback& callback) override;
@@ -55,13 +52,11 @@ class UserProviderImpl : UserProvider {
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(
-      const std::string& user_id,
-      const std::string& device_name,
-      const fidl::String& server_name,
-      const std::string& local_ledger_path,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserController> user_controller_request);
+  void LoginInternal(const std::string& user_id,
+                     const std::string& device_name,
+                     const fidl::String& server_name,
+                     const std::string& local_ledger_path,
+                     UserLoginParamsPtr user_login_params);
 
   fidl::BindingSet<UserProvider> bindings_;
 
