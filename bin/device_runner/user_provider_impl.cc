@@ -316,7 +316,7 @@ void UserProviderImpl::LoginInternal(
     fidl::InterfaceRequest<UserController> user_controller_request) {
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
-      local_ledger_path, server_name, ledger_repository.NewRequest(),
+      local_ledger_path, server_name, nullptr, ledger_repository.NewRequest(),
       [](ledger::Status status) {
         FTL_DCHECK(status == ledger::Status::OK)
             << "GetRepository failed: " << status;
