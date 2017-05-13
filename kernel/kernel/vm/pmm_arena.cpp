@@ -9,6 +9,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <pretty/sizes.h>
 #include <string.h>
 #include <trace.h>
 
@@ -231,8 +232,9 @@ status_t PmmArena::FreePage(vm_page_t* page) {
 }
 
 void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) {
-    printf("arena %p: name '%s' base %#" PRIxPTR " size 0x%zx priority %u flags 0x%x\n", this, name(), base(),
-           size(), priority(), flags());
+    char pbuf[16];
+    printf("arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) priority %u flags 0x%x\n", this, name(), base(),
+           format_size(pbuf, sizeof(pbuf), size()), size(), priority(), flags());
     printf("\tpage_array %p, free_count %zu\n", page_array_, free_count_);
 
     /* dump all of the pages */

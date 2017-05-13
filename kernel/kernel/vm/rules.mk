@@ -11,6 +11,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
     kernel/lib/mxtl \
+    kernel/lib/pretty \
     kernel/lib/user_copy \
     third_party/lib/cryptolib
 
