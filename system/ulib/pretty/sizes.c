@@ -5,8 +5,8 @@
 #include <pretty/sizes.h>
 
 #include <assert.h>
-#include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include <magenta/assert.h>
@@ -22,7 +22,7 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
     MX_DEBUG_ASSERT(str != NULL);
 
     int ui = 0;
-    double db = bytes;
+    uint16_t r = 0;
     bool whole = true;
     // Divide until we reach a unit that can express the value
     // with 4 or fewer whole digits.
@@ -34,16 +34,26 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
     while (bytes >= 10000 || (bytes != 0 && (bytes & 1023) == 0)) {
         ui++;
         MX_DEBUG_ASSERT(ui < num_units); // Can't happen with a 64-bit number.
-        db /= 1024;
         if (bytes & 1023) {
             whole = false;
         }
+        r = bytes % 1024;
         bytes /= 1024;
     }
     if (whole) {
-        snprintf(str, str_size, "%zd%c", bytes, units[ui]);
+        snprintf(str, str_size, "%zu%c", bytes, units[ui]);
     } else {
-        snprintf(str, str_size, "%.1f%c", db, units[ui]);
+        // r represents the remainder of the most recent division operation.
+        // Since we provide a single unit of precision, we can round it based
+        // on the second digit and increment bytes in the case that it pushes
+        // the final value back over into a whole number.
+        unsigned int round_up = ((r % 100) >= 50);
+        r = (r / 100) + round_up;
+        if (r == 10) {
+            bytes++;
+            r = 0;
+        }
+        snprintf(str, str_size, "%zu.%1u%c", bytes, r, units[ui]);
     }
     return str;
 }
