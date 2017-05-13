@@ -35,6 +35,8 @@ extern const char* test_root_path;
 
 // Path to the mounted filesystem's backing store (if it exists)
 extern char test_disk_path[];
+// Is the disk path a REAL disk, or is it be a generated ramdisk?
+extern bool use_real_disk;
 
 // Current filesystem's info
 extern fs_info_t* test_info;
