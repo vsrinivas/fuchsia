@@ -112,6 +112,7 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
     const fidl::String& server_id,
+    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");

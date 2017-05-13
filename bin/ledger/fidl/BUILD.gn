@@ -11,5 +11,6 @@ fidl("internal") {
 
   deps = [
     "//apps/ledger/services/public",
+    "//apps/modular/services/auth",
   ]
 }

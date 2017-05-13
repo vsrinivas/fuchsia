@@ -36,7 +36,7 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   ledger::LedgerRepositoryPtr repository;
   fidl::String fidl_server_id = sync ? fidl::String(server_id) : fidl::String();
   repository_factory->GetRepository(
-      ledger_repository_path, std::move(fidl_server_id),
+      ledger_repository_path, std::move(fidl_server_id), nullptr,
       repository.NewRequest(), QuitOnErrorCallback("GetRepository"));
 
   ledger::LedgerPtr ledger;
