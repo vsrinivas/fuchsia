@@ -145,7 +145,7 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
       address_.is_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
   ssize_t result = recvfrom(
       socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(),
-      MSG_WAITALL, reinterpret_cast<sockaddr*>(&source_address_storage),
+      0, reinterpret_cast<sockaddr*>(&source_address_storage),
       &source_address_length);
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;

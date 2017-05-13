@@ -122,8 +122,7 @@ void MessageTransciever::SendPacket(PacketType type,
   packet_header.channel_ = 0;
   packet_header.payload_size_ = htonl(payload_size);
 
-  int result = send(socket_fd_.get(), &packet_header, sizeof(packet_header),
-                    payload_size == 0 ? 0 : MSG_MORE);
+  int result = send(socket_fd_.get(), &packet_header, sizeof(packet_header), 0);
   if (result == -1) {
     FTL_LOG(ERROR) << "Failed to send, errno " << errno;
     CloseConnection();
