@@ -14,7 +14,7 @@
 __BEGIN_CDECLS
 
 #define MAX_SUPPORTED_CPUID     (0x17)
-#define MAX_SUPPORTED_CPUID_EXT (0x80000008)
+#define MAX_SUPPORTED_CPUID_EXT (0x8000001e)
 
 struct cpuid_leaf {
     uint32_t a;
@@ -35,6 +35,7 @@ enum x86_cpuid_leaf_num {
 
     X86_CPUID_EXT_BASE = 0x80000000,
     X86_CPUID_ADDR_WIDTH = 0x80000008,
+    X86_CPUID_AMD_TOPOLOGY = 0x8000001e,
 };
 
 struct x86_cpuid_bit {
@@ -120,6 +121,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
 #define X86_FEATURE_PT           X86_CPUID_BIT(0x7, 1, 25)
 #define X86_FEATURE_PKU          X86_CPUID_BIT(0x7, 2, 3)
+#define X86_FEATURE_AMD_TOPO     X86_CPUID_BIT(0x80000001, 2, 22)
 #define X86_FEATURE_SYSCALL      X86_CPUID_BIT(0x80000001, 3, 11)
 #define X86_FEATURE_NX           X86_CPUID_BIT(0x80000001, 3, 20)
 #define X86_FEATURE_HUGE_PAGE    X86_CPUID_BIT(0x80000001, 3, 26)

@@ -89,6 +89,27 @@ static void extended_amd_topology_init(void)
 
     package_shift = apic_id_core_id_size;
     package_mask = ~core_mask;
+
+    // check to see if AMD topology extensions are enabled
+    if (x86_feature_test(X86_FEATURE_AMD_TOPO)) {
+        leaf = x86_get_cpuid_leaf(X86_CPUID_AMD_TOPOLOGY);
+        if (!leaf)
+            return;
+
+        uint32_t cores_per_compute_unit = BITS_SHIFT(leaf->b, 15, 8) + 1;
+        if (cores_per_compute_unit == 2) {
+            // SMT is enabled, the bottom bit of the APIC id is the SMT id
+            // This is according to the BKDG and PPR for family 15h-17h
+            smt_mask = 1;
+            core_shift = 1;
+        } else if (cores_per_compute_unit > 2) {
+            // not sure how to handle this, display message and move on
+            TRACEF("WARNING: cores per compute unit > 2 (%u), unhandled\n", cores_per_compute_unit);
+        }
+
+        // TODO: handle multiple nodes per processor in 0x8000001e/ecx
+    }
+
 }
 
 static void legacy_topology_init(void)
