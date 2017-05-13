@@ -247,12 +247,15 @@ void InputInterpreter::NotifyRegistry() {
   registry_->RegisterDevice(std::move(descriptor), input_device_.NewRequest());
 }
 
-bool InputInterpreter::Read() {
+bool InputInterpreter::Read(bool discard) {
   int rc = read(fd_, report_.data(), max_report_len_);
   if (rc < 1) {
     FTL_LOG(ERROR) << "Failed to read from input: " << rc;
     // TODO(jpoichet) check whether the device was actually closed or not
     return false;
+  }
+  if (discard) {
+    return true;
   }
 
   TRACE_DURATION("input", "Read");

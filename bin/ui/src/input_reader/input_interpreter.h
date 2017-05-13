@@ -35,7 +35,7 @@ class InputInterpreter {
   ~InputInterpreter();
 
   bool Initialize();
-  bool Read();
+  bool Read(bool discard);
 
   const std::string& name() const { return name_; }
   mx_handle_t handle() { return event_.get(); }

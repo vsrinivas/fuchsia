@@ -42,11 +42,14 @@ public:
     FTL_DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
   };
 
+  void WatchDisplayOwnershipChanges(int dir_fd);
+
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(mx_handle_t handle);
 
   void OnDirectoryHandleReady(mx_handle_t handle, mx_signals_t pending);
   void OnDeviceHandleReady(mx_handle_t handle, mx_signals_t pending);
+  void OnDisplayHandleReady(mx_handle_t handle, mx_signals_t pending);
 
   void OnInternalReport(mx_handle_t handle, InputInterpreter::ReportType type);
 
@@ -57,6 +60,10 @@ public:
 
   std::map<mx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
+  std::unique_ptr<mtl::DeviceWatcher> console_watcher_;
+  mx_handle_t display_ownership_event_;
+  mtl::MessageLoop::HandlerKey display_ownership_handler_key_;
+  bool display_owned_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
