@@ -14,6 +14,8 @@ namespace modular {
 
 namespace {
 
+// TODO(alhaad): This is also defined in device_runner.cc. Reconcile!
+constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v2.db";
 
@@ -314,18 +316,25 @@ void UserProviderImpl::LoginInternal(
     const std::string& local_ledger_path,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserController> user_controller_request) {
+  // Get token provider factory for this user.
+  auth::TokenProviderFactoryPtr token_provider_factory;
+  account_provider_->GetTokenProviderFactory(
+      account_id, token_provider_factory.NewRequest());
+
+  // Get a token provider instance to pass to ledger.
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
+  token_provider_factory->GetTokenProvider(
+      kLedgerAppUrl, ledger_token_provider.NewRequest());
+
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
-      local_ledger_path, server_name, nullptr, ledger_repository.NewRequest(),
+      local_ledger_path, server_name, std::move(ledger_token_provider),
+      ledger_repository.NewRequest(),
       [](ledger::Status status) {
         FTL_DCHECK(status == ledger::Status::OK)
             << "GetRepository failed: " << status;
       });
 
-  // Get token provider factory for this user.
-  auth::TokenProviderFactoryPtr token_provider_factory;
-  account_provider_->GetTokenProviderFactory(
-      account_id, token_provider_factory.NewRequest());
 
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, device_name, user_shell_, story_shell_,
