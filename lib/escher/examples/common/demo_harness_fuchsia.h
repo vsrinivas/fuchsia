@@ -41,6 +41,10 @@ class DemoHarnessFuchsia : public DemoHarness,
   // |Module|
   void Stop(const StopCallback& done) override;
 
+  app::ApplicationContext* application_context() {
+    return application_context_.get();
+  }
+
  private:
   // Called by Init().
   void InitWindowSystem() override;
