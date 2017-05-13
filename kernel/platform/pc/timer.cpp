@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include <assert.h>
+#include <bits.h>
 #include <debug.h>
 #include <err.h>
 #include <reg.h>
@@ -291,8 +292,9 @@ static uint64_t lookup_core_crystal_freq(void) {
         case X86_MICROARCH_AMD_BULLDOZER:
         case X86_MICROARCH_AMD_JAGUAR:
         case X86_MICROARCH_AMD_ZEN:
-            // TODO: figure out how to look up frequency
-            break;
+            // 15h-17h BKDGs mention the APIC timer rate is 2xCLKIN,
+            // which experimentally appears to be 100Mhz always
+            return 100 * 1000 * 1000;
         case X86_MICROARCH_UNKNOWN:
             break;
     }
@@ -300,14 +302,63 @@ static uint64_t lookup_core_crystal_freq(void) {
     return 0;
 }
 
-static uint64_t lookup_tsc_freq(void) {
-    const uint64_t core_crystal_clock_freq = lookup_core_crystal_freq();
+static uint64_t compute_p_state_clock(uint64_t p_state_msr) {
+    // is it valid?
+    if (!BIT(p_state_msr, 63))
+        return 0;
 
-    // If this leaf is present, then 18.18.3 (Determining the Processor Base
-    // Frequency) documents this as the nominal TSC frequency.
-    const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
-    if (tsc_leaf && tsc_leaf->b && tsc_leaf->a) {
-        return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
+    // different AMD microarchitectures use slightly different formulas to compute
+    // the effective clock rate of a P state
+    uint64_t clock = 0;
+    switch (x86_microarch) {
+        case X86_MICROARCH_AMD_BULLDOZER:
+        case X86_MICROARCH_AMD_JAGUAR: {
+            uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
+            uint64_t fid = BITS(p_state_msr, 5, 0);
+
+            clock = (100 * (fid + 0x10) / (1 << did)) * 1000 * 1000;
+            break;
+        }
+        case X86_MICROARCH_AMD_ZEN: {
+            uint64_t fid = BITS(p_state_msr, 7, 0);
+
+            clock = (fid * 25) * 1000 * 1000;
+            break;
+        }
+        default:
+            break;
+    }
+
+    return clock;
+}
+
+static uint64_t lookup_tsc_freq(void) {
+    if (x86_vendor == X86_VENDOR_INTEL) {
+        const uint64_t core_crystal_clock_freq = lookup_core_crystal_freq();
+
+        // If this leaf is present, then 18.18.3 (Determining the Processor Base
+        // Frequency) documents this as the nominal TSC frequency.
+        const struct cpuid_leaf *tsc_leaf = x86_get_cpuid_leaf(X86_CPUID_TSC);
+        if (tsc_leaf) {
+            return (core_crystal_clock_freq * tsc_leaf->b) / tsc_leaf->a;
+        }
+    } else if (x86_vendor == X86_VENDOR_AMD) {
+        uint32_t p0_state_msr = 0xc0010064; // base P-state MSR
+        switch (x86_microarch) {
+            // TSC is invariant on these architectures and defined as running at
+            // P0 clock, so compute it
+            case X86_MICROARCH_AMD_ZEN: {
+                // According to the Family 17h PPR, the first P-state MSR is indeed
+                // P0 state and appears to be experimentally so
+                uint64_t p0_state;
+                if (read_msr_safe(p0_state_msr, &p0_state) != MX_OK)
+                    break;
+
+                return compute_p_state_clock(p0_state);
+            }
+            default:
+                break;
+        }
     }
 
     return 0;
@@ -323,11 +374,11 @@ static void calibrate_apic_timer(void)
         apic_ticks_per_ms = static_cast<uint32_t>(apic_freq / 1000);
         apic_divisor = 1;
         fp_32_64_div_32_32(&apic_ticks_per_ns, apic_ticks_per_ms, 1000 * 1000);
-        TRACEF("APIC frequency: %" PRIu32 " ticks/ms\n", apic_ticks_per_ms);
+        printf("APIC frequency: %" PRIu32 " ticks/ms\n", apic_ticks_per_ms);
         return;
     }
 
-    TRACEF("Could not find APIC frequency! Calibrating APIC with %s\n",
+    printf("Could not find APIC frequency: Calibrating APIC with %s\n",
            clock_name[calibration_clock]);
 
     apic_divisor = 1;
@@ -396,7 +447,7 @@ outer:
     }
     ASSERT(apic_divisor != 0);
 
-    LTRACEF("APIC timer calibrated: %" PRIu32 " ticks/ms, %d divisor\n",
+    printf("APIC timer calibrated: %" PRIu32 " ticks/ms, divisor %d\n",
             apic_ticks_per_ms, apic_divisor);
 }
 
@@ -407,71 +458,67 @@ static void calibrate_tsc(void)
     const uint64_t tsc_freq = lookup_tsc_freq();
     if (tsc_freq != 0) {
         tsc_ticks_per_ms = tsc_freq / 1000;
-        ASSERT(tsc_ticks_per_ms <= UINT32_MAX);
-        fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, static_cast<uint32_t>(tsc_ticks_per_ms));
-        fp_32_64_div_32_32(&tsc_per_ns, static_cast<uint32_t>(tsc_ticks_per_ms), 1000 * 1000);
-        TRACEF("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
-        return;
-    }
+        printf("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
+    } else {
+        printf("Could not find TSC frequency: Calibrating TSC with %s\n",
+               clock_name[calibration_clock]);
 
-    TRACEF("Could not find TSC frequency! Calibrating TSC with %s\n",
-           clock_name[calibration_clock]);
+        uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
+        const uint16_t duration_ms[2] = { 1, 2 };
+        for (int trial = 0; trial < 2; ++trial) {
+            for (int tries = 0; tries < 3; ++tries) {
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle_preamble();
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle_preamble(duration_ms[trial]);
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
 
-    uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
-    const uint16_t duration_ms[2] = { 1, 2 };
-    for (int trial = 0; trial < 2; ++trial) {
-        for (int tries = 0; tries < 3; ++tries) {
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle_preamble();
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle_preamble(duration_ms[trial]);
-                    break;
-                default: PANIC_UNIMPLEMENTED;
-            }
+                // Use CPUID to serialize the instruction stream
+                uint32_t _ignored;
+                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+                uint64_t start = rdtsc();
+                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
-            // Use CPUID to serialize the instruction stream
-            uint32_t _ignored;
-            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-            uint64_t start = rdtsc();
-            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle(duration_ms[trial]);
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle(duration_ms[trial]);
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
 
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle(duration_ms[trial]);
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle(duration_ms[trial]);
-                    break;
-                default: PANIC_UNIMPLEMENTED;
-            }
+                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+                uint64_t end = rdtsc();
+                cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
-            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-            uint64_t end = rdtsc();
-            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-
-            uint64_t tsc_ticks = end - start;
-            if (tsc_ticks < best_time[trial]) {
-                best_time[trial] = tsc_ticks;
-            }
-            LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
-                    tries, tsc_ticks);
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle_cleanup();
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle_cleanup();
-                    break;
-                default: PANIC_UNIMPLEMENTED;
+                uint64_t tsc_ticks = end - start;
+                if (tsc_ticks < best_time[trial]) {
+                    best_time[trial] = tsc_ticks;
+                }
+                LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
+                        tries, tsc_ticks);
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle_cleanup();
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle_cleanup();
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
             }
         }
+
+        tsc_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
+
+        printf("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
     }
-
-    tsc_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
-
-    LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 
     ASSERT(tsc_ticks_per_ms <= UINT32_MAX);
     fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, static_cast<uint32_t>(tsc_ticks_per_ms));
@@ -548,9 +595,9 @@ static void platform_init_timer(uint level)
         }
     }
 
-    TRACEF("timer features: constant_tsc %d invariant_tsc %d tsc_deadline %d\n",
+    printf("timer features: constant_tsc %d invariant_tsc %d tsc_deadline %d\n",
             constant_tsc, invariant_tsc, use_tsc_deadline);
-    TRACEF("Using %s as wallclock\n", clock_name[wall_clock]);
+    printf("Using %s as wallclock\n", clock_name[wall_clock]);
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
