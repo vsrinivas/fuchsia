@@ -77,6 +77,22 @@ bool test_persist_simple(void) {
     END_TEST;
 }
 
+bool test_persist_rapid_remount(void) {
+    if (!test_info->can_be_mounted) {
+        fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
+        return true;
+    }
+
+    BEGIN_TEST;
+
+    for (size_t i = 0; i < 100; i++) {
+        ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+    }
+
+    END_TEST;
+}
+
+
 template <size_t BufferSize>
 bool test_persist_with_data(void) {
     if (!test_info->can_be_mounted) {
@@ -250,6 +266,7 @@ bool test_rename_loop(void) {
 
 RUN_FOR_ALL_FILESYSTEMS(persistence_tests,
     RUN_TEST_MEDIUM(test_persist_simple)
+    RUN_TEST_MEDIUM(test_persist_rapid_remount)
     RUN_TEST_MEDIUM((test_persist_with_data<1>))
     RUN_TEST_MEDIUM((test_persist_with_data<100>))
     RUN_TEST_MEDIUM((test_persist_with_data<8192 - 1>))
