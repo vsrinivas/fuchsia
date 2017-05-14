@@ -105,18 +105,7 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
 
         status = device_add(parent, &args, &device->mxdev);
     } else {
-#if NEW_BUS_DRIVER
         return ERR_BAD_STATE;
-#else
-        status = device_create(name, device, &kpci_device_proto, drv,
-                               MX_PROTOCOL_PCI, &_pci_protocol, &device->mxdev);
-        if (status == NO_ERROR) {
-            // TODO (voydanoff) devhost_create_pcidev() requires that we write directly into the mx_device_t here.
-            // This can be cleaned up after we remove devhost_create_pcidev()
-            device->mxdev->props = device->props;
-            device->mxdev->prop_count = countof(device->props);
-        }
-#endif
     }
 
     if (status == NO_ERROR) {
@@ -131,7 +120,6 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
     return status;
 }
 
-#if NEW_BUS_DRIVER
 static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     mx_status_t status;
     mx_device_t* pcidev;
@@ -167,81 +155,12 @@ static mx_status_t kpci_drv_create(mx_driver_t* drv, mx_device_t* parent,
     return kpci_init_child(drv, parent, index, true, &dev);
 }
 
-#else
-static mx_driver_t __driver_kpci = {
-    .name = "pci",
-};
-
-mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
-    return kpci_init_child(&__driver_kpci, NULL, index, true, out);
-}
-
-void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id,
-                            const char* procname, int argc, char** argv);
-
-static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
-    for (uint32_t index = 0;; index++) {
-        mx_pcie_device_info_t info;
-        mx_handle_t h = mx_pci_get_nth_device(get_root_resource(), index, &info);
-        if (h < 0) {
-            break;
-        }
-        mx_handle_close(h);
-
-        char name[32];
-        snprintf(name, sizeof(name), "%02x:%02x:%02x",
-                 info.bus_id, info.dev_id, info.func_id);
-
-        char procname[64];
-        snprintf(procname, sizeof(procname), "devhost:pci#%d:%04x:%04x",
-                 index, info.vendor_id, info.device_id);
-
-        char arg1[20];
-        snprintf(arg1, sizeof(arg1), "pci=%d", index);
-
-        const char* args[2] = { "/boot/bin/devhost", arg1 };
-        devhost_launch_devhost(parent, name, MX_PROTOCOL_PCI, procname, 2, (char**)args);
-    }
-
-    return NO_ERROR;
-}
-
-static mx_status_t kpci_drv_init(mx_driver_t* drv) {
-    mx_status_t status;
-    printf("kpci_init()\n");
-
-   device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "pci",
-        .driver = drv,
-        .ops = &kpci_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    mx_device_t* kpci_root_dev;
-    if ((status = device_add(driver_get_root_device(), &args, &kpci_root_dev)) < 0) {
-        return status;
-    } else {
-        return kpci_init_children(drv, kpci_root_dev);
-    }
-}
-#endif
-
 static mx_driver_ops_t kpci_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-#if NEW_BUS_DRIVER
     .bind = kpci_drv_bind,
     .create = kpci_drv_create,
-#else
-    .init = kpci_drv_init,
-#endif
 };
 
-#if NEW_BUS_DRIVER
 MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
 MAGENTA_DRIVER_END(pci)
-#else
-MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(pci)
-#endif

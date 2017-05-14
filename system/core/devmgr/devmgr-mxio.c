@@ -16,6 +16,7 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
@@ -28,6 +29,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+void devmgr_io_init(void) {
+    // setup stdout
+    mx_handle_t h;
+    if (mx_log_create(MX_LOG_FLAG_DEVMGR, &h) < 0) {
+        return;
+    }
+    mxio_t* logger;
+    if ((logger = mxio_logger_create(h)) == NULL) {
+        return;
+    }
+    close(1);
+    mxio_bind_to_fd(logger, 1, 0);
+}
 
 typedef struct bootfile bootfile_t;
 struct bootfile {

@@ -15,8 +15,4 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/bcm
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/magenta
 
-ifeq ($(ENABLE_DEVHOST_V2),true)
-MODULE_DEFINES += DEVHOST_V2=1
-endif
-
 include make/module.mk

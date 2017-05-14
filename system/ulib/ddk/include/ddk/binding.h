@@ -181,24 +181,12 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver__
 #endif
 
-#if DEVHOST_V2
 #define MAGENTA_DRIVER_DEF(Driver,Ops,Flags) \
 mx_driver_t MAGENTA_DRIVER_PASTE(_driver_,Driver) = {\
     /* .name */ MAGENTA_TOSTRING(Driver),\
     /* .ops */ &Ops,\
     /* .flags */ Flags,\
 };
-#else
-#define MAGENTA_DRIVER_DEF(Driver,Ops,Flags) \
-mx_driver_t MAGENTA_DRIVER_PASTE(_driver_,Driver) = {\
-    /* .name */ MAGENTA_TOSTRING(Driver),\
-    /* .ops */ &Ops,\
-    /* .flags */ Flags,\
-    /* .node */ {0, 0},\
-    /* .binding */ 0,\
-    /* .binding_size */ 0,\
-};
-#endif
 
 #define MAGENTA_DRIVER_BEGIN_ETC(Driver,Ops,Flags,VendorName,Version,BindCount) \
 MAGENTA_DRIVER_DEF(Driver, Ops, Flags) \

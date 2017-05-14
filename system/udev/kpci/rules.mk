@@ -16,6 +16,4 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
-MODULE_DEFINES := NEW_BUS_DRIVER=1
-
 include make/module.mk

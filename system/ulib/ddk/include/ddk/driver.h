@@ -51,18 +51,8 @@ typedef struct mx_driver_ops {
 
 struct mx_driver {
     const char* name;
-
     mx_driver_ops_t* ops;
-
     uint32_t flags;
-
-#if !DEVHOST_V2
-    struct list_node node;
-
-    const mx_bind_inst_t* binding;
-    uint32_t binding_size;
-    // binding instructions
-#endif
 };
 
 // echo -n "device_add_args_v0.5" | sha256sum | cut -c1-16

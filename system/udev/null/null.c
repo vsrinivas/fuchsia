@@ -42,21 +42,11 @@ mx_status_t null_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     return device_add(parent, &args, &dev);
 }
 
-#if !DEVHOST_V2
-mx_status_t null_init(mx_driver_t* drv) {
-    return null_bind(drv, driver_get_root_device(), NULL);
-}
-#endif
-
 mx_driver_t _driver_null;
 
 static mx_driver_ops_t null_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-#if DEVHOST_V2
     .bind = null_bind,
-#else
-    .init = null_init,
-#endif
 };
 
 MAGENTA_DRIVER_BEGIN(null, null_driver_ops, "magenta", "0.1", 0)

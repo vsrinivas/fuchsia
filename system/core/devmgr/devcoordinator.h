@@ -5,6 +5,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 
@@ -26,15 +29,6 @@ mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
 mx_status_t port_cancel(port_t* port, port_handler_t* ph);
 mx_status_t port_queue(port_t* port, port_handler_t* ph, uint32_t evt);
 
-#if DEVMGR
-#include <fs/vfs.h>
-#include "memfs-private.h"
-
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-
-#if DEVHOST_V2
 typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
@@ -83,7 +77,7 @@ struct dc_device {
     int32_t refcount;
     uint32_t protocol_id;
     uint32_t prop_count;
-    VnodeDir* vnode;
+    void* vnode;
     device_t* parent;
     device_t* shadow;
 
@@ -104,18 +98,6 @@ struct dc_device {
 
     mx_device_prop_t props[];
 };
-
-#else
-typedef struct {
-    mx_handle_t hrpc;
-    uint32_t flags;
-    uint32_t protocol_id;
-    uint32_t prop_count;
-    VnodeDir* vnode;
-    char name[MX_DEVICE_NAME_MAX + 1];
-    mx_device_prop_t props[];
-} device_t;
-#endif
 
 // This device is never destroyed
 #define DEV_CTX_IMMORTAL   0x01
@@ -157,7 +139,7 @@ typedef struct dc_driver {
 mx_status_t do_publish(device_t* parent, device_t* dev);
 void do_unpublish(device_t* dev);
 
-void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job);
+void coordinator_init(void* vnroot, mx_handle_t root_job);
 void coordinator(void);
 
 void coordinator_new_driver(driver_ctx_t* ctx, const char* version);
@@ -167,9 +149,6 @@ void enumerate_drivers(void);
 bool dc_is_bindable(driver_ctx_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
                     bool autobind);
-#endif
-
-#if DEVHOST_V2
 
 #define DC_MAX_DATA 4096
 
@@ -218,17 +197,3 @@ mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
                           const char** name, const char** args);
 mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
                        mx_handle_t* handles, size_t hcount);
-
-#else
-typedef struct dev_coordinator_msg {
-    uint32_t op;
-    int32_t arg;
-    uint32_t protocol_id;
-    char name[MX_DEVICE_NAME_MAX];
-} dev_coordinator_msg_t;
-
-#define DC_OP_STATUS 0
-#define DC_OP_ADD 1
-#define DC_OP_REMOVE 2
-#define DC_OP_SHUTDOWN 3
-#endif

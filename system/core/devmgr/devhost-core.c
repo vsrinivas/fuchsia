@@ -140,78 +140,6 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-#if !DEVHOST_V2
-static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv, bool autobind) {
-    mx_status_t status;
-
-    xprintf("devhost: probe dev=%p(%s) drv=%p(%s)\n",
-            dev, dev->name, drv, drv->name ? drv->name : "<NULL>");
-
-    // don't bind to the driver that published this device
-    if (drv == dev->driver) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    // evaluate the driver's binding program against the device's properties
-    if (!devhost_is_bindable_drv(drv, dev, autobind)) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    void *cookie = NULL;
-    DM_UNLOCK();
-    // Load driver if it's not already loaded
-    if ((status = devhost_load_driver(drv)) < 0) {
-        DM_LOCK();
-        return status;
-    }
-    status = drv->ops->bind(drv, dev, &cookie);
-    DM_LOCK();
-    if (status < 0) {
-        return status;
-    }
-    dev_ref_acquire(dev);
-
-    // multi-bind devices are not "owned" by a single driver
-    // and they currently are permanent singleton devices (like /dev/misc)
-    // which will never result in child->op->unbind(), so the fact that
-    // we do not track the cookie here is not a problem.
-    if (!(dev->flags & DEV_FLAG_MULTI_BIND)) {
-        dev->owner = drv;
-        dev->owner_cookie = cookie;
-
-        // remove from unbound list if we succeeded
-        if (list_in_list(&dev->unode)) {
-            list_delete(&dev->unode);
-        }
-    }
-
-    return NO_ERROR;
-}
-
-static void devhost_device_probe_all(mx_device_t* dev, bool autobind) {
-    if ((dev->flags & DEV_FLAG_UNBINDABLE) || device_is_bound(dev)) {
-        return;
-    }
-
-    mx_driver_t* drv = NULL;
-    list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-        if (devhost_device_probe(dev, drv, autobind) == NO_ERROR) {
-            // if the probe succeeded and we are not a multi-bind
-            // device, we can stop looking for further matches now
-            if (!(dev->flags & DEV_FLAG_MULTI_BIND)) {
-                break;
-            }
-        }
-    }
-
-    // if no driver is bound, add the device to the unmatched list
-    if (!device_is_bound(dev)) {
-        list_add_tail(&unmatched_device_list, &dev->unode);
-    }
-}
-#endif
-
-
 mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
                                   mx_driver_t* driver, mx_device_t** out) {
     mx_device_t* dev = malloc(sizeof(mx_device_t));
@@ -285,16 +213,7 @@ static mx_status_t device_validate(mx_device_t* dev) {
         (dev->protocol_id == MX_PROTOCOL_ROOT)) {
         // These protocols is only allowed for the special
         // singleton misc or root parent devices.
-#if DEVHOST_V2
         return ERR_INVALID_ARGS;
-#else
-        if (dev != driver_get_misc_device()) {
-            return ERR_INVALID_ARGS;
-        }
-        // We do not limit binding to a single child
-        // on the misc parent device.
-        dev->flags |= DEV_FLAG_MULTI_BIND;
-#endif
     }
     // devices which do not declare a primary protocol
     // are implied to be misc devices
@@ -442,12 +361,6 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         }
     }
     dev->flags |= DEV_FLAG_ADDED;
-
-#if !DEVHOST_V2
-    // probe the device
-    devhost_device_probe_all(dev, true);
-#endif
-
     dev->flags &= (~DEV_FLAG_BUSY);
     return NO_ERROR;
 
@@ -546,34 +459,6 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-#if !DEVHOST_V2
-mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
-    if (device_is_bound(dev)) {
-        return ERR_INVALID_ARGS;
-    }
-    if (dev->flags & DEV_FLAG_UNBINDABLE) {
-        return NO_ERROR;
-    }
-    dev->flags |= DEV_FLAG_BUSY;
-    if (!drv_name) {
-        devhost_device_probe_all(dev, false);
-    } else {
-        // bind the driver with matching name
-        mx_driver_t* drv = NULL;
-        list_for_every_entry (&driver_list, drv, mx_driver_t, node) {
-            if (strcmp(drv->name, drv_name)) {
-                continue;
-            }
-            if (devhost_device_probe(dev, drv, false) == NO_ERROR) {
-                break;
-            }
-        }
-    }
-    dev->flags &= ~DEV_FLAG_BUSY;
-    return NO_ERROR;
-}
-#endif
-
 mx_status_t devhost_device_rebind(mx_device_t* dev) {
     dev->flags |= DEV_FLAG_BUSY;
 
@@ -594,11 +479,6 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
         dev->owner = NULL;
         dev_ref_release(dev);
     }
-
-#if !DEVHOST_V2
-    // probe the device again to bind
-    devhost_device_probe_all(dev, false);
-#endif
 
     dev->flags &= ~DEV_FLAG_BUSY;
     return NO_ERROR;
@@ -642,28 +522,6 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     dev_ref_release(dev);
     return r;
 }
-
-#if !DEVHOST_V2
-mx_status_t devhost_driver_add(mx_driver_t* drv) {
-    xprintf("driver add: %p(%s)\n", drv, drv->name);
-
-    // add the driver to the driver list
-    list_add_tail(&driver_list, &drv->node);
-
-    // probe unmatched devices with the driver and initialize if the probe is successful
-    mx_device_t* dev = NULL;
-    mx_device_t* temp = NULL;
-    list_for_every_entry_safe (&unmatched_device_list, dev, temp, mx_device_t, unode) {
-        devhost_device_probe(dev, drv, true);
-    }
-    return NO_ERROR;
-}
-
-mx_status_t devhost_driver_remove(mx_driver_t* drv) {
-    // TODO: implement
-    return ERR_NOT_SUPPORTED;
-}
-#endif
 
 mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     if (dev->owner != drv) {

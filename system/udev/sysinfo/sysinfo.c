@@ -12,7 +12,6 @@
 #include <string.h>
 #include <threads.h>
 
-#if DEVHOST_V2
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #define ID_HJOBROOT 4
@@ -34,9 +33,6 @@ static mx_handle_t get_sysinfo_job_root(void) {
 
     return MX_HANDLE_INVALID;
 }
-#else
-mx_handle_t get_sysinfo_job_root(void);
-#endif
 
 static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
                              void* reply, size_t max, size_t* out_actual) {
@@ -92,26 +88,11 @@ mx_status_t sysinfo_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     return device_add(parent, &args, &dev);
 }
 
-#if !DEVHOST_V2
-mx_status_t sysinfo_init(mx_driver_t* drv) {
-    return sysinfo_bind(drv, driver_get_misc_device(), NULL);
-}
-#endif
-
 static mx_driver_ops_t sysinfo_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-#if DEVHOST_V2
     .bind = sysinfo_bind,
-#else
-    .init = sysinfo_init,
-#endif
 };
 
-#if DEVHOST_V2
 MAGENTA_DRIVER_BEGIN(sysinfo, sysinfo_driver_ops, "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_MISC_PARENT),
 MAGENTA_DRIVER_END(sysinfo)
-#else
-MAGENTA_DRIVER_BEGIN(sysinfo, sysinfo_driver_ops, "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(sysinfo)
-#endif

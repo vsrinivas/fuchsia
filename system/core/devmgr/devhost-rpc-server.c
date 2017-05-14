@@ -41,17 +41,8 @@ devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
         return NULL;
     }
     ios->dev = dev;
-#if !DEVHOST_V2
-    mtx_init(&ios->lock, mtx_plain);
-#endif
     return ios;
 }
-
-#if !DEVHOST_V2
-mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
-    return mxio_dispatcher_add(devhost_rio_dispatcher, h, devhost_rio_handler, ios);
-}
-#endif
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
@@ -488,27 +479,6 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
 
 mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     devhost_iostate_t* ios = cookie;
-    mx_status_t status;
     bool should_free_ios = false;
-#if DEVHOST_V2
     return _devhost_rio_handler(msg, rh, ios, &should_free_ios);
-#else
-    mtx_lock(&ios->lock);
-    // if ios->dev is NULL, this is the "root" iostate of the
-    // device (where OPEN transactions are passed from devfs)
-    // and devhost_remove() has been called as part of device
-    // removal
-    if (ios->dev != NULL) {
-        status = _devhost_rio_handler(msg, rh, ios, &should_free_ios);
-    } else {
-        printf("rpc-device: stale ios %p\n", ios);
-        status = ERR_PEER_CLOSED;
-    }
-    mtx_unlock(&ios->lock);
-    // TODO(swetland): pretty sure we sometimes leak these.
-    if (should_free_ios) {
-        free(ios);
-    }
-#endif
-    return status;
 }

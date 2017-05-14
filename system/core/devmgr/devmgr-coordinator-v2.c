@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 
+#include <ddk/driver.h>
 #include <launchpad/launchpad.h>
+#include <magenta/assert.h>
 #include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-
-#include <ddk/driver.h>
+#include <mxio/io.h>
 
 #include "acpi.h"
 #include "devcoordinator.h"
 #include "log.h"
+#include "memfs-private.h"
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
@@ -918,7 +921,7 @@ void coordinator_new_driver(driver_t* drv, const char* version) {
     }
 }
 
-void coordinator_init(VnodeDir* vnroot, mx_handle_t root_job) {
+void coordinator_init(void* vnroot, mx_handle_t root_job) {
     printf("coordinator_init()\n");
 
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job);
