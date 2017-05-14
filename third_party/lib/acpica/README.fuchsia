@@ -14,3 +14,4 @@ Modifications:
 - Added source/os_specific/service_layers/osfuchsia.c
 - Moved everything in source/include into source/include/acpica
 - Wrapped source/include/acpica/acpi.h with __BEGIN_CDECLS/__END_CDECLS
+- Modified source/components/tables/tbxfload.c to check AcpiGbl_DsdtIndex

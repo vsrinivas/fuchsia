@@ -127,14 +127,20 @@ AcpiTbLoadNamespace (
 
     (void) AcpiUtAcquireMutex (ACPI_MTX_TABLES);
 
+    if (AcpiGbl_DsdtIndex == UINT32_MAX ||
+        !AcpiGbl_RootTableList.CurrentTableCount)
+    {
+        Status = AE_NO_ACPI_TABLES;
+        goto UnlockAndExit;
+    }
+
     /*
      * Load the namespace. The DSDT is required, but any SSDT and
      * PSDT tables are optional. Verify the DSDT.
      */
     Table = &AcpiGbl_RootTableList.Tables[AcpiGbl_DsdtIndex];
 
-    if (!AcpiGbl_RootTableList.CurrentTableCount ||
-        !ACPI_COMPARE_NAME (Table->Signature.Ascii, ACPI_SIG_DSDT) ||
+    if (!ACPI_COMPARE_NAME (Table->Signature.Ascii, ACPI_SIG_DSDT) ||
          ACPI_FAILURE (AcpiTbValidateTable (Table)))
     {
         Status = AE_NO_ACPI_TABLES;
