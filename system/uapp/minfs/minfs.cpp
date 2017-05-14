@@ -45,7 +45,7 @@ void minfs_dump_info(minfs_info_t* info) {
     trace(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
 }
 
-mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
+mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
     if ((info->magic0 != kMinfsMagic0) ||
         (info->magic1 != kMinfsMagic1)) {
         error("minfs: bad magic\n");
@@ -87,7 +87,7 @@ mx_status_t Minfs::InodeSync(uint32_t ino, const minfs_inode_t* inode) {
     return NO_ERROR;
 }
 
-Minfs::Minfs(Bcache* bc, minfs_info_t* info) : bc_(bc) {
+Minfs::Minfs(Bcache* bc, const minfs_info_t* info) : bc_(bc) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
@@ -306,7 +306,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 static const unsigned kPoolSize = 4;
 #endif
 
-mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
+mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = info->inode_count;
 

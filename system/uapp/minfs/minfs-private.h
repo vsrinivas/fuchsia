@@ -32,10 +32,7 @@ constexpr uint32_t kMxFsSyncCtime   = (1<<1);
 constexpr uint32_t kMinfsBlockCacheSize = 64;
 
 // Used by fsck
-struct CheckMaps {
-    RawBitmap checked_inodes;
-    RawBitmap checked_blocks;
-};
+class MinfsChecker;
 
 class VnodeMinfs;
 
@@ -43,7 +40,7 @@ class Minfs {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
-    static mx_status_t Create(Minfs** out, Bcache* bc, minfs_info_t* info);
+    static mx_status_t Create(Minfs** out, Bcache* bc, const minfs_info_t* info);
 
     mx_status_t Unmount();
 
@@ -81,9 +78,8 @@ public:
 
 private:
     // Fsck can introspect Minfs
-    friend mx_status_t check_inode(CheckMaps*, const Minfs*, uint32_t, uint32_t);
-    friend mx_status_t minfs_check(Bcache*);
-    Minfs(Bcache* bc_, minfs_info_t* info_);
+    friend class MinfsChecker;
+    Minfs(Bcache* bc_, const minfs_info_t* info_);
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     mx_status_t InoNew(const minfs_inode_t* inode, uint32_t* ino_out);
     mx_status_t LoadBitmaps();
@@ -224,15 +220,40 @@ private:
     fs::RemoteContainer remoter_;
 };
 
+class MinfsChecker {
+public:
+    MinfsChecker();
+
+    mx_status_t Init(Bcache* bc, const minfs_info_t* info);
+    mx_status_t CheckInode(uint32_t ino, uint32_t parent);
+    mx_status_t CheckForUnusedBlocks() const;
+    mx_status_t CheckForUnusedInodes() const;
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
+
+    mx_status_t GetInode(minfs_inode_t* inode, uint32_t ino);
+    mx_status_t GetInodeNthBno(minfs_inode_t* inode, uint32_t n, uint32_t* bno_out);
+    mx_status_t FileRead(minfs_inode_t* inode, void* data, size_t len, size_t off);
+    mx_status_t FileWrite(minfs_inode_t* inode, const void* data, size_t len,
+                          size_t off);
+    mx_status_t CheckDirectory(minfs_inode_t* inode, uint32_t ino,
+                               uint32_t parent, uint32_t flags);
+    const char* CheckDataBlock(uint32_t bno);
+    mx_status_t CheckFile(minfs_inode_t* inode, uint32_t ino);
+
+    mxtl::unique_ptr<Minfs> fs_;
+    RawBitmap checked_inodes_;
+    RawBitmap checked_blocks_;
+};
+
 // write the inode data of this vnode to disk (default does not update time values)
 void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 
-mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max);
+mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
 void minfs_dump_info(minfs_info_t* info);
 
 int minfs_mkfs(Bcache* bc);
 
-mx_status_t check_inode(CheckMaps*, const Minfs*, uint32_t, uint32_t);
 mx_status_t minfs_check(Bcache* bc);
 
 mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, Bcache* bc);
