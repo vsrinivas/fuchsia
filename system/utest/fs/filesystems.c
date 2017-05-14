@@ -152,7 +152,8 @@ int unmount_memfs(const char* mount_path) {
 
 int mkfs_minfs(const char* disk_path) {
     mx_status_t status;
-    if ((status = mkfs(disk_path, DISK_FORMAT_MINFS, launch_stdio_sync)) != NO_ERROR) {
+    if ((status = mkfs(disk_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+                       &default_mkfs_options)) != NO_ERROR) {
         fprintf(stderr, "Could not mkfs filesystem");
         return -1;
     }
@@ -203,7 +204,8 @@ bool thinfs_exists(void) {
 
 int mkfs_thinfs(const char* disk_path) {
     mx_status_t status;
-    if ((status = mkfs(disk_path, DISK_FORMAT_FAT, launch_stdio_sync)) != NO_ERROR) {
+    if ((status = mkfs(disk_path, DISK_FORMAT_FAT, launch_stdio_sync,
+                       &default_mkfs_options)) != NO_ERROR) {
         fprintf(stderr, "Could not mkfs filesystem");
         return -1;
     }

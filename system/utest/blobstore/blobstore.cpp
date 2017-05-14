@@ -83,7 +83,8 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
     }
 
     mx_status_t status;
-    if ((status = mkfs(ramdisk_path_out, DISK_FORMAT_BLOBFS, launch_stdio_sync)) != NO_ERROR) {
+    if ((status = mkfs(ramdisk_path_out, DISK_FORMAT_BLOBFS, launch_stdio_sync,
+                       &default_mkfs_options)) != NO_ERROR) {
         fprintf(stderr, "Could not mkfs blobstore: %d", status);
         destroy_ramdisk(ramdisk_path_out);
         return -1;

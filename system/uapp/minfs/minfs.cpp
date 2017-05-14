@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <bitmap/raw-bitmap.h>
+#include <fs/trace.h>
 #include <magenta/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
@@ -36,12 +37,12 @@ void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno) 
 }
 
 void minfs_dump_info(minfs_info_t* info) {
-    printf("minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
-    printf("minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
-    printf("minfs: inode bitmap @ %10u\n", info->ibm_block);
-    printf("minfs: alloc bitmap @ %10u\n", info->abm_block);
-    printf("minfs: inode table  @ %10u\n", info->ino_block);
-    printf("minfs: data blocks  @ %10u\n", info->dat_block);
+    trace(MINFS, "minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
+    trace(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
+    trace(MINFS, "minfs: inode bitmap @ %10u\n", info->ibm_block);
+    trace(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
+    trace(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
+    trace(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
 }
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {

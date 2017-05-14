@@ -41,6 +41,16 @@ static const mount_options_t default_mount_options = {
     .create_mountpoint = false,
 };
 
+typedef struct mkfs_options {
+    bool verbose;
+} mkfs_options_t;
+
+static const mkfs_options_t default_mkfs_options = {
+    .verbose = false,
+};
+
+#define NUM_MKFS_OPTIONS 1
+
 typedef struct fsck_options {
     bool verbose;
     // At MOST one of the following '*_modify' flags may be true.
@@ -92,7 +102,8 @@ mx_status_t fmount(int devicefd, int mountfd, disk_format_t df,
                    const mount_options_t* options, LaunchCallback cb);
 
 // Format the provided device with a requested disk format.
-mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb);
+mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb,
+                 const mkfs_options_t* options);
 
 // Check and repair a device with a requested disk format.
 mx_status_t fsck(const char* devicepath, disk_format_t df,

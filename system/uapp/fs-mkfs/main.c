@@ -80,7 +80,10 @@ int main(int argc, char** argv) {
         printf("fs_mkfs: Formatting device [%s]\n", devicepath);
     }
 
-    if ((r = mkfs(devicepath, df, launch_stdio_sync)) < 0) {
+    mkfs_options_t options = default_mkfs_options;
+    options.verbose = verbose;
+
+    if ((r = mkfs(devicepath, df, launch_stdio_sync, &options)) < 0) {
         fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
     }
     return r;

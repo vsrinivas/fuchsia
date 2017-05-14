@@ -17,7 +17,8 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
-static mx_status_t mkfs_mxfs(const char* binary, const char* devicepath, LaunchCallback cb) {
+static mx_status_t mkfs_mxfs(const char* binary, const char* devicepath,
+                             LaunchCallback cb, const mkfs_options_t* options) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -33,23 +34,33 @@ static mx_status_t mkfs_mxfs(const char* binary, const char* devicepath, LaunchC
     }
     n += status;
 
-    const char* argv[] = { binary, "mkfs" };
-    return cb(countof(argv), argv, hnd, ids, n);
+    const char** argv = calloc(sizeof(char*), (2 + NUM_MKFS_OPTIONS));
+    size_t argc = 0;
+    argv[argc++] = binary;
+    if (options->verbose) {
+        argv[argc++] = "-v";
+    }
+    argv[argc++] = "mkfs";
+    status = cb(argc, argv, hnd, ids, n);
+    free(argv);
+    return status;
 }
 
-static mx_status_t mkfs_fat(const char* devicepath, LaunchCallback cb) {
+static mx_status_t mkfs_fat(const char* devicepath, LaunchCallback cb,
+                            const mkfs_options_t* options) {
     const char* argv[] = {"/boot/bin/mkfs-msdosfs", devicepath};
     return cb(countof(argv), argv, NULL, NULL, 0);
 }
 
-mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb) {
+mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb,
+                 const mkfs_options_t* options) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mkfs_mxfs("/boot/bin/minfs", devicepath, cb);
+        return mkfs_mxfs("/boot/bin/minfs", devicepath, cb, options);
     case DISK_FORMAT_FAT:
-        return mkfs_fat(devicepath, cb);
+        return mkfs_fat(devicepath, cb, options);
     case DISK_FORMAT_BLOBFS:
-        return mkfs_mxfs("/boot/bin/blobstore", devicepath, cb);
+        return mkfs_mxfs("/boot/bin/blobstore", devicepath, cb, options);
     default:
         return ERR_NOT_SUPPORTED;
     }
