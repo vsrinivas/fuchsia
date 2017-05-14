@@ -240,11 +240,14 @@ private:
 class MinfsChecker {
 public:
     MinfsChecker();
-
     mx_status_t Init(Bcache* bc, const minfs_info_t* info);
     mx_status_t CheckInode(uint32_t ino, uint32_t parent);
     mx_status_t CheckForUnusedBlocks() const;
     mx_status_t CheckForUnusedInodes() const;
+
+    // "Set once"-style flag to identify if anything nonconforming
+    // was found in the underlying filesystem -- even if it was fixed.
+    bool conforming_;
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 

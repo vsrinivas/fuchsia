@@ -68,6 +68,7 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
 mx_status_t MinfsChecker::FileRead(minfs_inode_t* inode, void* data, size_t len, size_t off) {
     if (off >= inode->size) {
         warn("file_read: offset %lu is greater than inode size (%u)\n", off, inode->size);
+        conforming_ = false;
         return 0;
     }
     if (len > (inode->size - off)) {
@@ -111,6 +112,7 @@ mx_status_t MinfsChecker::FileWrite(minfs_inode_t* inode, const void* data,
                                     size_t len, size_t off) {
     if (off >= inode->size) {
         warn("file_write: offset %lu is greater than inode size (%u)\n", off, inode->size);
+        conforming_ = false;
         return 0;
     }
     if (len > (inode->size - off)) {
@@ -302,6 +304,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
             if ((msg = CheckDataBlock(inode->inum[n])) != nullptr) {
                 warn("check: ino#%u: indirect block %u(@%u): %s\n",
                      ino, n, inode->inum[n], msg);
+                conforming_ = false;
             }
             blocks++;
         }
@@ -309,7 +312,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
 
     // count and sanity-check data blocks
 
-    unsigned max = 0;
+    unsigned blocks_allocated = 0;
     for (unsigned n = 0;;n++) {
         mx_status_t status;
         uint32_t bno;
@@ -325,25 +328,22 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
             const char* msg;
             if ((msg = CheckDataBlock(bno)) != nullptr) {
                 warn("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
+                conforming_ = false;
             }
-            max = n + 1;
+            blocks_allocated = n + 1;
         }
     }
-    if (max) {
-        unsigned sizeblocks = inode->size / kMinfsBlockSize;
-        if (sizeblocks > max) {
-            warn("check: ino#%u: filesize too large\n", ino);
-        } else if (sizeblocks < (max - 1)) {
+    if (blocks_allocated) {
+        unsigned max_blocks = mxtl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
+        if (blocks_allocated > max_blocks) {
             warn("check: ino#%u: filesize too small\n", ino);
-        }
-    } else {
-        if (inode->size) {
-            warn("check: ino#%u: filesize too large\n", ino);
+            conforming_ = false;
         }
     }
     if (blocks != inode->block_count) {
         warn("check: ino#%u: block count %u, actual blocks %u\n",
              ino, inode->block_count, blocks);
+        conforming_ = false;
     }
     return NO_ERROR;
 }
@@ -356,6 +356,7 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent) {
     checked_inodes_.Set(ino, ino + 1);
     if (!fs_->inode_map_.Get(ino, ino + 1)) {
         warn("check: ino#%u: not marked in-use\n", ino);
+        conforming_ = false;
     }
     mx_status_t status;
     minfs_inode_t inode;
@@ -419,7 +420,7 @@ mx_status_t MinfsChecker::CheckForUnusedInodes() const {
     return NO_ERROR;
 }
 
-MinfsChecker::MinfsChecker() : fs_(nullptr) {};
+MinfsChecker::MinfsChecker() : conforming_(true), fs_(nullptr) {};
 
 mx_status_t MinfsChecker::Init(Bcache* bc, const minfs_info_t* info) {
     mx_status_t status;
@@ -473,6 +474,7 @@ mx_status_t minfs_check(Bcache* bc) {
     //TODO: check allocated inodes that were abandoned
     //TODO: check allocated blocks that were not accounted for
     //TODO: check unallocated inodes where magic != 0
+    status |= (status != NO_ERROR) ? 0 : (chk.conforming_ ? NO_ERROR : ERR_BAD_STATE);
     return status;
 }
 
