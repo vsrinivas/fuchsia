@@ -138,7 +138,7 @@ next_instruction:
     return false;
 }
 
-bool dc_is_bindable(driver_ctx_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
                     bool autobind) {
     if (drv->binding_size == 0) {

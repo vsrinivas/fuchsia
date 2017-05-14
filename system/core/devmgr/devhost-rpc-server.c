@@ -122,7 +122,6 @@ done:
         printf("devhost_get_handles: failed to start iostate\n");
         goto fail;
     }
-
     return NO_ERROR;
 
 fail:

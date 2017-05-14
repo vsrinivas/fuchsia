@@ -125,14 +125,14 @@ struct dc_device {
 
 #define DEV_CTX_SHADOW     0x40
 
-typedef struct dc_driver {
+struct dc_driver {
     const char* name;
     const mx_bind_inst_t* binding;
     uint32_t binding_size;
     uint32_t flags;
     struct list_node node;
     const char* libname;
-} driver_ctx_t;
+};
 
 #define DRIVER_NAME_LEN_MAX 64
 
@@ -142,11 +142,11 @@ void do_unpublish(device_t* dev);
 void coordinator_init(void* vnroot, mx_handle_t root_job);
 void coordinator(void);
 
-void coordinator_new_driver(driver_ctx_t* ctx, const char* version);
+void coordinator_new_driver(driver_t* ctx, const char* version);
 
 void enumerate_drivers(void);
 
-bool dc_is_bindable(driver_ctx_t* drv, uint32_t protocol_id,
+bool dc_is_bindable(driver_t* drv, uint32_t protocol_id,
                     mx_device_prop_t* props, size_t prop_count,
                     bool autobind);
 
