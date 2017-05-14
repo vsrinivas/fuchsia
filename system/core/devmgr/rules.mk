@@ -15,11 +15,11 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
     $(LOCAL_DIR)/dnode.cpp \
-    $(LOCAL_DIR)/devhost-binding.c \
     $(LOCAL_DIR)/devhost-shared.c \
     $(LOCAL_DIR)/devmgr.c \
+    $(LOCAL_DIR)/devmgr-binding.c \
     $(LOCAL_DIR)/devmgr-coordinator.c \
-    $(LOCAL_DIR)/devmgr-coordinator-v2.c \
+    $(LOCAL_DIR)/devmgr-devfs.c \
     $(LOCAL_DIR)/devmgr-drivers.c \
     $(LOCAL_DIR)/devmgr-mxio.c \
     $(LOCAL_DIR)/driver-info.c \
@@ -59,18 +59,18 @@ include make/module.mk
 
 # devhost - container for drivers
 #
-MODULE := $(LOCAL_DIR).host2
+MODULE := $(LOCAL_DIR).host
 
-MODULE_NAME := devhost2
+MODULE_NAME := devhost
 
 MODULE_TYPE := userapp
 
 MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1 DDK_INTERNAL=1
 
 MODULE_SRCS := \
+	$(LOCAL_DIR)/devhost.c \
     $(LOCAL_DIR)/devhost-api.c \
     $(LOCAL_DIR)/devhost-core.c \
-    $(LOCAL_DIR)/devhost-v2.c \
     $(LOCAL_DIR)/devhost-rpc-server.c \
     $(LOCAL_DIR)/devhost-shared.c \
 
@@ -89,7 +89,7 @@ MODULE_TYPE := driver
 MODULE_NAME := dmctl
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/dmctl-v2.c \
+	$(LOCAL_DIR)/dmctl.c \
 	$(LOCAL_DIR)/devhost-shared.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
