@@ -44,8 +44,6 @@ devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
     return ios;
 }
 
-mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
-
 static mx_status_t devhost_get_handles(mx_handle_t rh, mx_device_t* dev,
                                        const char* path, uint32_t flags) {
     mx_status_t r;
@@ -133,13 +131,6 @@ fail_openat_pipelined:
     free(newios);
     mx_handle_close(rh);
     return r;
-}
-
-void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    msg.op = MXRIO_CLONE;
-    mxrio_txn_handoff(srv, rh, &msg);
 }
 
 static void sync_io_complete(iotxn_t* txn, void* cookie) {
@@ -258,14 +249,12 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
-                                 devhost_iostate_t* ios, bool* should_free_ios) {
+mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused, void* cookie) {
+    devhost_iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
-
-    *should_free_ios = false;
 
     // ensure handle count specified by opcode matches reality
     if (msg->hcount != MXRIO_HC(msg->op)) {
@@ -279,7 +268,6 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
         device_close(dev, ios->flags);
-        *should_free_ios = true;
         return NO_ERROR;
     case MXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {
@@ -475,10 +463,4 @@ mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused,
         }
         return ERR_NOT_SUPPORTED;
     }
-}
-
-mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    devhost_iostate_t* ios = cookie;
-    bool should_free_ios = false;
-    return _devhost_rio_handler(msg, rh, ios, &should_free_ios);
 }

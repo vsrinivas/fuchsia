@@ -164,9 +164,8 @@ static void dh_handle_open(mxrio_msg_t* msg, size_t len,
     }
     msg->handle[0] = h;
 
-    bool free_ios = false;
     mx_status_t r;
-    if ((r = _devhost_rio_handler(msg, 0, ios, &free_ios)) < 0) {
+    if ((r = devhost_rio_handler(msg, 0, ios)) < 0) {
         if (r != ERR_DISPATCHER_INDIRECT) {
             log(ERROR, "devhost: OPEN failed: %d\n", r);
         }
@@ -377,14 +376,6 @@ static mx_status_t dh_handle_dc_rpc(port_handler_t* ph, mx_signals_t signals, ui
     return NO_ERROR;
 }
 
-
-static mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t h, void* cookie) {
-    iostate_t* ios = cookie;
-    bool free_ios = false;
-    mx_status_t r = _devhost_rio_handler(msg, 0, ios, &free_ios);
-    return r;
-};
-
 // handles remoteio rpc
 static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     iostate_t* ios = ios_from_ph(ph);
@@ -392,12 +383,12 @@ static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, u
     mx_status_t r;
     const char* msg;
     if (signals & MX_CHANNEL_READABLE) {
-        if ((r = mxrio_handle_rpc(ph->handle, rio_handler, ios)) == NO_ERROR) {
+        if ((r = mxrio_handle_rpc(ph->handle, devhost_rio_handler, ios)) == NO_ERROR) {
             return NO_ERROR;
         }
         msg = (r > 0) ? "closed-by-rpc" : "rpc error";
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
-        mxrio_handle_close(rio_handler, ios);
+        mxrio_handle_close(devhost_rio_handler, ios);
         r = 1;
         msg = "closed-by-disconnect";
     } else {
