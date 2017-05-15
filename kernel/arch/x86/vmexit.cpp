@@ -18,18 +18,15 @@
 #include <mxtl/algorithm.h>
 #include <platform/pc/timer.h>
 
-#if WITH_LIB_MAGENTA
-#include <magenta/fifo_dispatcher.h>
-#endif // WITH_LIB_MAGENTA
-
 #include "hypervisor_priv.h"
 #include "vmexit_priv.h"
 
 #if WITH_LIB_MAGENTA
+#include <magenta/fifo_dispatcher.h>
 static const uint16_t kUartReceiveIoPort = 0x3f8;
 static const uint16_t kUartStatusIoPort = 0x3fd;
 static const uint64_t kUartStatusIdle = 1u << 6;
-#endif
+#endif // WITH_LIB_MAGENTA
 
 static const uint64_t kIa32ApicBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
@@ -44,7 +41,9 @@ static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 static const uint8_t kModRMRegMask = 0b00111000;
 
+static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptInfoValid = 1u << 31;
+static const uint64_t kInvalidErrorCode = UINT64_MAX;
 
 ExitInfo::ExitInfo() {
     exit_reason = static_cast<ExitReason>(vmcs_read(VmcsField32::EXIT_REASON));
@@ -87,12 +86,21 @@ static void next_rip(const ExitInfo& exit_info) {
     vmcs_write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.instruction_length);
 }
 
-static void set_interrupt(LocalApicState* local_apic_state) {
-    if (local_apic_state->active_interrupt != kInvalidInterrupt) {
-        uint32_t interrupt_info = kInterruptInfoValid | local_apic_state->active_interrupt;
-        vmcs_write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
-        local_apic_state->active_interrupt = kInvalidInterrupt;
+static void set_interrupt(uint32_t interrupt, uint64_t error_code, InterruptionType type) {
+    uint32_t interrupt_info = kInterruptInfoValid | static_cast<uint32_t>(type) << 8 | interrupt;
+    if (error_code != kInvalidErrorCode) {
+        interrupt_info |= kInterruptInfoDeliverErrorCode;
+        vmcs_write(VmcsField32::ENTRY_EXCEPTION_ERROR_CODE, error_code & UINT32_MAX);
     }
+    vmcs_write(VmcsField32::ENTRY_INTERRUPTION_INFORMATION, interrupt_info);
+}
+
+static void set_local_apic_interrupt(LocalApicState* local_apic_state) {
+    if (local_apic_state->active_interrupt == kInvalidInterrupt)
+        return;
+    set_interrupt(local_apic_state->active_interrupt, kInvalidErrorCode,
+                  InterruptionType::EXTERNAL_INTERRUPT);
+    local_apic_state->active_interrupt = kInvalidInterrupt;
 }
 
 void interrupt_window_exiting(bool enable) {
@@ -106,15 +114,12 @@ void interrupt_window_exiting(bool enable) {
     vmcs_write(VmcsField32::PROCBASED_CTLS, controls);
 }
 
-static status_t handle_external_interrupt(const ExitInfo& exit_info,
+static status_t handle_external_interrupt(const ExitInfo& exit_info, AutoVmcsLoad* vmcs_load,
                                           LocalApicState* local_apic_state) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    arch_enable_ints();
-    arch_disable_ints();
-
+    vmcs_load->reload();
     if (vmcs_read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
         // If interrupts are enabled, we inject any active interrupts.
-        set_interrupt(local_apic_state);
+        set_local_apic_interrupt(local_apic_state);
     } else if (local_apic_state->active_interrupt != kInvalidInterrupt) {
         // If interrupts are disabled, we set VM exit on interrupt enable.
         interrupt_window_exiting(true);
@@ -125,7 +130,7 @@ static status_t handle_external_interrupt(const ExitInfo& exit_info,
 static status_t handle_interrupt_window(const ExitInfo& exit_info,
                                         LocalApicState* local_apic_state) {
     interrupt_window_exiting(false);
-    set_interrupt(local_apic_state);
+    set_local_apic_interrupt(local_apic_state);
     return NO_ERROR;
 }
 
@@ -170,7 +175,7 @@ static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic
     // a) Continue to deliver interrupts to the guest.
     // b) Kill the hypervisor while a guest is halted.
     event_wait(&local_apic_state->event);
-    set_interrupt(local_apic_state);
+    set_local_apic_interrupt(local_apic_state);
     next_rip(exit_info);
     return NO_ERROR;
 }
@@ -259,7 +264,7 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
         next_rip(exit_info);
         timer_cancel(&local_apic_state->timer);
         local_apic_state->active_interrupt = kInvalidInterrupt;
-        local_apic_state->tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & 0xffffffff);
+        local_apic_state->tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & UINT32_MAX);
         if (local_apic_state->tsc_deadline > 0) {
             lk_time_t deadline = ticks_to_nanos(local_apic_state->tsc_deadline);
             timer_set_oneshot(&local_apic_state->timer, deadline, deadline_callback, local_apic_state);
@@ -533,8 +538,11 @@ static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_
 static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* guest_state,
                                      IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas) {
     if (exit_info.guest_physical_address < kIoApicPhysBase ||
-        exit_info.guest_physical_address >= kIoApicPhysBase + PAGE_SIZE)
-        return ERR_OUT_OF_RANGE;
+        exit_info.guest_physical_address >= kIoApicPhysBase + PAGE_SIZE) {
+        // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
+        set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
+        return NO_ERROR;
+    }
 
     uint8_t inst_buf[kMaxInstructionLength];
     uint32_t inst_len = exit_info.instruction_length;
@@ -598,7 +606,7 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
 
     // Check that XCR0 is valid.
     uint64_t xcr0_bitmap = ((uint64_t)leaf.d << 32) | leaf.a;
-    uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & 0xffffffff);
+    uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX);
     if (~xcr0_bitmap & xcr0 ||
         // x87 state must be enabled.
         (xcr0 & X86_XSAVE_STATE_X87) != X86_XSAVE_STATE_X87 ||
@@ -611,14 +619,14 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
     return NO_ERROR;
 }
 
-status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_state,
-                        IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
-                        FifoDispatcher* serial_fifo) {
+status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
+                        LocalApicState* local_apic_state, IoApicState* io_apic_state,
+                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* serial_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
-        return handle_external_interrupt(exit_info, local_apic_state);
+        return handle_external_interrupt(exit_info, vmcs_load, local_apic_state);
     case ExitReason::INTERRUPT_WINDOW:
         dprintf(SPEW, "handling interrupt window\n\n");
         return handle_interrupt_window(exit_info, local_apic_state);

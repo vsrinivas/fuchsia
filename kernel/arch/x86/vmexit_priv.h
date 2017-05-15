@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+class AutoVmcsLoad;
 class FifoDispatcher;
 class GuestPhysicalAddressSpace;
 struct GuestState;
@@ -54,6 +55,13 @@ struct IoInfo {
     IoInfo(uint64_t qualification);
 };
 
+/* VM entry interruption type. */
+enum class InterruptionType : uint32_t {
+    EXTERNAL_INTERRUPT  = 0u,
+    HARDWARE_EXCEPTION  = 3u,
+};
+
+/* Local APIC registers. */
 enum class ApicRegister : uint16_t {
     LOCAL_APIC_ID   = 0x0020,
     EOI             = 0x00b0,
@@ -83,6 +91,6 @@ struct Instruction {
 void interrupt_window_exiting(bool enable);
 status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestState* guest_state,
                             Instruction* inst);
-status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_state,
-                        IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
-                        FifoDispatcher* serial_fifo);
+status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
+                        LocalApicState* local_apic_state, IoApicState* io_apic_state,
+                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* serial_fifo);

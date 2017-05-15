@@ -385,16 +385,28 @@ VmxonPerCpu* VmxonContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
 }
 
-AutoVmcsLoad::AutoVmcsLoad(VmxPage* page) {
+AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
+    : page_(page) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    __UNUSED status_t status = vmptrld(page->PhysicalAddress());
+    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
 AutoVmcsLoad::~AutoVmcsLoad() {
     DEBUG_ASSERT(arch_ints_disabled());
     arch_enable_ints();
+}
+
+void AutoVmcsLoad::reload() {
+    // When we VM exit due to an external interrupt, we want to handle that
+    // interrupt. To do that, we temporarily re-enable interrupts. However, we
+    // must then reload the VMCS, in case it has been changed in the interim.
+    DEBUG_ASSERT(arch_ints_disabled());
+    arch_enable_ints();
+    arch_disable_ints();
+    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
+    DEBUG_ASSERT(status == NO_ERROR);
 }
 
 status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
@@ -835,8 +847,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         vmx_state_.resume = true;
-        status = vmexit_handler(&vmx_state_.guest_state, &local_apic_state_, &io_apic_state_, gpas,
-                                serial_fifo);
+        status = vmexit_handler(&vmcs_load, &vmx_state_.guest_state, &local_apic_state_,
+                                &io_apic_state_, gpas, serial_fifo);
     }
     return status;
 }
@@ -870,7 +882,7 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
 
     // Setup common MSR bitmaps.
     VmxInfo vmx_info;
-    status = ctx->msr_bitmaps_page_.Alloc(vmx_info, 0xff);
+    status = ctx->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX);
     if (status != NO_ERROR)
         return status;
 

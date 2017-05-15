@@ -84,6 +84,7 @@ enum class VmcsField32 : uint64_t {
     ENTRY_CTLS                      = 0x4012,   /* VM-entry controls */
     ENTRY_MSR_LOAD_COUNT            = 0x4014,   /* VM-entry MSR-load count */
     ENTRY_INTERRUPTION_INFORMATION  = 0x4016,   /* VM-entry interruption-information field */
+    ENTRY_EXCEPTION_ERROR_CODE      = 0x4018,   /* VM-entry exception error code */
     PROCBASED_CTLS2                 = 0x401e,   /* Secondary processor-based controls */
     INSTRUCTION_ERROR               = 0x4400,   /* VM instruction error */
     EXIT_REASON                     = 0x4402,   /* Exit reason */
@@ -170,7 +171,7 @@ enum class VmcsFieldXX : uint64_t {
 #define ENTRY_CTLS_LOAD_IA32_EFER           (1u << 15)
 
 /* LINK_POINTER values */
-#define LINK_POINTER_INVALIDATE             0xffffffffffffffff
+#define LINK_POINTER_INVALIDATE             UINT64_MAX
 
 /* GUEST_XX_ACCESS_RIGHTS flags */
 #define GUEST_XX_ACCESS_RIGHTS_UNUSABLE     (1u << 16)
@@ -244,9 +245,15 @@ private:
     bool is_on_ = false;
 };
 
-struct AutoVmcsLoad {
+class AutoVmcsLoad {
+public:
     AutoVmcsLoad(VmxPage* page);
     ~AutoVmcsLoad();
+
+    void reload();
+
+private:
+    VmxPage* page_;
 };
 
 /* Stores the local APIC state across VM exits. */
