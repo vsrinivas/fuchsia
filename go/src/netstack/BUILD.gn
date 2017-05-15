@@ -4,38 +4,11 @@
 
 import("//build/go/go_binary.gni")
 
-declare_args() {
-  # if true, lwiperf server will run
-  lwiperf = false
-
-  # if true, use netstack2 for netstack
-  netstack2 = true
+go_binary("netstack") {
+  gopackage = "apps/netstack/netstack2"
 }
 
-# The final output netstack at $root_out_dir/netstack may be built from :netstack1 or :netstack2.
-# To avoid confusing dependencies, especially when toggling the flag on and off, both targets build
-# their executable into their own location (either $root_out_dir/netstack1 or
-# $root_out_dir/netstack2), then a separate step copies the winner $root_out_dir/netstack.
-group("netstack") {
-  deps = [
-    ":copy_selected_netstack",
-    "//apps/netstack/apps",
-  ]
-}
-
-copy("copy_selected_netstack") {
-    if (netstack2) {
-        deps = [ ":netstack2" ]
-        sources = [ "$root_out_dir/netstack2" ]
-    } else {
-        deps = [ ":netstack1" ]
-        sources = [ "$root_out_dir/netstack1" ]
-    }
-    outputs = [ "$root_out_dir/netstack" ]
-}
-
-if (!netstack2) {
-
+# Deprecated: will be removed on or around 2017-May-19.
 executable("netstack1") {
   sources = [
     "dispatcher.c",
@@ -74,10 +47,6 @@ executable("netstack1") {
     defines += [ "NETSTACK_DEBUG" ]
   }
 
-  if (lwiperf) {
-    defines += [ "USE_LWIPERF" ]
-  }
-
   libs = [
     "mxio",
     "magenta",
@@ -88,8 +57,4 @@ executable("netstack1") {
   ]
 }
 
-}
 
-go_binary("netstack2") {
-    gopackage = "apps/netstack/netstack2"
-}
