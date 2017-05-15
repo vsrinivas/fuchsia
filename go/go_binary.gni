@@ -31,6 +31,8 @@ template("go_binary") {
       current_cpu,
       "--go-tool",
       rebase_path("//buildtools/go"),
+      "--binname",
+      rebase_path("$out_path"),
       invoker.gopackage,
     ]
 
