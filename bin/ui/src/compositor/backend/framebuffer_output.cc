@@ -24,7 +24,7 @@ namespace {
 // Delay between frames.
 // TODO(jeffbrown): Don't hardcode this.
 constexpr ftl::TimeDelta kHardwareRefreshInterval =
-    ftl::TimeDelta::FromMicroseconds(8000);
+    ftl::TimeDelta::FromMicroseconds(16667);
 
 // Amount of time it takes between flushing a frame and pixels lighting up.
 // TODO(jeffbrown): Tune this for A/V sync.
