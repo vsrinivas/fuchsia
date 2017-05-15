@@ -89,7 +89,7 @@ static mx_status_t dc_handle_device(port_handler_t* ph, mx_signals_t signals, ui
 static mx_status_t dc_attempt_bind(driver_t* drv, device_t* dev);
 
 static mx_handle_t devhost_job;
-static port_t dc_port;
+port_t dc_port;
 static list_node_t list_drivers = LIST_INITIAL_VALUE(list_drivers);
 
 static driver_t* libname_to_driver(const char* libname) {
@@ -142,6 +142,18 @@ static device_t misc_device = {
     .pending = LIST_INITIAL_VALUE(misc_device.pending),
     .refcount = 1,
 };
+
+device_t socket_device = {
+    .flags = DEV_CTX_IMMORTAL,
+    .protocol_id = 0,
+    .name = "socket",
+    .libname = "",
+    .args = "",
+    .children = LIST_INITIAL_VALUE(socket_device.children),
+    .pending = LIST_INITIAL_VALUE(socket_device.pending),
+    .refcount = 1,
+};
+
 
 static void dc_dump_device(device_t* dev, size_t indent) {
     mx_koid_t pid = dev->host ? dev->host->koid : 0;
@@ -319,7 +331,7 @@ static void dc_release_device(device_t* dev) {
 
     log(DEVLC, "devcoord: destroy dev %p name='%s'\n", dev, dev->name);
 
-    do_unpublish(dev);
+    devfs_unpublish(dev);
 
     if (dev->hrpc != MX_HANDLE_INVALID) {
         mx_handle_close(dev->hrpc);
@@ -406,7 +418,7 @@ static mx_status_t dc_add_device(device_t* parent,
     }
 
     mx_status_t r;
-    if ((r = do_publish(parent, dev)) < 0) {
+    if ((r = devfs_publish(parent, dev)) < 0) {
         free(dev);
         return r;
     }
@@ -415,7 +427,7 @@ static mx_status_t dc_add_device(device_t* parent,
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
     if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
-        do_unpublish(dev);
+        devfs_unpublish(dev);
         free(dev);
         return r;
     }
@@ -468,7 +480,7 @@ static mx_status_t dc_remove_device(device_t* dev, bool forced) {
     dev->flags |= DEV_CTX_DEAD;
 
     // remove from devfs, preventing further OPEN attempts
-    do_unpublish(dev);
+    devfs_unpublish(dev);
 
     // detach from devhost
     devhost_t* dh = dev->host;
@@ -926,7 +938,7 @@ void coordinator_new_driver(driver_t* drv, const char* version) {
     }
 }
 
-void coordinator_init(void* vnroot, mx_handle_t root_job) {
+device_t* coordinator_init(mx_handle_t root_job) {
     printf("coordinator_init()\n");
 
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job);
@@ -935,9 +947,9 @@ void coordinator_init(void* vnroot, mx_handle_t root_job) {
     }
     mx_object_set_property(devhost_job, MX_PROP_NAME, "magenta-drivers", 15);
 
-    root_device.vnode = vnroot;
-
     port_init(&dc_port);
+
+    return &root_device;
 }
 
 //TODO: The acpisvc needs to become the acpi bus device
@@ -962,7 +974,8 @@ void coordinator(void) {
     }
     acpi_init();
 
-    do_publish(&root_device, &misc_device);
+    devfs_publish(&root_device, &misc_device);
+    devfs_publish(&root_device, &socket_device);
 
     enumerate_drivers();
 
