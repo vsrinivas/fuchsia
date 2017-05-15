@@ -215,6 +215,8 @@ static void process_work(work_t* work) {
 
 static const char* devhost_bin = "/boot/bin/devhost";
 
+mx_handle_t get_service_root(void);
+
 static mx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
@@ -234,6 +236,9 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
                          PA_HND(PA_MXIO_ROOT, 0));
+    if ((h = get_service_root()) != MX_HANDLE_INVALID) {
+        launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
+    }
 
     //TODO: limit root job access to root devhost only
     launchpad_add_handle(lp, get_sysinfo_job_root(),
