@@ -115,7 +115,8 @@ type iostate struct {
 	wq *waiter.Queue
 	ep tcpip.Endpoint
 
-	transProto tcpip.TransportProtocolNumber
+	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
+	transProto tcpip.TransportProtocolNumber // TCP or UDP
 	// dataHandle is used to communicate with libc.
 	// dataHandle is an mx.Socket for TCP, or an mx.Channel for UDP.
 	dataHandle     mx.Handle
@@ -455,10 +456,11 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 	}
 }
 
-func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
+func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (ios *iostate, reterr error) {
 	var peerS mx.Handle
 	if iosOrig == nil {
 		ios = &iostate{
+			netProto:        netProto,
 			transProto:      transProto,
 			wq:              wq,
 			ep:              ep,
@@ -603,7 +605,7 @@ func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	ios, err = s.newIostate(h, nil, transProto, wq, ep)
+	ios, err = s.newIostate(h, nil, n, transProto, wq, ep)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -667,7 +669,7 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 		return err
 	}
 
-	_, err = s.newIostate(h, nil, ios.transProto, newwq, newep)
+	_, err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep)
 	return err
 }
 
@@ -948,6 +950,18 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) (status mx.Status) 
 		}()
 	}
 
+	if addr.Addr == "" {
+		// TODO: Not ideal. We should pass an empty addr to the endpoint,
+		// and netstack should find the first local interface that it can
+		// connect to. Until that exists, we assume localhost.
+		switch ios.netProto {
+		case ipv4.ProtocolNumber:
+			addr.Addr = header.IPv4Loopback
+		case ipv6.ProtocolNumber:
+			addr.Addr = header.IPv6Loopback
+		}
+	}
+
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 	err = ios.ep.Connect(*addr)
@@ -1139,7 +1153,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		var err error
 		switch {
 		case strings.HasPrefix(path, "none"): // MXRIO_SOCKET_DIR_NONE
-			_, err = s.newIostate(msg.Handle[0], nil, tcp.ProtocolNumber, nil, nil)
+			_, err = s.newIostate(msg.Handle[0], nil, ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil)
 		case strings.HasPrefix(path, "socket/"): // MXRIO_SOCKET_DIR_SOCKET
 			err = s.opSocket(msg.Handle[0], ios, msg, path)
 		case strings.HasPrefix(path, "accept"): // MXRIO_SOCKET_DIR_ACCEPT
@@ -1165,7 +1179,7 @@ func (s *socketServer) mxioHandler(msg *rio.Msg, rh mx.Handle, cookieVal int64) 
 		return dispatcher.ErrIndirect.Status
 	case rio.OpClone:
 		ios.acquire()
-		_, err := s.newIostate(msg.Handle[0], ios, tcp.ProtocolNumber, nil, nil)
+		_, err := s.newIostate(msg.Handle[0], ios, ios.netProto, tcp.ProtocolNumber, nil, nil)
 		if err != nil {
 			ios.release(func() { s.iosCloseHandler(ios, cookie) })
 			ro := rio.RioObject{
