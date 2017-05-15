@@ -13,7 +13,6 @@ import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
-import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -367,7 +366,7 @@ void main() {
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
   _appContext.outgoingServices.addServiceForName(
-    (request) {
+    (InterfaceRequest<Module> request) {
       _log('Received binding request for Module');
       _module ??= new ModuleImpl();
       _module.bind(request);
