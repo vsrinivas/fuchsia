@@ -1,8 +1,10 @@
 {
     "imports": [
+        "drivers",
         "magenta_benchmarks",
         "netstack",
         "sbase",
+        "thinfs",
         "vim"
     ]
 }
