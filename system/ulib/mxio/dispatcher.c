@@ -127,7 +127,7 @@ static int mxio_dispatcher_thread(void* _md) {
                 if (r == ERR_DISPATCHER_NO_WORK) {
                     printf("mxio: dispatcher found no work to do!\n");
                 } else {
-                    disconnect_handler(md, handler, r < 0);
+                    disconnect_handler(md, handler, r != ERR_DISPATCHER_DONE);
                     continue;
                 }
             }

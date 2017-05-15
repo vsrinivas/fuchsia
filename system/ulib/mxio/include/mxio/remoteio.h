@@ -69,17 +69,15 @@ const char* mxio_opname(uint32_t op);
 
 typedef struct mxrio_msg mxrio_msg_t;
 
-typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, void* cookie);
 // callback to process a mxrio_msg
 // - on entry datalen indicates how much valid data is in msg.data[]
-// - return value will be placed in msg.arg, negative is an error,
-//   positive values are opcode-specific
-// - on non-error return msg.len indicates how much valid data to
-//   send.  On error return msg.len will be set to 0.
-// - if rh is non-zero it is a reply handle which may be used for
-//   deferred replies.  In which case the callback must return
-//   ERR_DISPATCHER_INDIRECT to differentiate this from an immediate
-//   reply or error
+// - return value of ERR_DISPATCHER_INDIRECT indicates that the
+//   reply is being handled by the callback (forwarded to another
+//   server, sent later, etc, and no reply message should be sent.
+// - otherwise, the return value is treated as the status to send
+//   in the rpc response, and msg.len indicates how much valid data
+//   to send.  On error return msg.len will be set to 0.
 
 // a mxio_dispatcher_handler suitable for use with a mxio_dispatcher
 mx_status_t mxrio_handler(mx_handle_t h, void* cb, void* cookie);
@@ -91,7 +89,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* cb, void* cookie);
 // should be made).  handle_close() processes a "synthetic" close
 // event (eg, channel was remotely closed), and neither function
 // should be callaed again after handle_close().
-mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_cb_t cb, void* cookie);
+mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, void* cookie);
 mx_status_t mxrio_handle_close(mxrio_cb_t cb, void* cookie);
 
 // OPEN and CLOSE messages, can be forwarded to another remoteio server,

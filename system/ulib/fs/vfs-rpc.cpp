@@ -173,7 +173,7 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
     return sizeof(mx_handle_t);
 }
 
-mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, vfs_iostate* ios) {
+mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -513,12 +513,12 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode>
 // make locking more fine grained
 static mtx_t vfs_big_lock = MTX_INIT;
 
-mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
+mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
     mxtl::AutoLock lock(&vfs_big_lock);
     mxtl::RefPtr<Vnode> vn = ios->vn;
-    mx_status_t status = vfs_handler_vn(msg, rh, mxtl::move(vn), ios);
+    mx_status_t status = vfs_handler_vn(msg, mxtl::move(vn), ios);
     return status;
 }
 

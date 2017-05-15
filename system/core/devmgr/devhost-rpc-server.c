@@ -249,7 +249,7 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused, void* cookie) {
+mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
     devhost_iostate_t* ios = cookie;
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
@@ -268,6 +268,10 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh_unused, void* c
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
         device_close(dev, ios->flags);
+        // The ios released its reference to this device by calling device_close()
+        // Put an invalid pointer in its dev field to ensure any use-after-release
+        // attempts explode.
+        ios->dev = (void*) 0xdead;
         return NO_ERROR;
     case MXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {

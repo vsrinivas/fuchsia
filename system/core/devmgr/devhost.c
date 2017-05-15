@@ -165,7 +165,7 @@ static void dh_handle_open(mxrio_msg_t* msg, size_t len,
     msg->handle[0] = h;
 
     mx_status_t r;
-    if ((r = devhost_rio_handler(msg, 0, ios)) < 0) {
+    if ((r = devhost_rio_handler(msg, ios)) < 0) {
         if (r != ERR_DISPATCHER_INDIRECT) {
             log(ERROR, "devhost: OPEN failed: %d\n", r);
         }
@@ -381,25 +381,24 @@ static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, u
     iostate_t* ios = ios_from_ph(ph);
 
     mx_status_t r;
-    const char* msg;
+    mxrio_msg_t msg;
     if (signals & MX_CHANNEL_READABLE) {
-        if ((r = mxrio_handle_rpc(ph->handle, devhost_rio_handler, ios)) == NO_ERROR) {
+        if ((r = mxrio_handle_rpc(ph->handle, &msg, devhost_rio_handler, ios)) == NO_ERROR) {
             return NO_ERROR;
         }
-        msg = (r > 0) ? "closed-by-rpc" : "rpc error";
     } else if (signals & MX_CHANNEL_PEER_CLOSED) {
         mxrio_handle_close(devhost_rio_handler, ios);
-        r = 1;
-        msg = "closed-by-disconnect";
+        r = ERR_STOP;
     } else {
-        return NO_ERROR;
+        printf("dh_handle_rio_rpc: invalid signals %x\n", signals);
+        exit(0);
     }
 
-    char buffer[512];
-    const char* path = mkdevpath(ios->dev, buffer, sizeof(buffer));
-    log(RPC_RIO, "devhost[%s] %s: %d\n", path, msg, r);
-
-    //TODO: downref device under lock
+    // We arrive here if handle_rpc was a clean close (ERR_DISPATCHER_DONE),
+    // or close-due-to-error (non-NO_ERROR), or if the channel was closed
+    // out from under us (ERR_STOP).  In all cases, the ios's reference to
+    // the device was released, and will no longer be used, so we will free
+    // it before returning.
     free(ios);
     return r;
 }

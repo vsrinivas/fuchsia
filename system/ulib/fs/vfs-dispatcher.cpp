@@ -159,7 +159,7 @@ int VfsDispatcher::Loop() {
             for (unsigned ix = 0; ix < mxtl::min(kMaxMessageBatchSize, (unsigned)packet.signal.count); ++ix) {
                 if ((r = handler->ExecuteCallback(cb_)) != NO_ERROR) {
                     // error or close: invoke callback in case of error
-                    DisconnectHandler(handler, r < 0);
+                    DisconnectHandler(handler, r != ERR_DISPATCHER_DONE);
                     goto free_handler;
                 }
             }

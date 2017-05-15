@@ -328,7 +328,7 @@ typedef struct vdircookie {
 extern mxio_dispatcher_t* vfs_dispatcher;
 
 // Handle incoming mxrio messages, dispatching them to vnode operations.
-mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie);
 
 // Send an unmount signal on a handle to a filesystem and await a response.
 mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
