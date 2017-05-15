@@ -27,7 +27,8 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
 }
 
 cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
-                                     ftl::StringView user_id) {
+                                     ftl::StringView user_id,
+                                     ftl::StringView user_directory) {
   if (!server_id || server_id.size() == 0) {
     cloud_sync::UserConfig user_config;
     user_config.use_sync = false;
@@ -38,6 +39,7 @@ cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
   user_config.use_sync = true;
   user_config.server_id = server_id.get();
   user_config.user_id = user_id.ToString();
+  user_config.user_directory = user_directory.ToString();
   return user_config;
 }
 
@@ -121,7 +123,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
     ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
-    cloud_sync::UserConfig user_config = GetUserConfig(server_id, user_id);
+    cloud_sync::UserConfig user_config =
+        GetUserConfig(server_id, user_id, sanitized_path);
     if (!user_config.use_sync) {
       FTL_LOG(WARNING) << "No sync configuration set, "
                        << "Ledger will work locally but won't sync";
@@ -136,11 +139,13 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     if (!SaveConfigForDebugging(user_id, repository_path.get(), temp_dir)) {
       FTL_LOG(WARNING) << "Failed to save the current configuration.";
     }
+    auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
+        environment_, std::move(user_config));
+    user_sync->Start();
     auto result = repositories_.emplace(
         std::piecewise_construct, std::forward_as_tuple(sanitized_path),
         std::forward_as_tuple(sanitized_path, environment_,
-                              std::make_unique<cloud_sync::UserSyncImpl>(
-                                  environment_, std::move(user_config))));
+                              std::move(user_sync)));
     FTL_DCHECK(result.second);
     it = result.first;
   }

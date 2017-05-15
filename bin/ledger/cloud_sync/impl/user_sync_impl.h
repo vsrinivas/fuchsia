@@ -12,6 +12,7 @@
 
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/environment/environment.h"
+#include "apps/ledger/src/firebase/firebase.h"
 
 namespace cloud_sync {
 
@@ -20,13 +21,29 @@ class UserSyncImpl : public UserSync {
   UserSyncImpl(ledger::Environment* environment, UserConfig user_config);
   ~UserSyncImpl() override;
 
+  // Starts UserSyncImpl. This method must be called before any other method.
+  void Start();
+
  private:
+  // Check that the version on the cloud is compatible with the local version on
+  // the device.
+  void CheckCloudVersion();
+
+  // Enable sync upload.
+  void EnableUpload();
+
   // UserSync
-  const UserConfig& GetUserConfig() override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(ftl::StringView app_id) override;
 
   ledger::Environment* environment_;
-  UserConfig user_config_;
+  const UserConfig user_config_;
+
+  // UserSyncImpl must be started before it can be used.
+  bool started_ = false;
+  // Whether uploads should be enabled. It is false until the cloud version has
+  // been checked.
+  bool upload_enabled_ = false;
+  std::unique_ptr<firebase::Firebase> user_firebase_;
   std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
 };
 

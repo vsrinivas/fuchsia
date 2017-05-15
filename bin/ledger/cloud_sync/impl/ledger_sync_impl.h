@@ -31,6 +31,9 @@ class LedgerSyncImpl : public LedgerSync {
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) override;
 
+  // Enables upload. Has no effect if this method has already been called.
+  void EnableUpload();
+
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(std::function<void()> on_delete) {
     FTL_DCHECK(!on_delete_);
@@ -40,6 +43,7 @@ class LedgerSyncImpl : public LedgerSync {
  private:
   ledger::Environment* const environment_;
   const UserConfig* const user_config_;
+  bool upload_enabled_ = false;
   const std::string app_gcs_prefix_;
   // Firebase path under which the data of this Ledger instance is stored.
   const std::string app_firebase_path_;

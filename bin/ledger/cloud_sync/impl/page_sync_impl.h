@@ -67,6 +67,9 @@ class PageSyncImpl : public PageSync,
     on_delete_ = on_delete;
   }
 
+  // Enables upload. Has no effect if this method has already been called.
+  void EnableUpload();
+
   // PageSync:
   void Start() override;
 
@@ -146,6 +149,8 @@ class PageSyncImpl : public PageSync,
   // ensures that sync is not reported as idle until the commits to be
   // downloaded are retrieved.
   bool download_list_retrieved_ = false;
+  // Set to true when upload is enabled.
+  bool upload_enabled_ = false;
 
   // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;

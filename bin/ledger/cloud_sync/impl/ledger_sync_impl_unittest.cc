@@ -9,6 +9,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -22,7 +23,7 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
         environment_(message_loop_.task_runner(),
                      &network_service_,
                      ftl::TimeDelta()),
-        user_config_({true, "server_id", "test_user"}),
+        user_config_({true, "server_id", "test_user", dir_.path()}),
         ledger_sync_(&environment_, &user_config_, "test_id") {}
 
   // ::testing::Test:
@@ -31,6 +32,7 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
   void TearDown() override { ::testing::Test::TearDown(); }
 
  protected:
+  files::ScopedTempDir dir_;
   ledger::FakeNetworkService network_service_;
   ledger::Environment environment_;
   UserConfig user_config_;

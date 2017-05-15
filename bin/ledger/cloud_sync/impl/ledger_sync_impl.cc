@@ -86,12 +86,26 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage, result->cloud_provider.get(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback);
+  if (upload_enabled_) {
+    page_sync->EnableUpload();
+  }
   active_page_syncs_.insert(page_sync.get());
   page_sync->set_on_delete([ this, page_sync = page_sync.get() ]() {
     active_page_syncs_.erase(page_sync);
   });
   result->page_sync = std::move(page_sync);
   return result;
+}
+
+void LedgerSyncImpl::EnableUpload() {
+  if (upload_enabled_) {
+    return;
+  }
+
+  upload_enabled_ = true;
+  for (auto page_sync : active_page_syncs_) {
+    page_sync->EnableUpload();
+  }
 }
 
 }  // namespace cloud_sync

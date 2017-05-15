@@ -46,6 +46,15 @@ PageSyncImpl::~PageSyncImpl() {
   }
 }
 
+void PageSyncImpl::EnableUpload() {
+  if (upload_enabled_) {
+    return;
+  }
+
+  upload_enabled_ = true;
+  StartUpload();
+}
+
 void PageSyncImpl::Start() {
   FTL_DCHECK(!started_);
   started_ = true;
@@ -204,6 +213,12 @@ void PageSyncImpl::StartDownload() {
 }
 
 void PageSyncImpl::StartUpload() {
+  if (!upload_enabled_ || !download_list_retrieved_) {
+    // Only start uploading when the backlog is downloaded and upload is
+    // enabled.
+    return;
+  }
+
   // Retrieve the backlog of the existing unsynced commits and enqueue them for
   // upload.
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long

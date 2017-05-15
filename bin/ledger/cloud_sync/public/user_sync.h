@@ -19,7 +19,6 @@ class UserSync {
   UserSync() {}
   virtual ~UserSync() {}
 
-  virtual const UserConfig& GetUserConfig() = 0;
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
       ftl::StringView app_id) = 0;
 

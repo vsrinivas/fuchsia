@@ -17,12 +17,28 @@ UserSyncImpl::~UserSyncImpl() {
   FTL_DCHECK(active_ledger_syncs_.empty());
 }
 
-const UserConfig& UserSyncImpl::GetUserConfig() {
-  return user_config_;
+void UserSyncImpl::Start() {
+  FTL_DCHECK(!started_);
+  CheckCloudVersion();
+  started_ = true;
+}
+
+void UserSyncImpl::CheckCloudVersion() {
+  // TODO(qsr): Check for cloud version.
+  EnableUpload();
+}
+
+void UserSyncImpl::EnableUpload() {
+  upload_enabled_ = true;
+  for (auto ledger_sync : active_ledger_syncs_) {
+    ledger_sync->EnableUpload();
+  }
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     ftl::StringView app_id) {
+  FTL_DCHECK(started_);
+
   if (!user_config_.use_sync) {
     return nullptr;
   }
@@ -33,6 +49,9 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     active_ledger_syncs_.erase(ledger_sync);
   });
   active_ledger_syncs_.insert(result.get());
+  if (upload_enabled_) {
+    result->EnableUpload();
+  }
   return result;
 }
 

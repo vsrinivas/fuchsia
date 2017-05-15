@@ -16,6 +16,8 @@ struct UserConfig {
   std::string server_id;
   // The id of the user.
   std::string user_id;
+  // Directory for the user persistent data.
+  std::string user_directory;
 };
 
 }  // namespace cloud_sync
