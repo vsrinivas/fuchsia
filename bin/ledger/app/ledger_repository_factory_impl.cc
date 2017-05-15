@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -140,7 +141,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       FTL_LOG(WARNING) << "Failed to save the current configuration.";
     }
     auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
-        environment_, std::move(user_config));
+        environment_, std::move(user_config),
+        std::make_unique<backoff::ExponentialBackoff>());
     user_sync->Start();
     auto result = repositories_.emplace(
         std::piecewise_construct, std::forward_as_tuple(sanitized_path),
