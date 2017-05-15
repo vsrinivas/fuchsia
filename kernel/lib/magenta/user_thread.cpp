@@ -749,6 +749,7 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
             DEBUG_ASSERT(exception_wait_port_ != nullptr);
             excp_port_type = exception_wait_port_->type();
         } else {
+            DEBUG_ASSERT(exception_wait_port_ == nullptr);
             excp_port_type = ExceptionPort::Type::NONE;
         }
     }

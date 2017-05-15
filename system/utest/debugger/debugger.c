@@ -159,10 +159,15 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
                 // process exits), so check for either DYING or DEAD.
                 EXPECT_TRUE(info.state == MX_THREAD_STATE_DYING ||
                             info.state == MX_THREAD_STATE_DEAD, "");
-                if (info.state == MX_THREAD_STATE_DYING)
-                    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
-                else
-                    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "");
+                // If the state is DYING it would be nice to check that the value of
+                // |info.wait_exception_port_type| is DEBUGGER. Alas if the process has
+                // exited then the thread will get THREAD_SIGNAL_KILL which will cause
+                // UserThread::ExceptionHandlerExchange to exit before we've told the
+                // thread to "resume" from MX_EXCP_THREAD_EXITING. The thread is still
+                // in the DYING state but it is no longer in an exception. Thus
+                // |info.wait_exception_port_type| can either be DEBUGGER or NONE.
+                EXPECT_TRUE(info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_NONE ||
+                            info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
                 tu_handle_close(thread);
             } else {
                 EXPECT_TRUE(tu_process_has_exited(inferior), "");
