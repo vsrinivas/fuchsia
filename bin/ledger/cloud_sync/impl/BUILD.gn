@@ -8,6 +8,7 @@ source_set("impl") {
     "batch_download.h",
     "commit_upload.cc",
     "commit_upload.h",
+    "constants.h",
     "ledger_sync_impl.cc",
     "ledger_sync_impl.h",
     "page_sync_impl.cc",
