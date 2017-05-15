@@ -7,7 +7,7 @@ set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-readonly CIPD_CLIENT_VERSION="${CIPD_CLIENT_VERSION:-git_revision:508f70d14492573c37760381060bbb5fc7904bfd}"
+readonly CIPD_CLIENT_VERSION="${CIPD_CLIENT_VERSION:-$(cat ${SCRIPT_DIR}/.cipd_version)}"
 readonly CIPD_CLIENT_URL="${CIPD_CLIENT_URL:-https://chrome-infra-packages.appspot.com}"
 
 declare HOST_PLATFORM="$(uname -s | tr '[:upper:]' '[:lower:]')"
