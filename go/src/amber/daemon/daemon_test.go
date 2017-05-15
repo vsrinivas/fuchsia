@@ -28,7 +28,8 @@ func randSeq(n int) string {
 type testSrc struct {
 	mu         sync.Mutex
 	UpdateReqs map[string][]time.Time
-	getReqs    map[string]*struct{}
+	getReqs    map[Package]*struct{}
+	interval   time.Duration
 }
 
 func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
@@ -41,7 +42,7 @@ func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
 	tList = append(tList, now)
 	t.UpdateReqs[pkg.Name] = tList
 	p := Package{Name: pkg.Name, Version: randSeq(6)}
-	t.getReqs[p.String()] = &struct{}{}
+	t.getReqs[p] = &struct{}{}
 	t.mu.Unlock()
 
 	fmt.Print(".")
@@ -51,19 +52,19 @@ func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
 func (t *testSrc) FetchPkg(pkg *Package) (*os.File, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.getReqs[pkg.String()] == nil {
+	if t.getReqs[*pkg] == nil {
 		fmt.Println("ERROR: unknown update pkg requested")
 		return nil, ErrNoUpdateContent
 	}
 
-	delete(t.getReqs, pkg.String())
+	delete(t.getReqs, *pkg)
 
 	fmt.Print("|")
 	return nil, nil
 }
 
 func (t *testSrc) CheckInterval() time.Duration {
-	return 1 * time.Millisecond
+	return t.interval
 }
 
 func (t *testSrc) Equals(o Source) bool {
@@ -83,32 +84,23 @@ func processPackage(pkg *Package, src Source) error {
 // TestDaemon tests daemon.go with a fake package source. The test runs for ~30
 // seconds.
 func TestDaemon(t *testing.T) {
-	srcSet := SourceSet{}
 	tSrc := testSrc{UpdateReqs: make(map[string][]time.Time),
-		getReqs: make(map[string]*struct{})}
-	srcSet.AddSource(&tSrc)
+		getReqs:  make(map[Package]*struct{}),
+		interval: time.Second * 3}
+	tSrc2 := testSrc{UpdateReqs: make(map[string][]time.Time),
+		getReqs:  make(map[Package]*struct{}),
+		interval: time.Second * 5}
+	sources := []*testSrc{&tSrc, &tSrc2}
+	pkgSet := NewPackageSet()
+	pkgSet.Add(&Package{Name: "email", Version: "23af90ee"})
+	pkgSet.Add(&Package{Name: "video", Version: "f2b8006c"})
+	pkgSet.Add(&Package{Name: "search", Version: "fa08207e"})
 
-	job1 := NewUpdateRequest(
-		[]Package{
-			Package{Name: "email", Version: "23af90ee"}},
-		7*time.Second)
+	d := NewDaemon(pkgSet, processPackage)
 
-	job2 := NewUpdateRequest(
-		[]Package{
-			Package{Name: "video", Version: "f2b8006c"}},
-		3*time.Second)
-
-	job3 := NewUpdateRequest(
-		[]Package{
-			Package{Name: "search", Version: "fa08207e"}},
-		1*time.Second)
-
-	jobs := []*UpdateRequest{job1, job2, job3}
-	d := NewDaemon(&srcSet)
 	startTime := time.Now()
-
-	for _, j := range jobs {
-		d.AddRequest(j, processPackage)
+	for _, src := range sources {
+		d.AddSource(src)
 	}
 
 	// sleep for 30 seconds while we run
@@ -116,42 +108,28 @@ func TestDaemon(t *testing.T) {
 	time.Sleep(runTime)
 	d.CancelAll()
 
-	for k, v := range tSrc.UpdateReqs {
-		var targJob *UpdateRequest
-	Outer:
-		for i := range jobs {
-			targets := jobs[i].GetTargets()
-			for j := range targets {
-				if targets[j].Name == k {
-					targJob = jobs[i]
-					break Outer
-				}
-			}
+	for _, src := range sources {
+		verify(t, src, pkgSet, runTime, startTime)
+	}
+}
+
+func verify(t *testing.T, src *testSrc, pkgs *PackageSet, runTime time.Duration,
+	startTime time.Time) {
+	runs := int(runTime/src.interval) + 1
+	runsAlt := runs
+	if runTime%src.interval == 0 {
+		runsAlt--
+	} else {
+		runsAlt = -1
+	}
+
+	for _, pkg := range pkgs.Packages() {
+		actRuns := src.UpdateReqs[pkg.Name]
+		if len(actRuns) != runs && len(actRuns) != runsAlt {
+			t.Errorf("Incorrect execution could, found %d, but expected %d for %s\n", len(actRuns), runs, pkg.Name)
 		}
 
-		times := v
-		// check that we did the number of checks expected
-		expectedRuns := int(runTime/targJob.UpdateInterval) + 1
-		if expectedRuns != len(times) {
-			// special case when interval is a multiple of job time,
-			// here we expect one less run perhaps than regular
-			if runTime%targJob.UpdateInterval == 0 {
-				if expectedRuns-1 != len(times) {
-					t.Errorf("Incorrect execution count, found %d but expected %d\n",
-						len(times), expectedRuns-1)
-				}
-			} else {
-				t.Errorf("Wrong execution count, found %d but expected %d\n",
-					len(times), expectedRuns)
-			}
-		}
-
-		// check that the trains ran on time
-
-		// set a threshold of being within 10%, but we should always be
-		// within 10 seconds and don't require we be closer than 200ms
-		// of our interval target
-		thresh := targJob.UpdateInterval / 10
+		thresh := src.interval / 10
 		maxThresh := 10 * time.Second
 		minThresh := 200 * time.Millisecond
 		if thresh > maxThresh {
@@ -160,16 +138,16 @@ func TestDaemon(t *testing.T) {
 			thresh = minThresh
 		}
 
-		for _, time := range times {
+		for _, time := range actRuns {
 			delta := time.Sub(startTime)
-			expected := delta % targJob.UpdateInterval
-			if expected > thresh && expected <= targJob.UpdateInterval-thresh {
+			expected := delta % src.interval
+			if expected > thresh && expected <= src.interval-thresh {
 				t.Errorf("Execution accuracy %s exceeds tolerance of %s\n", delta, thresh)
 			}
 		}
 	}
 
-	if len(tSrc.getReqs) != 0 {
+	if len(src.getReqs) != 0 {
 		t.Errorf("Error, some pkgs were not requested!")
 	}
 }

@@ -14,21 +14,19 @@ import (
 	"github.com/flynn/go-tuf/client"
 )
 
+// ErrTufSrcNoHash is returned if the TUF entry doesn't have a SHA512 hash
 var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 
-type ErrRetrieval string
-
-func (s ErrRetrieval) Error() string {
-	return fmt.Sprintf("updatesource: data retrieval failed %s", s)
-}
-
+// TUFSource wraps a TUF Client into the Source interface
 type TUFSource struct {
-	Client *client.Client
+	Client   *client.Client
+	Interval time.Duration
 }
 
+// FetchUpdate returns a Package struct if there is an update for the Package
+// passed into the call.
 func (f *TUFSource) FetchUpdate(pkg *Package) (*Package, error) {
 	_, err := f.Client.Update()
-
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return nil, err
 	}
@@ -66,11 +64,13 @@ type delFile struct {
 	*os.File
 }
 
+// Delete removes the file from the filesystem
 func (f *delFile) Delete() error {
 	f.Close()
 	return os.Remove(f.Name())
 }
 
+// FetchPkg gets the content for the requested Package
 func (f *TUFSource) FetchPkg(pkg *Package) (*os.File, error) {
 	fmt.Printf("Requesting download for: %s\n", pkg.Name)
 	tmp, err := ioutil.TempFile("", pkg.Version)
@@ -80,7 +80,7 @@ func (f *TUFSource) FetchPkg(pkg *Package) (*os.File, error) {
 
 	err = f.Client.Download(pkg.Name, &delFile{tmp})
 	if err != nil {
-		return nil, ErrRetrieval(err.Error())
+		return nil, ErrNoUpdateContent
 	}
 
 	_, err = tmp.Seek(0, os.SEEK_SET)
@@ -92,12 +92,14 @@ func (f *TUFSource) FetchPkg(pkg *Package) (*os.File, error) {
 	return tmp, nil
 }
 
+// CheckInterval returns the time between which checks should be spaced.
 func (f *TUFSource) CheckInterval() time.Duration {
 	// TODO(jmatt) figure out how to establish a real value from the
 	// Client we wrap
-	return 1 * time.Second
+	return f.Interval
 }
 
+// Equals returns true if the Source passed in is a pointer to this instance
 func (f *TUFSource) Equals(o Source) bool {
 	switch o.(type) {
 	case *TUFSource:

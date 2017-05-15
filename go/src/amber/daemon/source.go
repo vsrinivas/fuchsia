@@ -10,8 +10,15 @@ import (
 	"time"
 )
 
+// ErrNoUpdate is returned if no update is available
 var ErrNoUpdate = errors.New("amber/source: no update available")
+
+// ErrUnknownPkg is returned if the Source doesn't have any data about any
+// version of the package.
 var ErrUnknownPkg = errors.New("amber/source: package not known")
+
+// ErrNoUpdateContent is returned if the requested package content couldn't be
+// retrieved.
 var ErrNoUpdateContent = errors.New("amber/source: update content not available")
 
 // Source provides a way to get information about a package update and a way
@@ -25,6 +32,7 @@ type Source interface {
 	// is returned, ready for reading.
 	FetchPkg(pkg *Package) (*os.File, error)
 
+	// CheckInterval is minimum time between polls of this source
 	CheckInterval() time.Duration
 
 	// Equals should return true if the provide Source is the same as the receiver.

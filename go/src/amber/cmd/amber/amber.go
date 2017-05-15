@@ -101,9 +101,9 @@ func loadKeys(path string) ([]*data.Key, error) {
 func amber(client *tuf.Client) error {
 	files := []string{"/system/bin/tuf-client",
 		"/system/bin/amber"}
-	pkgs := []daemon.Package{}
-	d := sha512.New()
+	reqSet := daemon.NewPackageSet()
 
+	d := sha512.New()
 	// get the current SHA512 hash of the file
 	for _, name := range files {
 		sha, err := digest(name, d)
@@ -114,20 +114,15 @@ func amber(client *tuf.Client) error {
 
 		hexStr := hex.EncodeToString(sha)
 		pkg := daemon.Package{Name: name, Version: hexStr}
-		pkgs = append(pkgs, pkg)
+		reqSet.Add(&pkg)
 	}
 
-	sources := daemon.SourceSet{}
-	fetcher := &daemon.TUFSource{Client: client}
-
-	sources.AddSource(fetcher)
-
-	checker := daemon.NewDaemon(&sources)
+	fetcher := &daemon.TUFSource{Client: client, Interval: time.Second * 5}
+	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
 	defer checker.CancelAll()
-	request := daemon.NewUpdateRequest(pkgs, time.Second*5)
-	checker.AddRequest(request, daemon.ProcessPackage)
+	checker.AddSource(fetcher)
 
-	fmt.Println("Press Ctrl+C or Ctrl+D to exit")
+	fmt.Println("Press Ctrl+C or Ctrl+D to exit.")
 	buf := make([]byte, 1)
 	for {
 		_, err := os.Stdin.Read(buf)

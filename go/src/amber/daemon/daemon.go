@@ -11,10 +11,11 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
-var ErrReqNotFound = errors.New("amber/daemon: no corresponding request found")
+// ErrSrcNotFound is returned when a request is made to RemoveSource, but the
+// passed in Source is not known to the Daemon
+var ErrSrcNotFound = errors.New("amber/daemon: no corresponding source found")
 
 // Deamon provides access to a set of Sources and oversees the polling of those
 // Sources.
@@ -23,62 +24,64 @@ var ErrReqNotFound = errors.New("amber/daemon: no corresponding request found")
 // Execution contexts sharing a single Daemon instance should mediate access
 // to all calls into the Daemon.
 type Daemon struct {
-	runners   map[UpdateRequest]*RequestRunner
-	srcs      *SourceSet
+	srcMons   []*SourceMonitor
+	pkgs      *PackageSet
 	stopCount sync.WaitGroup
+	processor func(*Package, Source) error
+	// sources must claim this before running updates
+	updateLock sync.Mutex
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
-func NewDaemon(s *SourceSet) *Daemon {
-	return &Daemon{srcs: s,
-		runners: make(map[UpdateRequest]*RequestRunner)}
+func NewDaemon(r *PackageSet, f func(*Package, Source) error) *Daemon {
+	return &Daemon{pkgs: r, processor: f, updateLock: sync.Mutex{}, srcMons: []*SourceMonitor{}}
 }
 
-// AddRequest starts monitoring for updates to the UpdateRequest supplied. This
-// monitoring can be canceled with a call to CancelRequest or CancelAll
-func (d *Daemon) AddRequest(req *UpdateRequest, f func(*Package, Source) error) {
-	rec := RequestRunner{
-		UpdateRequest: req,
-		LatestCheck:   time.Now().Add(-2 * req.UpdateInterval),
-		SourceSet:     d.srcs,
-		Processor:     f,
-	}
-
-	d.runners[*req] = &rec
+// AddSource is called to add a Source that can be used to get updates. When the
+// Source is added, the Daemon will start polling it at the interval from
+// Source.GetInterval()
+func (d *Daemon) AddSource(s Source) {
+	mon := &SourceMonitor{src: s,
+		pkgs:      d.pkgs,
+		processor: d.processor,
+		runGate:   &d.updateLock}
+	d.srcMons = append(d.srcMons, mon)
 	go func() {
 		defer d.stopCount.Done()
-		rec.Run()
+		mon.Run()
 	}()
 }
 
-// CancelRequest stops monitoring for updates described by a UpdateRequest
-// previously add by a call to AddRequest. The method waits for the monitoring
-// routine to stop before returning and therefore this method may block.
-func (d *Daemon) CancelRequest(req *UpdateRequest) error {
-	r := d.runners[*req]
-	if r == nil {
-		return ErrReqNotFound
+// RemoveSource should be used to stop using a Source previously added with
+// AddSource. This method does not wait for any in-progress polling operation
+// on the Source to complete. This method returns ErrSrcNotFound if the supplied
+// Source is not know to this Daemon.
+func (d *Daemon) RemoveSource(src Source) error {
+	for i, m := range d.srcMons {
+		if m.src.Equals(src) {
+			d.srcMons = append(d.srcMons[:i], d.srcMons[i+1:]...)
+			d.stopCount.Add(1)
+			m.Stop()
+			return nil
+		}
+
 	}
-	r.Stop()
-	d.stopCount.Add(1)
-	delete(d.runners, *req)
-	return nil
+	return ErrSrcNotFound
 }
 
-// CancelAll cancels all currently monitored UpdateRequests that were previously
-// added to this Daemon with a call to AddRequest. This method blocks until all
-// runners have stopped.
+// CancelAll stops all update retrieval operations, blocking until any
+// in-progress operations complete.
 func (d *Daemon) CancelAll() {
-	for _, v := range d.runners {
+	for _, s := range d.srcMons {
 		d.stopCount.Add(1)
-		v.Stop()
+		s.Stop()
 	}
 
 	d.stopCount.Wait()
-	d.runners = make(map[UpdateRequest]*RequestRunner)
+	d.srcMons = []*SourceMonitor{}
 }
 
-//var ErrInvalidPath = errors.New("pkgprocessor: invalid path, must start with /")
+// ErrProcPkgIO is a general I/O error during ProcessPackage
 type ErrProcessPackage string
 
 func NewErrProcessPackage(f string, args ...interface{}) error {
@@ -89,6 +92,10 @@ func (e ErrProcessPackage) Error() string {
 	return string(e)
 }
 
+// ProcessPackage attempts to retrieve the content of the supplied Package
+// from the supplied Source. If retrieval from the Source fails, the Source's
+// error is returned. If there is a local I/O error when processing the package
+// an ErrProcPkgIO is returned.
 func ProcessPackage(pkg *Package, src Source) error {
 	// this package processor can only deal with names that look like
 	// file paths
