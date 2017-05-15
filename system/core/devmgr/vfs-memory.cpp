@@ -690,7 +690,7 @@ mxtl::RefPtr<memfs::VnodeDir> MemfsRoot() {
 
 mxtl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("dev", true, &memfs::devfs_root);
+        mx_status_t r = memfs_create_fs("dev", false, &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
             panic();
@@ -708,6 +708,10 @@ mxtl::RefPtr<memfs::VnodeDir> BootfsRoot() {
         }
     }
     return memfs::bootfs_root;
+}
+
+mx_status_t devfs_mount(mx_handle_t h) {
+    return DevfsRoot()->AttachRemote(h);
 }
 
 VnodeDir* devfs_get_root() {

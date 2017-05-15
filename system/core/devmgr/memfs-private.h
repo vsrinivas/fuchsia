@@ -174,6 +174,7 @@ mx_handle_t vfs_create_global_root_handle(void);
 mx_handle_t vfs_create_root_handle(VnodeMemfs* vn);
 
 // device fs
+mx_status_t devfs_mount(mx_handle_t h);
 VnodeDir* devfs_get_root(void);
 mx_status_t memfs_create_device_at(VnodeDir* parent, VnodeDir** out, const char* name,
                                    mx_handle_t hdevice) TA_EXCL(vfs_lock);

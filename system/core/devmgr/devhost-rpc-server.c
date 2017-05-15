@@ -257,9 +257,6 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
 
     // ensure handle count specified by opcode matches reality
     if (msg->hcount != MXRIO_HC(msg->op)) {
-        for (unsigned i = 0; i < msg->hcount; i++) {
-            mx_handle_close(msg->handle[i]);
-        }
         return ERR_IO;
     }
     msg->hcount = 0;
@@ -274,7 +271,8 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, void* cookie) {
         return NO_ERROR;
     case MXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {
-            return ERR_INVALID_ARGS;
+            mx_handle_close(msg->handle[0]);
+            return ERR_DISPATCHER_INDIRECT;
         }
         msg->data[len] = 0;
         // fallthrough
