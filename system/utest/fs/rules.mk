@@ -31,7 +31,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-random-op.c \
     $(LOCAL_DIR)/test-sparse.cpp \
     $(LOCAL_DIR)/test-sync.c \
-    $(LOCAL_DIR)/test-truncate.c \
+    $(LOCAL_DIR)/test-truncate.cpp \
     $(LOCAL_DIR)/test-unlink.c \
     $(LOCAL_DIR)/test-watcher.c \
 

@@ -1173,7 +1173,7 @@ mx_status_t VnodeMinfs::Truncate(size_t len) {
     }
 
     mx_status_t status = TruncateInternal(len);
-    if (status != NO_ERROR) {
+    if (status == NO_ERROR) {
         // Successful truncates update inode
         InodeSync(kMxFsSyncMtime);
     }
@@ -1238,7 +1238,6 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
                 }
             }
         }
-        inode_.size = static_cast<uint32_t>(len);
     } else if (len > inode_.size) {
         // Truncate should make the file longer, filled with zeroes.
         if (kMinfsMaxFileSize < len) {
@@ -1250,6 +1249,7 @@ mx_status_t VnodeMinfs::TruncateInternal(size_t len) {
         }
     }
 
+    inode_.size = static_cast<uint32_t>(len);
 #ifdef __Fuchsia__
     if ((r = mx_vmo_set_size(vmo_, mxtl::roundup(len, kMinfsBlockSize))) != NO_ERROR) {
         return r;

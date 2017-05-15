@@ -11,6 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/new.h>
+#include <magenta/syscalls.h>
+#include <mxtl/unique_ptr.h>
+
 #include "filesystems.h"
 #include "misc.h"
 
@@ -82,35 +86,46 @@ bool test_truncate_small(void) {
     END_TEST;
 }
 
-#define BUFSIZE 1048576
-static_assert(BUFSIZE == ((BUFSIZE / sizeof(uint64_t)) * sizeof(uint64_t)),
-              "BUFSIZE not multiple of sizeof(uint64_t)");
-
+template <bool Remount>
 bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     // Acquire the old size
     struct stat st;
     ASSERT_EQ(stat(filename, &st), 0, "");
     ssize_t old_len = st.st_size;
 
-    // Truncate the file
+    // Truncate the file, verify the size gets updated
     int fd = open(filename, O_RDWR, 0644);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(ftruncate(fd, new_len), 0, "");
-
-    // Verify that the size has been updated
     ASSERT_EQ(stat(filename, &st), 0, "");
     ASSERT_EQ(st.st_size, new_len, "");
 
-    uint8_t* readbuf = malloc(BUFSIZE);
-    ASSERT_NEQ(readbuf, NULL, "");
+    // Close and reopen the file; verify the inode stays updated
+    ASSERT_EQ(close(fd), 0, "");
+    fd = open(filename, O_RDWR, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(stat(filename, &st), 0, "");
+    ASSERT_EQ(st.st_size, new_len, "");
+
+    if (Remount) {
+        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+        ASSERT_EQ(stat(filename, &st), 0, "");
+        ASSERT_EQ(st.st_size, new_len, "");
+        fd = open(filename, O_RDWR, 0644);
+    }
+
+    AllocChecker ac;
+    mxtl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
+    ASSERT_TRUE(ac.check(), "");
     if (new_len > old_len) { // Expanded the file
         // Verify that the file is unchanged up to old_len
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-        ASSERT_STREAM_ALL(read, fd, readbuf, old_len);
-        ASSERT_EQ(memcmp(readbuf, u8, old_len), 0, "");
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), old_len);
+        ASSERT_EQ(memcmp(readbuf.get(), u8, old_len), 0, "");
         // Verify that the file is filled with zeroes from old_len to new_len
         ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len, "");
-        ASSERT_STREAM_ALL(read, fd, readbuf, new_len - old_len);
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len - old_len);
         for (ssize_t n = 0; n < (new_len - old_len); n++) {
             ASSERT_EQ(readbuf[n], 0, "");
         }
@@ -120,43 +135,49 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     } else { // Shrunk the file (or kept it the same length)
         // Verify that the file is unchanged up to new_len
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-        ASSERT_STREAM_ALL(read, fd, readbuf, new_len);
-        ASSERT_EQ(memcmp(readbuf, u8, new_len), 0, "");
+        ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len);
+        ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0, "");
     }
     ASSERT_EQ(close(fd), 0, "");
-    free(readbuf);
 
     return true;
 }
 
 // Test that truncate doesn't have issues dealing with larger files
 // Repeatedly write to / truncate a file.
+template <size_t BufSize, size_t Iterations, bool Remount>
 bool test_truncate_large(void) {
+    if (Remount && !test_info->can_be_mounted) {
+        fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
+        return true;
+    }
+
     BEGIN_TEST;
 
     // Fill a test buffer with data
-    uint64_t* u64 = malloc(BUFSIZE);
-    ASSERT_NEQ(u64, NULL, "");
-    rand64_t rdata;
-    srand64(&rdata, "truncate_large_test");
-    for (unsigned n = 0; n < (BUFSIZE / sizeof(uint64_t)); n++) {
-        u64[n] = rand64(&rdata);
+    AllocChecker ac;
+    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
+    ASSERT_TRUE(ac.check(), "");
+
+    unsigned seed = static_cast<unsigned>(mx_ticks_get());
+    unittest_printf("Truncate test using seed: %u\n", seed);
+    srand(seed);
+    for (unsigned n = 0; n < BufSize; n++) {
+        buf[n] = static_cast<uint8_t>(rand_r(&seed));
     }
 
     // Start a file filled with the u8 buffer
     const char* filename = "::alpha";
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0, "");
-    ASSERT_STREAM_ALL(write, fd, u64, BUFSIZE);
+    ASSERT_STREAM_ALL(write, fd, buf.get(), BufSize);
+    ASSERT_EQ(close(fd), 0, "");
 
     // Repeatedly truncate / write to the file
-    const int num_iterations = 50;
-    for (int i = 0; i < num_iterations; i++) {
-        size_t len = rand64(&rdata) % BUFSIZE;
-        ASSERT_TRUE(checked_truncate(filename, (uint8_t*)u64, len), "");
+    for (size_t i = 0; i < Iterations; i++) {
+        size_t len = rand_r(&seed) % BufSize;
+        ASSERT_TRUE(checked_truncate<Remount>(filename, buf.get(), len), "");
     }
-    free(u64);
-    ASSERT_EQ(close(fd), 0, "");
     ASSERT_EQ(unlink(filename), 0, "");
 
     END_TEST;
@@ -164,5 +185,8 @@ bool test_truncate_large(void) {
 
 RUN_FOR_ALL_FILESYSTEMS(truncate_tests,
     RUN_TEST_MEDIUM(test_truncate_small)
-    RUN_TEST_LARGE(test_truncate_large)
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 10, 100, false>))
+    RUN_TEST_MEDIUM((test_truncate_large<1 << 15, 50, false>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, false>))
+    RUN_TEST_LARGE((test_truncate_large<1 << 20, 50, true>))
 )
