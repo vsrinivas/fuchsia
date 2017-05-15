@@ -966,10 +966,14 @@ status_t VmcsContext::set_esi(uint32_t guest_esi) {
     return NO_ERROR;
 }
 
-static int vmcs_launch(void* arg) {
+static int vmcs_enter(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
-    return per_cpu->Enter(*context, context->gpas(), context->serial_fifo());
+    status_t status;
+    do {
+        status = per_cpu->Enter(*context, context->gpas(), context->serial_fifo());
+    } while (status == NO_ERROR);
+    return status;
 }
 
 status_t VmcsContext::Enter() {
@@ -979,7 +983,7 @@ status_t VmcsContext::Enter() {
         return ERR_BAD_STATE;
     if (esi_ == UINT32_MAX)
         return ERR_BAD_STATE;
-    return percpu_exec(vmcs_launch, this);
+    return percpu_exec(vmcs_enter, this);
 }
 
 status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {

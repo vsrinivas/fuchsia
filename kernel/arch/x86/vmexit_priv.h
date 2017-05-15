@@ -21,6 +21,7 @@ enum class ExitReason : uint32_t {
     INTERRUPT_WINDOW            = 7u,
     CPUID                       = 10u,
     HLT                         = 12u,
+    VMCALL                      = 18u,
     IO_INSTRUCTION              = 30u,
     RDMSR                       = 31u,
     WRMSR                       = 32u,

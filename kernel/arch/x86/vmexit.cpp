@@ -628,6 +628,9 @@ status_t vmexit_handler(GuestState* guest_state, LocalApicState* local_apic_stat
     case ExitReason::HLT:
         dprintf(SPEW, "handling HLT instruction\n\n");
         return handle_hlt(exit_info, local_apic_state);
+    case ExitReason::VMCALL:
+        dprintf(SPEW, "handling VMCALL instruction\n\n");
+        return ERR_STOP;
     case ExitReason::IO_INSTRUCTION:
         return handle_io(exit_info, guest_state, serial_fifo);
     case ExitReason::RDMSR:

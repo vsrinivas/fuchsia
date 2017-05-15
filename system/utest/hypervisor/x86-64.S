@@ -28,5 +28,5 @@ FUNCTION(guest_start)
     xor %eax, %eax
     cpuid
 
-    jmp .
+    vmcall
 FUNCTION(guest_end)
