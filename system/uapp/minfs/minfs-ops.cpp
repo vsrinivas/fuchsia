@@ -32,10 +32,14 @@ mx_time_t minfs_gettime_utc() {
     return time;
 }
 
+} // namespace anonymous
+
+namespace minfs {
+
 #ifdef __Fuchsia__
-mx_status_t vmo_read_exact(mx_handle_t h, void* data, uint64_t offset, size_t len) {
+mx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) {
     size_t actual;
-    mx_status_t status = mx_vmo_read(h, data, offset, len, &actual);
+    mx_status_t status = vmo_.read(data, offset, len, &actual);
     if (status != NO_ERROR) {
         return status;
     } else if (actual != len) {
@@ -44,9 +48,9 @@ mx_status_t vmo_read_exact(mx_handle_t h, void* data, uint64_t offset, size_t le
     return NO_ERROR;
 }
 
-mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, size_t len) {
+mx_status_t VnodeMinfs::VmoWriteExact(const void* data, uint64_t offset, size_t len) {
     size_t actual;
-    mx_status_t status = mx_vmo_write(h, data, offset, len, &actual);
+    mx_status_t status = vmo_.write(data, offset, len, &actual);
     if (status != NO_ERROR) {
         return status;
     } else if (actual != len) {
@@ -56,11 +60,6 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
 }
 #endif
 
-
-} // namespace anonymous
-
-
-namespace minfs {
 
 void VnodeMinfs::InodeSync(WriteTxn* txn, uint32_t flags) {
     // by default, c/mtimes are not updated to current time
@@ -213,22 +212,21 @@ mx_status_t VnodeMinfs::InitIndirectVmo() {
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
 mx_status_t VnodeMinfs::InitVmo() {
-    if (vmo_ != MX_HANDLE_INVALID) {
+    if (vmo_.is_valid()) {
         return NO_ERROR;
     }
 
     mx_status_t status;
-    if ((status = mx_vmo_create(mxtl::roundup(inode_.size, kMinfsBlockSize), 0,
-                                &vmo_)) != NO_ERROR) {
+    if ((status = mx::vmo::create(mxtl::roundup(inode_.size, kMinfsBlockSize),
+                                  0, &vmo_)) != NO_ERROR) {
         error("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
 
-    if ((status = fs_->bc_->AttachVmo(vmo_, &vmoid_)) != NO_ERROR) {
-        mx_handle_close(vmo_);
+    if ((status = fs_->bc_->AttachVmo(vmo_.get(), &vmoid_)) != NO_ERROR) {
+        vmo_.reset();
         return status;
     }
-
     ReadTxn txn(fs_->bc_);
 
     // Initialize all direct blocks
@@ -248,7 +246,8 @@ mx_status_t VnodeMinfs::InitVmo() {
 
             // Only initialize the indirect vmo if it is being used.
             if ((status = InitIndirectVmo()) != NO_ERROR) {
-                goto fail_close_direct;
+                vmo_.reset();
+                return status;
             }
 
             MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
@@ -267,9 +266,6 @@ mx_status_t VnodeMinfs::InitVmo() {
     }
 
     return txn.Flush();
-fail_close_direct:
-    mx_handle_close(vmo_);
-    return status;
 }
 #endif
 
@@ -760,13 +756,12 @@ VnodeMinfs::~VnodeMinfs() {
 
     fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
-    if (vmo_ != MX_HANDLE_INVALID) {
+    if (vmo_.is_valid()) {
         block_fifo_request_t request;
         request.txnid = fs_->bc_->TxnId();
         request.vmoid = vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
         fs_->bc_->Txn(&request, 1);
-        mx_handle_close(vmo_);
     }
 #endif
 }
@@ -807,7 +802,7 @@ mx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 #ifdef __Fuchsia__
     if ((status = InitVmo()) != NO_ERROR) {
         return status;
-    } else if ((status = mx_vmo_read(vmo_, data, off, len, actual)) != NO_ERROR) {
+    } else if ((status = vmo_.read(data, off, len, actual)) != NO_ERROR) {
         return status;
     }
 #else
@@ -895,14 +890,14 @@ mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         size_t xfer_off = n * kMinfsBlockSize + adjust;
         if ((xfer_off + xfer) > inode_.size) {
             size_t new_size = xfer_off + xfer;
-            if ((status = mx_vmo_set_size(vmo_, mxtl::roundup(new_size, kMinfsBlockSize))) != NO_ERROR) {
+            if ((status = vmo_.set_size(mxtl::roundup(new_size, kMinfsBlockSize))) != NO_ERROR) {
                 goto done;
             }
             inode_.size = static_cast<uint32_t>(new_size);
         }
 
         // Update this block of the in-memory VMO
-        if ((status = vmo_write_exact(vmo_, data, xfer_off, xfer)) != NO_ERROR) {
+        if ((status = VmoWriteExact(data, xfer_off, xfer)) != NO_ERROR) {
             return ERR_IO;
         }
 
@@ -1287,14 +1282,14 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
             if (bno != 0) {
                 size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
-                if ((r = vmo_read_exact(vmo_, bdata, len - adjust, adjust)) != NO_ERROR) {
+                if ((r = VmoReadExact(bdata, len - adjust, adjust)) != NO_ERROR) {
                     return ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 
                 // TODO(smklein): Remove this write when shrinking VMO size
                 // automatically sets partial pages to zero.
-                if ((r = vmo_write_exact(vmo_, bdata, len - adjust, kMinfsBlockSize)) != NO_ERROR) {
+                if ((r = VmoWriteExact(bdata, len - adjust, kMinfsBlockSize)) != NO_ERROR) {
                     return ERR_IO;
                 }
 #else
@@ -1322,7 +1317,7 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
 
     inode_.size = static_cast<uint32_t>(len);
 #ifdef __Fuchsia__
-    if ((r = mx_vmo_set_size(vmo_, mxtl::roundup(len, kMinfsBlockSize))) != NO_ERROR) {
+    if ((r = vmo_.set_size(mxtl::roundup(len, kMinfsBlockSize))) != NO_ERROR) {
         return r;
     }
 #endif

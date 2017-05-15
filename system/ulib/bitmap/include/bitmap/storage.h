@@ -15,6 +15,7 @@
 #include <mxtl/macros.h>
 
 #ifdef __Fuchsia__
+#include <mx/vmo.h>
 #include <magenta/syscalls.h>
 #endif
 
@@ -56,31 +57,26 @@ public:
         Release();
         size_ = size;
         mx_status_t status;
-        if ((status = mx_vmo_create(size_, 0, &vmo_)) != NO_ERROR) {
+        if ((status = mx::vmo::create(size_, 0, &vmo_)) != NO_ERROR) {
             return status;
-        } else if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_, 0,
+        } else if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_.get(), 0,
                                          size_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                                          &mapped_addr_)) != NO_ERROR) {
-            mx_handle_close(vmo_);
-            vmo_ = MX_HANDLE_INVALID;
+            vmo_.reset();
             return status;
         }
         return NO_ERROR;
     }
 
     void* GetData() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
-
-    mx_handle_t GetVmo() const { MX_DEBUG_ASSERT(vmo_ != MX_HANDLE_INVALID); return vmo_; }
+    mx_handle_t GetVmo() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_.get(); }
 private:
     void Release() {
-        if (vmo_ != MX_HANDLE_INVALID) {
-            MX_DEBUG_ASSERT(mapped_addr_ != 0);
+        if (mapped_addr_ != 0) {
             mx_vmar_unmap(mx_vmar_root_self(), mapped_addr_, size_);
-            mx_handle_close(vmo_);
-            vmo_ = MX_HANDLE_INVALID;
         }
     }
-    mx_handle_t vmo_;
+    mx::vmo vmo_;
     uintptr_t mapped_addr_;
     size_t size_;
 };

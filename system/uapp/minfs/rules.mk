@@ -25,7 +25,9 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/fs \
+    system/ulib/mx \
     system/ulib/mxalloc \
+    system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/sync \
 

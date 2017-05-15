@@ -4,6 +4,11 @@
 
 #pragma once
 
+#ifdef __Fuchsia__
+#include <mx/vmo.h>
+#include <fs/vfs-dispatcher.h>
+#endif
+
 #include <mxtl/algorithm.h>
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/intrusive_single_list.h>
@@ -12,9 +17,6 @@
 #include <mxtl/unique_ptr.h>
 
 #include <fs/mapped-vmo.h>
-#ifdef __Fuchsia__
-#include <fs/vfs-dispatcher.h>
-#endif
 #include <fs/vfs.h>
 
 #include "minfs.h"
@@ -220,11 +222,14 @@ private:
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).
 
+    mx_status_t VmoReadExact(void* data, uint64_t offset, size_t len);
+    mx_status_t VmoWriteExact(const void* data, uint64_t offset, size_t len);
+
     // TODO(smklein): When we have can register MinFS as a pager service, and
     // it can properly handle pages faults on a vnode's contents, then we can
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
-    mx_handle_t vmo_;
+    mx::vmo vmo_;
     mxtl::unique_ptr<MappedVmo> vmo_indirect_;
     vmoid_t vmoid_;
     vmoid_t vmoid_indirect_;
