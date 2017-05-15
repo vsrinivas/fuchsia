@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "runtime_config",
+        "netstack",
+        "test_runner"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/bootstrap/apps.config",
+            "file": "apps/test_runner/config/apps.config"
+        }
+    ]
+}
