@@ -10,16 +10,15 @@ import stat
 import subprocess
 
 fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
-fuchsia_sysroot = os.path.realpath(os.environ['FUCHSIA_SYSROOT_DIR'])
 fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
 fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
 common_flags = [
     '-std=c++14',
     '-isystem',
-    fuchsia_sysroot + '/include',
+    fuchsia_build + '/sysroot/include',
     '-isystem',
-    fuchsia_sysroot + '/include/c++/v1',
+    fuchsia_build + '/sysroot/include/c++/v1',
 ]
 
 default_flags = [
