@@ -25,7 +25,6 @@
 namespace blobstore {
 
 VnodeBlob::~VnodeBlob() {
-    BlobCloseHandles();
     blobstore_->ReleaseBlob(this);
 }
 

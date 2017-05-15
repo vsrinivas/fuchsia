@@ -8,12 +8,15 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <merkle/digest.h>
+#include <mx/event.h>
+#include <mx/vmo.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
+#include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
 
 namespace blobstore {
@@ -152,12 +155,10 @@ private:
     WAVLTreeNodeState type_wavl_state_;
 
     const mxtl::RefPtr<Blobstore> blobstore_;
-    mx_handle_t vmo_merkle_tree_;
-    uintptr_t   vmo_merkle_tree_addr_;
-    mx_handle_t vmo_blob_;
-    uintptr_t   vmo_blob_addr_;
+    mxtl::unique_ptr<MappedVmo> merkle_tree_;
+    mxtl::unique_ptr<MappedVmo> blob_;
 
-    mx_handle_t readable_event_;
+    mx::event readable_event_;
     uint64_t bytes_written_;
 
     BlobFlags flags_;
