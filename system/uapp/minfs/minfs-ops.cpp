@@ -125,7 +125,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
         fs_->bc_->Readblk(inode_.inum[indirect], idata);
         uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
 #endif
-        uint32_t iflags = 0;
+        bool dirty = false;
         bool delete_indirect = true; // can we delete the indirect block?
         // release the blocks pointed at by the entries in the indirect block
         for (unsigned direct = 0; direct < direct_per_indirect; direct++) {
@@ -146,11 +146,11 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
             uint32_t bitblock = entry[direct] / kMinfsBlockBits;
             txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
             entry[direct] = 0;
-            iflags = kBlockDirty;
+            dirty = true;
             inode_.block_count--;
         }
         // only update the indirect block if an entry was deleted
-        if (iflags & kBlockDirty) {
+        if (dirty) {
             doSync = true;
 #ifdef __Fuchsia__
             txn->Enqueue(vmoid_indirect_, indirect, inode_.inum[indirect], 1);
@@ -313,7 +313,7 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
 #endif
 
     uint32_t ibno;
-    uint32_t iflags = 0;
+    bool dirty = false;
 
     // look up the indirect bno
     if ((ibno = inode_.inum[i]) == 0) {
@@ -337,7 +337,7 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
         // record new indirect block in inode, note that we need to update
         inode_.block_count++;
         inode_.inum[i] = ibno;
-        iflags = kBlockDirty;
+        dirty = true;
     }
 #ifdef __Fuchsia__
     MX_DEBUG_ASSERT(vmo_indirect_ != nullptr);
@@ -356,10 +356,10 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
         }
         inode_.block_count++;
         ientry[j] = *bno;
-        iflags = kBlockDirty;
+        dirty = true;
     }
 
-    if (iflags & kBlockDirty) {
+    if (dirty) {
         // Write back the indirect block if requested
 #ifdef __Fuchsia__
         txn->Enqueue(vmoid_indirect_, i, ibno, 1);

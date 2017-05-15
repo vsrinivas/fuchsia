@@ -159,85 +159,15 @@ static_assert(kMinfsMaxDirectorySize <= kMinfsReclenMask,
 //  4GB ->  512K blocks ->  64K bitmap (8K qword)
 // 32GB -> 4096K blocks -> 512K bitmap (64K qwords)
 
-
-
 // Block Cache (bcache.c)
-class Bcache;
-
-// Flag denoting if a block is dirty or not
-constexpr uint32_t kBlockDirty = 0x01;
-// Flag identifying block list on which a block exists.
-constexpr uint32_t kBlockBusy  = 0x02;
-constexpr uint32_t kBlockLRU   = 0x04;
-constexpr uint32_t kBlockFree  = 0x08;
-
-constexpr uint32_t kBlockLLFlags = (kBlockBusy | kBlockLRU | kBlockFree);
-
 constexpr uint32_t kMinfsHashBits = (8);
-constexpr uint32_t kMinfsBuckets = (1 << kMinfsHashBits);
-
-class BlockNode : public mxtl::DoublyLinkedListable<mxtl::RefPtr<BlockNode>>,
-                  public mxtl::RefCounted<BlockNode> {
-public:
-    using NodeState = mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<BlockNode>>;
-    struct TypeListTraits {
-        static NodeState& node_state(BlockNode& bn) { return bn.type_list_state_; }
-    };
-    struct TypeHashTraits {
-        static NodeState& node_state(BlockNode& bn) { return bn.type_hash_state_; }
-    };
-
-    // Create a single Block within a Block Cache
-    static mx_status_t Create(Bcache* bc);
-
-    void* data() const { return data_.get(); }
-
-    // Allow BlockNode to be placed in an mxtl::HashTable
-    uint32_t GetKey() const { return bno_; }
-    static size_t GetHash(uint32_t key) { return fnv1a32(&key, sizeof(key)); }
-
-    ~BlockNode();
-private:
-    friend class Bcache;
-    friend class BcacheLists;
-    friend struct TypeListTraits;
-    friend struct TypeHashTraits;
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BlockNode);
-    BlockNode();
-
-    NodeState type_list_state_;
-    NodeState type_hash_state_;
-    uint32_t flags_;
-    uint32_t bno_;
-    mxtl::unique_free_ptr<char> data_;
-};
-
-// Contains operations that act on Bcache's linked lists, updating their flags as they move from
-// one list to another.
-class BcacheLists {
-public:
-    void PushBack(mxtl::RefPtr<BlockNode> blk, uint32_t block_type);
-    mxtl::RefPtr<BlockNode> PopFront(uint32_t block_type);
-    mxtl::RefPtr<BlockNode> Erase(mxtl::RefPtr<BlockNode> blk, uint32_t block_type);
-
-private:
-    using LinkedList = mxtl::DoublyLinkedList<mxtl::RefPtr<BlockNode>, BlockNode::TypeListTraits>;
-    LinkedList* GetList(uint32_t block_type);
-    size_t SizeAllSlow() const; // Used for debugging
-
-    LinkedList list_busy_;  // Between Get() and Put(). In hash.
-    LinkedList list_lru_;   // Available for re-use. In hash.
-    LinkedList list_free_;  // Never been used. Not in hash.
-};
 
 class Bcache {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static mx_status_t Create(Bcache** out, int fd, uint32_t blockmax, uint32_t blocksize,
-                              uint32_t num);
+    static mx_status_t Create(Bcache** out, int fd, uint32_t blockmax);
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)
@@ -254,39 +184,20 @@ public:
     txnid_t TxnId() const { return txnid_; }
 #endif
 
-    // Helper functions which combine 'Get' and 'Put'.
-    mx_status_t Read(uint32_t bno, void* data, uint32_t off, uint32_t len);
-    mx_status_t Write(uint32_t bno, const void* data, uint32_t off, uint32_t len);
-
     int Sync();
     int Close();
 
     ~Bcache();
 
 private:
-    Bcache(int fd, uint32_t blockmax, uint32_t blocksize);
+    Bcache(int fd, uint32_t blockmax);
 
-    // acquire a block, reading from disk if necessary,
-    // returning a handle and a pointer to the data
-    mxtl::RefPtr<BlockNode> Get(uint32_t bno);
-
-    // release a block back to the cache
-    // flags *must* contain kBlockDirty if it was modified
-    void Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags);
-
-    mxtl::RefPtr<BlockNode> Get(uint32_t bno, uint32_t mode);
-
-    using HashTableBucket = mxtl::DoublyLinkedList<mxtl::RefPtr<BlockNode>, BlockNode::TypeHashTraits>;
-    using HashTable = mxtl::HashTable<uint32_t, mxtl::RefPtr<BlockNode>, HashTableBucket>;
-    HashTable hash_; // Map of all 'in use' blocks, accessible by bno
-    BcacheLists lists_;
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_; // Fast path to interact with block device
     txnid_t txnid_; // TODO(smklein): One per thread
 #endif
     int fd_;
     uint32_t blockmax_;
-    uint32_t blocksize_;
 };
 
 
