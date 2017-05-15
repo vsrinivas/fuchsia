@@ -6,10 +6,6 @@
         {
             "binary": "netstack",
             "bootfs_path": "bin/netstack"
-        },
-        {
-            "binary": "netstack_debug",
-            "bootfs_path": "bin/netstack_debug"
         }
     ]
 }
