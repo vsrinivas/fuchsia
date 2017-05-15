@@ -101,11 +101,13 @@ int serial_fifo_thread(void* arg) {
             return thrd_error;
         if (observed & MX_FIFO_PEER_CLOSED)
             return thrd_success;
+        if (~observed & MX_FIFO_READABLE)
+            continue;
 
         uint32_t bytes_read;
         status = mx_fifo_read(*fifo, buffer + offset, PAGE_SIZE - offset, &bytes_read);
         if (status != NO_ERROR)
-            return status;
+            return thrd_error;
 
         uint8_t* linebreak = memchr(buffer + offset, '\r', bytes_read);
         offset += bytes_read;
