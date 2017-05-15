@@ -115,10 +115,11 @@ Status DbEmptyImpl::MarkObjectIdUnsynced(ObjectIdView object_id) {
 Status DbEmptyImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::SetSyncMetadata(ftl::StringView sync_state) {
+Status DbEmptyImpl::SetSyncMetadata(ftl::StringView key,
+                                    ftl::StringView value) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::GetSyncMetadata(std::string* sync_state) {
+Status DbEmptyImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
   return Status::NOT_IMPLEMENTED;
 }
 }  // namespace storage

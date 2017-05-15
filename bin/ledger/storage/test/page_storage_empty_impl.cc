@@ -117,12 +117,14 @@ void PageStorageEmptyImpl::GetObject(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::SetSyncMetadata(ftl::StringView sync_state) {
+Status PageStorageEmptyImpl::SetSyncMetadata(ftl::StringView key,
+                                             ftl::StringView value) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::GetSyncMetadata(std::string* sync_state) {
+Status PageStorageEmptyImpl::GetSyncMetadata(ftl::StringView key,
+                                             std::string* value) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }

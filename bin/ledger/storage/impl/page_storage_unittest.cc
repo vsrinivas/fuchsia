@@ -902,12 +902,19 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
 }
 
 TEST_F(PageStorageTest, SyncMetadata) {
-  std::string sync_state;
-  EXPECT_EQ(Status::NOT_FOUND, storage_->GetSyncMetadata(&sync_state));
+  std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
+      {"foo1", "foo2"}, {"bar1", " bar2 "}};
+  for (auto key_and_value : keys_and_values) {
+    auto key = key_and_value.first;
+    auto value = key_and_value.second;
+    std::string returned_value;
+    EXPECT_EQ(Status::NOT_FOUND,
+              storage_->GetSyncMetadata(key, &returned_value));
 
-  EXPECT_EQ(Status::OK, storage_->SetSyncMetadata("bazinga"));
-  EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(&sync_state));
-  EXPECT_EQ("bazinga", sync_state);
+    EXPECT_EQ(Status::OK, storage_->SetSyncMetadata(key, value));
+    EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(key, &returned_value));
+    EXPECT_EQ(value, returned_value);
+  }
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {

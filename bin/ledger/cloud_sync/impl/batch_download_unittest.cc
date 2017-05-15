@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 
+#include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -43,14 +44,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
         }));
   }
 
-  storage::Status SetSyncMetadata(ftl::StringView sync_state) override {
-    sync_metadata = sync_state.ToString();
+  storage::Status SetSyncMetadata(ftl::StringView key,
+                                  ftl::StringView value) override {
+    sync_metadata[key.ToString()] = value.ToString();
     return storage::Status::OK;
   }
 
   bool should_fail_add_commit_from_sync = false;
   std::unordered_map<storage::CommitId, std::string> received_commits;
-  std::string sync_metadata;
+  std::unordered_map<std::string, std::string> sync_metadata;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -86,7 +88,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
   EXPECT_EQ(0, error_calls);
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("42", storage_.sync_metadata);
+  EXPECT_EQ("42", storage_.sync_metadata[kTimestampKey.ToString()]);
 }
 
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
@@ -109,7 +111,7 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata);
+  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
 }
 
 TEST_F(BatchDownloadTest, FailToAddCommit) {
@@ -130,7 +132,7 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   EXPECT_EQ(0, done_calls);
   EXPECT_EQ(1, error_calls);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ("", storage_.sync_metadata);
+  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 }
 
 }  // namespace

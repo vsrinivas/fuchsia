@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include "apps/ledger/src/cloud_sync/impl/constants.h"
+
 namespace cloud_sync {
 
 BatchDownload::BatchDownload(storage::PageStorage* storage,
@@ -36,7 +38,8 @@ void BatchDownload::Start() {
           return;
         }
 
-        if (storage_->SetSyncMetadata(std::move(records_.back().timestamp)) !=
+        if (storage_->SetSyncMetadata(kTimestampKey,
+                                      std::move(records_.back().timestamp)) !=
             storage::Status::OK) {
           on_error_();
           return;

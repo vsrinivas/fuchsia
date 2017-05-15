@@ -671,12 +671,14 @@ void PageStorageImpl::GetObject(
                                                     std::move(file_path)));
 }
 
-Status PageStorageImpl::SetSyncMetadata(ftl::StringView sync_state) {
-  return db_.SetSyncMetadata(sync_state);
+Status PageStorageImpl::SetSyncMetadata(ftl::StringView key,
+                                        ftl::StringView value) {
+  return db_.SetSyncMetadata(key, value);
 }
 
-Status PageStorageImpl::GetSyncMetadata(std::string* sync_state) {
-  return db_.GetSyncMetadata(sync_state);
+Status PageStorageImpl::GetSyncMetadata(ftl::StringView key,
+                                        std::string* value) {
+  return db_.GetSyncMetadata(key, value);
 }
 
 void PageStorageImpl::GetCommitContents(const Commit& commit,

@@ -21,7 +21,7 @@ constexpr const ftl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
                                                    kCommitIdSize);
 
 // The serialization version of the ledger.
-constexpr const ftl::StringView kSerializationVersion = "8";
+constexpr const ftl::StringView kSerializationVersion = "9";
 
 }  // namespace storage
 

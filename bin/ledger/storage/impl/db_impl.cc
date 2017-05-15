@@ -41,7 +41,7 @@ const size_t kJournalEntryAddPrefixSize = 2;
 constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
 constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
 
-constexpr ftl::StringView kSyncMetadata = "sync-metadata";
+constexpr ftl::StringView kSyncMetadataPrefix = "sync-metadata/";
 
 template <typename I>
 I DeserializeNumber(ftl::StringView value) {
@@ -92,6 +92,10 @@ std::string GetUnsyncedObjectKeyFor(ObjectIdView object_id) {
 
 std::string GetImplicitJournalMetaKeyFor(const JournalId& journal_id) {
   return ftl::Concatenate({kImplicitJournalMetaPrefix, journal_id});
+}
+
+std::string GetSyncMetadataKeyFor(ftl::StringView key) {
+  return ftl::Concatenate({kSyncMetadataPrefix, key});
 }
 
 std::string GetJournalEntryPrefixFor(const JournalId& journal_id) {
@@ -480,12 +484,12 @@ Status DbImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   return Status::OK;
 }
 
-Status DbImpl::SetSyncMetadata(ftl::StringView sync_state) {
-  return Put(kSyncMetadata, sync_state);
+Status DbImpl::SetSyncMetadata(ftl::StringView key, ftl::StringView value) {
+  return Put(GetSyncMetadataKeyFor(key), value);
 }
 
-Status DbImpl::GetSyncMetadata(std::string* sync_state) {
-  return Get(kSyncMetadata, sync_state);
+Status DbImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
+  return Get(GetSyncMetadataKeyFor(key), value);
 }
 
 Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,

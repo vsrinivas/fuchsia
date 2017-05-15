@@ -171,11 +171,13 @@ class DB {
   // Checks if the object with the given |object_id| is synced.
   virtual Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) = 0;
 
-  // Sets the opaque sync metadata associated with this page.
-  virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;
+  // Sets the opaque sync metadata associated with this page for the given key.
+  virtual Status SetSyncMetadata(ftl::StringView key,
+                                 ftl::StringView value) = 0;
 
-  // Retrieves the opaque sync metadata associated with this page.
-  virtual Status GetSyncMetadata(std::string* sync_state) = 0;
+  // Retrieves the opaque sync metadata associated with this page for the given
+  // key.
+  virtual Status GetSyncMetadata(ftl::StringView key, std::string* value) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(DB);

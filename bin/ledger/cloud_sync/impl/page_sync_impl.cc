@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/logging.h"
 
@@ -144,7 +145,7 @@ void PageSyncImpl::OnMalformedNotification() {
 void PageSyncImpl::StartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
-  auto status = storage_->GetSyncMetadata(&last_commit_ts);
+  auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
   // NOT_FOUND means that we haven't persisted the state yet, e.g. because we
   // haven't received any remote commits yet. In this case an empty timestamp is
   // the right value.
@@ -250,7 +251,7 @@ void PageSyncImpl::SetRemoteWatcher() {
   FTL_DCHECK(!remote_watch_set_);
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
-  auto status = storage_->GetSyncMetadata(&last_commit_ts);
+  auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
   if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
     HandleError("Failed to retrieve the sync metadata.");
     return;

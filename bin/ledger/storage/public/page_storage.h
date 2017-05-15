@@ -134,12 +134,15 @@ class PageStorage {
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) = 0;
 
-  // Sets the opaque sync metadata associated with this page. This state is
-  // persisted through restarts and can be retrieved using |GetSyncMetadata()|.
-  virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;
+  // Sets the opaque sync metadata associated with this page associated with the
+  // given |key|. This state is persisted through restarts and can be retrieved
+  // using |GetSyncMetadata()|.
+  virtual Status SetSyncMetadata(ftl::StringView key,
+                                 ftl::StringView value) = 0;
 
-  // Retrieves the opaque sync metadata associated with this page.
-  virtual Status GetSyncMetadata(std::string* sync_state) = 0;
+  // Retrieves the opaque sync metadata associated with this page and the given
+  // |key|.
+  virtual Status GetSyncMetadata(ftl::StringView key, std::string* value) = 0;
 
   // Commit contents.
 

@@ -278,12 +278,18 @@ TEST_F(DBTest, Batch) {
 }
 
 TEST_F(DBTest, SyncMetadata) {
-  std::string sync_state;
-  EXPECT_EQ(Status::NOT_FOUND, db_.GetSyncMetadata(&sync_state));
+  std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
+      {"foo1", "foo2"}, {"bar1", " bar2 "}};
+  for (auto key_and_value : keys_and_values) {
+    auto key = key_and_value.first;
+    auto value = key_and_value.second;
+    std::string returned_value;
+    EXPECT_EQ(Status::NOT_FOUND, db_.GetSyncMetadata(key, &returned_value));
 
-  EXPECT_EQ(Status::OK, db_.SetSyncMetadata("bazinga"));
-  EXPECT_EQ(Status::OK, db_.GetSyncMetadata(&sync_state));
-  EXPECT_EQ("bazinga", sync_state);
+    EXPECT_EQ(Status::OK, db_.SetSyncMetadata(key, value));
+    EXPECT_EQ(Status::OK, db_.GetSyncMetadata(key, &returned_value));
+    EXPECT_EQ(value, returned_value);
+  }
 }
 
 }  // namespace

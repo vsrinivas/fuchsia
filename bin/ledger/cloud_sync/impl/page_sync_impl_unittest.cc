@@ -12,6 +12,7 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
@@ -148,13 +149,19 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  storage::Status SetSyncMetadata(ftl::StringView sync_state) override {
-    sync_metadata = sync_state.ToString();
+  storage::Status SetSyncMetadata(ftl::StringView key,
+                                  ftl::StringView value) override {
+    sync_metadata[key.ToString()] = value.ToString();
     return storage::Status::OK;
   }
 
-  storage::Status GetSyncMetadata(std::string* sync_state) override {
-    *sync_state = sync_metadata;
+  storage::Status GetSyncMetadata(ftl::StringView key,
+                                  std::string* value) override {
+    auto it = sync_metadata.find(key.ToString());
+    if (it == sync_metadata.end()) {
+      return storage::Status::NOT_FOUND;
+    }
+    *value = it->second;
     return storage::Status::OK;
   }
 
@@ -177,7 +184,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   bool watcher_set = false;
   bool watcher_removed = false;
   std::unordered_map<storage::CommitId, std::string> received_commits;
-  std::string sync_metadata;
+  std::unordered_map<std::string, std::string> sync_metadata;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -645,7 +652,7 @@ TEST_F(PageSyncImplTest, FailToListCommits) {
 // provider and saved in storage.
 TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ("", storage_.sync_metadata);
+  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.records_to_return.push_back(cloud_provider::Record(
       cloud_provider::Commit("id1", "content1", {}), "42"));
@@ -667,7 +674,7 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata);
+  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
   EXPECT_EQ(1, on_backlog_downloaded_calls);
 }
 
@@ -707,7 +714,7 @@ TEST_F(PageSyncImplTest, RegisterWatcher) {
 // received and passed to storage.
 TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ("", storage_.sync_metadata);
+  EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
       cloud_provider::Commit("id1", "content1", {}), "42"));
@@ -725,7 +732,7 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata);
+  EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
 }
 
 // Verify that we retry setting the remote watcher on connection errors.
@@ -797,7 +804,7 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
   EXPECT_EQ("content3", storage_.received_commits["id3"]);
-  EXPECT_EQ("44", storage_.sync_metadata);
+  EXPECT_EQ("44", storage_.sync_metadata[kTimestampKey.ToString()]);
   EXPECT_EQ(2u, storage_.add_commits_from_sync_calls);
 }
 
@@ -828,7 +835,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("42", storage_.sync_metadata);
+  EXPECT_EQ("42", storage_.sync_metadata[kTimestampKey.ToString()]);
 }
 
 // Verifies that a failure to persist the remote commit stops syncing remote
