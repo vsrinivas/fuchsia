@@ -10,7 +10,7 @@
 #include <glm/glm.hpp>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/services/composition2/composer.fidl.h"
+#include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/src/composer/composer_impl.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"

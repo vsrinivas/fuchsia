@@ -4,7 +4,7 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("composition2") {
+fidl("composer") {
   sources = [
     "composer.fidl",
     "ops.fidl",

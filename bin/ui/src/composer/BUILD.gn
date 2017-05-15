@@ -40,7 +40,7 @@ source_set("common") {
 
   public_deps = [
     "//application/lib/app",
-    "//apps/mozart/services/composition2",
+    "//apps/mozart/services/composer",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/tracing/lib/trace:provider",

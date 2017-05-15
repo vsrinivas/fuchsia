@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/composition2/session.fidl.h"
+#include "apps/mozart/services/composer/session.fidl.h"
 
 namespace mozart {
 namespace composer {

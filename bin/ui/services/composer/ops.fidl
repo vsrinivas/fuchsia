@@ -4,7 +4,7 @@
 
 module mozart2;
 
-import "apps/mozart/services/composition2/resources.fidl";
+import "apps/mozart/services/composer/resources.fidl";
 
 // Operations that are used to modify the state of a |Session|.
 union Op {

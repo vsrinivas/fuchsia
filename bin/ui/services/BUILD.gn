@@ -6,9 +6,9 @@ group("services") {
   deps = [
     "buffers",
     "buffers/cpp",
+    "composer",
     "composition",
     "composition/cpp",
-    "composition2",
     "geometry",
     "geometry/cpp",
     "input",

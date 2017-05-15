@@ -4,8 +4,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "apps/mozart/services/composition2/composer.fidl.h"
-#include "apps/mozart/services/composition2/session.fidl.h"
+#include "apps/mozart/services/composer/composer.fidl.h"
+#include "apps/mozart/services/composer/session.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/log_settings.h"

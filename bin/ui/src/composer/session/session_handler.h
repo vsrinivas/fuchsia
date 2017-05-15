@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/composition2/session.fidl.h"
+#include "apps/mozart/services/composer/session.fidl.h"
 #include "apps/mozart/src/composer/session/session.h"
 #include "apps/mozart/src/composer/util/error_reporter.h"
 #include "lib/fidl/cpp/bindings/binding.h"
