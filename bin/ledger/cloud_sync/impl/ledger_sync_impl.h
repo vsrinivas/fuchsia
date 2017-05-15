@@ -5,6 +5,10 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_LEDGER_SYNC_IMPL_H_
 
+#include <memory>
+#include <unordered_set>
+
+#include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -27,6 +31,12 @@ class LedgerSyncImpl : public LedgerSync {
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) override;
 
+  // |on_delete| will be called when this class is deleted.
+  void set_on_delete(std::function<void()> on_delete) {
+    FTL_DCHECK(!on_delete_);
+    on_delete_ = on_delete;
+  }
+
  private:
   ledger::Environment* const environment_;
   const UserConfig* const user_config_;
@@ -35,6 +45,9 @@ class LedgerSyncImpl : public LedgerSync {
   const std::string app_firebase_path_;
   // Firebase instance scoped to |app_path_|.
   std::unique_ptr<firebase::Firebase> app_firebase_;
+  std::unordered_set<PageSyncImpl*> active_page_syncs_;
+  // Called on destruction.
+  std::function<void()> on_delete_;
 };
 
 }  // namespace cloud_sync

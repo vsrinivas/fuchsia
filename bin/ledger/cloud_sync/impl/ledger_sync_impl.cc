@@ -29,7 +29,13 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
   FTL_DCHECK(!user_config->server_id.empty());
 }
 
-LedgerSyncImpl::~LedgerSyncImpl() {}
+LedgerSyncImpl::~LedgerSyncImpl() {
+  FTL_DCHECK(active_page_syncs_.empty());
+
+  if (on_delete_) {
+    on_delete_();
+  }
+}
 
 void LedgerSyncImpl::RemoteContains(
     ftl::StringView page_id,
@@ -77,9 +83,14 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
       GetGcsPrefixForPage(app_gcs_prefix_, page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get(), result->cloud_storage.get());
-  result->page_sync = std::make_unique<PageSyncImpl>(
+  auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage, result->cloud_provider.get(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback);
+  active_page_syncs_.insert(page_sync.get());
+  page_sync->set_on_delete([ this, page_sync = page_sync.get() ]() {
+    active_page_syncs_.erase(page_sync);
+  });
+  result->page_sync = std::move(page_sync);
   return result;
 }
 

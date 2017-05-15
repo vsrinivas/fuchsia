@@ -40,6 +40,10 @@ PageSyncImpl::~PageSyncImpl() {
     storage_->RemoveCommitWatcher(this);
     cloud_provider_->UnwatchCommits(this);
   }
+
+  if (on_delete_) {
+    on_delete_();
+  }
 }
 
 void PageSyncImpl::Start() {

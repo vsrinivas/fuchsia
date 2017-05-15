@@ -61,6 +61,12 @@ class PageSyncImpl : public PageSync,
                ftl::Closure on_error);
   ~PageSyncImpl() override;
 
+  // |on_delete| will be called when this class is deleted.
+  void set_on_delete(std::function<void()> on_delete) {
+    FTL_DCHECK(!on_delete_);
+    on_delete_ = on_delete;
+  }
+
   // PageSync:
   void Start() override;
 
@@ -150,6 +156,8 @@ class PageSyncImpl : public PageSync,
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
   std::vector<cloud_provider::Record> commits_to_download_;
+  // Called on destruction.
+  std::function<void()> on_delete_;
 
   // Must be the last member field.
   ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;

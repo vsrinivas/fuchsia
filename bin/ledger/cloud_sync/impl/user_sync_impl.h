@@ -7,6 +7,10 @@
 
 #include "apps/ledger/src/cloud_sync/public/user_sync.h"
 
+#include <memory>
+#include <unordered_set>
+
+#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/environment/environment.h"
 
 namespace cloud_sync {
@@ -23,6 +27,7 @@ class UserSyncImpl : public UserSync {
 
   ledger::Environment* environment_;
   UserConfig user_config_;
+  std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
 };
 
 }  // namespace cloud_sync
