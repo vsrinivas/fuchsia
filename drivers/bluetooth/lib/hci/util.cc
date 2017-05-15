@@ -49,5 +49,30 @@ std::string HCIVersionToString(hci::HCIVersion version) {
   return "(unknown)";
 }
 
+bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
+                                common::DeviceAddress* out_address) {
+  FTL_DCHECK(out_address);
+
+  common::DeviceAddress::Type type;
+  switch (report.address_type) {
+    case hci::LEAddressType::kPublic:
+    case hci::LEAddressType::kPublicIdentity:
+      type = common::DeviceAddress::Type::kLEPublic;
+      break;
+    case hci::LEAddressType::kRandom:
+    case hci::LEAddressType::kRandomIdentity:
+      type = common::DeviceAddress::Type::kLERandom;
+      break;
+    default:
+      FTL_LOG(WARNING)
+          << "gap: LegacyLowEnergyScanManager: Invalid address type in advertising report: "
+          << static_cast<int>(report.address_type);
+      return false;
+  }
+
+  *out_address = common::DeviceAddress(type, report.address);
+  return true;
+}
+
 }  // namespace hci
 }  // namespace adapter

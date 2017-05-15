@@ -33,14 +33,14 @@ DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size) : buffer_size_(buffer_s
 
 DynamicByteBuffer::DynamicByteBuffer(const ByteBuffer& buffer)
     : buffer_size_(buffer.GetSize()), buffer_(buffer.CopyContents()) {
-  FTL_DCHECK(buffer_size_) << "|buffer_size| must be non-zero";
-  FTL_DCHECK(buffer_.get()) << "|buffer| cannot be nullptr";
+  FTL_DCHECK(!buffer_size_ || buffer_.get())
+      << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
 }
 
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size, std::unique_ptr<uint8_t[]> buffer)
     : buffer_size_(buffer_size), buffer_(std::move(buffer)) {
-  FTL_DCHECK(buffer_size_) << "|buffer_size| must be non-zero";
-  FTL_DCHECK(buffer_.get()) << "|buffer| cannot be nullptr";
+  FTL_DCHECK(!buffer_size_ || buffer_.get())
+      << "|buffer| cannot be nullptr when |buffer_size| is non-zero";
 }
 
 DynamicByteBuffer::DynamicByteBuffer(DynamicByteBuffer&& other) {
