@@ -25,12 +25,12 @@ class ActionLogData {
   ActionLogger GetActionLogger(const std::string& module_url);
   // TODO(azani): Make the log readable somehow.
 
- private:
   void Append(
       const std::string& module_url,
       const std::string& method,
       const std::string& json_params);
 
+ private:
   std::vector<std::string> log_;
   ActionListener listener_;
 };

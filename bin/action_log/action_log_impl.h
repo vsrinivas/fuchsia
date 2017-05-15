@@ -35,6 +35,8 @@ class UserActionLogImpl : public UserActionLog {
                               const std::string& method,
                               const std::string& params);
 
+  void LogDummyActionDelayed();
+
   ActionLogData action_log_;
   fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;

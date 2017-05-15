@@ -5,6 +5,8 @@
 #include "apps/maxwell/src/action_log/action_log_impl.h"
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/maxwell/src/action_log/action_log_data.h"
 
@@ -18,7 +20,10 @@ UserActionLogImpl::UserActionLogImpl()
     : action_log_([this](const std::string& component_url,
                          const std::string& method, const std::string& params) {
         BroadcastToSubscribers(component_url, method, params);
-      }) {}
+      }) {
+  // TODO(azani): Remove before production!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  LogDummyActionDelayed();
+}
 
 void UserActionLogImpl::BroadcastToSubscribers(const std::string& component_url,
                                                const std::string& method,
@@ -60,6 +65,16 @@ void UserActionLogImpl::Subscribe(
   // TODO(azani): Remove when dummy data is no longer needed.
   BroadcastToSubscribers("http://example.org", "SpuriousMethod",
                          "{\"cake_truth\": false}");
+}
+
+void UserActionLogImpl::LogDummyActionDelayed() {
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [this] {
+        action_log_.Append("http://example.org", "SpuriousMethod",
+                           "{\"cake_truth\": false}");
+        LogDummyActionDelayed();
+      },
+      ftl::TimeDelta::FromSeconds(5));
 }
 
 void ComponentActionLogImpl::LogAction(const fidl::String& method,
