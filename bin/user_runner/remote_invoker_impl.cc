@@ -112,7 +112,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::String> {
 
   void Finish() { Done(std::move(page_id_)); }
 
-  ledger::Ledger* const ledger_; // not owned
+  ledger::Ledger* const ledger_;  // not owned
   const fidl::String device_id_;
   const fidl::String story_id_;
   const fidl::String timestamp_;
@@ -129,7 +129,8 @@ RemoteInvokerImpl::RemoteInvokerImpl(ledger::Ledger* const ledger)
 void RemoteInvokerImpl::StartOnDevice(const fidl::String& device_id,
                                       const fidl::String& story_id,
                                       const StartOnDeviceCallback& callback) {
-  FTL_LOG(INFO) << "Starting rehydrate call for story " << story_id << " on device " << device_id;
+  FTL_LOG(INFO) << "Starting rehydrate call for story " << story_id
+                << " on device " << device_id;
   new StartOnDeviceCall(&operation_queue_, ledger_, device_id, story_id,
                         callback);
 }

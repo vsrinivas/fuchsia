@@ -38,13 +38,13 @@ namespace modular {
 // Template specializations for fidl services that don't have a Terminate()
 // method.
 
-template<>
+template <>
 void AppClient<auth::AccountProvider>::ServiceTerminate(
     const std::function<void()>& done) {
   service_.set_connection_error_handler(done);
 }
 
-template<>
+template <>
 void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
     const std::function<void()>& done) {
   service_.set_connection_error_handler(done);
@@ -197,10 +197,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
-    device_shell_.reset(
-        new AppClient<DeviceShell>(
-            app_context_->launcher().get(),
-            settings_.device_shell.Clone()));
+    device_shell_.reset(new AppClient<DeviceShell>(
+        app_context_->launcher().get(), settings_.device_shell.Clone()));
 
     mozart::ViewProviderPtr device_shell_view_provider;
     ConnectToService(device_shell_->services(),
@@ -222,10 +220,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 3. Start OAuth Token Manager App.
     AppConfigPtr token_manager_config = AppConfig::New();
     token_manager_config->url = "file:///system/apps/oauth_token_manager";
-    token_manager_.reset(
-        new AppClient<auth::AccountProvider>(
-            app_context_->launcher().get(),
-            std::move(token_manager_config)));
+    token_manager_.reset(new AppClient<auth::AccountProvider>(
+        app_context_->launcher().get(), std::move(token_manager_config)));
     token_manager_->primary_service()->Initialize(
         account_provider_context_binding_.NewBinding());
 
@@ -234,10 +230,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     ledger_config->url = kLedgerAppUrl;
     ledger_config->args = fidl::Array<fidl::String>::New(1);
     ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-    ledger_.reset(
-        new AppClient<ledger::LedgerRepositoryFactory>(
-            app_context_->launcher().get(),
-            std::move(ledger_config)));
+    ledger_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
+        app_context_->launcher().get(), std::move(ledger_config)));
 
     // 5. Setup user provider.
     user_provider_impl_ = std::make_unique<UserProviderImpl>(
@@ -261,18 +255,18 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // just demonstrates that AppTerminate() works as we like it to.
     FTL_LOG(INFO) << "DeviceShellContext::Shutdown()";
     user_provider_impl_->Teardown([this] {
-        FTL_LOG(INFO) << "- UserProvider down";
-        token_manager_->AppTerminate([this] {
-            FTL_LOG(INFO) << "- AuthProvider down";
-            ledger_->AppTerminate([this] {
-                FTL_LOG(INFO) << "- Ledger down";
-                device_shell_->AppTerminate([this] {
-                    FTL_LOG(INFO) << "- DeviceShell down";
-                    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-                  });
-              });
+      FTL_LOG(INFO) << "- UserProvider down";
+      token_manager_->AppTerminate([this] {
+        FTL_LOG(INFO) << "- AuthProvider down";
+        ledger_->AppTerminate([this] {
+          FTL_LOG(INFO) << "- Ledger down";
+          device_shell_->AppTerminate([this] {
+            FTL_LOG(INFO) << "- DeviceShell down";
+            mtl::MessageLoop::GetCurrent()->PostQuitTask();
           });
+        });
       });
+    });
   }
 
   // |AccountProviderContext|

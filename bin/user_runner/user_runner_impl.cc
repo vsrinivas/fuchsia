@@ -155,7 +155,8 @@ UserRunnerImpl::UserRunnerImpl(
 
   // RemoteInvoker
 
-  // TODO(planders) Do not create RemoteInvoker until service is actually requested.
+  // TODO(planders) Do not create RemoteInvoker until service is actually
+  // requested.
   remote_invoker_impl_.reset(new RemoteInvokerImpl(ledger_.get()));
   user_scope_.AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
@@ -290,7 +291,8 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
     story_provider_impl_->Teardown([this, done] {
       agent_runner_->Teardown([this, done] {
         // First delete this, then invoke done, finally post stop.
-        std::unique_ptr<fidl::Binding<UserRunner>> binding = std::move(binding_);
+        std::unique_ptr<fidl::Binding<UserRunner>> binding =
+            std::move(binding_);
         delete this;
         done();
         mtl::MessageLoop::GetCurrent()->PostQuitTask();

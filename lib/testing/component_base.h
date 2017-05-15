@@ -56,7 +56,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // callback in the argument against execution after this instance is deleted,
   // using the weak pointer factory.
   std::function<void()> Protect(std::function<void()> callback) {
-    return [ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
+    return
+        [ ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback) ] {
       if (ptr) {
         callback();
       }

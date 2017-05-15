@@ -20,9 +20,7 @@ constexpr char kTest2Agent[] =
 class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
                      modular::testing::Agent1Interface {
  public:
-  static void New() {
-    new TestAgentApp;
-  }
+  static void New() { new TestAgentApp; }
 
  private:
   TestAgentApp() { TestInit(__FILE__); }

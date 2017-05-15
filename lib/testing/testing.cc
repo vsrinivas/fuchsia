@@ -38,7 +38,7 @@ void Fail(const std::string& log_msg) {
 
 void Done() {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Done([]{});
+    g_test_runner->Done([] {});
     g_test_runner.reset();
   }
   if (g_test_runner_store.is_bound())
@@ -47,7 +47,7 @@ void Done() {
 
 void Teardown() {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Teardown([]{});
+    g_test_runner->Teardown([] {});
     g_test_runner.reset();
   }
   if (g_test_runner_store.is_bound())

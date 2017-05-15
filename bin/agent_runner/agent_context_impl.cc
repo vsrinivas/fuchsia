@@ -19,9 +19,8 @@ constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 class AgentContextImpl::StartAndInitializeCall : Operation<void> {
  public:
   StartAndInitializeCall(OperationContainer* const container,
-                 AgentContextImpl* const agent_context_impl)
-      : Operation(container, [] {}),
-        agent_context_impl_(agent_context_impl) {
+                         AgentContextImpl* const agent_context_impl)
+      : Operation(container, [] {}), agent_context_impl_(agent_context_impl) {
     Ready();
   }
 
@@ -207,16 +206,14 @@ void AgentContextImpl::Done() {}
 
 void AgentContextImpl::MaybeStopAgent() {
   new StopCall(&operation_queue_, false /* is agent runner terminating? */,
-               this,
-               [this] {
+               this, [this] {
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.
                });
 }
 
 void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
-  new StopCall(&operation_queue_, true /* is agent runner terminating? */,
-               this,
+  new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
                [this, callback]() {
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.

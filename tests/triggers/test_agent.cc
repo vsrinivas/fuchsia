@@ -17,9 +17,7 @@ namespace {
 class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
                      modular::testing::TriggerAgentInterface {
  public:
-  static void New() {
-    new TestAgentApp;
-  }
+  static void New() { new TestAgentApp; }
 
  private:
   TestAgentApp() { TestInit(__FILE__); }
@@ -70,11 +68,11 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    modular::testing::GetStore()->Put(
-        "trigger_test_agent_stopped", "", [this, callback] {
-          TEST_PASS("Trigger test agent exited");
-          DeleteAndQuit(callback);
-        });
+    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
+                                      [this, callback] {
+                                        TEST_PASS("Trigger test agent exited");
+                                        DeleteAndQuit(callback);
+                                      });
   }
 
   // |TriggerAgentInterface|

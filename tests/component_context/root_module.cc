@@ -81,8 +81,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { DeleteAndQuit([]{}); }),
-        kTimeout);
+        Protect([this] { DeleteAndQuit([] {}); }), kTimeout);
   }
 
   // Tests message queues. Calls |done_cb| when completed successfully.

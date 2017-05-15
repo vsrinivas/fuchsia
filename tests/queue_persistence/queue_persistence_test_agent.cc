@@ -71,9 +71,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
     msg_queue_.reset();
 
     modular::testing::GetStore()->Put(
-        "queue_persistence_test_agent_stopped", "", [this, callback] {
-          DeleteAndQuit(callback);
-        });
+        "queue_persistence_test_agent_stopped", "",
+        [this, callback] { DeleteAndQuit(callback); });
   }
 
   // |QueuePersistenceAgentInterface|

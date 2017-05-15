@@ -13,9 +13,7 @@ namespace {
 
 class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
  public:
-  static void New() {
-    new TestAgentApp;
-  }
+  static void New() { new TestAgentApp; }
 
  private:
   TestAgentApp() { TestInit(__FILE__); }

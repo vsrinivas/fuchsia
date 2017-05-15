@@ -544,43 +544,44 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<void> {
 
   void GetKeysToDelete(FlowToken flow) {
     GetEntries(snapshot_.get(), message_queues_key_prefix_.c_str(),
-            &component_entries_, nullptr, [this, flow](ledger::Status status) {
-              if (status != ledger::Status::OK) {
-                FTL_LOG(ERROR)
-                    << "DeleteNamespaceCall::GetKeysToDelete() " << status;
-                Done();
-                return;
-              }
+               &component_entries_, nullptr,
+               [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR)
+                       << "DeleteNamespaceCall::GetKeysToDelete() " << status;
+                   Done();
+                   return;
+                 }
 
-              for (const auto& entry : component_entries_) {
-                FTL_DCHECK(entry->value) << "Value vmo handle is null";
+                 for (const auto& entry : component_entries_) {
+                   FTL_DCHECK(entry->value) << "Value vmo handle is null";
 
-                keys_to_delete_.push_back(entry->key.Clone());
+                   keys_to_delete_.push_back(entry->key.Clone());
 
-                std::string queue_token;
-                if (!mtl::StringFromVmo(entry->value, &queue_token)) {
-                  FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
-                                 << " couldn't be copied.";
-                  continue;
-                }
+                   std::string queue_token;
+                   if (!mtl::StringFromVmo(entry->value, &queue_token)) {
+                     FTL_LOG(ERROR) << "VMO for key " << to_string(entry->key)
+                                    << " couldn't be copied.";
+                     continue;
+                   }
 
-                keys_to_delete_.push_back(
-                    to_array(MakeMessageQueueKey(queue_token)));
-              }
+                   keys_to_delete_.push_back(
+                       to_array(MakeMessageQueueKey(queue_token)));
+                 }
 
-              DeleteKeys(flow);
-            });
+                 DeleteKeys(flow);
+               });
   }
 
   void DeleteKeys(FlowToken flow) {
     for (size_t i = 0; i < keys_to_delete_.size(); i++) {
-      page_->Delete(
-          keys_to_delete_[i].Clone(), [this, i, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FTL_LOG(ERROR) << "Page.Delete(): Could not delete key "
-                             << to_string(keys_to_delete_[i]);
-            }
-          });
+      page_->Delete(keys_to_delete_[i].Clone(),
+                    [this, i, flow](ledger::Status status) {
+                      if (status != ledger::Status::OK) {
+                        FTL_LOG(ERROR) << "Page.Delete(): Could not delete key "
+                                       << to_string(keys_to_delete_[i]);
+                      }
+                    });
     }
   }
 
@@ -692,7 +693,8 @@ void MessageQueueManager::DeleteMessageQueue(
 }
 
 void MessageQueueManager::DeleteNamespace(
-    const std::string& component_namespace, ftl::Closure done_callback) {
+    const std::string& component_namespace,
+    ftl::Closure done_callback) {
   new DeleteNamespaceCall(&operation_collection_, this, page_.get(),
                           component_namespace, done_callback);
 }

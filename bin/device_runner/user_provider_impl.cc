@@ -315,20 +315,20 @@ void UserProviderImpl::LoginInternal(const std::string& account_id,
 
   // Get a token provider instance to pass to ledger.
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
-  token_provider_factory->GetTokenProvider(
-      kLedgerAppUrl, ledger_token_provider.NewRequest());
+  token_provider_factory->GetTokenProvider(kLedgerAppUrl,
+                                           ledger_token_provider.NewRequest());
 
   fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
   ledger_repository_factory_->GetRepository(
       local_ledger_path, server_name, std::move(ledger_token_provider),
-      ledger_repository.NewRequest(),
-      [](ledger::Status status) {
+      ledger_repository.NewRequest(), [](ledger::Status status) {
         FTL_DCHECK(status == ledger::Status::OK)
             << "GetRepository failed: " << status;
       });
 
-
-  auto user_shell = params->user_shell_config.is_null() ? default_user_shell_.Clone() : std::move(params->user_shell_config);
+  auto user_shell = params->user_shell_config.is_null()
+                        ? default_user_shell_.Clone()
+                        : std::move(params->user_shell_config);
   auto controller = std::make_unique<UserControllerImpl>(
       app_context_, device_name, std::move(user_shell), story_shell_,
       std::move(token_provider_factory), account_id,

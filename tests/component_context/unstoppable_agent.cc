@@ -21,7 +21,7 @@ class UnstoppableAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
  private:
   UnstoppableAgentApp() { TestInit(__FILE__); }
-  ~UnstoppableAgentApp() override  = default;
+  ~UnstoppableAgentApp() override = default;
 
   // |Agent|
   void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,

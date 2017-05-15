@@ -539,13 +539,13 @@ class StoryProviderImpl::TeardownCall : Operation<void> {
     for (auto& it : story_provider_impl_->story_controllers_) {
       // Each callback has a copy of |flow| which only goes out-of-scope once
       // the story corresponding to |it| stops.
-      it.second->StopForTeardown([this, story_id = it.first, flow] {
+      it.second->StopForTeardown([ this, story_id = it.first, flow ] {
         // It is okay to erase story_id because story provider binding has been
         // closed and this callback cannot be invoked asynchronously.
         story_provider_impl_->story_controllers_.erase(story_id);
       });
     }
-   }
+  }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
 
