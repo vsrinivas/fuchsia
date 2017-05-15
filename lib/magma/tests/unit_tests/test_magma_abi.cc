@@ -9,6 +9,10 @@
 #include "gtest/gtest.h"
 #include <thread>
 
+extern "C" {
+#include "test_magma_abi.h"
+}
+
 class TestBase {
 public:
     TestBase() { fd_ = open("/dev/class/display/000", O_RDONLY); }
@@ -233,3 +237,5 @@ TEST(MagmaAbi, SemaphoreImportExport)
     TestConnection test2;
     TestConnection::SemaphoreImportExport(&test1, &test2);
 }
+
+TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }

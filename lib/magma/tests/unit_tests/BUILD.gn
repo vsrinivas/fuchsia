@@ -109,6 +109,7 @@ executable("magma_abi_conformance_tests") {
   sources = [
     "main.cc",
     "test_magma_abi.cc",
+    "test_magma_abi_c.c",
   ]
 
   deps = [

@@ -58,7 +58,7 @@ magma_status_t magma_import(struct magma_connection_t* connection, uint32_t buff
                             magma_buffer_t* buffer_out);
 
 // Reads the size of the display in pixels.
-magma_status_t magma_display_get_size(int fd, magma_display_size* size_out);
+magma_status_t magma_display_get_size(int fd, struct magma_display_size* size_out);
 
 // Provides a buffer to be scanned out on the next vblank event.
 // |wait_semaphores| will be waited upon prior to scanning out the buffer.
@@ -71,11 +71,11 @@ void magma_display_page_flip(struct magma_connection_t* connection, magma_buffer
                              const magma_semaphore_t* signal_semaphores);
 
 // Creates a semaphore on the given connection.  If successful |semaphore_out| will be set.
-magma_status_t magma_create_semaphore(magma_connection_t* connection,
+magma_status_t magma_create_semaphore(struct magma_connection_t* connection,
                                       magma_semaphore_t* semaphore_out);
 
 // Destroys |semaphore|.
-void magma_destroy_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore);
+void magma_destroy_semaphore(struct magma_connection_t* connection, magma_semaphore_t semaphore);
 
 // Returns the object id for the given semaphore.
 uint64_t magma_get_semaphore_id(magma_semaphore_t semaphore);
