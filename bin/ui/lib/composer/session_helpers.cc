@@ -114,9 +114,49 @@ mozart2::OpPtr NewCreateMaterialOp(uint32_t id,
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateNodeOp(uint32_t id, mozart2::NodeType type) {
+mozart2::OpPtr NewCreateClipNodeOp(uint32_t id) {
+  auto node = mozart2::ClipNode::New();
+
   auto resource = mozart2::Resource::New();
-  resource->set_node(type);
+  resource->set_clip_node(std::move(node));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id) {
+  auto node = mozart2::EntityNode::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_entity_node(std::move(node));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateLinkNodeOp(uint32_t id, mx::eventpair epair) {
+  auto node = mozart2::LinkNode::New();
+  node->token = std::move(epair);
+
+  auto resource = mozart2::Resource::New();
+  resource->set_link_node(std::move(node));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id) {
+  auto node = mozart2::ShapeNode::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_shape_node(std::move(node));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateTagNodeOp(uint32_t id, int32_t tag_value) {
+  auto node = mozart2::TagNode::New();
+  node->tag_value = tag_value;
+
+  auto resource = mozart2::Resource::New();
+  resource->set_tag_node(std::move(node));
 
   return NewCreateResourceOp(id, std::move(resource));
 }

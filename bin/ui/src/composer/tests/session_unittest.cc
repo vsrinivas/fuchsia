@@ -15,20 +15,20 @@ namespace composer {
 namespace test {
 
 TEST_F(SessionTest, ResourceIdAlreadyUsed) {
-  EXPECT_TRUE(Apply(NewCreateNodeOp(1, mozart2::NodeType::kEntity)));
-  EXPECT_TRUE(Apply(NewCreateNodeOp(2, mozart2::NodeType::kShape)));
+  EXPECT_TRUE(Apply(NewCreateEntityNodeOp(1)));
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(2)));
   ExpectLastReportedError(nullptr);
-  EXPECT_FALSE(Apply(NewCreateNodeOp(2, mozart2::NodeType::kShape)));
+  EXPECT_FALSE(Apply(NewCreateShapeNodeOp(2)));
   ExpectLastReportedError(
       "composer::ResourceMap::AddResource(): resource with ID 2 already "
       "exists.");
 }
 
 TEST_F(SessionTest, AddAndRemoveResource) {
-  EXPECT_TRUE(Apply(NewCreateNodeOp(1, mozart2::NodeType::kEntity)));
-  EXPECT_TRUE(Apply(NewCreateNodeOp(2, mozart2::NodeType::kShape)));
-  EXPECT_TRUE(Apply(NewCreateNodeOp(3, mozart2::NodeType::kShape)));
-  EXPECT_TRUE(Apply(NewCreateNodeOp(4, mozart2::NodeType::kShape)));
+  EXPECT_TRUE(Apply(NewCreateEntityNodeOp(1)));
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(2)));
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(3)));
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(4)));
   EXPECT_TRUE(Apply(NewAddChildOp(1, 2)));
   EXPECT_TRUE(Apply(NewAddPartOp(1, 3)));
   EXPECT_EQ(4U, session_->GetTotalResourceCount());
@@ -53,7 +53,7 @@ TEST_F(SessionTest, ShapeNodeMaterialAndShape) {
   const ResourceId kMaterialId = 2;
   const ResourceId kShapeId = 3;
 
-  EXPECT_TRUE(Apply(NewCreateNodeOp(kNodeId, mozart2::NodeType::kShape)));
+  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
   EXPECT_TRUE(Apply(NewCreateMaterialOp(kMaterialId, 0, 255, 100, 100, 255)));
   EXPECT_TRUE(Apply(NewCreateCircleOp(kShapeId, 50.f)));
   EXPECT_TRUE(Apply(NewSetMaterialOp(kNodeId, kMaterialId)));

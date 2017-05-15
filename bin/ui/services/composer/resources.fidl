@@ -4,6 +4,7 @@
 
 module mozart2;
 
+import "apps/mozart/services/composer/nodes.fidl";
 import "apps/mozart/services/composer/shapes.fidl";
 import "apps/mozart/services/composer/types.fidl";
 
@@ -24,7 +25,12 @@ union Resource {
   Mesh mesh;
 
   Material material;
-  NodeType node;
+
+  ClipNode clip_node;
+  EntityNode entity_node;
+  LinkNode link_node;
+  ShapeNode shape_node;
+  TagNode tag_node;
 
   // A value that can be used in place of a constant value.
   Variable variable;

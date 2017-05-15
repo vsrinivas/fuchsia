@@ -84,8 +84,16 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateMesh(id, op->resource->get_mesh());
     case mozart2::Resource::Tag::MATERIAL:
       return ApplyCreateMaterial(id, op->resource->get_material());
-    case mozart2::Resource::Tag::NODE:
-      return ApplyCreateNode(id, op->resource->get_node());
+    case mozart2::Resource::Tag::CLIP_NODE:
+      return ApplyCreateClipNode(id, op->resource->get_clip_node());
+    case mozart2::Resource::Tag::ENTITY_NODE:
+      return ApplyCreateEntityNode(id, op->resource->get_entity_node());
+    case mozart2::Resource::Tag::LINK_NODE:
+      return ApplyCreateLinkNode(id, op->resource->get_link_node());
+    case mozart2::Resource::Tag::SHAPE_NODE:
+      return ApplyCreateShapeNode(id, op->resource->get_shape_node());
+    case mozart2::Resource::Tag::TAG_NODE:
+      return ApplyCreateTagNode(id, op->resource->get_tag_node());
     default:
       error_reporter_->ERROR()
           << "composer::Session::ApplyCreateResourceOp(): unsupported resource"
@@ -266,21 +274,65 @@ bool Session::ApplyCreateMaterial(ResourceId id,
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
-bool Session::ApplyCreateNode(ResourceId id, mozart2::NodeType node_type) {
-  auto node = CreateNode(id, node_type);
+bool Session::ApplyCreateClipNode(ResourceId id,
+                                  const mozart2::ClipNodePtr& args) {
+  auto node = CreateClipNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-ResourcePtr Session::CreateNode(ResourceId id, mozart2::NodeType node_type) {
-  switch (node_type) {
-    case mozart2::NodeType::kEntity:
-      return ftl::MakeRefCounted<EntityNode>(this);
-    case mozart2::NodeType::kShape:
-      return ftl::MakeRefCounted<ShapeNode>(this);
-    default:
-      FTL_DCHECK(false);  // unimplemented
-      return ResourcePtr();
-  }
+bool Session::ApplyCreateEntityNode(ResourceId id,
+                                    const mozart2::EntityNodePtr& args) {
+  auto node = CreateEntityNode(id, args);
+  return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+bool Session::ApplyCreateLinkNode(ResourceId id,
+                                  const mozart2::LinkNodePtr& args) {
+  auto node = CreateLinkNode(id, args);
+  return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+bool Session::ApplyCreateShapeNode(ResourceId id,
+                                   const mozart2::ShapeNodePtr& args) {
+  auto node = CreateShapeNode(id, args);
+  return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+bool Session::ApplyCreateTagNode(ResourceId id,
+                                 const mozart2::TagNodePtr& args) {
+  auto node = CreateTagNode(id, args);
+  return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+ResourcePtr Session::CreateClipNode(ResourceId id,
+                                    const mozart2::ClipNodePtr& args) {
+  error_reporter_->ERROR() << "composer::Session::CreateClipNode(): "
+                              "unimplemented.";
+  return ResourcePtr();
+}
+
+ResourcePtr Session::CreateEntityNode(ResourceId id,
+                                      const mozart2::EntityNodePtr& args) {
+  return ftl::MakeRefCounted<EntityNode>(this);
+}
+
+ResourcePtr Session::CreateLinkNode(ResourceId id,
+                                    const mozart2::LinkNodePtr& args) {
+  error_reporter_->ERROR() << "composer::Session::CreateLinkNode(): "
+                              "unimplemented.";
+  return ResourcePtr();
+}
+
+ResourcePtr Session::CreateShapeNode(ResourceId id,
+                                     const mozart2::ShapeNodePtr& args) {
+  return ftl::MakeRefCounted<ShapeNode>(this);
+}
+
+ResourcePtr Session::CreateTagNode(ResourceId id,
+                                   const mozart2::TagNodePtr& args) {
+  error_reporter_->ERROR() << "composer::Session::CreateTagNode(): "
+                              "unimplemented.";
+  return ResourcePtr();
 }
 
 ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {

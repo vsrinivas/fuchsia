@@ -48,9 +48,20 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::MATERIAL:
       stream << "Material";
       break;
-    case Resource::Tag::NODE:
-      // TODO: print out the type of node.
-      stream << "NodeType";
+    case Resource::Tag::CLIP_NODE:
+      stream << "ClipNode";
+      break;
+    case Resource::Tag::ENTITY_NODE:
+      stream << "EntityNode";
+      break;
+    case Resource::Tag::LINK_NODE:
+      stream << "LinkNode";
+      break;
+    case Resource::Tag::SHAPE_NODE:
+      stream << "ShapeNode";
+      break;
+    case Resource::Tag::TAG_NODE:
+      stream << "TagNode";
       break;
     case Resource::Tag::VARIABLE:
       stream << "Variable";

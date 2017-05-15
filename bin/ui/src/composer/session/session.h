@@ -83,10 +83,19 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args);
   bool ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args);
   bool ApplyCreateMaterial(ResourceId id, const mozart2::MaterialPtr& args);
-  bool ApplyCreateNode(ResourceId id, mozart2::NodeType node_type);
+  bool ApplyCreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
+  bool ApplyCreateEntityNode(ResourceId id, const mozart2::EntityNodePtr& args);
+  bool ApplyCreateLinkNode(ResourceId id, const mozart2::LinkNodePtr& args);
+  bool ApplyCreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
+  bool ApplyCreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
 
   // Actually create resources.
-  ResourcePtr CreateNode(ResourceId id, mozart2::NodeType node_type);
+  ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
+  ResourcePtr CreateEntityNode(ResourceId id,
+                               const mozart2::EntityNodePtr& args);
+  ResourcePtr CreateLinkNode(ResourceId id, const mozart2::LinkNodePtr& args);
+  ResourcePtr CreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
+  ResourcePtr CreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
   ResourcePtr CreateMaterial(ResourceId id,
                              float red,
