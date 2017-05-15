@@ -11,12 +11,13 @@
 
 namespace ledger {
 
-LedgerRepositoryImpl::LedgerRepositoryImpl(const std::string& base_storage_dir,
-                                           Environment* environment,
-                                           cloud_sync::UserConfig user_config)
+LedgerRepositoryImpl::LedgerRepositoryImpl(
+    const std::string& base_storage_dir,
+    Environment* environment,
+    std::unique_ptr<cloud_sync::UserSync> user_sync)
     : base_storage_dir_(base_storage_dir),
       environment_(environment),
-      user_config_(std::move(user_config)) {
+      user_sync_(std::move(user_sync)) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
 }
@@ -47,11 +48,8 @@ void LedgerRepositoryImpl::GetLedger(
             environment_->main_runner(), environment_->GetIORunner(),
             environment_->coroutine_service(), base_storage_dir_,
             name_as_string);
-    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
-    if (user_config_.use_sync) {
-      ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(
-          environment_, &user_config_, name_as_string);
-    }
+    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync =
+        user_sync_->CreateLedgerSync(name_as_string);
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),

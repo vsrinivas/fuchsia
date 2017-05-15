@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
@@ -137,7 +138,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     auto result = repositories_.emplace(
         std::piecewise_construct, std::forward_as_tuple(sanitized_path),
         std::forward_as_tuple(sanitized_path, environment_,
-                              std::move(user_config)));
+                              std::make_unique<cloud_sync::UserSyncImpl>(
+                                  environment_, std::move(user_config))));
     FTL_DCHECK(result.second);
     it = result.first;
   }
