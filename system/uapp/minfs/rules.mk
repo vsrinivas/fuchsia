@@ -54,7 +54,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
-    $(LOCAL_DIR)/minfs-check.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/mxalloc/alloc_checker.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \

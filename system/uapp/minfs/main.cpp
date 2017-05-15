@@ -28,16 +28,17 @@ static minfs::Bcache* the_block_cache;
 extern mxtl::RefPtr<minfs::VnodeMinfs> fake_root;
 
 int run_fs_tests(int argc, char** argv);
-void drop_cache() {
-    the_block_cache->Invalidate();
-}
 
 #endif
 
 namespace {
 
 int do_minfs_check(minfs::Bcache* bc, int argc, char** argv) {
+#ifdef __Fuchsia__
     return minfs_check(bc);
+#else
+    return -1;
+#endif
 }
 
 #ifdef __Fuchsia__

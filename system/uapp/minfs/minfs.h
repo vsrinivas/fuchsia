@@ -254,20 +254,9 @@ public:
     txnid_t TxnId() const { return txnid_; }
 #endif
 
-    // acquire a block, reading from disk if necessary,
-    // returning a handle and a pointer to the data
-    mxtl::RefPtr<BlockNode> Get(uint32_t bno);
-
-    // release a block back to the cache
-    // flags *must* contain kBlockDirty if it was modified
-    void Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags);
-
     // Helper functions which combine 'Get' and 'Put'.
     mx_status_t Read(uint32_t bno, void* data, uint32_t off, uint32_t len);
     mx_status_t Write(uint32_t bno, const void* data, uint32_t off, uint32_t len);
-
-    // drop all non-busy, non-dirty blocks
-    void Invalidate();
 
     int Sync();
     int Close();
@@ -276,6 +265,14 @@ public:
 
 private:
     Bcache(int fd, uint32_t blockmax, uint32_t blocksize);
+
+    // acquire a block, reading from disk if necessary,
+    // returning a handle and a pointer to the data
+    mxtl::RefPtr<BlockNode> Get(uint32_t bno);
+
+    // release a block back to the cache
+    // flags *must* contain kBlockDirty if it was modified
+    void Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags);
 
     mxtl::RefPtr<BlockNode> Get(uint32_t bno, uint32_t mode);
 

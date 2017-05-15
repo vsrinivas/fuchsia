@@ -242,8 +242,6 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
     bc_->Readblk(info_.ino_block + (ino / kMinfsInodesPerBlock), inodata);
 #endif
     memcpy(&vn->inode_, (void*)((uintptr_t)inodata + off_of_ino), kMinfsInodeSize);
-
-    vn->fs_ = this;
     vn->ino_ = ino;
     vnode_hash_.insert(vn.get());
 

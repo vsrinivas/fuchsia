@@ -59,19 +59,6 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
-void Bcache::Invalidate() {
-    mxtl::RefPtr<BlockNode> blk;
-    uint32_t n = 0;
-    while ((blk = lists_.PopFront(kBlockLRU)) != nullptr) {
-        // remove from hash, bno to be reassigned
-        assert(!(blk->flags_ & kBlockBusy));
-        hash_.erase(*blk);
-        lists_.PushBack(mxtl::move(blk), kBlockFree);
-        n++;
-    }
-    trace(BCACHE, "[ %d blocks dropped ]\n", n);
-}
-
 mxtl::RefPtr<BlockNode> Bcache::Get(uint32_t bno, uint32_t mode) {
     trace(BCACHE,"bcache_get() bno=%u %s\n", bno, modestr(mode));
     if (bno >= blockmax_) {

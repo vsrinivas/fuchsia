@@ -18,8 +18,6 @@
 #include "host.h"
 #include "misc.h"
 
-void drop_cache();
-
 #define TRY(func) ({\
     int ret = (func); \
     if (ret < 0) { \
@@ -146,7 +144,6 @@ int worker_writer(worker_t* w) {
         srand64(&w->rdata, w->name);
         w->pos = 0;
         w->work = worker_verify;
-        drop_cache();
         return BUSY;
     }
     return r;

@@ -18,12 +18,11 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
               ino, fs_->info_.inode_count);
         return ERR_OUT_OF_RANGE;
     }
-    mx_status_t status;
-    uint32_t bno_of_ino = fs_->info_.ino_block + ino / kMinfsInodesPerBlock;
+    uint32_t bno_of_ino = ino / kMinfsInodesPerBlock;
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
-    if ((status = fs_->bc_->Read(bno_of_ino, inode, off_of_ino, kMinfsInodeSize)) < 0) {
-        return status;
-    }
+    uintptr_t iaddr = reinterpret_cast<uintptr_t>(fs_->inode_table_->GetData()) +
+                      bno_of_ino * kMinfsBlockSize + off_of_ino;
+    memcpy(inode, reinterpret_cast<void*>(iaddr), kMinfsInodeSize);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         error("check: ino %u has bad magic %#x\n", ino, inode->magic);
         return ERR_IO_DATA_INTEGRITY;
@@ -53,101 +52,14 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
         *bno_out = 0;
         return NO_ERROR;
     }
-    mxtl::RefPtr<BlockNode> iblk;
-    if ((iblk = fs_->bc_->Get(ibno)) == nullptr) {
-        return ERR_NOT_FOUND;
+    char data[kMinfsBlockSize];
+    mx_status_t status;
+    if ((status = fs_->bc_->Readblk(ibno, data)) != NO_ERROR) {
+        return status;
     }
-    uint32_t* ientry = static_cast<uint32_t*>(iblk->data());
+    uint32_t* ientry = reinterpret_cast<uint32_t*>(data);
     *bno_out = ientry[j];
-    fs_->bc_->Put(mxtl::move(iblk), 0);
     return NO_ERROR;
-}
-
-// Convert 'single-block-reads' to generic reads, which may cross block
-// boundaries. This function works on directories too.
-mx_status_t MinfsChecker::FileRead(minfs_inode_t* inode, void* data, size_t len, size_t off) {
-    if (off >= inode->size) {
-        warn("file_read: offset %lu is greater than inode size (%u)\n", off, inode->size);
-        conforming_ = false;
-        return 0;
-    }
-    if (len > (inode->size - off)) {
-        len = inode->size - off;
-    }
-
-    void* start = data;
-    uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
-    uint32_t adjust = off % kMinfsBlockSize;
-
-    while ((len > 0) && (n < kMinfsMaxFileBlock)) {
-        uint32_t xfer;
-        if (len > (kMinfsBlockSize - adjust)) {
-            xfer = kMinfsBlockSize - adjust;
-        } else {
-            xfer = static_cast<uint32_t>(len);
-        }
-
-        uint32_t bno;
-        mx_status_t status;
-        if ((status = GetInodeNthBno(inode, n, &bno)) != NO_ERROR) {
-            return status;
-        }
-
-        if ((status = fs_->bc_->Read(bno, data, adjust, xfer)) != NO_ERROR) {
-            return status;
-        }
-
-        adjust = 0;
-        len -= xfer;
-        data = (void*)((uintptr_t)data + xfer);
-        n++;
-    }
-
-    return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
-}
-
-// Convert 'single-block-writes' to generic writes, which may cross block
-// boundaries. This function works on directories too.
-mx_status_t MinfsChecker::FileWrite(minfs_inode_t* inode, const void* data,
-                                    size_t len, size_t off) {
-    if (off >= inode->size) {
-        warn("file_write: offset %lu is greater than inode size (%u)\n", off, inode->size);
-        conforming_ = false;
-        return 0;
-    }
-    if (len > (inode->size - off)) {
-        len = inode->size - off;
-    }
-
-    const void* start = data;
-    uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
-    uint32_t adjust = off % kMinfsBlockSize;
-
-    while ((len > 0) && (n < kMinfsMaxFileBlock)) {
-        uint32_t xfer;
-        if (len > (kMinfsBlockSize - adjust)) {
-            xfer = kMinfsBlockSize - adjust;
-        } else {
-            xfer = static_cast<uint32_t>(len);
-        }
-
-        uint32_t bno;
-        mx_status_t status;
-        if ((status = GetInodeNthBno(inode, n, &bno)) != NO_ERROR) {
-            return status;
-        }
-
-        if ((status = fs_->bc_->Write(bno, data, adjust, xfer)) != NO_ERROR) {
-            return status;
-        }
-
-        adjust = 0;
-        len -= xfer;
-        data = (void*)((uintptr_t)data + xfer);
-        n++;
-    }
-
-    return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
 }
 
 mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
@@ -157,12 +69,21 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
     bool dotdot = false;
     uint32_t dirent_count = 0;
 
+    mx_status_t status;
+    mxtl::RefPtr<VnodeMinfs> vn;
+    if ((status = VnodeMinfs::AllocateHollow(fs_.get(), &vn)) != NO_ERROR) {
+        return status;
+    }
+    memcpy(&vn->inode_, inode, kMinfsInodeSize);
+    vn->ino_ = ino;
+
     size_t prev_off = 0;
     size_t off = 0;
     while (true) {
         uint32_t data[MINFS_DIRENT_SIZE];
-        mx_status_t status = FileRead(inode, data, MINFS_DIRENT_SIZE, off);
-        if (status != MINFS_DIRENT_SIZE) {
+        size_t actual;
+        status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, off, &actual);
+        if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
             error("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
             if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
                 // So we couldn't read the last direntry, for whatever reason, but our
@@ -176,8 +97,8 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 int c = getchar();
                 if (c == 'y') {
                     // Mark the 'last' visible direntry as last.
-                    status = FileRead(inode, data, MINFS_DIRENT_SIZE, prev_off);
-                    if (status != MINFS_DIRENT_SIZE) {
+                    status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, prev_off, &actual);
+                    if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
                         error("check: Error trying to update last dirent as 'last': %d.\n"
                               "Can't read the last dirent even though we just did earlier.\n",
                               status);
@@ -185,7 +106,8 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                     }
                     minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
                     de->reclen |= kMinfsReclenLast;
-                    FileWrite(inode, data, MINFS_DIRENT_SIZE, prev_off);
+                    WriteTxn txn(fs_->bc_);
+                    vn->WriteInternal(&txn, data, MINFS_DIRENT_SIZE, prev_off, &actual);
                     return NO_ERROR;
                 } else {
                     return ERR_IO;
@@ -209,8 +131,8 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         } else {
             // Re-read the dirent to acquire the full name
             uint32_t record_full[DirentSize(NAME_MAX)];
-            status = FileRead(inode, record_full, DirentSize(de->namelen), off);
-            if (status != static_cast<mx_status_t>(DirentSize(de->namelen))) {
+            status = vn->ReadInternal(record_full, DirentSize(de->namelen), off, &actual);
+            if (status != NO_ERROR || actual != DirentSize(de->namelen)) {
                 error("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
                 return ERR_IO;
             }
@@ -441,18 +363,19 @@ mx_status_t MinfsChecker::Init(Bcache* bc, const minfs_info_t* info) {
 mx_status_t minfs_check(Bcache* bc) {
     mx_status_t status;
 
-    minfs_info_t info;
-    if (bc->Read(0, &info, 0, sizeof(info)) < 0) {
+    char data[kMinfsBlockSize];
+    if (bc->Readblk(0, data) < 0) {
         error("minfs: could not read info block\n");
         return -1;
     }
-    minfs_dump_info(&info);
-    if (minfs_check_info(&info, bc->Maxblk())) {
+    const minfs_info_t* info = reinterpret_cast<const minfs_info_t*>(data);
+    minfs_dump_info(info);
+    if (minfs_check_info(info, bc->Maxblk())) {
         return -1;
     }
 
     MinfsChecker chk;
-    if ((status = chk.Init(bc, &info)) != NO_ERROR) {
+    if ((status = chk.Init(bc, info)) != NO_ERROR) {
         return status;
     }
 

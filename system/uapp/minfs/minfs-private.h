@@ -168,6 +168,8 @@ public:
     ~VnodeMinfs();
 
 private:
+    // Fsck can introspect Minfs
+    friend class MinfsChecker;
     VnodeMinfs(Minfs* fs);
 
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized
@@ -237,6 +239,17 @@ private:
     fs::RemoteContainer remoter_;
 };
 
+// write the inode data of this vnode to disk (default does not update time values)
+void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
+
+mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
+void minfs_dump_info(const minfs_info_t* info);
+void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino);
+
+int minfs_mkfs(Bcache* bc);
+
+#ifdef __Fuchsia__
+
 class MinfsChecker {
 public:
     MinfsChecker();
@@ -253,9 +266,6 @@ private:
 
     mx_status_t GetInode(minfs_inode_t* inode, uint32_t ino);
     mx_status_t GetInodeNthBno(minfs_inode_t* inode, uint32_t n, uint32_t* bno_out);
-    mx_status_t FileRead(minfs_inode_t* inode, void* data, size_t len, size_t off);
-    mx_status_t FileWrite(minfs_inode_t* inode, const void* data, size_t len,
-                          size_t off);
     mx_status_t CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                                uint32_t parent, uint32_t flags);
     const char* CheckDataBlock(uint32_t bno);
@@ -266,16 +276,8 @@ private:
     RawBitmap checked_blocks_;
 };
 
-// write the inode data of this vnode to disk (default does not update time values)
-void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
-
-mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
-void minfs_dump_info(const minfs_info_t* info);
-void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino);
-
-int minfs_mkfs(Bcache* bc);
-
 mx_status_t minfs_check(Bcache* bc);
+#endif
 
 mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, Bcache* bc);
 
