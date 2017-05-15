@@ -12,7 +12,7 @@ union Op {
   ReleaseResourceOp release_resource;
 
   // Node operations.
-  AddChildOp add_child;
+  AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
   AddPartOp add_part;
   DetachOp detach;
   DetachChildrenOp detach_children;

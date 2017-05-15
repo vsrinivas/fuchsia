@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/mozart/lib/composer/types.h"
 #include "apps/mozart/src/composer/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -12,8 +13,6 @@ namespace composer {
 
 class ErrorReporter;
 class Session;
-
-typedef uint32_t ResourceId;
 
 // Resource is the base class for all client-created objects (i.e. those that
 // are created in response to a CreateResourceOp operation).
@@ -30,6 +29,8 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const char* type_name() const { return type_info_.name; }
   Session* session() const { return session_; }
   ErrorReporter* error_reporter() const;
+
+  virtual void Accept(class ResourceVisitor* visitor) = 0;
 
  protected:
   Resource(Session* session, const ResourceTypeInfo& type_info);

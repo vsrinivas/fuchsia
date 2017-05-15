@@ -8,6 +8,7 @@ config("common_include_dirs") {
   include_dirs = [
     "//lib/escher",
     "//third_party/glm",
+    "//lib",
   ]
 }
 
@@ -17,6 +18,8 @@ source_set("common") {
     "composer_impl.h",
     "print_op.cc",
     "print_op.h",
+    "renderer/renderer.cc",
+    "renderer/renderer.h",
     "resources/link.cc",
     "resources/link.h",
     "resources/material.cc",
@@ -32,6 +35,8 @@ source_set("common") {
     "resources/resource_map.cc",
     "resources/resource_map.h",
     "resources/resource_type_info.h",
+    "resources/resource_visitor.cc",
+    "resources/resource_visitor.h",
     "resources/shapes/circle_shape.cc",
     "resources/shapes/circle_shape.h",
     "resources/shapes/shape.cc",

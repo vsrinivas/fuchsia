@@ -29,6 +29,8 @@ class SessionTest : public ::testing::Test,
   // Implement SessionContext.
   LinkPtr CreateLink(Session* session, const mozart2::LinkPtr& args) override;
 
+  void OnSessionTearDown(Session* session) override;
+
   // Apply the specified Op, and verify that it succeeds.
   bool Apply(const mozart2::OpPtr& op) { return session_->ApplyOp(op); }
 

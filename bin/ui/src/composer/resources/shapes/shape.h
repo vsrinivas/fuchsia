@@ -13,6 +13,8 @@ class Shape : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
+  void Accept(class ResourceVisitor* visitor) override;
+
  protected:
   Shape(Session* session, const ResourceTypeInfo& type_info);
 };

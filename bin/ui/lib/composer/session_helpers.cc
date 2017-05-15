@@ -228,22 +228,27 @@ mozart2::OpPtr NewDetachChildrenOp(uint32_t node_id) {
 }
 
 mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
-                                 float translation[3],
-                                 float scale[3],
-                                 float anchor[3],
-                                 float quaternion[3]) {
+                                 const float translation[3],
+                                 const float scale[3],
+                                 const float anchor[3],
+                                 const float quaternion[4]) {
   auto set_transform = mozart2::SetTransformOp::New();
   set_transform->node_id = node_id;
+  set_transform->transform = mozart2::Transform::New();
   auto& transform = set_transform->transform;
+  transform->translation = mozart2::vec3::New();
   transform->translation->x = translation[0];
   transform->translation->y = translation[1];
   transform->translation->z = translation[2];
+  transform->scale = mozart2::vec3::New();
   transform->scale->x = scale[0];
   transform->scale->y = scale[1];
   transform->scale->z = scale[2];
+  transform->anchor = mozart2::vec3::New();
   transform->anchor->x = anchor[0];
   transform->anchor->y = anchor[1];
   transform->anchor->z = anchor[2];
+  transform->rotation = mozart2::Quaternion::New();
   transform->rotation->x = quaternion[0];
   transform->rotation->y = quaternion[1];
   transform->rotation->z = quaternion[2];

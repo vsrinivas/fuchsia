@@ -8,6 +8,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/src/composer/composer_impl.h"
+#include "apps/mozart/src/composer/renderer/renderer.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
 #include "escher/geometry/types.h"
@@ -57,44 +58,16 @@ class HelloComposerService : public Demo {
   }
 
   void DrawFrame() override {
-    size_t session_count = composer_->GetSessionCount();
-    if (session_count == last_session_count_) {
-      return;
+    Renderer* renderer = composer_->renderer();
+
+    // For now, just assume the first Link created is the root of the tree.
+    if (composer_->links().size() > 0) {
+      LinkPtr link = composer_->links()[0];
+
+      escher::Model model(renderer->CreateDisplayList(
+          link.get(), escher::vec2(kScreenWidth, kScreenHeight)));
+      swapchain_helper_.DrawFrame(stage_, model);
     }
-    last_session_count_ = session_count;
-
-    // Create a grid of circles, where each circle represents a Session in
-    // the Composer.
-    std::vector<escher::Object> objects;
-    size_t grid_size =
-        static_cast<size_t>(ceil(sqrt(static_cast<double>(session_count))));
-    float grid_cell_width = static_cast<float>(kScreenWidth) / grid_size;
-    float grid_cell_height = static_cast<float>(kScreenHeight) / grid_size;
-
-    auto background_material = ftl::MakeRefCounted<escher::Material>();
-    background_material->set_color(escher::vec3(0.8f, 0.8f, 0.8f));
-    objects.push_back(escher::Object::NewRect(
-        escher::vec2(0.f, 0.f), escher::vec2(kScreenWidth, kScreenHeight), 0.f,
-        background_material));
-
-    auto circle_material = ftl::MakeRefCounted<escher::Material>();
-    circle_material->set_color(
-        escher::vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
-
-    for (size_t y = 0; y < grid_size; ++y) {
-      for (size_t x = 0; x < grid_size; ++x) {
-        if (session_count > y * grid_size + x) {
-          escher::vec2 center(
-              (0.5f + static_cast<float>(x)) * grid_cell_width,
-              (0.5f + static_cast<float>(y)) * grid_cell_height);
-          objects.push_back(escher::Object::NewCircle(
-              center, grid_cell_height * 0.4f, 10.f, circle_material));
-        }
-      }
-    }
-
-    escher::Model model(std::move(objects));
-    swapchain_helper_.DrawFrame(stage_, model);
   }
 
  private:
@@ -133,7 +106,6 @@ class HelloComposerService : public Demo {
   escher::Stage stage_;
   std::unique_ptr<ComposerImpl> composer_;
   fidl::Binding<mozart2::Composer> binding_;
-  size_t last_session_count_ = 987654321;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloComposerService);
 };

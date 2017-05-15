@@ -54,6 +54,8 @@ LinkPtr SessionTest::CreateLink(Session* session,
   }
 }
 
+void SessionTest::OnSessionTearDown(Session* session) {}
+
 }  // namespace test
 }  // namespace composer
 }  // namespace mozart

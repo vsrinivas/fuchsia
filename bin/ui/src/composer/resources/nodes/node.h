@@ -34,6 +34,11 @@ class Node : public Resource {
 
   Node* parent() const { return parent_; }
 
+  void Accept(class ResourceVisitor* visitor) override;
+
+  const std::set<NodePtr>& children() { return children_; }
+  const std::set<NodePtr>& parts() { return parts_; }
+
  protected:
   Node(Session* session, const ResourceTypeInfo& type_info);
 

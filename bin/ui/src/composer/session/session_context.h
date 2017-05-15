@@ -20,6 +20,8 @@ class SessionContext {
 
   virtual LinkPtr CreateLink(Session* session,
                              const mozart2::LinkPtr& args) = 0;
+
+  virtual void OnSessionTearDown(Session* session) = 0;
 };
 
 }  // namespace composer

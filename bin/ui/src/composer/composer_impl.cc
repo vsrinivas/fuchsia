@@ -4,12 +4,14 @@
 
 #include "apps/mozart/src/composer/composer_impl.h"
 
+#include "apps/mozart/src/composer/renderer/renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace mozart {
 namespace composer {
 
-ComposerImpl::ComposerImpl() : session_count_(0) {}
+ComposerImpl::ComposerImpl()
+    : session_count_(0), renderer_(std::make_unique<Renderer>()) {}
 
 ComposerImpl::~ComposerImpl() {}
 
@@ -50,9 +52,27 @@ void ComposerImpl::TearDownSession(SessionId id) {
 
 LinkPtr ComposerImpl::CreateLink(Session* session,
                                  const mozart2::LinkPtr& args) {
-  session->error_reporter()->ERROR()
-      << "SessionContext::CreateLink() unimplemented";
-  return LinkPtr();
+  // TODO: Create a LinkHolder class that takes args.token and destroys
+  // links if that gets signalled
+
+  FTL_DCHECK(args);
+
+  // For now, just create a dumb list of sessions.
+  auto link = ftl::MakeRefCounted<Link>(session);
+
+  FTL_CHECK(link);
+  links_.push_back(link);
+
+  return link;
+}
+
+void ComposerImpl::OnSessionTearDown(Session* session) {
+  auto predicate = [session](const LinkPtr& l) {
+    return l->session() == session;
+  };
+  // Remove all links to session.
+  links_.erase(std::remove_if(links_.begin(), links_.end(), predicate),
+               links_.end());
 }
 
 }  // namespace composer

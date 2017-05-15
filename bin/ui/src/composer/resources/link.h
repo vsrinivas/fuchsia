@@ -4,16 +4,18 @@
 
 #pragma once
 
-#include "apps/mozart/src/composer/resources/resource.h"
+#include "apps/mozart/src/composer/resources/nodes/node.h"
 
 namespace mozart {
 namespace composer {
 
-class Link : public Resource {
+class Link final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
   explicit Link(Session* session);
+
+  void Accept(class ResourceVisitor* visitor) override;
 };
 
 typedef ftl::RefPtr<Link> LinkPtr;

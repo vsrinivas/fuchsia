@@ -11,7 +11,8 @@ namespace composer {
 
 namespace {
 
-constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode;
+constexpr ResourceTypeFlags kHasChildren =
+    ResourceType::kEntityNode | ResourceType::kLink;
 constexpr ResourceTypeFlags kHasParts =
     ResourceType::kEntityNode | ResourceType::kClipNode;
 
@@ -85,6 +86,11 @@ bool Node::AddPart(NodePtr part_node) {
 
 bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   FTL_DCHECK(node_to_detach_from_parent);
+  if (node_to_detach_from_parent->type_flags() & ResourceType::kLink) {
+    node_to_detach_from_parent->error_reporter()->ERROR()
+        << "A Link cannot be detached.";
+    return false;
+  }
   if (auto parent = node_to_detach_from_parent->parent_) {
     auto& container = node_to_detach_from_parent->is_part_ ? parent->parts_
                                                            : parent->children_;

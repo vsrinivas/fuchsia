@@ -16,10 +16,10 @@ Material::Material(Session* session,
                    float blue,
                    float alpha)
     : Resource(session, Material::kTypeInfo),
-      red_(red),
-      green_(green),
-      blue_(blue),
-      alpha_(alpha) {}
+      escher_material_(ftl::MakeRefCounted<escher::Material>()) {
+  // TODO: need to add alpha into escher material
+  escher_material_->set_color(escher::vec3(red, green, blue));
+}
 
 }  // namespace composer
 }  // namespace mozart

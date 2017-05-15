@@ -24,6 +24,8 @@ class ShapeNode final : public Node {
   const MaterialPtr& material() const { return material_; }
   const ShapePtr& shape() const { return shape_; }
 
+  void Accept(class ResourceVisitor* visitor) override;
+
  private:
   MaterialPtr material_;
   ShapePtr shape_;

@@ -8,6 +8,7 @@
 
 #include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/services/composer/session.fidl.h"
+#include "apps/mozart/src/composer/resources/link.h"
 #include "apps/mozart/src/composer/session/session.h"
 #include "apps/mozart/src/composer/session/session_handler.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -15,6 +16,8 @@
 
 namespace mozart {
 namespace composer {
+
+class Renderer;
 
 class ComposerImpl : public mozart2::Composer, public SessionContext {
  public:
@@ -27,8 +30,13 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
 
   // SessionContext interface methods.
   LinkPtr CreateLink(Session* session, const mozart2::LinkPtr& args) override;
+  void OnSessionTearDown(Session* session) override;
 
   size_t GetSessionCount() { return session_count_; }
+
+  const std::vector<LinkPtr>& links() const { return links_; }
+
+  Renderer* renderer() const { return renderer_.get(); }
 
  private:
   friend class SessionHandler;
@@ -38,6 +46,11 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
 
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
+
+  // Placeholders for Links and the Renderer. These will be instantiated
+  // differently in the future.
+  std::vector<LinkPtr> links_;
+  std::unique_ptr<Renderer> renderer_;
 
   SessionId next_session_id_ = 1;
 };

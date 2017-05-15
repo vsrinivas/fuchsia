@@ -52,10 +52,10 @@ mozart2::OpPtr NewAddPartOp(uint32_t node_id, uint32_t part_id);
 mozart2::OpPtr NewDetachOp(uint32_t node_id);
 mozart2::OpPtr NewDetachChildrenOp(uint32_t node_id);
 mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
-                                 float translation[3],
-                                 float scale[3],
-                                 float anchor[3],
-                                 float quaternion[3]);
+                                 const float translation[3],
+                                 const float scale[3],
+                                 const float anchor[3],
+                                 const float quaternion[4]);
 mozart2::OpPtr NewSetShapeOp(uint32_t node_id, uint32_t shape_id);
 mozart2::OpPtr NewSetMaterialOp(uint32_t node_id, uint32_t material_id);
 mozart2::OpPtr NewSetClipOp(uint32_t node_id, uint32_t clip_id);

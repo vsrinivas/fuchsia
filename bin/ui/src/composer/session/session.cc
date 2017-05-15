@@ -370,6 +370,8 @@ void Session::TearDown() {
   is_valid_ = false;
   error_reporter_ = nullptr;
   resources_.Clear();
+
+  context_->OnSessionTearDown(this);
   FTL_DCHECK(resource_count_ == 0);
 }
 

@@ -14,6 +14,8 @@ class EntityNode final : public Node {
   static const ResourceTypeInfo kTypeInfo;
 
   EntityNode(Session* session);
+
+  void Accept(class ResourceVisitor* visitor) override;
 };
 
 }  // namespace composer

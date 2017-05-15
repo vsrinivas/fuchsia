@@ -17,6 +17,8 @@ class CircleShape final : public Shape {
 
   float radius() const { return radius_; }
 
+  void Accept(class ResourceVisitor* visitor) override;
+
  private:
   float radius_;
 };
