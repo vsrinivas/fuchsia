@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <memory>
 #include <unordered_map>
 
 #include <mx/channel.h>
@@ -16,6 +17,8 @@
 
 namespace bluetooth {
 namespace testing {
+
+class FakeDevice;
 
 // FakeController emulates a real Bluetooth controller. It can be configured to respond to HCI
 // commands in a predictable manner.
@@ -58,6 +61,19 @@ class FakeController : public FakeControllerBase {
     uint8_t le_total_num_acl_data_packets;
   };
 
+  // Current device scan state.
+  struct LEScanState final {
+    LEScanState();
+
+    bool enabled;
+    hci::LEScanType scan_type;
+    uint16_t scan_interval;
+    uint16_t scan_window;
+    bool filter_duplicates;
+    hci::LEOwnAddressType own_address_type;
+    hci::LEScanFilterPolicy filter_policy;
+  };
+
   // Constructor initializes the controller with the minimal default settings (equivalent to calling
   // Settings::ApplyDefaults()).
   FakeController(mx::channel cmd_channel, mx::channel acl_data_channel);
@@ -71,6 +87,13 @@ class FakeController : public FakeControllerBase {
   void SetDefaultResponseStatus(hci::OpCode opcode, hci::Status status);
   void ClearDefaultResponseStatus(hci::OpCode opcode);
 
+  // Returns the current LE scan state.
+  const LEScanState& le_scan_state() const { return le_scan_state_; }
+
+  // Adds a fake remote device. This device will be used to during LE scan and connection
+  // procedures.
+  void AddLEDevice(std::unique_ptr<FakeDevice> le_device);
+
  private:
   // Sends a HCI_Command_Complete event in response to the command with |opcode| and using the given
   // data as the parameter payload.
@@ -81,12 +104,18 @@ class FakeController : public FakeControllerBase {
   // returns true. Returns false if no response was set.
   bool MaybeRespondWithDefaultStatus(hci::OpCode opcode);
 
+  // Sends LE advertising reports for known LE devices, if a scan is currently enabled.
+  void SendAdvertisingReports();
+
   // FakeControllerBase overrides:
   void OnCommandPacketReceived(const hci::CommandPacket& command_packet) override;
   void OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) override;
 
   Settings settings_;
+  LEScanState le_scan_state_;
+
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
+  std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };

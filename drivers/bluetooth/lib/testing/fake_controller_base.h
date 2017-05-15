@@ -54,6 +54,8 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   bool IsStarted() const { return static_cast<bool>(task_runner_); }
 
  protected:
+  ftl::RefPtr<ftl::TaskRunner> task_runner() const { return task_runner_; }
+
   // Getters for our channel endpoints.
   const mx::channel& command_channel() const { return cmd_channel_; }
   const mx::channel& acl_data_channel() const { return acl_channel_; }

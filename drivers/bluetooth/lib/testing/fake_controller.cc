@@ -9,6 +9,7 @@
 #include "apps/bluetooth/lib/hci/command_packet.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/testing/fake_device.h"
 #include "lib/ftl/strings/string_printf.h"
 
 namespace bluetooth {
@@ -69,6 +70,14 @@ void FakeController::Settings::ApplyLEConfig() {
   SetBit(&le_features, hci::LESupportedFeature::kLEExtendedAdvertising);
 }
 
+FakeController::LEScanState::LEScanState()
+    : enabled(false),
+      scan_type(hci::LEScanType::kPassive),
+      scan_interval(0),
+      scan_window(0),
+      filter_duplicates(false),
+      filter_policy(hci::LEScanFilterPolicy::kNoWhiteList) {}
+
 FakeController::FakeController(mx::channel cmd_channel, mx::channel acl_data_channel)
     : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
 
@@ -83,6 +92,10 @@ void FakeController::SetDefaultResponseStatus(hci::OpCode opcode, hci::Status st
 
 void FakeController::ClearDefaultResponseStatus(hci::OpCode opcode) {
   default_status_map_.erase(opcode);
+}
+
+void FakeController::AddLEDevice(std::unique_ptr<FakeDevice> le_device) {
+  le_devices_.push_back(std::move(le_device));
 }
 
 void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return_params,
@@ -113,6 +126,29 @@ bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
   params.status = iter->second;
   RespondWithCommandComplete(opcode, &params, sizeof(params));
   return true;
+}
+
+void FakeController::SendAdvertisingReports() {
+  if (!le_scan_state_.enabled || le_devices_.empty()) return;
+
+  for (const auto& device : le_devices_) {
+    // We want to send scan response packets only during an active scan and if the device is
+    // scannable.
+    bool need_scan_rsp =
+        (le_scan_state().scan_type == hci::LEScanType::kActive) && device->scannable();
+    SendCommandChannelPacket(
+        device->CreateAdvertisingReportEvent(need_scan_rsp && device->should_batch_reports()));
+
+    // If the original report did not include a scan response then we send it as a separate event.
+    if (need_scan_rsp && !device->should_batch_reports()) {
+      SendCommandChannelPacket(device->CreateScanResponseReportEvent());
+    }
+  }
+
+  // We'll send new reports for the same devices if duplicate filtering is disabled.
+  if (!le_scan_state_.filter_duplicates) {
+    task_runner()->PostTask([this] { SendAdvertisingReports(); });
+  }
 }
 
 void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_packet) {
@@ -223,9 +259,39 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       RespondWithCommandComplete(hci::kReadLocalExtendedFeatures, &out_params, sizeof(out_params));
       break;
     }
-    case hci::kLESetScanEnable:
+    case hci::kLESetScanParameters: {
+      auto in_params = command_packet.GetPayload<hci::LESetScanParametersCommandParams>();
+
+      hci::SimpleReturnParams out_params;
+      if (le_scan_state_.enabled) {
+        out_params.status = hci::Status::kCommandDisallowed;
+      } else {
+        out_params.status = hci::Status::kSuccess;
+        le_scan_state_.scan_type = in_params->scan_type;
+        le_scan_state_.scan_interval = le16toh(in_params->scan_interval);
+        le_scan_state_.scan_window = le16toh(in_params->scan_window);
+        le_scan_state_.own_address_type = in_params->own_address_type;
+        le_scan_state_.filter_policy = in_params->filter_policy;
+      }
+
+      RespondWithCommandComplete(command_packet.opcode(), &out_params, sizeof(out_params));
+      break;
+    }
+    case hci::kLESetScanEnable: {
+      auto in_params = command_packet.GetPayload<hci::LESetScanEnableCommandParams>();
+
+      le_scan_state_.enabled = (in_params->scanning_enabled == hci::GenericEnableParam::kEnable);
+      le_scan_state_.filter_duplicates =
+          (in_params->filter_duplicates == hci::GenericEnableParam::kEnable);
+
+      hci::SimpleReturnParams out_params;
+      out_params.status = hci::Status::kSuccess;
+      RespondWithCommandComplete(command_packet.opcode(), &out_params, sizeof(out_params));
+
+      if (le_scan_state_.enabled) SendAdvertisingReports();
+      break;
+    }
     case hci::kReset:
-    case hci::kLESetScanParameters:
     case hci::kWriteLEHostSupport: {
       hci::SimpleReturnParams params;
       params.status = hci::Status::kSuccess;
