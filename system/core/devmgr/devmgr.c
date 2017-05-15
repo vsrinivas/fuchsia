@@ -175,15 +175,13 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return NO_ERROR;
     }
     case DISK_FORMAT_BLOBFS: {
-        mount_options_t options;
-        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        mount_options_t options = default_mount_options;
         options.create_mountpoint = true;
         mount(fd, "/blobstore", DISK_FORMAT_BLOBFS, &options, launch_blobstore);
         return NO_ERROR;
     }
     case DISK_FORMAT_MINFS: {
-        mount_options_t options;
-        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        mount_options_t options = default_mount_options;
         options.wait_until_ready = false;
         printf("devmgr: minfs\n");
         if (mount_minfs(fd, &options) != NO_ERROR) {
@@ -200,8 +198,7 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         if (r == GPT_GUID_LEN && !memcmp(guid, guid_efi_part, GPT_GUID_LEN)) {
             efi = true;
         }
-        mount_options_t options;
-        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        mount_options_t options = default_mount_options;
         options.create_mountpoint = true;
         options.readonly = efi;
         static int fat_counter = 0;

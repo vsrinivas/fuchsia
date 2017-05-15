@@ -49,8 +49,7 @@ int parse_args(int argc, char** argv, mount_options_t* options,
 int main(int argc, char** argv) {
     char* devicepath;
     char* mountpath;
-    mount_options_t options;
-    memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+    mount_options_t options = default_mount_options;
     int r;
     if ((r = parse_args(argc, argv, &options, &devicepath, &mountpath))) {
         return r;

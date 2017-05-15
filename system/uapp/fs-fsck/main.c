@@ -70,8 +70,7 @@ int main(int argc, char** argv) {
     char* devicepath;
     disk_format_t df;
     int r;
-    fsck_options_t options;
-    memcpy(&options, &default_fsck_options, sizeof(fsck_options_t));
+    fsck_options_t options = default_fsck_options;
     if ((r = parse_args(argc, argv, &options, &df, &devicepath))) {
         return r;
     }

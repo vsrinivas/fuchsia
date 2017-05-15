@@ -66,8 +66,7 @@ static bool mount_mkdir_unmount(void) {
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), NO_ERROR, "");
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
-    mount_options_t options;
-    memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+    mount_options_t options = default_mount_options;
     options.create_mountpoint = true;
     ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options,
                     launch_stdio_async),
