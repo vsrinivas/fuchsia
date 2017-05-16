@@ -75,6 +75,38 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
     return NO_ERROR;
 }
 
+// TODO(johngro) : re: the plug_notify_targets_ list.  In theory, we could put
+// this in a tree indexed by the channel's owner context, or by the pointer
+// itself.  This would make add/remove operations simpler, and faster in the
+// case that we had lots of clients.  In reality, however, we are likely to
+// limit the interface moving forward so that we have only one client at a time
+// (in which case this becomes much simpler).  Moving forward, we need to come
+// back and either simplify or optimize (as the situation warrents) once we know
+// how we are proceeding.
+void RealtekStream::AddPDNotificationTgtLocked(DispatcherChannel* channel) {
+    bool duplicate = false;
+    for (auto& tgt : plug_notify_targets_) {
+        duplicate = (tgt.channel.get() == channel);
+        if (duplicate)
+            break;
+    }
+
+    if (!duplicate) {
+        mxtl::RefPtr<DispatcherChannel> c(channel);
+        mxtl::unique_ptr<NotifyTarget> tgt(new NotifyTarget(mxtl::move(c)));
+        plug_notify_targets_.push_back(mxtl::move(tgt));
+    }
+}
+
+void RealtekStream::RemovePDNotificationTgtLocked(const DispatcherChannel& channel) {
+    for (auto& tgt : plug_notify_targets_) {
+        if (tgt.channel.get() == &channel) {
+            plug_notify_targets_.erase(tgt);
+            break;
+        }
+    }
+}
+
 mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
     mxtl::unique_ptr<PendingCommand> pending_cmd;
     bool want_response = (cmd.thunk != nullptr);
@@ -116,7 +148,12 @@ mx_status_t RealtekStream::RunCmdListLocked(const Command* list, size_t count, b
 }
 
 void RealtekStream::OnDeactivateLocked() {
+    plug_notify_targets_.clear();
     DisableConverterLocked(true);
+}
+
+void RealtekStream::OnChannelDeactivateLocked(const DispatcherChannel& channel) {
+    RemovePDNotificationTgtLocked(channel);
 }
 
 mx_status_t RealtekStream::OnDMAAssignedLocked() {
@@ -149,9 +186,36 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
     bool plugged = resp.data & (1u << 3);
 
     if (plug_state_ != plugged) {
-        // TODO(johngro) : notify our clients
-        LOG("Plug state is now \"%s\"\n", plugged ? "Plugged" : "Unplugged");
+        // Update our internal state.
         plug_state_ = plugged;
+        last_plug_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+
+        // Inform anyone who has registered for notification.
+        MX_DEBUG_ASSERT(pc_.async_plug_det);
+        if (!plug_notify_targets_.is_empty()) {
+            audio2_proto::PlugDetectNotify notif;
+
+            notif.hdr.cmd = AUDIO2_STREAM_PLUG_DETECT_NOTIFY;
+            notif.hdr.transaction_id = AUDIO2_INVALID_TRANSACTION_ID;
+            notif.flags = static_cast<audio2_pd_notify_flags_t>(
+                    (plug_state_ ? AUDIO2_PDNF_PLUGGED : 0) | AUDIO2_PDNF_CAN_NOTIFY);
+            notif.plug_state_time = last_plug_time_;
+
+            for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end(); ) {
+                mx_status_t res;
+
+                MX_DEBUG_ASSERT(iter->channel != nullptr);
+                res = iter->channel->Write(&notif, sizeof(notif));
+                if (res != NO_ERROR) {
+                    // If we have failed to send the notification over our
+                    // client channel, something has gone fairly wrong.  Remove
+                    // the client from the notification list.
+                    plug_notify_targets_.erase(iter++);
+                } else {
+                    ++iter;
+                }
+            }
+        }
     }
 
     return NO_ERROR;
@@ -245,6 +309,49 @@ void RealtekStream::OnSetGainLocked(const audio2_proto::SetGainReq& req,
         out_resp->result    = res;
         out_resp->cur_mute  = cur_mute_;
         out_resp->cur_gain  = ComputeCurrentGainLocked();
+    }
+}
+
+void RealtekStream::OnPlugDetectLocked(DispatcherChannel* response_channel,
+                                       const audio2_proto::PlugDetectReq& req,
+                                       audio2_proto::PlugDetectResp* out_resp) {
+    MX_DEBUG_ASSERT(response_channel != nullptr);
+
+    // If our pin cannot perform presence detection, just fall back on the base class impl.
+    if (!pc_.pin_caps.can_pres_detect()) {
+        IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
+        return;
+    }
+
+    if (pc_.async_plug_det) {
+        // If we are capible of asynch plug detection, add or remove this client
+        // to/from the notify list before reporting the current state.  Apps
+        // should not be setting both flags, but if they do, disable wins.
+        if (req.flags & AUDIO2_PDF_DISABLE_NOTIFICATIONS) {
+            RemovePDNotificationTgtLocked(*response_channel);
+        } else if (req.flags & AUDIO2_PDF_ENABLE_NOTIFICATIONS) {
+            AddPDNotificationTgtLocked(response_channel);
+        }
+
+        // Report the current plug detection state if the client expects a response.
+        if (out_resp) {
+            out_resp->flags  = static_cast<audio2_pd_notify_flags_t>(
+                               (plug_state_ ? AUDIO2_PDNF_PLUGGED : 0) |
+                               (pc_.async_plug_det ? AUDIO2_PDNF_CAN_NOTIFY : 0));
+            out_resp->plug_state_time = last_plug_time_;
+        }
+    } else {
+        // TODO(johngro): In order to do proper polling support, we need to add
+        // the concept of a pending client request to the system.  IOW - we need
+        // to create and run a state machine where we hold a reference to the
+        // client's response channel, and eventually respond to the client using
+        // the same transaction ID they requested state with.
+        //
+        // For now, if our hardware does not support async plug detect, we
+        // simply fall back on the default implementation which reports that we
+        // are hardwired and always plugged in.
+        IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
+        return;
     }
 }
 
@@ -429,6 +536,7 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
 
 mx_status_t RealtekStream::ProcessPinState(const Command& cmd, const CodecResponse& resp) {
     plug_state_ = PinSenseState(resp.data).presence_detect();
+    last_plug_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
     return UpdateSetupProgressLocked(PLUG_STATE_SETUP_COMPLETE);
 }
 
