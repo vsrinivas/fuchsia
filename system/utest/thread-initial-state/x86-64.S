@@ -10,7 +10,14 @@
 .endm
 
 .macro check_xmm reg
-    ptest \reg, \reg
+    // toss the register down on the stack in the red zone
+    // so we can compare with zero.
+    // avoids using the more obvious ptest instruction, which is
+    // only present in SSE4.1
+    movdqu \reg, -16(%rsp)
+    cmpq $0, -16(%rsp)
+    jnz .Lfail
+    cmpq $0, -8(%rsp)
     jnz .Lfail
 .endm
 
