@@ -103,43 +103,6 @@ struct Material {
   ColorRgba color;
 };
 
-// These are the types of nodes that can be created within a Mozart |Session|.
-//
-// Node Characteristics:
-// These are characteristics that each type of |Node| either has or doesn't.
-// These constrain operations that reference nodes; violations will cause the
-// |Session| connection to be closed.  For example, |NodeAddChildOp| must target
-// a node with the "has_children" characteristic.  These characteristics
-// are not explicitly reflected in the Mozart Compositor API; instead, they must
-// be enforced by implementations of the API.
-// - has_transform:
-// - has_children:
-// - has_parts:
-// - has_clip:
-// - is_clip:
-// - has_shape:
-// - has_material:
-enum NodeType {
-  // Properties:
-  // - has_transform
-  // - has_children
-  // - has_parts
-  // - has_clip
-  kEntity = 1,
-
-  // Properties:
-  // - has_transform
-  // - has_shape
-  // - has_material
-  kShape,
-
-  // Properties:
-  // - has_transform
-  // - is_clip
-  // - has_parts
-  kClip,
-};
-
 struct Variable {
   ValueType type;
   Value initial_value;  // Must match type.  Must not be a variable_id.
