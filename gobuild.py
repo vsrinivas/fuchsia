@@ -36,40 +36,7 @@ def main():
         print("unknown current_cpu: ", args.current_cpu)
         return 1
 
-    sympaths = {
-        'apps/amber': 'github.com/flynn/go-tuf',
-        'apps/thinfs': 'fuchsia.googlesource.com/thinfs',
-        'apps/netstack': 'apps/netstack',
-        'apps/wlan': 'apps/wlan',
-        'lib/fidl/go/src/fidl' : 'fidl',
-        'third_party/golang/crypto': 'golang.org/x/crypto',
-        'third_party/golibs/github.com/dustin/go-humanize': 'github.com/dustin/go-humanize',
-        'third_party/golibs/github.com/flynn/go-docopt': 'github.com/flynn/go-docopt',
-        'third_party/golibs/github.com/golang/snappy': 'github.com/golang/snappy',
-        'third_party/golibs/github.com/syndtr/goleveldb/leveldb': 'github.com/syndtr/goleveldb/leveldb',
-        'third_party/golibs/github.com/tent/canonical-json-go': 'github.com/tent/canonical-json-go',
-        'third_party/netstack': 'github.com/google/netstack'
-    }
-
     gopath = args.root_out_dir
-    for src in sympaths:
-        dst = os.path.join(gopath, "src", sympaths[src])
-        try:
-            os.makedirs(os.path.dirname(dst))
-        except OSError, e:
-            if e.errno == os.errno.EEXIST:
-                pass # ignore, already have directory
-            else:
-                print("could not mkdir for path: ", dst, ": ", e)
-                return 1
-        try:
-            os.symlink(os.path.join(args.fuchsia_root, src), dst)
-        except OSError, e:
-            if e.errno == os.errno.EEXIST:
-                pass # ignore, already have symlink
-            else:
-                print("could not link: ", src, ": ", e)
-                return 1
 
     os.environ['CGO_ENABLED'] = '1'
     os.environ['GOPATH'] = gopath + ":" + os.path.join(args.root_out_dir, "gen/go")
