@@ -45,7 +45,7 @@ void App::Run(const ftl::CommandLine& command_line) {
     exit(1);
   }
 
-  if (!context()->environment_services()) {
+  if (!context()->has_environment_services()) {
     err() << "Cannot access application environment services" << std::endl;
     exit(1);
   }
