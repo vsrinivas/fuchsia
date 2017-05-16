@@ -43,6 +43,10 @@ private:
 
     mxtl::Canary<mxtl::magic("VMOD")> canary_;
     mxtl::RefPtr<VmObject> vmo_;
+
+    // VMOs do not currently maintain any VMO-specific signal state,
+    // but do allow user signals to be set. In addition, the CookieJar
+    // shares the same lock.
     StateTracker state_tracker_;
     CookieJar cookie_jar_;
 };
