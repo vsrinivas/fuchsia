@@ -34,8 +34,6 @@ typedef struct dc_pending pending_t;
 typedef struct dc_devhost devhost_t;
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
-typedef struct dc_devnode devnode_t;
-
 
 struct dc_work {
     list_node_t node;
@@ -79,8 +77,7 @@ struct dc_device {
     int32_t refcount;
     uint32_t protocol_id;
     uint32_t prop_count;
-    devnode_t* self;
-    devnode_t* link;
+    void* vnode;
     device_t* parent;
     device_t* shadow;
 
@@ -139,10 +136,10 @@ struct dc_driver {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-mx_status_t devfs_publish(device_t* parent, device_t* dev);
-void devfs_unpublish(device_t* dev);
+mx_status_t do_publish(device_t* parent, device_t* dev);
+void do_unpublish(device_t* dev);
 
-device_t* coordinator_init(mx_handle_t root_job);
+void coordinator_init(void* vnroot, mx_handle_t root_job);
 void coordinator(void);
 
 void coordinator_new_driver(driver_t* ctx, const char* version);
