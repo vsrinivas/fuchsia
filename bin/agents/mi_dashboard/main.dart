@@ -41,7 +41,8 @@ Directory _webrootDirectory;
 // Some Dart FIDL bindings do have toJson methods, but not unions. Since we need
 // to do some converting anyway, might as well also unwrap the more nested FIDL
 // bindings.
-final JSON = new JsonCodec(toEncodable: (dynamic object) {
+// ignore: non_constant_identifier_names
+final JsonCodec JSON = new JsonCodec(toEncodable: (dynamic object) {
   if (object is ComponentScope) {
     switch (object.tag) {
       case ComponentScopeTag.globalScope:
