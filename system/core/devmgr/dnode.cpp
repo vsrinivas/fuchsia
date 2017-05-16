@@ -36,7 +36,6 @@ mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, mxtl::RefPtr<Vno
         return nullptr;
     }
 
-    vn->devices_.push_back(dn);
     return dn;
 }
 

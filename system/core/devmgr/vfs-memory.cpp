@@ -39,9 +39,6 @@ VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
-    while (!devices_.is_empty()) {
-        devices_.pop_front()->Detach();
-    }
 }
 
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
@@ -59,20 +56,6 @@ VnodeDir::~VnodeDir() {}
 VnodeVmo::VnodeVmo(mx_handle_t vmo, mx_off_t offset, mx_off_t length) :
     vmo_(vmo), offset_(offset), length_(length) {}
 VnodeVmo::~VnodeVmo() {}
-
-VnodeDevice::VnodeDevice() {
-    flags_ |= V_FLAG_DEVICE;
-    link_count_ = 1; // Implied '.'
-}
-VnodeDevice::~VnodeDevice() {
-    xprintf("devfs: vn %p destroyed\n", this);
-    if (IsRemote()) {
-        mx_status_t r = mx_handle_close(DetachRemote());
-        if (r < 0) {
-            printf("device_release: unexected error closing remote %d\n", r);
-        }
-    }
-}
 
 mx_status_t VnodeMemfs::Open(uint32_t flags) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
@@ -194,18 +177,6 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
-    return NO_ERROR;
-}
-
-mx_status_t VnodeDevice::Getattr(vnattr_t* attr) {
-    memset(attr, 0, sizeof(vnattr_t));
-    if (IsRemote() && !IsDirectory()) {
-        attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-    } else {
-        attr->mode = V_TYPE_DIR | V_IRUSR;
-    }
-    attr->size = 0;
-    attr->nlink = link_count_;
     return NO_ERROR;
 }
 
@@ -475,14 +446,9 @@ mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
     return NO_ERROR;
 }
 
-static mx_status_t memfs_create_fs(const char* name, bool device, mxtl::RefPtr<VnodeDir>* out) {
+static mx_status_t memfs_create_fs(const char* name, mxtl::RefPtr<VnodeDir>* out) {
     AllocChecker ac;
-    mxtl::RefPtr<VnodeDir> fs;
-    if (device) {
-        fs = mxtl::AdoptRef(new (&ac) VnodeDevice());
-    } else {
-        fs = mxtl::AdoptRef(new (&ac) VnodeDir());
-    }
+    mxtl::RefPtr<VnodeDir> fs = mxtl::AdoptRef(new (&ac) VnodeDir());
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
@@ -499,95 +465,6 @@ static mx_status_t memfs_create_fs(const char* name, bool device, mxtl::RefPtr<V
 
 static void memfs_mount_locked(mxtl::RefPtr<VnodeDir> parent, mxtl::RefPtr<VnodeDir> subtree) TA_REQ(vfs_lock) {
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
-}
-
-// TODO(smklein): Update the usage of the vfs_lock here to a Vnode-specific lock,
-// allowing vnode creation, but preventing TOCTTOU bugs between checking if the
-// device exists and when we actually create it.
-//
-// precondition: no ref taken on parent
-// postcondition: ref returned on out parameter
-mx_status_t VnodeDir::CreateDeviceAtLocked(mxtl::RefPtr<VnodeDir>* out, const char* name,
-                                           mx_handle_t h) TA_REQ(vfs_lock) {
-    if (name == nullptr) {
-        return ERR_INVALID_ARGS;
-    }
-    size_t len = strlen(name);
-
-    // check for duplicate
-    mxtl::RefPtr<Dnode> dn;
-    if (dnode_->Lookup(name, len, &dn) == NO_ERROR) {
-        *out = mxtl::RefPtr<VnodeDir>::Downcast(mxtl::move(dn->AcquireVnode()));
-        if ((h == 0) && (!(*out)->IsRemote())) {
-            // creating a duplicate directory node simply
-            // returns the one that's already there
-            return NO_ERROR;
-        }
-        *out = nullptr;
-        return ERR_ALREADY_EXISTS;
-    }
-
-    // create vnode
-    mx_status_t status;
-    if ((status = CanCreate(name, len)) != NO_ERROR) {
-        return status;
-    }
-    AllocChecker ac;
-    mxtl::RefPtr<VnodeDir> vn = mxtl::AdoptRef(new (&ac) VnodeDevice());
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-
-    if ((status = AttachVnode(vn, name, len, true)) != NO_ERROR) {
-        return status;
-    }
-
-    if (h) {
-        // attach device
-        vn->AttachRemote(h);
-    }
-
-    NotifyAdd(name, len);
-    *out = mxtl::move(vn);
-    return NO_ERROR;
-}
-
-static mx_status_t memfs_add_link_locked(mxtl::RefPtr<VnodeDir> parent, const char* name,
-                                         mxtl::RefPtr<VnodeMemfs> vn) TA_REQ(vfs_lock) {
-    if ((parent == nullptr) || (vn == nullptr)) {
-        return ERR_INVALID_ARGS;
-    }
-
-    char tmp[8];
-    size_t len;
-    if (name == nullptr) {
-        //TODO: something smarter
-        // right now we have so few devices and instances this is not a problem
-        // but it clearly is not optimal
-        // seqcount is used to avoid rapidly re-using device numbers
-        for (unsigned n = 0; n < 1000; n++) {
-            snprintf(tmp, sizeof(tmp), "%03u", (parent->seqcount_++) % 1000);
-            if (parent->dnode_->Lookup(tmp, 3, nullptr) != NO_ERROR) {
-                name = tmp;
-                len = 3;
-                goto got_name;
-            }
-        }
-        return ERR_ALREADY_EXISTS;
-    } else {
-        len = strlen(name);
-        if (parent->dnode_->Lookup(name, len, nullptr) == NO_ERROR) {
-            return ERR_ALREADY_EXISTS;
-        }
-    }
-got_name:
-    mxtl::RefPtr<Dnode> dn;
-    if ((dn = Dnode::Create(name, len, mxtl::move(vn))) == nullptr) {
-        return ERR_NO_MEMORY;
-    }
-    Dnode::AddChild(parent->dnode_, mxtl::move(dn));
-    parent->NotifyAdd(name, len);
-    return NO_ERROR;
 }
 
 mx_status_t VnodeDir::CreateFromVmo(const char* name, size_t namelen,
@@ -668,7 +545,7 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
 
 mxtl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("system", false, &memfs::systemfs_root);
+        mx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'system' file system\n", r);
             panic();
@@ -679,7 +556,7 @@ mxtl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
 
 mxtl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     if (memfs::memfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("tmp", false, &memfs::memfs_root);
+        mx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
             panic();
@@ -690,7 +567,7 @@ mxtl::RefPtr<memfs::VnodeDir> MemfsRoot() {
 
 mxtl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("dev", false, &memfs::devfs_root);
+        mx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'device' file system\n", r);
             panic();
@@ -701,7 +578,7 @@ mxtl::RefPtr<memfs::VnodeDir> DevfsRoot() {
 
 mxtl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     if (memfs::bootfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("boot", false, &memfs::bootfs_root);
+        mx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'boot' file system\n", r);
             panic();
@@ -714,34 +591,14 @@ mx_status_t devfs_mount(mx_handle_t h) {
     return DevfsRoot()->AttachRemote(h);
 }
 
-VnodeDir* devfs_get_root() {
-    return DevfsRoot().get();
-}
-
 VnodeDir* systemfs_get_root() {
     return SystemfsRoot().get();
-}
-
-mx_status_t memfs_create_device_at(memfs::VnodeDir* parent, memfs::VnodeDir** out,
-                                   const char* name, mx_handle_t h) {
-    if ((parent == nullptr) || !parent->IsDirectory()) {
-        return ERR_INVALID_ARGS;
-    }
-    mxtl::AutoLock lock(&vfs_lock);
-    mxtl::RefPtr<memfs::VnodeDir> refout;
-    mx_status_t status = parent->CreateDeviceAtLocked(&refout, name, h);
-    // Leak a reference to be held by C code, which is not aware of RefPtrs.
-    // Although the device Vnode can be used interoperably with C++ RefPtr code,
-    // it will never be naturally deleted, and the C code is responsible for
-    // deleting it once no other references exist.
-    *out = mxtl::move(refout.leak_ref());
-    return status;
 }
 
 // Hardcoded initialization function to create/access global root directory
 VnodeDir* vfs_create_global_root() {
     if (memfs::vfs_root == nullptr) {
-        mx_status_t r = memfs_create_fs("<root>", false, &memfs::vfs_root);
+        mx_status_t r = memfs_create_fs("<root>", &memfs::vfs_root);
         if (r < 0) {
             printf("fatal error %d allocating root file system\n", r);
             panic();
@@ -761,11 +618,4 @@ VnodeDir* vfs_create_global_root() {
 void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
     mxtl::AutoLock lock(&vfs_lock);
     memfs_mount_locked(mxtl::RefPtr<VnodeDir>(parent), mxtl::RefPtr<VnodeDir>(subtree));
-}
-
-mx_status_t memfs_add_link(memfs::VnodeDir* parent, const char* name,
-                           memfs::VnodeMemfs* target) {
-    mxtl::AutoLock lock(&vfs_lock);
-    return memfs_add_link_locked(mxtl::RefPtr<VnodeDir>(parent), name,
-                                 mxtl::RefPtr<VnodeMemfs>(target));
 }

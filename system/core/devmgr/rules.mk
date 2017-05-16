@@ -24,7 +24,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-mxio.c \
     $(LOCAL_DIR)/driver-info.c \
     $(LOCAL_DIR)/vfs-boot.cpp \
-    $(LOCAL_DIR)/vfs-device.cpp \
     $(LOCAL_DIR)/vfs-memory.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
 
