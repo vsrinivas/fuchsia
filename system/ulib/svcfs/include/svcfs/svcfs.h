@@ -23,7 +23,7 @@ protected:
 
 class Vnode : public fs::Vnode {
 public:
-    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) override final;
+    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) final;
 
     ~Vnode() override;
 
@@ -50,8 +50,8 @@ public:
              ServiceProvider* provider);
     ~VnodeSvc() override;
 
-    mx_status_t Open(uint32_t flags) override final;
-    mx_status_t Serve(mx_handle_t h, uint32_t flags) override final;
+    mx_status_t Open(uint32_t flags) final;
+    mx_status_t Serve(mx_handle_t h, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
     const mxtl::Array<char>& name() const { return name_; }
@@ -62,7 +62,11 @@ public:
 private:
     NodeState type_child_state_;
 
+    // If non-zero, this vnode is a persistent child of a |VnodeDir|. Otherwise,
+    // if zero, this vnode is a temporary result of a |Lookup| and supports
+    // exactly one |Serve| operation.
     uint64_t node_id_;
+
     mxtl::Array<char> name_;
     ServiceProvider* provider_;
 };
@@ -72,14 +76,14 @@ public:
     explicit VnodeDir(mxio_dispatcher_cb_t dispatcher);
     ~VnodeDir() override;
 
-    mx_status_t Open(uint32_t flags) override final;
-    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) override final;
-    mx_status_t Getattr(vnattr_t* a) override final;
+    mx_status_t Open(uint32_t flags) final;
+    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    mx_status_t Getattr(vnattr_t* a) final;
 
-    void NotifyAdd(const char* name, size_t len) override final;
+    void NotifyAdd(const char* name, size_t len) final;
     mx_status_t WatchDir(mx_handle_t* out) final;
 
-    mx_status_t Readdir(void* cookie, void* dirents, size_t len) override final;
+    mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     bool AddService(const char* name, size_t len, ServiceProvider* provider);
     void RemoveAllServices();
@@ -91,6 +95,23 @@ private:
     uint64_t next_node_id_;
     ServiceList services_;
     fs::WatcherContainer watcher_;
+};
+
+// Similar to VnodeDir, but doesn't support enumeration or watching.
+class VnodeProviderDir : public Vnode {
+public:
+    explicit VnodeProviderDir(mxio_dispatcher_cb_t dispatcher);
+    ~VnodeProviderDir() override;
+
+    mx_status_t Open(uint32_t flags) final;
+    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    mx_status_t Getattr(vnattr_t* a) final;
+
+    // Set the service provider to null to prevent further requests.
+    void SetServiceProvider(ServiceProvider* provider);
+
+private:
+    ServiceProvider* provider_;
 };
 
 } // namespace svcfs
