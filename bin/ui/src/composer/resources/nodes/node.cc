@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/composer/nodes/node.h"
+#include "apps/mozart/src/composer/resources/nodes/node.h"
 
 #include "apps/mozart/src/composer/util/error_reporter.h"
 

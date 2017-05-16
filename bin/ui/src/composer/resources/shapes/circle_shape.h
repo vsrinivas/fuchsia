@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/src/composer/shapes/shape.h"
+#include "apps/mozart/src/composer/resources/shapes/shape.h"
 
 namespace mozart {
 namespace composer {

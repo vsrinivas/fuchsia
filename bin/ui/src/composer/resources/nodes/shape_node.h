@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "apps/mozart/src/composer/nodes/node.h"
+#include "apps/mozart/src/composer/resources/nodes/node.h"
 
 #include "apps/mozart/src/composer/resources/material.h"
-#include "apps/mozart/src/composer/shapes/shape.h"
+#include "apps/mozart/src/composer/resources/shapes/shape.h"
 
 namespace mozart {
 namespace composer {

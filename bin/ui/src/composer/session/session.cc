@@ -4,11 +4,11 @@
 
 #include "apps/mozart/src/composer/session/session.h"
 
-#include "apps/mozart/src/composer/nodes/entity_node.h"
-#include "apps/mozart/src/composer/nodes/node.h"
-#include "apps/mozart/src/composer/nodes/shape_node.h"
 #include "apps/mozart/src/composer/print_op.h"
-#include "apps/mozart/src/composer/shapes/circle_shape.h"
+#include "apps/mozart/src/composer/resources/nodes/entity_node.h"
+#include "apps/mozart/src/composer/resources/nodes/node.h"
+#include "apps/mozart/src/composer/resources/nodes/shape_node.h"
+#include "apps/mozart/src/composer/resources/shapes/circle_shape.h"
 
 namespace mozart {
 namespace composer {

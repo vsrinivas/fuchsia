@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/lib/composer/session_helpers.h"
-#include "apps/mozart/src/composer/nodes/shape_node.h"
 #include "apps/mozart/src/composer/resources/material.h"
-#include "apps/mozart/src/composer/shapes/circle_shape.h"
+#include "apps/mozart/src/composer/resources/nodes/shape_node.h"
+#include "apps/mozart/src/composer/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/composer/tests/session_test.h"
 
 #include "gtest/gtest.h"
