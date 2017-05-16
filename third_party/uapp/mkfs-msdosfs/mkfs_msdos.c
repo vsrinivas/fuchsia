@@ -488,9 +488,16 @@ int mkfs_msdos(const char* fname, const struct msdos_options* op) {
     }
     print_bpb(&bpb);
     if (!o.no_create) {
-        gettimeofday(&tv, NULL);
-        now = tv.tv_sec;
-        tm = localtime(&now);
+        if (o.timestamp_set) {
+            tv.tv_sec = now = o.timestamp;
+            tv.tv_usec = 0;
+            tm = gmtime(&now);
+        } else {
+            gettimeofday(&tv, NULL);
+            now = tv.tv_sec;
+            tm = localtime(&now);
+        }
+
         if (!(img = malloc(bpb.bpbBytesPerSec))) {
             warn(NULL);
             goto done;

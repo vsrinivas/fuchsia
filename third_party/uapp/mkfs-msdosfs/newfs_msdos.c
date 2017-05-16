@@ -27,6 +27,7 @@
 
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <err.h>
 #include <errno.h>
@@ -48,11 +49,28 @@ static unsigned int argtou(const char*, unsigned int, unsigned int, const char*)
 static off_t argtooff(const char*, const char*);
 static void usage(void);
 
+static time_t
+get_tstamp(const char *b)
+{
+    struct stat st;
+    char *eb;
+    long long l;
+
+    if (stat(b, &st) != -1)
+        return (time_t)st.st_mtime;
+
+    errno = 0;
+    l = strtoll(b, &eb, 0);
+    if (b == eb || *eb || errno)
+        errx(EXIT_FAILURE, "Can't parse timestamp '%s'", b);
+    return (time_t)l;
+}
+
 /*
  * Construct a FAT12, FAT16, or FAT32 file system.
  */
 int main(int argc, char* argv[]) {
-    static const char opts[] = "@:NB:C:F:I:L:O:S:a:b:c:e:f:h:i:k:m:n:o:r:s:u:";
+    static const char opts[] = "@:NB:C:F:I:L:O:S:a:b:c:e:f:h:i:k:m:n:o:r:s:T:u:";
     struct msdos_options o;
     const char* fname;
     char buf[MAXPATHLEN];
@@ -122,6 +140,10 @@ int main(int argc, char* argv[]) {
             break;
         case 'r':
             o.reserved_sectors = argto2(optarg, 1, "reserved sectors");
+            break;
+        case 'T':
+            o.timestamp_set = 1;
+            o.timestamp = get_tstamp(optarg);
             break;
         default:
             usage();

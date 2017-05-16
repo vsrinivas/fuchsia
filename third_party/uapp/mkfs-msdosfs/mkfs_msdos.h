@@ -43,6 +43,7 @@
     AOPT('N', bool, no_create, -2, "Don't create filesystem, print params only") \
     AOPT('O', const char*, OEM_string, -1, "OEM string")                         \
     AOPT('S', off_t, disk_size, -1, "Disk size")                                 \
+    AOPT('T', time_t, timestamp, 0, "Timestamp")                                 \
     AOPT('a', uint32_t, sectors_per_fat, 1, "Sectors per FAT")                   \
     AOPT('b', uint32_t, block_size, 1, "Block size")                             \
     AOPT('c', uint8_t, sectors_per_cluster, 1, "Sectors per cluster")            \
@@ -57,6 +58,7 @@ struct msdos_options {
 #define AOPT(_opt, _type, _name, _min, _desc) _type _name;
     ALLOPTS
 #undef AOPT
+    uint32_t timestamp_set : 1;
     uint32_t volume_id_set : 1;
     uint32_t media_descriptor_set : 1;
     uint32_t hidden_sectors_set : 1;
