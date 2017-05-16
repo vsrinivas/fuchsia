@@ -128,9 +128,7 @@ static bool MakeBlob(const char* path, const char* merkle, size_t size_merkle,
                      const char* data, size_t size_data, int* out_fd) {
     int fd = open(path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    blob_ioctl_config_t config;
-    config.size_data = size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, size_data), 0, "");
     ASSERT_EQ(StreamAll(write, fd, merkle, size_merkle), 0, "Failed to write Merkle Tree");
     ASSERT_EQ(StreamAll(write, fd, data, size_data), 0, "Failed to write Data");
 
@@ -156,9 +154,7 @@ static bool MakeBlobCompromised(const char* path, const char* merkle, size_t siz
                                 const char* data, size_t size_data) {
     int fd = open(path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    blob_ioctl_config_t config;
-    config.size_data = size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, size_data), 0, "");
 
     // If we're writing a blob with invalid sizes, it's possible that writing will fail.
     StreamAll(write, fd, merkle, size_merkle);
@@ -427,17 +423,12 @@ static bool BadAllocation(void) {
 
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    blob_ioctl_config_t config;
-    config.size_data = 0;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), ERR_INVALID_ARGS, "Blob without data");
+    ASSERT_EQ(ftruncate(fd, 0), -1, "Blob without data");
     // This is the size of the entire disk; we won't have room.
-    config.size_data = (1 << 20) * 512;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), ERR_NO_SPACE, "Huge blob");
+    ASSERT_EQ(ftruncate(fd, (1 << 20) * 512), -1, "Huge blob");
 
     // Okay, finally, a valid blob!
-    config.size_data = info->size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0,
-              "Failed to allocate blob");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Failed to allocate blob");
 
     // Write nothing, but close the blob. Since the write was incomplete,
     // it will be inaccessible.
@@ -448,8 +439,7 @@ static bool BadAllocation(void) {
     // this time.
     fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0,
-              "Failed to allocate blob");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Failed to allocate blob");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
               "Failed to write merkle");
     ASSERT_EQ(close(fd), 0, "");
@@ -458,10 +448,10 @@ static bool BadAllocation(void) {
     // And once more -- let's write everything but the last byte of a blob's data.
     fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "Failed to allocate blob");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Failed to allocate blob");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
               "Failed to write merkle");
-    ASSERT_EQ(StreamAll(write, fd, info->data.get(), config.size_data - 1), 0,
+    ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data - 1), 0,
               "Failed to write data");
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
@@ -671,9 +661,7 @@ bool blob_config_helper(blob_list_t* bl) {
     if (state == nullptr) {
         return true;
     } else if (state->state == empty) {
-        blob_ioctl_config_t config;
-        config.size_data = state->info->size_data;
-        ASSERT_EQ(ioctl_blobstore_blob_init(state->fd, &config), 0, "");
+        ASSERT_EQ(ftruncate(state->fd, state->info->size_data), 0, "");
         state->state = configured;
     }
     {
@@ -897,15 +885,13 @@ static bool NoSpace(void) {
 
         int fd = open(info->path, O_CREAT | O_RDWR);
         ASSERT_GT(fd, 0, "Failed to create blob");
-        blob_ioctl_config_t config;
-        config.size_data = info->size_data;
-        mx_status_t status = static_cast<mx_status_t>(ioctl_blobstore_blob_init(fd, &config));
-        if (status != NO_ERROR) {
-            ASSERT_EQ(status, ERR_NO_SPACE, "Blobstore expected to run out of space");
+        int r = ftruncate(fd, info->size_data);
+        if (r < 0) {
+            ASSERT_EQ(errno, ENOSPC, "Blobstore expected to run out of space");
             // We ran out of space, as expected. Can we allocate if we
             // unlink a previously allocated blob of the desired size?
             ASSERT_EQ(unlink(last_info->path), 0, "Unlinking old blob");
-            ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "Re-init after unlink");
+            ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Re-init after unlink");
 
             // Yay! allocated successfully.
             ASSERT_EQ(close(fd), 0, "");
@@ -983,9 +969,7 @@ static bool EarlyRead(void) {
 
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after open");
     ASSERT_TRUE(check_not_readable(fd2), "Should not be readable after open");
-    blob_ioctl_config_t config;
-    config.size_data = info->size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after alloc");
     ASSERT_TRUE(check_not_readable(fd2), "Should not be readable after alloc");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
@@ -1040,9 +1024,7 @@ static bool WaitForRead(void) {
     thrd_create(&waiter_thread, wait_until_readable, &dupfd);
 
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after open");
-    blob_ioctl_config_t config;
-    config.size_data = info->size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after alloc");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
               "Failed to write Merkle Tree");
@@ -1077,9 +1059,7 @@ static bool WriteSeekIgnored(void) {
     ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    blob_ioctl_config_t config;
-    config.size_data = info->size_data;
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
 
     size_t n = 0;
     while (n != info->size_merkle) {
@@ -1125,8 +1105,6 @@ static bool UnlinkTiming(void) {
 
     mxtl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
-    blob_ioctl_config_t config;
-    config.size_data = info->size_data;
 
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
@@ -1134,17 +1112,17 @@ static bool UnlinkTiming(void) {
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
 
     // Unlink after init
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
 
     // Unlink after first write
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
               "Failed to write Merkle Tree");
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
 
     // Unlink after second write
-    ASSERT_EQ(ioctl_blobstore_blob_init(fd, &config), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
     ASSERT_EQ(StreamAll(write, fd, info->merkle.get(), info->size_merkle), 0,
               "Failed to write Merkle Tree");
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
@@ -1199,11 +1177,8 @@ static bool RootDirectory(void) {
     mxtl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateBlob(1 << 12, &info), "");
 
-    blob_ioctl_config_t config;
-    config.size_data = info->size_data;
-
     // Test ioctls which should ONLY operate on Blobs
-    ASSERT_LT(ioctl_blobstore_blob_init(dirfd, &config), 0, "");
+    ASSERT_LT(ftruncate(dirfd, info->size_data), 0, "");
 
     // Should NOT be able to unlink root dir
     ASSERT_EQ(close(dirfd), 0, "");

@@ -66,13 +66,3 @@ typedef struct mount_mkdir_config {
 
 // ssize_t ioctl_vfs_mount_mkdir_fs(int fd, mount_mkdir_config_t* in, size_t in_len);
 IOCTL_WRAPPER_VARIN(ioctl_vfs_mount_mkdir_fs, IOCTL_VFS_MOUNT_MKDIR_FS, mount_mkdir_config_t);
-
-#define IOCTL_BLOBSTORE_BLOB_INIT \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_VFS, 8)
-
-typedef struct blob_ioctl_config {
-    size_t size_data;
-} blob_ioctl_config_t;
-
-// ssize_t ioctl_blobstore_blob_init(int fd, const blob_ioctl_config_t* in);
-IOCTL_WRAPPER_IN(ioctl_blobstore_blob_init, IOCTL_BLOBSTORE_BLOB_INIT, blob_ioctl_config_t);
