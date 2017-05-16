@@ -847,7 +847,7 @@ static mx_status_t make_part(int device_fd, size_t offset, size_t length,
          len_temp);
 
   // kick off formatting of the device
-  rc = mkfs(data_path, format, launch_stdio_sync);
+  rc = mkfs(data_path, format, launch_stdio_sync, &default_mkfs_options);
   if (rc != NO_ERROR) {
     fprintf(stderr, "ERROR: Partition formatting failed.\n");
     return ERR_INTERNAL;
