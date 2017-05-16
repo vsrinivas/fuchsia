@@ -294,7 +294,7 @@ TEST_F(LegacyLowEnergyScannerTest, ActiveScanResults) {
 
   std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback([&results](const auto& result, const auto& data) {
-    results[result.address] = std::make_pair(result, data.AsString());
+    results[result.address] = std::make_pair(result, data.ToString());
   });
 
   // Perform an active scan.
@@ -388,7 +388,7 @@ TEST_F(LegacyLowEnergyScannerTest, StopDuringActiveScan) {
 
   std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback([&results, this](const auto& result, const auto& data) {
-    results[result.address] = std::make_pair(result, data.AsString());
+    results[result.address] = std::make_pair(result, data.ToString());
 
     // Stop the scan after observing the last fake device that we added. FakeController sends device
     // found events for fake devices in the order in which they were added.
@@ -432,7 +432,7 @@ TEST_F(LegacyLowEnergyScannerTest, PassiveScanResults) {
 
   std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>> results;
   set_device_found_callback([&results](const auto& result, const auto& data) {
-    results[result.address] = std::make_pair(result, data.AsString());
+    results[result.address] = std::make_pair(result, data.ToString());
   });
 
   // Perform a passive scan.

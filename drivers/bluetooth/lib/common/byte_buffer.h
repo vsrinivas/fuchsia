@@ -11,6 +11,7 @@
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace bluetooth {
 namespace common {
@@ -37,8 +38,11 @@ class ByteBuffer {
   virtual const_iterator cbegin() const = 0;
   virtual const_iterator cend() const = 0;
 
-  // Returns the contents of this buffer as a C++ string.
-  std::string AsString() const;
+  // Returns the contents of this buffer as a C++ string-like object without copying its contents.
+  ftl::StringView AsString() const;
+
+  // Returns the contents of this buffer as a C++ string after copying its contents.
+  std::string ToString() const;
 };
 
 // Mutable extension to the ByteBuffer interface. This provides methods that
@@ -144,8 +148,10 @@ class DynamicByteBuffer : public MutableByteBuffer {
 // provides an immutable view over it.
 class BufferView : public ByteBuffer {
  public:
-  explicit BufferView(const ByteBuffer& buffer);
   BufferView(const uint8_t* bytes, size_t size);
+
+  explicit BufferView(const ByteBuffer& buffer);
+  explicit BufferView(const ftl::StringView& string);
 
   // The default constructor initializes this to an empty buffer.
   BufferView();

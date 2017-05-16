@@ -111,7 +111,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
 
   // The AD fields that we'll parse out.
   uint8_t flags = 0;
-  std::string short_name, complete_name;
+  ftl::StringView short_name, complete_name;
   int8_t tx_power_lvl;
   bool tx_power_present = false;
 
@@ -138,10 +138,9 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   }
 
   // First check if this report should be filtered out by name.
-  if (!name_filter.empty()) {
-    if (complete_name.compare(0, name_filter.length(), name_filter) != 0 &&
-        short_name.compare(0, name_filter.length(), name_filter) != 0)
-      return;
+  if (!name_filter.empty() && complete_name.compare(name_filter) != 0 &&
+      short_name.compare(name_filter) != 0) {
+    return;
   }
 
   // Apply the address type filter.

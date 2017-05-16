@@ -16,8 +16,12 @@ std::unique_ptr<uint8_t[]> ByteBuffer::CopyContents() const {
   return buffer;
 }
 
-std::string ByteBuffer::AsString() const {
-  return std::string(reinterpret_cast<const char*>(GetData()), GetSize());
+ftl::StringView ByteBuffer::AsString() const {
+  return ftl::StringView(reinterpret_cast<const char*>(GetData()), GetSize());
+}
+
+std::string ByteBuffer::ToString() const {
+  return AsString().ToString();
 }
 
 DynamicByteBuffer::DynamicByteBuffer() : buffer_size_(0u) {}
@@ -83,6 +87,11 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
 BufferView::BufferView(const ByteBuffer& buffer) {
   size_ = buffer.GetSize();
   bytes_ = buffer.GetData();
+}
+
+BufferView::BufferView(const ftl::StringView& string) {
+  size_ = string.size();
+  bytes_ = reinterpret_cast<const uint8_t*>(string.data());
 }
 
 BufferView::BufferView(const uint8_t* bytes, size_t size) : size_(size), bytes_(bytes) {
