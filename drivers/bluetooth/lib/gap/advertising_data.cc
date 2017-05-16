@@ -60,5 +60,22 @@ bool AdvertisingDataReader::HasMoreData() const {
   return remaining_bytes_;
 }
 
+AdvertisingDataWriter::AdvertisingDataWriter(common::MutableByteBuffer* buffer)
+    : buffer_(buffer), bytes_written_(0u) {
+  FTL_DCHECK(buffer_);
+}
+
+bool AdvertisingDataWriter::WriteField(DataType type, const common::ByteBuffer& data) {
+  size_t next_size = data.GetSize() + 2;  // 2 bytes for [length][type].
+  if (bytes_written_ + next_size > buffer_->GetSize() || next_size > 255) return false;
+
+  buffer_->GetMutableData()[bytes_written_++] = static_cast<uint8_t>(next_size) - 1;
+  buffer_->GetMutableData()[bytes_written_++] = static_cast<uint8_t>(type);
+  std::memcpy(buffer_->GetMutableData() + bytes_written_, data.GetData(), data.GetSize());
+  bytes_written_ += data.GetSize();
+
+  return true;
+}
+
 }  // namespace gap
 }  // namespace bluetooth

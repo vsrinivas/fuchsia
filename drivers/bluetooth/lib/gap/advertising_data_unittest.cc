@@ -76,6 +76,62 @@ TEST(AdvertisingDataTest, ReaderParseFields) {
   EXPECT_FALSE(reader.GetNextField(&type, &data));
 }
 
+// Helper for computing the size of a string literal at compile time. sizeof() would have worked
+// too but that counts the null character.
+template <std::size_t N>
+constexpr size_t StringSize(char const (&str)[N]) {
+  return N - 1;
+}
+
+TEST(AdvertisingDataTest, WriteField) {
+  constexpr char kValue0[] = "value zero";
+  constexpr char kValue1[] = "value one";
+  constexpr char kValue2[] = "value two";
+  constexpr char kValue3[] = "value three";
+
+  // Have just enough space for the first three values (+ 6 for 2 extra octets for each TLV field).
+  constexpr char kBufferSize = StringSize(kValue0) + StringSize(kValue1) + StringSize(kValue2) + 6;
+  common::StaticByteBuffer<kBufferSize> buffer;
+
+  AdvertisingDataWriter writer(&buffer);
+  EXPECT_EQ(0u, writer.bytes_written());
+
+  // We write malformed values here for testing purposes.
+  EXPECT_TRUE(writer.WriteField(DataType::kFlags, common::BufferView(kValue0)));
+  EXPECT_EQ(StringSize(kValue0) + 2, writer.bytes_written());
+
+  EXPECT_TRUE(writer.WriteField(DataType::kShortenedLocalName, common::BufferView(kValue1)));
+  EXPECT_EQ(StringSize(kValue0) + 2 + StringSize(kValue1) + 2, writer.bytes_written());
+
+  // Trying to write kValue3 should fail because there isn't enough room left in the buffer.
+  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue3)));
+
+  // Writing kValue2 should fill up the buffer.
+  EXPECT_TRUE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue2)));
+  EXPECT_FALSE(writer.WriteField(DataType::kCompleteLocalName, common::BufferView(kValue3)));
+  EXPECT_EQ(buffer.GetSize(), writer.bytes_written());
+
+  // Verify the contents.
+  DataType type;
+  common::BufferView value;
+  AdvertisingDataReader reader(buffer);
+  EXPECT_TRUE(reader.is_valid());
+
+  EXPECT_TRUE(reader.GetNextField(&type, &value));
+  EXPECT_EQ(DataType::kFlags, type);
+  EXPECT_EQ(kValue0, value.AsString());
+
+  EXPECT_TRUE(reader.GetNextField(&type, &value));
+  EXPECT_EQ(DataType::kShortenedLocalName, type);
+  EXPECT_EQ(kValue1, value.AsString());
+
+  EXPECT_TRUE(reader.GetNextField(&type, &value));
+  EXPECT_EQ(DataType::kCompleteLocalName, type);
+  EXPECT_EQ(kValue2, value.AsString());
+
+  EXPECT_FALSE(reader.GetNextField(&type, &value));
+}
+
 }  // namespace
 }  // namespace gap
 }  // namespace bluetooth

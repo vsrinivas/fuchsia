@@ -22,12 +22,13 @@ namespace common {
 
 class BufferView;
 class ByteBuffer;
+class MutableByteBuffer;
 
 }  // namespace common
 
 namespace gap {
 
-// Class for extracting EIR, AD, and Scan Rsp.
+// Used for parsing data in TLV-format as described at the beginning of the file above.
 class AdvertisingDataReader {
  public:
   // |data| must point to a valid piece of memory for the duration in which this
@@ -55,7 +56,25 @@ class AdvertisingDataReader {
   size_t remaining_bytes_;
 };
 
-// TODO(armansito): Add AdvertisingDataWriter
+// Used for writing data in TLV-format as described at the beginning of the file above.
+class AdvertisingDataWriter {
+ public:
+  // |buffer| is the piece of memory on which this AdvertisingDataWriter should operate. The buffer
+  // must out-live this instance and must point to a valid piece of memory.
+  explicit AdvertisingDataWriter(common::MutableByteBuffer* buffer);
+
+  // Writes the given piece of type/tag and data into the next available segment in the underlying
+  // buffer. Returns false if there isn't enough space left in the buffer for writing. Returns true
+  // on success.
+  bool WriteField(DataType type, const common::ByteBuffer& data);
+
+  // The total number of bytes that have been written into the buffer.
+  size_t bytes_written() const { return bytes_written_; }
+
+ private:
+  common::MutableByteBuffer* buffer_;
+  size_t bytes_written_;
+};
 
 }  // namespace gap
 }  // namespace bluetooth
