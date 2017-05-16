@@ -253,6 +253,7 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id) {
 
     users.push_back(modular::CreateUserStorage(
         builder, builder.CreateString(user->id()), user->identity_provider(),
+        builder.CreateString(user->display_name()),
         builder.CreateString(user->device_name()),
         builder.CreateString(user->server_name())));
   }
