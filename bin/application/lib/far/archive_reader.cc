@@ -17,7 +17,7 @@ namespace archive {
 namespace {
 
 struct PathComparator {
-  ArchiveReader* reader = nullptr;
+  const ArchiveReader* reader = nullptr;
 
   bool operator()(const DirectoryTableEntry& lhs, const ftl::StringView& rhs) {
     return reader->GetPathView(lhs) < rhs;
@@ -35,7 +35,23 @@ bool ArchiveReader::Read() {
 }
 
 bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
-                                const char* output_path) {
+                                const char* output_path) const {
+  DirectoryTableEntry entry;
+  if (!GetDirectoryEntry(archive_path, &entry))
+    return false;
+  if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
+    fprintf(stderr, "error: Failed to seek to offset of file.\n");
+    return false;
+  }
+  if (!CopyFileToPath(fd_.get(), output_path, entry.data_length)) {
+    fprintf(stderr, "error: Failed write contents to '%s'.\n", output_path);
+    return false;
+  }
+  return true;
+}
+
+bool ArchiveReader::GetDirectoryEntry(ftl::StringView archive_path,
+                                      DirectoryTableEntry* entry) const {
   PathComparator comparator;
   comparator.reader = this;
 
@@ -43,14 +59,7 @@ bool ArchiveReader::ExtractFile(ftl::StringView archive_path,
                              archive_path, comparator);
   if (it == directory_table_.end() || GetPathView(*it) != archive_path)
     return false;
-  if (lseek(fd_.get(), it->data_offset, SEEK_SET) < 0) {
-    fprintf(stderr, "error: Failed to seek to offset of file.\n");
-    return false;
-  }
-  if (!CopyFileToPath(fd_.get(), output_path, it->data_length)) {
-    fprintf(stderr, "error: Failed write contents to '%s'.\n", output_path);
-    return false;
-  }
+  *entry = *it;
   return true;
 }
 
@@ -58,7 +67,8 @@ ftl::UniqueFD ArchiveReader::TakeFileDescriptor() {
   return std::move(fd_);
 }
 
-ftl::StringView ArchiveReader::GetPathView(const DirectoryTableEntry& entry) {
+ftl::StringView ArchiveReader::GetPathView(
+    const DirectoryTableEntry& entry) const {
   return ftl::StringView(path_data_.data() + entry.name_offset,
                          entry.name_length);
 }
@@ -124,7 +134,7 @@ bool ArchiveReader::ReadIndex() {
 }
 
 bool ArchiveReader::ReadDirectory() {
-  IndexEntry* dir_entry = GetIndexEntry(kDirType);
+  const IndexEntry* dir_entry = GetIndexEntry(kDirType);
   if (!dir_entry) {
     fprintf(stderr, "error: Cannot find directory chunk.\n");
     return false;
@@ -146,7 +156,7 @@ bool ArchiveReader::ReadDirectory() {
     return false;
   }
 
-  IndexEntry* dirnames_entry = GetIndexEntry(kDirnamesType);
+  const IndexEntry* dirnames_entry = GetIndexEntry(kDirnamesType);
   if (!dirnames_entry) {
     fprintf(stderr, "error: Cannot find directory names chunk.\n");
     return false;
@@ -165,7 +175,7 @@ bool ArchiveReader::ReadDirectory() {
   return true;
 }
 
-IndexEntry* ArchiveReader::GetIndexEntry(uint64_t type) {
+const IndexEntry* ArchiveReader::GetIndexEntry(uint64_t type) const {
   for (auto& entry : index_) {
     if (entry.type == type)
       return &entry;

@@ -21,29 +21,39 @@ class ArchiveReader {
 
   bool Read();
 
+  uint64_t file_count() const { return directory_table_.size(); }
+
   template <typename Callback>
-  void ListDirectory(Callback callback) {
+  void ListPaths(Callback callback) const {
     for (const auto& entry : directory_table_)
       callback(GetPathView(entry));
   }
 
-  bool ExtractFile(ftl::StringView archive_path, const char* output_path);
+  template <typename Callback>
+  void ListDirectory(Callback callback) const {
+    for (const auto& entry : directory_table_)
+      callback(entry);
+  }
+
+  bool ExtractFile(ftl::StringView archive_path, const char* output_path) const;
+  bool GetDirectoryEntry(ftl::StringView archive_path,
+                         DirectoryTableEntry* entry) const;
 
   ftl::UniqueFD TakeFileDescriptor();
 
-  ftl::StringView GetPathView(const DirectoryTableEntry& entry);
+  ftl::StringView GetPathView(const DirectoryTableEntry& entry) const;
 
  private:
   bool ReadIndex();
   bool ReadDirectory();
 
-  IndexEntry* GetIndexEntry(uint64_t type);
+  const IndexEntry* GetIndexEntry(uint64_t type) const;
 
   ftl::UniqueFD fd_;
   std::vector<IndexEntry> index_;
   std::vector<DirectoryTableEntry> directory_table_;
   std::vector<char> path_data_;
-};  // namespace archive
+};
 
 }  // namespace archive
 

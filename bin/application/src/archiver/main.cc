@@ -80,7 +80,7 @@ int List(const ftl::CommandLine& command_line) {
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
-  reader.ListDirectory([](ftl::StringView string) {
+  reader.ListPaths([](ftl::StringView string) {
     printf("%.*s\n", static_cast<int>(string.size()), string.data());
   });
   return 0;

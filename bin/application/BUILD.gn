@@ -4,6 +4,7 @@
 
 group("application") {
   deps = [
+    "lib/farfs",
     "src/archiver",
     "src/archiver($host_toolchain)",
     "src/manager",
