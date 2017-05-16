@@ -128,6 +128,7 @@ private:
     void DumpStreamPublishedLocked() __TA_REQUIRES(obj_lock());
     DECLARE_THUNK(ProcessPinWidgetCaps);
     DECLARE_THUNK(ProcessPinAmpCaps);
+    DECLARE_THUNK(ProcessPinCfgDefaults);
     DECLARE_THUNK(ProcessPinCaps);
     DECLARE_THUNK(ProcessPinState);
     DECLARE_THUNK(ProcessConverterWidgetCaps);
@@ -169,6 +170,7 @@ private:
     struct {
         AudioWidgetCaps widget_caps;
         AmpCaps         amp_caps;
+        ConfigDefaults  cfg_defaults;
         PinCaps         pin_caps;
         bool            has_amp        = false;
         bool            async_plug_det = false;
