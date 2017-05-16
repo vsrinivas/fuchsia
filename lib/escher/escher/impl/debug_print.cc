@@ -7,9 +7,55 @@
 // These should only be called by operator<<, so it's safe to elide them.
 #if !defined(NDEBUG)
 
+#include "escher/geometry/transform.h"
 #include "escher/impl/model_pipeline_spec.h"
 
 namespace escher {
+
+std::ostream& operator<<(std::ostream& str, const Transform& transform) {
+  return str << "Transform[t: " << transform.translation
+             << " s: " << transform.scale << " r: " << transform.rotation
+             << " a: " << transform.anchor << "]";
+}
+
+std::ostream& operator<<(std::ostream& str, const mat2& m) {
+  str << "mat2[";
+  for (int y = 0; y < 2; ++y) {
+    str << std::endl;
+    for (int x = 0; x < 2; ++x) {
+      str << " " << m[x][y];
+    }
+  }
+  return str << " ]";
+}
+
+std::ostream& operator<<(std::ostream& str, const mat4& m) {
+  str << "mat4[";
+  for (int y = 0; y < 4; ++y) {
+    str << std::endl;
+    for (int x = 0; x < 4; ++x) {
+      str << " " << m[x][y];
+    }
+  }
+  return str << " ]";
+}
+
+std::ostream& operator<<(std::ostream& str, const vec2& v) {
+  return str << "(" << v[0] << ", " << v[1] << ")";
+}
+
+std::ostream& operator<<(std::ostream& str, const vec3& v) {
+  return str << "(" << v[0] << ", " << v[1] << ", " << v[2] << ")";
+}
+
+std::ostream& operator<<(std::ostream& str, const vec4& v) {
+  return str << "(" << v[0] << ", " << v[1] << ", " << v[2] << ", " << v[3]
+             << ")";
+}
+
+std::ostream& operator<<(std::ostream& str, const quat& q) {
+  return str << "(" << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")";
+}
 
 std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
   switch (attr) {

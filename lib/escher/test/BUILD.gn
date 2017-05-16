@@ -11,11 +11,13 @@ executable("escher_unittests") {
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
     "hash_unittest.cc",
+    "transform_unittest.cc",
     "run_all_unittests.cc",
   ]
 
   deps = [
     "//lib/escher/escher",
+    "//lib/ftl",
     "//third_party/gtest",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",

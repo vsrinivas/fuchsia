@@ -37,6 +37,7 @@ static_library("escher") {
     "geometry/size_i.h",
     "geometry/tessellation.cc",
     "geometry/tessellation.h",
+    "geometry/transform.h",
     "geometry/types.h",
     "impl/command_buffer.cc",
     "impl/command_buffer.h",

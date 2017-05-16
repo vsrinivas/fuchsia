@@ -16,7 +16,11 @@
 #include <glm/glm.hpp>
 #endif
 
-#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/transform.hpp>
+
+#include "escher/util/debug_print.h"
 
 namespace escher {
 
@@ -26,5 +30,14 @@ using glm::vec4;
 using glm::mat2;
 using glm::mat3;
 using glm::mat4;
+using glm::quat;
+
+ESCHER_DEBUG_PRINTABLE(vec2);
+ESCHER_DEBUG_PRINTABLE(vec3);
+ESCHER_DEBUG_PRINTABLE(vec4);
+ESCHER_DEBUG_PRINTABLE(mat2);
+ESCHER_DEBUG_PRINTABLE(mat3);
+ESCHER_DEBUG_PRINTABLE(mat4);
+ESCHER_DEBUG_PRINTABLE(quat);
 
 }  // namespace escher
