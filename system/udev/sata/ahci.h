@@ -19,7 +19,7 @@
 #define AHCI_PORT_INT_TFE (1 << 30)
 #define AHCI_PORT_INT_HBF (1 << 29)
 #define AHCI_PORT_INT_HBD (1 << 28)
-#define AHCI_PORT_INT_IF  (1 << 28)
+#define AHCI_PORT_INT_IF  (1 << 27)
 #define AHCI_PORT_INT_INF (1 << 26)
 #define AHCI_PORT_INT_OF  (1 << 24)
 #define AHCI_PORT_INT_IPM (1 << 23)
