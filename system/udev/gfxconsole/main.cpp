@@ -476,7 +476,8 @@ static mx_protocol_device_t vc_device_proto;
 extern mx_driver_t _driver_vc_root;
 
 // opening the root device returns a new vc device instance
-static mx_status_t vc_do_root_open(vc_device_t* dev, vc_device_t** vc_out, uint32_t flags) {
+static mx_status_t vc_do_root_open(bool create_mx_device, vc_device_t** vc_out,
+                                   uint32_t flags) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     mx_status_t status;
@@ -485,9 +486,7 @@ static mx_status_t vc_do_root_open(vc_device_t* dev, vc_device_t** vc_out, uint3
         return status;
     }
 
-    // if called normally, add the instance
-    // if dev is null, we're creating the log console
-    if (dev) {
+    if (create_mx_device) {
         // init the new device
         char name[8];
         snprintf(name, sizeof(name), "vc%u", g_vc_count);
@@ -524,9 +523,8 @@ static mx_status_t vc_do_root_open(vc_device_t* dev, vc_device_t** vc_out, uint3
 }
 
 static mx_status_t vc_root_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
-    auto dev = reinterpret_cast<vc_device_t*>(ctx);
     vc_device_t* vc;
-    mx_status_t status = vc_do_root_open(dev, &vc, flags);
+    mx_status_t status = vc_do_root_open(true, &vc, flags);
     if (status != NO_ERROR) {
         return status;
     }
@@ -724,7 +722,7 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
             device_get_name(dev), info.width, info.height, info.stride, info.format);
 
     vc_device_t* vc;
-    if (vc_do_root_open(NULL, &vc, 0) == NO_ERROR) {
+    if (vc_do_root_open(false, &vc, 0) == NO_ERROR) {
         thrd_t t;
         thrd_create_with_name(&t, vc_log_reader_thread, vc, "vc-log-reader");
     }
