@@ -6,7 +6,7 @@
 
 #include <mx/vmar.h>
 
-#include "application/services/service_provider.fidl.h"
+#include "application/lib/app/application_context.h"
 #include "apps/icu_data/lib/constants.h"
 #include "apps/icu_data/services/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
@@ -48,7 +48,7 @@ uintptr_t GetDataFromVMO(const mx::vmo& vmo, size_t* size_out) {
 // Then, initializes ICU with the data received.
 //
 // Return value indicates if initialization was successful.
-bool Initialize(app::ServiceProvider* services) {
+bool Initialize(app::ApplicationContext* context) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return false;
@@ -56,8 +56,7 @@ bool Initialize(app::ServiceProvider* services) {
 
   // Get the data from the ICU data provider.
   icu_data::ICUDataProviderPtr icu_data_provider;
-  services->ConnectToService(icu_data::ICUDataProvider::Name_,
-                             fidl::GetProxy(&icu_data_provider).PassChannel());
+  context->ConnectToEnvironmentService(icu_data_provider.NewRequest());
 
   icu_data::ICUDataPtr response;
   icu_data_provider->ICUDataWithSha1(

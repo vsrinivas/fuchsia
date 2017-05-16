@@ -6,12 +6,12 @@
 #define APPS_ICU_DATA_LIB_ICU_DATA_H_
 
 namespace app {
-class ServiceProvider;
+class ApplicationContext;
 }
 
 namespace icu_data {
 
-bool Initialize(app::ServiceProvider* services);
+bool Initialize(app::ApplicationContext* context);
 bool Release();
 
 }  // namespace icu_data

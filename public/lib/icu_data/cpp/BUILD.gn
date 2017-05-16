@@ -30,6 +30,7 @@ source_set("lib") {
 
   deps = [
     ":generate_icu_constants",
+    "//application/lib/app",
     "//application/services",
     "//apps/icu_data/services",
     "//third_party/icu",
