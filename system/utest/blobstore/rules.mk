@@ -16,6 +16,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/merkle \
     third_party/ulib/cryptolib \
+    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

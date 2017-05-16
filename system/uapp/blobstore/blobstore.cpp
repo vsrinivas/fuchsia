@@ -10,9 +10,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <magenta/new.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <merkle/digest.h>
 #include <merkle/tree.h>
 #include <mxtl/ref_ptr.h>

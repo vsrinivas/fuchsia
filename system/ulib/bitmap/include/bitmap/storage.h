@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <magenta/new.h>
 #include <magenta/process.h>
 #include <magenta/types.h>
+#include <mxalloc/new.h>
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
 

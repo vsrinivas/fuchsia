@@ -10,7 +10,6 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <trace.h>
 
 #include <kernel/event.h>
@@ -22,6 +21,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_thread.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0

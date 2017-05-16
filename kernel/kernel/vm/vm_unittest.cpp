@@ -11,8 +11,8 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_paged.h>
+#include <mxalloc/new.h>
 #include <mxtl/array.h>
-#include <new.h>
 #include <unittest.h>
 
 static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;

@@ -14,8 +14,8 @@
 #include <unistd.h>
 
 #include <magenta/device/vfs.h>
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 

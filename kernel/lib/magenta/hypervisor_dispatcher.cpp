@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/hypervisor_dispatcher.h>
+#include <mxalloc/new.h>
 #include <mxtl/auto_lock.h>
-#include <new.h>
 
 constexpr mx_rights_t kDefaultHypervisorRights = MX_RIGHT_EXECUTE;
 

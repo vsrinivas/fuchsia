@@ -4,10 +4,10 @@
 
 #include <elfload/elfload.h>
 #include <limits.h>
-#include <magenta/new.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxcpp/new.h>
 #include <mx/process.h>
 #include <mx/vmar.h>
 #include <mx/vmo.h>

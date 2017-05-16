@@ -7,9 +7,9 @@
 #include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
 #include <magenta/interrupt_event_dispatcher.h>
+#include <mxalloc/new.h>
 
 #include <err.h>
-#include <new.h>
 
 constexpr mx_rights_t kDefaultInterruptRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;

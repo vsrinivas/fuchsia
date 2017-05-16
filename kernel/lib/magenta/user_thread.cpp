@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <new.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>

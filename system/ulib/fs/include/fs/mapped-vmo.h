@@ -9,7 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/new.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
 

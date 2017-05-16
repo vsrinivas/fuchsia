@@ -18,8 +18,8 @@
 #include <string.h>
 
 #include <bitmap/rle-bitmap.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
-#include <new.h>
 
 /* Task used for updating IO permissions on each CPU */
 struct ioport_update_context {

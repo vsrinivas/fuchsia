@@ -21,6 +21,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
+#include <mxalloc/new.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_free_ptr.h>

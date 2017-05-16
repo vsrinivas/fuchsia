@@ -9,7 +9,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <new.h>
+#include <mxalloc/new.h>
 #include <trace.h>
 
 #include "vm_priv.h"

@@ -16,13 +16,14 @@
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <list.h>
-#include <new.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
 
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
+
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <magenta/errors.h>
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 

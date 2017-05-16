@@ -9,8 +9,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/device/block.h>
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>

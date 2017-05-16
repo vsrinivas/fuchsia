@@ -6,14 +6,13 @@
 
 #include <stddef.h>
 #include <magenta/assert.h>
+#include <mxalloc/new.h>
 #include <mxtl/macros.h>
 
-// TODO(vtl): Rectify this difference.
-#ifdef _KERNEL
-#include <new.h>
-#else
-#include <magenta/new.h>
-#endif
+// We don't want to force a dependency on a particular implementation
+// of placement new, and therefore cannot rely on a header providing a
+// declaration of it. So we just forward declare it here.
+void* operator new(size_t, void *ptr);
 
 namespace mxtl {
 

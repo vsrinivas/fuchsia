@@ -23,7 +23,7 @@
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
-#include <new.h>
+#include <mxalloc/new.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>

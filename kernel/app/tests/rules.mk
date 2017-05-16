@@ -27,6 +27,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     kernel/lib/crypto \
     kernel/lib/header_tests \
+    kernel/lib/mxalloc \
     kernel/lib/mxtl \
     third_party/lib/safeint \
     kernel/lib/unittest \

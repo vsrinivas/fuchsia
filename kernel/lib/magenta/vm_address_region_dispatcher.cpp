@@ -10,8 +10,9 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 
+#include <mxalloc/new.h>
+
 #include <assert.h>
-#include <new.h>
 #include <err.h>
 #include <inttypes.h>
 #include <trace.h>

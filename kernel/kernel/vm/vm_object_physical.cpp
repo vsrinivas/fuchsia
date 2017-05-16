@@ -15,7 +15,7 @@
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
-#include <new.h>
+#include <mxalloc/new.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>

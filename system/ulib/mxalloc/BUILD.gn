@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("mxalloc_config") {
+  include_dirs = [ "include" ]
+}
+
+static_library("mxalloc") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "include/mxalloc/new.h",
+    "alloc_checker.cpp",
+  ]
+
+  public_configs = [ ":mxalloc_config" ]
+}

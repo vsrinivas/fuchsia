@@ -8,7 +8,6 @@
 
 #include <lib/rodso.h>
 #include <kernel/vm/vm_object.h>
-#include <new.h>
 
 class VmMapping;
 

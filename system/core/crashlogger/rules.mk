@@ -18,6 +18,7 @@ MODULE_SRCS += \
 MODULE_NAME := crashlogger
 
 MODULE_STATIC_LIBS := \
+    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/pretty \

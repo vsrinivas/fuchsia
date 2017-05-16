@@ -11,6 +11,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxalloc/new.h>
 #include <mxtl/type_support.h>
 #include <platform.h>
 

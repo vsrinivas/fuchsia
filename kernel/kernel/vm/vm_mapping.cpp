@@ -13,9 +13,9 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxalloc/new.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
-#include <new.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
 

@@ -79,3 +79,34 @@ We have built a minimal C++ library around the various Magenta
 [`mx`](../system/ulib/mx/README.md). `mx` is a minimal layer on top of
 `mx_handle_t` and the system calls, to provide handles with type
 safety and ownership semantics.
+
+## mxcpp
+
+Some of our code runs in an environment which cannot include the
+standard C++ runtime environment. This environment includes symbols
+like __cxa_pure_virtual that are defined by the ABI and that the
+compiler expects to be ambient. [The mxcpp
+library](../system/ulib/mxcpp) provides that dependency. It also
+includes the placement operator new overloads and, in userspace, the
+standard new and delete operators. Note that it does not include the
+similarly named __cxa_atexit, which in userspace must be provided by
+the libc. See extensive comments in musl's atexit implementation if
+you are curious.
+
+*This library is mutually exclusive of the standard C++ library.*
+
+## mxalloc
+
+The standard operator new is assumed to either return valid memory or
+to throw std::bad_alloc. This policy is not suitable for the
+kernel. We also want to dynamically enforce that returns are
+explicitly checked. As such, [the mxalloc
+library](../system/ulib/mxalloc) introduces our own operator new
+overload which takes a reference to an `AllocChecker`. If the status
+of the `AllocChecker` is not queried after the new expression, an
+assertion is raised. This lets us enforce that the return value is
+checked without having to reason about optimizations of the standard
+operator new in the presence of -fno-exceptions and so on.
+
+This library can be linked into programs that use the standard
+library, and also into programs that use `mxcpp`.

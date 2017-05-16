@@ -9,7 +9,8 @@
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_io_mapping_dispatcher.h>
 
-#include <new.h>
+#include <mxalloc/new.h>
+
 #include <string.h>
 
 status_t PciIoMappingDispatcher::Create(

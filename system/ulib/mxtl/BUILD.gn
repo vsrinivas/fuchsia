@@ -15,7 +15,6 @@ source_set("mxtl") {
     "include/mxtl/auto_call.h",
     "include/mxtl/auto_lock.h",
     "include/mxtl/deleter.h",
-    "include/mxtl/inline_array.h",
     "include/mxtl/intrusive_container_utils.h",
     "include/mxtl/intrusive_double_list.h",
     "include/mxtl/intrusive_hash_table.h",

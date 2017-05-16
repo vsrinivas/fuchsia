@@ -11,7 +11,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
 namespace merkle {

@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <new.h>
 #include <kernel/mutex.h>
 #include <kernel/event.h>
 

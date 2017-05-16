@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 
 #include <arch/ops.h>
 #include <arch/user_copy.h>
@@ -20,6 +19,9 @@
 #include <magenta/excp_port.h>
 #include <magenta/state_tracker.h>
 #include <magenta/user_copy.h>
+
+#include <mxalloc/new.h>
+#include <mxcpp/new.h>
 
 constexpr mx_rights_t kDefaultIOPortRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;

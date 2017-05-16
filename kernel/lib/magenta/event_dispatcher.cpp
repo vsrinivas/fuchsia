@@ -7,9 +7,9 @@
 #include <magenta/event_dispatcher.h>
 
 #include <err.h>
-#include <new.h>
 
 #include <magenta/state_tracker.h>
+#include <mxalloc/new.h>
 
 constexpr mx_rights_t kDefaultEventRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;

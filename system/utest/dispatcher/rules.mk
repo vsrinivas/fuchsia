@@ -17,6 +17,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := system/ulib/fs \
     system/ulib/mxtl \
     system/ulib/mxcpp \
+    system/ulib/mxalloc \
 
 MODULE_LIBS := \
     system/ulib/c \

@@ -19,11 +19,12 @@
 #include <list.h>
 #include <lk/init.h>
 #include <mxtl/limits.h>
-#include <new.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
 #include <platform.h>
+
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

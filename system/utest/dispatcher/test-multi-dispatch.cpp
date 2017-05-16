@@ -10,10 +10,11 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <magenta/new.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
+
+#include <mxalloc/new.h>
 
 #include <mxio/debug.h>
 

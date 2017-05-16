@@ -6,9 +6,9 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 
 #include <magenta/types.h>
+#include <mxalloc/new.h>
 
 namespace {
 

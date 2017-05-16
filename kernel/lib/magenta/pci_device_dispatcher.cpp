@@ -13,9 +13,10 @@
 #include <magenta/pci_io_mapping_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 
+#include <mxalloc/new.h>
+
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <trace.h>
 
 constexpr mx_rights_t kDefaultPciDeviceRights =

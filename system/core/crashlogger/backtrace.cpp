@@ -16,10 +16,11 @@
 #include <ngunwind/libunwind.h>
 #include <ngunwind/fuchsia.h>
 
-#include <magenta/cpp.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+
+#include <mxalloc/new.h>
 
 #include <mxtl/array.h>
 

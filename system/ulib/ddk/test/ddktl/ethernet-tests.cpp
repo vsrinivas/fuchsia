@@ -4,7 +4,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
-#include <magenta/cpp.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 

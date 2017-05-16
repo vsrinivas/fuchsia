@@ -17,6 +17,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"

@@ -11,10 +11,10 @@
 #include <fs/vfs.h>
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
-#include <magenta/new.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/thread_annotations.h>
+#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>

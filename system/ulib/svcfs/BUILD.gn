@@ -17,7 +17,7 @@ static_library("svcfs") {
   public_deps = [
       "//magenta/system/ulib/fs",
       "//magenta/system/ulib/mx",
-      "//magenta/system/ulib/mxcpp",
+      "//magenta/system/ulib/mxalloc",
       "//magenta/system/ulib/mxtl",
   ]
 }

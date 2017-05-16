@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <new.h>
 #include <string.h>
 
 #include <arch/hypervisor.h>
@@ -13,6 +12,8 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <hypervisor/guest_physical_address_space.h>
+
+#include <mxalloc/new.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>

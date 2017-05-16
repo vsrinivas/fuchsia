@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 
 namespace svcfs {
 

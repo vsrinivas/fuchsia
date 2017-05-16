@@ -16,7 +16,6 @@
 #include <list.h>
 #include <lk/init.h>
 #include <mxtl/limits.h>
-#include <new.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
@@ -24,6 +23,8 @@
 
 #include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>
+
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

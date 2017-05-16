@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <new.h>
 #include <string.h>
 
 #include <magenta/exception.h>
@@ -16,6 +15,8 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_thread.h>
+
+#include <mxalloc/new.h>
 
 #include <trace.h>
 

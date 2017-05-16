@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include <magenta/assert.h>
-#include <magenta/new.h>
 #include <magenta/status.h>
 #include <unittest/unittest.h>
 

@@ -21,7 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/merkle \
     third_party/ulib/cryptolib \
-    system/ulib/mxcpp \
+    system/ulib/mxalloc \
     system/ulib/mxtl \
 
 MODULE_LIBS := \

@@ -14,7 +14,7 @@
 #include <magenta/channel_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
-#include <new.h>
+#include <mxalloc/new.h>
 #include <string.h>
 
 class ResourceRecord : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<ResourceRecord>> {

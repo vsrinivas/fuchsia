@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <platform.h>
 #include <stdint.h>
 
@@ -20,6 +19,7 @@
 
 #include <sys/types.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/type_support.h>
 
 // WaitSetDispatcher::Entry ------------------------------------------------------------------------

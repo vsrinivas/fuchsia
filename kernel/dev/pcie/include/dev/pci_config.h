@@ -5,7 +5,6 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/intrusive_single_list.h>
 #include <dev/pci_common.h>
-#include <new.h>
 
 class PciReg8 {
 public:

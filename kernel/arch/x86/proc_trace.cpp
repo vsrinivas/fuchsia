@@ -34,7 +34,6 @@
 #include <magenta/thread_annotations.h>
 #include <mxtl/macros.h>
 #include <mxtl/unique_ptr.h>
-#include <new.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>

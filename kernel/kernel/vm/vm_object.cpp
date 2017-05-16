@@ -16,7 +16,6 @@
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <mxtl/ref_ptr.h>
-#include <new.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>

@@ -6,11 +6,10 @@
 
 #if WITH_DEV_PCIE
 
-#include <new.h>
-
 #include <kernel/auto_lock.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
+#include <mxalloc/new.h>
 
 constexpr mx_rights_t kDefaultPciInterruptRights = MX_RIGHT_READ |
                                                    MX_RIGHT_WRITE |

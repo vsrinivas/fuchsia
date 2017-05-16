@@ -6,10 +6,9 @@
 
 #include <magenta/io_mapping_dispatcher.h>
 
-#include <new.h>
-
 #include <kernel/vm/vm_object_physical.h>
 #include <magenta/process_dispatcher.h>
+#include <mxalloc/new.h>
 
 constexpr mx_rights_t IoMappingDispatcher::kDefaultRights;
 

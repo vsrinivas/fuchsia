@@ -10,7 +10,6 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <trace.h>
 #include <pow2.h>
 
@@ -23,6 +22,7 @@
 
 #include <magenta/handle.h>
 #include <magenta/port_client.h>
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

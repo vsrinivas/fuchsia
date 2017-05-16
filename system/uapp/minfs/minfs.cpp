@@ -11,7 +11,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <fs/trace.h>
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 

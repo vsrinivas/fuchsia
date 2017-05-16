@@ -4,13 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <new.h>
 #include <string.h>
 
 #include <kernel/auto_lock.h>
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/handle.h>
+#include <mxalloc/new.h>
 
 
 constexpr mx_rights_t kDefaultFifoRights =

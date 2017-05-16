@@ -24,7 +24,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
-    system/ulib/mxcpp \
+    system/ulib/mxalloc \
     system/ulib/mxtl \
 
 MODULE_LIBS := \
@@ -54,7 +54,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/minfs-ops.cpp \
     $(LOCAL_DIR)/minfs-check.cpp \
     system/ulib/fs/vfs.cpp \
-    system/ulib/mxcpp/new.cpp \
+    system/ulib/mxalloc/alloc_checker.cpp \
     system/ulib/mxcpp/pure_virtual.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
 
@@ -62,6 +62,7 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/bitmap/include \
+    -Isystem/ulib/mxalloc/include \
     -Isystem/ulib/mxcpp/include \
     -Isystem/ulib/mxio/include \
     -Isystem/ulib/mxtl/include \

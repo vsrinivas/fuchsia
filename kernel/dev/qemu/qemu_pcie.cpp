@@ -12,8 +12,8 @@
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <inttypes.h>
 #include <lk/init.h>
+#include <mxalloc/new.h>
 #include <mxtl/ref_ptr.h>
-#include <new.h>
 #include <dev/qemu-virt.h>
 #include <trace.h>
 #include <mdi/mdi.h>

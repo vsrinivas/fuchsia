@@ -11,8 +11,8 @@
 #include <ddk/device.h>
 #include <fs/vfs.h>
 #include <magenta/device/vfs.h>
-#include <magenta/new.h>
 #include <magenta/thread_annotations.h>
+#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
 #include <mxtl/auto_lock.h>

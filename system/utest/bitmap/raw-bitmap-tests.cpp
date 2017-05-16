@@ -5,7 +5,7 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <unittest/unittest.h>
 

@@ -30,7 +30,7 @@ static_library("fs") {
   ]
 
   deps = [
-    "//magenta/system/ulib/mxcpp",
+    "//magenta/system/ulib/mxalloc",
     "//magenta/system/ulib/mxtl",
   ]
 

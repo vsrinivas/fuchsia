@@ -20,6 +20,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_upstream_node.cpp
 
 MODULE_DEPS += \
+    kernel/lib/mxcpp \
     kernel/lib/mxtl \
     kernel/lib/region-alloc
 

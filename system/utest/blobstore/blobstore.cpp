@@ -21,12 +21,12 @@
 
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
-#include <magenta/device/vfs.h>
 #include <magenta/device/ramdisk.h>
-#include <magenta/new.h>
+#include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <merkle/digest.h>
 #include <merkle/tree.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>

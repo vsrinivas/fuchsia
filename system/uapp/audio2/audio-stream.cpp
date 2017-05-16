@@ -6,12 +6,12 @@
 #include <inttypes.h>
 #include <magenta/assert.h>
 #include <magenta/device/audio2.h>
-#include <magenta/new.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mx/channel.h>
 #include <mx/handle.h>
 #include <mx/vmo.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/limits.h>

@@ -6,11 +6,11 @@
 
 #include <magenta/thread_dispatcher.h>
 
-#include <new.h>
 #include <trace.h>
 
 #include <magenta/handle.h>
 #include <magenta/process_dispatcher.h>
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

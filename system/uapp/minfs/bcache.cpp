@@ -9,7 +9,7 @@
 
 #include <fs/trace.h>
 
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 

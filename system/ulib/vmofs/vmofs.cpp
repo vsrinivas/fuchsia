@@ -6,8 +6,8 @@
 
 #include <string.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
 
 namespace vmofs {

@@ -7,12 +7,12 @@
 #include <magenta/job_dispatcher.h>
 
 #include <err.h>
-#include <new.h>
 
 #include <kernel/auto_lock.h>
 
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/policy.h>
+#include <mxalloc/new.h>
 
 constexpr mx_rights_t kDefaultJobRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE |

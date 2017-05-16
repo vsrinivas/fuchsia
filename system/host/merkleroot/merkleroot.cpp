@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <merkle/digest.h>
 #include <merkle/tree.h>
 #include <mxtl/unique_ptr.h>

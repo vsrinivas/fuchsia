@@ -15,7 +15,7 @@
 #include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/prng.h>
-#include <new.h>
+#include <mxcpp/new.h>
 #include <mxtl/algorithm.h>
 #include <lk/init.h>
 #include <string.h>

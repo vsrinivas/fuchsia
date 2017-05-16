@@ -9,10 +9,11 @@
 
 #include <magenta/compiler.h>
 
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 #include <magenta/threads.h>
+
+#include <mxalloc/new.h>
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>

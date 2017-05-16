@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <bitmap/rle-bitmap.h>
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <unittest/unittest.h>
 

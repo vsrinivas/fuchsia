@@ -6,7 +6,6 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <new.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -32,6 +31,7 @@
 #include <magenta/user_thread.h>
 #include <magenta/wait_set_dispatcher.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/atomic.h>
 #include <mxtl/ref_ptr.h>
 

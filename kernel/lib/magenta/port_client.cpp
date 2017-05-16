@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <platform.h>
 
 #include <kernel/mutex.h>

@@ -17,7 +17,6 @@
 #include <lib/console.h>
 #include <list.h>
 #include <lk/init.h>
-#include <new.h>
 #include <pow2.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +25,7 @@
 #include "pmm_arena.h"
 
 #include <magenta/thread_annotations.h>
+#include <mxcpp/new.h>
 #include <mxtl/intrusive_double_list.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)

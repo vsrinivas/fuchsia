@@ -8,13 +8,8 @@
 
 #include <magenta/errors.h>
 #include <magenta/types.h>
+#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
-
-#if _KERNEL
-#include <new.h>
-#else // _KERNEL
-#include <magenta/new.h>
-#endif
 
 namespace bitmap {
 

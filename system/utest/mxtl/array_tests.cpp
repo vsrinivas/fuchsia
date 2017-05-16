@@ -4,7 +4,7 @@
 
 #include <mxtl/array.h>
 
-#include <magenta/cpp.h>
+#include <mxalloc/new.h>
 #include <unittest/unittest.h>
 
 namespace {

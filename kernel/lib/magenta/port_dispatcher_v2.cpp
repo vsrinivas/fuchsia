@@ -8,13 +8,14 @@
 
 #include <assert.h>
 #include <err.h>
-#include <new.h>
 #include <platform.h>
 #include <pow2.h>
 
 #include <magenta/compiler.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/port.h>
+
+#include <mxalloc/new.h>
 
 #include <kernel/auto_lock.h>
 

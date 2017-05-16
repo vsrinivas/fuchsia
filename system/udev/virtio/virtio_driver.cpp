@@ -11,10 +11,10 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
 #include <magenta/compiler.h>
-#include <magenta/new.h>
 #include <magenta/types.h>
 
 #include "block.h"

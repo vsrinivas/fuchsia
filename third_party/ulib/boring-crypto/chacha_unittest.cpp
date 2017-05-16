@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <new.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest.h>
 

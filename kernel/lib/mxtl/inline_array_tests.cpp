@@ -5,8 +5,8 @@
 #include <mxtl/inline_array.h>
 
 #include <stddef.h>
-#include <magenta/new.h>
-#include <unittest/unittest.h>
+#include <mxalloc/new.h>
+#include <unittest.h>
 
 namespace {
 
@@ -31,7 +31,7 @@ struct TestType {
 size_t TestType::ctor_run_count = 0u;
 size_t TestType::dtor_run_count = 0u;
 
-bool inline_test() {
+bool inline_test(void* unused) {
     BEGIN_TEST;
 
     for (size_t sz = 0u; sz <= 3u; sz++) {
@@ -39,7 +39,7 @@ bool inline_test() {
         {
             AllocChecker ac;
             mxtl::InlineArray<TestType, 3u> ia(&ac, sz);
-            ASSERT_TRUE(ac.check(), "");
+            EXPECT_TRUE(ac.check(), "");
         }
         EXPECT_EQ(TestType::ctor_run_count, sz, "");
         EXPECT_EQ(TestType::dtor_run_count, sz, "");
@@ -48,7 +48,7 @@ bool inline_test() {
     END_TEST;
 }
 
-bool non_inline_test() {
+bool non_inline_test(void* unused) {
     static const size_t test_sizes[] = { 4u, 5u, 6u, 10u, 100u, 1000u };
 
     BEGIN_TEST;
@@ -60,7 +60,7 @@ bool non_inline_test() {
         {
             AllocChecker ac;
             mxtl::InlineArray<TestType, 3u> ia(&ac, sz);
-            ASSERT_TRUE(ac.check(), "");
+            EXPECT_TRUE(ac.check(), "");
         }
         EXPECT_EQ(TestType::ctor_run_count, sz, "");
         EXPECT_EQ(TestType::dtor_run_count, sz, "");
@@ -71,7 +71,7 @@ bool non_inline_test() {
 
 }  // namespace
 
-BEGIN_TEST_CASE(inline_array_tests)
-RUN_NAMED_TEST("inline test", inline_test)
-RUN_NAMED_TEST("non-inline test", non_inline_test)
-END_TEST_CASE(inline_array_tests);
+UNITTEST_START_TESTCASE(inline_array_tests)
+UNITTEST("inline test", inline_test)
+UNITTEST("non-inline test", non_inline_test)
+UNITTEST_END_TESTCASE(inline_array_tests, "inlinearraytests", "Inline array test", nullptr, nullptr);

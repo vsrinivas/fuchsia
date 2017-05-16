@@ -11,8 +11,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
 #include "filesystems.h"

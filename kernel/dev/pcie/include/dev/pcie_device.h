@@ -22,7 +22,6 @@
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
-#include <new.h>
 #include <sys/types.h>
 
 /* Fwd decls */

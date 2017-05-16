@@ -13,8 +13,8 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
-#include <magenta/new.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
 

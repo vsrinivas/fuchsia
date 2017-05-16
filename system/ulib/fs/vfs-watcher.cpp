@@ -14,7 +14,7 @@
 #endif
 
 #include <fs/vfs.h>
-#include <magenta/new.h>
+#include <mxalloc/new.h>
 
 namespace fs {
 

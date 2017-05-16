@@ -14,7 +14,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/heap_wrapper.c \
 	$(LOCAL_DIR)/page_alloc.c \
-	$(LOCAL_DIR)/new.cpp
 
 # pick a heap implementation
 ifndef LK_HEAP_IMPLEMENTATION

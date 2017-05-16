@@ -9,8 +9,8 @@
 #include <threads.h>
 
 #include <fs/vfs.h>
-#include <magenta/new.h>
 #include <magenta/thread_annotations.h>
+#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>

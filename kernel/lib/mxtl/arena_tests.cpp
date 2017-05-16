@@ -7,6 +7,7 @@
 #include <mxtl/arena.h>
 
 #include <kernel/vm/vm_aspace.h>
+#include <mxalloc/new.h>
 #include <unittest.h>
 
 using mxtl::Arena;

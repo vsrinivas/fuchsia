@@ -15,9 +15,9 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <magenta/cpp.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
 #include <pretty/hexdump.h>

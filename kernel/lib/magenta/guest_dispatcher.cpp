@@ -8,7 +8,7 @@
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/guest_dispatcher.h>
 #include <magenta/hypervisor_dispatcher.h>
-#include <new.h>
+#include <mxalloc/new.h>
 
 constexpr mx_rights_t kDefaultGuestRights = MX_RIGHT_EXECUTE;
 

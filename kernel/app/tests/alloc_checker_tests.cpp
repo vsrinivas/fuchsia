@@ -6,9 +6,9 @@
 
 #include "tests.h"
 
-#include <new.h>
-#include <unittest.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
+#include <unittest.h>
 
 static bool alloc_checker_ctor(void* context) {
     BEGIN_TEST;

@@ -8,9 +8,9 @@
 #include <unistd.h>
 
 #include <fs/mapped-vmo.h>
-#include <magenta/new.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <mxalloc/new.h>
 #include <mxtl/unique_ptr.h>
 
 mx_status_t MappedVmo::Create(size_t size, mxtl::unique_ptr<MappedVmo>* out) {
@@ -48,4 +48,3 @@ MappedVmo::~MappedVmo() {
     mx_vmar_unmap(mx_vmar_root_self(), addr_, len_);
     mx_handle_close(vmo_);
 }
-

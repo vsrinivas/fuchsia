@@ -40,6 +40,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
+    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/acpisvc-client \

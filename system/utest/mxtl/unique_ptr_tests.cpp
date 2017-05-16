@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include <magenta/cpp.h>
+#include <mxalloc/new.h>
 #include <unittest/unittest.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>

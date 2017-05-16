@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-watcher.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

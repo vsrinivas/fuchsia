@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <list.h>
-#include <new.h>
 #include <rand.h>
 #include <string.h>
 #include <trace.h>
@@ -35,6 +34,8 @@
 #include <magenta/user_copy.h>
 #include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
+
+#include <mxalloc/new.h>
 
 #define LOCAL_TRACE 0
 

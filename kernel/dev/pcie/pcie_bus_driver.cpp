@@ -13,8 +13,8 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lk/init.h>
+#include <mxalloc/new.h>
 #include <mxtl/limits.h>
-#include <new.h>
 #include <trace.h>
 
 /* TODO(johngro) : figure this out someday.

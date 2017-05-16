@@ -16,7 +16,7 @@ MODULE_SRCS += \
 MODULE_NAME := bitmap-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxcpp \
+    system/ulib/mxalloc \
     system/ulib/mxtl \
 
 MODULE_LIBS := \
