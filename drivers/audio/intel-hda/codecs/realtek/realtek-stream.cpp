@@ -458,8 +458,9 @@ mx_status_t RealtekStream::OnActivateLocked() {
     // capabilities.
     const Command SETUP[] = {
         { props_.pc_nid,   GET_PARAM(CodecParam::AW_CAPS),  THUNK(ProcessPinWidgetCaps) },
-        { props_.conv_nid, GET_PARAM(CodecParam::AW_CAPS),  THUNK(ProcessConverterWidgetCaps) },
+        { props_.pc_nid,   GET_CONFIG_DEFAULT,              THUNK(ProcessPinCfgDefaults) },
         { props_.pc_nid,   GET_PARAM(CodecParam::PIN_CAPS), THUNK(ProcessPinCaps) },
+        { props_.conv_nid, GET_PARAM(CodecParam::AW_CAPS),  THUNK(ProcessConverterWidgetCaps) },
     };
 
     return RunCmdListLocked(SETUP, countof(SETUP));
@@ -491,6 +492,11 @@ mx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResp
     return UpdateSetupProgressLocked(PIN_COMPLEX_SETUP_COMPLETE);
 }
 
+mx_status_t RealtekStream::ProcessPinCfgDefaults(const Command& cmd, const CodecResponse& resp) {
+    pc_.cfg_defaults.raw_data_ = resp.data;
+    return NO_ERROR;
+}
+
 mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecResponse& resp) {
     pc_.pin_caps.raw_data_ = resp.data;
 
@@ -499,6 +505,20 @@ mx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
         const char* tag = is_input() ? "input" : "output";
         LOG("ERROR: Stream configured for %s, but pin complex cannot %s\n", tag, tag);
         return ERR_BAD_STATE;
+    }
+
+    // Is the Jack Detect Override bit set in our config defaults?  If so,
+    // force-clear all of the bits in the pin caps which indicate an ability to
+    // perform presence detection and impedence sensing.  Even though hardware
+    // technically has the ability to perform presence detection, the
+    // BIOS/Device manufacturer is trying to tell us that presence detection
+    // circuitry has not been wired up, and that this stream is hardwired.
+    //
+    if (pc_.cfg_defaults.jack_detect_override()) {
+        static constexpr uint32_t mask = AW_PIN_CAPS_FLAG_CAN_IMPEDANCE_SENSE
+                                       | AW_PIN_CAPS_FLAG_TRIGGER_REQUIRED
+                                       | AW_PIN_CAPS_FLAG_CAN_PRESENCE_DETECT;
+        pc_.pin_caps.raw_data_ &= ~mask;
     }
 
     // Can this stream determine if it is connected or not?  If not, then we
