@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "boringssl_libssl"
+    ],
     "labels": [
         "//apps/ledger",
         "//apps/ledger/src:tests"
