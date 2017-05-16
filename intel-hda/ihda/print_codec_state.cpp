@@ -101,7 +101,7 @@ void Dump(const AudioWidgetState::StreamFormat& format) {
 }
 
 #define FMT(fmt) "%s%17s : " fmt, pad
-void Dump(const AudioWidgetState::ConfigDefaults& cfg) {
+void Dump(const ConfigDefaults& cfg) {
     static const char* pad = "+     \\-- ";
     const char *tmp, *tmp2;
 

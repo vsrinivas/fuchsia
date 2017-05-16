@@ -88,21 +88,6 @@ struct AudioWidgetState {
         AmpState amp_state_;
     };
 
-    // Section 7.3.3.31.  Present only in pin complexes
-    struct ConfigDefaults {
-        uint8_t port_connectivity() const { return static_cast<uint8_t>((raw_data_ >> 30) & 0x03); }
-        uint8_t location()          const { return static_cast<uint8_t>((raw_data_ >> 24) & 0x3F); }
-        uint8_t default_device()    const { return static_cast<uint8_t>((raw_data_ >> 20) & 0x0F); }
-        uint8_t connection_type()   const { return static_cast<uint8_t>((raw_data_ >> 16) & 0x0F); }
-        uint8_t color()             const { return static_cast<uint8_t>((raw_data_ >> 12) & 0x0F); }
-        uint8_t misc()              const { return static_cast<uint8_t>((raw_data_ >>  8) & 0x0F); }
-        uint8_t default_assoc()     const { return static_cast<uint8_t>((raw_data_ >>  4) & 0x0F); }
-        uint8_t sequence()          const { return static_cast<uint8_t>((raw_data_ >>  0) & 0x0F); }
-        bool jack_detect_override() const { return (misc() & 0x01) != 0; }
-
-        uint32_t raw_data_;
-    };
-
     explicit AudioWidgetState(const AudioWidgetCaps& caps) : caps_(caps) { }
 
     const AudioWidgetCaps caps_;
