@@ -71,7 +71,7 @@ build() {
 }
 
 declare CLEAN="${CLEAN:-false}"
-declare SRCDIR="${SRCDIR:-}"
+declare SRCDIR="${SRCDIR:-${ROOT_DIR}/third_party/qemu}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare DESTDIR="${DESTDIR:-${OUTDIR}}"
 declare JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN)}"
@@ -86,15 +86,6 @@ while getopts "cd:j:o:s:" opt; do
     *) usage;;
   esac
 done
-
-if [[ ! -d "${SRCDIR}" ]]; then
-  # Do all our work in a temporary directory, then rm it when we're done.
-  readonly TEMPDIR="$(mktemp -d ${ROOT_DIR}/qemu.XXXXXXXXXX)"
-  trap "rm -rf -- ${TEMPDIR}" EXIT
-
-  git clone --recursive "https://fuchsia.googlesource.com/third_party/qemu" "${TEMPDIR}"
-  SRCDIR="${TEMPDIR}"
-fi
 
 readonly CLEAN SRCDIR OUTDIR DESTDIR JOBS
 
