@@ -20,7 +20,7 @@ struct ktrace_probe_info {
     ktrace_probe_info_t* next;
     const char* name;
     uint32_t num;
-};
+} __ALIGNED(16); // align on multiple of 16 to match linker packing of the ktrace_probe section
 
 void* ktrace_open(uint32_t tag);
 void ktrace_tiny(uint32_t tag, uint32_t arg);
