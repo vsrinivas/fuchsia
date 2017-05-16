@@ -17,7 +17,7 @@ All of these implementations share the algorithm documented herein.
  * Block size: 8kb, 0 padded.
  * Root digest size: 32 bytes.
  * Hash algorithm: SHA-256.
- * Block digest computation: SHA-256((offset | level) + data)
+ * Block digest computation: SHA-256((offset | level) + input length + data)
 
 ## Definitions
 
@@ -36,14 +36,18 @@ the current level, and the current level index.
 
  1. Initialize the level with an index, an offset starting at 0, and an empty
     list of hashes.
- 2. For each 8kb of input, compute the next block identity by taking the binary
-    OR of the the level index and the current offset.
- 3. Take the SHA-256 hash of the identity and 8kb of input data, and append it
-    to the levels list of hashes. Increment the offset by 32.
- 4. Repeat 1-3 until all input is consumed, padding the last input block with 0
-    if it does not align on 8kb.
- 5. If the length of hashes is 32, finish.
- 6. If the length of hashes is not 8kb aligned, 0 fill up to an 8kb alignment.
+ 2. For each 8kb (or remainder of) of input, compute the next block identity by
+    taking the binary OR of the the level index and the current offset.
+ 3. Init a SHA-256 digest, append to it the identity, the length of the
+    input, the input, and if the input is shorter than 8kb, a pad of 0 up to
+    8kb.
+ 4. Append the output of the digest to the levels list of hashes. Increment
+    the offset by 32.
+ 5. Repeat 1-4 until all input is consumed.
+ 6. If the length of hashes is 32, finish.
+ 7. If the length of hashes is not 8kb aligned, 0 fill up to an 8kb
+    alignment and compute more levels until there is a root level containing a
+    single 32 byte digest.
 
 ## Computation of a root digest
 
@@ -60,17 +64,17 @@ the SHA-256 of 8 0 bytes, the block identity of a single 0 length block.
 ## Example values
 
  * The empty digest:
- `af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc`
+ `15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b`
  * 8192 bytes of `0xff` - "oneblock"
- `85a54736b35f5bc8ed6b1832f01faf3d6448f24fefa7054331a5e9bc16036b32`
+ `68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737`
  * 65536 bytes of `0xff` - "small"
- `733ac7663521c2aadf131471b3ada067b0d29366ad258737c08d855398304d03`
+ `f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf`
  * 2105344 bytes of `0xff` - "large"
- `26af21232d940f91ab8a44e5136255230fe04732d3718009130e7bc514bdd480`
+ `7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67`
  * 2109440 bytes of `0xff` - "unaligned"
- `ec80578cb472963f0986fc4b079678fe727ec6941527f691d2d7fa0c1a7797e3`
+ `7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43`
  * `0xff0080` bytes filled with repetitions of `0xff0080` - "fuchsia"
- `25b19153c5175b5bb20faafadda0d3712403c4e93370c37d05864f3e6467b9e5`
+ `2feb488cffc976061998ac90ce7292241dfa86883c0edc279433b5c4370d0f30`
 
 
 [merkletree]: https://en.wikipedia.org/wiki/Merkle_tree "Merkle Tree"
