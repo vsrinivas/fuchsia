@@ -59,11 +59,30 @@ bool Arm64AssemblyGenerator::syscall(ofstream& os, const Syscall& sc) {
     return os.good();
 }
 
+bool KernelBranchGenerator::header(ofstream& os) {
+    os << "start_syscall_dispatch\n";
+    return os.good();
+}
+
+bool KernelBranchGenerator::syscall(ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso()) {
+        return os.good();
+    }
+    os << "syscall_dispatch " << sc.num_kernel_args() << " " << sc.name << "\n";
+    return os.good();
+}
+
 bool SyscallNumbersGenerator::syscall(ofstream& os, const Syscall& sc) {
     if (sc.is_vdso())
         return true;
 
+    num_calls_++;
     os << define_prefix_ << sc.name << " " << sc.index << "\n";
+    return os.good();
+}
+
+bool SyscallNumbersGenerator::footer(ofstream& os) {
+    os << define_prefix_ << "COUNT " << num_calls_ << "\n";
     return os.good();
 }
 

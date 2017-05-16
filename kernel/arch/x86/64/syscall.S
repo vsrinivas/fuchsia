@@ -7,6 +7,227 @@
 
 #include <asm.h>
 #include <arch/x86/mp.h>
+#include <magenta/mx-syscall-numbers.h>
+
+//
+// Macros for preparing ABI conformant calls for syscall wrappers.
+//
+// syscall_8(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, arg_8, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// arg_4 from r10 to rcx
+// arg_5 from r8  to r8
+// arg_6 from r9  to r9
+// arg_7 from r12 to (%rsp)
+// arg_8 from r13 to 8(%rsp)
+// rip   from rcx to 16(%rsp)
+//
+.macro pre_8_args
+    pre_push 3
+    push    %rcx
+    push    %r13
+    push    %r12
+
+    /* move arg 4 into the proper register for calling convention */
+    mov     %r10, %rcx
+.endm
+
+.macro post_8_args
+    post_pop 3
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_7(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// arg_4 from r10 to rcx
+// arg_5 from r8  to r8
+// arg_6 from r9  to r9
+// arg_7 from r12 to (rsp)
+// rip   from rcx to 8(rsp)
+//
+.macro pre_7_args
+    pre_push 2
+    push    %rcx
+    push    %r12
+    mov     %r10, %rcx
+.endm
+
+.macro post_7_args
+    post_pop 2
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_6(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// arg_4 from r10 to rcx
+// arg_5 from r8  to r8
+// arg_6 from r9  to r9
+// rip   from rcx to (rsp)
+//
+.macro pre_6_args
+    pre_push 1
+    push    %rcx
+    mov     %r10, %rcx
+.endm
+
+.macro post_6_args
+    post_pop 1
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_5(arg_1, arg_2, arg_3, arg_4, arg_5, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// arg_4 from r10 to rcx
+// arg_5 from r8  to r8
+// rip   from rcx to r9
+//
+.macro pre_5_args
+    pre_push 0
+    mov     %rcx, %r9
+    mov     %r10, %rcx
+.endm
+
+.macro post_5_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_4(arg_1, arg_2, arg_3, arg_4, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// arg_4 from r10 to rcx
+// rip   from rcx to r8
+//
+.macro pre_4_args
+    pre_push 0
+    mov     %rcx, %r8
+    mov     %r10, %rcx
+.endm
+
+.macro post_4_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_3(arg_1, arg_2, arg_3, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// arg_3 from rdx to rdx
+// rip   from rcx to rcx
+//
+.macro pre_3_args
+    pre_push 0
+.endm
+
+.macro post_3_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_2(arg_1, arg_2, rip)
+//
+// arg_1 from rdi to rdi
+// arg_2 from rsi to rsi
+// rip   from rcx to rdx
+//
+.macro pre_2_args
+    pre_push 0
+    mov     %rcx, %rdx
+.endm
+
+.macro post_2_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+//
+// syscall_1(arg_1, rip)
+//
+// arg_1 from rdi to rdi
+// rip   from rcx to rsi
+//
+.macro pre_1_args
+    pre_push 0
+    mov    %rcx, %rsi
+.endm
+
+.macro post_1_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+
+//
+// syscall_0(rip)
+//
+// rip   from rcx to rdi
+//
+.macro pre_0_args
+    pre_push 0
+    mov    %rcx, %rdi
+.endm
+
+.macro post_0_args
+    post_pop 0
+    jmp     .Lcleanup_and_return
+.endm
+
+// x86_syscall (below) leaves the stack misaligned by 8, so the macros
+// need to account for that.
+.macro pre_push n
+.if \n % 2 == 0
+    push    $0
+.endif
+.endm
+
+.macro post_pop n
+.if \n % 2 == 0
+    add     $(\n + 1) * 8, %rsp
+.else
+    add     $\n * 8, %rsp
+.endif
+.endm
+
+
+// Adds a label for making the syscall and adds it to the jump table.
+.macro syscall_dispatch nargs, syscall
+    .pushsection .text.syscall-dispatch,"ax",%progbits
+    .Lcall_\syscall\():
+        pre_\nargs\()_args
+        call wrapper_\syscall
+        post_\nargs\()_args
+    .popsection
+    .pushsection .rodata.syscall-table,"a",%progbits
+        .quad .Lcall_\syscall
+    .popsection
+.endm
+
+// Adds the label for the jump table.
+.macro start_syscall_dispatch
+    .pushsection .rodata.syscall-table,"a",%progbits
+    .Lcall_wrapper_table:
+    .popsection
+.endm
 
 .text
 
@@ -50,26 +271,27 @@ FUNCTION(x86_syscall)
     push    %gs:PERCPU_SAVED_USER_SP_OFFSET
 
     push    %r11 /* user RFLAGS */
-
-    /* start to push the rest of the args on the stack as per C calling convention */
     push    %rcx /* user RIP */
-    push    %rax /* syscall # */
-    push    %r13 /* arg 8 */
-    push    %r12 /* arg 7 */
 
-    /* move arg 4 into the proper register for calling convention */
-    mov     %r10, %rcx
+    // Any changes to the stack here need to be reflected in
+    // pre_push and post_pop macros above to maintain alignment.
 
-    /* call the high level routine */
-    call    x86_64_syscall
+    // Verify the syscall is in range and jump to it.
+    cmp     $MX_SYS_COUNT, %eax
+    jae     .Lunknown_syscall
+    jmp     *.Lcall_wrapper_table(, %rax, 8)
+#include <magenta/syscall-kernel-branches.S>
+
+.Lunknown_syscall:
+    pre_0_args
+    call    unknown_syscall
+    post_0_args
+
+.Lcleanup_and_return:
 
     /* at this point:
        rax = syscall result
        rdx = non-zero if thread was signaled */
-
-    /* skip some of the arguments we pushed on the stack (rax, r13 and r12).
-     * r12 and r13 are callee-saved, so they won't have been clobbered. */
-    add     $8 * 3, %rsp
 
     /* restore the registers from which SYSRET restores user state */
     pop     %rcx /* user RIP */
@@ -156,4 +378,3 @@ FUNCTION(x86_syscall)
     jmp     .Lreturn_from_syscall
 
 END(x86_syscall)
-

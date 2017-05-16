@@ -456,10 +456,7 @@ void x86_exception_handler(x86_iframe_t *frame)
         frame->vector, frame->ip);
 }
 
-__WEAK struct x86_64_syscall_result x86_64_syscall(
-    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-    uint64_t syscall_num, uint64_t ip)
+__WEAK x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip)
 {
     PANIC_UNIMPLEMENTED;
 }

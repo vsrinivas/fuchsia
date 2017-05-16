@@ -10,8 +10,8 @@ using std::ofstream;
 using std::string;
 using std::vector;
 
-static auto in = std::string(4u, ' ');
-static auto inin = std::string(8u, ' ');
+static const string in = "    ";
+static const string inin = in + in;
 
 void write_extern_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix) {
     os << "extern \"C\" {\nextern ";

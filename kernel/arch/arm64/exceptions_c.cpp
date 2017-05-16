@@ -126,14 +126,13 @@ static void arm64_syscall_handler(struct arm64_iframe_long *iframe, uint excepti
                                   uint32_t esr)
 {
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
-    uint32_t iss = BITS(esr, 24, 0);
 
     if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* trapped inside the kernel, this is bad */
         printf("syscall from in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
-    arm64_syscall(iframe, (ec == 0x15) ? true : false, iss & 0xffff, iframe->elr);
+    arm64_syscall(iframe, (ec == 0x15) ? true : false, iframe->elr);
 }
 
 static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,

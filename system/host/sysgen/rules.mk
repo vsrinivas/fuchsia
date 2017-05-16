@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/generator.cpp \
     $(LOCAL_DIR)/header_generator.cpp \
     $(LOCAL_DIR)/kernel_invocation_generator.cpp \
+    $(LOCAL_DIR)/kernel_wrapper_generator.cpp \
     $(LOCAL_DIR)/rust_binding_generator.cpp \
     $(LOCAL_DIR)/syscall_parser.cpp \
     $(LOCAL_DIR)/sysgen.cpp \

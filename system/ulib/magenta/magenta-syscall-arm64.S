@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Magenta expects some magic bits in the svc instruction.
-// Encapsulate that here, so that callers do not have to set it manually.
 .macro magenta_syscall num, name, caller
     mov x16, #\num
-    svc #0xf0f
+    svc #0x0
 // This symbol at the return address identifies this as an approved call site.
     .hidden CODE_SYSRET_\name\()_VIA_\caller
 CODE_SYSRET_\name\()_VIA_\caller\():

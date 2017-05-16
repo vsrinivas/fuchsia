@@ -257,6 +257,7 @@ bool Syscall::will_wrap(const string& type) const {
     return !is_no_wrap() && type.find("reinterpret_cast") != string::npos;
 }
 
+// TODO(andymutton): Rework this after changing arm and removing the invocation generator.
 string Syscall::maybe_wrap(const string& type) const {
     return will_wrap(type) ? "make_user_ptr(" + type + ")" : type;
 }

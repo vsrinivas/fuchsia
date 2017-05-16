@@ -61,9 +61,7 @@ void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
 void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
                       uintptr_t pc, uint64_t rflags) __NO_RETURN;
 
-struct x86_64_syscall_result x86_64_syscall(
-    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+struct x86_64_syscall_result unknown_syscall(
     uint64_t syscall_num, uint64_t ip);
 
 void x86_syscall(void);
