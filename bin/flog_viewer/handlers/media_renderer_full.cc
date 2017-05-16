@@ -49,5 +49,43 @@ void MediaRendererFull::SetMediaType(media::MediaTypePtr type) {
   std::cout << outdent;
 }
 
+void MediaRendererFull::PrimeRequested() {
+  std::cout << entry() << "MediaRenderer.PrimeRequested" << std::endl;
+}
+
+void MediaRendererFull::CompletingPrime() {
+  std::cout << entry() << "MediaRenderer.CompletingPrime" << std::endl;
+}
+
+void MediaRendererFull::ScheduleTimelineTransform(
+    media::TimelineTransformPtr timeline_transform) {
+  std::cout << entry() << "MediaRenderer.ScheduleTimelineTransform"
+            << std::endl;
+  std::cout << indent;
+  std::cout << begl << "timeline_transform: " << timeline_transform
+            << std::endl;
+  std::cout << outdent;
+}
+
+void MediaRendererFull::ApplyTimelineTransform(
+    media::TimelineTransformPtr timeline_transform) {
+  std::cout << entry() << "MediaRenderer.ApplyTimelineTransform" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "timeline_transform: " << timeline_transform
+            << std::endl;
+  std::cout << outdent;
+}
+
+void MediaRendererFull::EngagePacket(int64_t current_pts,
+                                     int64_t packet_pts,
+                                     uint64_t packet_label) {
+  std::cout << entry() << "MediaRenderer.EngagePacket" << std::endl;
+  std::cout << indent;
+  std::cout << begl << "current_pts: " << AsTime(current_pts) << std::endl;
+  std::cout << begl << "packet_pts: " << AsTime(packet_pts) << std::endl;
+  std::cout << begl << "packet_label: " << packet_label << std::endl;
+  std::cout << outdent;
+}
+
 }  // namespace handlers
 }  // namespace flog

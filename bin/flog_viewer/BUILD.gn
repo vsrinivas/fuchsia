@@ -60,6 +60,7 @@ executable("flog_viewer") {
 
   deps = [
     "//application/lib/app",
+    "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",
     "//lib/ftl",

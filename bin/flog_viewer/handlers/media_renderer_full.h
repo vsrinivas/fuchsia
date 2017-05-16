@@ -29,6 +29,20 @@ class MediaRendererFull : public ChannelHandler,
 
   void SetMediaType(media::MediaTypePtr type) override;
 
+  void PrimeRequested() override;
+
+  void CompletingPrime() override;
+
+  void ScheduleTimelineTransform(
+      media::TimelineTransformPtr timeline_transform) override;
+
+  void ApplyTimelineTransform(
+      media::TimelineTransformPtr timeline_transform) override;
+
+  void EngagePacket(int64_t current_pts,
+                    int64_t packet_pts,
+                    uint64_t packet_label) override;
+
  private:
   media::logs::MediaRendererChannelStub stub_;
   bool terse_;

@@ -29,6 +29,16 @@ std::shared_ptr<Accumulator> MediaPacketConsumerDigest::GetAccumulator() {
   return accumulator_;
 }
 
+std::shared_ptr<MediaPacketConsumerAccumulator::Packet>
+MediaPacketConsumerDigest::FindOutstandingPacket(uint64_t label) {
+  auto iter = accumulator_->outstanding_packets_.find(label);
+  if (iter == accumulator_->outstanding_packets_.end()) {
+    return nullptr;
+  }
+
+  return iter->second;
+}
+
 void MediaPacketConsumerDigest::BoundAs(uint64_t koid) {
   BindAs(koid);
 }
@@ -103,9 +113,9 @@ void MediaPacketConsumerDigest::PacketSupplied(uint64_t label,
   accumulator_->packets_.Add(packet->payload_size);
 
   accumulator_->outstanding_packets_.emplace(
-      label,
-      MediaPacketConsumerAccumulator::Packet::Create(
-          label, std::move(packet), payload_address, packets_outstanding));
+      label, MediaPacketConsumerAccumulator::Packet::Create(
+                 label, std::move(packet), payload_address, packets_outstanding,
+                 entry()->time_ns));
 }
 
 void MediaPacketConsumerDigest::ReturningPacket(uint64_t label,
