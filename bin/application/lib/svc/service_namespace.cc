@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <magenta/device/vfs.h>
 #include <mxio/util.h>
-#include <mxtl/ref_ptr.h>
+
 #include <utility>
 
 #include "lib/ftl/files/unique_fd.h"

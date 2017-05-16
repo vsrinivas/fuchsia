@@ -64,13 +64,18 @@ mx::process CreateProcess(
     const mx::job& job,
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
+    mx::channel service_root,
     fidl::InterfaceHandle<ApplicationEnvironment> environment) {
   fidl::Map<uint32_t, mx::handle> startup_handles =
       std::move(launch_info->startup_handles);
-  startup_handles.insert(MX_HND_TYPE_APPLICATION_ENVIRONMENT,
+  startup_handles.insert(PA_APP_ENVIRONMENT,
                          environment.PassHandle());
+
+  if (service_root)
+    startup_handles.insert(PA_SERVICE_ROOT, std::move(service_root));
+
   if (launch_info->services) {
-    startup_handles.insert(MX_HND_TYPE_APPLICATION_SERVICES,
+    startup_handles.insert(PA_APP_SERVICES,
                            launch_info->services.PassChannel());
   }
 
@@ -164,6 +169,10 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
 
   mtl::SetObjectName(job_.get(), label_);
+
+  app::ServiceProviderPtr services_backend;
+  host_->GetApplicationEnvironmentServices(services_backend.NewRequest());
+  services_.set_backend(std::move(services_backend));
 }
 
 ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() {
@@ -253,7 +262,7 @@ void ApplicationEnvironmentImpl::GetApplicationLauncher(
 
 void ApplicationEnvironmentImpl::GetServices(
     fidl::InterfaceRequest<ServiceProvider> services) {
-  host_->GetApplicationEnvironmentServices(std::move(services));
+  services_.AddBinding(std::move(services));
 }
 
 void ApplicationEnvironmentImpl::Duplicate(
@@ -350,7 +359,8 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     fidl::InterfaceRequest<ApplicationController> controller) {
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(
-      job_, std::move(package), std::move(launch_info), std::move(environment));
+      job_, std::move(package), std::move(launch_info),
+      services_.OpenAsDirectory(), std::move(environment));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process), url);

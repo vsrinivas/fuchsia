@@ -15,6 +15,7 @@
 #include "application/src/manager/application_controller_impl.h"
 #include "application/src/manager/application_environment_controller_impl.h"
 #include "application/src/manager/application_runner_holder.h"
+#include "application/src/manager/service_provider_bridge.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -93,6 +94,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
 
   fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
   fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
+
+  ServiceProviderBridge services_;
 
   ApplicationEnvironmentImpl* parent_;
   ApplicationEnvironmentHostPtr host_;
