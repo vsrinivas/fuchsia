@@ -30,9 +30,10 @@ struct ColorRgba {
 };
 
 struct Quaternion {
-  float i;
-  float j;
-  float k;
+  float x;
+  float y;
+  float z;
+  float w;
 };
 
 struct Transform {

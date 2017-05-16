@@ -244,9 +244,10 @@ mozart2::OpPtr NewSetTransformOp(uint32_t node_id,
   transform->anchor->x = anchor[0];
   transform->anchor->y = anchor[1];
   transform->anchor->z = anchor[2];
-  transform->rotation->i = quaternion[0];
-  transform->rotation->j = quaternion[1];
-  transform->rotation->k = quaternion[2];
+  transform->rotation->x = quaternion[0];
+  transform->rotation->y = quaternion[1];
+  transform->rotation->z = quaternion[2];
+  transform->rotation->w = quaternion[3];
 
   auto op = mozart2::Op::New();
   op->set_set_transform(std::move(set_transform));

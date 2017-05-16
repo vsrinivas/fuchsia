@@ -8,6 +8,11 @@
 
 namespace mozart {
 
+const float kZeroesFloat3[3] = {0.f, 0.f, 0.f};
+const float kOnesFloat3[3] = {1.f, 1.f, 1.f};
+// A quaterion that has no rotation.
+const float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
+
 // Resource creation.
 mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo);
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
