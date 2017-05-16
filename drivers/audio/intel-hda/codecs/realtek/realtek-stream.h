@@ -34,6 +34,8 @@ protected:
     // IntelHDAStreamBase implementation
     mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock()) final;
     void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock()) final;
+    void        OnChannelDeactivateLocked(const DispatcherChannel& channel)
+        __TA_REQUIRES(obj_lock()) final;
     mx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock()) final;
     mx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
         __TA_REQUIRES(obj_lock()) final;
@@ -46,6 +48,9 @@ protected:
     void OnGetGainLocked(audio2_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
     void OnSetGainLocked(const audio2_proto::SetGainReq& req,
                          audio2_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock()) final;
+    void OnPlugDetectLocked(DispatcherChannel* response_channel,
+                            const audio2_proto::PlugDetectReq& req,
+                            audio2_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock()) final;
 
 private:
     struct Command {
@@ -83,6 +88,15 @@ private:
         Command cmd_;
     };
 
+    // TODO(johngro) : Elminiate this complexity if/when we get to the point
+    // that audio streams have a 1:1 relationship with their clients (instead of
+    // 1:many)
+    struct NotifyTarget : mxtl::DoublyLinkedListable<mxtl::unique_ptr<NotifyTarget>> {
+        explicit NotifyTarget(mxtl::RefPtr<DispatcherChannel>&& ch) : channel(ch) { }
+        mxtl::RefPtr<DispatcherChannel> channel;
+    };
+    using NotifyTargetList = mxtl::DoublyLinkedList<mxtl::unique_ptr<NotifyTarget>>;
+
     // Bits used to track setup state machine progress.
     static constexpr uint32_t PIN_COMPLEX_SETUP_COMPLETE = (1u << 0);
     static constexpr uint32_t CONVERTER_SETUP_COMPLETE   = (1u << 1);
@@ -105,6 +119,9 @@ private:
     mx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
     float       ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
     mx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
+    void        AddPDNotificationTgtLocked(DispatcherChannel* channel) __TA_REQUIRES(obj_lock());
+    void        RemovePDNotificationTgtLocked(const DispatcherChannel& channel)
+        __TA_REQUIRES(obj_lock());
 
     // Setup state machine methods.
     mx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
@@ -128,12 +145,14 @@ private:
 
     // Setup state machine progress.
     uint32_t setup_progress_ __TA_GUARDED(obj_lock()) = 0;
-    bool            format_set_     __TA_GUARDED(obj_lock()) = false;
+    bool     format_set_     __TA_GUARDED(obj_lock()) = false;
 
     // Current gain and plug detect settings.
-    uint8_t cur_gain_steps_ __TA_GUARDED(obj_lock()) = 0;
-    bool    cur_mute_       __TA_GUARDED(obj_lock()) = false;
-    bool    plug_state_     __TA_GUARDED(obj_lock()) = true;
+    uint8_t   cur_gain_steps_ __TA_GUARDED(obj_lock()) = 0;
+    bool      cur_mute_       __TA_GUARDED(obj_lock()) = false;
+    bool      plug_state_     __TA_GUARDED(obj_lock()) = true;
+    mx_time_t last_plug_time_ __TA_GUARDED(obj_lock()) = 0;
+    NotifyTargetList plug_notify_targets_ __TA_GUARDED(obj_lock());
 
     // Coverter capabilities.
     struct {
