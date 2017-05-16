@@ -160,7 +160,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
       exit(1);
     }
-    if (!app_context_->environment_services()) {
+    if (!app_context_->has_environment_services()) {
       FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
       exit(1);
     }

@@ -45,9 +45,8 @@ class RunComponentApp : public app::ApplicationEnvironmentHost {
 
     // Make services from this environment available in the new environment.
     env_services_.SetDefaultServiceConnector(
-        [this](std::string service_name, mx::channel channel) {
-          context_->environment_services()->ConnectToService(
-              service_name, std::move(channel));
+        [this](std::string name, mx::channel channel) {
+          context_->ConnectToEnvironmentService(name, std::move(channel));
         });
 
     FTL_LOG(INFO) << "Running component " << component_id;
