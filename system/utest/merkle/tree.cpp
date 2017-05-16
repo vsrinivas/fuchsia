@@ -32,15 +32,15 @@ const size_t kUnaligned = kLarge + (kNodeSize / 2);
 // The hard-coded trees used for testing were created by using sha256sum on
 // files generated using echo -ne, dd, and xxd
 const char* kNoDataDigest =
-    "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc";
+    "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
 const char* kOneNodeDigest =
-    "85a54736b35f5bc8ed6b1832f01faf3d6448f24fefa7054331a5e9bc16036b32";
+    "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737";
 const char* kSmallDigest =
-    "733ac7663521c2aadf131471b3ada067b0d29366ad258737c08d855398304d03";
+    "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf";
 const char* kLargeDigest =
-    "26af21232d940f91ab8a44e5136255230fe04732d3718009130e7bc514bdd480";
+    "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67";
 const char* kUnalignedDigest =
-    "ec80578cb472963f0986fc4b079678fe727ec6941527f691d2d7fa0c1a7797e3";
+    "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43";
 
 // These tests use anonymously scoped globals to reduce the amount of repetitive
 // test setup.

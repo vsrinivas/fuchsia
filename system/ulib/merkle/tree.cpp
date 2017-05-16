@@ -13,6 +13,21 @@
 
 namespace merkle {
 
+namespace {
+
+uint32_t GetNodeLength(uint64_t offset, uint64_t data_len) {
+    MX_DEBUG_ASSERT(offset + Tree::kNodeSize > offset);
+    if (offset + Tree::kNodeSize <= data_len) {
+        return Tree::kNodeSize;
+    }
+    if (offset != data_len) {
+        return static_cast<uint32_t>(data_len - offset);
+    }
+    return 0;
+}
+
+} // namespace
+
 constexpr size_t Tree::kNodeSize;
 const size_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
 const size_t kMaxFailures = kDigestsPerNode;
@@ -77,6 +92,8 @@ mx_status_t Tree::CreateFinal(void* tree, Digest* digest) {
         digest_.Init();
         uint64_t locality = static_cast<uint64_t>(offset_ | level_);
         digest_.Update(&locality, sizeof(locality));
+        uint32_t length = 0;
+        digest_.Update(&length, sizeof(length));
         digest_.Final();
     }
     if (data_len_ <= kNodeSize) {
@@ -258,20 +275,15 @@ void Tree::HashNode(const void* data) {
     digest_.Init();
     uint64_t locality = offset | level_;
     digest_.Update(&locality, sizeof(locality));
-    size_t to_digest = data_len_ - offset_;
-    if (level_ == 0 && to_digest < kNodeSize) {
-        digest_.Update(bytes, to_digest);
-        if (to_digest != 0) {
-            size_t pad_len = kNodeSize - to_digest;
-            uint8_t pad[pad_len];
-            memset(pad, 0, pad_len);
-            digest_.Update(pad, pad_len);
-        }
-        offset_ = data_len_;
-    } else {
-        digest_.Update(bytes, kNodeSize);
-        offset_ += kNodeSize;
+    uint32_t length = GetNodeLength(offset_, data_len_);
+    digest_.Update(&length, sizeof(length));
+    digest_.Update(bytes, length);
+    if (level_ == 0 && length != 0 && length < kNodeSize) {
+        uint8_t pad[kNodeSize - length];
+        memset(pad, 0, kNodeSize - length);
+        digest_.Update(pad, kNodeSize - length);
     }
+    offset_ += length;
     digest_.Final();
 }
 
@@ -286,6 +298,8 @@ mx_status_t Tree::HashData(const void* data, size_t length, void* tree) {
             digest_.Init();
             uint64_t locality = offset_ | level_;
             digest_.Update(&locality, sizeof(locality));
+            uint32_t len = GetNodeLength(offset_, data_len_);
+            digest_.Update(&len, sizeof(len));
         }
         size_t left = static_cast<size_t>(kNodeSize - (offset_ % kNodeSize));
         left = mxtl::min(left, length);
