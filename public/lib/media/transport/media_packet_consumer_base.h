@@ -35,6 +35,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     const MediaPacketPtr& packet() { return packet_; }
     void* payload() { return payload_; }
     uint64_t payload_size() { return packet_->payload_size; }
+    uint64_t label() { return label_; }
 
    private:
     SuppliedPacket(uint64_t label,

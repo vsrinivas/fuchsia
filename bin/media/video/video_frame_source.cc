@@ -66,7 +66,12 @@ void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
 
   DiscardOldPackets();
 
-  // TODO(dalesat): Detect starvation.
+  if (packet_queue_.empty()) {
+    FLOG(log_channel_, EngagePacket(pts_, MediaPacket::kNoTimestamp, 0));
+  } else {
+    FLOG(log_channel_, EngagePacket(pts_, packet_queue_.front()->packet()->pts,
+                                    packet_queue_.front()->label()));
+  }
 }
 
 void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
@@ -213,8 +218,11 @@ void VideoFrameSource::GetTimelineConsumer(
 }
 
 void VideoFrameSource::Prime(const PrimeCallback& callback) {
+  FLOG(log_channel_, PrimeRequested());
   pts_ = kUnspecifiedTime;
   SetDemand(2);
+
+  FLOG(log_channel_, CompletingPrime());
   callback();  // TODO(dalesat): Wait until we get packets.
 }
 
@@ -223,6 +231,8 @@ void VideoFrameSource::SetTimelineTransform(
     const SetTimelineTransformCallback& callback) {
   FTL_DCHECK(timeline_transform);
   FTL_DCHECK(timeline_transform->reference_delta != 0);
+
+  FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
 
   if (timeline_transform->subject_time != kUnspecifiedTime) {
     MaybeClearEndOfStream();
@@ -290,6 +300,9 @@ void VideoFrameSource::MaybeApplyPendingTimelineChange(int64_t reference_time) {
       pending_timeline_function_.reference_time() > reference_time) {
     return;
   }
+
+  FLOG(log_channel_, ApplyTimelineTransform(
+                         TimelineTransform::From(pending_timeline_function_)));
 
   current_timeline_function_ = pending_timeline_function_;
   pending_timeline_function_ =
