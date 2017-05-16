@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
 #include <unordered_map>
 
 #include "escher/material/material.h"

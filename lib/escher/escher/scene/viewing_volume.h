@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
 #include <math.h>
 
 #include "escher/geometry/size_i.h"

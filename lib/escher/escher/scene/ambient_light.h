@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
-
 namespace escher {
 
 // Ambient light is emitted omnidirectionally from infinity.

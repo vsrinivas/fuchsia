@@ -4,7 +4,19 @@
 
 #pragma once
 
+#if defined(countof)
+// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
 #include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+
+#include <glm/gtc/quaternion.hpp>
 
 namespace escher {
 
