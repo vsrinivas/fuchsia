@@ -4,6 +4,7 @@
 
 #include <magenta/process.h>
 #include <magenta/processargs.h>
+#include <mxio/util.h>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
@@ -13,13 +14,13 @@ namespace app {
 
 ApplicationContext::ApplicationContext(
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ServiceProvider> outgoing_services)
+    fidl::InterfaceRequest<ServiceProvider> outgoing_services,
+    mx::channel service_root)
     : environment_(ApplicationEnvironmentPtr::Create(std::move(environment))),
-      outgoing_services_(std::move(outgoing_services)) {
-  if (environment_) {
-    environment_->GetServices(environment_services_.NewRequest());
+      outgoing_services_(std::move(outgoing_services)),
+      service_root_(std::move(service_root)) {
+  if (environment_)
     environment_->GetApplicationLauncher(launcher_.NewRequest());
-  }
 }
 
 ApplicationContext::~ApplicationContext() = default;
@@ -37,14 +38,23 @@ ApplicationContext::CreateFromStartupInfo() {
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfoNotChecked() {
   mx_handle_t environment =
-      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
+      mx_get_startup_handle(PA_APP_ENVIRONMENT);
   mx_handle_t services =
-      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
+      mx_get_startup_handle(PA_APP_SERVICES);
+
+  mx_handle_t service_root = mx_get_startup_handle(PA_SERVICE_ROOT);
 
   return std::make_unique<ApplicationContext>(
       fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
                                                     0u),
-      fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
+      fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)),
+      mx::channel(service_root));
+}
+
+void ApplicationContext::ConnectToEnvironmentService(
+    const std::string& interface_name, mx::channel channel) {
+  mxio_service_connect_at(service_root_.get(), interface_name.c_str(),
+                          channel.release());
 }
 
 }  // namespace app

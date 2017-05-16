@@ -22,7 +22,8 @@ class ApplicationContext {
  public:
   // The constructor is normally called by CreateFromStartupInfo().
   ApplicationContext(fidl::InterfaceHandle<ApplicationEnvironment> environment,
-                     fidl::InterfaceRequest<ServiceProvider> outgoing_services);
+                     fidl::InterfaceRequest<ServiceProvider> outgoing_services,
+                     mx::channel service_root);
 
   ~ApplicationContext();
 
@@ -48,13 +49,8 @@ class ApplicationContext {
   // May be null if the application does not have access to its environment.
   const ApplicationEnvironmentPtr& environment() const { return environment_; }
 
-  // Gets incoming services provided to the application by the host of
-  // its environment.
-  //
-  // May be null if the application does not have access to its environment.
-  const ServiceProviderPtr& environment_services() const {
-    return environment_services_;
-  }
+  // Whether this application was given services by its environment.
+  bool has_environment_services() const { return !!service_root_; }
 
   // Gets the application launcher service provided to the application by
   // its environment.
@@ -72,7 +68,7 @@ class ApplicationContext {
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
     fidl::InterfacePtr<Interface> interface_ptr;
-    environment_services_->ConnectToService(
+    ConnectToEnvironmentService(
         interface_name, interface_ptr.NewRequest().PassChannel());
     return interface_ptr;
   }
@@ -81,16 +77,20 @@ class ApplicationContext {
   // binding the service to an interface request.
   template <typename Interface>
   void ConnectToEnvironmentService(
-      fidl::InterfaceRequest<Interface> interface_request,
+      fidl::InterfaceRequest<Interface> request,
       const std::string& interface_name = Interface::Name_) {
-    environment_services_->ConnectToService(interface_name,
-                                            interface_request.PassChannel());
+    ConnectToEnvironmentService(interface_name, request.PassChannel());
   }
+
+  // Connects to a service provided by the application's environment,
+  // binding the service to a channel.
+  void ConnectToEnvironmentService(const std::string& interface_name,
+                                   mx::channel channel);
 
  private:
   ApplicationEnvironmentPtr environment_;
   ServiceProviderImpl outgoing_services_;
-  ServiceProviderPtr environment_services_;
+  mx::channel service_root_;
   ApplicationLauncherPtr launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
