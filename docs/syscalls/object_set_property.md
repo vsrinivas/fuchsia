@@ -16,8 +16,4 @@ mx_status_t mx_object_set_property(mx_handle_t handle, uint32_t property,
 
 ## DESCRIPTION
 
-## RETURN VALUE
-
-## ERRORS
-
-## SEE ALSO
+See [object_get_property()](object_get_property.md) for a full description.
