@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_TOOL_DOCTOR_COMMAND_H_
 #define APPS_LEDGER_SRC_TOOL_DOCTOR_COMMAND_H_
 
+#include <vector>
+
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
@@ -27,8 +29,8 @@ class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
 
  private:
   // cloud_provider::CommitWatcher:
-  void OnRemoteCommit(cloud_provider::Commit commit,
-                      std::string timestamp) override;
+  void OnRemoteCommits(std::vector<cloud_provider::Commit> commit,
+                       std::string timestamp) override;
 
   void OnConnectionError() override;
 

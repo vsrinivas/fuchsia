@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_COMMIT_WATCHER_H_
 #define APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_COMMIT_WATCHER_H_
 
+#include <vector>
+
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "lib/ftl/macros.h"
 
@@ -15,10 +17,11 @@ class CommitWatcher {
   CommitWatcher() {}
   virtual ~CommitWatcher() {}
 
-  // Called when a new commit is added to the cloud. |timestamp| is opaque
-  // to the client, but can be passed back to CloudProvider as a query
+  // Called when a new batch of commits is added to the cloud. |timestamp| is
+  // opaque to the client, but can be passed back to CloudProvider as a query
   // parameter.
-  virtual void OnRemoteCommit(Commit commit, std::string timestamp) = 0;
+  virtual void OnRemoteCommits(std::vector<Commit> commits,
+                               std::string timestamp) = 0;
 
   // Called upon failure to establish a network connection, or when such
   // connection breaks. No further commit notifications are delivered after this

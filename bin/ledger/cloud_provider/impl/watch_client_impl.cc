@@ -86,6 +86,8 @@ void WatchClientImpl::Handle(const std::string& path,
 
 void WatchClientImpl::ProcessRecord(Record record) {
   if (!batch_timestamp_.empty()) {
+    // There is a pending batch already, verify that the new commits is part of
+    // it.
     if (record.timestamp != batch_timestamp_) {
       FTL_LOG(ERROR) << "Two batches of commits are intermixed. "
                      << "This should not have happened, please file a bug.";
@@ -100,27 +102,21 @@ void WatchClientImpl::ProcessRecord(Record record) {
       HandleError();
       return;
     }
-    batch_.push_back(std::move(record));
-    if (batch_.size() == batch_size_) {
-      CommitBatch();
-    }
-    return;
+  } else {
+    // There is no pending batch, start a new one.
+    FTL_DCHECK(batch_.empty());
+    batch_timestamp_ = record.timestamp;
+    batch_size_ = record.batch_size;
+    batch_.reserve(batch_size_);
   }
 
-  // There is no pending batch.
-  if (record.batch_size == 1) {
-    // No need to start a batch for a single commit.
-    commit_watcher_->OnRemoteCommit(std::move(record.commit),
-                                    std::move(record.timestamp));
-    return;
-  }
-
-  // Start a new batch.
-  FTL_DCHECK(batch_.empty());
-  batch_timestamp_ = record.timestamp;
-  batch_size_ = record.batch_size;
-  batch_.reserve(batch_size_);
+  // Add the new commit to the batch.
   batch_.push_back(std::move(record));
+
+  // If the batch is complete, commit.
+  if (batch_.size() == batch_size_) {
+    CommitBatch();
+  }
 }
 
 void WatchClientImpl::CommitBatch() {
@@ -128,11 +124,12 @@ void WatchClientImpl::CommitBatch() {
   std::sort(batch_.begin(), batch_.end(), [](const auto& lhs, const auto& rhs) {
     return lhs.batch_position < rhs.batch_position;
   });
+  std::vector<Commit> commits;
   for (auto& record : batch_) {
-    // TODO(ppi): change the watcher API to accept a list of commits.
-    commit_watcher_->OnRemoteCommit(std::move(record.commit),
-                                    std::move(record.timestamp));
+    commits.push_back(std::move(record.commit));
   }
+  commit_watcher_->OnRemoteCommits(std::move(commits),
+                                   std::move(batch_timestamp_));
   batch_.clear();
   batch_timestamp_.clear();
   batch_size_ = 0;

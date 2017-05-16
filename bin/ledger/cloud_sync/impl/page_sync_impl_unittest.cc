@@ -216,7 +216,9 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
         watcher, commit = std::move(record.commit),
         timestamp = std::move(record.timestamp)
       ]() mutable {
-        watcher->OnRemoteCommit(std::move(commit), std::move(timestamp));
+        std::vector<cloud_provider::Commit> commits;
+        commits.push_back(std::move(commit));
+        watcher->OnRemoteCommits(std::move(commits), std::move(timestamp));
       }));
     }
   }
@@ -399,8 +401,9 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
   StartPageSync();
-  page_sync_.OnRemoteCommit(cloud_provider::Commit("id1", "content1", {}),
-                            "44");
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(cloud_provider::Commit("id1", "content1", {}));
+  page_sync_.OnRemoteCommits(std::move(commits), "44");
   page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
                           storage::ChangeSource::LOCAL);
 
@@ -894,8 +897,9 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  page_sync_.OnRemoteCommit(cloud_provider::Commit("id3", "content3", {}),
-                            "44");
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(cloud_provider::Commit("id3", "content3", {}));
+  page_sync_.OnRemoteCommits(std::move(commits), "44");
   EXPECT_FALSE(page_sync_.IsIdle());
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 3u) {

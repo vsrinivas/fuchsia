@@ -91,8 +91,8 @@ class PageSyncImpl : public PageSync,
                                     mx::socket data)> callback) override;
 
   // cloud_provider::CommitWatcher:
-  void OnRemoteCommit(cloud_provider::Commit commit,
-                      std::string timestamp) override;
+  void OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
+                       std::string timestamp) override;
 
   void OnConnectionError() override;
 

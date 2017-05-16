@@ -106,10 +106,12 @@ void DoctorCommand::Start(ftl::Closure on_done) {
   CheckHttpConnectivity();
 }
 
-void DoctorCommand::OnRemoteCommit(cloud_provider::Commit commit,
-                                   std::string timestamp) {
+void DoctorCommand::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
+                                    std::string timestamp) {
   if (on_remote_commit_) {
-    on_remote_commit_(std::move(commit), std::move(timestamp));
+    for (auto& commit : commits) {
+      on_remote_commit_(std::move(commit), std::move(timestamp));
+    }
   }
 }
 

@@ -121,9 +121,13 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   }
 
   // CommitWatcher:
-  void OnRemoteCommit(Commit commit, std::string timestamp) override {
-    commits_.push_back(std::move(commit));
-    server_timestamps_.push_back(std::move(timestamp));
+  void OnRemoteCommits(std::vector<Commit> commits,
+                       std::string timestamp) override {
+    on_remote_commits_calls_++;
+    for (auto& commit : commits) {
+      commits_.push_back(std::move(commit));
+      server_timestamps_.push_back(timestamp);
+    }
   }
 
   void OnConnectionError() override { connection_error_calls_++; }
@@ -164,6 +168,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   // registered as a CommitWatcher.
   std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
+  unsigned int on_remote_commits_calls_ = 0u;
   unsigned int connection_error_calls_ = 0u;
   unsigned int malformed_notification_calls_ = 0u;
 
@@ -307,10 +312,12 @@ TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
   document.Parse(put_content.c_str(), put_content.size());
   ASSERT_FALSE(document.HasParseError());
 
+  EXPECT_EQ(0u, on_remote_commits_calls_);
   watch_client_->OnPatch("/", document);
 
   Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
   Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  EXPECT_EQ(1u, on_remote_commits_calls_);
   EXPECT_EQ(2u, commits_.size());
   EXPECT_EQ(2u, server_timestamps_.size());
   EXPECT_EQ(expected_n1, commits_[0]);
@@ -338,6 +345,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
   ASSERT_FALSE(document_1.HasParseError());
   watch_client_->OnPatch("/", document_1);
 
+  EXPECT_EQ(0u, on_remote_commits_calls_);
   EXPECT_EQ(0u, commits_.size());
 
   std::string content_2 = R"({
@@ -354,6 +362,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
   ASSERT_FALSE(document_2.HasParseError());
   watch_client_->OnPatch("/", document_2);
 
+  EXPECT_EQ(1u, on_remote_commits_calls_);
   Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
   Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
   ASSERT_EQ(2u, commits_.size());
