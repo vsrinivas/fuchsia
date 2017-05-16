@@ -477,9 +477,7 @@ static uint64_t ept_pointer(paddr_t pml4_address) {
         // Use write back memory.
         VMX_MEMORY_TYPE_WRITE_BACK << 0 |
         // Page walk length of 4 (defined as N minus 1).
-        3u << 3 |
-        // Accessed and dirty flags are enabled.
-        1u << 6;
+        3u << 3;
 }
 
 static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
