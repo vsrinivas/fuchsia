@@ -9,6 +9,10 @@
             "bootfs_path": "apps/armadillo_user_shell"
         },
         {
+            "binary": "gen/apps/sysui/capybara_user_shell/capybara_user_shell.flx",
+            "bootfs_path": "apps/capybara_user_shell"
+        },
+        {
             "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
             "bootfs_path": "apps/userpicker_device_shell"
         },
