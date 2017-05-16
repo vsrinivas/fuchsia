@@ -92,7 +92,12 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       const std::string& key,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
-    FTL_NOTREACHED();
+    patch_keys_.push_back(key);
+    patch_data_.push_back(data);
+    message_loop_.task_runner()->PostTask([this, callback]() {
+      callback(firebase::Status::OK);
+      message_loop_.PostQuitTask();
+    });
   }
 
   void Delete(
@@ -144,6 +149,8 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   std::vector<std::string> get_queries_;
   std::vector<std::string> put_keys_;
   std::vector<std::string> put_data_;
+  std::vector<std::string> patch_keys_;
+  std::vector<std::string> patch_data_;
   std::vector<std::string> watch_keys_;
   std::vector<std::string> watch_queries_;
   unsigned int unwatch_count_ = 0u;
@@ -168,28 +175,59 @@ TEST_F(CloudProviderImplTest, AddCommit) {
   Commit commit(
       "commit_id", "some_content",
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(std::move(commit));
 
   Status status;
-  cloud_provider_->AddCommit(
-      commit,
+  cloud_provider_->AddCommits(
+      std::move(commits),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, put_keys_.size());
-  EXPECT_EQ(put_keys_.size(), put_data_.size());
-  EXPECT_EQ("commits/commit_idV", put_keys_[0]);
+  ASSERT_EQ(1u, patch_keys_.size());
+  ASSERT_EQ(patch_keys_.size(), patch_data_.size());
+  EXPECT_EQ("commits", patch_keys_[0]);
   EXPECT_EQ(
-      "{\"id\":\"commit_idV\","
+      "{\"commit_idV\":{\"id\":\"commit_idV\","
       "\"content\":\"some_contentV\","
       "\"objects\":{"
       "\"object_aV\":\"data_aV\","
       "\"object_bV\":\"data_bV\"},"
-      "\"timestamp\":{\".sv\":\"timestamp\"}"
-      "}",
-      put_data_[0]);
+      "\"timestamp\":{\".sv\":\"timestamp\"},"
+      "\"batch_position\":0,"
+      "\"batch_size\":1"
+      "}}",
+      patch_data_[0]);
   EXPECT_TRUE(watch_keys_.empty());
   EXPECT_EQ(0u, unwatch_count_);
+}
+
+TEST_F(CloudProviderImplTest, AddMultipleCommits) {
+  Commit commit1("id1", "content1", std::map<ObjectId, Data>{});
+  Commit commit2("id2", "content2", std::map<ObjectId, Data>{});
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(std::move(commit1));
+  commits.push_back(std::move(commit2));
+
+  Status status;
+  cloud_provider_->AddCommits(
+      std::move(commits),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::OK, status);
+  ASSERT_EQ(1u, patch_keys_.size());
+  ASSERT_EQ(patch_keys_.size(), patch_data_.size());
+  EXPECT_EQ("commits", patch_keys_[0]);
+  EXPECT_EQ(
+      "{\"id1V\":{\"id\":\"id1V\",\"content\":\"content1V\","
+      "\"timestamp\":{\".sv\":\"timestamp\"},"
+      "\"batch_position\":0,\"batch_size\":2},"
+      "\"id2V\":{\"id\":\"id2V\",\"content\":\"content2V\","
+      "\"timestamp\":{\".sv\":\"timestamp\"},"
+      "\"batch_position\":1,\"batch_size\":2}}",
+      patch_data_[0]);
 }
 
 TEST_F(CloudProviderImplTest, WatchUnwatch) {
@@ -212,8 +250,9 @@ TEST_F(CloudProviderImplTest, WatchWithQuery) {
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", watch_queries_[0]);
 }
 
-// Tests handling a server event containing multiple commits.
-TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
+// Tests handling a server event containing multiple separate (not batched)
+// commits.
+TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
   cloud_provider_->WatchCommits("", this);
 
   std::string put_content =
@@ -231,7 +270,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
   document.Parse(put_content.c_str(), put_content.size());
   ASSERT_FALSE(document.HasParseError());
 
-  watch_client_->OnPut("/", document);
+  watch_client_->OnPatch("/", document);
 
   Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
   Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
@@ -244,8 +283,129 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
   EXPECT_EQ(0u, malformed_notification_calls_);
 }
 
+// Tests handling a server event containing a complete batch of commits.
+TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
+  cloud_provider_->WatchCommits("", this);
+
+  std::string put_content = R"({
+    "id_1V": {
+      "id": "id_1V",
+      "content": "some_contentV",
+      "timestamp": 43,
+      "batch_position": 0,
+      "batch_size": 2
+    },
+    "id_2V": {
+      "id": "id_2V",
+      "content": "some_other_contentV",
+      "timestamp": 43,
+      "batch_position": 1,
+      "batch_size": 2
+    }
+  })";
+  rapidjson::Document document;
+  document.Parse(put_content.c_str(), put_content.size());
+  ASSERT_FALSE(document.HasParseError());
+
+  watch_client_->OnPatch("/", document);
+
+  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
+  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  EXPECT_EQ(2u, commits_.size());
+  EXPECT_EQ(2u, server_timestamps_.size());
+  EXPECT_EQ(expected_n1, commits_[0]);
+  EXPECT_EQ(ServerTimestampToBytes(43), server_timestamps_[0]);
+  EXPECT_EQ(expected_n2, commits_[1]);
+  EXPECT_EQ(ServerTimestampToBytes(43), server_timestamps_[1]);
+  EXPECT_EQ(0u, malformed_notification_calls_);
+}
+
+// Tests handling a batch delivered over two separate calls.
+TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
+  cloud_provider_->WatchCommits("", this);
+
+  std::string content_1 = R"({
+    "id_1V": {
+      "id": "id_1V",
+      "content": "some_contentV",
+      "timestamp": 42,
+      "batch_position": 0,
+      "batch_size": 2
+    }
+  })";
+  rapidjson::Document document_1;
+  document_1.Parse(content_1.c_str(), content_1.size());
+  ASSERT_FALSE(document_1.HasParseError());
+  watch_client_->OnPatch("/", document_1);
+
+  EXPECT_EQ(0u, commits_.size());
+
+  std::string content_2 = R"({
+    "id_2V": {
+      "id": "id_2V",
+      "content": "some_other_contentV",
+      "timestamp": 42,
+      "batch_position": 1,
+      "batch_size": 2
+    }
+  })";
+  rapidjson::Document document_2;
+  document_2.Parse(content_2.c_str(), content_2.size());
+  ASSERT_FALSE(document_2.HasParseError());
+  watch_client_->OnPatch("/", document_2);
+
+  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
+  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  ASSERT_EQ(2u, commits_.size());
+  EXPECT_EQ(expected_n1, commits_[0]);
+  EXPECT_EQ(expected_n2, commits_[1]);
+  EXPECT_EQ(0u, malformed_notification_calls_);
+}
+
+// Tests handling a batch delivered over two separate calls in incorrect order.
+TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
+  cloud_provider_->WatchCommits("", this);
+
+  std::string content_2 = R"({
+    "id_2V": {
+      "id": "id_2V",
+      "content": "some_other_contentV",
+      "timestamp": 42,
+      "batch_position": 1,
+      "batch_size": 2
+    }
+  })";
+  rapidjson::Document document_2;
+  document_2.Parse(content_2.c_str(), content_2.size());
+  ASSERT_FALSE(document_2.HasParseError());
+  watch_client_->OnPatch("/", document_2);
+
+  EXPECT_EQ(0u, commits_.size());
+
+  std::string content_1 = R"({
+    "id_1V": {
+      "id": "id_1V",
+      "content": "some_contentV",
+      "timestamp": 42,
+      "batch_position": 0,
+      "batch_size": 2
+    }
+  })";
+  rapidjson::Document document_1;
+  document_1.Parse(content_1.c_str(), content_1.size());
+  ASSERT_FALSE(document_1.HasParseError());
+  watch_client_->OnPatch("/", document_1);
+
+  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
+  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  ASSERT_EQ(2u, commits_.size());
+  EXPECT_EQ(expected_n1, commits_[0]);
+  EXPECT_EQ(expected_n2, commits_[1]);
+  EXPECT_EQ(0u, malformed_notification_calls_);
+}
+
 // Tests handling a server event containing a single commit.
-TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
+TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
   cloud_provider_->WatchCommits("", this);
 
   std::string put_content =

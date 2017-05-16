@@ -19,11 +19,6 @@ namespace cloud_provider {
 namespace {
 // The root path under which all commits are stored.
 constexpr ftl::StringView kCommitRoot = "commits";
-
-// Returns the path under which the given commit is stored.
-std::string GetCommitPath(const Commit& commit) {
-  return ftl::Concatenate({kCommitRoot, "/", firebase::EncodeKey(commit.id)});
-}
 }  // namespace
 
 CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
@@ -32,16 +27,17 @@ CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
 
 CloudProviderImpl::~CloudProviderImpl() {}
 
-void CloudProviderImpl::AddCommit(const Commit& commit,
-                                  const std::function<void(Status)>& callback) {
-  std::string encoded_commit;
-  bool ok = EncodeCommit(commit, &encoded_commit);
+void CloudProviderImpl::AddCommits(
+    std::vector<Commit> commits,
+    const std::function<void(Status)>& callback) {
+  std::string encoded_batch;
+  bool ok = EncodeCommits(commits, &encoded_batch);
   FTL_DCHECK(ok);
 
-  firebase_->Put(GetCommitPath(commit), encoded_commit,
-                 [callback](firebase::Status status) {
-                   callback(ConvertFirebaseStatus(status));
-                 });
+  firebase_->Patch(kCommitRoot.ToString(), encoded_batch,
+                   [callback](firebase::Status status) {
+                     callback(ConvertFirebaseStatus(status));
+                   });
 }
 
 void CloudProviderImpl::WatchCommits(const std::string& min_timestamp,

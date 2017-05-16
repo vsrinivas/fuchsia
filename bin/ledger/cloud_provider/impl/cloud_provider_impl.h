@@ -27,8 +27,8 @@ class CloudProviderImpl : public CloudProvider {
   ~CloudProviderImpl() override;
 
   // CloudProvider:
-  void AddCommit(const Commit& commit,
-                 const std::function<void(Status)>& callback) override;
+  void AddCommits(std::vector<Commit> commits,
+                  const std::function<void(Status)>& callback) override;
 
   void WatchCommits(const std::string& min_timestamp,
                     CommitWatcher* watcher) override;

@@ -31,6 +31,16 @@ WatchClientImpl::~WatchClientImpl() {
 
 void WatchClientImpl::OnPut(const std::string& path,
                             const rapidjson::Value& value) {
+  Handle(path, value);
+}
+
+void WatchClientImpl::OnPatch(const std::string& path,
+                              const rapidjson::Value& value) {
+  Handle(path, value);
+}
+
+void WatchClientImpl::Handle(const std::string& path,
+                             const rapidjson::Value& value) {
   if (errored_) {
     return;
   }
@@ -55,8 +65,7 @@ void WatchClientImpl::OnPut(const std::string& path,
       return;
     }
     for (auto& record : records) {
-      commit_watcher_->OnRemoteCommit(std::move(record.commit),
-                                      std::move(record.timestamp));
+      ProcessRecord(std::move(record));
     }
     return;
   }
@@ -72,8 +81,61 @@ void WatchClientImpl::OnPut(const std::string& path,
     return;
   }
 
-  commit_watcher_->OnRemoteCommit(std::move(record->commit),
-                                  std::move(record->timestamp));
+  ProcessRecord(std::move(*record));
+}
+
+void WatchClientImpl::ProcessRecord(Record record) {
+  if (!batch_timestamp_.empty()) {
+    if (record.timestamp != batch_timestamp_) {
+      FTL_LOG(ERROR) << "Two batches of commits are intermixed. "
+                     << "This should not have happened, please file a bug.";
+      HandleError();
+      return;
+    }
+
+    // Received record is for the current batch.
+    if (record.batch_size != batch_size_) {
+      FTL_LOG(ERROR) << "The size of the commit batch is inconsistent. "
+                     << "This should not have happened, please file a bug.";
+      HandleError();
+      return;
+    }
+    batch_.push_back(std::move(record));
+    if (batch_.size() == batch_size_) {
+      CommitBatch();
+    }
+    return;
+  }
+
+  // There is no pending batch.
+  if (record.batch_size == 1) {
+    // No need to start a batch for a single commit.
+    commit_watcher_->OnRemoteCommit(std::move(record.commit),
+                                    std::move(record.timestamp));
+    return;
+  }
+
+  // Start a new batch.
+  FTL_DCHECK(batch_.empty());
+  batch_timestamp_ = record.timestamp;
+  batch_size_ = record.batch_size;
+  batch_.reserve(batch_size_);
+  batch_.push_back(std::move(record));
+}
+
+void WatchClientImpl::CommitBatch() {
+  FTL_DCHECK(batch_.size() == batch_size_);
+  std::sort(batch_.begin(), batch_.end(), [](const auto& lhs, const auto& rhs) {
+    return lhs.batch_position < rhs.batch_position;
+  });
+  for (auto& record : batch_) {
+    // TODO(ppi): change the watcher API to accept a list of commits.
+    commit_watcher_->OnRemoteCommit(std::move(record.commit),
+                                    std::move(record.timestamp));
+  }
+  batch_.clear();
+  batch_timestamp_.clear();
+  batch_size_ = 0;
 }
 
 void WatchClientImpl::OnMalformedEvent() {

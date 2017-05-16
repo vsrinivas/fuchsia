@@ -254,8 +254,10 @@ void DoctorCommand::CheckCommits() {
   what("Firebase - upload test commit");
   cloud_provider::Commit commit(RandomString(), RandomString(), {});
   ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->AddCommit(
-      commit,
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(commit.Clone());
+  cloud_provider_->AddCommits(
+      std::move(commits),
       ftl::MakeCopyable([ this, commit = commit.Clone(),
                           request_start ](cloud_provider::Status status) {
         if (status != cloud_provider::Status::OK) {
@@ -379,15 +381,17 @@ void DoctorCommand::CheckWatchNewCommits() {
     on_done_();
   };
 
-  cloud_provider_->AddCommit(
-      commit, ftl::MakeCopyable([ this, expected_commit = commit.Clone() ](
-                  cloud_provider::Status status) {
-        if (status != cloud_provider::Status::OK) {
-          error(status);
-          on_done_();
-          return;
-        }
-      }));
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(commit.Clone());
+  cloud_provider_->AddCommits(std::move(commits), ftl::MakeCopyable([
+                                this, expected_commit = commit.Clone()
+                              ](cloud_provider::Status status) {
+                                if (status != cloud_provider::Status::OK) {
+                                  error(status);
+                                  on_done_();
+                                  return;
+                                }
+                              }));
 }
 
 void DoctorCommand::Done() {

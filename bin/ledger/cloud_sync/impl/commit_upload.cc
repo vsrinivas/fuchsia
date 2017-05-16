@@ -105,8 +105,11 @@ void CommitUpload::UploadCommit() {
       commit_->GetId(), commit_->GetStorageBytes().ToString(),
       std::map<cloud_provider::ObjectId, cloud_provider::Data>{});
   storage::CommitId commit_id = commit_->GetId();
-  cloud_provider_->AddCommit(commit, [ this, commit_id = std::move(commit_id) ](
-                                         cloud_provider::Status status) {
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(std::move(commit));
+  cloud_provider_->AddCommits(std::move(commits), [
+    this, commit_id = std::move(commit_id)
+  ](cloud_provider::Status status) {
     // UploadCommit() is called as a last step of a so-far-successful upload
     // attempt, so we couldn't have failed before.
     FTL_DCHECK(active_or_finished_);

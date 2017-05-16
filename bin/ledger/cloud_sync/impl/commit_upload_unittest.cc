@@ -113,10 +113,10 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   ~TestCloudProvider() override = default;
 
-  void AddCommit(
-      const cloud_provider::Commit& commit,
+  void AddCommits(
+      std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
-    received_commits.push_back(commit.Clone());
+    received_commits.push_back(commits.front().Clone());
     message_loop_->task_runner()->PostTask(
         [this, callback]() { callback(commit_status_to_return); });
   }

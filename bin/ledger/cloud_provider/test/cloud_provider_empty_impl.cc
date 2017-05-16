@@ -9,8 +9,8 @@
 namespace cloud_provider {
 namespace test {
 
-void CloudProviderEmptyImpl::AddCommit(
-    const Commit& commit,
+void CloudProviderEmptyImpl::AddCommits(
+    std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   FTL_NOTIMPLEMENTED();
 }

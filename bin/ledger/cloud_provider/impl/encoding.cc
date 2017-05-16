@@ -22,68 +22,79 @@ const char kIdKey[] = "id";
 const char kContentKey[] = "content";
 const char kObjectsKey[] = "objects";
 const char kTimestampKey[] = "timestamp";
+const char kBatchPositionKey[] = "batch_position";
+const char kBatchSizeKey[] = "batch_size";
+
+void WriteCommit(rapidjson::Writer<rapidjson::StringBuffer>* writer,
+                 const Commit& commit,
+                 std::string encoded_id,
+                 int batch_position,
+                 int batch_size) {
+  writer->StartObject();
+  {
+    writer->Key(kIdKey);
+    writer->String(encoded_id.c_str(), encoded_id.size());
+
+    writer->Key(kContentKey);
+    std::string content = firebase::EncodeValue(commit.content);
+    writer->String(content.c_str(), content.size());
+
+    if (!commit.storage_objects.empty()) {
+      writer->Key(kObjectsKey);
+      writer->StartObject();
+      {
+        for (const auto& entry : commit.storage_objects) {
+          std::string key = firebase::EncodeKey(entry.first);
+          writer->Key(key.c_str(), key.size());
+          std::string value = firebase::EncodeValue(entry.second);
+          writer->String(value.c_str(), value.size());
+        }
+      }
+      writer->EndObject();
+    }
+
+    writer->Key(kTimestampKey);
+    // Placeholder that Firebase will replace with server timestamp. See
+    // https://firebase.google.com/docs/database/rest/save-data.
+    writer->StartObject();
+    {
+      writer->Key(".sv");
+      writer->String("timestamp");
+    }
+    writer->EndObject();
+
+    writer->Key(kBatchPositionKey);
+    writer->Int(batch_position);
+
+    writer->Key(kBatchSizeKey);
+    writer->Int(batch_size);
+  }
+  writer->EndObject();
+}
 
 }  // namespace
 
-bool EncodeCommit(const Commit& commit, std::string* output_json) {
+bool EncodeCommits(const std::vector<Commit>& commits,
+                   std::string* output_json) {
   rapidjson::StringBuffer string_buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
 
   writer.StartObject();
-
-  writer.Key(kIdKey);
-  std::string id = firebase::EncodeValue(commit.id);
-  writer.String(id.c_str(), id.size());
-
-  writer.Key(kContentKey);
-  std::string content = firebase::EncodeValue(commit.content);
-  writer.String(content.c_str(), content.size());
-
-  if (!commit.storage_objects.empty()) {
-    writer.Key(kObjectsKey);
-    writer.StartObject();
-    for (const auto& entry : commit.storage_objects) {
-      std::string key = firebase::EncodeKey(entry.first);
-      writer.Key(key.c_str(), key.size());
-      std::string value = firebase::EncodeValue(entry.second);
-      writer.String(value.c_str(), value.size());
+  {
+    for (size_t i = 0; i < commits.size(); i++) {
+      std::string encoded_id = firebase::EncodeValue(commits[i].id);
+      writer.Key(encoded_id.c_str(), encoded_id.size());
+      WriteCommit(&writer, commits[i], std::move(encoded_id), i,
+                  commits.size());
     }
-    writer.EndObject();
   }
-
-  writer.Key(kTimestampKey);
-  // Placeholder that Firebase will replace with server timestamp. See
-  // https://firebase.google.com/docs/database/rest/save-data.
-  writer.StartObject();
-  writer.Key(".sv");
-  writer.String("timestamp");
   writer.EndObject();
 
-  writer.EndObject();
-
-  if (!writer.IsComplete()) {
-    return false;
-  }
+  FTL_DCHECK(writer.IsComplete());
 
   std::string result = string_buffer.GetString();
   output_json->swap(result);
   return true;
-}
-
-bool DecodeCommit(const std::string& json,
-                  std::unique_ptr<Record>* output_record) {
-  rapidjson::Document document;
-  document.Parse(json.c_str(), json.size());
-
-  if (document.HasParseError()) {
-    return false;
-  }
-
-  if (!document.IsObject()) {
-    return false;
-  }
-
-  return DecodeCommitFromValue(document, output_record);
 }
 
 bool DecodeMultipleCommits(const std::string& json,
@@ -138,6 +149,7 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
   FTL_DCHECK(output_record);
   FTL_DCHECK(value.IsObject());
 
+  // TODO(ppi): use a JSON schema to validate the format.
   CommitId commit_id;
   if (!value.HasMember(kIdKey) || !value[kIdKey].IsString() ||
       !firebase::Decode(value[kIdKey].GetString(), &commit_id)) {
@@ -171,10 +183,21 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
     return false;
   }
 
+  int batch_position = 0;
+  if (value.HasMember(kBatchPositionKey) && value[kBatchPositionKey].IsInt()) {
+    batch_position = value[kBatchPositionKey].GetInt();
+  }
+
+  int batch_size = 1;
+  if (value.HasMember(kBatchSizeKey) && value[kBatchSizeKey].IsInt()) {
+    batch_size = value[kBatchSizeKey].GetInt();
+  }
+
   auto record = std::make_unique<Record>(
       Commit(std::move(commit_id), std::move(commit_content),
              std::move(storage_objects)),
-      ServerTimestampToBytes(value[kTimestampKey].GetInt64()));
+      ServerTimestampToBytes(value[kTimestampKey].GetInt64()), batch_position,
+      batch_size);
   output_record->swap(record);
   return true;
 }

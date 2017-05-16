@@ -18,18 +18,13 @@ namespace cloud_provider {
 // These methods encode and decode commits specifically for storing
 // in Firebase Realtime Database.
 
-// Encodes a commit as a JSON string suitable for storing in
-// Firebase Realtime Database. In addition to the commit content, a
-// timestamp placeholder is added, making Firebase tag the commit with a
-// server timestamp.
-bool EncodeCommit(const Commit& commit, std::string* output_json);
-
-// Decodes a commit from the JSON representation in Firebase
-// Realtime Database. If successful, the method returns true, and
-// |output_record| contains the decoded commit, along with opaque
-// server timestamp.
-bool DecodeCommit(const std::string& json,
-                  std::unique_ptr<Record>* output_record);
+// Encodes a batch of commits as a JSON dictionary suitable for storing in
+// Firebase Realtime Database.
+//
+// For each commit, in addition to the commit content, a timestamp placeholder
+// is added, making Firebase tag the commit with a server timestamp.
+bool EncodeCommits(const std::vector<Commit>& commits,
+                   std::string* output_json);
 
 // Decodes multiple commits from the JSON representation of an
 // object holding them in Firebase Realtime Database. If successful, the method

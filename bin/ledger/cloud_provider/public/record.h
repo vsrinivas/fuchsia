@@ -10,10 +10,11 @@
 
 namespace cloud_provider {
 
-// Represents a commit along with its timestamp.
+// Represents a commit received from the cloud, along with its server-side
+// timestamp and batch position.
 struct Record {
   Record();
-  Record(Commit n, std::string t);
+  Record(Commit n, std::string t, int position = 0, int size = 1);
 
   ~Record();
 
@@ -22,6 +23,8 @@ struct Record {
 
   Commit commit;
   std::string timestamp;
+  size_t batch_position;
+  size_t batch_size;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Record);

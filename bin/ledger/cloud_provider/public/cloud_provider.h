@@ -33,10 +33,13 @@ class CloudProvider {
   CloudProvider() {}
   virtual ~CloudProvider() {}
 
-  // Adds the given commit to the cloud. The given callback will be called
-  // asynchronously with Status::OK if the operation have succeeded.
-  virtual void AddCommit(const Commit& commit,
-                         const std::function<void(Status)>& callback) = 0;
+  // Adds the given commits to the cloud.
+  //
+  // The commits are added in one batch - on the receiving side they will be
+  // delivered in a single watch commits notification, in the same order as
+  // they were passed in the AddCommits() call.
+  virtual void AddCommits(std::vector<Commit> commits,
+                          const std::function<void(Status)>& callback) = 0;
 
   // Registers the given watcher to be notified about commits already present
   // and these being added to the cloud later. This includes commits added by
