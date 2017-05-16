@@ -87,7 +87,6 @@ class AgentContextImpl::StopCall : Operation<void> {
     FlowToken flow(this);
 
     if (agent_context_impl_->state_ == State::TERMINATING) {
-      // Means that the agent is already stopping.
       return;
     }
 

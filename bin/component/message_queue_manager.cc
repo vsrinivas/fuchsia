@@ -88,7 +88,7 @@ class MessageQueueStorage : MessageSender {
 
   void RegisterWatcher(const std::function<void()>& watcher) {
     watcher_ = watcher;
-    if (watcher_) {
+    if (watcher_ && !queue_data_.IsEmpty()) {
       watcher_();
     }
   }

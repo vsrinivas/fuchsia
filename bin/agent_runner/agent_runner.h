@@ -83,10 +83,13 @@ class AgentRunner : AgentProvider, PageClient {
 
   static void XdrTriggerInfo(XdrContext* const xdr, TriggerInfo* const data);
 
-  AgentContextImpl* MaybeRunAgent(const std::string& agent_url);
+  // Starts up an agent, or waits until the agent can start up if it is already
+  // in a terminating state. Calls |done| once the agent has started.
+  // Note that the agent could be in an INITIALIZING state.
+  void MaybeRunAgent(const std::string& agent_url, const ftl::Closure& done);
 
-  // Returns true if the agent is running but is in a terminating state.
-  bool IsAgentTerminating(const std::string& agent_url);
+  // Actually starts up an agent (used by |MaybeRunAgent()| above).
+  void RunAgent(const std::string& agent_url);
 
   // Will also start and initialize the agent as a consequence.
   void ForwardConnectionsToAgent(const std::string& agent_url);
@@ -134,11 +137,18 @@ class AgentRunner : AgentProvider, PageClient {
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
     fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
+
   // agent URL -> pending connections to an agent
   // This map holds connections to an agent that we hold onto while the existing
   // agent is in a terminating state.
   std::unordered_map<std::string, std::vector<struct PendingConnectionEntry>>
       pending_agent_connections_;
+
+  // agent URL -> done callbacks to invoke once agent has started.
+  // Holds requests to start an agent; in case an agent is already in a
+  // terminating state, we pend those requests here until the agent terminates.
+  std::unordered_map<std::string, std::vector<ftl::Closure>>
+      run_agent_callbacks_;
 
   // agent URL -> modular.AgentContext
   std::unordered_map<std::string, std::unique_ptr<AgentContextImpl>>

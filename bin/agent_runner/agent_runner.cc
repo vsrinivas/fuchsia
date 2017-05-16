@@ -190,6 +190,47 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   }
 }
 
+void AgentRunner::MaybeRunAgent(const std::string& agent_url,
+                                const ftl::Closure& done) {
+  auto agent_it = running_agents_.find(agent_url);
+  if (agent_it != running_agents_.end()) {
+    if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
+      run_agent_callbacks_[agent_url].push_back(done);
+      return;
+    }
+    // Agent is already running, so we can issue the callback immediately.
+    done();
+    return;
+  }
+
+  run_agent_callbacks_[agent_url].push_back(done);
+
+  RunAgent(agent_url);
+}
+
+void AgentRunner::RunAgent(const std::string& agent_url) {
+  // Start the agent and issue all callbacks.
+  ComponentContextInfo component_info = {message_queue_manager_, this,
+                                         ledger_repository_};
+  AgentContextInfo info = {component_info, application_launcher_,
+                           token_provider_factory_.get(),
+                           user_intelligence_provider_};
+
+  FTL_CHECK(running_agents_.emplace(
+      agent_url, std::make_unique<AgentContextImpl>(info, agent_url)).second);
+
+  auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
+  if (run_callbacks_it != run_agent_callbacks_.end()) {
+    for (auto& callback : run_callbacks_it->second) {
+      callback();
+    }
+    run_agent_callbacks_.erase(agent_url);
+  }
+
+  UpdateWatchers();
+  ForwardConnectionsToAgent(agent_url);
+}
+
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url,
     const std::string& agent_url,
@@ -204,32 +245,31 @@ void AgentRunner::ConnectToAgent(
       {requestor_url, std::move(incoming_services_request),
        std::move(agent_controller_request)});
 
-  if (!IsAgentTerminating(agent_url)) {
+  MaybeRunAgent(agent_url, [this, agent_url] {
+    // If the agent was terminating and has restarted, forwarding connections
+    // here is redundant, since it was already forwarded earlier.
     ForwardConnectionsToAgent(agent_url);
-  }
+  });
 }
 
 void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
   UpdateWatchers();
 
-  // At this point, if there were pending connections to this agent, we can
-  // start it up again and forward connections to it.
-  ForwardConnectionsToAgent(agent_url);
-}
-
-bool AgentRunner::IsAgentTerminating(const std::string& agent_url) {
-  auto found_it = running_agents_.find(agent_url);
-  return found_it != running_agents_.end() &&
-         found_it->second->state() == AgentContextImpl::State::TERMINATING;
+  // At this point, if there are pending requests to start the agent (because
+  // the previous one was in a terminating state), we can start it up again.
+  if (run_agent_callbacks_.find(agent_url) != run_agent_callbacks_.end()) {
+    RunAgent(agent_url);
+  }
 }
 
 void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
   // Did we hold onto new connections as the previous one was exiting?
   auto found_it = pending_agent_connections_.find(agent_url);
   if (found_it != pending_agent_connections_.end()) {
+    AgentContextImpl* agent = running_agents_[agent_url].get();
     for (auto& pending_connection : found_it->second) {
-      MaybeRunAgent(agent_url)->NewConnection(
+      agent->NewConnection(
           pending_connection.requestor_url,
           std::move(pending_connection.incoming_services_request),
           std::move(pending_connection.agent_controller_request));
@@ -379,7 +419,9 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
           return;
         }
 
-        MaybeRunAgent(agent_url)->NewTask(task_id);
+        MaybeRunAgent(agent_url, [agent_url, task_id, this] {
+          running_agents_[agent_url]->NewTask(task_id);
+        });
       });
 }
 
@@ -420,8 +462,11 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
           return;
         }
 
-        MaybeRunAgent(agent_url)->NewTask(task_id);
-        ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id], false);
+        MaybeRunAgent(agent_url, [agent_url, task_id, found_it, this]() {
+          running_agents_[agent_url]->NewTask(task_id);
+          ScheduleAlarmTask(agent_url, task_id, found_it->second[task_id],
+                            false);
+        });
       },
       ftl::TimeDelta::FromSeconds(alarm_in_seconds));
 }
@@ -437,25 +482,6 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
       FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
     }
   });
-}
-
-AgentContextImpl* AgentRunner::MaybeRunAgent(const std::string& agent_url) {
-  auto found_it = running_agents_.find(agent_url);
-  if (found_it == running_agents_.end()) {
-    bool inserted = false;
-    ComponentContextInfo component_info = {message_queue_manager_, this,
-                                           ledger_repository_};
-    AgentContextInfo info = {component_info, application_launcher_,
-                             token_provider_factory_.get(),
-                             user_intelligence_provider_};
-    std::tie(found_it, inserted) = running_agents_.emplace(
-        agent_url, std::make_unique<AgentContextImpl>(info, agent_url));
-    FTL_DCHECK(inserted);
-
-    UpdateWatchers();
-  }
-
-  return found_it->second.get();
 }
 
 void AgentRunner::UpdateWatchers() {

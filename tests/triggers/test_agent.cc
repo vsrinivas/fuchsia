@@ -68,11 +68,9 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
-                                      [this, callback] {
-                                        TEST_PASS("Trigger test agent exited");
-                                        DeleteAndQuit(callback);
-                                      });
+    modular::testing::GetStore()->Put(
+        "trigger_test_agent_stopped", "",
+        [callback, this] { DeleteAndQuit(callback); });
   }
 
   // |TriggerAgentInterface|
