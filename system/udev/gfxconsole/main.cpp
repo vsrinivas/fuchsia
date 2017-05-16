@@ -683,9 +683,6 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     g_fb_device = dev;
     g_fb_display_protocol = disp;
 
-    // The virtual console has released control of the display
-    g_vc_owns_display = false;
-
     // Create display event
     if ((status = mx_event_create(0, &g_vc_owner_event)) < 0) {
         return status;
