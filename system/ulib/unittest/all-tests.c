@@ -21,46 +21,56 @@ bool unittest_run_one_test(struct test_case_element* elem, test_type_t type) {
     return elem->test_case();
 }
 
-bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result) {
+static bool unittest_run_all_tests_etc(
+    const char* test_binary_name, test_type_t type) {
     unsigned int n_tests = 0;
-    unsigned int n_success = 0;
     unsigned int n_failed = 0;
 
     utest_test_type = type;
 
-    bool all_success = true;
     struct test_case_element* current = test_case_list;
     while (current) {
         if (!current->test_case()) {
             current->failed_next = failed_test_case_list;
             failed_test_case_list = current;
-            all_success = false;
+            n_failed++;
         }
         current = current->next;
         n_tests++;
     }
 
-    if (all_success) {
-        n_success = n_tests;
-        unittest_printf_critical("SUCCESS!  All test cases passed!\n");
+    unittest_printf_critical(
+        "====================================================\n");
+    if (test_binary_name != NULL && test_binary_name[0] != '\0') {
+        unittest_printf_critical(
+            "Results for test binary \"%s\":\n", test_binary_name);
     } else {
+        // argv[0] can be null for binaries that run as userboot,
+        // like core-tests.
+        unittest_printf_critical("Results:\n");
+    }
+    if (n_failed == 0) {
+        unittest_printf_critical("    SUCCESS!  All test cases passed!\n");
+    } else {
+        unittest_printf_critical("\n");
+        unittest_printf_critical("    The following test cases failed:\n");
         struct test_case_element* failed = failed_test_case_list;
         while (failed) {
+            unittest_printf_critical("        %s\n", failed->name);
             struct test_case_element* failed_next =
                 failed->failed_next;
             failed->failed_next = NULL;
             failed = failed_next;
-            n_failed++;
         }
-        n_success = n_tests - n_failed;
         failed_test_case_list = NULL;
+        unittest_printf_critical("\n");
     }
-
-    result->n_tests = n_tests;
-    result->n_success = n_success;
-    result->n_failed = n_failed;
-
-    return all_success;
+    unittest_printf_critical(
+        "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   \n",
+        n_tests, n_tests - n_failed, n_failed);
+    unittest_printf_critical(
+        "====================================================\n");
+    return n_failed == 0;
 }
 
 /*
@@ -68,7 +78,6 @@ bool unittest_run_all_tests_etc(test_type_t type, struct test_result* result) {
  */
 bool unittest_run_all_tests(int argc, char** argv) {
     int prev_verbosity_level = -1;
-
     int i = 1;
     while (i < argc) {
         if ((strlen(argv[i]) == 3) && (argv[i][0] == 'v') && (argv[i][1] == '=')) {
@@ -91,15 +100,5 @@ bool unittest_run_all_tests(int argc, char** argv) {
     if (prev_verbosity_level >= 0)
         unittest_set_verbosity_level(prev_verbosity_level);
 
-    struct test_result result;
-    bool all_success = unittest_run_all_tests_etc(test_type, &result);
-
-    unittest_printf_critical(
-            "\n====================================================\n");
-    unittest_printf_critical(
-            "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ", result.n_tests, result.n_success, result.n_failed);
-    unittest_printf_critical(
-            "\n====================================================\n");
-
-    return all_success;
+    return unittest_run_all_tests_etc(argv[0], test_type);
 }
