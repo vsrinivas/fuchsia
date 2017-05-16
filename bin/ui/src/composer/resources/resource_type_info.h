@@ -25,9 +25,11 @@ enum ResourceType {
   kMaterial = 1 << 8,
 
   kNode = 1 << 9,
-  kEntityNode = 1 << 10,
-  kShapeNode = 1 << 11,
-  kClipNode = 1 << 12
+  kClipNode = 1 << 10,
+  kEntityNode = 1 << 11,
+  kLinkNode = 1 << 12,
+  kShapeNode = 1 << 13,
+  kTagNode = 1 << 14,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

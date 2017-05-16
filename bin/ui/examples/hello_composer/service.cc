@@ -5,10 +5,6 @@
 #include <cmath>
 #include <memory>
 
-// TODO: why do we need to include this first?
-// It is included by "escher/geometry/types.h" ?!?
-#include <glm/glm.hpp>
-
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/src/composer/composer_impl.h"

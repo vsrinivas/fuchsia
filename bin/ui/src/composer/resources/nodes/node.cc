@@ -15,6 +15,10 @@ constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode;
 constexpr ResourceTypeFlags kHasParts =
     ResourceType::kEntityNode | ResourceType::kClipNode;
 
+constexpr ResourceTypeFlags kHasTransform =
+    ResourceType::kClipNode | ResourceType::kEntityNode |
+    ResourceType::kLinkNode | ResourceType::kShapeNode;
+
 }  // anonymous namespace
 
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
@@ -47,6 +51,7 @@ bool Node::AddChild(NodePtr child_node) {
   auto insert_result = children_.insert(std::move(child_node));
   FTL_DCHECK(insert_result.second);
 
+  child_node->InvalidateGlobalTransform();
   return true;
 }
 
@@ -72,10 +77,11 @@ bool Node::AddPart(NodePtr part_node) {
   auto insert_result = children_.insert(std::move(part_node));
   FTL_DCHECK(insert_result.second);
 
+  part_node->InvalidateGlobalTransform();
   return true;
 }
 
-void Node::Detach(const NodePtr& node_to_detach_from_parent) {
+bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
   FTL_DCHECK(node_to_detach_from_parent);
   if (auto parent = node_to_detach_from_parent->parent_) {
     auto& container = node_to_detach_from_parent->is_part_ ? parent->parts_
@@ -83,6 +89,40 @@ void Node::Detach(const NodePtr& node_to_detach_from_parent) {
     size_t removed_count = container.erase(node_to_detach_from_parent);
     FTL_DCHECK(removed_count == 1);  // verify parent-child invariant
     node_to_detach_from_parent->parent_ = nullptr;
+    node_to_detach_from_parent->InvalidateGlobalTransform();
+  }
+  return true;
+}
+
+bool Node::SetTransform(const escher::Transform& transform) {
+  if (!(type_flags() & kHasTransform)) {
+    error_reporter()->ERROR() << "composer::Node::SetTransform(): node of type "
+                              << type_name() << " cannot have transform set.";
+    return false;
+  }
+  transform_ = transform;
+  InvalidateGlobalTransform();
+  return true;
+}
+
+void Node::InvalidateGlobalTransform() {
+  if (!global_transform_dirty_) {
+    global_transform_dirty_ = true;
+    for (auto& node : parts_) {
+      node->InvalidateGlobalTransform();
+    }
+    for (auto& node : children_) {
+      node->InvalidateGlobalTransform();
+    }
+  }
+}
+
+void Node::ComputeGlobalTransform() const {
+  if (parent_) {
+    global_transform_ =
+        parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
+  } else {
+    global_transform_ = static_cast<escher::mat4>(transform_);
   }
 }
 

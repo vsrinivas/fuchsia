@@ -4,6 +4,13 @@
 
 import("//apps/mozart/config.gni")
 
+config("common_include_dirs") {
+  include_dirs = [
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+}
+
 source_set("common") {
   sources = [
     "composer_impl.cc",
@@ -44,13 +51,15 @@ source_set("common") {
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/tracing/lib/trace:provider",
+    "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
   ]
 
+  public_configs = [ ":common_include_dirs" ]
+
   deps = [
-    "//lib/escher/escher",
     "//magma:vulkan",
   ]
 }
@@ -92,6 +101,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "tests/node_unittest.cc",
     "tests/session_test.cc",
     "tests/session_test.h",
     "tests/session_unittest.cc",

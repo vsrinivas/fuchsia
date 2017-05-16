@@ -9,6 +9,7 @@
 #include "apps/mozart/src/composer/resources/nodes/node.h"
 #include "apps/mozart/src/composer/resources/nodes/shape_node.h"
 #include "apps/mozart/src/composer/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/composer/util/unwrap.h"
 
 namespace mozart {
 namespace composer {
@@ -110,14 +111,16 @@ bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
   // Find the parent and child nodes.
   auto parent_node = resources_.FindResource<Node>(op->node_id);
   if (!parent_node) {
-    error_reporter_->ERROR()
-        << "composer::Session::ApplyAddChildOp(): cannot find parent node.";
+    error_reporter_->ERROR() << "composer::Session::ApplyAddChildOp(): cannot "
+                                "find parent node with ID "
+                             << op->node_id;
     return false;
   }
   auto child_node = resources_.FindResource<Node>(op->child_id);
   if (!child_node) {
-    error_reporter_->ERROR()
-        << "composer::Session::ApplyAddChildOp(): cannot find child node.";
+    error_reporter_->ERROR() << "composer::Session::ApplyAddChildOp(): cannot "
+                                "find child node with ID "
+                             << op->child_id;
     return false;
   }
 
@@ -128,14 +131,16 @@ bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
   // Find the parent and part nodes.
   auto parent_node = resources_.FindResource<Node>(op->node_id);
   if (!parent_node) {
-    error_reporter_->ERROR()
-        << "composer::Session::ApplyAddPartOp(): cannot find parent node.";
+    error_reporter_->ERROR() << "composer::Session::ApplyAddPartOp(): cannot "
+                                "find parent node with ID "
+                             << op->node_id;
     return false;
   }
   auto part_node = resources_.FindResource<Node>(op->part_id);
   if (!part_node) {
     error_reporter_->ERROR()
-        << "composer::Session::ApplyAddPartOp(): cannot find part node.";
+        << "composer::Session::ApplyAddPartOp(): cannot find part node with ID "
+        << op->part_id;
     return false;
   }
 
@@ -143,9 +148,14 @@ bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
 }
 
 bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
-  error_reporter_->ERROR()
-      << "composer::Session::ApplyDetachOp(): unimplemented";
-  return false;
+  auto node = resources_.FindResource<Node>(op->node_id);
+  if (!node) {
+    error_reporter_->ERROR()
+        << "composer::Session::ApplyDetachOp(): cannot find node with ID "
+        << op->node_id;
+    return false;
+  }
+  return Node::Detach(node);
 }
 
 bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
@@ -155,9 +165,14 @@ bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
 }
 
 bool Session::ApplySetTransformOp(const mozart2::SetTransformOpPtr& op) {
-  error_reporter_->ERROR()
-      << "composer::Session::ApplySetTransformOp(): unimplemented";
-  return false;
+  auto node = resources_.FindResource<Node>(op->node_id);
+  if (!node) {
+    error_reporter_->ERROR() << "composer::Session::ApplySetTransformOp(): "
+                                "could not find Node with ID "
+                             << op->node_id;
+    return false;
+  }
+  return node->SetTransform(Unwrap(op->transform));
 }
 
 bool Session::ApplySetShapeOp(const mozart2::SetShapeOpPtr& op) {

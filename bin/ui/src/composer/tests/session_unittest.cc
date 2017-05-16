@@ -48,26 +48,6 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_EQ(0U, session_->GetMappedResourceCount());
 }
 
-TEST_F(SessionTest, ShapeNodeMaterialAndShape) {
-  const ResourceId kNodeId = 1;
-  const ResourceId kMaterialId = 2;
-  const ResourceId kShapeId = 3;
-
-  EXPECT_TRUE(Apply(NewCreateShapeNodeOp(kNodeId)));
-  EXPECT_TRUE(Apply(NewCreateMaterialOp(kMaterialId, 0, 255, 100, 100, 255)));
-  EXPECT_TRUE(Apply(NewCreateCircleOp(kShapeId, 50.f)));
-  EXPECT_TRUE(Apply(NewSetMaterialOp(kNodeId, kMaterialId)));
-  EXPECT_TRUE(Apply(NewSetShapeOp(kNodeId, kShapeId)));
-  auto shape_node = FindResource<ShapeNode>(kNodeId);
-  auto material = FindResource<Material>(kMaterialId);
-  auto circle = FindResource<Shape>(kShapeId);
-  ASSERT_NE(nullptr, shape_node.get());
-  ASSERT_NE(nullptr, material.get());
-  ASSERT_NE(nullptr, circle.get());
-  EXPECT_EQ(shape_node->material(), material);
-  EXPECT_EQ(shape_node->shape(), circle);
-}
-
 TEST_F(SessionTest, CreateLink) {
   // This fails because the eventpair is null.
   EXPECT_FALSE(Apply(NewCreateLinkOp(1, mx::eventpair())));
