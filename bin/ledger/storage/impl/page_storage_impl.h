@@ -70,6 +70,8 @@ class PageStorageImpl : public PageStorage {
   Status MarkCommitSynced(const CommitId& commit_id) override;
   Status GetDeltaObjects(const CommitId& commit_id,
                          std::vector<ObjectId>* objects) override;
+  void GetAllUnsyncedObjectIds(
+      std::function<void(Status, std::vector<ObjectId>)> callback) override;
   void GetUnsyncedObjectIds(
       const CommitId& commit_id,
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
@@ -133,7 +135,9 @@ class PageStorageImpl : public PageStorage {
   std::string staging_dir_;
   callback::PendingOperationManager pending_operation_manager_;
   PageSyncDelegate* page_sync_;
-  std::queue<std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>> commits_to_send_;
+  std::queue<
+      std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
+      commits_to_send_;
 };
 
 }  // namespace storage

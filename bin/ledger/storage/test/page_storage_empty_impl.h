@@ -56,6 +56,9 @@ class PageStorageEmptyImpl : public PageStorage {
   Status GetDeltaObjects(const CommitId& commit_id,
                          std::vector<ObjectId>* objects) override;
 
+  void GetAllUnsyncedObjectIds(
+      std::function<void(Status, std::vector<ObjectId>)> callback) override;
+
   void GetUnsyncedObjectIds(
       const CommitId& commit_id,
       std::function<void(Status, std::vector<ObjectId>)> callback) override;

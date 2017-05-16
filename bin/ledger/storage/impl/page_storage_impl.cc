@@ -282,29 +282,29 @@ class FileWriter : public ObjectSourceHandler {
       return;
     }
     callback_ = std::move(callback);
-    io_runner_->PostTask(ftl::MakeCopyable([
-      this, weak_this = weak_ptr_factory_.GetWeakPtr()
-    ]() mutable {
-      // Called on the io runner.
+    io_runner_->PostTask(ftl::MakeCopyable(
+        [ this, weak_this = weak_ptr_factory_.GetWeakPtr() ]() mutable {
+          // Called on the io runner.
 
-      // |this| cannot be deleted here, because if the destructor of FileWriter
-      // has been called after Start and before this has been run, it is still
-      // waiting on the lock to be released as the posts are run in-order.
-      file_writer_on_io_thread_->Start(std::move(data_source_), [
-        weak_this, main_runner = main_runner_
-      ](Status status, ObjectId object_id) {
-        // Called on the io runner.
+          // |this| cannot be deleted here, because if the destructor of
+          // FileWriter has been called after Start and before this has been
+          // run, it is still waiting on the lock to be released as the posts
+          // are run in-order.
+          file_writer_on_io_thread_->Start(std::move(data_source_), [
+            weak_this, main_runner = main_runner_
+          ](Status status, ObjectId object_id) {
+            // Called on the io runner.
 
-        main_runner->PostTask(
-            [ weak_this, status, object_id = std::move(object_id) ]() {
-              // Called on the main runner.
+            main_runner->PostTask(
+                [ weak_this, status, object_id = std::move(object_id) ]() {
+                  // Called on the main runner.
 
-              if (weak_this) {
-                weak_this->callback_(status, std::move(object_id));
-              }
-            });
-      });
-    }));
+                  if (weak_this) {
+                    weak_this->callback_(status, std::move(object_id));
+                  }
+                });
+          });
+        }));
   }
 
  private:
@@ -581,6 +581,13 @@ Status PageStorageImpl::GetDeltaObjects(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
+void PageStorageImpl::GetAllUnsyncedObjectIds(
+    std::function<void(Status, std::vector<ObjectId>)> callback) {
+  std::vector<ObjectId> unsynced_object_ids;
+  Status s = db_.GetUnsyncedObjectIds(&unsynced_object_ids);
+  callback(s, unsynced_object_ids);
+}
+
 void PageStorageImpl::GetUnsyncedObjectIds(
     const CommitId& commit_id,
     std::function<void(Status, std::vector<ObjectId>)> callback) {
@@ -621,21 +628,21 @@ void PageStorageImpl::AddObjectFromSync(
     ObjectIdView object_id,
     std::unique_ptr<DataSource> data_source,
     const std::function<void(Status)>& callback) {
-  AddObject(std::move(data_source), [
-    this, object_id = object_id.ToString(), callback
-  ](Status status, ObjectId found_id) {
-    if (status != Status::OK) {
-      callback(status);
-    } else if (found_id != object_id) {
-      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
-                     << convert::ToHex(object_id)
-                     << ". Found: " << convert::ToHex(found_id);
-      files::DeletePath(GetFilePath(found_id), false);
-      callback(Status::OBJECT_ID_MISMATCH);
-    } else {
-      callback(Status::OK);
-    }
-  });
+  AddObject(std::move(data_source),
+            [ this, object_id = object_id.ToString(), callback ](
+                Status status, ObjectId found_id) {
+              if (status != Status::OK) {
+                callback(status);
+              } else if (found_id != object_id) {
+                FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
+                               << convert::ToHex(object_id)
+                               << ". Found: " << convert::ToHex(found_id);
+                files::DeletePath(GetFilePath(found_id), false);
+                callback(Status::OBJECT_ID_MISMATCH);
+              } else {
+                callback(Status::OK);
+              }
+            });
 }
 
 void PageStorageImpl::AddObjectFromLocal(
@@ -806,7 +813,6 @@ void PageStorageImpl::AddCommits(
   if (s == Status::OK && notify_watchers) {
     NotifyWatchers();
   }
-
 }
 
 Status PageStorageImpl::ContainsCommit(CommitIdView id) {

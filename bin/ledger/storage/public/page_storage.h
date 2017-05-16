@@ -102,8 +102,14 @@ class PageStorage {
   // parent(s).
   virtual Status GetDeltaObjects(const CommitId& commit_id,
                                  std::vector<ObjectId>* objects) = 0;
+  // Finds all objects in the storage that are not yet synced, and calls
+  // |callback| with the operation status and the corresponding |ObjectId|s
+  // vector.
+  virtual void GetAllUnsyncedObjectIds(
+      std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
   // Finds all objects in the storage tree of the commit with the given
-  // |commit_id| that are not yet synced and adds them in the |objectus| vector.
+  // |commit_id| that are not yet synced, and calls |callback| with the
+  // operation status and the corresponding |ObjectId|s vector.
   virtual void GetUnsyncedObjectIds(
       const CommitId& commit_id,
       std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
