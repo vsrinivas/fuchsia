@@ -4,6 +4,8 @@
 
 #include "apps/mozart/examples/tile/tile_view.h"
 
+#include <mxio/util.h>
+
 #include "application/lib/app/connect.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -108,7 +110,7 @@ void TileView::CreateNestedEnvironment() {
 
   env_services_.SetDefaultServiceConnector(
       [this](std::string service_name, mx::channel channel) {
-        application_context_->environment_services()->ConnectToService(
+        application_context_->ConnectToEnvironmentService(
             service_name, std::move(channel));
       });
 }

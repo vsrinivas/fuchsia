@@ -26,8 +26,7 @@ InputConnectionImpl::InputConnectionImpl(
   FTL_DCHECK(view_token_);
   binding_.set_connection_error_handler(
       [this] { associate_->OnInputConnectionDied(this); });
-  app::ConnectToService(application_context->environment_services().get(),
-                        ime_service_.NewRequest());
+  application_context->ConnectToEnvironmentService(ime_service_.NewRequest());
   ime_service_.set_connection_error_handler(
       [] { FTL_LOG(ERROR) << "IME Service Died."; });
 }
