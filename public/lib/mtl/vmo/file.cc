@@ -5,13 +5,8 @@
 #include "lib/mtl/vmo/file.h"
 
 #include <fcntl.h>
-#include <magenta/syscalls.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/uio.h>
+#include <mxio/io.h>
 #include <unistd.h>
-
-#include <vector>
 
 #include "lib/ftl/logging.h"
 
@@ -20,39 +15,11 @@ namespace mtl {
 bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
   FTL_CHECK(handle_ptr);
 
-  struct stat64 st;
-  if (fstat64(fd.get(), &st) == -1) {
-    FTL_LOG(WARNING) << "mx::vmo::fstat failed";
+  mx_handle_t result = MX_HANDLE_INVALID;
+  mx_status_t status = mxio_get_vmo(fd.get(), &result);
+  if (status != NO_ERROR)
     return false;
-  }
-
-  size_t size = st.st_size;
-  mx_status_t status = mx::vmo::create(size, 0, handle_ptr);
-  if (status != NO_ERROR) {
-    FTL_LOG(WARNING) << "mx::vmo::create failed: " << status;
-    return false;
-  }
-
-  constexpr size_t kBufferSize = 1 << 16;
-  std::vector<char> buffer(kBufferSize);
-  size_t offset = 0;
-  while (offset < size) {
-    ssize_t bytes_read = read(fd.get(), buffer.data(), buffer.size());
-    if (bytes_read < 0) {
-      FTL_LOG(WARNING) << "mx::vmo::read failed: " << bytes_read;
-      return false;
-    }
-
-    size_t actual = 0;
-    mx_status_t rv =
-        handle_ptr->write(buffer.data(), offset, bytes_read, &actual);
-    if (rv < 0 || actual != static_cast<size_t>(bytes_read)) {
-      FTL_LOG(WARNING) << "mx::vmo::write wrote " << actual
-                       << " bytes instead of " << bytes_read << " bytes.";
-      return false;
-    }
-    offset += bytes_read;
-  }
+  handle_ptr->reset(result);
   return true;
 }
 
