@@ -932,12 +932,21 @@ void ViewRegistry::GetSoftKeyboardContainer(
     fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(container.is_pending());
-  ViewState* view = FindView(view_token->value);
-  if (!view) {
+  FTL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
+
+  ViewState* view_state = FindView(view_token->value);
+  if (!view_state) {
     return;
   }
+
   // Walk the tree back up until we find a service provider
-  app::ConnectToService(view->service_provider().get(), std::move(container));
+  auto& provider = view_state->service_provider();
+  while (!provider && view_state) {
+    view_state = view_state->view_stub()->parent();
+  }
+  if (provider) {
+    app::ConnectToService(provider.get(), std::move(container));
+  }
 }
 
 // EXTERNAL SIGNALING
