@@ -437,6 +437,15 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             uintptr_t value = process->aspace()->vdso_base_address();
             return _value.reinterpret<uintptr_t>().copy_to_user(value);
         }
+        case MX_PROP_JOB_MAX_HEIGHT: {
+            if (size < sizeof(uint32_t))
+                return ERR_BUFFER_TOO_SMALL;
+            auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+            if (!job)
+                return ERR_WRONG_TYPE;
+            uint32_t value = job->max_height();
+            return _value.reinterpret<uint32_t>().copy_to_user(value);
+        }
         default:
             return ERR_INVALID_ARGS;
     }

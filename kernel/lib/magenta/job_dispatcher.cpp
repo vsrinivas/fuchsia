@@ -14,6 +14,9 @@
 #include <magenta/syscalls/policy.h>
 #include <mxalloc/new.h>
 
+// The starting max_height value of the root job.
+static const uint32_t kRootJobMaxHeight = 32;
+
 constexpr mx_rights_t kDefaultJobRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE |
     MX_RIGHT_ENUMERATE | MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY |
@@ -29,6 +32,11 @@ status_t JobDispatcher::Create(uint32_t flags,
                                mxtl::RefPtr<JobDispatcher> parent,
                                mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
+    if (parent != nullptr && parent->max_height() == 0) {
+        // The parent job cannot have children.
+        return ERR_OUT_OF_RANGE;
+    }
+
     AllocChecker ac;
     auto job = new (&ac) JobDispatcher(flags, parent, parent->GetPolicy());
     if (!ac.check())
@@ -48,9 +56,11 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              mxtl::RefPtr<JobDispatcher> parent,
                              pol_cookie_t policy)
     : parent_(mxtl::move(parent)),
+      max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
-      process_count_(0u), job_count_(0u),
-      state_tracker_(MX_JOB_NO_PROCESSES|MX_JOB_NO_JOBS),
+      process_count_(0u),
+      job_count_(0u),
+      state_tracker_(MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS),
       policy_(policy) {
 }
 
