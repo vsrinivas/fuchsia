@@ -16,5 +16,8 @@
             "binary": "wlan.so",
             "bootfs_path": "lib/driver/wlan.so"
         }
+    ],
+    "gopaths": [
+        { "apps/wlan": "apps/wlan" }
     ]
 }

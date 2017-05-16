@@ -3,6 +3,9 @@
         "//apps/amber:tuf",
         "//apps/amber:tuf-client"
     ],
+    "imports": [
+        "golibs"
+    ],
     "binaries": [
         {
             "binary": "tuf",
@@ -12,5 +15,8 @@
             "binary": "tuf-client",
             "bootfs_path": "bin/tuf-client"
         }
+    ],
+    "gopaths": [
+        { "apps/amber": "github.com/flynn/go-tuf" }
     ]
 }

@@ -39,6 +39,7 @@ class Amalgamation:
         self.boot = Filesystem() # Files that will live in /boot
         self.system = Filesystem() # Files that will live in /system
         self.resources = []
+        self.gopaths = []
 
 
     def add_config(self, config, config_path):
@@ -81,6 +82,8 @@ class Amalgamation:
                     'bootfs_path': os.path.join('components', component_file.url_as_path),
                     'default': False,
                 })
+        if config.get("gopaths"):
+            self.gopaths.extend(config.get("gopaths"))
 
 
 def resolve_imports(import_queue, omit_files, build_root):
@@ -108,6 +111,17 @@ def resolve_imports(import_queue, omit_files, build_root):
                 sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
                 return None
     return amalgamation
+
+def update_gopath(maps, build_root):
+    for gopath in maps:
+        for src in gopath:
+            target = os.path.join(build_root, "src", gopath[src])
+            src = os.path.join(paths.FUCHSIA_ROOT, src)
+            if not os.path.exists(os.path.dirname(target)):
+                os.makedirs(os.path.dirname(target))
+            if os.path.lexists(target):
+                os.remove(target)
+            os.symlink(src, target)
 
 def write_manifest(manifest, files, autorun):
     manifest_dir = os.path.dirname(manifest)
@@ -145,6 +159,8 @@ def main():
         if os.path.exists(args.boot_manifest):
             os.remove(args.boot_manifest)
     write_manifest(args.system_manifest, amalgamation.system.files, args.autorun)
+
+    update_gopath(amalgamation.gopaths, amalgamation.build_root)
 
     if args.depfile != "":
         with open(args.depfile, "w") as f:

@@ -7,5 +7,11 @@
             "binary": "netstack",
             "bootfs_path": "bin/netstack"
         }
+    ],
+    "gopaths": [
+        {
+            "apps/netstack": "apps/netstack",
+            "third_party/netstack": "github.com/google/netstack"
+        }
     ]
 }
