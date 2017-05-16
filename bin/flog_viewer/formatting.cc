@@ -4,13 +4,19 @@
 
 #include "apps/media/tools/flog_viewer/formatting.h"
 
-#include <chrono>
 #include <iomanip>
 #include <iostream>
 
 #include "apps/media/services/flog/flog.fidl.h"
 
 namespace flog {
+namespace {
+
+static constexpr int64_t kNanosecondsPerSecond = 1000000000ll;
+static constexpr int64_t kSecondsPerMinute = 60ll;
+static constexpr int64_t kMinutesPerHour = 60ll;
+
+}  // namespace
 
 int ostream_indent_index() {
   static int i = std::ios_base::xalloc();
@@ -43,17 +49,15 @@ std::ostream& operator<<(std::ostream& os, AsKoid value) {
 }
 
 std::ostream& operator<<(std::ostream& os, AsNiceDateTime value) {
-  std::time_t time = std::chrono::system_clock::to_time_t(
-      std::chrono::time_point<std::chrono::system_clock>(
-          std::chrono::microseconds(value.time_us_)));
-  std::tm* tm = gmtime(&time);
-  // Our timestamps are relative to startup, so no point in showing the date.
-  return os << std::setfill('0') << std::setw(2) << tm->tm_hour << ":"
-            << std::setw(2) << tm->tm_min << ":" << std::setw(2) << tm->tm_sec;
-}
+  int64_t seconds = value.time_ns_ / kNanosecondsPerSecond;
+  int64_t minutes = seconds / kSecondsPerMinute;
+  int64_t hours = minutes / kMinutesPerHour;
+  seconds %= kSecondsPerMinute;
+  minutes %= kMinutesPerHour;
 
-std::ostream& operator<<(std::ostream& os, AsMicroseconds value) {
-  return os << std::setfill('0') << std::setw(6) << value.time_us_ % 1000000ull;
+  // Our timestamps are relative to startup, so no point in showing the date.
+  return os << std::setfill('0') << std::setw(2) << hours << ":" << std::setw(2)
+            << minutes << ":" << std::setw(2) << seconds;
 }
 
 std::ostream& operator<<(std::ostream& os, const Channel& value) {
@@ -108,19 +112,21 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
   // We want to know if this entry happened in a different second than the
   // previous entry. To do this, we use ostream::iword to store a time value
   // at seconds resolution. We mod it by max long so it'll fit in a long.
-  long second = static_cast<long>((value->time_us / 1000000ull) %
+  long second = static_cast<long>((value->time_ns / kNanosecondsPerSecond) %
                                   std::numeric_limits<long>::max());
 
   // If this second value differs from the previous one, record the new second
   // value and print a second header.
   if (os.iword(ostream_entry_second_index()) != second) {
     os.iword(ostream_entry_second_index()) = second;
-    os << AsNiceDateTime(value->time_us) << std::endl;
+    os << AsNiceDateTime(value->time_ns) << std::endl;
   }
 
-  // Print <microseconds> <log_id>.<channel_id>
-  return os << AsMicroseconds(value->time_us) << " " << value->log_id << "."
-            << std::setw(2) << std::setfill('0') << value->channel_id << " ";
+  // Print <nanoseconds> <log_id>.<channel_id>
+  return os << std::setfill('0') << std::setw(9)
+            << value->time_ns % kNanosecondsPerSecond << " " << value->log_id
+            << "." << std::setw(2) << std::setfill('0') << value->channel_id
+            << " ";
 }
 
 }  // namespace flog

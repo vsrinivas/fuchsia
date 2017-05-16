@@ -57,18 +57,11 @@ struct AsKoid {
 std::ostream& operator<<(std::ostream& os, AsKoid value);
 
 struct AsNiceDateTime {
-  explicit AsNiceDateTime(uint64_t time_us) : time_us_(time_us) {}
-  uint64_t time_us_;
+  explicit AsNiceDateTime(int64_t time_ns) : time_ns_(time_ns) {}
+  int64_t time_ns_;
 };
 
 std::ostream& operator<<(std::ostream& os, AsNiceDateTime value);
-
-struct AsMicroseconds {
-  explicit AsMicroseconds(uint64_t time_us) : time_us_(time_us) {}
-  uint64_t time_us_;
-};
-
-std::ostream& operator<<(std::ostream& os, AsMicroseconds value);
 
 std::ostream& operator<<(std::ostream& os, const Channel& value);
 

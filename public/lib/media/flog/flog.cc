@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <chrono>
-
 #include "apps/media/lib/flog/flog.h"
+
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace flog {
 
@@ -56,10 +57,8 @@ void Flog::LogChannelDeletion(uint32_t channel_id) {
 }
 
 // static
-uint64_t Flog::GetTime() {
-  return std::chrono::duration_cast<std::chrono::microseconds>(
-             std::chrono::system_clock::now().time_since_epoch())
-      .count();
+int64_t Flog::GetTime() {
+  return (ftl::TimePoint::Now() - ftl::TimePoint()).ToNanoseconds();
 }
 
 // static

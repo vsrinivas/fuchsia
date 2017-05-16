@@ -55,19 +55,19 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
   }
 
   // Creates an entry with an uninitialized details field.
-  FlogEntryPtr CreateEntry(int64_t time_us, uint32_t channel_id);
+  FlogEntryPtr CreateEntry(int64_t time_ns, uint32_t channel_id);
 
   // FlogLogger implementation (called by stub_).
-  void LogChannelCreation(int64_t time_us,
+  void LogChannelCreation(int64_t time_ns,
                           uint32_t channel_id,
                           const fidl::String& type_name,
                           uint64_t subject_address) override;
 
-  void LogChannelMessage(int64_t time_us,
+  void LogChannelMessage(int64_t time_ns,
                          uint32_t channel_id,
                          fidl::Array<uint8_t> data) override;
 
-  void LogChannelDeletion(int64_t time_us, uint32_t channel_id) override;
+  void LogChannelDeletion(int64_t time_ns, uint32_t channel_id) override;
 
   uint32_t log_id_;
   ftl::UniqueFD fd_;

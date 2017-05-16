@@ -189,8 +189,8 @@ class Flog {
   static void LogChannelDeletion(uint32_t channel_id);
 
  private:
-  // Gets the current time in microseconds since epoch.
-  static uint64_t GetTime();
+  // Gets the current time in nanoseconds since epoch.
+  static int64_t GetTime();
 
   static std::atomic_ulong last_allocated_channel_id_;
   static FlogLoggerPtr logger_;

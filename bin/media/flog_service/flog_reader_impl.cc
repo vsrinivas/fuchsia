@@ -211,20 +211,20 @@ void FlogReaderImpl::FillReadBuffer(bool restart) {
   read_buffer_.resize(bytes_read);
 }
 
-FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_us, uint32_t channel_id) {
+FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_ns, uint32_t channel_id) {
   FlogEntryPtr entry = FlogEntry::New();
-  entry->time_us = time_us;
+  entry->time_ns = time_ns;
   entry->log_id = log_id_;
   entry->channel_id = channel_id;
   entry->details = FlogEntryDetails::New();
   return entry;
 }
 
-void FlogReaderImpl::LogChannelCreation(int64_t time_us,
+void FlogReaderImpl::LogChannelCreation(int64_t time_ns,
                                         uint32_t channel_id,
                                         const fidl::String& type_name,
                                         uint64_t subject_address) {
-  entry_ = CreateEntry(time_us, channel_id);
+  entry_ = CreateEntry(time_ns, channel_id);
   FlogChannelCreationEntryDetailsPtr details =
       FlogChannelCreationEntryDetails::New();
   details->type_name = type_name;
@@ -232,18 +232,18 @@ void FlogReaderImpl::LogChannelCreation(int64_t time_us,
   entry_->details->set_channel_creation(std::move(details));
 }
 
-void FlogReaderImpl::LogChannelMessage(int64_t time_us,
+void FlogReaderImpl::LogChannelMessage(int64_t time_ns,
                                        uint32_t channel_id,
                                        fidl::Array<uint8_t> data) {
-  entry_ = CreateEntry(time_us, channel_id);
+  entry_ = CreateEntry(time_ns, channel_id);
   FlogChannelMessageEntryDetailsPtr details =
       FlogChannelMessageEntryDetails::New();
   details->data = std::move(data);
   entry_->details->set_channel_message(std::move(details));
 }
 
-void FlogReaderImpl::LogChannelDeletion(int64_t time_us, uint32_t channel_id) {
-  entry_ = CreateEntry(time_us, channel_id);
+void FlogReaderImpl::LogChannelDeletion(int64_t time_ns, uint32_t channel_id) {
+  entry_ = CreateEntry(time_ns, channel_id);
   FlogChannelDeletionEntryDetailsPtr details =
       FlogChannelDeletionEntryDetails::New();
   entry_->details->set_channel_deletion(std::move(details));
