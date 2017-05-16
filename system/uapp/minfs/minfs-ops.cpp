@@ -630,7 +630,6 @@ static mx_status_t cb_dir_append(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
         }
         offs->off += size;
         // create new entry in the remaining space
-        de = (minfs_dirent_t*) ((uintptr_t)de + size);
         char data[kMinfsMaxDirentSize];
         de = (minfs_dirent_t*) data;
         de->reclen = extra | (was_last_record ? kMinfsReclenLast : 0);
@@ -1334,7 +1333,6 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
         if ((status = newdir->ForEachDirent(&args, cb_dir_append)) < 0) {
             return status;
         }
-        status = NO_ERROR;
     } else if (status != NO_ERROR) {
         return status;
     }
