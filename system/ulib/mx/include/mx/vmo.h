@@ -46,6 +46,13 @@ public:
         return mx_vmo_set_size(get(), size);
     }
 
+    mx_status_t clone(uint32_t options, uint64_t offset, uint64_t size, vmo* result) {
+        mx_handle_t h = MX_HANDLE_INVALID;
+        mx_status_t status = mx_vmo_clone(get(), options, offset, size, &h);
+        result->reset(h);
+        return status;
+    }
+
     mx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size,
                          void* buffer, size_t buffer_size) const {
         return mx_vmo_op_range(get(), op, offset, size, buffer, buffer_size);
