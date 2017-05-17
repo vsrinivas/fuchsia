@@ -136,8 +136,11 @@ bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
 
   std::sort(records.begin(), records.end(),
             [](const Record& lhs, const Record& rhs) {
-              return BytesToServerTimestamp(lhs.timestamp) <
-                     BytesToServerTimestamp(rhs.timestamp);
+              if (lhs.timestamp != rhs.timestamp) {
+                return BytesToServerTimestamp(lhs.timestamp) <
+                       BytesToServerTimestamp(rhs.timestamp);
+              }
+              return lhs.batch_position < rhs.batch_position;
             });
 
   output_records->swap(records);

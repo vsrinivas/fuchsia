@@ -550,6 +550,49 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
 }
 
+// Verifies that out-of-order batch commits are reordered when retrieved through
+// GetCommits().
+TEST_F(CloudProviderImplTest, GetCommitsBatch) {
+  std::string get_response_content = R"({
+    "id_1V": {
+      "id": "id_1V",
+      "content": "other_contentV",
+      "timestamp": 43,
+      "batch_position": 1,
+      "batch_size": 2
+    },
+    "id_0V": {
+      "id": "id_0V",
+      "content": "some_contentV",
+      "timestamp": 43,
+      "batch_position": 0,
+      "batch_size": 2
+    }
+  })";
+  get_response_ = std::make_unique<rapidjson::Document>();
+  get_response_->Parse(get_response_content.c_str(),
+                       get_response_content.size());
+
+  Status status;
+  std::vector<Record> records;
+  cloud_provider_->GetCommits(
+      ServerTimestampToBytes(42),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &records));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  const Commit expected_commit_0("id_0", "some_content",
+                                 std::map<ObjectId, Data>{});
+  const Commit expected_commit_1("id_1", "other_content",
+                                 std::map<ObjectId, Data>{});
+  EXPECT_EQ(2u, records.size());
+  // Verify that commits are ordered by the batch position.
+  EXPECT_EQ(expected_commit_0, records[0].commit);
+  EXPECT_EQ(ServerTimestampToBytes(43), records[0].timestamp);
+  EXPECT_EQ(expected_commit_1, records[1].commit);
+  EXPECT_EQ(ServerTimestampToBytes(43), records[1].timestamp);
+}
+
 TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   std::string get_response_content = "null";
   get_response_ = std::make_unique<rapidjson::Document>();
