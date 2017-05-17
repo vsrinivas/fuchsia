@@ -22,6 +22,6 @@ class Mozart {
     _offerServiceProvider(_context, handle);
   }
 
-  static void _offerServiceProvider(int handle)
+  static void _offerServiceProvider(int context, int handle)
       native 'Mozart_offerServiceProvider';
 }
