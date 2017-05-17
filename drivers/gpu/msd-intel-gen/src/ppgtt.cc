@@ -127,8 +127,7 @@ bool PerProcessGtt::Init()
 
     uint64_t start = 0;
 
-    // leave space for a guard page
-    allocator_ = magma::SimpleAllocator::Create(start, Size() - PAGE_SIZE);
+    allocator_ = magma::SimpleAllocator::Create(start, Size());
     if (!allocator_)
         return DRETF(false, "failed to create allocator");
 
@@ -201,7 +200,7 @@ bool PerProcessGtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
     // see
     // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf
     // page 908
-    size_t alloc_size = size + PAGE_SIZE;
+    size_t alloc_size = size + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
     return allocator_->Alloc(alloc_size, align_pow2, addr_out);
 }
 
@@ -237,8 +236,8 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
     if (!allocator_->GetSize(addr, &allocated_length))
         return DRETF(false, "couldn't get allocated length for addr");
 
-    // add an extra page to length to account for the overfetch protection page
-    if (length + PAGE_SIZE != allocated_length)
+    // add extra pages to length to account for the overfetch page and guard page
+    if (length + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE != allocated_length)
         return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
                      allocated_length, length);
 
@@ -261,10 +260,23 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
     DLOG("start pdp %u pd %i pt %u", page_directory_pointer_index, page_directory_index,
          page_table_index);
 
-    for (uint64_t i = 0; i<length>> PAGE_SHIFT; i++) {
-        gen_pte_t pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
-        page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                                   page_table_index, pte);
+    for (uint64_t i = 0; i < num_pages + kOverfetchPageCount + kGuardPageCount; i++) {
+        if (i < num_pages) {
+            // buffer pages
+            gen_pte_t pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
+            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
+                                                                       page_table_index, pte);
+        } else if (i < num_pages + kOverfetchPageCount) {
+            // overfetch page
+            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true);
+            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
+                                                                       page_table_index, pte);
+        } else {
+            // guard page
+            gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, false);
+            page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
+                                                                       page_table_index, pte);
+        }
 
         if (++page_table_index == kPageTableEntries) {
             page_table_index = 0;
@@ -275,12 +287,6 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
             }
         }
     }
-
-    // insert pte for overfetch protection page
-    auto pte = gen_pte_encode(scratch_bus_addr_, CACHING_NONE, true);
-    page_directories_[page_directory_pointer_index]->write_pte(page_directory_index,
-                                                               page_table_index, pte);
-
     return true;
 }
 

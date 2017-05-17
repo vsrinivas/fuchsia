@@ -66,20 +66,25 @@ public:
         uint64_t bus_addr[page_count];
         EXPECT_TRUE(buffer->MapPageRangeBus(0, page_count, bus_addr));
 
-        for (unsigned int i = 0; i < page_count; i++) {
+        for (unsigned int i = 0;
+             i < page_count + PerProcessGtt::kOverfetchPageCount + PerProcessGtt::kGuardPageCount;
+             i++) {
             uint64_t pte = get_pte(ppgtt, gpu_addr + i * PAGE_SIZE);
-            EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
-            EXPECT_TRUE(pte & 0x1); // page present
+            if (i < page_count) {
+                EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
+            } else {
+                EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
+            }
+
+            if (i < page_count + PerProcessGtt::kOverfetchPageCount) {
+                EXPECT_TRUE(pte & 0x1); // page present
+            } else {
+                EXPECT_FALSE(pte & 0x1); // page present
+            }
             EXPECT_TRUE(pte & 0x3); // rw
             EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
         }
         EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
-
-        uint64_t pte = get_pte(ppgtt, gpu_addr + page_count * PAGE_SIZE);
-        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
-        EXPECT_TRUE(pte & 0x1); // page present
-        EXPECT_TRUE(pte & 0x3); // rw
-        EXPECT_EQ(pte & cache_bits(CACHING_NONE), cache_bits(CACHING_NONE));
     }
 
     static std::shared_ptr<magma::PlatformBuffer> get_scratch_buffer()
