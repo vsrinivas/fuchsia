@@ -1,0 +1,18 @@
+{
+    "imports": [
+        "boot_test_runner"
+    ],
+    "labels": [
+        "//apps/test_runner/src/test"
+    ],
+    "binaries": [
+        {
+            "binary": "fake_failing_test",
+            "bootfs_path": "test/fake_failing_test"
+        },
+        {
+            "binary": "fake_passing_test",
+            "bootfs_path": "test/fake_passing_test"
+        }
+    ]
+}
