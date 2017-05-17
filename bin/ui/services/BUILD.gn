@@ -11,6 +11,7 @@ group("services") {
     "composition/cpp",
     "geometry",
     "geometry/cpp",
+    "images2",
     "input",
     "input/cpp",
     "presentation",

@@ -7,6 +7,7 @@ module mozart2;
 import "apps/mozart/services/composer/nodes.fidl";
 import "apps/mozart/services/composer/shapes.fidl";
 import "apps/mozart/services/composer/types.fidl";
+import "apps/mozart/services/images2/image_info.fidl";
 
 // These are all of the types of resources that can be created within a
 // |Session|.
@@ -47,38 +48,10 @@ struct Memory {
 // An image mapped to a range of a |Memory| resource.
 // TODO: more precise and extensive docs.
 struct Image {
-  // Specifies the memory layout of pixels in the image.
-  // TODO: populate.  For example, see formats supported by Chromium:
-  // https://cs.chromium.org/chromium/src/media/base/video_types.h?type=cs&l=19
-  enum Format {
-    kRGBA = 0,
-    kBGRA,
-    kRGB,
-    kSRGB,
-    kSRGBA,
-    kYV12,
-  };
-
-  // Corresponds to VkImageTiling.
-  // TODO: add a BlitOp so that a client that doesn't want to deal with Vulkan
-  // directly can blit a linear image into an optimal one.
-  enum Tiling {
-    kOptimal = 0,  // VK_IMAGE_TILING_OPTIMAL
-    kLinear,       // VK_IMAGE_TILING_LINEAR
-  };
+  ImageInfo info;
 
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of image within |Memory| resource
-  Format format;
-  Tiling tiling;
-
-  uint32 width;
-  uint32 height;
-  uint32 num_bytes;
-
-  // If true, the memory is already formatted as a Vulkan image.  Otherwise, it
-  // is a CPU-accessible image that must be uploaded to Vulkan.
-  bool is_vulkan;
 };
 
 // A buffer mapped to a range of |Memory|.

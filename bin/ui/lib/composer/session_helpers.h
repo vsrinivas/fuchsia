@@ -18,12 +18,11 @@ mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo);
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
-                                mozart2::Image::Format format,
-                                mozart2::Image::Tiling tiling,
+                                mozart2::ImageInfo::PixelFormat format,
+                                mozart2::ImageInfo::Tiling tiling,
                                 uint32_t width,
                                 uint32_t height,
-                                uint32_t num_bytes,
-                                bool is_vulkan);
+                                uint32_t stride);
 mozart2::OpPtr NewCreateBufferOp(uint32_t id,
                                  uint32_t memory_id,
                                  uint32_t memory_offset,

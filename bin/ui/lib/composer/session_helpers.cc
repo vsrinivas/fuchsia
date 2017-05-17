@@ -32,21 +32,19 @@ mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo, uint32_t num_bytes) {
 mozart2::OpPtr NewCreateImageOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
-                                mozart2::Image::Format format,
-                                mozart2::Image::Tiling tiling,
+                                mozart2::ImageInfo::PixelFormat format,
+                                mozart2::ImageInfo::Tiling tiling,
                                 uint32_t width,
                                 uint32_t height,
-                                uint32_t num_bytes,
-                                bool is_vulkan) {
+                                uint32_t stride) {
   auto image = mozart2::Image::New();
   image->memory_id = memory_id;
   image->memory_offset = memory_offset;
-  image->format = format;
-  image->tiling = tiling;
-  image->width = width;
-  image->height = height;
-  image->num_bytes = num_bytes;
-  image->is_vulkan = is_vulkan;
+  image->info->pixel_format = format;
+  image->info->tiling = tiling;
+  image->info->width = width;
+  image->info->height = height;
+  image->info->stride = stride;
 
   auto resource = mozart2::Resource::New();
   resource->set_image(std::move(image));

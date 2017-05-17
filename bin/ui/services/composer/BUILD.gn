@@ -17,5 +17,6 @@ fidl("composer") {
 
   public_deps = [
     "//apps/mozart/services/geometry",
+    "//apps/mozart/services/images2",
   ]
 }
