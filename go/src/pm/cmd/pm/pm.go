@@ -17,6 +17,7 @@ import (
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
+	"fuchsia.googlesource.com/pm/cmd/pm/verify"
 )
 
 const usage = `%s [command]
@@ -24,8 +25,8 @@ const usage = `%s [command]
     genkey  - generate a new private/public key pair
     update  - update the merkle roots in meta/contents
     sign    - sign a package with the given key
+    verify  - verify metadata signature against the embedded public key
 TODO:
-    verify  - verify an archive signature against the embedded public key
     archive - construct a single .far representation of the package
     publish - upload the package to a distribution service
 `
@@ -62,6 +63,9 @@ func main() {
 			die(err)
 		}
 		err = sign.Run(d, ed25519.PrivateKey(buf))
+
+	case "verify":
+		err = verify.Run(d)
 
 	default:
 		flag.Usage()
