@@ -6,6 +6,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <limits>
 
 #include "application/lib/app/connect.h"
 #include "apps/media/tools/flog_viewer/formatting.h"
@@ -20,7 +21,7 @@ const std::string FlogViewer::kFormatFull = "full";
 // static
 const std::string FlogViewer::kFormatDigest = "digest";
 
-FlogViewer::FlogViewer() {}
+FlogViewer::FlogViewer() : stop_index_(std::numeric_limits<uint32_t>::max()) {}
 
 FlogViewer::~FlogViewer() {}
 
@@ -142,6 +143,12 @@ void FlogViewer::ProcessEntries(uint32_t start_index) {
                       [this, start_index](fidl::Array<FlogEntryPtr> entries) {
                         uint32_t entry_index = start_index;
                         for (const FlogEntryPtr& entry : entries) {
+                          if (entry_index > stop_index_) {
+                            std::cout << std::endl;
+                            PrintRemainingAccumulators();
+                            terminate_callback_();
+                            return;
+                          }
                           ProcessEntry(entry_index, entry);
                           entry_index++;
                         }
@@ -190,6 +197,7 @@ void FlogViewer::OnChannelCreated(
     const FlogEntryPtr& entry,
     const FlogChannelCreationEntryDetailsPtr& details) {
   if (format_ == kFormatTerse || format_ == kFormatFull) {
+    std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
     std::cout << entry << "channel created, type " << details->type_name
               << ", address " << AsAddress(details->subject_address)
               << std::endl;
@@ -245,6 +253,10 @@ void FlogViewer::OnChannelMessage(
     return;
   }
 
+  if (format_ == kFormatTerse || format_ == kFormatFull) {
+    std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
+  }
+
   iter->second->handler()->HandleMessage(iter->second, entry_index, entry,
                                          &message);
 }
@@ -254,6 +266,7 @@ void FlogViewer::OnChannelDeleted(
     const FlogEntryPtr& entry,
     const FlogChannelDeletionEntryDetailsPtr& details) {
   if (format_ == kFormatTerse || format_ == kFormatFull) {
+    std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
     std::cout << entry << "channel deleted" << std::endl;
   }
 

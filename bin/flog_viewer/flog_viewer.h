@@ -34,6 +34,8 @@ class FlogViewer : public ChannelManager {
 
   void set_format(const std::string& format) { format_ = format; }
 
+  void set_stop_index(uint32_t stop_index) { stop_index_ = stop_index; }
+
   // Initializes the viewer.
   void Initialize(app::ApplicationContext* application_context,
                   const std::function<void()>& terminate_callback);
@@ -93,6 +95,7 @@ class FlogViewer : public ChannelManager {
   std::map<uint64_t, std::shared_ptr<Channel>> channels_by_subject_address_;
   std::map<uint64_t, std::shared_ptr<Channel>> channels_by_binding_koid_;
   std::map<uint64_t, Binding*> bindings_by_binding_koid_;
+  uint32_t stop_index_;
 };
 
 }  // namespace flog

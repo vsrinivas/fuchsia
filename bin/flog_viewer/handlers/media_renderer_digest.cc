@@ -79,10 +79,12 @@ void MediaRendererDigest::EngagePacket(int64_t current_pts,
   if (packet_label == 0) {
     // Needed a packet but there was none.
     accumulator_->starved_no_packet_.Add();
+    ReportProblem() << "Renderer starved, no packet";
   } else if (packet_pts < current_pts) {
     // Needed a packet, but the newest one was too old.
     accumulator_->starved_ns_.Add(
         static_cast<uint64_t>(current_pts - packet_pts));
+    ReportProblem() << "Renderer starved, stale packet";
   } else if (!accumulator_->current_timeline_transform_ ||
              accumulator_->current_timeline_transform_->subject_delta == 0) {
     // Engaged packet as part of preroll (while paused).
@@ -165,9 +167,9 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
     os << begl << "preroll packets: " << preroll_packets_.count() << std::endl;
   }
 
-  os << begl << "packet earliness (ns): min " << packet_earliness_ns_.min()
-     << ", avg " << packet_earliness_ns_.average() << ", max "
-     << packet_earliness_ns_.max() << std::endl;
+  os << begl << "packet earliness: min " << AsTime(packet_earliness_ns_.min())
+     << ", avg " << AsTime(packet_earliness_ns_.average()) << ", max "
+     << AsTime(packet_earliness_ns_.max()) << std::endl;
 
   if (starved_no_packet_.count() != 0) {
     os << begl << "STARVED (no packet): " << starved_no_packet_.count()
@@ -176,8 +178,9 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
 
   if (starved_ns_.count() != 0) {
     os << begl << "STARVED (stale packet): count " << starved_ns_.count()
-       << ", staleness (ns) min " << starved_ns_.min() << ", avg "
-       << starved_ns_.average() << ", max " << starved_ns_.max() << std::endl;
+       << ", staleness min " << AsTime(starved_ns_.min()) << ", avg "
+       << AsTime(starved_ns_.average()) << ", max " << AsTime(starved_ns_.max())
+       << std::endl;
   }
 
   if (missing_packets_.count() != 0) {

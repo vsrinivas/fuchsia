@@ -46,6 +46,18 @@ class FlogViewerApp {
       did_something = true;
     }
 
+    if (command_line.GetOptionValue("stop-index", &string_value)) {
+      uint32_t stop_index;
+      if (!Parse(string_value, &stop_index)) {
+        Usage();
+        return;
+      }
+
+      viewer_.set_stop_index(stop_index);
+
+      did_something = true;
+    }
+
     if (command_line.GetOptionValue("last", &string_value)) {
       viewer_.ProcessLastLog(string_value);
       did_something = true;
@@ -106,6 +118,9 @@ class FlogViewerApp {
     std::cout
         << "    --channel(s)=<channel ids>  process only the indicated channels"
         << std::endl;
+    std::cout << "    --stop-index=<time>         process up to the indicated "
+                 "entry index"
+              << std::endl;
     std::cout << "    --delete-log(s)=<log ids>   delete the indicated logs"
               << std::endl;
     std::cout << "    --delete-all-logs           delete all logs" << std::endl;
@@ -132,6 +147,13 @@ class FlogViewerApp {
     }
 
     return vector_of_uint32_out->size() != 0 && istream.eof();
+  }
+
+  bool Parse(const std::string& string_value, uint32_t* uint32_out) {
+    FTL_DCHECK(uint32_out);
+
+    std::istringstream istream(string_value);
+    return (istream >> *uint32_out) && istream.eof();
   }
 
   FlogViewer viewer_;

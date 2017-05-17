@@ -40,7 +40,7 @@ void MediaSinkFull::Config(media::MediaTypePtr input_type,
   std::cout << begl << "input_type: " << input_type;
   std::cout << begl << "output_type: " << output_type;
   std::cout << begl << "converter_koids: " << converter_koids;
-  std::cout << begl << "renderer_koid: " << renderer_koid;
+  std::cout << begl << "renderer_koid: " << renderer_koid << std::endl;
   std::cout << outdent;
 }
 
