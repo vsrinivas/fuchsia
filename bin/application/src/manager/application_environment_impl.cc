@@ -10,12 +10,15 @@
 #include <magenta/processargs.h>
 #include <magenta/status.h>
 #include <mx/process.h>
+#include <mxio/namespace.h>
 #include <unistd.h>
 
 #include <utility>
 
 #include "application/lib/app/connect.h"
+#include "application/lib/far/format.h"
 #include "application/src/manager/url_resolver.h"
+#include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/handles/object_info.h"
@@ -27,6 +30,13 @@ constexpr char kFuchsiaMagic[] = "#!fuchsia ";
 constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
+constexpr char kAppPath[] = "bin/app";
+
+enum class LaunchType {
+  kProcess,
+  kArchive,
+  kRunner,
+};
 
 bool HasHandle(const fidl::Map<uint32_t, mx::handle>& startup_handles,
                uint32_t handle_id) {
@@ -37,6 +47,15 @@ bool HasReservedHandles(
     const fidl::Map<uint32_t, mx::handle>& startup_handles) {
   return HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_ENVIRONMENT) ||
          HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_SERVICES);
+}
+
+std::vector<const char*> GetArgv(const ApplicationLaunchInfoPtr& launch_info) {
+  std::vector<const char*> argv;
+  argv.reserve(launch_info->arguments.size() + 1);
+  argv.push_back(launch_info->url.get().c_str());
+  for (const auto& argument : launch_info->arguments)
+    argv.push_back(argument.get().c_str());
+  return argv;
 }
 
 // The very first process we create gets the PA_SERVICE_REQUEST given to us by
@@ -68,8 +87,7 @@ mx::process CreateProcess(
     fidl::InterfaceHandle<ApplicationEnvironment> environment) {
   fidl::Map<uint32_t, mx::handle> startup_handles =
       std::move(launch_info->startup_handles);
-  startup_handles.insert(PA_APP_ENVIRONMENT,
-                         environment.PassHandle());
+  startup_handles.insert(PA_APP_ENVIRONMENT, environment.PassHandle());
 
   if (service_root)
     startup_handles.insert(PA_SERVICE_ROOT, std::move(service_root));
@@ -91,13 +109,7 @@ mx::process CreateProcess(
   ForwardServiceRequestToFirstProcess(&ids, &handles);
 
   std::string label = GetLabelFromURL(launch_info->url);
-
-  std::vector<const char*> argv;
-  argv.reserve(launch_info->arguments.size() + 1);
-  argv.push_back(launch_info->url.get().c_str());
-  for (const auto& argument : launch_info->arguments)
-    argv.push_back(argument.get().c_str());
-
+  std::vector<const char*> argv = GetArgv(launch_info);
   mx::vmo data = std::move(package->data);
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
@@ -124,21 +136,76 @@ mx::process CreateProcess(
   return mx::process(proc);
 }
 
-bool HasShebang(const mx::vmo& data, std::string* runner) {
+mx::process CreateSandboxedProcess(
+    const mx::job& job,
+    mx::vmo data,
+    ApplicationLaunchInfoPtr launch_info,
+    mxio_flat_namespace_t* flat,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment) {
   if (!data)
-    return false;
-  std::string shebang(kMaxShebangLength, '\0');
+    return mx::process();
+
+  std::string label = GetLabelFromURL(launch_info->url);
+  std::vector<const char*> argv = GetArgv(launch_info);
+
+  // TODO(vardhan): The job passed to the child process (which will be
+  // duplicated from this |job|) should not be killable.
+  launchpad_t* lp;
+  launchpad_create(job.get(), label.c_str(), &lp);
+  launchpad_clone(lp, LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON);
+  launchpad_set_args(lp, argv.size(), argv.data());
+
+  launchpad_set_nametable(lp, flat->count, flat->path);
+
+  std::vector<uint32_t> ids;
+  std::vector<mx_handle_t> handles;
+
+  for (size_t i = 0; i < flat->count; ++i) {
+    ids.push_back(flat->type[i]);
+    handles.push_back(flat->handle[i]);
+  }
+
+  ids.push_back(PA_APP_ENVIRONMENT);
+  handles.push_back(environment.PassHandle().release());
+
+  if (launch_info->services) {
+    ids.push_back(PA_APP_SERVICES);
+    handles.push_back(launch_info->services.PassChannel().release());
+  }
+
+  launchpad_add_handles(lp, ids.size(), handles.data(), ids.data());
+  launchpad_load_from_vmo(lp, data.release());
+
+  mx_handle_t proc;
+  const char* errmsg;
+  auto status = launchpad_go(lp, &proc, &errmsg);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
+                   << " due to error " << status << " ("
+                   << mx_status_get_string(status) << "): " << errmsg;
+    return mx::process();
+  }
+  return mx::process(proc);
+}
+
+LaunchType Classify(const mx::vmo& data, std::string* runner) {
+  if (!data)
+    return LaunchType::kProcess;
+  std::string hint(kMaxShebangLength, '\0');
   size_t count;
-  mx_status_t status = data.read(&shebang[0], 0, shebang.length(), &count);
+  mx_status_t status = data.read(&hint[0], 0, hint.length(), &count);
   if (status != NO_ERROR)
-    return false;
-  if (shebang.find(kFuchsiaMagic) != 0)
-    return false;
-  size_t newline = shebang.find('\n', kFuchsiaMagicLength);
-  if (newline == std::string::npos)
-    return false;
-  *runner = shebang.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
-  return true;
+    return LaunchType::kProcess;
+  if (memcmp(hint.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
+    return LaunchType::kArchive;
+  if (hint.find(kFuchsiaMagic) == 0) {
+    size_t newline = hint.find('\n', kFuchsiaMagicLength);
+    if (newline == std::string::npos)
+      return LaunchType::kProcess;
+    *runner = hint.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
+    return LaunchType::kRunner;
+  }
+  return LaunchType::kProcess;
 }
 
 }  // namespace
@@ -295,24 +362,35 @@ void ApplicationEnvironmentImpl::CreateApplication(
 
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;
-  loader_->LoadApplication(url, ftl::MakeCopyable([
-                             this, launch_info = std::move(launch_info),
-                             controller = std::move(controller)
-                           ](ApplicationPackagePtr package) mutable {
-                             if (package) {
-                               std::string runner;
-                               if (HasShebang(package->data, &runner)) {
-                                 CreateApplicationWithRunner(
-                                     std::move(package), std::move(launch_info),
-                                     runner, std::move(controller));
-                               } else {
-                                 CreateApplicationWithProcess(
-                                     std::move(package), std::move(launch_info),
-                                     environment_bindings_.AddBinding(this),
-                                     std::move(controller));
-                               }
-                             }
-                           }));
+  loader_->LoadApplication(
+      url, ftl::MakeCopyable([
+        this, launch_info = std::move(launch_info),
+        controller = std::move(controller)
+      ](ApplicationPackagePtr package) mutable {
+        if (package) {
+          std::string runner;
+          LaunchType type = Classify(package->data, &runner);
+          switch (type) {
+            case LaunchType::kProcess:
+              CreateApplicationWithProcess(
+                  std::move(package), std::move(launch_info),
+                  environment_bindings_.AddBinding(this),
+                  std::move(controller));
+              break;
+            case LaunchType::kArchive:
+              CreateApplicationFromArchive(
+                  std::move(package), std::move(launch_info),
+                  environment_bindings_.AddBinding(this),
+                  std::move(controller));
+              break;
+            case LaunchType::kRunner:
+              CreateApplicationWithRunner(std::move(package),
+                                          std::move(launch_info), runner,
+                                          std::move(controller));
+              break;
+          }
+        }
+      }));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
@@ -358,12 +436,50 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationController> controller) {
   const std::string url = launch_info->url;  // Keep a copy before moving it.
-  mx::process process = CreateProcess(
-      job_, std::move(package), std::move(launch_info),
-      services_.OpenAsDirectory(), std::move(environment));
+  mx::process process =
+      CreateProcess(job_, std::move(package), std::move(launch_info),
+                    services_.OpenAsDirectory(), std::move(environment));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
-        std::move(controller), this, std::move(process), url);
+        std::move(controller), this, nullptr, std::move(process), url);
+    ApplicationControllerImpl* key = application.get();
+    applications_.emplace(key, std::move(application));
+  }
+}
+
+void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
+    ApplicationPackagePtr package,
+    ApplicationLaunchInfoPtr launch_info,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment,
+    fidl::InterfaceRequest<ApplicationController> controller) {
+  auto file_system =
+      std::make_unique<archive::FileSystem>(std::move(package->data));
+  mx::channel pkg = file_system->OpenAsDirectory();
+  if (!pkg)
+    return;
+  mx::channel svc = services_.OpenAsDirectory();
+  if (!svc)
+    return;
+
+  mx_handle_t handles[] = {pkg.get(), svc.get()};
+  uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
+  const char* paths[] = {"/pkg", "/svc"};
+
+  mxio_flat_namespace_t flat;
+  flat.count = 2;
+  flat.handle = handles;
+  flat.type = types;
+  flat.path = paths;
+
+  const std::string url = launch_info->url;  // Keep a copy before moving it.
+  mx::process process = CreateSandboxedProcess(
+      job_, file_system->GetFileAsVMO(kAppPath), std::move(launch_info), &flat,
+      std::move(environment));
+
+  if (process) {
+    auto application = std::make_unique<ApplicationControllerImpl>(
+        std::move(controller), this, std::move(file_system), std::move(process),
+        url);
     ApplicationControllerImpl* key = application.get();
     applications_.emplace(key, std::move(application));
   }

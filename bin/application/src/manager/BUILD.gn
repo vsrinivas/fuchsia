@@ -32,6 +32,7 @@ executable("manager") {
   deps = [
     "//application/lib/app",
     "//application/lib/svc",
+    "//application/lib/farfs",
     "//application/services",
     "//lib/ftl",
     "//lib/mtl",

@@ -133,7 +133,8 @@ mx::vmo FileSystem::GetFileAsVMO(ftl::StringView path) {
   DirectoryTableEntry entry;
   reader_->GetDirectoryEntry(path, &entry);
   mx_handle_t result = MX_HANDLE_INVALID;
-  mx_vmo_clone(vmo_, 0, entry.data_offset, entry.data_length, &result);
+  mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
+               entry.data_length, &result);
   return mx::vmo(result);
 }
 

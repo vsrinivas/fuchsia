@@ -15,10 +15,12 @@ namespace app {
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
     ApplicationEnvironmentImpl* environment,
+    std::unique_ptr<archive::FileSystem> fs,
     mx::process process,
     std::string path)
     : binding_(this),
       environment_(environment),
+      fs_(std::move(fs)),
       process_(std::move(process)),
       path_(std::move(path)) {
   termination_handler_ = mtl::MessageLoop::GetCurrent()->AddHandler(

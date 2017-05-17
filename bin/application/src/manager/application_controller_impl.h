@@ -7,6 +7,7 @@
 
 #include <mx/process.h>
 
+#include "application/lib/farfs/file_system.h"
 #include "application/services/application_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
@@ -22,6 +23,7 @@ class ApplicationControllerImpl : public ApplicationController,
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
       ApplicationEnvironmentImpl* environment,
+      std::unique_ptr<archive::FileSystem> fs,
       mx::process process,
       std::string path);
   ~ApplicationControllerImpl() override;
@@ -38,6 +40,7 @@ class ApplicationControllerImpl : public ApplicationController,
 
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
+  std::unique_ptr<archive::FileSystem> fs_;
   mx::process process_;
   std::string path_;
 
