@@ -6,15 +6,20 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# To apply magenta analyzers when building Magenta, you should build it
-# with Clang. For instructions on how to build Magenta with Clang see
-# https://fuchsia.googlesource.com/manifest/
-# Note: you also need to set your path to point to your clang in
-# TOOLCHAIN_PREFIX.
+# This script will perform static analyses provided by Clang Static analyzers
+# on Magenta. It requires either a prebuilt Clang toolchan or a Clang toolchain
+# built from official Clang repository. For instructions on how to obtain a
+# prebuilt toolchain or build the toolchain from scratch, please refer to
+# document at
+# https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md
+
+set -eu
+
+ORIGINAL_CWD="$(pwd)"
 
 # These are the default checkers for clang and are always on by defualt,
 # unless they are explicitley disabled
-CHECKERS_TO_DISABLE="\
+CHECKERS_DEFAULT_ON="\
   core.CallAndMessage \
   core.DynamicTypePropagation \
   core.DivideZero \
@@ -52,52 +57,172 @@ CHECKERS_TO_DISABLE="\
 "
 
 # Magenta specific checkers
-CHECKERS_TO_ENABLE="\
-  magenta.SpinLock \
-  magenta.MutexChecker \
-"
+# Content may change in the future
+CHECKERS_TO_ENABLE=""
 
-# Disable default checkers
-for i in $CHECKERS_TO_DISABLE; do
-  CHECKERS="$CHECKERS -disable-checker $i"
-done
+# Checkers that should be disabled
+CHECKERS_TO_DISABLE=""
 
-# Enable magenta checkers
-for i in $CHECKERS_TO_ENABLE; do
-  CHECKERS="$CHECKERS -enable-checker $i"
-done
+# Checkers Args that should be passed to Clang Static Analyzer
+CHECKERS=""
 
-#echo $CHECKERS
-PREFIX=
-LIB=
-OUT_DIR="AnalysisResult"
+func_disable_checkers() {
+  # Disable default checkers
+  for i in $CHECKERS_TO_DISABLE; do
+    CHECKERS="$CHECKERS -disable-checker $i"
+  done
+}
 
-function HELP {
+func_enable_checkers() {
+  # Enable the checkers stored in $CHECKERS_TO_ENABLE
+  for i in $CHECKERS_TO_ENABLE; do
+    CHECKERS="$CHECKERS -enable-checker $i"
+  done
+}
+
+func_test_exist() {
+  if [ ! -e "$1" ]; then
+    echo "$1 does not exist! Please check your input. Aborting!"
+    exit -1
+  fi
+}
+
+func_trap_handler() {
+  cd "$ORIGINAL_CWD"
+  exit -1
+}
+
+# Register trap
+trap func_trap_handler SIGHUP SIGINT SIGTERM EXIT
+
+# Path to python version of scan_build
+SCAN_BUILD_PY=""
+# Path to CC wrapper of scan_build_py
+SCAN_BUILD_PY_CC=""
+# Path to CXX wrapper of scan_build_py
+SCAN_BUILD_PY_CXX=""
+
+# Path to perl version of scan_build
+SCAN_BUILD_PERL=""
+
+# Path to clang
+CLANG_PATH=""
+
+# Path to clang++
+CLANGXX_PATH=""
+
+# Path to toolchain
+TOOLCHAIN_PREFIX=""
+
+# Path to directory that contains scan-build-py/bin
+SCAN_BUILD_PY_PREFIX=""
+
+function func_help {
   echo "help:"
-  echo "-p <toolchain prefix> : path to the directory containing bin/clang"
-  echo "-l <libgcc>           : path to libgcc"
-  echo "-o <output dir>       : path to output dir (default: AnalysisResult)"
+  echo "-p <toolchain prefix>     : path to the directory containing bin/clang"
+  echo "-s <scan-build-py prefix> : path to the directory bin/scan-build"
+  echo "-o <output dir>           : path to output dir (default: AnalysisResult)"
   echo "-h for help"
   exit 1
 }
 
-while getopts "p:l:o:h" opt; do
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  # if $SOURCE was a relative symlink, we need to resolve it relative to the
+  # path where the symlink file was located
+  [[ "$SOURCE" != /* ]] && SOURCE="$SCRIPT_DIR/$SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+MAGENTA_ROOT="$SCRIPT_DIR/.."
+
+# Path to output analysis results
+OUT_DIR="$MAGENTA_ROOT/AnalysisResult"
+
+# Read args from command line
+while getopts "p:s:o:h" opt; do
   case $opt in
-    p) PREFIX=$OPTARG;;
-    l) LIB=$OPTARG;;
-    o) OUT_DIR=$OPTARG;;
-    h) HELP;;
+    p) TOOLCHAIN_PREFIX="$OPTARG";;
+    s) SCAN_BUILD_PY_PREFIX="$OPTARG";;
+    o) OUT_DIR="$OPTARG";;
+    h) func_help;;
     \?)
       echo "Inavlid option"
-      HELP
+      func_help
   esac
 done
 
-SCAN_BUILD=$PREFIX/scan-build
+# Determine the clang prefix
+if [ -z "$TOOLCHAIN_PREFIX" ]; then
+  # User did not provide toolchain prefix
+  # Assume user prefer prebuilt toolchain
+  PREBUILT_DIR="$MAGENTA_ROOT/prebuilt/downloads"
+  # Determine OS type
+  OS_STR="$(uname)"
+  if [ "$OS_STR" = "Darwin" ]; then
+    PREBUILT_DIR="$PREBUILT_DIR/clang+llvm-x86_64-darwin"
+  elif [ "$OS_STR" = "Linux" ]; then
+    PREBUILT_DIR="$PREBUILT_DIR/clang+llvm-x86_64-linux"
+  fi
+  if [ ! -d "$PREBUILT_DIR" ]; then
+    echo "Toolchain prefix is not defined and prebuilt toolchain has not yet been downloaded."
+    echo "Abort!"
+    exit -1
+  fi
+  TOOLCHAIN_PREFIX="$PREBUILT_DIR"
+fi
 
-$SCAN_BUILD $CHECKERS -o $OUT_DIR make \
-                                      CLANG=1 \
-                                      FUCHSIA=1 \
-                                      TOOLCHAIN_PREFIX=$PREFIX/ \
-                                      LIBGCC=$LIB/ \
-                                      ARCH_x86_64_TOOLCHAIN_PREFIX=$PREFIX/
+CLANG_PATH="$TOOLCHAIN_PREFIX/bin/clang"
+CLANGXX_PATH="$TOOLCHAIN_PREFIX/bin/clang++"
+
+# Check if clang exists
+func_test_exist "$CLANG_PATH"
+func_test_exist "$CLANGXX_PATH"
+
+# Looking for scan-build-py
+# Prebuild does not have scan-build-py
+if [ -z "$SCAN_BUILD_PY_PREFIX" ]; then
+  # SCAN_BUILD_PY_PREFIX not defined
+  # Try fuchsia/third_party
+  SCAN_BUILD_PY_PREFIX="$MAGENTA_ROOT/../third_party/llvm/tools/clang/tools/scan-build-py"
+fi
+
+if [ ! -d "$SCAN_BUILD_PY_PREFIX" ]; then
+  echo "scan-build-py is not found at $SCAN_BUILD_PY_PREFIX, Aborting!"
+  exit -1
+fi
+
+SCAN_BUILD_PY="$SCAN_BUILD_PY_PREFIX/bin/scan-build"
+SCAN_BUILD_PY_CC="$SCAN_BUILD_PY_PREFIX/bin/analyze-cc"
+SCAN_BUILD_PY_CXX="$SCAN_BUILD_PY_PREFIX/bin/analyze-c++"
+
+# Test if scan-build exists
+func_test_exist "$SCAN_BUILD_PY"
+func_test_exist "$SCAN_BUILD_PY_CC"
+func_test_exist "$SCAN_BUILD_PY_CXX"
+
+# Construct Checker Args that should be passed to scan-build
+func_disable_checkers
+func_enable_checkers
+
+# All clear, perform analysis
+# Change dir to magenta
+cd "$MAGENTA_ROOT"
+# Run scan-build on make
+make USE_CLANG=true clean &> /dev/null
+
+CMDL="${SCAN_BUILD_PY}"
+CMDL="$CMDL --use-cc ${CLANG_PATH}"
+CMDL="$CMDL --use-c++ ${CLANGXX_PATH}"
+CMDL="$CMDL -o ${OUT_DIR}"
+CMDL="$CMDL $CHECKERS"
+CMDL="$CMDL make USE_CLANG=true"
+CMDL="$CMDL CC=${SCAN_BUILD_PY_CC}"
+CMDL="$CMDL CXX=${SCAN_BUILD_PY_CXX}"
+CMDL="$CMDL -j32"
+
+# Execute
+$CMDL
+
+exit 0;
