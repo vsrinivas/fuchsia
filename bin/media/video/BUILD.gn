@@ -4,13 +4,12 @@
 
 source_set("video") {
   sources = [
-    "video_converter.cc",
-    "video_converter.h",
     "video_frame_source.cc",
     "video_frame_source.h",
   ]
 
   deps = [
+    ":video_converter",
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/lib/transport",
@@ -23,4 +22,25 @@ source_set("video") {
     "//apps/tracing/lib/trace",
     "//lib/ftl",
   ]
+}
+
+config("optimize_video_converter") {
+  cflags = [ "-O3" ]
+}
+
+source_set("video_converter") {
+  sources = [
+    "video_converter.cc",
+    "video_converter.h",
+  ]
+
+  deps = [
+    "//apps/media/services",
+    "//apps/media/src/fidl",
+    "//apps/media/src/framework",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/tracing/lib/trace",
+  ]
+
+  configs += [ ":optimize_video_converter" ]
 }
