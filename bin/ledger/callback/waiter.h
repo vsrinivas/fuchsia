@@ -89,8 +89,8 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 template <typename S, typename T>
 class ResultAccumulator {
  public:
-  ResultAccumulator(S default_status)
-      : default_status_(default_status), result_status_(default_status_) {}
+  ResultAccumulator(S success_status)
+      : success_status_(success_status), result_status_(success_status_) {}
 
   size_t PrepareCall() {
     results_.emplace_back();
@@ -98,7 +98,7 @@ class ResultAccumulator {
   }
 
   bool Update(size_t index, S status, T result) {
-    if (status != default_status_) {
+    if (status != success_status_) {
       result_status_ = status;
       results_.clear();
       return false;
@@ -114,28 +114,51 @@ class ResultAccumulator {
  private:
   size_t current_index_ = 0;
   std::vector<T> results_;
-  S default_status_;
+  S success_status_;
   S result_status_;
 };
 
 template <typename S>
 class StatusAccumulator {
  public:
-  StatusAccumulator(S default_status)
-      : default_status_(default_status), result_status_(default_status_) {}
+  StatusAccumulator(S success_status)
+      : success_status_(success_status), result_status_(success_status_) {}
 
   bool PrepareCall() { return true; }
 
   bool Update(bool, S status) {
     result_status_ = status;
-    return default_status_ == result_status_;
+    return success_status_ == result_status_;
   }
 
   S Result() { return result_status_; }
 
  private:
-  S default_status_;
+  S success_status_;
   S result_status_;
+};
+
+template <typename S, typename V>
+class PromiseAccumulator {
+ public:
+  PromiseAccumulator(S default_status, V default_value)
+      : status_(default_status), value_(std::move(default_value)) {}
+
+  bool PrepareCall() { return true; }
+
+  bool Update(bool, S status, V value) {
+    status_ = std::move(status);
+    value_ = std::move(value);
+    return false;
+  }
+
+  std::pair<S, V> Result() {
+    return std::make_pair(status_, std::move(value_));
+  }
+
+ private:
+  S status_;
+  V value_;
 };
 
 class CompletionAccumulator {
@@ -166,8 +189,8 @@ class Waiter : public internal::BaseWaiter<internal::ResultAccumulator<S, T>,
                                            S,
                                            T> {
  public:
-  static ftl::RefPtr<Waiter<S, T>> Create(S default_status) {
-    return ftl::AdoptRef(new Waiter<S, T>(default_status));
+  static ftl::RefPtr<Waiter<S, T>> Create(S success_status) {
+    return ftl::AdoptRef(new Waiter<S, T>(success_status));
   }
 
   void Finalize(std::function<void(S, std::vector<T>)> callback) {
@@ -181,12 +204,12 @@ class Waiter : public internal::BaseWaiter<internal::ResultAccumulator<S, T>,
   }
 
  private:
-  Waiter(S default_status)
+  Waiter(S success_status)
       : internal::BaseWaiter<internal::ResultAccumulator<S, T>,
                              std::pair<S, std::vector<T>>,
                              S,
                              T>(
-            internal::ResultAccumulator<S, T>(default_status)) {}
+            internal::ResultAccumulator<S, T>(success_status)) {}
 };
 
 // StatusWaiter can be used to collate the results of many asynchronous calls
@@ -196,14 +219,58 @@ template <class S>
 class StatusWaiter
     : public internal::BaseWaiter<internal::StatusAccumulator<S>, S, S> {
  public:
-  static ftl::RefPtr<StatusWaiter<S>> Create(S default_status) {
-    return ftl::AdoptRef(new StatusWaiter<S>(default_status));
+  static ftl::RefPtr<StatusWaiter<S>> Create(S success_status) {
+    return ftl::AdoptRef(new StatusWaiter<S>(success_status));
   }
 
  private:
-  StatusWaiter(S default_status)
+  StatusWaiter(S success_status)
       : internal::BaseWaiter<internal::StatusAccumulator<S>, S, S>(
-            internal::StatusAccumulator<S>(default_status)) {}
+            internal::StatusAccumulator<S>(success_status)) {}
+};
+
+// Promise is used to wait on an asynchronous call.  A typical usage example
+// is:
+// auto promise =
+//     callback::Promise<Status, std::unique_ptr<Object>>::Create(
+//         Status::ILLEGAL_STATE);
+// storage->GetObject(object_id1, promise.NewCallback());
+// ...
+//
+// promise->Finalize([](Status s, std::unique_ptr<Object> o) {
+//   do something with the returned object
+// });
+template <class S, class V>
+class Promise : public internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
+                                            std::pair<S, V>,
+                                            S,
+                                            V> {
+ public:
+  // Create a new promise. |default_status| and |default_value| will be
+  // returned to the callback in |Finalize| if |NewCallback| is not called.
+  static ftl::RefPtr<Promise<S, V>> Create(S default_status,
+                                           V default_value = V()) {
+    return ftl::AdoptRef(
+        new Promise<S, V>(default_status, std::move(default_value)));
+  }
+
+  void Finalize(std::function<void(S, V)> callback) {
+    internal::BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<S, V>, S,
+                         V>::Finalize([callback =
+                                           std::move(callback)](
+        std::pair<S, V> result) {
+      callback(result.first, std::move(result.second));
+    });
+  }
+
+ private:
+  Promise(S default_status, V default_value)
+      : internal::BaseWaiter<internal::PromiseAccumulator<S, V>,
+                             std::pair<S, V>,
+                             S,
+                             V>(
+            internal::PromiseAccumulator<S, V>(default_status,
+                                               std::move(default_value))) {}
 };
 
 // CompletionWaiter can be used to be notified on completion of a computation.

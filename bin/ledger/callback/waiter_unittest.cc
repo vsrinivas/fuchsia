@@ -120,6 +120,16 @@ TEST(Waiter, CallbackSurviveWaiter) {
   c1(0, 0);
 }
 
+TEST(Waiter, Promise) {
+  auto promise = Promise<int, int>::Create(0);
+
+  promise->NewCallback()(1, 2);
+  int status, result;
+  promise->Finalize(Capture([] {}, &status, &result));
+  EXPECT_EQ(1, status);
+  EXPECT_EQ(2, result);
+}
+
 TEST(StatusWaiter, MixedInitialize) {
   auto waiter = StatusWaiter<int>::Create(0);
 

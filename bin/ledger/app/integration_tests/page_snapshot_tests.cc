@@ -51,6 +51,57 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
 }
 
+TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
+  std::string expected_value = "Alice";
+  expected_value.resize(100);
+
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("name"), convert::ToArray(expected_value),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+                    [](Status status) { EXPECT_EQ(Status::OK, status); });
+
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, mx::vmo v) {
+    EXPECT_EQ(status, Status::OK);
+    value = std::move(v);
+  });
+
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+
+  ASSERT_TRUE(value);
+  EXPECT_EQ(expected_value, ToString(value));
+}
+
+TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
+  std::string value1 = "Alice";
+  value1.resize(100);
+  std::string value2 = "";
+
+  // Put the 2 values without waiting for the callbacks.
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("name"), convert::ToArray(value1),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page->Put(convert::ToArray("name"), convert::ToArray(value2),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  mx::vmo value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, mx::vmo v) {
+    EXPECT_EQ(status, Status::OK);
+    value = std::move(v);
+  });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+  EXPECT_EQ(value2, ToString(value));
+}
+
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   PagePtr page = GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),

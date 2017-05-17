@@ -12,6 +12,7 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -52,29 +53,37 @@ void PageDelegate::GetSnapshot(
     fidl::Array<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
     const Page::GetSnapshotCallback& callback) {
-  auto tracked_callback = TrackCallback(std::move(callback));
-  storage_->GetCommit(
-      GetCurrentCommitId(),
-      ftl::MakeCopyable([
+  // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
+  // operation serializer.
+  operation_serializer_.Serialize(
+      TrackCallback(std::move(callback)), ftl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
-        key_prefix = std::move(key_prefix), watcher = std::move(watcher),
-        callback = std::move(tracked_callback)
-      ](storage::Status status,
-        std::unique_ptr<const storage::Commit> commit) mutable {
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status));
-          return;
-        }
-        std::string prefix = convert::ToString(key_prefix);
-        if (watcher) {
-          PageWatcherPtr watcher_ptr =
-              PageWatcherPtr::Create(std::move(watcher));
-          branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
-                                              commit->Clone(), prefix);
-        }
-        manager_->BindPageSnapshot(
-            std::move(commit), std::move(snapshot_request), std::move(prefix));
-        callback(Status::OK);
+        key_prefix = std::move(key_prefix), watcher = std::move(watcher)
+      ](Page::GetSnapshotCallback callback) mutable {
+        storage_->GetCommit(
+            GetCurrentCommitId(),
+            ftl::MakeCopyable([
+              this, snapshot_request = std::move(snapshot_request),
+              key_prefix = std::move(key_prefix), watcher = std::move(watcher),
+              callback = std::move(callback)
+            ](storage::Status status,
+              std::unique_ptr<const storage::Commit> commit) mutable {
+              if (status != storage::Status::OK) {
+                callback(PageUtils::ConvertStatus(status));
+                return;
+              }
+              std::string prefix = convert::ToString(key_prefix);
+              if (watcher) {
+                PageWatcherPtr watcher_ptr =
+                    PageWatcherPtr::Create(std::move(watcher));
+                branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
+                                                    commit->Clone(), prefix);
+              }
+              manager_->BindPageSnapshot(std::move(commit),
+                                         std::move(snapshot_request),
+                                         std::move(prefix));
+              callback(Status::OK);
+            }));
       }));
 }
 
@@ -94,20 +103,28 @@ void PageDelegate::PutWithPriority(
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
   auto tracked_callback = TrackCallback(std::move(callback));
-  storage_->AddObjectFromLocal(
-      storage::DataSource::Create(std::move(value)), ftl::MakeCopyable([
-        this, key = std::move(key), priority,
-        callback = std::move(tracked_callback)
-      ](storage::Status status, storage::ObjectId object_id) mutable {
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status));
-          return;
-        }
+  auto promise = callback::Promise<storage::Status, storage::ObjectId>::Create(
+      storage::Status::ILLEGAL_STATE);
+  storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
+                               promise->NewCallback());
 
-        PutInCommit(std::move(key), std::move(object_id),
-                    priority == Priority::EAGER ? storage::KeyPriority::EAGER
-                                                : storage::KeyPriority::LAZY,
-                    std::move(callback));
+  operation_serializer_.Serialize(
+      std::move(tracked_callback), ftl::MakeCopyable([
+        this, promise = std::move(promise), key = std::move(key), priority
+      ](Page::PutWithPriorityCallback callback) mutable {
+        promise->Finalize(ftl::MakeCopyable([
+          this, key = std::move(key), priority, callback = std::move(callback)
+        ](storage::Status status, storage::ObjectId object_id) mutable {
+          if (status != storage::Status::OK) {
+            callback(PageUtils::ConvertStatus(status));
+            return;
+          }
+
+          PutInCommit(std::move(key), std::move(object_id),
+                      priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                  : storage::KeyPriority::LAZY,
+                      std::move(callback));
+        }));
       }));
 }
 
@@ -118,36 +135,51 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
   auto tracked_callback = TrackCallback(std::move(callback));
-  storage::ObjectIdView object_id(reference->opaque_id);
-  storage_->GetObject(
-      object_id, storage::PageStorage::Location::LOCAL,
-      ftl::MakeCopyable([
-        this, key = std::move(key), object_id = object_id.ToString(), priority,
-        callback = std::move(tracked_callback)
-      ](storage::Status status,
-        std::unique_ptr<const storage::Object> object) mutable {
-        if (status != storage::Status::OK) {
-          callback(
-              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND));
-          return;
-        }
-        PutInCommit(std::move(key), std::move(object_id),
-                    priority == Priority::EAGER ? storage::KeyPriority::EAGER
-                                                : storage::KeyPriority::LAZY,
-                    std::move(callback));
+  auto promise = callback::
+      Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
+          storage::Status::ILLEGAL_STATE);
+  storage_->GetObject(reference->opaque_id,
+                      storage::PageStorage::Location::LOCAL,
+                      promise->NewCallback());
+
+  operation_serializer_.Serialize(
+      std::move(tracked_callback), ftl::MakeCopyable([
+        this, promise = std::move(promise), key = std::move(key),
+        object_id = std::move(reference->opaque_id), priority
+      ](Page::PutReferenceCallback callback) mutable {
+        promise->Finalize(ftl::MakeCopyable([
+          this, key = std::move(key), object_id = std::move(object_id),
+          priority, callback = std::move(callback)
+        ](storage::Status status,
+          std::unique_ptr<const storage::Object> object) mutable {
+          if (status != storage::Status::OK) {
+            callback(
+                PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND));
+            return;
+          }
+          PutInCommit(std::move(key), convert::ToString(object_id),
+                      priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                  : storage::KeyPriority::LAZY,
+                      std::move(callback));
+        }));
       }));
 }
 
 // Delete(array<uint8> key) => (Status status);
 void PageDelegate::Delete(fidl::Array<uint8_t> key,
                           const Page::DeleteCallback& callback) {
-  RunInTransaction(ftl::MakeCopyable([key = std::move(key)](storage::Journal *
-                                                            journal) mutable {
-                     return PageUtils::ConvertStatus(
-                         journal->Delete(std::move(key)),
-                         Status::KEY_NOT_FOUND);
-                   }),
-                   std::move(callback));
+  operation_serializer_.Serialize(
+      std::move(callback), ftl::MakeCopyable([ this, key = std::move(key) ](
+                               Page::DeleteCallback callback) mutable {
+
+        RunInTransaction(
+            ftl::MakeCopyable([key = std::move(key)](storage::Journal *
+                                                     journal) mutable {
+              return PageUtils::ConvertStatus(journal->Delete(std::move(key)),
+                                              Status::KEY_NOT_FOUND);
+            }),
+            std::move(callback));
+      }));
 }
 
 // CreateReference(uint64 size, handle<socket> data)
@@ -254,46 +286,42 @@ void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
 void PageDelegate::RunInTransaction(
     std::function<Status(storage::Journal* journal)> runnable,
     std::function<void(Status)> callback) {
-  operation_serializer_.Serialize(
-      std::move(callback),
-      [ this, runnable = std::move(runnable) ](StatusCallback callback) {
-        if (journal_) {
-          // A transaction is in progress; add this change to it.
-          callback(runnable(journal_.get()));
-          return;
-        }
-        // No transaction is in progress; create one just for this change.
-        // TODO(etiennej): Add a change batching strategy for operations outside
-        // transactions. Currently, we create a commit for every change; we
-        // would like to group changes that happen "close enough" together in
-        // one commit.
-        branch_tracker_.StartTransaction([] {});
-        storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        std::unique_ptr<storage::Journal> journal;
-        storage::Status status = storage_->StartCommit(
-            commit_id, storage::JournalType::IMPLICIT, &journal);
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status));
-          journal->Rollback();
-          branch_tracker_.StopTransaction(nullptr);
-          return;
-        }
-        Status ledger_status = runnable(journal.get());
-        if (ledger_status != Status::OK) {
-          callback(ledger_status);
-          journal->Rollback();
-          branch_tracker_.StopTransaction(nullptr);
-          return;
-        }
+  if (journal_) {
+    // A transaction is in progress; add this change to it.
+    callback(runnable(journal_.get()));
+    return;
+  }
+  // No transaction is in progress; create one just for this change.
+  // TODO(etiennej): Add a change batching strategy for operations outside
+  // transactions. Currently, we create a commit for every change; we
+  // would like to group changes that happen "close enough" together in
+  // one commit.
+  branch_tracker_.StartTransaction([] {});
+  storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
+  std::unique_ptr<storage::Journal> journal;
+  storage::Status status = storage_->StartCommit(
+      commit_id, storage::JournalType::IMPLICIT, &journal);
+  if (status != storage::Status::OK) {
+    callback(PageUtils::ConvertStatus(status));
+    journal->Rollback();
+    branch_tracker_.StopTransaction(nullptr);
+    return;
+  }
+  Status ledger_status = runnable(journal.get());
+  if (ledger_status != Status::OK) {
+    callback(ledger_status);
+    journal->Rollback();
+    branch_tracker_.StopTransaction(nullptr);
+    return;
+  }
 
-        CommitJournal(std::move(journal), [
-          this, callback = std::move(callback)
-        ](Status status, std::unique_ptr<const storage::Commit> commit) {
-          branch_tracker_.StopTransaction(
-              status == Status::OK ? std::move(commit) : nullptr);
-          callback(status);
-        });
-      });
+  CommitJournal(std::move(journal), [
+    this, callback = std::move(callback)
+  ](Status status, std::unique_ptr<const storage::Commit> commit) {
+    branch_tracker_.StopTransaction(status == Status::OK ? std::move(commit)
+                                                         : nullptr);
+    callback(status);
+  });
 }
 
 void PageDelegate::CommitJournal(

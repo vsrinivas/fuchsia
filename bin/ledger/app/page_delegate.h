@@ -88,7 +88,8 @@ class PageDelegate {
 
   // Run |runnable| in a transaction, and notifies |callback| of the result. If
   // a transaction is currently in progress, reuses it, otherwise creates a new
-  // one and commit it before calling |callback|.
+  // one and commit it before calling |callback|. This method is not
+  // serialized, and should only be called from a callsite that is serialized.
   void RunInTransaction(
       std::function<Status(storage::Journal* journal)> runnable,
       StatusCallback callback);
