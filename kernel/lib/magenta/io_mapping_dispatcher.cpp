@@ -86,12 +86,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
         return ERR_NO_MEMORY;
 
     paddr_ = paddr;
-    size_ = size;
-
-    uint vmo_cache_flags = arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK;
-    arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
-    if (vmo->SetMappingCachePolicy(vmo_cache_flags) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    size_  = size;
 
     auto root_vmar = aspace_->RootVmar();
     status_t res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,

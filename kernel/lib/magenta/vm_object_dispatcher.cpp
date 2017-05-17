@@ -115,10 +115,6 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
     }
 }
 
-mx_status_t VmObjectDispatcher::SetMappingCachePolicy(uint32_t cache_policy) {
-    return vmo_->SetMappingCachePolicy(cache_policy);
-}
-
 mx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_t size,
         mxtl::RefPtr<VmObject>* clone_vmo) {
     canary_.Assert();
