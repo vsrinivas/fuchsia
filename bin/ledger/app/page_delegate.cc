@@ -56,7 +56,7 @@ void PageDelegate::GetSnapshot(
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize(
-      TrackCallback(std::move(callback)), ftl::MakeCopyable([
+      std::move(callback), ftl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
         key_prefix = std::move(key_prefix), watcher = std::move(watcher)
       ](Page::GetSnapshotCallback callback) mutable {
@@ -102,14 +102,13 @@ void PageDelegate::PutWithPriority(
     fidl::Array<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
-  auto tracked_callback = TrackCallback(std::move(callback));
   auto promise = callback::Promise<storage::Status, storage::ObjectId>::Create(
       storage::Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::DataSource::Create(std::move(value)),
                                promise->NewCallback());
 
   operation_serializer_.Serialize(
-      std::move(tracked_callback), ftl::MakeCopyable([
+      std::move(callback), ftl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key), priority
       ](Page::PutWithPriorityCallback callback) mutable {
         promise->Finalize(ftl::MakeCopyable([
@@ -134,7 +133,6 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
-  auto tracked_callback = TrackCallback(std::move(callback));
   auto promise = callback::
       Promise<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::ILLEGAL_STATE);
@@ -143,7 +141,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                       promise->NewCallback());
 
   operation_serializer_.Serialize(
-      std::move(tracked_callback), ftl::MakeCopyable([
+      std::move(callback), ftl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key),
         object_id = std::move(reference->opaque_id), priority
       ](Page::PutReferenceCallback callback) mutable {
@@ -343,22 +341,9 @@ void PageDelegate::CommitJournal(
   });
 }
 
-std::function<void(Status)> PageDelegate::TrackCallback(
-    StatusCallback callback) {
-  ++in_progress_storage_operations_;
-  return [ this, callback = std::move(callback) ](Status status) {
-    callback(status);
-    --in_progress_storage_operations_;
-    if (!in_progress_storage_operations_) {
-      CheckEmpty();
-    }
-  };
-}
-
 void PageDelegate::CheckEmpty() {
   if (on_empty_callback_ && !interface_.is_bound() &&
-      branch_tracker_.IsEmpty() && operation_serializer_.empty() &&
-      !in_progress_storage_operations_) {
+      branch_tracker_.IsEmpty() && operation_serializer_.empty()) {
     on_empty_callback_();
   }
 }
