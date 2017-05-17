@@ -11,6 +11,7 @@ import subprocess
 
 fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
 fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
+fuchsia_sysroot = os.path.realpath(os.path.join(fuchsia_build, 'sysroot'))
 fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
 common_flags = [
@@ -98,6 +99,8 @@ def GetClangCommandFromNinjaForFilename(filename):
     elif ((flag.startswith('-') and flag[1] in 'DWFfmO') or
           flag.startswith('-std=') or flag.startswith('--target=') or
           flag.startswith('--sysroot=')):
+      if flag == '--sysroot=sysroot':
+        flag = '--sysroot=%s' % fuchsia_sysroot
       fuchsia_flags.append(flag)
     else:
       print('Ignoring flag: %s' % flag)
