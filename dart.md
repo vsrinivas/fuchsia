@@ -106,6 +106,9 @@ scripts/run-dart-action.py analyze --out out/<build-type> --fatal-warnings --lin
 ```
 This holds true for the individual analysis scripts.
 
+Lastly, it is possible to automatically run analysis as part of the build by
+passing the `--with-dart-analysis` flag to the `gen.py` script.
+
 
 ## Testing
 
