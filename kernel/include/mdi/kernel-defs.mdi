@@ -37,10 +37,12 @@ uint32  kernel-drivers.arm-generic-timer.freq-override  1034 // optional
 list    kernel-drivers.bcm28xx-interrupt        1040
 list    kernel-drivers.bcm28xx-uart             1041
 
+// pl011 uart
+list    kernel-drivers.pl011-uart               1050
+uint64  kernel-drivers.pl011-uart.base-phys     1051
+uint32  kernel-drivers.pl011-uart.irq           1052
+
 // qemu drivers
-list    kernel-drivers.qemu-uart                1050
-uint64  kernel-drivers.qemu-uart.base-phys      1051
-uint32  kernel-drivers.qemu-uart.irq            1052
 list    kernel-drivers.qemu-pcie                1053
 
 // ARM gicv2 driver

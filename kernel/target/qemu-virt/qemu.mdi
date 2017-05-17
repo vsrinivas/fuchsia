@@ -9,7 +9,7 @@ cpu-map = {
 }
 
 kernel-drivers = {
-    qemu-uart = {
+    pl011-uart = {
         base-phys = 0x09000000
         irq = 33
     }

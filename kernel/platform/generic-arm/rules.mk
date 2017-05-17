@@ -39,6 +39,6 @@ MODULE_DEPS += \
 	kernel/dev/psci \
 	kernel/dev/qemu \
 	kernel/dev/uart/bcm28xx \
-	kernel/dev/uart/qemu \
+	kernel/dev/uart/pl011 \
 
 include make/module.mk

@@ -44,7 +44,7 @@ static uint32_t uart_irq = 0;
 
 static cbuf_t uart_rx_buf;
 
-static enum handler_return qemu_uart_irq(void *arg)
+static enum handler_return pl011_uart_irq(void *arg)
 {
     bool resched = false;
 
@@ -70,13 +70,13 @@ static enum handler_return qemu_uart_irq(void *arg)
     return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-static void qemu_uart_init(mdi_node_ref_t* node, uint level)
+static void pl011_uart_init(mdi_node_ref_t* node, uint level)
 {
     // create circular buffer to hold received data
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 
     // assumes interrupts are contiguous
-    register_int_handler(uart_irq, &qemu_uart_irq, NULL);
+    register_int_handler(uart_irq, &pl011_uart_irq, NULL);
 
     // clear all irqs
     UARTREG(uart_base, UART_ICR) = 0x3ff;
@@ -94,7 +94,7 @@ static void qemu_uart_init(mdi_node_ref_t* node, uint level)
     unmask_interrupt(uart_irq);
 }
 
-static int qemu_uart_putc(char c)
+static int pl011_uart_putc(char c)
 {
     /* spin while fifo is full */
     while (UARTREG(uart_base, UART_TFR) & (1<<5))
@@ -104,7 +104,7 @@ static int qemu_uart_putc(char c)
     return 1;
 }
 
-static int qemu_uart_getc(bool wait)
+static int pl011_uart_getc(bool wait)
 {
     char c;
     if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
@@ -116,7 +116,7 @@ static int qemu_uart_getc(bool wait)
 }
 
 /* panic-time getc/putc */
-static int qemu_uart_pputc(char c)
+static int pl011_uart_pputc(char c)
 {
     /* spin while fifo is full */
     while (UARTREG(uart_base, UART_TFR) & (1<<5))
@@ -126,7 +126,7 @@ static int qemu_uart_pputc(char c)
     return 1;
 }
 
-static int qemu_uart_pgetc(void)
+static int pl011_uart_pgetc(void)
 {
     if ((UARTREG(uart_base, UART_TFR) & (1<<4)) == 0) {
         return UARTREG(uart_base, UART_DR);
@@ -136,34 +136,34 @@ static int qemu_uart_pgetc(void)
 }
 
 static const struct pdev_uart_ops uart_ops = {
-    .putc = qemu_uart_putc,
-    .getc = qemu_uart_getc,
-    .pputc = qemu_uart_pputc,
-    .pgetc = qemu_uart_pgetc,
+    .putc = pl011_uart_putc,
+    .getc = pl011_uart_getc,
+    .pputc = pl011_uart_pputc,
+    .pgetc = pl011_uart_pgetc,
 };
 
-static void qemu_uart_init_early(mdi_node_ref_t* node, uint level) {
+static void pl011_uart_init_early(mdi_node_ref_t* node, uint level) {
     uint64_t uart_base_phys = 0;
     bool got_uart_base_phys = false;
     bool got_uart_irq = false;
-    
+
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_DRIVERS_QEMU_UART_BASE_PHYS:
+        case MDI_KERNEL_DRIVERS_PL011_UART_BASE_PHYS:
             got_uart_base_phys = !mdi_node_uint64(&child, &uart_base_phys);
             break;
-        case MDI_KERNEL_DRIVERS_QEMU_UART_IRQ:
+        case MDI_KERNEL_DRIVERS_PL011_UART_IRQ:
             got_uart_irq = !mdi_node_uint32(&child, &uart_irq);
             break;
         }
     }
 
     if (!got_uart_base_phys) {
-        panic("qemu uart: uart_base_phys not defined\n");
+        panic("pl011 uart: uart_base_phys not defined\n");
     }
     if (!got_uart_irq) {
-        panic("qemu uart: uart_irq not defined\n");
+        panic("pl011 uart: uart_irq not defined\n");
     }
 
     uart_base = (uint64_t)paddr_to_kvaddr(uart_base_phys);
@@ -173,5 +173,5 @@ static void qemu_uart_init_early(mdi_node_ref_t* node, uint level) {
     pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(qemu_uart_init_early, MDI_KERNEL_DRIVERS_QEMU_UART, qemu_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
-LK_PDEV_INIT(qemu_uart_init, MDI_KERNEL_DRIVERS_QEMU_UART, qemu_uart_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(pl011_uart_init_early, MDI_KERNEL_DRIVERS_PL011_UART, pl011_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(pl011_uart_init, MDI_KERNEL_DRIVERS_PL011_UART, pl011_uart_init, LK_INIT_LEVEL_PLATFORM);
