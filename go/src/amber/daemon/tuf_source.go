@@ -23,9 +23,9 @@ type TUFSource struct {
 	Interval time.Duration
 }
 
-// FetchUpdate returns a Package struct if there is an update for the Package
-// passed into the call.
-func (f *TUFSource) FetchUpdate(pkg *Package) (*Package, error) {
+// AvailableUpdates takes a list of Packages and returns a map from those Packages
+// to any available update Package
+func (f *TUFSource) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
 	_, err := f.Client.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return nil, err
@@ -39,24 +39,27 @@ func (f *TUFSource) FetchUpdate(pkg *Package) (*Package, error) {
 		return nil, err
 	}
 
-	meta, ok := m[pkg.Name]
-	if !ok {
-		return nil, ErrUnknownPkg
+	updates := make(map[Package]Package)
+
+	for _, p := range pkgs {
+		meta, ok := m[p.Name]
+		if !ok {
+			continue
+		}
+		hash, ok := meta.Hashes["sha512"]
+		if !ok {
+			continue
+		}
+
+		hashStr := hash.String()
+		if hashStr != p.Version {
+			fmt.Printf("\nAvailable update %s version %s\n", p.Name,
+				hashStr[:8])
+			updates[*p] = Package{Name: p.Name, Version: hashStr}
+		}
 	}
 
-	hash, ok := meta.Hashes["sha512"]
-	if !ok {
-		return nil, ErrTufSrcNoHash
-	}
-
-	hashStr := hash.String()
-	if hashStr != pkg.Version {
-		fmt.Printf("\nAvailable update %s version %s\n", pkg.Name,
-			hashStr[:8])
-		return &Package{Name: pkg.Name, Version: hashStr}, nil
-	}
-
-	return nil, ErrNoUpdate
+	return updates, nil
 }
 
 // create a wrapper for File so it conforms to interface Client.Download expects

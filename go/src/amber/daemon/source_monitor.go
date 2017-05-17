@@ -60,27 +60,24 @@ func (sm *SourceMonitor) check(t time.Time) {
 		return
 	}
 
-	fmt.Printf(".")
-
 	sm.runGate.Lock()
 	defer sm.runGate.Unlock()
+	fmt.Printf(".")
 
 	// track the number of workers updating specific packages
 	var workers sync.WaitGroup
-	// TODO(jmatt) Actually return the result in a way that might be
-	// useful to a client.
-	for _, pkg := range sm.pkgs.Packages() {
-		update, e := sm.src.FetchUpdate(pkg)
-		if e != nil {
-			if e != ErrNoUpdate && e != ErrUnknownPkg {
-				fmt.Printf("error getting update: %v\n", e)
-			}
+	pkgs := sm.pkgs.Packages()
+	updates, _ := sm.src.AvailableUpdates(pkgs)
+
+	for _, pkg := range pkgs {
+		update, ok := updates[*pkg]
+		if !ok {
 			continue
 		}
 
 		workers.Add(1)
 		go func(orig *Package, upd *Package) {
-			e = sm.processor(upd, sm.src)
+			e := sm.processor(upd, sm.src)
 			if e != nil {
 				fmt.Printf("error processing package %v\n", e)
 			} else {
@@ -88,11 +85,10 @@ func (sm *SourceMonitor) check(t time.Time) {
 				sm.pkgs.Add(upd)
 			}
 			workers.Done()
-		}(pkg, update)
+		}(pkg, &update)
 	}
 
 	workers.Wait()
-
 	// record when the check finishes. If it took longer than the update
 	// interval we can use this to avoid doing a flurry of checks once
 	// the check completes

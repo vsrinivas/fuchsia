@@ -26,7 +26,7 @@ var ErrSrcNotFound = errors.New("amber/daemon: no corresponding source found")
 type Daemon struct {
 	srcMons   []*SourceMonitor
 	pkgs      *PackageSet
-	stopCount sync.WaitGroup
+	runCount  sync.WaitGroup
 	processor func(*Package, Source) error
 	// sources must claim this before running updates
 	updateLock sync.Mutex
@@ -46,8 +46,9 @@ func (d *Daemon) AddSource(s Source) {
 		processor: d.processor,
 		runGate:   &d.updateLock}
 	d.srcMons = append(d.srcMons, mon)
+	d.runCount.Add(1)
 	go func() {
-		defer d.stopCount.Done()
+		defer d.runCount.Done()
 		mon.Run()
 	}()
 }
@@ -60,7 +61,6 @@ func (d *Daemon) RemoveSource(src Source) error {
 	for i, m := range d.srcMons {
 		if m.src.Equals(src) {
 			d.srcMons = append(d.srcMons[:i], d.srcMons[i+1:]...)
-			d.stopCount.Add(1)
 			m.Stop()
 			return nil
 		}
@@ -73,11 +73,10 @@ func (d *Daemon) RemoveSource(src Source) error {
 // in-progress operations complete.
 func (d *Daemon) CancelAll() {
 	for _, s := range d.srcMons {
-		d.stopCount.Add(1)
 		s.Stop()
 	}
 
-	d.stopCount.Wait()
+	d.runCount.Wait()
 	d.srcMons = []*SourceMonitor{}
 }
 

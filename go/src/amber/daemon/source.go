@@ -24,10 +24,11 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 // Source provides a way to get information about a package update and a way
 // to get that update.
 type Source interface {
-	// FetchUpdate gets the package metadata of an available version that is newer
-	// than the passed in Package descriptor
-	FetchUpdate(pkg *Package) (*Package, error)
-	// FetchPkg retrieves the package content from this source, if it is available.
+	// AvailableUpdates takes a list of packages and returns update metadata
+	// for any updates available for those packages.
+	AvailableUpdates(pkg []*Package) (map[Package]Package, error)
+
+	// FetchUpdate retrieves the package content from this source, if it is available.
 	// The package content is written to a file and an open File to the content
 	// is returned, ready for reading.
 	FetchPkg(pkg *Package) (*os.File, error)

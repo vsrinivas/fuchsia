@@ -32,27 +32,32 @@ type testSrc struct {
 	interval   time.Duration
 }
 
-func (t *testSrc) FetchUpdate(pkg *Package) (*Package, error) {
+func (t *testSrc) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
 	t.mu.Lock()
 	now := time.Now()
-	tList := t.UpdateReqs[pkg.Name]
-	if tList == nil {
-		tList = []time.Time{}
-	}
-	tList = append(tList, now)
-	t.UpdateReqs[pkg.Name] = tList
-	p := Package{Name: pkg.Name, Version: randSeq(6)}
-	t.getReqs[p] = &struct{}{}
-	t.mu.Unlock()
 
-	fmt.Print(".")
-	return &p, nil
+	updates := make(map[Package]Package)
+	for _, p := range pkgs {
+		tList := t.UpdateReqs[p.Name]
+		if tList == nil {
+			tList = []time.Time{}
+		}
+		tList = append(tList, now)
+		t.UpdateReqs[p.Name] = tList
+		up := Package{Name: p.Name, Version: randSeq(6)}
+		t.getReqs[up] = &struct{}{}
+		updates[*p] = up
+	}
+
+	t.mu.Unlock()
+	fmt.Print("*")
+	return updates, nil
 }
 
 func (t *testSrc) FetchPkg(pkg *Package) (*os.File, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.getReqs[*pkg] == nil {
+	if _, ok := t.getReqs[*pkg]; !ok {
 		fmt.Println("ERROR: unknown update pkg requested")
 		return nil, ErrNoUpdateContent
 	}
