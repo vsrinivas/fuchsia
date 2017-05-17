@@ -27,9 +27,8 @@ class VnodeBlob;
 typedef uint32_t BlobFlags;
 
 // After Open;
-constexpr BlobFlags kBlobStateEmpty       = 0x00000000; // Not yet allocated
+constexpr BlobFlags kBlobStateEmpty       = 0x00010000; // Not yet allocated
 // After Ioctl configuring size:
-constexpr BlobFlags kBlobStateMerkleWrite = 0x00010000; // Merkle tree is being written
 constexpr BlobFlags kBlobStateDataWrite   = 0x00020000; // Data is being written
 // After Writing:
 constexpr BlobFlags kBlobStateReadable    = 0x00040000; // Readable
@@ -111,7 +110,7 @@ private:
     void QueueUnlink();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
-    // kBlobStateEmpty --> kBlobStateMerkleWrite
+    // kBlobStateEmpty --> kBlobStateDataWrite
     mx_status_t SpaceAllocate(uint64_t size_data);
 
     // Writes to either the Merkle Tree or the Data section,
@@ -146,9 +145,8 @@ private:
     // the contents of a VMO into memory when it is opened.
     mx_status_t InitVmos();
 
-    mx_status_t WriteShared(const void** data, size_t* len, size_t* actual,
-                            uint64_t maxlen, mx_handle_t vmo, uint64_t start_block);
-
+    mx_status_t WriteShared(size_t start, size_t len, uint64_t maxlen,
+                            mx_handle_t vmo, uint64_t start_block);
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
     mx_status_t WriteMetadata();

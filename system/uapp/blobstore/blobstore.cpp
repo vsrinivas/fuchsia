@@ -278,7 +278,7 @@ mx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         goto fail;
     }
 
-    SetState(size_merkle != 0 ? kBlobStateMerkleWrite : kBlobStateDataWrite);
+    SetState(kBlobStateDataWrite);
     return NO_ERROR;
 
 fail:
@@ -289,17 +289,12 @@ fail:
 
 // A helper function for dumping either the Merkle Tree or the actual blob data
 // to both (1) The containing VMO, and (2) disk.
-mx_status_t VnodeBlob::WriteShared(const void** data, size_t* len, size_t* actual,
-                                   uint64_t maxlen, mx_handle_t vmo, uint64_t start_block) {
-    size_t to_write = mxtl::min(*len, maxlen - bytes_written_);
-    mx_status_t status = vmo_write_exact(vmo, *data, bytes_written_, to_write);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
+mx_status_t VnodeBlob::WriteShared(size_t start, size_t len, uint64_t maxlen,
+                                   mx_handle_t vmo, uint64_t start_block) {
     // Write as many 'entire blocks' as possible
-    uint64_t n = bytes_written_ / kBlobstoreBlockSize;
-    uint64_t n_end = (bytes_written_ + to_write) / kBlobstoreBlockSize;
+    uint64_t n = start / kBlobstoreBlockSize;
+    uint64_t n_end = (start + len) / kBlobstoreBlockSize;
+    mx_status_t status;
     while (n < n_end) {
         status = vn_dump_block(blobstore_->blockfd_, vmo, n, n + start_block, false);
         if (status != NO_ERROR) {
@@ -310,7 +305,7 @@ mx_status_t VnodeBlob::WriteShared(const void** data, size_t* len, size_t* actua
 
     // Special case: We've written all the 'whole blocks', but we're missing
     // a partial block at the very end.
-    if ((bytes_written_ + to_write == maxlen) &&
+    if ((start + len == maxlen) &&
         (maxlen % kBlobstoreBlockSize != 0)) {
         status = vn_dump_block(blobstore_->blockfd_, vmo, n, n + start_block, true);
         if (status != NO_ERROR) {
@@ -318,11 +313,7 @@ mx_status_t VnodeBlob::WriteShared(const void** data, size_t* len, size_t* actua
         }
     }
 
-    bytes_written_ += to_write;
-    assert(bytes_written_ <= maxlen);
-    *actual += to_write;
-    *len -= to_write;
-    *data = (const void*)((uintptr_t)(*data) + (uintptr_t)(to_write));
+    assert(start + len <= maxlen);
     return NO_ERROR;
 }
 
@@ -375,38 +366,54 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     }
 
     auto inode = &blobstore_->node_map_[map_index_];
-    mx_status_t status;
-    if (GetState() == kBlobStateMerkleWrite) {
-        uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
-        status = WriteShared(&data, &len, actual, size_merkle,
-                             merkle_tree_->GetVmo(), inode->start_block);
-        if (status != NO_ERROR) {
-            return status;
-        }
-
-        // More merkle to write.
-        if (bytes_written_ < size_merkle) {
-            return NO_ERROR;
-        }
-
-        // No more merkle to write. Move on to data.
-        SetState(kBlobStateDataWrite);
-        bytes_written_ = 0;
-        if (len == 0) {
-            return NO_ERROR;
-        }
-    }
 
     if (GetState() == kBlobStateDataWrite) {
-        status = WriteShared(&data, &len, actual, inode->blob_size,
-                             blob_->GetVmo(), inode->start_block + MerkleTreeBlocks(*inode));
+        size_t to_write = mxtl::min(len, inode->blob_size - bytes_written_);
+        mx_status_t status = vmo_write_exact(blob_->GetVmo(), data,
+                                             bytes_written_, to_write);
         if (status != NO_ERROR) {
             return status;
         }
+
+        status = WriteShared(bytes_written_, len, inode->blob_size,
+                             blob_->GetVmo(),
+                             inode->start_block + MerkleTreeBlocks(*inode));
+        if (status != NO_ERROR) {
+            SetState(kBlobStateError);
+            return status;
+        }
+
+        *actual = to_write;
+        bytes_written_ += to_write;
 
         // More data to write.
         if (bytes_written_ < inode->blob_size) {
             return NO_ERROR;
+        }
+
+        // TODO(smklein): As an optimization, use the CreateInit/Update/Final
+        // methods to create the merkle tree as we write data, rather than
+        // waiting until the data is fully downloaded to create the tree.
+        merkle::Tree tree;
+        size_t merkle_size = tree.GetTreeLength(inode->blob_size);
+        if (merkle_size > 0) {
+            merkle::Digest digest;
+            if (tree.Create(blob_->GetData(), inode->blob_size, merkle_tree_->GetData(),
+                            merkle_size, &digest) != NO_ERROR) {
+                SetState(kBlobStateError);
+                return status;
+            } else if (digest != digest_) {
+                // Downloaded blob did not match provided digest
+                SetState(kBlobStateError);
+                return status;
+            }
+
+            status = WriteShared(0, merkle_size, merkle_size, merkle_tree_->GetVmo(),
+                                 inode->start_block);
+            if (status != NO_ERROR) {
+                SetState(kBlobStateError);
+                return status;
+            }
         }
 
         // No more data to write. Flush to disk.
@@ -603,7 +610,6 @@ mx_status_t Blobstore::ReleaseBlob(VnodeBlob* vn) {
             }
             // Fall-through
         }
-        case kBlobStateMerkleWrite:
         case kBlobStateDataWrite:
         case kBlobStateError: {
             vn->SetState(kBlobStateReleasing);
