@@ -261,7 +261,7 @@ void Presentation::UpdateScene() {
 }
 
 void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
-  FTL_VLOG(1) << "OnDeviceAdded: token=" << input_device->id();
+  FTL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FTL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
   std::unique_ptr<mozart::DeviceState> state =
@@ -275,9 +275,14 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
 }
 
 void Presentation::OnDeviceRemoved(uint32_t device_id) {
-  FTL_VLOG(1) << "OnDeviceRemoved: token=" << device_id;
+  FTL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
+    if (cursors_.count(device_id)) {
+      cursors_.erase(device_id);
+      layout_changed_ = true;
+      root_view_->Invalidate();
+    }
     device_states_by_id_.erase(device_id);
   }
 }

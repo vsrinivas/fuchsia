@@ -193,6 +193,7 @@ void MouseState::SendEvent(float rel_x,
   mozart::PointerEventPtr pt = mozart::PointerEvent::New();
   pt->event_time = timestamp;
   pt->device_id = device_state_->device_id();
+  pt->pointer_id = device_state_->device_id();
   pt->phase = phase;
   pt->buttons = buttons;
   pt->type = mozart::PointerEvent::Type::MOUSE;
