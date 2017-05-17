@@ -15,6 +15,7 @@ public:
     }
     bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override { return false; }
     void SetSequenceNumber(uint32_t sequence_number) override {}
+    GpuMapping* GetBatchMapping() override { return nullptr; }
 };
 
 #endif // MOCK_MAPPED_BATCH_H

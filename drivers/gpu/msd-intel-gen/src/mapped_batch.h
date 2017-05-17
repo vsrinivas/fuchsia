@@ -19,6 +19,8 @@ public:
     virtual bool GetGpuAddress(gpu_addr_t* gpu_addr_out) = 0;
     virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
     virtual uint32_t GetPipeControlFlags() { return 0; }
+    virtual bool IsSimple() { return false; }
+    virtual GpuMapping* GetBatchMapping() = 0;
 
     void scheduled() { scheduled_ = true; }
     bool was_scheduled() { return scheduled_; }
@@ -50,6 +52,10 @@ public:
     {
         sequence_number_ = sequence_number;
     }
+
+    bool IsSimple() override { return true; }
+
+    GpuMapping* GetBatchMapping() override { return batch_buffer_mapping_.get(); }
 
 private:
     std::shared_ptr<MsdIntelContext> context_;

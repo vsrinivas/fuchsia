@@ -53,6 +53,17 @@ public:
         return std::move(wait_semaphores_);
     }
 
+    std::vector<std::shared_ptr<GpuMapping>>& exec_resource_mappings()
+    {
+        return exec_resource_mappings_;
+    }
+
+    GpuMapping* GetBatchMapping() override
+    {
+        DASSERT(prepared_to_execute_);
+        return exec_resource_mappings_[batch_buffer_index_].get();
+    }
+
 private:
     CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
                   std::weak_ptr<ClientContext> context);

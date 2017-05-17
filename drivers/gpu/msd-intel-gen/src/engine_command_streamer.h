@@ -106,6 +106,10 @@ public:
 
     bool WaitIdle() override;
 
+    // This does not return ownership of the mapped batches so it is not safe
+    // to safe the result and this method must be called from the device thread
+    std::vector<MappedBatch*> GetInflightBatches();
+
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner);
 

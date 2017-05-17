@@ -725,3 +725,19 @@ void RenderEngineCommandStreamer::ResetCurrentContext()
     // Reset the engine hardware
     EngineCommandStreamer::Reset();
 }
+
+std::vector<MappedBatch*> RenderEngineCommandStreamer::GetInflightBatches()
+{
+    uint32_t num_sequences = inflight_command_sequences_.size();
+    std::vector<MappedBatch*> inflight_batches;
+    inflight_batches.reserve(num_sequences);
+    for (uint32_t i = 0; i < num_sequences; i++) {
+        auto sequence = std::move(inflight_command_sequences_.front());
+        inflight_batches.push_back(sequence.mapped_batch());
+
+        // Pop off the front and push to the back
+        inflight_command_sequences_.pop();
+        inflight_command_sequences_.push(std::move(sequence));
+    }
+    return inflight_batches;
+}

@@ -58,6 +58,7 @@ public:
         struct RenderCommandStreamer {
             uint32_t sequence_number;
             uint64_t active_head_pointer;
+            std::vector<MappedBatch*> inflight_batches;
         } render_cs;
 
         bool fault_present;

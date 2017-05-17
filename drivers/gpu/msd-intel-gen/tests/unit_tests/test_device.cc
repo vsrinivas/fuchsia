@@ -65,6 +65,7 @@ public:
         EXPECT_EQ(dump_state.render_cs.active_head_pointer,
                   device->render_engine_cs()->GetActiveHeadPointer());
         EXPECT_FALSE(dump_state.fault_present);
+        EXPECT_TRUE(dump_state.render_cs.inflight_batches.empty());
 
         std::string dump_string;
         device->DumpToString(dump_string);
@@ -93,6 +94,7 @@ public:
         EXPECT_EQ(dump_state.fault_engine, engine);
         EXPECT_EQ(dump_state.fault_src, src);
         EXPECT_EQ(dump_state.fault_type, type);
+        EXPECT_TRUE(dump_state.render_cs.inflight_batches.empty());
     }
 
     void BatchBuffer(bool should_wrap_ringbuffer)
