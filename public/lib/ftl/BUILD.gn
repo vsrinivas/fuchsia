@@ -50,6 +50,7 @@ static_library("ftl") {
     "functional/cancelable_callback.h",
     "functional/make_runnable.h",
     "functional/make_copyable.h",
+    "inttypes.h",
     "log_settings.cc",
     "logging.cc",
     "logging.h",
