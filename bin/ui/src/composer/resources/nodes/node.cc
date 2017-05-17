@@ -48,10 +48,11 @@ bool Node::AddChild(NodePtr child_node) {
   // Add child to its new parent (i.e. us).
   child_node->is_part_ = false;
   child_node->parent_ = this;
+  child_node->InvalidateGlobalTransform();
+
   auto insert_result = children_.insert(std::move(child_node));
   FTL_DCHECK(insert_result.second);
 
-  child_node->InvalidateGlobalTransform();
   return true;
 }
 
@@ -74,10 +75,11 @@ bool Node::AddPart(NodePtr part_node) {
   // Add part to its new parent (i.e. us).
   part_node->is_part_ = true;
   part_node->parent_ = this;
+  part_node->InvalidateGlobalTransform();
+
   auto insert_result = children_.insert(std::move(part_node));
   FTL_DCHECK(insert_result.second);
 
-  part_node->InvalidateGlobalTransform();
   return true;
 }
 
