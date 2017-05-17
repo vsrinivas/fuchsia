@@ -11,7 +11,7 @@ endif
 # by default drivers live in lib/driver/...
 
 ifeq ($(MODULE_SO_INSTALL_NAME),)
-MODULE_SO_INSTALL_NAME := lib/driver/$(MODULE_SO_NAME).so
+MODULE_SO_INSTALL_NAME := driver/$(MODULE_SO_NAME).so
 endif
 
 include make/module-userlib.mk
