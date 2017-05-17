@@ -1084,6 +1084,22 @@ static bool unbind_rebind_while_stopped_test(void)
                                  MX_EXCP_THREAD_STARTING, false, &tid),
                 "unexpected exception");
 
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status < 0)
+        tu_fatal("mx_object_get_child", status);
+
+    // The thread may still be running: There's a window between sending the
+    // exception report and the thread going to sleep that is exposed to us.
+    // We want to verify the thread is still waiting for an exception after we
+    // unbind, so wait for the thread to go to sleep before we unbind.
+    // Note that there's no worry of this hanging due to our watchdog.
+    mx_info_thread_t info;
+    do {
+        mx_nanosleep(0);
+        info = tu_thread_get_info(thread);
+    } while (info.state != MX_THREAD_STATE_BLOCKED);
+
     // Unbind the exception port quietly, meaning to leave the thread
     // waiting for an exception response.
     tu_set_exception_port(child, MX_HANDLE_INVALID, 0,
@@ -1093,13 +1109,9 @@ static bool unbind_rebind_while_stopped_test(void)
     // we just got.
 
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    mx_handle_t thread;
-    mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-    if (status < 0)
-        tu_fatal("mx_object_get_child", status);
 
     // Verify mx_info_thread_t indicates waiting for debugger response.
-    mx_info_thread_t info = tu_thread_get_info(thread);
+    info = tu_thread_get_info(thread);
     EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "unexpected thread state");
     EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "wrong exception port type");
 
