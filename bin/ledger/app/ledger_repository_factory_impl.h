@@ -18,7 +18,9 @@ namespace ledger {
 
 class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
  public:
-  explicit LedgerRepositoryFactoryImpl(ledger::Environment* environment);
+  enum class ConfigPersistence { PERSIST, FORGET };
+  explicit LedgerRepositoryFactoryImpl(ledger::Environment* environment,
+                                       ConfigPersistence config_persistence);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -31,6 +33,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       const GetRepositoryCallback& callback) override;
 
   ledger::Environment* const environment_;
+  const ConfigPersistence config_persistence_;
   callback::AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);

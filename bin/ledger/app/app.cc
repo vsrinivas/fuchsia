@@ -33,6 +33,7 @@ constexpr ftl::StringView kPersistentFileSystem = "/data";
 constexpr ftl::StringView kMinFsName = "minfs";
 constexpr ftl::TimeDelta kMaxPollingDelay = ftl::TimeDelta::FromSeconds(10);
 constexpr ftl::StringView kNoMinFsFlag = "no_minfs_wait";
+constexpr ftl::StringView kNoPersistedConfig = "no_persisted_config";
 
 // Maximal time to wait before doing a merge to prevent multiple devices
 // competing on solving the same merge.
@@ -46,8 +47,9 @@ constexpr ftl::TimeDelta kMaxMergingDelay = ftl::TimeDelta::FromSeconds(2);
 // separate processes when the app becomes multi-instance.
 class App : public LedgerController {
  public:
-  App()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  App(LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence)
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        config_persistence_(config_persistence) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
   }
@@ -62,8 +64,8 @@ class App : public LedgerController {
     environment_ = std::make_unique<Environment>(
         loop_.task_runner(), network_service_.get(), kMaxMergingDelay);
 
-    factory_impl_ =
-        std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
+    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
+        environment_.get(), config_persistence_);
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>(
@@ -87,6 +89,7 @@ class App : public LedgerController {
 
   mtl::MessageLoop loop_;
   std::unique_ptr<app::ApplicationContext> application_context_;
+  const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;
   std::unique_ptr<NetworkService> network_service_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
@@ -131,7 +134,11 @@ int main(int argc, const char** argv) {
     ledger::WaitForData();
   }
 
-  ledger::App app;
+  ledger::LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence =
+      command_line.HasOption(ledger::kNoPersistedConfig.ToString())
+          ? ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET
+          : ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::PERSIST;
+  ledger::App app(config_persistence);
   if (!app.Start()) {
     return 1;
   }

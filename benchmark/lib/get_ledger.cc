@@ -28,6 +28,7 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   launch_info->url = "file:///system/apps/ledger";
   launch_info->services = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");
+  launch_info->arguments.push_back("--no_persisted_config");
 
   context->launcher()->CreateApplication(std::move(launch_info),
                                          controller->NewRequest());

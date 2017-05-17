@@ -107,8 +107,9 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
 }  // namespace
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    ledger::Environment* environment)
-    : environment_(environment) {}
+    ledger::Environment* environment,
+    ConfigPersistence config_persistence)
+    : environment_(environment), config_persistence_(config_persistence) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -126,18 +127,21 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
     cloud_sync::UserConfig user_config =
         GetUserConfig(server_id, user_id, sanitized_path);
-    if (!user_config.use_sync) {
+    if (!user_config.use_sync &&
+        config_persistence_ == ConfigPersistence::PERSIST) {
       FTL_LOG(WARNING) << "No sync configuration set, "
                        << "Ledger will work locally but won't sync";
     }
     const std::string temp_dir =
         ftl::Concatenate({repository_path.get(), "/tmp"});
-    if (!CheckSyncConfig(user_config, sanitized_path, temp_dir)) {
+    if (config_persistence_ == ConfigPersistence::PERSIST &&
+        !CheckSyncConfig(user_config, sanitized_path, temp_dir)) {
       callback(Status::CONFIGURATION_ERROR);
       return;
     }
     // Save debugging data for `ledger_tool`.
-    if (!SaveConfigForDebugging(user_id, repository_path.get(), temp_dir)) {
+    if (config_persistence_ == ConfigPersistence::PERSIST &&
+        !SaveConfigForDebugging(user_id, repository_path.get(), temp_dir)) {
       FTL_LOG(WARNING) << "Failed to save the current configuration.";
     }
     auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
