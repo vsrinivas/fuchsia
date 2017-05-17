@@ -73,6 +73,8 @@ def main():
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 os.environ['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
+                if args.binname:
+                    binname = os.path.basename(args.binname)
                 subprocess.Popen([godepfile, '-o', binname, args.package], stdout=out, env=os.environ)
     return retcode
 
