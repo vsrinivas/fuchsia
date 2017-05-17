@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "fake_failing_test",
+      "exec": "/system/test/fake_failing_test"
+    },
+    {
+      "name": "fake_passing_test",
+      "exec": "/system/test/fake_passing_test"
+    }
+  ]
+}
