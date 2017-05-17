@@ -36,9 +36,6 @@ public:
               mx_off_t length);
     ~VnodeFile() override;
 
-    uint32_t GetVType() final;
-
-private:
     mx_status_t Open(uint32_t flags) final;
     mx_status_t Serve(mx_handle_t h, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
@@ -46,6 +43,9 @@ private:
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;
 
+    uint32_t GetVType() final;
+
+private:
     mx_handle_t vmo_;
     mx_off_t offset_;
     mx_off_t length_;
@@ -60,15 +60,14 @@ public:
              mxtl::Array<mxtl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
 
-    uint32_t GetVType() final;
-
-private:
     mx_status_t Open(uint32_t flags) final;
     mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     mx_status_t Getattr(vnattr_t* a) final;
-
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
+    uint32_t GetVType() final;
+
+private:
     mxtl::Array<mxtl::StringPiece> names_;
     mxtl::Array<mxtl::RefPtr<Vnode>> children_;
 };
