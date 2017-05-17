@@ -1,0 +1,17 @@
+{
+    "labels": [
+        "//apps/pm:pm"
+    ],
+    "imports": [
+        "golibs"
+    ],
+    "binaries": [
+        {
+            "binary": "pm",
+            "bootfs_path": "bin/pm"
+        }
+    ],
+    "gopaths": [
+        { "apps/pm": "fuchsia.googlesource.com/pm" }
+    ]
+}
