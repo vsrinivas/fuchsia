@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 executable("waterfall") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
   sources = [
     "scenes/demo_scene.cc",
     "scenes/ring_tricks1.cc",
@@ -20,7 +19,6 @@ executable("waterfall") {
     "waterfall_main.cc",
   ]
   deps = [
-    "//lib/escher/escher",
     "//lib/escher/examples/common",
   ]
 

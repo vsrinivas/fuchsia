@@ -8,21 +8,17 @@ group("sketchy") {
   ]
 
   if (is_fuchsia) {
-    deps += [
-      "ui",
-    ]
+    deps += [ "ui" ]
   }
 }
 
 executable("sketchy_demo") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS"]
   sources = [
     "sketchy_demo.cc",
     "sketchy_demo.h",
     "sketchy_main.cc",
   ]
   deps = [
-    "//lib/escher/escher",
     "//lib/escher/examples/common",
     "//lib/escher/examples/sketchy/sketchy",
   ]

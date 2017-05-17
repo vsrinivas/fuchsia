@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("public_preprocessor_definitions") {
+  defines = [
+    "VULKAN_HPP_NO_EXCEPTIONS",
+    "GLM_ENABLE_EXPERIMENTAL",
+  ]
+}
+
 config("thread_safety_warning") {
   cflags = [
     "-Wthread-safety",
@@ -11,18 +18,18 @@ config("thread_safety_warning") {
 
 static_library("escher") {
   defines = [
-    "VULKAN_HPP_NO_EXCEPTIONS",
-    "GLM_ENABLE_EXPERIMENTAL",
-
     # Currently necessary on Fuchsia, but not Linux.
     "ESCHER_DISABLE_BACKGROUND_COMPILATION",
   ]
 
   deps = [
-    "//lib/ftl",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
   ]
 
   sources = [
@@ -171,14 +178,17 @@ static_library("escher") {
     "//third_party/shaderc/third_party/glslang",
   ]
 
-  public_configs = [ ":thread_safety_warning" ]
+  public_configs = [
+    ":public_preprocessor_definitions",
+    ":thread_safety_warning",
+  ]
 
   if (is_fuchsia) {
-    deps += [ "//magma:vulkan" ]
+    public_deps += [ "//magma:vulkan" ]
   }
 
   if (is_linux) {
-    configs += [ "//lib/escher:vulkan_linux" ]
+    public_configs += [ "//lib/escher:vulkan_linux" ]
   }
 }
 

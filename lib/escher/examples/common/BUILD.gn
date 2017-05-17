@@ -3,21 +3,22 @@
 # found in the LICENSE file.
 
 static_library("common") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
   sources = [
     "demo.cc",
     "demo.h",
     "demo_harness.cc",
     "demo_harness.h",
-    "vulkan_proc_addrs.h",
     "vulkan_proc_addrs.cc",
+    "vulkan_proc_addrs.h",
   ]
   deps = [
-    "//lib/escher/escher",
     "//lib/ftl",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+  public_deps = [
+    "//lib/escher/escher",
   ]
   libs = [
     "dl",
@@ -33,9 +34,8 @@ static_library("common") {
     deps += [
       "//application/lib/app:app",
       "//apps/modular/services/module:module_cpp_sources",
-      "//magma:vulkan",
-      "//lib/mtl",
       "//lib/escher/examples/common/services",
+      "//lib/mtl",
     ]
     sources += [
       "demo_harness_fuchsia.cc",
@@ -44,7 +44,6 @@ static_library("common") {
   }
 
   if (is_linux) {
-    configs += [ "//lib/escher:vulkan_linux" ]
     deps += [ "third_party:glfw" ]
     sources += [
       "demo_harness_linux.cc",
