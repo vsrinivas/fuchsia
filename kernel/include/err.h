@@ -14,9 +14,6 @@
 
 #include <magenta/errors.h>
 
-// Kernel-private errors
-#define ERR_KERNEL_PRIVATE_BASE (-500)
-
 // TODO: This is used primarily by class drivers which are obsolete.
 // Re-examine when those are removed.
 #define ERR_NOT_CONFIGURED (-501)
