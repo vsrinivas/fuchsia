@@ -25,13 +25,20 @@ export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
 export QEMU_DIR="${FUCHSIA_DIR}/buildtools/qemu/bin"
+export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_DIR}/scripts/.git rev-parse HEAD)"
 
 ### envhelp: print usage for command or list of commands
+
+function env_sh_version() {
+  echo $FUCHSIA_ENV_SH_VERSION
+}
 
 function envhelp() {
   if [[ $# -ne 1 ]]; then
     # note: please keep these sorted
     cat <<END
+env.sh functions:
+  envhelp, env_sh_version
 magenta functions:
   mboot, mbuild, mcheck, mgo, mrun, mset, msymbolize
 fuchsia functions:
