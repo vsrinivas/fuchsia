@@ -57,4 +57,9 @@ mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
 // eagerly reading the contents into a freshly-created VMO.
 mx_status_t mxio_get_vmo(int fd, mx_handle_t* out_vmo);
 
+// create a fd that is backed by the given range of the vmo.
+// This function takes ownership of the vmo and will close the vmo when the fd
+// is closed.
+int mxio_vmo_fd(mx_handle_t vmo, uint64_t offset, uint64_t length);
+
 __END_CDECLS

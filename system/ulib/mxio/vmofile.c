@@ -183,3 +183,17 @@ mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {
     mtx_init(&vf->lock, mtx_plain);
     return &vf->io;
 }
+
+int mxio_vmo_fd(mx_handle_t vmo, uint64_t offset, uint64_t length) {
+    mxio_t* io;
+    int fd;
+    if ((io = mxio_vmofile_create(vmo, offset, length)) == NULL) {
+        return -1;
+    }
+    if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
+        mxio_close(io);
+        mxio_release(io);
+        return -1;
+    }
+    return fd;
+}
