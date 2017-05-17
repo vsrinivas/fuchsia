@@ -45,5 +45,19 @@ TEST(PendingOperationManager, HeterogenousObject) {
   EXPECT_EQ(2u, called);
 }
 
+TEST(PendingOperationManager, DoNotCrashIfManagerDeleted) {
+  std::unique_ptr<PendingOperationManager> operation_manager =
+      std::make_unique<PendingOperationManager>();
+  size_t called = 0;
+  auto result =
+      operation_manager->Manage(ftl::MakeAutoCall([&called] { ++called; }));
+  EXPECT_EQ(0u, called);
+  operation_manager.reset();
+  // |operation_manager| is deleted and all its storage.
+  EXPECT_EQ(1u, called);
+  result.second();
+  // Nothing bad should happen
+}
+
 }  // namespace
 }  // namespace callback

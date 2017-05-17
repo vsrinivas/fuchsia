@@ -28,10 +28,15 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
       interface_(std::move(request), this),
       branch_tracker_(coroutine_service, manager, storage) {
   interface_.set_on_empty([this] {
-    branch_tracker_.StopTransaction(nullptr);
-    CheckEmpty();
+    operation_serializer_.Serialize(
+        [](Status status) {},
+        [this](std::function<void(Status)> callback) {
+          branch_tracker_.StopTransaction(nullptr);
+          callback(Status::OK);
+        });
   });
   branch_tracker_.set_on_empty([this] { CheckEmpty(); });
+  operation_serializer_.set_on_empty([this] { CheckEmpty(); });
 }
 
 PageDelegate::~PageDelegate() {}
