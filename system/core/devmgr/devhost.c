@@ -399,6 +399,7 @@ static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, u
     // out from under us (ERR_STOP).  In all cases, the ios's reference to
     // the device was released, and will no longer be used, so we will free
     // it before returning.
+    mx_handle_close(ios->ph.handle);
     free(ios);
     return r;
 }
