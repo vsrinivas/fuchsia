@@ -19,4 +19,11 @@
 
 typedef void (*keypress_handler_t)(uint8_t keycode, int modifiers);
 
+struct vc_input_thread_args {
+    int fd;
+    keypress_handler_t keypress_handler;
+};
+
+int vc_input_thread(void* arg);
+
 void vc_watch_for_keyboard_devices(keypress_handler_t handler);
