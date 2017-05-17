@@ -4,6 +4,9 @@
 
 library dart_mozart;
 
+// Should be set to a |mozart::NativesDelegate*| by the embedder.
+int _context;
+
 int _viewContainer;
 
 class MozartStartupInfo {
@@ -12,4 +15,13 @@ class MozartStartupInfo {
     _viewContainer = null;
     return handle;
   }
+}
+
+class Mozart {
+  static void offerServiceProvider(int handle) {
+    _offerServiceProvider(_context, handle);
+  }
+
+  static void _offerServiceProvider(int handle)
+      native 'Mozart_offerServiceProvider';
 }

@@ -487,3 +487,9 @@ class ChildView extends LeafRenderObjectWidget {
       ..hitTestable = hitTestable;
   }
 }
+
+class View {
+  static void offerServiceProvider(InterfaceHandle<ServiceProvider> provider) {
+    Mozart.offerServiceProvider(provider.passChannel().handle.release());
+  }
+}
