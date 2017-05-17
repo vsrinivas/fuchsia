@@ -399,12 +399,12 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 
     if (dump_state.fault_present) {
         fmt = "ENGINE FAULT DETECTED\n"
-              "engine 0x%x src 0x%x type 0x%x gpu_address 0x%llx\n";
+              "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx\n";
         size = std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
                              dump_state.fault_type, dump_state.fault_gpu_address);
         std::vector<char> buf(size + 1);
         std::snprintf(&buf[0], buf.size(), fmt, dump_state.fault_engine, dump_state.fault_src,
-                      dump_state.fault_type);
+                      dump_state.fault_type, dump_state.fault_gpu_address);
         dump_out.append(&buf[0]);
     } else {
         dump_out.append("No engine faults detected.\n");
