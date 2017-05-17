@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <memory>
+#include <queue>
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
@@ -16,18 +17,21 @@
 
 namespace cloud_sync {
 
-// Uploads a single commit along with the storage objects referenced by it
-// through the cloud provider and marks the uploaded artifacts as synced.
+// Uploads a batch of commits along with unsynced storage objects and marks
+// the uploaded artifacts as synced.
 //
-// Contract: Unsynced objects referenced by the commit are marked as synced as
-// they are uploaded. The commit itself is uploaded only once all objects are
-// uploaded. The entire commit is marked as synced once all objects are uploaded
-// and the commit itself is uploaded.
+// Contract: The class doesn't reason about objects referenced by each commit,
+// and instead uploads each unsynced object present in storage at the moment of
+// calling Start(). Unsynced objects are marked as synced as they are uploaded.
+// The commits in the batch are uploaded in one network request once all objects
+// are uploaded.
 //
-// Usage: call Start() to kick off the upload. |on_done| is called after upload
-// is successfully completed. |on_error| will be called at most once after each
-// Start() call when an error occurs. After |on_error| is called the client can
-// call Start() again to retry the upload.
+// Usage: call Start() to kick off the upload. |on_done| is called after the
+// upload is successfully completed. |on_error| will be called at most once
+// after each network error. Each time after |on_error| is called the client can
+// call Retry() once to retry the upload.
+// TODO(ppi): rather than DCHECK on storage errors, take separate callbacks for
+// network and disk errors and let PageSync decide on how to handle each.
 //
 // Lifetime: if CommitUpload is deleted between Start() and |on_done| being
 // called, it has to be deleted along with |storage| and |cloud_provider|, which
@@ -37,40 +41,46 @@ class CommitUpload {
  public:
   CommitUpload(storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
-               std::unique_ptr<const storage::Commit> commit,
+               std::vector<std::unique_ptr<const storage::Commit>> commits,
                ftl::Closure on_done,
-               ftl::Closure on_error);
+               ftl::Closure on_error,
+               unsigned int max_concurrent_uploads = 10);
   ~CommitUpload();
 
   // Starts a new upload attempt. Results are reported through |on_done|
-  // and |on_error| passed in the constructor. After |on_error| is
-  // called the client can retry by calling Start() again.
+  // and |on_error| passed in the constructor. Can be called only once.
   void Start();
 
+  // Retries the attempt to upload the commit batch. Each time after |on_error|
+  // is called, the client can retry by calling this method.
+  void Retry();
+
  private:
+  void StartObjectUpload();
+
+  void UploadNextObject();
+
   // Uploads the given object.
   void UploadObject(std::unique_ptr<const storage::Object> object);
 
   // Uploads the commit.
-  void UploadCommit();
+  void UploadCommits();
 
   storage::PageStorage* storage_;
   cloud_provider::CloudProvider* cloud_provider_;
-  std::unique_ptr<const storage::Commit> commit_;
+  std::vector<std::unique_ptr<const storage::Commit>> commits_;
   ftl::Closure on_done_;
   ftl::Closure on_error_;
-  // Incremented on every upload attempt / Start() call. Tracked to detect stale
-  // callbacks executing for the previous upload attempts.
-  int current_attempt_ = 0;
-  // True iff the current upload attempt is active, ie. didn't error yet.
-  // Tracked to guard against starting a new upload attempt before the previous
-  // one fails and to avoid duplicate |on_error| calls for a single upload
-  // attempt. This is not reset after completing the upload, so that it's an
-  // error to call .Start() on an upload that is complete.
-  bool active_or_finished_ = false;
-  // Count of the remaining objects to be uploaded in the current upload
-  // attempt.
-  int objects_to_upload_ = 0;
+  const unsigned int max_concurrent_uploads_;
+
+  // All remaining object ids to be uploaded along with this batch of commits.
+  std::queue<storage::ObjectId> remaining_object_ids_;
+
+  // Number of object uploads currently in progress.
+  unsigned int current_uploads_ = 0u;
+
+  bool started_ = false;
+  bool errored_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitUpload);
 };

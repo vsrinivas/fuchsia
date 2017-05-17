@@ -116,7 +116,7 @@ class PageSyncImpl : public PageSync,
   void HandleLocalCommits(
       std::vector<std::unique_ptr<const storage::Commit>> commits);
 
-  void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
+  void UploadStagedCommits();
 
   void HandleError(const char error_description[]);
 
@@ -152,9 +152,10 @@ class PageSyncImpl : public PageSync,
   // Set to true when upload is enabled.
   bool upload_enabled_ = false;
 
-  // A queue of pending commit uploads.
-  std::queue<CommitUpload> commit_uploads_;
-  // Commits staged to be uploaded when the number of heads goes back to 1.
+  // Current batch of local commits being uploaded.
+  std::unique_ptr<CommitUpload> commit_upload_;
+  // Commits staged to be uploaded when the current upload is finished and the
+  // number of heads is 1.
   std::vector<std::unique_ptr<const storage::Commit>>
       commits_staged_for_upload_;
   // The current batch of remote commits being downloaded.

@@ -11,16 +11,19 @@
 
 namespace cloud_sync {
 
-CommitUpload::CommitUpload(storage::PageStorage* storage,
-                           cloud_provider::CloudProvider* cloud_provider,
-                           std::unique_ptr<const storage::Commit> commit,
-                           ftl::Closure on_done,
-                           ftl::Closure on_error)
+CommitUpload::CommitUpload(
+    storage::PageStorage* storage,
+    cloud_provider::CloudProvider* cloud_provider,
+    std::vector<std::unique_ptr<const storage::Commit>> commits,
+    ftl::Closure on_done,
+    ftl::Closure on_error,
+    unsigned int max_concurrent_uploads)
     : storage_(storage),
       cloud_provider_(cloud_provider),
-      commit_(std::move(commit)),
+      commits_(std::move(commits)),
       on_done_(on_done),
-      on_error_(on_error) {
+      on_error_(on_error),
+      max_concurrent_uploads_(max_concurrent_uploads) {
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
 }
@@ -28,35 +31,55 @@ CommitUpload::CommitUpload(storage::PageStorage* storage,
 CommitUpload::~CommitUpload() {}
 
 void CommitUpload::Start() {
-  FTL_DCHECK(!active_or_finished_);
-  current_attempt_++;
-  active_or_finished_ = true;
+  FTL_DCHECK(!started_);
+  FTL_DCHECK(!errored_);
+  started_ = true;
 
-  storage_->GetUnsyncedObjectIds(
-      commit_->GetId(), [this](storage::Status status,
-                               std::vector<storage::ObjectId> object_ids) {
+  storage_->GetAllUnsyncedObjectIds(
+      [this](storage::Status status,
+             std::vector<storage::ObjectId> object_ids) {
         FTL_DCHECK(status == storage::Status::OK);
-
-        // If there are no unsynced objects referenced by the commit, upload the
-        // commit directly.
-        if (object_ids.empty()) {
-          UploadCommit();
-          return;
+        for (auto& object_id : object_ids) {
+          remaining_object_ids_.push(std::move(object_id));
         }
-
-        // Upload all unsynced objects referenced by the commit. The last upload
-        // that succeeds triggers uploading the commit.
-        objects_to_upload_ = object_ids.size();
-        for (const auto& id : object_ids) {
-          storage_->GetObject(
-              id, storage::PageStorage::Location::LOCAL,
-              [this](storage::Status storage_status,
-                     std::unique_ptr<const storage::Object> object) {
-                FTL_DCHECK(storage_status == storage::Status::OK);
-                UploadObject(std::move(object));
-              });
-        }
+        StartObjectUpload();
       });
+}
+
+void CommitUpload::Retry() {
+  FTL_DCHECK(started_);
+  FTL_DCHECK(errored_);
+  errored_ = false;
+  StartObjectUpload();
+}
+
+void CommitUpload::StartObjectUpload() {
+  FTL_DCHECK(current_uploads_ == 0u);
+  // If there are no unsynced objects left, upload the commits.
+  if (remaining_object_ids_.empty()) {
+    UploadCommits();
+    return;
+  }
+
+  while (current_uploads_ < max_concurrent_uploads_ &&
+         !remaining_object_ids_.empty()) {
+    UploadNextObject();
+  }
+}
+
+void CommitUpload::UploadNextObject() {
+  FTL_DCHECK(!remaining_object_ids_.empty());
+  FTL_DCHECK(current_uploads_ < max_concurrent_uploads_);
+  current_uploads_++;
+  storage_->GetObject(remaining_object_ids_.front(),
+                      storage::PageStorage::Location::LOCAL,
+                      [this](storage::Status storage_status,
+                             std::unique_ptr<const storage::Object> object) {
+                        FTL_DCHECK(storage_status == storage::Status::OK);
+                        UploadObject(std::move(object));
+                      });
+  // Pop the object from the queue - if the upload fails, we will re-enqueue it.
+  remaining_object_ids_.pop();
 }
 
 void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
@@ -71,56 +94,77 @@ void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   FTL_DCHECK(result);
 
   storage::ObjectId id = object->GetId();
-  cloud_provider_->AddObject(object->GetId(), std::move(data), [
-    this, id = std::move(id), upload_attempt = current_attempt_
-  ](cloud_provider::Status status) {
-    if (upload_attempt != current_attempt_) {
-      // Object upload was completed for a previous .Start() call. If it
-      // succeeded, we still mark it as synced, as this allows to avoid
-      // re-uploading this object upon the next upload attempt.
-      if (status == cloud_provider::Status::OK) {
-        storage_->MarkObjectSynced(id);
-      }
-      return;
-    }
+  cloud_provider_->AddObject(
+      object->GetId(), std::move(data),
+      [ this, id = std::move(id) ](cloud_provider::Status status) {
+        FTL_DCHECK(current_uploads_ > 0);
+        current_uploads_--;
 
-    if (status != cloud_provider::Status::OK) {
-      if (active_or_finished_) {
-        active_or_finished_ = false;
-        on_error_();
-      }
-      return;
-    }
-    storage_->MarkObjectSynced(id);
-    objects_to_upload_--;
-    if (objects_to_upload_ == 0) {
-      // All the referenced objects are uploaded, upload the commit.
-      UploadCommit();
-    }
-  });
+        if (status != cloud_provider::Status::OK) {
+          errored_ = true;
+          // Re-enqueue the object for another upload attempt.
+          remaining_object_ids_.push(std::move(id));
+
+          if (current_uploads_ == 0u) {
+            on_error_();
+          }
+          return;
+        }
+
+        // Uploading the object succeeded.
+        auto result = storage_->MarkObjectSynced(id);
+        FTL_DCHECK(result == storage::Status::OK);
+
+        // Notify the user about the error once all pending uploads of the
+        // recent retry complete.
+        if (errored_ && current_uploads_ == 0u) {
+          on_error_();
+          return;
+        }
+
+        if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
+          // All the referenced objects are uploaded, upload the commits.
+          UploadCommits();
+          return;
+        }
+
+        if (!errored_ && !remaining_object_ids_.empty()) {
+          UploadNextObject();
+        }
+      });
 }
 
-void CommitUpload::UploadCommit() {
-  cloud_provider::Commit commit(
-      commit_->GetId(), commit_->GetStorageBytes().ToString(),
-      std::map<cloud_provider::ObjectId, cloud_provider::Data>{});
-  storage::CommitId commit_id = commit_->GetId();
+void CommitUpload::UploadCommits() {
+  FTL_DCHECK(!errored_);
   std::vector<cloud_provider::Commit> commits;
-  commits.push_back(std::move(commit));
-  cloud_provider_->AddCommits(std::move(commits), [
-    this, commit_id = std::move(commit_id)
-  ](cloud_provider::Status status) {
-    // UploadCommit() is called as a last step of a so-far-successful upload
-    // attempt, so we couldn't have failed before.
-    FTL_DCHECK(active_or_finished_);
-    if (status != cloud_provider::Status::OK) {
-      active_or_finished_ = false;
-      on_error_();
-      return;
-    }
-    storage_->MarkCommitSynced(commit_id);
-    on_done_();
-  });
+  std::vector<storage::CommitId> ids;
+  for (auto& storage_commit : commits_) {
+    storage::CommitId id = storage_commit->GetId();
+    cloud_provider::Commit commit(
+        id, storage_commit->GetStorageBytes().ToString(),
+        std::map<cloud_provider::ObjectId, cloud_provider::Data>{});
+    commits.push_back(std::move(commit));
+    ids.push_back(std::move(id));
+  }
+  cloud_provider_->AddCommits(
+      std::move(commits),
+      [ this, commit_ids = std::move(ids) ](cloud_provider::Status status) {
+        // UploadCommit() is called as a last step of a so-far-successful upload
+        // attempt, so we couldn't have failed before.
+        FTL_DCHECK(!errored_);
+        if (status != cloud_provider::Status::OK) {
+          errored_ = true;
+          on_error_();
+          return;
+        }
+        for (auto& id : commit_ids) {
+          auto ret = storage_->MarkCommitSynced(id);
+          FTL_DCHECK(ret == storage::Status::OK);
+        }
+        // This object can be deleted in the on_done_() callback, don't do
+        // anything after the call.
+        on_done_();
+      });
 }
 
 }  // namespace cloud_sync

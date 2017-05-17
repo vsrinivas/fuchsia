@@ -120,6 +120,12 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::vector<storage::ObjectId>());
   }
 
+  void GetAllUnsyncedObjectIds(
+      std::function<void(storage::Status, std::vector<storage::ObjectId>)>
+          callback) override {
+    callback(storage::Status::OK, std::vector<storage::ObjectId>());
+  }
+
   storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
     watcher_set = true;
     return storage::Status::OK;
@@ -203,7 +209,8 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   void AddCommits(
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
-    received_commits.push_back(commits.front().Clone());
+    std::move(commits.begin(), commits.end(),
+              std::back_inserter(received_commits));
     message_loop_->task_runner()->PostTask(
         [this, callback]() { callback(commit_status_to_return); });
   }
