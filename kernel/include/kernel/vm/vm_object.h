@@ -69,6 +69,19 @@ public:
         return MX_ERR_NOT_SUPPORTED;
     }
 
+    // Pin the given range of the vmo.  If any pages are not committed, this
+    // returns a MX_ERR_NO_MEMORY.
+    virtual status_t Pin(uint64_t offset, uint64_t len) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
+    // Unpin the given range of the vmo.  This asserts if it tries to unpin a
+    // page that is already not pinned (do not expose this function to
+    // usermode).
+    virtual void Unpin(uint64_t offset, uint64_t len) {
+        panic("Unpin should only be called on a pinned range");
+    }
+
     // read/write operators against kernel pointers only
     virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
         return MX_ERR_NOT_SUPPORTED;

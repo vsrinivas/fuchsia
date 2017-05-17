@@ -154,6 +154,7 @@ size_t VmPageList::FreeAllPages() {
         list_add_tail(&list, &p->free.node);
         p = nullptr;
         count++;
+        return MX_ERR_NEXT;
     };
 
     // walk the tree in order, freeing all the pages on every node

@@ -45,6 +45,9 @@ public:
                                    uint8_t alignment_log2) override;
     status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) override;
 
+    status_t Pin(uint64_t offset, uint64_t len) override;
+    void Unpin(uint64_t offset, uint64_t len) override;
+
     status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
     status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
     status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
@@ -101,6 +104,11 @@ private:
 
     // internal page list routine
     void AddPageToArray(size_t index, vm_page_t* p);
+
+    void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
+    // internal check if any pages in a range are pinned
+    bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
 
     // internal read/write routine that takes a templated copy function to help share some code
     template <typename T>

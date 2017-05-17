@@ -337,6 +337,115 @@ static bool vmo_commit_test(void* context) {
     END_TEST;
 }
 
+// Creates a paged VMO, pins it, and tries operations that should unpin it.
+static bool vmo_pin_test(void* context) {
+    BEGIN_TEST;
+
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+
+    status_t status = vmo->Pin(PAGE_SIZE, alloc_size);
+    EXPECT_EQ(MX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
+    status = vmo->Pin(PAGE_SIZE, 0);
+    EXPECT_EQ(MX_OK, status, "pinning range of len 0\n");
+    status = vmo->Pin(alloc_size + PAGE_SIZE, 0);
+    EXPECT_EQ(MX_ERR_OUT_OF_RANGE, status, "pinning out-of-range of len 0\n");
+
+    status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
+    status = vmo->Pin(0, alloc_size);
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
+
+    uint64_t n;
+    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "committing range\n");
+
+    status = vmo->Pin(0, alloc_size);
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
+    status = vmo->Pin(PAGE_SIZE, 4 * PAGE_SIZE);
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
+    status = vmo->Pin(0, 4 * PAGE_SIZE);
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status, "pinning uncommitted range\n");
+
+    status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(MX_OK, status, "pinning committed range\n");
+
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(PAGE_SIZE, PAGE_SIZE, &n);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(3 * PAGE_SIZE, PAGE_SIZE, &n);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+
+    vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
+
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "decommitting unpinned range\n");
+
+
+    status = vmo->CommitRange(PAGE_SIZE, 3 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "committing range\n");
+    status = vmo->Pin(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(MX_OK, status, "pinning committed range\n");
+
+    status = vmo->Resize(0);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "resizing pinned range\n");
+
+    vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
+
+    status = vmo->Resize(0);
+    EXPECT_EQ(MX_OK, status, "resizing unpinned range\n");
+
+    END_TEST;
+}
+
+// Creates a page VMO and pins the same pages multiple times
+static bool vmo_multiple_pin_test(void* context) {
+    BEGIN_TEST;
+
+    static const size_t alloc_size = PAGE_SIZE * 16;
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+    REQUIRE_NONNULL(vmo, "vmobject creation\n");
+    uint64_t n;
+    status_t status = vmo->CommitRange(0, alloc_size, &n);
+    EXPECT_EQ(MX_OK, status, "committing range\n");
+
+    status = vmo->Pin(0, alloc_size);
+    EXPECT_EQ(MX_OK, status, "pinning whole range\n");
+    status = vmo->Pin(PAGE_SIZE, 4 * PAGE_SIZE);
+    EXPECT_EQ(MX_OK, status, "pinning subrange\n");
+
+    for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
+        status = vmo->Pin(0, PAGE_SIZE);
+        EXPECT_EQ(MX_OK, status, "pinning first page max times\n");
+    }
+    status = vmo->Pin(0, PAGE_SIZE);
+    EXPECT_EQ(MX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
+
+    vmo->Unpin(0, alloc_size);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "decommitting unpinned range\n");
+
+    vmo->Unpin(PAGE_SIZE, 4 * PAGE_SIZE);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "decommitting unpinned range\n");
+
+    for (unsigned int i = 2; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
+        vmo->Unpin(0, PAGE_SIZE);
+    }
+    status = vmo->DecommitRange(0, PAGE_SIZE, &n);
+    EXPECT_EQ(MX_ERR_BAD_STATE, status, "decommitting unpinned range\n");
+
+    vmo->Unpin(0, PAGE_SIZE);
+    status = vmo->DecommitRange(0, PAGE_SIZE, &n);
+    EXPECT_EQ(MX_OK, status, "decommitting unpinned range\n");
+
+    END_TEST;
+}
+
 // Creates a vm object, commits odd sized memory.
 static bool vmo_odd_size_commit_test(void* context) {
     BEGIN_TEST;
@@ -702,6 +811,8 @@ VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
 VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
 VM_UNITTEST(vmo_create_test)
+VM_UNITTEST(vmo_pin_test)
+VM_UNITTEST(vmo_multiple_pin_test)
 VM_UNITTEST(vmo_commit_test)
 VM_UNITTEST(vmo_odd_size_commit_test)
 VM_UNITTEST(vmo_contiguous_commit_test)

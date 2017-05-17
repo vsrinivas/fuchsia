@@ -17,6 +17,9 @@ class VmObject;
 
 __BEGIN_CDECLS
 
+#define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
+#define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
+
 // core per page structure
 typedef struct vm_page {
     struct {
@@ -33,8 +36,10 @@ typedef struct vm_page {
 #if __cplusplus
         struct {
             // attached to a vm object
-            uint64_t offset;
-            VmObject* obj;
+            uint64_t offset; // unused currently
+            VmObject* obj; // unused currently
+
+            uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
         } object;
 #endif
 

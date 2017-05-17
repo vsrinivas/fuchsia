@@ -220,6 +220,8 @@ status_t PmmArena::FreePage(vm_page_t* page) {
     if (!page_belongs_to_arena(page))
         return MX_ERR_NOT_FOUND;
 
+    DEBUG_ASSERT(page->state != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
+
 #if PMM_ENABLE_FREE_FILL
     FreeFill(page);
 #endif
