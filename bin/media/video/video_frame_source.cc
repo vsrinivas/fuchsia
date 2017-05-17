@@ -167,9 +167,15 @@ void VideoFrameSource::OnPacketSupplied(
 
   packet_queue_.push(std::move(supplied_packet));
 
-  // Discard old packets now in case our frame rate is so low that we have to
-  // skip more packets than we demand when GetRgbaFrame is called.
-  DiscardOldPackets();
+  if (!prime_callback_) {
+    // Discard old packets now in case our frame rate is so low that we have to
+    // skip more packets than we demand when GetRgbaFrame is called.
+    DiscardOldPackets();
+  } else if (packet_queue_.size() >= kPacketDemand) {
+    FLOG(log_channel_, CompletingPrime());
+    prime_callback_();
+    prime_callback_ = nullptr;
+  }
 
   // If this is the first packet to arrive and we're not telling the views to
   // animate, invalidate the views so the first frame can be displayed.
@@ -220,10 +226,14 @@ void VideoFrameSource::GetTimelineConsumer(
 void VideoFrameSource::Prime(const PrimeCallback& callback) {
   FLOG(log_channel_, PrimeRequested());
   pts_ = kUnspecifiedTime;
-  SetDemand(2);
+  SetDemand(kPacketDemand);
 
-  FLOG(log_channel_, CompletingPrime());
-  callback();  // TODO(dalesat): Wait until we get packets.
+  if (packet_queue_.size() >= kPacketDemand) {
+    FLOG(log_channel_, CompletingPrime());
+    callback();
+  } else {
+    prime_callback_ = callback;
+  }
 }
 
 void VideoFrameSource::SetTimelineTransform(
