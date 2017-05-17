@@ -128,7 +128,7 @@ class AudioOutput {
   // links.
   AudioRendererToOutputLinkSet links_;
   AudioOutputManager* manager_;
-
+  AudioOutputWeakPtr weak_self_;
   ftl::Mutex mutex_;
 
  private:
@@ -162,7 +162,6 @@ class AudioOutput {
   void Shutdown();
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  AudioOutputWeakPtr weak_self_;
   std::thread worker_thread_;
 
   // TODO(johngro): Someday, when we expose output enumeration and control

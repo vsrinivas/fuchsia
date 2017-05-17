@@ -139,6 +139,9 @@ void AudioOutput::ProcessThunk(AudioOutputWeakPtr weak_output) {
 MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   FTL_DCHECK(this == self.get());
 
+  // Hold a weak reference to ourself.
+  weak_self_ = self;
+
   // If our derived class failed to initialize, Just get out.  We are being
   // called by the output manager, and they will remove us from the set of
   // active outputs as a result of us failing to initialize.
@@ -152,9 +155,7 @@ MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   FTL_DCHECK(worker_thread_.get_id() == std::thread::id());
   worker_thread_ = mtl::CreateThread(&task_runner_);
 
-  // Stash our callback state and schedule an immediate callback to get things
-  // running.
-  weak_self_ = self;
+  // Schedule an immediate callback to get things running.
   AudioOutputWeakPtr weak_self = weak_self_;
   task_runner_->PostTask([weak_self]() { ProcessThunk(weak_self); });
 

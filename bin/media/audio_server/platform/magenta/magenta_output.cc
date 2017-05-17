@@ -132,6 +132,34 @@ MediaResult MagentaOutput::Init() {
     }
   }
 
+  // Fetch the initial plug state, and enable plug state notifications if
+  // supported by the stream.  For now, process the result(s) using the
+  // EventReflector asynchronously, not here.
+  {
+    audio2_stream_cmd_plug_detect_req_t req;
+    req.hdr.cmd = AUDIO2_STREAM_CMD_PLUG_DETECT;
+    req.hdr.transaction_id = std::numeric_limits<mx_txid_t>::max();
+    req.flags = AUDIO2_PDF_ENABLE_NOTIFICATIONS;
+
+    res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
+    if (res != NO_ERROR) {
+      FTL_LOG(ERROR) << "Failed to request initial plug state (res "
+                     << res << ")";
+      return MediaResult::INTERNAL_ERROR;
+    }
+
+    // Create the reflector and hand the stream channel over to it.
+    reflector_ = EventReflector::Create(manager_, weak_self_);
+    FTL_DCHECK(reflector_ != nullptr);
+
+    res = reflector_->Activate(mxtl::move(stream_channel_));
+    if (res != NO_ERROR) {
+      FTL_LOG(ERROR) << "Failed to activate event reflector (res "
+                     << res << ")";
+      return MediaResult::INTERNAL_ERROR;
+    }
+  }
+
   // Fetch the fifo depth of the ring buffer we just got back.  This determines
   // how far ahead of the current playout position (in bytes) the hardware may
   // read.
@@ -397,6 +425,106 @@ bool MagentaOutput::FinishMixJob(const MixJob& job) {
   }
 
   return true;
+}
+
+mx_status_t MagentaOutput::EventReflector::Activate(
+    mx::channel stream_channel) {
+  auto ch = ::audio::DispatcherChannelAllocator::New();
+
+  if (ch == nullptr)
+    return ERR_NO_MEMORY;
+
+  // Simply activate the channel and get out.  The dispatcher pool will hold a
+  // reference to it while it is active.  There is no (current) reason for us
+  // to hold a reference to it as we are only using it to listen for events,
+  // never to send commands.
+  return ch->Activate(mxtl::WrapRefPtr(this), mxtl::move(stream_channel));
+}
+
+mx_status_t MagentaOutput::EventReflector::ProcessChannel(
+    DispatcherChannel* channel) {
+  FTL_DCHECK(channel != nullptr);
+
+  union {
+    audio2_cmd_hdr_t hdr;
+    audio2_stream_cmd_plug_detect_resp_t pd_resp;
+    audio2_stream_plug_detect_notify_t   pd_notify;
+  } msg;
+
+  uint32_t bytes;
+  mx_status_t res = channel->Read(&msg, sizeof(msg), &bytes);
+  if (res != NO_ERROR) {
+    FTL_LOG(ERROR) << "Failed to read message from driver (res " << res << ")";
+    return res;
+  }
+
+  // The only types of messages we expect at the moment are reponses to the plug
+  // detect command, and asynchronous plug detection notifications.
+  switch (msg.hdr.cmd) {
+    case AUDIO2_STREAM_CMD_PLUG_DETECT: {
+      if (bytes != sizeof(msg.pd_resp)) {
+        FTL_LOG(ERROR) << "Bad message length.  Expected "
+                       << sizeof(msg.pd_resp)
+                       << " Got " << bytes;
+        return ERR_INVALID_ARGS;
+      }
+
+      // TODO(johngro) : If this stream supports plug detection, but requires
+      // polling, set up that polling now.
+
+      const auto& m = msg.pd_resp;
+      HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
+      return NO_ERROR;
+    }
+
+    case AUDIO2_STREAM_PLUG_DETECT_NOTIFY: {
+      if (bytes != sizeof(msg.pd_notify)) {
+        FTL_LOG(ERROR) << "Bad message length.  Expected "
+                       << sizeof(msg.pd_notify) << " Got "
+                       << bytes;
+        return ERR_INVALID_ARGS;
+      }
+
+      const auto& m = msg.pd_notify;
+      HandlePlugStateChange(m.flags & AUDIO2_PDNF_PLUGGED, m.plug_state_time);
+      return NO_ERROR;
+    }
+
+    default:
+      FTL_LOG(ERROR) << "Unexpected message type 0x" << std::hex << msg.hdr.cmd;
+      return ERR_INVALID_ARGS;
+  }
+}
+
+void MagentaOutput::EventReflector::NotifyChannelDeactivated(
+    const DispatcherChannel& channel) {
+  // If our stream channel has been unplugged out from under us, the deivce
+  // which publishes our stream has been removed from the system (or the driver
+  // has crashed).  We need to begin the process of shutting down this
+  // AudioOutput.
+  manager_->ScheduleMessageLoopTask(
+      [manager = manager_, weak_output = output_]() {
+        auto output = weak_output.lock();
+        if (output) {
+          manager->ShutdownOutput(output);
+        }
+      });
+}
+
+void MagentaOutput::EventReflector::HandlePlugStateChange(bool plugged,
+                                                          mx_time_t plug_time) {
+  // Reflect this message to the AudioOutputManager so it can deal with the plug
+  // state change.
+  manager_->ScheduleMessageLoopTask(
+      [manager = manager_, weak_output = output_, plugged, plug_time]() {
+        auto output = weak_output.lock();
+        if (output) {
+          FTL_DLOG(INFO) << "[" << plug_time << "] Plug state is now "
+                         << (plugged ? "plugged" : "unplugged");
+          FTL_DLOG(INFO) <<
+            "TODO(johngro): Implement plug state handler in output manager";
+        }
+      });
 }
 
 }  // namespace audio
