@@ -1,0 +1,96 @@
+module mozart2;
+
+import "apps/mozart/services/images2/image_info.fidl";
+
+// ImagePipe is a mechanism for streaming shared images between a producer
+// and a consumer which may be running in different processes.
+//
+// Conceptually, the image pipe maintains a table of image resources supplied
+// by the producer into which graphical content may be stored as well as a
+// presentation queue containing a sequence of images which the producer has
+// asked the consumer to present.
+//
+// The presentation queue is initially empty.
+//
+// Each entry in the presentation queue consists of an image together with a
+// pair of optional synchronization fences:
+// - Acquire fence: signaled by the producer when the image is ready to be consumed
+// - Release fence: signaled by the consumer when the image is free to be freed or
+//   modified by the producer
+//
+// The consumer performs the following sequence of steps for each image which
+// is enqueued in the presentation queue:
+// - Await signals on the image's acquire fence.
+// - If the fence wait cannot be satisfied or if some other error is detected,
+//   close the image pipe.
+//   Otherwise, begin presenting the image's content.
+// - Retire the previously presented image (if any) from the presentation queue
+//   and signal its release fence when no longer needed.
+// - Continue presenting the same image until the next one is ready.  Loop.
+//
+// The producer performs the following sequence of steps to present content:
+// - Allocate and add some number of images (often 2 or 3) to the image pipe
+//   to establish a pool using |AddImage()|.
+// - Obtain the next available image from the pool.
+// - Ask the consumer to present the image and provide fences using |PresentImage()|.
+// - Start rendering the image.
+// - Signal the image's acquire fence when rendering is complete.
+// - Loop to present more image, listen for signals on release fences to recycle
+//   images back into the pool.
+//
+// When the producer closes the image pipe, all presented images are discarded.
+// The consumer signals the release fence of each discarded image only after that
+// image's acquire fence has been signaled (if not already signaled).  This ensures
+// that the image is not released until after it has finished being generated.
+// The producer may then await signaling of each image's release fence and recycle
+// them back into its image pool if desired.  Alternately, the producer may simply
+// close all of the memory objects and fences if it has no further interest in
+// reusing the memory.
+interface ImagePipe {
+  // Adds an image resource to image pipe.
+  //
+  // The |memory| is the handle of a memory object which contains the image
+  // data.  It is valid to create multiple images backed by the same memory object;
+  // they may even overlap.  Consumers must detect this and handle it accordingly.
+  // The |memory_offset| indicates the offset within the memory object at which
+  // the image data begins.
+  //
+  // The following errors will cause the connection to be closed:
+  // - |image_id| is already registered
+  // - |image_info| represents a format not supported by the consumer
+  // - |memory| is not a handle for a readable VMO
+  // - the image data expected at |memory_offset| according to the |image_info|
+  //   exceeds the memory object's bounds
+  AddImage(uint32 image_id, ImageInfo image_info,
+           handle<vmo> memory, uint64 memory_offset);
+
+  // Removes an image resource from the pipe.
+  //
+  // The |image_id| is detached from the image resource and is free to be
+  // reused to add a new image resource.
+  //
+  // Removing an image from the image pipe does not affect the presentation
+  // queue or the currently presented image.  See also |DiscardImages()|.
+  //
+  // The producer must wait for all release fences associated with the image to
+  // be signaled before freeing or modifying the underlying memory object since
+  // the image may still be in use in the presentation queue.
+  //
+  // The following errors will cause the connection to be closed:
+  // - |image_id| does not reference a currently registered image resource
+  RemoveImage(uint32 image_id);
+
+  // Enqueues the specified image for presentation.
+  //
+  // The |acquire_fence|, if not null, specifies a fence which the consumer must
+  // await before presenting the image.
+  // The |release_fence|, if not null, specifies a fence which the consumer must
+  // signal when it is safe for the producer to free or modify the image.
+  //
+  // The following errors will cause the connection to be closed:
+  // - |image_id| does not reference a currently registered image resource
+  //
+  // TODO(MZRT-80): Specify the presentation time.
+  PresentImage(uint32 image_id, handle<event>? acquire_fence,
+               handle<event>? release_fence);
+};

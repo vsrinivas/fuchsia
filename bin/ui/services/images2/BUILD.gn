@@ -7,5 +7,9 @@ import("//lib/fidl/fidl.gni")
 fidl("images2") {
   sources = [
     "image_info.fidl",
+    "image_pipe.fidl",
+  ]
+
+  public_deps = [
   ]
 }
