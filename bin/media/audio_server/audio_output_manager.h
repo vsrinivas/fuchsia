@@ -46,6 +46,10 @@ class AudioOutputManager {
   // configured.
   void SelectOutputsForRenderer(AudioRendererImplPtr renderer);
 
+  // Link an output to an audio renderer
+  void LinkOutputToRenderer(AudioOutputPtr output,
+                            AudioRendererImplPtr renderer);
+
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const ftl::Closure& task);
 
@@ -56,7 +60,25 @@ class AudioOutputManager {
   // outputs.
   void ShutdownOutput(AudioOutputPtr output);
 
+  // Handles a plugged/unplugged state change for the supplied audio output.
+  void HandlePlugStateChange(AudioOutputPtr output,
+                             bool plugged,
+                             mx_time_t plug_time);
+
  private:
+  // A placeholder for various types of simple routing policies.  This should be
+  // replaced when routing policy moves to a more centralized policy manager.
+  enum class RoutingPolicy {
+    // AudioRenderers are always connected to all audio outputs which currently
+    // in the plugged state (eg; have a connector attached to them)
+    ALL_PLUGGED_OUTPUTS,
+
+    // AudioRenderers are only connected to the output stream which most
+    // recently entered the plugged state.  Renderers move around from output to
+    // output as streams are published/unpublished and become plugged/unplugged.
+    LAST_PLUGGED_OUTPUT,
+  };
+
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
@@ -67,8 +89,14 @@ class AudioOutputManager {
   // loop thread, so no synchronization should be needed.
   AudioOutputSet outputs_;
 
+  // The special throttle output.  This output always exists, and is always used
+  // by all renderers.
+  AudioOutputPtr throttle_output_;
+
   // A helper class we will use to detect plug/unplug events for audio devices
   mxtl::RefPtr<AudioPlugDetector> plug_detector_;
+
+  RoutingPolicy routing_policy_ = RoutingPolicy::LAST_PLUGGED_OUTPUT;
 };
 
 }  // namespace audio

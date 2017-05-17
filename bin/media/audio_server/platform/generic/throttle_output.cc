@@ -25,6 +25,7 @@ AudioOutputPtr ThrottleOutput::New(AudioOutputManager* manager) {
 
 MediaResult ThrottleOutput::Init() {
   last_sched_time_ = ftl::TimePoint::Now();
+  UpdatePlugState(true, 0);
   return MediaResult::OK;
 }
 
@@ -47,8 +48,8 @@ bool ThrottleOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   // releasing it)
   //
   // In order to do this, however, we would to wake up and recompute whenever
-  // the rate transformations for one of our client renderers changes.  For now, we
-  // just poll because its simpler.
+  // the rate transformations for one of our client renderers changes.  For now,
+  // we just poll because its simpler.
   SetNextSchedTime(last_sched_time_);
 
   // The throttle output never actually mixes anything, it just provides

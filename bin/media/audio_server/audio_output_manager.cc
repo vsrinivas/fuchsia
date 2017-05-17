@@ -42,6 +42,8 @@ MediaResult AudioOutputManager::Init() {
     return res;
   }
 
+  throttle_output_ = throttle_output;
+
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
   FTL_DCHECK(plug_detector_ != nullptr);
@@ -95,26 +97,66 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
   }
 }
 
+void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
+                                               bool plugged,
+                                               mx_time_t plug_time) {
+  FTL_DCHECK(output);
+  if (output->UpdatePlugState(plugged, plug_time)) {
+    // TODO(johngro) : plugged/unpluged state has changed.  Time to re-evaluate
+    // our audio routing policy.
+  }
+}
+
 void AudioOutputManager::SelectOutputsForRenderer(
     AudioRendererImplPtr renderer) {
-  // TODO(johngro): Someday, base this on policy.  For now, every renderer gets
-  // assigned to every output in the system.
   FTL_DCHECK(renderer);
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
 
-  for (auto output : outputs_) {
-    auto link = AudioRendererToOutputLink::New(renderer, output);
-    FTL_DCHECK(output);
-    FTL_DCHECK(link);
+  // All renderers get linked to the throttle output, no matter what.
+  LinkOutputToRenderer(throttle_output_, renderer);
 
-    // If we cannot add this link to the output, it's because the output is in
-    // the process of shutting down (we didn't want to hang out with that guy
-    // anyway)
-    if (output->AddRendererLink(link) == MediaResult::OK) {
-      renderer->AddOutput(link);
-    }
+  switch (routing_policy_) {
+    case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
+      for (auto output : outputs_) {
+        if ((output != throttle_output_) && output->plugged()) {
+          LinkOutputToRenderer(output, renderer);
+        }
+      }
+    } break;
+
+    case RoutingPolicy::LAST_PLUGGED_OUTPUT: {
+      AudioOutputPtr best_output = nullptr;
+
+      for (auto output : outputs_) {
+        if ((output != throttle_output_) && output->plugged() &&
+            (!best_output || (best_output->plug_time() < output->plug_time()))) {
+          best_output = output;
+        }
+      }
+
+      if (best_output != nullptr) {
+        LinkOutputToRenderer(best_output, renderer);
+      }
+
+    } break;
+  }
+}
+
+void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
+                                              AudioRendererImplPtr renderer) {
+  FTL_DCHECK(output);
+  FTL_DCHECK(renderer);
+
+  auto link = AudioRendererToOutputLink::New(renderer, output);
+  FTL_DCHECK(link);
+
+  // If we cannot add this link to the output, it's because the output is in
+  // the process of shutting down (we didn't want to hang out with that guy
+  // anyway)
+  if (output->AddRendererLink(link) == MediaResult::OK) {
+    renderer->AddOutput(link);
   }
 }
 

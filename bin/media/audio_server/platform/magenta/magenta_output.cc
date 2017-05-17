@@ -513,16 +513,18 @@ void MagentaOutput::EventReflector::NotifyChannelDeactivated(
 
 void MagentaOutput::EventReflector::HandlePlugStateChange(bool plugged,
                                                           mx_time_t plug_time) {
+  // If this was a hardwired output, just use the current time as the plug time.
+  if (!plug_time) {
+    plug_time = mx_time_get(MX_CLOCK_MONOTONIC);
+  }
+
   // Reflect this message to the AudioOutputManager so it can deal with the plug
   // state change.
   manager_->ScheduleMessageLoopTask(
       [manager = manager_, weak_output = output_, plugged, plug_time]() {
         auto output = weak_output.lock();
         if (output) {
-          FTL_DLOG(INFO) << "[" << plug_time << "] Plug state is now "
-                         << (plugged ? "plugged" : "unplugged");
-          FTL_DLOG(INFO) <<
-            "TODO(johngro): Implement plug state handler in output manager";
+          manager->HandlePlugStateChange(output, plugged, plug_time);
         }
       });
 }

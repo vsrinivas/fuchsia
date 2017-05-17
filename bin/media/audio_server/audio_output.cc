@@ -214,5 +214,15 @@ void AudioOutput::Shutdown() {
   shut_down_ = true;
 }
 
+bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {
+  if ((plugged != plugged_) && (plug_time >= plug_time_)) {
+    plugged_ = plugged;
+    plug_time_ = plug_time;
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace audio
 }  // namespace media

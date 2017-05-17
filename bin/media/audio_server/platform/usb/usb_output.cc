@@ -57,6 +57,10 @@ MediaResult UsbOutput::Init() {
   // Set up the intermediate buffer at the StandardOutputBase level
   SetupMixBuffer(mix_buf_frames_);
 
+  // For now, USB devices are considered to be plugged at the time their device
+  // node shows up.
+  UpdatePlugState(true, mx_time_get(MX_CLOCK_MONOTONIC));
+
   return MediaResult::OK;
 }
 

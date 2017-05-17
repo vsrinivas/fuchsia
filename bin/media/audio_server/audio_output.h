@@ -37,6 +37,24 @@ class AudioOutput {
   // Accessor for the current value of the dB gain for the output.
   float DbGain() const { return db_gain_; }
 
+  // Accessors for the current plug state of the output.
+  //
+  // In addition to publishing and unpublishing streams when codecs are
+  // attached/removed to/from hot pluggable buses (such as USB), some codecs
+  // have the ability to detect the plugged or unplugged state of external
+  // connectors (such as a 3.5mm audio jack).  Drivers can report this
+  // plugged/unplugged state as well as the time of the last state change.
+  // Currently this information is used in the Audio Server to implement simple
+  // routing policies for AudioRenderers.
+  //
+  // plugged   : true when an audio output stream is either hardwired, or believes
+  //             that it has something connected to its plug.
+  // plug_time : The last time (according to mx_time_get(MX_CLOCK_MONOTONIC) at
+  //             which the plugged/unplugged state of the output stream last
+  //             changed.
+  bool plugged() const { return plugged_; }
+  mx_time_t plug_time() const { return plug_time_; }
+
  protected:
   explicit AudioOutput(AudioOutputManager* manager);
 
@@ -118,6 +136,22 @@ class AudioOutput {
     return shutting_down_;
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  //
+  // Other methods.
+  //
+
+  // UpdatePlugState
+  //
+  // Called by the audio output manager on the main message loop when it has
+  // been notified of a plug state change for the output.  Used to update the
+  // internal bookkeeping about the current plugged/unplugged state.  This
+  // method may also be used by derived classes during Init to set an initial
+  // plug state.
+  //
+  // Returns true if the plug state has changed, or false otherwise.
+  bool UpdatePlugState(bool plugged, mx_time_t plug_time);
+
   // TODO(johngro): Order this by priority.  Figure out how we are going to be
   // able to quickly find a renderer with a specific priority in order to
   // optimize changes of priority.  Perhaps uniquify the priorities by assigning
@@ -133,7 +167,7 @@ class AudioOutput {
 
  private:
   // It's always nice when you manager is also your friend.  Seriously though,
-  // the AudioOutputManager gets to call Init and Shutown, no one else
+  // the AudioOutputManager gets to call Init and Shutdown, no one else
   // (including derived classes) should be able to.
   friend class AudioOutputManager;
 
@@ -163,6 +197,11 @@ class AudioOutput {
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::thread worker_thread_;
+
+  // Plug state is protected by the fact that it is only ever accessed on the
+  // main message loop thread.
+  bool plugged_ = false;
+  mx_time_t plug_time_ = 0;
 
   // TODO(johngro): Someday, when we expose output enumeration and control
   // from
