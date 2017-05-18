@@ -338,9 +338,9 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     // start command
     if (cmd_is_queued(pdata->cmd)) {
-        ahci_write(&port->regs->sact, ahci_read(&port->regs->sact) | (1 << slot));
+        ahci_write(&port->regs->sact, (1 << slot));
     }
-    ahci_write(&port->regs->ci, ahci_read(&port->regs->ci) | (1 << slot));
+    ahci_write(&port->regs->ci, (1 << slot));
 
     // set the watchdog
     // TODO: general timeout mechanism
