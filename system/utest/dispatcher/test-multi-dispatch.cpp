@@ -160,12 +160,8 @@ bool test_multi_basic(void) {
     // create dispatcher
     mx_status_t status;
 
-    AllocChecker ac;
-    mxtl::unique_ptr<fs::VfsDispatcher> disp(new (&ac) fs::VfsDispatcher());
-    ASSERT_EQ(ac.check(), true, "");
-
-    status = disp->Create(disp_cb, DISPATCH_POOL_SIZE);
-    ASSERT_EQ(status, NO_ERROR, "");
+    mxtl::unique_ptr<fs::Dispatcher> disp;
+    ASSERT_EQ(NO_ERROR, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port
     mx_handle_t ch[2];
@@ -174,11 +170,7 @@ bool test_multi_basic(void) {
 
     // associate a handler object that will track state
     Handler handler(1);
-    status = disp->Add(ch[1], (void*)handler_cb, (void*)&handler);
-    ASSERT_EQ(status, NO_ERROR, "");
-
-    // fire up the dispatch worker threads
-    status = disp->Start("test-dispatch");
+    status = disp->AddVFSHandler(ch[1], (void*)handler_cb, (void*)&handler);
     ASSERT_EQ(status, NO_ERROR, "");
 
     // write MAX_MSG messages -- should result in all handler counts == 1
@@ -286,12 +278,8 @@ bool test_multi_multi(void) {
     // create dispatcher
     mx_status_t status;
 
-    AllocChecker ac;
-    mxtl::unique_ptr<fs::VfsDispatcher> disp(new (&ac) fs::VfsDispatcher());
-    ASSERT_EQ(ac.check(), true, "");
-
-    status = disp->Create(disp_cb, DISPATCH_POOL_SIZE);
-    ASSERT_EQ(status, NO_ERROR, "");
+    mxtl::unique_ptr<fs::Dispatcher> disp;
+    ASSERT_EQ(NO_ERROR, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port
     mx_handle_t ch[2];
@@ -300,11 +288,7 @@ bool test_multi_multi(void) {
 
     // associate a handler object that will track state
     Handler handler(WRITER_POOL_SIZE);
-    status = disp->Add(ch[1], (void*)handler_cb, (void*)&handler);
-    ASSERT_EQ(status, NO_ERROR, "");
-
-    // fire up the worker threads
-    status = disp->Start("test-dispatch");
+    status = disp->AddVFSHandler(ch[1], (void*)handler_cb, (void*)&handler);
     ASSERT_EQ(status, NO_ERROR, "");
 
     // make sure the counters get bumped in random order

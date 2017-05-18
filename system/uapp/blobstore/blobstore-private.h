@@ -125,6 +125,7 @@ private:
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
                            uint32_t* type, void* extra, uint32_t* esize) final;
     mx_status_t Open(uint32_t flags) final;
+    fs::Dispatcher* GetDispatcher() final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;

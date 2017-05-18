@@ -27,6 +27,8 @@
 
 namespace memfs {
 
+mxtl::unique_ptr<fs::Dispatcher> memfs_global_dispatcher;
+
 constexpr size_t kMinfsMaxFileSize = (8192 * 8192);
 
 static mxtl::RefPtr<VnodeDir> vfs_root = nullptr;
@@ -39,6 +41,10 @@ VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
+}
+
+fs::Dispatcher* VnodeMemfs::GetDispatcher() {
+    return memfs_global_dispatcher.get();
 }
 
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}

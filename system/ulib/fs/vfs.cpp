@@ -7,7 +7,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 #include <mxtl/auto_call.h>
 
@@ -25,7 +24,6 @@ uint32_t __trace_bits;
 #ifdef __Fuchsia__
 mtx_t vfs_lock = MTX_INIT;
 #endif
-mxio_dispatcher_t* vfs_dispatcher;
 
 namespace fs {
 namespace {
@@ -323,14 +321,6 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         return vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
     }
 }
-
-#ifdef __Fuchsia__
-mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
-    // default implementation adds this object to the mxio single
-    // threaded dispatcher
-    return mxio_dispatcher_add(vfs_dispatcher, h, (void*)vfs_handler, cookie);
-}
-#endif
 
 mx_status_t Vnode::Close() {
     return NO_ERROR;

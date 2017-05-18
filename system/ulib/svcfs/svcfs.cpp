@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include <fs/dispatcher.h>
 #include <mxalloc/new.h>
 
 namespace svcfs {
@@ -40,17 +41,17 @@ ServiceProvider::~ServiceProvider() = default;
 
 // Vnode -----------------------------------------------------------------------
 
-Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
+Vnode::Vnode(fs::Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
 
 Vnode::~Vnode() = default;
 
-mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
-    return dispatcher_(h, (void*)vfs_handler, cookie);
+fs::Dispatcher* Vnode::GetDispatcher() {
+    return dispatcher_;
 }
 
 // VnodeSvc --------------------------------------------------------------------
 
-VnodeSvc::VnodeSvc(mxio_dispatcher_cb_t dispatcher,
+VnodeSvc::VnodeSvc(fs::Dispatcher* dispatcher,
                    uint64_t node_id,
                    mxtl::Array<char> name,
                    ServiceProvider* provider)
@@ -93,7 +94,7 @@ void VnodeSvc::ClearProvider() {
 
 // VnodeDir --------------------------------------------------------------------
 
-VnodeDir::VnodeDir(mxio_dispatcher_cb_t dispatcher)
+VnodeDir::VnodeDir(fs::Dispatcher* dispatcher)
     : Vnode(dispatcher), next_node_id_(2) {}
 
 VnodeDir::~VnodeDir() = default;
@@ -186,7 +187,7 @@ void VnodeDir::RemoveAllServices() {
 
 // VnodeProviderDir --------------------------------------------------------------------
 
-VnodeProviderDir::VnodeProviderDir(mxio_dispatcher_cb_t dispatcher)
+VnodeProviderDir::VnodeProviderDir(fs::Dispatcher* dispatcher)
     : Vnode(dispatcher), provider_(nullptr) {}
 
 VnodeProviderDir::~VnodeProviderDir() = default;

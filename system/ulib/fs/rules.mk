@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mapped-vmo.cpp \
+    $(LOCAL_DIR)/mxio-dispatcher.cpp \
     $(LOCAL_DIR)/vfs.cpp \
     $(LOCAL_DIR)/vfs-mount.cpp \
     $(LOCAL_DIR)/vfs-unmount.cpp \
@@ -18,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-watcher.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/mx \
     system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \

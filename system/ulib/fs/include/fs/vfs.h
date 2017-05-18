@@ -44,11 +44,13 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
 #ifdef __Fuchsia__
+#include <fs/dispatcher.h>
 #include <mxtl/mutex.h>
 #endif  // __Fuchsia__
+
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -240,7 +242,7 @@ public:
     virtual ~Vnode() {};
 
 #ifdef __Fuchsia__
-    virtual mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
+    virtual Dispatcher* GetDispatcher() = 0;
 #endif
 
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
@@ -324,8 +326,6 @@ typedef struct vdircookie {
     uint64_t n;
     void* p;
 } vdircookie_t;
-
-extern mxio_dispatcher_t* vfs_dispatcher;
 
 // Handle incoming mxrio messages, dispatching them to vnode operations.
 mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie);

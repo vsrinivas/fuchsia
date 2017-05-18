@@ -14,7 +14,9 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/test-multi-dispatch.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/fs \
+MODULE_STATIC_LIBS := \
+    system/ulib/fs \
+    system/ulib/mx \
     system/ulib/mxtl \
     system/ulib/mxcpp \
     system/ulib/mxalloc \

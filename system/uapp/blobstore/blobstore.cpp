@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <fs/mxio-dispatcher.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
@@ -132,6 +133,12 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
 } // namespace
 
 namespace blobstore {
+
+mxtl::unique_ptr<fs::Dispatcher> blobstore_global_dispatcher;
+
+fs::Dispatcher* VnodeBlob::GetDispatcher() {
+    return blobstore_global_dispatcher.get();
+}
 
 void* Blobstore::GetBlockmapData(uint64_t n) const {
     assert(n < BlockMapBlocks(info_));
@@ -711,6 +718,9 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
         return status;
     }
 
+    if ((status = fs::MxioDispatcher::Create(&blobstore_global_dispatcher)) != NO_ERROR) {
+        return status;
+    }
     AllocChecker ac;
     mxtl::RefPtr<Blobstore> fs = mxtl::AdoptRef(new (&ac) Blobstore(fd, info));
     if (!ac.check()) {

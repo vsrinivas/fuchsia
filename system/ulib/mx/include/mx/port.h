@@ -41,7 +41,7 @@ public:
         return mx_port_bind(get(), key, source, signals);
     }
 
-    mx_status_t cancel(mx_handle_t source, uint64_t key) {
+    mx_status_t cancel(mx_handle_t source, uint64_t key) const {
         return mx_port_cancel(get(), source, key);
     }
 };

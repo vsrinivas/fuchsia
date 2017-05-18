@@ -24,6 +24,8 @@
 
 namespace memfs {
 
+extern mxtl::unique_ptr<fs::Dispatcher> memfs_global_dispatcher;
+
 class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
@@ -34,6 +36,7 @@ public:
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) final;
     mx_status_t AttachRemote(mx_handle_t h) final;
+    fs::Dispatcher* GetDispatcher() final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.

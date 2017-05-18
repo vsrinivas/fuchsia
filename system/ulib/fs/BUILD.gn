@@ -10,6 +10,7 @@ static_library("fs") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
     "mapped-vmo.cpp",
+    "mxio-dispatcher.cpp",
     "vfs.cpp",
     "vfs-mount.cpp",
     "vfs-unmount.cpp",
@@ -30,7 +31,9 @@ static_library("fs") {
   ]
 
   deps = [
+    "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxalloc",
+    "//magenta/system/ulib/mxcpp",
     "//magenta/system/ulib/mxtl",
   ]
 

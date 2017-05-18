@@ -14,6 +14,9 @@
 #include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
+#ifdef __Fuchsia__
+#include <fs/vfs-dispatcher.h>
+#endif
 
 #include "minfs-private.h"
 #include "block-txn.h"
@@ -323,21 +326,10 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
         return ERR_NO_MEMORY;
     }
 #ifdef __Fuchsia__
-    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher());
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-
-    status = dispatcher->Create(mxrio_handler, kPoolSize);
-    if (status != NO_ERROR) {
+    if ((status = fs::VfsDispatcher::Create(mxrio_handler, kPoolSize,
+                                            &fs->dispatcher_)) != NO_ERROR) {
         return status;
     }
-
-    status = dispatcher->Start("Minfs Dispatcher");
-    if (status != NO_ERROR) {
-        return status;
-    }
-    fs->dispatcher_.swap(dispatcher);
 #endif
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
@@ -446,12 +438,8 @@ mx_status_t Minfs::Unmount() {
 }
 
 #ifdef __Fuchsia__
-mx_status_t VnodeMinfs::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
-    return fs_->AddDispatcher(h, cookie);
-}
-
-mx_status_t Minfs::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
-    return dispatcher_->Add(h, reinterpret_cast<void*>(vfs_handler), cookie);
+fs::Dispatcher* VnodeMinfs::GetDispatcher() {
+    return fs_->GetDispatcher();
 }
 #endif
 

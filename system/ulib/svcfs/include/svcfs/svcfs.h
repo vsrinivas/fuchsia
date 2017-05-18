@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/types.h>
 #include <mx/channel.h>
@@ -23,14 +24,14 @@ protected:
 
 class Vnode : public fs::Vnode {
 public:
-    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) final;
+    fs::Dispatcher* GetDispatcher() final;
 
     ~Vnode() override;
 
 protected:
-    explicit Vnode(mxio_dispatcher_cb_t dispatcher);
+    explicit Vnode(fs::Dispatcher* dispatcher);
 
-    mxio_dispatcher_cb_t dispatcher_;
+    fs::Dispatcher* dispatcher_;
 };
 
 class VnodeSvc : public Vnode {
@@ -44,7 +45,7 @@ public:
         }
     };
 
-    VnodeSvc(mxio_dispatcher_cb_t dispatcher,
+    VnodeSvc(fs::Dispatcher* dispatcher,
              uint64_t node_id,
              mxtl::Array<char> name,
              ServiceProvider* provider);
@@ -73,7 +74,7 @@ private:
 
 class VnodeDir : public Vnode {
 public:
-    explicit VnodeDir(mxio_dispatcher_cb_t dispatcher);
+    explicit VnodeDir(fs::Dispatcher* dispatcher);
     ~VnodeDir() override;
 
     mx_status_t Open(uint32_t flags) final;
@@ -100,7 +101,7 @@ private:
 // Similar to VnodeDir, but doesn't support enumeration or watching.
 class VnodeProviderDir : public Vnode {
 public:
-    explicit VnodeProviderDir(mxio_dispatcher_cb_t dispatcher);
+    explicit VnodeProviderDir(fs::Dispatcher* dispatcher);
     ~VnodeProviderDir() override;
 
     mx_status_t Open(uint32_t flags) final;

@@ -6,7 +6,7 @@
 
 #ifdef __Fuchsia__
 #include <mx/vmo.h>
-#include <fs/vfs-dispatcher.h>
+#include <fs/dispatcher.h>
 #endif
 
 #include <mxtl/algorithm.h>
@@ -71,7 +71,11 @@ public:
     // Does not modify inode bitmap.
     mx_status_t InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* inode);
 
-    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie);
+#ifdef __Fuchsia__
+    fs::Dispatcher* GetDispatcher() {
+        return dispatcher_.get();
+    }
+#endif
 
     void ValidateBno(uint32_t bno) const {
         MX_DEBUG_ASSERT(info_.dat_block <= bno);
@@ -93,7 +97,7 @@ private:
     mx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out);
 
 #ifdef __Fuchsia__
-    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher_;
+    mxtl::unique_ptr<fs::Dispatcher> dispatcher_;
 #endif
     uint32_t abmblks_;
     uint32_t ibmblks_;
@@ -217,7 +221,7 @@ private:
     mx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
 
 #ifdef __Fuchsia__
-    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) final;
+    fs::Dispatcher* GetDispatcher() final;
 
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).

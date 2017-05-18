@@ -136,7 +136,7 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
     ios->vn = mxtl::RefPtr<Vnode>(this);
     ios->io_flags = flags;
 
-    if ((r = AddDispatcher(h, ios)) < 0) {
+    if ((r = GetDispatcher()->AddVFSHandler(h, reinterpret_cast<void*>(vfs_handler), ios)) < 0) {
         mx_handle_close(h);
         free(ios);
         return r;
@@ -531,6 +531,7 @@ mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
     ios->vn = mxtl::move(vn);  // reference passed in by caller
     ios->io_flags = 0;
 
+    mxio_dispatcher_t* vfs_dispatcher;
     if ((r = mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler)) < 0) {
         free(ios);
         return r;

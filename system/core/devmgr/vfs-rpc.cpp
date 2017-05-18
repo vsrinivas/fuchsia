@@ -8,6 +8,7 @@
 #include <string.h>
 #include <threads.h>
 
+#include <fs/mxio-dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
@@ -63,9 +64,7 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
 // Initialize the global root VFS node and dispatcher
 void vfs_global_init(VnodeDir* root) {
     memfs::global_vfs_root = root;
-    if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
-        mxio_dispatcher_start(vfs_dispatcher, "vfs-rio-dispatcher");
-    }
+    fs::MxioDispatcher::Create(&memfs::memfs_global_dispatcher);
 }
 
 // Return a RIO handle to the global root

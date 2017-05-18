@@ -26,7 +26,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 
 // Vnode -----------------------------------------------------------------------
 
-Vnode::Vnode(mxio_dispatcher_cb_t dispatcher) : dispatcher_(dispatcher) {}
+Vnode::Vnode(fs::Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
 
 Vnode::~Vnode() = default;
 
@@ -34,13 +34,13 @@ mx_status_t Vnode::Close() {
     return NO_ERROR;
 }
 
-mx_status_t Vnode::AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) {
-    return dispatcher_(h, (void*)vfs_handler, cookie);
+fs::Dispatcher* Vnode::GetDispatcher() {
+    return dispatcher_;
 }
 
 // VnodeFile --------------------------------------------------------------------
 
-VnodeFile::VnodeFile(mxio_dispatcher_cb_t dispatcher,
+VnodeFile::VnodeFile(fs::Dispatcher* dispatcher,
                      mx_handle_t vmo,
                      mx_off_t offset,
                      mx_off_t length)
@@ -110,7 +110,7 @@ mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
 
 // VnodeDir --------------------------------------------------------------------
 
-VnodeDir::VnodeDir(mxio_dispatcher_cb_t dispatcher,
+VnodeDir::VnodeDir(fs::Dispatcher* dispatcher,
                    mxtl::Array<mxtl::StringPiece> names,
                    mxtl::Array<mxtl::RefPtr<Vnode>> children)
     : Vnode(dispatcher),

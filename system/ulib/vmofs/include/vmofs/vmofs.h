@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/types.h>
 #include <mxtl/array.h>
@@ -15,22 +16,22 @@ namespace vmofs {
 class Vnode : public fs::Vnode {
 public:
     mx_status_t Close() final;
-    mx_status_t AddDispatcher(mx_handle_t h, vfs_iostate_t* cookie) final;
+    fs::Dispatcher* GetDispatcher() final;
 
     ~Vnode() override;
 
     virtual uint32_t GetVType() = 0;
 
 protected:
-    explicit Vnode(mxio_dispatcher_cb_t dispatcher);
+    explicit Vnode(fs::Dispatcher* dispatcher);
 
-    mxio_dispatcher_cb_t dispatcher_;
+    fs::Dispatcher* dispatcher_;
 };
 
 class VnodeFile : public Vnode {
 public:
     // The creator retains ownership of |vmo|.
-    VnodeFile(mxio_dispatcher_cb_t dispatcher,
+    VnodeFile(fs::Dispatcher* dispatcher,
               mx_handle_t vmo,
               mx_off_t offset,
               mx_off_t length);
@@ -55,7 +56,7 @@ class VnodeDir : public Vnode {
 public:
     // |names| must be sorted in ascending order and must have the same length
     // as |children|.
-    VnodeDir(mxio_dispatcher_cb_t dispatcher,
+    VnodeDir(fs::Dispatcher* dispatcher,
              mxtl::Array<mxtl::StringPiece> names,
              mxtl::Array<mxtl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
