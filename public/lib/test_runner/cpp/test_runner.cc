@@ -44,6 +44,9 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/writer.h"
+#include "third_party/rapidjson/rapidjson/stringbuffer.h"
 
 namespace test_runner {
 
@@ -55,7 +58,7 @@ TestRunnerImpl::TestRunnerImpl(
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_connection_error_handler([this] {
     if (waiting_for_termination_) {
-      FTL_LOG(INFO) << "Test " << test_name_ << " terminated as expected.";
+      FTL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
       termination_timer_.Stop();
       if (teardown_after_termination_) {
@@ -69,8 +72,8 @@ TestRunnerImpl::TestRunnerImpl(
   });
 }
 
-const std::string& TestRunnerImpl::test_name() const {
-  return test_name_;
+const std::string& TestRunnerImpl::program_name() const {
+  return program_name_;
 }
 
 bool TestRunnerImpl::waiting_for_termination() const {
@@ -81,8 +84,12 @@ void TestRunnerImpl::TeardownAfterTermination() {
   teardown_after_termination_ = true;
 }
 
-void TestRunnerImpl::Identify(const fidl::String& test_name) {
-  test_name_ = test_name;
+void TestRunnerImpl::Identify(const fidl::String& program_name) {
+  program_name_ = program_name;
+}
+
+void TestRunnerImpl::ReportResult(TestResultPtr result) {
+  test_run_context_->ReportResult(std::move(result));
 }
 
 void TestRunnerImpl::Fail(const fidl::String& log_message) {
@@ -103,13 +110,13 @@ void TestRunnerImpl::Teardown(const TeardownCallback& callback) {
 
 void TestRunnerImpl::WillTerminate(const double withinSeconds) {
   if (waiting_for_termination_) {
-    Fail(test_name_ + " called WillTerminate more than once.");
+    Fail(program_name_ + " called WillTerminate more than once.");
     return;
   }
   waiting_for_termination_ = true;
   termination_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
                            [this, withinSeconds] {
-                             FTL_LOG(ERROR) << test_name_
+                             FTL_LOG(ERROR) << program_name_
                                             << " termination timed out after "
                                             << withinSeconds << "s.";
                              binding_.set_connection_error_handler(nullptr);
@@ -137,7 +144,7 @@ void TestRunnerImpl::PassTestPoint() {
   FTL_CHECK(remaining_test_points_ >= 0);
 
   if (remaining_test_points_ == 0) {
-    Fail(test_name_ + " passed more test points than expected.");
+    Fail(program_name_ + " passed more test points than expected.");
     return;
   }
 
@@ -188,6 +195,26 @@ TestRunContext::TestRunContext(
   });
 }
 
+void TestRunContext::ReportResult(TestResultPtr result) {
+  if (result->failed) {
+    success_ = false;
+  }
+
+  rapidjson::Document doc;
+  rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+  doc.SetObject();
+  doc.AddMember("name", std::string(result->name), allocator);
+  doc.AddMember("elapsed", result->elapsed, allocator);
+  doc.AddMember("failed", result->failed, allocator);
+  doc.AddMember("message", std::string(result->message), allocator);
+
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  doc.Accept(writer);
+
+  test_runner_connection_->SendMessage(test_id_, "result", buffer.GetString());
+}
+
 void TestRunContext::Fail(const fidl::String& log_msg) {
   success_ = false;
   std::string msg("FAIL: ");
@@ -197,7 +224,7 @@ void TestRunContext::Fail(const fidl::String& log_msg) {
 
 void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   if (crashed) {
-    FTL_LOG(WARNING) << client->test_name()
+    FTL_LOG(WARNING) << client->program_name()
                      << " finished without calling"
                         " test_runner::reporting::Done().";
     test_runner_connection_->Teardown(test_id_, false);
@@ -205,7 +232,7 @@ void TestRunContext::StopTrackingClient(TestRunnerImpl* client, bool crashed) {
   }
 
   if (client->TestPointsRemaining()) {
-    FTL_LOG(WARNING) << client->test_name()
+    FTL_LOG(WARNING) << client->program_name()
                      << " finished without passing all test points.";
     test_runner_connection_->Teardown(test_id_, false);
     return;
@@ -230,11 +257,11 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
     if (client->waiting_for_termination()) {
       client->TeardownAfterTermination();
       FTL_LOG(INFO) << "Teardown blocked by test waiting for termination: "
-                    << client->test_name();
+                    << client->program_name();
       waiting_for_termination = true;
       continue;
     }
-    FTL_LOG(ERROR) << "Test " << client->test_name()
+    FTL_LOG(ERROR) << "Test " << client->program_name()
                    << " not done before Teardown().";
     success_ = false;
   }

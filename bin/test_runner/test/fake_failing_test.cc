@@ -8,5 +8,6 @@
 TEST(FakeFailingTest, Pass) {}
 
 TEST(FakeFailingTest, Fail) {
-  ASSERT_EQ(0, 1);
+  EXPECT_EQ(0, 1);
+  EXPECT_EQ(0, -1);
 }

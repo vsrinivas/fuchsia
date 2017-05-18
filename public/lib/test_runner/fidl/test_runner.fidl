@@ -4,17 +4,30 @@
 
 module test_runner;
 
+struct TestResult {
+  string name;
+  int64 elapsed;
+  bool failed;
+  string message;
+};
+
 // This service is included in the ApplicationEnvironment of multi-process tests
 // that are launched by the test runner harness. Test processes can connect to
 // this service to log failures, signal crashes, and signal completion.
 [ServiceName="test_runner.TestRunner"]
 interface TestRunner {
-  // Tell the test runner how to identify this test.
-  Identify(string test_name);
+  // Tells the test runner how to identify this test program.
+  Identify(string program_name);
+
+  // Tells the test runner that a paritcular test case finished. May be called
+  // multiple times.
+  ReportResult(TestResult result);
 
   // Tells the test runner that a particular test case failed, with the supplied
   // message. May be called multiple times. When |Teardown()| is called, the
-  // test ends as a failure.
+  // test program ends as a failure.
+  //
+  // |Fail()| is deprecated in favor of |ReportResult|.
   Fail(string log_message);
 
   // Either this method, |Teardown()| or |WillTerminate()| must be invoked
@@ -24,8 +37,9 @@ interface TestRunner {
   // processing this method.
   Done() => ();
 
-  // Signals that the test is complete and the entire test harness should be
-  // torn down. The test will be declared a failure if |Fail()| was ever called.
+  // Signals that the test program is complete and the entire test harness
+  // should be torn down. The test will be declared a failure if |Fail()| was
+  // ever called, or if |ReportResult()| was ever called where |failed| is true.
   // Otherwise the test will be declared successful. The test runner will send a
   // reply back as an acknowledgement when it starts processing this method.
   Teardown() => ();

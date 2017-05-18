@@ -30,6 +30,10 @@ class GoogleTestReporter : public testing::EmptyTestEventListener {
   void QuitOnThread();
 
   // testing::EmptyTestEventListener override.
+  // This gets called when a single test (defined by a method) ends.
+  void OnTestEnd(const ::testing::TestInfo& test) override;
+
+  // testing::EmptyTestEventListener override.
   // This gets called when all of the tests are done running
   void OnTestProgramEnd(const ::testing::UnitTest& test) override;
 

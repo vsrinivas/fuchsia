@@ -33,7 +33,7 @@ class TestRunnerImpl : public TestRunner {
   TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
                  TestRunContext* test_run_context);
 
-  const std::string& test_name() const;
+  const std::string& program_name() const;
 
   bool waiting_for_termination() const;
 
@@ -47,7 +47,9 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const fidl::String& test_name) override;
+  void Identify(const fidl::String& program_name) override;
+  // |TestRunner|
+  void ReportResult(TestResultPtr result) override;
   // |TestRunner|
   void Fail(const fidl::String& log_message) override;
   // |TestRunner|
@@ -63,7 +65,7 @@ class TestRunnerImpl : public TestRunner {
 
   fidl::Binding<TestRunner> binding_;
   TestRunContext* const test_run_context_;
-  std::string test_name_ = "UNKNOWN";
+  std::string program_name_ = "UNKNOWN";
   bool waiting_for_termination_ = false;
   ftl::OneShotTimer termination_timer_;
   bool teardown_after_termination_ = false;
@@ -72,12 +74,12 @@ class TestRunnerImpl : public TestRunner {
   FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };
 
-// TestRunContext represents a single run of a test. Given a test to run, it
-// runs it in a new ApplicationEnvironment and provides the environment a
-// TestRunner service to report completion. When tests are done, their
-// completion is reported back to TestRunObserver (which is responsible for
-// deleting TestRunContext). If the child application stops without reporting
-// anything, we declare the test a failure.
+// TestRunContext represents a single run of a test program. Given a test
+// program to run, it runs it in a new ApplicationEnvironment and provides the
+// environment a TestRunner service to report completion. When tests are done,
+// their completion is reported back to TestRunObserver (which is responsible
+// for deleting TestRunContext). If the child application stops without
+// reporting anything, we declare the test a failure.
 class TestRunContext {
  public:
   TestRunContext(std::shared_ptr<app::ApplicationContext> app_context,
@@ -88,6 +90,7 @@ class TestRunContext {
 
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
+  void ReportResult(TestResultPtr result);
   void Fail(const fidl::String& log_message);
   void Teardown(TestRunnerImpl* teardown_client);
 

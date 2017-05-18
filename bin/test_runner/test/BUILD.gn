@@ -6,8 +6,17 @@ group("test") {
   testonly = true
 
   deps = [
+    ":fake_command",
     ":fake_failing_test",
     ":fake_passing_test",
+  ]
+}
+
+executable("fake_command") {
+  testonly = true
+
+  sources = [
+    "fake_command.cc",
   ]
 }
 

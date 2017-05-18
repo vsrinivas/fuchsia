@@ -15,6 +15,7 @@ source_set("lib") {
     "//apps/test_runner/services:test_runner",
     "//lib/ftl",
     "//lib/mtl",
+    "//third_party/rapidjson",
   ]
 }
 
