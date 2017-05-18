@@ -250,7 +250,7 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "");
     ASSERT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "");
 
-    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDING
+    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED
     mx_handle_t eport;
     ASSERT_TRUE(set_debugger_exception_port(&eport),"");
 
@@ -262,7 +262,7 @@ static bool test_resume_suspended(void) {
     mx_exception_packet_t packet;
     ASSERT_EQ(mx_port_wait(eport, mx_deadline_after(MX_SEC(1)), &packet, sizeof(packet)), NO_ERROR, "");
     ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
-    ASSERT_EQ(packet.report.header.type, (uint32_t) MX_EXCP_THREAD_SUSPENDING, "");
+    ASSERT_EQ(packet.report.header.type, (uint32_t) MX_EXCP_THREAD_SUSPENDED, "");
 
     // Verify thread is suspended
     ASSERT_EQ(mx_object_get_info(thread_h, MX_INFO_THREAD,

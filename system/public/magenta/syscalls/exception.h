@@ -34,19 +34,23 @@ typedef enum {
     // with mx_task_resume.
     MX_EXCP_THREAD_STARTING = 100,
 
-    // A thread is suspending.
+    // A thread has suspended.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
     // The thread is paused until it is resumed by the debugger
     // with mx_task_resume. This resume is different though: it's not resuming
     // from an exception, so don't pass MX_RESUME_EXCEPTION, pass 0.
+    // A note on the word tense here: This is named "suspended" and not
+    // "suspending" because the thread has completely suspended at this point.
     // N.B. This notification is not replied to.
-    MX_EXCP_THREAD_SUSPENDING = 101,
+    MX_EXCP_THREAD_SUSPENDED = 101,
 
-    // A thread is resuming.
+    // A thread has resumed after being suspended.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
-    // This is the counterpart to MX_EXCP_THREAD_SUSPENDING.
+    // This is the counterpart to MX_EXCP_THREAD_SUSPENDED.
+    // A note on the word tense here: This is named "resumed" and not
+    // "resuming" because the thread has completely resumed at this point.
     // N.B. This notification is not replied to.
-    MX_EXCP_THREAD_RESUMING = 102,
+    MX_EXCP_THREAD_RESUMED = 102,
 
     // A thread is exiting.
     // This exception is sent to debuggers only (MX_EXCEPTION_PORT_DEBUGGER).
@@ -62,7 +66,7 @@ typedef enum {
     // or debugger exception port (if one is registered).
     // Thread gone notifications are only sent to the thread exception port
     // (if one is registered).
-    // N.B. "gone" notifications are not responded to.
+    // N.B. This notification is not replied to.
     MX_EXCP_GONE = 104,
 } mx_excp_type_t;
 
