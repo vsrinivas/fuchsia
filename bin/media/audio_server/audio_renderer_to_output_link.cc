@@ -95,6 +95,19 @@ void AudioRendererToOutputLink::FlushPendingQueue() {
   ReleaseQueue(new_queue);
 }
 
+void AudioRendererToOutputLink::InitPendingQueue(
+    const AudioRendererToOutputLinkPtr& source) {
+  FTL_DCHECK(source != nullptr);
+  FTL_DCHECK(this != source.get());
+
+  ftl::MutexLocker source_locker(&source->pending_queue_mutex_);
+  if (source->pending_queue_->empty()) return;
+
+  ftl::MutexLocker locker(&pending_queue_mutex_);
+  FTL_DCHECK(pending_queue_->empty());
+  *pending_queue_ = *source->pending_queue_;
+}
+
 AudioPipe::AudioPacketRefPtr AudioRendererToOutputLink::LockPendingQueueFront(
     bool* was_flushed) {
   flush_mutex_.Lock();

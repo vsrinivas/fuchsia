@@ -91,6 +91,7 @@ class AudioRendererToOutputLink {
   // AudioOutput.
   void PushToPendingQueue(const AudioPipe::AudioPacketRefPtr& pkt);
   void FlushPendingQueue();
+  void InitPendingQueue(const AudioRendererToOutputLinkPtr& source);
 
   // AudioOutput PendingQueue operations.  Never call these from the
   // AudioRenderer.

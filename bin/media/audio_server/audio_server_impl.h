@@ -50,13 +50,6 @@ class AudioServerImpl : public AudioServer {
     task_runner_->PostTask(task);
   }
 
-  // Removes a renderer from the set of active renderers.
-  void RemoveRenderer(AudioRendererImplPtr renderer) {
-    size_t removed;
-    removed = renderers_.erase(renderer);
-    FTL_DCHECK(removed);
-  }
-
   // Accessor for our encapsulated output manager.
   AudioOutputManager& GetOutputManager() { return output_manager_; }
 
@@ -77,9 +70,6 @@ class AudioServerImpl : public AudioServer {
 
   // State for dealing with outputs.
   AudioOutputManager output_manager_;
-
-  // State for dealing with renderers.
-  std::set<AudioRendererImplPtr> renderers_;
 
   // State for dealing with cleanup tasks.
   ftl::Mutex cleanup_queue_mutex_;

@@ -195,8 +195,18 @@ void AudioOutput::Shutdown() {
     BeginShutdown();
   }
 
-  // Unlink ourselves from all of our renderers.  Then go ahead and clear the
-  // renderer set.
+  // Unlink ourselves from all of our renderers.
+  UnlinkFromRenderers();
+
+  // Give our derived class a chance to clean up its resources.
+  Cleanup();
+
+  // We are now completely shut down.  The only reason we have this flag is to
+  // make sure that Shutdown is idempotent.
+  shut_down_ = true;
+}
+
+void AudioOutput::UnlinkFromRenderers() {
   for (const auto& link : links_) {
     FTL_DCHECK(link);
     AudioRendererImplPtr renderer = link->GetRenderer();
@@ -205,13 +215,6 @@ void AudioOutput::Shutdown() {
     }
   }
   links_.clear();
-
-  // Give our derived class a chance to clean up its resources.
-  Cleanup();
-
-  // We are now completely shut down.  The only reason we have this flag is to
-  // make sure that Shutdown is idempotent.
-  shut_down_ = true;
 }
 
 bool AudioOutput::UpdatePlugState(bool plugged, mx_time_t plug_time) {

@@ -45,17 +45,6 @@ AudioServerImpl::~AudioServerImpl() {
 
 void AudioServerImpl::Shutdown() {
   shutting_down_ = true;
-
-  while (renderers_.size()) {
-    // Renderers remove themselves from the server's set of active renderers as
-    // they shutdown.  Assert that the set's size is shrinking by one each time
-    // we shut down a renderer so we know that we are making progress.
-    size_t size_before = renderers_.size();
-    (*renderers_.begin())->Shutdown();
-    size_t size_after = renderers_.size();
-    FTL_DCHECK(size_after < size_before);
-  }
-
   output_manager_.Shutdown();
   DoPacketCleanup();
 }
@@ -63,8 +52,10 @@ void AudioServerImpl::Shutdown() {
 void AudioServerImpl::CreateRenderer(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer,
     fidl::InterfaceRequest<MediaRenderer> media_renderer) {
-  renderers_.insert(AudioRendererImpl::Create(std::move(audio_renderer),
-                                              std::move(media_renderer), this));
+  output_manager_.AddRenderer(
+      AudioRendererImpl::Create(std::move(audio_renderer),
+                                std::move(media_renderer),
+                                this));
 }
 
 void AudioServerImpl::DoPacketCleanup() {

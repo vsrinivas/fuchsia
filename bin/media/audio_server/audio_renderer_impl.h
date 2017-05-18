@@ -35,9 +35,10 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // connections to all clients and removing it from its owner server's list.
   void Shutdown();
 
-  // Methods used by the output manager to link this renderer to different
-  // outputs.
-  void AddOutput(AudioRendererToOutputLinkPtr link);
+  // Methods used by the output manager to link/unlink this renderer to/from
+  // different outputs.
+  void AddOutput(AudioRendererToOutputLinkPtr link,
+                 const AudioOutputPtr& throttle_output);
   void RemoveOutput(AudioRendererToOutputLinkPtr link);
 
   // Accessors used by AudioOutputs during mixing to access parameters which are

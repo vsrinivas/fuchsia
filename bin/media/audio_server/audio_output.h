@@ -195,6 +195,11 @@ class AudioOutput {
   // cleaning up all resources.
   void Shutdown();
 
+  // Called from AudioOutputManager (either directly, or indirectly from
+  // Shutdown) to unlink from all AudioRenderers currently linked to this
+  // output.
+  void UnlinkFromRenderers();
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::thread worker_thread_;
 
@@ -203,10 +208,9 @@ class AudioOutput {
   bool plugged_ = false;
   mx_time_t plug_time_ = 0;
 
-  // TODO(johngro): Someday, when we expose output enumeration and control
-  // from
+  // TODO(johngro): Someday, when we expose output enumeration and control from
   // the audio service, add the ability to change this value and update the
-  // assocated renderer-to-output-link amplitude scale factors.
+  // associated renderer-to-output-link amplitude scale factors.
   float db_gain_ = 0.0;
 
   // TODO(johngro): Eliminate the shutting down flag and just use the

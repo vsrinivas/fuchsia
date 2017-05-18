@@ -42,6 +42,17 @@ class AudioOutputManager {
   // Very Seriously Wrong.
   void Shutdown();
 
+  // Add a renderer to the set of active audio renderers.
+  void AddRenderer(AudioRendererImplPtr renderer) {
+    renderers_.insert(std::move(renderer));
+  }
+
+  // Remove a renderer from the set of active audio renderers.
+  void RemoveRenderer(AudioRendererImplPtr renderer) {
+    size_t removed = renderers_.erase(renderer);
+    FTL_DCHECK(removed);
+  }
+
   // Select the initial set of outputs for a renderer which has just been
   // configured.
   void SelectOutputsForRenderer(AudioRendererImplPtr renderer);
@@ -79,15 +90,26 @@ class AudioOutputManager {
     LAST_PLUGGED_OUTPUT,
   };
 
+  // Find the last plugged (non-throttle_output) active output in the system, or
+  // nullptr if none of the outputs are currently plugged.
+  AudioOutputPtr FindLastPluggedOutput();
+
+  // Methods for dealing with routing policy when an output becomes unplugged or
+  // completely removed from the system, or has become plugged/newly added to
+  // the system.
+  void OnOutputUnplugged(AudioOutputPtr output);
+  void OnOutputPlugged(AudioOutputPtr output);
+
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
 
-  // Our set of currently active audio output instances.
+  // Our sets of currently active audio outputs and renderers.
   //
-  // Contents of the output set must only be manipulated on the main message
+  // Contents of these collections must only be manipulated on the main message
   // loop thread, so no synchronization should be needed.
   AudioOutputSet outputs_;
+  AudioRendererImplSet renderers_;
 
   // The special throttle output.  This output always exists, and is always used
   // by all renderers.

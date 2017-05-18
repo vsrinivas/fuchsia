@@ -119,7 +119,7 @@ void AudioRendererImpl::Shutdown() {
 
   FTL_DCHECK(owner_);
   AudioRendererImplPtr thiz = weak_this_.lock();
-  owner_->RemoveRenderer(thiz);
+  owner_->GetOutputManager().RemoveRenderer(thiz);
 }
 
 void AudioRendererImpl::GetSupportedMediaTypes(
@@ -284,12 +284,27 @@ void AudioRendererImpl::SetGain(float db_gain) {
   }
 }
 
-void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
+void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link,
+                                  const AudioOutputPtr& throttle_output) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
   auto res = outputs_.emplace(link);
   FTL_DCHECK(res.second);
   link->UpdateGain();
+
+  // TODO(johngro): special case our throttle output link so that we don't have
+  // to go and find it when performing this operation.
+  if (link->GetOutput() != throttle_output) {
+    AudioRendererToOutputLinkPtr throttle_link;
+    for (const auto& l : outputs_) {
+      if (l->GetOutput() == throttle_output) {
+        throttle_link = l;
+      }
+    }
+
+    FTL_DCHECK(throttle_link != nullptr);
+    link->InitPendingQueue(throttle_link);
+  }
 }
 
 void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
