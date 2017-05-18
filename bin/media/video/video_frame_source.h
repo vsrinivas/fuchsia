@@ -63,7 +63,7 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   void GetRgbaFrame(uint8_t* rgba_buffer, const mozart::Size& rgba_buffer_size);
 
  private:
-  static constexpr uint32_t kPacketDemand = 2;
+  static constexpr uint32_t kPacketDemand = 3;
 
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(

@@ -30,11 +30,13 @@ void FidlPacketConsumer::OnPacketSupplied(
 }
 
 void FidlPacketConsumer::OnPacketReturning() {
-  if (downstream_demand_ == Demand::kPositive) {
-    SetDemand(supplied_packets_outstanding() + 1);
-  } else {
-    SetDemand(supplied_packets_outstanding());
+  uint32_t demand = supplied_packets_outstanding();
+
+  if (downstream_demand_ == Demand::kPositive || demand == 0) {
+    ++demand;
   }
+
+  SetDemand(demand);
 }
 
 void FidlPacketConsumer::OnFlushRequested(const FlushCallback& callback) {

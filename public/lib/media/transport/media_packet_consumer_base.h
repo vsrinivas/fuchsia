@@ -110,7 +110,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Called when a fatal error occurs. The default implementation does nothing.
   virtual void OnFailure();
 
-  size_t supplied_packets_outstanding() {
+  uint32_t supplied_packets_outstanding() {
     return counter_->packets_outstanding();
   }
 
@@ -167,7 +167,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     }
 
     // Returns number of packets currently outstanding.
-    size_t packets_outstanding() {
+    uint32_t packets_outstanding() {
 #ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
@@ -180,7 +180,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     MediaPacketConsumerBase* owner_;
     // We keep the buffer set here, because it needs to outlive SuppliedPackets.
     SharedBufferSet buffer_set_;
-    size_t packets_outstanding_ = 0;
+    uint32_t packets_outstanding_ = 0;
 
 #ifndef NDEBUG
     ftl::ThreadChecker thread_checker_;
