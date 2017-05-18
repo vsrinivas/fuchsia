@@ -352,10 +352,16 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   // local token in-memory cache.
   bool GetTokens(rapidjson::Document tokens) {
     if (!tokens.HasMember("access_token")) {
+      FTL_DCHECK(false) << "Tokens returned from server does not contain "
+                        << "access_token. Returned token: "
+                        << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
     if (refresh_id_token_ && !tokens.HasMember("id_token")) {
+      FTL_DCHECK(false) << "Tokens returned from server does not contain "
+                        << "id_token. Returned token: "
+                        << modular::JsonValueToPrettyString(tokens);
       return false;
     }
 
@@ -485,6 +491,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
   // |kCredentialsFile|.
   bool SaveCredentials(rapidjson::Document tokens) {
     if (!tokens.HasMember("refresh_token")) {
+      FTL_DCHECK(false) << "Tokens returned from server does not contain "
+                        << "refresh_token. Returned token: "
+                        << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
@@ -511,6 +520,8 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
 
     // Save tokens to disk.
     if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
+      FTL_DCHECK(false) << "Unable to create directory for " <<
+                        kCredentialsFile;
       return false;
     }
     auto serialized_tokens = modular::JsonValueToString(app_->user_creds_);
