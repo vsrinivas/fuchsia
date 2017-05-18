@@ -12,12 +12,12 @@ pub type {{$enum.Name}} =
 {{- if eq $enum.Signed true}} i32
 {{- else}} u32
 {{- end}};
-{{range $enum_val := $enum.Values}}const {{$enum.Name}}_{{$enum_val.Name}}: {{$enum.Name}} = {{$enum_val.Value}};
+{{range $enum_val := $enum.Values}}pub const {{$enum.Name}}_{{$enum_val.Name}}: {{$enum.Name}} = {{$enum_val.Value}};
 {{end}}
 {{if eq $enum.Signed true -}}
-const {{$enum.Name}}__UNKNOWN: {{$enum.Name}} = 0x7FFFFFFF;
+pub const {{$enum.Name}}__UNKNOWN: {{$enum.Name}} = 0x7FFFFFFF;
 {{else}}
-const {{$enum.Name}}__UNKNOWN: {{$enum.Name}} = 0xFFFFFFFF;
+pub const {{$enum.Name}}__UNKNOWN: {{$enum.Name}} = 0xFFFFFFFF;
 {{end}}
 {{end}}
 `
