@@ -4,10 +4,14 @@
 
 #include "apps/media/lib/flog/flog.h"
 
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace flog {
+
+// static
+uint64_t Flog::next_entry_index_ = 0;
 
 // static
 void Flog::Initialize(app::ApplicationContext* application_context,
@@ -31,8 +35,12 @@ void Flog::LogChannelCreation(uint32_t channel_id,
     return;
   }
 
+  TRACE_INSTANT("motown", "flog create channel", TRACE_SCOPE_PROCESS, "index",
+                next_entry_index_, "channel_id", channel_id);
+
   logger_->LogChannelCreation(GetTime(), channel_id, channel_type_name,
                               subject_address);
+  ++next_entry_index_;
 }
 
 // static
@@ -41,10 +49,14 @@ void Flog::LogChannelMessage(uint32_t channel_id, fidl::Message* message) {
     return;
   }
 
+  TRACE_INSTANT("motown", "flog message", TRACE_SCOPE_PROCESS, "index",
+                next_entry_index_, "channel_id", channel_id);
+
   fidl::Array<uint8_t> array =
       fidl::Array<uint8_t>::New(message->data_num_bytes());
   memcpy(array.data(), message->data(), message->data_num_bytes());
   logger_->LogChannelMessage(GetTime(), channel_id, std::move(array));
+  ++next_entry_index_;
 }
 
 // static
@@ -53,7 +65,11 @@ void Flog::LogChannelDeletion(uint32_t channel_id) {
     return;
   }
 
+  TRACE_INSTANT("motown", "flog delete channel", TRACE_SCOPE_PROCESS, "index",
+                next_entry_index_, "channel_id", channel_id);
+
   logger_->LogChannelDeletion(GetTime(), channel_id);
+  ++next_entry_index_;
 }
 
 // static

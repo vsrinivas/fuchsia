@@ -11,6 +11,7 @@ source_set("flog") {
   deps = [
     "//application/lib/app",
     "//apps/media/services/flog",
+    "//apps/tracing/lib/trace",
     "//lib/ftl",
     "//lib/mtl",
   ]

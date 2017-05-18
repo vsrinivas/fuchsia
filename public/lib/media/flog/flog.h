@@ -194,6 +194,7 @@ class Flog {
 
   static std::atomic_ulong last_allocated_channel_id_;
   static FlogLoggerPtr logger_;
+  static uint64_t next_entry_index_;
 };
 
 // Channel backing a FlogProxy.

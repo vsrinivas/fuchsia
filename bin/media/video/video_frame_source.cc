@@ -8,7 +8,6 @@
 
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/lib/timeline/timeline_function.h"
-#include "apps/tracing/lib/trace/event.h"
 
 namespace media {
 
@@ -141,8 +140,6 @@ fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
 
 void VideoFrameSource::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
-  TRACE_INSTANT("motown", "VideoRendererReceivePacket", TRACE_SCOPE_PROCESS,
-                "queue_depth_before", packet_queue_.size());
   FTL_DCHECK(supplied_packet);
   FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
              TimelineRate::NsPerSecond.subject_delta());
@@ -276,8 +273,6 @@ void VideoFrameSource::DiscardOldPackets() {
          packet_queue_.front()->packet()->pts < pts_) {
     // TODO(dalesat): Add hysteresis.
     packet_queue_.pop();
-    TRACE_INSTANT("motown", "VideoRendererReleasePacket", TRACE_SCOPE_PROCESS,
-                  "queue_depth_after", packet_queue_.size());
     // Make sure the front of the queue has been checked for revised media
     // type.
     CheckForRevisedMediaType(packet_queue_.front()->packet());
