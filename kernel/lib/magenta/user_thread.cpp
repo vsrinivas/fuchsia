@@ -420,18 +420,8 @@ void UserThread::Exiting() {
 void UserThread::Suspending() {
     LTRACE_ENTRY_OBJ;
 
-    // Notify debugger if attached.
-    // This is done by first obtaining our own reference to the port so the
-    // test can be done safely.
-    // TODO(dje): Allow debugger to say whether it wants these.
-    // TODO(dje): Is the locking sufficient here?
-    {
-        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
-        if (debugger_port) {
-            debugger_port->OnThreadSuspending(this);
-        }
-    }
-
+    // Update the state before sending any notifications out. We want the
+    // receiver to see the new state.
     {
         AutoLock lock(&state_lock_);
 
@@ -441,12 +431,25 @@ void UserThread::Suspending() {
         }
     }
 
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely.
+    // TODO(dje): Allow debugger to say whether it wants these.
+    {
+        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadSuspending(this);
+        }
+    }
+
     LTRACE_EXIT_OBJ;
 }
 
 void UserThread::Resuming() {
     LTRACE_ENTRY_OBJ;
 
+    // Update the state before sending any notifications out. We want the
+    // receiver to see the new state.
     {
         AutoLock lock(&state_lock_);
 
@@ -456,13 +459,10 @@ void UserThread::Resuming() {
         }
     }
 
-    // TODO(dje): Add support for modifying userspace regs from the debugger.
-
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely.
     // TODO(dje): Allow debugger to say whether it wants these.
-    // TODO(dje): Is the locking sufficient here?
     {
         mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
         if (debugger_port) {
