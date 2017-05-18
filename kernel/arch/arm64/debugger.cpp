@@ -17,58 +17,58 @@ uint arch_num_regsets(void)
     return 1; // TODO(dje): Just the general regs for now.
 }
 
-static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_regs_t *gr, uint32_t *buf_size)
+static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_regs_t *out, uint32_t *buf_size)
 {
     uint32_t provided_buf_size = *buf_size;
-    *buf_size = sizeof(*gr);
+    *buf_size = sizeof(*out);
 
     // Do "buffer too small" checks first. No point in prohibiting the caller
     // from finding out the needed size just because the thread is currently
     // running.
-    if (provided_buf_size < sizeof(*gr))
+    if (provided_buf_size < sizeof(*out))
         return ERR_BUFFER_TOO_SMALL;
 
     if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
-    struct arm64_iframe_long *p = thread->exception_context->frame;
+    struct arm64_iframe_long *in = thread->exception_context->frame;
 
     // TODO: We could get called while processing a synthetic exception where
     // there is no frame.
-    if (p == NULL)
+    if (in == NULL)
         return ERR_NOT_SUPPORTED;
 
-    static_assert(sizeof(p->r) == sizeof(gr->r), "");
-    memcpy(&gr->r[0], &p->r[0], sizeof(p->r));
-    gr->lr = p->lr;
-    gr->sp = p->usp;
-    gr->pc = p->elr;
-    gr->cpsr = p->spsr;
+    static_assert(sizeof(in->r) == sizeof(out->r), "");
+    memcpy(&out->r[0], &in->r[0], sizeof(in->r));
+    out->lr = in->lr;
+    out->sp = in->usp;
+    out->pc = in->elr;
+    out->cpsr = in->spsr;
 
     return NO_ERROR;
 }
 
-static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_general_regs_t *gr, uint32_t buf_size)
+static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_general_regs_t *in, uint32_t buf_size)
 {
-    if (buf_size != sizeof(*gr))
+    if (buf_size != sizeof(*in))
         return ERR_INVALID_ARGS;
 
     if (!thread_stopped_in_exception(thread))
         return ERR_BAD_STATE;
 
-    struct arm64_iframe_long *p = thread->exception_context->frame;
+    struct arm64_iframe_long *out = thread->exception_context->frame;
 
     // TODO: We could get called while processing a synthetic exception where
     // there is no frame.
-    if (p == NULL)
+    if (out == NULL)
         return ERR_NOT_SUPPORTED;
 
-    static_assert(sizeof(p->r) == sizeof(gr->r), "");
-    memcpy(&p->r[0], &gr->r[0], sizeof(p->r));
-    p->lr = gr->lr;
-    p->usp = gr->sp;
-    p->elr = gr->pc;
-    p->spsr = gr->cpsr;
+    static_assert(sizeof(out->r) == sizeof(in->r), "");
+    memcpy(&out->r[0], &in->r[0], sizeof(in->r));
+    out->lr = in->lr;
+    out->usp = in->sp;
+    out->elr = in->pc;
+    out->spsr = in->cpsr;
 
     return NO_ERROR;
 }
