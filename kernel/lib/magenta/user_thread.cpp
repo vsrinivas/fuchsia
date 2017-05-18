@@ -382,9 +382,24 @@ void UserThread::Exiting() {
         // all handles to its underling PortDispatcher.
     }
 
-    // remove ourselves from our parent process's view
-    process_->RemoveThread(this);
+    // Notify a debugger if attached. Do this before marking the thread as
+    // dead: the debugger expects to see the thread in the DYING state, it may
+    // try to read thread registers. The debugger still has to handle the case
+    // where the process is also dying (and thus the thread could transition
+    // DYING->DEAD from underneath it), but that's life (or death :-)).
+    // N.B. OnThreadExitForDebugger will block in ExceptionHandlerExchange, so
+    // don't hold the process's |exception_lock_| across the call.
+    {
+        mxtl::RefPtr<ExceptionPort> eport(process_->debugger_exception_port());
+        if (eport) {
+            eport->OnThreadExitForDebugger(this);
+        }
+    }
 
+    // Mark the thread as dead. Do this before removing the thread from the
+    // process because if this is the last thread then the process will be
+    // marked dead, and we don't want to have a state where the process is
+    // dead but one thread is not.
     {
         AutoLock lock(&state_lock_);
 
@@ -393,6 +408,9 @@ void UserThread::Exiting() {
         // put ourselves into the dead state
         SetState(State::DEAD);
     }
+
+    // remove ourselves from our parent process's view
+    process_->RemoveThread(this);
 
     // drop LK's reference
     if (Release()) {
