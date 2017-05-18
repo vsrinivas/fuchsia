@@ -426,6 +426,12 @@ static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t fla
         }
     } else {
         path = (char*) ".";
+        if (dn->device == &socket_device) {
+            // don't hand off opens of the /dev/socket "directory"
+            // to netstack, since it doesn't want to deal with STAT
+            // or the like
+            flags |= O_NOREMOTE;
+        }
     }
 
     if (r < 0) {
