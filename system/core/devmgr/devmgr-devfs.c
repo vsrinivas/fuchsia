@@ -368,7 +368,7 @@ void devfs_unpublish(device_t* dev) {
     }
 }
 
-static mx_status_t devfs_walk(devnode_t** _dn, char* path) {
+static mx_status_t devfs_walk(devnode_t** _dn, char* path, char** pathout) {
     devnode_t* dn = *_dn;
 
 again:
@@ -377,7 +377,9 @@ again:
         return NO_ERROR;
     }
     char* name = path;
+    char* undo = NULL;
     if ((path = strchr(path, '/')) != NULL) {
+        undo = path;
         *path++ = 0;
     }
     if (name[0] == 0) {
@@ -390,17 +392,41 @@ again:
             goto again;
         }
     }
-    return ERR_NOT_FOUND;
+    if (dn == *_dn) {
+        return ERR_NOT_FOUND;
+    }
+    if (undo) {
+        *undo = '/';
+    }
+    *_dn = dn;
+    *pathout = name;
+    return ERR_NEXT;
 }
 
-static void devfs_open(devnode_t* dn, mx_handle_t h, char* path, uint32_t flags) {
+static void devfs_open(devnode_t* dirdn, mx_handle_t h, char* path, uint32_t flags) {
     if (!strcmp(path, ".")) {
         path = NULL;
     }
 
-    mx_status_t r = devfs_walk(&dn, path);
+    devnode_t* dn = dirdn;
+    mx_status_t r = devfs_walk(&dn, path, &path);
 
     bool pipeline = flags & MXRIO_OFLAG_PIPELINE;
+
+    if (r == ERR_NEXT) {
+        // we only partially matched -- there's more path to walk
+        if ((dn->device == NULL) || (dn->device->hrpc == MX_HANDLE_INVALID)) {
+            // no remote to pass this on to
+            r = ERR_NOT_FOUND;
+        } else if (flags & (O_NOREMOTE | O_DIRECTORY)) {
+            // local requested, but this is remote only
+            r = ERR_NOT_SUPPORTED;
+        } else {
+            r = NO_ERROR;
+        }
+    } else {
+        path = (char*) ".";
+    }
 
     if (r < 0) {
 fail:
@@ -433,13 +459,14 @@ fail:
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_OPEN;
-    msg.datalen = 1;
+    msg.datalen = strlen(path);
     msg.arg = flags;
     msg.hcount = 1;
     msg.handle[0] = h;
-    msg.data[0] = '.';
+    memcpy(msg.data, path, msg.datalen);
 
-    if ((r = mx_channel_write(dn->device->hrpc, 0, &msg, MXRIO_HDR_SZ + 1, msg.handle, 1)) < 0) {
+    if ((r = mx_channel_write(dn->device->hrpc, 0, &msg, MXRIO_HDR_SZ + msg.datalen,
+                              msg.handle, 1)) < 0) {
         goto fail;
     }
 }
