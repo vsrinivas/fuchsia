@@ -485,12 +485,9 @@ endif
 GLOBAL_INCLUDES := $(addprefix -I,$(GLOBAL_INCLUDES))
 KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
 
-# default to no ccache
-CCACHE ?=
-
 # set up paths to various tools
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-CC := $(CCACHE) $(CLANG_TOOLCHAIN_PREFIX)clang
+CC := $(CLANG_TOOLCHAIN_PREFIX)clang
 AR := $(CLANG_TOOLCHAIN_PREFIX)llvm-ar
 OBJDUMP := $(CLANG_TOOLCHAIN_PREFIX)llvm-objdump
 READELF := $(CLANG_TOOLCHAIN_PREFIX)llvm-readobj -elf-output-style=GNU
@@ -498,7 +495,7 @@ CPPFILT := $(CLANG_TOOLCHAIN_PREFIX)llvm-cxxfilt
 SIZE := $(CLANG_TOOLCHAIN_PREFIX)llvm-size
 NM := $(CLANG_TOOLCHAIN_PREFIX)llvm-nm
 else
-CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
+CC := $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
 OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
 READELF := $(TOOLCHAIN_PREFIX)readelf
@@ -532,8 +529,8 @@ FOUND_HOST_GCC ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)gcc)
 HOST_TOOLCHAIN_PREFIX ?= $(CLANG_TOOLCHAIN_PREFIX)
 HOST_USE_CLANG ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)clang)
 ifneq ($(HOST_USE_CLANG),)
-HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang
-HOST_CXX     := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang++
+HOST_CC      := $(HOST_TOOLCHAIN_PREFIX)clang
+HOST_CXX     := $(HOST_TOOLCHAIN_PREFIX)clang++
 HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)llvm-ar
 HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)llvm-objdump
 HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)llvm-readobj
@@ -545,8 +542,8 @@ else
 ifeq ($(FOUND_HOST_GCC),)
 $(error cannot find toolchain, please set HOST_TOOLCHAIN_PREFIX or add it to your path)
 endif
-HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)gcc
-HOST_CXX     := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)g++
+HOST_CC      := $(HOST_TOOLCHAIN_PREFIX)gcc
+HOST_CXX     := $(HOST_TOOLCHAIN_PREFIX)g++
 HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)ar
 HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)objdump
 HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)readelf
