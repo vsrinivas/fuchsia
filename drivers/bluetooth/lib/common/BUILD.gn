@@ -15,8 +15,9 @@ source_set("common") {
     "observer_list.h",
     "packet.h",
     "test_helpers.h",
-    "uint128.cc",
     "uint128.h",
+    "uuid.cc",
+    "uuid.h",
   ]
 
   deps = [
@@ -34,7 +35,7 @@ source_set("tests") {
     "manufacturer_names_unittest.cc",
     "observer_list_unittest.cc",
     "packet_unittest.cc",
-    "uint128_unittest.cc",
+    "uuid_unittest.cc",
   ]
 
   deps = [
