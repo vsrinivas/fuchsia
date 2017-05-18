@@ -4,7 +4,6 @@
 
 #include <cmath>
 
-#define GLM_SWIZZLE
 #include <glm/glm.hpp>
 
 #include "escher/geometry/transform.h"
