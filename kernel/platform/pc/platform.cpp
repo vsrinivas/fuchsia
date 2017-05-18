@@ -167,6 +167,13 @@ static void platform_save_bootloader_data(void) {
             const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
             printf("multiboot: cmdline @ %p\n", cmdline);
             cmdline_append(cmdline);
+
+            // Look for framebuffer info in multiboot command line
+            bootloader.fb_base = cmdline_get_uint32("fb.base", 0);
+            bootloader.fb_width = cmdline_get_uint32("fb.width", 0);
+            bootloader.fb_height = cmdline_get_uint32("fb.height", 0);
+            bootloader.fb_stride = cmdline_get_uint32("fb.stride", 0);
+            bootloader.fb_format = cmdline_get_uint32("fb.format", 0);
         }
         if ((mi->flags & MB_INFO_MODS) && mi->mods_addr) {
             module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);
