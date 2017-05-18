@@ -59,7 +59,8 @@ typedef struct ahci_port {
 
     mtx_t lock;
 
-    uint32_t running; // bitmask of running commands
+    uint32_t running;   // bitmask of running commands
+    uint32_t completed; // bitmask of completed commands
     iotxn_t* commands[AHCI_MAX_COMMANDS]; // commands in flight
 
     list_node_t txn_list;
@@ -202,29 +203,15 @@ static bool cmd_is_queued(uint8_t cmd) {
 }
 
 static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, mx_status_t status) {
-    iotxn_t* txn;
+    mtx_lock(&port->lock);
     uint32_t sact = ahci_read(&port->regs->sact);
-    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
-        txn = port->commands[i];
-        if (txn == NULL) {
-            continue;
-        }
-        if (!(sact & (1 << i))) {
-            mtx_lock(&port->lock);
-            // clear state before calling the complete() hook
-            port->running &= ~(1 << i);
-            port->commands[i] = NULL;
-
-            // resume the port if paused for sync and no outstanding transactions
-            if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
-                port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
-            }
-            mtx_unlock(&port->lock);
-
-            iotxn_complete(txn, status, txn->length);
-        }
-    }
-    // hit the worker thread to do the next txn
+    uint32_t running = port->running;
+    uint32_t done = sact ^ running;
+    // assert if a channel without an outstanding transaction is active
+    MX_DEBUG_ASSERT(!(done & sact));
+    port->completed |= done;
+    mtx_unlock(&port->lock);
+    // hit the worker thread to complete commands
     completion_signal(&dev->worker_completion);
 }
 
@@ -233,18 +220,6 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     assert(!ahci_port_cmd_busy(port, slot));
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
-    if ((cmd_is_read(pdata->cmd) || cmd_is_write(pdata->cmd)) && pdata->count == 0) {
-        // Empty reads and writes complete immediately, and are not actually
-        // transmitted to the underlying device.
-        // resume the port if paused for sync and no outstanding transactions
-        if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
-            port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
-        }
-        iotxn_complete(txn, NO_ERROR, txn->length);
-        completion_signal(&dev->worker_completion);
-        return NO_ERROR;
-    }
-
     mx_status_t status = iotxn_physmap(txn);
     if (status != NO_ERROR) {
         iotxn_complete(txn, status, 0);
@@ -307,7 +282,6 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     mx_paddr_t paddr;
     for (;;) {
         length = iotxn_phys_iter_next(&iter, &paddr);
-        xprintf("chunk %u length %zu\n", cl->prdtl, length);
         if (length == 0) {
             break;
         } else if (length > AHCI_PRD_MAX_SIZE) {
@@ -330,8 +304,6 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         cl->prdtl += 1;
         prd += 1;
     }
-
-    xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u data_sz=0x%lx offset=0x%lx prdtl=%u\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, txn->length, txn->offset, cl->prdtl);
 
     port->running |= (1 << slot);
     port->commands[slot] = txn;
@@ -452,6 +424,12 @@ static void ahci_iotxn_queue(void* ctx, iotxn_t* txn) {
     assert(pdata->port < AHCI_MAX_PORTS);
     assert(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT));
 
+    // complete empty txns immediately
+    if (txn->length == 0) {
+        iotxn_complete(txn, NO_ERROR, txn->length);
+        return;
+    }
+
     // put the cmd on the queue
     mtx_lock(&port->lock);
     list_add_tail(&port->txn_list, &txn->node);
@@ -474,13 +452,34 @@ static int ahci_worker_thread(void* arg) {
     ahci_port_t* port;
     iotxn_t* txn;
     for (;;) {
-        // iterate all the ports and run commands
+        // iterate all the ports and run or complete commands
         for (int i = 0; i < AHCI_MAX_PORTS; i++) {
             port = &dev->ports[i];
             mtx_lock(&port->lock);
             if (!(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT))) {
                 goto next;
             }
+
+            // complete commands first
+            while (port->completed) {
+                unsigned slot = 32 - __builtin_clz(port->completed) - 1;
+                txn = port->commands[slot];
+                if (txn == NULL) {
+                    xprintf("ahci.%d: illegal state, completing slot %d but txn == NULL\n", port->nr, slot);
+                } else {
+                    mtx_unlock(&port->lock);
+                    iotxn_complete(txn, NO_ERROR, txn->length);
+                    mtx_lock(&port->lock);
+                }
+                port->completed &= ~(1 << slot);
+                port->running &= ~(1 << slot);
+                port->commands[slot] = NULL;
+                // resume the port if paused for sync and no outstanding transactions
+                if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
+                    port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
+                }
+            }
+
             if (port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) {
                 goto next;
             }
@@ -536,24 +535,26 @@ static int ahci_watchdog_thread(void* arg) {
             }
 
             mtx_lock(&port->lock);
-            if (port->running) {
+            uint32_t pending = port->running & ~port->completed;
+            while (pending) {
                 idle = false;
-                for (int j = 0; j < AHCI_MAX_COMMANDS; j++) {
-                    if (!port->commands[j]) {
-                        continue;
-                    }
-                    sata_pdata_t* pdata = sata_iotxn_pdata(port->commands[j]);
+                unsigned slot = 32 - __builtin_clz(pending) - 1;
+                iotxn_t* txn = port->commands[slot];
+                if (!txn) {
+                    xprintf("ahci: command %u pending but txn is NULL\n", slot);
+                } else {
+                    sata_pdata_t* pdata = sata_iotxn_pdata(txn);
                     if (pdata->timeout < now) {
                         // time out
-                        printf("ahci: txn time out on port %d\n", port->nr);
-                        iotxn_t* txn = port->commands[j];
-                        port->running &= ~(1 << j);
-                        port->commands[j] = NULL;
+                        printf("ahci: txn time out on port %d txn %p\n", port->nr, txn);
+                        port->running &= ~(1 << slot);
+                        port->commands[slot] = NULL;
                         mtx_unlock(&port->lock);
                         iotxn_complete(txn, ERR_TIMED_OUT, 0);
                         mtx_lock(&port->lock);
                     }
                 }
+                pending &= ~(1 << slot);
             }
             mtx_unlock(&port->lock);
         }
@@ -573,22 +574,15 @@ static void ahci_port_irq(ahci_device_t* dev, int nr) {
     uint32_t is = ahci_read(&port->regs->is);
     ahci_write(&port->regs->is, is);
 
-    if (is & AHCI_PORT_INT_DHR) { // RFIS received
-        ahci_port_complete_txn(dev, port, NO_ERROR);
-    }
-    if (is & AHCI_PORT_INT_PS) { // PSFIS rcv
-        ahci_port_complete_txn(dev, port, NO_ERROR);
-    }
-    if (is & AHCI_PORT_INT_SDB) { // SDBFIS
-        ahci_port_complete_txn(dev, port, NO_ERROR);
-    }
     if (is & AHCI_PORT_INT_PRC) { // PhyRdy change
         uint32_t serr = ahci_read(&port->regs->serr);
         ahci_write(&port->regs->serr, serr & ~0x1);
     }
-    if (is & AHCI_PORT_INT_TFE) { // taskfile error
-        xprintf("tfe error\n");
+    if (is & AHCI_PORT_INT_ERROR) { // error
+        xprintf("ahci.%d: error is=0x%08x\n", nr, is);
         ahci_port_complete_txn(dev, port, ERR_INTERNAL);
+    } else if (is) {
+        ahci_port_complete_txn(dev, port, NO_ERROR);
     }
 }
 
