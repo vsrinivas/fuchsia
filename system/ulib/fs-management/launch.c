@@ -73,7 +73,7 @@ mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
         return status;
     }
 
-    status = mx_object_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+    status = mx_object_wait_one(proc, MX_PROCESS_TERMINATED, MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "launch: Error waiting for process to terminate\n");
         mx_handle_close(proc);

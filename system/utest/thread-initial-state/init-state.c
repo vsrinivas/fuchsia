@@ -47,8 +47,7 @@ bool tis_test(void) {
     mx_handle_t handle = raw_thread_create(thread_entry, arg);
     ASSERT_GE(handle, 0, "Error while thread creation");
 
-    mx_status_t status = mx_object_wait_one(handle, MX_THREAD_SIGNALED,
-                                                  MX_TIME_INFINITE, NULL);
+    mx_status_t status = mx_object_wait_one(handle, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL);
     ASSERT_GE(status, 0, "Error while thread wait");
     END_TEST;
 }

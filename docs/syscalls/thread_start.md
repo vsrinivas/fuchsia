@@ -24,7 +24,7 @@ before the thread is started.  All other registers are zero upon start.
 When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
-*MX_THREAD_SIGNALED* when the thread stops executing (due to
+*MX_THREAD_TERMINATED* when the thread stops executing (due to
 *thread_exit**() being called.
 
 ## RETURN VALUE

@@ -201,13 +201,13 @@ mx_handle_t tu_launch_mxio_fini(launchpad_t* lp)
 
 void tu_process_wait_signaled(mx_handle_t process)
 {
-    mx_signals_t signals = MX_PROCESS_SIGNALED;
+    mx_signals_t signals = MX_PROCESS_TERMINATED;
     mx_signals_t pending;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
     mx_status_t result = tu_wait(&process, &signals, 1, NULL, timeout, &pending);
     if (result != NO_ERROR)
         tu_fatal(__func__, result);
-    if ((pending & MX_PROCESS_SIGNALED) == 0) {
+    if ((pending & MX_PROCESS_TERMINATED) == 0) {
         unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }

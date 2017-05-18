@@ -105,7 +105,7 @@ static bool test_basics(void) {
     ASSERT_TRUE(start_thread(test_sleep_thread_fn, (void*)mx_deadline_after(MX_MSEC(100)),
                              &thread), "");
     ASSERT_EQ(mx_object_wait_one(mxr_thread_get_handle(&thread),
-                                 MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+                                 MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
     END_TEST;
 }
@@ -211,7 +211,7 @@ static bool test_info_task_stats_fails(void) {
                 "");
     mx_handle_t thandle = mxr_thread_get_handle(&thread);
     ASSERT_EQ(mx_object_wait_one(thandle,
-                                 MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+                                 MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
 
     // Ensure that task_stats doesn't work on it.
@@ -239,7 +239,7 @@ static bool test_resume_suspended(void) {
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
     // The thread should still be blocked on the event when it wakes up
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, mx_deadline_after(MX_MSEC(100)),
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_TERMINATED, mx_deadline_after(MX_MSEC(100)),
                                  NULL), ERR_TIMED_OUT, "");
 
     // Verify thread is blocked
@@ -279,7 +279,7 @@ static bool test_resume_suspended(void) {
 
     ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL), NO_ERROR, "");
     ASSERT_EQ(mx_object_wait_one(
-        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+        thread_h, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(eport), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
@@ -302,7 +302,7 @@ static bool test_kill_suspended(void) {
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
 
     ASSERT_EQ(mx_object_wait_one(
-        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+        thread_h, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     // make sure the thread did not execute more user code.
     ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
@@ -334,7 +334,7 @@ static bool test_suspend_sleeping(void) {
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
     // Wait for the sleep to finish
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, sleep_deadline + MX_MSEC(50), NULL),
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_TERMINATED, sleep_deadline + MX_MSEC(50), NULL),
               NO_ERROR, "");
     const mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
@@ -429,7 +429,7 @@ static bool test_suspend_channel_call(void) {
     ASSERT_EQ(mx_task_resume(thread_h, 0), NO_ERROR, "");
 
     // Wait for the thread to finish
-    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL),
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "");
     EXPECT_EQ(thread_arg.call_status, NO_ERROR, "");
     EXPECT_EQ(thread_arg.read_status, NO_ERROR, "");
@@ -471,7 +471,7 @@ static bool test_suspend_port_call(void) {
     EXPECT_EQ(packet.key, 300ull, "");
 
     ASSERT_EQ(mx_object_wait_one(
-        thread_h, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+        thread_h, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(port[0]), NO_ERROR, "");

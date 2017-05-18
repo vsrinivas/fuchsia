@@ -92,7 +92,7 @@ public:
         if (handle_ != MX_HANDLE_INVALID) {
             // kill_thread() was used, so the thrd_t is in undefined state.
             // Use the kernel handle to ensure the thread has died.
-            EXPECT_EQ(mx_object_wait_one(handle_, MX_THREAD_SIGNALED,
+            EXPECT_EQ(mx_object_wait_one(handle_, MX_THREAD_TERMINATED,
                                          MX_TIME_INFINITE, NULL), NO_ERROR,
                       "mx_object_wait_one failed on killed thread");
             EXPECT_EQ(mx_handle_close(handle_), NO_ERROR,

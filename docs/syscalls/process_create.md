@@ -29,7 +29,7 @@ called.
 When the last handle to a process is closed, the process is destroyed.
 
 Process handles may be waited on and will assert the signal
-*MX_PROCESS_SIGNALED* when the process exits.
+*MX_PROCESS_TERMINATED* when the process exits.
 
 *job* is the controlling [job object](../objects/job.md) for the new
 process, which will become a child of that job.

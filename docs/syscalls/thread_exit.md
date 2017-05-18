@@ -18,7 +18,7 @@ void mx_thread_exit(void);
 **thread_exit**() causes the currently running thread to cease
 running and exit.
 
-The signal *MX_THREAD_SIGNALED* will be assserted on the thread
+The signal *MX_THREAD_TERMINATED* will be assserted on the thread
 object upon exit and may be observed via *object_wait_one*()
 or *object_wait_many*() on a handle to the thread.
 

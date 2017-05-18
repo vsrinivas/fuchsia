@@ -88,7 +88,7 @@ int thread_injection_test(void) {
 
     // Make sure the injector completed successfully.
     // If it didn't, the futex wait probably timed out too.
-    ASSERT_EQ(mx_object_wait_one(proc, MX_PROCESS_SIGNALED,
+    ASSERT_EQ(mx_object_wait_one(proc, MX_PROCESS_TERMINATED,
                                  MX_TIME_INFINITE, NULL),
               NO_ERROR, "waiting for injector to finish");
     mx_info_process_t proc_info;
