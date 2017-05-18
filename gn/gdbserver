@@ -29,6 +29,10 @@
             "bootfs_path": "test/debugserver/loop-test"
         },
         {
+            "binary": "syscall-test",
+            "bootfs_path": "test/debugserver/syscall-test"
+        },
+        {
             "binary": "thread-test",
             "bootfs_path": "test/debugserver/thread-test"
         }
