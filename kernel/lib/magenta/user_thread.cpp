@@ -763,7 +763,12 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
         AutoLock lock(&exception_wait_lock_);
         state = state_;
         lk_state = thread_.state;
-        if (InExceptionLocked()) {
+        if (InExceptionLocked() &&
+                // A port type of !NONE here indicates to the caller that the
+                // thread is waiting for an exception response. So don't return
+                // !NONE if the thread just woke up but hasn't reacquired
+                // |exception_wait_lock_|.
+                exception_status_ == ExceptionStatus::UNPROCESSED) {
             DEBUG_ASSERT(exception_wait_port_ != nullptr);
             excp_port_type = exception_wait_port_->type();
         } else {
