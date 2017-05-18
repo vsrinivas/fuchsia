@@ -16,11 +16,16 @@ uint32_t hid_key_to_vt100_code(uint8_t keycode, int modifiers,
     uint8_t ch = hid_map_key(keycode, modifiers & MOD_SHIFT, keymap);
     if (ch) {
         if (modifiers & MOD_CTRL) {
-            uint8_t sub = modifiers & MOD_SHIFT ? 'A' : 'a';
-            buf[0] = (char)(ch - sub + 1);
-        } else {
-            buf[0] = ch;
+            // Handle Ctrl-A to Ctrl-Z.  Ignore the Ctrl modifier on any
+            // other keys.
+            uint8_t range_start = modifiers & MOD_SHIFT ? 'A' : 'a';
+            uint8_t range_end = static_cast<uint8_t>(range_start + 26);
+            if (range_start <= ch && ch < range_end) {
+                buf[0] = static_cast<char>(ch - range_start + 1);
+                return 1;
+            }
         }
+        buf[0] = ch;
         return 1;
     }
 

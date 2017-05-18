@@ -124,6 +124,28 @@ bool test_keyboard_input_thread() {
     write_report_buf();
     expect_keypress(HID_USAGE_KEY_J, MOD_LCTRL, 10);
 
+    // Test Ctrl-1.  The Ctrl modifier should be ignored in this case so
+    // that we just get '1'.
+    *first_keycode = HID_USAGE_KEY_1;
+    write_report_buf();
+    expect_keypress(HID_USAGE_KEY_1, MOD_LCTRL, '1');
+
+    // Try Shift and Ctrl together.
+    *first_keycode = 0;
+    *modifiers_byte = 1 | 2; // Left Shift and Left Ctrl keys
+    write_report_buf();
+    expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT | MOD_LCTRL, '\0');
+
+    // Test Shift-Ctrl-J.  This should be equivalent to Ctrl-J.
+    *first_keycode = HID_USAGE_KEY_J;
+    write_report_buf();
+    expect_keypress(HID_USAGE_KEY_J, MOD_LSHIFT | MOD_LCTRL, 10);
+
+    // Test Shift-Ctrl-1.  This should be equivalent to Shift-1.
+    *first_keycode = HID_USAGE_KEY_1;
+    write_report_buf();
+    expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_LCTRL, '!');
+
     ret = close(pipe_fds[0]);
     EXPECT_EQ(ret, 0, "");
 
