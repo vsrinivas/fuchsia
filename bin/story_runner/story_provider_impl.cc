@@ -696,9 +696,6 @@ void StoryProviderImpl::OnChange(const std::string& key,
       [&story_data, state](StoryProviderWatcher* const watcher) {
         watcher->OnChange(story_data->story_info.Clone(), state);
       });
-
-  // TODO(mesch): If there is an update for a running story, the story
-  // controller needs to be notified.
 }
 
 // |PageClient|
