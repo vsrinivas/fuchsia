@@ -109,12 +109,6 @@ This option requests that the executable at *path* be launched once the
 system partition is mounted and *init* is launched.  If there is no system
 bootfs or system partition, it will never be launched.
 
-## magenta.fatal\_small\_deadlines
-
-This option (disabled by default) causes the kernel to kill processes that
-call blocking syscalls with small deadlines.  This is to help detect callers
-that are passing in relative timeouts rather than deadlines.
-
 ## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than

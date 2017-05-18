@@ -56,10 +56,6 @@ static mxtl::RefPtr<ExceptionPort> system_exception_port TA_GUARDED(system_excep
 // All jobs and processes are rooted at the |root_job|.
 static mxtl::RefPtr<JobDispatcher> root_job;
 
-// If true, kill processes that use abnormally small deadlines (likely bugs).
-// TODO(teisenbe): Remove this and magenta_check_deadline by mid May 2017.  It's
-// just to help catch bugs during a migration.
-static bool fatal_small_deadlines = false;
 // The singleton policy manager, for jobs and processes. This is
 // a magenta internal class (not a dispatcher-derived).
 static PolicyManager* policy_manager;
@@ -67,7 +63,6 @@ static PolicyManager* policy_manager;
 void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
-    fatal_small_deadlines = cmdline_get_bool("magenta.fatal_small_deadlines", false);
     policy_manager = PolicyManager::Create();
 }
 
@@ -278,34 +273,8 @@ bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
 }
 
 mx_status_t magenta_sleep(mx_time_t deadline) {
-    magenta_check_deadline("sleep", deadline);
     /* sleep with interruptable flag set */
     return thread_sleep_etc(deadline, true);
-}
-
-// TODO(teisenbe): Remove this function post-migration
-void magenta_check_deadline(const char* name, mx_time_t deadline) {
-    mx_time_t min_deadline = 0;
-    mx_time_t now = current_time();
-    if (now > LK_SEC(1)) {
-        if (now <= LK_SEC(6)) {
-            min_deadline = now - LK_SEC(1);
-        } else {
-            min_deadline = LK_SEC(5);
-        }
-    }
-
-    if (deadline != 0 && deadline <= min_deadline) {
-        if (fatal_small_deadlines) {
-            auto up = ProcessDispatcher::GetCurrent();
-            char proc_name[MX_MAX_NAME_LEN];
-            up->get_name(proc_name);
-            printf("\n[fatal: %s used a bad deadline for %s]\n", proc_name, name);
-            up->Exit(ERR_INVALID_ARGS);
-        } else {
-            TRACEF("WARNING: Oddly short deadline %" PRIu64 " for %s\n", deadline, name);
-        }
-    }
 }
 
 mx_status_t validate_resource_handle(mx_handle_t handle) {

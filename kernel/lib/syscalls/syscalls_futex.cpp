@@ -14,7 +14,6 @@
 
 mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t deadline) {
     LTRACEF("futex %p current %d\n", value_ptr.get(), current_value);
-    magenta_check_deadline("futex_wait", deadline);
 
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
         value_ptr, current_value, deadline);
