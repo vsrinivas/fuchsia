@@ -8,6 +8,13 @@
 
 namespace mtl {
 
+VFSDispatcher::VFSDispatcher() = default;
+
+mx_status_t VFSDispatcher::AddVFSHandler(mx_handle_t channel, void* callback,
+                                         void* iostate) {
+  return VFSHandler::Start(channel, callback, iostate);
+}
+
 VFSHandler::VFSHandler(mx::channel channel, void* callback, void* cookie)
   : key_(0),
     channel_(std::move(channel)),

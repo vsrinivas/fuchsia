@@ -5,6 +5,7 @@
 #ifndef LIB_MTL_VFS_VFS_HANDLER_H_
 #define LIB_MTL_VFS_VFS_HANDLER_H_
 
+#include <fs/dispatcher.h>
 #include <mx/channel.h>
 
 #include "lib/mtl/tasks/message_loop.h"
@@ -12,9 +13,16 @@
 
 namespace mtl {
 
+class VFSDispatcher : public fs::Dispatcher {
+ public:
+  VFSDispatcher();
+  mx_status_t AddVFSHandler(mx_handle_t h, void* callback, void* iostate) final;
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(VFSDispatcher);
+};
+
 class VFSHandler : public MessageLoopHandler {
  public:
-  // Implements mxio_dispatcher_cb_t.
   static mx_status_t Start(mx_handle_t channel, void* callback, void* cookie);
 
  private:
