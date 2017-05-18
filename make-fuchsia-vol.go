@@ -36,11 +36,12 @@ var (
 )
 
 var (
-	bootloader  = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
-	kernel      = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
-	ramdisk     = flag.String("ramdisk", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
-	sysmanifest = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
-	cmdline     = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
+	bootloader   = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
+	kernel       = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
+	ramdisk      = flag.String("ramdisk", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
+	bootmanifest = flag.String("bootmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/boot.bootfs.manifest"), "path to boot manifest")
+	sysmanifest  = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
+	cmdline      = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
 	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("MAGENTA_PROJECT"), "rpi"), "install rpi3 layout")
 	rpi3Root = flag.String("rpi3Root", filepath.Join(magentaDir, "kernel/target/rpi3"), "magenta rpi3 target root")
@@ -50,7 +51,7 @@ var (
 	optimalTransferSize = flag.Int64("optimalTransferSize", 0, "the optimal transfer size of the target disk (0 means unknown/unused)")
 
 	efiSize  = flag.Int64("efiSize", 100*1024*1024, "efi partition size in bytes")
-	sysSize  = flag.Int64("sysSize", 5*1024*1024*1024, "sys partition size in bytes")
+	sysSize  = flag.Int64("sysSize", 2*1024*1024*1024, "sys partition size in bytes")
 	blobSize = flag.Int64("blobSize", 1024*1024*1024, "blob partition size in bytes")
 	dataSize = flag.Int64("dataSize", 0, "data partition size in bytes (0 means `fill`)")
 )
@@ -72,7 +73,7 @@ func main() {
 
 	disk := flag.Args()[0]
 
-	for _, path := range []string{*kernel, *ramdisk, *sysmanifest, disk} {
+	for _, path := range []string{*kernel, *ramdisk, *bootmanifest, *sysmanifest, disk} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("cannot read %q: %s\n", path, err)
 		}
@@ -131,14 +132,18 @@ func main() {
 		log.Fatalf("could not determine size of %q", disk)
 	}
 
-	fmt.Printf("Disk: %s\nBlock Size: %d\nPhysical block size: %d\nOptimal transfer size: %d\nDisk size: %d\n", disk, logical, physical, optimal, diskSize)
-
 	// Note: this isn't entirely correct, as it doesn't take into account padding.
 	// Consider adding a real API for this in the GPT lib.
 	minGPTSize := int64((gpt.MinPartitionEntryArraySize + gpt.HeaderSize) * 2)
 	if uint64(*efiSize+*sysSize+minGPTSize) > diskSize {
 		log.Fatalf("%q is not large enough for the partition layout\n", disk)
 	}
+
+	log.Printf("Disk: %s", disk)
+	log.Printf("Disk size: %d", diskSize)
+	log.Printf("Block Size: %d", logical)
+	log.Printf("Physical block size: %d", physical)
+	log.Printf("Optimal transfer size: %d", optimal)
 
 	g, err := gpt.ReadGPT(f, logical, diskSize)
 	if err != nil {
@@ -225,6 +230,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Printf("EFI size: %d", *efiSize)
+	log.Printf("SYS size: %d", *sysSize)
+	log.Printf("BLOB size: %d", *blobSize)
+	log.Printf("DATA size: %d", *dataSize)
+
+
+	log.Printf("Writing GPT")
+
 	f, err = os.OpenFile(disk, os.O_RDWR, 0750)
 	if err != nil {
 		log.Fatal(err)
@@ -236,14 +249,13 @@ func main() {
 	f.Sync()
 	f.Close()
 
-	log.Printf("disk: %s\nEFI: %d\nSYS: %d\nBLOB: %d\nDATA: %d\n", disk, *efiSize, *sysSize, *blobSize, *dataSize)
 
 	efiStart = efiStart * logical
 	sysStart = sysStart * logical
 	blobStart = blobStart * logical
 	dataStart = dataStart * logical
 
-	log.Printf("EFI offset: %d", efiStart)
+	log.Printf("Writing EFI partition and files")
 
 	cmd := exec.Command("mkfs-msdosfs", "-LESP", "-F32",
 		fmt.Sprintf("-@%d", efiStart),
@@ -252,10 +264,8 @@ func main() {
 		disk,
 	)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Print(out)
 		log.Fatal(err)
 	}
 
@@ -273,8 +283,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Printf("%#v", fatfs)
 
 	root := fatfs.RootDirectory()
 
@@ -335,66 +343,64 @@ func main() {
 		root.Sync()
 	}
 
-	ents, err := root.Read()
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, e := range ents {
-		log.Printf("%#v", e.GetName())
-	}
-
 	root.Sync()
 	root.Close()
 	fatfs.Close()
 
-	log.Printf("Creating system minfs")
+	log.Printf("Creating SYS minfs")
 	path, err := mkminfs(*sysSize)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer os.Remove(path)
 
-	m, err := os.Open(*sysmanifest)
-	if err != nil {
-		log.Fatal(err)
-	}
-	mb := bufio.NewReader(m)
 	dirs := map[string]struct{}{}
 	minfsimg := fmt.Sprintf("%s@%d", path, *sysSize)
-	for {
-		line, err := mb.ReadString('\n')
+	for _, manifest := range []string{*bootmanifest, *sysmanifest} {
+		m, err := os.Open(manifest)
 		if err != nil {
-			log.Print(err)
-			break
-		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) < 2 {
-			continue
-		}
-		from := strings.TrimSpace(parts[1])
-		to := "::" + strings.TrimSpace(parts[0])
-
-		d := ""
-		for _, part := range strings.Split(filepath.Dir(to), "/") {
-			d = filepath.Join(d, part)
-			if _, ok := dirs[d]; !ok {
-				log.Printf("mkdir: %s", d)
-				if err := minfs(minfsimg, "mkdir", d); err != nil {
-					log.Fatal(err)
-				}
-				dirs[d] = struct{}{}
-			}
-		}
-		if err := minfs(minfsimg, "cp", from, to); err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Written: %s -> %s", from, to)
+		mb := bufio.NewReader(m)
+		for {
+			line, err := mb.ReadString('\n')
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Print(err)
+				break
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) < 2 {
+				continue
+			}
+			from := strings.TrimSpace(parts[1])
+			to := "::" + strings.TrimSpace(parts[0])
+
+			d := ""
+			for _, part := range strings.Split(filepath.Dir(to), "/") {
+				d = filepath.Join(d, part)
+				if _, ok := dirs[d]; !ok {
+					if err := minfs(minfsimg, "mkdir", d); err != nil {
+						log.Fatal(err)
+					}
+					dirs[d] = struct{}{}
+				}
+			}
+			if err := minfs(minfsimg, "cp", from, to); err != nil {
+				log.Fatal(err)
+			}
+		}
+		m.Close()
 	}
 
-	log.Print("Copying sys image into gpt image")
+	log.Print("Copying SYS into gpt image")
 	if err := copyIn(disk, int64(sysStart), *sysSize, path); err != nil {
 		log.Fatal(err)
 	}
+
+	log.Printf("Done")
 }
 
 func minfs(args ...string) error {
@@ -479,7 +485,6 @@ func msCopyIn(srcpath string, root fs.Directory, destdir string) {
 	}
 
 	name := filepath.Base(srcpath)
-	defer log.Printf("Written: %s -> %s", srcpath, filepath.Join(destdir, name))
 
 	to, _, err := d.Open(name, fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagFile)
 	if err != nil {
