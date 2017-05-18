@@ -539,8 +539,8 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_name) {
-    return devhost_simple_rpc(dev, DC_OP_BIND_DEVICE, drv_name, "bind-device");
+mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname) {
+    return devhost_simple_rpc(dev, DC_OP_BIND_DEVICE, drv_libname, "bind-device");
 }
 
 extern driver_api_t devhost_api;

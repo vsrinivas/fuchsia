@@ -21,6 +21,11 @@ static const char* test_drivers[] = {
     "iotxn_test",
 };
 
+static const char* test_driver_libs[] = {
+    "/boot/driver/ddktl-test.so",
+    "/boot/driver/iotxn-test.so",
+};
+
 #define DEV_TEST "/dev/misc/test"
 
 static void do_one_test(int tfd, int i, mx_handle_t output, test_ioctl_test_report_t* report) {
@@ -53,9 +58,9 @@ static void do_one_test(int tfd, int i, mx_handle_t output, test_ioctl_test_repo
         goto end_device_created;
     }
 
-    rc = ioctl_device_bind(fd, test_drivers[i], strlen(test_drivers[i]) + 1);
+    rc = ioctl_device_bind(fd, test_driver_libs[i], strlen(test_driver_libs[i]));
     if (rc < 0) {
-        printf("driver-tests: error %zd binding to %s\n", rc, test_drivers[i]);
+        printf("driver-tests: error %zd binding to %s\n", rc, test_driver_libs[i]);
         report->n_tests = 1;
         report->n_failed = 1;
         goto end_device_opened;

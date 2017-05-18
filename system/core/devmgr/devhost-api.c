@@ -94,10 +94,10 @@ static void _device_set_bindable(mx_device_t* dev, bool bindable) {
     DM_UNLOCK();
 }
 
-mx_status_t device_bind(mx_device_t* dev, const char* drv_name) {
+mx_status_t device_bind(mx_device_t* dev, const char* drv_libname) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_bind(dev, drv_name);
+    r = devhost_device_bind(dev, drv_libname);
     DM_UNLOCK();
     return r;
 }

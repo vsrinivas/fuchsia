@@ -9,7 +9,7 @@
 #include <magenta/types.h>
 
 // Bind to a driver
-//   in: driver to bind to (optional)
+//   in: path to the driver to bind (optional)
 //   out: none
 #define IOCTL_DEVICE_BIND \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 0)

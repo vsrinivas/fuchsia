@@ -181,8 +181,13 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     mx_status_t r;
     switch (op) {
     case IOCTL_DEVICE_BIND: {
-        const char* drv = in_len > 0 ? (const char*)in_buf : NULL;
-        r = device_bind(dev, drv);
+        char* drv_libname = in_len > 0 ? (char*)in_buf : NULL;
+        if (in_len > PATH_MAX) {
+            r = ERR_BAD_PATH;
+        } else {
+            drv_libname[in_len] = 0;
+            r = device_bind(dev, drv_libname);
+        }
         break;
     }
     case IOCTL_DEVICE_GET_EVENT_HANDLE: {

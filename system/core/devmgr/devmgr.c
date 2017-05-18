@@ -141,6 +141,10 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
     return ERR_INVALID_ARGS;
 }
 
+#define GPT_DRIVER_LIB "/boot/driver/gpt.so"
+#define MBR_DRIVER_LIB "/boot/driver/mbr.so"
+#define STRLEN(s) sizeof(s)/sizeof((s)[0])
+
 static mx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
         printf("devmgr: block watch waiting...\n");
@@ -159,14 +163,14 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
     case DISK_FORMAT_GPT: {
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
         // probe for partition table
-        ioctl_device_bind(fd, "gpt", 4);
+        ioctl_device_bind(fd, GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
         close(fd);
         return NO_ERROR;
     }
     case DISK_FORMAT_MBR: {
         printf("devmgr: /dev/class/block/%s: MBR?\n", name);
         // probe for partition table
-        ioctl_device_bind(fd, "mbr", 4);
+        ioctl_device_bind(fd, MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
         close(fd);
         return NO_ERROR;
     }
