@@ -1,0 +1,242 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Path to the root of the magenta build directory.
+  magenta_build_dir = "//out//build-magenta"
+}
+
+# Defines a package
+#
+# The package template is used to define a unit of related code and data.
+# A package always has a name (defaulting to the target name) and lists of
+# scopes describing the components of the package.
+#
+# Parameters
+#
+#   binaries (optional)
+#     List of scopes defining the binaries in the package. A binary is typically
+#     produced by the build system and is placed in the "bin/" directory of the
+#     assembled package.
+#
+#     Entries in a scope in the binaries list:
+#
+#       name (string, required)
+#         Name of the binary
+#
+#       source (path, optional)
+#         Location of the binary in the build directory if it is not at
+#         $root_build_dir/$name
+#
+#       app (bool, optional)
+#         If true, binary will be placed in "app/" instead of "bin/"
+#
+#   drivers (optional)
+#     List of scopes defining the drivers in the package. A driver is typically
+#     produced by the build system and is placed in the "driver" directory
+#     of the assembled package.
+#
+#     Temporarily, drivers are mapped to the "/boot" bootfs instead of the
+#     "/system" bootfs most other package components are mapped into, pending
+#     improvements to the device manager.
+#
+#     Entries in a scope in the drivers list:
+#
+#       name (string, required)
+#         Name of the driver
+#
+#   libraries (optional)
+#     List of scopes defining the (shared) libraries in the package. A library
+#     is placed in the "lib/" directory of the assembled package.
+#
+#     Entries in a scope in the libraries list:
+#
+#       name (string, required)
+#         Name of the library
+#
+#   resources (optional)
+#      List of scopes defining the resources in the package. A resource is a
+#      data file that may be produced by the build system, checked in to a
+#      source repository, or produced by another system that runs before the
+#      build. Resources are placed in the "data/" directory of the assembled
+#      package.
+#
+#     Entries in a scope in the resources list:
+#
+#       source (path, required)
+#         Location of resource in source or build directory. If the resource is
+#         checked in, this will typically be specified as a path relative to the
+#         BUILD.gn file containing the package() rule. If the resource is
+#         generated, this will typically be specified relative to
+#         $target_gen_dir
+#
+#       dest (path, required)
+#         Location the resource will be placed within "data/"
+#
+template("package") {
+  binaries = []
+  libraries = []
+  resources = []
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+  if (defined(invoker.binaries)) {
+    binaries = invoker.binaries
+  }
+  if (defined(invoker.drivers)) {
+    drivers = invoker.drivers
+  }
+  if (defined(invoker.libraries)) {
+    libraries = invoker.libraries
+  }
+  if (defined(invoker.resources)) {
+    resources = invoker.resources
+  }
+  output_base = "$root_build_dir/package/$package_name/"
+
+  mkfs_target = target_name + "_mkfs"
+  extract_buildids_target = target_name + "_extract_buildids"
+
+  # This action assembles an image containing all binaries, drivers, libraries,
+  # and resources defined in the package.
+  action(mkfs_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    system_manifest_empty = true
+    system_manifest_contents = []
+    boot_manifest_empty = true
+    boot_manifest_contents = []
+
+    sources = []
+
+    foreach(binary, binaries) {
+      if (defined(binary.source)) {
+        source = rebase_path(binary.source)
+        sources += [ root_build_dir + "/" + binary.source ]
+      } else {
+        # Default binary paths are relative to the root of the build dir.
+        source = rebase_path(root_build_dir + "/" + binary.name)
+        sources += [ root_build_dir + "/" + binary.name ]
+      }
+      if (defined(invoker.app) && invoker.app) {
+        dest = "app/" + binary.name
+      } else {
+        dest = "bin/" + binary.name
+      }
+      system_manifest_empty = false
+      system_manifest_contents += [ "$dest=$source" ]
+    }
+    foreach(driver, drivers) {
+      # Driver paths are relative to the root of the build dir.
+      source = rebase_path(root_build_dir + "/" + driver.name)
+      sources += [ root_build_dir + "/" + driver.name ]
+      dest = "driver/" + driver.name
+
+      # Drivers go in the boot manifest.
+      # TODO(jamesr): Once devmgr can reliably load drivers off of /system,
+      # unwind this.
+      boot_manifest_empty = false
+      boot_manifest_contents += [ "$dest=$source" ]
+    }
+    foreach(library, libraries) {
+      # Library paths are relative to the root of the build dir.
+      source = rebase_path(root_build_dir + "/" + library.name)
+      sources += [ root_build_dir + "/" + library.name ]
+      dest = "lib/" + library.name
+      system_manifest_empty = false
+      system_manifest_contents += [ "$dest=$source" ]
+    }
+    foreach(resource, resources) {
+      # Resource path are absolute.
+      source = resource.path
+      sources += [ resource.path ]
+      dest = "data/" + resource.dest
+      system_manifest_empty = false
+      system_manifest_contents += [ "$dest=$source" ]
+    }
+    if (!boot_manifest_empty) {
+      boot_manifest = output_base + "boot_manifest"
+      write_file(boot_manifest, boot_manifest_contents)
+    } else {
+      assert(boot_manifest_contents == [])
+    }
+    if (!system_manifest_empty) {
+      system_manifest = output_base + "system_manifest"
+      write_file(system_manifest, system_manifest_contents)
+    } else {
+      assert(system_manifest_contents == [])
+    }
+
+    mkbootfs_path = "$magenta_build_dir/tools/mkbootfs"
+
+    # TODO(jamesr): Update to Fuchsia Archive Format as soon as the system can
+    # consume that instead of bootfs.
+    output = output_base + "bootfs"
+
+    script = mkbootfs_path
+    outputs = [
+      output,
+    ]
+    args = [
+      "-o",
+      rebase_path(output),
+    ]
+    if (!boot_manifest_empty) {
+      args += [
+        "--target=boot",
+        rebase_path(boot_manifest),
+      ]
+      sources += [ boot_manifest ]
+    }
+    if (!system_manifest_empty) {
+      args += [
+        "--target=system",
+        rebase_path(system_manifest),
+      ]
+      sources += [ system_manifest ]
+    }
+  }
+
+  # This action extracts build ids from all binaries and libraries in the
+  # package and writes them into a ids.txt file in a predictable location.
+  action(extract_buildids_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    id_file = output_base + "ids.txt"
+
+    script = "//packages/gn/read_build_ids.py"
+    outputs = [
+      id_file,
+    ]
+
+    args = [ rebase_path(id_file) ]
+    foreach(binary, binaries) {
+      args += [ rebase_path(root_build_dir + "/" + binary.name) ]
+    }
+    foreach(driver, drivers) {
+      args += [ rebase_path(root_build_dir + "/" + driver.name) ]
+    }
+    foreach(library, libraries) {
+      args += [ rebase_path(root_build_dir + "/" + library.name) ]
+    }
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    deps = [
+      ":" + mkfs_target,
+      ":" + extract_buildids_target,
+    ]
+  }
+}

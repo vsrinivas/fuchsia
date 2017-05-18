@@ -5,8 +5,10 @@
 declare_args() {
   # list of modules
   modules = "default"
+
   # list of files omitted from user.bootfs
   omit_files = ""
+
   # path to autorun script
   autorun = ""
 }
@@ -22,33 +24,38 @@ group("default") {
 action("mkbootfs") {
   testonly = true
 
+  packages_file = rebase_path("packages", "", target_gen_dir)
+
   boot_manifest_file = rebase_path("boot.bootfs.manifest", "", target_gen_dir)
-  system_manifest_file = rebase_path("system.bootfs.manifest", "", target_gen_dir)
+  system_manifest_file =
+      rebase_path("system.bootfs.manifest", "", target_gen_dir)
   depfile = "$target_gen_dir/mkbootfs.d"
   component_index = "$root_gen_dir/component_index.json"
 
-  all_binaries = exec_script("process_modules.py",
-                             [
-                               "--boot-manifest",
-                               boot_manifest_file,
-                               "--system-manifest",
-                               system_manifest_file,
-                               "--modules",
-                               modules,
-                               "--omit-files",
-                               omit_files,
-                               "--autorun",
-                               autorun,
-                               "--build-root",
-                               rebase_path(root_build_dir),
-                               "--depfile",
-                               rebase_path(depfile),
-                               "--component-index",
-                               rebase_path(component_index),
-                               "--arch",
-                               target_cpu
-                             ],
-                             "list lines")
+  deps = exec_script("process_modules.py",
+                     [
+                       "--packages",
+                       packages_file,
+                       "--boot-manifest",
+                       boot_manifest_file,
+                       "--system-manifest",
+                       system_manifest_file,
+                       "--modules",
+                       modules,
+                       "--omit-files",
+                       omit_files,
+                       "--autorun",
+                       autorun,
+                       "--build-root",
+                       rebase_path(root_build_dir),
+                       "--depfile",
+                       rebase_path(depfile),
+                       "--component-index",
+                       rebase_path(component_index),
+                       "--arch",
+                       target_cpu,
+                     ],
+                     "list lines")
 
   script = "make_bootfs.py"
   system_bootfs = "$root_build_dir/user.bootfs"
@@ -58,11 +65,12 @@ action("mkbootfs") {
     build_id_file,
     component_index,
   ]
-  deps = all_binaries
 
   magenta_bootdata = "//out/build-magenta/build-$magenta_project/bootdata.bin"
 
-  inputs = [ magenta_bootdata ]
+  inputs = [
+    magenta_bootdata,
+  ]
 
   args = [
     "--output-file",
@@ -76,4 +84,5 @@ action("mkbootfs") {
     "--pre-binaries",
     rebase_path(magenta_bootdata),
   ]
+  args += read_file(packages_file, "list lines")
 }

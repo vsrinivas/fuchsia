@@ -74,6 +74,7 @@ def main():
     parser.add_argument('--system-manifest', help='Location of manifest for /system')
     parser.add_argument('--pre-binaries', help='bootdata binaries to include before bootfs')
     parser.add_argument('--post-binaries', help='bootdata binaries to include after bootfs')
+    parser.add_argument('packages', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     readobj = readobj_path()
@@ -81,18 +82,27 @@ def main():
     for manifest in [args.boot_manifest, args.system_manifest]:
         if os.path.exists(manifest):
             parse_build_ids_from_manifest(manifest, buildids, readobj)
-    with open(args.build_id_map, 'w') as build_id_file:
-        build_id_file.writelines(buildids)
 
     mkbootfs_cmd = [paths.MKBOOTFS_PATH, '-c']
     mkbootfs_cmd += ['-o', args.output_file]
     if args.pre_binaries:
         mkbootfs_cmd += [args.pre_binaries]
-    if os.path.exists(args.boot_manifest):
+    if os.path.exists(args.boot_manifest) and os.path.getsize(args.boot_manifest) > 0:
         mkbootfs_cmd += ["--target=boot", args.boot_manifest]
-    mkbootfs_cmd += ["--target=system", args.system_manifest]
+    if os.path.exists(args.system_manifest) and os.path.getsize(args.system_manifest) > 0:
+        mkbootfs_cmd += ["--target=system", args.system_manifest]
     if args.post_binaries:
         mkbootfs_cmd += [args.post_binaries]
+    for package in args.packages:
+        package_dir = os.path.join("package", package)
+        bootfs = os.path.join(package_dir, "bootfs")
+        mkbootfs_cmd += [ bootfs ]
+        ids = os.path.join(package_dir, "ids.txt")
+        with open(ids) as ids_file:
+            buildids.append(ids_file.read())
+
+    with open(args.build_id_map, 'w') as build_id_file:
+        build_id_file.writelines(buildids)
 
     return subprocess.call(mkbootfs_cmd)
 

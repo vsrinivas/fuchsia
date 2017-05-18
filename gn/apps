@@ -1,25 +1,9 @@
 {
-    "labels": [
-        "//apps/dart_content_handler",
-        "//apps/dart_content_handler/examples",
-        "//apps/dart_content_handler/integration"
-    ],
-    "binaries": [
-        {
-            "binary": "dart_content_handler",
-            "bootfs_path": "apps/dart_content_handler"
-        },
-        {
-            "binary": "dart_content_handler_test.dartx",
-            "bootfs_path": "apps/dart_content_handler_test.dartx"
-        },
-        {
-            "binary": "hello_app_dart.dartx",
-            "bootfs_path": "apps/hello_app_dart.dartx"
-        },
-        {
-            "binary": "hello_dart.dartx",
-            "bootfs_path": "apps/hello_dart.dartx"
-        }
-    ]
+    "packages": {
+        "dart_content_handler": "//apps/dart_content_handler:package",
+        "dart_content_handler_test":
+          "//apps/dart_content_handler/integration:package",
+        "hello_app_dart": "//apps/dart_content_handler/examples/hello_app_dart:package",
+        "hello_dart": "//apps/dart_content_handler/examples/hello_dart:package"
+    }
 }

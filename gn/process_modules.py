@@ -31,6 +31,8 @@ class Filesystem:
 class Amalgamation:
 
     def __init__(self):
+        self.packages = []
+        self.deps = []
         self.labels = []
         self.config_paths = []
         self.component_urls = []
@@ -44,8 +46,26 @@ class Amalgamation:
 
     def add_config(self, config, config_path):
         self.config_paths.append(config_path)
+        packages = config.get("packages", {})
+        for package in packages:
+            self.packages.append(package)
+            self.deps.append(packages[package])
+
+        for c in config.get("components", []):
+            # See https://fuchsia.googlesource.com/modular/src/component_manager/ for what a component is.
+            manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
+            self.component_urls.append(manifest.url)
+            for component_file in manifest.files().values():
+                self.system.add_file({
+                    'file': os.path.join(self.build_root, 'components', component_file.url_as_path),
+                    'bootfs_path': os.path.join('components', component_file.url_as_path),
+                    'default': False
+                })
+        # TODO(jamesr): Everything below here is deprecated and no longer needed
+        # when all package configurations are written in GN template. Migrate
+        # and remove.
         for label in config.get("labels", []):
-            self.labels.append(label)
+            self.deps.append(label)
         for b in config.get("binaries", []):
             if b["binary"] in self.omit_files:
                 continue
@@ -72,16 +92,6 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             file["default"] = r.has_key("default")
             self.system.add_file(file)
-        for c in config.get("components", []):
-            # See https://fuchsia.googlesource.com/modular/src/component_manager/ for what a component is.
-            manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
-            self.component_urls.append(manifest.url)
-            for component_file in manifest.files().values():
-                self.system.add_file({
-                    'file': os.path.join(self.build_root, 'components', component_file.url_as_path),
-                    'bootfs_path': os.path.join('components', component_file.url_as_path),
-                    'default': False,
-                })
         if config.get("gopaths"):
             self.gopaths.extend(config.get("gopaths"))
 
@@ -138,6 +148,7 @@ def write_manifest(manifest, files, autorun):
 def main():
     parser = argparse.ArgumentParser(description="Generate bootfs manifest and "
                                      + "list of GN targets for a list of Fuchsia modules")
+    parser.add_argument("--packages", help="path to packages file to generate")
     parser.add_argument("--boot-manifest", help="path to manifest file to generate for /boot")
     parser.add_argument("--system-manifest", help="path to manifest file to generate for /system")
     parser.add_argument("--modules", help="list of modules", default="default")
@@ -175,7 +186,9 @@ def main():
         with open(args.component_index, "w") as f:
             json.dump(amalgamation.component_urls, f)
 
-    sys.stdout.write("\n".join(amalgamation.labels))
+    with open(args.packages, "w") as f:
+        f.write("\n".join(amalgamation.packages))
+    sys.stdout.write("\n".join(amalgamation.deps))
     sys.stdout.write("\n")
     return 0
 

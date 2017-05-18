@@ -1,11 +1,5 @@
 {
-    "labels": [
-        "//bin/fortune"
-    ],
-    "binaries": [
-        {
-            "binary": "fortune",
-            "bootfs_path": "bin/fortune"
-        }
-    ]
+    "packages": {
+        "fortune": "//bin/fortune:package"
+    }
 }
