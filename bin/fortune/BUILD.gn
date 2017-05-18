@@ -2,8 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("fortune") {
   sources = [
     "fortune.c",
+  ]
+}
+
+package("package") {
+  package_name = "fortune"
+
+  deps = [ ":fortune" ]
+  binaries = [
+    {
+      name = "fortune"
+    }
   ]
 }
