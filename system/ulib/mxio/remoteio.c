@@ -22,6 +22,7 @@
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
+#include <mxio/namespace.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
@@ -540,19 +541,34 @@ static mx_status_t mxrio_connect(mx_handle_t svc, mx_handle_t cnxn,
 
 mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
     if (svcpath == NULL) {
+        mx_handle_close(h);
         return ERR_INVALID_ARGS;
     }
     if (strncmp("/svc/", svcpath, 5)) {
-        return ERR_NOT_FOUND;
+        goto not_found;
     }
-    return mxio_service_connect_at(mxio_svc_root, svcpath + 5, h);
+    // If there's an explicit svcroot handle,
+    // attempt to connect through that
+    if (mxio_svc_root != MX_HANDLE_INVALID) {
+        return mxio_service_connect_at(mxio_svc_root, svcpath + 5, h);
+    }
+    // Otherwise attempt to connect through the root namespace
+    if (mxio_root_ns != NULL) {
+        return mxio_ns_connect(mxio_root_ns, svcpath, h);
+    }
+    // Otherwise we fail
+not_found:
+    mx_handle_close(h);
+    return ERR_NOT_FOUND;
 }
 
 mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle_t h) {
     if (path == NULL) {
+        mx_handle_close(h);
         return ERR_INVALID_ARGS;
     }
     if (dir == MX_HANDLE_INVALID) {
+        mx_handle_close(h);
         return ERR_UNAVAILABLE;
     }
     return mxrio_connect(dir, h, MXRIO_OPEN, path);

@@ -71,4 +71,10 @@ typedef struct mxio_flat_namespace {
 mx_status_t mxio_ns_export(mxio_ns_t* ns, mxio_flat_namespace_t** out);
 mx_status_t mxio_ns_export_root(mxio_flat_namespace_t** out);
 
+// Attempt to connect to a service through the namespace.
+// The handle is always consumed.  It will be closed on error
+// or passed to the remote service on success.
+// The path must be an absolute path starting with / and containing
+// no ".." or "." or empty segments.
+mx_status_t mxio_ns_connect(mxio_ns_t* ns, const char* path, mx_handle_t h);
 __END_CDECLS;

@@ -194,6 +194,79 @@ static mx_status_t mxdir_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types
     return 1;
 }
 
+mx_status_t mxio_ns_connect(mxio_ns_t* ns, const char* path, mx_handle_t h) {
+    mxvn_t* vn = &ns->root;
+    mx_status_t r = NO_ERROR;
+
+    mtx_lock(&ns->lock);
+    if (path[0] != '/') {
+        r = ERR_NOT_FOUND;
+        goto done;
+    }
+    path++;
+
+    // These track the last node we descended
+    // through that has a remote fs.  We need
+    // this so we can backtrack and open relative
+    // to this point.
+    mxvn_t* save_vn = NULL;
+    const char* save_path = "";
+
+    for (;;) {
+        // find the next path segment
+        const char* name = path;
+        const char* next = strchr(path, '/');
+        size_t len = next ? (size_t)(next - path) : strlen(path);
+
+        // path segment can't be empty
+        if (len == 0) {
+            r = ERR_BAD_PATH;
+            break;
+        }
+
+        // is there a local match?
+        mxvn_t* child = vn_lookup_locked(vn, name, len);
+        if (child != NULL) {
+            vn = child;
+            if (next) {
+                // match, but more path to walk
+                // descend and continue
+                path = next + 1;
+                // but remember this node and path
+                if (child->remote != MX_HANDLE_INVALID) {
+                    save_vn = child;
+                    save_path = path;
+                }
+                continue;
+            } else {
+                // match on the last segment
+                // this is it
+                path = "";
+            }
+        }
+
+        // if there's not a remote filesystem, did we pass one?
+        if (vn->remote == MX_HANDLE_INVALID) {
+            // if not, we're done
+            if (save_vn == NULL) {
+                r = ERR_NOT_FOUND;
+                break;
+            }
+            // otherwise roll back
+            vn = save_vn;
+            path = save_path;
+        }
+
+        // hand off to remote filesystem
+        r = mxio_service_connect_at(vn->remote, path, h);
+        goto done;
+    }
+    mx_handle_close(h);
+done:
+    mtx_unlock(&ns->lock);
+    return r;
+}
+
 // Expects a canonical path (no ..) with no leading
 // slash and no trailing slash
 static mx_status_t mxdir_open(mxio_t* io, const char* path,
