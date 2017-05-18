@@ -17,6 +17,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/vfs/vfs_handler.h"
 
 namespace app {
 
@@ -106,6 +107,7 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
+  mtl::VFSDispatcher dispatcher_;
   mxtl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 

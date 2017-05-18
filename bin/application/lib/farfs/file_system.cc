@@ -20,7 +20,7 @@ struct DirRecord {
     children.swap(other.children);
   }
 
-  mxtl::RefPtr<vmofs::VnodeDir> CreateDirectory() {
+  mxtl::RefPtr<vmofs::VnodeDir> CreateDirectory(fs::Dispatcher* dispatcher) {
     size_t count = names.size();
     mxtl::Array<mxtl::StringPiece> names_array(new mxtl::StringPiece[count],
                                                count);
@@ -31,11 +31,12 @@ struct DirRecord {
       children_array[i] = std::move(children[i]);
     }
 
-    return mxtl::AdoptRef(new vmofs::VnodeDir(mtl::VFSHandler::Start,
+    return mxtl::AdoptRef(new vmofs::VnodeDir(dispatcher,
                                               std::move(names_array),
                                               std::move(children_array)));
   }
 
+  mtl::VFSDispatcher dispatcher_;
   std::vector<mxtl::StringPiece> names;
   std::vector<mxtl::RefPtr<vmofs::Vnode>> children;
 };
@@ -68,14 +69,15 @@ mxtl::StringPiece ToStringPiece(ftl::StringView view) {
   return mxtl::StringPiece(view.data(), view.size());
 }
 
-mxtl::RefPtr<vmofs::VnodeFile> CreateFile(mx_handle_t vmo,
+mxtl::RefPtr<vmofs::VnodeFile> CreateFile(fs::Dispatcher* dispatcher, mx_handle_t vmo,
                                           const DirectoryTableEntry& entry) {
   return mxtl::AdoptRef(new vmofs::VnodeFile(
-      mtl::VFSHandler::Start, vmo, entry.data_offset, entry.data_length));
+      dispatcher, vmo, entry.data_offset, entry.data_length));
 }
 
-void LeaveDirectory(ftl::StringView name, std::vector<DirRecord>* stack) {
-  auto child = stack->back().CreateDirectory();
+void LeaveDirectory(fs::Dispatcher* dispatcher, ftl::StringView name,
+                    std::vector<DirRecord>* stack) {
+  auto child = stack->back().CreateDirectory(dispatcher);
   stack->pop_back();
   DirRecord& parent = stack->back();
   parent.names.push_back(ToStringPiece(name));
@@ -147,7 +149,7 @@ void FileSystem::CreateDirectory() {
     ftl::StringView path = reader_->GetPathView(entry);
 
     while (path.substr(0, current_dir.size()) != current_dir)
-      LeaveDirectory(PopLastDirectory(&current_dir), &stack);
+      LeaveDirectory(&dispatcher_, PopLastDirectory(&current_dir), &stack);
 
     ftl::StringView remaining = path.substr(current_dir.size());
     while (PopFirstDirectory(&remaining))
@@ -157,15 +159,15 @@ void FileSystem::CreateDirectory() {
 
     DirRecord& parent = stack.back();
     parent.names.push_back(ToStringPiece(remaining));
-    parent.children.push_back(CreateFile(vmo_, entry));
+    parent.children.push_back(CreateFile(&dispatcher_, vmo_, entry));
   });
 
   while (!current_dir.empty())
-    LeaveDirectory(PopLastDirectory(&current_dir), &stack);
+    LeaveDirectory(&dispatcher_, PopLastDirectory(&current_dir), &stack);
 
   FTL_DCHECK(stack.size() == 1);
 
-  directory_ = stack.back().CreateDirectory();
+  directory_ = stack.back().CreateDirectory(&dispatcher_);
 }
 
 }  // namespace archive

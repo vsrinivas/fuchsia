@@ -16,7 +16,7 @@ namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : directory_(
-          mxtl::AdoptRef(new svcfs::VnodeProviderDir(mtl::VFSHandler::Start))) {
+          mxtl::AdoptRef(new svcfs::VnodeProviderDir(&dispatcher_))) {
   directory_->SetServiceProvider(this);
 }
 

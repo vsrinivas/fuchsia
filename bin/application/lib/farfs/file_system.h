@@ -13,6 +13,7 @@
 
 #include "application/lib/far/archive_reader.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/mtl/vfs/vfs_handler.h"
 
 namespace archive {
 
@@ -43,6 +44,7 @@ class FileSystem {
   // The owning reference to the vmo is stored inside |reader_| as a file
   /// descriptor.
   mx_handle_t vmo_;
+  mtl::VFSDispatcher dispatcher_;
   std::unique_ptr<ArchiveReader> reader_;
   mxtl::RefPtr<vmofs::VnodeDir> directory_;
 };
