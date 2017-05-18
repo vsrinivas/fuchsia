@@ -22,6 +22,8 @@
 // argv[0]
 const char* program_path;
 
+static const uint64_t exception_port_key = 0x6b6579; // "key"
+
 uint32_t get_uint32(char* buf)
 {
     uint32_t value = 0;
@@ -360,7 +362,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
 mx_handle_t attach_inferior(mx_handle_t inferior)
 {
     mx_handle_t eport = tu_io_port_create(0);
-    tu_set_exception_port(inferior, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    tu_set_exception_port(inferior, eport, exception_port_key, MX_EXCEPTION_PORT_DEBUGGER);
     unittest_printf("Attached to inferior\n");
     return eport;
 }
@@ -440,7 +442,7 @@ bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 
     unittest_printf("Waiting for exception on eport %d\n", eport);
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
-    ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
+    ASSERT_EQ(packet->hdr.key, exception_port_key, "bad report key");
     unittest_printf("read_exception: got exception %d\n", packet->report.header.type);
 
     END_HELPER;

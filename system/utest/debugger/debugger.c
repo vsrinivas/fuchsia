@@ -24,6 +24,9 @@
 
 #include "utils.h"
 
+typedef bool (wait_inferior_exception_handler_t)(mx_handle_t inferior,
+                                                 const mx_exception_packet_t* packet);
+
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
 // helpful when running "while /boot/test/debugger-test; do true; done".
@@ -110,7 +113,8 @@ static void fix_inferior_segv(mx_handle_t thread)
 #endif
 }
 
-static bool test_segv_pc(mx_handle_t thread) {
+static bool test_segv_pc(mx_handle_t thread)
+{
 #ifdef __x86_64__
     uint64_t pc = get_uint64_register(
         thread, offsetof(mx_x86_64_general_regs_t, rip));
@@ -130,11 +134,18 @@ static bool test_segv_pc(mx_handle_t thread) {
     return true;
 }
 
+// A simpler exception handler.
+// Synthetic exceptions are handled internally. Architectural exceptions
+// are passed on to |handler|.
 // Returns false if a test fails.
 // Otherwise waits for the inferior to exit and returns true.
 
-static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
+static bool wait_inferior_thread_worker(mx_handle_t inferior,
+                                        mx_handle_t eport,
+                                        wait_inferior_exception_handler_t* handler)
 {
+    BEGIN_HELPER;
+
     while (true) {
         unittest_printf("wait-inf: waiting on inferior\n");
 
@@ -185,48 +196,30 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
             }
             // A thread is gone, but we only care about the process.
             continue;
-        } else if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
-            unittest_printf("wait-inf: got page fault exception\n");
-            atomic_fetch_add(&segv_count, 1);
-        } else {
-            ASSERT_EQ(false, true, "wait-inf: unexpected exception type");
         }
 
-        mx_handle_t thread;
-        mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-        ASSERT_EQ(status, 0, "mx_object_get_child failed");
-
-        dump_inferior_regs(thread);
-
-        // Verify that the fault is at the PC we expected.
-        if (!test_segv_pc(thread))
+        if (!handler(inferior, &packet))
             return false;
-
-        // Do some tests that require a suspended inferior.
-        test_memory_ops(inferior, thread);
-
-        // Now correct the issue and resume the inferior.
-
-        fix_inferior_segv(thread);
-        // Useful for debugging, otherwise a bit too verbose.
-        //dump_inferior_regs(thread);
-
-        status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
-        tu_handle_close(thread);
-        ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
     }
 
-    return true;
+    END_HELPER;
 }
+
+typedef struct {
+    mx_handle_t inferior;
+    mx_handle_t eport;
+    wait_inferior_exception_handler_t* handler;
+} wait_inf_args_t;
 
 static int wait_inferior_thread_func(void* arg)
 {
-    mx_handle_t* args = arg;
-    mx_handle_t inferior = args[0];
-    mx_handle_t eport = args[1];
+    wait_inf_args_t* args = arg;
+    mx_handle_t inferior = args->inferior;
+    mx_handle_t eport = args->eport;
+    wait_inferior_exception_handler_t* handler = args->handler;
     free(args);
 
-    bool pass = wait_inferior_thread_worker(inferior, eport);
+    bool pass = wait_inferior_thread_worker(inferior, eport, handler);
     return pass ? 0 : -1;
 }
 
@@ -245,18 +238,21 @@ static int watchdog_thread_func(void* arg)
 }
 
 static thrd_t start_wait_inf_thread(mx_handle_t inferior,
-                                    mx_handle_t* out_eport)
+                                    mx_handle_t* out_eport,
+                                    wait_inferior_exception_handler_t* handler)
 {
     mx_handle_t eport = attach_inferior(inferior);
-    mx_handle_t* wait_inf_args = calloc(2, sizeof(mx_handle_t));
+    wait_inf_args_t* args = calloc(1, sizeof(*args));
 
     // Both handles are loaned to the thread. The caller of this function
     // owns and must close them.
-    wait_inf_args[0] = inferior;
-    wait_inf_args[1] = eport;
+    args->inferior = inferior;
+    args->eport = eport;
+    args->handler = handler;
 
     thrd_t wait_inferior_thread;
-    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*)wait_inf_args, "wait-inf thread");
+    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func,
+                         (void*)args, "wait-inf thread");
     *out_eport = eport;
     return wait_inferior_thread;
 }
@@ -281,18 +277,59 @@ static bool expect_debugger_attached_eq(
     return true;
 }
 
+// This returns a bool as it calls ASSERT_*.
+// N.B. This runs on the wait-inferior thread.
+
+static bool debugger_test_exception_handler(mx_handle_t inferior,
+                                            const mx_exception_packet_t* packet)
+{
+    ASSERT_EQ(packet->report.header.type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
+              "wait-inf: unexpected exception type");
+
+    unittest_printf("wait-inf: got page fault exception\n");
+
+    mx_koid_t tid = packet->report.context.tid;
+    mx_handle_t thread = tu_get_thread(inferior, tid);
+
+    dump_inferior_regs(thread);
+
+    // Verify that the fault is at the PC we expected.
+    if (!test_segv_pc(thread))
+        return false;
+
+    // Do some tests that require a suspended inferior.
+    test_memory_ops(inferior, thread);
+
+    fix_inferior_segv(thread);
+    // Useful for debugging, otherwise a bit too verbose.
+    //dump_inferior_regs(thread);
+
+    // Increment this before resuming the inferior in case the inferior
+    // sends MSG_RECOVERED_FROM_CRASH and the testcase processes the message
+    // before we can increment it.
+    atomic_fetch_add(&segv_count, 1);
+
+    mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+    tu_handle_close(thread);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    return true;
+}
+
 static bool debugger_test(void)
 {
     BEGIN_TEST;
 
     launchpad_t* lp;
-    mx_handle_t channel, inferior;
+    mx_handle_t inferior, channel;
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
     expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
     mx_handle_t eport = MX_HANDLE_INVALID;
-    thrd_t wait_inf_thread = start_wait_inf_thread(inferior, &eport);
+    thrd_t wait_inf_thread =
+        start_wait_inf_thread(inferior, &eport,
+                              debugger_test_exception_handler);
     EXPECT_GT(eport, 0, "");
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
@@ -303,7 +340,7 @@ static bool debugger_test(void)
 
     atomic_store(&segv_count, 0);
     enum message msg;
-    send_msg(channel, MSG_CRASH);
+    send_msg(channel, MSG_CRASH_AND_RECOVER_TEST);
     if (!recv_msg(channel, &msg))
         return false;
     EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "unexpected response from crash");
@@ -330,12 +367,14 @@ static bool debugger_thread_list_test(void)
     BEGIN_TEST;
 
     launchpad_t* lp;
-    mx_handle_t channel, inferior;
+    mx_handle_t inferior, channel;
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
     mx_handle_t eport = MX_HANDLE_INVALID;
-    thrd_t wait_inf_thread = start_wait_inf_thread(inferior, &eport);
+    thrd_t wait_inf_thread =
+        start_wait_inf_thread(inferior, &eport,
+                              debugger_test_exception_handler);
     EXPECT_GT(eport, 0, "");
 
     if (!start_inferior(lp))
@@ -363,9 +402,7 @@ static bool debugger_thread_list_test(void)
     for (uint32_t i = 0; i < num_threads; ++i) {
         mx_koid_t koid = threads[i];
         unittest_printf("Looking up thread %llu\n", (long long) koid);
-        mx_handle_t thread;
-        status = mx_object_get_child(inferior, koid, MX_RIGHT_SAME_RIGHTS, &thread);
-        EXPECT_EQ(status, 0, "mx_object_get_child failed");
+        mx_handle_t thread = tu_get_thread(inferior, koid);
         mx_info_handle_basic_t info;
         status = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
         EXPECT_EQ(status, NO_ERROR, "mx_object_get_info failed");
@@ -570,7 +607,7 @@ static bool msg_loop(mx_handle_t channel)
         case MSG_PING:
             send_msg(channel, MSG_PONG);
             break;
-        case MSG_CRASH:
+        case MSG_CRASH_AND_RECOVER_TEST:
             for (int i = 0; i < NUM_SEGV_TRIES; ++i) {
                 if (!test_prep_and_segv())
                     exit(21);
@@ -670,10 +707,10 @@ static int __NO_INLINE test_swbreak(void)
 }
 
 BEGIN_TEST_CASE(debugger_tests)
-RUN_TEST(debugger_test);
-RUN_TEST(debugger_thread_list_test);
-RUN_TEST(property_process_debug_addr_test);
-RUN_TEST(write_text_segment);
+RUN_TEST(debugger_test)
+RUN_TEST(debugger_thread_list_test)
+RUN_TEST(property_process_debug_addr_test)
+RUN_TEST(write_text_segment)
 END_TEST_CASE(debugger_tests)
 
 static void check_verbosity(int argc, char** argv)
