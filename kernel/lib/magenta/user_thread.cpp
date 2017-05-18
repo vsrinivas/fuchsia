@@ -749,7 +749,8 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    memset(info, 0, sizeof(*info));
+
+    *info = {};
 
     UserThread::State state;
     enum thread_state lk_state;
@@ -829,6 +830,16 @@ void UserThread::GetInfoForUserspace(mx_info_thread_t* info) {
                          static_cast<int>(excp_port_type));
         break;
     }
+}
+
+void UserThread::GetStatsForUserspace(mx_info_thread_stats_t* info) {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+
+    *info = {};
+
+    info->total_runtime = runtime_ns();
 }
 
 status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {

@@ -53,6 +53,13 @@ status_t ThreadDispatcher::GetInfo(mx_info_thread_t* info) {
     return NO_ERROR;
 }
 
+status_t ThreadDispatcher::GetStats(mx_info_thread_stats_t* info) {
+    canary_.Assert();
+
+    thread_->GetStatsForUserspace(info);
+    return NO_ERROR;
+}
+
 status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
     canary_.Assert();
 

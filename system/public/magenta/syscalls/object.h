@@ -27,6 +27,7 @@ typedef enum {
     MX_INFO_THREAD_EXCEPTION_REPORT    = 11, // mx_exception_report_t[1]
     MX_INFO_TASK_STATS                 = 12, // mx_info_task_stats_t[1]
     MX_INFO_PROCESS_MAPS               = 13, // mx_info_maps_t[n]
+    MX_INFO_THREAD_STATS               = 14, // mx_info_thread_stats_t[1]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -107,6 +108,11 @@ typedef struct mx_info_thread {
     // The value is one of MX_EXCEPTION_PORT_TYPE_*.
     uint32_t wait_exception_port_type;
 } mx_info_thread_t;
+
+typedef struct mx_info_thread_stats {
+    // Total accumulated running time of the thread.
+    mx_time_t total_runtime;
+} mx_info_thread_stats_t;
 
 // Statistics about resources (e.g., memory) used by a task. Can be relatively
 // expensive to gather.

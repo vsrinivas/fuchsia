@@ -28,6 +28,7 @@ public:
     void Kill() { thread_->Kill(); }
 
     status_t GetInfo(mx_info_thread_t* info);
+    status_t GetStats(mx_info_thread_stats_t* info);
 
     status_t GetExceptionReport(mx_exception_report_t* report);
 

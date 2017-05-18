@@ -138,6 +138,9 @@ public:
     // Fetch the state of the thread for userspace tools.
     void GetInfoForUserspace(mx_info_thread_t* info);
 
+    // Fetch per thread stats for userspace.
+    void GetStatsForUserspace(mx_info_thread_stats_t* info);
+
     // For debugger usage.
     // TODO(dje): The term "state" here conflicts with "state tracker".
     uint32_t get_num_state_kinds() const;
