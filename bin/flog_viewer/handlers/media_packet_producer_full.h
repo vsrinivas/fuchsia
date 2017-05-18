@@ -26,8 +26,6 @@ class MediaPacketProducerFull : public ChannelHandler,
   // MediaPacketProducerChannel implementation.
   void ConnectedTo(uint64_t related_koid) override;
 
-  void Connecting() override;
-
   void Resetting() override;
 
   void RequestingFlush() override;

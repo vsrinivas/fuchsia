@@ -9,7 +9,6 @@ import "apps/media/services/media_transport.fidl";
 [ServiceName="media::logs::MediaPacketProducerChannel"]
 interface MediaPacketProducerChannel {
   ConnectedTo(uint64 related_koid);
-  Connecting();
   Resetting();
   RequestingFlush();
   FlushCompleted();

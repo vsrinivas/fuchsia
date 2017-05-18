@@ -37,8 +37,6 @@ class MediaPacketProducerDigest
   // MediaPacketProducerChannel implementation.
   void ConnectedTo(uint64_t related_koid) override;
 
-  void Connecting() override;
-
   void Resetting() override;
 
   void RequestingFlush() override;
@@ -110,7 +108,6 @@ class MediaPacketProducerAccumulator : public Accumulator {
   };
 
   PeerBinding consumer_;
-  bool connected_ = false;
   Counted flush_requests_;
   media::MediaPacketDemandPtr current_demand_;
   uint32_t min_packets_outstanding_highest_ = 0;

@@ -33,7 +33,7 @@ void MediaPacketProducerBase::Connect(
 #endif
   FTL_DCHECK(consumer);
 
-  FLOG(log_channel_, Connecting());
+  FLOG(log_channel_, ConnectedTo(FLOG_PTR_KOID(consumer)));
 
   consumer_ = std::move(consumer);
   consumer_.set_connection_error_handler([this]() {

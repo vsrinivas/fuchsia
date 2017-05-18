@@ -56,6 +56,14 @@ class Binding {
   // Sets the channel.
   virtual void SetChannel(std::shared_ptr<Channel> channel);
 
+  explicit operator bool() const { return koid_ != 0; }
+
+  // Resets the koid and channel.
+  void Reset() {
+    koid_ = 0;
+    channel_ = nullptr;
+  }
+
  private:
   uint64_t koid_ = 0;
   std::shared_ptr<Channel> channel_;

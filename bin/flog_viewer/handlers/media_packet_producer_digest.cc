@@ -30,19 +30,15 @@ std::shared_ptr<Accumulator> MediaPacketProducerDigest::GetAccumulator() {
 }
 
 void MediaPacketProducerDigest::ConnectedTo(uint64_t related_koid) {
+  if (accumulator_->consumer_) {
+    ReportProblem() << "ConnectedTo when already connected";
+  }
+
   SetBindingKoid(&accumulator_->consumer_, related_koid);
 }
 
-void MediaPacketProducerDigest::Connecting() {
-  if (accumulator_->connected_) {
-    ReportProblem() << "Connected when already connected";
-  }
-
-  accumulator_->connected_ = true;
-}
-
 void MediaPacketProducerDigest::Resetting() {
-  accumulator_->connected_ = false;
+  accumulator_->consumer_.Reset();
 }
 
 void MediaPacketProducerDigest::RequestingFlush() {
@@ -137,7 +133,6 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
   os << "MediaPacketProducer" << std::endl;
   os << indent;
   os << begl << "consumer: " << consumer_;
-  os << begl << "connected: " << connected_ << std::endl;
   os << begl << "flushes: " << flush_requests_.count() << std::endl;
 
   os << begl << "current demand: " << current_demand_;
