@@ -416,7 +416,7 @@ bool Process::Kill() {
     util::LogErrorWithMxStatus("Error waiting for process to die, ignoring",
                                status);
   } else {
-    FTL_DCHECK(signals == MX_TASK_TERMINATED);
+    FTL_DCHECK(signals & MX_TASK_TERMINATED);
   }
 
   CloseDebugHandle();
