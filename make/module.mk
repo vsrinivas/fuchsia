@@ -80,7 +80,10 @@ endif
 
 # Introduce local, libc and dependency include paths
 ifneq ($(MODULE_TYPE),)
-ifneq ($(MODULE_TYPE),hostapp)
+ifeq ($(MODULE_TYPE),hostapp)
+# host app
+MODULE_SRCDEPS += $(HOST_CONFIG_HEADER)
+else
 # user module
 MODULE_SRCDEPS += $(USER_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -Iglobal/include

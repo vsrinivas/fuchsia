@@ -99,6 +99,7 @@ OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
+HOST_CONFIG_HEADER := $(BUILDDIR)/config-host.h
 GLOBAL_INCLUDES := system/public system/private $(GENERATED_INCLUDES)
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_DEBUGFLAGS ?= -g
@@ -252,6 +253,9 @@ KERNEL_DEFINES := LK=1 _KERNEL=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
 USER_DEFINES :=
+
+# anything added to HOST_DEFINES will be put into $(BUILDDIR)/config-host.h
+HOST_DEFINES :=
 
 # Anything added to GLOBAL_SRCDEPS will become a dependency of every source file in the system.
 # Useful for header files that may be included by one or more source files.
@@ -621,16 +625,24 @@ GLOBAL_DEFINES += ARCH_COMPILEFLAGS=\"$(subst $(SPACE),_,$(ARCH_COMPILEFLAGS))\"
 GLOBAL_DEFINES += ARCH_CFLAGS=\"$(subst $(SPACE),_,$(ARCH_CFLAGS))\"
 GLOBAL_DEFINES += ARCH_CPPFLAGS=\"$(subst $(SPACE),_,$(ARCH_CPPFLAGS))\"
 GLOBAL_DEFINES += ARCH_ASMFLAGS=\"$(subst $(SPACE),_,$(ARCH_ASMFLAGS))\"
+
 KERNEL_DEFINES += KERNEL_INCLUDES=\"$(subst $(SPACE),_,$(KERNEL_INCLUDES))\"
 KERNEL_DEFINES += KERNEL_COMPILEFLAGS=\"$(subst $(SPACE),_,$(KERNEL_COMPILEFLAGS))\"
 KERNEL_DEFINES += KERNEL_CFLAGS=\"$(subst $(SPACE),_,$(KERNEL_CFLAGS))\"
 KERNEL_DEFINES += KERNEL_CPPFLAGS=\"$(subst $(SPACE),_,$(KERNEL_CPPFLAGS))\"
 KERNEL_DEFINES += KERNEL_ASMFLAGS=\"$(subst $(SPACE),_,$(KERNEL_ASMFLAGS))\"
+
 USER_DEFINES += USER_COMPILEFLAGS=\"$(subst $(SPACE),_,$(USER_COMPILEFLAGS))\"
 USER_DEFINES += USER_CFLAGS=\"$(subst $(SPACE),_,$(USER_CFLAGS))\"
 USER_DEFINES += USER_CPPFLAGS=\"$(subst $(SPACE),_,$(USER_CPPFLAGS))\"
 USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
 USER_DEFINES += USER_LDFLAGS=\"$(subst $(SPACE),_,$(USER_LDFLAGS))\"
+
+HOST_DEFINES += HOST_COMPILEFLAGS=\"$(subst $(SPACE),_,$(HOST_COMPILEFLAGS))\"
+HOST_DEFINES += HOST_CFLAGS=\"$(subst $(SPACE),_,$(HOST_CFLAGS))\"
+HOST_DEFINES += HOST_CPPFLAGS=\"$(subst $(SPACE),_,$(HOST_CPPFLAGS))\"
+HOST_DEFINES += HOST_ASMFLAGS=\"$(subst $(SPACE),_,$(HOST_ASMFLAGS))\"
+HOST_DEFINES += HOST_LDFLAGS=\"$(subst $(SPACE),_,$(HOST_LDFLAGS))\"
 
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))
@@ -673,7 +685,10 @@ $(KERNEL_CONFIG_HEADER): FORCE
 $(USER_CONFIG_HEADER): FORCE
 	@$(call MAKECONFIGHEADER,$@,USER_DEFINES,"#define __Fuchsia__ 1")
 
-GENERATED += $(GLOBAL_CONFIG_HEADER) $(KERNEL_CONFIG_HEADER) $(USER_CONFIG_HEADER)
+$(HOST_CONFIG_HEADER): FORCE
+	@$(call MAKECONFIGHEADER,$@,HOST_DEFINES,"")
+
+GENERATED += $(GLOBAL_CONFIG_HEADER) $(KERNEL_CONFIG_HEADER) $(USER_CONFIG_HEADER) $(HOST_CONFIG_HEADER)
 
 # Empty rule for the .d files. The above rules will build .d files as a side
 # effect. Only works on gcc 3.x and above, however.
