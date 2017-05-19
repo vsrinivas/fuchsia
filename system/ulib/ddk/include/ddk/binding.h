@@ -91,10 +91,10 @@ __BEGIN_CDECLS;
 #define BIND_USB_SUBCLASS     0x0203
 #define BIND_USB_PROTOCOL     0x0204
 
-// System on Chip (SoC) binding variables at 0x03XX
-#define BIND_SOC_VID          0x0300
-#define BIND_SOC_PID          0x0301
-#define BIND_SOC_DID          0x0302
+// Platform device binding variables at 0x03XX
+#define BIND_PLATFORM_DEV_VID 0x0300
+#define BIND_PLATFORM_DEV_PID 0x0301
+#define BIND_PLATFORM_DEV_DID 0x0302
 
 // ACPI binding variables at 0x04XX
 // The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2

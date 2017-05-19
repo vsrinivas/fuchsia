@@ -143,6 +143,17 @@ static device_t misc_device = {
     .refcount = 1,
 };
 
+static device_t platform_device = {
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_BUSDEV,
+    .protocol_id = MX_PROTOCOL_PLATFORM_BUS,
+    .name = "platform",
+    .libname = "",
+    .args = "platform,,",
+    .children = LIST_INITIAL_VALUE(platform_device.children),
+    .pending = LIST_INITIAL_VALUE(platform_device.pending),
+    .refcount = 1,
+};
+
 device_t socket_device = {
     .flags = DEV_CTX_IMMORTAL,
     .protocol_id = 0,
@@ -154,6 +165,10 @@ device_t socket_device = {
     .refcount = 1,
 };
 
+void devmgr_set_mdi(mx_handle_t mdi_handle) {
+    // MDI VMO handle is passed via via the resource handle
+    platform_device.hrsrc = mdi_handle;
+}
 
 static void dc_dump_device(device_t* dev, size_t indent) {
     mx_koid_t pid = dev->host ? dev->host->koid : 0;
@@ -187,6 +202,7 @@ static void dc_dump_device(device_t* dev, size_t indent) {
 static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
+    dc_dump_device(&platform_device, 1);
 }
 
 static void dc_handle_new_device(device_t* dev);
@@ -928,6 +944,12 @@ static bool is_root_driver(driver_t* drv) {
         (memcmp(&root_device_binding, drv->binding, sizeof(root_device_binding)) == 0);
 }
 
+static bool is_platform_bus_driver(driver_t* drv) {
+    // only our built-in platform-bus driver should bind as platform bus
+    // so compare library path instead of binding program
+    return !strcmp(drv->libname, "/boot/driver/platform-bus.so");
+}
+
 void coordinator_new_driver(driver_t* drv, const char* version) {
     if (version[0] == '!') {
         // debugging / development hack
@@ -976,6 +998,7 @@ void coordinator(void) {
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &socket_device);
+    devfs_publish(&root_device, &platform_device);
 
     enumerate_drivers();
 
@@ -985,6 +1008,8 @@ void coordinator(void) {
             dc_attempt_bind(drv, &root_device);
         } else if (is_misc_driver(drv)) {
             dc_attempt_bind(drv, &misc_device);
+        } else if (is_platform_bus_driver(drv)) {
+            dc_attempt_bind(drv, &platform_device);
         }
     }
 

@@ -33,6 +33,8 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
+extern mx_protocol_device_t device_default_ops;
+
 void driver_add(mx_driver_t* driver);
 void driver_remove(mx_driver_t* driver);
 

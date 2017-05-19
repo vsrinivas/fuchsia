@@ -46,6 +46,7 @@ struct mx_device {
 
     mx_handle_t DDK_PRIVATE(event);
     mx_handle_t DDK_PRIVATE(rpc);
+    mx_handle_t DDK_PRIVATE(resource);
 
     // most devices implement a single
     // protocol beyond the base device protocol
@@ -165,6 +166,13 @@ static inline const char* device_get_name(mx_device_t* dev) {
 
 static inline mx_device_t* device_get_parent(mx_device_t* dev) {
     return dev->DDK_PRIVATE(parent);
+}
+
+static inline mx_handle_t device_get_resource(mx_device_t* dev) {
+    // the resource handle is read once and consumed immediately
+    mx_handle_t result = dev->DDK_PRIVATE(resource);
+    dev->DDK_PRIVATE(resource) = MX_HANDLE_INVALID;
+    return result;
 }
 
 mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id, void** protocol);

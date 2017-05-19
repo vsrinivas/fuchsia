@@ -100,6 +100,20 @@ static mx_status_t default_resume(void* ctx, uint32_t flags) {
     return ERR_NOT_SUPPORTED;
 }
 
+mx_protocol_device_t device_default_ops = {
+    .open = default_open,
+    .open_at = default_open_at,
+    .close = default_close,
+    .unbind = default_unbind,
+    .release = default_release,
+    .read = default_read,
+    .write = default_write,
+    .get_size = default_get_size,
+    .ioctl = default_ioctl,
+    .suspend = default_suspend,
+    .resume = default_resume,
+};
+
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
@@ -132,6 +146,7 @@ void dev_ref_release(mx_device_t* dev) {
         }
 
         mx_handle_close(dev->event);
+        mx_handle_close(dev->resource);
         DM_UNLOCK();
         device_op_release(dev);
         DM_LOCK();
