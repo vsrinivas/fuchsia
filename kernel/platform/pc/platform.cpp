@@ -31,7 +31,6 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
-//#include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 
 extern "C" {
@@ -298,8 +297,6 @@ static void platform_ensure_display_memtype(uint level)
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1);
 
-#define MAGENTA_VENDOR_GUID \
-    {0x82305eb2, 0xd39e, 0x4575, {0xa0, 0xc8, 0x6c, 0x20, 0x72, 0xd0, 0x84, 0x4c}}
 static efi_guid magenta_guid = MAGENTA_VENDOR_GUID;
 static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
 
@@ -309,13 +306,17 @@ void platform_init_crashlog(void) {
     if (bootloader.efi_system_table != NULL) {
         // Create a linear mapping to use to call UEFI Runtime Services
         efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
+        if (!efi_aspace) {
+            return;
+        }
 
         //TODO: get more precise about this.  This gets the job done on
         //      the platforms we're working on right now, but is probably
         //      not entirely correct.
-        void* ptr;
+        void* ptr = (void*) 0;
         mx_status_t r = efi_aspace->AllocPhysical("1:1", 16*1024*1024*1024UL, &ptr,
-                                                  PAGE_SIZE_SHIFT, 0, 0,
+                                                  PAGE_SIZE_SHIFT, 0,
+                                                  VMM_FLAG_VALLOC_SPECIFIC,
                                                   ARCH_MMU_FLAG_PERM_READ |
                                                   ARCH_MMU_FLAG_PERM_WRITE |
                                                   ARCH_MMU_FLAG_PERM_EXECUTE);
