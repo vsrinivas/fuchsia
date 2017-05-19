@@ -19,6 +19,7 @@ class SessionContext {
   virtual ~SessionContext() = default;
 
   virtual LinkPtr CreateLink(Session* session,
+                             ResourceId node_id,
                              const mozart2::LinkPtr& args) = 0;
 
   virtual void OnSessionTearDown(Session* session) = 0;

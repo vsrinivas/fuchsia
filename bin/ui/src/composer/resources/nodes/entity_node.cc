@@ -10,8 +10,8 @@ namespace composer {
 const ResourceTypeInfo EntityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
 
-EntityNode::EntityNode(Session* session)
-    : Node(session, EntityNode::kTypeInfo) {}
+EntityNode::EntityNode(Session* session, ResourceId node_id)
+    : Node(session, node_id, EntityNode::kTypeInfo) {}
 
 }  // namespace composer
 }  // namespace mozart

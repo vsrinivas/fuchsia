@@ -29,7 +29,6 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const char* type_name() const { return type_info_.name; }
   Session* session() const { return session_; }
   ErrorReporter* error_reporter() const;
-
   virtual void Accept(class ResourceVisitor* visitor) = 0;
 
  protected:

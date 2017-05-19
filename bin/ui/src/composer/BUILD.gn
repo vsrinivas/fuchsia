@@ -30,6 +30,8 @@ source_set("common") {
     "resources/nodes/node.h",
     "resources/nodes/shape_node.cc",
     "resources/nodes/shape_node.h",
+    "resources/nodes/tag_node.cc",
+    "resources/nodes/tag_node.h",
     "resources/resource.cc",
     "resources/resource.h",
     "resources/resource_map.cc",
@@ -111,6 +113,7 @@ executable("unittests") {
     "tests/session_test.h",
     "tests/session_unittest.cc",
     "tests/shape_unittest.cc",
+    "tests/tag_unittest.cc",
   ]
 
   deps = [

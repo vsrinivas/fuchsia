@@ -10,7 +10,8 @@ namespace composer {
 const ResourceTypeInfo Link::kTypeInfo = {
     ResourceType::kNode | ResourceType::kLink, "Link"};
 
-Link::Link(Session* session) : Node(session, Link::kTypeInfo) {}
+Link::Link(Session* session, ResourceId node_id)
+    : Node(session, node_id, Link::kTypeInfo) {}
 
 }  // namespace composer
 }  // namespace mozart

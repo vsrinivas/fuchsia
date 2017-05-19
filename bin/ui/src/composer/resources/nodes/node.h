@@ -21,6 +21,8 @@ class Node : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
+  virtual ~Node() override;
+
   bool AddChild(NodePtr child_node);
   bool AddPart(NodePtr part_node);
 
@@ -34,18 +36,36 @@ class Node : public Resource {
 
   Node* parent() const { return parent_; }
 
-  void Accept(class ResourceVisitor* visitor) override;
-
   const std::set<NodePtr>& children() { return children_; }
+
   const std::set<NodePtr>& parts() { return parts_; }
 
+  void Accept(class ResourceVisitor* visitor) override;
+
+  /// Convert a point that is in the coordinate space of the supplied node into
+  /// the coordinate space of the callee.
+  escher::vec2 ConvertPointFromNode(const escher::vec2& point,
+                                    const Node& node) const;
+
+  /// Returns if the given point (that is already in the coordinate space of the
+  /// node being queried) lies within its bounds.
+  virtual bool ContainsPoint(const escher::vec2& point) const;
+
  protected:
-  Node(Session* session, const ResourceTypeInfo& type_info);
+  Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+
+  ResourceId resource_id() const { return resource_id_; }
+
+  /// Applies the lambda on the descendents of the given node. Returning false
+  /// from the lambda indicates that no further iteration is necessary. In that
+  /// case, the lambda will not be called again.
+  void ApplyOnDescendants(std::function<bool(const Node&)> applier) const;
 
  private:
   void InvalidateGlobalTransform();
   void ComputeGlobalTransform() const;
 
+  const ResourceId resource_id_;
   bool is_part_ = false;
   Node* parent_ = nullptr;
   std::set<NodePtr> children_;

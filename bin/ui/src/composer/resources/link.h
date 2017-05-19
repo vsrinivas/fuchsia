@@ -13,7 +13,7 @@ class Link final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  explicit Link(Session* session);
+  explicit Link(Session* session, ResourceId node_id);
 
   void Accept(class ResourceVisitor* visitor) override;
 };

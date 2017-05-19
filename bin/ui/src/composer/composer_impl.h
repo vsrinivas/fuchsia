@@ -29,7 +29,9 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
       ::fidl::InterfaceRequest<mozart2::Session> request) override;
 
   // SessionContext interface methods.
-  LinkPtr CreateLink(Session* session, const mozart2::LinkPtr& args) override;
+  LinkPtr CreateLink(Session* session,
+                     ResourceId node_id,
+                     const mozart2::LinkPtr& args) override;
   void OnSessionTearDown(Session* session) override;
 
   size_t GetSessionCount() { return session_count_; }

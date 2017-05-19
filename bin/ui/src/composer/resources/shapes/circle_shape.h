@@ -17,6 +17,8 @@ class CircleShape final : public Shape {
 
   float radius() const { return radius_; }
 
+  bool ContainsPoint(const escher::vec2& point) const override;
+
   void Accept(class ResourceVisitor* visitor) override;
 
  private:

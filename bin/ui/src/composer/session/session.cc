@@ -8,6 +8,7 @@
 #include "apps/mozart/src/composer/resources/nodes/entity_node.h"
 #include "apps/mozart/src/composer/resources/nodes/node.h"
 #include "apps/mozart/src/composer/resources/nodes/shape_node.h"
+#include "apps/mozart/src/composer/resources/nodes/tag_node.h"
 #include "apps/mozart/src/composer/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/composer/util/unwrap.h"
 
@@ -238,7 +239,7 @@ bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
 }
 
 bool Session::ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args) {
-  auto link = context_->CreateLink(this, args);
+  auto link = context_->CreateLink(this, id, args);
   return link ? resources_.AddResource(id, std::move(link)) : false;
 }
 
@@ -328,7 +329,7 @@ ResourcePtr Session::CreateClipNode(ResourceId id,
 
 ResourcePtr Session::CreateEntityNode(ResourceId id,
                                       const mozart2::EntityNodePtr& args) {
-  return ftl::MakeRefCounted<EntityNode>(this);
+  return ftl::MakeRefCounted<EntityNode>(this, id);
 }
 
 ResourcePtr Session::CreateLinkNode(ResourceId id,
@@ -340,14 +341,12 @@ ResourcePtr Session::CreateLinkNode(ResourceId id,
 
 ResourcePtr Session::CreateShapeNode(ResourceId id,
                                      const mozart2::ShapeNodePtr& args) {
-  return ftl::MakeRefCounted<ShapeNode>(this);
+  return ftl::MakeRefCounted<ShapeNode>(this, id);
 }
 
 ResourcePtr Session::CreateTagNode(ResourceId id,
                                    const mozart2::TagNodePtr& args) {
-  error_reporter_->ERROR() << "composer::Session::CreateTagNode(): "
-                              "unimplemented.";
-  return ResourcePtr();
+  return ftl::MakeRefCounted<TagNode>(this, id, args->tag_value);
 }
 
 ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {

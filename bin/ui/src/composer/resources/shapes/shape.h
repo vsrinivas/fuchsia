@@ -5,6 +5,7 @@
 #pragma once
 
 #include "apps/mozart/src/composer/resources/resource.h"
+#include "lib/escher/escher/geometry/types.h"
 
 namespace mozart {
 namespace composer {
@@ -12,6 +13,9 @@ namespace composer {
 class Shape : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
+
+  /// Returns if the given point lies within its bounds of this shape.
+  virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
   void Accept(class ResourceVisitor* visitor) override;
 

@@ -5,6 +5,7 @@
 #include "apps/mozart/src/composer/resources/nodes/node.h"
 
 #include "apps/mozart/src/composer/util/error_reporter.h"
+#include "lib/escher/escher/geometry/types.h"
 
 namespace mozart {
 namespace composer {
@@ -12,7 +13,7 @@ namespace composer {
 namespace {
 
 constexpr ResourceTypeFlags kHasChildren =
-    ResourceType::kEntityNode | ResourceType::kLink;
+    ResourceType::kEntityNode | ResourceType::kLink | ResourceType::kTagNode;
 constexpr ResourceTypeFlags kHasParts =
     ResourceType::kEntityNode | ResourceType::kClipNode;
 
@@ -24,10 +25,14 @@ constexpr ResourceTypeFlags kHasTransform =
 
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
-Node::Node(Session* session, const ResourceTypeInfo& type_info)
-    : Resource(session, type_info) {
+Node::Node(Session* session,
+           ResourceId node_id,
+           const ResourceTypeInfo& type_info)
+    : Resource(session, type_info), resource_id_(node_id) {
   FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
+
+Node::~Node() = default;
 
 bool Node::AddChild(NodePtr child_node) {
   if (!(type_flags() & kHasChildren)) {
@@ -131,6 +136,47 @@ void Node::ComputeGlobalTransform() const {
         parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
   } else {
     global_transform_ = static_cast<escher::mat4>(transform_);
+  }
+}
+
+escher::vec2 Node::ConvertPointFromNode(const escher::vec2& point,
+                                        const Node& node) const {
+  auto inverted = glm::inverse(GetGlobalTransform());
+  auto adjusted =
+      glm::vec4{point.x, point.y, 0.0f, 1.0f} * node.GetGlobalTransform();
+  auto result = adjusted * inverted;
+  return {result.x, result.y};
+}
+
+bool Node::ContainsPoint(const escher::vec2& point) const {
+  bool inside = false;
+  ApplyOnDescendants([&inside, &point](const Node& descendant) -> bool {
+    if (descendant.ContainsPoint(point)) {
+      inside = true;
+      // At least one of our descendants has accepted the hit test. We no longer
+      // need to traverse to find the node. Return false and stop the iteration.
+      return false;
+    }
+    return true;
+  });
+  return inside;
+}
+
+void Node::ApplyOnDescendants(std::function<bool(const Node&)> applier) const {
+  if (!applier) {
+    return;
+  }
+
+  for (const auto& node : children_) {
+    if (!applier(*node)) {
+      return;
+    }
+  }
+
+  for (const auto& node : parts_) {
+    if (!applier(*node)) {
+      return;
+    }
   }
 }
 

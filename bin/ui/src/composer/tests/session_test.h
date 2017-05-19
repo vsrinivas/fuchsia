@@ -27,7 +27,9 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // Implement SessionContext.
-  LinkPtr CreateLink(Session* session, const mozart2::LinkPtr& args) override;
+  LinkPtr CreateLink(Session* session,
+                     ResourceId id,
+                     const mozart2::LinkPtr& args) override;
 
   void OnSessionTearDown(Session* session) override;
 

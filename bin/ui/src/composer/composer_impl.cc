@@ -51,6 +51,7 @@ void ComposerImpl::TearDownSession(SessionId id) {
 }
 
 LinkPtr ComposerImpl::CreateLink(Session* session,
+                                 ResourceId node_id,
                                  const mozart2::LinkPtr& args) {
   // TODO: Create a LinkHolder class that takes args.token and destroys
   // links if that gets signalled
@@ -58,7 +59,7 @@ LinkPtr ComposerImpl::CreateLink(Session* session,
   FTL_DCHECK(args);
 
   // For now, just create a dumb list of sessions.
-  auto link = ftl::MakeRefCounted<Link>(session);
+  auto link = ftl::MakeRefCounted<Link>(session, node_id);
 
   FTL_CHECK(link);
   links_.push_back(link);

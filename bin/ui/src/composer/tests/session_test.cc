@@ -43,6 +43,7 @@ void SessionTest::ReportError(ftl::LogSeverity severity,
 }
 
 LinkPtr SessionTest::CreateLink(Session* session,
+                                ResourceId id,
                                 const mozart2::LinkPtr& args) {
   if (!args->token) {
     session->error_reporter()->ERROR() << "Link token is null";
@@ -50,7 +51,7 @@ LinkPtr SessionTest::CreateLink(Session* session,
   } else {
     // TODO: emulate look-up of pre-registered token.
     FTL_LOG(WARNING) << "SessionTest::CreateLink() always succeeds";
-    return ::ftl::MakeRefCounted<Link>(session);
+    return ::ftl::MakeRefCounted<Link>(session, id);
   }
 }
 

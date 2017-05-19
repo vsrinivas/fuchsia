@@ -16,13 +16,15 @@ class ShapeNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ShapeNode(Session* session);
+  ShapeNode(Session* session, ResourceId node_id);
 
   void SetMaterial(MaterialPtr material);
   void SetShape(ShapePtr shape);
 
   const MaterialPtr& material() const { return material_; }
   const ShapePtr& shape() const { return shape_; }
+
+  bool ContainsPoint(const escher::vec2& point) const override;
 
   void Accept(class ResourceVisitor* visitor) override;
 

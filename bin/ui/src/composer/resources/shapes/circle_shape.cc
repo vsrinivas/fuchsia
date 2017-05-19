@@ -13,5 +13,9 @@ const ResourceTypeInfo CircleShape::kTypeInfo = {
 CircleShape::CircleShape(Session* session, float initial_radius)
     : Shape(session, CircleShape::kTypeInfo), radius_(initial_radius) {}
 
+bool CircleShape::ContainsPoint(const escher::vec2& point) const {
+  return point.x * point.x + point.y * point.y <= radius_ * radius_;
+}
+
 }  // namespace composer
 }  // namespace mozart
