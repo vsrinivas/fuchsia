@@ -26,8 +26,10 @@ class IntelHDACodecDriverBase : public DispatcherChannel::Owner {
 public:
     virtual void Shutdown();
 
+    // Properties
     mx_driver_t* codec_driver() const { return codec_driver_; }
     mx_device_t* codec_device() const { return codec_device_; }
+    mx_time_t    create_time()  const { return create_time_; }
 
     // Unsolicited tag allocation for streams
     mx_status_t AllocateUnsolTag(const IntelHDAStreamBase& stream, uint8_t* out_tag);
@@ -106,6 +108,7 @@ private:
 
     mx_driver_t* codec_driver_ = nullptr;
     mx_device_t* codec_device_ = nullptr;
+    mx_time_t    create_time_  = mx_time_get(MX_CLOCK_MONOTONIC);
 
     mxtl::Mutex device_channel_lock_;
     mxtl::RefPtr<DispatcherChannel> device_channel_ __TA_GUARDED(device_channel_lock_);
