@@ -16,12 +16,6 @@
 
 namespace compositor {
 
-namespace {
-
-enum FramebufferType { kVirtualConsole, kDisplay };
-
-}  // namespace
-
 class Framebuffer {
  public:
   static std::unique_ptr<Framebuffer> OpenFromDisplay();
@@ -35,6 +29,8 @@ class Framebuffer {
   bool Flush();
 
  private:
+  enum FramebufferType { kVirtualConsole, kDisplay };
+
   static std::unique_ptr<Framebuffer> Open(FramebufferType type);
 
   explicit Framebuffer(ftl::UniqueFD fd, FramebufferType framebuffer_type);
