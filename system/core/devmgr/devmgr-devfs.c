@@ -535,7 +535,8 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLONE:
-        devfs_open(dn, msg->handle[0], NULL, O_DIRECTORY);
+        msg->data[0] = 0;
+        devfs_open(dn, msg->handle[0], (char*) msg->data, arg | O_NOREMOTE);
         return ERR_DISPATCHER_INDIRECT;
     case MXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {
