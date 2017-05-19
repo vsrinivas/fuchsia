@@ -71,7 +71,7 @@ MaxwellTestBase::MaxwellTestBase()
   test_environment_host_binding_.Bind(&test_environment_host_handle);
   root_environment->CreateNestedEnvironment(
       std::move(test_environment_host_handle), test_environment_.NewRequest(),
-      NULL, "maxwell-test");
+      test_environment_controller_.NewRequest(), "maxwell-test");
   test_environment_->GetApplicationLauncher(test_launcher_.NewRequest());
   agent_launcher_ =
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
@@ -83,7 +83,8 @@ app::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->services = services.NewRequest();
-  test_launcher_->CreateApplication(std::move(launch_info), NULL);
+
+  test_launcher_->CreateApplication(std::move(launch_info), nullptr);
   return services;
 }
 

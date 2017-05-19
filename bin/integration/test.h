@@ -9,7 +9,6 @@
 #include "apps/maxwell/src/application_environment_host_impl.h"
 #include "apps/maxwell/src/user/agent_launcher.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
@@ -112,6 +111,8 @@ class MaxwellTestBase : public ::testing::Test {
   maxwell::ApplicationEnvironmentHostImpl test_environment_host_;
   fidl::Binding<app::ApplicationEnvironmentHost> test_environment_host_binding_;
   app::ApplicationEnvironmentPtr test_environment_;
+  // Hold a controller so that we kill all children when we go out of scope.
+  app::ApplicationEnvironmentControllerPtr test_environment_controller_;
   app::ApplicationLauncherPtr test_launcher_;
   std::unique_ptr<maxwell::AgentLauncher> agent_launcher_;
 };
