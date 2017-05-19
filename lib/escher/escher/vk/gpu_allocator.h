@@ -40,7 +40,8 @@ namespace escher {
 // from, and must allocate more memory directly from Vulkan.  This is done by
 // calling the protected method GpuAllocator::AllocateSlab().  The returned
 // GpuMem object is actually a GpuMemSlab, but the subclass neither knows nor
-// cares, with one exception:
+// cares (except indirectly: GpuMemSlab overrides OnAllocationDestroyed() to
+// call GpuAllocator::OnSuballocationDestroyed()).
 class GpuAllocator {
  public:
   GpuAllocator(const VulkanContext& context);
