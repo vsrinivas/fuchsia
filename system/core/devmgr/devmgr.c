@@ -273,10 +273,19 @@ int service_starter(void* arg) {
     }
 
     if (getenv("netsvc.disable") == NULL) {
-        // launch the network service
-        const char* args[] = { "/boot/bin/netsvc", NULL };
-        args[1] = getenv("magenta.nodename");
-        devmgr_launch(svcs_job_handle, "netsvc", args[1] ? 2 : 1, args,
+        const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
+        int argc = 1;
+
+        if (getenv("netsvc.netboot")) {
+            args[argc++] = "--netboot";
+        }
+
+        const char* nodename = getenv("magenta.nodename");
+        if (nodename) {
+            args[argc++] = nodename;
+        }
+
+        devmgr_launch(svcs_job_handle, "netsvc", argc, args,
                       NULL, -1, NULL, NULL, 0);
     }
 

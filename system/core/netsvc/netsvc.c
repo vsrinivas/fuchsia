@@ -31,6 +31,8 @@
 
 static mx_handle_t loghandle;
 
+static bool netbootloader = false;
+
 int get_log_line(char* out) {
     char buf[MX_LOG_RECORD_MAX + 1];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
@@ -94,13 +96,16 @@ void udp6_recv(void* data, size_t len,
 
     if (dport == NB_SERVER_PORT) {
         nbmsg* msg = data;
-        if ((len < (sizeof(nbmsg) + 1)) ||
+        // Not enough bytes to be a message
+        if ((len < sizeof(*msg)) ||
             (msg->magic != NB_MAGIC)) {
             return;
         }
-        // null terminate the payload
-        len -= sizeof(nbmsg);
-        msg->data[len - 1] = 0;
+        len -= sizeof(*msg);
+
+        if (len && msg->cmd != NB_DATA && msg->cmd != NB_LAST_DATA) {
+            msg->data[len - 1] = '\0';
+        }
 
         switch (msg->cmd) {
         case NB_QUERY:
@@ -137,6 +142,12 @@ void udp6_recv(void* data, size_t len,
         case NB_CLOSE:
             netfile_close(msg->cookie, saddr, sport, dport);
             break;
+        default:
+            // If the bootloader is enabled, then let it have a crack at the
+            // incoming packets as well.
+            if (netbootloader) {
+                netboot_recv(data, len + sizeof(nbmsg), daddr, dport, saddr, sport);
+            }
         }
         return;
     }
@@ -179,10 +190,20 @@ int main(int argc, char** argv) {
             return -1;
         }
 
+        bool nodename_provided = false;
+        while (argc > 1) {
+            if (!strncmp(argv[1], "--netboot", 9)) {
+                netbootloader = true;
+            } else {
+                nodename = argv[1];
+                nodename_provided = true;
+            }
+            argv++;
+            argc--;
+        }
+
         // Use mac address to generate unique nodename unless one was provided.
-        if ((argc > 1) && (argv[1][0])) {
-            nodename = argv[1];
-        } else {
+        if (!nodename_provided) {
             netifc_get_info(mac, &mtu);
             device_id_get(mac, device_id);
             nodename = device_id;
@@ -217,6 +238,10 @@ int main(int argc, char** argv) {
                     udp6_send(&pkt, len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
                 }
             }
+
+            if (netbootloader)
+                netboot_advertise(nodename);
+
             //TODO: wakeup early for log traffic too
             netifc_set_timer(100);
             if (netifc_poll())

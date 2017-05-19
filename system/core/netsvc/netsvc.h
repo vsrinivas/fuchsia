@@ -41,3 +41,9 @@ void netfile_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
 
 void netfile_close(uint32_t cookie,
                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport);
+
+void netboot_advertise(const char* nodename);
+
+void netboot_recv(void* data, size_t len,
+                  const ip6_addr_t* daddr, uint16_t dport,
+                  const ip6_addr_t* saddr, uint16_t sport);
