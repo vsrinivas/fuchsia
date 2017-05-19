@@ -29,7 +29,8 @@ StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
     return SetupMix(renderer, info);
   };
 
-  process_mix_ = [this](const AudioRendererImplPtr& renderer, RendererBookkeeping* info,
+  process_mix_ = [this](const AudioRendererImplPtr& renderer,
+                        RendererBookkeeping* info,
                         const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
     return ProcessMix(renderer, info, pkt_ref);
   };
@@ -39,7 +40,8 @@ StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
     return SetupTrim(renderer, info);
   };
 
-  process_trim_ = [this](const AudioRendererImplPtr& renderer, RendererBookkeeping* info,
+  process_trim_ = [this](const AudioRendererImplPtr& renderer,
+                         RendererBookkeeping* info,
                          const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
     return ProcessTrim(renderer, info, pkt_ref);
   };
@@ -88,8 +90,8 @@ void StandardOutputBase::Process() {
                              output_formatter_->channels();
       ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
-      // Mix each renderer into the intermediate buffer, then clip/format into the
-      // final buffer.
+      // Mix each renderer into the intermediate buffer, then clip/format into
+      // the final buffer.
       ForeachRenderer(setup_mix_, process_mix_);
       output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                        cur_mix_job_.buf_frames);
@@ -150,7 +152,8 @@ MediaResult StandardOutputBase::InitializeLink(
   return MediaResult::OK;
 }
 
-StandardOutputBase::RendererBookkeeping* StandardOutputBase::AllocBookkeeping() {
+StandardOutputBase::RendererBookkeeping*
+StandardOutputBase::AllocBookkeeping() {
   return new RendererBookkeeping();
 }
 
@@ -165,7 +168,7 @@ void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
 }
 
 void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
-                                      const RendererProcessTask& process) {
+                                         const RendererProcessTask& process) {
   for (auto iter = links_.begin(); iter != links_.end();) {
     if (shutting_down()) {
       return;
@@ -221,9 +224,9 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
       // Capture the amplitude to apply for the next bit of audio.
       info->amplitude_scale = link->amplitude_scale();
 
-      // Now process the packet which is at the front of the renderer's queue.  If
-      // the packet has been entirely consumed, pop it off the front and proceed
-      // to the next one.  Otherwise, we are finished.
+      // Now process the packet which is at the front of the renderer's queue.
+      // If the packet has been entirely consumed, pop it off the front and
+      // proceed to the next one.  Otherwise, we are finished.
       if (!process(renderer, info, pkt_ref)) {
         break;
       }
@@ -235,8 +238,8 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
 
     // Note: there is no point in doing this for the trim task, but it dosn't
     // hurt anything, and its easier then introducing another function to the
-    // ForeachRenderer arguments to run after each renderer is processed just for the
-    // purpose of setting this flag.
+    // ForeachRenderer arguments to run after each renderer is processed just
+    // for the purpose of setting this flag.
     cur_mix_job_.accumulate = true;
   }
 }
@@ -268,9 +271,9 @@ bool StandardOutputBase::ProcessMix(
   FTL_DCHECK(info->mixer);
   Mixer& mixer = *(info->mixer);
 
-  // If this renderer is currently paused (or being sampled extremely slowly), our
-  // step size will be zero.  We know that this packet will be relevant at some
-  // point in the future, but right now it contributes nothing.  Tell the
+  // If this renderer is currently paused (or being sampled extremely slowly),
+  // our step size will be zero.  We know that this packet will be relevant at
+  // some point in the future, but right now it contributes nothing.  Tell the
   // ForeachRenderer loop that we are done and to hold onto this packet for now.
   if (!info->step_size) {
     return false;
@@ -426,11 +429,8 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
 
   // The transformation has changed, re-compute the local time -> renderer frame
   // transformation.
-  lt_to_renderer_frames = TimelineFunction(
-      tmp.reference_time(),
-      tmp.subject_time() * renderer->FractionalFrameToMediaTimeRatio(),
-      TimelineRate::Product(renderer->FractionalFrameToMediaTimeRatio(),
-                            tmp.rate()));
+  lt_to_renderer_frames =
+      TimelineFunction(renderer->FractionalFrameToMediaTimeRatio()) * tmp;
 
   // Update the generation, and invalidate the output to renderer generation.
   lt_to_renderer_frames_gen = gen;
@@ -461,52 +461,19 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   // Compose the job supplied transformation from local to output with the
   // renderer supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
-  //
-  // TODO(dalesat): Use the Compose operation of TimelineFunction instead of
-  // doing it by hand here.
-  //
-  // For now, we punt, do it by hand and just assume that everything went well.
   TimelineFunction& dst = out_frames_to_renderer_frames;
 
-  // Distribute the intermediate offset entirely to the fractional frame domain
-  // for now.  We can do better by extracting portions of the intermedate
-  // offset that can be scaled by the ratios on either side of with without
-  // loss, but for now this should be close enough.
-  int64_t intermediate = job.local_to_output->reference_time() -
-                         lt_to_renderer_frames.reference_time();
-  int64_t renderer_frame_offset;
-
-  // TODO(dalesat): Use TimelineRate::Scale which allows us to scale using just
-  // just a ratio without needing to create a linear transform with empty
-  // offsets.
-  TimelineFunction tmp(lt_to_renderer_frames.rate());
-  renderer_frame_offset = tmp(intermediate);
-
-  // TODO(johngro): Add options to allow us to invert one or both of the ratios
-  // during composition instead of needing to make a temporary ratio to
-  // acomplish the task.
-  TimelineRate tmp_ratio(job.local_to_output->rate().reference_delta(),
-                         job.local_to_output->rate().subject_delta());
-
-  dst = TimelineFunction(
-      job.local_to_output->subject_time(),
-      lt_to_renderer_frames.subject_time() + renderer_frame_offset,
-      TimelineRate::Product(tmp_ratio, lt_to_renderer_frames.rate()));
+  dst = lt_to_renderer_frames * job.local_to_output->Inverse();
 
   // Finally, compute the step size in fractional frames.  IOW, every time we
   // move forward one output frame, how many fractional frames of input do we
   // consume.  Don't bother doing the multiplication if we already know that the
   // numerator is zero.
-  //
-  // TODO(dalesat): As before, use TimelineRate::Scale.
   FTL_DCHECK(dst.rate().reference_delta());
   if (!dst.rate().subject_delta()) {
     step_size = 0;
   } else {
-    TimelineFunction tmp(dst.rate());
-    int64_t tmp_step_size;
-
-    tmp_step_size = tmp(1);
+    int64_t tmp_step_size = dst.rate().Scale(1);
 
     FTL_DCHECK(tmp_step_size >= 0);
     FTL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());

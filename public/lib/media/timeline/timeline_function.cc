@@ -24,6 +24,11 @@ int64_t TimelineFunction::Apply(
 TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
                                            const TimelineFunction& ab,
                                            bool exact) {
+  // TODO(dalesat): Improve this implementation.
+  // This particular approach to composing two timeline functions comprimises
+  // range and accuracy (in some cases) for simplicity. It should be replaced
+  // with something that provides maximum range and accuracy without adding a
+  // lot of runtime cost.
   return TimelineFunction(ab.reference_time(), bc.Apply(ab.subject_time()),
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));
 }

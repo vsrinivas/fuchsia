@@ -43,8 +43,10 @@ class StandardOutputBase : public AudioOutput {
     RendererBookkeeping();
     ~RendererBookkeeping() override;
 
+    // The output values of these functions are in fractional frames.
     TimelineFunction lt_to_renderer_frames;
     TimelineFunction out_frames_to_renderer_frames;
+
     uint32_t lt_to_renderer_frames_gen = 0;
     uint32_t out_frames_to_renderer_frames_gen = MixJob::kInvalidGeneration;
     uint32_t step_size;
