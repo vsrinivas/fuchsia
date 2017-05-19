@@ -54,103 +54,116 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers,
     }
 }
 
+class KeyboardInputHelper {
+public:
+    KeyboardInputHelper() {
+        int rc = pipe(pipe_fds_);
+        EXPECT_EQ(rc, 0, "");
+
+        auto* args = new vc_input_thread_args;
+        args->fd = pipe_fds_[1];
+        args->keypress_handler = keypress_handler;
+        int ret = thrd_create_with_name(&thread_, vc_input_thread, args,
+                                        "input");
+        EXPECT_EQ(ret, thrd_success, "");
+    }
+
+    ~KeyboardInputHelper() {
+        int ret = close(pipe_fds_[0]);
+        EXPECT_EQ(ret, 0, "");
+
+        // Test that the keyboard input thread exits properly after it
+        // reads EOF.
+        EXPECT_EQ(thrd_join(thread_, &ret), thrd_success, "");
+    }
+
+    void WriteReportBuf() {
+        EXPECT_EQ(write(pipe_fds_[0], report_buf_, sizeof(report_buf_)),
+                  sizeof(report_buf_), "");
+    }
+
+    // Byte 0 contains one bit per modifier key.
+    void set_modifiers_byte(uint8_t value) { report_buf_[0] = value; }
+    // Bytes 2+ contain USB HID key codes.
+    void set_first_keycode(uint8_t value) { report_buf_[2] = value; }
+
+private:
+    int pipe_fds_[2];
+    thrd_t thread_;
+    // USB HID key state buffer.
+    uint8_t report_buf_[8] = {};
+};
+
 bool test_keyboard_input_thread() {
     BEGIN_TEST;
 
-    int pipe_fds[2];
-    int rc = pipe(pipe_fds);
-    EXPECT_EQ(rc, 0, "");
-
-    auto* args = new vc_input_thread_args;
-    args->fd = pipe_fds[1];
-    args->keypress_handler = keypress_handler;
-    thrd_t thread;
-    int ret = thrd_create_with_name(&thread, vc_input_thread, args, "input");
-    EXPECT_EQ(ret, thrd_success, "");
-
-    // USB HID key state buffer.
-    uint8_t report_buf[8] = {};
-    // Byte 0 contains one bit per modifier key.
-    uint8_t* modifiers_byte = &report_buf[0];
-    // Bytes 2+ contain USB HID key codes.
-    uint8_t* first_keycode = &report_buf[2];
-
-    auto write_report_buf = [&]() {
-        EXPECT_EQ(write(pipe_fds[0], report_buf, sizeof(report_buf)),
-                  sizeof(report_buf), "");
-    };
+    KeyboardInputHelper helper;
 
     // Test pressing keys without any modifiers.
-    *first_keycode = HID_USAGE_KEY_M;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_M);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_M, 0, 'm');
 
     // Test autorepeat: After some delay, the same key should be reported
     // again.
     expect_keypress(HID_USAGE_KEY_M, 0, 'm');
 
-    *first_keycode = HID_USAGE_KEY_6;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_6);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_6, 0, '6');
 
     // Press a modifier (but no other keys).
-    *first_keycode = 0; // Unset the earlier key
-    *modifiers_byte = 2; // Left Shift key
-    write_report_buf();
+    helper.set_first_keycode(0); // Unset the earlier key
+    helper.set_modifiers_byte(2); // Left Shift key
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0');
 
     // Test keys with modifiers pressed.
     // Test Shift-N.
-    *first_keycode = HID_USAGE_KEY_N;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_N);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_N, MOD_LSHIFT, 'N');
 
     // Test Shift-8.
-    *first_keycode = HID_USAGE_KEY_8;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_8);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_8, MOD_LSHIFT, '*');
 
     // Test Ctrl modifier.  First send a separate report_buf event to
     // report unsetting the Shift key state, to account for a quirk of the
     // current implementation.
-    *modifiers_byte = 0;
-    write_report_buf();
-    *modifiers_byte = 1; // Left Ctrl key
-    write_report_buf();
+    helper.set_modifiers_byte(0);
+    helper.WriteReportBuf();
+    helper.set_modifiers_byte(1); // Left Ctrl key
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_LEFT_CTRL, MOD_LCTRL, '\0');
 
     // Test Ctrl-J.
-    *first_keycode = HID_USAGE_KEY_J;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_J);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_J, MOD_LCTRL, 10);
 
     // Test Ctrl-1.  The Ctrl modifier should be ignored in this case so
     // that we just get '1'.
-    *first_keycode = HID_USAGE_KEY_1;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_1);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_1, MOD_LCTRL, '1');
 
     // Try Shift and Ctrl together.
-    *first_keycode = 0;
-    *modifiers_byte = 1 | 2; // Left Shift and Left Ctrl keys
-    write_report_buf();
+    helper.set_first_keycode(0);
+    helper.set_modifiers_byte(1 | 2); // Left Shift and Left Ctrl keys
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT | MOD_LCTRL, '\0');
 
     // Test Shift-Ctrl-J.  This should be equivalent to Ctrl-J.
-    *first_keycode = HID_USAGE_KEY_J;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_J);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_J, MOD_LSHIFT | MOD_LCTRL, 10);
 
     // Test Shift-Ctrl-1.  This should be equivalent to Shift-1.
-    *first_keycode = HID_USAGE_KEY_1;
-    write_report_buf();
+    helper.set_first_keycode(HID_USAGE_KEY_1);
+    helper.WriteReportBuf();
     expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_LCTRL, '!');
-
-    ret = close(pipe_fds[0]);
-    EXPECT_EQ(ret, 0, "");
-
-    // Test that the keyboard input thread exits properly after it reads EOF.
-    EXPECT_EQ(thrd_join(thread, &ret), thrd_success, "");
 
     END_TEST;
 }
