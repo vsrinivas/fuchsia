@@ -12,6 +12,11 @@ namespace gap {
 
 AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
     : is_valid_(true), ptr_(data.GetData()), remaining_bytes_(data.GetSize()) {
+  if (!remaining_bytes_) {
+    is_valid_ = false;
+    return;
+  }
+
   FTL_DCHECK(ptr_);
 
   // Do a validity check.

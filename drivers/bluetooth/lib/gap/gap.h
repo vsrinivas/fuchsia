@@ -23,10 +23,11 @@ enum class DataType : uint8_t {
   kComplete128BitServiceUUIDs   = 0x07,
   kShortenedLocalName           = 0x08,
   kCompleteLocalName            = 0x09,
-  kTXPowerLevel                 = 0x0A,
+  kTxPowerLevel                 = 0x0A,
   kClassOfDevice                = 0x0D,
   kSSPOOBHash                   = 0x0E,
   kSSPOOBRandomizer             = 0x0F,
+  kManufacturerSpecificData     = 0xFF,
 
   // TODO(armansito): Complete this list.
 };

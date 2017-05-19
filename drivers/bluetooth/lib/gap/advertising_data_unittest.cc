@@ -13,6 +13,13 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
+TEST(AdvertisingDataTest, ReaderEmptyData) {
+  common::BufferView empty;
+  AdvertisingDataReader reader(empty);
+  EXPECT_FALSE(reader.is_valid());
+  EXPECT_FALSE(reader.HasMoreData());
+}
+
 TEST(AdvertisingDataTest, ReaderMalformedData) {
   // TLV length exceeds the size of the payload
   auto bytes0 = common::CreateStaticByteBuffer(0x01);

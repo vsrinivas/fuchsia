@@ -128,7 +128,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
       case gap::DataType::kShortenedLocalName:
         short_name = adv_data_field.AsString();
         break;
-      case gap::DataType::kTXPowerLevel:
+      case gap::DataType::kTxPowerLevel:
         tx_power_present = true;
         tx_power_lvl = adv_data_field.GetData()[0];
         break;
@@ -169,7 +169,7 @@ void DisplayAdvertisingReport(const hci::LEAdvertisingReportData& data, int8_t r
   if (!complete_name.empty())
     std::cout << "    Complete Local Name: " << complete_name << std::endl;
   if (tx_power_present) {
-    std::cout << "    TX Power Level: " << ftl::NumberToString(tx_power_lvl) << std::endl;
+    std::cout << "    Tx Power Level: " << ftl::NumberToString(tx_power_lvl) << std::endl;
   }
 }
 
