@@ -15,3 +15,44 @@ kernel-drivers = {
         irq-virt = 99 // INTERRUPT_ARM_LOCAL_CNTVIRQ
     }
 }
+
+include "system/ulib/ddk/include/mdi/ddk-defs.mdi"
+
+platform-bus = {
+    device = {
+        name = "mailbox"
+        vid = 0xBC
+        pid = 1
+        did = 1
+    }
+    device = {
+        name = "bcm-emmc"
+        vid = 0xBC
+        pid = 1
+        did = 2
+    }
+    device = {
+        name = "bcm-i2c"
+        vid = 0xBC
+        pid = 1
+        did = 3
+    }
+    device = {
+        name = "bcm-pcm"
+        vid = 0xBC
+        pid = 1
+        did = 4
+    }
+    device = {
+        name = "bcm-usb"
+        vid = 0xBC
+        pid = 1
+        did = 5
+    }
+    device = {
+        name = "bcm-display"
+        vid = 0xBC
+        pid = 1
+        did = 6
+    }
+}

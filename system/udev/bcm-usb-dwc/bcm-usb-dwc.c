@@ -1816,7 +1816,7 @@ static mx_driver_ops_t usb_dwc_driver_ops = {
 // The formatter does not play nice with these macros.
 // clang-format off
 MAGENTA_DRIVER_BEGIN(bcm_usb_dwc, usb_dwc_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
-    BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_USB),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_USB),
 MAGENTA_DRIVER_END(bcm_usb_dwc)
 // clang-format on

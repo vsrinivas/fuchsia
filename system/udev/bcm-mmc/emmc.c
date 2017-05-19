@@ -33,6 +33,7 @@
 #include <ddk/device.h>
 #include <ddk/iotxn.h>
 #include <ddk/protocol/bcm-bus.h>
+#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/sdmmc.h>
 
 // Magenta Includes
@@ -622,10 +623,11 @@ static int emmc_bootstrap_thread(void *arg) {
         goto out;
     }
 
+    mx_device_t* bus_dev;
     bcm_bus_protocol_t* bus_proto;
-    if (device_op_get_protocol(dev, MX_PROTOCOL_BCM_BUS, (void**)&bus_proto)) {
+    st = platform_device_find_protocol(dev, MX_PROTOCOL_BCM_BUS, &bus_dev, (void**)&bus_proto);
+    if (st != NO_ERROR) {
         printf("emmc_bootstrap_thread could not find MX_PROTOCOL_BCM_BUS\n");
-        st = ERR_NOT_SUPPORTED;
         goto out;
     }
 
@@ -678,7 +680,7 @@ static int emmc_bootstrap_thread(void *arg) {
     // Configure the clock.
     uint32_t base_clock = 0;
     const uint32_t bcm28xX_core_clock_id = 1;
-    st = bus_proto->get_clock_rate(dev, bcm28xX_core_clock_id, &base_clock);
+    st = bus_proto->get_clock_rate(bus_dev, bcm28xX_core_clock_id, &base_clock);
      if (st < 0 || base_clock == 0) {
         xprintf("emmc: failed to get base clock rate, retcode = %d\n", st);
         goto out;
@@ -802,8 +804,8 @@ static mx_driver_ops_t emmc_dwc_driver_ops = {
 // The formatter does not play nice with these macros.
 // clang-format off
 MAGENTA_DRIVER_BEGIN(bcm_emmc, emmc_dwc_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
-    BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
-    BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_EMMC),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOMM),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_EMMC),
 MAGENTA_DRIVER_END(bcm_emmc)
 // clang-format on
