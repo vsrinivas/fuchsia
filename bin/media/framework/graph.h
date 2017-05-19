@@ -17,7 +17,7 @@
 
 namespace media {
 
-namespace {
+namespace internal {
 
 // StageCreator::Create creates a stage for a part. DEFINE_STAGE_CREATOR defines
 // a specialization for a particular model/stage type pair. Every new
@@ -43,7 +43,7 @@ DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStage);
 
 #undef DEFINE_STAGE_CREATOR
 
-}  // namespace
+}  // namespace internal
 
 //
 // USAGE
@@ -123,7 +123,7 @@ class Graph {
   template <typename T>
   PartRef Add(std::shared_ptr<T> t_ptr) {
     FTL_DCHECK(t_ptr);
-    return Add(StageCreator<T>::Create(t_ptr));
+    return Add(internal::StageCreator<T>::Create(t_ptr));
   }
 
   // Removes a part from the graph after disconnecting it from other parts.
@@ -168,7 +168,7 @@ class Graph {
   template <typename T>
   OutputRef AddAndConnectAll(OutputRef output, const T& t) {
     for (const auto& element : t) {
-      PartRef part = Add(StageCreator<T>::Create(element));
+      PartRef part = Add(internal::StageCreator<T>::Create(element));
       Connect(output, part.input());
       output = part.output();
     }
