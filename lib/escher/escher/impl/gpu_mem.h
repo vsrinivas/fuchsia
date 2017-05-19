@@ -6,44 +6,67 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_mem_slab.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {
 
-// Memory allocated by a GpuAllocator.  It is a region of a GpuMemSlab (this is
-// an implementation detail, not relevant to clients of GpuAllocator/GpuMem).
+class GpuMem;
+typedef ftl::RefPtr<GpuMem> GpuMemPtr;
+
+// Ref-counted wrapper around a vk::DeviceMemory.  Supports sub-allocation.
 // TODO: move out of impl namespace.
 class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
  public:
-  // Accessors for the base address of the underlying GpuMemSlab, and the offset
-  // and size of the region within the slab.  These support idiomatic use of
-  // Vulkan APIs for e.g. creating vk::Images and vk::Buffers.
-  vk::DeviceMemory base() const { return slab_->base(); }
+  // Create a GpuMem that wraps a newly-allocated vk::DeviceMemory, which will
+  // be destroyed when the GpuMem dies.
+  static GpuMemPtr New(vk::Device device,
+                       vk::PhysicalDevice physical_device,
+                       vk::MemoryRequirements reqs,
+                       vk::MemoryPropertyFlags flags);
+
+  // Create a GpuMem that takes ownership of |mem|, which will be destroyed hen
+  // the GpuMem dies.
+  static GpuMemPtr New(vk::Device device,
+                       vk::DeviceMemory mem,
+                       vk::DeviceSize size,
+                       uint32_t memory_type_index);
+
+  // Sub-allocate a GpuMem that represents a sub-range of the memory in this
+  // GpuMem.  Since these sub-allocations reference the parent GpuMem, the
+  // parent will not be destroyed while outstanding sub-allocations exist.
+  // Returns nullptr if the requested offset/size do not fit within the current
+  // GpuMem.
+  // Note: no bookkeeping ensures that sub-allocations do not overlap!
+  GpuMemPtr Allocate(vk::DeviceSize size, vk::DeviceSize offset);
+
+  vk::DeviceMemory base() const { return base_; }
   vk::DeviceSize offset() const { return offset_; }
   vk::DeviceSize size() const { return size_; }
 
-  // Return the memory type of the underlying slab.
-  uint32_t memory_type_index() const { return slab_->memory_type_index(); }
-
- private:
-  // Called by GpuAllocator::Allocate().
-  friend class GpuAllocator;
-  GpuMem(GpuMemSlab* slab, vk::DeviceSize offset, vk::DeviceSize size);
+ protected:
+  // |offset| + |size| must be <= the size of |base|.  Takes ownership of
+  // |base|.
+  GpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset = 0);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(GpuMem);
-  ~GpuMem();
+  virtual ~GpuMem();
 
-  GpuMemSlab* slab_;
-  vk::DeviceSize offset_;
+ private:
+  // Allow subclasses to take action when a sub-allocation is destroyed.  For
+  // example, this can be used by subclasses of GpuAllocator for bookkeeping of
+  // available memory withing a GpuMemSlab.
+  friend class GpuMemSuballocation;
+  virtual void OnAllocationDestroyed(vk::DeviceSize size,
+                                     vk::DeviceSize offset) {}
+
+  vk::DeviceMemory base_;
   vk::DeviceSize size_;
+  vk::DeviceSize offset_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GpuMem);
 };
-
-typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 
 }  // namespace impl
 }  // namespace escher

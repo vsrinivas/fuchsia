@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_mem.h"
+#include "escher/impl/gpu_mem_slab.h"
 #include "escher/vk/vulkan_context.h"
 
 namespace escher {
@@ -25,31 +25,21 @@ class GpuAllocator {
   virtual GpuMemPtr Allocate(vk::MemoryRequirements reqs,
                              vk::MemoryPropertyFlags flags) = 0;
 
+  // Current number of bytes allocated (i.e. unfreed) by this allocator.
   uint64_t GetNumBytesAllocated() { return num_bytes_allocated_; }
 
-  vk::PhysicalDevice physical_device() { return physical_device_; }
-  vk::Device device() { return device_; }
+  vk::PhysicalDevice physical_device() const { return physical_device_; }
+  vk::Device device() const { return device_; }
+  uint32_t slab_count() const { return slab_count_; }
 
  protected:
   // Concrete subclasses use this to allocate GpuMemSlabs that are then used
   // to suballocate GpuMem instances from.
-  std::unique_ptr<GpuMemSlab> AllocateSlab(vk::DeviceSize size,
-                                           uint32_t memory_type_index);
-  void FreeSlab(std::unique_ptr<GpuMemSlab> slab);
-
-  // Concrete subclasses use this to sub-allocate GpuMem from GpuMemSlabs.
-  GpuMemPtr AllocateMem(GpuMemSlab* slab,
-                        vk::DeviceSize offset,
-                        vk::DeviceSize size);
+  GpuMemSlabPtr AllocateSlab(vk::MemoryRequirements reqs,
+                             vk::MemoryPropertyFlags flags);
 
  private:
-  // Called by GpuMemSlab::FreeMem().
   friend class GpuMemSlab;
-  virtual void FreeMem(GpuMemSlab* slab,
-                       uint32_t slab_ref_count,
-                       vk::DeviceSize offset,
-                       vk::DeviceSize size) = 0;
-
   vk::PhysicalDevice physical_device_;
   vk::Device device_;
   vk::DeviceSize num_bytes_allocated_;

@@ -22,12 +22,6 @@ class NaiveGpuAllocator : public GpuAllocator {
 
   GpuMemPtr Allocate(vk::MemoryRequirements reqs,
                      vk::MemoryPropertyFlags flags) override;
-
- private:
-  void FreeMem(GpuMemSlab* slab,
-               uint32_t slab_ref_count,
-               vk::DeviceSize offset,
-               vk::DeviceSize size) override;
 };
 
 }  // namespace impl
