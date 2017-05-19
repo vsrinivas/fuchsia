@@ -91,13 +91,16 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
             return MX_HANDLE_INVALID;
         }
 
+        mx_handle_t minip_channel;
         // Start the process before we mess with the VMAR,
         // so we don't step on the mapping done by start_mini_process_etc.
-        s = start_mini_process_etc(process, thread, vmar, event, false);
+        s = start_mini_process_etc(process, thread, vmar, event, &minip_channel);
         if (s != NO_ERROR) {
             EXPECT_EQ(s, NO_ERROR, "start_mini_process_etc");
             return MX_HANDLE_INVALID;
         }
+
+        mx_handle_close(minip_channel);
 
         // Create a child VMAR and a mapping under it, so we have
         // something interesting to look at when getting the process's

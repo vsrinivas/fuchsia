@@ -17,6 +17,35 @@ namespace {
 
 const mx_time_t kTimeoutNs = MX_MSEC(250);
 
+bool mini_process_sanity() {
+    BEGIN_TEST;
+
+    mx_handle_t proc;
+    mx_handle_t thread;
+    mx_handle_t vmar;
+
+    ASSERT_EQ(mx_process_create(mx_job_default(), "mini-p", 3u, 0, &proc, &vmar), NO_ERROR, "");
+    ASSERT_EQ(mx_thread_create(proc, "mini-p", 2u, 0u, &thread), NO_ERROR, "");
+
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), NO_ERROR, "");
+
+    mx_handle_t cmd_channel;
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, &cmd_channel), NO_ERROR, "");
+
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr), NO_ERROR, "");
+
+    mx_handle_t oev;
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_CREATE_EVENT, &oev), NO_ERROR, "");
+
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), ERR_PEER_CLOSED, "");
+
+    mx_handle_close(thread);
+    mx_handle_close(proc);
+    mx_handle_close(vmar);
+    END_TEST;
+}
+
 bool kill_process_via_thread_close() {
     BEGIN_TEST;
 
@@ -99,7 +128,7 @@ bool kill_process_via_vmar_destroy() {
 
     // Make the process busy-wait rather than using a vDSO call because
     // if it maps in the vDSO then mx_vmar_destroy is prohibited.
-    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true),
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, nullptr),
               NO_ERROR, "");
 
     // Destroying the root VMAR should cause the process to terminate.
@@ -136,9 +165,11 @@ bool kill_process_handle_cycle() {
     EXPECT_EQ(mx_handle_duplicate(proc1, MX_RIGHT_SAME_RIGHTS, &dup1), NO_ERROR, "");
     EXPECT_EQ(mx_handle_duplicate(proc2, MX_RIGHT_SAME_RIGHTS, &dup2), NO_ERROR, "");
 
-    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, dup2, false)
-              , NO_ERROR, "");
-    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, dup1, false),
+    mx_handle_t minip_chn[2];
+
+    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, dup2, &minip_chn[0]),
+              NO_ERROR, "");
+    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, dup1, &minip_chn[1]),
               NO_ERROR, "");
 
     EXPECT_EQ(mx_handle_close(vmar2), NO_ERROR, "");
@@ -210,9 +241,11 @@ bool kill_channel_handle_cycle() {
     // The process start with each one side of the channel. We don't have access to the
     // channel anymore.
 
-    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], false),
+    mx_handle_t minip_chn[2];
+
+    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], &minip_chn[0]),
               NO_ERROR, "");
-    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], false),
+    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], &minip_chn[1]),
               NO_ERROR, "");
 
     EXPECT_EQ(mx_handle_close(vmar2), NO_ERROR, "");
@@ -278,8 +311,9 @@ bool info_reflects_process_state() {
     EXPECT_FALSE(info.started, "process should not appear as started");
     EXPECT_FALSE(info.exited, "process should not appear as exited");
 
+    mx_handle_t minip_chn;
     // Start the process and make (relatively) certain it's alive.
-    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, false),
+    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, &minip_chn),
               NO_ERROR, "");
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
@@ -308,6 +342,7 @@ bool info_reflects_process_state() {
 } // namespace
 
 BEGIN_TEST_CASE(process_tests)
+RUN_TEST(mini_process_sanity);
 RUN_TEST(kill_process_via_thread_close);
 RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
