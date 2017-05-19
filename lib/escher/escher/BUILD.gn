@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("public_includes") {
+  include_dirs = [
+    "//lib",  # for ftl/
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+}
+
 config("public_preprocessor_definitions") {
   defines = [
     "VULKAN_HPP_NO_EXCEPTIONS",
@@ -32,6 +40,7 @@ static_library("escher") {
   ]
 
   public_deps = [
+    "//lib/escher/escher/base:escher_base",
     "//lib/ftl",
   ]
 
@@ -175,13 +184,11 @@ static_library("escher") {
   ]
 
   include_dirs = [
-    "//lib",  # for ftl/
-    "//lib/escher",  # TODO: make //lib/escher/src|include directories.
-    "//third_party/glm",
     "//third_party/shaderc/third_party/glslang",
   ]
 
   public_configs = [
+    ":public_includes",
     ":public_preprocessor_definitions",
     ":thread_safety_warning",
   ]

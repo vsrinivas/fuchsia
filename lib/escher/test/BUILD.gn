@@ -17,6 +17,7 @@ executable("escher_unittests") {
   ]
 
   deps = [
+    "base:base_unittests",
     "//lib/escher/escher",
     "//lib/ftl",
     "//third_party/gtest",
