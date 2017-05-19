@@ -249,9 +249,7 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
     if (res != NO_ERROR)
         return res;
 
-    mx_time_t last_plug_time = resp.plug_state_time
-                             ? resp.plug_state_time
-                             : mx_time_get(MX_CLOCK_MONOTONIC);
+    mx_time_t last_plug_time = resp.plug_state_time;
     bool last_plug_state = (resp.flags & AUDIO2_PDNF_PLUGGED);
     printf("Initial plug state is : %s.\n", last_plug_state ? "plugged" : "unplugged");
 
@@ -263,9 +261,6 @@ mx_status_t AudioStream::PlugMonitor(float duration) {
 
     auto ReportPlugState = [&last_plug_time, &last_plug_state](bool plug_state,
                                                                mx_time_t plug_time) {
-        if (plug_time == 0)
-            plug_time = mx_time_get(MX_CLOCK_MONOTONIC);
-
         printf("Plug State now : %s (%.3lf sec since last change).\n",
                plug_state ? "plugged" : "unplugged",
                static_cast<double>(plug_time - last_plug_time) / 1000000000.0);

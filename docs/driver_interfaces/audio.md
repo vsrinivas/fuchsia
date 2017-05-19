@@ -298,8 +298,7 @@ gain step size as 0.0.
 
 Regardless of mute capabilities, drivers for fixed gain streams **must** report
 their min/max gain as (0.0, 0.0).  The gain step size is meaningless in this
-situation, but drivers **should** report their step size as 0.0 in this
-situation.
+situation, but drivers **should** report their step size as 0.0.
 
 ### Setting hardware gain control levels
 
@@ -379,9 +378,10 @@ Three valid flags are currently defined.
  * `AUDIO2_PDNF_PLUGGED`  Set when the stream hardware considers the
    stream to be currently in the "plugged-in" state.
 
-Drivers for "hardwired" streams **should** always set the `CAN_NOTIFY` flag to
-false, and the `PLUGGED` flag to true.  In addition, the plug state time of the
-response to the `PLUG_DETECT` message **should** always be set to 0.
+Drivers for "hardwired" streams **must not** set the `CAN_NOTIFY` flag, and
+**must** set the `PLUGGED` flag.  In addition, the plug state time of the
+response to the `PLUG_DETECT` message **should** always be set to the time at
+which the stream device was published by the driver.
 
 Applications **may** choose not to receive an acknowledgement of a `PLUG_DETECT`
 command by setting the `AUDIO2_FLAG_NO_ACK` flag on their command.  No response
