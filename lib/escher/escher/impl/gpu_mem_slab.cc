@@ -4,8 +4,8 @@
 
 #include "escher/impl/gpu_mem_slab.h"
 
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/vk/gpu_allocator.h"
 #include "ftl/logging.h"
 
 namespace escher {
@@ -21,8 +21,7 @@ GpuMemSlab::GpuMemSlab(vk::Device device,
       memory_type_index_(memory_type_index),
       allocator_(allocator) {
   if (allocator_) {
-    allocator_->num_bytes_allocated_ += size;
-    allocator_->slab_count_++;
+    allocator_->OnSlabCreated(size);
   }
 }
 
@@ -56,8 +55,14 @@ GpuMemSlab::~GpuMemSlab() {
     device_.freeMemory(base());
   }
   if (allocator_) {
-    allocator_->num_bytes_allocated_ -= size();
-    allocator_->slab_count_--;
+    allocator_->OnSlabDestroyed(size());
+  }
+}
+
+void GpuMemSlab::OnAllocationDestroyed(vk::DeviceSize size,
+                                       vk::DeviceSize offset) {
+  if (allocator_) {
+    allocator_->OnSuballocationDestroyed(this, size, offset);
   }
 }
 

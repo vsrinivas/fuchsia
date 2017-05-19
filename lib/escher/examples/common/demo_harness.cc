@@ -6,8 +6,8 @@
 
 #include "escher/escher_process_init.h"
 #include "escher/examples/common/demo.h"
-#include "escher/impl/gpu_mem.h"
 #include "escher/renderer/image.h"
+#include "escher/vk/gpu_mem.h"
 #include "ftl/logging.h"
 #include "ftl/memory/ref_ptr.h"
 

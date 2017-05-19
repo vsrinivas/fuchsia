@@ -19,7 +19,6 @@ namespace impl {
 
 class CommandBuffer;
 class ModelUniformWriter;
-class GpuAllocator;
 
 class ModelData {
  public:

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/naive_gpu_allocator.h"
+#include "escher/vk/naive_gpu_allocator.h"
 
 namespace escher {
-namespace impl {
 
 NaiveGpuAllocator::NaiveGpuAllocator(const VulkanContext& context)
     : GpuAllocator(context) {}
@@ -24,5 +23,8 @@ GpuMemPtr NaiveGpuAllocator::Allocate(vk::MemoryRequirements reqs,
   return AllocateSlab(reqs, flags);
 }
 
-}  // namespace impl
+void NaiveGpuAllocator::OnSuballocationDestroyed(GpuMem* slab,
+                                                 vk::DeviceSize size,
+                                                 vk::DeviceSize offset) {}
+
 }  // namespace escher

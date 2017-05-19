@@ -4,7 +4,7 @@
 
 #include "escher/renderer/image_owner.h"
 
-#include "escher/impl/gpu_mem.h"
+#include "escher/vk/gpu_mem.h"
 
 namespace escher {
 

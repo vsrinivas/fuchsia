@@ -6,12 +6,11 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/gpu_allocator.h"
-#include "escher/impl/gpu_mem.h"
+#include "escher/vk/gpu_allocator.h"
+#include "escher/vk/gpu_mem.h"
 #include "escher/vk/vulkan_context.h"
 
 namespace escher {
-namespace impl {
 
 // NaiveGpuAllocator uses a separate GpuMemSlab for each GpuMem that it
 // allocates.  This ignores Vulkan best practices, and is a placeholder until a
@@ -22,7 +21,13 @@ class NaiveGpuAllocator : public GpuAllocator {
 
   GpuMemPtr Allocate(vk::MemoryRequirements reqs,
                      vk::MemoryPropertyFlags flags) override;
+
+ private:
+  // No-op, because NaiveGpuAllocator does not perform sub-allocation.  This
+  // can only be called if a client manually sub-allocates from the allocation.
+  void OnSuballocationDestroyed(GpuMem* slab,
+                                vk::DeviceSize size,
+                                vk::DeviceSize offset) override;
 };
 
-}  // namespace impl
 }  // namespace escher

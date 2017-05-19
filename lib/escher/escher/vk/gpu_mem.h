@@ -11,12 +11,13 @@
 
 namespace escher {
 namespace impl {
+class GpuMemSuballocation;
+}
 
 class GpuMem;
 typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 
 // Ref-counted wrapper around a vk::DeviceMemory.  Supports sub-allocation.
-// TODO: move out of impl namespace.
 class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
  public:
   // Create a GpuMem that wraps a newly-allocated vk::DeviceMemory, which will
@@ -57,7 +58,7 @@ class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
   // Allow subclasses to take action when a sub-allocation is destroyed.  For
   // example, this can be used by subclasses of GpuAllocator for bookkeeping of
   // available memory withing a GpuMemSlab.
-  friend class GpuMemSuballocation;
+  friend class impl::GpuMemSuballocation;
   virtual void OnAllocationDestroyed(vk::DeviceSize size,
                                      vk::DeviceSize offset) {}
 
@@ -68,5 +69,4 @@ class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GpuMem);
 };
 
-}  // namespace impl
 }  // namespace escher

@@ -4,15 +4,15 @@
 
 #include "escher/renderer/image.h"
 
-#include "escher/impl/gpu_mem.h"
 #include "escher/renderer/image_owner.h"
+#include "escher/vk/gpu_mem.h"
 
 namespace escher {
 
 ImageCore::ImageCore(ImageOwner* image_owner,
                      ImageInfo info,
                      vk::Image image,
-                     impl::GpuMemPtr mem)
+                     GpuMemPtr mem)
     : ResourceCore(image_owner),
       info_(info),
       image_(image),

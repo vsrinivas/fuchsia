@@ -4,13 +4,13 @@
 
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/image_cache.h"
-#include "escher/impl/mesh_manager.h"
 #include "escher/impl/mesh_impl.h"
+#include "escher/impl/mesh_manager.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"
 #include "escher/util/cplusplus.h"
+#include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 
@@ -53,7 +53,7 @@ TexturePtr Escher::NewTexture(ImagePtr image,
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {
-  return impl_->gpu_allocator()->GetNumBytesAllocated();
+  return impl_->gpu_allocator()->total_slab_bytes();
 }
 
 }  // namespace escher

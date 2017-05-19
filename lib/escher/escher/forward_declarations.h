@@ -14,6 +14,8 @@ namespace escher {
 class Buffer;
 class Escher;
 class Framebuffer;
+class GpuAllocator;
+class GpuMem;
 class Image;
 class MeshBuilder;
 class MeshBuilderFactory;
@@ -36,6 +38,7 @@ struct VulkanSwapchain;
 
 typedef ftl::RefPtr<Buffer> BufferPtr;
 typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
+typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 typedef ftl::RefPtr<Image> ImagePtr;
 typedef ftl::RefPtr<Material> MaterialPtr;
 typedef ftl::RefPtr<Mesh> MeshPtr;
@@ -51,8 +54,6 @@ namespace impl {
 class CommandBuffer;
 class CommandBufferPool;
 class EscherImpl;
-class GpuAllocator;
-class GpuMem;
 class ImageCache;
 class MeshImpl;
 class MeshManager;
@@ -67,7 +68,6 @@ class Resource;
 class SsdoAccelerator;
 class SsdoSampler;
 
-typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 typedef ftl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
 typedef ftl::RefPtr<Pipeline> PipelinePtr;
 typedef ftl::RefPtr<Resource> ResourcePtr;

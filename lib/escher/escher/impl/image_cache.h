@@ -9,10 +9,10 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/forward_declarations.h"
-#include "escher/impl/gpu_mem.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/image_owner.h"
 #include "escher/util/hash.h"
+#include "escher/vk/gpu_mem.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_counted.h"
 

@@ -6,15 +6,15 @@
 
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/glsl_compiler.h"
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/gpu_uploader.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
-#include "escher/impl/naive_gpu_allocator.h"
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/profiling/timestamp_profiler.h"
 #include "escher/resources/resource_life_preserver.h"
 #include "escher/util/cplusplus.h"
+#include "escher/vk/gpu_allocator.h"
+#include "escher/vk/naive_gpu_allocator.h"
 
 namespace escher {
 namespace impl {

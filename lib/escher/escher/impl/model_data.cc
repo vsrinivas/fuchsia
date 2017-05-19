@@ -5,8 +5,8 @@
 #include "escher/impl/model_data.h"
 
 #include "escher/impl/command_buffer.h"
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {

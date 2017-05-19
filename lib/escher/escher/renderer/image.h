@@ -36,10 +36,7 @@ class ImageOwner;
 
 class ImageCore : public ResourceCore {
  public:
-  ImageCore(ImageOwner* image_owner,
-            ImageInfo info,
-            vk::Image,
-            impl::GpuMemPtr mem);
+  ImageCore(ImageOwner* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
   ~ImageCore() override;
 
   const ImageInfo& info() const { return info_; }
@@ -53,7 +50,7 @@ class ImageCore : public ResourceCore {
  private:
   const ImageInfo info_;
   const vk::Image image_;
-  impl::GpuMemPtr mem_;
+  GpuMemPtr mem_;
   bool has_depth_;
   bool has_stencil_;
 };

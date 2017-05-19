@@ -9,11 +9,11 @@ executable("escher_unittests") {
 
   sources = [
     "gpu_mem_unittest.cc",
+    "hash_unittest.cc",
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
-    "hash_unittest.cc",
-    "transform_unittest.cc",
     "run_all_unittests.cc",
+    "transform_unittest.cc",
   ]
 
   deps = [

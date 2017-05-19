@@ -14,7 +14,6 @@ namespace impl {
 class CommandBufferSequencer;
 class CommandBufferPool;
 class GlslToSpirvCompiler;
-class GpuAllocator;
 class GpuUploader;
 class ImageCache;
 class MeshManager;

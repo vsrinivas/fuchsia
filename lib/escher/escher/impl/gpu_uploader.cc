@@ -4,12 +4,12 @@
 
 #include "escher/impl/gpu_uploader.h"
 
+#include <algorithm>
+
 #include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
-
-#include <algorithm>
+#include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {

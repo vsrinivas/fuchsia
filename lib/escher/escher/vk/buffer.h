@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/forward_declarations.h"
-#include <escher/impl/resource.h>
+#include "escher/impl/resource.h"
 
 namespace escher {
 
@@ -42,7 +42,7 @@ class Buffer : public impl::Resource {
   // Construct an ownerless Buffer.  When the Buffer is destroyed, all resources
   // are immediately freed/destroyed.
   Buffer(vk::Device device,
-         impl::GpuAllocator* allocator,
+         GpuAllocator* allocator,
          vk::DeviceSize size,
          vk::BufferUsageFlags usage_flags,
          vk::MemoryPropertyFlags memory_property_flags);

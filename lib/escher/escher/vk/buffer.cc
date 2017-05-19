@@ -4,8 +4,8 @@
 
 #include "escher/vk/buffer.h"
 
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 
@@ -16,7 +16,7 @@ namespace {
 class UnownedBufferInfo : public BufferInfo {
  public:
   UnownedBufferInfo(vk::Device device,
-                    impl::GpuAllocator* allocator,
+                    GpuAllocator* allocator,
                     vk::DeviceSize size,
                     vk::BufferUsageFlags usage_flags,
                     vk::MemoryPropertyFlags memory_property_flags)
@@ -69,7 +69,7 @@ class UnownedBufferInfo : public BufferInfo {
   vk::Device device_;
   vk::DeviceSize size_;
   vk::Buffer buffer_;
-  impl::GpuMemPtr mem_;
+  GpuMemPtr mem_;
   uint8_t* mapped_ptr_;
 };
 
@@ -80,7 +80,7 @@ BufferPtr BufferOwner::NewBuffer(std::unique_ptr<BufferInfo> info) {
 }
 
 Buffer::Buffer(vk::Device device,
-               impl::GpuAllocator* allocator,
+               GpuAllocator* allocator,
                vk::DeviceSize size,
                vk::BufferUsageFlags usage_flags,
                vk::MemoryPropertyFlags memory_property_flags)

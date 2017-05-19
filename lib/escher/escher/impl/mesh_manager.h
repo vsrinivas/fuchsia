@@ -20,7 +20,6 @@
 
 namespace escher {
 namespace impl {
-class GpuAllocator;
 class GpuUploader;
 
 // Responsible for generating Meshes, tracking their memory use, managing
