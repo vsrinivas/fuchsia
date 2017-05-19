@@ -342,19 +342,30 @@ bool LinkTrainingBody(RegisterIo* reg_io, int32_t ddi_number)
     if (!DpcdRequestLinkTraining(&dp_aux, &tp_set))
         return false;
 
-    // Allow 100us for the first training step, as specified by the
-    // DisplayPort spec.
-    std::this_thread::sleep_for(std::chrono::microseconds(100));
-
-    // Did the sink device receive the signal successfully?
     dpcd::Lane01Status lane01_status;
-    if (!DpcdReadLaneStatus(&dp_aux, &lane01_status))
-        return false;
-    // TODO(MA-150): If the training attempts fail, we are supposed to try
-    // again after telling the source device to produce a stronger signal
-    // (higher voltage swing level, etc.).  This is not implemented yet.
-    if (!lane01_status.lane0_cr_done().get() || !lane01_status.lane1_cr_done().get())
-        return DRETF(false, "DP: Link training: clock recovery step failed");
+    // Number of times to poll with the same voltage level configured, as
+    // specified by the DisplayPort spec.
+    const int kPollsPerVoltageLevel = 5;
+    // Time to wait before polling the registers for the result of the
+    // first training step, as specified by the DisplayPort spec.
+    const int kPollTimeUsec = 100;
+    int poll_count = 0;
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::microseconds(kPollTimeUsec));
+
+        // Did the sink device receive the signal successfully?
+        if (!DpcdReadLaneStatus(&dp_aux, &lane01_status))
+            return false;
+        if (lane01_status.lane0_cr_done().get() && lane01_status.lane1_cr_done().get())
+            break;
+        // The training attempt has not succeeded yet.
+        // TODO(MA-150): We are supposed to read the ADJUST_REQUEST_LANE0_1
+        // DPCD register and tell the source device to produce a stronger
+        // signal (higher voltage swing level, etc.) as instructed by the
+        // sink device.
+        if (++poll_count == kPollsPerVoltageLevel)
+            return DRETF(false, "DP: Link training: clock recovery step failed");
+    }
 
     // Link training stage 2.
 
