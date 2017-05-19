@@ -727,9 +727,10 @@ void IntelHDAStreamBase::OnPlugDetectLocked(DispatcherChannel* response_channel,
         return;
     }
 
+    MX_DEBUG_ASSERT(parent_codec_ != nullptr);
     out_resp->flags = static_cast<audio2_pd_notify_flags_t>(AUDIO2_PDNF_HARDWIRED |
                                                             AUDIO2_PDNF_PLUGGED);
-    out_resp->plug_state_time = 0;
+    out_resp->plug_state_time = parent_codec_->create_time();
 }
 
 }  // namespace codecs
