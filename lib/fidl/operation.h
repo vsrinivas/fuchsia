@@ -27,8 +27,9 @@ class OperationContainer {
 
  private:
   friend class OperationBase;
+  virtual ftl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
   virtual void Hold(OperationBase* o) = 0;
-  virtual ftl::WeakPtr<OperationContainer> Drop(OperationBase* o) = 0;
+  virtual void Drop(OperationBase* o) = 0;
   virtual void Cont() = 0;
 };
 
@@ -42,11 +43,20 @@ class OperationCollection : public OperationContainer {
   bool Empty() override;
 
  private:
+  ftl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
-  ftl::WeakPtr<OperationContainer> Drop(OperationBase* o) override;
+  void Drop(OperationBase* o) override;
   void Cont() override;
 
   std::vector<std::unique_ptr<OperationBase>> operations_;
+
+  // It is essential that the weak_ptr_factory is defined after the operations_
+  // container, so that it gets destroyed before operations_, and hence before
+  // the Operation instances in it, so that the Done() call on their
+  // OperationBase sees the container weak pointer to be null. That's also why
+  // we need the virtual GetWeakPtr() in the base class, rather than to put the
+  // weak ptr factory in the base class.
+  ftl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
 };
@@ -62,11 +72,25 @@ class OperationQueue : public OperationContainer {
   bool Empty() override;
 
  private:
+  ftl::WeakPtr<OperationContainer> GetWeakPtr() override;
   void Hold(OperationBase* o) override;
-  ftl::WeakPtr<OperationContainer> Drop(OperationBase* o) override;
+  void Drop(OperationBase* o) override;
   void Cont() override;
 
+  // Are there any operations running? An operation is considered once its
+  // |Run()| has been invoked, up until result callback has finished. Note that
+  // an operation could be running while it is not present in |operations_|: its
+  // result callback could be executing.
+  bool idle_ = true;
+
   std::queue<std::unique_ptr<OperationBase>> operations_;
+
+  // It is essential that the weak_ptr_factory is defined after the operations_
+  // container, so that it gets destroyed before operations_, and hence before
+  // the Operation instances in it, so that the Done() call on their
+  // OperationBase sees the container weak pointer to be null. That's also why
+  // we need the virtual GetWeakPtr() in the base class, rather than to put the
+  // weak ptr factory in the base class.
   ftl::WeakPtrFactory<OperationContainer> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationQueue);
@@ -120,21 +144,20 @@ class OperationBase {
  protected:
   // Derived classes need to pass the OperationContainer here. The constructor
   // adds the instance to the container.
-  OperationBase(OperationContainer* container);
+  OperationBase(OperationContainer* const container);
 
   // Derived classes call this when they are ready for |Run()| to be called.
   void Ready();
 
-  // Operation::Done() calls this.
-  ftl::WeakPtr<OperationContainer> DoneStart();
-  void DoneFinish(ftl::WeakPtr<OperationContainer> container);
+  // Derived classes call this to remove themselves from their container.
+  void DoneStart();
+  static void DoneFinish(ftl::WeakPtr<OperationContainer> container);
 
   class FlowTokenBase;
 
- private:
-  // Used by the implementation of DoneBase() to remove this instance from the
+  // Used by the implementation of DoneStart() to remove this instance from the
   // container.
-  OperationContainer* const container_;
+  ftl::WeakPtr<OperationContainer> const container_;
 
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
   // was deleted.
@@ -146,23 +169,33 @@ class OperationBase {
 template <typename T>
 class Operation : public OperationBase {
  public:
-  ~Operation() override = default;
+  ~Operation() override { 
+    // We must invalidate our weakptrs before the result callback is destroyed
+    // if it still hasn't been called; otherwise, the result callback may
+    // contain FlowTokens that will attempt to call Done().
+    weak_ptr_factory_.InvalidateWeakPtrs();
+  }
 
   using ResultCall = std::function<void(T)>;
 
  protected:
   Operation(OperationContainer* const container, ResultCall result_call)
-      : OperationBase(container), result_call_(std::move(result_call)) {}
+      : OperationBase(container),
+        result_call_(std::move(result_call)) {}
 
   // Derived classes call this when they are prepared to be removed from the
   // container. Must be the last the instance does, as it results in destructor
   // invocation.
   void Done(T v) {
-    T result_value = std::move(v);
-    ResultCall result_call = std::move(result_call_);
-    auto container = DoneStart();
-    result_call(std::move(result_value));
-    DoneFinish(std::move(container));
+    auto container = std::move(container_);
+    if (container) {
+      T result_value = std::move(v);
+      ResultCall result_call = std::move(result_call_);
+      DoneStart();
+      // Can no longer refer to |this|.
+      result_call(std::move(result_value));
+      OperationBase::DoneFinish(std::move(container));
+    }
   }
 
   class FlowToken;
@@ -177,19 +210,29 @@ class Operation : public OperationBase {
 template <>
 class Operation<void> : public OperationBase {
  public:
-  ~Operation() override = default;
+  ~Operation() override {
+    // We must invalidate our weakptrs before the result callback is destroyed
+    // if it still hasn't been called; otherwise, the result callback may
+    // contain FlowTokens that will attempt to call Done().
+    weak_ptr_factory_.InvalidateWeakPtrs();
+  }
 
   using ResultCall = std::function<void()>;
 
  protected:
   Operation(OperationContainer* const container, ResultCall result_call)
-      : OperationBase(container), result_call_(std::move(result_call)) {}
+      : OperationBase(container),
+        result_call_(std::move(result_call)) {}
 
   void Done() {
-    ResultCall result_call = std::move(result_call_);
-    auto container = DoneStart();
-    result_call();
-    DoneFinish(std::move(container));
+    auto container = std::move(container_);
+    if (container) {
+      ResultCall result_call = std::move(result_call_);
+      DoneStart();
+      // Can no longer refer to |this|.
+      result_call();
+      OperationBase::DoneFinish(std::move(container));
+    }
   }
 
   class FlowToken;

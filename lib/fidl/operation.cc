@@ -12,7 +12,7 @@ OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
 
-OperationCollection::OperationCollection() = default;
+OperationCollection::OperationCollection() : weak_ptr_factory_(this) {}
 
 OperationCollection::~OperationCollection() = default;
 
@@ -20,24 +20,26 @@ bool OperationCollection::Empty() {
   return operations_.empty();
 }
 
+ftl::WeakPtr<OperationContainer> OperationCollection::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
 void OperationCollection::Hold(OperationBase* const o) {
   operations_.emplace_back(o);
   o->Run();
 }
 
-ftl::WeakPtr<OperationContainer> OperationCollection::Drop(
+void OperationCollection::Drop(
     OperationBase* const o) {
   auto it = std::remove_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });
   FTL_DCHECK(it != operations_.end());
   operations_.erase(it, operations_.end());
-  return ftl::WeakPtr<OperationContainer>();
 }
 
 void OperationCollection::Cont() {
-  // Never happens, because Drop() always returns nullptr.
-  FTL_NOTREACHED() << "Drop() should have returned nullptr.";
+  // no-op for operation collection.
 }
 
 OperationQueue::OperationQueue() : weak_ptr_factory_(this) {}
@@ -48,46 +50,57 @@ bool OperationQueue::Empty() {
   return operations_.empty();
 }
 
+ftl::WeakPtr<OperationContainer> OperationQueue::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
 void OperationQueue::Hold(OperationBase* const o) {
   operations_.emplace(o);
-  // Run this operation if it is the only operation in the queue. If
-  // there are weak ptrs outstanding, this means there will be a
-  // Cont() call that runs the next operation.
-  if (operations_.size() == 1 && !weak_ptr_factory_.HasWeakPtrs()) {
+  if (idle_) {
+    FTL_DCHECK(operations_.size() == 1);
+    idle_ = false;
     o->Run();
   }
 }
 
-ftl::WeakPtr<OperationContainer> OperationQueue::Drop(OperationBase* const o) {
+void OperationQueue::Drop(OperationBase* const o) {
   FTL_DCHECK(!operations_.empty());
   FTL_DCHECK(operations_.front().get() == o);
   operations_.pop();
-  return weak_ptr_factory_.GetWeakPtr();
 }
 
 void OperationQueue::Cont() {
   if (!operations_.empty()) {
     operations_.front()->Run();
+  } else {
+    idle_ = true;
   }
 }
 
 OperationBase::OperationBase(OperationContainer* const c)
-    : container_(c), weak_ptr_factory_(this) {}
+    : container_(c->GetWeakPtr()), weak_ptr_factory_(this) {}
 
-OperationBase::~OperationBase() = default;
+OperationBase::~OperationBase() {
+  // In case this Operation holds a callback (which will be destroyed) that
+  // contains a |FlowToken|, we invalid our weak pointer before that
+  // |FlowToken| tries to call us.
+  weak_ptr_factory_.InvalidateWeakPtrs();
+}
 
 void OperationBase::Ready() {
+  FTL_DCHECK(container_);
   container_->Hold(this);
 }
 
-ftl::WeakPtr<OperationContainer> OperationBase::DoneStart() {
-  return container_->Drop(this);
+void OperationBase::DoneStart() {
+  container_->Drop(this);
 }
 
-void OperationBase::DoneFinish(ftl::WeakPtr<OperationContainer> container) {
-  if (container) {
+// static
+void OperationBase::DoneFinish(
+    ftl::WeakPtr<OperationContainer> const container) {
+  if (container)
     container->Cont();
-  }
 }
 
 OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)
