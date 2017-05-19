@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
@@ -19,13 +20,21 @@
 
 int main(int argc, char* argv[]) {
     uint32_t fs = 0;
-    if (argc > 1 && !strcmp(argv[1], "-f")) {
-        fs = 1;
+    const char* fn = "/dev/class/console/vc";
+
+    while (argc > 1) {
+        if (!strcmp(argv[1], "-f")) {
+            fs = 1;
+        } else {
+            fn = argv[1];
+        }
+        argv++;
+        argc--;
     }
 
-    int vfd = open("/dev/class/console/vc", O_RDWR);
+    int vfd = open(fn, O_RDWR);
     if (vfd < 0) {
-        printf("failed to open virtcon (%d)\n", errno);
+        printf("failed to open fb '%s' (%d)\n", fn, errno);
         return -1;
     }
     ioctl_display_get_fb_t fb;
