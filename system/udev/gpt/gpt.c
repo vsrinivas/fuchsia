@@ -12,6 +12,7 @@
 #include <magenta/listnode.h>
 #include <sys/param.h>
 #include <sync/completion.h>
+#include <lib/cksum.h>
 #include <assert.h>
 #include <inttypes.h>
 #include <fcntl.h>
@@ -76,6 +77,30 @@ static uint64_t getsize(gptpart_device_t* dev) {
 
 static mx_off_t to_parent_offset(gptpart_device_t* dev, mx_off_t offset) {
     return offset + dev->gpt_entry.first_lba * dev->info.block_size;
+}
+
+static bool validate_header(const gpt_t* header, const block_info_t* info) {
+    if (header->size > sizeof(gpt_t)) {
+        xprintf("gpt: invalid header size\n");
+        return false;
+    }
+    gpt_t copy;
+    memcpy(&copy, header, sizeof(gpt_t));
+    copy.crc32 = 0;
+    uint32_t crc = crc32(0, (const unsigned char*)&copy, copy.size);
+    if (crc != header->crc32) {
+        xprintf("gpt: header crc invalid\n");
+        return false;
+    }
+    if (header->last_lba >= info->block_count) {
+        xprintf("gpt: last block > block count\n");
+        return false;
+    }
+    if (header->entries_count * header->entries_sz > TXN_SIZE) {
+        xprintf("gpt: entry table too big\n");
+        return false;
+    }
+    return true;
 }
 
 // implement device protocol:
@@ -265,13 +290,14 @@ static int gpt_bind_thread(void* arg) {
     mx_device_t* dev = info->dev;
     free(info);
 
+    iotxn_t* txn = NULL;
     unsigned partitions = 0; // used to keep track of number of partitions found
     block_info_t block_info;
     size_t actual = 0;
     ssize_t rc = device_op_ioctl(dev, IOCTL_BLOCK_GET_INFO, NULL, 0,
                                  &block_info, sizeof(block_info), &actual);
     if (rc < 0 || actual != sizeof(block_info)) {
-        xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, dev->name);
+        xprintf("gpt: Error %zd getting blksize for dev=%s\n", rc, device_get_name(dev));
         goto unbind;
     }
 
@@ -282,7 +308,6 @@ static int gpt_bind_thread(void* arg) {
     }
 
     // allocate an iotxn to read the partition table
-    iotxn_t* txn;
     mx_status_t status = iotxn_alloc(&txn, IOTXN_ALLOC_CONTIGUOUS, TXN_SIZE);
     if (status != NO_ERROR) {
         xprintf("gpt: error %d allocating iotxn\n", status);
@@ -311,7 +336,10 @@ static int gpt_bind_thread(void* arg) {
     iotxn_copyfrom(txn, &header, sizeof(gpt_t), 0);
     if (header.magic != GPT_MAGIC) {
         xprintf("gpt: bad header magic\n");
-        iotxn_release(txn);
+        goto unbind;
+    }
+
+    if (!validate_header(&header, &block_info)) {
         goto unbind;
     }
 
@@ -335,22 +363,41 @@ static int gpt_bind_thread(void* arg) {
     iotxn_queue(dev, txn);
     completion_wait(&completion, MX_TIME_INFINITE);
 
+    uint8_t entries[TXN_SIZE];
+    iotxn_copyfrom(txn, entries, txn->actual, 0);
+
+    uint32_t crc = crc32(0, (const unsigned char*)entries, txn->actual);
+    if (crc != header.entries_crc) {
+        xprintf("gpt: entries crc invalid\n");
+        goto unbind;
+    }
+
+    uint64_t dev_block_count = block_info.block_count;
+
     for (partitions = 0; partitions < header.entries_count; partitions++) {
         if (partitions * header.entries_sz > txn->actual) break;
+
+        // skip over entries that look invalid
+        gpt_entry_t* entry = (gpt_entry_t*)(entries + (partitions * sizeof(gpt_entry_t)));
+        if (entry->first_lba < header.first_lba || entry->last_lba > header.last_lba) {
+            continue;
+        }
+        if (entry->first_lba == entry->last_lba) {
+            continue;
+        }
+        if ((entry->last_lba - entry->first_lba + 1) > dev_block_count) {
+            xprintf("gpt: entry %u too big, last = 0x%" PRIx64 " first = 0x%" PRIx64 " block_count = 0x%" PRIx64 "\n", partitions, entry->last_lba, entry->first_lba, dev_block_count);
+            continue;
+        }
 
         gptpart_device_t* device = calloc(1, sizeof(gptpart_device_t));
         if (!device) {
             xprintf("gpt: out of memory!\n");
-            iotxn_release(txn);
             goto unbind;
         }
         device->parent = dev;
 
-        iotxn_copyfrom(txn, &device->gpt_entry, sizeof(gpt_entry_t), sizeof(gpt_entry_t) * partitions);
-        if (device->gpt_entry.type[0] == 0) {
-            free(device);
-            continue;
-        }
+        memcpy(&device->gpt_entry, entry, sizeof(gpt_entry_t));
         block_info.block_count = device->gpt_entry.last_lba - device->gpt_entry.first_lba + 1;
         memcpy(&device->info, &block_info, sizeof(block_info));
 
@@ -360,11 +407,13 @@ static int gpt_bind_thread(void* arg) {
         uint8_to_guid_string(partition_guid, device->gpt_entry.guid);
         char pname[GPT_NAME_LEN];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
-        xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
-                device->mxdev->name, type_guid, partition_guid, pname);
 
         char name[128];
         snprintf(name, sizeof(name), "%sp%u", device_get_name(dev), partitions);
+
+        xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
+                partitions, name, type_guid, partition_guid, pname,
+                device->gpt_entry.first_lba, device->gpt_entry.last_lba);
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,
@@ -386,6 +435,9 @@ static int gpt_bind_thread(void* arg) {
 
     return NO_ERROR;
 unbind:
+    if (txn != NULL) {
+        iotxn_release(txn);
+    }
     if (partitions == 0) {
         device_unbind(dev);
     }
