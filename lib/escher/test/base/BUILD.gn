@@ -7,6 +7,7 @@ source_set("base_unittests") {
 
   sources = [
     "ownable_unittest.cc",
+    "typed_reffable_unittest.cc",
   ]
 
   deps = [

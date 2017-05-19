@@ -4,8 +4,13 @@
 
 static_library("escher_base") {
   sources = [
-    "ownable.cc",
+    "make.h",
     "ownable.h",
+    "owner.h",
+    "reffable.cc",
+    "reffable.h",
+    "type_info.h",
+    "typed_reffable.h",
   ]
 
   public_configs = [ "//lib/escher/escher:public_includes" ]

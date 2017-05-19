@@ -8,9 +8,17 @@
 
 namespace escher {
 
-int Ownable::FortyTwo() const {
-  FTL_LOG(INFO) << "The answer is 42.";
-  return 42;
+Reffable::~Reffable() {
+  FTL_DCHECK(ref_count_ == 0);
 }
+
+#ifndef NDEBUG
+void Reffable::Adopt() {
+  FTL_DCHECK(adoption_required_);
+  FTL_DCHECK(ref_count() == 0);
+  ++ref_count_;
+  adoption_required_ = false;
+}
+#endif
 
 }  // namespace escher
