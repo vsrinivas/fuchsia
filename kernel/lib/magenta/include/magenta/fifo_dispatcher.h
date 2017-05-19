@@ -65,5 +65,5 @@ private:
     uint32_t tail_ TA_GUARDED(lock_);
     uint8_t* data_ TA_GUARDED(lock_);
 
-    static constexpr uint32_t kMaxSizeBytes = 4096;
+    static constexpr uint32_t kMaxSizeBytes = PAGE_SIZE;
 };
