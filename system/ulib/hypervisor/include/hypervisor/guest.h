@@ -48,11 +48,11 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
  * Create a guest with the given VMO containing its physical memory.
  *
  * @param hypervisor The hypervisor to launch the guest under.
- * @param hypervisor The VMO representing the guest's physical memory.
- * @param serial_fifo The FIFO where the guest's serial output will be written.
+ * @param phys_mem The VMO representing the guest's physical memory.
+ * @param ctl_fifo A handle to the control FIFO for the guest.
  * @param guest A handle to the newly created guest.
  */
-mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* serial_fifo,
+mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
                          mx_handle_t* guest);
 
 __END_CDECLS;

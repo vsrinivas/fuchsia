@@ -55,8 +55,8 @@ private:
 
 class VmcsContext {
 public:
-    static status_t Create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
+    static status_t Create(mxtl::RefPtr<VmObject> phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<VmcsContext>* context);
 
     ~VmcsContext();
@@ -74,21 +74,20 @@ public:
     status_t set_esi(uint32_t guest_esi);
     uint32_t esi() const { return esi_; }
     GuestPhysicalAddressSpace* gpas() const { return gpas_.get(); }
-    FifoDispatcher* serial_fifo() const { return serial_fifo_.get(); }
+    FifoDispatcher* ctl_fifo() const { return ctl_fifo_.get(); }
 
 private:
     uintptr_t entry_ = UINTPTR_MAX;
     uintptr_t cr3_ = UINTPTR_MAX;
     uint32_t esi_ = UINT32_MAX;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
-    mxtl::RefPtr<FifoDispatcher> serial_fifo_;
+    mxtl::RefPtr<FifoDispatcher> ctl_fifo_;
 
     VmxPage msr_bitmaps_page_;
     VmxPage apic_address_page_;
     mxtl::Array<VmcsPerCpu> per_cpus_;
 
-    explicit VmcsContext(mxtl::RefPtr<FifoDispatcher> serial_fifo,
-                         mxtl::Array<VmcsPerCpu> per_cpus);
+    explicit VmcsContext(mxtl::RefPtr<FifoDispatcher> ctl_fifo, mxtl::Array<VmcsPerCpu> per_cpus);
 };
 
 using HypervisorContext = VmxonContext;

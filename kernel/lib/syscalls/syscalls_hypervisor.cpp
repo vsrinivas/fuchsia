@@ -36,8 +36,8 @@ mx_status_t sys_hypervisor_create(mx_handle_t opt_handle, uint32_t options, user
 }
 
 static mx_status_t guest_create(mx_handle_t hypervisor_handle,
-                                mx_handle_t guest_phys_mem_handle,
-                                mx_handle_t serial_fifo_handle,
+                                mx_handle_t phys_mem_handle,
+                                mx_handle_t ctl_fifo_handle,
                                 mx_handle_t* out) {
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -47,22 +47,22 @@ static mx_status_t guest_create(mx_handle_t hypervisor_handle,
     if (status != NO_ERROR)
         return status;
 
-    mxtl::RefPtr<VmObjectDispatcher> guest_phys_mem;
+    mxtl::RefPtr<VmObjectDispatcher> phys_mem;
     status = up->GetDispatcherWithRights(
-        guest_phys_mem_handle, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE, &guest_phys_mem);
+        phys_mem_handle, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE, &phys_mem);
     if (status != NO_ERROR)
         return status;
 
-    mxtl::RefPtr<FifoDispatcher> serial_fifo;
+    mxtl::RefPtr<FifoDispatcher> ctl_fifo;
     status = up->GetDispatcherWithRights(
-        serial_fifo_handle, MX_RIGHT_READ | MX_RIGHT_WRITE, &serial_fifo);
+        ctl_fifo_handle, MX_RIGHT_READ | MX_RIGHT_WRITE, &ctl_fifo);
     if (status != NO_ERROR)
         return status;
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     status = GuestDispatcher::Create(
-        hypervisor, guest_phys_mem->vmo(), serial_fifo, &dispatcher, &rights);
+        hypervisor, phys_mem->vmo(), ctl_fifo, &dispatcher, &rights);
     if (status != NO_ERROR)
         return status;
 
@@ -125,7 +125,7 @@ static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
                                uint32_t args_len, user_ptr<void> result, uint32_t result_len) {
     switch (opcode) {
     case MX_HYPERVISOR_OP_GUEST_CREATE: {
-        mx_handle_t create_args[2] /* = { guest_phys_mem, serial_fifo } */;
+        mx_handle_t create_args[2] /* = { phys_mem, ctl_fifo } */;
         if (args_len != sizeof(create_args))
             return ERR_INVALID_ARGS;
         if (args.copy_array_from_user(create_args, sizeof(create_args)) != NO_ERROR)

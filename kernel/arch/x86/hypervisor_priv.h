@@ -290,7 +290,7 @@ public:
     status_t Setup(paddr_t pml4_address, paddr_t apic_access_address,
                    paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
-                   FifoDispatcher* serial_fifo);
+                   FifoDispatcher* ctl_fifo);
 
 private:
     VmxPage host_msr_page_;

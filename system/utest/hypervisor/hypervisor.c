@@ -133,9 +133,9 @@ static bool guest_start_test(void) {
     mx_handle_t guest_phys_mem;
     ASSERT_EQ(guest_create_phys_mem(&addr, kVmoSize, &guest_phys_mem), NO_ERROR, "");
 
-    mx_handle_t guest_serial_fifo;
+    mx_handle_t guest_ctl_fifo;
     mx_handle_t guest;
-    ASSERT_EQ(guest_create(hypervisor, guest_phys_mem, &guest_serial_fifo, &guest), NO_ERROR, "");
+    ASSERT_EQ(guest_create(hypervisor, guest_phys_mem, &guest_ctl_fifo, &guest), NO_ERROR, "");
 
     // Setup the guest.
     uintptr_t guest_entry = 0;
@@ -159,13 +159,19 @@ static bool guest_start_test(void) {
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
               ERR_STOP, "");
 
-    uint8_t buffer[PAGE_SIZE];
-    uint32_t num_entries_read;
-    ASSERT_EQ(mx_fifo_read(guest_serial_fifo, buffer, PAGE_SIZE, &num_entries_read), NO_ERROR, "");
-    ASSERT_EQ(memcmp(buffer, "mx", 2), 0, "");
+    mx_guest_packet_t packet[2];
+    uint32_t num_packets;
+    ASSERT_EQ(mx_fifo_read(guest_ctl_fifo, packet, sizeof(packet), &num_packets), NO_ERROR, "");
+    ASSERT_EQ(num_packets, 2u, "");
+    ASSERT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_IO_PORT, "");
+    ASSERT_EQ(packet[0].io_port.access_size, 1u, "");
+    ASSERT_EQ(packet[0].io_port.data[0], 'm', "");
+    ASSERT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_IO_PORT, "");
+    ASSERT_EQ(packet[1].io_port.access_size, 1u, "");
+    ASSERT_EQ(packet[1].io_port.data[0], 'x', "");
 
     ASSERT_EQ(mx_handle_close(guest), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(guest_serial_fifo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(guest_ctl_fifo), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(guest_phys_mem), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(hypervisor), NO_ERROR, "");
 

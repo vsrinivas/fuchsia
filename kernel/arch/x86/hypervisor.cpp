@@ -817,7 +817,7 @@ void vmx_exit(VmxState* vmx_state) {
 }
 
 status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
-                           FifoDispatcher* serial_fifo) {
+                           FifoDispatcher* ctl_fifo) {
     AutoVmcsLoad vmcs_load(&page_);
     // FS is used for thread-local storage — save for this thread.
     vmcs_write(VmcsFieldXX::HOST_FS_BASE, read_msr(X86_MSR_IA32_FS_BASE));
@@ -847,7 +847,7 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
     } else {
         vmx_state_.resume = true;
         status = vmexit_handler(&vmcs_load, &vmx_state_.guest_state, &local_apic_state_,
-                                &io_apic_state_, gpas, serial_fifo);
+                                &io_apic_state_, gpas, ctl_fifo);
     }
     return status;
 }
@@ -860,8 +860,8 @@ static int vmcs_setup(void* arg) {
 }
 
 // static
-status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                             mxtl::RefPtr<FifoDispatcher> serial_fifo,
+status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
+                             mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                              mxtl::unique_ptr<VmcsContext>* context) {
     uint num_cpus = arch_max_num_cpus();
 
@@ -871,11 +871,11 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
         return ERR_NO_MEMORY;
 
     mxtl::Array<VmcsPerCpu> cpu_ctxs(ctxs, num_cpus);
-    mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(serial_fifo, mxtl::move(cpu_ctxs)));
+    mxtl::unique_ptr<VmcsContext> ctx(new (&ac) VmcsContext(ctl_fifo, mxtl::move(cpu_ctxs)));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    status_t status = GuestPhysicalAddressSpace::Create(guest_phys_mem, &ctx->gpas_);
+    status_t status = GuestPhysicalAddressSpace::Create(phys_mem, &ctx->gpas_);
     if (status != NO_ERROR)
         return status;
 
@@ -923,9 +923,8 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
     return NO_ERROR;
 }
 
-VmcsContext::VmcsContext(mxtl::RefPtr<FifoDispatcher> serial_fifo,
-                         mxtl::Array<VmcsPerCpu> per_cpus)
-    : serial_fifo_(serial_fifo), per_cpus_(mxtl::move(per_cpus)) {}
+VmcsContext::VmcsContext(mxtl::RefPtr<FifoDispatcher> ctl_fifo, mxtl::Array<VmcsPerCpu> per_cpus)
+    : ctl_fifo_(ctl_fifo), per_cpus_(mxtl::move(per_cpus)) {}
 
 static int vmcs_clear(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
@@ -982,7 +981,7 @@ static int vmcs_enter(void* arg) {
     VmcsPerCpu* per_cpu = context->PerCpu();
     status_t status;
     do {
-        status = per_cpu->Enter(*context, context->gpas(), context->serial_fifo());
+        status = per_cpu->Enter(*context, context->gpas(), context->ctl_fifo());
     } while (status == NO_ERROR);
     return status;
 }
@@ -1005,10 +1004,10 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
     return VmxonContext::Create(context);
 }
 
-status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
+status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<GuestContext>* context) {
-    return VmcsContext::Create(guest_phys_mem, serial_fifo, context);
+    return VmcsContext::Create(phys_mem, ctl_fifo, context);
 }
 
 status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {

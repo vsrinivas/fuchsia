@@ -12,8 +12,8 @@
 class GuestDispatcher final : public Dispatcher {
 public:
     static mx_status_t Create(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
-                              mxtl::RefPtr<VmObject> guest_phys_mem,
-                              mxtl::RefPtr<FifoDispatcher> serial_fifo,
+                              mxtl::RefPtr<VmObject> phys_mem,
+                              mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                               mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 

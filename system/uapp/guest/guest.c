@@ -89,10 +89,27 @@ static mx_status_t load_bootfs(int fd, uintptr_t addr, uintptr_t bootdata_off) {
     return NO_ERROR;
 }
 
-int serial_fifo_thread(void* arg) {
-    uint8_t buffer[PAGE_SIZE];
-    uint32_t offset = 0;
+#define IO_BUFFER_SIZE 512
+typedef struct ctl_context {
+    uint8_t io_buffer[IO_BUFFER_SIZE];
+    uint16_t io_offset;
+} ctl_context_t;
+
+void handle_io_port(ctl_context_t* context, const mx_guest_io_port_t* io_port) {
+    for (int i = 0; i < io_port->access_size; i++) {
+        context->io_buffer[context->io_offset++] = io_port->data[i];
+        if (context->io_offset == IO_BUFFER_SIZE || io_port->data[i] == '\r') {
+            printf("%.*s", context->io_offset, context->io_buffer);
+            context->io_offset = 0;
+        }
+    }
+}
+
+int ctl_thread(void* arg) {
     mx_handle_t* fifo = arg;
+    mx_guest_packet_t packet[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
+    ctl_context_t context;
+    memset(&context, 0, sizeof(ctl_context_t));
     while (true) {
         mx_signals_t observed;
         mx_status_t status = mx_object_wait_one(*fifo, MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
@@ -104,16 +121,20 @@ int serial_fifo_thread(void* arg) {
         if (~observed & MX_FIFO_READABLE)
             continue;
 
-        uint32_t bytes_read;
-        status = mx_fifo_read(*fifo, buffer + offset, PAGE_SIZE - offset, &bytes_read);
+        uint32_t num_packets;
+        status = mx_fifo_read(*fifo, &packet, sizeof(packet), &num_packets);
         if (status != NO_ERROR)
             return thrd_error;
 
-        uint8_t* linebreak = memchr(buffer + offset, '\r', bytes_read);
-        offset += bytes_read;
-        if (linebreak != NULL || offset == PAGE_SIZE) {
-            printf("%.*s", offset, buffer);
-            offset = 0;
+        for (uint32_t i = 0; i < num_packets; i++) {
+            switch (packet[i].type) {
+            case MX_GUEST_PKT_TYPE_IO_PORT:
+                handle_io_port(&context, &packet[i].io_port);
+                break;
+            default:
+                fprintf(stderr, "Unhandled guest packet %d\n", packet[i].type);
+                return thrd_error;
+            }
         }
     }
 }
@@ -133,16 +154,16 @@ int main(int argc, char** argv) {
     }
 
     uintptr_t addr;
-    mx_handle_t guest_phys_mem;
-    status = guest_create_phys_mem(&addr, kVmoSize, &guest_phys_mem);
+    mx_handle_t phys_mem;
+    status = guest_create_phys_mem(&addr, kVmoSize, &phys_mem);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create guest physical memory\n");
         return status;
     }
 
-    mx_handle_t guest_serial_fifo;
+    mx_handle_t ctl_fifo;
     mx_handle_t guest;
-    status = guest_create(hypervisor, guest_phys_mem, &guest_serial_fifo, &guest);
+    status = guest_create(hypervisor, phys_mem, &ctl_fifo, &guest);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
@@ -221,7 +242,7 @@ int main(int argc, char** argv) {
     }
 
     thrd_t thread;
-    int ret = thrd_create(&thread, serial_fifo_thread, &guest_serial_fifo);
+    int ret = thrd_create(&thread, ctl_thread, &ctl_fifo);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create serial FIFO thread\n");
         return ERR_INTERNAL;

@@ -168,14 +168,16 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
     return NO_ERROR;
 }
 
-mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* serial_fifo,
+mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
                          mx_handle_t* guest) {
-    mx_handle_t guest_fifo;
-    mx_status_t status = mx_fifo_create(PAGE_SIZE, 1, 0, &guest_fifo, serial_fifo);
+    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
+    const uint32_t size = MX_GUEST_MAX_PKT_SIZE;
+    mx_handle_t kernel_ctl_fifo;
+    mx_status_t status = mx_fifo_create(count, size, 0, &kernel_ctl_fifo, ctl_fifo);
     if (status != NO_ERROR)
         return status;
 
-    mx_handle_t create_args[2] = { phys_mem, guest_fifo };
+    mx_handle_t create_args[2] = { phys_mem, kernel_ctl_fifo };
     return mx_hypervisor_op(hypervisor, MX_HYPERVISOR_OP_GUEST_CREATE,
                             create_args, sizeof(create_args), guest, sizeof(*guest));
 }

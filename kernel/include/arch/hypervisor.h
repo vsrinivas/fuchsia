@@ -30,8 +30,8 @@ status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context);
 /* Create a guest context.
  * This creates the structures to allow a guest to be run.
  */
-status_t arch_guest_create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                           mxtl::RefPtr<FifoDispatcher> serial_fifo,
+status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
+                           mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                            mxtl::unique_ptr<GuestContext>* context);
 
 /* Enter a guest context.

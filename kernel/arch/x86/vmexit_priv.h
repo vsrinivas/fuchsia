@@ -46,7 +46,7 @@ struct ExitInfo {
 
 /* Stores IO instruction info from the VMCS exit qualification field. */
 struct IoInfo {
-    uint8_t bytes;
+    uint8_t access_size;
     bool input;
     bool string;
     bool repeat;
@@ -93,4 +93,4 @@ status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestSta
                             Instruction* inst);
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
                         LocalApicState* local_apic_state, IoApicState* io_apic_state,
-                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* serial_fifo);
+                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo);

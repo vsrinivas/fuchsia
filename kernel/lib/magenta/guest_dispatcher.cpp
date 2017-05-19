@@ -14,12 +14,12 @@ constexpr mx_rights_t kDefaultGuestRights = MX_RIGHT_EXECUTE;
 
 // static
 mx_status_t GuestDispatcher::Create(mxtl::RefPtr<HypervisorDispatcher> hypervisor,
-                                    mxtl::RefPtr<VmObject> guest_phys_mem,
-                                    mxtl::RefPtr<FifoDispatcher> serial_fifo,
+                                    mxtl::RefPtr<VmObject> phys_mem,
+                                    mxtl::RefPtr<FifoDispatcher> ctl_fifo,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     mxtl::unique_ptr<GuestContext> context;
-    mx_status_t status = arch_guest_create(guest_phys_mem, serial_fifo, &context);
+    mx_status_t status = arch_guest_create(phys_mem, ctl_fifo, &context);
     if (status != NO_ERROR)
         return status;
 

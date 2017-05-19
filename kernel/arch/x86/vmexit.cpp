@@ -23,6 +23,8 @@
 
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
+#include <magenta/syscalls/hypervisor.h>
+
 static const uint16_t kUartReceiveIoPort = 0x3f8;
 static const uint16_t kUartStatusIoPort = 0x3fd;
 static const uint64_t kUartStatusIdle = 1u << 6;
@@ -70,7 +72,7 @@ ExitInfo::ExitInfo() {
 }
 
 IoInfo::IoInfo(uint64_t qualification) {
-    bytes = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
+    access_size = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
     input = BIT_SHIFT(qualification, 3);
     string = BIT_SHIFT(qualification, 4);
     repeat = BIT_SHIFT(qualification, 5);
@@ -180,8 +182,54 @@ static status_t handle_hlt(const ExitInfo& exit_info, LocalApicState* local_apic
     return NO_ERROR;
 }
 
-static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
-                          FifoDispatcher* serial_fifo) {
+#if WITH_LIB_MAGENTA
+class FifoStateObserver : public StateObserver {
+public:
+    FifoStateObserver(mx_signals_t watched_signals)
+        : watched_signals_(watched_signals) {
+        event_init(&event_, false, 0);
+    }
+    status_t Wait(StateTracker* state_tracker) {
+        state_tracker->AddObserver(this, nullptr);
+        status_t status = event_wait(&event_);
+        state_tracker->RemoveObserver(this);
+        return status;
+    }
+private:
+    mx_signals_t watched_signals_;
+    event_t event_;
+    virtual bool OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) {
+        return false;
+    }
+    virtual bool OnStateChange(mx_signals_t new_state) {
+        if (new_state & watched_signals_)
+            event_signal(&event_, false);
+        return false;
+    }
+    virtual bool OnCancel(Handle* handle) {
+        return false;
+    }
+};
+
+static status_t packet_write(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet) {
+    StateTracker* state_tracker = ctl_fifo->get_state_tracker();
+    if (~state_tracker->GetSignalsState() & MX_FIFO_WRITABLE) {
+        // TODO(abdulla): Add stats to keep track of waits.
+        FifoStateObserver state_observer(MX_FIFO_WRITABLE | MX_FIFO_PEER_CLOSED);
+        status_t status = state_observer.Wait(state_tracker);
+        if (status != NO_ERROR)
+            return status;
+        if (state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED)
+            return ERR_PEER_CLOSED;
+    }
+    uint8_t* data = reinterpret_cast<uint8_t*>(packet);
+    uint32_t actual;
+    return ctl_fifo->Write(data, sizeof(mx_guest_packet_t), &actual);
+}
+#endif // WITH_LIB_MAGENTA
+
+static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* guest_state,
+                                      FifoDispatcher* ctl_fifo) {
     next_rip(exit_info);
 #if WITH_LIB_MAGENTA
     IoInfo io_info(exit_info.exit_qualification);
@@ -192,9 +240,12 @@ static status_t handle_io(const ExitInfo& exit_info, GuestState* guest_state,
     }
     if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
         return NO_ERROR;
-    uint8_t* data = reinterpret_cast<uint8_t*>(&guest_state->rax);
-    uint32_t actual;
-    return serial_fifo->Write(data, io_info.bytes, &actual);
+    mx_guest_packet_t packet;
+    memset(&packet, 0, sizeof(mx_guest_packet_t));
+    packet.type = MX_GUEST_PKT_TYPE_IO_PORT;
+    packet.io_port.access_size = io_info.access_size;
+    memcpy(packet.io_port.data, &guest_state->rax, io_info.access_size);
+    return packet_write(ctl_fifo, &packet);
 #else // WITH_LIB_MAGENTA
     return NO_ERROR;
 #endif // WITH_LIB_MAGENTA
@@ -621,7 +672,7 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
 
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
                         LocalApicState* local_apic_state, IoApicState* io_apic_state,
-                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* serial_fifo) {
+                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
@@ -640,7 +691,7 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         dprintf(SPEW, "handling VMCALL instruction\n\n");
         return ERR_STOP;
     case ExitReason::IO_INSTRUCTION:
-        return handle_io(exit_info, guest_state, serial_fifo);
+        return handle_io_instruction(exit_info, guest_state, ctl_fifo);
     case ExitReason::RDMSR:
         dprintf(SPEW, "handling RDMSR instruction\n\n");
         return handle_rdmsr(exit_info, guest_state);
