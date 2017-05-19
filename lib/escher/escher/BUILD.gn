@@ -6,6 +6,9 @@ config("public_preprocessor_definitions") {
   defines = [
     "VULKAN_HPP_NO_EXCEPTIONS",
     "GLM_ENABLE_EXPERIMENTAL",
+
+    # Disable SIMD code paths that seem unstable on Fuchsia.
+    "GLM_FORCE_PURE",
   ]
 }
 
