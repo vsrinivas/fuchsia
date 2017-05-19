@@ -237,7 +237,13 @@ impl<T: EncodableNullable> Encodable for Option<T>
 {
     fn encode(self, buf: &mut EncodeBuf, base: usize, offset: usize) {
         match self {
-            None => Encodable::encode(T::null_value(), buf, base, offset),
+            None => {
+                Encodable::encode(T::null_value(), buf, base, offset);
+                if <T as EncodableNullable>::NullType::size() < T::size() {
+                    // Generate second null for union types (16 bytes)
+                    Encodable::encode(T::null_value(), buf, base, offset);
+                }
+            }
             Some(val) => val.encode(buf, base, offset)
         }
     }
@@ -247,7 +253,7 @@ impl<T: EncodableNullable> Encodable for Option<T>
     }
 
     fn size() -> usize {
-        8
+        T::size()
     }
 }
 
@@ -577,7 +583,7 @@ impl_codable_ptr!(String);
 
 impl<K: Encodable + Eq + Hash, V: Encodable> EncodablePtr for HashMap<K, V> {
     fn body_size(&self) -> usize {
-        16
+        24
     }
 
     fn header_data(&self) -> u32 {
