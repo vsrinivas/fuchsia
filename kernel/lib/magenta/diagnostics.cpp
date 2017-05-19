@@ -490,8 +490,37 @@ static void DumpAddressSpace(const cmd_args* arg) {
     }
 }
 
+static void DumpHandleTable() {
+    printf("outstanding handles: %zu\n", internal::OutstandingHandles());
+    internal::DumpHandleTableInfo();
+}
+
 static size_t mwd_limit = 32 * 256;
 static bool mwd_running;
+
+static size_t hwd_limit = 1024;
+static bool hwd_running;
+
+static int hwd_thread(void* arg) {
+    static size_t previous_handle_count = 0u;
+
+    for (;;) {
+        auto handle_count = internal::OutstandingHandles();
+        if (handle_count != previous_handle_count) {
+            if (handle_count > hwd_limit) {
+                printf("HandleWatchdog! %zu handles outstanding (greater than limit %zu)\n",
+                       handle_count, hwd_limit);
+            } else if (previous_handle_count > hwd_limit) {
+                printf("HandleWatchdog! %zu handles outstanding (dropping below limit %zu)\n",
+                       handle_count, hwd_limit);
+            }
+        }
+
+        previous_handle_count = handle_count;
+
+        thread_sleep_relative(LK_SEC(1));
+    }
+}
 
 void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
     auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
@@ -522,6 +551,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         printf("%s ps                : list processes\n", argv[0].str);
         printf("%s mwd  <mb>         : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid>        : dump process handles\n", argv[0].str);
+        printf("%s hwd  <count>      : handle watchdog\n", argv[0].str);
         printf("%s vmos <pid>        : dump process VMOs\n", argv[0].str);
         printf("%s jb   <pid>        : list job tree\n", argv[0].str);
         printf("%s kill <pid>        : kill process\n", argv[0].str);
@@ -548,6 +578,17 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
         } else {
             DumpProcessList();
         }
+    } else if (strcmp(argv[1].str, "hwd") == 0) {
+        if (argc == 3) {
+            hwd_limit = argv[2].u;
+        }
+        if (!hwd_running) {
+            thread_t* t = thread_create("hwd", hwd_thread, nullptr, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+            if (t) {
+                hwd_running = true;
+                thread_resume(t);
+            }
+        }
     } else if (strcmp(argv[1].str, "ht") == 0) {
         if (argc < 3)
             goto usage;
@@ -571,7 +612,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     } else if (strcmp(argv[1].str, "htinfo") == 0) {
         if (argc != 2)
             goto usage;
-        internal::DumpHandleTableInfo();
+        DumpHandleTable();
     } else {
         printf("unrecognized subcommand '%s'\n", argv[1].str);
         goto usage;

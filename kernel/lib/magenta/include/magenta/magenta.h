@@ -60,7 +60,11 @@ mx_status_t get_process(ProcessDispatcher* up,
                         mxtl::RefPtr<ProcessDispatcher>* proc);
 
 namespace internal {
-    // Dumps internal details of the handle table using printf().
-    // Should only be called by diagnostics.cpp.
-    void DumpHandleTableInfo();
+// Dumps internal details of the handle table using printf().
+// Should only be called by diagnostics.cpp.
+void DumpHandleTableInfo();
+
+// Returns the number of outstanding handles.
+// Should only be called by diagnostics.cpp.
+size_t OutstandingHandles();
 } // namespace internal

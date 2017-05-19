@@ -49,6 +49,11 @@ static Mutex handle_mutex;
 static mxtl::Arena TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
+size_t internal::OutstandingHandles() {
+    AutoLock lock(&handle_mutex);
+    return outstanding_handles;
+}
+
 // The system exception port.
 static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
 static mxtl::RefPtr<ExceptionPort> system_exception_port TA_GUARDED(system_exception_mutex);
