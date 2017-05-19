@@ -56,8 +56,6 @@ mx_device_t* device_create_setup(mx_device_t* parent) {
     return dev;
 }
 
-static mx_device_t* root_dev;
-
 static mx_status_t default_open(void* ctx, mx_device_t** out, uint32_t flags) {
     return NO_ERROR;
 }
@@ -238,26 +236,6 @@ static mx_status_t device_validate(mx_device_t* dev) {
     return NO_ERROR;
 }
 
-mx_status_t devhost_device_add_root(mx_device_t* dev) {
-    mx_status_t status;
-    if ((status = device_validate(dev)) < 0) {
-        dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
-        return status;
-    }
-    if (root_dev != NULL) {
-        printf("devhost: cannot add two root devices\n");
-        panic();
-    }
-    root_dev = dev;
-    dev_ref_acquire(dev);
-
-    if (dev->protocol_id != 0) {
-        list_add_tail(&unmatched_device_list, &dev->unode);
-    }
-    dev->flags |= DEV_FLAG_ADDED;
-    return NO_ERROR;
-}
-
 mx_status_t devhost_device_install(mx_device_t* dev) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
@@ -278,7 +256,7 @@ mx_status_t devhost_device_install(mx_device_t* dev) {
 }
 
 mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
-                               mx_device_prop_t* props, uint32_t prop_count,
+                               const mx_device_prop_t* props, uint32_t prop_count,
                                const char* businfo, mx_handle_t resource) {
     mx_status_t status;
     if ((status = device_validate(dev)) < 0) {
@@ -317,12 +295,6 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         goto fail;
     }
 
-    // Set the device properties if they're not already filled out
-    if (dev->props == NULL) {
-        dev->props = props;
-        dev->prop_count = prop_count;
-    }
-
     dev->flags |= DEV_FLAG_BUSY;
 
     // this is balanced by end of devhost_device_remove
@@ -342,7 +314,7 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         list_add_tail(&parent->children, &dev->node);
 
         // devhost_add always consumes the handle
-        status = devhost_add(parent, dev, businfo, resource);
+        status = devhost_add(parent, dev, businfo, resource, props, prop_count);
         if (status < 0) {
             printf("devhost: %p(%s): remote add failed %d\n",
                    dev, dev->name, status);
@@ -444,11 +416,6 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     if (dev->parent) {
         list_delete(&dev->node);
         dev_ref_release(dev->parent);
-    }
-
-    // remove from list of unbound devices, if on that list
-    if (list_in_list(&dev->unode)) {
-        list_delete(&dev->unode);
     }
 
     dev->flags |= DEV_FLAG_VERY_DEAD;

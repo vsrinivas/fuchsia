@@ -422,7 +422,8 @@ static void devhost_io_init(void) {
 // Send message to devcoordinator asking to add child device to
 // parent device.  Called under devhost api lock.
 mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
-                        const char* businfo, mx_handle_t resource) {
+                        const char* businfo, mx_handle_t resource,
+                        const mx_device_prop_t* props, uint32_t prop_count) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
@@ -442,7 +443,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
     dc_msg_t msg;
     uint32_t msglen;
     if ((r = dc_msg_pack(&msg, &msglen,
-                         child->props, child->prop_count * sizeof(mx_device_prop_t),
+                         props, prop_count * sizeof(mx_device_prop_t),
                          name, businfo)) < 0) {
         goto fail;
     }

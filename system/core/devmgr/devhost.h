@@ -41,7 +41,7 @@ mx_status_t devhost_driver_remove(mx_driver_t* driver);
 mx_status_t devhost_driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 
 mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
-                               mx_device_prop_t* props, uint32_t prop_count,
+                               const mx_device_prop_t* props, uint32_t prop_count,
                                const char* businfo, mx_handle_t resource);
 mx_status_t devhost_device_install(mx_device_t* dev);
 mx_status_t devhost_device_add_root(mx_device_t* dev);
@@ -80,7 +80,8 @@ mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h);
 
 // routines devhost uses to talk to dev coordinator
 mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child,
-                        const char* businfo, mx_handle_t resource);
+                        const char* businfo, mx_handle_t resource,
+                        const mx_device_prop_t* props, uint32_t prop_count);
 mx_status_t devhost_remove(mx_device_t* dev);
 mx_status_t devhost_add_internal(mx_device_t* parent,
                                  const char* name, uint32_t protocol_id,

@@ -69,14 +69,6 @@ struct mx_device {
     // list of this device's children in the device tree
     struct list_node DDK_PRIVATE(children);
 
-    // for list of all unmatched devices, if not bound
-    // TODO: use this for general lifecycle tracking
-    struct list_node DDK_PRIVATE(unode);
-
-    // properties for driver binding
-    mx_device_prop_t* DDK_PRIVATE(props);
-    uint32_t DDK_PRIVATE(prop_count);
-
     // iostate
     void* DDK_PRIVATE(ios);
 

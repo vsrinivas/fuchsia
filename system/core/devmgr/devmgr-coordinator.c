@@ -783,7 +783,7 @@ static mx_status_t dc_create_shadow(device_t* parent) {
 
     size_t namelen = strlen(parent->name);
     size_t liblen = strlen(parent->libname);
-    device_t* dev = calloc(1, sizeof(mx_device_t) + namelen + liblen + 2);
+    device_t* dev = calloc(1, sizeof(device_t) + namelen + liblen + 2);
     if (dev == NULL) {
         return ERR_NO_MEMORY;
     }
