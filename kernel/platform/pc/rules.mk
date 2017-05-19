@@ -32,7 +32,6 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
     third_party/lib/acpica \
-    kernel/lib/capsule \
     kernel/lib/gfxconsole \
     kernel/lib/fixed_point \
     kernel/lib/memory_limit \

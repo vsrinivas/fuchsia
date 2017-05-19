@@ -14,7 +14,6 @@
 #include <platform.h>
 #include <platform/keyboard.h>
 
-#include <lib/capsule.h>
 #include <lib/console.h>
 #include <lib/version.h>
 
@@ -48,55 +47,6 @@ static void halt_other_cpus(void) {
         }
     }
 #endif
-}
-
-#define CAPSULE_TAG_x86_64_CRASH 33
-#define CAPSULE_BUILD_DIGITS 8
-#define CAPSULE_TAG_MAGIC_x86 0x3e343658
-
-#pragma pack(push, 1)
-typedef struct x86_panic_capsule {
-    uint32_t magic;
-    char build[CAPSULE_BUILD_DIGITS];
-    uint32_t count;
-    uint32_t pc32[THREAD_BACKTRACE_DEPTH];
-} x86_panic_capsule_t;
-#pragma pack(pop)
-
-static void store_panic_in_capsule(void) {
-    thread_backtrace_t bt;
-    int count = thread_get_backtrace(get_current_thread(), __GET_FRAME(0), &bt);
-    if (count < 1) {
-        printf("failed to get backtrace\n");
-        return;
-    }
-    x86_panic_capsule_t capsule = {};
-    capsule.magic = CAPSULE_TAG_MAGIC_x86;
-    capsule.count = (uint32_t)count;
-
-    const char *buildid = version.buildid;
-
-    // if the first part of the build string starts with GIT_, trim it off
-    if (memcmp(buildid, "GIT_", 4) == 0)
-        buildid += 4;
-
-    // zero out and copy the first part of the buildid string
-    memset(capsule.build, 0, CAPSULE_BUILD_DIGITS);
-    for (int c = 0; c < CAPSULE_BUILD_DIGITS && buildid[c] != '\0'; c++) {
-        capsule.build[c] = buildid[c];
-    }
-
-    for (int c = 0; c < THREAD_BACKTRACE_DEPTH; c++) {
-        capsule.pc32[c] = (c < count) ?
-            (uint32_t)((uintptr_t)bt.pc[c] & 0x00000000ffffffff) : 0u;
-    }
-    int32_t rc = capsule_store(
-        CAPSULE_TAG_x86_64_CRASH, &capsule, sizeof(x86_panic_capsule_t));
-    if (rc < 0) {
-        printf("store to capsule failed: %d\n", rc);
-    } else {
-        printf("stored %d frames in capsule\n", count);
-    }
 }
 
 void platform_panic_start(void) {
@@ -139,7 +89,6 @@ void platform_halt(
 #if WITH_LIB_DEBUGLOG
 #if WITH_PANIC_BACKTRACE
     thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
-    store_panic_in_capsule();
 #endif
     dlog_bluescreen_halt();
 #endif
@@ -159,33 +108,3 @@ void platform_halt(
         x86_hlt();
     }
 }
-
-#if WITH_LIB_CONSOLE
-
-static int cmd_prevcrash(int argc, const cmd_args *argv, uint32_t flags) {
-    x86_panic_capsule_t capsule;
-    int32_t rv = capsule_fetch(
-        CAPSULE_TAG_x86_64_CRASH, &capsule, sizeof(x86_panic_capsule_t));
-    if (capsule.magic != CAPSULE_TAG_MAGIC_x86) {
-        printf("panic capsule is corrupt (%d) %x\n", rv, capsule.magic);
-        return 0;
-    }
-    printf("panic capsule found\nbuild:");
-    for (int c = 0; c < CAPSULE_BUILD_DIGITS; c++) {
-        printf("%c", capsule.build[c]);
-    }
-    printf("\nbacktrace:\n");
-    for (int c = 0; c < THREAD_BACKTRACE_DEPTH; c++) {
-        if (c < (int)capsule.count)
-            printf("bt#%02d: %p\n", c, (void*)(capsule.pc32[c] | 0xffffffff00000000));
-    }
-    printf("\n");
-    return 0;
-}
-
-STATIC_COMMAND_START
-STATIC_COMMAND("prevpanic", "dump panic stored in capsule", &cmd_prevcrash)
-STATIC_COMMAND_END(prevpanic);
-
-#endif  // WITH_LIB_CONSOLE
-
