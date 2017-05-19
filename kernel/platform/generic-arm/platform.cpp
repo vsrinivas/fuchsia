@@ -646,3 +646,7 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     arch_disable_ints();
     for (;;);
 }
+
+size_t platform_stow_crashlog(void* log, size_t len) {
+    return 0;
+}

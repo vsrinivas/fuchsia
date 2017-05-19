@@ -11,6 +11,7 @@
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>
+#include <platform.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -55,6 +56,8 @@ status_t udisplay_init(void) {
 }
 
 void dlog_bluescreen_halt(void) {
+    platform_stow_crashlog(qrlogbuf, qrlogptr);
+
     if (g_udisplay.framebuffer_virt == 0)
         return;
 

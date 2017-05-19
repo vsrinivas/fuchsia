@@ -154,6 +154,38 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
     return cd.file_count;
 }
 
+static void setup_last_crashlog(mx_handle_t vmo_in, uint64_t off_in, size_t sz) {
+    printf("devmgr: last crashlog is %zu bytes\n", sz);
+    mx_handle_t vmo;
+    mx_status_t r;
+    if ((r = mx_vmo_create(sz, 0, &vmo) < 0)) {
+        return;
+    }
+
+    char tmp[4096];
+    uint64_t off = 0;
+    size_t len = sz;
+    while (len > 0) {
+        size_t actual_in;
+        r = mx_vmo_read(vmo_in, tmp, off_in, (len > sizeof(tmp)) ? sizeof(tmp) : len, &actual_in);
+        if (r < 0) {
+            goto fail;
+        }
+        size_t actual;
+        r = mx_vmo_write(vmo, tmp, off, actual_in, &actual);
+        if ((r < 0) || (actual_in != actual)) {
+            goto fail;
+        }
+        len -= actual;
+        off += actual;
+        off_in += actual;
+    }
+    bootfs_add_file("log/last-panic.txt", vmo, 0, sz);
+    return;
+fail:
+    mx_handle_close(vmo);
+}
+
 #define HND_BOOTFS(n) PA_HND(PA_VMO_BOOTFS, n)
 #define HND_BOOTDATA(n) PA_HND(PA_VMO_BOOTDATA, n)
 
@@ -214,6 +246,9 @@ static void setup_bootfs(void) {
                 }
                 break;
             }
+            case BOOTDATA_LAST_CRASHLOG:
+                setup_last_crashlog(vmo, off + sizeof(bootdata), bootdata.length);
+                break;
             case BOOTDATA_MDI:
             case BOOTDATA_CMDLINE:
             case BOOTDATA_ACPI_RSDP:

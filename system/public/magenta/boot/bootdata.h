@@ -70,6 +70,10 @@
 // Content: a uint64_t physical address of the table
 #define BOOTDATA_EFI_SYSTEM_TABLE (0x53494645) // EFIS
 
+// Last crashlog
+// Content: ascii/utf8 log data from previous boot
+#define BOOTDATA_LAST_CRASHLOG    (0x4d4f4f42) // BOOM
+
 #define BOOTDATA_IGNORE           (0x50494b53) // SKIP
 
 #ifndef ASSEMBLY
@@ -116,6 +120,15 @@ typedef struct {
     bootdata_t hdr_kernel;
     bootdata_kernel_t data_kernel;
 } magenta_kernel_t;
+
+
+/* EFI Variable for Crash Log */
+#define MAGENTA_VENDOR_GUID \
+    {0x82305eb2, 0xd39e, 0x4575, {0xa0, 0xc8, 0x6c, 0x20, 0x72, 0xd0, 0x84, 0x4c}}
+#define MAGENTA_CRASHLOG_EFIVAR \
+    { 'c', 'r', 'a', 's', 'h', 'l', 'o', 'g', 0 };
+#define MAGENTA_CRASHLOG_EFIATTR \
+    (EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
 
 __END_CDECLS;
 #endif

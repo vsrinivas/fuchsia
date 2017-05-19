@@ -7,7 +7,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #include <err.h>
 #include <trace.h>
 #include <arch/x86/apic.h>
@@ -32,7 +31,14 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
+//#include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+
+extern "C" {
+#include <efi/runtime-services.h>
+#include <efi/system-table.h>
+};
+
 
 #define LOCAL_TRACE 0
 
@@ -292,6 +298,60 @@ static void platform_ensure_display_memtype(uint level)
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1);
 
+#define MAGENTA_VENDOR_GUID \
+    {0x82305eb2, 0xd39e, 0x4575, {0xa0, 0xc8, 0x6c, 0x20, 0x72, 0xd0, 0x84, 0x4c}}
+static efi_guid magenta_guid = MAGENTA_VENDOR_GUID;
+static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
+
+static mxtl::RefPtr<VmAspace> efi_aspace;
+
+void platform_init_crashlog(void) {
+    if (bootloader.efi_system_table != NULL) {
+        // Create a linear mapping to use to call UEFI Runtime Services
+        efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
+
+        //TODO: get more precise about this.  This gets the job done on
+        //      the platforms we're working on right now, but is probably
+        //      not entirely correct.
+        void* ptr;
+        mx_status_t r = efi_aspace->AllocPhysical("1:1", 16*1024*1024*1024UL, &ptr,
+                                                  PAGE_SIZE_SHIFT, 0, 0,
+                                                  ARCH_MMU_FLAG_PERM_READ |
+                                                  ARCH_MMU_FLAG_PERM_WRITE |
+                                                  ARCH_MMU_FLAG_PERM_EXECUTE);
+
+        if (r != NO_ERROR) {
+            efi_aspace.reset();
+        }
+    }
+}
+
+// Something big enough for the panic log but not too enormous
+// to avoid excessive pressure on efi variable storage
+#define MAX_CRASHLOG_LEN 4096
+
+size_t platform_stow_crashlog(void* log, size_t len) {
+    if (!efi_aspace) {
+        return 0;
+    }
+    if (log == NULL) {
+        return MAX_CRASHLOG_LEN;
+    }
+    if (len > MAX_CRASHLOG_LEN) {
+        len = MAX_CRASHLOG_LEN;
+    }
+
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+
+    efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
+    efi_runtime_services* rs = sys->RuntimeServices;
+    if (rs->SetVariable(crashlog_name, &magenta_guid, MAGENTA_CRASHLOG_EFIATTR, len, log) == 0) {
+        return len;
+    } else {
+        return 0;
+    }
+}
+
 void platform_early_init(void)
 {
     /* get the debug output working */
@@ -426,6 +486,8 @@ status_t platform_mp_prep_cpu_unplug(uint cpu_id)
 void platform_init(void)
 {
     platform_init_debug();
+
+    platform_init_crashlog();
 
 #if NO_USER_KEYBOARD
     platform_init_keyboard(&console_input_buf);

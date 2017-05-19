@@ -88,6 +88,17 @@ void platform_quiesce(void);
  */
 void *platform_get_ramdisk(size_t *size);
 
+/* Stash the crashlog somewhere platform-specific that allows
+ * for recovery after reboot.  This will only be called out
+ * of the panic() handling path on the way to reboot, and is
+ * not necessarily safe to be called from any other state.
+ *
+ * Calling with a NULL log returns the maximum supported size.
+ * It is safe to query the size at any time after boot.  If the
+ * return is 0, no crashlog recovery is supported.
+ */
+size_t platform_stow_crashlog(void* log, size_t len);
+
 __END_CDECLS;
 
 #endif

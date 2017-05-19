@@ -5,6 +5,7 @@
 #include "osboot.h"
 
 #include <efi/protocol/graphics-output.h>
+#include <efi/runtime-services.h>
 
 #include <cmdline.h>
 #include <inttypes.h>
@@ -14,6 +15,25 @@
 
 #include <magenta/boot/bootdata.h>
 #include <magenta/pixelformat.h>
+
+
+static efi_guid magenta_guid = MAGENTA_VENDOR_GUID;
+static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
+
+static size_t get_last_crashlog(efi_system_table* sys, void* ptr, size_t max) {
+    efi_runtime_services* rs = sys->RuntimeServices;
+
+    uint32_t attr = MAGENTA_CRASHLOG_EFIATTR;
+    size_t sz = max;
+    efi_status r = rs->GetVariable(crashlog_name, &magenta_guid, &attr, &sz, ptr);
+    if (r == EFI_SUCCESS) {
+        // Erase it
+        rs->SetVariable(crashlog_name, &magenta_guid, MAGENTA_CRASHLOG_EFIATTR, 0, NULL);
+    } else {
+        sz = 0;
+    }
+    return sz;
+}
 
 static unsigned char scratch[32768];
 
@@ -184,6 +204,14 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     hdr.length = msize + sizeof(uint64_t);
     if (add_bootdata(&bptr, &blen, &hdr, scratch)) {
         goto fail;
+    }
+
+    // obtain the last crashlog if we can
+    size_t sz = get_last_crashlog(sys, scratch, 4096);
+    if (sz > 0) {
+        hdr.type = BOOTDATA_LAST_CRASHLOG;
+        hdr.length = sz;
+        add_bootdata(&bptr, &blen, &hdr, scratch);
     }
 
     // fill the remaining gap between pre-data and ramdisk image
