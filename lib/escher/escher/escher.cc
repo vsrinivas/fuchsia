@@ -56,4 +56,8 @@ uint64_t Escher::GetNumGpuBytesAllocated() {
   return impl_->gpu_allocator()->total_slab_bytes();
 }
 
+const VulkanContext& Escher::vulkan_context() {
+  return impl_->vulkan_context();
+}
+
 }  // namespace escher

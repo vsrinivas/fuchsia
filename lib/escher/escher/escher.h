@@ -52,6 +52,8 @@ class Escher : public MeshBuilderFactory {
 
   uint64_t GetNumGpuBytesAllocated();
 
+  const VulkanContext& vulkan_context();
+
  private:
   std::unique_ptr<impl::EscherImpl> impl_;
 
