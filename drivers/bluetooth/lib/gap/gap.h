@@ -32,6 +32,22 @@ enum class DataType : uint8_t {
   // TODO(armansito): Complete this list.
 };
 
+// Constants for the expected size (in octets) of an advertising/EIR/scan-response data field.
+//
+//  * If a constant contains the word "Min", then it specifies a minimum expected length rather than
+//    an exact length.
+//
+//  * If a constants contains the word "ElemSize", then the data field is expected to contain a
+//    contiguous array of elements of the specified size.
+constexpr size_t kTxPowerLevelSize = 1;
+
+constexpr size_t kFlagsSizeMin = 1;
+constexpr size_t kManufacturerSpecificDataSizeMin = 2;
+
+constexpr size_t k16BitUUIDElemSize = 2;
+constexpr size_t k32BitUUIDElemSize = 4;
+constexpr size_t k128BitUUIDElemSize = 16;
+
 // Potential values that can be provided in the "Flags" advertising data
 // bitfield.
 enum AdvFlag : uint8_t {

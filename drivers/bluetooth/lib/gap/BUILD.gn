@@ -10,6 +10,8 @@ static_library("gap") {
     "adapter_state.h",
     "advertising_data.cc",
     "advertising_data.h",
+    "discovery_filter.cc",
+    "discovery_filter.h",
     "gap.h",
     "low_energy_state.cc",
     "low_energy_state.h",
@@ -28,6 +30,7 @@ source_set("tests") {
   sources = [
     "adapter_unittest.cc",
     "advertising_data_unittest.cc",
+    "discovery_filter_unittest.cc",
   ]
 
   deps = [
