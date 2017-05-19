@@ -26,6 +26,7 @@
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
+#include "apps/modular/services/story/surface.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -85,8 +86,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      const uint64_t parent_id,
-      const fidl::String& view_type);
+      uint64_t parent_id,
+      SurfaceRelationPtr surface_relation);
 
   // Called by ModuleContextImpl.
   const fidl::String& GetStoryId() const;

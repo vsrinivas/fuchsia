@@ -8,6 +8,7 @@ import "application/services/service_provider.fidl";
 import "apps/maxwell/services/user/intelligence_services.fidl";
 import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/story/surface.fidl";
 import "apps/modular/services/module/module_controller.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
@@ -56,11 +57,15 @@ interface ModuleContext {
 
   // Like StartModule(), but the view of the newly started module is
   // sent to the story shell for display.
+  //
+  // Providing a |surface_relation| will advise the StoryShell how to
+  // layout surfaces that the new module creates. If |surface_relation|
+  // is null then a default relation is used.
   StartModuleInShell(string name, string module_url, string? link_name,
                      app.ServiceProvider? outgoing_services,
                      app.ServiceProvider&? incoming_services,
                      ModuleController& module_controller,
-                     string view_type);
+                     SurfaceRelation? surface_relation);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this

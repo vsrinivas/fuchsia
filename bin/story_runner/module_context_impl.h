@@ -71,7 +71,7 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      const fidl::String& view_type) override;
+      SurfaceRelationPtr surface_relation) override;
   // |ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> request) override;

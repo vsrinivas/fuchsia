@@ -622,7 +622,7 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
   ModuleControllerPtr module_controller;
   StartModuleInShell(fidl::Array<fidl::String>::New(0), module_name, url,
                      link_name, nullptr, nullptr,
-                     module_controller.NewRequest(), 0L, "");
+                     module_controller.NewRequest(), 0L, nullptr);
 
   // TODO(mesch): Watch all root modules and compute story state from that.
   if (module_name == kRootModuleName) {
@@ -770,20 +770,22 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     const uint64_t parent_id,
-    const fidl::String& view_type) {
+    SurfaceRelationPtr surface_relation) {
   mozart::ViewOwnerPtr view_owner;
   StartModule(parent_module_path, module_name, module_url, link_name,
               std::move(outgoing_services), std::move(incoming_services),
               std::move(module_controller_request), view_owner.NewRequest(),
               ftl::MakeCopyable([
-                this, view_owner = std::move(view_owner), parent_id, view_type
+                this, view_owner = std::move(view_owner), parent_id,
+                surface_relation = std::move(surface_relation)
               ](uint32_t id) mutable {
                 // If this is called during Stop(), story_shell_ might already
                 // have been reset. TODO(mesch): Then the whole operation should
                 // fail.
                 if (story_shell_) {
                   story_shell_->ConnectView(view_owner.PassInterfaceHandle(),
-                                            id, parent_id, view_type);
+                                            id, parent_id,
+                                            std::move(surface_relation));
                 }
               }));
 }

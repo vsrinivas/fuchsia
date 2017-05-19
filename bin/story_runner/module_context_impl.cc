@@ -71,11 +71,11 @@ void ModuleContextImpl::StartModuleInShell(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    const fidl::String& view_type) {
-  story_impl_->StartModuleInShell(module_path_, name, query, link_name,
-                                  std::move(outgoing_services),
-                                  std::move(incoming_services),
-                                  std::move(module_controller), id_, view_type);
+    SurfaceRelationPtr surface_relation) {
+  story_impl_->StartModuleInShell(
+      module_path_, name, query, link_name, std::move(outgoing_services),
+      std::move(incoming_services), std::move(module_controller), id_,
+      std::move(surface_relation));
 }
 
 void ModuleContextImpl::GetComponentContext(

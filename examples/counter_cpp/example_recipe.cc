@@ -199,7 +199,7 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
     module_context_->StartModuleInShell(
         "module1", "file:///system/apps/example_module1", kModule1Link,
         std::move(services_for_module1), services_from_module1.NewRequest(),
-        module1_.NewRequest(), "");
+        module1_.NewRequest(), nullptr);
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -219,7 +219,7 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
 
     module_context_->StartModuleInShell(
         "module2", "file:///system/apps/example_module2", kModule2Link, nullptr,
-        nullptr, module2_.NewRequest(), "");
+        nullptr, module2_.NewRequest(), nullptr);
 
     connections_.emplace_back(
         new LinkConnection(module1_link_.get(), module2_link_.get()));
