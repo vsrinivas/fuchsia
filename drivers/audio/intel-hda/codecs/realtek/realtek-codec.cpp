@@ -14,6 +14,9 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
+static constexpr float DEFAULT_HEADPHONE_GAIN = -30.0;
+static constexpr float DEFAULT_SPEAKER_GAIN = 0.0;
+
 void RealtekCodec::PrintDebugPrefix() const {
     printf("RealtekCodec : ");
 }
@@ -200,19 +203,21 @@ mx_status_t RealtekCodec::SetupAcer12() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id = 1,
-          .afg_nid   = 1,
-          .conv_nid  = 3,
-          .pc_nid    = 33,
-          .is_input  = false,
+        { .stream_id    = 1,
+          .afg_nid      = 1,
+          .conv_nid     = 3,
+          .pc_nid       = 33,
+          .is_input     = false,
+          .default_gain = DEFAULT_HEADPHONE_GAIN,
         },
 
         // Speakers
-        { .stream_id = 2,
-          .afg_nid   = 1,
-          .conv_nid  = 2,
-          .pc_nid    = 20,
-          .is_input  = false,
+        { .stream_id    = 2,
+          .afg_nid      = 1,
+          .conv_nid     = 2,
+          .pc_nid       = 20,
+          .is_input     = false,
+          .default_gain = DEFAULT_SPEAKER_GAIN,
         },
     };
 
@@ -259,11 +264,12 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id = 1,
-          .afg_nid   = 1,
-          .conv_nid  = 2,
-          .pc_nid    = 33,
-          .is_input  = false,
+        { .stream_id    = 1,
+          .afg_nid      = 1,
+          .conv_nid     = 2,
+          .pc_nid       = 33,
+          .is_input     = false,
+          .default_gain = DEFAULT_HEADPHONE_GAIN,
         },
     };
 

@@ -25,6 +25,7 @@ namespace {
 // frame's worth of time, so 10mSec should be more then generous enough.
 static constexpr mx_time_t IHDA_SD_MAX_RESET_TIME_NSEC  = 10000000u;  // 10mSec
 static constexpr mx_time_t IHDA_SD_RESET_POLL_TIME_NSEC = 100000u;    // 100uSec
+static constexpr mx_time_t IHDA_SD_STOP_HOLD_TIME_NSEC  = 100000u;
 constexpr uint32_t DMA_ALIGN = 128;
 constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 }  // namespace
@@ -52,15 +53,32 @@ IntelHDAStream::~IntelHDAStream() {
     MX_DEBUG_ASSERT(!running_);
 }
 
-void IntelHDAStream::EnterReset() {
+void IntelHDAStream::EnsureStopped(hda_stream_desc_regs_t* regs) {
+    // Stop the stream, but do not place it into reset.  Ack any lingering IRQ
+    // status bits in the process.
+    REG_CLR_BITS(&regs->ctl_sts.w, HDA_SD_REG_CTRL_RUN);
+    hw_wmb();
+    mx_nanosleep(mx_deadline_after(IHDA_SD_STOP_HOLD_TIME_NSEC));
+
+    constexpr uint32_t SET = HDA_SD_REG_STS32_ACK;
+    constexpr uint32_t CLR = HDA_SD_REG_CTRL_IOCE |
+                             HDA_SD_REG_CTRL_FEIE |
+                             HDA_SD_REG_CTRL_DEIE;
+    REG_MOD(&regs->ctl_sts.w, CLR, SET);
+    hw_wmb();
+}
+
+void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
     // Enter the reset state  To do this, we...
-    // 1) Clear the RUN bit.
+    // 1) Clear the RUN bit if it was set.
     // 2) Set the SRST bit to 1.
     // 3) Poll until the hardware acks by setting the SRST bit to 1.
-    REG_WR(&regs_->ctl_sts.w, 0u);
-    hw_wmb();   // Do not let the CPU reorder this write.
-    REG_WR(&regs_->ctl_sts.w, HDA_SD_REG_CTRL_SRST); // Set the reset bit.
-    hw_rmb();   // Do not let the CPU snoop the write pipe; HW must set this bit before we proceed
+    if (REG_RD(&regs->ctl_sts.w) & HDA_SD_REG_CTRL_RUN) {
+        EnsureStopped(regs);
+    }
+
+    REG_WR(&regs->ctl_sts.w, HDA_SD_REG_CTRL_SRST); // Set the reset bit.
+    hw_mb();    // Make sure that all writes have gone through before we start to read.
 
     // Wait until the hardware acks the reset.
     mx_status_t res;
@@ -72,22 +90,19 @@ void IntelHDAStream::EnterReset() {
                 auto val  = REG_RD(&regs->ctl_sts.w);
                 return (val & HDA_SD_REG_CTRL_SRST) != 0;
             },
-            regs_);
+            regs);
 
-    if (res != NO_ERROR)
-        LOG("Failed to place stream descriptor HW into reset! (res %d)\n", res);
-}
+    if (res != NO_ERROR) {
+        printf("Failed to place stream descriptor HW into reset! (res %d)\n", res);
+    }
 
-void IntelHDAStream::ExitReset() {
     // Leave the reset state.  To do this, we...
     // 1) Set the SRST bit to 0.
     // 2) Poll until the hardware acks by setting the SRST bit back to 0.
-
-    REG_WR(&regs_->ctl_sts.w, 0u);
-    hw_rmb();   // Do not let the CPU snoop the write pipe; HW must clear this bit before we proceed
+    REG_WR(&regs->ctl_sts.w, 0u);
+    hw_mb();    // Make sure that all writes have gone through before we start to read.
 
     // Wait until the hardware acks the release from reset.
-    mx_status_t res;
     res = WaitCondition(
            IHDA_SD_MAX_RESET_TIME_NSEC,
            IHDA_SD_RESET_POLL_TIME_NSEC,
@@ -96,18 +111,15 @@ void IntelHDAStream::ExitReset() {
                auto val  = REG_RD(&regs->ctl_sts.w);
                return (val & HDA_SD_REG_CTRL_SRST) == 0;
            },
-           regs_);
+           regs);
 
     if (res != NO_ERROR)
-        LOG("Failed to release stream descriptor HW from reset! (res %d)\n", res);
+        printf("Failed to release stream descriptor HW from reset! (res %d)\n", res);
 }
 
 void IntelHDAStream::Configure(Type type, uint8_t tag) {
     if (type == Type::INVALID) {
         MX_DEBUG_ASSERT(tag == 0);
-        // Make certain that the stream DMA engine has been stopped and being
-        // held in reset.
-        EnterReset();
     } else {
         MX_DEBUG_ASSERT(type != Type::BIDIR);
         MX_DEBUG_ASSERT((tag != 0) && (tag < 16));
@@ -126,29 +138,14 @@ mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
     // and stop the hardware.
     Deactivate();
 
-    // Let the stream hardware out of reset.
-    ExitReset();
-
-    // Set the stream tag and direction bit (in the case of a bi-directional channel)
-    MX_DEBUG_ASSERT((configured_type_ == Type::INPUT) || (configured_type_ == Type::OUTPUT));
-    uint32_t val = HDA_SD_REG_CTRL_STRM_TAG(tag_)
-                 | HDA_SD_REG_CTRL_STRIPE1
-                 | (configured_type_ == Type::INPUT ? HDA_SD_REG_CTRL_DIR_IN
-                                                    : HDA_SD_REG_CTRL_DIR_OUT);
-    REG_WR(&regs_->ctl_sts.w, val);
-
-    // Set up the pointers to our buffer descriptor list.
-    REG_WR(&regs_->bdpl, static_cast<uint32_t>(bdl_phys_ & 0xFFFFFFFFu));
-    REG_WR(&regs_->bdpu, static_cast<uint32_t>((bdl_phys_ >> 32) & 0xFFFFFFFFu));
-
-    // Program the stream format.
-    REG_WR(&regs_->fmt, encoded_fmt);
-
-    // Make sure the stream format has been written before we read the fifo depth.
-    hw_rmb();
+    // Record and program the stream format, then record the fifo depth we get based on this format
+    // selection.
+    encoded_fmt_ = encoded_fmt;
+    REG_WR(&regs_->fmt, encoded_fmt_);
+    hw_mb();
     fifo_depth_ = REG_RD(&regs_->fifod);
 
-    DEBUG_LOG("Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt, fifo_depth_);
+    DEBUG_LOG("Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
 
     // Record our new client channel
     mxtl::AutoLock channel_lock(&channel_lock_);
@@ -243,8 +240,6 @@ void IntelHDAStream::ProcessStreamIRQ() {
     // were stopped after the IRQ fired but before it was handled.  Don't send
     // any notifications in this case.
     mxtl::AutoLock notif_lock(&notif_lock_);
-    if (irq_channel_ == nullptr)
-        return;
 
     // TODO(johngro):  Deal with FIFO errors or descriptor errors.  There is no
     // good way to recover from such a thing.  If it happens, we need to shut
@@ -252,6 +247,9 @@ void IntelHDAStream::ProcessStreamIRQ() {
     // that their stream was ruined and that they need to restart it.
     if (sts & (HDA_SD_REG_STS8_FIFOE | HDA_SD_REG_STS8_DESE))
         DEBUG_LOG("Unexpected stream IRQ status 0x%02x!\n", sts);
+
+    if (irq_channel_ == nullptr)
+        return;
 
     if (sts & HDA_SD_REG_STS8_BCIS) {
         audio2_proto::RingBufPositionNotify msg;
@@ -276,13 +274,8 @@ void IntelHDAStream::DeactivateLocked() {
         channel_ = nullptr;
     }
 
-    // Stop the stream, but do not place it into reset.  Ack any lingering IRQ
-    // status bits in the process.
-    REG_WR(&regs_->ctl_sts.w, HDA_SD_REG_STS32_ACK);
-    hw_wmb();  // No reordering!  We must be sure that the stream is stopped before moving on.
-
-    // Now enter reset.
-    EnterReset();
+    // Make sure that the stream has been stopped.
+    EnsureStoppedLocked();
 
     // We are now stopped and unconfigured.
     running_         = false;
@@ -505,14 +498,13 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio2_proto::RingBufGe
         goto finished;
     }
 
-    // Program the cyclic buffer length and the BDL last valid index.
-    MX_DEBUG_ASSERT(entry > 0);
-    REG_WR(&regs_->cbl, rb_size);
-    REG_WR(&regs_->lvi, static_cast<uint16_t>(entry - 1));
-
     // TODO(johngro) : Force writeback of the cache to make sure that the BDL
     // has hit physical memory?
-    hw_wmb();
+
+    // Record the cyclic buffer length and the BDL last valid index.
+    MX_DEBUG_ASSERT(entry > 0);
+    cyclic_buffer_length_ = rb_size;
+    bdl_last_valid_index_ = static_cast<uint16_t>(entry - 1);
 
 finished:
     if (resp.result == NO_ERROR) {
@@ -530,6 +522,8 @@ finished:
 
 mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartReq& req) {
     audio2_proto::RingBufStartResp resp;
+    uint32_t ctl_val;
+
     resp.hdr = req.hdr;
     resp.result = NO_ERROR;
     resp.start_ticks = 0;
@@ -542,6 +536,24 @@ mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartR
         resp.result = ERR_BAD_STATE;
         goto finished;
     }
+
+    // Make sure that the stream DMA channel has been fully reset.
+    Reset();
+
+    // Now program all of the relevant registers before begining operation.
+    // Program the cyclic buffer length and the BDL last valid index.
+    MX_DEBUG_ASSERT((configured_type_ == Type::INPUT) || (configured_type_ == Type::OUTPUT));
+    ctl_val = HDA_SD_REG_CTRL_STRM_TAG(tag_)
+            | HDA_SD_REG_CTRL_STRIPE1
+            | (configured_type_ == Type::INPUT ? HDA_SD_REG_CTRL_DIR_IN
+                                               : HDA_SD_REG_CTRL_DIR_OUT);
+    REG_WR(&regs_->ctl_sts.w, ctl_val);
+    REG_WR(&regs_->fmt, encoded_fmt_);
+    REG_WR(&regs_->bdpl, static_cast<uint32_t>(bdl_phys_ & 0xFFFFFFFFu));
+    REG_WR(&regs_->bdpu, static_cast<uint32_t>((bdl_phys_ >> 32) & 0xFFFFFFFFu));
+    REG_WR(&regs_->cbl, cyclic_buffer_length_);
+    REG_WR(&regs_->lvi, bdl_last_valid_index_);
+    hw_wmb();
 
     // Make a copy of our reference to our channel which can be used by the IRQ
     // thread to deliver notifications to the application.
@@ -566,14 +578,16 @@ mx_status_t IntelHDAStream::ProcessStartLocked(const audio2_proto::RingBufStartR
         //
         // For now, we just assume that transmission starts "very soon" after we
         // whack the bit.
+        LOG("[%2hu] 0x%08x PRE-START\n", id(), REG_RD(&regs_->ctl_sts.w));
         constexpr uint32_t SET = HDA_SD_REG_CTRL_RUN  |
                                  HDA_SD_REG_CTRL_IOCE |
+                                 HDA_SD_REG_CTRL_FEIE |
+                                 HDA_SD_REG_CTRL_DEIE |
                                  HDA_SD_REG_STS32_ACK;
-        constexpr uint32_t CLR = HDA_SD_REG_CTRL_FEIE |
-                                 HDA_SD_REG_CTRL_DEIE;
-        REG_MOD(&regs_->ctl_sts.w, CLR, SET);
+        REG_SET_BITS(&regs_->ctl_sts.w, SET);
         hw_wmb();
         resp.start_ticks = mx_ticks_get();
+        LOG("[%2hu] 0x%08x POST-START\n", id(), REG_RD(&regs_->ctl_sts.w));
     }
 
     // Success, we are now running.
@@ -597,16 +611,8 @@ mx_status_t IntelHDAStream::ProcessStopLocked(const audio2_proto::RingBufStopReq
             irq_channel_ = nullptr;
         }
 
-        // Ack all interrupts while we also disable all interrupts and clear the
-        // run bit.
-        constexpr uint32_t SET = HDA_SD_REG_STS32_ACK;
-        constexpr uint32_t CLR = HDA_SD_REG_CTRL_RUN  |
-                                 HDA_SD_REG_CTRL_IOCE |
-                                 HDA_SD_REG_CTRL_FEIE |
-                                 HDA_SD_REG_CTRL_DEIE;
-        REG_MOD(&regs_->ctl_sts.w, CLR, SET);
-        hw_wmb();
-
+        // Make sure that we have been stopped and that all interrupts have been acked.
+        EnsureStoppedLocked();
         resp.result = NO_ERROR;
     } else {
         resp.result = ERR_BAD_STATE;

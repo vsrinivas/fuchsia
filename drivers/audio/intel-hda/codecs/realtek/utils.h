@@ -21,6 +21,7 @@ struct StreamProperties {
     uint16_t conv_nid;  // NID of the converter used by this stream.
     uint16_t pc_nid;    // NID of the pin converter used by this stream.
     bool     is_input;
+    float    default_gain;
 };
 
 }  // namespace codecs

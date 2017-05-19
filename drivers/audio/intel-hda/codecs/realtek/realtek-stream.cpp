@@ -15,8 +15,6 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-static constexpr float DEFAULT_INITIAL_GAIN = -30.0;
-
 mx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
     const Command DISABLE_CONVERTER_VERBS[] = {
         { props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(true, 0, is_input(), !is_input()) },
@@ -600,7 +598,7 @@ mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
     conv_.min_gain  = conv_.amp_caps.min_gain_db();
     conv_.max_gain  = conv_.amp_caps.max_gain_db();
 
-    return UpdateConverterGainLocked(mxtl::max(DEFAULT_INITIAL_GAIN, conv_.min_gain));
+    return UpdateConverterGainLocked(mxtl::max(props_.default_gain, conv_.min_gain));
 }
 
 mx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,
