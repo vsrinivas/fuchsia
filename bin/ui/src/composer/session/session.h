@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "apps/mozart/services/composer/session.fidl.h"
+#include "apps/mozart/src/composer/resources/memory.h"
 #include "apps/mozart/src/composer/resources/resource_map.h"
 #include "apps/mozart/src/composer/session/session_context.h"
 #include "apps/mozart/src/composer/util/error_reporter.h"
@@ -16,6 +17,9 @@ namespace mozart {
 namespace composer {
 
 typedef uint64_t SessionId;
+
+class Image;
+typedef ::ftl::RefPtr<Image> ImagePtr;
 
 class Session;
 typedef ::ftl::RefPtr<Session> SessionPtr;
@@ -90,6 +94,11 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
 
   // Actually create resources.
+  ResourcePtr CreateMemory(ResourceId, const mozart2::MemoryPtr& args);
+  ResourcePtr CreateImage(ResourceId,
+                          MemoryPtr memory,
+                          const mozart2::ImagePtr& args);
+  ResourcePtr CreateLink(ResourceId, const mozart2::LinkPtr& args);
   ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   ResourcePtr CreateEntityNode(ResourceId id,
                                const mozart2::EntityNodePtr& args);
@@ -98,6 +107,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);
   ResourcePtr CreateMaterial(ResourceId id,
+                             ImagePtr image,
                              float red,
                              float green,
                              float blue,

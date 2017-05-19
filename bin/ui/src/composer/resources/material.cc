@@ -4,6 +4,9 @@
 
 #include "apps/mozart/src/composer/resources/material.h"
 
+#include "apps/mozart/src/composer/resources/image.h"
+#include "apps/mozart/src/composer/session/session.h"
+
 namespace mozart {
 namespace composer {
 
@@ -14,9 +17,31 @@ Material::Material(Session* session,
                    float red,
                    float green,
                    float blue,
+                   float alpha,
+                   ImagePtr texture_image)
+    : Material(session,
+               texture_image,
+               texture_image
+                   ? ftl::MakeRefCounted<escher::Texture>(
+                         session->context()->escher_resource_life_preserver(),
+                         texture_image->escher_image(),
+                         vk::Filter::eLinear)
+                   : escher::TexturePtr(),
+               red,
+               green,
+               blue,
+               alpha) {}
+
+Material::Material(Session* session,
+                   ImagePtr image,
+                   escher::TexturePtr escher_texture,
+                   float red,
+                   float green,
+                   float blue,
                    float alpha)
     : Resource(session, Material::kTypeInfo),
-      escher_material_(ftl::MakeRefCounted<escher::Material>()) {
+      escher_material_(ftl::MakeRefCounted<escher::Material>(escher_texture)),
+      texture_(image) {
   // TODO: need to add alpha into escher material
   escher_material_->set_color(escher::vec3(red, green, blue));
 }

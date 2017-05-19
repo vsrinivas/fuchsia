@@ -41,8 +41,8 @@ class ResourceMap {
       return ftl::RefPtr<ResourceT>();
     } else if (!it->second->type_info().IsKindOf(ResourceT::kTypeInfo)) {
       error_reporter_->ERROR()
-          << "Type mismatch for resource ID " << id << ": "
-          << it->second->type_info().name << " is not a sub-type of "
+          << "Type mismatch for resource ID " << id << ": actual type is "
+          << it->second->type_info().name << ", expected a sub-type of "
           << ResourceT::kTypeInfo.name;
       return ftl::RefPtr<ResourceT>();
     } else {

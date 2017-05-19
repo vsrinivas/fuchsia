@@ -20,18 +20,18 @@ union Resource {
   // Linking to external entities.
   Link link;
 
+  ClipNode clip_node;
+  EntityNode entity_node;
+  LinkNode link_node;
+  ShapeNode shape_node;
+  TagNode tag_node;
+
   // Shapes (see shapes.fidl).
   Rectangle rectangle;
   Circle circle;
   Mesh mesh;
 
   Material material;
-
-  ClipNode clip_node;
-  EntityNode entity_node;
-  LinkNode link_node;
-  ShapeNode shape_node;
-  TagNode tag_node;
 
   // A value that can be used in place of a constant value.
   Variable variable;
@@ -40,9 +40,22 @@ union Resource {
 // |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
 // it with Mozart.
 // TODO: specify resizing behavior.  Who can resize?  Client/Mozart/both/none?
-// TODO: specify memory type.  Is this from a GPU heap?  CPU accessible memory?
 struct Memory {
+  // Specifies the type of VMO's memory.
+  enum MemoryType {
+    // VMO is regular host CPU memory.
+    HOST_MEMORY = 0,
+
+    // VMO can be imported as a VkDeviceMemory using vkImportDeviceMemoryMAGMA.
+    VK_DEVICE_MEMORY = 1,
+  };
+
+  // The VMO which backs this memory.
   handle<vmo> vmo;
+
+  // The type of memory stored in the VMO, namely whether it's GPU memory or
+  // host memory.
+  MemoryType memory_type;
 };
 
 // An image mapped to a range of a |Memory| resource.

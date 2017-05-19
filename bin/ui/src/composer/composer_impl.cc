@@ -10,8 +10,21 @@
 namespace mozart {
 namespace composer {
 
+ComposerImpl::ComposerImpl(vk::Device vk_device,
+                           escher::ResourceLifePreserver* life_preserver,
+                           escher::GpuAllocator* allocator,
+                           escher::impl::GpuUploader* uploader)
+    : session_count_(0),
+      vk_device_(vk_device),
+      life_preserver_(life_preserver),
+      image_factory_(
+          std::make_unique<escher::SimpleImageFactory>(life_preserver,
+                                                       allocator)),
+      gpu_uploader_(uploader),
+      renderer_(std::make_unique<Renderer>()) {}
+
 ComposerImpl::ComposerImpl()
-    : session_count_(0), renderer_(std::make_unique<Renderer>()) {}
+    : ComposerImpl(nullptr, nullptr, nullptr, nullptr) {}
 
 ComposerImpl::~ComposerImpl() {}
 

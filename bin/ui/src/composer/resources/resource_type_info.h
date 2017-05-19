@@ -12,24 +12,27 @@ namespace composer {
 // All subclasses of Resource are represented here.
 enum ResourceType {
   kMemory = 1,
-  kImage = 1 << 1,
-  kBuffer = 1 << 2,
+  kHostMemory = 1 << 1,
+  kGpuMemory = 1 << 2,
 
-  kLink = 1 << 3,
+  kImage = 1 << 3,
+  kBuffer = 1 << 4,
 
-  kShape = 1 << 4,
-  kRectangle = 1 << 5,
-  kCircle = 1 << 6,
-  kMesh = 1 << 7,
+  kLink = 1 << 5,
 
-  kMaterial = 1 << 8,
+  kShape = 1 << 6,
+  kRectangle = 1 << 7,
+  kCircle = 1 << 8,
+  kMesh = 1 << 9,
 
-  kNode = 1 << 9,
-  kClipNode = 1 << 10,
-  kEntityNode = 1 << 11,
-  kLinkNode = 1 << 12,
-  kShapeNode = 1 << 13,
-  kTagNode = 1 << 14,
+  kMaterial = 1 << 10,
+
+  kNode = 1 << 11,
+  kClipNode = 1 << 12,
+  kEntityNode = 1 << 13,
+  kLinkNode = 1 << 14,
+  kShapeNode = 1 << 15,
+  kTagNode = 1 << 16,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

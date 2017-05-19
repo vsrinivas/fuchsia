@@ -42,6 +42,18 @@ std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
 };
 
+void Renderer::Visitor::Visit(GpuMemory* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(HostMemory* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(Image* r) {
+  FTL_CHECK(false);
+}
+
 void Renderer::Visitor::Visit(EntityNode* r) {
   Visit(static_cast<Node*>(r));
 }

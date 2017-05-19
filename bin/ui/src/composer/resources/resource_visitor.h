@@ -7,6 +7,9 @@
 namespace mozart {
 namespace composer {
 
+class GpuMemory;
+class HostMemory;
+class Image;
 class EntityNode;
 class Node;
 class ShapeNode;
@@ -17,6 +20,9 @@ class Material;
 
 class ResourceVisitor {
  public:
+  virtual void Visit(GpuMemory* r) = 0;
+  virtual void Visit(HostMemory* r) = 0;
+  virtual void Visit(Image* r) = 0;
   virtual void Visit(EntityNode* r) = 0;
   virtual void Visit(Node* r) = 0;
   virtual void Visit(ShapeNode* r) = 0;

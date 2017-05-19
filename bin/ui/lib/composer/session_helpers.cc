@@ -19,7 +19,7 @@ static mozart2::OpPtr NewCreateResourceOp(uint32_t id,
   return op;
 }
 
-mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo, uint32_t num_bytes) {
+mozart2::OpPtr NewCreateMemoryOp(uint32_t id, mx::vmo vmo) {
   auto memory = mozart2::Memory::New();
   memory->vmo = std::move(vmo);
 
@@ -40,6 +40,7 @@ mozart2::OpPtr NewCreateImageOp(uint32_t id,
   auto image = mozart2::Image::New();
   image->memory_id = memory_id;
   image->memory_offset = memory_offset;
+  image->info = mozart2::ImageInfo::New();
   image->info->pixel_format = format;
   image->info->tiling = tiling;
   image->info->width = width;

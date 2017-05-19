@@ -10,15 +10,23 @@
 namespace mozart {
 namespace composer {
 
+class Image;
+typedef ftl::RefPtr<Image> ImagePtr;
+
+class Material;
+typedef ftl::RefPtr<Material> MaterialPtr;
+
 class Material : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  explicit Material(Session* session,
-                    float red,
-                    float green,
-                    float blue,
-                    float alpha);
+  Material(Session* session,
+           float red,
+           float green,
+           float blue,
+           float alpha,
+           ImagePtr texture_image = nullptr);
+
   float red() const { return escher_material_->color().x; }
   float green() const { return escher_material_->color().y; }
   float blue() const { return escher_material_->color().z; }
@@ -33,10 +41,16 @@ class Material : public Resource {
   void Accept(class ResourceVisitor* visitor) override;
 
  private:
+  Material(Session* session,
+           ImagePtr image,
+           escher::TexturePtr escher_texture,
+           float red,
+           float green,
+           float blue,
+           float alpha);
   escher::MaterialPtr escher_material_;
+  ImagePtr texture_;
 };
-
-typedef ftl::RefPtr<Material> MaterialPtr;
 
 }  // namespace composer
 }  // namespace mozart

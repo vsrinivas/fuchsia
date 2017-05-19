@@ -5,6 +5,9 @@
 #include "apps/mozart/src/composer/session/session.h"
 
 #include "apps/mozart/src/composer/print_op.h"
+#include "apps/mozart/src/composer/resources/gpu_memory.h"
+#include "apps/mozart/src/composer/resources/host_memory.h"
+#include "apps/mozart/src/composer/resources/image.h"
 #include "apps/mozart/src/composer/resources/nodes/entity_node.h"
 #include "apps/mozart/src/composer/resources/nodes/node.h"
 #include "apps/mozart/src/composer/resources/nodes/shape_node.h"
@@ -221,15 +224,20 @@ bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
 }
 
 bool Session::ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args) {
-  error_reporter_->ERROR()
-      << "composer::Session::ApplyCreateMemory(): unimplemented";
-  return false;
+  auto memory = CreateMemory(id, args);
+  return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
 bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
-  error_reporter_->ERROR()
-      << "composer::Session::ApplyCreateImage(): unimplemented";
-  return false;
+  auto memory = resources_.FindResource<Memory>(args->memory_id);
+  if (!memory) {
+    error_reporter_->ERROR() << "composer::Session::ApplyCreateImage(): "
+                                "could not find Memory with ID "
+                             << args->memory_id;
+    return false;
+  }
+  auto image = CreateImage(id, memory, args);
+  return image ? resources_.AddResource(id, std::move(image)) : false;
 }
 
 bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
@@ -276,17 +284,29 @@ bool Session::ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args) {
 
 bool Session::ApplyCreateMaterial(ResourceId id,
                                   const mozart2::MaterialPtr& args) {
-  if (args->texture_id != 0) {
-    error_reporter_->ERROR() << "composer::Session::ApplyCreateMaterial(): "
-                                "unimplemented: texture support";
-    return false;
+  float red = 1.f;
+  float green = 1.f;
+  float blue = 1.f;
+  float alpha = 1.f;
+  if (args->color) {
+    auto& color = args->color;
+    red = static_cast<float>(color->red) / 255.f;
+    green = static_cast<float>(color->green) / 255.f;
+    blue = static_cast<float>(color->blue) / 255.f;
+    alpha = static_cast<float>(color->alpha) / 255.f;
   }
-
-  auto& color = args->color;
-  auto material = CreateMaterial(id, static_cast<float>(color->red) / 255.f,
-                                 static_cast<float>(color->green) / 255.f,
-                                 static_cast<float>(color->blue) / 255.f,
-                                 static_cast<float>(color->alpha) / 255.f);
+  ImagePtr image;
+  if (args->texture_id != 0) {
+    image = resources_.FindResource<Image>(args->texture_id);
+    if (!image) {
+      error_reporter_->ERROR()
+          << "composer::Session::ApplyCreateMaterial(): cannot "
+             "find texture with ID "
+          << args->texture_id;
+      return false;
+    }
+  }
+  auto material = CreateMaterial(id, image, red, green, blue, alpha);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
@@ -318,6 +338,26 @@ bool Session::ApplyCreateTagNode(ResourceId id,
                                  const mozart2::TagNodePtr& args) {
   auto node = CreateTagNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+ResourcePtr Session::CreateMemory(ResourceId, const mozart2::MemoryPtr& args) {
+  vk::Device device = context()->vk_device();
+  switch (args->memory_type) {
+    case mozart2::Memory::MemoryType::VK_DEVICE_MEMORY:
+      return GpuMemory::New(this, device, args, error_reporter_);
+    case mozart2::Memory::MemoryType::HOST_MEMORY:
+      return HostMemory::New(this, device, args, error_reporter_);
+  }
+}
+
+ResourcePtr Session::CreateImage(ResourceId,
+                                 MemoryPtr memory,
+                                 const mozart2::ImagePtr& args) {
+  return Image::New(this, memory, args, error_reporter_);
+}
+
+ResourcePtr Session::CreateLink(ResourceId id, const mozart2::LinkPtr& args) {
+  return context()->CreateLink(this, id, args);
 }
 
 ResourcePtr Session::CreateClipNode(ResourceId id,
@@ -354,11 +394,12 @@ ResourcePtr Session::CreateCircle(ResourceId id, float initial_radius) {
 }
 
 ResourcePtr Session::CreateMaterial(ResourceId id,
+                                    ImagePtr image,
                                     float red,
                                     float green,
                                     float blue,
                                     float alpha) {
-  return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha);
+  return ftl::MakeRefCounted<Material>(this, red, green, blue, alpha, image);
 }
 
 void Session::TearDown() {
@@ -370,7 +411,7 @@ void Session::TearDown() {
   error_reporter_ = nullptr;
   resources_.Clear();
 
-  context_->OnSessionTearDown(this);
+  context()->OnSessionTearDown(this);
   FTL_DCHECK(resource_count_ == 0);
 }
 

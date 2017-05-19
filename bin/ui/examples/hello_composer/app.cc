@@ -8,9 +8,11 @@
 #include "application/lib/app/connect.h"
 #include "apps/mozart/lib/composer/session_helpers.h"
 #include "apps/mozart/lib/composer/types.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composer/composer.fidl.h"
 #include "apps/mozart/services/composer/ops.fidl.h"
 #include "apps/mozart/services/composer/session.fidl.h"
+#include "escher/util/image_utils.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/log_settings.h"
@@ -41,6 +43,28 @@ class HelloComposerApp {
 
   ResourceId NewResourceId() { return ++resource_id_counter_; }
 
+  static ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size) {
+    mx::vmo vmo;
+    mx_status_t status = mx::vmo::create(size, 0u, &vmo);
+    if (status != NO_ERROR) {
+      FTL_LOG(ERROR) << "Failed to create vmo: status=" << status
+                     << ", size=" << size;
+      return nullptr;
+    }
+
+    // Optimization: We will be writing to every page of the buffer, so
+    // allocate physical memory for it eagerly.
+    status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
+    if (status != NO_ERROR) {
+      FTL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status
+                     << ", size=" << size;
+      return nullptr;
+    }
+
+    uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
+    return ftl::MakeRefCounted<mtl::SharedVmo>(std::move(vmo), map_flags);
+  }
+
   fidl::Array<mozart2::OpPtr> CreateLinkAndSampleScene() {
     auto ops = fidl::Array<mozart2::OpPtr>::New(0);
 
@@ -51,13 +75,49 @@ class HelloComposerApp {
     ResourceId link_id = NewResourceId();
     ops.push_back(NewCreateLinkOp(link_id, std::move(link_handle1)));
 
-    // Create a red circle.
+    // Create a shape node.
     ResourceId node_id = NewResourceId();
     ops.push_back(NewCreateShapeNodeOp(node_id));
 
-    ResourceId material_id = NewResourceId();
-    ops.push_back(NewCreateMaterialOp(material_id, 0, 255, 100, 100, 255));
+    // Generate a checkerboard.
+    size_t checkerboard_width = 8;
+    size_t checkerboard_height = 8;
+    size_t checkerboard_pixels_size;
+    auto checkerboard_pixels = escher::image_utils::NewCheckerboardPixels(
+        checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
+    auto shared_vmo = CreateSharedVmo(checkerboard_pixels_size);
+
+    memcpy(shared_vmo->Map(), checkerboard_pixels.get(),
+           checkerboard_pixels_size);
+
+    ResourceId checkerboard_memory_id = NewResourceId();
+
+    // Duplicate the VMO handle.
+    mx::vmo vmo_copy;
+    auto status = shared_vmo->vmo().duplicate(MX_RIGHT_SAME_RIGHTS, &vmo_copy);
+    if (status) {
+      FTL_LOG(ERROR) << "Failed to duplicate vmo handle.";
+      return nullptr;
+    }
+
+    ops.push_back(
+        NewCreateMemoryOp(checkerboard_memory_id, std::move(vmo_copy)));
+
+    // Create an Image to wrap the checkerboard.
+    ResourceId checkerboard_image_id = NewResourceId();
+    ops.push_back(
+        NewCreateImageOp(checkerboard_image_id, checkerboard_memory_id, 0,
+                         mozart2::ImageInfo::PixelFormat::BGRA_8,
+                         mozart2::ImageInfo::Tiling::LINEAR, checkerboard_width,
+                         checkerboard_height, checkerboard_width));
+
+    // Create a Material with the checkerboard image.
+    ResourceId material_id = NewResourceId();
+    ops.push_back(NewCreateMaterialOp(material_id, checkerboard_image_id, 255,
+                                      100, 100, 255));
+
+    // Make the shape a circle.
     ResourceId shape_id = NewResourceId();
     ops.push_back(NewCreateCircleOp(shape_id, 50.f));
 

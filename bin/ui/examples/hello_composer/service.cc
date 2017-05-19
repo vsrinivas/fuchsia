@@ -45,7 +45,11 @@ class HelloComposerService : public Demo {
         application_context_(harness->application_context()),
         renderer_(escher()->NewPaperRenderer()),
         swapchain_helper_(harness->GetVulkanSwapchain(), renderer_),
-        composer_(std::make_unique<ComposerImpl>()),
+        composer_(
+            std::make_unique<ComposerImpl>(escher()->vulkan_context().device,
+                                           escher()->resource_life_preserver(),
+                                           escher()->gpu_allocator(),
+                                           escher()->gpu_uploader())),
         binding_(composer_.get()) {
     FTL_DCHECK(application_context_);
 

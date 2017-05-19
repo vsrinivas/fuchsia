@@ -27,8 +27,15 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   const ResourceTypeInfo& type_info() const { return type_info_; }
   ResourceTypeFlags type_flags() const { return type_info_.flags; }
   const char* type_name() const { return type_info_.name; }
+
+  // The session this Resource lives in.
   Session* session() const { return session_; }
+
+  // An error reporter associated with the Resource's session. When operating
+  // on this resource, always log errors to the ErrorReporter before failing.
   ErrorReporter* error_reporter() const;
+
+  // Used by ResourceVisitor to visit a tree of Resources.
   virtual void Accept(class ResourceVisitor* visitor) = 0;
 
  protected:

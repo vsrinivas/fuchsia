@@ -4,6 +4,9 @@
 
 #include "apps/mozart/src/composer/resources/resource_visitor.h"
 
+#include "apps/mozart/src/composer/resources/gpu_memory.h"
+#include "apps/mozart/src/composer/resources/host_memory.h"
+#include "apps/mozart/src/composer/resources/image.h"
 #include "apps/mozart/src/composer/resources/link.h"
 #include "apps/mozart/src/composer/resources/material.h"
 #include "apps/mozart/src/composer/resources/nodes/entity_node.h"
@@ -14,6 +17,18 @@
 
 namespace mozart {
 namespace composer {
+
+void GpuMemory::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void HostMemory::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Image::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
 
 void EntityNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);

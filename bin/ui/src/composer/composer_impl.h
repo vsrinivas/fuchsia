@@ -11,6 +11,8 @@
 #include "apps/mozart/src/composer/resources/link.h"
 #include "apps/mozart/src/composer/session/session.h"
 #include "apps/mozart/src/composer/session/session_handler.h"
+#include "escher/forward_declarations.h"
+#include "escher/renderer/simple_image_factory.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/thread.h"
 
@@ -21,6 +23,10 @@ class Renderer;
 
 class ComposerImpl : public mozart2::Composer, public SessionContext {
  public:
+  ComposerImpl(vk::Device vk_device,
+               escher::ResourceLifePreserver* life_preserver,
+               escher::GpuAllocator* allocator,
+               escher::impl::GpuUploader* uploader);
   ComposerImpl();
   ~ComposerImpl() override;
 
@@ -36,6 +42,20 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
   void OnSessionTearDown(Session* session) override;
 
   size_t GetSessionCount() { return session_count_; }
+
+  // Gets the VkDevice that is used with the renderer.
+  // TODO: Should this belong in Renderer, or something like a
+  // SessionResourceFactory?
+  vk::Device vk_device() override { return vk_device_; }
+  escher::ResourceLifePreserver* escher_resource_life_preserver() override {
+    return life_preserver_;
+  }
+  escher::ImageFactory* escher_image_factory() override {
+    return image_factory_.get();
+  }
+  escher::impl::GpuUploader* escher_gpu_uploader() override {
+    return gpu_uploader_;
+  }
 
   const std::vector<LinkPtr>& links() const { return links_; }
 
@@ -57,6 +77,11 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
 
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;
+
+  vk::Device vk_device_;
+  escher::ResourceLifePreserver* life_preserver_;
+  std::unique_ptr<escher::SimpleImageFactory> image_factory_;
+  escher::impl::GpuUploader* gpu_uploader_;
 
   // Placeholders for Links and the Renderer. These will be instantiated
   // differently in the future.
