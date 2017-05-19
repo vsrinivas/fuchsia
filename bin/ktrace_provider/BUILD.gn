@@ -11,6 +11,8 @@ executable("ktrace_provider") {
     "log_importer.cc",
     "log_importer.h",
     "main.cc",
+    "reader.cc",
+    "reader.h",
     "tags.cc",
     "tags.h",
   ]

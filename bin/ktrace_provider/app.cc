@@ -11,6 +11,7 @@
 
 #include "apps/tracing/lib/trace/provider.h"
 #include "apps/tracing/src/ktrace_provider/importer.h"
+#include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
@@ -21,7 +22,6 @@ namespace {
 constexpr char kDefaultProviderLabel[] = "ktrace";
 constexpr char kCategory[] = "kernel";
 constexpr char kDmctlDev[] = "/dev/misc/dmctl";
-constexpr char kTraceDev[] = "/dev/misc/ktrace";
 constexpr char kKTraceOff[] = "ktraceoff";
 constexpr char kKTraceOn[] = "ktraceon";
 
@@ -107,15 +107,10 @@ void App::CollectTraces() {
     return;
   }
 
-  std::vector<uint8_t> buffer;
-  if (!files::ReadFileToVector(kTraceDev, &buffer)) {
-    FTL_LOG(ERROR) << "Failed to read traces from " << kTraceDev;
-    return;
-  }
-  FTL_VLOG(2) << "Collected " << buffer.size() << " bytes of trace data";
+  Reader reader;
 
   Importer importer(writer);
-  if (!importer.Import(buffer.data(), buffer.size())) {
+  if (!importer.Import(reader)) {
     FTL_LOG(ERROR) << "Errors encountered while importing ktrace data";
   }
 }

@@ -4,9 +4,10 @@
 
 #include "apps/tracing/src/ktrace_provider/importer.h"
 
-#include "apps/tracing/src/ktrace_provider/tags.h"
+#include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/time/time_point.h"
 
 using namespace tracing;
 using namespace tracing::writer;
@@ -44,35 +45,27 @@ Importer::Importer(TraceWriter& writer)
 
 Importer::~Importer() = default;
 
-bool Importer::Import(const uint8_t* buffer, size_t size) {
+bool Importer::Import(Reader& reader) {
   if (!writer_)
     return false;
 
   writer_.WriteProcessDescription(kNoProcess, "kernel");
 
-  const uint8_t* current = buffer;
-  const uint8_t* end = current + size;
-  while (current + sizeof(ktrace_header_t) <= end) {
-    const ktrace_header* record =
-        reinterpret_cast<const ktrace_header*>(current);
+  auto start = ftl::TimePoint::Now();
 
-    size_t record_size = KTRACE_LEN(record->tag);
-    if (record_size < sizeof(ktrace_header_t)) {
-      FTL_VLOG(2) << "Skipped ktrace record with invalid size at " << std::hex
-                  << (current - buffer) << ", tag=" << record->tag;
-      current += sizeof(uint64_t);
-      continue;
-    }
-
-    if (current + record_size > end)
+  while (true) {
+    if (auto record = reader.ReadNextRecord()) {
+      if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
+        FTL_VLOG(2) << "Skipped ktrace record, tag=" << record->tag;
+      }
+    } else {
       break;
-
-    if (!ImportRecord(record, record_size)) {
-      FTL_VLOG(2) << "Skipped ktrace record at " << std::hex
-                  << (current - buffer) << ", tag=" << record->tag;
     }
-    current += record_size;
   }
+
+  FTL_VLOG(2) << "Import of ktrace records took: "
+              << (ftl::TimePoint::Now() - start).ToMicroseconds() << " us";
+
   return true;
 }
 

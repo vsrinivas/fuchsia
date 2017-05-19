@@ -19,6 +19,8 @@
 
 namespace ktrace_provider {
 
+class Reader;
+
 class Importer {
  public:
   using TraceWriter = tracing::writer::TraceWriter;
@@ -32,7 +34,7 @@ class Importer {
   Importer(TraceWriter& writer);
   ~Importer();
 
-  bool Import(const uint8_t* buffer, size_t size);
+  bool Import(Reader& reader);
 
  private:
   bool ImportRecord(const ktrace_header_t* record, size_t record_size);
