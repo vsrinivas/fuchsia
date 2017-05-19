@@ -18,9 +18,9 @@ FUNCTION(vmx_enter)
     popq HS_RIP(%rdi)
 
     // Store the callee save registers.
+    mov %rbx, HS_RBX(%rdi)
     mov %rsp, HS_RSP(%rdi)
     mov %rbp, HS_RBP(%rdi)
-    mov %rbx, HS_RBX(%rdi)
     mov %r12, HS_R12(%rdi)
     mov %r13, HS_R13(%rdi)
     mov %r14, HS_R14(%rdi)
@@ -40,12 +40,12 @@ FUNCTION(vmx_enter)
 
     // Load the guest registers not covered by the VMCS.
     mov GS_RAX(%rsp), %rax
-    mov GS_RBX(%rsp), %rbx
     mov GS_RCX(%rsp), %rcx
     mov GS_RDX(%rsp), %rdx
-    mov GS_RDI(%rsp), %rdi
-    mov GS_RSI(%rsp), %rsi
+    mov GS_RBX(%rsp), %rbx
     mov GS_RBP(%rsp), %rbp
+    mov GS_RSI(%rsp), %rsi
+    mov GS_RDI(%rsp), %rdi
     mov GS_R8(%rsp), %r8
     mov GS_R9(%rsp), %r9
     mov GS_R10(%rsp), %r10
@@ -92,12 +92,12 @@ FUNCTION(vmx_exit_entry)
     // Store the guest registers not covered by the VMCS. At this point,
     // vmx_state is in RSP.
     mov %rax, GS_RAX(%rsp)
-    mov %rbx, GS_RBX(%rsp)
     mov %rcx, GS_RCX(%rsp)
     mov %rdx, GS_RDX(%rsp)
-    mov %rdi, GS_RDI(%rsp)
-    mov %rsi, GS_RSI(%rsp)
+    mov %rbx, GS_RBX(%rsp)
     mov %rbp, GS_RBP(%rsp)
+    mov %rsi, GS_RSI(%rsp)
+    mov %rdi, GS_RDI(%rsp)
     mov %r8, GS_R8(%rsp)
     mov %r9, GS_R9(%rsp)
     mov %r10, GS_R10(%rsp)
@@ -115,9 +115,9 @@ FUNCTION(vmx_exit_entry)
     mov %rsp, %rdi
 
     // Load the host callee save registers.
+    mov HS_RBX(%rdi), %rbx
     mov HS_RSP(%rdi), %rsp
     mov HS_RBP(%rdi), %rbp
-    mov HS_RBX(%rdi), %rbx
     mov HS_R12(%rdi), %r12
     mov HS_R13(%rdi), %r13
     mov HS_R14(%rdi), %r14
