@@ -131,8 +131,8 @@ done:
     return status;
 }
 
-static mx_status_t blkdev_free_txn(blkdev_t* bdev,
-                               const void* in_buf, size_t in_len) {
+static mx_status_t blkdev_free_txn(blkdev_t* bdev, const void* in_buf,
+                                   size_t in_len) {
     if (in_len != sizeof(txnid_t)) {
         return ERR_INVALID_ARGS;
     }

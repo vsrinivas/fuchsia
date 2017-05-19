@@ -70,9 +70,8 @@ mx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
         // clear the current block transaction.
         do_respond = true;
     }
-    *msg_out = &msgs_[goal_];
-    goal_++;
-    assert(goal_ <= MAX_TXN_MESSAGES);
+    MX_DEBUG_ASSERT(goal_ < MAX_TXN_MESSAGES); // Avoid overflowing msgs
+    *msg_out = &msgs_[goal_++];
     flags_ |= do_respond ? kTxnFlagRespond : 0;
     return NO_ERROR;
 fail:
@@ -82,9 +81,10 @@ fail:
     return ERR_IO;
 }
 
-void BlockTransaction::Complete(mx_status_t status) {
+void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
     mxtl::AutoLock lock(&lock_);
     response_.count++;
+    MX_DEBUG_ASSERT(goal_ != 0);
     MX_DEBUG_ASSERT(response_.count <= goal_);
 
     if ((status != NO_ERROR) && (response_.status == NO_ERROR)) {
@@ -92,26 +92,21 @@ void BlockTransaction::Complete(mx_status_t status) {
     }
 
     if ((flags_ & kTxnFlagRespond) && (response_.count == goal_)) {
-        RespondLocked();
+        // Don't block the block device. Respond if we can (and in the absence
+        // of an I/O error or closed remote, this should just work).
+        uint32_t actual;
+        mx_status_t status = mx_fifo_write(fifo_, &response_,
+                                           sizeof(block_fifo_response_t), &actual);
+        if (status != NO_ERROR) {
+            fprintf(stderr, "Block Server I/O error: Could not write response\n");
+        }
+        response_.count = 0;
+        response_.status = NO_ERROR;
+        goal_ = 0;
+        flags_ &= ~kTxnFlagRespond;
     }
-}
-
-txnid_t BlockTransaction::GetTxnid() const {
-    return response_.txnid;
-}
-
-void BlockTransaction::RespondLocked() {
-    // Don't block the block device. Respond if we can (and in the absence
-    // of an I/O error or closed remote, this should just work).
-    uint32_t actual;
-    mx_status_t status = mx_fifo_write(fifo_, &response_, sizeof(block_fifo_response_t), &actual);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "Block Server I/O error: Could not write response\n");
-    }
-    response_.count = 0;
-    response_.status = NO_ERROR;
-    goal_ = 0;
-    flags_ &= ~kTxnFlagRespond;
+    msg->txn.reset();
+    msg->iobuf.reset();
 }
 
 IoBuffer::IoBuffer(mx_handle_t vmo, vmoid_t id) : io_vmo_(vmo), vmoid_(id) {}
@@ -189,6 +184,7 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     if (txnid >= countof(txns_)) {
         return;
     }
+    MX_DEBUG_ASSERT(txns_[txnid] != nullptr);
     txns_[txnid] = nullptr;
 }
 
@@ -214,9 +210,15 @@ void blockserver_fifo_complete(void* cookie, mx_status_t status) {
     block_msg_t* msg = static_cast<block_msg_t*>(cookie);
     // Since iobuf is a RefPtr, it lives at least as long as the txn,
     // and is not discarded underneath the block device driver.
-    msg->iobuf = nullptr;
-    msg->txn->Complete(status);
-    msg->txn = nullptr;
+    MX_DEBUG_ASSERT(msg->iobuf != nullptr);
+    MX_DEBUG_ASSERT(msg->txn != nullptr);
+    // Hold an extra copy of the 'txn' refptr; if we don't, and 'msg->txn' is
+    // the last copy, then when we nullify 'msg->txn' in Complete we end up
+    // trying to unlock a lock in a deleted BlockTxn.
+    auto txn = msg->txn;
+    // Pass msg to complete so 'msg->txn' can be nullified while protected
+    // by the BlockTransaction's lock.
+    txn->Complete(msg, status);
 }
 
 static block_callbacks_t cb = {
@@ -270,7 +272,9 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
                 if (status != NO_ERROR) {
                     break;
                 }
+                MX_DEBUG_ASSERT(msg->txn == nullptr);
                 msg->txn = txns_[txnid];
+                MX_DEBUG_ASSERT(msg->iobuf == nullptr);
                 msg->iobuf = iobuf.CopyPointer();
 
                 // Hack to ensure that the vmo is valid.

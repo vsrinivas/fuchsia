@@ -10,6 +10,7 @@
 
 #include <ddk/protocol/block.h>
 #include <magenta/device/block.h>
+#include <magenta/thread_annotations.h>
 #include <magenta/types.h>
 
 #ifdef __cplusplus
@@ -64,21 +65,17 @@ public:
     mx_status_t Enqueue(bool do_respond, block_msg_t** msg_out);
 
     // Called once the transaction has completed successfully.
-    void Complete(mx_status_t status);
-
-    txnid_t GetTxnid() const;
+    void Complete(block_msg_t* msg, mx_status_t status);
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockTransaction);
+
     const mx_handle_t fifo_;
 
-    // Send a response to the txn which has been worked on.
-    void RespondLocked();
-
     mxtl::Mutex lock_;
-    block_msg_t msgs_[MAX_TXN_MESSAGES];
-    block_fifo_response_t response_; // The response to be sent back to the client
-    uint32_t flags_;
-    uint32_t goal_; // How many ops does the block device need to complete?
+    block_msg_t msgs_[MAX_TXN_MESSAGES] TA_GUARDED(lock_);
+    block_fifo_response_t response_ TA_GUARDED(lock_); // The response to be sent back to the client
+    uint32_t flags_ TA_GUARDED(lock_);
+    uint32_t goal_ TA_GUARDED(lock_); // How many ops does the block device need to complete?
 };
 
 class BlockServer {
@@ -99,13 +96,13 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
     BlockServer();
 
-    mx_status_t FindVmoIDLocked(vmoid_t* out);
+    mx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     mxtl::Mutex server_lock_;
-    mx_handle_t fifo_;
-    mxtl::WAVLTree<vmoid_t, mxtl::RefPtr<IoBuffer>> tree_;
-    mxtl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT];
-    vmoid_t last_id;
+    mx_handle_t fifo_ TA_GUARDED(server_lock_);
+    mxtl::WAVLTree<vmoid_t, mxtl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
+    mxtl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
+    vmoid_t last_id TA_GUARDED(server_lock_);
 };
 
 #else
