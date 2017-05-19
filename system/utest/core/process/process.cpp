@@ -108,7 +108,8 @@ bool kill_process_via_vmar_destroy() {
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
         proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+    signals &= MX_TASK_TERMINATED;
+    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
     EXPECT_EQ(mx_handle_close(proc), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
@@ -244,6 +245,7 @@ bool kill_channel_handle_cycle() {
 
     EXPECT_EQ(mx_object_wait_one(
         thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    signals &= MX_TASK_TERMINATED;
     EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
     EXPECT_EQ(mx_handle_close(thread2), NO_ERROR, "");
