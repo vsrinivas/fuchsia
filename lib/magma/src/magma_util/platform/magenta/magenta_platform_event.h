@@ -29,7 +29,7 @@ public:
             &pending);
         DASSERT(status == NO_ERROR || status == ERR_TIMED_OUT);
 
-        return pending == mx_signal();
+        return pending & mx_signal();
     }
 
     mx_handle_t mx_handle() { return mx_event_.get(); }

@@ -30,7 +30,7 @@ bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
         return false;
 
     DASSERT(status == NO_ERROR);
-    DASSERT(pending == mx_signal());
+    DASSERT(pending & mx_signal());
 
     Reset();
     return true;
