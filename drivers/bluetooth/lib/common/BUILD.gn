@@ -13,6 +13,7 @@ source_set("common") {
     "manufacturer_names.cc",
     "manufacturer_names.h",
     "observer_list.h",
+    "optional.h",
     "packet.h",
     "test_helpers.h",
     "uint128.h",
@@ -34,6 +35,7 @@ source_set("tests") {
     "device_address_unittest.cc",
     "manufacturer_names_unittest.cc",
     "observer_list_unittest.cc",
+    "optional_unittest.cc",
     "packet_unittest.cc",
     "uuid_unittest.cc",
   ]
