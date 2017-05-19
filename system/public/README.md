@@ -9,3 +9,15 @@ headers are ones that need to be global because they're a public
 API/ABI surface or a header needed by a large number of public
 headers (eg, magenta/compiler.h)
 
+Headers in this directory are also used building Fuchsia host tools.
+These builds cannot get these headers from sysroot: sysroot is for target
+builds. Instead such tools need to add the following to their BUILD.gn:
+
+```
+executable("foo") {
+  deps = [ ... ]
+  if (!is_fuchsia) {
+    deps += [ "//magenta/system/public" ]
+  }
+}
+```

@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# If not building for Fuchsia (e.g., linux, macos) then binaries need to get
+# magenta headers directly from source. Otherwise they come from sysroot.
+config("public_config") {
+  include_dirs = [ "." ]
+  visibility = [ ":*" ]
+}
+
+# These headers are exported for use in building non-fuchsia-host binaries.
+source_set("public") {
+  public = [
+    "magenta/compiler.h",
+    "magenta/errors.h",
+    "magenta/ktrace-def.h",
+    "magenta/ktrace.h",
+    "magenta/syscalls/object.h",
+    "magenta/types.h",
+  ]
+
+  public_configs = [ ":public_config" ]
+}
