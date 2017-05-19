@@ -26,7 +26,8 @@ void main(List args) {
 }
 
 class _AskHandlerImpl extends AskHandler {
-  static final _urlSubPattern = new RegExp(r"\.[a-z]{2}");
+  static final _urlSubPattern =
+      new RegExp(r"\.[a-z]{2}|(?:\d{1,3}\.){3}\d{1,3}|localhost");
   static final _dashboardSubPattern = new RegExp(r"^das|^fuc|^bui|^sta");
   static final _chatHeadline = "Open Chat";
   static final _musicPatternKanye = new RegExp(r"kanye|yeezus");
@@ -36,8 +37,11 @@ class _AskHandlerImpl extends AskHandler {
   void ask(UserInput query, void callback(List<Proposal> proposals)) {
     List<Proposal> proposals = new List();
     if (query.text?.contains(_urlSubPattern) ?? false) {
-      final String url =
-          query.text.startsWith("http") ? query.text : "https://" + query.text;
+      final String url = query.text.startsWith("http")
+          ? query.text
+          : query.text.startsWith("localhost")
+              ? "http://" + query.text
+              : "https://" + query.text;
 
       proposals.add(
         _createProposal(
