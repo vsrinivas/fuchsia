@@ -51,6 +51,9 @@ class MockViewInspector : public ViewInspector {
   void GetSoftKeyboardContainer(
       mozart::ViewTokenPtr view_token,
       fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
+  void GetImeService(
+      mozart::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
 
  private:
   std::unordered_map<uint32_t, HitTester*> hit_testers_;

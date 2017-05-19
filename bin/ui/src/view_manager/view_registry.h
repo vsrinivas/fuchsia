@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
@@ -28,7 +29,8 @@ class ViewRegistry : public mozart::ViewInspector {
   using AssociateConnectionErrorCallback =
       ViewAssociateTable::AssociateConnectionErrorCallback;
 
-  explicit ViewRegistry(mozart::CompositorPtr compositor);
+  explicit ViewRegistry(app::ApplicationContext* application_context,
+                        mozart::CompositorPtr compositor);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
@@ -145,8 +147,10 @@ class ViewRegistry : public mozart::ViewInspector {
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
       mozart::ViewTokenPtr view_token,
-      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container)
-      override;
+      fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
+  void GetImeService(
+      mozart::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
 
  private:
   // LIFETIME
@@ -205,6 +209,11 @@ class ViewRegistry : public mozart::ViewInspector {
 
   // LOOKUP
 
+  // Walk up the view tree starting at |view_token| to find a service
+  // provider that offers a service named |service_name|.
+  app::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
+                                                std::string service_name);
+
   ViewState* FindView(uint32_t view_token_value);
   ViewTreeState* FindViewTree(uint32_t view_tree_token_value);
 
@@ -223,6 +232,7 @@ class ViewRegistry : public mozart::ViewInspector {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
+  app::ApplicationContext* application_context_;
   mozart::CompositorPtr compositor_;
   ViewAssociateTable associate_table_;
 

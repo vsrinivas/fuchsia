@@ -5,7 +5,6 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 
-#include "application/lib/app/application_context.h"
 #include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/input/text_input.fidl.h"
@@ -28,8 +27,7 @@ class InputConnectionImpl : public mozart::InputConnection,
  public:
   InputConnectionImpl(InputAssociate* associate,
                       mozart::ViewTokenPtr view_token,
-                      fidl::InterfaceRequest<mozart::InputConnection> request,
-                      app::ApplicationContext* application_context);
+                      fidl::InterfaceRequest<mozart::InputConnection> request);
   ~InputConnectionImpl() override;
 
   const mozart::ViewToken* view_token() const { return view_token_.get(); }

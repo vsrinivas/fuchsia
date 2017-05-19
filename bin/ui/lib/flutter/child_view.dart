@@ -489,7 +489,13 @@ class ChildView extends LeafRenderObjectWidget {
 }
 
 class View {
-  static void offerServiceProvider(InterfaceHandle<ServiceProvider> provider) {
-    Mozart.offerServiceProvider(provider.passChannel().handle.release());
+  /// Provide services to Mozart throught |provider|.
+  ///
+  /// |services| should contain the list of service names offered by the
+  /// |provider|.
+  static void offerServiceProvider(InterfaceHandle<ServiceProvider> provider,
+                                   List<String> services) {
+    Mozart.offerServiceProvider(provider.passChannel().handle.release(),
+                                services);
   }
 }

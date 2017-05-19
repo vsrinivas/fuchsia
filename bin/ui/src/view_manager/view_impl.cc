@@ -25,8 +25,10 @@ void ViewImpl::GetServiceProvider(
 }
 
 void ViewImpl::OfferServiceProvider(
-    ::fidl::InterfaceHandle<app::ServiceProvider> service_provider) {
-  state_->set_service_provider(std::move(service_provider));
+    fidl::InterfaceHandle<app::ServiceProvider> service_provider,
+    fidl::Array<fidl::String> service_names) {
+  state_->SetServiceProvider(std::move(service_provider),
+                             std::move(service_names));
 }
 
 void ViewImpl::CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) {

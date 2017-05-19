@@ -8,7 +8,6 @@
 #include <memory>
 #include <unordered_map>
 
-#include "application/lib/app/application_context.h"
 #include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 #include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
@@ -20,7 +19,7 @@ namespace input_manager {
 // InputManager's ViewAssociate interface implementation.
 class InputAssociate : public mozart::ViewAssociate {
  public:
-  InputAssociate(app::ApplicationContext* application_context);
+  InputAssociate();
   ~InputAssociate() override;
 
   const ftl::RefPtr<mozart::ViewInspectorClient>& inspector() {
@@ -57,7 +56,6 @@ class InputAssociate : public mozart::ViewAssociate {
       mozart::ViewTreeTokenPtr view_tree_token,
       fidl::InterfaceRequest<mozart::InputDispatcher> request);
 
-  app::ApplicationContext* application_context_;
   ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;

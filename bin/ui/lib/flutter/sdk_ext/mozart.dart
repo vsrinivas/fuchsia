@@ -18,10 +18,12 @@ class MozartStartupInfo {
 }
 
 class Mozart {
-  static void offerServiceProvider(int handle) {
-    _offerServiceProvider(_context, handle);
+  static void offerServiceProvider(int handle, List<String> services) {
+    _offerServiceProvider(_context, handle, services);
   }
 
-  static void _offerServiceProvider(int context, int handle)
-      native 'Mozart_offerServiceProvider';
+  static void _offerServiceProvider(int context,
+                                    int handle,
+                                    List<String> services) native
+      'Mozart_offerServiceProvider';
 }

@@ -11,8 +11,7 @@
 
 namespace input_manager {
 
-InputAssociate::InputAssociate(app::ApplicationContext* application_context)
-    : application_context_(application_context) {}
+InputAssociate::InputAssociate() {}
 
 InputAssociate::~InputAssociate() {}
 
@@ -67,8 +66,7 @@ void InputAssociate::CreateInputConnection(
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
       view_token_value, std::make_unique<InputConnectionImpl>(
-                            this, std::move(view_token), std::move(request),
-                            application_context_));
+                            this, std::move(view_token), std::move(request)));
 }
 
 void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {

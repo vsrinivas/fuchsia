@@ -69,6 +69,30 @@ const std::string& ViewState::FormattedLabel() const {
   }
   return formatted_label_cache_;
 }
+app::ServiceProvider* ViewState::GetServiceProviderIfSupports(
+    std::string service_name) {
+  if (service_names_) {
+    auto& v = service_names_.storage();
+    if (std::find(v.begin(), v.end(), service_name) != v.end()) {
+      return service_provider_.get();
+    }
+  }
+  return nullptr;
+}
+
+void ViewState::SetServiceProvider(
+    fidl::InterfaceHandle<app::ServiceProvider> service_provider,
+    fidl::Array<fidl::String> service_names) {
+  if (service_provider) {
+    service_provider_ =
+        app::ServiceProviderPtr::Create(std::move(service_provider));
+    service_names_ = std::move(service_names);
+
+  } else {
+    service_provider_.reset();
+    service_names_.reset();
+  }
+}
 
 void ViewState::RebuildFocusChain() {
   focus_chain_ = mozart::FocusChain::New();

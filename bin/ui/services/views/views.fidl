@@ -114,11 +114,19 @@ interface View {
   // See |InputConnection|.
   GetServiceProvider(app.ServiceProvider& service_provider);
 
-  // This is a way for views to offer services to the compositor.
+  // This is a way for an app to offer services that are associated with a
+  // particular view. Used to expose services to the compositor
   //
   // In particular this should be used to let know which view is implementing
-  // able to show an IME.
-  OfferServiceProvider(app.ServiceProvider? service_provider);
+  // the ability to show an IME
+  //
+  // |service_names| should contain a list of service names as defined with the
+  // FIDL syntax [ServiceName="service_name"]
+  //
+  // The list of services will be used by the compositor to filter service
+  // providers when looking for a particular service.
+  OfferServiceProvider(app.ServiceProvider service_provider,
+                       array<string> service_names);
 
   // Creates the view's scene, replacing any previous scene the view
   // might have had.

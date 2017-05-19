@@ -73,8 +73,10 @@ mozart::FocusChainPtr CopyFocusChain(const mozart::FocusChain* chain) {
 }
 }  // namespace
 
-ViewRegistry::ViewRegistry(mozart::CompositorPtr compositor)
-    : compositor_(std::move(compositor)) {}
+ViewRegistry::ViewRegistry(app::ApplicationContext* application_context,
+                           mozart::CompositorPtr compositor)
+    : application_context_(application_context),
+      compositor_(std::move(compositor)) {}
 
 ViewRegistry::~ViewRegistry() {}
 
@@ -927,6 +929,24 @@ void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
   callback(false);
 }
 
+app::ServiceProvider* ViewRegistry::FindViewServiceProvider(
+    uint32_t view_token,
+    std::string service_name) {
+  ViewState* view_state = FindView(view_token);
+  if (!view_state) {
+    return nullptr;
+  }
+
+  auto provider = view_state->GetServiceProviderIfSupports(service_name);
+  while (!provider && view_state) {
+    view_state = view_state->view_stub()->parent();
+    provider = view_state
+                   ? view_state->GetServiceProviderIfSupports(service_name)
+                   : nullptr;
+  }
+  return provider;
+}
+
 void ViewRegistry::GetSoftKeyboardContainer(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
@@ -934,18 +954,26 @@ void ViewRegistry::GetSoftKeyboardContainer(
   FTL_DCHECK(container.is_pending());
   FTL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
-  ViewState* view_state = FindView(view_token->value);
-  if (!view_state) {
-    return;
-  }
-
-  // Walk the tree back up until we find a service provider
-  auto& provider = view_state->service_provider();
-  while (!provider && view_state) {
-    view_state = view_state->view_stub()->parent();
-  }
+  auto provider = FindViewServiceProvider(view_token->value,
+                                          mozart::SoftKeyboardContainer::Name_);
   if (provider) {
-    app::ConnectToService(provider.get(), std::move(container));
+    app::ConnectToService(provider, std::move(container));
+  }
+}
+
+void ViewRegistry::GetImeService(
+    mozart::ViewTokenPtr view_token,
+    fidl::InterfaceRequest<mozart::ImeService> ime_service) {
+  FTL_DCHECK(view_token);
+  FTL_DCHECK(ime_service.is_pending());
+  FTL_VLOG(1) << "GetImeService: view_token=" << view_token;
+
+  auto provider =
+      FindViewServiceProvider(view_token->value, mozart::ImeService::Name_);
+  if (provider) {
+    app::ConnectToService(provider, std::move(ime_service));
+  } else {
+    application_context_->ConnectToEnvironmentService(std::move(ime_service));
   }
 }
 

@@ -24,7 +24,8 @@ ViewManagerApp::ViewManagerApp(Params* params)
     exit(1);
   });
 
-  registry_.reset(new ViewRegistry(std::move(compositor)));
+  registry_.reset(
+      new ViewRegistry(application_context_.get(), std::move(compositor)));
   LaunchAssociates(params);
 
   application_context_->outgoing_services()->AddService<mozart::ViewManager>(

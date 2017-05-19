@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 
-#include "application/lib/app/connect.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
@@ -15,8 +14,7 @@ namespace input_manager {
 InputConnectionImpl::InputConnectionImpl(
     InputAssociate* associate,
     mozart::ViewTokenPtr view_token,
-    fidl::InterfaceRequest<mozart::InputConnection> request,
-    app::ApplicationContext* application_context)
+    fidl::InterfaceRequest<mozart::InputConnection> request)
     : associate_(associate),
       view_token_(std::move(view_token)),
       binding_(this, std::move(request)),
@@ -26,9 +24,6 @@ InputConnectionImpl::InputConnectionImpl(
   FTL_DCHECK(view_token_);
   binding_.set_connection_error_handler(
       [this] { associate_->OnInputConnectionDied(this); });
-  application_context->ConnectToEnvironmentService(ime_service_.NewRequest());
-  ime_service_.set_connection_error_handler(
-      [] { FTL_LOG(ERROR) << "IME Service Died."; });
 }
 
 InputConnectionImpl::~InputConnectionImpl() {}
@@ -110,9 +105,17 @@ void InputConnectionImpl::GetInputMethodEditor(
           container_.reset();
           associate_->inspector()->view_inspector()->GetSoftKeyboardContainer(
               view_token_.Clone(), container_.NewRequest());
+
+          container_.set_connection_error_handler([this] {
+            FTL_VLOG(1) << "SoftKeyboardContainer died.";
+            // TODO if HW Keyboard available, we should fallback to HW IME
+            Reset();
+          });
+
           container_->Show(ftl::MakeCopyable([
             this, keyboard_type, initial_state = std::move(initial_state)
           ](bool shown) mutable {
+            FTL_VLOG(1) << "SoftKeyboardContainer.Show " << shown;
             if (shown) {
               ConnectWithImeService(keyboard_type, std::move(initial_state));
             }
@@ -135,7 +138,15 @@ void InputConnectionImpl::ConnectWithImeService(
   FTL_VLOG(1) << "ConnectWithImeService: view_token=" << *view_token_
               << ", keyboard_type=" << keyboard_type
               << ", initial_state=" << *state;
-  FTL_DCHECK(ime_service_.is_bound());
+  // Retrieve IME Service from the view tree
+  associate_->inspector()->view_inspector()->GetImeService(
+      view_token_.Clone(), ime_service_.NewRequest());
+  ime_service_.set_connection_error_handler([this] {
+    FTL_LOG(ERROR) << "IME Service Died.";
+    Reset();
+  });
+
+  // GetInputMethodEditor from IME service
   mozart::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
   client_binding_.set_connection_error_handler([this] { OnClientDied(); });
@@ -146,10 +157,6 @@ void InputConnectionImpl::ConnectWithImeService(
 
 void InputConnectionImpl::OnEditorDied() {
   FTL_VLOG(1) << "OnEditorDied: Text 'field' disconnected";
-  if (container_) {
-    container_->Hide();
-    container_.reset();
-  }
   Reset();
 }
 
@@ -159,6 +166,14 @@ void InputConnectionImpl::OnClientDied() {
 }
 
 void InputConnectionImpl::Reset() {
+  if (ime_service_)
+    ime_service_.reset();
+
+  if (container_) {
+    container_->Hide();
+    container_.reset();
+  }
+
   if (editor_binding_.is_bound())
     editor_binding_.Close();
   if (client_)

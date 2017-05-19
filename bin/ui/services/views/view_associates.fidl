@@ -134,4 +134,9 @@ interface ViewInspector {
   // in the associated ViewTree
   GetSoftKeyboardContainer(ViewToken view_token,
                            SoftKeyboardContainer& container);
+
+  // Retrieve the IME Service that is the closest to the ViewToken
+  // in the associated ViewTree
+  GetImeService(ViewToken view_token,
+                ImeService& ime_service);
 };

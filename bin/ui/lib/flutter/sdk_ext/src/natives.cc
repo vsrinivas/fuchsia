@@ -21,8 +21,7 @@ namespace mozart {
 #define DECLARE_FUNCTION(name, count) \
   extern void name(Dart_NativeArguments args);
 
-#define MOZART_NATIVE_LIST(V)         \
-  V(Mozart_offerServiceProvider, 2)
+#define MOZART_NATIVE_LIST(V) V(Mozart_offerServiceProvider, 3)
 
 MOZART_NATIVE_LIST(DECLARE_FUNCTION);
 
@@ -83,13 +82,40 @@ void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   if (!context || !handle)
     return;
 
+  // TODO(jpoichet) Use lib/tonic to retrieve std::vector<std::string>
+  Dart_Handle list = Dart_GetNativeArgument(args, 2);
+  intptr_t list_length = 0;
+  Dart_Handle result = Dart_ListLength(list, &list_length);
+  if (Dart_IsError(result)) {
+    return;
+  }
+  fidl::Array<fidl::String> services;
+  services.resize(list_length);
+  for (intptr_t index = 0; index < list_length; ++index) {
+    Dart_Handle value = Dart_ListGetAt(list, index);
+    intptr_t length = 0;
+    result = Dart_StringLength(value, &length);
+    if (Dart_IsError(result)) {
+      return;
+    }
+    char* buffer = nullptr;
+    result =
+        Dart_StringToUTF8(value, reinterpret_cast<uint8_t**>(&buffer), &length);
+    if (Dart_IsError(result)) {
+      return;
+    }
+
+    buffer[length] = '\0';
+    services[index] = std::string(buffer);
+  }
+
   NativesDelegate* delegate = reinterpret_cast<NativesDelegate*>(context);
   fidl::InterfaceHandle<app::ServiceProvider> provider =
-      fidl::InterfaceHandle<app::ServiceProvider>
-          (mx::channel(static_cast<mx_handle_t>(handle)), 0);
+      fidl::InterfaceHandle<app::ServiceProvider>(
+          mx::channel(static_cast<mx_handle_t>(handle)), 0);
 
   View* view = delegate->GetMozartView();
-  view->OfferServiceProvider(std::move(provider));
+  view->OfferServiceProvider(std::move(provider), std::move(services));
 }
 
 }  // namespace mozart

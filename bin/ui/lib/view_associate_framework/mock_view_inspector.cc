@@ -102,4 +102,8 @@ void MockViewInspector::GetSoftKeyboardContainer(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {}
 
+void MockViewInspector::GetImeService(
+    mozart::ViewTokenPtr view_token,
+    fidl::InterfaceRequest<mozart::ImeService> ime_service) {}
+
 }  // namespace mozart
