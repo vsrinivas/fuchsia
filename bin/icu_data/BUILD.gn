@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("icu_data_provider") {
   sources = [
     "icu_data_provider_impl.cc",
@@ -15,5 +17,21 @@ executable("icu_data_provider") {
     "//application/lib/app",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+package("icu_data") {
+  deps = [ ":icu_data_provider" ]
+
+  binaries = [
+    {
+      name = "icu_data_provider"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icu_data/icudtl.dat"
+    },
   ]
 }
