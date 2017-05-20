@@ -103,7 +103,7 @@ void AudioRendererImpl::Shutdown() {
   if (!media_renderer_binding_.is_bound()) {
     FTL_DCHECK(!pipe_.is_bound());
     FTL_DCHECK(!timeline_control_point_.is_bound());
-    FTL_DCHECK(!outputs_.size());
+    FTL_DCHECK(!output_links_.size());
     return;
   }
 
@@ -115,7 +115,8 @@ void AudioRendererImpl::Shutdown() {
   // the process.
   pipe_.Reset();
   timeline_control_point_.Reset();
-  outputs_.clear();
+  output_links_.clear();
+  throttle_output_link_ = nullptr;
 
   FTL_DCHECK(owner_);
   AudioRendererImplPtr thiz = weak_this_.lock();
@@ -278,32 +279,22 @@ void AudioRendererImpl::SetGain(float db_gain) {
 
   db_gain_ = db_gain;
 
-  for (const auto& output : outputs_) {
+  for (const auto& output : output_links_) {
     FTL_DCHECK(output);
     output->UpdateGain();
   }
 }
 
-void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link,
-                                  const AudioOutputPtr& throttle_output) {
+void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
-  auto res = outputs_.emplace(link);
+  auto res = output_links_.emplace(link);
   FTL_DCHECK(res.second);
   link->UpdateGain();
 
-  // TODO(johngro): special case our throttle output link so that we don't have
-  // to go and find it when performing this operation.
-  if (link->GetOutput() != throttle_output) {
-    AudioRendererToOutputLinkPtr throttle_link;
-    for (const auto& l : outputs_) {
-      if (l->GetOutput() == throttle_output) {
-        throttle_link = l;
-      }
-    }
-
-    FTL_DCHECK(throttle_link != nullptr);
-    link->InitPendingQueue(throttle_link);
+  // Prime this new output with the pending contents of the throttle output.
+  if (throttle_output_link_ != nullptr) {
+    link->InitPendingQueue(throttle_output_link_);
   }
 }
 
@@ -311,15 +302,27 @@ void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
 
-  auto iter = outputs_.find(link);
-  if (iter != outputs_.end()) {
-    outputs_.erase(iter);
+  if (link == throttle_output_link_) {
+    throttle_output_link_ = nullptr;
   } else {
-    // TODO(johngro): that's odd.  I can't think of a reason why we we should
-    // not be able to find this link in our set of outputs... should we log
-    // something about this?
-    FTL_DCHECK(false);
+    auto iter = output_links_.find(link);
+    if (iter != output_links_.end()) {
+      output_links_.erase(iter);
+    } else {
+      // TODO(johngro): that's odd.  I can't think of a reason why we we should
+      // not be able to find this link in our set of outputs... should we log
+      // something about this?
+      FTL_DCHECK(false);
+    }
   }
+}
+
+void AudioRendererImpl::SetThrottleOutput(
+    const AudioRendererToOutputLinkPtr& throttle_output_link) {
+  // TODO(johngro): assert that we are on the main message loop thread.
+  FTL_DCHECK(throttle_output_link  != nullptr);
+  FTL_DCHECK(throttle_output_link_ == nullptr);
+  throttle_output_link_ = throttle_output_link;
 }
 
 void AudioRendererImpl::SnapshotRateTrans(TimelineFunction* out,
@@ -341,7 +344,12 @@ void AudioRendererImpl::SnapshotRateTrans(TimelineFunction* out,
 
 void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   FTL_DCHECK(packet);
-  for (const auto& output : outputs_) {
+
+  if (throttle_output_link_ != nullptr) {
+    throttle_output_link_->PushToPendingQueue(packet);
+  }
+
+  for (const auto& output : output_links_) {
     FTL_DCHECK(output);
     output->PushToPendingQueue(packet);
   }
@@ -358,7 +366,11 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
 
 bool AudioRendererImpl::OnFlushRequested(
     const MediaPacketConsumer::FlushCallback& cbk) {
-  for (const auto& output : outputs_) {
+  if (throttle_output_link_ != nullptr) {
+    throttle_output_link_->FlushPendingQueue();
+  }
+
+  for (const auto& output : output_links_) {
     FTL_DCHECK(output);
     output->FlushPendingQueue();
   }

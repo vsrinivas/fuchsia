@@ -27,22 +27,21 @@ AudioOutputManager::~AudioOutputManager() {
 
 MediaResult AudioOutputManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
-  throttle_output_ = ThrottleOutput::New(this);
-  if (throttle_output_ == nullptr) {
+  auto throttle_output = ThrottleOutput::New(this);
+  if (throttle_output == nullptr) {
     FTL_LOG(WARNING)
         << "AudioOutputManager failed to create default throttle output!";
     return MediaResult::INSUFFICIENT_RESOURCES;
   }
 
-  MediaResult res = AddOutput(throttle_output_);
+  MediaResult res = throttle_output->Init(throttle_output);
   if (res != MediaResult::OK) {
     FTL_LOG(WARNING)
         << "AudioOutputManager failed to initalize the throttle output (res "
         << res << ")";
-    throttle_output_ = nullptr;
-    return res;
+    throttle_output->Shutdown();
   }
-
+  throttle_output_ = std::move(throttle_output);
 
   // Step #2: Being monitoring for plug/unplug events for pluggable audio
   // output devices.
@@ -82,11 +81,30 @@ void AudioOutputManager::Shutdown() {
   }
   outputs_.clear();
 
+  throttle_output_->Shutdown();
+  throttle_output_ = nullptr;
+
   // TODO(johngro) : shut down the thread pool
+}
+
+void AudioOutputManager::AddRenderer(AudioRendererImplPtr renderer) {
+  FTL_DCHECK(renderer);
+
+  // Create a link between this renderer and the throttle output, assign it to
+  // the renderer, and then add the renderer to the set of active renderers.
+  auto link = AudioRendererToOutputLink::New(renderer, throttle_output_);
+  FTL_DCHECK(link);
+
+  if (throttle_output_->AddRendererLink(link) == MediaResult::OK) {
+    renderer->SetThrottleOutput(link);
+  }
+
+  renderers_.insert(std::move(renderer));
 }
 
 MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
   FTL_DCHECK(output != nullptr);
+  FTL_DCHECK(output != throttle_output_);
 
   auto emplace_res = outputs_.emplace(output);
   FTL_DCHECK(emplace_res.second);
@@ -97,7 +115,7 @@ MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
     output->Shutdown();
   }
 
-  if (output->plugged() && (output != throttle_output_)) {
+  if (output->plugged()) {
     OnOutputPlugged(output);
   }
 
@@ -105,6 +123,9 @@ MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
 }
 
 void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
+  FTL_DCHECK(output != nullptr);
+  FTL_DCHECK(output != throttle_output_);
+
   auto iter = outputs_.find(output);
   if (iter != outputs_.end()) {
     if (output->UpdatePlugState(false, output->plug_time())) {
@@ -135,13 +156,10 @@ void AudioOutputManager::SelectOutputsForRenderer(
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
 
-  // All renderers get linked to the throttle output, no matter what.
-  LinkOutputToRenderer(throttle_output_, renderer);
-
   switch (routing_policy_) {
     case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
       for (auto output : outputs_) {
-        if ((output != throttle_output_) && output->plugged()) {
+        if (output->plugged()) {
           LinkOutputToRenderer(output, renderer);
         }
       }
@@ -169,7 +187,7 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   // the process of shutting down (we didn't want to hang out with that guy
   // anyway)
   if (output->AddRendererLink(link) == MediaResult::OK) {
-    renderer->AddOutput(link, throttle_output_);
+    renderer->AddOutput(link);
   }
 }
 
@@ -182,8 +200,8 @@ AudioOutputPtr AudioOutputManager::FindLastPluggedOutput() {
   AudioOutputPtr best_output = nullptr;
 
   for (auto output : outputs_) {
-    if ((output != throttle_output_) && output->plugged() &&
-        (!best_output || (best_output->plug_time() < output->plug_time()))) {
+    if (output->plugged() &&
+       (!best_output || (best_output->plug_time() < output->plug_time()))) {
       best_output = output;
     }
   }
@@ -234,7 +252,7 @@ void AudioOutputManager::OnOutputPlugged(AudioOutputPtr output) {
       if (FindLastPluggedOutput() != output) return;
 
       for (const auto& unlink_tgt : outputs_) {
-        if ((unlink_tgt != throttle_output_) && (unlink_tgt != output)) {
+        if (unlink_tgt != output) {
           unlink_tgt->UnlinkFromRenderers();
         }
       }

@@ -37,9 +37,10 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
 
   // Methods used by the output manager to link/unlink this renderer to/from
   // different outputs.
-  void AddOutput(AudioRendererToOutputLinkPtr link,
-                 const AudioOutputPtr& throttle_output);
+  void AddOutput(AudioRendererToOutputLinkPtr link);
   void RemoveOutput(AudioRendererToOutputLinkPtr link);
+  void SetThrottleOutput(
+      const AudioRendererToOutputLinkPtr& throttle_output_link);
 
   // Accessors used by AudioOutputs during mixing to access parameters which are
   // important for the mixing process.
@@ -93,7 +94,8 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   TimelineRate frame_to_media_ratio_;
   uint32_t bytes_per_frame_ = 1;
   AudioMediaTypeDetailsPtr format_;
-  AudioRendererToOutputLinkSet outputs_;
+  AudioRendererToOutputLinkSet output_links_;
+  AudioRendererToOutputLinkPtr throttle_output_link_;
   float db_gain_ = 0.0;
 };
 
