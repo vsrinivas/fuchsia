@@ -327,7 +327,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     mp_set_curr_cpu_online(false);
 
     mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;
-    mexec_assembly((uintptr_t)dst_addr, 0, 0, 0, ops, (void*)0x00080000);
+    mexec_assembly((uintptr_t)dst_addr, 0, 0, 0, ops, (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
 
     panic("Execution should never reach here\n");
     return NO_ERROR;
