@@ -18,7 +18,7 @@ std::string SimplifyPath(std::string path);
 std::string AbsolutePath(const std::string& path);
 
 // Returns the directory name component of the given path.
-std::string GetDirectoryName(std::string path);
+std::string GetDirectoryName(const std::string& path);
 
 // Returns the basename component of the given path by stripping everything up
 // to and including the last slash.

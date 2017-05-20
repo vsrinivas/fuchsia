@@ -189,8 +189,7 @@ std::string AbsolutePath(const std::string& path) {
   return std::string(absPath);
 }
 
-// Returns the directory name component of the given path.
-std::string GetDirectoryName(std::string path) {
+std::string GetDirectoryName(const std::string& path) {
   size_t rootLength = RootLength(path);
   size_t separator = LastSeparator(path);
   if (separator < rootLength)
