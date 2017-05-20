@@ -9,11 +9,18 @@
 # TODO(dje): gdb should let us use a better command class than COMMAND_DATA.
 # TODO(dje): Add arm64 support.
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import sys
 import gdb
 import gdb.printing
 import re
 from gdb.unwinder import Unwinder
+
+if sys.version_info > (3,):
+  long = int
 
 # The command prefix, passed in from gdbinit.py.
 _MAGENTA_COMMAND_PREFIX = "magenta"
@@ -21,7 +28,7 @@ _KERNEL_EXCEPTION_UNWINDER_PARAMETER = "kernel-exception-unwinder"
 
 _THREAD_MAGIC = 0x74687264
 
-print "Loading magenta.elf-gdb.py ..."
+print("Loading magenta.elf-gdb.py ...")
 
 
 def _is_x86_64():
@@ -315,8 +322,8 @@ def _print_thread_summary(thread, number, tls_entry, user_thread_ptr_t):
   else:
     pid = "kern"
   name = str(thread["name"].lazy_string().value()).strip('"')
-  print "%3d %5s %#16x %-32s %s" % (
-      number, pid, thread.address, name, thread["state"])
+  print("%3d %5s %#16x %-32s %s" % (
+      number, pid, thread.address, name, thread["state"]))
 
 
 class _InfoMagentaThreads(gdb.Command):
@@ -353,8 +360,8 @@ class _InfoMagentaThreads(gdb.Command):
     gdb.execute("set print address off")
     gdb.execute("set print symbol off")
 
-    print "%3s %5s %-18s %-32s %s" % (
-        "Num", "Pid", "thread_t*", "Name", "State")
+    print("%3s %5s %-18s %-32s %s" % (
+        "Num", "Pid", "thread_t*", "Name", "State"))
     # Make sure we restore these when we're done.
     try:
       user_thread_ptr_t = gdb.lookup_type("UserThread").pointer()
@@ -367,16 +374,16 @@ class _InfoMagentaThreads(gdb.Command):
       gdb.execute("set print address %s" % (save_print_address))
       gdb.execute("set print symbol %s" % (save_print_symbol))
     if num_threads:
-      print "Note: Each thread is now available in $mx_threads[num]."
+      print("Note: Each thread is now available in $mx_threads[num].")
     else:
-      print "<no threads>"
+      print("<no threads>")
 
 
 def _print_process_summary(process, number):
   state = str(process["state_"])
   state = state.replace("ProcessDispatcher::", "")
-  print "%3d %#16x %4u %s" % (
-      number, process.address, process["id_"], state)
+  print("%3d %#16x %4u %s" % (
+      number, process.address, process["id_"], state))
 
 
 class _InfoMagentaProcesses(gdb.Command):
@@ -413,8 +420,8 @@ class _InfoMagentaProcesses(gdb.Command):
     gdb.execute("set print address off")
     gdb.execute("set print symbol off")
 
-    print "%3s %-18s %4s %s" % (
-        "Num", "ProcessDispatcher*", "Pid", "State")
+    print("%3s %-18s %4s %s" % (
+        "Num", "ProcessDispatcher*", "Pid", "State"))
     # Make sure we restore these when we're done.
     try:
       num = 1
@@ -425,9 +432,9 @@ class _InfoMagentaProcesses(gdb.Command):
       gdb.execute("set print address %s" % (save_print_address))
       gdb.execute("set print symbol %s" % (save_print_symbol))
     if num_processes:
-      print "Note: Each process is now available in $mx_processes[num]."
+      print("Note: Each process is now available in $mx_processes[num].")
     else:
-      print "<no processes>"
+      print("<no processes>")
 
 
 def _print_handle_summary(handle, number):
@@ -443,8 +450,8 @@ def _print_handle_summary(handle, number):
   else:
     dispatcher_type = "Dispatcher"
   dispatcher_text = "(%s*) %s" % (dispatcher_type, dispatcher)
-  print "  %3d %-18s %4u %#8x %s" % (
-      number, handle.address, process_id, rights, dispatcher_text)
+  print("  %3d %-18s %4u %#8x %s" % (
+      number, handle.address, process_id, rights, dispatcher_text))
 
 
 class _InfoMagentaHandles(gdb.Command):
@@ -473,9 +480,9 @@ class _InfoMagentaHandles(gdb.Command):
         handles = _get_handle_list(p)
         num_handles = len(handles)
 
-        print "Process %u" % (p["id_"])
-        print "  %3s %-18s %4s %8s %s" % (
-            "Num", "Handle*", "Pid", "Rights", "Dispatcher")
+        print("Process %u" % (p["id_"]))
+        print("  %3s %-18s %4s %8s %s" % (
+            "Num", "Handle*", "Pid", "Rights", "Dispatcher"))
 
         num = 1
         for handle_ptr in handles:
@@ -483,7 +490,7 @@ class _InfoMagentaHandles(gdb.Command):
           num += 1
 
         if not num_handles:
-          print "  <no handles>"
+          print("  <no handles>")
 
     finally:
       gdb.execute("set print address %s" % (save_print_address))
