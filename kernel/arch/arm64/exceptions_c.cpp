@@ -48,7 +48,7 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint3
 
 #if WITH_LIB_MAGENTA
 
-static status_t call_magenta_data_fault_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
+static status_t call_magenta_data_fault_exception_handler(mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
     arch_exception_context_t context = {};
     context.frame = iframe;
@@ -61,16 +61,9 @@ static status_t call_magenta_data_fault_exception_handler (mx_excp_type_t type, 
     return status;
 }
 
-static status_t call_magenta_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
+static status_t call_magenta_exception_handler(mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
 {
-    arch_exception_context_t context = {};
-    context.frame = iframe;
-    context.esr = esr;
-
-    arch_enable_ints();
-    status_t status = magenta_exception_handler(type, &context, iframe->elr);
-    arch_disable_ints();
-    return status;
+    return call_magenta_data_fault_exception_handler(type, iframe, esr, 0);
 }
 
 #endif
