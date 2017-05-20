@@ -73,9 +73,6 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     /* put the return code back */
     frame->r[0] = ret;
 
-    /* check to see if there are any pending signals */
-    thread_process_pending_signals();
-
     /* re-disable interrupts on the way out
        This must be done before the below ktrace_tiny call. */
     arch_disable_ints();
