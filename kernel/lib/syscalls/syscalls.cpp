@@ -38,6 +38,10 @@ inline uint64_t invoke_syscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
 #if ARCH_ARM64
 #include <arch/arm64.h>
 
+// N.B. Interrupts must be disabled on entry and they will be disabled on exit.
+// The reason is the two calls two arch_curr_cpu_num in the ktrace calls: we
+// don't want the cpu changing during the call.
+
 extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, uint32_t syscall_imm, uint64_t pc) {
     uint64_t syscall_num = frame->r[16];
 
@@ -53,7 +57,9 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
     THREAD_STATS_INC(syscalls);
 
-    /* re-enable interrupts to maintain kernel preemptiveness */
+    /* re-enable interrupts to maintain kernel preemptiveness
+       This must be done after the above ktrace_tiny call, and after the
+       above THREAD_STATS_INC call as it also calls arch_curr_cpu_num. */
     arch_enable_ints();
 
     LTRACEF_LEVEL(2, "num %" PRIu64 "\n", syscall_num);
@@ -70,7 +76,8 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     /* check to see if there are any pending signals */
     thread_process_pending_signals();
 
-    /* re-disable interrupts on the way out */
+    /* re-disable interrupts on the way out
+       This must be done before the below ktrace_tiny call. */
     arch_disable_ints();
 
     ktrace_tiny(TAG_SYSCALL_EXIT, ((uint32_t)syscall_num << 8) | arch_curr_cpu_num());
@@ -80,6 +87,10 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
 #if ARCH_X86_64
 #include <arch/x86.h>
+
+// N.B. Interrupts must be disabled on entry and they will be disabled on exit.
+// The reason is the two calls two arch_curr_cpu_num in the ktrace calls: we
+// don't want the cpu changing during the call.
 
 struct x86_64_syscall_result x86_64_syscall(
     uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
@@ -103,7 +114,9 @@ struct x86_64_syscall_result x86_64_syscall(
 
     THREAD_STATS_INC(syscalls);
 
-    /* re-enable interrupts to maintain kernel preemptiveness */
+    /* re-enable interrupts to maintain kernel preemptiveness
+       This must be done after the above ktrace_tiny call, and after the
+       above THREAD_STATS_INC call as it also calls arch_curr_cpu_num. */
     arch_enable_ints();
 
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
@@ -113,9 +126,11 @@ struct x86_64_syscall_result x86_64_syscall(
 
     LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", thread, ret);
 
-    ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
+    /* re-disable interrupts on the way out
+       This must be done before the below ktrace_tiny call. */
+    arch_disable_ints();
 
-    // The assembler caller will re-disable interrupts at the appropriate time.
+    ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
 
     struct x86_64_syscall_result result;
     result.status = ret;

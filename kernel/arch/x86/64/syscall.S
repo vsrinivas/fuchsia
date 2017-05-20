@@ -90,7 +90,8 @@ FUNCTION(x86_syscall)
 
 .Lreturn_from_syscall:
 
-    /* make sure interrupts are disabled */
+    /* make sure interrupts are disabled (they already are in the fall-through
+       path, but if we took the .Lthread_signaled path they aren't) */
     cli
 
     /* restore the user stack */
@@ -104,6 +105,9 @@ FUNCTION(x86_syscall)
     sysretq
 
 .Lthread_signaled:
+    /* re-enable interrupts to maintain kernel preemptiveness */
+    sti
+
     /* fill in x86_syscall_general_regs_t
        Because we don't save the regs unless we have to a lot of the original
        values are gone. The user just has to deal with it. One important thing
