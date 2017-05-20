@@ -5,8 +5,8 @@
 #pragma once
 
 #ifdef __Fuchsia__
-#include <mx/vmo.h>
 #include <fs/dispatcher.h>
+#include <mx/vmo.h>
 #endif
 
 #include <mxtl/algorithm.h>
@@ -17,20 +17,29 @@
 #include <mxtl/unique_ptr.h>
 
 #include <fs/mapped-vmo.h>
+
+#ifdef __Fuchsia__
+#include <fs/vfs-dispatcher.h>
+#endif
+
 #include <fs/vfs.h>
 
+#include "block-txn.h"
 #include "minfs.h"
 #include "misc.h"
-#include "block-txn.h"
 
-#define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
+#define panic(fmt...)         \
+    do {                      \
+        fprintf(stderr, fmt); \
+        __builtin_trap();     \
+    } while (0)
 
 namespace minfs {
 
 // minfs_sync_vnode flags
-constexpr uint32_t kMxFsSyncDefault = 0;     // default: no implicit time update
-constexpr uint32_t kMxFsSyncMtime   = (1<<0);
-constexpr uint32_t kMxFsSyncCtime   = (1<<1);
+constexpr uint32_t kMxFsSyncDefault = 0; // default: no implicit time update
+constexpr uint32_t kMxFsSyncMtime = (1 << 0);
+constexpr uint32_t kMxFsSyncCtime = (1 << 1);
 
 constexpr uint32_t kMinfsBlockCacheSize = 64;
 
@@ -63,9 +72,9 @@ public:
     // free ino in inode bitmap, release all blocks held by inode
     mx_status_t InoFree(
 #ifdef __Fuchsia__
-                        const MappedVmo* vmo_indirect,
+        const MappedVmo* vmo_indirect,
 #endif
-                        const minfs_inode_t& inode, uint32_t ino);
+        const minfs_inode_t& inode, uint32_t ino);
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
@@ -129,8 +138,10 @@ struct DirectoryOffset {
 
 #define INO_HASH(ino) fnv1a_tiny(ino, kMinfsHashBits)
 
+// clang-format off
 constexpr uint32_t kMinfsFlagDeletedDirectory = 0x00010000;
 constexpr uint32_t kMinfsFlagReservedMask     = 0xFFFF0000;
+// clang-format on
 
 static_assert((kMinfsFlagReservedMask & V_FLAG_RESERVED_MASK) == 0,
               "MinFS should not be using any Vnode flags which are reserved");
@@ -263,13 +274,15 @@ class MinfsChecker {
 public:
     MinfsChecker();
     mx_status_t Init(Bcache* bc, const minfs_info_t* info);
-    mx_status_t CheckInode(uint32_t ino, uint32_t parent);
+    mx_status_t CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot);
     mx_status_t CheckForUnusedBlocks() const;
     mx_status_t CheckForUnusedInodes() const;
+    mx_status_t CheckLinkCounts() const;
 
     // "Set once"-style flag to identify if anything nonconforming
     // was found in the underlying filesystem -- even if it was fixed.
     bool conforming_;
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 
@@ -283,6 +296,8 @@ private:
     mxtl::unique_ptr<Minfs> fs_;
     RawBitmap checked_inodes_;
     RawBitmap checked_blocks_;
+
+    mxtl::Array<int32_t> links_;
 };
 
 mx_status_t minfs_check(Bcache* bc);

@@ -18,8 +18,8 @@
 #include <fs/vfs-dispatcher.h>
 #endif
 
-#include "minfs-private.h"
 #include "block-txn.h"
+#include "minfs-private.h"
 
 namespace minfs {
 
@@ -85,15 +85,16 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* i
     return NO_ERROR;
 }
 
-Minfs::Minfs(Bcache* bc, const minfs_info_t* info) : bc_(bc) {
+Minfs::Minfs(Bcache* bc, const minfs_info_t* info)
+    : bc_(bc) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
 mx_status_t Minfs::InoFree(
 #ifdef __Fuchsia__
-                           const MappedVmo* vmo_indirect,
+    const MappedVmo* vmo_indirect,
 #endif
-                           const minfs_inode_t& inode, uint32_t ino) {
+    const minfs_inode_t& inode, uint32_t ino) {
     // We're going to be updating block bitmaps repeatedly.
     WriteTxn txn(bc_);
 #ifdef __Fuchsia__
@@ -167,7 +168,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     uint32_t ino = static_cast<uint32_t>(bitoff_start);
 
     // locate data and block offset of bitmap
-    void *bmdata;
+    void* bmdata;
     MX_DEBUG_ASSERT(ino <= inode_map_.size());
     uint32_t ibm_relative_bno = (ino / kMinfsBlockBits);
     if ((bmdata = GetBlock<const RawBitmap&>(inode_map_, ibm_relative_bno)) == nullptr) {
@@ -182,7 +183,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
         return status;
     }
 
-    // Commit blocks to disk
+// Commit blocks to disk
 #ifdef __Fuchsia__
     vmoid_t id = inode_map_vmoid_;
 #else
@@ -275,7 +276,7 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
     uint32_t bmbno_rel = bno / kMinfsBlockBits;       // bmbno relative to bitmap
     uint32_t bmbno_abs = info_.abm_block + bmbno_rel; // bmbno relative to block device
 
-    // commit the bitmap
+// commit the bitmap
 #ifdef __Fuchsia__
     txn->Enqueue(block_map_vmoid_, bmbno_rel, bmbno_abs, 1);
 #else
@@ -291,7 +292,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 #define DE0_SIZE DirentSize(1)
 
     // directory entry for self
-    minfs_dirent_t* de = (minfs_dirent_t*) bdata;
+    minfs_dirent_t* de = (minfs_dirent_t*)bdata;
     de->ino = ino_self;
     de->reclen = DE0_SIZE;
     de->namelen = 1;
@@ -539,7 +540,7 @@ int minfs_mkfs(Bcache* bc) {
     ino[kMinfsRootIno].magic = kMinfsMagicDir;
     ino[kMinfsRootIno].size = kMinfsBlockSize;
     ino[kMinfsRootIno].block_count = 1;
-    ino[kMinfsRootIno].link_count = 1;
+    ino[kMinfsRootIno].link_count = 2;
     ino[kMinfsRootIno].dirent_count = 2;
     ino[kMinfsRootIno].dnum[0] = info.dat_block;
     bc->Writeblk(info.ino_block, blk);

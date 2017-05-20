@@ -7,8 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "minfs.h"
 #include "minfs-private.h"
+#include "minfs.h"
 
 namespace minfs {
 
@@ -137,6 +137,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 return ERR_IO;
             }
             de = reinterpret_cast<minfs_dirent_t*>(record_full);
+            bool dot_or_dotdot = false;
 
             if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
                 error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
@@ -146,6 +147,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 if (dot) {
                     error("check: ino#%u: multiple '.' entries\n", ino);
                 }
+                dot_or_dotdot = true;
                 dot = true;
                 if (de->ino != ino) {
                     error("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
@@ -155,6 +157,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 if (dotdot) {
                     error("check: ino#%u: multiple '..' entries\n", ino);
                 }
+                dot_or_dotdot = true;
                 dotdot = true;
                 if (de->ino != parent) {
                     error("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
@@ -165,8 +168,9 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                 info("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n",
                      ino, eno, de->ino, de->type, de->namelen, de->name, is_last ? "[last]" : "");
             }
+
             if (flags & CD_RECURSE) {
-                if ((status = CheckInode(de->ino, ino)) < 0) {
+                if ((status = CheckInode(de->ino, ino, dot_or_dotdot)) < 0) {
                     return status;
                 }
             }
@@ -235,7 +239,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     // count and sanity-check data blocks
 
     unsigned blocks_allocated = 0;
-    for (unsigned n = 0;;n++) {
+    for (unsigned n = 0;; n++) {
         mx_status_t status;
         uint32_t bno;
         if ((status = GetInodeNthBno(inode, n, &bno)) < 0) {
@@ -270,22 +274,38 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     return NO_ERROR;
 }
 
-mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent) {
-    if (checked_inodes_.Get(ino, ino + 1)) {
-        // we've been here before
-        return NO_ERROR;
-    }
-    checked_inodes_.Set(ino, ino + 1);
-    if (!fs_->inode_map_.Get(ino, ino + 1)) {
-        warn("check: ino#%u: not marked in-use\n", ino);
-        conforming_ = false;
-    }
-    mx_status_t status;
+mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot) {
     minfs_inode_t inode;
+    mx_status_t status;
+
     if ((status = GetInode(&inode, ino)) < 0) {
         error("check: ino#%u: not readable\n", ino);
         return status;
     }
+
+    bool prev_checked = checked_inodes_.Get(ino, ino + 1);
+
+    if (inode.magic == kMinfsMagicDir && prev_checked && !dot_or_dotdot) {
+        error("check: ino#%u: Multiple hard links to directory (excluding '.' and '..') found\n", ino);
+        return ERR_BAD_STATE;
+    }
+
+    links_[ino - 1] += 1;
+
+    if (prev_checked) {
+        // we've been here before
+        return NO_ERROR;
+    }
+
+    links_[ino - 1] -= inode.link_count;
+
+    checked_inodes_.Set(ino, ino + 1);
+
+    if (!fs_->inode_map_.Get(ino, ino + 1)) {
+        warn("check: ino#%u: not marked in-use\n", ino);
+        conforming_ = false;
+    }
+
     if (inode.magic == kMinfsMagicDir) {
         info("ino#%u: DIR blks=%u links=%u\n",
              ino, inode.block_count, inode.link_count);
@@ -342,9 +362,30 @@ mx_status_t MinfsChecker::CheckForUnusedInodes() const {
     return NO_ERROR;
 }
 
-MinfsChecker::MinfsChecker() : conforming_(true), fs_(nullptr) {};
+mx_status_t MinfsChecker::CheckLinkCounts() const {
+    unsigned error = 0;
+    for (uint32_t n = 0; n < fs_->info_.inode_count; n++) {
+        if (links_[n] != 0) {
+            error += 1;
+            error("check: inode#%u has incorrect link count %u\n", n + 1, links_[n]);
+            return ERR_BAD_STATE;
+        }
+    }
+    if (error) {
+        error("check: %u inode%s with incorrect link count\n",
+              error, error > 1 ? "s" : "");
+        return ERR_BAD_STATE;
+    }
+    return NO_ERROR;
+}
+
+MinfsChecker::MinfsChecker()
+    : conforming_(true), fs_(nullptr), links_(){};
 
 mx_status_t MinfsChecker::Init(Bcache* bc, const minfs_info_t* info) {
+    links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
+    links_[0] = -1;
+
     mx_status_t status;
     if ((status = checked_inodes_.Reset(info->inode_count)) < 0) {
         return status;
@@ -380,7 +421,7 @@ mx_status_t minfs_check(Bcache* bc) {
     }
 
     //TODO: check root not a directory
-    if ((status = chk.CheckInode(1, 1)) < 0) {
+    if ((status = chk.CheckInode(1, 1, 0)) < 0) {
         return status;
     }
 
@@ -392,6 +433,8 @@ mx_status_t minfs_check(Bcache* bc) {
     r = chk.CheckForUnusedBlocks();
     status |= (status != NO_ERROR) ? 0 : r;
     r = chk.CheckForUnusedInodes();
+    status |= (status != NO_ERROR) ? 0 : r;
+    r = chk.CheckLinkCounts();
     status |= (status != NO_ERROR) ? 0 : r;
 
     //TODO: check allocated inodes that were abandoned
