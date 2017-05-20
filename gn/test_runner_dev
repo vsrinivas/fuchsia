@@ -7,6 +7,10 @@
     ],
     "binaries": [
         {
+            "binary": "fake_command",
+            "bootfs_path": "test/fake_command"
+        },
+        {
             "binary": "fake_failing_test",
             "bootfs_path": "test/fake_failing_test"
         },
