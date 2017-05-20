@@ -299,9 +299,8 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
         }
     }
 
-    bool is_user = !BIT(ec, 0);
     /* if we came from user space, check to see if we have any signals to handle */
-    if (unlikely(is_user)) {
+    if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
         /* in the case of receiving a kill signal, this function may not return,
          * but the scheduler would have been invoked so it's fine.
          */
