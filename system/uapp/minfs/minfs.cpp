@@ -72,15 +72,16 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* i
     void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
                             (uintptr_t)(inoblock_rel * kMinfsBlockSize));
     auto itable_id = inode_table_vmoid_;
+    memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
+    txn->Enqueue(itable_id, inoblock_rel, inoblock_abs, 1);
 #else
+    // Since host-side tools don't have "mapped vmos", just read / update /
+    // write the single absolute indoe block.
     uint8_t inodata[kMinfsBlockSize];
     bc_->Readblk(inoblock_abs, inodata);
-    auto itable_id = static_cast<void*>(inodata);
-#endif
     memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
-
-    // commit blocks to disk
-    txn->Enqueue(itable_id, inoblock_rel, inoblock_abs, 1);
+    bc_->Writeblk(inoblock_abs, inodata);
+#endif
     return NO_ERROR;
 }
 

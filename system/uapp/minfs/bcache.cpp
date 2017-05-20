@@ -107,8 +107,8 @@ Bcache::~Bcache() {
         block_fifo_release_client(fifo_client_);
         ioctl_block_fifo_close(fd_);
     }
-    close(fd_);
 #endif
+    close(fd_);
 }
 
 #ifndef __Fuchsia__
