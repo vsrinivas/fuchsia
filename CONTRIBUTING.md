@@ -36,7 +36,7 @@ See the Gerrit documentation for more detail:
 ## [Googlers only] Issue actions
 
 Commit messages may reference issue IDs in Fuchsia's
-(issue tracker)[https://fuchsia.atlassian.net/]; such references will become
+[issue tracker](https://fuchsia.atlassian.net/); such references will become
 links in the Gerrit UI. Issue actions may also be specified, for example to
 automatically close an issue when a commit is landed:
 
