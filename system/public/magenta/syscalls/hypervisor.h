@@ -16,12 +16,40 @@ __BEGIN_CDECLS
 #define MX_HYPERVISOR_OP_GUEST_CREATE       1u
 #define MX_HYPERVISOR_OP_GUEST_ENTER        2u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY    3u
+#define MX_HYPERVISOR_OP_GUEST_SET_GPR      3u
+#define MX_HYPERVISOR_OP_GUEST_GET_GPR      4u
+
+#define MX_HYPERVISOR_OP_GUEST_SET_IP       5u
 
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_CR3      4u
-#define MX_HYPERVISOR_OP_GUEST_SET_ESI      5u
+#define MX_HYPERVISOR_OP_GUEST_SET_CR3      6u
 #endif // __x86_64__
+
+typedef struct mx_guest_gpr {
+#if __aarch64__
+    uint64_t r[31];
+    uint64_t sp;
+#elif __x86_64__
+    uint64_t rax;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t rbx;
+    uint64_t rsp;
+    uint64_t rbp;
+    uint64_t rsi;
+    uint64_t rdi;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+#else
+#error Unsupported architecture
+#endif
+} mx_guest_gpr_t;
 
 // Packets for communication over the control FIFO.
 

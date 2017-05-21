@@ -86,40 +86,51 @@ static mx_status_t guest_enter(mx_handle_t handle) {
     return guest->Enter();
 }
 
+static mx_status_t guest_set_gpr(mx_handle_t handle, const mx_guest_gpr_t* guest_gpr) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->SetGpr(guest_gpr);
+}
+
+static mx_status_t guest_get_gpr(mx_handle_t handle, mx_guest_gpr_t* guest_gpr) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->GetGpr(guest_gpr);
+}
+
+static mx_status_t guest_set_ip(mx_handle_t handle, uintptr_t guest_ip) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->set_ip(guest_ip);
+}
+
 #if ARCH_X86_64
 static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &guest);
     if (status != NO_ERROR)
         return status;
 
     return guest->set_cr3(guest_cr3);
 }
-
-static mx_status_t guest_set_esi(mx_handle_t handle, uint32_t guest_esi) {
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<GuestDispatcher> guest;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
-    if (status != NO_ERROR)
-        return status;
-
-    return guest->set_esi(guest_esi);
-}
 #endif
-
-static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<GuestDispatcher> guest;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &guest);
-    if (status != NO_ERROR)
-        return status;
-
-    return guest->set_entry(guest_entry);
-}
 
  mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, user_ptr<const void> args,
                                uint32_t args_len, user_ptr<void> result, uint32_t result_len) {
@@ -142,13 +153,32 @@ static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
     }
     case MX_HYPERVISOR_OP_GUEST_ENTER:
         return guest_enter(handle);
-    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY: {
-        uintptr_t guest_entry;
-        if (args_len != sizeof(guest_entry))
+    case MX_HYPERVISOR_OP_GUEST_SET_GPR: {
+        mx_guest_gpr_t guest_gpr;
+        if (args_len != sizeof(guest_gpr))
             return ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&guest_entry, sizeof(guest_entry)) != NO_ERROR)
+        if (args.reinterpret<const mx_guest_gpr_t>().copy_from_user(&guest_gpr) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        return guest_set_entry(handle, guest_entry);
+        return guest_set_gpr(handle, &guest_gpr);
+    }
+    case MX_HYPERVISOR_OP_GUEST_GET_GPR: {
+        mx_guest_gpr_t guest_gpr;
+        if (result_len != sizeof(guest_gpr))
+            return ERR_INVALID_ARGS;
+        mx_status_t status = guest_get_gpr(handle, &guest_gpr);
+        if (status != NO_ERROR)
+            return status;
+        if (result.reinterpret<mx_guest_gpr_t>().copy_to_user(guest_gpr) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return NO_ERROR;
+    }
+    case MX_HYPERVISOR_OP_GUEST_SET_IP: {
+        uintptr_t guest_ip;
+        if (args_len != sizeof(guest_ip))
+            return ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&guest_ip, sizeof(guest_ip)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return guest_set_ip(handle, guest_ip);
     }
 #if ARCH_X86_64
     case MX_HYPERVISOR_OP_GUEST_SET_CR3: {
@@ -158,14 +188,6 @@ static mx_status_t guest_set_entry(mx_handle_t handle, uintptr_t guest_entry) {
         if (args.copy_array_from_user(&guest_cr3, sizeof(guest_cr3)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         return guest_set_cr3(handle, guest_cr3);
-    }
-    case MX_HYPERVISOR_OP_GUEST_SET_ESI: {
-        uint32_t guest_esi;
-        if (args_len != sizeof(guest_esi))
-            return ERR_INVALID_ARGS;
-        if (args.copy_array_from_user(&guest_esi, sizeof(guest_esi)) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        return guest_set_esi(handle, guest_esi);
     }
 #endif // ARCH_X86_64
     default:

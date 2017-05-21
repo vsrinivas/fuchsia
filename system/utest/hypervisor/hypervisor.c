@@ -138,23 +138,20 @@ static bool guest_start_test(void) {
     ASSERT_EQ(guest_create(hypervisor, guest_phys_mem, &guest_ctl_fifo, &guest), NO_ERROR, "");
 
     // Setup the guest.
-    uintptr_t guest_entry = 0;
-    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_entry), NO_ERROR, "");
+    uintptr_t guest_ip = 0;
+    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip), NO_ERROR, "");
+
 #if __x86_64__
-    memcpy((void*)(addr + guest_entry), guest_start, guest_end - guest_start);
+    memcpy((void*)(addr + guest_ip), guest_start, guest_end - guest_start);
     uintptr_t guest_cr3 = 0;
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
               NO_ERROR, "");
-    uint32_t guest_esi = 0;
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI,
-                               &guest_esi, sizeof(guest_esi), NULL, 0),
-              NO_ERROR, "");
 #endif // __x86_64__
 
     // Enter the guest.
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY,
-                               &guest_entry, sizeof(guest_entry), NULL, 0),
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_IP,
+                               &guest_ip, sizeof(guest_ip), NULL, 0),
               NO_ERROR, "");
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),
               ERR_STOP, "");

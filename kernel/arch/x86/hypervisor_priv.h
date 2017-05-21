@@ -13,6 +13,8 @@
 #include <kernel/event.h>
 #include <kernel/timer.h>
 
+typedef struct mx_guest_gpr mx_guest_gpr_t;
+
 static const uint64_t kIoApicPhysBase = 0xfec00000;
 static const uint8_t kIoApicRedirectOffsets = 0x36;
 static const uint32_t kInvalidInterrupt = UINT32_MAX >> 1;
@@ -291,6 +293,8 @@ public:
                    paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
                    FifoDispatcher* ctl_fifo);
+    status_t SetGpr(const mx_guest_gpr_t* guest_gpr);
+    status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
 
 private:
     VmxPage host_msr_page_;

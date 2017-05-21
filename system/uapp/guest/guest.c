@@ -26,7 +26,7 @@ static bool container_is_valid(const bootdata_t* container) {
            container->flags == 0;
 }
 
-static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry,
+static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_ip,
                                 uintptr_t* end_off) {
     uintptr_t header_addr = addr + kKernelOffset;
     int ret = read(fd, (void*)header_addr, sizeof(magenta_kernel_t));
@@ -58,7 +58,7 @@ static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_entry,
         return ERR_IO;
     }
 
-    *guest_entry = header->data_kernel.entry64;
+    *guest_ip = header->data_kernel.entry64;
     *end_off = header->hdr_file.length + sizeof(bootdata_t);
     return NO_ERROR;
 }
@@ -194,9 +194,9 @@ int main(int argc, char** argv) {
         return ERR_IO;
     }
 
-    uintptr_t guest_entry;
+    uintptr_t guest_ip;
     uintptr_t magenta_end_off;
-    status = load_magenta(fd, addr, &guest_entry, &magenta_end_off);
+    status = load_magenta(fd, addr, &guest_ip, &magenta_end_off);
     close(fd);
     if (status != NO_ERROR)
         return status;
@@ -216,6 +216,18 @@ int main(int argc, char** argv) {
             return status;
     }
 
+    mx_guest_gpr_t guest_gpr;
+    memset(&guest_gpr, 0, sizeof(guest_gpr));
+#if __x86_64__
+    guest_gpr.rsi = kBootdataOffset;
+#endif // __x86_64__
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_GPR, &guest_gpr,
+                              sizeof(guest_gpr), NULL, 0);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to set guest ESI\n");
+        return status;
+    }
+
 #if __x86_64__
     uintptr_t guest_cr3 = 0;
     status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3, &guest_cr3,
@@ -224,18 +236,10 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
-
-    uint32_t guest_esi = kBootdataOffset;
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ESI, &guest_esi,
-                              sizeof(guest_esi), NULL, 0);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "Failed to set guest ESI\n");
-        return status;
-    }
 #endif // __x86_64__
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY,
-                              &guest_entry, sizeof(guest_entry), NULL, 0);
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_IP,
+                              &guest_ip, sizeof(guest_ip), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest RIP\n");
         return status;

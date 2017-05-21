@@ -12,7 +12,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <hypervisor/guest_physical_address_space.h>
-
+#include <magenta/syscalls/hypervisor.h>
 #include <mxalloc/new.h>
 
 #if WITH_LIB_MAGENTA
@@ -241,6 +241,50 @@ void* VmxPage::VirtualAddress() {
     return paddr_to_kvaddr(pa_);
 }
 
+status_t PerCpu::Init(const VmxInfo& info) {
+    status_t status = page_.Alloc(info, 0);
+    if (status != NO_ERROR)
+        return status;
+
+    VmxRegion* region = page_.VirtualAddress<VmxRegion>();
+    region->revision_id = info.revision_id;
+    return NO_ERROR;
+}
+
+AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
+    : page_(page) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+    arch_disable_ints();
+    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
+    DEBUG_ASSERT(status == NO_ERROR);
+}
+
+AutoVmcsLoad::~AutoVmcsLoad() {
+    DEBUG_ASSERT(arch_ints_disabled());
+    arch_enable_ints();
+}
+
+void AutoVmcsLoad::reload() {
+    // When we VM exit due to an external interrupt, we want to handle that
+    // interrupt. To do that, we temporarily re-enable interrupts. However, we
+    // must then reload the VMCS, in case it has been changed in the interim.
+    DEBUG_ASSERT(arch_ints_disabled());
+    arch_enable_ints();
+    arch_disable_ints();
+    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
+    DEBUG_ASSERT(status == NO_ERROR);
+}
+
+status_t VmxonPerCpu::VmxOn() {
+    status_t status = vmxon(page_.PhysicalAddress());
+    is_on_ = status == NO_ERROR;
+    return status;
+}
+
+status_t VmxonPerCpu::VmxOff() {
+    return is_on_ ? vmxoff() : NO_ERROR;
+}
+
 static bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr) {
     uint64_t fixed0 = read_msr(fixed0_msr);
     uint64_t fixed1 = read_msr(fixed1_msr);
@@ -313,26 +357,6 @@ static int vmx_enable(void* arg) {
     return per_cpu->VmxOn();
 }
 
-status_t PerCpu::Init(const VmxInfo& info) {
-    status_t status = page_.Alloc(info, 0);
-    if (status != NO_ERROR)
-        return status;
-
-    VmxRegion* region = page_.VirtualAddress<VmxRegion>();
-    region->revision_id = info.revision_id;
-    return NO_ERROR;
-}
-
-status_t VmxonPerCpu::VmxOn() {
-    status_t status = vmxon(page_.PhysicalAddress());
-    is_on_ = status == NO_ERROR;
-    return status;
-}
-
-status_t VmxonPerCpu::VmxOff() {
-    return is_on_ ? vmxoff() : NO_ERROR;
-}
-
 // static
 status_t VmxonContext::Create(mxtl::unique_ptr<VmxonContext>* context) {
     uint num_cpus = arch_max_num_cpus();
@@ -384,30 +408,6 @@ VmxonContext::~VmxonContext() {
 
 VmxonPerCpu* VmxonContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
-}
-
-AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
-    : page_(page) {
-    DEBUG_ASSERT(!arch_ints_disabled());
-    arch_disable_ints();
-    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
-    DEBUG_ASSERT(status == NO_ERROR);
-}
-
-AutoVmcsLoad::~AutoVmcsLoad() {
-    DEBUG_ASSERT(arch_ints_disabled());
-    arch_enable_ints();
-}
-
-void AutoVmcsLoad::reload() {
-    // When we VM exit due to an external interrupt, we want to handle that
-    // interrupt. To do that, we temporarily re-enable interrupts. However, we
-    // must then reload the VMCS, in case it has been changed in the interim.
-    DEBUG_ASSERT(arch_ints_disabled());
-    arch_enable_ints();
-    arch_disable_ints();
-    __UNUSED status_t status = vmptrld(page_->PhysicalAddress());
-    DEBUG_ASSERT(status == NO_ERROR);
 }
 
 status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
@@ -835,9 +835,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
     }
 
     if (!vmx_state_.resume) {
-        vmcs_write(VmcsFieldXX::GUEST_RIP, context.entry());
+        vmcs_write(VmcsFieldXX::GUEST_RIP, context.ip());
         vmcs_write(VmcsFieldXX::GUEST_CR3, context.cr3());
-        vmx_state_.guest_state.rsi = context.esi();
     }
 
     status_t status = vmx_enter(&vmx_state_);
@@ -850,6 +849,37 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
                                 &io_apic_state_, gpas, ctl_fifo);
     }
     return status;
+}
+
+template<typename Out, typename In>
+void gpr_copy(Out* out, const In& in) {
+    out->rax = in.rax;
+    out->rcx = in.rcx;
+    out->rdx = in.rdx;
+    out->rbx = in.rbx;
+    out->rbp = in.rbp;
+    out->rsi = in.rsi;
+    out->rdi = in.rdi;
+    out->r8 = in.r8;
+    out->r9 = in.r9;
+    out->r10 = in.r10;
+    out->r11 = in.r11;
+    out->r12 = in.r12;
+    out->r13 = in.r13;
+    out->r14 = in.r14;
+    out->r15 = in.r15;
+}
+
+status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t* guest_gpr) {
+    gpr_copy(&vmx_state_.guest_state, *guest_gpr);
+    vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr->rsp);
+    return NO_ERROR;
+}
+
+status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
+    gpr_copy(guest_gpr, vmx_state_.guest_state);
+    guest_gpr->rsp = vmcs_read(VmcsFieldXX::GUEST_RSP);
+    return NO_ERROR;
 }
 
 static int vmcs_setup(void* arg) {
@@ -955,27 +985,6 @@ VmcsPerCpu* VmcsContext::PerCpu() {
     return &per_cpus_[arch_curr_cpu_num()];
 }
 
-status_t VmcsContext::set_entry(uintptr_t guest_entry) {
-    if (guest_entry >= gpas_->size())
-        return ERR_INVALID_ARGS;
-    entry_ = guest_entry;
-    return NO_ERROR;
-}
-
-status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
-    if (guest_cr3 >= gpas_->size() - PAGE_SIZE)
-        return ERR_INVALID_ARGS;
-    cr3_ = guest_cr3;
-    return NO_ERROR;
-}
-
-status_t VmcsContext::set_esi(uint32_t guest_esi) {
-    if (guest_esi >= gpas_->size())
-        return ERR_INVALID_ARGS;
-    esi_ = guest_esi;
-    return NO_ERROR;
-}
-
 static int vmcs_enter(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
@@ -987,13 +996,35 @@ static int vmcs_enter(void* arg) {
 }
 
 status_t VmcsContext::Enter() {
-    if (entry_ == UINTPTR_MAX)
+    if (ip_ == UINTPTR_MAX)
         return ERR_BAD_STATE;
     if (cr3_ == UINTPTR_MAX)
         return ERR_BAD_STATE;
-    if (esi_ == UINT32_MAX)
-        return ERR_BAD_STATE;
     return percpu_exec(vmcs_enter, this);
+}
+
+status_t VmcsContext::SetGpr(const mx_guest_gpr_t* guest_gpr) {
+    // TODO(abdulla): Update this when we move to an external VCPU model.
+    return per_cpus_[0].SetGpr(guest_gpr);
+}
+
+status_t VmcsContext::GetGpr(mx_guest_gpr_t* guest_gpr) const {
+    // TODO(abdulla): Update this when we move to an external VCPU model.
+    return per_cpus_[0].GetGpr(guest_gpr);
+}
+
+status_t VmcsContext::set_ip(uintptr_t guest_ip) {
+    if (guest_ip >= gpas_->size())
+        return ERR_INVALID_ARGS;
+    ip_ = guest_ip;
+    return NO_ERROR;
+}
+
+status_t VmcsContext::set_cr3(uintptr_t guest_cr3) {
+    if (guest_cr3 >= gpas_->size() - PAGE_SIZE)
+        return ERR_INVALID_ARGS;
+    cr3_ = guest_cr3;
+    return NO_ERROR;
 }
 
 status_t arch_hypervisor_create(mxtl::unique_ptr<HypervisorContext>* context) {
@@ -1014,15 +1045,20 @@ status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
     return context->Enter();
 }
 
-status_t arch_guest_set_entry(const mxtl::unique_ptr<GuestContext>& context,
-                              uintptr_t guest_entry) {
-    return context->set_entry(guest_entry);
+status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
+                            const mx_guest_gpr_t* guest_gpr) {
+    return context->SetGpr(guest_gpr);
+}
+
+status_t arch_guest_get_gpr(const mxtl::unique_ptr<GuestContext>& context,
+                            mx_guest_gpr_t* guest_gpr) {
+    return context->GetGpr(guest_gpr);
+}
+
+status_t arch_guest_set_ip(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_ip) {
+    return context->set_ip(guest_ip);
 }
 
 status_t x86_guest_set_cr3(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_cr3) {
     return context->set_cr3(guest_cr3);
-}
-
-status_t x86_guest_set_esi(const mxtl::unique_ptr<GuestContext>& context, uint32_t guest_esi) {
-    return context->set_esi(guest_esi);
 }
