@@ -2,11 +2,13 @@
     "labels": [
         "//drivers/wifi/testing"
     ],
-    "binaries": [
+    "drivers": [
         {
             "binary": "wlan-testdev.so",
-            "bootfs_path": "lib/driver/wlan-testdev.so"
-        },
+            "bootfs_path": "driver/wlan-testdev.so"
+        }
+    ],
+    "binaries": [
         {
             "binary": "wlan-testutil",
             "bootfs_path": "bin/wlan-testutil"
