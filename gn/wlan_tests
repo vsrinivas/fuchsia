@@ -1,5 +1,6 @@
 {
     "labels": [
+        "//drivers/wifi/wlan/tests",
         "//drivers/wifi/testing"
     ],
     "drivers": [
@@ -9,6 +10,14 @@
         }
     ],
     "binaries": [
+        {
+            "binary": "wlan_mac_unittest",
+            "bootfs_path": "test/wlan_mac_unittest"
+        },
+        {
+            "binary": "wlan_scanner_unittest",
+            "bootfs_path": "test/wlan_scanner_unittest"
+        },
         {
             "binary": "wlan-testutil",
             "bootfs_path": "bin/wlan-testutil"
