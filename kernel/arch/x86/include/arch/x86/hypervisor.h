@@ -68,6 +68,7 @@ public:
     VmcsPerCpu* PerCpu();
 
     status_t Enter();
+    status_t MemTrap(vaddr_t guest_paddr, size_t size);
     status_t SetGpr(const mx_guest_gpr_t* guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
 

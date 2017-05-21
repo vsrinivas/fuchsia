@@ -211,20 +211,39 @@ private:
     }
 };
 
-static status_t packet_write(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet) {
-    StateTracker* state_tracker = ctl_fifo->get_state_tracker();
-    if (~state_tracker->GetSignalsState() & MX_FIFO_WRITABLE) {
-        // TODO(abdulla): Add stats to keep track of waits.
-        FifoStateObserver state_observer(MX_FIFO_WRITABLE | MX_FIFO_PEER_CLOSED);
-        status_t status = state_observer.Wait(state_tracker);
-        if (status != NO_ERROR)
-            return status;
-        if (state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED)
-            return ERR_PEER_CLOSED;
-    }
+static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals) {
+    if (state_tracker->GetSignalsState() & signals)
+        return NO_ERROR;
+    // TODO(abdulla): Add stats to keep track of waits.
+    FifoStateObserver state_observer(signals | MX_FIFO_PEER_CLOSED);
+    status_t status = state_observer.Wait(state_tracker);
+    if (status != NO_ERROR)
+        return status;
+    return state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED ? ERR_PEER_CLOSED : NO_ERROR;
+}
+
+static status_t packet_write(FifoDispatcher* ctl_fifo, const mx_guest_packet_t& packet) {
+    status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_WRITABLE);
+    if (status != NO_ERROR)
+        return status;
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(&packet);
+    uint32_t actual;
+    status = ctl_fifo->Write(data, sizeof(mx_guest_packet_t), &actual);
+    if (status != NO_ERROR)
+        return status;
+    return actual != 1 ? ERR_IO_DATA_INTEGRITY : NO_ERROR;
+}
+
+static status_t packet_read(FifoDispatcher* ctl_fifo, mx_guest_packet_t* packet) {
+    status_t status = packet_wait(ctl_fifo->get_state_tracker(), MX_FIFO_READABLE);
+    if (status != NO_ERROR)
+        return status;
     uint8_t* data = reinterpret_cast<uint8_t*>(packet);
     uint32_t actual;
-    return ctl_fifo->Write(data, sizeof(mx_guest_packet_t), &actual);
+    status = ctl_fifo->Read(data, sizeof(mx_guest_packet_t), &actual);
+    if (status != NO_ERROR)
+        return status;
+    return actual != 1 ? ERR_IO_DATA_INTEGRITY : NO_ERROR;
 }
 #endif // WITH_LIB_MAGENTA
 
@@ -241,13 +260,14 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
     if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
         return NO_ERROR;
     mx_guest_packet_t packet;
-    memset(&packet, 0, sizeof(mx_guest_packet_t));
+    memset(&packet, 0, sizeof(packet));
     packet.type = MX_GUEST_PKT_TYPE_IO_PORT;
     packet.io_port.access_size = io_info.access_size;
     memcpy(packet.io_port.data, &guest_state->rax, io_info.access_size);
-    return packet_write(ctl_fifo, &packet);
-#else // WITH_LIB_MAGENTA
+    return packet_write(ctl_fifo, packet);
     return NO_ERROR;
+#else // WITH_LIB_MAGENTA
+    return ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
@@ -587,19 +607,42 @@ static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_
 }
 
 static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* guest_state,
-                                     IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas) {
-    if (exit_info.guest_physical_address < kIoApicPhysBase ||
-        exit_info.guest_physical_address >= kIoApicPhysBase + PAGE_SIZE) {
-        // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
-        set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
-        return NO_ERROR;
-    }
-
+                                     IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
+                                     FifoDispatcher* ctl_fifo) {
     uint8_t inst_buf[kMaxInstructionLength];
     uint32_t inst_len = exit_info.instruction_length;
     status_t status = fetch_data(gpas, exit_info.guest_rip, inst_buf, inst_len);
     if (status != NO_ERROR)
         return status;
+
+    if (exit_info.guest_physical_address < kIoApicPhysBase ||
+        exit_info.guest_physical_address >= kIoApicPhysBase + PAGE_SIZE) {
+#if WITH_LIB_MAGENTA
+        mx_guest_packet_t packet;
+        memset(&packet, 0, sizeof(mx_guest_packet_t));
+        packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
+        packet.mem_trap.instruction_length = exit_info.instruction_length & UINT8_MAX;
+        memcpy(packet.mem_trap.instruction, inst_buf, inst_len);
+        packet.mem_trap.paddr = exit_info.guest_physical_address;
+        status_t status = packet_write(ctl_fifo, packet);
+        if (status != NO_ERROR)
+            return status;
+        status = packet_read(ctl_fifo, &packet);
+        if (status != NO_ERROR)
+            return status;
+        if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION)
+            return ERR_INVALID_ARGS;
+        if (packet.mem_trap_action.fault) {
+            // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
+            set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
+        } else {
+            next_rip(exit_info);
+        }
+        return NO_ERROR;
+#else // WITH_LIB_MAGENTA
+        return ERR_NOT_SUPPORTED;
+#endif // WITH_LIB_MAGENTA
+    }
 
     Instruction inst;
     status = decode_instruction(inst_buf, inst_len, guest_state, &inst);
@@ -707,7 +750,7 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return handle_apic_access(exit_info, guest_state, local_apic_state, gpas);
     case ExitReason::EPT_VIOLATION:
         dprintf(SPEW, "handling EPT violation\n\n");
-        return handle_ept_violation(exit_info, guest_state, io_apic_state, gpas);
+        return handle_ept_violation(exit_info, guest_state, io_apic_state, gpas, ctl_fifo);
     case ExitReason::XSETBV:
         dprintf(SPEW, "handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, guest_state);

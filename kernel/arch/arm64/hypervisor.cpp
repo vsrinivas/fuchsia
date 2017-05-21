@@ -21,6 +21,11 @@ status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
     return ERR_NOT_SUPPORTED;
 }
 
+status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vaddr_t guest_paddr,
+                             size_t size) {
+    return ERR_NOT_SUPPORTED;
+}
+
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
                             const mx_guest_gpr_t* guest_gpr) {
     return ERR_NOT_SUPPORTED;

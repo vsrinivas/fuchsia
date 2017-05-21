@@ -936,7 +936,7 @@ status_t VmcsContext::Create(mxtl::RefPtr<VmObject> phys_mem,
 
     // We ensure the page containing the IO APIC address is not mapped so that
     // we VM exit with an EPT violation when the guest accesses the page.
-    status = ctx->gpas_->UnmapPage(kIoApicPhysBase);
+    status = ctx->gpas_->UnmapRange(kIoApicPhysBase, PAGE_SIZE);
     if (status != NO_ERROR)
         return status;
 
@@ -965,7 +965,7 @@ static int vmcs_clear(void* arg) {
 VmcsContext::~VmcsContext() {
     __UNUSED status_t status = percpu_exec(vmcs_clear, this);
     DEBUG_ASSERT(status == NO_ERROR);
-    status = gpas_->UnmapPage(APIC_PHYS_BASE);
+    status = gpas_->UnmapRange(APIC_PHYS_BASE, PAGE_SIZE);
     DEBUG_ASSERT(status == NO_ERROR);
 }
 
@@ -1001,6 +1001,10 @@ status_t VmcsContext::Enter() {
     if (cr3_ == UINTPTR_MAX)
         return ERR_BAD_STATE;
     return percpu_exec(vmcs_enter, this);
+}
+
+status_t VmcsContext::MemTrap(vaddr_t guest_paddr, size_t size) {
+    return gpas_->UnmapRange(guest_paddr, size);
 }
 
 status_t VmcsContext::SetGpr(const mx_guest_gpr_t* guest_gpr) {
@@ -1043,6 +1047,11 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
 
 status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context) {
     return context->Enter();
+}
+
+status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vaddr_t guest_paddr,
+                             size_t size) {
+    return context->MemTrap(guest_paddr, size);
 }
 
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,

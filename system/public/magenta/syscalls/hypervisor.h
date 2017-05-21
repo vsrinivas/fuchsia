@@ -15,14 +15,15 @@ __BEGIN_CDECLS
 
 #define MX_HYPERVISOR_OP_GUEST_CREATE       1u
 #define MX_HYPERVISOR_OP_GUEST_ENTER        2u
+#define MX_HYPERVISOR_OP_GUEST_MEM_TRAP     3u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_GPR      3u
-#define MX_HYPERVISOR_OP_GUEST_GET_GPR      4u
+#define MX_HYPERVISOR_OP_GUEST_SET_GPR      4u
+#define MX_HYPERVISOR_OP_GUEST_GET_GPR      5u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_IP       5u
+#define MX_HYPERVISOR_OP_GUEST_SET_IP       6u
 
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_CR3      6u
+#define MX_HYPERVISOR_OP_GUEST_SET_CR3      7u
 #endif // __x86_64__
 
 typedef struct mx_guest_gpr {
@@ -55,6 +56,7 @@ typedef struct mx_guest_gpr {
 
 #define MX_GUEST_PKT_TYPE_IO_PORT           1u
 #define MX_GUEST_PKT_TYPE_MEM_TRAP          2u
+#define MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION   3u
 
 typedef struct mx_guest_io_port {
     uint8_t access_size;
@@ -67,18 +69,28 @@ typedef struct mx_guest_io_port {
 } mx_guest_io_port_t;
 
 typedef struct mx_guest_mem_trap {
-#if __x86_64__
-    uint8_t ip_size;
+#if __aarch64__
+    uint32_t instruction;
+#elif __x86_64__
+    uint8_t instruction_length;
+    // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+    uint8_t instruction[15];
+#else
+#error Unsupported architecture
 #endif
-    mx_vaddr_t ip;
     mx_paddr_t paddr;
 } mx_guest_mem_trap_t;
+
+typedef struct mx_guest_mem_trap_action {
+    bool fault;
+} mx_guest_mem_trap_action_t;
 
 typedef struct mx_guest_packet {
     uint8_t type;
     union {
         mx_guest_io_port_t io_port;
         mx_guest_mem_trap_t mem_trap;
+        mx_guest_mem_trap_action_t mem_trap_action;
     };
 } mx_guest_packet_t;
 

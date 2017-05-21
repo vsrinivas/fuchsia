@@ -22,6 +22,7 @@ public:
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_GUEST; }
 
     mx_status_t Enter();
+    mx_status_t MemTrap(mx_vaddr_t guest_paddr, size_t size);
     mx_status_t SetGpr(const mx_guest_gpr_t* guest_gpr);
     mx_status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
 

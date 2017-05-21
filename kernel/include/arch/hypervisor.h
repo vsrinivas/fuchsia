@@ -40,6 +40,11 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> phys_mem,
  */
 status_t arch_guest_enter(const mxtl::unique_ptr<GuestContext>& context);
 
+/* Create a guest context.
+ */
+status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vaddr_t guest_paddr,
+                             size_t size);
+
 /* Set general purpose registers of a guest context.
  */
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,

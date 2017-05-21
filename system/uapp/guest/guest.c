@@ -95,7 +95,7 @@ typedef struct ctl_context {
     uint16_t io_offset;
 } ctl_context_t;
 
-void handle_io_port(ctl_context_t* context, const mx_guest_io_port_t* io_port) {
+mx_status_t handle_io_port(ctl_context_t* context, const mx_guest_io_port_t* io_port) {
     for (int i = 0; i < io_port->access_size; i++) {
         context->io_buffer[context->io_offset++] = io_port->data[i];
         if (context->io_offset == IO_BUFFER_SIZE || io_port->data[i] == '\r') {
@@ -103,16 +103,28 @@ void handle_io_port(ctl_context_t* context, const mx_guest_io_port_t* io_port) {
             context->io_offset = 0;
         }
     }
+    return NO_ERROR;
+}
+
+mx_status_t handle_mem_trap(ctl_context_t* context, const mx_guest_mem_trap_t* mem_trap,
+                     mx_handle_t fifo) {
+    // TODO(abdulla): Properly handle mem traps, currently we just fault.
+    mx_guest_packet_t packet;
+    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION;
+    packet.mem_trap_action.fault = true;
+    uint32_t num_packets;
+    return mx_fifo_write(fifo, &packet, sizeof(packet), &num_packets);
 }
 
 int ctl_thread(void* arg) {
-    mx_handle_t* fifo = arg;
+    // TODO(abdulla): Correctly terminate the VCPU on prior to return.
+    mx_handle_t fifo = *(mx_handle_t*)arg;
     mx_guest_packet_t packet[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
     ctl_context_t context;
     memset(&context, 0, sizeof(ctl_context_t));
     while (true) {
         mx_signals_t observed;
-        mx_status_t status = mx_object_wait_one(*fifo, MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
+        mx_status_t status = mx_object_wait_one(fifo, MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
                                                 MX_TIME_INFINITE, &observed);
         if (status != NO_ERROR)
             return thrd_error;
@@ -122,17 +134,25 @@ int ctl_thread(void* arg) {
             continue;
 
         uint32_t num_packets;
-        status = mx_fifo_read(*fifo, &packet, sizeof(packet), &num_packets);
+        status = mx_fifo_read(fifo, &packet, sizeof(packet), &num_packets);
         if (status != NO_ERROR)
             return thrd_error;
 
         for (uint32_t i = 0; i < num_packets; i++) {
+            mx_status_t status;
             switch (packet[i].type) {
             case MX_GUEST_PKT_TYPE_IO_PORT:
-                handle_io_port(&context, &packet[i].io_port);
+                status = handle_io_port(&context, &packet[i].io_port);
+                break;
+            case MX_GUEST_PKT_TYPE_MEM_TRAP:
+                status = handle_mem_trap(&context, &packet[i].mem_trap, fifo);
                 break;
             default:
                 fprintf(stderr, "Unhandled guest packet %d\n", packet[i].type);
+                return thrd_error;
+            }
+            if (status != NO_ERROR) {
+                fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet[i].type, status);
                 return thrd_error;
             }
         }
@@ -248,12 +268,12 @@ int main(int argc, char** argv) {
     thrd_t thread;
     int ret = thrd_create(&thread, ctl_thread, &ctl_fifo);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create serial FIFO thread\n");
+        fprintf(stderr, "Failed to create control thread\n");
         return ERR_INTERNAL;
     }
     ret = thrd_detach(thread);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach serial FIFO thread\n");
+        fprintf(stderr, "Failed to detach control thread\n");
         return ERR_INTERNAL;
     }
 

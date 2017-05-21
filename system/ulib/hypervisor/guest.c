@@ -171,7 +171,7 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
 mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
                          mx_handle_t* guest) {
     const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
-    const uint32_t size = MX_GUEST_MAX_PKT_SIZE;
+    const uint32_t size = sizeof(mx_guest_packet_t);
     mx_handle_t kernel_ctl_fifo;
     mx_status_t status = mx_fifo_create(count, size, 0, &kernel_ctl_fifo, ctl_fifo);
     if (status != NO_ERROR)

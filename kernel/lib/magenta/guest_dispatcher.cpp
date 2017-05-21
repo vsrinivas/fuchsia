@@ -45,6 +45,12 @@ mx_status_t GuestDispatcher::Enter() {
     return arch_guest_enter(context_);
 }
 
+mx_status_t GuestDispatcher::MemTrap(mx_vaddr_t guest_paddr, size_t size) {
+    canary_.Assert();
+
+    return arch_guest_mem_trap(context_, guest_paddr, size);
+}
+
 mx_status_t GuestDispatcher::SetGpr(const mx_guest_gpr_t* guest_gpr) {
     canary_.Assert();
 
