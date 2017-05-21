@@ -229,7 +229,9 @@ template("clang_toolchain") {
     }
 
     tool("copy") {
-      command = "cp -af {{source}} {{output}}"
+      # We use link instead of copy; the way "copy" tool is being used is
+      # compatible with links since Ninja is tracking changes to the source.
+      command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
       description = "COPY {{source}} {{output}}"
     }
 
