@@ -15,7 +15,7 @@
 
 const char kDevTest[] = "/dev/misc/test";
 const char kWlan[] = "wlan";
-const char kWlanDriverName[] = "wlan_test";
+const char kWlanDriverName[] = "/boot/driver/wlan-testdev.so";
 
 int usage(const char* appname) {
     std::cerr << "usage: " << appname << " <add|rm>" << std::endl;
