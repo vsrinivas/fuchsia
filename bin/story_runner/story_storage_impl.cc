@@ -349,8 +349,8 @@ class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
   }
 
   ledger::Page* const page_;  // not owned
-  const std::string& story_id_;
-  const std::string& device_id_;
+  const std::string story_id_;
+  const std::string device_id_;
   StoryState state_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteDeviceDataCall);
