@@ -15,11 +15,16 @@
 #include <magenta/types.h>
 
 #include <mxtl/canary.h>
+#include <mxtl/intrusive_single_list.h>
 #include <mxtl/ref_counted.h>
 
 class VmMapping;
 class VmObject;
 class PortClient;
+
+constexpr int kMBufSize = 2048 - 8 - 4 - 4;
+
+constexpr int kSocketSizeMax = 128 * kMBufSize;
 
 class SocketDispatcher final : public Dispatcher {
 public:
@@ -42,29 +47,22 @@ public:
 
     status_t HalfClose();
 
-    mx_status_t Read(void* dest, size_t len, bool from_user,
+    mx_status_t Read(void* dst, size_t len, bool from_user,
                      size_t* nread);
 
     void OnPeerZeroHandles();
 
 private:
-    class CBuf {
-    public:
-        ~CBuf();
-        bool Init(uint32_t len);
-        size_t Write(const void* src, size_t len, bool from_user);
-        size_t Read(void* dest, size_t len, bool from_user);
-        size_t CouldRead() const;
-        size_t free() const;
-        bool empty() const;
+    // An MBuf is a small fixed-size chainable memory buffer.
+    struct MBuf : public mxtl::SinglyLinkedListable<MBuf*> {
+        size_t rem() const;
 
-    private:
-        size_t head_ = 0u;
-        size_t tail_ = 0u;
-        uint32_t len_pow2_ = 0u;
-        mxtl::RefPtr<VmMapping> mapping_;
-        mxtl::RefPtr<VmObject> vmo_;
+        uint32_t off_ = 0u;
+        uint32_t len_ = 0u;
+        char data_[kMBufSize] = {0};
+        // TODO: maybe union data_ with char* blocks for large messages
     };
+    static_assert(sizeof(MBuf) == 2048, "");
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
@@ -73,6 +71,13 @@ private:
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
+    size_t WriteMBufs(const void* src, size_t len, bool from_user) TA_REQ(lock_);
+    size_t ReadMBufs(void* dst, size_t len, bool from_user) TA_REQ(lock_);
+    MBuf* AllocMBuf() TA_REQ(lock_);
+    void FreeMBuf(MBuf* buf) TA_REQ(lock_);
+    bool is_full() const TA_REQ(lock_);
+    bool is_empty() const TA_REQ(lock_);
+
     mxtl::Canary<mxtl::magic("SOCK")> canary_;
 
     mx_koid_t peer_koid_;
@@ -80,7 +85,10 @@ private:
 
     // The |lock_| protects all members below.
     Mutex lock_;
-    CBuf cbuf_ TA_GUARDED(lock_);
+    mxtl::SinglyLinkedList<MBuf*> freelist_ TA_GUARDED(lock_);
+    mxtl::SinglyLinkedList<MBuf*> tail_ TA_GUARDED(lock_);
+    MBuf* head_ TA_GUARDED(lock_);
+    size_t size_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
     mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
     // half_closed_[0] is this end and [1] is the other end.

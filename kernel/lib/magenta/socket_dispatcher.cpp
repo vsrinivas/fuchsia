@@ -10,8 +10,8 @@
 
 #include <assert.h>
 #include <err.h>
-#include <trace.h>
 #include <pow2.h>
+#include <trace.h>
 
 #include <lib/user_copy/user_ptr.h>
 
@@ -29,130 +29,19 @@
 constexpr mx_rights_t kDefaultSocketRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-constexpr size_t kDeFaultSocketBufferSize = 256 * 1024u;
-
 constexpr mx_signals_t kValidSignalMask =
     MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_USER_SIGNAL_ALL;
 
-namespace {
-// Cribbed from pow2.h, we need overloading to correctly deal with 32 and 64 bits.
-template <typename T> T vmodpow2(T val, uint modp2) { return val & ((1U << modp2) - 1); }
+size_t SocketDispatcher::MBuf::rem() const {
+    return kMBufSize - (off_ + len_);
 }
 
-#define INC_POINTER(len_pow2, ptr, inc) vmodpow2(((ptr) + (inc)), len_pow2)
-
-SocketDispatcher::CBuf::~CBuf() {
-    if (mapping_) {
-        mapping_->Destroy();
-    }
+bool SocketDispatcher::is_full() const {
+    return size_ >= kSocketSizeMax;
 }
 
-bool SocketDispatcher::CBuf::Init(uint32_t len) {
-    vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, len);
-    if (!vmo_)
-        return false;
-
-    const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-    auto st = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
-            0 /* ignored */, len, 0 /* align pow2 */, 0 /* vmar flags */,
-            vmo_, 0, arch_mmu_flags, "socket", &mapping_);
-
-    if (st < 0)
-        return false;
-
-    DEBUG_ASSERT(mapping_);
-    len_pow2_ = log2_uint_floor(len);
-    return true;
-}
-
-size_t SocketDispatcher::CBuf::free() const {
-    uint consumed = modpow2((uint)(head_ - tail_), len_pow2_);
-    return valpow2(len_pow2_) - consumed - 1;
-}
-
-bool SocketDispatcher::CBuf::empty() const {
-    return tail_ == head_;
-}
-
-size_t SocketDispatcher::CBuf::Write(const void* src, size_t len, bool from_user) {
-
-    size_t write_len;
-    size_t pos = 0;
-
-    while (pos < len && (free() > 0)) {
-        if (head_ >= tail_) {
-            if (tail_ == 0) {
-                // Special case - if tail is at position 0, we can't write all
-                // the way to the end of the buffer. Otherwise, head ends up at
-                // 0, head == tail, and buffer is considered "empty" again.
-                write_len = MIN(valpow2(len_pow2_) - head_ - 1, len - pos);
-            } else {
-                // Write to the end of the buffer.
-                write_len = MIN(valpow2(len_pow2_) - head_, len - pos);
-            }
-        } else {
-            // Write from head to tail-1.
-            write_len = MIN(tail_ - head_ - 1, len - pos);
-        }
-
-        // if it's full, abort and return how much we've written
-        if (write_len == 0) {
-            break;
-        }
-
-        const char *ptr = (const char*)src;
-        ptr += pos;
-        if (from_user) {
-            // TODO: find a safer way to do this
-            user_ptr<const void> uptr(ptr);
-            vmo_->WriteUser(uptr, head_, write_len, nullptr);
-        } else {
-            memcpy(reinterpret_cast<void*>(mapping_->base() + head_), ptr, write_len);
-        }
-
-        head_ = INC_POINTER(len_pow2_, head_, write_len);
-        pos += write_len;
-    }
-    return pos;
-}
-
-size_t SocketDispatcher::CBuf::Read(void* dest, size_t len, bool from_user) {
-    size_t ret = 0;
-
-    if (tail_ != head_) {
-        size_t pos = 0;
-        // loop until we've read everything we need
-        // at most this will make two passes to deal with wraparound
-        while (pos < len && tail_ != head_) {
-            size_t read_len;
-            if (head_ > tail_) {
-                // simple case where there is no wraparound
-                read_len = MIN(head_ - tail_, len - pos);
-            } else {
-                // read to the end of buffer in this pass
-                read_len = MIN(valpow2(len_pow2_) - tail_, len - pos);
-            }
-
-            char *ptr = (char*)dest;
-            ptr += pos;
-            if (from_user) {
-                // TODO: find a safer way to do this
-                user_ptr<void> uptr(ptr);
-                vmo_->ReadUser(uptr, tail_, read_len, nullptr);
-            } else {
-                memcpy(ptr, reinterpret_cast<void*>(mapping_->base() + tail_), read_len);
-            }
-
-            tail_ = INC_POINTER(len_pow2_, tail_, read_len);
-            pos += read_len;
-        }
-        ret = pos;
-    }
-    return ret;
-}
-
-size_t SocketDispatcher::CBuf::CouldRead() const {
-    return modpow2((uint)(head_ - tail_), len_pow2_);
+bool SocketDispatcher::is_empty() const {
+    return size_ == 0;
 }
 
 // static
@@ -186,10 +75,16 @@ status_t SocketDispatcher::Create(uint32_t flags,
 SocketDispatcher::SocketDispatcher(uint32_t /*flags*/)
     : peer_koid_(0u),
       state_tracker_(MX_SOCKET_WRITABLE),
+      head_(nullptr),
+      size_(0u),
       half_closed_{false, false} {
 }
 
 SocketDispatcher::~SocketDispatcher() {
+    while (!tail_.is_empty())
+        delete tail_.pop_front();
+    while (!freelist_.is_empty())
+        delete freelist_.pop_front();
 }
 
 // This is called before either SocketDispatcher is accessible from threads other than the one
@@ -197,7 +92,7 @@ SocketDispatcher::~SocketDispatcher() {
 mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
     peer_koid_ = other_->get_koid();
-    return cbuf_.Init(kDeFaultSocketBufferSize) ? NO_ERROR : ERR_NO_MEMORY;
+    return NO_ERROR;
 }
 
 void SocketDispatcher::on_zero_handles() {
@@ -274,7 +169,7 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) 
 
     iopc_ = mxtl::move(client);
 
-    if (!cbuf_.empty())
+    if (!is_empty())
         iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
 
     return NO_ERROR;
@@ -329,12 +224,12 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
 
     AutoLock lock(&lock_);
 
-    if (!cbuf_.free())
+    if (is_full())
         return ERR_SHOULD_WAIT;
 
-    bool was_empty = cbuf_.empty();
+    bool was_empty = is_empty();
 
-    auto st = cbuf_.Write(src, len, from_user);
+    auto st = WriteMBufs(src, len, from_user);
 
     if (st > 0) {
         if (was_empty)
@@ -343,41 +238,123 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
             iopc_->Signal(MX_SOCKET_READABLE, st, &lock_);
     }
 
-    if (!cbuf_.free())
+    if (is_full())
         other_->state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
 
     *written = st;
     return NO_ERROR;
 }
 
-mx_status_t SocketDispatcher::Read(void* dest, size_t len,
+size_t SocketDispatcher::WriteMBufs(const void* src, size_t len, bool from_user) {
+    if (head_ == nullptr) {
+        head_ = AllocMBuf();
+        if (head_ == nullptr)
+            return 0;
+        tail_.push_front(head_);
+    }
+
+    size_t pos = 0;
+    while (pos < len) {
+        if (head_->rem() == 0) {
+            auto next = AllocMBuf();
+            if (next == nullptr)
+                return pos;
+            tail_.insert_after(tail_.make_iterator(*head_), next);
+            head_ = next;
+        }
+        void* dst = head_->data_ + head_->off_ + head_->len_;
+        size_t copy_len = MIN(head_->rem(), len - pos);
+        if (size_ + copy_len > kSocketSizeMax) {
+            copy_len = kSocketSizeMax - size_;
+            if (copy_len == 0)
+                break;
+        }
+        if (from_user) {
+            // TODO: find a safer way to do this
+            user_ptr<const void> usrc(src);
+            if (usrc.byte_offset(pos).copy_array_from_user(dst, copy_len) != NO_ERROR)
+                return pos;
+        } else {
+            memcpy(dst, reinterpret_cast<const char*>(src) + pos, copy_len);
+        }
+        pos += copy_len;
+        head_->len_ += static_cast<uint32_t>(copy_len);
+        size_ += copy_len;
+    }
+    return pos;
+}
+
+mx_status_t SocketDispatcher::Read(void* dst, size_t len,
                                    bool from_user, size_t* nread) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
 
     // Just query for bytes outstanding.
-    if (!dest && len == 0) {
-        *nread = cbuf_.CouldRead();
+    if (!dst && len == 0) {
+        *nread = size_;
         return NO_ERROR;
     }
 
     bool closed = half_closed_[1] || !other_;
 
-    if (cbuf_.empty())
-        return closed ? ERR_PEER_CLOSED: ERR_SHOULD_WAIT;
+    if (is_empty())
+        return closed ? ERR_PEER_CLOSED : ERR_SHOULD_WAIT;
 
-    bool was_full = cbuf_.free() == 0u;
+    bool was_full = is_full();
 
-    auto st = cbuf_.Read(dest, len, from_user);
+    auto st = ReadMBufs(dst, len, from_user);
 
-    if (cbuf_.empty()) {
+    if (is_empty())
         state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);
-    }
 
     if (!closed && was_full && (st > 0))
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);
     return NO_ERROR;
+}
+
+size_t SocketDispatcher::ReadMBufs(void* dst, size_t len, bool from_user) {
+    size_t pos = 0;
+    while (pos < len) {
+        if (tail_.is_empty())
+            return pos;
+        MBuf& cur = tail_.front();
+        char* src = cur.data_ + cur.off_;
+        size_t copy_len = MIN(cur.len_, len - pos);
+        if (from_user) {
+            // TODO: find a safer way to do this
+            user_ptr<void> udst(dst);
+            if (udst.byte_offset(pos).copy_array_to_user(src, copy_len) != NO_ERROR)
+                return pos;
+        } else {
+            memcpy(reinterpret_cast<char*>(dst) + pos, src, copy_len);
+        }
+        pos += copy_len;
+        cur.off_ += static_cast<uint32_t>(copy_len);
+        cur.len_ -= static_cast<uint32_t>(copy_len);
+        size_ -= copy_len;
+        if (cur.len_ == 0) {
+            if (head_ == &cur)
+                head_ = nullptr;
+            FreeMBuf(tail_.pop_front());
+        }
+    }
+    return pos;
+}
+
+SocketDispatcher::MBuf* SocketDispatcher::AllocMBuf() {
+    if (freelist_.is_empty()) {
+        AllocChecker ac;
+        MBuf* buf = new (&ac) MBuf();
+        return (!ac.check()) ? nullptr : buf;
+    }
+    return freelist_.pop_front();
+}
+
+void SocketDispatcher::FreeMBuf(SocketDispatcher::MBuf* buf) {
+    buf->off_ = 0u;
+    buf->len_ = 0u;
+    freelist_.push_front(buf);
 }
