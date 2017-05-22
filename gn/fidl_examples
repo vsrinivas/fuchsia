@@ -1,0 +1,20 @@
+{
+    "labels": [
+        "//lib/fidl/examples"
+    ],
+    "binaries": [
+        {
+            "binary": "echo_client_go",
+            "bootfs_path": "apps/echo_client_go"
+        },
+        {
+            "binary": "echo_server_go",
+            "bootfs_path": "apps/echo_server_go"
+        }
+    ],
+    "gopaths": [
+        { "lib/fidl/examples" : "fuchsia.googlesource.com/fidl_examples" },
+        { "application/lib/app/go/src/app" : "application/lib/app" },
+        { "lib/fidl/go/src/fidl": "fidl" }
+    ]
+}

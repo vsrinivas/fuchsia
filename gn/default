@@ -11,6 +11,7 @@
         "drivers",
         "escher",
         "fidl",
+        "fidl_examples",
         "flutter",
         "fonts",
         "fortune",
