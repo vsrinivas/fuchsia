@@ -22,9 +22,6 @@ void free(void *ptr);
 
 void heap_init(void);
 
-/* critical section time delayed free */
-void heap_delayed_free(void *);
-
 /* tell the heap to return any free pages it can find */
 void heap_trim(void);
 

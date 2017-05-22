@@ -36,10 +36,6 @@ static bool heap_trace = false;
 #define heap_trace (false)
 #endif
 
-/* delayed free list */
-struct list_node delayed_free_list = LIST_INITIAL_VALUE(delayed_free_list);
-spin_lock_t delayed_free_lock = SPIN_LOCK_INITIAL_VALUE;
-
 #if WITH_LIB_HEAP_MINIHEAP
 /* miniheap implementation */
 #include <lib/miniheap.h>
@@ -94,27 +90,6 @@ static inline void *HEAP_CALLOC(size_t n, size_t s)
 #error need to select valid heap implementation or provide wrapper
 #endif
 
-static void heap_free_delayed_list(void)
-{
-    struct list_node list;
-
-    list_initialize(&list);
-
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&delayed_free_lock, state);
-
-    struct list_node *node;
-    while ((node = list_remove_head(&delayed_free_list))) {
-        list_add_head(&list, node);
-    }
-    spin_unlock_irqrestore(&delayed_free_lock, state);
-
-    while ((node = list_remove_head(&list))) {
-        LTRACEF("freeing node %p\n", node);
-        HEAP_FREE(node);
-    }
-}
-
 void heap_init(void)
 {
     HEAP_INIT();
@@ -122,11 +97,6 @@ void heap_init(void)
 
 void heap_trim(void)
 {
-    // deal with the pending free list
-    if (unlikely(!list_is_empty(&delayed_free_list))) {
-        heap_free_delayed_list();
-    }
-
     HEAP_TRIM();
 }
 
@@ -135,11 +105,6 @@ void *malloc(size_t size)
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("size %zu\n", size);
-
-    // deal with the pending free list
-    if (unlikely(!list_is_empty(&delayed_free_list))) {
-        heap_free_delayed_list();
-    }
 
     void *ptr = HEAP_MALLOC(size);
     if (unlikely(heap_trace))
@@ -158,11 +123,6 @@ void *memalign(size_t boundary, size_t size)
 
     LTRACEF("boundary %zu, size %zu\n", boundary, size);
 
-    // deal with the pending free list
-    if (unlikely(!list_is_empty(&delayed_free_list))) {
-        heap_free_delayed_list();
-    }
-
     void *ptr = HEAP_MEMALIGN(boundary, size);
     if (unlikely(heap_trace))
         printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), boundary, size, ptr);
@@ -180,11 +140,6 @@ void *calloc(size_t count, size_t size)
 
     LTRACEF("count %zu, size %zu\n", count, size);
 
-    // deal with the pending free list
-    if (unlikely(!list_is_empty(&delayed_free_list))) {
-        heap_free_delayed_list();
-    }
-
     void *ptr = HEAP_CALLOC(count, size);
     if (unlikely(heap_trace))
         printf("caller %p calloc %zu, %zu -> %p\n", __GET_CALLER(), count, size, ptr);
@@ -196,11 +151,6 @@ void *realloc(void *ptr, size_t size)
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("ptr %p, size %zu\n", ptr, size);
-
-    // deal with the pending free list
-    if (unlikely(!list_is_empty(&delayed_free_list))) {
-        heap_free_delayed_list();
-    }
 
     void *ptr2 = HEAP_REALLOC(ptr, size);
     if (unlikely(heap_trace))
@@ -224,39 +174,9 @@ void free(void *ptr)
     HEAP_FREE(ptr);
 }
 
-/* critical section time delayed free */
-void heap_delayed_free(void *ptr)
-{
-    LTRACEF("ptr %p\n", ptr);
-
-    /* throw down a structure on the free block */
-    /* XXX assumes the free block is large enough to hold a list node */
-    struct list_node *node = (struct list_node *)ptr;
-
-    spin_lock_saved_state_t state;
-    spin_lock_irqsave(&delayed_free_lock, state);
-    list_add_head(&delayed_free_list, node);
-    spin_unlock_irqrestore(&delayed_free_lock, state);
-}
-
 static void heap_dump(bool panic_time)
 {
     HEAP_DUMP(panic_time);
-
-    printf("\tdelayed free list:\n");
-
-    spin_lock_saved_state_t state = 0;
-
-    if (!panic_time)
-        spin_lock_irqsave(&delayed_free_lock, state);
-
-    struct list_node *node;
-    list_for_every(&delayed_free_list, node) {
-        printf("\t\tnode %p\n", node);
-    }
-
-    if (!panic_time)
-        spin_unlock_irqrestore(&delayed_free_lock, state);
 }
 
 static void heap_test(void)
