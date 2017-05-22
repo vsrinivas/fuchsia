@@ -87,21 +87,6 @@ void AudioOutputManager::Shutdown() {
   // TODO(johngro) : shut down the thread pool
 }
 
-void AudioOutputManager::AddRenderer(AudioRendererImplPtr renderer) {
-  FTL_DCHECK(renderer);
-
-  // Create a link between this renderer and the throttle output, assign it to
-  // the renderer, and then add the renderer to the set of active renderers.
-  auto link = AudioRendererToOutputLink::New(renderer, throttle_output_);
-  FTL_DCHECK(link);
-
-  if (throttle_output_->AddRendererLink(link) == MediaResult::OK) {
-    renderer->SetThrottleOutput(link);
-  }
-
-  renderers_.insert(std::move(renderer));
-}
-
 MediaResult AudioOutputManager::AddOutput(AudioOutputPtr output) {
   FTL_DCHECK(output != nullptr);
   FTL_DCHECK(output != throttle_output_);
@@ -152,9 +137,14 @@ void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
 void AudioOutputManager::SelectOutputsForRenderer(
     AudioRendererImplPtr renderer) {
   FTL_DCHECK(renderer);
+  FTL_DCHECK(renderer->format_valid());
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
+
+  // Regarless of policy, all renderers should always be linked to the special
+  // throttle output.
+  LinkOutputToRenderer(throttle_output_, renderer);
 
   switch (routing_policy_) {
     case RoutingPolicy::ALL_PLUGGED_OUTPUTS: {
@@ -180,6 +170,11 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   FTL_DCHECK(output);
   FTL_DCHECK(renderer);
 
+  // Do not create any links if the renderer's output format has not been set.
+  // Links will be created during SelectOutputsForRenderer when the renderer
+  // finally has its format set via AudioRendererImpl::SetMediaType
+  if (!renderer->format_valid()) return;
+
   auto link = AudioRendererToOutputLink::New(renderer, output);
   FTL_DCHECK(link);
 
@@ -187,7 +182,11 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   // the process of shutting down (we didn't want to hang out with that guy
   // anyway)
   if (output->AddRendererLink(link) == MediaResult::OK) {
-    renderer->AddOutput(link);
+    if (output == throttle_output_) {
+      renderer->SetThrottleOutput(link);
+    } else {
+      renderer->AddOutput(link);
+    }
   }
 }
 

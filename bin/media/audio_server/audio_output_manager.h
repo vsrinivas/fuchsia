@@ -43,7 +43,10 @@ class AudioOutputManager {
   void Shutdown();
 
   // Add a renderer to the set of active audio renderers.
-  void AddRenderer(AudioRendererImplPtr renderer);
+  void AddRenderer(AudioRendererImplPtr renderer) {
+    FTL_DCHECK(renderer);
+    renderers_.insert(std::move(renderer));
+  }
 
   // Remove a renderer from the set of active audio renderers.
   void RemoveRenderer(AudioRendererImplPtr renderer) {

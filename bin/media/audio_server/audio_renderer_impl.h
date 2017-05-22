@@ -52,6 +52,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
 
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
   const AudioMediaTypeDetailsPtr& format() const { return format_; }
+  bool format_valid() const { return (format_.get() != nullptr); }
   float db_gain() const { return db_gain_; }
 
  private:
