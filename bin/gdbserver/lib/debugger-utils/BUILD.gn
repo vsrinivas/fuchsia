@@ -50,6 +50,10 @@ static_library("debugger-utils") {
     deps += [
       "//magenta/system/ulib/mx",
     ]
+  } else {
+    deps += [
+      "//magenta/system/public",
+    ]
   }
 }
 

@@ -15,4 +15,8 @@ source_set("intel-pt-decode") {
     "//lib/ftl",
     "//third_party/processor-trace/libipt",
   ]
+
+  if (!is_fuchsia) {
+    deps += [ "//magenta/system/public" ]
+  }
 }
