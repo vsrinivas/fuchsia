@@ -24,6 +24,8 @@ vim some_file ...
 git commit ...
 
 # upload the patch to gerrit
+jiri upload # Adds default topic - ${USER}-add_feature_foo
+# or
 git push origin HEAD:refs/for/master
 
 # once the change is landed, clean up the branch
@@ -50,8 +52,38 @@ time.
 
 ## Cross-repo changes
 
-Changes in two separate repos will be automatically tracked for you by Gerrit
+Changes in two or more separate repos will be automatically tracked for you by Gerrit
 if you use the same topic.
+
+### Using jiri upload
+Create branch with same name on all repos and upload the changes
+```
+# make and commit the first change
+cd fuchsia/bin/fortune
+git checkout -b new add_feature_foo
+vim foo_related_files ...
+git commit ...
+
+# make and commit the second change in another repository
+cd fuchsia/build
+git checkout -b new add_feature_foo
+vim more_foo_related_files ...
+git commit ...
+
+# Upload changes
+jiri upload -multipart # default topic would be ${USER}-add_feature_foo
+# or
+jiri upload -multipart -topic="custom_topic"
+
+# after the changes are reviewed, approved and submitted, cleanup the local branch
+cd fuchsia/bin/fortune
+git branch -d add_feature_foo
+
+cd fuchsia/build
+git branch -d add_feature_foo
+```
+
+### Using gerrit commands
 
 ```
 # make and commit the first change, upload it with topic 'add_feature_foo'
