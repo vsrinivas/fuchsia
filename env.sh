@@ -674,14 +674,15 @@ END
 }
 
 function freboot() {
-  if [[ $# -ne 0 ]]; then
-    freboot-usage
-    return 1
+  if [[ $# -gt 1 ]]; then
+      freboot_usage
+      return 1
   fi
 
+  freboot_host=${1:-":"}
   fcheck || return 1
   echo "Rebooting system..."
-  netruncmd : "dm reboot"
+  netruncmd --nowait "${freboot_host}" "dm reboot"
 }
 
 ### ftrace: collects and presents traces
