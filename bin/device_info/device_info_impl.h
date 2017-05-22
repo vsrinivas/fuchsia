@@ -21,7 +21,7 @@ class DeviceInfoImpl : public modular::DeviceInfo {
                  const std::string& device_id,
                  const std::string& device_profile);
 
-  void AddBinding(fidl::InterfaceRequest<DeviceInfo> request);
+  void Connect(fidl::InterfaceRequest<DeviceInfo> request);
 
  private:
   void GetDeviceIdForSyncing(
@@ -31,9 +31,9 @@ class DeviceInfoImpl : public modular::DeviceInfo {
 
   void GetDeviceName(const GetDeviceNameCallback& callback) override;
 
-  std::string device_id_;
-  std::string device_name_;
-  std::string device_profile_;
+  const std::string device_id_;
+  const std::string device_name_;
+  const std::string device_profile_;
 
   fidl::BindingSet<modular::DeviceInfo> bindings_;
 

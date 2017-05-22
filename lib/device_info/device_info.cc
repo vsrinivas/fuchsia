@@ -16,7 +16,7 @@ namespace modular {
 
 constexpr char kDeviceInfoDirectory[] = "/data/modular/device";
 constexpr char kDeviceIDFile[] = "/data/modular/device/%s.syncid";
-constexpr char kSyncDeviceProfile[] = "/data/modular/device/profile.config";
+constexpr char kSyncDeviceProfile[] = "/data/modular/device/profile_config.json";
 
 std::string LoadDeviceProfile() {
   std::string device_profile;

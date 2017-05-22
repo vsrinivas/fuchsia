@@ -141,7 +141,7 @@ UserRunnerImpl::UserRunnerImpl(
       new DeviceInfoImpl(device_name_, device_id, device_profile));
   user_scope_.AddService<DeviceInfo>(
       [this](fidl::InterfaceRequest<DeviceInfo> request) {
-        device_info_impl_->AddBinding(std::move(request));
+        device_info_impl_->Connect(std::move(request));
       });
 
   // DeviceMap

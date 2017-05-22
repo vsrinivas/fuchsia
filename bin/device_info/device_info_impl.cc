@@ -15,7 +15,7 @@ DeviceInfoImpl::DeviceInfoImpl(const std::string& device_name,
       device_name_(device_name),
       device_profile_(device_profile) {}
 
-void DeviceInfoImpl::AddBinding(fidl::InterfaceRequest<DeviceInfo> request) {
+void DeviceInfoImpl::Connect(fidl::InterfaceRequest<DeviceInfo> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
