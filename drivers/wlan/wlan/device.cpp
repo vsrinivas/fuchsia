@@ -259,7 +259,7 @@ void Device::MainLoop() {
     std::lock_guard<std::mutex> lock(lock_);
     mlme_.Stop();
     port_.reset();
-    channel_.reset();
+    ResetChannelLocked();
 }
 
 bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
@@ -272,7 +272,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
             sig.count);
     if (sig.observed & MX_CHANNEL_PEER_CLOSED) {
         infof("channel closed\n");
-        channel_.reset();
+        ResetChannelLocked();
     } else if (sig.observed & MX_CHANNEL_READABLE) {
         auto buffer = buffer_alloc_.New();
         if (buffer == nullptr) {
@@ -285,7 +285,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
             channel_.read(0, buffer->data, sizeof(buffer->data), &read, nullptr, 0, nullptr);
         if (status != NO_ERROR) {
             errorf("could not read channel: %d\n", status);
-            channel_.reset();
+            ResetChannelLocked();
             return packet_queued;
         }
         debugf("read %u bytes from channel_\n", read);
@@ -301,7 +301,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         status = RegisterChannelWaitLocked();
         if (status != NO_ERROR) {
             errorf("could not wait on channel: %d\n", status);
-            channel_.reset();
+            ResetChannelLocked();
         }
     }
     return packet_queued;
@@ -309,8 +309,8 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
 
 mx_status_t Device::RegisterChannelWaitLocked() {
     mx_signals_t sigs = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-    return mx_object_wait_async(channel_.get(), port_.get(),
-            reinterpret_cast<std::uintptr_t>(this), sigs, MX_WAIT_ASYNC_ONCE);
+    return channel_.wait_async(port_, reinterpret_cast<uintptr_t>(this),
+            sigs, MX_WAIT_ASYNC_ONCE);
 }
 
 mx_status_t Device::SendShutdown() {
@@ -345,7 +345,13 @@ mx_status_t Device::GetChannel(mx::channel* out) {
     }
 
     infof("channel opened\n");
+    mlme_.SetServiceChannel(channel_.get());
     return NO_ERROR;
+}
+
+void Device::ResetChannelLocked() {
+    mlme_.SetServiceChannel(MX_HANDLE_INVALID);
+    channel_.reset();
 }
 
 }  // namespace wlan

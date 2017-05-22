@@ -15,6 +15,7 @@ struct Header {
     uint64_t txn_id;
     uint32_t flags;
     uint32_t ordinal;
+    uint8_t payload[];
 } __PACKED;
 
 }  // namespace wlan

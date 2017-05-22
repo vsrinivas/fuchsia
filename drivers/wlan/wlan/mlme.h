@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "clock.h"
+#include "scanner.h"
+
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/wlan.h>
 #include <magenta/types.h>
@@ -22,6 +25,7 @@ class Mlme {
     mx_status_t Init();
     mx_status_t Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* device);
     void Stop();
+    void SetServiceChannel(mx_handle_t h);
 
     void GetDeviceInfo(ethmac_info_t* info);
 
@@ -29,10 +33,21 @@ class Mlme {
     mx_status_t HandleTimeout(mx_time_t* next_timeout);
 
   private:
+    // MAC frame handlers
     mx_status_t HandleCtrlPacket(const Packet* packet);
     mx_status_t HandleDataPacket(const Packet* packet);
     mx_status_t HandleMgmtPacket(const Packet* packet);
     mx_status_t HandleSvcPacket(const Packet* packet);
+
+    // Management frame handlers
+    mx_status_t HandleBeacon(const Packet* packet);
+    mx_status_t HandleProbeResponse(const Packet* packet);
+
+    // Scan handlers
+    mx_status_t StartScan(const Packet* packet);
+    void HandleScanTimeout(mx_time_t now);
+    void HandleScanStatus(Scanner::Status status);
+    mx_status_t SendScanResponse();
 
     void SetNextTimeout(mx_time_t* next_timeout);
 
@@ -40,6 +55,13 @@ class Mlme {
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
     ethmac_info_t ethmac_info_ = {};
+
+    mx_handle_t service_ = MX_HANDLE_INVALID;
+
+    wlan_channel_t active_channel_ = { 0 };
+
+    SystemClock clock_;
+    Scanner scanner_;
 };
 
 }  // namespace wlan

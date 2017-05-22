@@ -17,6 +17,7 @@ config("wlan_config") {
 
 source_set("mlme") {
   sources = [
+    "clock.h",
     "element.cpp",
     "element.h",
     "logging.h",
@@ -26,6 +27,8 @@ source_set("mlme") {
     "mlme.h",
     "packet.cpp",
     "packet.h",
+    "scanner.cpp",
+    "scanner.h",
   ]
 
   deps = [
@@ -33,6 +36,7 @@ source_set("mlme") {
   ]
 
   public_deps = [
+    "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
 }

@@ -51,6 +51,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
     Source src() const { return src_; }
 
     const uint8_t* data() const { return buffer_->data; }
+    uint8_t* mut_data() { return buffer_->data; }
     size_t len() const { return len_; }
 
     template <typename T>

@@ -75,6 +75,7 @@ class Device : public WlanBaseDevice,
     mx_status_t SendShutdown();
 
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
+    void ResetChannelLocked() __TA_REQUIRES(lock_);
 
     mx_device_t* parent_;
     std::mutex lock_;

@@ -12,6 +12,7 @@
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <magenta/assert.h>
+#include <magenta/syscalls.h>
 #include <mx/time.h>
 
 #include <cinttypes>
@@ -26,7 +27,8 @@ namespace wlan {
 constexpr mx_duration_t kDefaultTimeout = MX_SEC(1);
 
 Mlme::Mlme(ddk::WlanmacProtocolProxy wlanmac_proxy)
-  : wlanmac_proxy_(wlanmac_proxy) {
+  : wlanmac_proxy_(wlanmac_proxy),
+    scanner_(&clock_) {
     debugfn();
 }
 
@@ -51,10 +53,16 @@ mx_status_t Mlme::Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* de
 
 void Mlme::Stop() {
     debugfn();
+    service_ = MX_HANDLE_INVALID;
     if (ethmac_proxy_ == nullptr) {
         warnf("ethmac not started\n");
     }
     ethmac_proxy_.reset();
+}
+
+void Mlme::SetServiceChannel(mx_handle_t h) {
+    debugfn();
+    service_ = h;
 }
 
 void Mlme::GetDeviceInfo(ethmac_info_t* info) {
@@ -131,6 +139,10 @@ mx_status_t Mlme::HandlePacket(const Packet* packet, mx_time_t* next_timeout) {
 mx_status_t Mlme::HandleTimeout(mx_time_t* next_timeout) {
     MX_DEBUG_ASSERT(next_timeout != nullptr);
 
+    mx_time_t now = clock_.Now();
+
+    HandleScanTimeout(now);
+
     SetNextTimeout(next_timeout);
     return NO_ERROR;
 }
@@ -156,58 +168,10 @@ mx_status_t Mlme::HandleMgmtPacket(const Packet* packet) {
             MAC_ADDR_ARGS(hdr->addr3));
 
     switch (hdr->fc.subtype()) {
-    case ManagementSubtype::kBeacon: {
-        auto bcn = packet->field<Beacon>(hdr->size());
-        debugf("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
-                bcn->timestamp, bcn->beacon_interval, bcn->cap.val());
-
-        size_t elt_len = packet->len() - hdr->size() - sizeof(Beacon);
-        ElementReader reader(bcn->elements, elt_len);
-
-        while (reader.is_valid()) {
-            const ElementHeader* hdr = reader.peek();
-            if (hdr == nullptr) break;
-
-            switch (hdr->id) {
-            case ElementId::kSsid: {
-                auto ssid = reader.read<SsidElement>();
-                debugf("ssid: %.*s\n", ssid->hdr.len, ssid->ssid);
-                break;
-            }
-            case ElementId::kSuppRates: {
-                auto supprates = reader.read<SupportedRatesElement>();
-                if (supprates == nullptr) goto done_iter;
-                char buf[256];
-                char* bptr = buf;
-                for (int i = 0; i < supprates->hdr.len; i++) {
-                    size_t used = bptr - buf;
-                    MX_DEBUG_ASSERT(sizeof(buf) > used);
-                    bptr += snprintf(bptr, sizeof(buf) - used, " %u", supprates->rates[i]);
-                }
-                debugf("supported rates:%s\n", buf);
-                break;
-            }
-            case ElementId::kDsssParamSet: {
-                auto dsss_params = reader.read<DsssParamSetElement>();
-                if (dsss_params == nullptr) goto done_iter;
-                debugf("current channel: %u\n", dsss_params->current_chan);
-                break;
-            }
-            case ElementId::kCountry: {
-                auto country = reader.read<CountryElement>();
-                if (country == nullptr) goto done_iter;
-                debugf("country: %.*s\n", 3, country->country);
-                break;
-            }
-            default:
-                debugf("unknown element id: %u len: %u\n", hdr->id, hdr->len);
-                reader.skip(sizeof(ElementHeader) + hdr->len);
-                break;
-            }
-        }
-done_iter:
-        break;
-    }
+    case ManagementSubtype::kBeacon:
+        return HandleBeacon(packet);
+    case ManagementSubtype::kProbeResponse:
+        return HandleProbeResponse(packet);
     default:
         break;
     }
@@ -216,30 +180,19 @@ done_iter:
 
 mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     debugfn();
-    auto* p = packet->data();
-    auto h = reinterpret_cast<const Header*>(p);
+    const uint8_t* p = packet->data();
+    auto h = FromBytes<Header>(p, packet->len());
     debugf("service packet txn_id=%" PRIu64 " flags=%u ordinal=%u\n",
            h->txn_id, h->flags, h->ordinal);
 
     mx_status_t status = NO_ERROR;
     switch (static_cast<Method>(h->ordinal)) {
-    case Method::SCAN: {
-        ScanRequest req;
-        if (h->len > packet->len()) {
-            return ERR_IO_DATA_INTEGRITY;
-        }
-        // TODO(tkilbourn): remove this const_cast when we have better FIDL deserialization
-        auto reqptr = reinterpret_cast<void*>(const_cast<uint8_t*>(p) + h->len);
-        if (!req.Deserialize(reqptr, packet->len() - h->len)) {
-            warnf("could not deserialize ScanRequest\n");
-        } else {
-            std::stringstream ss;
-            ss << "ScanRequest BSS: " << req.bss_type << " ssid: " << req.ssid <<
-                " ScanType: " << req.scan_type << " probe delay: " << req.probe_delay;
-            infof("%s\n", ss.str().c_str());
+    case Method::SCAN_request:
+        status = StartScan(packet);
+        if (status != NO_ERROR) {
+            errorf("could not start scan: %d\n", status);
         }
         break;
-    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = ERR_NOT_SUPPORTED;
@@ -248,8 +201,134 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
     return status;
 }
 
+mx_status_t Mlme::HandleBeacon(const Packet* packet) {
+    debugfn();
+
+    if (scanner_.IsRunning()) {
+        HandleScanStatus(scanner_.HandleBeacon(packet));
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
+    debugfn();
+
+    if (scanner_.IsRunning()) {
+        HandleScanStatus(scanner_.HandleProbeResponse(packet));
+    }
+
+    return NO_ERROR;
+}
+
+mx_status_t Mlme::StartScan(const Packet* packet) {
+    debugfn();
+    const uint8_t* p = packet->data();
+    auto h = FromBytes<Header>(p, packet->len());
+    MX_DEBUG_ASSERT(static_cast<Method>(h->ordinal) == Method::SCAN_request);
+
+    auto req = ScanRequest::New();
+    auto resp = ScanResponse::New();
+    auto reqptr = reinterpret_cast<const void*>(h->payload);
+    if (!req->Deserialize(const_cast<void*>(reqptr), packet->len() - h->len)) {
+        warnf("could not deserialize ScanRequest\n");
+        return ERR_IO;
+    }
+    mx_status_t status = scanner_.Start(std::move(req), std::move(resp));
+    if (status != NO_ERROR) {
+        SendScanResponse();
+        return status;
+    }
+
+    auto scan_chan = scanner_.ScanChannel();
+    status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
+    if (status != NO_ERROR) {
+        errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
+        SendScanResponse();
+        scanner_.Reset();
+    }
+    return status;
+}
+
+void Mlme::HandleScanTimeout(mx_time_t now) {
+    auto scan_timeout = scanner_.NextTimeout();
+    if (scan_timeout > 0 && scan_timeout < now) {
+        HandleScanStatus(scanner_.HandleTimeout(now));
+    }
+}
+
+void Mlme::HandleScanStatus(Scanner::Status status) {
+    switch (status) {
+    case Scanner::Status::kStartActiveScan:
+        // TODO(tkilbourn): start sending probe requests
+        break;
+    case Scanner::Status::kNextChannel: {
+        debugf("scan status: NextChannel\n");
+        auto scan_chan = scanner_.ScanChannel();
+        mx_status_t status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
+        if (status != NO_ERROR) {
+            errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
+            scanner_.Reset();
+            auto reset_status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
+            if (reset_status != NO_ERROR) {
+                errorf("could not reset to active channel %u: %d\n",
+                        active_channel_.channel_num, status);
+                // TODO(tkilbourn): reset hw?
+            }
+        }
+        break;
+    }
+    case Scanner::Status::kFinishScan: {
+        debugf("scan status: FinishScan\n");
+        mx_status_t status = SendScanResponse();
+        if (status != NO_ERROR && status != ERR_PEER_CLOSED) {
+            errorf("could not send scan response: %d\n", status);
+        }
+        if (active_channel_.channel_num > 0) {
+            status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
+            if (status != NO_ERROR) {
+                errorf("could not reset to active channel %u: %d\n",
+                        active_channel_.channel_num, status);
+                // TODO(tkilbourn): reset hw?
+            }
+        }
+        scanner_.Reset();
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+mx_status_t Mlme::SendScanResponse() {
+    auto resp = scanner_.ScanResults();
+    size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
+    mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[buf_len]);
+    auto header = FromBytes<Header>(buf.get(), buf_len);
+    header->len = sizeof(Header);
+    header->txn_id = 1;  // TODO(tkilbourn): txn ids
+    header->flags = 0;
+    header->ordinal = static_cast<uint32_t>(Method::SCAN_confirm);
+    mx_status_t status = NO_ERROR;
+    if (!resp->Serialize(header->payload, buf_len - sizeof(Header))) {
+        errorf("could not serialize scan response\n");
+        status = ERR_IO;
+    } else {
+        status = mx_channel_write(service_, 0u, buf.get(), buf_len, NULL, 0);
+        if (status != NO_ERROR) {
+            errorf("could not send scan response: %d\n", status);
+        }
+    }
+    return status;
+}
+
 void Mlme::SetNextTimeout(mx_time_t* next_timeout) {
     *next_timeout = mx::deadline_after(kDefaultTimeout);
+
+    auto scan_timeout = scanner_.NextTimeout();
+    if (scan_timeout > 0 && scan_timeout < *next_timeout) {
+        *next_timeout = scan_timeout;
+    }
 }
 
 }  // namespace wlan

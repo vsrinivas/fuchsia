@@ -207,8 +207,3 @@ TEST_F(Elements, Country) {
 
 }  // namespace
 }  // namespace wlan
-
-int main(int argc, char* argv[]) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

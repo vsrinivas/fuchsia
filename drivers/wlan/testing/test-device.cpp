@@ -72,6 +72,7 @@ void Device::WlanmacTx(uint32_t options, void* data, size_t length) {
 }
 
 mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
+    std::printf("wlan::testing::Device::WlanmacSetChannel()  chan=%u\n", chan->channel_num);
     return NO_ERROR;
 }
 
