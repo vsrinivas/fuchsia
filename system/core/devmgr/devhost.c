@@ -236,8 +236,8 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
         if ((r = port_watch(&dh_port, &newios->ph)) < 0) {
-            free(newios);
             free(newios->dev);
+            free(newios);
             break;
         }
         log(RPC_IN, "devhost[%s] created '%s' ios=%p\n", path, name, newios);
