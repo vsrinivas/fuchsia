@@ -544,12 +544,12 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
         mx_handle_close(h);
         return ERR_INVALID_ARGS;
     }
-    if (strncmp("/svc/", svcpath, 5)) {
-        goto not_found;
-    }
     // If there's an explicit svcroot handle,
     // attempt to connect through that
     if (mxio_svc_root != MX_HANDLE_INVALID) {
+        if (strncmp("/svc/", svcpath, 5)) {
+            goto not_found;
+        }
         return mxio_service_connect_at(mxio_svc_root, svcpath + 5, h);
     }
     // Otherwise attempt to connect through the root namespace
