@@ -988,6 +988,8 @@ VmcsPerCpu* VmcsContext::PerCpu() {
 static int vmcs_enter(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
+    if (per_cpu->ShouldResume())
+        return ERR_UNAVAILABLE;
     status_t status;
     do {
         status = per_cpu->Enter(*context, context->gpas(), context->ctl_fifo());

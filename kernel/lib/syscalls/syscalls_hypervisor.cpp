@@ -196,7 +196,7 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     }
-    case MX_HYPERVISOR_OP_GUEST_SET_IP: {
+    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP: {
         uintptr_t guest_ip;
         if (args_len != sizeof(guest_ip))
             return ERR_INVALID_ARGS;
@@ -205,7 +205,7 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
         return guest_set_ip(handle, guest_ip);
     }
 #if ARCH_X86_64
-    case MX_HYPERVISOR_OP_GUEST_SET_CR3: {
+    case MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3: {
         uintptr_t guest_cr3;
         if (args_len != sizeof(guest_cr3))
             return ERR_INVALID_ARGS;

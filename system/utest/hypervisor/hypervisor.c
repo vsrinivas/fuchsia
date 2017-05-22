@@ -144,13 +144,13 @@ static bool guest_start_test(void) {
 #if __x86_64__
     memcpy((void*)(addr + guest_ip), guest_start, guest_end - guest_start);
     uintptr_t guest_cr3 = 0;
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3,
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
               NO_ERROR, "");
 #endif // __x86_64__
 
     // Enter the guest.
-    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_IP,
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
                                &guest_ip, sizeof(guest_ip), NULL, 0),
               NO_ERROR, "");
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0),

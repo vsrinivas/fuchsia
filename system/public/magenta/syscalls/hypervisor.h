@@ -13,17 +13,17 @@ __BEGIN_CDECLS
 
 // Opcodes for mx_hypervisor_op().
 
-#define MX_HYPERVISOR_OP_GUEST_CREATE       1u
-#define MX_HYPERVISOR_OP_GUEST_ENTER        2u
-#define MX_HYPERVISOR_OP_GUEST_MEM_TRAP     3u
+#define MX_HYPERVISOR_OP_GUEST_CREATE           1u
+#define MX_HYPERVISOR_OP_GUEST_ENTER            2u
+#define MX_HYPERVISOR_OP_GUEST_MEM_TRAP         3u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_GPR      4u
-#define MX_HYPERVISOR_OP_GUEST_GET_GPR      5u
+#define MX_HYPERVISOR_OP_GUEST_SET_GPR          4u
+#define MX_HYPERVISOR_OP_GUEST_GET_GPR          5u
 
-#define MX_HYPERVISOR_OP_GUEST_SET_IP       6u
+#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP     6u
 
 #if __x86_64__
-#define MX_HYPERVISOR_OP_GUEST_SET_CR3      7u
+#define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3    7u
 #endif // __x86_64__
 
 typedef struct mx_guest_gpr {
@@ -54,9 +54,9 @@ typedef struct mx_guest_gpr {
 
 // Packets for communication over the control FIFO.
 
-#define MX_GUEST_PKT_TYPE_IO_PORT           1u
-#define MX_GUEST_PKT_TYPE_MEM_TRAP          2u
-#define MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION   3u
+#define MX_GUEST_PKT_TYPE_IO_PORT               1u
+#define MX_GUEST_PKT_TYPE_MEM_TRAP              2u
+#define MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION       3u
 
 typedef struct mx_guest_io_port {
     uint8_t access_size;
@@ -94,7 +94,7 @@ typedef struct mx_guest_packet {
     };
 } mx_guest_packet_t;
 
-#define MX_GUEST_MAX_PKT_SIZE               32u
+#define MX_GUEST_MAX_PKT_SIZE                   32u
 static_assert(sizeof(mx_guest_packet_t) <= MX_GUEST_MAX_PKT_SIZE,
               "size of mx_guest_packet_t must not exceed "
               "MX_GUEST_MAX_PKT_SIZE");

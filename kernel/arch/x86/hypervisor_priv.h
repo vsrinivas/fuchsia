@@ -296,6 +296,8 @@ public:
     status_t SetGpr(const mx_guest_gpr_t* guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
 
+    bool ShouldResume() const { return vmx_state_.resume; }
+
 private:
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;

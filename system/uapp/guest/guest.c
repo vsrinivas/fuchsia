@@ -241,8 +241,8 @@ int main(int argc, char** argv) {
 #if __x86_64__
     guest_gpr.rsi = kBootdataOffset;
 #endif // __x86_64__
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_GPR, &guest_gpr,
-                              sizeof(guest_gpr), NULL, 0);
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
+                              &guest_gpr, sizeof(guest_gpr), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest ESI\n");
         return status;
@@ -250,15 +250,15 @@ int main(int argc, char** argv) {
 
 #if __x86_64__
     uintptr_t guest_cr3 = 0;
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_CR3, &guest_cr3,
-                              sizeof(guest_cr3), NULL, 0);
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
+                              &guest_cr3, sizeof(guest_cr3), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
 #endif // __x86_64__
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_IP,
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
                               &guest_ip, sizeof(guest_ip), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest RIP\n");
