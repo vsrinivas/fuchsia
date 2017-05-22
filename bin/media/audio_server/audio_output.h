@@ -35,7 +35,7 @@ class AudioOutput {
   MediaResult RemoveRendererLink(const AudioRendererToOutputLinkPtr& link);
 
   // Accessor for the current value of the dB gain for the output.
-  float DbGain() const { return db_gain_; }
+  float db_gain() const { return db_gain_; }
 
   // Accessors for the current plug state of the output.
   //

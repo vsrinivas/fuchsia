@@ -65,7 +65,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   FTL_DCHECK(supplied_packet);
   FTL_DCHECK(owner_);
   FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
-             owner_->Format()->frames_per_second);
+             owner_->format()->frames_per_second);
   FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
@@ -74,7 +74,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   //
   // TODO(johngro): Someday, automatically enforce this using
   // alignment/allocation restrictions at the MediaPipe level of things.
-  uint32_t frame_size = owner_->BytesPerFrame();
+  uint32_t frame_size = owner_->bytes_per_frame();
 
   if ((frame_size > 1) && (supplied_packet->payload_size() % frame_size)) {
     FTL_LOG(ERROR) << "Region length (" << supplied_packet->payload_size()

@@ -50,9 +50,9 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
     return frame_to_media_ratio_;
   }
 
-  uint32_t BytesPerFrame() const { return bytes_per_frame_; }
-  const AudioMediaTypeDetailsPtr& Format() const { return format_; }
-  float DbGain() const { return db_gain_; }
+  uint32_t bytes_per_frame() const { return bytes_per_frame_; }
+  const AudioMediaTypeDetailsPtr& format() const { return format_; }
+  float db_gain() const { return db_gain_; }
 
  private:
   friend class AudioPipe;

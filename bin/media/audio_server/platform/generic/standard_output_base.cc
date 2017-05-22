@@ -140,7 +140,7 @@ MediaResult StandardOutputBase::InitializeLink(
 
   // Pick a mixer based on the input and output formats.
   bk->mixer =
-      Mixer::Select(renderer->Format(),
+      Mixer::Select(renderer->format(),
                     output_formatter_ ? &output_formatter_->format() : nullptr);
   if (bk->mixer == nullptr) {
     return MediaResult::UNSUPPORTED_CONFIG;
