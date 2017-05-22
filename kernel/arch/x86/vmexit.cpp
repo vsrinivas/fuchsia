@@ -32,16 +32,6 @@ static const uint64_t kUartStatusIdle = 1u << 6;
 
 static const uint64_t kIa32ApicBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
-static const uint8_t kIoApicVersion = 0x11;
-static const uint32_t kFirstRedirectOffset = 0x10;
-static const uint32_t kLastRedirectOffset = kFirstRedirectOffset + kIoApicRedirectOffsets - 1;
-
-static const uint8_t kApicAccessRead = 0;
-
-static const uint32_t kMaxInstructionLength = 15;
-static const uint8_t kRexRMask = 1u << 2;
-static const uint8_t kRexWMask = 1u << 3;
-static const uint8_t kModRMRegMask = 0b00111000;
 
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptInfoValid = 1u << 31;
@@ -80,8 +70,7 @@ IoInfo::IoInfo(uint64_t qualification) {
 }
 
 ApicAccessInfo::ApicAccessInfo(uint64_t qualification) {
-    reg = static_cast<ApicRegister>(BITS(qualification, 11, 0));
-    type = static_cast<uint8_t>(BITS_SHIFT(qualification, 15, 12));
+    offset = (uint16_t)BITS(qualification, 11, 0);
 }
 
 static void next_rip(const ExitInfo& exit_info) {
@@ -404,285 +393,55 @@ static status_t fetch_data(GuestPhysicalAddressSpace* gpas, vaddr_t guest_vaddr,
     return NO_ERROR;
 }
 
-static bool is_rex_prefix(uint8_t prefix) {
-    return (prefix >> 4) == 0b0100;
-}
-
-static bool has_sib_byte(uint8_t mod_rm) {
-    return (mod_rm >> 6) != 0b11 && (mod_rm & 0b111) == 0b100;
-}
-
-static uint8_t displacement_size(uint8_t mod_rm) {
-    switch (mod_rm >> 6) {
-    case 0b01:
-        return 1;
-    case 0b10:
-        return 4;
-    default:
-        return (mod_rm & ~kModRMRegMask) == 0b00000101 ? 4 : 0;
-    }
-}
-
-static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
-    return static_cast<uint8_t>(((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0));
-}
-
-static uint64_t* select_register(GuestState* guest_state, uint8_t register_id) {
-    // From Intel Volume 2, Section 2.1.
-    switch (register_id) {
-    // From Intel Volume 2, Section 2.1.5.
-    case 0:
-        return &guest_state->rax;
-    case 1:
-        return &guest_state->rcx;
-    case 2:
-        return &guest_state->rdx;
-    case 3:
-        return &guest_state->rbx;
-    case 4:
-        // RSP is specially handled by the VMCS.
-    default:
-        return nullptr;
-    case 5:
-        return &guest_state->rbp;
-    case 6:
-        return &guest_state->rsi;
-    case 7:
-        return &guest_state->rdi;
-    case 8:
-        return &guest_state->r8;
-    case 9:
-        return &guest_state->r9;
-    case 10:
-        return &guest_state->r10;
-    case 11:
-        return &guest_state->r11;
-    case 12:
-        return &guest_state->r12;
-    case 13:
-        return &guest_state->r13;
-    case 14:
-        return &guest_state->r14;
-    case 15:
-        return &guest_state->r15;
-    }
-}
-
-status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestState* guest_state,
-                            Instruction* inst) {
-    if (inst_len == 0)
-        return ERR_BAD_STATE;
-    if (inst_len > kMaxInstructionLength)
-        return ERR_OUT_OF_RANGE;
-
-    // Parse REX prefix.
-    //
-    // From Intel Volume 2, Appendix 2.2.1.
-    //
-    // TODO(abdulla): Handle more prefixes.
-    bool rex_r = false;
-    bool rex_w = false;
-    if (is_rex_prefix(inst_buf[0])) {
-        rex_r = inst_buf[0] & kRexRMask;
-        rex_w = inst_buf[0] & kRexWMask;
-        inst_buf++;
-        inst_len--;
-    }
-
-    if (inst_len == 0)
-        return ERR_NOT_SUPPORTED;
-    if (inst_len < 2)
-        return ERR_OUT_OF_RANGE;
-
-    const uint8_t mod_rm = inst_buf[1];
-    if (has_sib_byte(mod_rm))
-        return ERR_NOT_SUPPORTED;
-
-    const uint8_t disp_size = displacement_size(mod_rm);
-    switch (inst_buf[0]) {
-    // Move r to r/m.
-    case 0x89:
-        if (inst_len != disp_size + 2u)
-            return ERR_OUT_OF_RANGE;
-        inst->read = false;
-        inst->rex = rex_w;
-        inst->imm = 0;
-        inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
-        return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
-    // Move r/m to r.
-    case 0x8b:
-        if (inst_len != disp_size + 2u)
-            return ERR_OUT_OF_RANGE;
-        inst->read = true;
-        inst->rex = rex_w;
-        inst->imm = 0;
-        inst->reg = select_register(guest_state, register_id(mod_rm, rex_r));
-        return inst->reg == nullptr ? ERR_NOT_SUPPORTED : NO_ERROR;
-    // Move imm to r/m.
-    case 0xc7: {
-        const uint8_t imm_size = 4;
-        if (inst_len != disp_size + imm_size + 2u)
-            return ERR_OUT_OF_RANGE;
-        if ((mod_rm & kModRMRegMask) != 0)
-            return ERR_INVALID_ARGS;
-        inst->read = false;
-        inst->rex = false;
-        inst->imm = 0;
-        inst->reg = nullptr;
-        memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
-        return NO_ERROR;
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
-template<typename T>
-T get_value(const Instruction& inst) {
-    return static_cast<T>(inst.reg != nullptr ? *inst.reg : inst.imm);
-}
-
-template<typename T>
-void apply_inst(const Instruction& inst, T* value) {
-    if (inst.read)
-        *inst.reg = *value;
-    else
-        *value = get_value<T>(inst);
-}
-
-static status_t handle_apic_access(const ExitInfo& exit_info, GuestState* guest_state,
-                                   LocalApicState* local_apic_state,
-                                   GuestPhysicalAddressSpace* gpas) {
-    uint8_t inst_buf[kMaxInstructionLength];
-    uint32_t inst_len = exit_info.instruction_length;
-    status_t status = fetch_data(gpas, exit_info.guest_rip, inst_buf, inst_len);
-    if (status != NO_ERROR)
-        return status;
-
-    Instruction inst;
-    status = decode_instruction(inst_buf, inst_len, guest_state, &inst);
-    if (status != NO_ERROR)
-        return status;
-
-    ApicAccessInfo apic_access_info(exit_info.exit_qualification);
-    if (inst.read && apic_access_info.type != kApicAccessRead)
-        return ERR_BAD_STATE;
-
-    switch (apic_access_info.reg) {
-    case ApicRegister::LOCAL_APIC_ID:
-        if (!inst.read)
-            return ERR_NOT_SUPPORTED;
-        *inst.reg = 0;
-        next_rip(exit_info);
-        return NO_ERROR;
-    case ApicRegister::EOI:
-        // TODO(abdulla): Correctly handle EOI.
-        if (inst.read)
-            return ERR_INVALID_ARGS;
-        next_rip(exit_info);
-        return NO_ERROR;
-    case ApicRegister::SVR:
-    case ApicRegister::ESR:
-    case ApicRegister::LVT_TIMER:
-    case ApicRegister::LVT_ERROR: {
-        next_rip(exit_info);
-        // From Intel Volume 3, Section 10.5.3: Before attempt to read from the
-        // ESR, software should first write to it.
-        //
-        // Therefore, we ignore writes to the ESR.
-        if (!inst.read && apic_access_info.reg == ApicRegister::ESR)
-            return NO_ERROR;
-        uint32_t* reg = apic_reg(local_apic_state, apic_access_info.reg);
-        apply_inst(inst, reg);
-        return NO_ERROR;
-    }
-    case ApicRegister::INITIAL_COUNT:
-        uint32_t count = get_value<uint32_t>(inst);
-        if (inst.read || count > 0)
-            return ERR_NOT_SUPPORTED;
-        next_rip(exit_info);
-        return NO_ERROR;
-    }
-    return ERR_NOT_SUPPORTED;
-}
-
-static status_t handle_ept_violation(const ExitInfo& exit_info, GuestState* guest_state,
-                                     IoApicState* io_apic_state, GuestPhysicalAddressSpace* gpas,
-                                     FifoDispatcher* ctl_fifo) {
-    uint8_t inst_buf[kMaxInstructionLength];
-    uint32_t inst_len = exit_info.instruction_length;
-    status_t status = fetch_data(gpas, exit_info.guest_rip, inst_buf, inst_len);
-    if (status != NO_ERROR)
-        return status;
-
-    if (exit_info.guest_physical_address < kIoApicPhysBase ||
-        exit_info.guest_physical_address >= kIoApicPhysBase + PAGE_SIZE) {
 #if WITH_LIB_MAGENTA
-        mx_guest_packet_t packet;
-        memset(&packet, 0, sizeof(mx_guest_packet_t));
-        packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
-        packet.mem_trap.instruction_length = exit_info.instruction_length & UINT8_MAX;
-        memcpy(packet.mem_trap.instruction, inst_buf, inst_len);
-        packet.mem_trap.paddr = exit_info.guest_physical_address;
-        status_t status = packet_write(ctl_fifo, packet);
-        if (status != NO_ERROR)
-            return status;
-        status = packet_read(ctl_fifo, &packet);
-        if (status != NO_ERROR)
-            return status;
-        if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION)
-            return ERR_INVALID_ARGS;
-        if (packet.mem_trap_action.fault) {
-            // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
-            set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
-        } else {
-            next_rip(exit_info);
-        }
-        return NO_ERROR;
-#else // WITH_LIB_MAGENTA
-        return ERR_NOT_SUPPORTED;
-#endif // WITH_LIB_MAGENTA
-    }
-
-    Instruction inst;
-    status = decode_instruction(inst_buf, inst_len, guest_state, &inst);
+static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
+                                GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
+    mx_guest_packet_t packet;
+    memset(&packet, 0, sizeof(mx_guest_packet_t));
+    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
+    packet.mem_trap.guest_paddr = guest_paddr;
+    packet.mem_trap.instruction_length = exit_info.instruction_length & UINT8_MAX;
+    status_t status = fetch_data(gpas, exit_info.guest_rip, packet.mem_trap.instruction_buffer,
+                                 packet.mem_trap.instruction_length);
     if (status != NO_ERROR)
         return status;
-    if (inst.rex)
-        return ERR_NOT_SUPPORTED;
-
-    uint64_t io_apic_reg = exit_info.guest_physical_address - kIoApicPhysBase;
-    switch (io_apic_reg) {
-    case IO_APIC_IOREGSEL:
-        if (inst.read)
-            return ERR_NOT_SUPPORTED;
-        io_apic_state->select = get_value<uint32_t>(inst);
+    status = packet_write(ctl_fifo, packet);
+    if (status != NO_ERROR)
+        return status;
+    status = packet_read(ctl_fifo, &packet);
+    if (status != NO_ERROR)
+        return status;
+    if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION)
+        return ERR_INVALID_ARGS;
+    if (packet.mem_trap_action.fault) {
+        // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
+        set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
+    } else {
         next_rip(exit_info);
-        return io_apic_state->select > UINT8_MAX ? ERR_INVALID_ARGS : NO_ERROR;
-    case IO_APIC_IOWIN:
-        switch (io_apic_state->select) {
-        case IO_APIC_REG_ID:
-            apply_inst(inst, &io_apic_state->id);
-            next_rip(exit_info);
-            return NO_ERROR;
-        case IO_APIC_REG_VER:
-            if (!inst.read || inst.reg == nullptr)
-                return ERR_NOT_SUPPORTED;
-            // There are two redirect offsets per redirection entry. We return
-            // the maximum redirection entry index.
-            //
-            // From Intel 82093AA, Section 3.2.2.
-            *inst.reg = (kIoApicRedirectOffsets / 2 - 1) << 16 | kIoApicVersion;
-            next_rip(exit_info);
-            return NO_ERROR;
-        case kFirstRedirectOffset ... kLastRedirectOffset: {
-            uint32_t i = io_apic_state->select - kFirstRedirectOffset;
-            apply_inst(inst, io_apic_state->redirect + i);
-            next_rip(exit_info);
-            return NO_ERROR;
-        }}
     }
+    return NO_ERROR;
+}
+#endif // WITH_LIB_MAGENTA
+
+static status_t handle_apic_access(const ExitInfo& exit_info, GuestPhysicalAddressSpace* gpas,
+                                   FifoDispatcher* ctl_fifo) {
+#if WITH_LIB_MAGENTA
+    ApicAccessInfo apic_access_info(exit_info.exit_qualification);
+    vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
+    return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
+#else // WITH_LIB_MAGENTA
     return ERR_NOT_SUPPORTED;
+#endif // WITH_LIB_MAGENTA
+}
+
+static status_t handle_ept_violation(const ExitInfo& exit_info, GuestPhysicalAddressSpace* gpas,
+                                     FifoDispatcher* ctl_fifo) {
+#if WITH_LIB_MAGENTA
+    vaddr_t guest_paddr = exit_info.guest_physical_address;
+    return handle_mem_trap(exit_info, guest_paddr, gpas, ctl_fifo);
+#else // WITH_LIB_MAGENTA
+    return ERR_NOT_SUPPORTED;
+#endif // WITH_LIB_MAGENTA
 }
 
 static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state) {
@@ -714,8 +473,8 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, GuestState* guest_state
 }
 
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
-                        LocalApicState* local_apic_state, IoApicState* io_apic_state,
-                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo) {
+                        LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
+                        FifoDispatcher* ctl_fifo) {
     ExitInfo exit_info;
 
     switch (exit_info.exit_reason) {
@@ -747,10 +506,10 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
         return ERR_BAD_STATE;
     case ExitReason::APIC_ACCESS:
         dprintf(SPEW, "handling APIC access\n\n");
-        return handle_apic_access(exit_info, guest_state, local_apic_state, gpas);
+        return handle_apic_access(exit_info, gpas, ctl_fifo);
     case ExitReason::EPT_VIOLATION:
         dprintf(SPEW, "handling EPT violation\n\n");
-        return handle_ept_violation(exit_info, guest_state, io_apic_state, gpas, ctl_fifo);
+        return handle_ept_violation(exit_info, gpas, ctl_fifo);
     case ExitReason::XSETBV:
         dprintf(SPEW, "handling XSETBV instruction\n\n");
         return handle_xsetbv(exit_info, guest_state);

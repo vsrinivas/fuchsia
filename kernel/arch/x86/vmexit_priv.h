@@ -74,23 +74,12 @@ enum class ApicRegister : uint16_t {
 
 /* Stores local APIC access info from the VMCS exit qualification field. */
 struct ApicAccessInfo {
-    ApicRegister reg;
-    uint8_t type;
+    uint16_t offset;
 
     ApicAccessInfo(uint64_t qualification);
 };
 
-/* Stores info from a decoded instruction. */
-struct Instruction {
-    bool read;
-    bool rex;
-    uint32_t imm;
-    uint64_t* reg;
-};
-
 void interrupt_window_exiting(bool enable);
-status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len, GuestState* guest_state,
-                            Instruction* inst);
 status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
-                        LocalApicState* local_apic_state, IoApicState* io_apic_state,
-                        GuestPhysicalAddressSpace* gpas, FifoDispatcher* ctl_fifo);
+                        LocalApicState* local_apic_state, GuestPhysicalAddressSpace* gpas,
+                        FifoDispatcher* ctl_fifo);

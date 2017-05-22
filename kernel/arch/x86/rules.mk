@@ -77,7 +77,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/tsc.cpp \
 	$(LOCAL_DIR)/user_copy.cpp \
 	$(LOCAL_DIR)/vmexit.cpp \
-	$(LOCAL_DIR)/vmexit_tests.cpp \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \

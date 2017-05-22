@@ -73,11 +73,11 @@ typedef struct mx_guest_mem_trap {
 #elif __x86_64__
     uint8_t instruction_length;
     // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-    uint8_t instruction[15];
+    uint8_t instruction_buffer[15];
 #else
 #error Unsupported architecture
 #endif
-    mx_paddr_t paddr;
+    mx_vaddr_t guest_paddr;
 } mx_guest_mem_trap_t;
 
 typedef struct mx_guest_mem_trap_action {

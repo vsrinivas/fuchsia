@@ -430,7 +430,6 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
     local_apic_state_.active_interrupt = kInvalidInterrupt;
     local_apic_state_.tsc_deadline = 0;
     local_apic_state_.apic_addr = nullptr;
-    memset(&io_apic_state_, 0, sizeof(io_apic_state_));
     return NO_ERROR;
 }
 
@@ -840,8 +839,8 @@ status_t VmcsPerCpu::Enter(const VmcsContext& context, GuestPhysicalAddressSpace
         dprintf(SPEW, "vmlaunch failed: %#" PRIx64 "\n", error);
     } else {
         vmx_state_.resume = true;
-        status = vmexit_handler(&vmcs_load, &vmx_state_.guest_state, &local_apic_state_,
-                                &io_apic_state_, gpas, ctl_fifo);
+        status = vmexit_handler(&vmcs_load, &vmx_state_.guest_state, &local_apic_state_, gpas,
+                                ctl_fifo);
     }
     return status;
 }

@@ -10,6 +10,7 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/guest.c \
+    $(LOCAL_DIR)/vcpu.c \
 
 MODULE_NAME := guest
 

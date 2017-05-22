@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <magenta/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /**
  * Create a VMO for guest physical memory.
@@ -55,4 +57,4 @@ mx_status_t guest_create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_of
 mx_status_t guest_create(mx_handle_t hypervisor, mx_handle_t phys_mem, mx_handle_t* ctl_fifo,
                          mx_handle_t* guest);
 
-__END_CDECLS;
+__END_CDECLS

@@ -274,16 +274,6 @@ struct LocalApicState {
     mxtl::RefPtr<VmObject> apic_mem;
 };
 
-/* Stores the IO APIC state across VM exits. */
-struct IoApicState {
-    // IO register-select register.
-    uint32_t select;
-    // IO APIC identification register.
-    uint32_t id;
-    // IO redirection table offsets.
-    uint32_t redirect[kIoApicRedirectOffsets];
-};
-
 /* Creates a VMCS CPU context to initialize a VM. */
 class VmcsPerCpu : public PerCpu {
 public:
@@ -305,7 +295,6 @@ private:
     VmxPage guest_msr_page_;
     VmxState vmx_state_;
     LocalApicState local_apic_state_;
-    IoApicState io_apic_state_;
 };
 
 uint16_t vmcs_read(VmcsField16 field);

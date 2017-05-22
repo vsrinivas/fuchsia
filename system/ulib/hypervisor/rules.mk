@@ -15,7 +15,12 @@ MODULE_CFLAGS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
-    $(LOCAL_DIR)/guest.c
+    $(LOCAL_DIR)/guest.c \
+
+ifeq ($(SUBARCH),x86-64)
+MODULE_SRCS += \
+    $(LOCAL_DIR)/decode.c
+endif
 
 MODULE_LIBS := \
 	system/ulib/c \

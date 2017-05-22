@@ -6,18 +6,23 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <threads.h>
 #include <unistd.h>
 
+#include <hypervisor/decode.h>
 #include <hypervisor/guest.h>
 #include <magenta/assert.h>
 #include <magenta/boot/bootdata.h>
+#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+
+#include "vcpu.h"
 
 static const size_t kVmoSize = 1u << 30;
 static const uintptr_t kKernelOffset = 0x100000;
 static const uintptr_t kBootdataOffset = 0x800000;
+
+static const uint32_t kMapFlags __UNUSED = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static bool container_is_valid(const bootdata_t* container) {
     return container->type == BOOTDATA_CONTAINER &&
@@ -89,74 +94,9 @@ static mx_status_t load_bootfs(int fd, uintptr_t addr, uintptr_t bootdata_off) {
     return NO_ERROR;
 }
 
-#define IO_BUFFER_SIZE 512
-typedef struct ctl_context {
-    uint8_t io_buffer[IO_BUFFER_SIZE];
-    uint16_t io_offset;
-} ctl_context_t;
-
-mx_status_t handle_io_port(ctl_context_t* context, const mx_guest_io_port_t* io_port) {
-    for (int i = 0; i < io_port->access_size; i++) {
-        context->io_buffer[context->io_offset++] = io_port->data[i];
-        if (context->io_offset == IO_BUFFER_SIZE || io_port->data[i] == '\r') {
-            printf("%.*s", context->io_offset, context->io_buffer);
-            context->io_offset = 0;
-        }
-    }
-    return NO_ERROR;
-}
-
-mx_status_t handle_mem_trap(ctl_context_t* context, const mx_guest_mem_trap_t* mem_trap,
-                     mx_handle_t fifo) {
-    // TODO(abdulla): Properly handle mem traps, currently we just fault.
-    mx_guest_packet_t packet;
-    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION;
-    packet.mem_trap_action.fault = true;
-    uint32_t num_packets;
-    return mx_fifo_write(fifo, &packet, sizeof(packet), &num_packets);
-}
-
-int ctl_thread(void* arg) {
-    // TODO(abdulla): Correctly terminate the VCPU on prior to return.
-    mx_handle_t fifo = *(mx_handle_t*)arg;
-    mx_guest_packet_t packet[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
-    ctl_context_t context;
-    memset(&context, 0, sizeof(ctl_context_t));
-    while (true) {
-        mx_signals_t observed;
-        mx_status_t status = mx_object_wait_one(fifo, MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
-                                                MX_TIME_INFINITE, &observed);
-        if (status != NO_ERROR)
-            return thrd_error;
-        if (observed & MX_FIFO_PEER_CLOSED)
-            return thrd_success;
-        if (~observed & MX_FIFO_READABLE)
-            continue;
-
-        uint32_t num_packets;
-        status = mx_fifo_read(fifo, &packet, sizeof(packet), &num_packets);
-        if (status != NO_ERROR)
-            return thrd_error;
-
-        for (uint32_t i = 0; i < num_packets; i++) {
-            mx_status_t status;
-            switch (packet[i].type) {
-            case MX_GUEST_PKT_TYPE_IO_PORT:
-                status = handle_io_port(&context, &packet[i].io_port);
-                break;
-            case MX_GUEST_PKT_TYPE_MEM_TRAP:
-                status = handle_mem_trap(&context, &packet[i].mem_trap, fifo);
-                break;
-            default:
-                fprintf(stderr, "Unhandled guest packet %d\n", packet[i].type);
-                return thrd_error;
-            }
-            if (status != NO_ERROR) {
-                fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet[i].type, status);
-                return thrd_error;
-            }
-        }
-    }
+static int vcpu_thread(void* arg) {
+    // TODO(abdulla): Correctly terminate the VCPU prior to return.
+    return vcpu_loop((vcpu_context_t*)arg) != NO_ERROR ? thrd_error : thrd_success;
 }
 
 int main(int argc, char** argv) {
@@ -181,9 +121,19 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    mx_handle_t ctl_fifo;
-    mx_handle_t guest;
-    status = guest_create(hypervisor, phys_mem, &ctl_fifo, &guest);
+    guest_state_t guest_state;
+    memset(&guest_state, 0, sizeof(guest_state));
+    int ret = mtx_init(&guest_state.mutex, mtx_plain);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to initialize guest state mutex\n");
+        return ERR_INTERNAL;
+    }
+
+    vcpu_context_t context;
+    memset(&context, 0, sizeof(context));
+    context.guest_state = &guest_state;
+
+    status = guest_create(hypervisor, phys_mem, &context.vcpu_fifo, &context.guest);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
@@ -241,14 +191,14 @@ int main(int argc, char** argv) {
 #if __x86_64__
     guest_gpr.rsi = kBootdataOffset;
 #endif // __x86_64__
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
+    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                               &guest_gpr, sizeof(guest_gpr), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest ESI\n");
         return status;
     }
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
+    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
                               &guest_ip, sizeof(guest_ip), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest RIP\n");
@@ -257,30 +207,36 @@ int main(int argc, char** argv) {
 
 #if __x86_64__
     uintptr_t guest_cr3 = 0;
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
+    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
                               &guest_cr3, sizeof(guest_cr3), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
 
-    mx_handle_t apic_mem;
-    status = mx_vmo_create(PAGE_SIZE, 0, &apic_mem);
+    status = mx_vmo_create(PAGE_SIZE, 0, &context.local_apic_state.apic_mem);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to create guest local APIC memory\n");
         return status;
     }
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
-                              &apic_mem, sizeof(apic_mem), NULL, 0);
+    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
+                              &context.local_apic_state.apic_mem, sizeof(mx_handle_t), NULL, 0);
     if (status != NO_ERROR) {
         fprintf(stderr, "Failed to set guest local APIC memory\n");
+        return status;
+    }
+
+    status = mx_vmar_map(mx_vmar_root_self(), 0, context.local_apic_state.apic_mem, 0, PAGE_SIZE,
+                         kMapFlags, (uintptr_t*)&context.local_apic_state.apic_addr);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to map local APIC memory\n");
         return status;
     }
 #endif // __x86_64__
 
     thrd_t thread;
-    int ret = thrd_create(&thread, ctl_thread, &ctl_fifo);
+    ret = thrd_create(&thread, vcpu_thread, &context);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create control thread\n");
         return ERR_INTERNAL;
@@ -291,7 +247,7 @@ int main(int argc, char** argv) {
         return ERR_INTERNAL;
     }
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
+    status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_ENTER, NULL, 0, NULL, 0);
     if (status != NO_ERROR)
         fprintf(stderr, "Failed to enter guest %d\n", status);
     return status;
