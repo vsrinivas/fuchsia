@@ -15,7 +15,7 @@
 namespace flog {
 namespace handlers {
 
-// Status of a media packet consumer as understood by MediaPacketConsumerDigest.
+// Status of a media packet consumer as understood by MediaPacketConsumer.
 class MediaPacketConsumerAccumulator : public Accumulator {
  public:
   MediaPacketConsumerAccumulator();
@@ -70,17 +70,16 @@ class MediaPacketConsumerAccumulator : public Accumulator {
   std::unordered_map<uint32_t, PayloadBuffer> outstanding_payload_buffers_;
   Tracked buffers_;
 
-  friend class MediaPacketConsumerDigest;
+  friend class MediaPacketConsumer;
 };
 
 // Handler for MediaPacketConsumerChannel messages, digest format.
-class MediaPacketConsumerDigest
-    : public ChannelHandler,
-      public media::logs::MediaPacketConsumerChannel {
+class MediaPacketConsumer : public ChannelHandler,
+                            public media::logs::MediaPacketConsumerChannel {
  public:
-  MediaPacketConsumerDigest(const std::string& format);
+  MediaPacketConsumer(const std::string& format);
 
-  ~MediaPacketConsumerDigest() override;
+  ~MediaPacketConsumer() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 

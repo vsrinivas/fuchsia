@@ -16,12 +16,12 @@ namespace handlers {
 class MediaPlayerAccumulator;
 
 // Handler for MediaPlayerChannel messages, digest format.
-class MediaPlayerDigest : public ChannelHandler,
-                          public media::logs::MediaPlayerChannel {
+class MediaPlayer : public ChannelHandler,
+                    public media::logs::MediaPlayerChannel {
  public:
-  MediaPlayerDigest(const std::string& format);
+  MediaPlayer(const std::string& format);
 
-  ~MediaPlayerDigest() override;
+  ~MediaPlayer() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -70,7 +70,7 @@ class MediaPlayerDigest : public ChannelHandler,
   std::shared_ptr<MediaPlayerAccumulator> accumulator_;
 };
 
-// Status of a media player as understood by MediaPlayerDigest.
+// Status of a media player as understood by MediaPlayer.
 class MediaPlayerAccumulator : public Accumulator {
  public:
   enum class State {
@@ -100,7 +100,7 @@ class MediaPlayerAccumulator : public Accumulator {
   std::vector<ChildBinding> sinks_;
   media::TimelineTransformPtr timeline_transform_;
 
-  friend class MediaPlayerDigest;
+  friend class MediaPlayer;
 };
 
 }  // namespace handlers

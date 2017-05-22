@@ -19,13 +19,12 @@ namespace handlers {
 class MediaPacketProducerAccumulator;
 
 // Handler for MediaPacketProducerChannel messages, digest format.
-class MediaPacketProducerDigest
-    : public ChannelHandler,
-      public media::logs::MediaPacketProducerChannel {
+class MediaPacketProducer : public ChannelHandler,
+                            public media::logs::MediaPacketProducerChannel {
  public:
-  MediaPacketProducerDigest(const std::string& format);
+  MediaPacketProducer(const std::string& format);
 
-  ~MediaPacketProducerDigest() override;
+  ~MediaPacketProducer() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -65,7 +64,7 @@ class MediaPacketProducerDigest
   std::shared_ptr<MediaPacketProducerAccumulator> accumulator_;
 };
 
-// Status of a media packet producer as understood by MediaPacketProducerDigest.
+// Status of a media packet producer as understood by MediaPacketProducer.
 class MediaPacketProducerAccumulator : public Accumulator {
  public:
   MediaPacketProducerAccumulator();
@@ -118,7 +117,7 @@ class MediaPacketProducerAccumulator : public Accumulator {
   std::unordered_map<uint64_t, Allocation> outstanding_allocations_;
   Tracked allocations_;
 
-  friend class MediaPacketProducerDigest;
+  friend class MediaPacketProducer;
 };
 
 }  // namespace handlers

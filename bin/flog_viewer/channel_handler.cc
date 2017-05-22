@@ -6,24 +6,23 @@
 
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/default.h"
-#include "apps/media/tools/flog_viewer/handlers/media_demux_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_demux_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_producer_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_producer_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_player_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_player_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_renderer_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_renderer_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_source_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_source_full.h"
-#include "apps/media/tools/flog_viewer/handlers/media_type_converter_digest.h"
-#include "apps/media/tools/flog_viewer/handlers/media_type_converter_full.h"
+#include "apps/media/tools/flog_viewer/handlers/media_demux.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_producer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_player.h"
+#include "apps/media/tools/flog_viewer/handlers/media_renderer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_sink.h"
+#include "apps/media/tools/flog_viewer/handlers/media_source.h"
+#include "apps/media/tools/flog_viewer/handlers/media_type_converter.h"
 
 namespace flog {
+
+// static
+const std::string ChannelHandler::kFormatTerse = "terse";
+// static
+const std::string ChannelHandler::kFormatFull = "full";
+// static
+const std::string ChannelHandler::kFormatDigest = "digest";
 
 // static
 std::unique_ptr<ChannelHandler> ChannelHandler::Create(
@@ -33,63 +32,22 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
   ChannelHandler* handler = nullptr;
 
   // When implementing a new handler, add logic here for creating an instance.
-  if (type_name == handlers::MediaPlayerFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaPlayerFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaPlayerDigest(format);
-    }
-  } else if (type_name == handlers::MediaTypeConverterFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaTypeConverterFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaTypeConverterDigest(format);
-    }
-  } else if (type_name == handlers::MediaDemuxFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaDemuxFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaDemuxDigest(format);
-    }
-  } else if (type_name == handlers::MediaPacketProducerFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaPacketProducerFull(format);
-    }
-    if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaPacketProducerDigest(format);
-    }
-  } else if (type_name == handlers::MediaPacketConsumerFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaPacketConsumerFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaPacketConsumerDigest(format);
-    }
-  } else if (type_name == handlers::MediaRendererFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaRendererFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaRendererDigest(format);
-    }
-  } else if (type_name == handlers::MediaSinkFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaSinkFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaSinkDigest(format);
-    }
-  } else if (type_name == handlers::MediaSourceFull::Name_) {
-    if (format == FlogViewer::kFormatTerse ||
-        format == FlogViewer::kFormatFull) {
-      handler = new handlers::MediaSourceFull(format);
-    } else if (format == FlogViewer::kFormatDigest) {
-      handler = new handlers::MediaSourceDigest(format);
-    }
+  if (type_name == handlers::MediaPlayer::Name_) {
+    handler = new handlers::MediaPlayer(format);
+  } else if (type_name == handlers::MediaTypeConverter::Name_) {
+    handler = new handlers::MediaTypeConverter(format);
+  } else if (type_name == handlers::MediaDemux::Name_) {
+    handler = new handlers::MediaDemux(format);
+  } else if (type_name == handlers::MediaPacketProducer::Name_) {
+    handler = new handlers::MediaPacketProducer(format);
+  } else if (type_name == handlers::MediaPacketConsumer::Name_) {
+    handler = new handlers::MediaPacketConsumer(format);
+  } else if (type_name == handlers::MediaRenderer::Name_) {
+    handler = new handlers::MediaRenderer(format);
+  } else if (type_name == handlers::MediaSink::Name_) {
+    handler = new handlers::MediaSink(format);
+  } else if (type_name == handlers::MediaSource::Name_) {
+    handler = new handlers::MediaSource(format);
   }
 
   if (handler == nullptr) {
@@ -101,7 +59,7 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
   return std::unique_ptr<ChannelHandler>(handler);
 }
 
-ChannelHandler::ChannelHandler() {}
+ChannelHandler::ChannelHandler(const std::string& format) : format_(format) {}
 
 ChannelHandler::~ChannelHandler() {}
 

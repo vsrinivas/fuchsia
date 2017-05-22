@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_renderer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_renderer.h"
 
 #include <iostream>
 
@@ -11,34 +11,45 @@
 #include "apps/media/services/logs/media_renderer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
-#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer.h"
 
 namespace flog {
 namespace handlers {
 
-MediaRendererDigest::MediaRendererDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaRendererAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaRenderer::MediaRenderer(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaRendererAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaRendererDigest::~MediaRendererDigest() {}
+MediaRenderer::~MediaRenderer() {}
 
-void MediaRendererDigest::HandleMessage(fidl::Message* message) {
+void MediaRenderer::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaRendererDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaRenderer::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaRendererDigest::BoundAs(uint64_t koid) {
+void MediaRenderer::BoundAs(uint64_t koid) {
+  terse_out() << entry() << "MediaRenderer.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
 }
 
-void MediaRendererDigest::Config(
-    fidl::Array<media::MediaTypeSetPtr> supported_types,
-    uint64_t consumer_address) {
+void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
+                           uint64_t consumer_address) {
+  terse_out() << entry() << "MediaRenderer.Config" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "supported_types: " << supported_types;
+  terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
+              << std::endl;
+  terse_out() << outdent;
+
   FTL_DCHECK(supported_types);
   FTL_DCHECK(consumer_address);
 
@@ -47,35 +58,62 @@ void MediaRendererDigest::Config(
   accumulator_->consumer_channel_->SetHasParent();
 }
 
-void MediaRendererDigest::SetMediaType(media::MediaTypePtr type) {
+void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
+  terse_out() << entry() << "MediaRenderer.SetMediaType" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "type: " << type;
+  terse_out() << outdent;
+
   FTL_DCHECK(type);
   accumulator_->type_ = std::move(type);
 }
 
-void MediaRendererDigest::PrimeRequested() {
+void MediaRenderer::PrimeRequested() {
+  terse_out() << entry() << "MediaRenderer.PrimeRequested" << std::endl;
+
   accumulator_->prime_requests_.Add();
 }
 
-void MediaRendererDigest::CompletingPrime() {
+void MediaRenderer::CompletingPrime() {
+  terse_out() << entry() << "MediaRenderer.CompletingPrime" << std::endl;
+
   accumulator_->prime_requests_.Remove();
 }
 
-void MediaRendererDigest::ScheduleTimelineTransform(
+void MediaRenderer::ScheduleTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
+  terse_out() << entry() << "MediaRenderer.ScheduleTimelineTransform"
+              << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "timeline_transform: " << timeline_transform;
+  terse_out() << outdent;
+
   accumulator_->timeline_updates_.Add();
   accumulator_->pending_timeline_transform_ = std::move(timeline_transform);
 }
 
-void MediaRendererDigest::ApplyTimelineTransform(
+void MediaRenderer::ApplyTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
+  terse_out() << entry() << "MediaRenderer.ApplyTimelineTransform" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "timeline_transform: " << timeline_transform;
+  terse_out() << outdent;
+
   accumulator_->timeline_updates_.Remove();
   accumulator_->current_timeline_transform_ = std::move(timeline_transform);
   accumulator_->pending_timeline_transform_ = nullptr;
 }
 
-void MediaRendererDigest::EngagePacket(int64_t current_pts,
-                                       int64_t packet_pts,
-                                       uint64_t packet_label) {
+void MediaRenderer::EngagePacket(int64_t current_pts,
+                                 int64_t packet_pts,
+                                 uint64_t packet_label) {
+  terse_out() << entry() << "MediaRenderer.EngagePacket" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "current_pts: " << AsTime(current_pts) << std::endl;
+  terse_out() << begl << "packet_pts: " << AsTime(packet_pts) << std::endl;
+  terse_out() << begl << "packet_label: " << packet_label << std::endl;
+  terse_out() << outdent;
+
   if (packet_label == 0) {
     // Needed a packet but there was none.
     accumulator_->starved_no_packet_.Add();
@@ -91,13 +129,12 @@ void MediaRendererDigest::EngagePacket(int64_t current_pts,
     accumulator_->preroll_packets_.Add();
   } else if (accumulator_->consumer_channel_) {
     // Engaged packet while playing. The consumer should have the packet.
-    MediaPacketConsumerDigest* consumer_digest =
-        reinterpret_cast<MediaPacketConsumerDigest*>(
-            accumulator_->consumer_channel_->handler().get());
-    if (consumer_digest != nullptr) {
+    MediaPacketConsumer* consumer = reinterpret_cast<MediaPacketConsumer*>(
+        accumulator_->consumer_channel_->handler().get());
+    if (consumer != nullptr) {
       // Found the consumer.
       std::shared_ptr<MediaPacketConsumerAccumulator::Packet> packet =
-          consumer_digest->FindOutstandingPacket(packet_label);
+          consumer->FindOutstandingPacket(packet_label);
       if (packet != nullptr) {
         media::TimelineFunction presentation_timeline =
             accumulator_->current_timeline_transform_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_demux_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_demux.h"
 
 #include <iostream>
 
@@ -33,30 +33,43 @@ std::ostream& operator<<(std::ostream& os,
   return os << outdent;
 }
 
-MediaDemuxDigest::MediaDemuxDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaDemuxAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaDemux::MediaDemux(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaDemuxAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaDemuxDigest::~MediaDemuxDigest() {}
+MediaDemux::~MediaDemux() {}
 
-void MediaDemuxDigest::HandleMessage(fidl::Message* message) {
+void MediaDemux::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaDemuxDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaDemux::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaDemuxDigest::BoundAs(uint64_t koid) {
+void MediaDemux::BoundAs(uint64_t koid) {
+  terse_out() << entry() << "MediaDemux.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
 }
 
-void MediaDemuxDigest::NewStream(uint32_t index,
-                                 media::MediaTypePtr type,
-                                 uint64_t producer_address) {
+void MediaDemux::NewStream(uint32_t index,
+                           media::MediaTypePtr type,
+                           uint64_t producer_address) {
   FTL_DCHECK(type);
+
+  terse_out() << entry() << "MediaDemux.NewStream" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "index: " << index << std::endl;
+  terse_out() << begl << "type: " << type;
+  terse_out() << begl << "producer_address: " << *AsChannel(producer_address)
+              << std::endl;
+  terse_out() << outdent;
 
   while (accumulator_->streams_.size() <= index) {
     accumulator_->streams_.emplace_back();

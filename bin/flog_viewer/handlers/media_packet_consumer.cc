@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer.h"
 
 #include <iostream>
 
@@ -13,24 +13,24 @@
 namespace flog {
 namespace handlers {
 
-MediaPacketConsumerDigest::MediaPacketConsumerDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaPacketConsumerAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaPacketConsumer::MediaPacketConsumer(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaPacketConsumerAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaPacketConsumerDigest::~MediaPacketConsumerDigest() {}
+MediaPacketConsumer::~MediaPacketConsumer() {}
 
-void MediaPacketConsumerDigest::HandleMessage(fidl::Message* message) {
+void MediaPacketConsumer::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaPacketConsumerDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaPacketConsumer::GetAccumulator() {
   return accumulator_;
 }
 
 std::shared_ptr<MediaPacketConsumerAccumulator::Packet>
-MediaPacketConsumerDigest::FindOutstandingPacket(uint64_t label) {
+MediaPacketConsumer::FindOutstandingPacket(uint64_t label) {
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter == accumulator_->outstanding_packets_.end()) {
     return nullptr;
@@ -39,11 +39,21 @@ MediaPacketConsumerDigest::FindOutstandingPacket(uint64_t label) {
   return iter->second;
 }
 
-void MediaPacketConsumerDigest::BoundAs(uint64_t koid) {
+void MediaPacketConsumer::BoundAs(uint64_t koid) {
+  terse_out() << entry() << "MediaPacketConsumer.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
 }
 
-void MediaPacketConsumerDigest::DemandSet(media::MediaPacketDemandPtr demand) {
+void MediaPacketConsumer::DemandSet(media::MediaPacketDemandPtr demand) {
+  full_out() << entry() << "MediaPacketConsumer.DemandSet" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "demand: " << demand;
+  full_out() << outdent;
+
   accumulator_->current_demand_ = std::move(demand);
   if (accumulator_->min_packets_outstanding_highest_ <
       accumulator_->current_demand_->min_packets_outstanding) {
@@ -52,19 +62,36 @@ void MediaPacketConsumerDigest::DemandSet(media::MediaPacketDemandPtr demand) {
   }
 }
 
-void MediaPacketConsumerDigest::Reset() {}
+void MediaPacketConsumer::Reset() {
+  terse_out() << entry() << "MediaPacketConsumer.Reset" << std::endl;
+}
 
-void MediaPacketConsumerDigest::Failed() {
+void MediaPacketConsumer::Failed() {
+  terse_out() << entry() << "MediaPacketConsumer.Failed" << std::endl;
+
   accumulator_->failed_ = true;
 }
 
-void MediaPacketConsumerDigest::RespondingToGetDemandUpdate(
+void MediaPacketConsumer::RespondingToGetDemandUpdate(
     media::MediaPacketDemandPtr demand) {
+  full_out() << entry() << "MediaPacketConsumer.RespondingToGetDemandUpdate"
+             << std::endl;
+  full_out() << indent;
+  full_out() << begl << "demand: " << demand;
+  full_out() << outdent;
+
   accumulator_->get_demand_update_responses_ += 1;
 }
 
-void MediaPacketConsumerDigest::AddPayloadBufferRequested(uint32_t id,
-                                                          uint64_t size) {
+void MediaPacketConsumer::AddPayloadBufferRequested(uint32_t id,
+                                                    uint64_t size) {
+  terse_out() << entry() << "MediaPacketConsumer.AddPayloadBufferRequested"
+              << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "id: " << id << std::endl;
+  terse_out() << begl << "size: " << size << std::endl;
+  terse_out() << outdent;
+
   auto iter = accumulator_->outstanding_payload_buffers_.find(id);
   if (iter != accumulator_->outstanding_payload_buffers_.end()) {
     ReportProblem() << "Payload buffer added with id already in use";
@@ -75,7 +102,13 @@ void MediaPacketConsumerDigest::AddPayloadBufferRequested(uint32_t id,
   accumulator_->buffers_.Add(size);
 }
 
-void MediaPacketConsumerDigest::RemovePayloadBufferRequested(uint32_t id) {
+void MediaPacketConsumer::RemovePayloadBufferRequested(uint32_t id) {
+  terse_out() << entry() << "MediaPacketConsumer.RemovePayloadBufferRequested"
+              << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "id: " << id << std::endl;
+  terse_out() << outdent;
+
   auto iter = accumulator_->outstanding_payload_buffers_.find(id);
   if (iter == accumulator_->outstanding_payload_buffers_.end()) {
     ReportProblem() << "RemovePayloadBuffer request specifies unassigned id";
@@ -86,14 +119,18 @@ void MediaPacketConsumerDigest::RemovePayloadBufferRequested(uint32_t id) {
   accumulator_->outstanding_payload_buffers_.erase(iter);
 }
 
-void MediaPacketConsumerDigest::FlushRequested() {
+void MediaPacketConsumer::FlushRequested() {
+  terse_out() << entry() << "MediaPacketConsumer.FlushRequested" << std::endl;
+
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
     ReportProblem() << "FlushRequested when another flush was outstanding";
   }
   accumulator_->flush_requests_.Add();
 }
 
-void MediaPacketConsumerDigest::CompletingFlush() {
+void MediaPacketConsumer::CompletingFlush() {
+  terse_out() << entry() << "MediaPacketConsumer.CompletingFlush" << std::endl;
+
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
     ReportProblem() << "CompletingFlush when no flush was outstanding";
   } else {
@@ -101,10 +138,20 @@ void MediaPacketConsumerDigest::CompletingFlush() {
   }
 }
 
-void MediaPacketConsumerDigest::PacketSupplied(uint64_t label,
-                                               media::MediaPacketPtr packet,
-                                               uint64_t payload_address,
-                                               uint32_t packets_outstanding) {
+void MediaPacketConsumer::PacketSupplied(uint64_t label,
+                                         media::MediaPacketPtr packet,
+                                         uint64_t payload_address,
+                                         uint32_t packets_outstanding) {
+  full_out() << entry() << "MediaPacketConsumer.PacketSupplied" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "label: " << label << std::endl;
+  full_out() << begl << "packet: " << packet;
+  full_out() << begl << "payload_address: " << AsAddress(payload_address)
+             << std::endl;
+  full_out() << begl << "packets_outstanding: " << packets_outstanding
+             << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter != accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Packet label reused";
@@ -118,8 +165,15 @@ void MediaPacketConsumerDigest::PacketSupplied(uint64_t label,
                  entry()->time_ns));
 }
 
-void MediaPacketConsumerDigest::ReturningPacket(uint64_t label,
-                                                uint32_t packets_outstanding) {
+void MediaPacketConsumer::ReturningPacket(uint64_t label,
+                                          uint32_t packets_outstanding) {
+  full_out() << entry() << "MediaPacketConsumer.ReturningPacket" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "label: " << label << std::endl;
+  full_out() << begl << "packets_outstanding: " << packets_outstanding
+             << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter == accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Retiring packet not currently outstanding";

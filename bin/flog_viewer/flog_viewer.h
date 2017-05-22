@@ -20,10 +20,6 @@ namespace flog {
 // Model class for the flog viewer app.
 class FlogViewer : public ChannelManager {
  public:
-  static const std::string kFormatTerse;
-  static const std::string kFormatFull;
-  static const std::string kFormatDigest;
-
   FlogViewer();
 
   ~FlogViewer();
@@ -87,7 +83,7 @@ class FlogViewer : public ChannelManager {
   static const uint32_t kGetEntriesMaxCount = 64;
 
   std::unordered_set<uint32_t> channels_;
-  std::string format_ = kFormatTerse;
+  std::string format_ = ChannelHandler::kFormatDigest;
   std::function<void()> terminate_callback_;
   FlogServicePtr service_;
   FlogReaderPtr reader_;

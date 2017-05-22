@@ -24,10 +24,6 @@ class Default : public ChannelHandler {
  protected:
   // ChannelHandler overrides.
   void HandleMessage(fidl::Message* message) override;
-
- private:
-  bool terse_;
-  bool full_;
 };
 
 }  // namespace handlers

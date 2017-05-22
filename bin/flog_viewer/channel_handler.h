@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <iostream>
+#include <streambuf>
+
 #include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/binding.h"
@@ -14,6 +17,28 @@
 namespace flog {
 
 class Channel;
+
+template <class cT, class traits = std::char_traits<cT>>
+class basic_nullbuf : public std::basic_streambuf<cT, traits> {
+  typename traits::int_type overflow(typename traits::int_type c) {
+    return traits::not_eof(c);  // indicate success
+  }
+};
+
+template <class cT, class traits = std::char_traits<cT>>
+class basic_onullstream : public std::basic_ostream<cT, traits> {
+ public:
+  basic_onullstream()
+      : std::basic_ios<cT, traits>(&sbuf_),
+        std::basic_ostream<cT, traits>(&sbuf_) {
+    std::basic_ostream<cT, traits>::init(&sbuf_);
+  }
+
+ private:
+  basic_nullbuf<cT, traits> sbuf_;
+};
+
+typedef basic_onullstream<char> onullstream;
 
 // Handler for channel messages.
 //
@@ -28,6 +53,10 @@ class Channel;
 // to provide callers access to the accumulator.
 class ChannelHandler {
  public:
+  static const std::string kFormatTerse;
+  static const std::string kFormatFull;
+  static const std::string kFormatDigest;
+
   static std::unique_ptr<ChannelHandler> Create(const std::string& type_name,
                                                 const std::string& format,
                                                 ChannelManager* manager);
@@ -45,7 +74,7 @@ class ChannelHandler {
   virtual std::shared_ptr<Accumulator> GetAccumulator();
 
  protected:
-  ChannelHandler();
+  ChannelHandler(const std::string& format);
 
   virtual void HandleMessage(fidl::Message* message) = 0;
 
@@ -54,12 +83,12 @@ class ChannelHandler {
     return GetAccumulator()->ReportProblem(entry_index(), entry());
   }
 
-  uint32_t entry_index() {
+  uint32_t entry_index() const {
     FTL_DCHECK(entry_) << "entry_index called outside of HandleMessage";
     return entry_index_;
   }
 
-  const FlogEntryPtr& entry() {
+  const FlogEntryPtr& entry() const {
     FTL_DCHECK(entry_) << "entry called outside of HandleMessage";
     return *entry_;
   }
@@ -70,13 +99,25 @@ class ChannelHandler {
 
   void SetBindingKoid(Binding* binding, uint64_t koid);
 
+  const std::string& format() const { return format_; }
+
+  std::ostream& full_out() {
+    return format_ == kFormatFull ? std::cout : onull;
+  }
+
+  std::ostream& terse_out() {
+    return format_ != kFormatDigest ? std::cout : onull;
+  }
+
  private:
   ChannelManager* manager_;
+  std::string format_;
 
   // These fields are only used during calls to HandleMessage().
   std::shared_ptr<Channel> channel_ = nullptr;
   uint32_t entry_index_ = 0;
   const FlogEntryPtr* entry_ = nullptr;
+  onullstream onull;
 };
 
 }  // namespace flog

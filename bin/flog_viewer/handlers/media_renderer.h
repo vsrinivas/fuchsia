@@ -18,12 +18,12 @@ namespace handlers {
 class MediaRendererAccumulator;
 
 // Handler for MediaRendererChannel messages, digest format.
-class MediaRendererDigest : public ChannelHandler,
-                            public media::logs::MediaRendererChannel {
+class MediaRenderer : public ChannelHandler,
+                      public media::logs::MediaRendererChannel {
  public:
-  MediaRendererDigest(const std::string& format);
+  MediaRenderer(const std::string& format);
 
-  ~MediaRendererDigest() override;
+  ~MediaRenderer() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -59,7 +59,7 @@ class MediaRendererDigest : public ChannelHandler,
   std::shared_ptr<MediaRendererAccumulator> accumulator_;
 };
 
-// Status of a media type converter as understood by MediaRendererDigest.
+// Status of a media type converter as understood by MediaRenderer.
 class MediaRendererAccumulator : public Accumulator {
  public:
   MediaRendererAccumulator();
@@ -82,7 +82,7 @@ class MediaRendererAccumulator : public Accumulator {
   Tracked starved_ns_;
   Counted missing_packets_;
 
-  friend class MediaRendererDigest;
+  friend class MediaRenderer;
 };
 
 }  // namespace handlers

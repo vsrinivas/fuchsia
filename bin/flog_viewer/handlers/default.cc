@@ -13,20 +13,16 @@
 namespace flog {
 namespace handlers {
 
-Default::Default(const std::string& format)
-    : terse_(format == FlogViewer::kFormatTerse),
-      full_(format == FlogViewer::kFormatFull) {}
+Default::Default(const std::string& format) : ChannelHandler(format) {}
 
 Default::~Default() {}
 
 void Default::HandleMessage(fidl::Message* message) {
-  if (terse_ || full_) {
-    std::cout << entry() << "channel message, size "
+  terse_out() << entry() << "channel message, size "
               << message->data_num_bytes() << " name " << message->name()
               << std::endl;
-    if (full_) {
-      PrintData(message->data(), message->data_num_bytes());
-    }
+  if (format() == kFormatFull) {
+    PrintData(message->data(), message->data_num_bytes());
   }
 }
 

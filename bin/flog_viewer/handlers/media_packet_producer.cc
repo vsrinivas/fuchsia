@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_packet_producer_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_producer.h"
 
 #include <iostream>
 
@@ -13,23 +13,28 @@
 namespace flog {
 namespace handlers {
 
-MediaPacketProducerDigest::MediaPacketProducerDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaPacketProducerAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaPacketProducer::MediaPacketProducer(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaPacketProducerAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaPacketProducerDigest::~MediaPacketProducerDigest() {}
+MediaPacketProducer::~MediaPacketProducer() {}
 
-void MediaPacketProducerDigest::HandleMessage(fidl::Message* message) {
+void MediaPacketProducer::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaPacketProducerDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaPacketProducer::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaPacketProducerDigest::ConnectedTo(uint64_t related_koid) {
+void MediaPacketProducer::ConnectedTo(uint64_t related_koid) {
+  terse_out() << entry() << "MediaPacketProducer.ConnectedTo" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  terse_out() << outdent;
+
   if (accumulator_->consumer_) {
     ReportProblem() << "ConnectedTo when already connected";
   }
@@ -37,18 +42,24 @@ void MediaPacketProducerDigest::ConnectedTo(uint64_t related_koid) {
   SetBindingKoid(&accumulator_->consumer_, related_koid);
 }
 
-void MediaPacketProducerDigest::Resetting() {
+void MediaPacketProducer::Resetting() {
+  terse_out() << entry() << "MediaPacketProducer.Resetting" << std::endl;
+
   accumulator_->consumer_.Reset();
 }
 
-void MediaPacketProducerDigest::RequestingFlush() {
+void MediaPacketProducer::RequestingFlush() {
+  terse_out() << entry() << "MediaPacketProducer.RequestingFlush" << std::endl;
+
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
     ReportProblem() << "RequestingFlush when another flush was outstanding";
   }
   accumulator_->flush_requests_.Add();
 }
 
-void MediaPacketProducerDigest::FlushCompleted() {
+void MediaPacketProducer::FlushCompleted() {
+  terse_out() << entry() << "MediaPacketProducer.FlushCompleted" << std::endl;
+
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
     ReportProblem() << "FlushCompleted when no flush was outstanding";
   } else {
@@ -56,9 +67,17 @@ void MediaPacketProducerDigest::FlushCompleted() {
   }
 }
 
-void MediaPacketProducerDigest::AllocatingPayloadBuffer(uint32_t index,
-                                                        uint64_t size,
-                                                        uint64_t buffer) {
+void MediaPacketProducer::AllocatingPayloadBuffer(uint32_t index,
+                                                  uint64_t size,
+                                                  uint64_t buffer) {
+  full_out() << entry() << "MediaPacketProducer.AllocatingPayloadBuffer"
+             << std::endl;
+  full_out() << indent;
+  full_out() << begl << "index: " << index << std::endl;
+  full_out() << begl << "size: " << size << std::endl;
+  full_out() << begl << "buffer: " << AsAddress(buffer) << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_allocations_.find(buffer);
   if (iter != accumulator_->outstanding_allocations_.end()) {
     ReportProblem() << "Allocation of buffer already allocated";
@@ -69,13 +88,27 @@ void MediaPacketProducerDigest::AllocatingPayloadBuffer(uint32_t index,
   accumulator_->allocations_.Add(size);
 }
 
-void MediaPacketProducerDigest::PayloadBufferAllocationFailure(uint32_t index,
-                                                               uint64_t size) {
+void MediaPacketProducer::PayloadBufferAllocationFailure(uint32_t index,
+                                                         uint64_t size) {
+  terse_out() << entry() << "MediaPacketProducer.PayloadBufferAllocationFailure"
+              << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "index: " << index << std::endl;
+  terse_out() << begl << "size: " << size << std::endl;
+  terse_out() << outdent;
+
   ReportProblem() << "Allocation failure";
 }
 
-void MediaPacketProducerDigest::ReleasingPayloadBuffer(uint32_t index,
-                                                       uint64_t buffer) {
+void MediaPacketProducer::ReleasingPayloadBuffer(uint32_t index,
+                                                 uint64_t buffer) {
+  full_out() << entry() << "MediaPacketProducer.ReleasingPayloadBuffer"
+             << std::endl;
+  full_out() << indent;
+  full_out() << begl << "index: " << index << std::endl;
+  full_out() << begl << "buffer: " << AsAddress(buffer) << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_allocations_.find(buffer);
   if (iter == accumulator_->outstanding_allocations_.end()) {
     ReportProblem() << "Release of buffer not currently allocated";
@@ -86,8 +119,12 @@ void MediaPacketProducerDigest::ReleasingPayloadBuffer(uint32_t index,
   accumulator_->outstanding_allocations_.erase(iter);
 }
 
-void MediaPacketProducerDigest::DemandUpdated(
-    media::MediaPacketDemandPtr demand) {
+void MediaPacketProducer::DemandUpdated(media::MediaPacketDemandPtr demand) {
+  full_out() << entry() << indent;
+  full_out() << "MediaPacketProducer.DemandUpdated" << std::endl;
+  full_out() << begl << "demand: " << demand;
+  full_out() << outdent;
+
   accumulator_->current_demand_ = std::move(demand);
   if (accumulator_->min_packets_outstanding_highest_ <
       accumulator_->current_demand_->min_packets_outstanding) {
@@ -96,10 +133,20 @@ void MediaPacketProducerDigest::DemandUpdated(
   }
 }
 
-void MediaPacketProducerDigest::ProducingPacket(uint64_t label,
-                                                media::MediaPacketPtr packet,
-                                                uint64_t payload_address,
-                                                uint32_t packets_outstanding) {
+void MediaPacketProducer::ProducingPacket(uint64_t label,
+                                          media::MediaPacketPtr packet,
+                                          uint64_t payload_address,
+                                          uint32_t packets_outstanding) {
+  full_out() << entry() << "MediaPacketProducer.ProducingPacket" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "label: " << label << std::endl;
+  full_out() << begl << "packet: " << packet;
+  full_out() << begl << "payload_address: " << AsAddress(payload_address)
+             << std::endl;
+  full_out() << begl << "packets_outstanding: " << packets_outstanding
+             << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter != accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Packet label " << label << " reused";
@@ -113,8 +160,15 @@ void MediaPacketProducerDigest::ProducingPacket(uint64_t label,
           label, std::move(packet), payload_address, packets_outstanding));
 }
 
-void MediaPacketProducerDigest::RetiringPacket(uint64_t label,
-                                               uint32_t packets_outstanding) {
+void MediaPacketProducer::RetiringPacket(uint64_t label,
+                                         uint32_t packets_outstanding) {
+  full_out() << entry() << "MediaPacketProducer.RetiringPacket" << std::endl;
+  full_out() << indent;
+  full_out() << begl << "label: " << label << std::endl;
+  full_out() << begl << "packets_outstanding: " << packets_outstanding
+             << std::endl;
+  full_out() << outdent;
+
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter == accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Retiring packet not currently outstanding";

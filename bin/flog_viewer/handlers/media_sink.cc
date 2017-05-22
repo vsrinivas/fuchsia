@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_sink.h"
 
 #include <iostream>
 
@@ -13,32 +13,45 @@
 namespace flog {
 namespace handlers {
 
-MediaSinkDigest::MediaSinkDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaSinkAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaSink::MediaSink(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaSinkAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaSinkDigest::~MediaSinkDigest() {}
+MediaSink::~MediaSink() {}
 
-void MediaSinkDigest::HandleMessage(fidl::Message* message) {
+void MediaSink::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaSinkDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaSink::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaSinkDigest::BoundAs(uint64_t koid) {
+void MediaSink::BoundAs(uint64_t koid) {
+  terse_out() << entry() << "MediaSink.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
 }
 
-void MediaSinkDigest::Config(media::MediaTypePtr input_type,
-                             media::MediaTypePtr output_type,
-                             fidl::Array<uint64_t> converter_koids,
-                             uint64_t renderer_koid) {
+void MediaSink::Config(media::MediaTypePtr input_type,
+                       media::MediaTypePtr output_type,
+                       fidl::Array<uint64_t> converter_koids,
+                       uint64_t renderer_koid) {
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
+
+  terse_out() << entry() << "MediaSink.Config" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "input_type: " << input_type;
+  terse_out() << begl << "output_type: " << output_type;
+  terse_out() << begl << "converter_koids: " << converter_koids;
+  terse_out() << begl << "renderer_koid: " << renderer_koid << std::endl;
+  terse_out() << outdent;
 
   accumulator_->input_type_ = std::move(input_type);
   accumulator_->output_type_ = std::move(output_type);

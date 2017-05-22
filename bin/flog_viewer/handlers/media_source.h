@@ -13,12 +13,12 @@ namespace handlers {
 class MediaSourceAccumulator;
 
 // Handler for MediaSourceChannel messages.
-class MediaSourceDigest : public ChannelHandler,
-                          public media::logs::MediaSourceChannel {
+class MediaSource : public ChannelHandler,
+                    public media::logs::MediaSourceChannel {
  public:
-  MediaSourceDigest(const std::string& format);
+  MediaSource(const std::string& format);
 
-  ~MediaSourceDigest() override;
+  ~MediaSource() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -39,7 +39,7 @@ class MediaSourceDigest : public ChannelHandler,
   std::shared_ptr<MediaSourceAccumulator> accumulator_;
 };
 
-// Status of a media source as understood by MediaSourceDigest.
+// Status of a media source as understood by MediaSource.
 class MediaSourceAccumulator : public Accumulator {
  public:
   struct Stream {
@@ -67,7 +67,7 @@ class MediaSourceAccumulator : public Accumulator {
   ChildBinding demux_;
   std::vector<Stream> streams_;
 
-  friend class MediaSourceDigest;
+  friend class MediaSource;
 };
 
 }  // namespace handlers

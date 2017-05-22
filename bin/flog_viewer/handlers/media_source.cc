@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_source_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_source.h"
 
 #include <iostream>
 
@@ -27,35 +27,52 @@ std::ostream& operator<<(std::ostream& os,
   return os << outdent;
 }
 
-MediaSourceDigest::MediaSourceDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaSourceAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaSource::MediaSource(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaSourceAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaSourceDigest::~MediaSourceDigest() {}
+MediaSource::~MediaSource() {}
 
-void MediaSourceDigest::HandleMessage(fidl::Message* message) {
+void MediaSource::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaSourceDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaSource::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaSourceDigest::BoundAs(uint64_t koid) {
+void MediaSource::BoundAs(uint64_t koid) {
+  terse_out() << entry() << "MediaSource.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
 }
 
-void MediaSourceDigest::CreatedDemux(uint64_t related_koid) {
+void MediaSource::CreatedDemux(uint64_t related_koid) {
+  terse_out() << entry() << "MediaSource.CreatedDemux" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  terse_out() << outdent;
+
   SetBindingKoid(&accumulator_->demux_, related_koid);
 }
 
-void MediaSourceDigest::NewStream(uint32_t index,
-                                  media::MediaTypePtr output_type,
-                                  fidl::Array<uint64_t> converter_koids) {
+void MediaSource::NewStream(uint32_t index,
+                            media::MediaTypePtr output_type,
+                            fidl::Array<uint64_t> converter_koids) {
   FTL_DCHECK(output_type);
   FTL_DCHECK(converter_koids);
+
+  terse_out() << entry() << "MediaSource.NewStream" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "index: " << index << std::endl;
+  terse_out() << begl << "output_type: " << output_type;
+  terse_out() << begl << "converter_koids: " << converter_koids;
+  terse_out() << outdent;
 
   while (accumulator_->streams_.size() <= index) {
     accumulator_->streams_.emplace_back();

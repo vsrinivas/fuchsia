@@ -16,12 +16,12 @@ namespace handlers {
 class MediaTypeConverterAccumulator;
 
 // Handler for MediaTypeConverterChannel messages, digest format.
-class MediaTypeConverterDigest : public ChannelHandler,
-                                 public media::logs::MediaTypeConverterChannel {
+class MediaTypeConverter : public ChannelHandler,
+                           public media::logs::MediaTypeConverterChannel {
  public:
-  MediaTypeConverterDigest(const std::string& format);
+  MediaTypeConverter(const std::string& format);
 
-  ~MediaTypeConverterDigest() override;
+  ~MediaTypeConverter() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -43,7 +43,7 @@ class MediaTypeConverterDigest : public ChannelHandler,
   std::shared_ptr<MediaTypeConverterAccumulator> accumulator_;
 };
 
-// Status of a media type converter as understood by MediaTypeConverterDigest.
+// Status of a media type converter as understood by MediaTypeConverter.
 class MediaTypeConverterAccumulator : public Accumulator {
  public:
   MediaTypeConverterAccumulator();
@@ -59,7 +59,7 @@ class MediaTypeConverterAccumulator : public Accumulator {
   std::shared_ptr<Channel> consumer_channel_;
   std::shared_ptr<Channel> producer_channel_;
 
-  friend class MediaTypeConverterDigest;
+  friend class MediaTypeConverter;
 };
 
 }  // namespace handlers

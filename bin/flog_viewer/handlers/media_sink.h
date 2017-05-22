@@ -16,12 +16,11 @@ namespace handlers {
 class MediaSinkAccumulator;
 
 // Handler for MediaSinkChannel messages, digest format.
-class MediaSinkDigest : public ChannelHandler,
-                        public media::logs::MediaSinkChannel {
+class MediaSink : public ChannelHandler, public media::logs::MediaSinkChannel {
  public:
-  MediaSinkDigest(const std::string& format);
+  MediaSink(const std::string& format);
 
-  ~MediaSinkDigest() override;
+  ~MediaSink() override;
 
   std::shared_ptr<Accumulator> GetAccumulator() override;
 
@@ -43,7 +42,7 @@ class MediaSinkDigest : public ChannelHandler,
   std::shared_ptr<MediaSinkAccumulator> accumulator_;
 };
 
-// Status of a media sink as understood by MediaSinkDigest.
+// Status of a media sink as understood by MediaSink.
 class MediaSinkAccumulator : public Accumulator {
  public:
   MediaSinkAccumulator();
@@ -58,7 +57,7 @@ class MediaSinkAccumulator : public Accumulator {
   std::vector<ChildBinding> converters_;
   ChildBinding renderer_;
 
-  friend class MediaSinkDigest;
+  friend class MediaSink;
 };
 
 }  // namespace handlers

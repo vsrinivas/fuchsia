@@ -14,13 +14,6 @@
 
 namespace flog {
 
-// static
-const std::string FlogViewer::kFormatTerse = "terse";
-// static
-const std::string FlogViewer::kFormatFull = "full";
-// static
-const std::string FlogViewer::kFormatDigest = "digest";
-
 FlogViewer::FlogViewer() : stop_index_(std::numeric_limits<uint32_t>::max()) {}
 
 FlogViewer::~FlogViewer() {}
@@ -182,6 +175,10 @@ void FlogViewer::ProcessEntry(uint32_t entry_index, const FlogEntryPtr& entry) {
 }
 
 void FlogViewer::PrintRemainingAccumulators() {
+  if (format_ != ChannelHandler::kFormatDigest) {
+    return;
+  }
+
   for (std::pair<uint32_t, std::shared_ptr<Channel>> pair :
        channels_by_channel_id_) {
     if (pair.second->has_accumulator() && !pair.second->has_parent()) {
@@ -196,7 +193,8 @@ void FlogViewer::OnChannelCreated(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
     const FlogChannelCreationEntryDetailsPtr& details) {
-  if (format_ == kFormatTerse || format_ == kFormatFull) {
+  if (format_ == ChannelHandler::kFormatTerse ||
+      format_ == ChannelHandler::kFormatFull) {
     std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
     std::cout << entry << "channel created, type " << details->type_name
               << ", address " << AsAddress(details->subject_address)
@@ -253,7 +251,8 @@ void FlogViewer::OnChannelMessage(
     return;
   }
 
-  if (format_ == kFormatTerse || format_ == kFormatFull) {
+  if (format_ == ChannelHandler::kFormatTerse ||
+      format_ == ChannelHandler::kFormatFull) {
     std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
   }
 
@@ -265,7 +264,8 @@ void FlogViewer::OnChannelDeleted(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
     const FlogChannelDeletionEntryDetailsPtr& details) {
-  if (format_ == kFormatTerse || format_ == kFormatFull) {
+  if (format_ == ChannelHandler::kFormatTerse ||
+      format_ == ChannelHandler::kFormatFull) {
     std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
     std::cout << entry << "channel deleted" << std::endl;
   }

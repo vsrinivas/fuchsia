@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/tools/flog_viewer/handlers/media_type_converter_digest.h"
+#include "apps/media/tools/flog_viewer/handlers/media_type_converter.h"
 
 #include <iostream>
 
@@ -13,34 +13,50 @@
 namespace flog {
 namespace handlers {
 
-MediaTypeConverterDigest::MediaTypeConverterDigest(const std::string& format)
-    : accumulator_(std::make_shared<MediaTypeConverterAccumulator>()) {
-  FTL_DCHECK(format == FlogViewer::kFormatDigest);
+MediaTypeConverter::MediaTypeConverter(const std::string& format)
+    : ChannelHandler(format),
+      accumulator_(std::make_shared<MediaTypeConverterAccumulator>()) {
   stub_.set_sink(this);
 }
 
-MediaTypeConverterDigest::~MediaTypeConverterDigest() {}
+MediaTypeConverter::~MediaTypeConverter() {}
 
-void MediaTypeConverterDigest::HandleMessage(fidl::Message* message) {
+void MediaTypeConverter::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-std::shared_ptr<Accumulator> MediaTypeConverterDigest::GetAccumulator() {
+std::shared_ptr<Accumulator> MediaTypeConverter::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaTypeConverterDigest::BoundAs(uint64_t koid,
-                                       const fidl::String& converter_type) {
+void MediaTypeConverter::BoundAs(uint64_t koid,
+                                 const fidl::String& converter_type) {
+  terse_out() << entry() << "MediaTypeConverter.BoundAs" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "converter_type: " << converter_type << std::endl;
+  terse_out() << outdent;
+
   BindAs(koid);
   accumulator_->converter_type_ = converter_type;
 }
 
-void MediaTypeConverterDigest::Config(media::MediaTypePtr input_type,
-                                      media::MediaTypePtr output_type,
-                                      uint64_t consumer_address,
-                                      uint64_t producer_address) {
+void MediaTypeConverter::Config(media::MediaTypePtr input_type,
+                                media::MediaTypePtr output_type,
+                                uint64_t consumer_address,
+                                uint64_t producer_address) {
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
+
+  terse_out() << entry() << "MediaTypeConverter.Config" << std::endl;
+  terse_out() << indent;
+  terse_out() << begl << "input_type: " << input_type;
+  terse_out() << begl << "output_type: " << output_type;
+  terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
+              << std::endl;
+  terse_out() << begl << "producer_address: " << *AsChannel(producer_address)
+              << std::endl;
+  terse_out() << outdent;
 
   accumulator_->input_type_ = std::move(input_type);
   accumulator_->output_type_ = std::move(output_type);
