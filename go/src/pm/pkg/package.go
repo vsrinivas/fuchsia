@@ -132,6 +132,11 @@ func Sign(packageDir string, privateKey ed25519.PrivateKey) error {
 	}
 
 	var msg []byte
+
+	for _, f := range metaFiles {
+		msg = append(msg, f...)
+	}
+
 	for _, f := range metaFiles {
 		buf, err := ioutil.ReadFile(f)
 		if err != nil {
@@ -174,6 +179,14 @@ func Verify(packageDir string) error {
 	}
 	sort.Strings(metas)
 	var msg []byte
+
+	for _, path := range metas {
+		if path == signatureFile {
+			continue
+		}
+		msg = append(msg, path...)
+	}
+
 	for _, path := range metas {
 		if path == signatureFile {
 			continue

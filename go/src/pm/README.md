@@ -65,12 +65,13 @@ TODO(raggi): provide exact format and structure of first gen metadata.
 
 ### contents
 
-The contents file contains a strict and complete manifest of all files that are
-in the entire package. The names double as paths for packaging and paths for
-presentation at runtime. Associated with each path is a hash of the content
-using the merkle root strategy documented here.
+The contents file contains a strict and complete manifest of all files that
+are in the entire package. The names double as paths for packaging and paths
+for presentation at runtime. Associated with each path is a hash of the
+content using the merkle root strategy documented as below.
 
-TODO(raggi): add link to merkle root docs.
+[Merkle Root](https://fuchsia.googlesource.com/docs/+/master/merkleroot.md)
+
 
 ### signature
 
@@ -78,7 +79,12 @@ The signature file is calculated from a cryptographic hash of all files in the
 `meta/` directory except for `signature` itself. It must be signed using the
 same key that is identified in the `metadata` file.
 
-TODO(raggi): explain specific crypto and format.
+The signature algorithm is EdDSA. The message to be signed is constructed as follows:
+
+* Glob all files in meta/ except for signature.
+* Sort the names in byte order.
+* Write all file names to the message.
+* Write all file contents to the message.
 
 ## Conventions for Fuchsia Packages
 

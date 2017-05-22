@@ -184,6 +184,14 @@ func TestSign(t *testing.T) {
 		case "signature":
 			continue
 		}
+		msg = append(msg, f...)
+	}
+
+	for _, f := range metaFiles {
+		switch filepath.Base(f) {
+		case "signature":
+			continue
+		}
 
 		buf, err := ioutil.ReadFile(f)
 		if err != nil {
@@ -248,6 +256,25 @@ func TestVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.Close()
+
+	if err := Verify(d); err != ErrVerificationFailed {
+		t.Fatalf("got %v, want %v", err, ErrVerificationFailed)
+	}
+
+	if err := Update(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := Sign(d, key); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Verify(d); err != nil {
+		t.Fatalf("unexpected verification failure: %s", err)
+	}
+
+	if err := os.Rename(filepath.Join(d, "meta", "contents"), filepath.Join(d, "meta", "content")); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := Verify(d); err != ErrVerificationFailed {
 		t.Fatalf("got %v, want %v", err, ErrVerificationFailed)
