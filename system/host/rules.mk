@@ -4,27 +4,6 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-# Export these files for use when building host tools from outside of magenta.
-# Since these files are for use in building host tools, here is as good a
-# place as any to do this for now.
-PUBLIC_HEADER_DIR := system/public
-EXPORTED_HEADERS := \
-    $(BUILDDIR)/tools/include/magenta/compiler.h \
-    $(BUILDDIR)/tools/include/magenta/errors.h \
-    $(BUILDDIR)/tools/include/magenta/ktrace-def.h \
-    $(BUILDDIR)/tools/include/magenta/ktrace.h \
-    $(BUILDDIR)/tools/include/magenta/syscalls/object.h \
-    $(BUILDDIR)/tools/include/magenta/types.h \
-
-$(BUILDDIR)/tools/include/%: $(PUBLIC_HEADER_DIR)/%
-	$(call BUILDECHO,exporting $<)
-	@$(MKDIR)
-	$(NOECHO)cp -pf $< $@
-
-GENERATED += $(EXPORTED_HEADERS)
-EXTRA_BUILDDEPS += $(EXPORTED_HEADERS)
-
-
 HOSTAPPS := \
 	$(LOCAL_DIR)/bootserver/rules.mk \
 	$(LOCAL_DIR)/fidl/rules.mk \
