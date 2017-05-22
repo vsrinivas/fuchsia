@@ -14,7 +14,9 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
+#include <mxio/remoteio.h>
 #include <mxio/util.h>
+#include <mxio/vfs.h>
 
 #include "private.h"
 
@@ -88,6 +90,24 @@ static ssize_t mx_pipe_write(mxio_t* io, const void* data, size_t len) {
 static ssize_t mx_pipe_read(mxio_t* io, void* data, size_t len) {
     mx_pipe_t* p = (mx_pipe_t*)io;
     return _read(p->h, data, len, io->flags & MXIO_FLAG_NONBLOCK);
+}
+
+static mx_status_t mx_pipe_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
+    switch (op) {
+    default:
+        return ERR_NOT_SUPPORTED;
+
+    case MXRIO_STAT: {
+        vnattr_t attr = {};
+        if (maxreply < sizeof(attr)) {
+            return ERR_INVALID_ARGS;
+        }
+        attr.mode = V_TYPE_PIPE | V_IRUSR | V_IWUSR;
+        vnattr_t* attr_out = data;
+        *attr_out = attr;
+        return sizeof(attr);
+    }
+    }
 }
 
 static mx_status_t mx_pipe_close(mxio_t* io) {
@@ -179,7 +199,7 @@ static mxio_ops_t mx_pipe_ops = {
     .recvmsg = mxio_default_recvmsg,
     .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,
-    .misc = mxio_default_misc,
+    .misc = mx_pipe_misc,
     .close = mx_pipe_close,
     .open = mxio_default_open,
     .clone = mx_pipe_clone,
