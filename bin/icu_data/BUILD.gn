@@ -25,6 +25,8 @@ executable("icu_data_provider") {
 }
 
 package("icu_data") {
+  app = true
+
   deps = [ ":icu_data_provider" ]
 
   binaries = [
