@@ -80,17 +80,6 @@ static mx_status_t _device_add(mx_device_t* parent, device_add_args_t* args,
     return r;
 }
 
-static mx_status_t _device_add_instance(mx_device_t* dev, mx_device_t* parent) {
-    mx_status_t r;
-    DM_LOCK();
-    if (dev) {
-        dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-    }
-    r = devhost_device_add(dev, parent, NULL, 0, NULL, 0);
-    DM_UNLOCK();
-    return r;
-}
-
 static mx_status_t _device_remove(mx_device_t* dev) {
     mx_status_t r;
     DM_LOCK();
