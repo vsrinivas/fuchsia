@@ -59,6 +59,9 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     }
     hid_for_every_key(&key_delta, keycode) {
         *modifiers |= modifiers_from_keycode(keycode);
+        if (keycode == HID_USAGE_KEY_CAPSLOCK) {
+            *modifiers ^= MOD_CAPSLOCK;
+        }
         keypress_handler(keycode, *modifiers);
     }
 

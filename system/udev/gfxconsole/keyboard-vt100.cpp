@@ -25,6 +25,13 @@ uint32_t hid_key_to_vt100_code(uint8_t keycode, int modifiers,
                 return 1;
             }
         }
+        if (modifiers & MOD_CAPSLOCK) {
+            if ('a' <= ch && ch <= 'z') {
+                ch = static_cast<char>(ch  - 'a' + 'A');
+            } else if ('A' <= ch && ch <= 'Z') {
+                ch = static_cast<char>(ch  - 'A' + 'a');
+            }
+        }
         buf[0] = ch;
         return 1;
     }

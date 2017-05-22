@@ -168,8 +168,74 @@ bool test_keyboard_input_thread() {
     END_TEST;
 }
 
+bool test_caps_lock() {
+    BEGIN_TEST;
+
+    KeyboardInputHelper helper;
+
+    helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_CAPSLOCK, '\0');
+
+    // Test that letters are capitalized.
+    helper.set_first_keycode(HID_USAGE_KEY_M);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_M, MOD_CAPSLOCK, 'M');
+
+    // Non-letter characters should not be affected.  This isn't Shift Lock.
+    helper.set_first_keycode(HID_USAGE_KEY_1);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_1, MOD_CAPSLOCK, '1');
+
+    // Test unsetting Caps Lock.
+    helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_CAPSLOCK, 0, '\0');
+
+    helper.set_first_keycode(HID_USAGE_KEY_M);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_M, 0, 'm');
+
+    END_TEST;
+}
+
+bool test_caps_lock_with_shift() {
+    BEGIN_TEST;
+
+    KeyboardInputHelper helper;
+
+    helper.set_modifiers_byte(2); // Left Shift key
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0');
+    helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT | MOD_CAPSLOCK, '\0');
+
+    // Shift should undo the effect of Caps Lock for letters.
+    helper.set_first_keycode(HID_USAGE_KEY_M);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT | MOD_CAPSLOCK, 'm');
+
+    helper.set_first_keycode(HID_USAGE_KEY_1);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_CAPSLOCK, '!');
+
+    // Test unsetting Caps Lock.
+    helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT, '\0');
+
+    helper.set_first_keycode(HID_USAGE_KEY_M);
+    helper.WriteReportBuf();
+    expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT, 'M');
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(gfxconsole_keyboard_tests)
 RUN_TEST(test_keyboard_input_thread)
+RUN_TEST(test_caps_lock)
+RUN_TEST(test_caps_lock_with_shift)
 END_TEST_CASE(gfxconsole_keyboard_tests)
 
 }
