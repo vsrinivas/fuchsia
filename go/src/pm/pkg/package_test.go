@@ -254,6 +254,87 @@ func TestVerify(t *testing.T) {
 	}
 }
 
+func TestValidate(t *testing.T) {
+	d, err := testpackage.New()
+	defer os.RemoveAll(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Init(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := Update(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := keys.Gen(d); err != nil {
+		t.Fatal(err)
+	}
+	buf, err := ioutil.ReadFile(filepath.Join(d, "key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := ed25519.PrivateKey(buf)
+	if err := Sign(d, key); err != nil {
+		t.Fatal(err)
+	}
+
+	err = Validate(d)
+	if err != nil {
+		t.Fatalf("Unexpected validation error")
+	}
+
+	for _, f := range RequiredFiles {
+		if err := os.Rename(filepath.Join(d, f), filepath.Join(d, f+"a")); err != nil {
+			t.Fatal(err)
+		}
+		if err := Validate(d); err == nil {
+			t.Errorf("expected a validation error when %q is missing", f)
+		}
+		if err := os.Rename(filepath.Join(d, f+"a"), filepath.Join(d, f)); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestSeal(t *testing.T) {
+	d, err := testpackage.New()
+	defer os.RemoveAll(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Init(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := Update(d); err != nil {
+		t.Fatal(err)
+	}
+	if err := keys.Gen(d); err != nil {
+		t.Fatal(err)
+	}
+	buf, err := ioutil.ReadFile(filepath.Join(d, "key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := ed25519.PrivateKey(buf)
+	if err := Sign(d, key); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Seal(d); err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO(raggi): until we have far reader support this test only verifies that
+	// the package meta data was correctly updated, it doesn't actually verify
+	// that the contents of the far are correct.
+
+	if _, err := os.Stat(filepath.Join(d, "meta.far")); err != nil {
+		t.Errorf("meta.far was not created")
+	}
+}
+
 func TestWalkContents(t *testing.T) {
 	d, err := testpackage.New()
 	defer os.RemoveAll(d)

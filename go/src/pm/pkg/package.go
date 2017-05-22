@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"fuchsia.googlesource.com/pm/far"
 	"fuchsia.googlesource.com/pm/merkle"
 
 	"golang.org/x/crypto/ed25519"
@@ -162,7 +163,7 @@ func Verify(packageDir string) error {
 		return err
 	}
 
-	sig, err := ioutil.ReadFile(filepath.Join(packageDir, "meta", "signature"))
+	sig, err := ioutil.ReadFile(signatureFile)
 	if err != nil {
 		return err
 	}
@@ -190,6 +191,78 @@ func Verify(packageDir string) error {
 	}
 
 	return nil
+}
+
+// ErrRequiredFileMissing is returned by operations when the operation depends
+// on a file that was not found on disk.
+type ErrRequiredFileMissing struct {
+	Path string
+}
+
+func (e ErrRequiredFileMissing) Error() string {
+	return fmt.Sprintf("pkg: missing required file: %q", e.Path)
+}
+
+// RequiredFiles is a list of files that are required before a package can be sealed.
+var RequiredFiles = []string{"meta/contents", "meta/signature", "meta/pubkey", "meta/package.json"}
+
+// Validate ensures that the package contains the required files and that it has a verified signature.
+func Validate(packageDir string) error {
+	metaFiles, err := filepath.Glob(filepath.Join(packageDir, "meta", "*"))
+	if err != nil {
+		return err
+	}
+
+	// metaMap is the manifest for far to use to construct the archive, as well as
+	// a convenient way to look up if the required files are present
+	metaMap := map[string]string{}
+	for _, f := range metaFiles {
+		rel, err := filepath.Rel(packageDir, f)
+		if err != nil {
+			return err
+		}
+		metaMap[rel] = f
+	}
+
+	for _, f := range RequiredFiles {
+		if _, ok := metaMap[f]; !ok {
+			return ErrRequiredFileMissing{f}
+		}
+	}
+
+	return Verify(packageDir)
+}
+
+// Seal archives meta/ into a FAR archive named meta.far.
+func Seal(packageDir string) error {
+
+	if err := Validate(packageDir); err != nil {
+		return err
+	}
+
+	archive, err := os.Create(filepath.Join(packageDir, "meta.far"))
+	if err != nil {
+		return err
+	}
+
+	metaFiles, err := filepath.Glob(filepath.Join(packageDir, "meta", "*"))
+	if err != nil {
+		return err
+	}
+
+	// metaMap is the manifest for far to use to construct the archive, as well as
+	// a convenient way to look up if the required files are present
+	metaMap := map[string]string{}
+	for _, f := range metaFiles {
+		rel, err := filepath.Rel(packageDir, f)
+		if err != nil {
+			return err
+		}
+		metaMap[rel] = f
+	}
+
+	far.Write(archive, metaMap)
+	return archive.Close()
 }
 
 // WalkContents is like a filepath.Walk in a package dir, but with a simplified

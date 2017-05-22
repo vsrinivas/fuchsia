@@ -1,0 +1,14 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Package seal implements the `pm seal` command
+package seal
+
+import "fuchsia.googlesource.com/pm/pkg"
+
+// Run first delegates to sign.Run to generate a fresh signature for the
+// package in packageDir, then archives the meta/ directory into meta.far.
+func Run(packageDir string) error {
+	return pkg.Seal(packageDir)
+}
