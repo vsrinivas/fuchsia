@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"fuchsia.googlesource.com/pm/far"
 	"fuchsia.googlesource.com/pm/merkle"
@@ -72,16 +73,40 @@ func Update(packageDir string) error {
 	metadir := filepath.Join(packageDir, "meta")
 	os.MkdirAll(metadir, os.ModePerm)
 
-	f, err := os.Create(filepath.Join(metadir, "contents"))
+	contentsPath := filepath.Join(metadir, "contents")
+	f, err := os.Open(contentsPath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	var contents []string
+
+	if err == nil {
+		buf, err := ioutil.ReadAll(f)
+		f.Close()
+		if err != nil {
+			return err
+		}
+		for _, line := range strings.Split(string(buf), "\n") {
+			if line == "" {
+				continue
+			}
+			contents = append(contents, strings.SplitN(line, ":", 2)[0])
+		}
+	} else {
+		WalkContents(packageDir, func(path string) error {
+			contents = append(contents, path)
+			return nil
+		})
+	}
+
+	f, err = os.Create(filepath.Join(metadir, "contents"))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	// TODO(raggi): instead of recreating the contents manifest with all found
-	// files, just read the file and update the merkle roots for files in the
-	// manifest
-	return WalkContents(packageDir, func(path string) error {
+	for _, path := range contents {
 		var t merkle.Tree
 		cf, err := os.Open(filepath.Join(packageDir, path))
 		if err != nil {
@@ -98,9 +123,8 @@ func Update(packageDir string) error {
 		if err != nil {
 			return err
 		}
-
-		return nil
-	})
+	}
+	return nil
 }
 
 // Sign creates a pubkey and signature file in the meta directory of the given

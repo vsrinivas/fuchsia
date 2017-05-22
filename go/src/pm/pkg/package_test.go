@@ -107,6 +107,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	buf, err := ioutil.ReadAll(f)
+	f.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,6 +140,30 @@ func TestUpdate(t *testing.T) {
 		if lines[i] != want {
 			t.Errorf("contents mismatch: got %q, want %q", lines[i], want)
 			break
+		}
+	}
+
+	// adding a file that is not in a pre-existing manifest should not get
+	// automatically added to the manifest by update.
+	touch(filepath.Join(tmpDir, "foo"))
+
+	if err := Update(tmpDir); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err = os.Open(filepath.Join(tmpDir, "meta", "contents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf, err = ioutil.ReadAll(f)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, line := range strings.Split(string(buf), "\n") {
+		if strings.Contains(line, "foo") {
+			t.Error("unexpected addition of new file to manifest")
 		}
 	}
 }
