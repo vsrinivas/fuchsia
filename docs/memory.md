@@ -110,12 +110,70 @@ M  ________012d9000-________012da000 rw-      4k:sz      4k:res  useralloc
 ...
 ```
 
+### Dump all VMOs associated with a process
+
+```
+k mx vmos <pid>
+```
+
+This will also show unmapped VMOs, which neither `ps` nor `vmaps` currently
+account for.
+
+It also shows whether a given VMO is a clone, along with its parent's koid.
+
+> NOTE: This is a kernel command, and will print to the kernel console.
+
+```
+magenta$ k mx vmos 1102
+[00005.269] 01041.01044> process [1102]:
+[00005.269] 01041.01044> Handles to VMOs:
+[00005.269] 01041.01044>       handle rights  koid #map parent #chld    size   alloc name
+[00005.299] 01041.01044>   1686510157 rwxmdt  1144    1      -     0    256k      4k -
+[00005.300] 01041.01044>   1692801539 r-xmdt  1031   22      -     0     32k     32k -
+[00005.300] 01041.01044>   total: 2 VMOs, size 288k, alloc 36k
+[00005.300] 01041.01044> Mapped VMOs:
+[00005.300] 01041.01044>            -      -  koid #map parent #chld    size   alloc name
+[00005.301] 01041.01044>            -      -  1166    1   1038     1   29.7k      8k -
+[00005.301] 01041.01044>            -      -  1168    2   1166     0      8k      8k -
+[00005.301] 01041.01044>            -      -  1168    2   1166     0      8k      8k -
+[00005.301] 01041.01044>            -      -  1211    3      -     0    516k     16k -
+[00005.301] 01041.01044>            -      -  1270    1      -     0      4k      4k -
+...
+[00005.302] 01041.01044>            -      -  1129    1   1038     1  883.2k     12k -
+[00005.302] 01041.01044>            -      -  1133    1   1129     0     16k     12k -
+[00005.302] 01041.01044>            -      -  1134    1      -     0     12k     12k -
+[00005.302] 01041.01044>            -      -  koid #map parent #chld    size   alloc name
+```
+
+Columns:
+
+-   `handle`: The `mx_handle_t` value of this process's handle to the VMO.
+-   `rights`: The rights that the handle has, zero or more of:
+    -   `r`: `MX_RIGHT_READ`
+    -   `w`: `MX_RIGHT_WRITE`
+    -   `x`: `MX_RIGHT_EXECUTE`
+    -   `m`: `MX_RIGHT_MAP`
+    -   `d`: `MX_RIGHT_DUPLICATE`
+    -   `t`: `MX_RIGHT_TRANSFER`
+-   `koid`: The koid of the VMO, if it has one. Zero otherwise. A VMO
+    without a koid was created by the kernel, and has never had a userspace
+    handle.
+-   `#map`: The number of times the VMO is currently mapped into VMARs.
+-   `parent`: The koid of the VMO's parent, if it's a clone.
+-   `#chld`: The number of active clones (children) of the VMO.
+-   `size`: The VMO's current size, in bytes.
+-   `alloc`: The amount of physical memory allocated to the VMO, in bytes.
+-   `name`: The name of the VMO, or `-` if its name is empty.
+
 ### Limitations
 
 Neither `ps` nor `vmaps` currently account for:
 
 -   VMOs or VMO subranges that are not mapped. E.g., you could create a VMO,
     write 1G of data into it, and it won't show up here.
+
+None of the process-dumping tools account for:
+
 -   Multiply-mapped pages. If you create multiple mappings using the same range
     of a VMO, any committed pages of the VMO will be counted (in RES) as many
     times as those pages are mapped. This could be inside the same process, or
