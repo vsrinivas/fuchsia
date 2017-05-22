@@ -267,7 +267,7 @@ UserRunnerImpl::UserRunnerImpl(
       user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  focus_handler_.reset(new FocusHandler(device_name, root_page_.get()));
+  focus_handler_.reset(new FocusHandler(device_id, root_page_.get()));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request));
 
   visible_stories_handler_.reset(new VisibleStoriesHandler);

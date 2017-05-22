@@ -82,11 +82,11 @@ class FocusHandler::QueryCall : Operation<fidl::Array<FocusInfoPtr>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(QueryCall);
 };
 
-FocusHandler::FocusHandler(const fidl::String& device_name,
+FocusHandler::FocusHandler(const fidl::String& device_id,
                            ledger::Page* const page)
     : PageClient("FocusHandler", page, kFocusKeyPrefix),
       page_(page),
-      device_name_(device_name) {}
+      device_id_(device_id) {}
 
 FocusHandler::~FocusHandler() = default;
 
@@ -120,7 +120,7 @@ void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
 
 void FocusHandler::Set(const fidl::String& story_id) {
   auto focus_info = FocusInfo::New();
-  focus_info->device_id = device_name_;
+  focus_info->device_id = device_id_;
   focus_info->focused_story_id = story_id;
   focus_info->last_focus_change_timestamp =
       ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
@@ -130,7 +130,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
 
   // Focus watchers are notified from the page watcher notification.
   page_->PutWithPriority(
-      to_array(MakeFocusKey(device_name_)), to_array(json),
+      to_array(MakeFocusKey(device_id_)), to_array(json),
       ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "Ledger operation returned status: " << status;

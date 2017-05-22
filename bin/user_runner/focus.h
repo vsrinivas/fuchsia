@@ -24,7 +24,7 @@ namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, PageClient {
  public:
-  FocusHandler(const fidl::String& device_name, ledger::Page* page);
+  FocusHandler(const fidl::String& device_id, ledger::Page* page);
   ~FocusHandler() override;
 
   void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);
@@ -46,7 +46,7 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
   void OnChange(const std::string& key, const std::string& value) override;
 
   ledger::Page* const page_;
-  const fidl::String device_name_;
+  const fidl::String device_id_;
 
   fidl::BindingSet<FocusProvider> provider_bindings_;
   fidl::BindingSet<FocusController> controller_bindings_;
