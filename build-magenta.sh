@@ -47,16 +47,6 @@ build() {
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   popd > /dev/null
-
-  # These are magenta headers for use in building host tools outside
-  # of the magenta tree.
-  local magenta_host_include="${magenta_buildroot}/build-${magenta_target}/tools/include"
-  local out_magenta_host_dir="${outdir}/magenta-host-${target}"
-  rm -rf -- "${out_magenta_host_dir}"
-  mkdir -p -- "${out_magenta_host_dir}"
-  cp -r -- \
-   "${magenta_host_include}" \
-   "${out_magenta_host_dir}"
 }
 
 declare CLEAN="${CLEAN:-false}"
