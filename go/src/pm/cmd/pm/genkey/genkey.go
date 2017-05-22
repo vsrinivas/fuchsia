@@ -6,12 +6,20 @@
 package genkey
 
 import (
+	"os"
+	"path/filepath"
+
 	"fuchsia.googlesource.com/pm/keys"
 )
 
-// Run generates a new private/public keypair. The keys are written to
-// outdir/key and outdir/pub in binary format. The generated keys are suitable
-// for use with EdDSA.
+// Run generates a new keypair and writes it to outdir/key in binary format.
+// The generated keys are suitable for use with EdDSA, specifically for `pm
+// sign`
 func Run(outdir string) error {
-	return keys.Gen(outdir)
+	f, err := os.Create(filepath.Join(outdir, "key"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return keys.Gen(f)
 }

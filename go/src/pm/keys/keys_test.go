@@ -5,9 +5,6 @@ package keys
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"golang.org/x/crypto/ed25519"
@@ -23,37 +20,22 @@ func (z zeroReader) Read(buf []byte) (int, error) {
 }
 
 func TestGen(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(d)
-
 	randSource = zeroReader{}
 
-	exPub, exKey, err := ed25519.GenerateKey(randSource)
+	_, exKey, err := ed25519.GenerateKey(randSource)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := Gen(d); err != nil {
+	buf := bytes.NewBuffer(nil)
+
+	if err := Gen(buf); err != nil {
 		t.Fatal(err)
 	}
 
-	privKey, err := ioutil.ReadFile(filepath.Join(d, "key"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKey, err := ioutil.ReadFile(filepath.Join(d, "pub"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	key := buf.Bytes()
 
-	if !bytes.Equal(privKey, exKey) {
-		t.Errorf("private key: got %x, want %x", privKey, exKey)
-	}
-
-	if !bytes.Equal(pubKey, exPub) {
-		t.Errorf("public key: got %x, want %x", privKey, exKey)
+	if !bytes.Equal(key, exKey) {
+		t.Errorf("key: got %x, want %x", key, exKey)
 	}
 }

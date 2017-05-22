@@ -7,9 +7,7 @@ package keys
 
 import (
 	"crypto/rand"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"io"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -17,17 +15,14 @@ import (
 // tests override this for deterministic output
 var randSource = rand.Reader
 
-// Gen generates a new private/public keypair. The keys are written to
-// outdir/key and outdir/pub in binary format. The generated keys are suitable
-// for use with EdDSA.
-func Gen(outdir string) error {
-	pubKey, privKey, err := ed25519.GenerateKey(randSource)
+// Gen generates a new keypair and writes the private key to the given writer.
+// The generated key contains a private and public key suitable for use with EdDSA.
+func Gen(w io.Writer) error {
+	_, key, err := ed25519.GenerateKey(randSource)
 	if err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(outdir, "key"), privKey, os.ModePerm); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(outdir, "pub"), pubKey, os.ModePerm)
+	_, err = w.Write(key)
+	return err
 }

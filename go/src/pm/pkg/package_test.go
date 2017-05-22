@@ -5,6 +5,7 @@
 package pkg
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -148,14 +149,11 @@ func TestSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := keys.Gen(d); err != nil {
+	buf := bytes.NewBuffer(nil)
+	if err := keys.Gen(buf); err != nil {
 		t.Fatal(err)
 	}
-	buf, err := ioutil.ReadFile(filepath.Join(d, "key"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	key := ed25519.PrivateKey(buf)
+	key := ed25519.PrivateKey(buf.Bytes())
 
 	if err := Init(d); err != nil {
 		t.Fatal(err)
@@ -205,11 +203,11 @@ func TestSign(t *testing.T) {
 	}
 	sig = sig[:n]
 
-	buf, err = ioutil.ReadFile(filepath.Join(d, "meta", "pubkey"))
+	b, err := ioutil.ReadFile(filepath.Join(d, "meta", "pubkey"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubkey := ed25519.PublicKey(buf)
+	pubkey := ed25519.PublicKey(b)
 
 	if !ed25519.Verify(pubkey, msg, sig) {
 		t.Fatal("signature verification failed")
@@ -222,14 +220,11 @@ func TestVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := keys.Gen(d); err != nil {
+	buf := bytes.NewBuffer(nil)
+	if err := keys.Gen(buf); err != nil {
 		t.Fatal(err)
 	}
-	buf, err := ioutil.ReadFile(filepath.Join(d, "key"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	key := ed25519.PrivateKey(buf)
+	key := ed25519.PrivateKey(buf.Bytes())
 
 	if err := Init(d); err != nil {
 		t.Fatal(err)
