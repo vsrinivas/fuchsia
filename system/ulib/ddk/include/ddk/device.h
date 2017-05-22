@@ -98,8 +98,8 @@ typedef struct mx_protocol_device {
     // that child device instead).  If dev_out is not modified the device itself
     // is opened.
     //
-    // The per-instance child should be created with device_create(),
-    // but added with device_add_instance() instead of device_add().
+    // The per-instance child should be created with the DEVICE_ADD_INSTANCE flag set
+    // in the arguments to device_add().
     //
     // open is also called whenever a device is cloned (a new handle is obtained).
     mx_status_t (*open)(void* ctx, mx_device_t** dev_out, uint32_t flags);
