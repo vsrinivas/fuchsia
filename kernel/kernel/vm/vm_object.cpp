@@ -52,6 +52,16 @@ VmObject::~VmObject() {
     DEBUG_ASSERT(children_list_.is_empty());
 }
 
+void VmObject::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+    canary_.Assert();
+    name_.get(out_name);
+}
+
+status_t VmObject::set_name(const char* name, size_t len) {
+    canary_.Assert();
+    return name_.set(name, len);
+}
+
 void VmObject::set_user_id(uint64_t user_id) {
     canary_.Assert();
     AutoLock a(&lock_);

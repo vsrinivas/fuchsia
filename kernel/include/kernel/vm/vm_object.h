@@ -17,6 +17,7 @@
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
+#include <mxtl/name.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
@@ -93,6 +94,14 @@ public:
                                 size_t buffer_size) {
         return ERR_NOT_SUPPORTED;
     }
+
+    // Returns a null-terminated name, or the empty string if set_name() has not
+    // been called.
+    void get_name(char out_name[MX_MAX_NAME_LEN]) const;
+
+    // Sets the name of the object. May truncate internally. |len| is the size
+    // of the buffer pointed to by |name|.
+    status_t set_name(const char* name, size_t len);
 
     // Returns a user ID associated with this VMO, or zero.
     // Typically used to hold a magenta koid for Dispatcher-wrapped VMOs.
@@ -205,4 +214,8 @@ protected:
     uint32_t children_list_len_ TA_GUARDED(lock_) = 0;
 
     uint64_t user_id_ TA_GUARDED(lock_) = 0;
+
+    // The user-friendly VMO name. For debug purposes only. That
+    // is, there is no mechanism to get access to a VMO via this name.
+    Name name_;
 };
