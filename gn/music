@@ -19,6 +19,10 @@
         {
             "binary": "gen/apps/modules/music/modules/music_artist/music_artist.flx",
             "bootfs_path": "apps/music_artist"
+        },
+        {
+            "binary": "music_playback_agent.dartx",
+            "bootfs_path": "apps/music_playback_agent"
         }
     ]
 }
