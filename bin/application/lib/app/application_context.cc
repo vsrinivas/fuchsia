@@ -14,10 +14,6 @@ namespace app {
 namespace {
 
 mx::channel GetServiceRoot() {
-  mx_handle_t service_root = mx_get_startup_handle(PA_SERVICE_ROOT);
-  if (service_root != MX_HANDLE_INVALID)
-    return mx::channel(service_root);
-
   mx::channel h1, h2;
   if (mx::channel::create(0, &h1, &h2) != NO_ERROR)
     return mx::channel();

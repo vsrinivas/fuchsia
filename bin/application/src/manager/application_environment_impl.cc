@@ -11,6 +11,7 @@
 #include <magenta/status.h>
 #include <mx/process.h>
 #include <mxio/namespace.h>
+#include <mxio/util.h>
 #include <unistd.h>
 
 #include <utility>
@@ -58,6 +59,32 @@ std::vector<const char*> GetArgv(const ApplicationLaunchInfoPtr& launch_info) {
   return argv;
 }
 
+mx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
+  if (launch_info->services)
+    return launch_info->services.PassChannel();
+  return mx::channel();
+}
+
+mx_handle_t GetMxioRoot() {
+  static mx_handle_t mxio_root = MX_HANDLE_INVALID;
+  if (mxio_root == MX_HANDLE_INVALID) {
+    mx_handle_t handles[MXIO_MAX_HANDLES] = {
+        MX_HANDLE_INVALID, MX_HANDLE_INVALID, MX_HANDLE_INVALID};
+    uint32_t types[MXIO_MAX_HANDLES] = {0, 0, 0};
+    mx_status_t status = mxio_clone_root(handles, types);
+    if (status < NO_ERROR)
+      return MX_HANDLE_INVALID;
+    FTL_CHECK(status == 1);
+    FTL_CHECK(types[0] == PA_MXIO_ROOT);
+    mxio_root = handles[0];
+  }
+  return mxio_root;
+}
+
+mx::channel CloneMxioRoot() {
+  return mx::channel(mxio_service_clone(GetMxioRoot()));
+}
+
 // The very first process we create gets the PA_SERVICE_REQUEST given to us by
 // our parent. This handle comes from the devmgr and is intended as a short term
 // solution for wiring up the graphics driver to the tracing services.
@@ -79,35 +106,24 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-mx::process CreateProcess(const mx::job& job,
-                          ApplicationPackagePtr package,
-                          ApplicationLaunchInfoPtr launch_info,
-                          mx::channel service_root) {
-  fidl::Map<uint32_t, mx::handle> startup_handles =
-      std::move(launch_info->startup_handles);
-
-  if (service_root)
-    startup_handles.insert(PA_SERVICE_ROOT, std::move(service_root));
-
-  if (launch_info->services) {
-    startup_handles.insert(PA_APP_SERVICES,
-                           launch_info->services.PassChannel());
+mx::process Launch(const mx::job& job,
+                   const std::string& label,
+                   uint32_t what,
+                   const std::vector<const char*>& argv,
+                   mxio_flat_namespace_t* flat,
+                   mx::channel app_services,
+                   std::vector<uint32_t> ids,
+                   std::vector<mx_handle_t> handles,
+                   mx::vmo data) {
+  if (app_services) {
+    ids.push_back(PA_APP_SERVICES);
+    handles.push_back(app_services.release());
   }
 
-  std::vector<uint32_t> ids;
-  std::vector<mx_handle_t> handles;
-  ids.reserve(startup_handles.size());
-  handles.reserve(startup_handles.size());
-  for (auto it = startup_handles.begin(); it != startup_handles.end(); ++it) {
-    ids.push_back(it.GetKey());
-    handles.push_back(it.GetValue().release());
+  for (size_t i = 0; i < flat->count; ++i) {
+    ids.push_back(flat->type[i]);
+    handles.push_back(flat->handle[i]);
   }
-
-  ForwardServiceRequestToFirstProcess(&ids, &handles);
-
-  std::string label = GetLabelFromURL(launch_info->url);
-  std::vector<const char*> argv = GetArgv(launch_info);
-  mx::vmo data = std::move(package->data);
 
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
@@ -116,21 +132,43 @@ mx::process CreateProcess(const mx::job& job,
   // duplicated from this |job|) should not be killable.
   launchpad_t* lp;
   launchpad_create(job.get(), label.c_str(), &lp);
-  launchpad_load_from_vmo(lp, data.release());
+  launchpad_clone(lp, what);
   launchpad_set_args(lp, argv.size(), argv.data());
-  launchpad_set_environ(lp, environ);
-  launchpad_clone(lp, LP_CLONE_MXIO_ALL);
+  launchpad_set_nametable(lp, flat->count, flat->path);
   launchpad_add_handles(lp, handles.size(), handles.data(), ids.data());
+  launchpad_load_from_vmo(lp, data.release());
+
   mx_handle_t proc;
   const char* errmsg;
   auto status = launchpad_go(lp, &proc, &errmsg);
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
-                   << " due to error " << status << " ("
-                   << mx_status_get_string(status) << "): " << errmsg;
+    FTL_LOG(ERROR) << "Cannot run executable " << label << " due to error "
+                   << status << " (" << mx_status_get_string(status)
+                   << "): " << errmsg;
     return mx::process();
   }
   return mx::process(proc);
+}
+
+mx::process CreateProcess(const mx::job& job,
+                          ApplicationPackagePtr package,
+                          ApplicationLaunchInfoPtr launch_info,
+                          mxio_flat_namespace_t* flat) {
+  std::vector<uint32_t> ids;
+  std::vector<mx_handle_t> handles;
+
+  auto startup_handles = std::move(launch_info->startup_handles);
+  for (auto it = startup_handles.begin(); it != startup_handles.end(); ++it) {
+    ids.push_back(it.GetKey());
+    handles.push_back(it.GetValue().release());
+  }
+
+  ForwardServiceRequestToFirstProcess(&ids, &handles);
+
+  return Launch(job, GetLabelFromURL(launch_info->url),
+                LP_CLONE_MXIO_CWD | LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON,
+                GetArgv(launch_info), flat, TakeAppServices(launch_info),
+                std::move(ids), std::move(handles), std::move(package->data));
 }
 
 mx::process CreateSandboxedProcess(const mx::job& job,
@@ -140,44 +178,10 @@ mx::process CreateSandboxedProcess(const mx::job& job,
   if (!data)
     return mx::process();
 
-  std::string label = GetLabelFromURL(launch_info->url);
-  std::vector<const char*> argv = GetArgv(launch_info);
-
-  // TODO(vardhan): The job passed to the child process (which will be
-  // duplicated from this |job|) should not be killable.
-  launchpad_t* lp;
-  launchpad_create(job.get(), label.c_str(), &lp);
-  launchpad_clone(lp, LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON);
-  launchpad_set_args(lp, argv.size(), argv.data());
-
-  launchpad_set_nametable(lp, flat->count, flat->path);
-
-  std::vector<uint32_t> ids;
-  std::vector<mx_handle_t> handles;
-
-  for (size_t i = 0; i < flat->count; ++i) {
-    ids.push_back(flat->type[i]);
-    handles.push_back(flat->handle[i]);
-  }
-
-  if (launch_info->services) {
-    ids.push_back(PA_APP_SERVICES);
-    handles.push_back(launch_info->services.PassChannel().release());
-  }
-
-  launchpad_add_handles(lp, ids.size(), handles.data(), ids.data());
-  launchpad_load_from_vmo(lp, data.release());
-
-  mx_handle_t proc;
-  const char* errmsg;
-  auto status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
-                   << " due to error " << status << " ("
-                   << mx_status_get_string(status) << "): " << errmsg;
-    return mx::process();
-  }
-  return mx::process(proc);
+  return Launch(job, GetLabelFromURL(launch_info->url),
+                LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
+                flat, TakeAppServices(launch_info), std::vector<uint32_t>(),
+                std::vector<mx_handle_t>(), std::move(data));
 }
 
 LaunchType Classify(const mx::vmo& data, std::string* runner) {
@@ -434,10 +438,30 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  // TODO(abarth): We'll need to update this code when we switch the parent to
+  // namespaces.
+  mx::channel root = CloneMxioRoot();
+  if (!root)
+    return;
+
+  mx::channel svc = services_.OpenAsDirectory();
+  if (!svc)
+    return;
+
+  mx_handle_t handles[] = {root.get(), svc.get()};
+  uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
+  const char* paths[] = {"/", "/svc"};
+
+  mxio_flat_namespace_t flat;
+  flat.count = 2;
+  flat.handle = handles;
+  flat.type = types;
+  flat.path = paths;
+
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process =
-      CreateProcess(job_, std::move(package), std::move(launch_info),
-                    services_.OpenAsDirectory());
+      CreateProcess(job_, std::move(package), std::move(launch_info), &flat);
+
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url);
