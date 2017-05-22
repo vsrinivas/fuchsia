@@ -7,11 +7,7 @@
 package sign
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sort"
-
+	"fuchsia.googlesource.com/pm/pkg"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -21,43 +17,5 @@ import (
 // pre-existing signature. The resulting signature is written to
 // packageDir/meta/signature.
 func Run(packageDir string, privateKey ed25519.PrivateKey) error {
-
-	signatureFile := filepath.Join(packageDir, "meta", "signature")
-
-	if err := ioutil.WriteFile(filepath.Join(packageDir, "meta", "pubkey"), privateKey.Public().(ed25519.PublicKey), os.ModePerm); err != nil {
-		return err
-	}
-
-	// NOTE: cannot use pkg.WalkContents as it is critical that the contents file
-	// is signed. It is also important that we establish a deterministic order for
-	// the signature.
-	metas, err := filepath.Glob(filepath.Join(packageDir, "meta", "*"))
-	if err != nil {
-		return err
-	}
-	sort.Strings(metas)
-	metaFiles := []string{}
-	for _, path := range metas {
-		if path == signatureFile {
-			continue
-		}
-		metaFiles = append(metaFiles, path)
-	}
-
-	var msg []byte
-	for _, f := range metaFiles {
-		buf, err := ioutil.ReadFile(f)
-		if err != nil {
-			return err
-		}
-		msg = append(msg, buf...)
-	}
-
-	sig := ed25519.Sign(privateKey, msg)
-
-	if err := ioutil.WriteFile(signatureFile, sig, os.ModePerm); err != nil {
-		return err
-	}
-
-	return nil
+	return pkg.Sign(packageDir, privateKey)
 }

@@ -6,29 +6,12 @@
 package genkey
 
 import (
-	"crypto/rand"
-	"os"
-	"path/filepath"
-
-	"io/ioutil"
-
-	"golang.org/x/crypto/ed25519"
+	"fuchsia.googlesource.com/pm/keys"
 )
-
-// tests override this for deterministic output
-var randSource = rand.Reader
 
 // Run generates a new private/public keypair. The keys are written to
 // outdir/key and outdir/pub in binary format. The generated keys are suitable
 // for use with EdDSA.
 func Run(outdir string) error {
-	pubKey, privKey, err := ed25519.GenerateKey(randSource)
-	if err != nil {
-		return err
-	}
-
-	if err := ioutil.WriteFile(filepath.Join(outdir, "key"), privKey, os.ModePerm); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(outdir, "pub"), pubKey, os.ModePerm)
+	return keys.Gen(outdir)
 }

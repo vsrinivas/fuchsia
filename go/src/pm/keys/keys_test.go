@@ -1,8 +1,7 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-package genkey
+package keys
 
 import (
 	"bytes"
@@ -23,7 +22,7 @@ func (z zeroReader) Read(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
-func TestRun(t *testing.T) {
+func TestGen(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +36,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Run(d); err != nil {
+	if err := Gen(d); err != nil {
 		t.Fatal(err)
 	}
 
