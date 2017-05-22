@@ -47,9 +47,9 @@ void MediaSink::Config(media::MediaTypePtr input_type,
 
   terse_out() << entry() << "MediaSink.Config" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "input_type: " << input_type;
-  terse_out() << begl << "output_type: " << output_type;
-  terse_out() << begl << "converter_koids: " << converter_koids;
+  terse_out() << begl << "input_type: " << input_type << std::endl;
+  terse_out() << begl << "output_type: " << output_type << std::endl;
+  terse_out() << begl << "converter_koids: " << converter_koids << std::endl;
   terse_out() << begl << "renderer_koid: " << renderer_koid << std::endl;
   terse_out() << outdent;
 
@@ -71,9 +71,9 @@ MediaSinkAccumulator::~MediaSinkAccumulator() {}
 void MediaSinkAccumulator::Print(std::ostream& os) {
   os << "MediaSink" << std::endl;
   os << indent;
-  os << begl << "input_type: " << input_type_;
-  os << begl << "output_type: " << output_type_;
-  os << begl << "converters: " << converters_;
+  os << begl << "input_type: " << input_type_ << std::endl;
+  os << begl << "output_type: " << output_type_ << std::endl;
+  os << begl << "converters: " << converters_ << std::endl;
   os << begl << "renderer: " << renderer_;
 
   Accumulator::Print(os);

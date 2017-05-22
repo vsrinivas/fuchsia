@@ -79,24 +79,24 @@ std::ostream& operator<<(std::ostream& os, const ChildBinding& value) {
   }
 
   if (value.koid() == 0) {
-    return os << "<none>" << std::endl;
+    return os << "<none>";
   }
 
-  return os << "unresolved binding, koid " << AsKoid(value.koid()) << std::endl;
+  return os << "unresolved binding, koid " << AsKoid(value.koid());
 }
 
 std::ostream& operator<<(std::ostream& os, const PeerBinding& value) {
   std::shared_ptr<Channel> channel = value.channel();
 
   if (channel) {
-    return os << *channel << " " << std::endl;
+    return os << *channel;
   }
 
   if (value.koid() == 0) {
-    return os << "<none>" << std::endl;
+    return os << "<none>";
   }
 
-  return os << "unresolved binding, koid " << AsKoid(value.koid()) << std::endl;
+  return os << "unresolved binding, koid " << AsKoid(value.koid());
 }
 
 int ostream_entry_second_index() {

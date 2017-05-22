@@ -276,7 +276,8 @@ void FlogViewer::OnChannelDeleted(
     return;
   }
 
-  if (iter->second->has_accumulator()) {
+  if (format_ == ChannelHandler::kFormatDigest &&
+      iter->second->has_accumulator()) {
     iter->second->PrintAccumulator(std::cout);
   }
   channels_by_channel_id_.erase(iter);

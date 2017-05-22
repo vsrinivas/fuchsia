@@ -64,16 +64,14 @@ std::ostream& operator<<(std::ostream& os, AsTime value);
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>";
   } else if (value.size() == 0) {
-    return os << "<empty>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<empty>";
   }
 
   int index = 0;
   for (T& element : const_cast<fidl::Array<T>&>(value)) {
-    os << begl << "[" << index++ << "] " << element;
+    os << std::endl << begl << "[" << index++ << "] " << element;
   }
 
   return os;
@@ -103,14 +101,12 @@ std::ostream& operator<<(std::ostream& os, AsInlineArray<T> value) {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   if (value.empty()) {
-    return os << "<empty>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<empty>";
   }
 
   int index = 0;
   for (const T& element : value) {
-    os << begl << "[" << index++ << "] " << element;
+    os << std::endl << begl << "[" << index++ << "] " << element;
   }
 
   return os;

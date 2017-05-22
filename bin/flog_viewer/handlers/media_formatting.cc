@@ -12,29 +12,27 @@ namespace handlers {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
   if (!value.is_bound()) {
-    return os << "<not bound>" << std::endl;
+    return os << "<not bound>";
   } else {
-    return os << "<bound>" << std::endl;
+    return os << "<bound>";
   }
 }
 
 std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl << "medium: " << StringFromMediaTypeMedium(value->medium)
      << std::endl;
-  os << begl << "details: " << value->details;
+  os << begl << "details: " << value->details << std::endl;
   os << begl << "encoding: " << value->encoding << std::endl;
   if (value->encoding_parameters) {
     os << begl << "encoding_parameters: " << value->encoding_parameters.size()
-       << " bytes" << std::endl;
+       << " bytes";
   } else {
-    os << begl << "encoding_parameters: <nullptr>" << std::endl;
+    os << begl << "encoding_parameters: <nullptr>";
   }
   return os << outdent;
 }
@@ -42,31 +40,26 @@ std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value) {
 std::ostream& operator<<(std::ostream& os,
                          const media::MediaTypeSetPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl << "medium: " << StringFromMediaTypeMedium(value->medium)
      << std::endl;
-  os << begl << "details: " << value->details;
-  os << begl << "encodings: " << AsInlineArray<fidl::String>(value->encodings)
-     << std::endl;
+  os << begl << "details: " << value->details << std::endl;
+  os << begl << "encodings: " << AsInlineArray<fidl::String>(value->encodings);
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::MediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>";
   } else if (value->has_unknown_tag()) {
-    return os << "<empty>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<empty>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   if (value->is_audio()) {
     return os << begl << "audio: " << value->get_audio() << outdent;
   }
@@ -79,20 +72,18 @@ std::ostream& operator<<(std::ostream& os,
   if (value->is_subpicture()) {
     return os << begl << "subpicture: " << value->get_subpicture() << outdent;
   }
-  return os << begl << "UNKNOWN TAG" << std::endl << outdent;
+  return os << begl << "UNKNOWN TAG" << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::MediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>";
   } else if (value->has_unknown_tag()) {
-    return os << "<empty>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<empty>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   if (value->is_audio()) {
     return os << begl << "audio: " << value->get_audio() << outdent;
   }
@@ -105,35 +96,31 @@ std::ostream& operator<<(std::ostream& os,
   if (value->is_subpicture()) {
     return os << begl << "subpicture: " << value->get_subpicture() << outdent;
   }
-  return os << begl << "UNKNOWN TAG" << std::endl << outdent;
+  return os << begl << "UNKNOWN TAG" << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::AudioMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl
      << "sample_format: " << StringFromAudioSampleFormat(value->sample_format)
      << std::endl;
   os << begl << "channels: " << int(value->channels) << std::endl;
-  os << begl << "frames_per_second: " << value->frames_per_second << std::endl;
+  os << begl << "frames_per_second: " << value->frames_per_second;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::AudioMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl
      << "sample_format: " << StringFromAudioSampleFormat(value->sample_format)
      << std::endl;
@@ -141,20 +128,17 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "max_channels: " << int(value->max_channels) << std::endl;
   os << begl << "min_frames_per_second: " << value->min_frames_per_second
      << std::endl;
-  os << begl << "max_frames_per_second: " << value->max_frames_per_second
-     << std::endl;
+  os << begl << "max_frames_per_second: " << value->max_frames_per_second;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::VideoMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl << "profile: " << value->profile << std::endl;
   os << begl << "pixel_format: " << value->pixel_format << std::endl;
   os << begl << "color_space: " << value->color_space << std::endl;
@@ -169,37 +153,33 @@ std::ostream& operator<<(std::ostream& os,
      << std::endl;
   os << begl << "line_stride: " << AsInlineArray<uint32_t>(value->line_stride)
      << std::endl;
-  os << begl << "plane_offset: " << AsInlineArray<uint32_t>(value->plane_offset)
-     << std::endl;
+  os << begl
+     << "plane_offset: " << AsInlineArray<uint32_t>(value->plane_offset);
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::VideoMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
   os << indent;
   os << begl << "min_width: " << value->min_width << std::endl;
   os << begl << "max_width: " << value->max_width << std::endl;
   os << begl << "min_height: " << value->min_height << std::endl;
-  os << begl << "max_height: " << value->max_height << std::endl;
+  os << begl << "max_height: " << value->max_height;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::TextMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
-  os << begl << "NO MEMBERS" << std::endl;
+  os << indent << std::endl;
+  os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -207,13 +187,11 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const media::TextMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
   os << indent;
-  os << begl << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -221,13 +199,11 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const media::SubpictureMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
-  os << begl << "NO MEMBERS" << std::endl;
+  os << indent << std::endl;
+  os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -235,13 +211,11 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const media::SubpictureMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
   os << indent;
-  os << begl << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -249,23 +223,21 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const media::TimelineTransformPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl << "reference_time: " << AsTime(value->reference_time)
      << std::endl;
   os << begl << "subject_time: " << AsTime(value->subject_time) << std::endl;
   os << begl << "reference_delta: " << value->reference_delta << std::endl;
-  os << begl << "subject_delta: " << value->subject_delta << std::endl;
+  os << begl << "subject_delta: " << value->subject_delta;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>";
   }
 
   return os << *value;
@@ -280,22 +252,20 @@ std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value) {
   os << begl << "end_of_stream: " << value.end_of_stream << std::endl;
   os << begl << "payload_buffer_id: " << value.payload_buffer_id << std::endl;
   os << begl << "payload_offset: " << value.payload_offset << std::endl;
-  os << begl << "payload_size: " << value.payload_size << std::endl;
+  os << begl << "payload_size: " << value.payload_size;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const media::MediaPacketDemandPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
+    return os << "<nullptr>";
   }
 
-  os << indent;
+  os << indent << std::endl;
   os << begl << "min_packets_outstanding: " << value->min_packets_outstanding
      << std::endl;
-  os << begl << "min_pts: " << AsTime(value->min_pts) << std::endl;
+  os << begl << "min_pts: " << AsTime(value->min_pts);
   return os << outdent;
 }
 

@@ -16,13 +16,11 @@ namespace handlers {
 std::ostream& operator<<(std::ostream& os,
                          const MediaDemuxAccumulator::Stream& value) {
   if (!value) {
-    return os << begl << "NULL STREAM" << std::endl;
-  } else {
-    os << std::endl;
+    return os << begl << "NULL STREAM";
   }
 
-  os << indent;
-  os << begl << "type: " << value.type_;
+  os << indent << std::endl;
+  os << begl << "type: " << value.type_ << std::endl;
   if (value.producer_channel_) {
     os << begl << "producer: " << *value.producer_channel_ << " ";
     value.producer_channel_->PrintAccumulator(os);
@@ -66,7 +64,7 @@ void MediaDemux::NewStream(uint32_t index,
   terse_out() << entry() << "MediaDemux.NewStream" << std::endl;
   terse_out() << indent;
   terse_out() << begl << "index: " << index << std::endl;
-  terse_out() << begl << "type: " << type;
+  terse_out() << begl << "type: " << type << std::endl;
   terse_out() << begl << "producer_address: " << *AsChannel(producer_address)
               << std::endl;
   terse_out() << outdent;

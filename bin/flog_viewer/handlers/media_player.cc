@@ -78,7 +78,7 @@ void MediaPlayer::ReceivedSourceDescription(
   terse_out() << entry() << "MediaPlayer.ReceivedSourceDescription"
               << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "stream_types: " << stream_types;
+  terse_out() << begl << "stream_types: " << stream_types << std::endl;
   terse_out() << outdent;
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kInitial) {
@@ -234,7 +234,8 @@ void MediaPlayer::SettingTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
   terse_out() << entry() << "MediaPlayer.SettingTimelineTransform" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform;
+  terse_out() << begl << "timeline_transform: " << timeline_transform
+              << std::endl;
   terse_out() << outdent;
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
@@ -256,18 +257,20 @@ void MediaPlayerAccumulator::Print(std::ostream& os) {
   os << begl << "state: " << state_ << std::endl;
   os << begl << "target_state: " << target_state_ << std::endl;
   os << begl << "target_position: " << AsTime(target_position_) << std::endl;
-  os << begl << "source: " << source_;
-  os << begl << "stream_types: " << stream_types_;
-  os << begl << "sinks: " << sinks_;
+  os << begl << "source: " << source_ << std::endl;
+  os << begl << "stream_types: " << stream_types_ << std::endl;
+  os << begl << "sinks: " << sinks_ << std::endl;
   os << begl << "timeline_transform: " << timeline_transform_;
 
   if (state_ != target_state_) {
-    os << begl << "SUSPENSE: transitioning to state " << target_state_
-       << ", currently in state " << state_ << std::endl;
+    os << std::endl
+       << begl << "SUSPENSE: transitioning to state " << target_state_
+       << ", currently in state " << state_;
   }
 
   if (target_position_ != media::kUnspecifiedTime) {
-    os << begl << "SUSPENSE: seeking to position " << target_position_;
+    os << std::endl
+       << begl << "SUSPENSE: seeking to position " << target_position_;
   }
 
   Accumulator::Print(os);

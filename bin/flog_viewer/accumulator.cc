@@ -32,7 +32,7 @@ std::ostream& Accumulator::ReportProblem(uint32_t entry_index,
 
 void Accumulator::PrintProblems(std::ostream& os) {
   for (const Problem& problem : problems_) {
-    os << begl << "PROBLEM: " << problem << std::endl;
+    os << std::endl << begl << "PROBLEM: " << problem;
   }
 }
 

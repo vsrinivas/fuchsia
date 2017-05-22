@@ -122,7 +122,7 @@ void MediaPacketProducer::ReleasingPayloadBuffer(uint32_t index,
 void MediaPacketProducer::DemandUpdated(media::MediaPacketDemandPtr demand) {
   full_out() << entry() << indent;
   full_out() << "MediaPacketProducer.DemandUpdated" << std::endl;
-  full_out() << begl << "demand: " << demand;
+  full_out() << begl << "demand: " << demand << std::endl;
   full_out() << outdent;
 
   accumulator_->current_demand_ = std::move(demand);
@@ -140,7 +140,7 @@ void MediaPacketProducer::ProducingPacket(uint64_t label,
   full_out() << entry() << "MediaPacketProducer.ProducingPacket" << std::endl;
   full_out() << indent;
   full_out() << begl << "label: " << label << std::endl;
-  full_out() << begl << "packet: " << packet;
+  full_out() << begl << "packet: " << packet << std::endl;
   full_out() << begl << "payload_address: " << AsAddress(payload_address)
              << std::endl;
   full_out() << begl << "packets_outstanding: " << packets_outstanding
@@ -186,10 +186,10 @@ MediaPacketProducerAccumulator::~MediaPacketProducerAccumulator() {}
 void MediaPacketProducerAccumulator::Print(std::ostream& os) {
   os << "MediaPacketProducer" << std::endl;
   os << indent;
-  os << begl << "consumer: " << consumer_;
+  os << begl << "consumer: " << consumer_ << std::endl;
   os << begl << "flushes: " << flush_requests_.count() << std::endl;
 
-  os << begl << "current demand: " << current_demand_;
+  os << begl << "current demand: " << current_demand_ << std::endl;
   os << begl << "min packets outstanding : max "
      << min_packets_outstanding_highest_ << std::endl;
 
@@ -218,34 +218,33 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
        << allocations_.max_outstanding_total() << std::endl;
   }
 
-  os << begl << "allocation count: " << allocations_.count() << std::endl;
+  os << begl << "allocation count: " << allocations_.count();
   if (allocations_.count() != 0) {
-    os << begl << "allocation size: "
+    os << std::endl
+       << begl << "allocation size: "
        << "min " << allocations_.min() << ", avg " << allocations_.average()
-       << ", max " << allocations_.max() << ", total " << allocations_.total()
-       << std::endl;
+       << ", max " << allocations_.max() << ", total " << allocations_.total();
   }
 
   for (const std::pair<uint64_t, std::shared_ptr<Packet>>& pair :
        outstanding_packets_) {
-    os << begl << "SUSPENSE: outstanding packet" << std::endl;
+    os << std::endl << begl << "SUSPENSE: outstanding packet" << std::endl;
     os << indent;
     os << begl << "label: " << pair.second->label_ << std::endl;
-    os << begl << "packet: " << pair.second->packet_;
+    os << begl << "packet: " << pair.second->packet_ << std::endl;
     os << begl
        << "payload address: " << AsAddress(pair.second->payload_address_)
        << std::endl;
-    os << begl << "packets outstanding: " << pair.second->packets_outstanding_
-       << std::endl;
+    os << begl << "packets outstanding: " << pair.second->packets_outstanding_;
     os << outdent;
   }
 
   for (const std::pair<uint64_t, Allocation>& pair : outstanding_allocations_) {
-    os << begl << "SUSPENSE: outstanding allocation" << std::endl;
+    os << std::endl << begl << "SUSPENSE: outstanding allocation" << std::endl;
     os << indent;
     os << begl << "index: " << pair.second.index_ << std::endl;
     os << begl << "size: " << pair.second.size_ << std::endl;
-    os << begl << "buffer: " << AsAddress(pair.second.buffer_) << std::endl;
+    os << begl << "buffer: " << AsAddress(pair.second.buffer_);
     os << outdent;
   }
 

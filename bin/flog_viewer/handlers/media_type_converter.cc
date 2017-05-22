@@ -50,8 +50,8 @@ void MediaTypeConverter::Config(media::MediaTypePtr input_type,
 
   terse_out() << entry() << "MediaTypeConverter.Config" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "input_type: " << input_type;
-  terse_out() << begl << "output_type: " << output_type;
+  terse_out() << begl << "input_type: " << input_type << std::endl;
+  terse_out() << begl << "output_type: " << output_type << std::endl;
   terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
               << std::endl;
   terse_out() << begl << "producer_address: " << *AsChannel(producer_address)
@@ -74,13 +74,14 @@ void MediaTypeConverterAccumulator::Print(std::ostream& os) {
   os << "MediaTypeConverter" << std::endl;
   os << indent;
   os << begl << "converter_type: " << converter_type_ << std::endl;
-  os << begl << "input_type: " << input_type_;
-  os << begl << "output_type: " << output_type_;
+  os << begl << "input_type: " << input_type_ << std::endl;
+  os << begl << "output_type: " << output_type_ << std::endl;
 
   if (consumer_channel_) {
     os << begl << "consumer: " << *consumer_channel_ << " ";
     FTL_DCHECK(consumer_channel_->resolved());
     consumer_channel_->PrintAccumulator(os);
+    os << std::endl;
   } else {
     os << begl << "consumer: <none>" << std::endl;
   }
@@ -90,7 +91,7 @@ void MediaTypeConverterAccumulator::Print(std::ostream& os) {
     FTL_DCHECK(producer_channel_->resolved());
     producer_channel_->PrintAccumulator(os);
   } else {
-    os << begl << "producer: <none>" << std::endl;
+    os << begl << "producer: <none>";
   }
 
   Accumulator::Print(os);

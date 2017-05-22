@@ -45,7 +45,7 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
                            uint64_t consumer_address) {
   terse_out() << entry() << "MediaRenderer.Config" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "supported_types: " << supported_types;
+  terse_out() << begl << "supported_types: " << supported_types << std::endl;
   terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
               << std::endl;
   terse_out() << outdent;
@@ -61,7 +61,7 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
 void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
   terse_out() << entry() << "MediaRenderer.SetMediaType" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "type: " << type;
+  terse_out() << begl << "type: " << type << std::endl;
   terse_out() << outdent;
 
   FTL_DCHECK(type);
@@ -85,7 +85,8 @@ void MediaRenderer::ScheduleTimelineTransform(
   terse_out() << entry() << "MediaRenderer.ScheduleTimelineTransform"
               << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform;
+  terse_out() << begl << "timeline_transform: " << timeline_transform
+              << std::endl;
   terse_out() << outdent;
 
   accumulator_->timeline_updates_.Add();
@@ -96,7 +97,8 @@ void MediaRenderer::ApplyTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
   terse_out() << entry() << "MediaRenderer.ApplyTimelineTransform" << std::endl;
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform;
+  terse_out() << begl << "timeline_transform: " << timeline_transform
+              << std::endl;
   terse_out() << outdent;
 
   accumulator_->timeline_updates_.Remove();
@@ -171,17 +173,18 @@ MediaRendererAccumulator::~MediaRendererAccumulator() {}
 void MediaRendererAccumulator::Print(std::ostream& os) {
   os << "MediaRenderer" << std::endl;
   os << indent;
-  os << begl << "supported_types: " << supported_types_;
+  os << begl << "supported_types: " << supported_types_ << std::endl;
 
   if (consumer_channel_) {
     os << begl << "consumer: " << *consumer_channel_ << " ";
     FTL_DCHECK(consumer_channel_->resolved());
     consumer_channel_->PrintAccumulator(os);
+    os << std::endl;
   } else {
     os << begl << "consumer: <none>" << std::endl;
   }
 
-  os << begl << "type: " << type_;
+  os << begl << "type: " << type_ << std::endl;
 
   os << begl << "timeline updates: " << timeline_updates_.count() << std::endl;
 
@@ -206,23 +209,24 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
 
   os << begl << "packet earliness: min " << AsTime(packet_earliness_ns_.min())
      << ", avg " << AsTime(packet_earliness_ns_.average()) << ", max "
-     << AsTime(packet_earliness_ns_.max()) << std::endl;
+     << AsTime(packet_earliness_ns_.max());
 
   if (starved_no_packet_.count() != 0) {
-    os << begl << "STARVED (no packet): " << starved_no_packet_.count()
-       << std::endl;
+    os << std::endl
+       << begl << "STARVED (no packet): " << starved_no_packet_.count();
   }
 
   if (starved_ns_.count() != 0) {
-    os << begl << "STARVED (stale packet): count " << starved_ns_.count()
+    os << std::endl
+       << begl << "STARVED (stale packet): count " << starved_ns_.count()
        << ", staleness min " << AsTime(starved_ns_.min()) << ", avg "
-       << AsTime(starved_ns_.average()) << ", max " << AsTime(starved_ns_.max())
-       << std::endl;
+       << AsTime(starved_ns_.average()) << ", max "
+       << AsTime(starved_ns_.max());
   }
 
   if (missing_packets_.count() != 0) {
-    os << begl << "PACKETS NOT FOUND: " << missing_packets_.count()
-       << std::endl;
+    os << std::endl
+       << begl << "PACKETS NOT FOUND: " << missing_packets_.count();
   }
 
   Accumulator::Print(os);

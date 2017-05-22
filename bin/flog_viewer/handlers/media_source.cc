@@ -16,13 +16,11 @@ namespace handlers {
 std::ostream& operator<<(std::ostream& os,
                          const MediaSourceAccumulator::Stream& value) {
   if (!value) {
-    return os << begl << "NULL STREAM" << std::endl;
-  } else {
-    os << std::endl;
+    return os << begl << "NULL STREAM";
   }
 
-  os << indent;
-  os << begl << "output_type: " << value.output_type_;
+  os << indent << std::endl;
+  os << begl << "output_type: " << value.output_type_ << std::endl;
   os << begl << "converters: " << value.converters_;
   return os << outdent;
 }
@@ -70,8 +68,8 @@ void MediaSource::NewStream(uint32_t index,
   terse_out() << entry() << "MediaSource.NewStream" << std::endl;
   terse_out() << indent;
   terse_out() << begl << "index: " << index << std::endl;
-  terse_out() << begl << "output_type: " << output_type;
-  terse_out() << begl << "converter_koids: " << converter_koids;
+  terse_out() << begl << "output_type: " << output_type << std::endl;
+  terse_out() << begl << "converter_koids: " << converter_koids << std::endl;
   terse_out() << outdent;
 
   while (accumulator_->streams_.size() <= index) {
@@ -98,7 +96,7 @@ MediaSourceAccumulator::~MediaSourceAccumulator() {}
 void MediaSourceAccumulator::Print(std::ostream& os) {
   os << "MediaSource" << std::endl;
   os << indent;
-  os << begl << "demux: " << demux_;
+  os << begl << "demux: " << demux_ << std::endl;
   os << begl << "streams: " << streams_;
 
   Accumulator::Print(os);
