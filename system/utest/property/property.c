@@ -105,9 +105,31 @@ static bool thread_name_test(void)
     END_TEST;
 }
 
+static bool vmo_name_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    ASSERT_EQ(mx_vmo_create(16, 0u, &vmo), NO_ERROR, "");
+    unittest_printf("VMO handle %d\n", vmo);
+
+    // Name should start out empty.
+    char name[MX_MAX_NAME_LEN] = { 'x', '\0' };
+    EXPECT_EQ(mx_object_get_property(vmo, MX_PROP_NAME, name, sizeof(name)),
+              NO_ERROR, "");
+    EXPECT_EQ(strcmp("", name), 0, "");
+
+    // Check the rest.
+    bool success = test_name_property(vmo);
+    if (!success)
+        return false;
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
+RUN_TEST(vmo_name_test);
 END_TEST_CASE(property_tests)
 
 int main(int argc, char **argv)

@@ -25,6 +25,8 @@ public:
     ~VmObjectDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
+    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
+    status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
     mx_status_t Read(user_ptr<void> user_data, size_t length,

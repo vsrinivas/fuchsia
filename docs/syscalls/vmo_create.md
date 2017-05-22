@@ -36,6 +36,12 @@ The following rights will be set on the handle by default:
 
 **MX_RIGHT_MAP** - May be mapped.
 
+**MX_RIGHT_GET_PROPERTY** - May get its properties using
+[object_get_property](object_get_property).
+
+**MX_RIGHT_SET_PROPERTY** - May set its properties using
+[object_set_property](object_set_property).
+
 The *options* field is currently unused and must be set to 0.
 
 ## RETURN VALUE

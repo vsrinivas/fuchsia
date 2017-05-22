@@ -240,6 +240,18 @@ static bool rights_test_map_helper(mx_handle_t vmo, size_t len, uint32_t flags, 
     return true;
 }
 
+// Returns zero on failure.
+static mx_rights_t get_handle_rights(mx_handle_t h) {
+    mx_info_handle_basic_t info;
+    mx_status_t s = mx_object_get_info(h, MX_INFO_HANDLE_BASIC, &info,
+    sizeof(info), nullptr, nullptr);
+    if (s != NO_ERROR) {
+        EXPECT_EQ(s, NO_ERROR, "");  // Poison the test
+        return 0;
+    }
+    return info.rights;
+}
+
 bool vmo_rights_test() {
     BEGIN_TEST;
 
@@ -253,6 +265,19 @@ bool vmo_rights_test() {
     // allocate an object
     status = mx_vmo_create(len, 0, &vmo);
     EXPECT_EQ(NO_ERROR, status, "vm_object_create");
+
+    // Check that the handle has at least the expected rights.
+    // This list should match the list in docs/syscalls/vmo_create.md.
+    static const mx_rights_t kExpectedRights =
+        MX_RIGHT_DUPLICATE |
+        MX_RIGHT_TRANSFER |
+        MX_RIGHT_READ |
+        MX_RIGHT_WRITE |
+        MX_RIGHT_EXECUTE |
+        MX_RIGHT_MAP |
+        MX_RIGHT_GET_PROPERTY |
+        MX_RIGHT_SET_PROPERTY;
+    EXPECT_EQ(kExpectedRights, kExpectedRights & get_handle_rights(vmo), "");
 
     // test that we can read/write it
     status = mx_vmo_read(vmo, buf, 0, 0, &r);
@@ -349,6 +374,15 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
     if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
+
+    // test that we can get/set a property on it
+    const char *set_name = "test vmo";
+    status = mx_object_set_property(vmo, MX_PROP_NAME, set_name, sizeof(set_name));
+    EXPECT_EQ(NO_ERROR, status, "set_property");
+    char get_name[MX_MAX_NAME_LEN];
+    status = mx_object_get_property(vmo, MX_PROP_NAME, get_name, sizeof(get_name));
+    EXPECT_EQ(NO_ERROR, status, "get_property");
+    EXPECT_STR_EQ(set_name, get_name, sizeof(set_name), "vmo name");
 
     // close the handle
     status = mx_handle_close(vmo);

@@ -19,7 +19,14 @@
 #define LOCAL_TRACE 0
 
 constexpr mx_rights_t kDefaultVmoRights =
-    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP;
+    MX_RIGHT_DUPLICATE |
+    MX_RIGHT_TRANSFER |
+    MX_RIGHT_READ |
+    MX_RIGHT_WRITE |
+    MX_RIGHT_EXECUTE |
+    MX_RIGHT_MAP |
+    MX_RIGHT_GET_PROPERTY |
+    MX_RIGHT_SET_PROPERTY;
 
 status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
@@ -42,6 +49,16 @@ VmObjectDispatcher::~VmObjectDispatcher() {
     // Intentionally leave vmo_->user_id() set to our koid even though we're
     // dying and the koid will no longer map to a Dispatcher. koids are never
     // recycled, and it could be a useful breadcrumb.
+}
+
+void VmObjectDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+    canary_.Assert();
+    vmo_->get_name(out_name);
+}
+
+status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
+    canary_.Assert();
+    return vmo_->set_name(name, len);
 }
 
 mx_status_t VmObjectDispatcher::Read(user_ptr<void> user_data,
