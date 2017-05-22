@@ -18,23 +18,17 @@ import (
 
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/merkle"
+	"fuchsia.googlesource.com/pm/testpackage"
 )
 
 func TestRun(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", t.Name())
+	tmpDir, err := testpackage.New()
+	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpDir)
 
-	packageFiles := []string{"a", "b", "dir/c"}
-	sort.Strings(packageFiles)
-
-	for _, f := range packageFiles {
-		if err := os.MkdirAll(filepath.Join(tmpDir, filepath.Dir(f)), os.ModePerm); err != nil {
-			t.Fatal(err)
-		}
-
+	for _, f := range testpackage.Files {
 		fd, err := os.Create(filepath.Join(tmpDir, f))
 		if err != nil {
 			t.Fatal(err)
@@ -68,11 +62,15 @@ func TestRun(t *testing.T) {
 		lines = lines[1:]
 	}
 
-	if len(lines) != len(packageFiles) {
-		t.Fatalf("content lines mismatch: %v\n%v", lines, packageFiles)
+	// meta/package.json is also included
+	if len(lines) != len(testpackage.Files)+1 {
+		t.Fatalf("content lines mismatch: %v\n%v", lines, testpackage.Files)
 	}
 
-	for i, pf := range packageFiles {
+	files := []string{}
+	files = append(files, testpackage.Files...)
+	files = append(files, "meta/package.json")
+	for i, pf := range files {
 		var tree merkle.Tree
 		f, err := os.Open(filepath.Join(tmpDir, pf))
 		if err != nil {

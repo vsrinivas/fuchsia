@@ -28,6 +28,9 @@ func Run(packageDir string, privateKey ed25519.PrivateKey) error {
 		return err
 	}
 
+	// NOTE: cannot use pkg.WalkContents as it is critical that the contents file
+	// is signed. It is also important that we establish a deterministic order for
+	// the signature.
 	metas, err := filepath.Glob(filepath.Join(packageDir, "meta", "*"))
 	if err != nil {
 		return err

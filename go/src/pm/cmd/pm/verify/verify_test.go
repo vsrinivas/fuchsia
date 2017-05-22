@@ -16,31 +16,14 @@ import (
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
+	"fuchsia.googlesource.com/pm/testpackage"
 )
 
 func TestRun(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
+	d, err := testpackage.New()
+	defer os.RemoveAll(d)
 	if err != nil {
 		t.Fatal(err)
-	}
-	defer os.Remove(d)
-
-	packageFiles := []string{"a", "b", "dir/c"}
-	for _, f := range packageFiles {
-		f = filepath.Join(d, f)
-
-		err := os.MkdirAll(filepath.Dir(f), os.ModePerm)
-		if err != nil {
-			t.Fatal(err)
-		}
-		f, err := os.Create(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = f.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	if err := genkey.Run(d); err != nil {
