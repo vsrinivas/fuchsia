@@ -4,16 +4,19 @@
 
 #include "escher/renderer/image.h"
 
-#include "escher/renderer/image_owner.h"
+#include "escher/impl/vulkan_utils.h"
 #include "escher/vk/gpu_mem.h"
 
 namespace escher {
 
-ImageCore::ImageCore(ImageOwner* image_owner,
+const ResourceCoreTypeInfo ImageCore::kTypeInfo = {ResourceCoreType::kImageCore,
+                                                   "ImageCore"};
+
+ImageCore::ImageCore(ResourceCoreManager* image_owner,
                      ImageInfo info,
                      vk::Image image,
                      GpuMemPtr mem)
-    : ResourceCore(image_owner),
+    : ResourceCore(image_owner, kTypeInfo),
       info_(info),
       image_(image),
       mem_(std::move(mem)) {
@@ -36,6 +39,7 @@ ImageCore::ImageCore(ImageOwner* image_owner,
       has_stencil_ = true;
       break;
     default:
+      FTL_DCHECK(false);
       // No depth or stencil component.
       has_depth_ = false;
       has_stencil_ = false;
@@ -55,6 +59,46 @@ ImageCore::~ImageCore() {
 
 Image::Image(std::unique_ptr<ImageCore> core) : Resource2(std::move(core)) {}
 
+Image::Image(ResourceCoreManager* image_owner,
+             ImageInfo info,
+             vk::Image vk_image,
+             GpuMemPtr mem)
+    : Image(std::make_unique<escher::ImageCore>(image_owner,
+                                                info,
+                                                vk_image,
+                                                mem)) {}
+
 Image::~Image() {}
+
+vk::Image Image::CreateVkImage(const vk::Device& device, ImageInfo info) {
+  vk::ImageCreateInfo create_info;
+  create_info.imageType = vk::ImageType::e2D;
+  create_info.format = info.format;
+  create_info.extent = vk::Extent3D{info.width, info.height, 1};
+  create_info.mipLevels = 1;
+  create_info.arrayLayers = 1;
+  switch (info.sample_count) {
+    case 1:
+      create_info.samples = vk::SampleCountFlagBits::e1;
+      break;
+    case 2:
+      create_info.samples = vk::SampleCountFlagBits::e2;
+      break;
+    case 4:
+      create_info.samples = vk::SampleCountFlagBits::e4;
+      break;
+    case 8:
+      create_info.samples = vk::SampleCountFlagBits::e8;
+      break;
+    default:
+      FTL_DCHECK(false);
+  }
+  create_info.tiling = vk::ImageTiling::eOptimal;
+  create_info.usage = info.usage;
+  create_info.sharingMode = vk::SharingMode::eExclusive;
+  create_info.initialLayout = vk::ImageLayout::eUndefined;
+  vk::Image image = ESCHER_CHECKED_VK_RESULT(device.createImage(create_info));
+  return image;
+}
 
 }  // namespace escher

@@ -12,12 +12,15 @@
 
 namespace escher {
 
+const ResourceCoreTypeInfo FramebufferCore::kTypeInfo = {
+    ResourceCoreType::kFramebufferCore, "FramebufferCore"};
+
 FramebufferCore::FramebufferCore(ResourceLifePreserver* life_preserver,
                                  uint32_t width,
                                  uint32_t height,
                                  const std::vector<ImagePtr>& images,
                                  vk::RenderPass render_pass)
-    : ResourceCore(life_preserver) {
+    : ResourceCore(life_preserver, kTypeInfo) {
   vk::Device device = vulkan_context().device;
 
   // For each image, construct a corresponding view.

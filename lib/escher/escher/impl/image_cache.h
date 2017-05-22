@@ -10,7 +10,6 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/renderer/image.h"
-#include "escher/renderer/image_owner.h"
 #include "escher/util/hash.h"
 #include "escher/vk/gpu_mem.h"
 #include "ftl/macros.h"
@@ -24,7 +23,7 @@ class GpuUploader;
 
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
-class ImageCache : public ImageOwner {
+class ImageCache : public ResourceCoreManager {
  public:
   // The allocator is used to allocate memory for newly-created images.  The
   // queue and CommandBufferPool are used to schedule image layout transitions.

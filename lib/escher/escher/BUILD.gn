@@ -117,8 +117,6 @@ static_library("escher") {
     "renderer/framebuffer.h",
     "renderer/image.cc",
     "renderer/image.h",
-    "renderer/image_owner.cc",
-    "renderer/image_owner.h",
     "renderer/paper_renderer.cc",
     "renderer/paper_renderer.h",
     "renderer/renderer.cc",

@@ -11,6 +11,30 @@
 
 namespace escher {
 
+// All subclasses of ResourceCore are represented here.
+enum ResourceCoreType {
+  kImageCore = 1,
+  kTextureCore = 1 << 1,
+  kFramebufferCore = 1 << 2,
+};
+
+// Bitwise combination of ResourceCoreTypes.  A subclass hierarchy can be
+// represented: for each class, a bit is set for that class and all of its
+// parent classes. Currently we don't have any subclasses, however.
+typedef uint64_t ResourceCoreTypeFlags;
+
+// Static metadata about a ResourceCore subclass.
+struct ResourceCoreTypeInfo {
+  ResourceCoreTypeFlags flags;
+  const char* name;
+
+  // Return true if this type is or inherits from |base_type|, and false
+  // otherwise.
+  bool IsKindOf(const ResourceCoreTypeInfo& base_type) const {
+    return base_type.flags == (flags & base_type.flags);
+  }
+};
+
 // Defined below.
 class ResourceCore;
 
@@ -50,9 +74,15 @@ class ResourceCoreManager {
 // Not thread-safe.
 class ResourceCore {
  public:
-  explicit ResourceCore(ResourceCoreManager* manager);
+  static const ResourceCoreTypeInfo kTypeInfo;
+
+  explicit ResourceCore(ResourceCoreManager* manager,
+                        const ResourceCoreTypeInfo& type_info);
   virtual ~ResourceCore();
 
+  const ResourceCoreTypeInfo& type_info() const { return type_info_; }
+  ResourceCoreTypeFlags type_flags() const { return type_info_.flags; }
+  const char* type_name() const { return type_info_.name; }
   uint64_t sequence_number() const { return sequence_number_; }
 
   const VulkanContext& vulkan_context() const {
@@ -68,6 +98,7 @@ class ResourceCore {
 
   ResourceCoreManager* manager_;
   uint64_t sequence_number_ = 0;
+  const ResourceCoreTypeInfo& type_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResourceCore);
 };

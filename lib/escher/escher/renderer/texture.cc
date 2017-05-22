@@ -11,12 +11,15 @@
 
 namespace escher {
 
+const ResourceCoreTypeInfo TextureCore::kTypeInfo = {
+    ResourceCoreType::kTextureCore, "TextureCore"};
+
 TextureCore::TextureCore(ResourceLifePreserver* life_preserver,
                          const ImagePtr& image,
                          vk::Filter filter,
                          vk::ImageAspectFlags aspect_mask,
                          bool use_unnormalized_coordinates)
-    : ResourceCore(life_preserver) {
+    : ResourceCore(life_preserver, kTypeInfo) {
   vk::Device device = vulkan_context().device;
 
   vk::ImageViewCreateInfo view_info;

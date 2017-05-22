@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
-#include "escher/renderer/image_owner.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_swapchain.h"
 
@@ -74,10 +73,9 @@ class DemoHarness {
  private:
   // For wrapping swapchain images in VkImage.
   // TODO: Find a nicer solution.
-  class SwapchainImageOwner : public escher::ImageOwner {
+  class SwapchainImageOwner : public escher::ResourceCoreManager {
    public:
     explicit SwapchainImageOwner(const escher::VulkanContext& context);
-    using escher::ImageOwner::CreateImage;
 
    private:
     void ReceiveResourceCore(

@@ -413,9 +413,8 @@ void DemoHarness::CreateSwapchain(const WindowParams& window_params) {
       image_info.width = swapchain_extent.width;
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
-      escher_images.push_back(swapchain_image_owner_->CreateImage(
-          std::make_unique<escher::ImageCore>(swapchain_image_owner_.get(),
-                                              image_info, im, nullptr)));
+      escher_images.push_back(ftl::MakeRefCounted<escher::Image>(
+          swapchain_image_owner_.get(), image_info, im, nullptr));
     }
     swapchain_ = escher::VulkanSwapchain(
         swapchain, escher_images, swapchain_extent.width,
@@ -525,7 +524,7 @@ escher::VulkanContext DemoHarness::GetVulkanContext() {
 
 DemoHarness::SwapchainImageOwner::SwapchainImageOwner(
     const escher::VulkanContext& context)
-    : escher::ImageOwner(context) {}
+    : escher::ResourceCoreManager(context) {}
 
 void DemoHarness::SwapchainImageOwner::ReceiveResourceCore(
     std::unique_ptr<escher::ResourceCore> core) {

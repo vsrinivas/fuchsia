@@ -36,7 +36,13 @@ class ImageOwner;
 
 class ImageCore : public ResourceCore {
  public:
-  ImageCore(ImageOwner* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
+  static const ResourceCoreTypeInfo kTypeInfo;
+
+  ImageCore(ResourceCoreManager* image_owner,
+            ImageInfo info,
+            vk::Image,
+            GpuMemPtr mem);
+
   ~ImageCore() override;
 
   const ImageInfo& info() const { return info_; }
@@ -61,6 +67,18 @@ class Image : public Resource2 {
   // Returns image_ and mem_ to the owner.
   ~Image() override;
 
+  Image(std::unique_ptr<ImageCore> core);
+
+  Image(ResourceCoreManager* image_owner,
+        ImageInfo info,
+        vk::Image,
+        GpuMemPtr mem);
+
+  // Helper function that creates a VkImage given the parameters in ImageInfo.
+  // This does not bind the the VkImage to memory; the caller must do that
+  // separately after calling this function.
+  static vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
+
   vk::Image get() const { return core()->image(); }
   vk::Format format() const { return core()->format(); }
   uint32_t width() const { return core()->width(); }
@@ -70,6 +88,7 @@ class Image : public Resource2 {
   bool has_stencil() const { return core()->has_stencil(); }
 
   const ImageCore* core() const {
+    FTL_CHECK(Resource2::core()->type_info().IsKindOf(ImageCore::kTypeInfo));
     return static_cast<const ImageCore*>(Resource2::core());
   }
 
@@ -79,10 +98,6 @@ class Image : public Resource2 {
 
  private:
   void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override {}
-
-  // Only subclasses of ImageOwner are allowed to instantiate new Images.
-  friend class ImageOwner;
-  Image(std::unique_ptr<ImageCore> core);
 
   SemaphorePtr wait_semaphore_;
 

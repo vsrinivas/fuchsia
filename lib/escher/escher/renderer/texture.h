@@ -11,6 +11,8 @@ namespace escher {
 
 class TextureCore : public ResourceCore {
  public:
+  static const ResourceCoreTypeInfo kTypeInfo;
+
   TextureCore(ResourceLifePreserver* life_preserver,
               const ImagePtr& image,
               vk::Filter filter,
@@ -47,6 +49,7 @@ class Texture : public Resource2 {
   uint32_t height() const { return height_; }
 
   const TextureCore* core() const {
+    FTL_CHECK(Resource2::core()->type_info().IsKindOf(TextureCore::kTypeInfo));
     return static_cast<const TextureCore*>(Resource2::core());
   }
 

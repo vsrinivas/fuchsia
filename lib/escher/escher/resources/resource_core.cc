@@ -6,7 +6,11 @@
 
 namespace escher {
 
-ResourceCore::ResourceCore(ResourceCoreManager* manager) : manager_(manager) {
+const ResourceCoreTypeInfo ResourceCore::kTypeInfo = {0, "ResourceCore"};
+
+ResourceCore::ResourceCore(ResourceCoreManager* manager,
+                           const ResourceCoreTypeInfo& type_info)
+    : manager_(manager), type_info_(type_info) {
   FTL_DCHECK(manager_);
   manager_->IncrementResourceCount();
 }

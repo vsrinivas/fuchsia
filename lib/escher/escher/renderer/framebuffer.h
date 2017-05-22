@@ -13,6 +13,8 @@ namespace escher {
 
 class FramebufferCore : public ResourceCore {
  public:
+  static const ResourceCoreTypeInfo kTypeInfo;
+
   FramebufferCore(ResourceLifePreserver* life_preserver,
                   uint32_t width,
                   uint32_t height,
@@ -47,6 +49,8 @@ class Framebuffer : public Resource2 {
   const ImagePtr& get_image(uint32_t index) const { return images_.at(index); }
 
   const FramebufferCore* core() const {
+    FTL_DCHECK(
+        Resource2::core()->type_info().IsKindOf(FramebufferCore::kTypeInfo));
     return static_cast<const FramebufferCore*>(Resource2::core());
   }
 
