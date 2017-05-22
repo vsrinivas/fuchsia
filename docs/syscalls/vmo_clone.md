@@ -25,7 +25,7 @@ size.
 
 Valid flags:
 
-- *MX_CLONE_COPY_ON_WRITE* - Create a copy-on-write clone. The cloned vmo will
+- *MX_VMO_CLONE_COPY_ON_WRITE* - Create a copy-on-write clone. The cloned vmo will
 behave the same way the parent does, except that any write operation on the clone
 will bring in a copy of the page at the offset the write occurred. The new page in
 the cloned vmo is now a copy and may diverge from the parent. Any reads from
@@ -42,7 +42,7 @@ By default the rights of the cloned handled will be the same as the
 original with a few exceptions. See [vmo_create](vmo_create.md) for a
 discussion of the details of each right.
 
-If *options* is *MX_CLONE_COPY_ON_WRITE* the following rights are added:
+If *options* is *MX_VMO_CLONE_COPY_ON_WRITE* the following rights are added:
 
 - **MX_RIGHT_WRITE**
 
