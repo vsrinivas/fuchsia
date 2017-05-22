@@ -79,15 +79,12 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-mx::process CreateProcess(
-    const mx::job& job,
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfoPtr launch_info,
-    mx::channel service_root,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment) {
+mx::process CreateProcess(const mx::job& job,
+                          ApplicationPackagePtr package,
+                          ApplicationLaunchInfoPtr launch_info,
+                          mx::channel service_root) {
   fidl::Map<uint32_t, mx::handle> startup_handles =
       std::move(launch_info->startup_handles);
-  startup_handles.insert(PA_APP_ENVIRONMENT, environment.PassHandle());
 
   if (service_root)
     startup_handles.insert(PA_SERVICE_ROOT, std::move(service_root));
@@ -136,12 +133,10 @@ mx::process CreateProcess(
   return mx::process(proc);
 }
 
-mx::process CreateSandboxedProcess(
-    const mx::job& job,
-    mx::vmo data,
-    ApplicationLaunchInfoPtr launch_info,
-    mxio_flat_namespace_t* flat,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment) {
+mx::process CreateSandboxedProcess(const mx::job& job,
+                                   mx::vmo data,
+                                   ApplicationLaunchInfoPtr launch_info,
+                                   mxio_flat_namespace_t* flat) {
   if (!data)
     return mx::process();
 
@@ -164,9 +159,6 @@ mx::process CreateSandboxedProcess(
     ids.push_back(flat->type[i]);
     handles.push_back(flat->handle[i]);
   }
-
-  ids.push_back(PA_APP_ENVIRONMENT);
-  handles.push_back(environment.PassHandle().release());
 
   if (launch_info->services) {
     ids.push_back(PA_APP_SERVICES);
@@ -240,6 +232,16 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   app::ServiceProviderPtr services_backend;
   host_->GetApplicationEnvironmentServices(services_backend.NewRequest());
   services_.set_backend(std::move(services_backend));
+
+  services_.AddService<ApplicationEnvironment>(
+      [this](fidl::InterfaceRequest<ApplicationEnvironment> request) {
+        environment_bindings_.AddBinding(this, std::move(request));
+      });
+
+  services_.AddService<ApplicationLauncher>(
+      [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
+        launcher_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() {
@@ -372,16 +374,14 @@ void ApplicationEnvironmentImpl::CreateApplication(
           LaunchType type = Classify(package->data, &runner);
           switch (type) {
             case LaunchType::kProcess:
-              CreateApplicationWithProcess(
-                  std::move(package), std::move(launch_info),
-                  environment_bindings_.AddBinding(this),
-                  std::move(controller));
+              CreateApplicationWithProcess(std::move(package),
+                                           std::move(launch_info),
+                                           std::move(controller));
               break;
             case LaunchType::kArchive:
-              CreateApplicationFromArchive(
-                  std::move(package), std::move(launch_info),
-                  environment_bindings_.AddBinding(this),
-                  std::move(controller));
+              CreateApplicationFromArchive(std::move(package),
+                                           std::move(launch_info),
+                                           std::move(controller));
               break;
             case LaunchType::kRunner:
               CreateApplicationWithRunner(std::move(package),
@@ -433,12 +433,11 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationController> controller) {
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process =
       CreateProcess(job_, std::move(package), std::move(launch_info),
-                    services_.OpenAsDirectory(), std::move(environment));
+                    services_.OpenAsDirectory());
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url);
@@ -450,7 +449,6 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
 void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationController> controller) {
   auto file_system =
       std::make_unique<archive::FileSystem>(std::move(package->data));
@@ -473,8 +471,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateSandboxedProcess(
-      job_, file_system->GetFileAsVMO(kAppPath), std::move(launch_info), &flat,
-      std::move(environment));
+      job_, file_system->GetFileAsVMO(kAppPath), std::move(launch_info), &flat);
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(

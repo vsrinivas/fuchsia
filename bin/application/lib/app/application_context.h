@@ -21,9 +21,8 @@ namespace app {
 class ApplicationContext {
  public:
   // The constructor is normally called by CreateFromStartupInfo().
-  ApplicationContext(fidl::InterfaceHandle<ApplicationEnvironment> environment,
-                     fidl::InterfaceRequest<ServiceProvider> outgoing_services,
-                     mx::channel service_root);
+  ApplicationContext(mx::channel service_root,
+                     fidl::InterfaceRequest<ServiceProvider> outgoing_services);
 
   ~ApplicationContext();
 
@@ -68,8 +67,8 @@ class ApplicationContext {
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
     fidl::InterfacePtr<Interface> interface_ptr;
-    ConnectToEnvironmentService(
-        interface_name, interface_ptr.NewRequest().PassChannel());
+    ConnectToEnvironmentService(interface_name,
+                                interface_ptr.NewRequest().PassChannel());
     return interface_ptr;
   }
 
@@ -103,6 +102,6 @@ namespace modular {
 // modular::ApplicationContext to app::ApplicationContext. New code should use
 // the app:: name. TODO(jamesr): Remove once users are transitioned over.
 using app::ApplicationContext;
-}
+}  // namespace modular
 
 #endif  // APPLICATION_LIB_APP_APPLICATION_CONTEXT_H_

@@ -15,8 +15,7 @@
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : directory_(
-          mxtl::AdoptRef(new svcfs::VnodeProviderDir(&dispatcher_))) {
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeProviderDir(&dispatcher_))) {
   directory_->SetServiceProvider(this);
 }
 
@@ -27,6 +26,11 @@ ServiceProviderBridge::~ServiceProviderBridge() {
 void ServiceProviderBridge::AddBinding(
     fidl::InterfaceRequest<app::ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
+}
+
+void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
+                                              const std::string& service_name) {
+  name_to_service_connector_[service_name] = std::move(connector);
 }
 
 bool ServiceProviderBridge::ServeDirectory(mx::channel channel) {
@@ -68,12 +72,16 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
 void ServiceProviderBridge::Connect(const char* name,
                                     size_t len,
                                     mx::channel channel) {
-  backend_->ConnectToService(fidl::String(name, len), std::move(channel));
+  ConnectToService(fidl::String(name, len), std::move(channel));
 }
 
 void ServiceProviderBridge::ConnectToService(const fidl::String& service_name,
                                              mx::channel channel) {
-  backend_->ConnectToService(std::move(service_name), std::move(channel));
+  auto it = name_to_service_connector_.find(service_name.get());
+  if (it != name_to_service_connector_.end())
+    it->second(std::move(channel));
+  else
+    backend_->ConnectToService(std::move(service_name), std::move(channel));
 }
 
 }  // namespace app

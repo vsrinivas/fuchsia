@@ -89,12 +89,10 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   void CreateApplicationWithProcess(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceHandle<ApplicationEnvironment> environment,
       fidl::InterfaceRequest<ApplicationController> controller);
   void CreateApplicationFromArchive(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceHandle<ApplicationEnvironment> environment,
       fidl::InterfaceRequest<ApplicationController> controller);
 
   fidl::BindingSet<ApplicationEnvironment> environment_bindings_;

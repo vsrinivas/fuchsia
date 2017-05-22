@@ -33,6 +33,25 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
 
+  using ServiceConnector = std::function<void(mx::channel)>;
+
+  template <typename Interface>
+  using InterfaceRequestHandler =
+      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+
+  void AddServiceForName(ServiceConnector connector,
+                         const std::string& service_name);
+
+  template <typename Interface>
+  void AddService(InterfaceRequestHandler<Interface> handler,
+                  const std::string& service_name = Interface::Name_) {
+    AddServiceForName(
+        [handler](mx::channel channel) {
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+        },
+        service_name);
+  }
+
   void set_backend(app::ServiceProviderPtr backend) {
     backend_ = std::move(backend);
   }
@@ -54,6 +73,8 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   mtl::VFSDispatcher dispatcher_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
   mxtl::RefPtr<svcfs::VnodeProviderDir> directory_;
+
+  std::map<std::string, ServiceConnector> name_to_service_connector_;
   app::ServiceProviderPtr backend_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
