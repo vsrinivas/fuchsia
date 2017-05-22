@@ -21,7 +21,19 @@ typedef struct dpc {
     void *arg;
 } dpc_t;
 
+#define DPC_INITIAL_VALUE \
+{ \
+    .node = LIST_INITIAL_CLEARED_VALUE, \
+    .func = 0, \
+    .arg = 0, \
+}
+
+/* queue an already filled out, optionally reschedule immediately to run the dpc thread */
 status_t dpc_queue(dpc_t *dpc, bool reschedule);
+
+/* queue a dpc, but must be holding the thread lock */
+/* does not force a reschedule */
+status_t dpc_queue_thread_locked(dpc_t *dpc);
 
 __END_CDECLS
 

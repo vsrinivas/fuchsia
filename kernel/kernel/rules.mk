@@ -11,6 +11,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS := \
 	kernel/lib/debug \
+	kernel/lib/dpc \
 	kernel/lib/heap \
 	kernel/lib/libc \
 	kernel/lib/mxtl \

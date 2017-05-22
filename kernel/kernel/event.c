@@ -114,31 +114,17 @@ out:
     return ret;
 }
 
-/**
- * @brief  Signal an event
- *
- * Signals an event.  If EVENT_FLAG_AUTOUNSIGNAL is set in the event
- * object's flags, only one waiting thread is allowed to proceed.  Otherwise,
- * all waiting threads are allowed to proceed until such time as
- * event_unsignal() is called.
- *
- * @param e           Event object
- * @param reschedule  If true, waiting thread(s) are executed immediately,
- *                    and the current thread resumes only after the
- *                    waiting threads have been satisfied. If false,
- *                    waiting threads are placed at the head of the run
- *                    queue.
- * @param wait_result What status event_wait_deadline will return to the
- *                    thread or threads that are woken up.
- *
- * @return  Returns the number of threads that have been unblocked.
- */
-int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
+static int event_signal_internal(event_t *e, bool reschedule, status_t wait_result, bool thread_lock_held)
 {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 
-    THREAD_LOCK(state);
+    // conditionally acquire/release the thread lock
+    // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
+    // the state variable needs to exit in either path.
+    spin_lock_saved_state_t state = 0;
+    if (!thread_lock_held)
+        spin_lock_irqsave(&thread_lock, state);
 
     int wake_count = 0;
 
@@ -160,9 +146,35 @@ int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
         }
     }
 
-    THREAD_UNLOCK(state);
+    // conditionally THREAD_UNLOCK
+    if (!thread_lock_held)
+        spin_unlock_irqrestore(&thread_lock, state);
 
     return wake_count;
+}
+
+/**
+ * @brief  Signal an event
+ *
+ * Signals an event.  If EVENT_FLAG_AUTOUNSIGNAL is set in the event
+ * object's flags, only one waiting thread is allowed to proceed.  Otherwise,
+ * all waiting threads are allowed to proceed until such time as
+ * event_unsignal() is called.
+ *
+ * @param e           Event object
+ * @param reschedule  If true, waiting thread(s) are executed immediately,
+ *                    and the current thread resumes only after the
+ *                    waiting threads have been satisfied. If false,
+ *                    waiting threads are placed at the head of the run
+ *                    queue.
+ * @param wait_result What status event_wait_deadline will return to the
+ *                    thread or threads that are woken up.
+ *
+ * @return  Returns the number of threads that have been unblocked.
+ */
+int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
+{
+    return event_signal_internal(e, reschedule, wait_result, false);
 }
 
 /**
@@ -184,7 +196,16 @@ int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
  */
 int event_signal(event_t *e, bool reschedule)
 {
-    return event_signal_etc(e, reschedule, NO_ERROR);
+    return event_signal_internal(e, reschedule, NO_ERROR, false);
+}
+
+/* same as above, but the thread lock must already be held */
+int event_signal_thread_locked(event_t *e)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    return event_signal_internal(e, false, NO_ERROR, true);
 }
 
 /**

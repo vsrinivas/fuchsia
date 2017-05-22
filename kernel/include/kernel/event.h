@@ -64,9 +64,10 @@ static inline status_t event_wait(event_t *e) { return event_wait_deadline(e, IN
 
 int event_signal_etc(event_t *, bool reschedule, status_t result);
 int event_signal(event_t *, bool reschedule);
+int event_signal_thread_locked(event_t *);
 status_t event_unsignal(event_t *);
 
-static inline bool event_initialized(event_t *e) { return e->magic == EVENT_MAGIC; }
+static inline bool event_initialized(const event_t *e) { return e->magic == EVENT_MAGIC; }
 
 static inline bool event_signaled(const event_t *e) { return e->signaled; }
 

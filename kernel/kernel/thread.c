@@ -30,6 +30,7 @@
 #include <kernel/vm.h>
 #include <platform.h>
 #include <target.h>
+#include <lib/dpc.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 
@@ -225,6 +226,23 @@ thread_t *thread_create(const char *name, thread_start_routine entry, void *arg,
                              NULL, NULL, stack_size, NULL);
 }
 
+static void free_thread_resources(thread_t *t)
+{
+    /* free its stack and the thread structure itself */
+    if (t->flags & THREAD_FLAG_FREE_STACK) {
+        if (t->stack)
+            free(t->stack);
+#if __has_feature(safe_stack)
+        if (t->unsafe_stack)
+            free(t->unsafe_stack);
+#endif
+    }
+
+    t->magic = 0;
+    if (t->flags & THREAD_FLAG_FREE_STRUCT)
+        free(t);
+}
+
 /**
  * @brief Flag a thread as real time
  *
@@ -391,16 +409,7 @@ status_t thread_join(thread_t *t, int *retcode, lk_time_t deadline)
 
     THREAD_UNLOCK(state);
 
-    /* free its stack and the thread structure itself */
-    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack) {
-        free(t->stack);
-#if __has_feature(safe_stack)
-        free(t->unsafe_stack);
-#endif
-    }
-
-    if (t->flags & THREAD_FLAG_FREE_STRUCT)
-        free(t);
+    free_thread_resources(t);
 
     return NO_ERROR;
 }
@@ -427,8 +436,34 @@ status_t thread_detach(thread_t *t)
     }
 }
 
+/* called back in the DPC worker thread to free the stack and/or the thread structure
+ * itself for a thread that is exiting on its own.
+ */
+static void thread_free_dpc(struct dpc *dpc)
+{
+    thread_t *t = (thread_t *)dpc->arg;
+
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+    DEBUG_ASSERT(t->state == THREAD_DEATH);
+
+    /* grab and release the thread lock, which effectively serializes us with
+     * the thread that is queuing itself for destruction.
+     */
+    THREAD_LOCK(state);
+    CF;
+    THREAD_UNLOCK(state);
+
+    free_thread_resources(t);
+}
+
 __NO_RETURN static void thread_exit_locked(thread_t *current_thread, int retcode)
 {
+    /* create a dpc on the stack to queue up a free */
+    /* must be put at top scope in this function to force the compiler to keep it from
+     * reusing the stack before the function exits
+     */
+    dpc_t free_dpc;
+
     /* enter the dead state */
     current_thread->state = THREAD_DEATH;
     current_thread->retcode = retcode;
@@ -438,22 +473,15 @@ __NO_RETURN static void thread_exit_locked(thread_t *current_thread, int retcode
         /* remove it from the master thread list */
         list_delete(&current_thread->thread_list_node);
 
-        /* clear the structure's magic */
-        current_thread->magic = 0;
-
-        /* free its stack and the thread structure itself */
-        if (current_thread->flags & THREAD_FLAG_FREE_STACK && current_thread->stack) {
-            heap_delayed_free(current_thread->stack);
-#if __has_feature(safe_stack)
-            heap_delayed_free(current_thread->unsafe_stack);
-#endif
-
-            /* make sure its not going to get a bounds check performed on the half-freed stack */
-            current_thread->flags &= ~THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK;
+        /* if we have to do any freeing of either the stack or the thread structure, queue
+         * a dpc to do the cleanup
+         */
+        if ((current_thread->flags & THREAD_FLAG_FREE_STACK && current_thread->stack) ||
+            current_thread->flags & THREAD_FLAG_FREE_STRUCT) {
+            free_dpc.func = thread_free_dpc;
+            free_dpc.arg = (void *)current_thread;
+            dpc_queue_thread_locked(&free_dpc);
         }
-
-        if (current_thread->flags & THREAD_FLAG_FREE_STRUCT)
-            heap_delayed_free(current_thread);
     } else {
         /* signal if anyone is waiting */
         wait_queue_wake_all(&current_thread->retcode_wait_queue, false, 0);
@@ -486,15 +514,7 @@ void thread_forget(thread_t *t)
 
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    if (t->flags & THREAD_FLAG_FREE_STACK && t->stack) {
-        free(t->stack);
-#if __has_feature(safe_stack)
-        free(t->unsafe_stack);
-#endif
-    }
-
-    if (t->flags & THREAD_FLAG_FREE_STRUCT)
-        free(t);
+    free_thread_resources(t);
 }
 
 /**
