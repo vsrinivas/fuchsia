@@ -13,6 +13,10 @@
             "bootfs_path": "apps/capybara_user_shell"
         },
         {
+            "binary": "gen/apps/sysui/kernel_panic/kernel_panic.flx",
+            "bootfs_path": "apps/kernel_panic"
+        },
+        {
             "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
             "bootfs_path": "apps/userpicker_device_shell"
         },
