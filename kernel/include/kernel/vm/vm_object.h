@@ -94,6 +94,17 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
+    // Returns a user ID associated with this VMO, or zero.
+    // Typically used to hold a magenta koid for Dispatcher-wrapped VMOs.
+    uint64_t user_id() const;
+
+    // Returns the parent's user_id() if this VMO has a parent,
+    // otherwise returns zero.
+    uint64_t parent_user_id() const;
+
+    // Sets the value returned by |user_id()|. May only be called once.
+    void set_user_id(uint64_t user_id);
+
     virtual void Dump(uint depth, bool verbose) = 0;
 
     // cache maintainence operations.
@@ -192,4 +203,6 @@ protected:
     // lengths of corresponding lists
     uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;
     uint32_t children_list_len_ TA_GUARDED(lock_) = 0;
+
+    uint64_t user_id_ TA_GUARDED(lock_) = 0;
 };

@@ -29,6 +29,7 @@ status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
     if (!ac.check())
         return ERR_NO_MEMORY;
 
+    disp->vmo()->set_user_id(disp->get_koid());
     *rights = kDefaultVmoRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return NO_ERROR;
@@ -37,7 +38,11 @@ status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
 VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
     : vmo_(vmo), state_tracker_(0u) {}
 
-VmObjectDispatcher::~VmObjectDispatcher() {}
+VmObjectDispatcher::~VmObjectDispatcher() {
+    // Intentionally leave vmo_->user_id() set to our koid even though we're
+    // dying and the koid will no longer map to a Dispatcher. koids are never
+    // recycled, and it could be a useful breadcrumb.
+}
 
 mx_status_t VmObjectDispatcher::Read(user_ptr<void> user_data,
                                      size_t length,

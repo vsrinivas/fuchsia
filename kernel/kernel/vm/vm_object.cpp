@@ -52,6 +52,34 @@ VmObject::~VmObject() {
     DEBUG_ASSERT(children_list_.is_empty());
 }
 
+void VmObject::set_user_id(uint64_t user_id) {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    DEBUG_ASSERT(user_id_ == 0);
+    user_id_ = user_id;
+}
+
+uint64_t VmObject::user_id() const {
+    canary_.Assert();
+    AutoLock a(&lock_);
+    return user_id_;
+}
+
+uint64_t VmObject::parent_user_id() const {
+    canary_.Assert();
+    // Don't hold both our lock and our parent's lock at the same time, because
+    // it's probably the same lock.
+    mxtl::RefPtr<VmObject> parent;
+    {
+        AutoLock a(&lock_);
+        if (parent_ == nullptr) {
+            return 0u;
+        }
+        parent = parent_;
+    }
+    return parent->user_id();
+}
+
 bool VmObject::is_cow_clone() const {
     canary_.Assert();
     AutoLock a(&lock_);
