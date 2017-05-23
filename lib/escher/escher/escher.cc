@@ -9,6 +9,7 @@
 #include "escher/impl/mesh_manager.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"
+#include "escher/resources/resource_life_preserver.h"
 #include "escher/util/cplusplus.h"
 #include "escher/util/image_utils.h"
 #include "escher/vk/gpu_allocator.h"
@@ -62,6 +63,18 @@ uint64_t Escher::GetNumGpuBytesAllocated() {
 
 const VulkanContext& Escher::vulkan_context() {
   return impl_->vulkan_context();
+}
+
+ResourceLifePreserver* Escher::resource_life_preserver() {
+  return impl_->resource_life_preserver();
+}
+
+GpuAllocator* Escher::gpu_allocator() {
+  return impl_->gpu_allocator();
+}
+
+impl::GpuUploader* Escher::gpu_uploader() {
+  return impl_->gpu_uploader();
 }
 
 }  // namespace escher

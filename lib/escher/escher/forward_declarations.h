@@ -54,6 +54,7 @@ namespace impl {
 class CommandBuffer;
 class CommandBufferPool;
 class EscherImpl;
+class GpuUploader;
 class ImageCache;
 class MeshImpl;
 class MeshManager;
