@@ -39,9 +39,7 @@ namespace merkle {
 //
 // If |s| is NO_ERROR, the |data| between |offset| and |offset + length| is the
 // same as when "Create" was called. If it is ERR_IO_DATA_INTEGRITY, either the
-// data, tree, or root digest have been altered.  |data_failures| and
-// |tree_failures| can be used in those cases to determine the offsets with
-// incorrect contents.
+// data, tree, or root digest have been altered.
 class Tree final {
 public:
     // This struct is simply used to associate an offset and length when
@@ -55,7 +53,7 @@ public:
     // TODO(aarongreen): Tune this to optimize performance.
     static constexpr size_t kNodeSize = 8192;
 
-    Tree() : data_len_(0), level_(1), offset_(0), num_failures_(0) {}
+    Tree() : data_len_(0), level_(1), offset_(0) {}
     ~Tree();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Tree);
 
@@ -64,18 +62,6 @@ public:
     // Verify with the same |data_len|, |offset|, and |length|.  This can be
     // used to prefetch that data if so desired.
     const mxtl::Array<Range>& ranges() const { return ranges_; }
-
-    // After a call to Verify fails with ERR_IO_DATA_INTEGRITY, these will
-    // return the offsets in the data and tree, respectively, that failed to
-    // match their parent digests.  The granularity is still |kNodeSize|,
-    // meaning for each offset returned the error(s) are in [offset, min(offset+
-    // kNodeSize, len)), where len is |data_len| or |tree_len| as appropriate.
-    const mxtl::Array<uint64_t>& data_failures() const {
-        return data_failures_;
-    }
-    const mxtl::Array<uint64_t>& tree_failures() const {
-        return tree_failures_;
-    }
 
     // Returns the minimum size needed to hold a Merkle tree for the given
     // |data_len|. The tree consists of all the nodes containing the digests of
@@ -135,14 +121,6 @@ private:
     // tree and writes the digests to |tree|.
     mx_status_t HashData(const void* data, size_t length, void* tree);
 
-    // This method adds the given offset |off| to the appropriate list of
-    // failures.
-    void AddFailure();
-
-    // The method cleans up interim memory used in |Verify| and returns the
-    // overall result.
-    mx_status_t VerifyFinal();
-
     // These fields control the overall shape of the tree and its serialization.
     size_t data_len_;
     mxtl::Array<uint64_t> offsets_;
@@ -155,11 +133,6 @@ private:
 
     // This field is used as working space when calculating digests.
     Digest digest_;
-
-    // These fields are for checking and tracking bad digests.
-    size_t num_failures_;
-    mxtl::Array<uint64_t> data_failures_;
-    mxtl::Array<uint64_t> tree_failures_;
 };
 
 } // namespace merkle

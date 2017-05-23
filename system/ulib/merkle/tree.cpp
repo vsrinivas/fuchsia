@@ -30,7 +30,6 @@ uint32_t GetNodeLength(uint64_t offset, uint64_t data_len) {
 
 constexpr size_t Tree::kNodeSize;
 const size_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
-const size_t kMaxFailures = kDigestsPerNode;
 
 Tree::~Tree() {}
 
@@ -176,9 +175,6 @@ mx_status_t Tree::SetRanges(size_t data_len, uint64_t offset, size_t length) {
 mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
                          size_t tree_len, uint64_t offset, size_t length,
                          const Digest& digest) {
-    num_failures_ = 0;
-    data_failures_.reset();
-    tree_failures_.reset();
     if ((!data && data_len != 0) || (!tree && tree_len != 0)) {
         return ERR_INVALID_ARGS;
     }
@@ -195,13 +191,13 @@ mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
     offset_ = level_ == 0 ? 0 : offsets_[level_ - 1];
     HashNode(level_ == 0 ? data : tree);
     if (digest != digest_) {
-        AddFailure();
+        return ERR_IO_DATA_INTEGRITY;
     }
     // Check the Merkle tree.
     const uint8_t* hashes = static_cast<const uint8_t*>(tree);
     uint64_t hash_offset = 0;
     size_t finish = 0;
-    while (level_ != 0 && num_failures_ == 0) {
+    while (level_ != 0) {
         --level_;
         if (level_ == 0) {
             offset_ = offset - (offset % kNodeSize);
@@ -217,12 +213,12 @@ mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
         while (offset_ < finish) {
             HashNode(level_ == 0 ? data : tree);
             if (digest_ != hashes + hash_offset) {
-                AddFailure();
+                return ERR_IO_DATA_INTEGRITY;
             }
             hash_offset += Digest::kLength;
         }
     }
-    return VerifyFinal();
+    return NO_ERROR;
 }
 
 // Private methods
@@ -327,44 +323,6 @@ mx_status_t Tree::HashData(const void* data, size_t length, void* tree) {
         hashes += Digest::kLength;
     }
     return NO_ERROR;
-}
-
-void Tree::AddFailure() {
-    mxtl::Array<uint64_t>* failures =
-        (level_ == 0 ? &data_failures_ : &tree_failures_);
-    if (num_failures_ == 0) {
-        AllocChecker ac;
-        auto raw = new (&ac) uint64_t[kMaxFailures];
-        if (ac.check()) {
-            failures->reset(raw, kMaxFailures);
-        }
-    }
-    if (num_failures_ < failures->size()) {
-        (*failures)[num_failures_] =
-            mxtl::roundup(offset_, kNodeSize) - kNodeSize;
-    }
-    ++num_failures_;
-}
-
-mx_status_t Tree::VerifyFinal() {
-    if (num_failures_ == 0) {
-        return NO_ERROR;
-    }
-    mxtl::Array<uint64_t>* failures = nullptr;
-    if (tree_failures_.size() == 0) {
-        failures = &data_failures_;
-    } else if (data_failures_.size() == 0) {
-        failures = &tree_failures_;
-    } else {
-        return ERR_INTERNAL;
-    }
-    AllocChecker ac;
-    auto raw = new (&ac) uint64_t[num_failures_];
-    if (ac.check()) {
-        memcpy(raw, failures->get(), num_failures_ * sizeof(uint64_t));
-        failures->reset(raw, num_failures_);
-    }
-    return ERR_IO_DATA_INTEGRITY;
 }
 
 } // namespace merkle

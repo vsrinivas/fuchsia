@@ -539,8 +539,6 @@ bool SetRangesOutOfBounds(void) {
 bool Verify(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -548,8 +546,6 @@ bool Verify(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
                            gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
@@ -587,8 +583,6 @@ bool VerifyNodeByNode(void) {
 bool VerifyWithoutData(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc = merkleTree.Create(gData, 0, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -596,16 +590,12 @@ bool VerifyWithoutData(void) {
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.Verify(gData, 0, gTree, gTreeLen, 0, 0, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyWithoutTree(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, kNodeSize, gTree, gTreeLen, &gDigest);
@@ -614,8 +604,6 @@ bool VerifyWithoutTree(void) {
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.Verify(gData, kNodeSize, nullptr, 0, 0, kNodeSize, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
@@ -648,8 +636,6 @@ bool VerifyMissingTree(void) {
 bool VerifyUnalignedTreeLength(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -657,16 +643,12 @@ bool VerifyUnalignedTreeLength(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen + 1, gOffset,
                            gLength, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyUnalignedDataLength(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -674,8 +656,6 @@ bool VerifyUnalignedDataLength(void) {
     rc = merkleTree.Verify(gData, gDataLen - 1, gTree, gTreeLen, gOffset,
                            gLength, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
@@ -696,8 +676,6 @@ bool VerifyTreeTooSmall(void) {
 bool VerifyDataUnaligned(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kUnaligned);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -706,16 +684,12 @@ bool VerifyDataUnaligned(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset,
                            gDataLen - gOffset, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyUnalignedOffset(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -723,16 +697,12 @@ bool VerifyUnalignedOffset(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset - 1,
                            gLength, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyUnalignedLength(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -740,8 +710,6 @@ bool VerifyUnalignedLength(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset,
                            gLength - 1, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
@@ -761,8 +729,6 @@ bool VerifyOutOfBounds(void) {
 bool VerifyZeroLength(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -770,16 +736,12 @@ bool VerifyZeroLength(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, 0,
                            gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyBadRoot(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kLarge);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -792,18 +754,12 @@ bool VerifyBadRoot(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
                            gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 1, "Wrong number of tree_failures");
-    ASSERT_EQ(tree_failures[0], merkleTree.GetTreeLength(kLarge) - kNodeSize,
-              "Wrong offset for tree_failure");
     END_TEST;
 }
 
 bool VerifyGoodPartOfBadTree(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kLarge);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -812,16 +768,12 @@ bool VerifyGoodPartOfBadTree(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 256 * kNodeSize,
                            kNodeSize, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyBadTree(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kLarge);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -831,18 +783,12 @@ bool VerifyBadTree(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
                            gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 1, "Wrong number of tree_failures");
-    ASSERT_EQ(tree_failures[0], hash_off - (hash_off % kNodeSize),
-              "Wrong offset for tree_failure");
     END_TEST;
 }
 
 bool VerifyGoodPartOfBadLeaves(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -851,16 +797,12 @@ bool VerifyGoodPartOfBadLeaves(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
                            gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 0, "Wrong number of data_failures");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool VerifyBadLeaves(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     InitData(kSmall);
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
@@ -869,17 +811,12 @@ bool VerifyBadLeaves(void) {
     rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
                            gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-    ASSERT_EQ(data_failures.size(), 1, "Wrong number of data_failures");
-    ASSERT_EQ(data_failures[0], gOffset, "Wrong offset for data_failure");
-    ASSERT_EQ(tree_failures.size(), 0, "Wrong number of tree_failures");
     END_TEST;
 }
 
 bool CreateAndVerifyHugePRNGData(void) {
     BEGIN_TEST;
     Tree merkleTree;
-    auto& data_failures = merkleTree.data_failures();
-    auto& tree_failures = merkleTree.tree_failures();
     mx_status_t rc = NO_ERROR;
     uint8_t digest[Digest::kLength];
     for (gDataLen = kNodeSize; gDataLen <= sizeof(gData); gDataLen <<= 1) {
@@ -907,20 +844,6 @@ bool CreateAndVerifyHugePRNGData(void) {
             rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
                                    gDataLen, gDigest);
             ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-            if (gTreeLen < kNodeSize) {
-                ASSERT_EQ(data_failures.size(), 1,
-                          "Wrong number of data_failures with bad root");
-                ASSERT_EQ(tree_failures.size(), 0,
-                          "Wrong number of tree_failures with bad root");
-                ASSERT_EQ(data_failures[0], 0, "Not a root digest failure");
-            } else {
-                ASSERT_EQ(data_failures.size(), 0,
-                          "Wrong number of data_failures with bad root");
-                ASSERT_EQ(tree_failures.size(), 1,
-                          "Wrong number of tree_failures with bad root");
-                ASSERT_EQ(tree_failures[0], gTreeLen - kNodeSize,
-                          "Not a root digest failure");
-            }
             break;
         case 2:
             // Flip bit in data
@@ -931,12 +854,6 @@ bool CreateAndVerifyHugePRNGData(void) {
             rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
                                    gDataLen, gDigest);
             ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-            ASSERT_GT(data_failures.size(), 0,
-                      "Wrong number of data_failures with bad data");
-            ASSERT_LE(data_failures.size(), n,
-                      "Wrong number of data_failures with bad data");
-            ASSERT_EQ(tree_failures.size(), 0,
-                      "Wrong number of tree_failures with bad data");
             break;
         case 3:
             // Flip bit in tree (if large enough to have a tree)
@@ -949,18 +866,8 @@ bool CreateAndVerifyHugePRNGData(void) {
 
             if (gTreeLen < kNodeSize) {
                 ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-                ASSERT_EQ(data_failures.size(), 0,
-                          "Wrong number of data_failures with bad tree");
-                ASSERT_EQ(tree_failures.size(), 0,
-                          "Wrong number of tree_failures with bad tree");
             } else {
                 ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
-                ASSERT_EQ(data_failures.size(), 0,
-                          "Wrong number of data_failures with bad tree");
-                ASSERT_GT(tree_failures.size(), 0,
-                          "Wrong number of tree_failures with bad tree");
-                ASSERT_LE(tree_failures.size(), n,
-                          "Wrong number of tree_failures with bad tree");
             }
             break;
         default:
