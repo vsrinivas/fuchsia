@@ -323,30 +323,6 @@ extern {
         requeue_count: u32
         ) -> mx_status_t;
 
-    pub fn mx_waitset_create(
-        options: u32,
-        out: *mut mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_add(
-        waitset_handle: mx_handle_t,
-        cookie: u64,
-        handle: mx_handle_t,
-        signals: mx_signals_t
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_remove(
-        waitset_handle: mx_handle_t,
-        cookie: u64
-        ) -> mx_status_t;
-
-    pub fn mx_waitset_wait(
-        waitset_handle: mx_handle_t,
-        deadline: mx_time_t,
-        results: *mut mx_waitset_result_t,
-        count: *mut u32
-        ) -> mx_status_t;
-
     pub fn mx_port_create(
         options: u32,
         out: *mut mx_handle_t

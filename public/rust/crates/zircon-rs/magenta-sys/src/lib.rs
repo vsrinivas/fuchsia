@@ -172,13 +172,6 @@ pub struct mx_wait_item_t {
 }
 
 #[repr(C)]
-pub struct mx_waitset_result_t {
-    pub cookie: u64,
-    pub status: mx_status_t,
-    pub observed: mx_signals_t,
-}
-
-#[repr(C)]
 pub struct mx_channel_call_args_t {
     pub wr_bytes: *const u8,
     pub wr_handles: *const mx_handle_t,

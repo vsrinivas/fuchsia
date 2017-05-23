@@ -23,7 +23,6 @@ mod process;
 mod socket;
 mod thread;
 mod vmo;
-mod waitset;
 
 pub use channel::{Channel, ChannelOpts, MessageBuf};
 pub use event::{Event, EventOpts};
@@ -35,7 +34,6 @@ pub use process::Process;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 pub use thread::Thread;
 pub use vmo::{Vmo, VmoCloneOpts, VmoOp, VmoOpts};
-pub use waitset::{WaitSet, WaitSetOpts};
 
 use magenta_sys as sys;
 
