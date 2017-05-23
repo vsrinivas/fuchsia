@@ -9,9 +9,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
+	$(LOCAL_DIR)/null.c \
 	$(LOCAL_DIR)/root.c \
-	system/udev/null/null.c \
-	system/udev/zero/zero.c \
+	$(LOCAL_DIR)/zero.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk
 
