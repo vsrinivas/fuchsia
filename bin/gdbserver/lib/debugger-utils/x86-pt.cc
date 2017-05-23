@@ -4,37 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-/*
- * Portions of this file are derived from "simplept".
- *
- * Copyright (c) 2015, Intel Corporation
- * Author: Andi Kleen
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "x86-pt.h"
 
 #include <atomic>
@@ -114,48 +83,9 @@ const ProcessorTraceFeatures* GetProcessorTraceFeatures() {
     __cpuid(0x15, a1, b1, c1, d1);
     pt->tsc_ratio_den = a1;
     pt->tsc_ratio_num = b1;
-    if (a1 && b1)
-      pt->bus_freq = 1. / ((float)a1 / (float)b1);
   }
 
   return pt;
-}
-
-// N.B. This output is parsed by the post-processor.
-
-void DumpProcessorTraceFeatures(FILE* out, const ProcessorTraceFeatures *pt) {
-  fprintf(out, "Processor trace:");
-
-  if (!pt->have_pt) {
-    fprintf(out, " not supported\n");
-    return;
-  }
-
-  fprintf(out, "\n");
-  fprintf(out, "cr3_filtering: %d\n", pt->cr3_filtering);
-  fprintf(out, "cycle_accurate_mode: %d\n", pt->cycle_accurate_mode);
-  fprintf(out, "ip_filtering: %d\n", pt->ip_filtering);
-  fprintf(out, "supports_mtc: %d\n", pt->mtc);
-  fprintf(out, "supports_ptwrite: %d\n", pt->ptwrite);
-  fprintf(out, "supports_power_events: %d\n", pt->power_events);
-
-  fprintf(out, "supports_filter_ranges: %d\n", pt->supports_filter_ranges);
-  fprintf(out, "supports_stop_ranges: %d\n", pt->supports_stop_ranges);
-
-  fprintf(out, "to_pa: %d\n", pt->to_pa);
-  fprintf(out, "multiple_to_pa_entries: %d\n", pt->multiple_to_pa_entries);
-  fprintf(out, "single_range: %d\n", pt->single_range);
-  fprintf(out, "trace_transport_output: %d\n", pt->trace_transport_output);
-  fprintf(out, "payloads_are_lip: %d\n", pt->payloads_are_lip);
-
-  fprintf(out, "mtc_freq_mask: 0x%x\n", pt->mtc_freq_mask);
-  fprintf(out, "cycle_thresh_mask: 0x%x\n", pt->cycle_thresh_mask);
-  fprintf(out, "psb_freq_mask: 0x%x\n", pt->psb_freq_mask);
-  fprintf(out, "num_addr_ranges: %u\n", pt->num_addr_ranges);
-
-  fprintf(out, "tsc_ratio: %u %u\n", pt->tsc_ratio_den, pt->tsc_ratio_num);
-  if (pt->bus_freq != 0)
-    fprintf(out, "bus_freq: %f\n", pt->bus_freq);
 }
 
 }  // namespace x86

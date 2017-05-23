@@ -97,10 +97,6 @@ bool IsSingleStepException(const mx_exception_context_t& context) {
 
 void DumpArch(FILE* out) {
   x86::x86_feature_debug(out);
-  if (x86::HaveProcessorTrace()) {
-    const x86::ProcessorTraceFeatures* pt = x86::GetProcessorTraceFeatures();
-    x86::DumpProcessorTraceFeatures(out, pt);
-  }
 }
 
 }  // namespace arch

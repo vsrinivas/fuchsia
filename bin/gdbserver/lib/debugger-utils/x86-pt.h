@@ -39,16 +39,12 @@ struct ProcessorTraceFeatures {
   bool payloads_are_lip;
 
   uint32_t tsc_ratio_num, tsc_ratio_den;
-  float bus_freq;
 };
 
 bool HaveProcessorTrace();
 
 // WARNING: Until the first call completes this is not thread safe.
 const ProcessorTraceFeatures* GetProcessorTraceFeatures();
-
-// TODO(dje): iostreams. later.
-void DumpProcessorTraceFeatures(FILE* out, const ProcessorTraceFeatures *pt);
 
 }  // namespace x86
 }  // namespace arch
