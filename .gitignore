@@ -9,6 +9,7 @@
 .landmines
 .project
 .pydevproject
+.vscode
 .checkstyle
 cscope.*
 Session.vim
