@@ -95,8 +95,12 @@ def main():
         mkbootfs_cmd += [args.post_binaries]
     for package in args.packages:
         package_dir = os.path.join("package", package)
-        bootfs = os.path.join(package_dir, "bootfs")
-        mkbootfs_cmd += [ bootfs ]
+        boot_manifest = os.path.join(package_dir, "boot_manifest")
+        if os.path.exists(boot_manifest) and os.path.getsize(boot_manifest) != 0:
+            mkbootfs_cmd += [ "--target=boot", boot_manifest ]
+        system_manifest = os.path.join(package_dir, "system_manifest")
+        if os.path.exists(system_manifest) and os.path.getsize(system_manifest) != 0:
+            mkbootfs_cmd += [ "--target=system", system_manifest ]
         ids = os.path.join(package_dir, "ids.txt")
         with open(ids) as ids_file:
             buildids.append(ids_file.read())
