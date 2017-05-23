@@ -55,6 +55,7 @@ typedef struct sdmmc {
     mx_device_t* sdmmc_mxdev;
     uint16_t rca;
     uint64_t capacity;
+    block_callbacks_t* callbacks;
 } sdmmc_t;
 
 static void sdmmc_txn_cplt(iotxn_t* request, void* cookie) {
@@ -83,6 +84,14 @@ static mx_off_t sdmmc_get_size(void* ctx) {
     return sdmmc->capacity;
 }
 
+static void sdmmc_get_info(block_info_t* info, void* ctx) {
+    memset(info, 0, sizeof(*info));
+    // Since we only support SDHC cards, the blocksize must be the SDHC
+    // blocksize.
+    info->block_size = SDHC_BLOCK_SIZE;
+    info->block_count = sdmmc_get_size(ctx) / SDHC_BLOCK_SIZE;
+}
+
 static mx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
                                size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     switch (op) {
@@ -90,11 +99,7 @@ static mx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
         block_info_t* info = reply;
         if (max < sizeof(*info))
             return ERR_BUFFER_TOO_SMALL;
-        memset(info, 0, sizeof(*info));
-        // Since we only support SDHC cards, the blocksize must be the SDHC
-        // blocksize.
-        info->block_size = SDHC_BLOCK_SIZE;
-        info->block_count = sdmmc_get_size(ctx) / SDHC_BLOCK_SIZE;
+        sdmmc_get_info(info, ctx);
         *out_actual = sizeof(*info);
         return NO_ERROR;
     }
@@ -245,6 +250,68 @@ static mx_protocol_device_t sdmmc_device_proto = {
     .release = sdmmc_release,
     .iotxn_queue = sdmmc_iotxn_queue,
     .get_size = sdmmc_get_size,
+};
+
+static void sdmmc_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb) {
+    sdmmc_t* device = dev->ctx;
+    device->callbacks = cb;
+}
+
+static void sdmmc_block_get_info(mx_device_t* dev, block_info_t* info) {
+    sdmmc_t* device = dev->ctx;
+    sdmmc_get_info(info, device);
+}
+
+static void sdmmc_block_complete(iotxn_t* txn, void* cookie) {
+    sdmmc_t* dev;
+    memcpy(&dev, txn->extra, sizeof(sdmmc_t*));
+    dev->callbacks->complete(cookie, txn->status);
+    iotxn_release(txn);
+}
+
+static void block_do_txn(sdmmc_t* dev, uint32_t opcode, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_info_t info;
+    sdmmc_get_info(&info, dev);
+
+    if ((dev_offset % info.block_size) || (length % info.block_size)) {
+        dev->callbacks->complete(cookie, ERR_INVALID_ARGS);
+        return;
+    }
+    uint64_t size = info.block_size * info.block_count;
+    if ((dev_offset >= size) || (length >= (size - dev_offset))) {
+        dev->callbacks->complete(cookie, ERR_OUT_OF_RANGE);
+        return;
+    }
+
+    mx_status_t status;
+    iotxn_t* txn;
+    if ((status = iotxn_alloc_vmo(&txn, IOTXN_ALLOC_POOL, vmo, vmo_offset, length)) != NO_ERROR) {
+        dev->callbacks->complete(cookie, status);
+        return;
+    }
+    txn->opcode = opcode;
+    txn->length = length;
+    txn->offset = dev_offset;
+    txn->complete_cb = sdmmc_block_complete;
+    txn->cookie = cookie;
+    memcpy(txn->extra, &dev, sizeof(sdmmc_t*));
+    iotxn_queue(dev->mxdev, txn);
+}
+
+static void sdmmc_block_read(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn((sdmmc_t*)dev->ctx, IOTXN_OP_READ, vmo, length, vmo_offset, dev_offset, cookie);
+}
+
+static void sdmmc_block_write(mx_device_t* dev, mx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset, void* cookie) {
+    block_do_txn((sdmmc_t*)dev->ctx, IOTXN_OP_WRITE, vmo, length, vmo_offset, dev_offset, cookie);
+}
+
+// Block core protocol
+static block_ops_t sdmmc_block_ops = {
+    .set_callbacks = sdmmc_block_set_callbacks,
+    .get_info = sdmmc_block_get_info,
+    .read = sdmmc_block_read,
+    .write = sdmmc_block_write,
 };
 
 static int sdmmc_bootstrap_thread(void* arg) {
@@ -460,7 +527,8 @@ static int sdmmc_bootstrap_thread(void* arg) {
         .ctx = sdmmc,
         .driver = &_driver_sdmmc,
         .ops = &sdmmc_device_proto,
-        .proto_id = MX_PROTOCOL_BLOCK,
+        .proto_id = MX_PROTOCOL_BLOCK_CORE,
+        .proto_ops = &sdmmc_block_ops,
     };
 
     st = device_add(dev, &args, &sdmmc->mxdev);
