@@ -33,6 +33,19 @@ adrp \reg, \symbol
 add \reg, \reg, #:lo12:\symbol
 .endm
 
+.macro movabs reg, symbol
+// TODO(mcgrathr): Remove this workaround when the upstream LLVM assembler
+// bug http://bugs.llvm.org/show_bug.cgi?id=32527 is fixed.
+#ifdef __clang__
+ldr \reg, =\symbol
+#else
+movz \reg, #:abs_g0_nc:\symbol
+movk \reg, #:abs_g1_nc:\symbol
+movk \reg, #:abs_g2_nc:\symbol
+movk \reg, #:abs_g3:\symbol
+#endif
+.endm
+
 .macro tbzmask, reg, mask, label, shift=0
 .if \shift >= 64
     .error "tbzmask: unsupported mask, \mask"

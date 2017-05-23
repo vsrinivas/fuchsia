@@ -134,21 +134,21 @@ FUNCTION(arm_reset)
  */
 .Lmapping_size_loop:
     movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
-    ldr     tmp, =__code_start
+    movabs  tmp, __code_start
     subs    size, tmp, vaddr
     /* If page is below  the entry point (_start) mark as kernel data */
     b.hi    .Lmem_type_done
 
     movlit  attr, MMU_PTE_KERNEL_RO_FLAGS
-    ldr     tmp, =__rodata_start
+    movabs  tmp, __rodata_start
     subs    size, tmp, vaddr
     b.hi    .Lmem_type_done
     orr     attr, attr, #MMU_PTE_ATTR_PXN
-    ldr     tmp, =__data_start
+    movabs  tmp, __data_start
     subs    size, tmp, vaddr
     b.hi    .Lmem_type_done
     movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
-    ldr     tmp, =_end
+    movabs  tmp, _end
     subs    size, tmp, vaddr
     b.lo    . /* Error: _end < vaddr */
     cmp     mapping_size, size
@@ -236,7 +236,7 @@ FUNCTION(arm_reset)
     /* Calculate phys offset (needed for memory allocation) */
 .Lphys_offset:
     adr     phys_offset, .Lphys_offset /* phys */
-    ldr     tmp, =.Lphys_offset /* virt */
+    movabs  tmp, .Lphys_offset /* virt */
     sub     phys_offset, tmp, phys_offset
 
     /* Allocate new page table */
@@ -331,7 +331,7 @@ FUNCTION(arm_reset)
     isb
 
     /* Jump to virtual code address */
-    ldr     tmp, =.Lmmu_on_vaddr
+    movabs  tmp, .Lmmu_on_vaddr
     br      tmp
 
 .Lmmu_on_vaddr:
