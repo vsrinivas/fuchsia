@@ -558,8 +558,12 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
     web_view_controller_.set_connection_error_handler(
         [this] {
+          // web_view is not build by default because of the time it adds to the
+          // build.
+          // TODO(alhaad/ukode): Fallback to a pre-build version.
           FTL_CHECK(false) << "web_view not found at " << kWebViewUrl << ". "
-                           << "Please build web_view locally.";
+                           << "Please build web_view locally. Instructions at "
+                           << "https://fuchsia.googlesource.com/web_view/+/master/README.md";
         });
 
     mozart::ViewOwnerPtr view_owner;
