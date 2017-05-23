@@ -23,10 +23,10 @@ using merkle::Digest;
 // The Tree tests below are naturally sensitive to the shape of the Merkle tree.
 // These determine those sizes in a consistent way.  The only requirement here
 // is that |kSmall * Digest::kLength| should be less than |kNodeSize|.
-const size_t kNodeSize = Tree::kNodeSize;
-const size_t kSmall = 8 * kNodeSize;
-const size_t kLarge = ((kNodeSize / Digest::kLength) + 1) * kNodeSize;
-const size_t kUnaligned = kLarge + (kNodeSize / 2);
+const uint64_t kNodeSize = Tree::kNodeSize;
+const uint64_t kSmall = 8 * kNodeSize;
+const uint64_t kLarge = ((kNodeSize / Digest::kLength) + 1) * kNodeSize;
+const uint64_t kUnaligned = kLarge + (kNodeSize / 2);
 
 // The hard-coded trees used for testing were created by using sha256sum on
 // files generated using echo -ne, dd, and xxd
@@ -43,17 +43,17 @@ const char* kUnalignedDigest =
 
 // These tests use anonymously scoped globals to reduce the amount of repetitive
 // test setup.
-size_t gDataLen;
+uint64_t gDataLen;
 uint8_t gData[1 << 24];
-size_t gTreeLen;
+uint64_t gTreeLen;
 uint8_t gTree[1 << 24];
 Digest gDigest;
 uint64_t gOffset;
-size_t gLength;
+uint64_t gLength;
 
 // Sets up the global variables to represent a data blob of |num| nodes,
 // completely filled with 0's.
-void InitData(size_t length) {
+void InitData(uint64_t length) {
     memset(gData, 0xff, sizeof(gData));
     gDataLen = length;
     MX_DEBUG_ASSERT(gDataLen <= sizeof(gData));
@@ -346,7 +346,7 @@ bool CreateByteByByte(void) {
     Tree merkleTree;
     mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    for (size_t i = 0; i < gDataLen; ++i) {
+    for (uint64_t i = 0; i < gDataLen; ++i) {
         rc = merkleTree.CreateUpdate(gData + i, 1, gTree);
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     }
@@ -552,7 +552,7 @@ bool Verify(void) {
 bool VerifyCWrapper(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    size_t gTreeLen = merkle_tree_length(gDataLen);
+    uint64_t gTreeLen = merkle_tree_length(gDataLen);
     uint8_t digest[Digest::kLength];
     mx_status_t rc = merkle_tree_create(gData, gDataLen, gTree, gTreeLen,
                                         digest, sizeof(digest));
@@ -572,7 +572,7 @@ bool VerifyNodeByNode(void) {
     mx_status_t rc =
         merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    for (size_t i = 0; i < gDataLen; i += kNodeSize) {
+    for (uint64_t i = 0; i < gDataLen; i += kNodeSize) {
         rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, i, kNodeSize,
                                gDigest);
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -821,7 +821,7 @@ bool CreateAndVerifyHugePRNGData(void) {
     uint8_t digest[Digest::kLength];
     for (gDataLen = kNodeSize; gDataLen <= sizeof(gData); gDataLen <<= 1) {
         // Generate random data
-        for (size_t i = 0; i < gDataLen; ++i) {
+        for (uint64_t i = 0; i < gDataLen; ++i) {
             gData[i] = static_cast<uint8_t>(rand());
         }
         // Create the Merkle tree
@@ -831,11 +831,11 @@ bool CreateAndVerifyHugePRNGData(void) {
         // Randomly pick one of the four cases below.
         rc = gDigest.CopyTo(digest, sizeof(digest));
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-        size_t n = (rand() % 16) + 1;
+        uint64_t n = (rand() % 16) + 1;
         switch (rand() % 4) {
         case 1:
             // Flip bits in root digest
-            for (size_t i = 0; i < n; ++i) {
+            for (uint64_t i = 0; i < n; ++i) {
                 uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
                 digest[rand() % Digest::kLength] ^=
                     static_cast<uint8_t>(1 << tmp);
@@ -847,7 +847,7 @@ bool CreateAndVerifyHugePRNGData(void) {
             break;
         case 2:
             // Flip bit in data
-            for (size_t i = 0; i < n; ++i) {
+            for (uint64_t i = 0; i < n; ++i) {
                 uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
                 gData[rand() % gDataLen] ^= static_cast<uint8_t>(1 << tmp);
             }
@@ -857,7 +857,7 @@ bool CreateAndVerifyHugePRNGData(void) {
             break;
         case 3:
             // Flip bit in tree (if large enough to have a tree)
-            for (size_t i = 0; i < n && gTreeLen > 0; ++i) {
+            for (uint64_t i = 0; i < n && gTreeLen > 0; ++i) {
                 uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
                 gTree[rand() % gTreeLen] ^= static_cast<uint8_t>(1 << tmp);
             }
