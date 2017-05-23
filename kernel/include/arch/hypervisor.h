@@ -48,7 +48,7 @@ status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vadd
 /* Set general purpose registers of a guest context.
  */
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
-                            const mx_guest_gpr_t* guest_gpr);
+                            const mx_guest_gpr_t& guest_gpr);
 
 /* Get general purpose registers of a guest context.
  */

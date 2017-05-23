@@ -293,7 +293,7 @@ public:
                    paddr_t msr_bitmaps_address);
     status_t Enter(const VmcsContext& context, GuestPhysicalAddressSpace* gpas,
                    FifoDispatcher* ctl_fifo);
-    status_t SetGpr(const mx_guest_gpr_t* guest_gpr);
+    status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
 
     bool ShouldResume() const { return vmx_state_.resume; }

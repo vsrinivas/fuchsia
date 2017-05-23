@@ -870,9 +870,9 @@ void gpr_copy(Out* out, const In& in) {
     out->r15 = in.r15;
 }
 
-status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t* guest_gpr) {
-    gpr_copy(&vmx_state_.guest_state, *guest_gpr);
-    vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr->rsp);
+status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t& guest_gpr) {
+    gpr_copy(&vmx_state_.guest_state, guest_gpr);
+    vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr.rsp);
     return NO_ERROR;
 }
 
@@ -1009,7 +1009,7 @@ status_t VmcsContext::MemTrap(vaddr_t guest_paddr, size_t size) {
     return gpas_->UnmapRange(guest_paddr, size);
 }
 
-status_t VmcsContext::SetGpr(const mx_guest_gpr_t* guest_gpr) {
+status_t VmcsContext::SetGpr(const mx_guest_gpr_t& guest_gpr) {
     // TODO(abdulla): Update this when we move to an external VCPU model.
     return per_cpus_[0].SetGpr(guest_gpr);
 }
@@ -1057,7 +1057,7 @@ status_t arch_guest_mem_trap(const mxtl::unique_ptr<GuestContext>& context, vadd
 }
 
 status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
-                            const mx_guest_gpr_t* guest_gpr) {
+                            const mx_guest_gpr_t& guest_gpr) {
     return context->SetGpr(guest_gpr);
 }
 

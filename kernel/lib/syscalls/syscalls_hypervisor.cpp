@@ -102,7 +102,7 @@ static mx_status_t guest_mem_trap(mx_handle_t handle, mx_vaddr_t guest_paddr, si
     return guest->MemTrap(guest_paddr, size);
 }
 
-static mx_status_t guest_set_gpr(mx_handle_t handle, const mx_guest_gpr_t* guest_gpr) {
+static mx_status_t guest_set_gpr(mx_handle_t handle, const mx_guest_gpr_t& guest_gpr) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -183,7 +183,7 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
             return ERR_INVALID_ARGS;
         if (args.reinterpret<const mx_guest_gpr_t>().copy_from_user(&guest_gpr) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        return guest_set_gpr(handle, &guest_gpr);
+        return guest_set_gpr(handle, guest_gpr);
     }
     case MX_HYPERVISOR_OP_GUEST_GET_GPR: {
         mx_guest_gpr_t guest_gpr;
