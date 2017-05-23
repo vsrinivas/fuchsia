@@ -125,7 +125,7 @@ template("package") {
         sources += [ root_build_dir + "/" + binary.name ]
       }
       if (defined(invoker.app) && invoker.app) {
-        dest = "app/" + binary.name
+        dest = "apps/" + binary.name
       } else {
         dest = "bin/" + binary.name
       }
