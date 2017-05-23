@@ -141,38 +141,6 @@ mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
     return NO_ERROR;
 }
 
-mx_status_t Tree::SetRanges(uint64_t data_len, uint64_t offset,
-                            uint64_t length) {
-    uint64_t finish = offset + length;
-    if (finish < offset || finish > data_len) {
-        return ERR_INVALID_ARGS;
-    }
-    offset -= offset % kNodeSize;
-    if (finish != data_len) {
-        finish = mxtl::roundup(finish, kNodeSize);
-    }
-    AllocChecker ac;
-    auto raw = new (&ac) Range[offsets_.size()];
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-    for (uint64_t i = 0; i < offsets_.size(); ++i) {
-        offset /= kDigestsPerNode;
-        offset = offsets_[i] + offset - (offset % kNodeSize);
-        raw[i].offset = offset;
-        if (length == 0) {
-            raw[i].length = 0;
-            continue;
-        }
-        finish /= kDigestsPerNode;
-        finish = offsets_[i] + mxtl::roundup(finish, kNodeSize);
-        raw[i].offset = offset;
-        raw[i].length = finish - offset;
-    }
-    ranges_.reset(raw, offsets_.size());
-    return NO_ERROR;
-}
-
 mx_status_t Tree::Verify(const void* data, uint64_t data_len, const void* tree,
                          uint64_t tree_len, uint64_t offset, uint64_t length,
                          const Digest& digest) {
@@ -259,6 +227,37 @@ mx_status_t Tree::SetLengths(uint64_t data_len, uint64_t tree_len) {
     }
     memcpy(raw, offsets, i * sizeof(uint64_t));
     offsets_.reset(raw, i);
+    return NO_ERROR;
+}
+
+mx_status_t Tree::SetRanges(uint64_t data_len, uint64_t offset, uint64_t length) {
+    uint64_t finish = offset + length;
+    if (finish < offset || finish > data_len) {
+        return ERR_INVALID_ARGS;
+    }
+    offset -= offset % kNodeSize;
+    if (finish != data_len) {
+        finish = mxtl::roundup(finish, kNodeSize);
+    }
+    AllocChecker ac;
+    auto raw = new (&ac) Range[offsets_.size()];
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+    for (uint64_t i = 0; i < offsets_.size(); ++i) {
+        offset /= kDigestsPerNode;
+        offset = offsets_[i] + offset - (offset % kNodeSize);
+        raw[i].offset = offset;
+        if (length == 0) {
+            raw[i].length = 0;
+            continue;
+        }
+        finish /= kDigestsPerNode;
+        finish = offsets_[i] + mxtl::roundup(finish, kNodeSize);
+        raw[i].offset = offset;
+        raw[i].length = finish - offset;
+    }
+    ranges_.reset(raw, offsets_.size());
     return NO_ERROR;
 }
 

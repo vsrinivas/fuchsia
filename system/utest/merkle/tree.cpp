@@ -434,108 +434,6 @@ bool CreateDataUnaligned(void) {
     END_TEST;
 }
 
-bool SetRanges(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gOffset, gLength);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    const auto& ranges = merkleTree.ranges();
-    ASSERT_EQ(ranges.size(), 2, "number of ranges");
-    ASSERT_EQ(ranges[0].offset, 0, "offset 0");
-    ASSERT_EQ(ranges[0].length, kNodeSize, "length 0");
-    ASSERT_EQ(ranges[1].offset, kNodeSize * 2, "offset 1");
-    ASSERT_EQ(ranges[1].length, kNodeSize, "length 1");
-    END_TEST;
-}
-
-bool SetRangesEmpty(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gOffset, 0);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    const auto& ranges = merkleTree.ranges();
-    ASSERT_EQ(ranges.size(), 2, "number of ranges");
-    ASSERT_EQ(ranges[0].length, 0, "length 0");
-    ASSERT_EQ(ranges[1].length, 0, "length 1");
-    END_TEST;
-}
-
-bool SetRangesFull(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, 0, gDataLen);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    const auto& ranges = merkleTree.ranges();
-    ASSERT_EQ(ranges.size(), 2, "number of ranges");
-    ASSERT_EQ(ranges[0].offset, 0, "offset 0");
-    ASSERT_EQ(ranges[0].length, kNodeSize * 2, "length 0");
-    ASSERT_EQ(ranges[1].offset, kNodeSize * 2, "offset 1");
-    ASSERT_EQ(ranges[1].length, kNodeSize, "length 1");
-    END_TEST;
-}
-
-bool SetRangesUnalignedOffset(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kUnaligned);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gOffset + 1, gLength);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    const auto& ranges = merkleTree.ranges();
-    ASSERT_EQ(ranges.size(), 2, "number of ranges");
-    ASSERT_EQ(ranges[0].offset, 0, "offset 0");
-    ASSERT_EQ(ranges[0].length, kNodeSize * 2, "length 0");
-    ASSERT_EQ(ranges[1].offset, kNodeSize * 2, "offset 1");
-    ASSERT_EQ(ranges[1].length, kNodeSize, "length 1");
-    END_TEST;
-}
-
-bool SetRangesUnalignedLength(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kUnaligned);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gOffset, gLength + 1);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gOffset, gDataLen - gOffset);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    const auto& ranges = merkleTree.ranges();
-    ASSERT_EQ(ranges.size(), 2, "number of ranges");
-    ASSERT_EQ(ranges[0].offset, 0, "offset 0");
-    ASSERT_EQ(ranges[0].length, kNodeSize * 2, "length 0");
-    ASSERT_EQ(ranges[1].offset, kNodeSize * 2, "offset 1");
-    ASSERT_EQ(ranges[1].length, kNodeSize, "length 1");
-    END_TEST;
-}
-
-bool SetRangesOutOfBounds(void) {
-    BEGIN_TEST;
-    Tree merkleTree;
-    InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
-    ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.SetRanges(gDataLen, gDataLen - kNodeSize, kNodeSize * 2);
-    ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
-    END_TEST;
-}
-
 bool Verify(void) {
     BEGIN_TEST;
     Tree merkleTree;
@@ -912,12 +810,6 @@ RUN_TEST(CreateMissingData)
 RUN_TEST(CreateMissingTree)
 RUN_TEST(CreateTreeTooSmall)
 RUN_TEST(CreateDataUnaligned)
-RUN_TEST(SetRanges)
-RUN_TEST(SetRangesEmpty)
-RUN_TEST(SetRangesFull)
-RUN_TEST(SetRangesUnalignedOffset)
-RUN_TEST(SetRangesUnalignedLength)
-RUN_TEST(SetRangesOutOfBounds)
 RUN_TEST(Verify)
 RUN_TEST(VerifyCWrapper)
 RUN_TEST(VerifyNodeByNode)

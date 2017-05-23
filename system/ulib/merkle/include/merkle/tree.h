@@ -41,13 +41,6 @@ namespace merkle {
 // data, tree, or root digest have been altered.
 class Tree final {
 public:
-    // This struct is simply used to associate an offset and length when
-    // referring to a range of bytes within the data or tree.
-    struct Range {
-        uint64_t offset;
-        uint64_t length;
-    };
-
     // This sets the size that the tree uses to chunk up the data and digests.
     // TODO(aarongreen): Tune this to optimize performance.
     static constexpr uint64_t kNodeSize = 8192;
@@ -55,12 +48,6 @@ public:
     Tree() : data_len_(0), level_(1), offset_(0) {}
     ~Tree();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Tree);
-
-    // After calling |SetRanges|, this will return a list of offsets and length
-    // representing the region of the tree that will be accessed when calling
-    // Verify with the same |data_len|, |offset|, and |length|.  This can be
-    // used to prefetch that data if so desired.
-    const mxtl::Array<Range>& ranges() const { return ranges_; }
 
     // Returns the minimum size needed to hold a Merkle tree for the given
     // |data_len|. The tree consists of all the nodes containing the digests of
@@ -89,12 +76,6 @@ public:
     mx_status_t Create(const void* data, uint64_t data_len, void* tree,
                        uint64_t tree_len, Digest* digest);
 
-    // Sets the range of addresses within the tree that will need to be read to
-    // fulfill a corresponding call to Verify. |offset| and |length| must
-    // describe a range wholly within |data_len|. If the ranges fail to be set
-    // due to low memory, this will return ERR_NO_MEMORY.
-    mx_status_t SetRanges(uint64_t data_len, uint64_t offset, uint64_t length);
-
     // Checks the integrity of a the region of data given by the offset and
     // length.  It checks integrity using the given Merkle tree and trusted root
     // digest. |tree_len| must be at least as much as returned by
@@ -105,10 +86,23 @@ public:
                        const Digest& digest);
 
 private:
+    // This struct is simply used to associate an offset and length when
+    // referring to a range of bytes within the data or tree.
+    struct Range {
+        uint64_t offset;
+        uint64_t length;
+    };
+
     // Sets the length of the data that this Merkle tree references.  This
     // method has the side effect of setting the geometry of the Merkle tree;
     // this can fail due to low memory and return ERR_NO_MEMORY.
     mx_status_t SetLengths(uint64_t data_len, uint64_t tree_len);
+
+    // Sets the range of addresses within the tree that will need to be read to
+    // fulfill a corresponding call to Verify. |offset| and |length| must
+    // describe a range wholly within |data_len|. If the ranges fail to be set
+    // due to low memory, this will return ERR_NO_MEMORY.
+    mx_status_t SetRanges(uint64_t data_len, uint64_t offset, uint64_t length);
 
     // Calculates a digest using the data in |nodes| at given offset |off|.
     // It reads up to |kNodeSize| or until |end|, whichever comes first.  It
