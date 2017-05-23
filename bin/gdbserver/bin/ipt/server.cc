@@ -118,13 +118,13 @@ bool IptServer::StartInferior() {
   // only be opened once at a time.
 
   if (!process->Initialize()) {
-    util::LogError("failed to set up inferior");
+    FTL_LOG(ERROR) << "failed to set up inferior";
     return false;
   }
 
   FTL_DCHECK(!process->IsAttached());
   if (!process->Attach()) {
-    util::LogError("failed to attach to process");
+    FTL_LOG(ERROR) << "failed to attach to process";
     return false;
   }
   FTL_DCHECK(process->IsAttached());
@@ -145,7 +145,7 @@ bool IptServer::StartInferior() {
 
   FTL_DCHECK(!process->IsLive());
   if (!process->Start()) {
-    util::LogError("failed to start process");
+    FTL_LOG(ERROR) << "failed to start process";
     return false;
   }
   FTL_DCHECK(process->IsLive());

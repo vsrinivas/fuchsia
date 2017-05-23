@@ -51,9 +51,6 @@ std::string DecodeString(const ftl::StringView& string);
 // becomes "\x00".
 std::string EscapeNonPrintableString(const ftl::StringView& data);
 
-// Logs the given |message|.
-void LogError(const std::string& message);
-
 // Return a string representation of errno value |err|.
 std::string ErrnoString(int err);
 

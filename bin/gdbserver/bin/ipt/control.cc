@@ -501,7 +501,7 @@ static mx_status_t WriteBufferData(const IptConfig& config,
         goto Fail;
       }
       if (write(fd.get(), buf, to_write) != (ssize_t) to_write) {
-        util::LogError(ftl::StringPrintf("short write, file: %s\n", c_path));
+        FTL_LOG(ERROR) << ftl::StringPrintf("short write, file: %s\n", c_path);
         status = ERR_IO;
         goto Fail;
       }
