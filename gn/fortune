@@ -1,5 +1,5 @@
 {
     "packages": {
-        "fortune": "//bin/fortune:package"
+        "fortune": "//bin/fortune"
     }
 }
