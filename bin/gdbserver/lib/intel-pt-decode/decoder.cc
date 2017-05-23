@@ -50,16 +50,12 @@ std::unique_ptr<DecoderState> DecoderState::Create(
   auto decoder = std::unique_ptr<DecoderState>(new DecoderState());
 
   FTL_DCHECK(config.pt_file_name != "" || config.pt_list_file_name != "");
-  FTL_DCHECK(config.cpuid_file_name != "");
   FTL_DCHECK(config.ktrace_file_name != "");
 
   if (!decoder->AllocImage("ipt-dump"))
     return nullptr;
 
   // Read sideband data before we read anything else.
-
-  if (!decoder->ReadCpuidFile(config.cpuid_file_name))
-    return nullptr;
 
   if (!decoder->ReadKtraceFile(config.ktrace_file_name))
     return nullptr;

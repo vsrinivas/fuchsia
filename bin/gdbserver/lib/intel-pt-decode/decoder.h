@@ -30,7 +30,7 @@ struct DecoderConfig {
   uint64_t kernel_cr3 = pt_asid_no_cr3;
 
   // Path to the raw processor trace dump.
-  // This file is produced with the "ipt" program.
+  // This file is produced by the "ipt" program.
   std::string pt_file_name;
 
   // Path to a text file containing a mapping of "id" values and their
@@ -40,12 +40,8 @@ struct DecoderConfig {
   // thread-based tracing; in decimal.
   std::string pt_list_file_name;
 
-  // Path to file containing cpuid info.
-  // This file is produced with the "ipt" program.
-  std::string cpuid_file_name;
-
   // Path to needed ktrace data.
-  // This file is produced with the "ipt" program.
+  // This file is produced by the "ipt" program.
   std::string ktrace_file_name;
 
   // Optional additional files passed on the command line.
@@ -110,6 +106,9 @@ class DecoderState {
 
   const pt_config& config() const { return config_; }
   void set_nom_freq(uint8_t nom_freq) { config_.nom_freq = nom_freq; }
+  void set_family(uint32_t family) { config_.cpu.family = family; }
+  void set_model(uint32_t model) { config_.cpu.model = model; }
+  void set_stepping(uint32_t stepping) { config_.cpu.stepping = stepping; }
 
   bool AllocDecoder(const std::string& pt_file);
   void FreeDecoder();
@@ -128,7 +127,6 @@ class DecoderState {
 
   bool AllocImage(const std::string& name);
 
-  bool ReadCpuidFile(const std::string& file);
   bool ReadKtraceFile(const std::string& file);
   bool ReadMapFile(const std::string& file);
   bool ReadIdsFile(const std::string& file);

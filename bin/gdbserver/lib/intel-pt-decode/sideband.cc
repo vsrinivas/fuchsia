@@ -26,65 +26,6 @@ namespace intel_processor_trace {
 
 using debugserver::util::LogErrorWithErrno;
 
-bool DecoderState::ReadCpuidFile(const std::string& file) {
-  FTL_LOG(INFO) << "Loading cpuid data from " << file;
-
-  FILE* f = fopen(file.c_str(), "r");
-  if (!f) {
-    LogErrorWithErrno("error opening cpuid file");
-    return false;
-  }
-
-  char* line = nullptr;
-  size_t linelen = 0;
-  int lineno = 1;
-
-  auto cleanup = ftl::MakeAutoCall([line, f]() {
-    free(line);
-    fclose(f);
-  });
-
-  for (; getline(&line, &linelen, f) > 0; ++lineno) {
-    size_t n = strlen(line);
-    if (n > 0 && line[n - 1] == '\n')
-      line[n - 1] = '\0';
-    FTL_VLOG(2) << ftl::StringPrintf("read %d: %s", lineno, line);
-
-    if (line[0] == '\0' || line[0] == '#')
-      continue;
-
-    if (strcmp(line, "Vendor: Intel") == 0) {
-      config_.cpu.vendor = pcv_intel;
-    } else if (sscanf(line, "tsc_ratio: %u %u", &config_.cpuid_0x15_eax,
-                      &config_.cpuid_0x15_ebx) == 2) {
-      // ok
-      // Note: According to intel-pt.h:pt_config this is only used if MTC
-      // packets have been enabled in IA32_RTIT_CTRL.MTCEn.
-    } else if (sscanf(line, "family: %hu", &config_.cpu.family) == 1) {
-      // ok
-    } else if (sscanf(line, "model: %hhu", &config_.cpu.model) == 1) {
-      // ok
-    } else if (sscanf(line, "stepping: %hhu", &config_.cpu.stepping) == 1) {
-      // ok
-    } else if (sscanf(line, "mtc_freq: %hhu", &config_.mtc_freq) == 1) {
-      // This isn't from cpuid, it's the value of IA32_RTIT_CTL.MTCFreq
-      // when the trace was collected, but ipt-ctrl.cc puts the value here
-      // (otherwise we'd need another source of sideband data, hmmm, unless
-      // we put it in the ktrace data).
-      // According to intel-pt.h:pt_config this is only required if MTC
-      // packets have been enabled in IA32_RTIT_CTRL.MTCEn.
-      if (config_.mtc_freq)
-        config_.mtc_freq--;
-    } else {
-      FTL_VLOG(2) << ftl::StringPrintf("%d: ignoring: %s", lineno, line);
-    }
-  }
-
-  // TODO(dje): How to handle errata? See intel-pt.h:pt_errata.
-
-  return true;
-}
-
 // For passing data from ReadKtraceFile to ProcessKtraceRecord.
 struct KtraceData {
   DecoderState* state;
@@ -101,7 +42,6 @@ int DecoderState::ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
     case TAG_IPT_START: {
       // N.B. There may be many IPT_START/STOP records present.
       // We only want the last one.
-      FTL_LOG(INFO) << "Ktrace IPT start, ts " << rec->hdr.ts;
       const ktrace_rec_32b* r = &rec->r_32B;
       uint64_t kernel_cr3 = r->c | ((uint64_t)r->d << 32);
       state->set_nom_freq(r->a);
@@ -109,6 +49,17 @@ int DecoderState::ProcessKtraceRecord(debugserver::ktrace::KtraceRecord* rec,
       FTL_LOG(INFO) << ftl::StringPrintf("Ktrace IPT start, ts %" PRIu64
                                          ", nom_freq %u, kernel cr3 0x%" PRIx64,
                                          rec->hdr.ts, r->a, kernel_cr3);
+      break;
+    }
+    case TAG_IPT_CPU_INFO: {
+      FTL_LOG(INFO) << "Ktrace IPT start, ts " << rec->hdr.ts;
+      const ktrace_rec_32b* r = &rec->r_32B;
+      state->set_family(r->b);
+      state->set_model(r->c);
+      state->set_stepping(r->d);
+      FTL_LOG(INFO) << ftl::StringPrintf("Ktrace IPT CPU INFO, ts %" PRIu64
+                                         ", family %u, model %u, stepping %u",
+                                         rec->hdr.ts, r->b, r->c, r->d);
       break;
     }
     case TAG_IPT_STOP:
