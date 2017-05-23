@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <bitmap/raw-bitmap.h>
+#include <fs/block-txn.h>
 #include <fs/trace.h>
 #include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
@@ -18,7 +19,6 @@
 #include <fs/vfs-dispatcher.h>
 #endif
 
-#include "block-txn.h"
 #include "minfs-private.h"
 
 namespace minfs {
@@ -174,7 +174,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     void* bmdata;
     MX_DEBUG_ASSERT(ino <= inode_map_.size());
     uint32_t ibm_relative_bno = (ino / kMinfsBlockBits);
-    if ((bmdata = GetBlock<const RawBitmap&>(inode_map_, ibm_relative_bno)) == nullptr) {
+    if ((bmdata = fs::GetBlock<kMinfsBlockSize>(inode_map_.StorageUnsafe()->GetData(), ibm_relative_bno)) == nullptr) {
         panic("inode not in bitmap");
     }
 
@@ -283,7 +283,7 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
 #ifdef __Fuchsia__
     txn->Enqueue(block_map_vmoid_, bmbno_rel, bmbno_abs, 1);
 #else
-    void* bmdata = GetBlock<const RawBitmap&>(block_map_, bmbno_rel);
+    void* bmdata = fs::GetBlock<kMinfsBlockSize>(block_map_.StorageUnsafe()->GetData(), bmbno_rel);
     bc_->Writeblk(bmbno_abs, bmdata);
 #endif
     ValidateBno(bno);
@@ -388,13 +388,13 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
 
 #else
     for (uint32_t n = 0; n < fs->abmblks_; n++) {
-        void* bmdata = GetBlock<const RawBitmap&>(fs->block_map_, n);
+        void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->block_map_.StorageUnsafe()->GetData(), n);
         if (fs->bc_->Readblk(fs->info_.abm_block + n, bmdata)) {
             FS_TRACE_ERROR("minfs: failed reading alloc bitmap\n");
         }
     }
     for (uint32_t n = 0; n < fs->ibmblks_; n++) {
-        void* bmdata = GetBlock<const RawBitmap&>(fs->inode_map_, n);
+        void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->inode_map_.StorageUnsafe()->GetData(), n);
         if (fs->bc_->Readblk(fs->info_.ibm_block + n, bmdata)) {
             FS_TRACE_ERROR("minfs: failed reading inode bitmap\n");
         }
@@ -524,14 +524,14 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
 
     // write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {
-        void* bmdata = GetBlock<const RawBitmap&>(abm, n);
+        void* bmdata = fs::GetBlock<kMinfsBlockSize>(abm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
         bc->Writeblk(info.abm_block + n, blk);
     }
 
     // write inode bitmap
     for (uint32_t n = 0; n < ibmblks; n++) {
-        void* bmdata = GetBlock<const RawBitmap&>(ibm, n);
+        void* bmdata = fs::GetBlock<kMinfsBlockSize>(ibm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
         bc->Writeblk(info.ibm_block + n, blk);
     }

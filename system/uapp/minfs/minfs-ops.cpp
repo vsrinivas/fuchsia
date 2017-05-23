@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <fs/block-txn.h>
 #include <mxtl/algorithm.h>
 #include <magenta/device/vfs.h>
 
@@ -20,7 +21,6 @@
 #endif
 
 #include "minfs-private.h"
-#include "block-txn.h"
 
 namespace {
 

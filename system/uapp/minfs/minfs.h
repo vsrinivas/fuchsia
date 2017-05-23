@@ -199,35 +199,4 @@ private:
     uint32_t blockmax_;
 };
 
-
-namespace internal {
-
-template <typename T>
-struct GetBlockHelper;
-
-template <>
-struct GetBlockHelper <const void*> {
-    static void* get_block(const void* data, uint32_t blkno) {
-        assert(kMinfsBlockSize <= (blkno + 1) * kMinfsBlockSize); // Avoid overflow
-        return (void*)((uintptr_t)(data) + (uintptr_t)(kMinfsBlockSize * blkno));
-    }
-};
-
-template <>
-struct GetBlockHelper <const RawBitmap&> {
-    static void* get_block(const RawBitmap& bitmap, uint32_t blkno) {
-        assert(blkno * kMinfsBlockSize < bitmap.size()); // Accessing beyond end of bitmap
-        return GetBlockHelper<const void*>::get_block(bitmap.StorageUnsafe()->GetData(), blkno);
-    }
-};
-
-} // namespace internal
-
-// Access the "blkno"-th block within data.
-// "blkno = 0" corresponds to the first block within data.
-template <typename T>
-void* GetBlock(T data, uint32_t blkno) {
-    return internal::GetBlockHelper<T>::get_block(data, blkno);
-}
-
 } // namespace minfs

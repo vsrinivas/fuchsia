@@ -16,6 +16,7 @@
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
+#include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
 
 #ifdef __Fuchsia__
@@ -24,7 +25,6 @@
 
 #include <fs/vfs.h>
 
-#include "block-txn.h"
 #include "minfs.h"
 #include "misc.h"
 
@@ -35,6 +35,9 @@
     } while (0)
 
 namespace minfs {
+
+using WriteTxn = fs::WriteTxn<kMinfsBlockSize, Bcache>;
+using ReadTxn = fs::ReadTxn<kMinfsBlockSize, Bcache>;
 
 // minfs_sync_vnode flags
 constexpr uint32_t kMxFsSyncDefault = 0; // default: no implicit time update
