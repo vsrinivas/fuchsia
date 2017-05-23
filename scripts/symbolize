@@ -190,12 +190,12 @@ def main():
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
 
     # Magenta backtraces
-    magenta_crash_re = re.compile("Halting...")
+    magenta_crash_re = re.compile("^MAGENTA KERNEL PANIC$")
     # TODO(cja): Add ARM to the regex
     magenta_pc_re = re.compile("RIP: (0x[0-9a-z]+)")
     magenta_bt_re = re.compile(full_prefix +
         "bt#(\d+): (\dx[0-9a-fA-F]+)$")
-    magenta_end_re = re.compile("^Halted$");
+    magenta_elf_path = ''
     magenta_bt = False
     magenta_pc = ''
 
@@ -207,7 +207,7 @@ def main():
         # Strip any trailing carriage return character ("\r"), since
         # these appear in the serial console output from QEMU.
         line = line.rstrip()
-        if bt_end_re.match(line) or magenta_end_re.match(line) or (magenta_bt and line == ''):
+        if bt_end_re.match(line):
             if len(processed_lines) != 0:
                 writeline("\nstart of symbolized stack:\n")
                 writelines(processed_lines)
@@ -289,7 +289,12 @@ def main():
 
         # Magenta Specific Handling
         if magenta_crash_re.search(line):
-            magenta_bt = True
+            magenta_elf_path = find_file_in_build_dir("magenta.elf", build_dirs)
+            if magenta_elf_path:
+                magenta_bt = True
+            else:
+                sys.stderr.write("Symbolize could not find the magenta elf binary. Perhaps you need to build "
+                                  "magenta or specify the build directory with -b?\n")
         m = magenta_pc_re.search(line)
         if m:
             magenta_pc = m.group(1)
@@ -297,24 +302,22 @@ def main():
         if m and magenta_bt:
             frame_num = m.group(2)
             addr = m.group(3)
-            magenta_elf_path = find_file_in_build_dir("magenta.elf", build_dirs)
-            if magenta_elf_path:
-                # If we saw the instruction pointer for the fault/panic then use it once
-                if magenta_pc:
-                    prefix = "   pc: %s => " % magenta_pc
-                    a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
-                            magenta_pc)
-                    processed_lines.append(prefix +
-                            a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
-                    magenta_pc = None
-
-
-                prefix = "bt#%s: %s => " % (frame_num, addr)
-                a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path, addr)
-                # In the case of inlined methods it is more readable if the inlined lines are
-                # aligned to be to the irght of =>
+            # If we saw the instruction pointer for the fault/panic then use it once
+            if magenta_pc:
+                prefix = "   pc: %s => " % magenta_pc
+                a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path,
+                        magenta_pc)
                 processed_lines.append(prefix +
                         a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+                magenta_pc = None
+
+
+            prefix = "bt#%s: %s => " % (frame_num, addr)
+            a2l_out = run_tool(arch, "addr2line", "-Cpife", magenta_elf_path, addr)
+            # In the case of inlined methods it is more readable if the inlined lines are
+            # aligned to be to the irght of =>
+            processed_lines.append(prefix +
+                    a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
             continue
 
         # Exit if we've reached the end of stdin
