@@ -429,35 +429,16 @@ static void ramdisk_from_bootdata_container(void* bootdata,
     *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
 }
 
-static void platform_mdi_init(void) {
+static void platform_mdi_init(const bootdata_t* section) {
     mdi_node_ref_t  root;
     mdi_node_ref_t  cpu_map;
     mdi_node_ref_t  kernel_drivers;
 
-    // Look for MDI data in ramdisk bootdata
-    size_t offset = 0;
-    uintptr_t ramdisk_base_ptr = reinterpret_cast<uintptr_t>(ramdisk_base);
-    bootdata_t* header = reinterpret_cast<bootdata_t*>(ramdisk_base_ptr);
-    if (header->type != BOOTDATA_CONTAINER) {
-        panic("invalid bootdata container header\n");
-    }
-    offset += sizeof(*header);
+    const void* ramdisk_end = reinterpret_cast<uint8_t*>(ramdisk_base) + ramdisk_size;
+    const void* section_ptr = reinterpret_cast<const void *>(section);
+    const size_t length = reinterpret_cast<uintptr_t>(ramdisk_end) - reinterpret_cast<uintptr_t>(section_ptr);
 
-    while (offset < ramdisk_size) {
-        header = reinterpret_cast<bootdata_t*>(ramdisk_base_ptr + offset);
-
-        if (header->type == BOOTDATA_MDI) {
-            break;
-        } else {
-            offset += BOOTDATA_ALIGN(sizeof(*header) + header->length);
-        }
-    }
-    if (offset >= ramdisk_size) {
-        panic("No MDI found in ramdisk\n");
-    }
-
-    if (mdi_init(reinterpret_cast<void *>(ramdisk_base_ptr + offset),
-                 ramdisk_size - offset, &root) != NO_ERROR) {
+    if (mdi_init(section_ptr, length, &root) != NO_ERROR) {
         panic("mdi_init failed\n");
     }
 
@@ -474,6 +455,59 @@ static void platform_mdi_init(void) {
 #endif
 
     pdev_init(&kernel_drivers);
+}
+
+static uint32_t process_bootsection(bootdata_t* section) {
+    switch(section->type) {
+    case BOOTDATA_MDI:
+        platform_mdi_init(section);
+        break;
+    case BOOTDATA_CMDLINE:
+        if (section->length < 1) {
+            break;
+        }
+        char* contents = reinterpret_cast<char*>(section + 1);
+        contents[section->length - 1] = '\0';
+        cmdline_init(contents);
+        break;
+    }
+
+    return section->type;
+}
+
+static void process_bootdata(bootdata_t* root) {
+    DEBUG_ASSERT(root);
+
+    if (root->type != BOOTDATA_CONTAINER) {
+        printf("bootdata: invalid type = %08x\n", root->type);
+        return;
+    }
+
+    if (root->extra != BOOTDATA_MAGIC) {
+        printf("bootdata: invalid magic = %08x\n", root->extra);
+        return;
+    }
+
+    bool mdi_found = false;
+    size_t offset = sizeof(bootdata_t);
+    const size_t length = (root->length);
+
+    while (offset < length) {
+        uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
+        bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
+
+        const uint32_t type = process_bootsection(section);
+        if (BOOTDATA_MDI == type) {
+            mdi_found = true;
+        }
+
+        offset += BOOTDATA_ALIGN(sizeof(*section) + section->length);
+    }
+
+    if (!mdi_found) {
+        panic("No MDI found in ramdisk\n");
+    }
+
 }
 
 extern int _end;
@@ -507,7 +541,7 @@ void platform_early_init(void)
         panic("no ramdisk!\n");
     }
 
-    platform_mdi_init();
+    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
 
     /* add the main memory arena */
     if (arena_size) {
