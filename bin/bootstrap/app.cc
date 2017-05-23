@@ -97,7 +97,7 @@ void App::RegisterAppLoaders(Params::ServiceMap app_loaders) {
 }
 
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
-  FTL_LOG(INFO) << "Bootstrapping application " << launch_info->url;
+  FTL_VLOG(1) << "Bootstrapping application " << launch_info->url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 

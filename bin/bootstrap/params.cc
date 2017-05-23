@@ -55,7 +55,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
     if (!command_line.GetOptionValue("services", &config_file))
       config_file = kDefaultServicesConfigFile;
     if (!config_file.empty()) {
-      FTL_LOG(INFO) << "Loading services from " << config_file;
+      FTL_VLOG(1) << "Loading services from " << config_file;
       Config config;
       if (config.ReadFrom(config_file)) {
         services_ = config.TakeServices();
@@ -67,7 +67,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
     if (!command_line.GetOptionValue("loaders", &config_file))
       config_file = kDefaultLoadersConfigFile;
     if (!config_file.empty()) {
-      FTL_LOG(INFO) << "Loading application loaders from " << config_file;
+      FTL_VLOG(1) << "Loading application loaders from " << config_file;
       Config config;
       if (config.ReadFrom(config_file)) {
         app_loaders_ = config.TakeAppLoaders();
@@ -79,7 +79,7 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
     if (!command_line.GetOptionValue("apps", &config_file))
       config_file = kDefaultAppsConfigFile;
     if (!config_file.empty()) {
-      FTL_LOG(INFO) << "Loading apps from " << config_file;
+      FTL_VLOG(1) << "Loading apps from " << config_file;
       Config config;
       if (config.ReadFrom(config_file)) {
         apps_ = config.TakeApps();
