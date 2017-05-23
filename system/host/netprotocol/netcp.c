@@ -16,6 +16,7 @@
 
 #include <fcntl.h>
 #include <libgen.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +53,9 @@ static int pull_file(int s, const char* dst, const char* src) {
         strncat(final_dst, "/", sizeof(final_dst) - strlen(final_dst) - 1);
         strncat(final_dst, basename((char*)src), sizeof(final_dst) - strlen(final_dst) - 1);
     }
-    int fd = open(final_dst, O_WRONLY|O_TRUNC|O_CREAT, 0664);
+
+    bool use_stdout = (final_dst[0] == '-' && final_dst[1] == '\0');
+    int fd = (use_stdout) ? fileno(stdout) : open(final_dst, O_WRONLY|O_TRUNC|O_CREAT, 0664);
     if (fd < 0) {
         fprintf(stderr, "%s: cannot open %s for writing: %s\n",
                 appname, final_dst, strerror(errno));
