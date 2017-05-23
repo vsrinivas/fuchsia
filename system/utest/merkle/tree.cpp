@@ -304,7 +304,7 @@ bool Create(void) {
 bool CreateCWrappers(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    gTreeLen = merkle_tree_length(gDataLen);
+    gTreeLen = merkle_tree_get_tree_length(gDataLen);
     uint8_t digest[Digest::kLength];
     mx_status_t rc = merkle_tree_create(gData, gDataLen, gTree, gTreeLen,
                                         digest, sizeof(digest));
@@ -313,14 +313,14 @@ bool CreateCWrappers(void) {
     rc = expected.Parse(kSmallDigest, strlen(kSmallDigest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     ASSERT_TRUE(expected == digest, "Incorrect root digest");
-    merkle_tree_t* tree = nullptr;
-    rc = merkle_tree_init(gDataLen, &tree);
+    merkle_tree_t* mt = nullptr;
+    rc = merkle_tree_create_init(gDataLen, gTreeLen, &mt);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     for (uint64_t i = 0; i < gDataLen; i += kNodeSize) {
-        rc = merkle_tree_update(tree, gData + i, kNodeSize);
+        rc = merkle_tree_create_update(mt, gData + i, kNodeSize, gTree);
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     }
-    rc = merkle_tree_final(tree, digest, sizeof(digest));
+    rc = merkle_tree_create_final(mt, gTree, digest, sizeof(digest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     ASSERT_TRUE(expected == digest, "Incorrect root digest");
     END_TEST;
@@ -426,7 +426,7 @@ bool Verify(void) {
 bool VerifyCWrapper(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    uint64_t gTreeLen = merkle_tree_length(gDataLen);
+    uint64_t gTreeLen = merkle_tree_get_tree_length(gDataLen);
     uint8_t digest[Digest::kLength];
     mx_status_t rc = merkle_tree_create(gData, gDataLen, gTree, gTreeLen,
                                         digest, sizeof(digest));

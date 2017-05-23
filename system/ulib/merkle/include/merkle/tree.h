@@ -22,7 +22,7 @@ namespace merkle {
 //
 // A Merkle tree is typically created for a given |data| and |data_len| using
 // the following (error checking is omitted):
-//      uint64_t tree_len = merkle::Tree::GetTreeLength(data_len);
+//      size_t tree_len = merkle::Tree::GetTreeLength(data_len);
 //      uint8_t *tree = malloc(tree_len); // or other allocation routine
 //      merkle::Digest digest;
 //      merkle::Tree::Create(data, data_len, tree, tree_len, &digest);
@@ -41,28 +41,28 @@ class Tree final {
 public:
     // This sets the size that the tree uses to chunk up the data and digests.
     // TODO(aarongreen): Tune this to optimize performance.
-    static constexpr uint64_t kNodeSize = 8192;
+    static constexpr size_t kNodeSize = 8192;
 
     // Returns the minimum size needed to hold a Merkle tree for the given
     // |data_len|. The tree consists of all the nodes containing the digests of
     // child nodes.  It does NOT include the root digest, which must be passed
     // to |Verify| after a trust decision has been made.  This means that when
     // the |data_len| is less than |kNodeSize|, this method will return 0.
-    static uint64_t GetTreeLength(uint64_t data_len);
+    static size_t GetTreeLength(size_t data_len);
 
     // Writes a Merkle tree for the given data and saves its root digest.
     // |tree_len| must be at least as much as returned by GetTreeLength().
-    static mx_status_t Create(const void* data, uint64_t data_len, void* tree,
-                              uint64_t tree_len, Digest* digest);
+    static mx_status_t Create(const void* data, size_t data_len, void* tree,
+                              size_t tree_len, Digest* digest);
 
     // Checks the integrity of a the region of data given by the offset and
     // length.  It checks integrity using the given Merkle tree and trusted root
     // digest. |tree_len| must be at least as much as returned by
     // GetTreeLength().  |offset| and |length| must describe a range wholly
     // within |data_len|.
-    static mx_status_t Verify(const void* data, uint64_t data_len,
-                              const void* tree, uint64_t tree_len,
-                              uint64_t offset, uint64_t length,
+    static mx_status_t Verify(const void* data, size_t data_len,
+                              const void* tree, size_t tree_len,
+                              size_t offset, size_t length,
                               const Digest& digest);
 
     // The stateful instance methods below are only needed when creating a
@@ -72,13 +72,13 @@ public:
 
     // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
     // data.  This must be called before |CreateUpdate|.
-    mx_status_t CreateInit(uint64_t data_len, uint64_t tree_len);
+    mx_status_t CreateInit(size_t data_len, size_t tree_len);
 
     // Processes an additional |length| bytes of |data| and writes digests to
     // the Merkle |tree|.  It is an error to process more data in total than was
     // specified by |data_len| in |CreateInit|.  |tree| must have room for at
     // least |GetTreeLength(data_len)| bytes.
-    mx_status_t CreateUpdate(const void* data, uint64_t length, void* tree);
+    mx_status_t CreateUpdate(const void* data, size_t length, void* tree);
 
     // Completes the Merkle |tree|, from the data leaves up to the |root|, which
     // it writes out if not null.  This must only be called after the total
@@ -90,17 +90,10 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Tree);
 
-    // This struct is simply used to associate an offset and length when
-    // referring to a range of bytes within the data or tree.
-    struct Range {
-        uint64_t offset;
-        uint64_t length;
-    };
-
     // Checks the integrity of the top level of a Merkle tree.  It checks
     // integrity using the given root digest. |data_len| must be at no more than
     // |kNodeSize|.
-    static mx_status_t VerifyRoot(const void* data, uint64_t data_len,
+    static mx_status_t VerifyRoot(const void* data, size_t data_len,
                                   uint64_t level, const Digest& root);
 
     // Checks the integrity of portion of a Merkle tree level given by the
@@ -108,9 +101,9 @@ private:
     // Merkle tree. |tree_len| must be at least as much as returned by
     // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
     // wholly within |data_len|.
-    static mx_status_t VerifyLevel(const void* data, uint64_t data_len,
-                                   const void* tree, uint64_t offset,
-                                   uint64_t length, uint64_t level);
+    static mx_status_t VerifyLevel(const void* data, size_t data_len,
+                                   const void* tree, size_t offset,
+                                   size_t length, uint64_t level);
 
     // See CreateFinal.  This implements that method, with an extra parameter to
     // allow levels other than the bottommost to be padded.
@@ -134,11 +127,11 @@ private:
 
     // Indicates the amount of data consumed so far by |CreateUpdate| for this
     // level.
-    uint64_t offset_;
+    size_t offset_;
 
     // Indicates the total amount of data to be consumed by |CreateUpdate| for
     // this level, as set in |CreateInit|.
-    uint64_t length_;
+    size_t length_;
 
     // Used to calculate digest, and save the hash state across calls to
     // |CreateUpdate|.
@@ -151,59 +144,67 @@ private:
 #ifndef __cplusplus
 typedef struct merkle_tree merkle_tree_t;
 #else
-typedef struct merkle_tree {
-    merkle::Tree obj;
-    mxtl::unique_ptr<uint8_t[]> nodes;
-} merkle_tree_t;
+typedef struct merkle_tree { merkle::Tree obj; } merkle_tree_t;
 extern "C" {
 #endif // __cplusplus
 
-// C API for merkle::Tree.  |merkle_tree_create| and |merkle_tree_verify| are
-// analogous to the corresponding C++ methods and require the caller to handle
-// all memory allocations.  |merkle_tree_init|, |merkle_tree_update|, and
-// |merkle_tree_final| differ in that they manage the memory needed for the
-// Merkle tree object and intermediate nodes transparently.
+// C API for merkle::Tree.  The methods below are directly equivalent to the C++
+// methods above, i.e. "merkle_tree_some_method" below would correspond to
+// "merkle::Tree::SomeMethod" above.  The parameters differ in only two ways:
+//      - The stateful creation methods (Init/Update/Final) include a
+//        'merkle_tree_t' handle to wrap the Tree object.
+//      - Digest arguments have been replace with a void*/size_t pair that
+//        indicate the buffer to use to read or save the digest.
 //
-// To create a Merkle tree root digest, a caller can do the following (with
-// additional error checking):
-//     merkle_tree_t *tree = NULL;
-//     merkle_tree_init(data_len, &tree);
-//     uint64_t offset = 0;
-//     while(offset < data_len) {
-//         // Fill buf with len bytes somehow.
-//         merkle_tree_update(tree, buf, len);
-//         offset += buf_len;
-//     }
-//     uint8_t digest[MERKLE_DIGEST_LENGTH];
-//     merkle_tree_final(&tree, digest, sizeof(digest));
+// The typical flow is similar to using the C++ methods to create a tree is:
+//      size_t tree_len = merkle_tree_get_tree_length(data_len);
+//      uint8_t *tree = malloc(tree_len);
+//      uint8_t *root = malloc(32);
+//      return merkle_tree_create(data, data_len, tree, tree_len, out, 32);
 //
-// Then |digest| will have the Merkle tree root and |tree| will be null.
+// An example flow using the stateful creation methods is:
+//      size_t tree_len = merkle_tree_get_tree_length(total_data_len);
+//      uint8_t *tree = malloc(tree_len);
+//      uint8_t root[32];
+//      merkle_tree_t *mt;
+//      if (merkle_tree_create_init(data_len, tree_len, &mt) != NO_ERROR)
+//          return;
+//      merkle_tree_create_update(mt, some_data, some_data_len);
+//      merkle_tree_create_update(mt, more_data, more_data_len);
+//      return merkle_tree_create_final(mt, tree, root, sizeof(root));
+//
+// The typical flow is similar to using the C++ methods to verify a tree is:
+//      return merkle_tree_verify(data, data_len, tree, tree_len, offset,
+//                                length, root, sizeof(root));
 
 // C wrapper for |merkle::Tree::GetTreeLength|.
-uint64_t merkle_tree_length(uint64_t data_len);
-
-// C wrapper for |merkle::Tree::CreateInit|.  This function allocates memory for
-// |tree|, which must be freed by a corresponding call to
-// |merkle_tree_final|.
-mx_status_t merkle_tree_init(uint64_t data_len, merkle_tree_t** tree);
-
-// C wrapper function for |merkle::Tree::CreateUpdate|.
-mx_status_t merkle_tree_update(merkle_tree_t* tree, const void* data,
-                               uint64_t length);
-
-// C wrapper function for |merkle::Tree::CreateFinal|.  This function consumes
-// |tree| and frees it.
-mx_status_t merkle_tree_final(merkle_tree_t* tree, void* out, uint64_t out_len);
+size_t merkle_tree_get_tree_length(size_t data_len);
 
 // C wrapper function for |merkle::Tree::Create|.
-mx_status_t merkle_tree_create(const void* data, uint64_t data_len, void* tree,
-                               uint64_t tree_len, void* out, uint64_t out_len);
+mx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
+                               size_t tree_len, void* out, size_t out_len);
+
+// C wrapper for |merkle::Tree::CreateInit|.  On success, this function
+//  allocates memory for |out|.  The caller must free this memory by calling
+//  |merkle_tree_create_final|, even if an intervening call to
+//  |merkle_tree_create_update| returns an error.
+mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
+                                    merkle_tree_t** out);
+
+// C wrapper function for |merkle::Tree::CreateUpdate|.
+mx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data,
+                                      size_t length, void* tree);
+
+// C wrapper function for |merkle::Tree::CreateFinal|.  This function consumes
+// |mt| and frees it.
+mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
+                                     size_t out_len);
 
 // C wrapper function for |merkle::Tree::Verify|.
-mx_status_t merkle_tree_verify(const void* data, uint64_t data_len, void* tree,
-                               uint64_t tree_len, uint64_t offset,
-                               uint64_t length, const void* root,
-                               uint64_t root_len);
+mx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
+                               size_t tree_len, size_t offset,
+                               size_t length, const void* root,
+                               size_t root_len);
 
 #ifdef __cplusplus
 }
