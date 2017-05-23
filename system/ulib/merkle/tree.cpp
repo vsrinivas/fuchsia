@@ -4,14 +4,24 @@
 
 #include <merkle/tree.h>
 
+#include <stdint.h>
 #include <string.h>
 
+#include <magenta/assert.h>
 #include <magenta/errors.h>
 #include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
 namespace merkle {
+
+// Size of a node in bytes.  Defined in tree.h.
+constexpr uint64_t Tree::kNodeSize;
+
+// The number of digests that fit in a node.  Importantly, if L is a
+// node-aligned length in one level of the Merkle tree, |L / kDigestsPerNode| is
+// the corresponding digest-aligned length in the next level up.
+const uint64_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
 
 namespace {
 
@@ -28,12 +38,8 @@ uint32_t GetNodeLength(uint64_t offset, uint64_t data_len) {
 
 } // namespace
 
-constexpr uint64_t Tree::kNodeSize;
-const uint64_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
-
-Tree::~Tree() {}
-
-// Public methods
+////////
+// Creation methods
 
 uint64_t Tree::GetTreeLength(uint64_t data_len) {
     if (data_len <= kNodeSize) {
@@ -48,6 +54,29 @@ uint64_t Tree::GetTreeLength(uint64_t data_len) {
     }
     return total;
 }
+
+mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
+                         uint64_t tree_len, Digest* digest) {
+    Tree mt;
+    mx_status_t rc = mt.CreateInit(data_len, tree, tree_len);
+    if (rc != NO_ERROR) {
+        return rc;
+    }
+    rc = mt.CreateUpdate(data, data_len, tree);
+    if (rc != NO_ERROR) {
+        return rc;
+    }
+    rc = mt.CreateFinal(tree, digest);
+    if (rc != NO_ERROR) {
+        return rc;
+    }
+    return NO_ERROR;
+}
+
+Tree::Tree()
+    : data_len_(0), level_(1), offset_(0) {}
+
+Tree::~Tree() {}
 
 mx_status_t Tree::CreateInit(uint64_t data_len, void* tree, uint64_t tree_len) {
     if (!tree && tree_len != 0) {
@@ -124,23 +153,8 @@ mx_status_t Tree::CreateFinal(void* tree, Digest* digest) {
     return NO_ERROR;
 }
 
-mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
-                         uint64_t tree_len, Digest* digest) {
-    Tree mt;
-    mx_status_t rc = mt.CreateInit(data_len, tree, tree_len);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
-    rc = mt.CreateUpdate(data, data_len, tree);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
-    rc = mt.CreateFinal(tree, digest);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
-    return NO_ERROR;
-}
+////////
+// Verification methods
 
 mx_status_t Tree::Verify(const void* data, uint64_t data_len, const void* tree,
                          uint64_t tree_len, uint64_t offset, uint64_t length,
@@ -213,7 +227,9 @@ mx_status_t Tree::VerifyLevel(const void* data, uint64_t data_len,
     return NO_ERROR;
 }
 
-// Private methods
+////////
+// Private helper methods
+// TODO(aarongreen): Deprecate and/or move these in the next CL.
 
 mx_status_t Tree::SetLengths(uint64_t data_len, uint64_t tree_len) {
     if (tree_len < GetTreeLength(data_len)) {
@@ -350,6 +366,7 @@ mx_status_t Tree::HashData(const void* data, uint64_t length, void* tree) {
 
 } // namespace merkle
 
+////////
 // C-style wrapper functions
 
 uint64_t merkle_tree_length(uint64_t data_len) {

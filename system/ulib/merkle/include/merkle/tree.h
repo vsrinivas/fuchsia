@@ -43,10 +43,6 @@ public:
     // TODO(aarongreen): Tune this to optimize performance.
     static constexpr uint64_t kNodeSize = 8192;
 
-    Tree() : data_len_(0), level_(1), offset_(0) {}
-    ~Tree();
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Tree);
-
     // Returns the minimum size needed to hold a Merkle tree for the given
     // |data_len|. The tree consists of all the nodes containing the digests of
     // child nodes.  It does NOT include the root digest, which must be passed
@@ -69,28 +65,51 @@ public:
                               uint64_t offset, uint64_t length,
                               const Digest& digest);
 
+    // The stateful instance methods below are only needed when creating a
+    // Merkle tree using the Init/Update/Final methods.
+    Tree();
+    ~Tree();
+
     // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
     // data.  This must be called before |CreateUpdate|.
     mx_status_t CreateInit(uint64_t data_len, void* tree, uint64_t tree_len);
 
     // Processes an additional |length| bytes of |data| and writes digests to
     // the Merkle |tree|.  It is an error to process more data in total than was
-    // specified by |data_len| in |CreateInit|.
+    // specified by |data_len| in |CreateInit|.  |tree| must have room for at
+    // least |GetTreeLength(data_len)| bytes.
     mx_status_t CreateUpdate(const void* data, uint64_t length, void* tree);
 
-    // Completes the Merkle |tree|, from the data leaves up to the root
-    // |digest|, which it writes out.  This must only be called after the total
+    // Completes the Merkle |tree|, from the data leaves up to the |root|, which
+    // it writes out if not null.  This must only be called after the total
     // number of bytes processed by |CreateUpdate| equals the |data_len| set by
-    // |CreateInit|.
+    // |CreateInit|.  |tree| must have room for at least
+    // |GetTreeLength(data_len)| bytes.
     mx_status_t CreateFinal(void* tree, Digest* digest);
 
 private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Tree);
+
     // This struct is simply used to associate an offset and length when
     // referring to a range of bytes within the data or tree.
     struct Range {
         uint64_t offset;
         uint64_t length;
     };
+
+    // Checks the integrity of the top level of a Merkle tree.  It checks
+    // integrity using the given root digest.
+    mx_status_t VerifyRoot(const void* data, const void* tree, uint64_t* level,
+                           const Digest& root);
+
+    // Checks the integrity of portion of a Merkle tree level given by the
+    // offset and length.  It checks integrity using next level up of the given
+    // Merkle tree. |tree_len| must be at least as much as returned by
+    // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
+    // wholly within |data_len|.
+    mx_status_t VerifyLevel(const void* data, uint64_t data_len,
+                            const void* tree, uint64_t offset, uint64_t length,
+                            uint64_t level);
 
     // Sets the length of the data that this Merkle tree references.  This
     // method has the side effect of setting the geometry of the Merkle tree;
@@ -112,20 +131,6 @@ private:
     // Hashes |length| bytes of |data| that makes up the leaves of the Merkle
     // tree and writes the digests to |tree|.
     mx_status_t HashData(const void* data, uint64_t length, void* tree);
-
-    // Checks the integrity of the top level of a Merkle tree.  It checks
-    // integrity using the given root digest.
-    mx_status_t VerifyRoot(const void* data, const void* tree, uint64_t* level,
-                           const Digest& root);
-
-    // Checks the integrity of portion of a Merkle tree level given by the
-    // offset and length.  It checks integrity using next level up of the given
-    // Merkle tree. |tree_len| must be at least as much as returned by
-    // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
-    // wholly within |data_len|.
-    mx_status_t VerifyLevel(const void* data, uint64_t data_len,
-                            const void* tree, uint64_t offset, uint64_t length,
-                            uint64_t level);
 
     // These fields control the overall shape of the tree and its serialization.
     uint64_t data_len_;
