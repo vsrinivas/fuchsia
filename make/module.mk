@@ -162,14 +162,13 @@ ifneq ($(MODULE_TYPE),hostapp)
 ALL_TARGET_OBJS += $(MODULE_OBJS)
 endif
 
-# build a ld -r style combined object
-# for all kernel and user modules
+# generate an input linker script for all kernel and user modules
 ifneq ($(MODULE_TYPE),hostapp)
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)
 	$(call BUILDECHO,linking $@)
-	$(NOECHO)$(LD) $(GLOBAL_MODULE_LDFLAGS) -r $^ -o $@
+	$(NOECHO)echo "INPUT($^)" > $@
 
 # track the module object for make clean
 GENERATED += $(MODULE_OBJECT)

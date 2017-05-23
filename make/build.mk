@@ -27,7 +27,6 @@ $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 # and QUIET
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
 ifeq ($(call TOBOOL,$(QUIET)),false)
-	$(NOECHO)$(SIZE) -t --common $(sort $(ALLMODULE_OBJS)) $(EXTRA_OBJS)
 	$(NOECHO)$(SIZE) $@
 endif
 endif
