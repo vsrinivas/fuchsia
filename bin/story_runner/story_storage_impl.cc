@@ -98,7 +98,7 @@ class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class StoryStorageImpl::WriteLinkDataCall : Operation<void> {
+class StoryStorageImpl::WriteLinkDataCall : Operation<> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -263,7 +263,7 @@ class StoryStorageImpl::ReadAllModuleDataCall
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadAllModuleDataCall);
 };
 
-class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
+class StoryStorageImpl::WriteModuleDataCall : Operation<> {
  public:
   WriteModuleDataCall(OperationContainer* const container,
                       ledger::Page* const page,
@@ -309,7 +309,7 @@ class StoryStorageImpl::WriteModuleDataCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteModuleDataCall);
 };
 
-class StoryStorageImpl::WriteDeviceDataCall : Operation<void> {
+class StoryStorageImpl::WriteDeviceDataCall : Operation<> {
  public:
   WriteDeviceDataCall(OperationContainer* const container,
                       ledger::Page* const page,

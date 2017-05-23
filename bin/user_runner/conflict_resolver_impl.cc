@@ -27,7 +27,7 @@ bool IsRootPageId(const fidl::Array<uint8_t>& id) {
 
 }  // namespace
 
-class ConflictResolverImpl::LogConflictDiffCall : Operation<void> {
+class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
  public:
   LogConflictDiffCall(OperationContainer* const container,
                       ledger::MergeResultProviderPtr result_provider)

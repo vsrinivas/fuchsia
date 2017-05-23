@@ -252,7 +252,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
 
-class MessageQueueManager::GetMessageSenderCall : Operation<void> {
+class MessageQueueManager::GetMessageSenderCall : Operation<> {
  public:
   GetMessageSenderCall(OperationContainer* const container,
                        MessageQueueManager* const message_queue_manager,
@@ -330,7 +330,7 @@ class MessageQueueManager::GetMessageSenderCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetMessageSenderCall);
 };
 
-class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
+class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
  public:
   ObtainMessageQueueCall(OperationContainer* const container,
                          MessageQueueManager* const message_queue_manager,
@@ -441,7 +441,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ObtainMessageQueueCall);
 };
 
-class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
+class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
  public:
   DeleteMessageQueueCall(OperationContainer* const container,
                          MessageQueueManager* const message_queue_manager,
@@ -535,7 +535,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
 
-class MessageQueueManager::DeleteNamespaceCall : Operation<void> {
+class MessageQueueManager::DeleteNamespaceCall : Operation<> {
  public:
   DeleteNamespaceCall(OperationContainer* const container,
                       MessageQueueManager* const message_queue_manager,

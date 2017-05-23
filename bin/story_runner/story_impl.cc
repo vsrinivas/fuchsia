@@ -56,7 +56,7 @@ class StoryImpl::StoryMarkerImpl : StoryMarker {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
 };
 
-class StoryImpl::AddModuleCall : Operation<void> {
+class StoryImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryImpl* const story_impl,
@@ -123,7 +123,7 @@ class StoryImpl::GetModulesCall : Operation<fidl::Array<ModuleDataPtr>> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetModulesCall);
 };
 
-class StoryImpl::AddForCreateCall : Operation<void> {
+class StoryImpl::AddForCreateCall : Operation<> {
  public:
   AddForCreateCall(OperationContainer* const container,
                    StoryImpl* const story_impl,
@@ -184,7 +184,7 @@ class StoryImpl::AddForCreateCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
 };
 
-class StoryImpl::StartCall : Operation<void> {
+class StoryImpl::StartCall : Operation<> {
  public:
   StartCall(OperationContainer* const container,
             StoryImpl* const story_impl,
@@ -238,7 +238,7 @@ class StoryImpl::StartCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
-class StoryImpl::StopCall : Operation<void> {
+class StoryImpl::StopCall : Operation<> {
  public:
   StopCall(OperationContainer* const container,
            StoryImpl* const story_impl,
@@ -351,7 +351,7 @@ class StoryImpl::StopCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
-class StoryImpl::DeleteCall : Operation<void> {
+class StoryImpl::DeleteCall : Operation<> {
  public:
   DeleteCall(OperationContainer* const container,
              StoryImpl* const story_impl,
@@ -381,7 +381,7 @@ class StoryImpl::DeleteCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
-class StoryImpl::StartModuleCall : Operation<void> {
+class StoryImpl::StartModuleCall : Operation<> {
  public:
   StartModuleCall(
       OperationContainer* const container,

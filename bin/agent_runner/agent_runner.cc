@@ -52,7 +52,7 @@ void AgentRunner::XdrTriggerInfo(XdrContext* const xdr,
 
 // Asynchronous operations of this service.
 
-class AgentRunner::InitializeCall : Operation<void> {
+class AgentRunner::InitializeCall : Operation<> {
  public:
   InitializeCall(OperationContainer* const container,
                  AgentRunner* const agent_runner,
@@ -103,7 +103,7 @@ class AgentRunner::InitializeCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
-class AgentRunner::UpdateCall : Operation<void> {
+class AgentRunner::UpdateCall : Operation<> {
  public:
   UpdateCall(OperationContainer* const container,
              AgentRunner* const agent_runner,
@@ -128,7 +128,7 @@ class AgentRunner::UpdateCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(UpdateCall);
 };
 
-class AgentRunner::DeleteCall : Operation<void> {
+class AgentRunner::DeleteCall : Operation<> {
  public:
   DeleteCall(OperationContainer* const container,
              AgentRunner* const agent_runner,

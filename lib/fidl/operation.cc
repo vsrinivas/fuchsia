@@ -92,17 +92,6 @@ void OperationBase::Ready() {
   container_->Hold(this);
 }
 
-void OperationBase::DoneStart() {
-  container_->Drop(this);
-}
-
-// static
-void OperationBase::DoneFinish(
-    ftl::WeakPtr<OperationContainer> const container) {
-  if (container)
-    container->Cont();
-}
-
 OperationBase::FlowTokenBase::FlowTokenBase(OperationBase* const op)
     : refcount_(new int), weak_op_(op->weak_ptr_factory_.GetWeakPtr()) {
   *refcount_ = 1;

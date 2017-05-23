@@ -410,7 +410,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
 
 // TODO(alhaad): Use variadic template in |Operation|. That way, parameters to
 // |callback| can be returned as parameters to |Done()|.
-class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
+class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
                                                   web_view::WebRequestDelegate {
  public:
   GoogleUserCredsCall(OperationContainer* const container,

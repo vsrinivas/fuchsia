@@ -110,7 +110,7 @@ class StoryProviderImpl::GetStoryDataCall : Operation<StoryDataPtr> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryDataCall);
 };
 
-class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
+class StoryProviderImpl::WriteStoryDataCall : Operation<> {
  public:
   WriteStoryDataCall(OperationContainer* const container,
                      ledger::Page* const page,
@@ -148,7 +148,7 @@ class StoryProviderImpl::WriteStoryDataCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
 };
 
-class StoryProviderImpl::MutateStoryDataCall : Operation<void> {
+class StoryProviderImpl::MutateStoryDataCall : Operation<> {
  public:
   MutateStoryDataCall(OperationContainer* const container,
                       ledger::Page* const page,
@@ -288,7 +288,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-class StoryProviderImpl::DeleteStoryCall : Operation<void> {
+class StoryProviderImpl::DeleteStoryCall : Operation<> {
  public:
   using ControllerMap =
       std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
@@ -375,7 +375,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<void> {
 // 1. Ensure that the story data in the root page isn't dirty due to a crash
 // 2. Retrieve the page specific to this story.
 // 3. Return a controller for this story that contains the page pointer.
-class StoryProviderImpl::GetControllerCall : Operation<void> {
+class StoryProviderImpl::GetControllerCall : Operation<> {
  public:
   using ControllerMap =
       std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
@@ -524,7 +524,7 @@ class StoryProviderImpl::PreviousStoriesCall
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
 
-class StoryProviderImpl::TeardownCall : Operation<void> {
+class StoryProviderImpl::TeardownCall : Operation<> {
  public:
   TeardownCall(OperationContainer* const container,
                StoryProviderImpl* const story_provider_impl,

@@ -17,7 +17,7 @@ namespace {
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 }
 
-class AgentContextImpl::StartAndInitializeCall : Operation<void> {
+class AgentContextImpl::StartAndInitializeCall : Operation<> {
  public:
   StartAndInitializeCall(OperationContainer* const container,
                          AgentContextImpl* const agent_context_impl)
@@ -71,7 +71,7 @@ class AgentContextImpl::StartAndInitializeCall : Operation<void> {
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection or running task.
-class AgentContextImpl::StopCall : Operation<void> {
+class AgentContextImpl::StopCall : Operation<> {
  public:
   StopCall(OperationContainer* const container,
            const bool terminating,

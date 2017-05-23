@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <queue>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "lib/ftl/macros.h"
@@ -149,34 +151,42 @@ class OperationBase {
   // Derived classes call this when they are ready for |Run()| to be called.
   void Ready();
 
-  // Derived classes call this to remove themselves from their container.
-  void DoneStart();
-  static void DoneFinish(ftl::WeakPtr<OperationContainer> container);
+  template <typename... Args,
+            typename ResultCall = std::function<void(Args...)>>
+  void DispatchCallback(ResultCall callback, Args... result_args) {
+    auto container = std::move(container_);
+    if (container) {
+      auto result_call = std::move(callback);
+      container->Drop(this);
+      // Can no longer refer to |this|.
+      result_call(std::move(result_args)...);
+      if (container) {
+        container->Cont();
+      }
+    }
+  }
 
   class FlowTokenBase;
 
-  // Used by the implementation of DoneStart() to remove this instance from the
-  // container.
+ private:
   ftl::WeakPtr<OperationContainer> const container_;
 
+ protected:
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
-  // was deleted.
+  // is deleted.
   ftl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
 };
 
-template <typename T>
+template <typename... Args>
 class Operation : public OperationBase {
  public:
   ~Operation() override {
-    // We must invalidate our weakptrs before the result callback is destroyed
-    // if it still hasn't been called; otherwise, the result callback may
-    // contain FlowTokens that will attempt to call Done().
     weak_ptr_factory_.InvalidateWeakPtrs();
   }
 
-  using ResultCall = std::function<void(T)>;
+  using ResultCall = std::function<void(Args...)>;
 
  protected:
   Operation(OperationContainer* const container, ResultCall result_call)
@@ -184,52 +194,10 @@ class Operation : public OperationBase {
         result_call_(std::move(result_call)) {}
 
   // Derived classes call this when they are prepared to be removed from the
-  // container. Must be the last the instance does, as it results in destructor
-  // invocation.
-  void Done(T v) {
-    auto container = std::move(container_);
-    if (container) {
-      T result_value = std::move(v);
-      ResultCall result_call = std::move(result_call_);
-      DoneStart();
-      // Can no longer refer to |this|.
-      result_call(std::move(result_value));
-      OperationBase::DoneFinish(std::move(container));
-    }
-  }
-
-  class FlowToken;
-  class FlowTokenHolder;
-
- private:
-  ResultCall result_call_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(Operation);
-};
-
-template <>
-class Operation<void> : public OperationBase {
- public:
-  ~Operation() override {
-    weak_ptr_factory_.InvalidateWeakPtrs();
-  }
-
-  using ResultCall = std::function<void()>;
-
- protected:
-  Operation(OperationContainer* const container, ResultCall result_call)
-      : OperationBase(container),
-        result_call_(std::move(result_call)) {}
-
-  void Done() {
-    auto container = std::move(container_);
-    if (container) {
-      ResultCall result_call = std::move(result_call_);
-      DoneStart();
-      // Can no longer refer to |this|.
-      result_call();
-      OperationBase::DoneFinish(std::move(container));
-    }
+  // container. Must be the last thing this instance does, as it results in
+  // destructor invocation.
+  void Done(Args... result_args) {
+    DispatchCallback(std::move(result_call_), std::move(result_args)...);
   }
 
   class FlowToken;
@@ -282,11 +250,11 @@ class OperationBase::FlowTokenBase {
   ftl::WeakPtr<OperationBase> weak_op_;
 };
 
-template <typename T>
-class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
+template <typename... Args>
+class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
  public:
-  FlowToken(Operation<T>* const op, T* const result)
-      : FlowTokenBase(op), op_(op), result_(result) {}
+  FlowToken(Operation<Args...>* const op, Args* const... result)
+      : FlowTokenBase(op), op_(op), result_(result...) {}
 
   FlowToken(const FlowToken& other)
       : FlowTokenBase(other), op_(other.op_), result_(other.result_) {}
@@ -294,33 +262,25 @@ class Operation<T>::FlowToken : OperationBase::FlowTokenBase {
   ~FlowToken() {
     // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
     if (refcount() == 1 && weak_op()) {
-      op_->Done(std::move(*result_));
+      apply(std::make_index_sequence<
+            std::tuple_size<decltype(result_)>::value>{});
     }
   }
 
  private:
-  Operation<T>* const op_;  // not owned
-  T* const result_;         // not owned
-};
-
-// TODO(mesch): There surely must be a way to write this as one class. But the
-// missing argument of Done() when the template parameter type is void makes
-// this difficult.
-class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
- public:
-  FlowToken(Operation<void>* const op) : FlowTokenBase(op), op_(op) {}
-
-  FlowToken(const FlowToken& other) : FlowTokenBase(other), op_(other.op_) {}
-
-  ~FlowToken() {
-    // If refcount is 1 here, it will become 0 in ~FlowTokenBase.
-    if (refcount() == 1 && weak_op()) {
-      op_->Done();
-    }
+  // This usage is based on the implementation of std::apply(), which is only
+  // available in C++17: http://en.cppreference.com/w/cpp/utility/apply
+  template <size_t... I>
+  void apply(std::integer_sequence<size_t, I...>) {
+    op_->Done(std::move((*std::get<I>(result_)))...);
   }
 
- private:
-  Operation<void>* const op_;  // not owned
+  Operation<Args...>* const op_;  // not owned
+
+  // The pointers that FlowToken() is constructed with are stored in this
+  // std::tuple. They are then extracted and std::move()'d in the |apply()|
+  // method.
+  std::tuple<Args* const...> result_; // the values are not owned
 };
 
 // Sometimes the asynchronous flow of control that is represented by a FlowToken
@@ -344,10 +304,10 @@ class Operation<void>::FlowToken : OperationBase::FlowTokenBase {
 // The flow token holder is a simple wrapper of a shared ptr to a unique ptr. We
 // define it because such a nested smart pointer is rather unwieldy to write
 // every time.
-template <typename T>
-class Operation<T>::FlowTokenHolder {
+template <typename... Args>
+class Operation<Args...>::FlowTokenHolder {
  public:
-  using FlowToken = Operation<T>::FlowToken;
+  using FlowToken = Operation<Args...>::FlowToken;
 
   FlowTokenHolder(const FlowToken& flow)
       : ptr_(std::make_shared<std::unique_ptr<FlowToken>>(
@@ -367,29 +327,12 @@ class Operation<T>::FlowTokenHolder {
   std::shared_ptr<std::unique_ptr<FlowToken>> ptr_;
 };
 
-// TODO(mesch): Compiler insists on the specialized definition, even though the
-// generic definition should cover the void case too.
-class Operation<void>::FlowTokenHolder {
- public:
-  using FlowToken = Operation<void>::FlowToken;
-
-  FlowTokenHolder(const FlowToken& flow)
-      : ptr_(std::make_shared<std::unique_ptr<FlowToken>>(
-            std::make_unique<FlowToken>(flow))) {}
-
-  FlowTokenHolder(const FlowTokenHolder& other) : ptr_(other.ptr_) {}
-
-  std::unique_ptr<FlowToken> Continue() const { return std::move(*ptr_); }
-
- private:
-  std::shared_ptr<std::unique_ptr<FlowToken>> ptr_;
-};
 
 // Following is a list of commonly used operations.
 
 // An operation which immediately calls its result callback. This is useful for
 // making sure that all operations that run before this have completed.
-class SyncCall : public Operation<void> {
+class SyncCall : public Operation<> {
  public:
   SyncCall(OperationContainer* const container, ResultCall result_call)
       : Operation(container, std::move(result_call)) {
