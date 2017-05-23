@@ -9,20 +9,6 @@
 #include "lib/ftl/logging.h"
 
 namespace media {
-namespace {
-
-bool PtssRoughlyEqual(int64_t a,
-                      TimelineRate a_rate,
-                      int64_t b,
-                      TimelineRate b_rate) {
-  a = a *
-      TimelineRate::Product(TimelineRate::NsPerSecond, a_rate.Inverse(), false);
-  b = b *
-      TimelineRate::Product(TimelineRate::NsPerSecond, b_rate.Inverse(), false);
-  return std::abs(a - b) < Timeline::ns_from_ms(50);
-}
-
-}  // namespace
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
@@ -133,20 +119,11 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
   FTL_DCHECK(allocator);
 
-  int64_t pts;
-  if (av_frame.pts == AV_NOPTS_VALUE) {
-    // No PTS supplied. Assume we're progressing normally.
-    pts = next_pts();
-  } else if (incoming_pts_rate_ == pts_rate()) {
-    // PTS supplied in the preferred units.
-    pts = av_frame.pts;
-  } else {
-    // PTS isn't in preferred units. Assume we're progressing normally.
-    // TODO(dalesat): Might need to reset if pts and av_frame.pts diverge.
-    pts = next_pts();
-    FTL_DCHECK(
-        PtssRoughlyEqual(pts, pts_rate(), av_frame.pts, incoming_pts_rate_));
-  }
+  // We infer the PTS for a packet based on the assumption that the decoder
+  // produces an uninterrupted stream of frames. The PTS value in av_frame is
+  // often bogus, and we get bad results if we try to use it. This approach is
+  // consistent with the way Chromium deals with the ffmpeg audio decoders.
+  int64_t pts = next_pts();
 
   set_next_pts(pts + av_frame.nb_samples);
 
