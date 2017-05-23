@@ -228,6 +228,14 @@ public:
     //     // Ok to create a channel.
     mx_status_t QueryPolicy(uint32_t condition) const;
 
+    uintptr_t vdso_code_address() {
+        if (unlikely(vdso_code_address_ == 0)) {
+            AutoLock a(&state_lock_);
+            vdso_code_address_ = aspace()->vdso_code_address();
+        }
+        return vdso_code_address_;
+    }
+
 private:
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
@@ -303,6 +311,9 @@ private:
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.
     uintptr_t debug_addr_ TA_GUARDED(state_lock_) = 0;
+
+    // This is a cache of aspace()->vdso_code_address().
+    uintptr_t vdso_code_address_ = 0;
 
     // Used to protect name read/writes
     mutable SpinLock name_lock_;

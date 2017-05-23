@@ -33,8 +33,11 @@ bool KernelInvocationGenerator::syscall(std::ofstream& os, const Syscall& sc) {
     auto syscall_name = syscall_prefix_ + sc.name;
 
     // case 0:
-    os << "    case " << sc.index << ": {\n"
-       << code_sp;
+    os << block_sp << "case " << sc.index << ": {\n";
+
+    os << code_sp << "CHECK_SYSCALL_PC(" << sc.name << ");\n";
+
+    os << code_sp;
 
     // ret = static_cast<uint64_t>(syscall_whatevs(      )) -closer
     string close_invocation = invocation(os, return_var_, return_type_, syscall_name, sc);

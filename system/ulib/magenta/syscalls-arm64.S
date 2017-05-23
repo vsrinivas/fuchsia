@@ -13,7 +13,7 @@
 
 .macro m_syscall name, num, with_aliases
 syscall_entry_begin \name
-    magenta_syscall \num
+    magenta_syscall \num, \name, \name
     ret
 syscall_entry_end \name \with_aliases
 .endm

@@ -113,6 +113,7 @@ public:
 
 #if WITH_LIB_VDSO
     uintptr_t vdso_base_address() const;
+    uintptr_t vdso_code_address() const;
 #endif
 
 protected:

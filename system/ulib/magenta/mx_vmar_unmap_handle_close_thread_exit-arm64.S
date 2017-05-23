@@ -20,16 +20,16 @@ syscall_entry_begin mx_vmar_unmap_handle_close_thread_exit
     push_regpair x19, x20
     mov x19, x3
 
-    magenta_syscall MX_SYS_vmar_unmap
+    magenta_syscall MX_SYS_vmar_unmap, mx_vmar_unmap, mx_vmar_unmap_handle_close_thread_exit
     cbnz x0, .Lvmar_unmap_fail
 
     // Now the stack is gone and we can never return!
 
     mov x0, x19
-    magenta_syscall MX_SYS_handle_close
+    magenta_syscall MX_SYS_handle_close, mx_handle_close, mx_vmar_unmap_handle_close_thread_exit
     cbnz x0, .Lhandle_close_fail
 
-    magenta_syscall MX_SYS_thread_exit
+    magenta_syscall MX_SYS_thread_exit, mx_thread_exit, mx_vmar_unmap_handle_close_thread_exit
 
     // It should be impossible to get here.
 .Lthread_exit_returned:

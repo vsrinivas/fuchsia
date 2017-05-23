@@ -20,16 +20,16 @@ syscall_entry_begin mx_futex_wake_handle_close_thread_exit
     push_regpair x19, x20
     mov w19, w2
 
-    magenta_syscall MX_SYS_futex_wake
+    magenta_syscall MX_SYS_futex_wake, mx_futex_wake, mx_futex_wake_handle_close_thread_exit
     cbnz x0, .Lfutex_wake_fail
 
     // Now the stack might be gone and we can never return!
 
     mov w0, w19
-    magenta_syscall MX_SYS_handle_close
+    magenta_syscall MX_SYS_handle_close, mx_handle_close, mx_futex_wake_handle_close_thread_exit
     cbnz x0, .Lhandle_close_fail
 
-    magenta_syscall MX_SYS_thread_exit
+    magenta_syscall MX_SYS_thread_exit, mx_thread_exit, mx_futex_wake_handle_close_thread_exit
 
     // It should be impossible to get here.
 .Lthread_exit_returned:

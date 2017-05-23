@@ -5,8 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <lib/ktrace.h>
 #include <kernel/thread.h>
+#include <lib/ktrace.h>
+#include <lib/vdso.h>
+#include <magenta/process_dispatcher.h>
 #include <platform.h>
 #include <trace.h>
 
@@ -14,22 +16,36 @@
 #include <stdint.h>
 
 #include "syscalls_priv.h"
+#include "vdso-valid-sysret.h"
 
 #define LOCAL_TRACE 0
 
-int sys_invalid_syscall(void) {
-    LTRACEF("invalid syscall\n");
+int sys_invalid_syscall(uint64_t num, uint64_t pc) {
+    LTRACEF("invalid syscall %lu from PC %#lx \n", num, pc);
     return ERR_BAD_SYSCALL;
 }
 
-inline uint64_t invoke_syscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg2, uint64_t arg3,
-                               uint64_t arg4, uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8) {
+inline uint64_t invoke_syscall(
+    uint64_t syscall_num, uint64_t pc,
+    uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+    uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8) {
     uint64_t ret;
+
+    const uint64_t pc_offset =
+        pc - ProcessDispatcher::GetCurrent()->vdso_code_address();
+
+#define CHECK_SYSCALL_PC(name) do {                             \
+        if (unlikely(!VDso::ValidSyscallPC::name(pc_offset)))   \
+            return sys_invalid_syscall(syscall_num, pc);        \
+    } while (0)
 
     switch (syscall_num) {
 #include <magenta/syscall-invocation-cases.inc>
-        default:
-            ret = sys_invalid_syscall();
+    default:
+        // This should be unreachable because the numbers are densely packed.
+        ASSERT_MSG(
+            0, "invalid syscall number %lu from PC %#lx reached switch!",
+            syscall_num, pc);
     }
 
     return ret;
@@ -65,8 +81,10 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     LTRACEF_LEVEL(2, "num %" PRIu64 "\n", syscall_num);
 
     /* call the routine */
-    uint64_t ret = invoke_syscall(syscall_num, frame->r[0], frame->r[1], frame->r[2], frame->r[3],
-                                  frame->r[4], frame->r[5], frame->r[6], frame->r[7]);
+    uint64_t ret = invoke_syscall(
+        syscall_num, pc,
+        frame->r[0], frame->r[1], frame->r[2], frame->r[3],
+        frame->r[4], frame->r[5], frame->r[6], frame->r[7]);
 
     LTRACEF_LEVEL(2, "ret %#" PRIx64 "\n", ret);
 
@@ -119,7 +137,9 @@ struct x86_64_syscall_result x86_64_syscall(
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
                   thread, syscall_num, ip);
 
-    uint64_t ret = invoke_syscall(syscall_num, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    uint64_t ret = invoke_syscall(syscall_num, ip,
+                                  arg1, arg2, arg3, arg4,
+                                  arg5, arg6, arg7, arg8);
 
     LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", thread, ret);
 

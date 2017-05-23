@@ -584,4 +584,9 @@ uintptr_t VmAspace::vdso_base_address() const {
     AutoLock a(&lock_);
     return VDso::base_address(vdso_code_mapping_);
 }
+
+uintptr_t VmAspace::vdso_code_address() const {
+    AutoLock a(&lock_);
+    return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
+}
 #endif

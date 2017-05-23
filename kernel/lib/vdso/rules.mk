@@ -32,4 +32,13 @@ $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h: scripts/gen-rodso-code.sh $(vdso-filename)
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
 MODULE_COMPILEFLAGS += -I$(BUILDDIR)/$(LOCAL_DIR)
 
+MODULE_SRCDEPS += $(BUILDDIR)/$(LOCAL_DIR)/vdso-valid-sysret.h
+$(BUILDDIR)/$(LOCAL_DIR)/vdso-valid-sysret.h: \
+    scripts/gen-vdso-valid-sysret.sh $(BUILDDIR)/$(LOCAL_DIR)/vdso-code.h
+	@$(MKDIR)
+	$(call BUILDECHO,generating $@)
+	$(NOECHO)$(SHELLEXEC) $^ > $@.new
+	@mv -f $@.new $@
+GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-valid-sysret.h
+
 include make/module.mk

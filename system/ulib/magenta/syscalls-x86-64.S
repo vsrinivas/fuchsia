@@ -21,7 +21,7 @@ syscall_entry_begin \name
     push_reg %r10
     push_reg %r11
     mov      %rcx, %r10
-    magenta_syscall \num
+    magenta_syscall \num, \name, \name
     pop_reg  %r11
     pop_reg  %r10
     ret
@@ -32,7 +32,7 @@ syscall_entry_begin \name
     push_reg %r12
     mov      0x20(%rsp), %r12
     mov      %rcx, %r10
-    magenta_syscall \num
+    magenta_syscall \num, \name, \name
     pop_reg  %r12
     pop_reg  %r11
     pop_reg  %r10
@@ -46,7 +46,7 @@ syscall_entry_begin \name
     mov      0x28(%rsp), %r12
     mov      0x30(%rsp), %r13
     mov      %rcx, %r10
-    magenta_syscall \num
+    magenta_syscall \num, \name, \name
     pop_reg  %r13
     pop_reg  %r12
     pop_reg  %r11
