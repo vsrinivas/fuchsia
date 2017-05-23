@@ -28,6 +28,11 @@ stp \ra, \rb, [sp,#-16]!
 ldp \ra, \rb, [sp], #16
 .endm
 
+.macro adr_global reg, symbol
+adrp \reg, \symbol
+add \reg, \reg, #:lo12:\symbol
+.endm
+
 .macro tbzmask, reg, mask, label, shift=0
 .if \shift >= 64
     .error "tbzmask: unsupported mask, \mask"

@@ -65,13 +65,11 @@ FUNCTION(arm_reset)
     /* set up the mmu according to mmu_initial_mappings */
 
     /* load the base of the translation table and clear the table */
-    adrp    page_table1, arm64_kernel_translation_table
-    add     page_table1, page_table1, #:lo12:arm64_kernel_translation_table
+    adr_global page_table1, arm64_kernel_translation_table
 
     /* Prepare tt_trampoline page table */
     /* Calculate pagetable physical addresses */
-    adrp    page_table0, tt_trampoline
-    add     page_table0, page_table0, #:lo12:tt_trampoline
+    adr_global page_table0, tt_trampoline
 
 #if WITH_SMP
     mrs     cpuid, mpidr_el1
@@ -89,8 +87,7 @@ FUNCTION(arm_reset)
     bne     .Lclear_top_page_table_loop
 
     /* load the address of the mmu_initial_mappings table and start processing */
-    adrp    mmu_initial_mapping, mmu_initial_mappings
-    add     mmu_initial_mapping, mmu_initial_mapping, #:lo12:mmu_initial_mappings
+    adr_global mmu_initial_mapping, mmu_initial_mappings
 
 .Linitial_mapping_loop:
 /* Read entry of mmu_initial_mappings (likely defined in platform.c) */
@@ -286,14 +283,12 @@ FUNCTION(arm_reset)
     str     tmp2, [page_table0, tmp, lsl #3]     /* tt_trampoline[paddr index] = pt entry */
 
 #if WITH_SMP
-    adrp    tmp, page_tables_not_ready
-    add     tmp, tmp, #:lo12:page_tables_not_ready
+    adr_global tmp, page_tables_not_ready
     str     wzr, [tmp]
     b       .Lpage_tables_ready
 
 .Lmmu_enable_secondary:
-    adrp    tmp, page_tables_not_ready
-    add     tmp, tmp, #:lo12:page_tables_not_ready
+    adr_global tmp, page_tables_not_ready
 .Lpage_tables_not_ready:
     ldr     wtmp2, [tmp]
     cbnz    wtmp2, .Lpage_tables_not_ready
@@ -359,8 +354,8 @@ FUNCTION(arm_reset)
     // NOTE: Relies on __post_prebss_bss_start and __bss_end
     // being 16 byte aligned.
 .L__do_bss:
-    ldr     tmp, =__post_prebss_bss_start
-    ldr     tmp2, =__bss_end
+    adr_global tmp, __post_prebss_bss_start
+    adr_global tmp2, __bss_end
     sub     tmp2, tmp2, tmp
     cbz     tmp2, .L__bss_loop_done
 .L__bss_loop:
@@ -369,7 +364,7 @@ FUNCTION(arm_reset)
     cbnz    tmp2, .L__bss_loop
 .L__bss_loop_done:
 
-    ldr     tmp, =boot_cpu_kstack_end
+    adr_global tmp, boot_cpu_kstack_end
     mov     sp, tmp
 
     // Set the thread pointer early so compiler-generated references
@@ -379,7 +374,7 @@ FUNCTION(arm_reset)
     // having to compile-time disable safe-stack and stack-protector
     // code generation features for all the C code in the bootstrap
     // path, which (unlike on x86, e.g.) is enough to get annoying.
-    ldr     tmp, =boot_cpu_fake_thread_pointer_location
+    adr_global tmp, boot_cpu_fake_thread_pointer_location
     msr     tpidr_el1, tmp
 
     // Choose a good (ideally random) stack-guard value as early as possible.

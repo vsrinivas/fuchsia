@@ -140,8 +140,7 @@ FUNCTION(arm64_get_secondary_sp)
     and     x9, x9, #0xffff             /* only use id/cluster */
     mov     x10, #SMP_MAX_CPUS
 
-    adrp    x11, arm64_secondary_sp_list
-    add     x11, x11, #:lo12:arm64_secondary_sp_list
+    adr_global x11, arm64_secondary_sp_list
 
 .Lsp_loop:
     ldr     x12, [x11, #0]
