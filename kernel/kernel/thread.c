@@ -1630,5 +1630,6 @@ void thread_print_backtrace(thread_t* t, void* fp)
     for (int n = 0; n < count; n++) {
         printf("bt#%02d: %p\n", n, tb.pc[n]);
     }
+    printf("bt#%02d: end\n", count);
 }
 #endif
