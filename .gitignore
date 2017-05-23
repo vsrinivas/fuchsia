@@ -15,6 +15,7 @@ blk.bin
 scripts/toolpaths.local
 clang-format
 compile_commands.json
+.vscode
 *_BACKUP_*
 *_REMOTE_*
 *_LOCAL_*
