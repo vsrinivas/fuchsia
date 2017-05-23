@@ -13,11 +13,14 @@
 namespace app {
 namespace {
 
+constexpr char kServiceRootPath[] = "/svc";
+
 mx::channel GetServiceRoot() {
   mx::channel h1, h2;
   if (mx::channel::create(0, &h1, &h2) != NO_ERROR)
     return mx::channel();
 
+  // TODO(abarth): Use kServiceRootPath once that actually works.
   if (mxio_service_connect("/svc/.", h1.release()) != NO_ERROR)
     return mx::channel();
 
@@ -53,6 +56,24 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
   return std::make_unique<ApplicationContext>(
       GetServiceRoot(),
       fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
+}
+
+std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
+    ApplicationStartupInfoPtr startup_info) {
+  const FlatNamespacePtr& flat = startup_info->flat_namespace;
+  if (flat->paths.size() != flat->directories.size())
+    return nullptr;
+
+  mx::channel service_root;
+  for (size_t i = 0; i < flat->paths.size(); ++i) {
+    if (flat->paths[i] == kServiceRootPath) {
+      service_root = std::move(flat->directories[i]);
+      break;
+    }
+  }
+
+  return std::make_unique<ApplicationContext>(
+      GetServiceRoot(), std::move(startup_info->launch_info->services));
 }
 
 void ApplicationContext::ConnectToEnvironmentService(

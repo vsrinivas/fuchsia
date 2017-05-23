@@ -10,6 +10,7 @@
 #include "application/lib/app/service_provider_impl.h"
 #include "application/services/application_environment.fidl.h"
 #include "application/services/application_launcher.fidl.h"
+#include "application/services/application_runner.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -42,6 +43,9 @@ class ApplicationContext {
   // environment services to be null so that callers can validate the values
   // and provide meaningful error messages.
   static std::unique_ptr<ApplicationContext> CreateFromStartupInfoNotChecked();
+
+  static std::unique_ptr<ApplicationContext> CreateFrom(
+      ApplicationStartupInfoPtr startup_info);
 
   // Gets the application's environment.
   //

@@ -6,18 +6,18 @@ module app;
 
 import "application/services/application_controller.fidl";
 import "application/services/application_environment.fidl";
-import "application/services/service_provider.fidl";
+import "application/services/flat_namespace.fidl";
 
 // Information given to applications at startup.
 //
 // For ELF binaries, this information is provided in the initialization message
 // given to libc by launchpad.
 struct ApplicationStartupInfo {
-  // The application's environment.
-  ApplicationEnvironment environment;
-
   // The application launch info for the application to start.
   ApplicationLaunchInfo launch_info;
+
+  // The namespace in which to run the application.
+  FlatNamespace flat_namespace;
 
   // TODO(abarth): Add more fields to this struct relating to application and
   // environment identity.

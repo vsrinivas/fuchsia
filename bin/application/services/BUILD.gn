@@ -13,6 +13,7 @@ fidl("services") {
     "application_launcher.fidl",
     "application_loader.fidl",
     "application_runner.fidl",
+    "flat_namespace.fidl",
     "service_registry.fidl",
   ]
 

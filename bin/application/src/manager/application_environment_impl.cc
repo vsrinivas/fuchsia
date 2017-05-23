@@ -32,6 +32,7 @@ constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
+constexpr char kServiceRootPath[] = "/svc";
 
 enum class LaunchType {
   kProcess,
@@ -402,9 +403,16 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
     return;
   }
 
+  auto flat_namespace = FlatNamespace::New();
+  flat_namespace->paths.resize(1);
+  flat_namespace->paths[0] = kServiceRootPath;
+  flat_namespace->directories.resize(1);
+  flat_namespace->directories[0] = services_.OpenAsDirectory();
+
   auto startup_info = ApplicationStartupInfo::New();
-  startup_info->environment = environment_bindings_.AddBinding(this);
   startup_info->launch_info = std::move(launch_info);
+  startup_info->flat_namespace = std::move(flat_namespace);
+
   result.first->second->StartApplication(
       std::move(package), std::move(startup_info), std::move(controller));
 }
@@ -425,7 +433,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
 
   mx_handle_t handles[] = {root.get(), svc.get()};
   uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
-  const char* paths[] = {"/", "/svc"};
+  const char* paths[] = {"/", kServiceRootPath};
 
   mxio_flat_namespace_t flat;
   flat.count = 2;
@@ -460,7 +468,7 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
 
   mx_handle_t handles[] = {pkg.get(), svc.get()};
   uint32_t types[] = {PA_HND(PA_NS_DIR, 0), PA_HND(PA_NS_DIR, 1)};
-  const char* paths[] = {"/pkg", "/svc"};
+  const char* paths[] = {"/pkg", kServiceRootPath};
 
   mxio_flat_namespace_t flat;
   flat.count = 2;
