@@ -15,16 +15,18 @@ boolean kernel-drivers.arm-psci.use-hvc         1002
 
 // ARM gic v3 driver
 list    kernel-drivers.arm-gic-v3               1010
-uint64  kernel-drivers.arm-gic-v3.base-phys     1011
+// TODO:(hollande) We use virt since peripherals
+//       should be accessed via a device memory mapping and presently
+//       we do not have mechanisms in kernel for converting phys address
+//       to peripheral address.  For now this requires keeping the base-virt
+//       definition consistent with the PERIPH_BASE_VIRT definition in
+//       the targets rules.mk
+uint64  kernel-drivers.arm-gic-v3.base-virt     1011
 uint64  kernel-drivers.arm-gic-v3.gicd-offset   1012
 uint64  kernel-drivers.arm-gic-v3.gicr-offset   1013
 uint64  kernel-drivers.arm-gic-v3.gicr-stride   1014
 uint32  kernel-drivers.arm-gic-v3.ipi-base      1015
-
-// MSM UART driver
-list    kernel-drivers.msm-uart                 1020
-uint64  kernel-drivers.msm-uart.base-phys       1021
-uint32  kernel-drivers.msm-uart.irq             1022
+uint64  kernel-drivers.arm-gic-v3.base-phys     1016
 
 // ARM generic timer driver
 list    kernel-drivers.arm-generic-timer                1030
@@ -39,16 +41,20 @@ list    kernel-drivers.bcm28xx-uart             1041
 
 // pl011 uart
 list    kernel-drivers.pl011-uart               1050
-uint64  kernel-drivers.pl011-uart.base-phys     1051
+// TODO:(hollande) See note above re: phys/virt
+uint64  kernel-drivers.pl011-uart.base-virt     1051
 uint32  kernel-drivers.pl011-uart.irq           1052
+uint64  kernel-drivers.pl011-uart.base-phys     1053
 
 // qemu drivers
-list    kernel-drivers.qemu-pcie                1053
+list    kernel-drivers.qemu-pcie                1054
 
 // ARM gicv2 driver
 list    kernel-drivers.arm-gic-v2               1060
-uint64  kernel-drivers.arm-gic-v2.base-phys     1061
+// TODO:(hollande) See note above re: phys/virt
+uint64  kernel-drivers.arm-gic-v2.base-virt     1061
 uint64  kernel-drivers.arm-gic-v2.gicd-offset   1062
 uint64  kernel-drivers.arm-gic-v2.gicc-offset   1063
 uint32  kernel-drivers.arm-gic-v2.ipi-base      1064
 uint64  kernel-drivers.arm-gic-v2.msi-frame-phys 1065
+uint64  kernel-drivers.arm-gic-v2.base-phys     1066

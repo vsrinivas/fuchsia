@@ -143,15 +143,15 @@ static const struct pdev_uart_ops uart_ops = {
 };
 
 static void pl011_uart_init_early(mdi_node_ref_t* node, uint level) {
-    uint64_t uart_base_phys = 0;
-    bool got_uart_base_phys = false;
+    uint64_t uart_base_virt = 0;
+    bool got_uart_base_virt = false;
     bool got_uart_irq = false;
 
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_DRIVERS_PL011_UART_BASE_PHYS:
-            got_uart_base_phys = !mdi_node_uint64(&child, &uart_base_phys);
+        case MDI_KERNEL_DRIVERS_PL011_UART_BASE_VIRT:
+            got_uart_base_virt = !mdi_node_uint64(&child, &uart_base_virt);
             break;
         case MDI_KERNEL_DRIVERS_PL011_UART_IRQ:
             got_uart_irq = !mdi_node_uint32(&child, &uart_irq);
@@ -159,14 +159,14 @@ static void pl011_uart_init_early(mdi_node_ref_t* node, uint level) {
         }
     }
 
-    if (!got_uart_base_phys) {
-        panic("pl011 uart: uart_base_phys not defined\n");
+    if (!got_uart_base_virt) {
+        panic("pl011 uart: uart_base_virt not defined\n");
     }
     if (!got_uart_irq) {
         panic("pl011 uart: uart_irq not defined\n");
     }
 
-    uart_base = (uint64_t)paddr_to_kvaddr(uart_base_phys);
+    uart_base = (uint64_t)uart_base_virt;
 
     UARTREG(uart_base, UART_CR) = (1<<8)|(1<<0); // tx_enable, uarten
 

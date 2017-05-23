@@ -323,10 +323,10 @@ static const struct pdev_interrupt_ops gic_ops = {
 };
 
 static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
-    uint64_t gic_base_phys = 0;
+    uint64_t gic_base_virt = 0;
     uint64_t msi_frame_phys = 0;
 
-    bool got_gic_base_phys = false;
+    bool got_gic_base_virt = false;
     bool got_gicd_offset = false;
     bool got_gicc_offset = false;
     bool got_ipi_base = false;
@@ -334,8 +334,8 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_BASE_PHYS:
-            got_gic_base_phys = !mdi_node_uint64(&child, &gic_base_phys);
+        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_BASE_VIRT:
+            got_gic_base_virt = !mdi_node_uint64(&child, &gic_base_virt);
             break;
         case MDI_KERNEL_DRIVERS_ARM_GIC_V2_GICD_OFFSET:
             got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv2_gicd_offset);
@@ -351,8 +351,8 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         }
     }
 
-    if (!got_gic_base_phys) {
-        printf("arm-gic-v2: gic_base_phys not defined\n");
+    if (!got_gic_base_virt) {
+        printf("arm-gic-v2: gic_base_virt not defined\n");
         return;
     }
     if (!got_gicd_offset) {
@@ -368,7 +368,7 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         return;
     }
 
-    arm_gicv2_gic_base = (uint64_t)paddr_to_kvaddr(gic_base_phys);
+    arm_gicv2_gic_base = (uint64_t)(gic_base_virt);
 
     arm_gic_init();
     if (msi_frame_phys) {

@@ -10,10 +10,12 @@ cpu-map = {
 
 kernel-drivers = {
     pl011-uart = {
+        base-virt = 0xffffffffc9000000
         base-phys = 0x09000000
         irq = 33
     }
     arm-gic-v2 = {
+        base-virt = 0xffffffffc8000000
         base-phys = 0x08000000
         gicd-offset = 0x00000
         gicc-offset = 0x10000
