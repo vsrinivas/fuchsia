@@ -68,11 +68,6 @@ typedef struct hid_device {
     size_t num_reports;
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
-    // A hid_device_t can only *really* be released when it is removed *and* all
-    // its instances (which depend on it for locking) are gone.
-    uint32_t refcount;
-    mtx_t lock;
-
     struct list_node instance_list;
     mtx_t instance_lock;
 
@@ -364,27 +359,8 @@ static mx_status_t hid_close_instance(void* ctx, uint32_t flags) {
 
 static void hid_release_reassembly_buffer(hid_device_t* dev);
 
-static void hid_downref(hid_device_t* hid) {
-    mtx_lock(&hid->lock);
-    hid->refcount--;
-    if (hid->refcount == 0) {
-        if (hid->hid_report_desc) {
-            free(hid->hid_report_desc);
-            hid->hid_report_desc = NULL;
-            hid->hid_report_desc_len = 0;
-        }
-        hid_release_reassembly_buffer(hid);
-
-        mtx_unlock(&hid->lock);
-        free(hid);
-    } else {
-        mtx_unlock(&hid->lock);
-    }
-}
-
 static void hid_release_instance(void* ctx) {
     hid_instance_t* hid = ctx;
-    hid_downref(hid->base);
     free(hid);
 }
 
@@ -682,7 +658,14 @@ static mx_status_t hid_init_reassembly_buffer(hid_device_t* dev) {
 
 static void hid_release_device(void* ctx) {
     hid_device_t* hid = ctx;
-    hid_downref(hid);
+
+    if (hid->hid_report_desc) {
+        free(hid->hid_report_desc);
+        hid->hid_report_desc = NULL;
+        hid->hid_report_desc_len = 0;
+    }
+    hid_release_reassembly_buffer(hid);
+    free(hid);
 }
 
 extern mx_driver_t _driver_hid;
@@ -715,7 +698,6 @@ static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t fl
     inst->base = hid;
 
     mtx_lock(&hid->instance_lock);
-    hid->refcount++;
     list_add_tail(&hid->instance_list, &inst->node);
     mtx_unlock(&hid->instance_lock);
 
@@ -861,7 +843,6 @@ static mx_status_t hid_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
         goto fail;
     }
 
-    mtx_init(&hiddev->lock, mtx_plain);
     mtx_init(&hiddev->instance_lock, mtx_plain);
     list_initialize(&hiddev->instance_list);
 
@@ -904,8 +885,6 @@ static mx_status_t hid_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
         printf("hid: failed to initialize reassembly buffer: %d\n", status);
         goto fail;
     }
-
-    hiddev->refcount = 1;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

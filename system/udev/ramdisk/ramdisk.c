@@ -35,10 +35,6 @@ typedef struct ramdisk_device {
     char name[NAME_MAX];
 } ramdisk_device_t;
 
-typedef struct ramdisk_instance {
-    mx_device_t* mxdev;
-} ramdisk_instance_t;
-
 static uint64_t sizebytes(ramdisk_device_t* rdev) {
     return rdev->blk_size * rdev->blk_count;
 }
@@ -263,40 +259,21 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
 }
 
-static void ramctl_unbind(void* ctx) {
-    ramdisk_instance_t* instance = ctx;
-    device_remove(instance->mxdev);
-}
-
 static mx_protocol_device_t ramctl_instance_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = ramctl_ioctl,
-    .unbind = ramctl_unbind,
 };
 
 static mx_status_t ramctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {
-    ramdisk_instance_t* instance = calloc(1, sizeof(ramdisk_instance_t));
-    if (!instance) {
-        return ERR_NO_MEMORY;
-    }
-
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ramctl-instance",
-        .ctx = instance,
         .driver = &_driver_ramdisk,
         .ops = &ramctl_instance_proto,
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    mx_status_t status;
-    if ((status = device_add(ramdisk_ctl_dev, &args, &instance->mxdev)) < 0) {
-        free(instance);
-        return status;
-    }
-
-    *dev_out = instance->mxdev;
-    return NO_ERROR;
+    return device_add(ramdisk_ctl_dev, &args, dev_out);
 }
 
 static mx_protocol_device_t ramdisk_ctl_proto = {

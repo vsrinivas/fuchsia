@@ -233,6 +233,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         dev->resource = (hcount == 2 ? hin[1] : MX_HANDLE_INVALID);
         dev->refcount = 1;
         list_initialize(&dev->children);
+        list_initialize(&dev->instances);
 
         newios->ph.handle = hin[0];
         newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;

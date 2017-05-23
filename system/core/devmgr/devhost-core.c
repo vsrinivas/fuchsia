@@ -127,6 +127,7 @@ void dev_ref_release(mx_device_t* dev) {
         if (dev->flags & DEV_FLAG_INSTANCE) {
             // these don't get removed, so mark dead state here
             dev->flags |= DEV_FLAG_DEAD | DEV_FLAG_VERY_DEAD;
+            list_delete(&dev->node);
         }
         if (dev->flags & DEV_FLAG_BUSY) {
             // this can happen if creation fails
@@ -150,6 +151,10 @@ void dev_ref_release(mx_device_t* dev) {
         DM_UNLOCK();
         device_op_release(dev);
         DM_LOCK();
+        if (dev->flags & DEV_FLAG_INSTANCE) {
+            // instances don't support device_remove() so we decrement the parent ref count here
+            dev_ref_release(dev->parent);
+        }
     }
 }
 
@@ -165,6 +170,7 @@ mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_devic
     dev->ops = ops;
     dev->driver = driver;
     list_initialize(&dev->children);
+    list_initialize(&dev->instances);
 
     if (name == NULL) {
         printf("devhost: dev=%p has null name.\n", dev);
@@ -322,10 +328,21 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
         dev->flags |= DEV_FLAG_ADDED;
         dev->flags &= (~DEV_FLAG_BUSY);
         return NO_ERROR;
-    } else if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+    }
+
+    dev_ref_acquire(parent);
+    dev->parent = parent;
+
+    if (dev->flags & DEV_FLAG_INSTANCE) {
+        list_add_tail(&parent->instances, &dev->node);
+
+        // instanced devices are not remoted and resources
+        // attached to them are discarded
+        if (resource != MX_HANDLE_INVALID) {
+            mx_handle_close(resource);
+        }
+    } else {
         // add to the device tree
-        dev_ref_acquire(parent);
-        dev->parent = parent;
         list_add_tail(&parent->children, &dev->node);
 
         // devhost_add always consumes the handle
@@ -339,12 +356,6 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
             list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
             return status;
-        }
-    } else {
-        // instanced devices are not remoted and resources
-        // attached to them are discarded
-        if (resource != MX_HANDLE_INVALID) {
-            mx_handle_close(resource);
         }
     }
     dev->flags |= DEV_FLAG_ADDED;
@@ -379,6 +390,21 @@ static const char* removal_problem(uint32_t flags) {
     return "?";
 }
 
+static void devhost_unbind_child(mx_device_t* child) {
+    // call child's unbind op
+    if (child->ops->unbind) {
+#if TRACE_ADD_REMOVE
+        printf("call unbind child: %p(%s)\n", child, child->name);
+#endif
+        // hold a reference so the child won't get released during its unbind callback.
+        dev_ref_acquire(child);
+        DM_UNLOCK();
+        device_op_unbind(child);
+        DM_LOCK();
+        dev_ref_release(child);
+    }
+}
+
 static void devhost_unbind_children(mx_device_t* dev) {
     mx_device_t* child = NULL;
     mx_device_t* temp = NULL;
@@ -386,18 +412,10 @@ static void devhost_unbind_children(mx_device_t* dev) {
     printf("devhost_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
     list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
-        // call child's unbind op
-        if (child->ops->unbind) {
-#if TRACE_ADD_REMOVE
-            printf("call unbind child: %p(%s)\n", child, child->name);
-#endif
-            // hold a reference so the child won't get released during its unbind callback.
-            dev_ref_acquire(child);
-            DM_UNLOCK();
-            device_op_unbind(child);
-            DM_LOCK();
-            dev_ref_release(child);
-        }
+        devhost_unbind_child(child);
+    }
+    list_for_every_entry_safe(&dev->instances, child, temp, mx_device_t, node) {
+        devhost_unbind_child(child);
     }
 }
 

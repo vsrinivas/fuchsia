@@ -70,6 +70,9 @@ struct mx_device {
     // list of this device's children in the device tree
     struct list_node DDK_PRIVATE(children);
 
+    // list of this device's instances
+    struct list_node DDK_PRIVATE(instances);
+
     // iostate
     void* DDK_PRIVATE(ios);
 
