@@ -22,8 +22,8 @@ footer() {
 }
 
 scan() {
-  local define symbol reset syscall caller
-  local -A syscall_callers
+  local define symbol rest syscall caller
+  local syscalls=''
 
   while read define symbol rest; do
     case "$symbol" in
@@ -34,15 +34,21 @@ scan() {
     syscall="${symbol#VDSO_CODE_SYSRET_mx_}"
     caller="${syscall#*_VIA_}"
     syscall="${syscall%_VIA_*}"
-    syscall_callers[$syscall]+=" $caller"
+    if eval "test -z \"\$syscall_callers_${syscall}\""; then
+      syscalls+=" $syscall"
+      eval "local syscall_callers_${syscall}=\$caller"
+    else
+      eval "syscall_callers_${syscall}+=\" \$caller\""
+    fi
   done
 
-  for syscall in "${!syscall_callers[@]}"; do
+  for syscall in $syscalls; do
     echo "\
     static bool ${syscall}(uintptr_t offset) {
         switch (offset) {\
 "
-    for caller in ${syscall_callers[$syscall]}; do
+    eval "local callers=\$syscall_callers_$syscall"
+    for caller in $callers; do
       echo "\
         case VDSO_CODE_SYSRET_mx_${syscall}_VIA_${caller} - VDSO_CODE_START:
             return true;\
