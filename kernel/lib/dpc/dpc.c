@@ -3,6 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include <lib/dpc.h>
 
 #include <assert.h>
@@ -62,6 +63,24 @@ status_t dpc_queue_thread_locked(dpc_t *dpc)
     return NO_ERROR;
 }
 
+bool dpc_cancel(dpc_t *dpc)
+{
+    DEBUG_ASSERT(dpc);
+
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&dpc_lock, state);
+
+    bool callback_not_running = false;
+
+    if (list_in_list(&dpc->node)) {
+        list_delete(&dpc->node);
+        callback_not_running = true;
+    }
+
+    spin_unlock_irqrestore(&dpc_lock, state);
+    return callback_not_running;
+}
+
 static int dpc_thread(void *arg)
 {
     for (;;) {
@@ -92,7 +111,7 @@ static int dpc_thread(void *arg)
 
 static void dpc_init(unsigned int level)
 {
-    thread_t *t = thread_create("dpc", &dpc_thread, NULL, HIGH_PRIORITY, DEFAULT_STACK_SIZE);
+    thread_t *t = thread_create("dpc", &dpc_thread, NULL, DPC_THREAD_PRIORITY, DEFAULT_STACK_SIZE);
     thread_detach_and_resume(t);
 }
 

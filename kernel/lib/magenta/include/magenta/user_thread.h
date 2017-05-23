@@ -220,10 +220,11 @@ private:
     mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
     const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);
     Mutex exception_wait_lock_;
-    event_t exception_event_ = EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
+    event_t exception_event_ =
+        EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
     // cleanup dpc structure
-    dpc_t cleanup_dpc_ = {};
+    dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};
 
     // Used to protect thread name read/writes
     SpinLock name_lock_;

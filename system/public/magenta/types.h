@@ -150,6 +150,9 @@ typedef uint32_t mx_signals_t;
 #define MX_LOG_READABLE             __MX_OBJECT_READABLE
 #define MX_LOG_WRITABLE             __MX_OBJECT_WRITABLE
 
+// Timer
+#define MX_TIMER_SIGNALED           __MX_OBJECT_SIGNALED
+
 // Compatibility Definitions
 // TODO: remove when safe. Magenta should not be using them.
 #define MX_PROCESS_SIGNALED         MX_PROCESS_TERMINATED

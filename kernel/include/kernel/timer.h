@@ -58,7 +58,7 @@ typedef struct timer {
 void timer_initialize(timer_t *);
 void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg);
 void timer_set_periodic(timer_t *, lk_time_t period, timer_callback, void *arg);
-void timer_cancel(timer_t *);
+bool timer_cancel(timer_t *);
 
 void timer_transition_off_cpu(uint old_cpu);
 void timer_thaw_percpu(void);

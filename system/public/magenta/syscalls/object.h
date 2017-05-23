@@ -53,6 +53,7 @@ typedef enum {
     MX_OBJ_TYPE_IOPORT2             = 20,
     MX_OBJ_TYPE_HYPERVISOR          = 21,
     MX_OBJ_TYPE_GUEST               = 22,
+    MX_OBJ_TYPE_TIMER               = 23,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 

@@ -54,7 +54,7 @@ static void DumpProcessListKeyMap() {
     printf("#vm : number of virtual memory address region handles\n");
     printf("#ch : number of channel handles\n");
     printf("#ev : number of event and event pair handles\n");
-    printf("#ip : number of io port handles\n");
+    printf("#po : number of port handles\n");
 }
 
 static char StateChar(const ProcessDispatcher& pd) {
@@ -72,7 +72,7 @@ static char StateChar(const ProcessDispatcher& pd) {
 }
 
 static const char* ObjectTypeToString(mx_obj_type_t type) {
-    static_assert(MX_OBJ_TYPE_LAST == 23, "need to update switch below");
+    static_assert(MX_OBJ_TYPE_LAST == 24, "need to update switch below");
 
     switch (type) {
         case MX_OBJ_TYPE_PROCESS: return "process";
@@ -95,6 +95,7 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_IOPORT2: return "portv2";
         case MX_OBJ_TYPE_HYPERVISOR: return "hypervisor";
         case MX_OBJ_TYPE_GUEST: return "guest";
+        case MX_OBJ_TYPE_TIMER: return "timer";
         default: return "???";
     }
 }
@@ -138,7 +139,7 @@ static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
              types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
-             types[MX_OBJ_TYPE_IOPORT]
+             types[MX_OBJ_TYPE_IOPORT2]
              );
     return buf;
 }

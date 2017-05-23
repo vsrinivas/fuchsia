@@ -43,6 +43,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/socket_dispatcher.cpp \
     $(LOCAL_DIR)/state_tracker.cpp \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
+    $(LOCAL_DIR)/timer_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
     $(LOCAL_DIR)/user_thread.cpp \
     $(LOCAL_DIR)/vm_address_region_dispatcher.cpp \

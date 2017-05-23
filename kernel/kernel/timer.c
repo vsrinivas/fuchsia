@@ -159,8 +159,13 @@ void timer_set_periodic(timer_t *timer, lk_time_t period, timer_callback callbac
 
 /**
  * @brief  Cancel a pending timer
+ *
+ * Returns true if the timer was canceled before it was
+ * scheduled in a cpu and false otherwise or if the timer
+ * was not scheduled at all.
+ *
  */
-void timer_cancel(timer_t *timer)
+bool timer_cancel(timer_t *timer)
 {
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
 
@@ -185,11 +190,15 @@ void timer_cancel(timer_t *timer)
 
         /* we're done, so return back to the callback */
         spin_unlock_irqrestore(&timer_lock, state);
-        return;
+        return false;
     }
+
+    bool callback_not_running;
 
     /* if the timer is in a queue, remove it and adjust hardware timers if needed */
     if (list_in_list(&timer->node)) {
+        callback_not_running = true;
+
 #if PLATFORM_HAS_DYNAMIC_TIMER
         timer_t *oldhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
 #endif
@@ -209,6 +218,8 @@ void timer_cancel(timer_t *timer)
             platform_set_oneshot_timer(timer_tick, NULL, newhead->scheduled_time);
         }
 #endif
+    } else {
+        callback_not_running = false;
     }
 
     spin_unlock_irqrestore(&timer_lock, state);
@@ -222,6 +233,8 @@ void timer_cancel(timer_t *timer)
     timer->callback = NULL;
     timer->arg = NULL;
     timer->period = 0;
+
+    return callback_not_running;
 }
 
 /* called at interrupt time to process any pending timers */
@@ -397,6 +410,7 @@ void timer_init(void)
         list_initialize(&timers[i].timer_queue);
     }
 #if !PLATFORM_HAS_DYNAMIC_TIMER
+    #warning "Platform does not have dynamic timer. Timer has 10ms resolution"
     /* register for a periodic timer tick */
     platform_set_periodic_timer(timer_tick, NULL, LK_MSEC(10)); /* 10ms */
 #endif

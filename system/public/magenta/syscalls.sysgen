@@ -313,6 +313,19 @@ syscall port_cancel
     (handle: mx_handle_t, source: mx_handle_t, key: uint64_t)
     returns (mx_status_t);
 
+# Timers
+
+syscall timer_create
+    (options: uint32_t)
+    returns (mx_status_t, out: mx_handle_t);
+
+syscall timer_start
+    (handle: mx_handle_t, deadline: mx_time_t, period: mx_duration_t, slack: mx_duration_t)
+    returns (mx_status_t);
+
+syscall timer_cancel(handle: mx_handle_t)
+    returns (mx_status_t);
+
 # Memory management
 
 syscall vmo_create

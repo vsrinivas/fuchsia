@@ -37,6 +37,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_system.cpp \
     $(LOCAL_DIR)/syscalls_task.cpp \
     $(LOCAL_DIR)/syscalls_test.cpp \
+    $(LOCAL_DIR)/syscalls_timer.cpp \
     $(LOCAL_DIR)/syscalls_vmar.cpp \
     $(LOCAL_DIR)/syscalls_vmo.cpp \
 
