@@ -21,7 +21,7 @@ $(OUTLKBIN): $(OUTLKELF)
 
 $(OUTLKELF): $(ALLMODULE_OBJS) $(EXTRA_OBJS) $(LINKER_SCRIPT)
 	$(call BUILDECHO,linking $@)
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -T $(LINKER_SCRIPT) \
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) -T $(LINKER_SCRIPT) \
 		$(ALLMODULE_OBJS) $(EXTRA_OBJS) -o $@
 # enable/disable the size output based on a combination of ENABLE_BUILD_LISTFILES
 # and QUIET

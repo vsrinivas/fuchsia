@@ -144,6 +144,7 @@ endif
 KERNEL_CFLAGS := -Wmissing-prototypes
 KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
+KERNEL_LDFLAGS :=
 
 # Build flags for modules that want frame pointers.
 # crashlogger, ngunwind, backtrace use this so that the simplisitic unwinder
@@ -166,10 +167,15 @@ USER_LDFLAGS := \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifeq ($(call TOBOOL,$(USE_LTO)),true)
+# LTO doesn't store -mcmodel=kernel information in the bitcode files as it
+# does for many other codegen options so we have to set it explicitly. This
+# can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
+KERNEL_LDFLAGS += -mllvm -code-model=kernel
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
 USER_COMPILEFLAGS += -flto=thin
 USER_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(BUILDDIR)/thinlto-cache
 else
+KERNEL_COMPILEFLAGS += -flto -fwhole-program-vtables
 USER_COMPILEFLAGS += -flto -fwhole-program-vtables
 # Full LTO doesn't require any special ld flags.
 endif
@@ -631,6 +637,7 @@ KERNEL_DEFINES += KERNEL_COMPILEFLAGS=\"$(subst $(SPACE),_,$(KERNEL_COMPILEFLAGS
 KERNEL_DEFINES += KERNEL_CFLAGS=\"$(subst $(SPACE),_,$(KERNEL_CFLAGS))\"
 KERNEL_DEFINES += KERNEL_CPPFLAGS=\"$(subst $(SPACE),_,$(KERNEL_CPPFLAGS))\"
 KERNEL_DEFINES += KERNEL_ASMFLAGS=\"$(subst $(SPACE),_,$(KERNEL_ASMFLAGS))\"
+KERNEL_DEFINES += KERNEL_LDFLAGS=\"$(subst $(SPACE),_,$(KERNEL_LDFLAGS))\"
 
 USER_DEFINES += USER_COMPILEFLAGS=\"$(subst $(SPACE),_,$(USER_COMPILEFLAGS))\"
 USER_DEFINES += USER_CFLAGS=\"$(subst $(SPACE),_,$(USER_CFLAGS))\"
