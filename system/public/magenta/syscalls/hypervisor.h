@@ -29,13 +29,11 @@ __BEGIN_CDECLS
 typedef struct mx_guest_gpr {
 #if __aarch64__
     uint64_t r[31];
-    uint64_t sp;
 #elif __x86_64__
     uint64_t rax;
     uint64_t rcx;
     uint64_t rdx;
     uint64_t rbx;
-    uint64_t rsp;
     uint64_t rbp;
     uint64_t rsi;
     uint64_t rdi;

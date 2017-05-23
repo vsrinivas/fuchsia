@@ -872,13 +872,11 @@ void gpr_copy(Out* out, const In& in) {
 
 status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t& guest_gpr) {
     gpr_copy(&vmx_state_.guest_state, guest_gpr);
-    vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr.rsp);
     return NO_ERROR;
 }
 
 status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     gpr_copy(guest_gpr, vmx_state_.guest_state);
-    guest_gpr->rsp = vmcs_read(VmcsFieldXX::GUEST_RSP);
     return NO_ERROR;
 }
 
