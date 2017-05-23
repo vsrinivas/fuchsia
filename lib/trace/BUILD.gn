@@ -12,6 +12,12 @@ source_set("types") {
   deps = [
     "//lib/ftl",
   ]
+
+  if (!is_fuchsia) {
+    # If not built on a Fuchsia system, we need to manually tell the compiler
+    # where to find magenta headers.
+    public_deps = [ "//magenta/system/public" ]
+  }
 }
 
 # Declares the trace macros and writer API and offers only a do-nothing stub
