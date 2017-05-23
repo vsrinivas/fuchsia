@@ -12,33 +12,27 @@
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace mtl {
-
-class VFSDispatcher : public fs::Dispatcher {
- public:
-  VFSDispatcher();
-  mx_status_t AddVFSHandler(mx_handle_t h, void* callback, void* iostate) final;
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(VFSDispatcher);
-};
+class VFSDispatcher;
 
 class VFSHandler : public MessageLoopHandler {
  public:
-  static mx_status_t Start(mx_handle_t channel, void* callback, void* cookie);
-
- private:
-  VFSHandler(mx::channel channel, void* callback, void* cookie);
+  explicit VFSHandler(VFSDispatcher* dispatcher);
   ~VFSHandler() override;
 
+  void Start(mx::channel channel, void* callback, void* iostate);
+
+ private:
   // |MessageLoopHandler| implementation:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
   void Stop(bool needs_close);
 
+  VFSDispatcher* dispatcher_;
   MessageLoop::HandlerKey key_;
   mx::channel channel_;
   void* callback_;
-  void* cookie_;
+  void* iostate_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(VFSHandler);
 };

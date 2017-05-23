@@ -4,6 +4,8 @@
 
 source_set("vfs") {
   sources = [
+    "vfs_dispatcher.cc",
+    "vfs_dispatcher.h",
     "vfs_handler.cc",
     "vfs_handler.h",
   ]
