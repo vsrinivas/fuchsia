@@ -26,6 +26,8 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
+#include "lib/ftl/command_line.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -246,7 +248,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
     if (!app_->user_creds_.HasMember(account_id_) ||
         !app_->user_creds_[account_id_].HasMember("refresh_token")) {
-      FTL_LOG(INFO) << "User not found";
+      FTL_VLOG(1) << "User not found";
       callback(nullptr);
       return;
     }
@@ -257,7 +259,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   void GetIdToken(const GetIdTokenCallback& callback) override {
     if (!app_->user_creds_.HasMember(account_id_) ||
         !app_->user_creds_[account_id_].HasMember("refresh_token")) {
-      FTL_LOG(INFO) << "User not found";
+      FTL_VLOG(1) << "User not found";
       callback(nullptr);
       return;
     }
@@ -525,7 +527,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
       return false;
     }
     auto serialized_tokens = modular::JsonValueToString(app_->user_creds_);
-    FTL_LOG(INFO) << "Tokens:" << serialized_tokens.data();
+    FTL_VLOG(1) << "Tokens:" << serialized_tokens.data();
 
     if (!files::WriteFile(kCredentialsFile, serialized_tokens.data(),
                           serialized_tokens.size())) {
@@ -614,7 +616,7 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
 
 void OAuthTokenManagerApp::Initialize(
     fidl::InterfaceHandle<AccountProviderContext> provider) {
-  FTL_LOG(INFO) << "OAuthTokenManagerApp::Initialize()";
+  FTL_VLOG(1) << "OAuthTokenManagerApp::Initialize()";
   account_provider_context_.Bind(std::move(provider));
 }
 
@@ -632,7 +634,7 @@ std::string OAuthTokenManagerApp::GenerateAccountId() {
 void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
                                       const fidl::String& display_name,
                                       const AddAccountCallback& callback) {
-  FTL_LOG(INFO) << "OAuthTokenManagerApp::AddAccount()";
+  FTL_VLOG(1) << "OAuthTokenManagerApp::AddAccount()";
   auto account = auth::Account::New();
 
   account->id = GenerateAccountId();
@@ -663,7 +665,7 @@ void OAuthTokenManagerApp::RefreshToken(
     const std::string& account_id,
     const bool refresh_id_token,
     const std::function<void(std::string)>& callback) {
-  FTL_LOG(INFO) << "OAuthTokenManagerApp::RefreshToken()";
+  FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshToken()";
   new GoogleOAuthTokensCall(&operation_collection_, account_id,
                             refresh_id_token, this, callback);
 }
@@ -672,6 +674,10 @@ void OAuthTokenManagerApp::RefreshToken(
 }  // namespace modular
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
+
   mtl::MessageLoop loop;
   modular::auth::OAuthTokenManagerApp app;
   loop.Run();
