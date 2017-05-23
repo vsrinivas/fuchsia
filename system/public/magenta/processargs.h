@@ -157,9 +157,7 @@ struct mx_proc_args {
 // --- Various ---
 
 // Handle types used by the application model
-#define PA_APP_REQUEST           0x40 // deprecated
 #define PA_APP_LAUNCHER          0x41
-#define PA_APP_ENVIRONMENT       0x42 // deprecated
 #define PA_APP_SERVICES          0x43
 
 // Handle types for one-off use and prototyping
@@ -204,9 +202,6 @@ struct mx_loader_svc_msg {
 #define MX_HND_INFO_TYPE(n) ((n) & 0xFF)
 
 #define MX_HND_TYPE_USER1 PA_USER1
-#define MX_HND_TYPE_APPLICATION_ENVIRONMENT PA_APP_ENVIRONMENT
-#define MX_HND_TYPE_APPLICATION_SERVICES PA_APP_SERVICES
-#define MX_HND_TYPE_APPLICATION_LAUNCHER PA_APP_LAUNCHER
 #define MX_HND_TYPE_MXIO_PIPE PA_MXIO_PIPE
 #define MX_HND_TYPE_JOB PA_JOB_DEFAULT
 #define MX_HND_TYPE_MXIO_ROOT PA_MXIO_ROOT
