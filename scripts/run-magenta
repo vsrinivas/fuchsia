@@ -46,7 +46,7 @@ BUILD=0
 CLANG=0
 DISK=0
 DISKFILE="blk.bin"
-DISKTYPE="ahci"
+DISKTYPE=
 BUILDDIR=
 GRAPHICS=0
 DO_KVM=0
@@ -177,6 +177,15 @@ else
 fi
 
 if (( $DISK )); then
+    # if disktype wasn't set on the command line, default to ahci unless VIRTIO is set
+    if [[ -z $DISKTYPE ]]; then
+        if (( $VIRTIO )); then
+            DISKTYPE="virtio"
+        else
+            DISKTYPE="ahci"
+        fi
+    fi
+
     ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
     if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
