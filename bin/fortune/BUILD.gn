@@ -4,16 +4,16 @@
 
 import("//packages/package.gni")
 
-executable("fortune") {
+executable("fortune_bin") {
+  output_name = "fortune"
+
   sources = [
     "fortune.c",
   ]
 }
 
-package("package") {
-  package_name = "fortune"
-
-  deps = [ ":fortune" ]
+package("fortune") {
+  deps = [ ":fortune_bin" ]
   binaries = [
     {
       name = "fortune"
