@@ -285,7 +285,9 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
      * all interrupts enabled
      * mode 0: EL0t
      */
-    uint32_t spsr = 0;
+    // TODO: (hollande,travisg) Need to determine why some platforms throw an
+    //         SError exception when first switching to uspace.
+    uint32_t spsr = (uint32_t)(1 << 8); //Mask SError exceptions (currently unhandled)
 
     arch_disable_ints();
 
