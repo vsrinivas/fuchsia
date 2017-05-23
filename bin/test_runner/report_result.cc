@@ -38,9 +38,6 @@ int main(int argc, char** argv) {
   launchpad_load_from_file(launchpad, executable);
   launchpad_clone(launchpad, LP_CLONE_ALL);
   launchpad_set_args(launchpad, argc - 1, argv + 1);
-  launchpad_add_handle(launchpad,
-                       environment.PassInterfaceHandle().PassHandle().release(),
-                       MX_HND_TYPE_APPLICATION_ENVIRONMENT);
 
   const char* error;
   mx_handle_t handle;
