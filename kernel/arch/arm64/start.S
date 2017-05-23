@@ -110,13 +110,13 @@ FUNCTION(arm_reset)
 
     /* set up the flags */
     tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_UNCACHED, .Lnot_uncached
-    ldr     attr, =MMU_INITIAL_MAP_STRONGLY_ORDERED
+    movlit  attr, MMU_INITIAL_MAP_STRONGLY_ORDERED
     b       .Lmem_type_done
 
 .Lnot_uncached:
     /* is this memory mapped to device/peripherals? */
     tbzmask tmp, MMU_INITIAL_MAPPING_FLAG_DEVICE, .Lnot_device
-    ldr     attr, =MMU_INITIAL_MAP_DEVICE
+    movlit  attr, MMU_INITIAL_MAP_DEVICE
     b       .Lmem_type_done
 .Lnot_device:
 
@@ -136,13 +136,13 @@ FUNCTION(arm_reset)
  *         extended with additional flag types
  */
 .Lmapping_size_loop:
-    ldr     attr, =MMU_PTE_KERNEL_DATA_FLAGS
+    movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
     ldr     tmp, =__code_start
     subs    size, tmp, vaddr
     /* If page is below  the entry point (_start) mark as kernel data */
     b.hi    .Lmem_type_done
 
-    ldr     attr, =MMU_PTE_KERNEL_RO_FLAGS
+    movlit  attr, MMU_PTE_KERNEL_RO_FLAGS
     ldr     tmp, =__rodata_start
     subs    size, tmp, vaddr
     b.hi    .Lmem_type_done
@@ -150,7 +150,7 @@ FUNCTION(arm_reset)
     ldr     tmp, =__data_start
     subs    size, tmp, vaddr
     b.hi    .Lmem_type_done
-    ldr     attr, =MMU_PTE_KERNEL_DATA_FLAGS
+    movlit  attr, MMU_PTE_KERNEL_DATA_FLAGS
     ldr     tmp, =_end
     subs    size, tmp, vaddr
     b.lo    . /* Error: _end < vaddr */
@@ -280,7 +280,7 @@ FUNCTION(arm_reset)
     /* Setup mapping at phys -> phys */
     adr     tmp, .Lmmu_on_pc
     lsr     tmp, tmp, #MMU_IDENT_TOP_SHIFT    /* tmp = paddr index */
-    ldr     tmp2, =MMU_PTE_IDENT_FLAGS
+    movlit  tmp2, MMU_PTE_IDENT_FLAGS
     add     tmp2, tmp2, tmp, lsl #MMU_IDENT_TOP_SHIFT  /* tmp2 = pt entry */
 
     str     tmp2, [page_table0, tmp, lsl #3]     /* tt_trampoline[paddr index] = pt entry */
@@ -308,13 +308,13 @@ FUNCTION(arm_reset)
     dsb     sy
 
     /* Initialize Memory Attribute Indirection Register */
-    ldr     tmp, =MMU_MAIR_VAL
+    movlit  tmp, MMU_MAIR_VAL
     msr     mair_el1, tmp
 
     /* Initialize TCR_EL1 */
     /* set cacheable attributes on translation walk */
     /* (SMP extensions) non-shareable, inner write-back write-allocate */
-    ldr     tmp, =MMU_TCR_FLAGS_IDENT
+    movlit  tmp, MMU_TCR_FLAGS_IDENT
     msr     tcr_el1, tmp
 
     isb
@@ -342,7 +342,7 @@ FUNCTION(arm_reset)
 .Lmmu_on_vaddr:
 
     /* Disable trampoline page-table in ttbr0 */
-    ldr     tmp, =MMU_TCR_FLAGS_KERNEL
+    movlit  tmp, MMU_TCR_FLAGS_KERNEL
     msr     tcr_el1, tmp
     isb
 
