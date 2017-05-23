@@ -91,17 +91,8 @@ bool CreateInit(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    END_TEST;
-}
-
-bool CreateInitMissingTree(void) {
-    BEGIN_TEST;
-    InitData(kLarge);
-    Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, nullptr, gTreeLen);
-    ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
 
@@ -109,11 +100,11 @@ bool CreateInitWithoutData(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(0, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(0, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.CreateInit(0, gTree, 0);
+    rc = merkleTree.CreateInit(0, 0);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.CreateInit(0, nullptr, 0);
+    rc = merkleTree.CreateInit(0, 0);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
@@ -122,7 +113,7 @@ bool CreateInitWithoutTree(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(kNodeSize, nullptr, 0);
+    mx_status_t rc = merkleTree.CreateInit(kNodeSize, 0);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
@@ -132,7 +123,7 @@ bool CreateInitTreeTooSmall(void) {
     InitData(kLarge);
     Tree merkleTree;
     gTreeLen = Tree::GetTreeLength(gDataLen);
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen - 1);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen - 1);
     ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
     END_TEST;
 }
@@ -141,7 +132,7 @@ bool CreateUpdate(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gLength, gTree);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -161,7 +152,7 @@ bool CreateUpdateMissingData(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(nullptr, gLength, gTree);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
@@ -172,7 +163,7 @@ bool CreateUpdateMissingTree(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gLength, nullptr);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
@@ -183,7 +174,7 @@ bool CreateUpdateWithoutData(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, 0, gTree);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -196,7 +187,7 @@ bool CreateUpdateWithoutTree(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(kNodeSize, nullptr, 0);
+    mx_status_t rc = merkleTree.CreateInit(kNodeSize, 0);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, kNodeSize, nullptr);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -207,10 +198,10 @@ bool CreateUpdateTooMuchData(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gDataLen + 1, gTree);
-    ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ERR_OUT_OF_RANGE, mx_status_get_string(rc));
     END_TEST;
 }
 
@@ -218,7 +209,7 @@ bool CreateFinal(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gDataLen, gTree);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -244,7 +235,7 @@ bool CreateFinalWithoutData(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(0, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(0, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateFinal(gTree, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -259,7 +250,7 @@ bool CreateFinalWithoutTree(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(kNodeSize, nullptr, 0);
+    mx_status_t rc = merkleTree.CreateInit(kNodeSize, 0);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, kNodeSize, nullptr);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -276,7 +267,7 @@ bool CreateFinalMissingDigest(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gDataLen, gTree);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -289,7 +280,7 @@ bool CreateFinalIncompleteData(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = merkleTree.CreateUpdate(gData, gDataLen - 1, gTree);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -339,7 +330,7 @@ bool CreateByteByByte(void) {
     BEGIN_TEST;
     InitData(kSmall);
     Tree merkleTree;
-    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen);
+    mx_status_t rc = merkleTree.CreateInit(gDataLen, gTreeLen);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     for (uint64_t i = 0; i < gDataLen; ++i) {
         rc = merkleTree.CreateUpdate(gData + i, 1, gTree);
@@ -732,7 +723,6 @@ bool CreateAndVerifyHugePRNGData(void) {
 BEGIN_TEST_CASE(MerkleTreeTests)
 RUN_TEST(GetTreeLength)
 RUN_TEST(CreateInit)
-RUN_TEST(CreateInitMissingTree)
 RUN_TEST(CreateInitWithoutData)
 RUN_TEST(CreateInitWithoutTree)
 RUN_TEST(CreateInitTreeTooSmall)

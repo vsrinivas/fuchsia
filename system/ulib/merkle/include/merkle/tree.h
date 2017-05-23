@@ -72,7 +72,7 @@ public:
 
     // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
     // data.  This must be called before |CreateUpdate|.
-    mx_status_t CreateInit(uint64_t data_len, void* tree, uint64_t tree_len);
+    mx_status_t CreateInit(uint64_t data_len, uint64_t tree_len);
 
     // Processes an additional |length| bytes of |data| and writes digests to
     // the Merkle |tree|.  It is an error to process more data in total than was
@@ -112,38 +112,36 @@ private:
                                    const void* tree, uint64_t offset,
                                    uint64_t length, uint64_t level);
 
-    // Sets the length of the data that this Merkle tree references.  This
-    // method has the side effect of setting the geometry of the Merkle tree;
-    // this can fail due to low memory and return ERR_NO_MEMORY.
-    mx_status_t SetLengths(uint64_t data_len, uint64_t tree_len);
+    // See CreateFinal.  This implements that method, with an extra parameter to
+    // allow levels other than the bottommost to be padded.
+    mx_status_t CreateFinalInternal(const void* data, void* tree, Digest* root);
 
-    // Sets the range of addresses within the tree that will need to be read to
-    // fulfill a corresponding call to Verify. |offset| and |length| must
-    // describe a range wholly within |data_len|. If the ranges fail to be set
-    // due to low memory, this will return ERR_NO_MEMORY.
-    mx_status_t SetRanges(uint64_t data_len, uint64_t offset, uint64_t length);
+    // All of the following fields are used to save state when creating the
+    // Merkle tree using the Init/Update/Final methods.  These methods use a
+    // chain of Tree objects, one for each level of the tree.
 
-    // Calculates a digest using the data in |nodes| at given offset |off|.
-    // It reads up to |kNodeSize| or until |end|, whichever comes first.  It
-    // stores the resulting digest in |out|.  It returns the number of bytes
-    // read.
-    void HashNode(const void* data);
+    // Indicates whether CreateInit has been called without a corresponding call
+    // to CreateFinal.
+    bool initialized_;
 
-    // Hashes |length| bytes of |data| that makes up the leaves of the Merkle
-    // tree and writes the digests to |tree|.
-    mx_status_t HashData(const void* data, uint64_t length, void* tree);
+    // For each Tree object in the chain, the Tree object managing the next
+    // level up is given by |next_|.
+    mxtl::unique_ptr<Tree> next_;
 
-    // These fields control the overall shape of the tree and its serialization.
-    uint64_t data_len_;
-    mxtl::Array<uint64_t> offsets_;
-
-    // These fields are used in walking the tree during creation and/or
-    // verification.
+    // Indicates the height in the tree of this Tree object, and equals the
+    // number of preceding Tree objects in the chain.
     uint64_t level_;
-    uint64_t offset_;
-    mxtl::Array<Range> ranges_;
 
-    // This field is used as working space when calculating digests.
+    // Indicates the amount of data consumed so far by |CreateUpdate| for this
+    // level.
+    uint64_t offset_;
+
+    // Indicates the total amount of data to be consumed by |CreateUpdate| for
+    // this level, as set in |CreateInit|.
+    uint64_t length_;
+
+    // Used to calculate digest, and save the hash state across calls to
+    // |CreateUpdate|.
     Digest digest_;
 };
 
