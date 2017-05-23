@@ -145,13 +145,6 @@ mx::process CreateProcess(const mx::job& job,
                           mxio_flat_namespace_t* flat) {
   std::vector<uint32_t> ids;
   std::vector<mx_handle_t> handles;
-
-  auto startup_handles = std::move(launch_info->startup_handles);
-  for (auto it = startup_handles.begin(); it != startup_handles.end(); ++it) {
-    ids.push_back(it.GetKey());
-    handles.push_back(it.GetValue().release());
-  }
-
   ForwardServiceRequestToFirstProcess(&ids, &handles);
 
   return Launch(job, GetLabelFromURL(launch_info->url),
