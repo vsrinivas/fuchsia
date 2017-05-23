@@ -129,7 +129,7 @@ ProcessDispatcher::~ProcessDispatcher() {
 }
 
 void ProcessDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
-    name_.get(out_name);
+    name_.get(MX_MAX_NAME_LEN, out_name);
 }
 
 status_t ProcessDispatcher::set_name(const char* name, size_t len) {

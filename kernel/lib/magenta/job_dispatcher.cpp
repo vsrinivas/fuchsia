@@ -280,7 +280,7 @@ mxtl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
 void JobDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     canary_.Assert();
 
-    name_.get(out_name);
+    name_.get(MX_MAX_NAME_LEN, out_name);
 }
 
 status_t JobDispatcher::set_name(const char* name, size_t len) {

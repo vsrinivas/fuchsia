@@ -117,7 +117,7 @@ private:
 
     // The user-friendly job name. For debug purposes only. That
     // is, there is no mechanism to mint a handle to a job via this name.
-    Name name_;
+    mxtl::Name<MX_MAX_NAME_LEN> name_;
 
     // The |lock_| protects all members below.
     Mutex lock_;

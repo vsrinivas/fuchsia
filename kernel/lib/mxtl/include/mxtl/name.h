@@ -6,15 +6,23 @@
 
 #pragma once
 
+#include <string.h>
+
+#include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 
 #include <magenta/types.h>
 #include <magenta/thread_annotations.h>
 
+#include <mxtl/algorithm.h>
+
+namespace mxtl {
+
 // A class for managing names of kernel objects. Since we don't want
 // unbounded lengths, the constructor and setter perform
 // truncation. Names include the trailing NUL as part of their
-// MX_MAX_NAME_LEN-sized buffer.
+// Size-sized buffer.
+template <size_t Size>
 class Name {
 public:
     Name() {}
@@ -24,8 +32,20 @@ public:
 
     ~Name() = default;
 
-    void get(char out_name[MX_MAX_NAME_LEN]) const;
-    mx_status_t set(const char* name, size_t len);
+    void get(size_t out_len, char *out_name) const {
+        AutoSpinLock lock(lock_);
+        memcpy(out_name, name_, min(out_len, Size));
+    }
+
+    mx_status_t set(const char* name, size_t len) {
+        if (len >= Size)
+            len = Size - 1;
+
+        AutoSpinLock lock(lock_);
+        memcpy(name_, name, len);
+        memset(name_ + len, 0, Size - len);
+        return NO_ERROR;
+    }
 
 private:
     // These Names are often included for diagnostic purposes, and
@@ -33,5 +53,7 @@ private:
     // in interrupt context. So we use a spinlock to serialize.
     mutable SpinLock lock_;
     // This includes the trailing NUL.
-    char name_[MX_MAX_NAME_LEN] TA_GUARDED(lock_) = {};
+    char name_[Size] TA_GUARDED(lock_) = {};
 };
+
+} // namespace mxtl

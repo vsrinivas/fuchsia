@@ -217,5 +217,5 @@ protected:
 
     // The user-friendly VMO name. For debug purposes only. That
     // is, there is no mechanism to get access to a VMO via this name.
-    Name name_;
+    mxtl::Name<MX_MAX_NAME_LEN> name_;
 };
