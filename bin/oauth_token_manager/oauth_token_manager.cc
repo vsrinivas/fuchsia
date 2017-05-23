@@ -52,9 +52,7 @@ constexpr char kGoogleOAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
 constexpr char kCredentialsFile[] = "/data/modular/device/v1/creds.db";
-constexpr char kWebViewUrl[] =
-    "https://fuchsia-build.storage.googleapis.com/apps/web_view/"
-    "web_view_b034f1a588a20e87198b83fd37f4ff676b093b6c";
+constexpr char kWebViewUrl[] = "file:///system/apps/web_view";
 
 constexpr auto kScopes = {"openid",
                           "email",
@@ -559,7 +557,10 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<void>,
     app_->application_context_->launcher()->CreateApplication(
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
     web_view_controller_.set_connection_error_handler(
-        [this] { Failure("Unable to start webview."); });
+        [this] {
+          FTL_CHECK(false) << "web_view not found at " << kWebViewUrl << ". "
+                           << "Please build web_view locally.";
+        });
 
     mozart::ViewOwnerPtr view_owner;
     mozart::ViewProviderPtr view_provider;
