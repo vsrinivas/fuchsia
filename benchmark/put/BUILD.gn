@@ -8,7 +8,12 @@ group("put") {
   ]
 }
 
-executable("ledger_benchmark_put") {
+source_set("lib") {
+  sources = [
+    "put.cc",
+    "put.h",
+  ]
+
   deps = [
     "//application/lib/app",
     "//apps/ledger/benchmark/lib",
@@ -20,9 +25,16 @@ executable("ledger_benchmark_put") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+}
+
+executable("ledger_benchmark_put") {
+  deps = [
+    ":lib",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
 
   sources = [
-    "put.cc",
-    "put.h",
+    "app.cc",
   ]
 }

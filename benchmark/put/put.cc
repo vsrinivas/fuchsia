@@ -4,49 +4,19 @@
 
 #include "apps/ledger/benchmark/put/put.h"
 
-#include <iostream>
-
 #include "apps/ledger/benchmark/lib/convert.h"
 #include "apps/ledger/benchmark/lib/data.h"
 #include "apps/ledger/benchmark/lib/get_ledger.h"
 #include "apps/ledger/benchmark/lib/logging.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "apps/tracing/lib/trace/provider.h"
-#include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
 constexpr ftl::StringView kStoragePath = "/data/benchmark/ledger/put";
-constexpr ftl::StringView kEntryCountFlag = "entry-count";
-constexpr ftl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr ftl::StringView kKeySizeFlag = "key-size";
-constexpr ftl::StringView kValueSizeFlag = "value-size";
-constexpr ftl::StringView kUpdateFlag = "update";
-
-void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kTransactionSizeFlag << "=<int> --"
-            << kKeySizeFlag << "=<int> --" << kValueSizeFlag << "=<int> ["
-            << kUpdateFlag << "]" << std::endl;
-}
-
-bool GetPositiveIntValue(const ftl::CommandLine& command_line,
-                         ftl::StringView flag,
-                         int* value) {
-  std::string value_str;
-  int found_value;
-  if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !ftl::StringToNumberWithError(value_str, &found_value) ||
-      found_value <= 0) {
-    return false;
-  }
-  *value = found_value;
-  return true;
-}
 
 }  // namespace
 
@@ -57,8 +27,7 @@ PutBenchmark::PutBenchmark(int entry_count,
                            int key_size,
                            int value_size,
                            bool update)
-    : tmp_dir_(kStoragePath),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -73,9 +42,13 @@ PutBenchmark::PutBenchmark(int entry_count,
 }
 
 void PutBenchmark::Run() {
-  ledger::LedgerPtr ledger =
-      benchmark::GetLedger(application_context_.get(), &ledger_controller_,
-                           "put", tmp_dir_.path(), false, "");
+  application_controller_ = std::make_unique<app::ApplicationControllerPtr>();
+  ledger_controller_ = std::make_unique<ledger::LedgerControllerPtr>();
+  tmp_dir_ = std::make_unique<files::ScopedTempDir>(kStoragePath);
+
+  ledger::LedgerPtr ledger = benchmark::GetLedger(
+      application_context_.get(), application_controller_.get(), "put",
+      tmp_dir_->path(), false, "", ledger_controller_.get());
   InitializeKeys(ftl::MakeCopyable([ this, ledger = std::move(ledger) ](
       std::vector<fidl::Array<uint8_t>> keys) {
     benchmark::GetPageEnsureInitialized(
@@ -98,6 +71,22 @@ void PutBenchmark::Run() {
           }
         }));
   }));
+}
+
+void PutBenchmark::ResetLedger() {
+  page_.reset();
+  (*ledger_controller_)->Terminate();
+  bool response = application_controller_->WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1));
+  FTL_DCHECK(!response);
+  FTL_DCHECK(application_controller_->encountered_error());
+  if (on_done_) {
+    on_done_();
+  }
+}
+
+void PutBenchmark::ShutDown() {
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 void PutBenchmark::InitializeKeys(
@@ -135,9 +124,9 @@ void PutBenchmark::AddInitialEntries(
 void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
   if (i == entry_count_) {
     if (transaction_size_ > 1) {
-      CommitAndShutDown();
+      CommitAndReset();
     } else {
-      ShutDown();
+      ResetLedger();
     }
     return;
   }
@@ -183,7 +172,7 @@ void PutBenchmark::CommitAndRunNext(int i,
       }));
 }
 
-void PutBenchmark::CommitAndShutDown() {
+void PutBenchmark::CommitAndReset() {
   TRACE_ASYNC_BEGIN("benchmark", "commit", entry_count_ / transaction_size_);
   page_->Commit([this](ledger::Status status) {
     if (benchmark::QuitOnError(status, "Page::Commit")) {
@@ -192,41 +181,8 @@ void PutBenchmark::CommitAndShutDown() {
     TRACE_ASYNC_END("benchmark", "commit", entry_count_ / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction",
                     entry_count_ / transaction_size_);
-    ShutDown();
+    ResetLedger();
   });
 }
 
-void PutBenchmark::ShutDown() {
-  // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  ledger_controller_->Kill();
-  ledger_controller_.WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(5));
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
-}
-
 }  // namespace benchmark
-
-int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-
-  int entry_count;
-  int transaction_size;
-  int key_size;
-  int value_size;
-  bool update = command_line.HasOption(kUpdateFlag.ToString());
-  if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
-      !GetPositiveIntValue(command_line, kTransactionSizeFlag,
-                           &transaction_size) ||
-      !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
-      !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
-    PrintUsage(argv[0]);
-    return -1;
-  }
-
-  mtl::MessageLoop loop;
-  benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
-                              value_size, update);
-  loop.task_runner()->PostTask([&app] { app.Run(); });
-  loop.Run();
-  return 0;
-}

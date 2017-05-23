@@ -21,7 +21,8 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
                             std::string ledger_name,
                             std::string ledger_repository_path,
                             bool sync,
-                            std::string server_id) {
+                            std::string server_id,
+                            ledger::LedgerControllerPtr* ledger_controller) {
   ledger::LedgerRepositoryFactoryPtr repository_factory;
   app::ServiceProviderPtr child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
@@ -33,7 +34,10 @@ ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
   context->launcher()->CreateApplication(std::move(launch_info),
                                          controller->NewRequest());
   app::ConnectToService(child_services.get(), repository_factory.NewRequest());
-
+  if (ledger_controller) {
+    app::ConnectToService(child_services.get(),
+                          ledger_controller->NewRequest());
+  }
   ledger::LedgerRepositoryPtr repository;
   fidl::String fidl_server_id = sync ? fidl::String(server_id) : fidl::String();
   repository_factory->GetRepository(

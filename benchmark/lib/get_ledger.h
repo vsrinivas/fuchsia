@@ -9,6 +9,7 @@
 #include <string>
 
 #include "application/lib/app/application_context.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -16,12 +17,14 @@ namespace benchmark {
 
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
-ledger::LedgerPtr GetLedger(app::ApplicationContext* context,
-                            app::ApplicationControllerPtr* controller,
-                            std::string ledger_name,
-                            std::string ledger_repository_path,
-                            bool sync,
-                            std::string server_id);
+ledger::LedgerPtr GetLedger(
+    app::ApplicationContext* context,
+    app::ApplicationControllerPtr* controller,
+    std::string ledger_name,
+    std::string ledger_repository_path,
+    bool sync,
+    std::string server_id,
+    ledger::LedgerControllerPtr* ledger_controller = nullptr);
 
 // Retrieves the requested page of the given Ledger instance and calls the
 // callback only after executing a GetId() call on the page, ensuring that it is
