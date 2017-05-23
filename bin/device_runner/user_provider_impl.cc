@@ -4,6 +4,9 @@
 
 #include "apps/modular/src/device_runner/user_provider_impl.h"
 
+#include <limits.h>
+#include <unistd.h>
+
 #include "apps/modular/src/device_runner/users_generated.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -176,9 +179,28 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
                                const fidl::String& devicename,
                                const fidl::String& servername,
                                const AddUserCallback& callback) {
+  std::string device_name;
+  if (!devicename.is_null() && !devicename.get().empty()) {
+    device_name = devicename;
+  } else {
+    // gethostname() will return "fuchsia" if the network stack hasn't started.
+    // Generally by this point we should have used OAuth to auth. This code is
+    // just optimistically trying to get a more unique and recognizable device
+    // name when the user doesn't specify one with their device shell.
+    char host_name_buffer[HOST_NAME_MAX + 1];
+    int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
+
+    if (result < 0) {
+      FTL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+      device_name = "fuchsia";
+    } else {
+      device_name = host_name_buffer;
+    }
+  }
+
   account_provider_->AddAccount(
       identity_provider, displayname,
-      [this, identity_provider, displayname, devicename, servername, callback](
+      [this, identity_provider, displayname, device_name, servername, callback](
           auth::AccountPtr account, const fidl::String& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
@@ -217,7 +239,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
             builder, builder.CreateString(account->id),
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
-            builder.CreateString(std::move(devicename)),
+            builder.CreateString(std::move(device_name)),
             builder.CreateString(std::move(servername))));
 
         builder.Finish(modular::CreateUsersStorage(

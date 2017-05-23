@@ -22,12 +22,15 @@ interface UserProvider {
   // |display_name| is the name which is displayed to the user. Ideally it
   // should be fetched from the identity provider.
   //
+  // |device_name| is what the user wants to name the device. If null or empty
+  // the device's current hostname will be used.
+  //
   // |server_name| is the cloud location used to sync the user's Ledger from.
   //
   // |account| is NULL if there was an error during identification and
   // |error_code| is set.
   AddUser(auth.IdentityProvider identity_provider, string display_name,
-          string device_name, string server_name) =>
+          string? device_name, string server_name) =>
       (auth.Account? account, string? error_code);
 
   // Removes information of a user from the local user database.

@@ -23,8 +23,9 @@ namespace {
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
+    // device_name will be set to the device's hostname if it is empty or null
     device_name =
-        command_line.GetOptionValueWithDefault("device_name", "magenta");
+        command_line.GetOptionValueWithDefault("device_name", "");
 
     // default user is incognito
     user = command_line.GetOptionValueWithDefault("user", "");
