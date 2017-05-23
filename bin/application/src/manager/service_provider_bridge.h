@@ -17,7 +17,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/vfs/vfs_handler.h"
+#include "lib/mtl/vfs/vfs_dispatcher.h"
 
 namespace app {
 

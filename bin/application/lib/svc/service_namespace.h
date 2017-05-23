@@ -6,8 +6,8 @@
 #define APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 
 #include <mx/channel.h>
-#include <svcfs/svcfs.h>
 #include <mxtl/ref_ptr.h>
+#include <svcfs/svcfs.h>
 
 #include <functional>
 #include <string>
@@ -17,11 +17,12 @@
 #include "application/services/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/vfs/vfs_handler.h"
+#include "lib/mtl/vfs/vfs_dispatcher.h"
 
 namespace app {
 
-class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvider {
+class ServiceNamespace : public svcfs::ServiceProvider,
+                         public app::ServiceProvider {
  public:
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceNamespace| to connect generic "interface requests" (i.e.,
@@ -43,7 +44,8 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
   // Constructs this service provider implementation, binding it to the given
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
-  explicit ServiceNamespace(fidl::InterfaceRequest<app::ServiceProvider> request);
+  explicit ServiceNamespace(
+      fidl::InterfaceRequest<app::ServiceProvider> request);
 
   ~ServiceNamespace() override;
 
@@ -102,8 +104,7 @@ class ServiceNamespace : public svcfs::ServiceProvider, public app::ServiceProvi
   void ConnectToService(const fidl::String& service_name,
                         mx::channel channel) override;
 
-  void ConnectCommon(const std::string& service_name,
-                     mx::channel channel);
+  void ConnectCommon(const std::string& service_name, mx::channel channel);
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
