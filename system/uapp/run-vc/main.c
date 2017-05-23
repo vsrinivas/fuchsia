@@ -61,13 +61,6 @@ static mx_status_t console_device_added(int dirfd, int event, const char* name, 
     launchpad_clone_fd(lp, fd, 1);
     launchpad_clone_fd(lp, fd, 2);
     launchpad_set_args(lp, pargc, shell ? pargv : &g_argv[1]);
-
-    // Forward MX_HND_TYPE_APPLICATION_ENVIRONMENT if we have one.
-    mx_handle_t app_env = mx_get_startup_handle(PA_HND(PA_APP_ENVIRONMENT, 0));
-    if (app_env != MX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, app_env, PA_HND(PA_APP_ENVIRONMENT, 0));
-    }
-
     launchpad_load_from_file(lp, shell ? pargv[0] : g_argv[1]);
 
     mx_status_t status;

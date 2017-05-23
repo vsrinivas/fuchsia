@@ -159,7 +159,7 @@ struct mx_proc_args {
 // Handle types used by the application model
 #define PA_APP_REQUEST           0x40 // deprecated
 #define PA_APP_LAUNCHER          0x41
-#define PA_APP_ENVIRONMENT       0x42
+#define PA_APP_ENVIRONMENT       0x42 // deprecated
 #define PA_APP_SERVICES          0x43
 
 // Handle types for one-off use and prototyping
