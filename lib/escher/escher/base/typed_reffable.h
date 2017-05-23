@@ -35,6 +35,9 @@ class TypedReffable : public Reffable {
   typedef TypeInfoT TypeInfo;
 
   // Concrete subclasses must override this to return a type-specific TypeInfo.
+  // For each subclass, the TypeInfo's:
+  //   - type flags MUST match the inheritance chain of that subclass.
+  //   - name MUST match the name of that subclass.
   virtual const TypeInfo& type_info() const = 0;
 
   // Return true if the specified type is identical or a base type of this
@@ -49,6 +52,10 @@ class TypedReffable : public Reffable {
   bool IsKindOf() const {
     return type_info().IsKindOf(TypedReffableT::kTypeInfo);
   }
+
+  // Return the name of the TypedReffable subclass that this object is an
+  // instance of.
+  const char* type_name() const { return type_info().name; }
 };
 
 }  // namespace escher

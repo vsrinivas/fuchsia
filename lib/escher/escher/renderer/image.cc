@@ -9,16 +9,17 @@
 
 namespace escher {
 
-const ResourceCoreTypeInfo ImageCore::kTypeInfo = {ResourceCoreType::kImageCore,
-                                                   "ImageCore"};
+const ResourceTypeInfo Image::kTypeInfo("Image",
+                                        ResourceType::kResource,
+                                        ResourceType::kImage);
 
-ImageCore::ImageCore(ResourceCoreManager* image_owner,
-                     ImageInfo info,
-                     vk::Image image,
-                     GpuMemPtr mem)
-    : ResourceCore(image_owner, kTypeInfo),
+Image::Image(ResourceManager* image_owner,
+             ImageInfo info,
+             vk::Image vk_image,
+             GpuMemPtr mem)
+    : Resource2(image_owner),
       info_(info),
-      image_(image),
+      image_(vk_image),
       mem_(std::move(mem)) {
   // TODO: How do we future-proof this in case more formats are added?
   switch (info.format) {
@@ -46,28 +47,15 @@ ImageCore::ImageCore(ResourceCoreManager* image_owner,
   }
 }
 
-ImageCore::~ImageCore() {
+Image::~Image() {
   if (!mem_) {
     // Probably a swapchain image.  We don't own the image or the memory.
-    FTL_LOG(INFO) << "Destroying ImageCore with unowned VkImage (perhaps a "
+    FTL_LOG(INFO) << "Destroying Image with unowned VkImage (perhaps a "
                      "swapchain image?)";
   } else {
     vulkan_context().device.destroyImage(image_);
   }
 }
-
-Image::Image(std::unique_ptr<ImageCore> core) : Resource2(std::move(core)) {}
-
-Image::Image(ResourceCoreManager* image_owner,
-             ImageInfo info,
-             vk::Image vk_image,
-             GpuMemPtr mem)
-    : Image(std::make_unique<escher::ImageCore>(image_owner,
-                                                info,
-                                                vk_image,
-                                                mem)) {}
-
-Image::~Image() {}
 
 vk::Image Image::CreateVkImage(const vk::Device& device, ImageInfo info) {
   vk::ImageCreateInfo create_info;

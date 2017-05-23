@@ -9,27 +9,11 @@
 
 namespace escher {
 
-class TextureCore : public ResourceCore {
- public:
-  static const ResourceCoreTypeInfo kTypeInfo;
-
-  TextureCore(ResourceLifePreserver* life_preserver,
-              const ImagePtr& image,
-              vk::Filter filter,
-              vk::ImageAspectFlags aspect_mask,
-              bool use_unnormalized_coordinates);
-  ~TextureCore() override;
-
-  vk::ImageView image_view() const { return image_view_; }
-  vk::Sampler sampler() const { return sampler_; }
-
- private:
-  vk::ImageView image_view_;
-  vk::Sampler sampler_;
-};
-
 class Texture : public Resource2 {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
@@ -48,14 +32,7 @@ class Texture : public Resource2 {
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
-  const TextureCore* core() const {
-    FTL_CHECK(Resource2::core()->type_info().IsKindOf(TextureCore::kTypeInfo));
-    return static_cast<const TextureCore*>(Resource2::core());
-  }
-
  private:
-  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override;
-
   ImagePtr image_;
   vk::Device device_;
   vk::ImageView image_view_;

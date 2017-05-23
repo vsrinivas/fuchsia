@@ -10,6 +10,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/renderer/image.h"
+#include "escher/resources/resource_manager.h"
 #include "escher/util/hash.h"
 #include "escher/vk/gpu_mem.h"
 #include "ftl/macros.h"
@@ -23,7 +24,7 @@ class GpuUploader;
 
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
-class ImageCache : public ResourceCoreManager {
+class ImageCache : public ResourceManager {
  public:
   // The allocator is used to allocate memory for newly-created images.  The
   // queue and CommandBufferPool are used to schedule image layout transitions.
@@ -77,9 +78,8 @@ class ImageCache : public ResourceCoreManager {
       vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
  private:
-  // Implement ResourceCoreManager::ReceiveResourceCore().  Adds the image to
-  // unused_images_.
-  void ReceiveResourceCore(std::unique_ptr<ResourceCore> core) override;
+  // Implements Owner::OnReceiveOwnable().  Adds the image to unused_images_.
+  void OnReceiveOwnable(std::unique_ptr<Resource2> resource) override;
 
   // Try to find an unused image that meets the required specs.  If successful,
   // remove and return it.  Otherwise, return nullptr.
@@ -99,7 +99,7 @@ class ImageCache : public ResourceCoreManager {
   // straightforward way, and profile to determine whether GPU stalls are a real
   // concern.
   std::unordered_map<ImageInfo,
-                     std::queue<std::unique_ptr<ImageCore>>,
+                     std::queue<std::unique_ptr<Image>>,
                      Hash<ImageInfo>>
       unused_images_;
 

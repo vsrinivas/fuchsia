@@ -8,13 +8,16 @@
 
 namespace escher {
 
-template <typename TypeInfoT>
+template <typename OwnableT, typename TypeInfoT>
 class Owner;
 
-// An Ownable may have an Owner.  If the Owner is non-null when the Ownable's
-// ref-count becomes zero, it becomes responsible for eventually destroying the
-// object (see OnZeroRefCount(), below).
-template <typename TypeInfoT>
+// An Ownable may optionally have an Owner; when |owner_| is non-null it is said
+// to be "owned", otherwise it is "unowned".  If an Ownable is unowned when its
+// ref-count becomes zero, it is immediately destroyed.  Otherwise, its Owner
+// becomes responsible for the lifecycle of the Ownable.  Different owners will
+// implement different strategies, e.g. one might defer destruction until a safe
+// time, while another might recycle the object by returning it to a pool.
+template <typename OwnableT, typename TypeInfoT>
 class Ownable : public TypedReffable<TypeInfoT> {
  public:
   typedef TypeInfoT TypeInfo;
@@ -25,21 +28,23 @@ class Ownable : public TypedReffable<TypeInfoT> {
     }
   }
 
-  Owner<TypeInfo>* owner() const { return owner_; }
+  Owner<OwnableT, TypeInfoT>* owner() const { return owner_; }
 
  protected:
   Ownable() = default;
 
  private:
-  friend class Owner<TypeInfo>;
-  void set_owner(Owner<TypeInfo>* owner) { owner_ = owner; }
+  friend class Owner<OwnableT, TypeInfoT>;
+  void set_owner(Owner<OwnableT, TypeInfoT>* owner) { owner_ = owner; }
 
   // If |owner| is null, returns true so that the Ownable is immediately
   // destroyed.  Otherwise, returns false; destruction of the Ownable is now
   // the responsiblity of the |owner_|, which is notified via ReceiveOwnable().
   bool OnZeroRefCount() final override {
     if (owner_) {
-      owner_->OnReceiveOwnable(std::unique_ptr<Ownable<TypeInfo>>(this));
+      // FTL_DCHECK(this->IsKindOf<OwnableT>());
+      owner_->OnReceiveOwnable(
+          std::unique_ptr<OwnableT>(static_cast<OwnableT*>(this)));
       return false;
     } else {
       // No owner: destroy immediately.
@@ -47,7 +52,7 @@ class Ownable : public TypedReffable<TypeInfoT> {
     }
   }
 
-  Owner<TypeInfo>* owner_ = nullptr;
+  Owner<OwnableT, TypeInfoT>* owner_ = nullptr;
 };
 
 }  // namespace escher

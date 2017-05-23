@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
+#include "escher/resources/resource_manager.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_swapchain.h"
 
@@ -73,13 +74,12 @@ class DemoHarness {
  private:
   // For wrapping swapchain images in VkImage.
   // TODO: Find a nicer solution.
-  class SwapchainImageOwner : public escher::ResourceCoreManager {
+  class SwapchainImageOwner : public escher::ResourceManager {
    public:
     explicit SwapchainImageOwner(const escher::VulkanContext& context);
 
    private:
-    void ReceiveResourceCore(
-        std::unique_ptr<escher::ResourceCore> core) override;
+    void OnReceiveOwnable(std::unique_ptr<escher::Resource2> resource) override;
   };
 
   // Called by New() after instantiation is complete, so that virtual functions

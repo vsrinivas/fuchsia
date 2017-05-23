@@ -11,28 +11,11 @@
 
 namespace escher {
 
-class FramebufferCore : public ResourceCore {
- public:
-  static const ResourceCoreTypeInfo kTypeInfo;
-
-  FramebufferCore(ResourceLifePreserver* life_preserver,
-                  uint32_t width,
-                  uint32_t height,
-                  const std::vector<ImagePtr>& images,
-                  vk::RenderPass render_pass);
-  ~FramebufferCore() override;
-
-  vk::Framebuffer get() const { return framebuffer_; }
-
- private:
-  vk::Framebuffer framebuffer_;
-  std::vector<vk::ImageView> image_views_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferCore);
-};
-
 class Framebuffer : public Resource2 {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   Framebuffer(impl::EscherImpl* escher,
               uint32_t width,
               uint32_t height,
@@ -48,16 +31,9 @@ class Framebuffer : public Resource2 {
 
   const ImagePtr& get_image(uint32_t index) const { return images_.at(index); }
 
-  const FramebufferCore* core() const {
-    FTL_DCHECK(
-        Resource2::core()->type_info().IsKindOf(FramebufferCore::kTypeInfo));
-    return static_cast<const FramebufferCore*>(Resource2::core());
-  }
-
  private:
-  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override;
-
   vk::Framebuffer framebuffer_;
+  std::vector<vk::ImageView> image_views_;
 
   uint32_t width_;
   uint32_t height_;

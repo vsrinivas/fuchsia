@@ -7,19 +7,19 @@
 namespace escher {
 
 ResourceLifePreserver::ResourceLifePreserver(const VulkanContext& context)
-    : ResourceCoreManager(context) {}
+    : ResourceManager(context) {}
 
 ResourceLifePreserver::~ResourceLifePreserver() {
   FTL_DCHECK(unused_resources_.empty());
 }
 
-void ResourceLifePreserver::ReceiveResourceCore(
-    std::unique_ptr<ResourceCore> core) {
-  if (core->sequence_number() <= last_finished_sequence_number_) {
+void ResourceLifePreserver::OnReceiveOwnable(
+    std::unique_ptr<Resource2> resource) {
+  if (resource->sequence_number() <= last_finished_sequence_number_) {
     // Destroy immediately.
   } else {
     // Defer destruction.
-    unused_resources_.insert(std::move(core));
+    unused_resources_.insert(std::move(resource));
   }
 }
 

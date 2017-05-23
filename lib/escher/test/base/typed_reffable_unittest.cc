@@ -164,4 +164,20 @@ TEST(TypedReffable, DeepHierarchy) {
   EXPECT_FALSE(sst->IsKindOf<SubSubSubTwo>());
 }
 
+TEST(TypedReffable, Names) {
+  auto o = escher::Make<One>();
+  auto so = escher::Make<SubOne>();
+  auto t = escher::Make<Two>();
+  auto st = escher::Make<SubTwo>();
+  auto sst = escher::Make<SubSubTwo>();
+  auto ssst = escher::Make<SubSubSubTwo>();
+
+  EXPECT_EQ("One", o->type_name());
+  EXPECT_EQ("SubOne", so->type_name());
+  EXPECT_EQ("Two", t->type_name());
+  EXPECT_EQ("SubTwo", st->type_name());
+  EXPECT_EQ("SubSubTwo", sst->type_name());
+  EXPECT_EQ("SubSubSubTwo", ssst->type_name());
+}
+
 }  // namespace

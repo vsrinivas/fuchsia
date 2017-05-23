@@ -17,7 +17,7 @@ ImageCache::ImageCache(const VulkanContext& context,
                        CommandBufferPool* pool,
                        GpuAllocator* allocator,
                        GpuUploader* uploader)
-    : ResourceCoreManager(context),
+    : ResourceManager(context),
       queue_(pool->queue()),
       allocator_(allocator),
       uploader_(uploader) {}
@@ -143,17 +143,17 @@ ImagePtr ImageCache::FindImage(const ImageInfo& info) {
   if (queue.empty()) {
     return ImagePtr();
   } else {
-    ImagePtr result = ftl::MakeRefCounted<Image>(std::move(queue.front()));
+    ImagePtr result(queue.front().release());
     queue.pop();
     return result;
   }
 }
 
-void ImageCache::ReceiveResourceCore(std::unique_ptr<ResourceCore> core) {
-  std::unique_ptr<ImageCore> image_core(
-      static_cast<ImageCore*>(core.release()));
-  auto& queue = unused_images_[image_core->info()];
-  queue.push(std::move(image_core));
+void ImageCache::OnReceiveOwnable(std::unique_ptr<Resource2> resource) {
+  FTL_DCHECK(resource->IsKindOf<Image>());
+  std::unique_ptr<Image> image(static_cast<Image*>(resource.release()));
+  auto& queue = unused_images_[image->info()];
+  queue.push(std::move(image));
 }
 
 }  // namespace impl

@@ -29,29 +29,37 @@ struct ImageInfo {
 };
 #pragma pack(pop)
 
-// Every Image has an owner, who is responsible for cleaning up the Image's
-// underlying resources when it is destroyed.  The ImageOwner must outlive all
-// of its owned Images.
-class ImageOwner;
-
-class ImageCore : public ResourceCore {
+// An Image is a Resource that encapsulates a vk::Image.
+class Image : public Resource2 {
  public:
-  static const ResourceCoreTypeInfo kTypeInfo;
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  ImageCore(ResourceCoreManager* image_owner,
-            ImageInfo info,
-            vk::Image,
-            GpuMemPtr mem);
+  // Returns image_ and mem_ to the owner.
+  ~Image() override;
 
-  ~ImageCore() override;
+  // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
+  // which should not be destroyed when this Image is destroyed (e.g. when
+  // working with images associated with a vk::SwapchainKHR); this is done by
+  // passing nullptr as the |mem| argument.
+  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
+
+  // Helper function that creates a VkImage given the parameters in ImageInfo.
+  // This does not bind the the VkImage to memory; the caller must do that
+  // separately after calling this function.
+  static vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
 
   const ImageInfo& info() const { return info_; }
-  vk::Image image() const { return image_; }
+  vk::Image get() const { return image_; }
   vk::Format format() const { return info_.format; }
   uint32_t width() const { return info_.width; }
   uint32_t height() const { return info_.height; }
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
+
+  // TODO: eventually make these private, callable only by friends.
+  void SetWaitSemaphore(SemaphorePtr semaphore);
+  SemaphorePtr TakeWaitSemaphore();
 
  private:
   const ImageInfo info_;
@@ -59,45 +67,6 @@ class ImageCore : public ResourceCore {
   GpuMemPtr mem_;
   bool has_depth_;
   bool has_stencil_;
-};
-
-// Encapsulates a vk::Image.  Lifecycle is managed by an ImageOwner.
-class Image : public Resource2 {
- public:
-  // Returns image_ and mem_ to the owner.
-  ~Image() override;
-
-  Image(std::unique_ptr<ImageCore> core);
-
-  Image(ResourceCoreManager* image_owner,
-        ImageInfo info,
-        vk::Image,
-        GpuMemPtr mem);
-
-  // Helper function that creates a VkImage given the parameters in ImageInfo.
-  // This does not bind the the VkImage to memory; the caller must do that
-  // separately after calling this function.
-  static vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
-
-  vk::Image get() const { return core()->image(); }
-  vk::Format format() const { return core()->format(); }
-  uint32_t width() const { return core()->width(); }
-  uint32_t height() const { return core()->height(); }
-
-  bool has_depth() const { return core()->has_depth(); }
-  bool has_stencil() const { return core()->has_stencil(); }
-
-  const ImageCore* core() const {
-    FTL_CHECK(Resource2::core()->type_info().IsKindOf(ImageCore::kTypeInfo));
-    return static_cast<const ImageCore*>(Resource2::core());
-  }
-
-  // TODO: eventually make these private, callable only by friends.
-  void SetWaitSemaphore(SemaphorePtr semaphore);
-  SemaphorePtr TakeWaitSemaphore();
-
- private:
-  void KeepDependenciesAlive(impl::CommandBuffer* command_buffer) override {}
 
   SemaphorePtr wait_semaphore_;
 

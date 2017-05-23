@@ -524,9 +524,10 @@ escher::VulkanContext DemoHarness::GetVulkanContext() {
 
 DemoHarness::SwapchainImageOwner::SwapchainImageOwner(
     const escher::VulkanContext& context)
-    : escher::ResourceCoreManager(context) {}
+    : escher::ResourceManager(context) {}
 
-void DemoHarness::SwapchainImageOwner::ReceiveResourceCore(
-    std::unique_ptr<escher::ResourceCore> core) {
-  FTL_LOG(INFO) << "Destroying ImageCore for swapchain image";
+void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
+    std::unique_ptr<escher::Resource2> resource) {
+  FTL_DCHECK(resource->IsKindOf<escher::Image>());
+  FTL_LOG(INFO) << "Destroying Image for swapchain image";
 }
