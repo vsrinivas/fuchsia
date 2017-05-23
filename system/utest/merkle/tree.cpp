@@ -72,8 +72,7 @@ void InitData(uint64_t length) {
 
 bool GetTreeLength(void) {
     BEGIN_TEST;
-    ASSERT_EQ(0, Tree::GetTreeLength(0),
-              "Wrong tree length for empty tree");
+    ASSERT_EQ(0, Tree::GetTreeLength(0), "Wrong tree length for empty tree");
     ASSERT_EQ(0, Tree::GetTreeLength(1), "Wrong tree length for 1 byte");
     ASSERT_EQ(0, Tree::GetTreeLength(kNodeSize),
               "Wrong tree length for 1 node");
@@ -502,7 +501,7 @@ bool VerifyMissingTree(void) {
     InitData(kSmall);
     mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = Tree::Verify(gData, kNodeSize, nullptr, gTreeLen, 0, kNodeSize,
+    rc = Tree::Verify(gData, kNodeSize + 1, nullptr, gTreeLen, 0, kNodeSize,
                       gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
@@ -583,7 +582,7 @@ bool VerifyOutOfBounds(void) {
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gDataLen - kNodeSize,
                       gLength, gDigest);
-    ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
+    ASSERT_EQ(rc, ERR_OUT_OF_RANGE, mx_status_get_string(rc));
     END_TEST;
 }
 
@@ -711,7 +710,7 @@ bool CreateAndVerifyHugePRNGData(void) {
             rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 0, gDataLen,
                               gDigest);
 
-            if (gTreeLen < kNodeSize) {
+            if (gTreeLen <= kNodeSize) {
                 ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
             } else {
                 ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));

@@ -98,18 +98,19 @@ private:
     };
 
     // Checks the integrity of the top level of a Merkle tree.  It checks
-    // integrity using the given root digest.
-    mx_status_t VerifyRoot(const void* data, const void* tree, uint64_t* level,
-                           const Digest& root);
+    // integrity using the given root digest. |data_len| must be at no more than
+    // |kNodeSize|.
+    static mx_status_t VerifyRoot(const void* data, uint64_t data_len,
+                                  uint64_t level, const Digest& root);
 
     // Checks the integrity of portion of a Merkle tree level given by the
     // offset and length.  It checks integrity using next level up of the given
     // Merkle tree. |tree_len| must be at least as much as returned by
     // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
     // wholly within |data_len|.
-    mx_status_t VerifyLevel(const void* data, uint64_t data_len,
-                            const void* tree, uint64_t offset, uint64_t length,
-                            uint64_t level);
+    static mx_status_t VerifyLevel(const void* data, uint64_t data_len,
+                                   const void* tree, uint64_t offset,
+                                   uint64_t length, uint64_t level);
 
     // Sets the length of the data that this Merkle tree references.  This
     // method has the side effect of setting the geometry of the Merkle tree;

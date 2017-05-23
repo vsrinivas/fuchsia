@@ -25,6 +25,72 @@ const uint64_t kDigestsPerNode = Tree::kNodeSize / Digest::kLength;
 
 namespace {
 
+// Digest wrapper functions.  These functions implement how a node in the Merkle
+// tree is hashed:
+//    digest = Hash((offset | level) + length + node_data + padding)
+// where:
+//  * offset is from the start of the VMO.
+//  * level is the height of the node in the tree (data nodes have level == 0).
+//  * length is the node size, e.g kNodeSize except possibly for the last node.
+//  * node_data is the actual bytes from the node.
+//  * padding is |kNodeSize - length| zeros.
+
+// Wrapper for Digest::Init.  This primes the working |digest| initializing it
+// and hashing the |locality| and |length|.
+void DigestInit(Digest* digest, uint64_t locality, uint64_t length) {
+    MX_DEBUG_ASSERT(digest);
+    MX_DEBUG_ASSERT(length < UINT32_MAX);
+    digest->Init();
+    digest->Update(&locality, sizeof(locality));
+    uint32_t len32 = static_cast<uint32_t>(mxtl::min(length, Tree::kNodeSize));
+    digest->Update(&len32, sizeof(len32));
+}
+
+// Wrapper for Digest::Update.  This will hash data from |in|, either |length|
+// bytes or up to the next node boundary, as determined from |offset|.  Returns
+// the number of bytes hashed.
+uint64_t DigestUpdate(Digest* digest, const uint8_t* in, uint64_t offset,
+                      uint64_t length) {
+    MX_DEBUG_ASSERT(digest);
+    // Check if length crosses a node boundary
+    length = mxtl::min(length, Tree::kNodeSize - (offset % Tree::kNodeSize));
+    digest->Update(in, length);
+    return length;
+}
+
+// Wrapper for Digest::Final.  This pads the hashed data with zeros up to a
+// node boundary before finalizing the digest.
+void DigestFinal(Digest* digest, uint64_t offset) {
+    offset = offset % Tree::kNodeSize;
+    if (offset != 0) {
+        uint64_t pad_len = Tree::kNodeSize - offset;
+        uint8_t pad[pad_len];
+        memset(pad, 0, pad_len);
+        digest->Update(pad, pad_len);
+    }
+    digest->Final();
+}
+
+////////
+// Helper functions for working between levels of the tree.
+
+// Helper function to transform a length in the current level to a length in the
+// next level up.
+uint64_t NextLength(uint64_t length) {
+    if (length > Tree::kNodeSize) {
+        return mxtl::roundup(length, Tree::kNodeSize) / kDigestsPerNode;
+    } else {
+        return 0;
+    }
+}
+
+// Helper function to transform a length in the current level to a node-aligned
+// length in the next level up.
+uint64_t NextAligned(uint64_t length) {
+    return mxtl::roundup(NextLength(length), Tree::kNodeSize);
+}
+
+// TODO(aarongreen): Replace me in the next CL.
 uint32_t GetNodeLength(uint64_t offset, uint64_t data_len) {
     MX_DEBUG_ASSERT(offset + Tree::kNodeSize > offset);
     if (offset + Tree::kNodeSize <= data_len) {
@@ -73,8 +139,7 @@ mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
     return NO_ERROR;
 }
 
-Tree::Tree()
-    : data_len_(0), level_(1), offset_(0) {}
+Tree::Tree() : data_len_(0), level_(1), offset_(0) {}
 
 Tree::~Tree() {}
 
@@ -159,70 +224,78 @@ mx_status_t Tree::CreateFinal(void* tree, Digest* digest) {
 mx_status_t Tree::Verify(const void* data, uint64_t data_len, const void* tree,
                          uint64_t tree_len, uint64_t offset, uint64_t length,
                          const Digest& root) {
-    Tree mt;
-    if ((!data && data_len != 0) || (!tree && tree_len != 0)) {
-        return ERR_INVALID_ARGS;
-    }
-    mx_status_t rc = mt.SetLengths(data_len, tree_len);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
-    rc = mt.SetRanges(data_len, offset, length);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
     uint64_t level = 0;
-    rc = mt.VerifyRoot(data, tree, &level, root);
-    if (rc != NO_ERROR) {
-        return rc;
-    }
-    while (level != 0) {
-        --level;
-        rc = mt.VerifyLevel(data, data_len, tree, offset, length, level);
-        if (rc != NO_ERROR) {
+    uint64_t root_len = data_len;
+    while (data_len > kNodeSize) {
+        mx_status_t rc;
+        // Verify the data in this level.
+        if ((rc = VerifyLevel(data, data_len, tree, offset, length, level)) !=
+            NO_ERROR) {
             return rc;
         }
+        // Ascend to the next level up.
+        data = tree;
+        root_len = NextLength(data_len);
+        data_len = NextAligned(data_len);
+        tree = static_cast<const uint8_t*>(tree) + data_len;
+        if (tree_len < data_len) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        tree_len -= data_len;
+        offset /= kDigestsPerNode;
+        length /= kDigestsPerNode;
+        ++level;
     }
-    return NO_ERROR;
+    return VerifyRoot(data, root_len, level, root);
 }
 
-mx_status_t Tree::VerifyRoot(const void* data, const void* tree,
-                             uint64_t* level, const Digest& expected) {
-    level_ = offsets_.size();
-    offset_ = level_ == 0 ? 0 : offsets_[level_ - 1];
-    HashNode(level_ == 0 ? data : tree);
-    if (expected != digest_) {
-        return ERR_IO_DATA_INTEGRITY;
+mx_status_t Tree::VerifyRoot(const void* data, uint64_t root_len,
+                             uint64_t level, const Digest& expected) {
+    // Must have data if length isn't 0.  Must have either zero or one node.
+    if ((!data && root_len != 0) || root_len > kNodeSize) {
+        return ERR_INVALID_ARGS;
     }
-    *level = level_;
-    return NO_ERROR;
+    const uint8_t* in = static_cast<const uint8_t*>(data);
+    Digest actual;
+    // We zero nodes if no data, exactly one node otherwise.
+    DigestInit(&actual, level, (root_len == 0 ? 0 : kNodeSize));
+    DigestUpdate(&actual, in, 0, root_len);
+    DigestFinal(&actual, root_len);
+    return (actual == expected ? NO_ERROR : ERR_IO_DATA_INTEGRITY);
 }
 
 mx_status_t Tree::VerifyLevel(const void* data, uint64_t data_len,
                               const void* tree, uint64_t offset,
                               uint64_t length, uint64_t level) {
-    level_ = level;
-    offset_ = level == 0 ? 0 : offsets_[level - 1];
-    const uint8_t* hashes = static_cast<const uint8_t*>(tree);
-    uint64_t hash_offset = 0;
-    uint64_t finish = 0;
-    if (level == 0) {
-        offset_ = offset - (offset % kNodeSize);
-        finish = mxtl::min(mxtl::roundup(offset + length, kNodeSize),
-                           data_len);
-        hash_offset = (offset_ / kDigestsPerNode);
-    } else {
-        offset_ = ranges_[level - 1].offset;
-        finish = offset_ + ranges_[level - 1].length;
-        hash_offset =
-            offsets_[level] + (offset_ - offsets_[level - 1]) / kDigestsPerNode;
+    MX_DEBUG_ASSERT(offset + length >= offset);
+    // Must have more than one node of data and digests to check against.
+    if (!data || data_len <= kNodeSize || !tree) {
+        return ERR_INVALID_ARGS;
     }
-    while (offset_ < finish) {
-        HashNode(level == 0 ? data : tree);
-        if (digest_ != hashes + hash_offset) {
+    // Must not overrun expected length.
+    if (offset + length > data_len) {
+        return ERR_OUT_OF_RANGE;
+    }
+    // Align parameters to node boundaries.
+    offset -= offset % kNodeSize;
+    length = mxtl::roundup(offset + length, kNodeSize) - offset;
+    const uint8_t* in = static_cast<const uint8_t*>(data) + offset;
+    // The digests are in the next level up.
+    Digest actual;
+    const uint8_t* expected =
+        static_cast<const uint8_t*>(tree) + (offset / kDigestsPerNode);
+    // Check the data of this level against the digests.
+    while (length > 0) {
+        DigestInit(&actual, offset | level, data_len - offset);
+        uint64_t chunk = DigestUpdate(&actual, in, offset, length);
+        in += chunk;
+        offset += chunk;
+        length -= chunk;
+        DigestFinal(&actual, offset);
+        if (actual != expected) {
             return ERR_IO_DATA_INTEGRITY;
         }
-        hash_offset += Digest::kLength;
+        expected += Digest::kLength;
     }
     return NO_ERROR;
 }
@@ -266,38 +339,6 @@ mx_status_t Tree::SetLengths(uint64_t data_len, uint64_t tree_len) {
     }
     memcpy(raw, offsets, i * sizeof(uint64_t));
     offsets_.reset(raw, i);
-    return NO_ERROR;
-}
-
-mx_status_t Tree::SetRanges(uint64_t data_len, uint64_t offset,
-                            uint64_t length) {
-    uint64_t finish = offset + length;
-    if (finish < offset || finish > data_len) {
-        return ERR_INVALID_ARGS;
-    }
-    offset -= offset % kNodeSize;
-    if (finish != data_len) {
-        finish = mxtl::roundup(finish, kNodeSize);
-    }
-    AllocChecker ac;
-    auto raw = new (&ac) Range[offsets_.size()];
-    if (!ac.check()) {
-        return ERR_NO_MEMORY;
-    }
-    for (uint64_t i = 0; i < offsets_.size(); ++i) {
-        offset /= kDigestsPerNode;
-        offset = offsets_[i] + offset - (offset % kNodeSize);
-        raw[i].offset = offset;
-        if (length == 0) {
-            raw[i].length = 0;
-            continue;
-        }
-        finish /= kDigestsPerNode;
-        finish = offsets_[i] + mxtl::roundup(finish, kNodeSize);
-        raw[i].offset = offset;
-        raw[i].length = finish - offset;
-    }
-    ranges_.reset(raw, offsets_.size());
     return NO_ERROR;
 }
 
