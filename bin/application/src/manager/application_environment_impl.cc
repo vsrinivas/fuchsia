@@ -39,17 +39,6 @@ enum class LaunchType {
   kRunner,
 };
 
-bool HasHandle(const fidl::Map<uint32_t, mx::handle>& startup_handles,
-               uint32_t handle_id) {
-  return startup_handles.find(handle_id) != startup_handles.cend();
-}
-
-bool HasReservedHandles(
-    const fidl::Map<uint32_t, mx::handle>& startup_handles) {
-  return HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_ENVIRONMENT) ||
-         HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_SERVICES);
-}
-
 std::vector<const char*> GetArgv(const ApplicationLaunchInfoPtr& launch_info) {
   std::vector<const char*> argv;
   argv.reserve(launch_info->arguments.size() + 1);
@@ -358,13 +347,6 @@ void ApplicationEnvironmentImpl::CreateApplication(
     return;
   }
   launch_info->url = canon_url;
-
-  if (HasReservedHandles(launch_info->startup_handles)) {
-    FTL_LOG(ERROR)
-        << "Cannot run " << launch_info->url
-        << " because the caller tried to bind reserved startup handles.";
-    return;
-  }
 
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;

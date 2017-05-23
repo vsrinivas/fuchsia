@@ -66,8 +66,7 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<app::CommandListener> command_listener;
-  mx::channel command_channel(
-      mx_get_startup_handle(MX_HND_TYPE_APPLICATION_LAUNCHER));
+  mx::channel command_channel(mx_get_startup_handle(PA_APP_LAUNCHER));
   if (command_channel) {
     command_listener.reset(new app::CommandListener(
         root.environment(), std::move(command_channel)));
