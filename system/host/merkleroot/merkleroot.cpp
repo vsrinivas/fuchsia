@@ -24,7 +24,6 @@ int main(int argc, char** argv) {
     }
     // Buffer one intermediate node's worth at a time.
     struct stat info;
-    merkle::Tree mt;
     AllocChecker ac;
     void* data = nullptr;
     mxtl::unique_ptr<uint8_t[]> tree(nullptr);
@@ -41,11 +40,10 @@ int main(int argc, char** argv) {
         if (!S_ISREG(info.st_mode)) {
             continue;
         }
-        size_t tree_len = merkle::Tree::GetTreeLength(info.st_size);
-        tree.reset(new (&ac) uint8_t[tree_len]);
+        size_t len = merkle::Tree::GetTreeLength(info.st_size);
+        tree.reset(new (&ac) uint8_t[len]);
         if (!ac.check()) {
-            fprintf(stderr, "[-] Failed to allocate tree of %zu bytes.\n",
-                    tree_len);
+            fprintf(stderr, "[-] Failed to allocate tree of %zu bytes.\n", len);
             return 1;
         }
         int fd = open(arg, O_RDONLY);
@@ -68,7 +66,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         mx_status_t rc =
-            mt.Create(data, info.st_size, tree.get(), tree_len, &digest);
+            merkle::Tree::Create(data, info.st_size, tree.get(), len, &digest);
         if (info.st_size != 0 && munmap(data, info.st_size) != 0) {
             perror("munmap");
             fprintf(stderr, "[-] Failed to munmap '%s.\n", arg);

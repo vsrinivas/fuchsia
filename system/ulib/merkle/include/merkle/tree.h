@@ -22,19 +22,17 @@ namespace merkle {
 //
 // A Merkle tree is typically created for a given |data| and |data_len| using
 // the following (error checking is omitted):
-//      merkle::Tree mt;
-//      uint64_t tree_len = mt.GetTreeLength(data_len);
+//      uint64_t tree_len = merkle::Tree::GetTreeLength(data_len);
 //      uint8_t *tree = malloc(tree_len); // or other allocation routine
 //      merkle::Digest digest;
-//      mt.Create(data, data_len, tree, tree_len, &digest);
+//      merkle::Tree::Create(data, data_len, tree, tree_len, &digest);
 //
 // At this point, |digest| contains the root digest for the Merkle tree
 // corresponding to the data. If this digest is trusted (e.g. the creator signs
 // it), other parties can use it to verify any portion of the data, chosen by
 // |offset| and |length| using the following:
-//      merkle::Tree mt;
-//      mx_status_t rc =
-//          mt.Verify(data, data_len, tree, tree_len, offset, length, digest);
+//      mx_status_t rc = merkle::Tree::Verify(data,
+//          data_len, tree, tree_len, offset, length, digest);
 //
 // If |s| is NO_ERROR, the |data| between |offset| and |offset + length| is the
 // same as when "Create" was called. If it is ERR_IO_DATA_INTEGRITY, either the
@@ -56,6 +54,21 @@ public:
     // the |data_len| is less than |kNodeSize|, this method will return 0.
     static uint64_t GetTreeLength(uint64_t data_len);
 
+    // Writes a Merkle tree for the given data and saves its root digest.
+    // |tree_len| must be at least as much as returned by GetTreeLength().
+    static mx_status_t Create(const void* data, uint64_t data_len, void* tree,
+                              uint64_t tree_len, Digest* digest);
+
+    // Checks the integrity of a the region of data given by the offset and
+    // length.  It checks integrity using the given Merkle tree and trusted root
+    // digest. |tree_len| must be at least as much as returned by
+    // GetTreeLength().  |offset| and |length| must describe a range wholly
+    // within |data_len|.
+    static mx_status_t Verify(const void* data, uint64_t data_len,
+                              const void* tree, uint64_t tree_len,
+                              uint64_t offset, uint64_t length,
+                              const Digest& digest);
+
     // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
     // data.  This must be called before |CreateUpdate|.
     mx_status_t CreateInit(uint64_t data_len, void* tree, uint64_t tree_len);
@@ -70,20 +83,6 @@ public:
     // number of bytes processed by |CreateUpdate| equals the |data_len| set by
     // |CreateInit|.
     mx_status_t CreateFinal(void* tree, Digest* digest);
-
-    // Writes a Merkle tree for the given data and saves its root digest.
-    // |tree_len| must be at least as much as returned by GetTreeLength().
-    mx_status_t Create(const void* data, uint64_t data_len, void* tree,
-                       uint64_t tree_len, Digest* digest);
-
-    // Checks the integrity of a the region of data given by the offset and
-    // length.  It checks integrity using the given Merkle tree and trusted root
-    // digest. |tree_len| must be at least as much as returned by
-    // GetTreeLength().  |offset| and |length| must describe a range wholly
-    // within |data_len|.
-    mx_status_t Verify(const void* data, uint64_t data_len, const void* tree,
-                       uint64_t tree_len, uint64_t offset, uint64_t length,
-                       const Digest& digest);
 
 private:
     // This struct is simply used to associate an offset and length when
@@ -113,6 +112,20 @@ private:
     // Hashes |length| bytes of |data| that makes up the leaves of the Merkle
     // tree and writes the digests to |tree|.
     mx_status_t HashData(const void* data, uint64_t length, void* tree);
+
+    // Checks the integrity of the top level of a Merkle tree.  It checks
+    // integrity using the given root digest.
+    mx_status_t VerifyRoot(const void* data, const void* tree, uint64_t* level,
+                           const Digest& root);
+
+    // Checks the integrity of portion of a Merkle tree level given by the
+    // offset and length.  It checks integrity using next level up of the given
+    // Merkle tree. |tree_len| must be at least as much as returned by
+    // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
+    // wholly within |data_len|.
+    mx_status_t VerifyLevel(const void* data, uint64_t data_len,
+                            const void* tree, uint64_t offset, uint64_t length,
+                            uint64_t level);
 
     // These fields control the overall shape of the tree and its serialization.
     uint64_t data_len_;

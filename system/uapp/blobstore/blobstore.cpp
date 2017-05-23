@@ -401,12 +401,11 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         // TODO(smklein): As an optimization, use the CreateInit/Update/Final
         // methods to create the merkle tree as we write data, rather than
         // waiting until the data is fully downloaded to create the tree.
-        merkle::Tree tree;
-        size_t merkle_size = tree.GetTreeLength(inode->blob_size);
+        size_t merkle_size = merkle::Tree::GetTreeLength(inode->blob_size);
         if (merkle_size > 0) {
             merkle::Digest digest;
-            if (tree.Create(blob_->GetData(), inode->blob_size, merkle_tree_->GetData(),
-                            merkle_size, &digest) != NO_ERROR) {
+            if (merkle::Tree::Create(blob_->GetData(), inode->blob_size, merkle_tree_->GetData(),
+                                     merkle_size, &digest) != NO_ERROR) {
                 SetState(kBlobStateError);
                 return status;
             } else if (digest != digest_) {
@@ -467,15 +466,14 @@ mx_status_t VnodeBlob::CopyVmo(mx_rights_t rights, mx_handle_t* out) {
     // 2) We could create a COW subsection of the original VMO.
     //
     // For now, we aggressively verify the entire VMO up front.
-    merkle::Tree mt;
     merkle::Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = &blobstore_->node_map_[map_index_];
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
     const void* merkle_data = (merkle_tree_ != nullptr) ? merkle_tree_->GetData() : nullptr;
-    status = mt.Verify(blob_->GetData(), inode->blob_size,
-                       merkle_data, size_merkle,
-                       0, inode->blob_size, d);
+    status = merkle::Tree::Verify(blob_->GetData(), inode->blob_size,
+                                  merkle_data, size_merkle,
+                                  0, inode->blob_size, d);
     if (status != NO_ERROR) {
         return status;
     }
@@ -493,7 +491,6 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
         return status;
     }
 
-    merkle::Tree mt;
     merkle::Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = &blobstore_->node_map_[map_index_];
@@ -507,9 +504,9 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
 
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
     const void* merkle_data = (merkle_tree_ != nullptr) ? merkle_tree_->GetData() : nullptr;
-    status = mt.Verify(blob_->GetData(), inode->blob_size,
-                       merkle_data, size_merkle,
-                       off, len, d);
+    status = merkle::Tree::Verify(blob_->GetData(), inode->blob_size,
+                                  merkle_data, size_merkle,
+                                  off, len, d);
     if (status != NO_ERROR) {
         return status;
     }

@@ -72,21 +72,19 @@ void InitData(uint64_t length) {
 
 bool GetTreeLength(void) {
     BEGIN_TEST;
-    Tree merkleTree;
-    ASSERT_EQ(0, merkleTree.GetTreeLength(0),
+    ASSERT_EQ(0, Tree::GetTreeLength(0),
               "Wrong tree length for empty tree");
-    ASSERT_EQ(0, merkleTree.GetTreeLength(1), "Wrong tree length for 1 byte");
-    ASSERT_EQ(0, merkleTree.GetTreeLength(kNodeSize),
+    ASSERT_EQ(0, Tree::GetTreeLength(1), "Wrong tree length for 1 byte");
+    ASSERT_EQ(0, Tree::GetTreeLength(kNodeSize),
               "Wrong tree length for 1 node");
-    ASSERT_EQ(kNodeSize, merkleTree.GetTreeLength(kNodeSize + 1),
+    ASSERT_EQ(kNodeSize, Tree::GetTreeLength(kNodeSize + 1),
               "Wrong tree length for 2 nodes");
     ASSERT_EQ(kNodeSize,
-              merkleTree.GetTreeLength(kNodeSize * kNodeSize / Digest::kLength),
+              Tree::GetTreeLength(kNodeSize * kNodeSize / Digest::kLength),
               "Wrong tree length for 1 node of digests");
-    ASSERT_EQ(
-        kNodeSize * 3,
-        merkleTree.GetTreeLength((kNodeSize * kNodeSize / Digest::kLength) + 1),
-        "Wrong tree length for 2 nodes of digests");
+    ASSERT_EQ(kNodeSize * 3, Tree::GetTreeLength(
+                                 (kNodeSize * kNodeSize / Digest::kLength) + 1),
+              "Wrong tree length for 2 nodes of digests");
     END_TEST;
 }
 
@@ -134,7 +132,7 @@ bool CreateInitTreeTooSmall(void) {
     BEGIN_TEST;
     InitData(kLarge);
     Tree merkleTree;
-    gTreeLen = merkleTree.GetTreeLength(gDataLen);
+    gTreeLen = Tree::GetTreeLength(gDataLen);
     mx_status_t rc = merkleTree.CreateInit(gDataLen, gTree, gTreeLen - 1);
     ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
     END_TEST;
@@ -304,9 +302,7 @@ bool CreateFinalIncompleteData(void) {
 bool Create(void) {
     BEGIN_TEST;
     InitData(kLarge);
-    Tree merkleTree;
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kLargeDigest, strlen(kLargeDigest));
@@ -362,10 +358,9 @@ bool CreateByteByByte(void) {
 bool CreateWithoutData(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    Tree merkleTree;
-    mx_status_t rc = merkleTree.Create(nullptr, 0, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(nullptr, 0, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Create(gData, 0, gTree, gTreeLen, &gDigest);
+    rc = Tree::Create(gData, 0, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kNoDataDigest, strlen(kNoDataDigest));
@@ -377,10 +372,9 @@ bool CreateWithoutData(void) {
 bool CreateWithoutTree(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    Tree merkleTree;
-    mx_status_t rc = merkleTree.Create(gData, kNodeSize, nullptr, 0, &gDigest);
+    mx_status_t rc = Tree::Create(gData, kNodeSize, nullptr, 0, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Create(gData, kNodeSize, gTree, 0, &gDigest);
+    rc = Tree::Create(gData, kNodeSize, gTree, 0, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kOneNodeDigest, strlen(kOneNodeDigest));
@@ -392,9 +386,7 @@ bool CreateWithoutTree(void) {
 bool CreateMissingData(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    Tree merkleTree;
-    mx_status_t rc =
-        merkleTree.Create(nullptr, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(nullptr, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
@@ -402,9 +394,8 @@ bool CreateMissingData(void) {
 bool CreateMissingTree(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    Tree merkleTree;
     mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, nullptr, kNodeSize, &gDigest);
+        Tree::Create(gData, gDataLen, nullptr, kNodeSize, &gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
@@ -412,10 +403,9 @@ bool CreateMissingTree(void) {
 bool CreateTreeTooSmall(void) {
     BEGIN_TEST;
     InitData(kSmall);
-    Tree merkleTree;
-    mx_status_t rc = merkleTree.Create(gData, gDataLen, nullptr, 0, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, nullptr, 0, &gDigest);
     ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
-    rc = merkleTree.Create(gData, kNodeSize * 257, gTree, kNodeSize, &gDigest);
+    rc = Tree::Create(gData, kNodeSize * 257, gTree, kNodeSize, &gDigest);
     ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
     END_TEST;
 }
@@ -423,9 +413,7 @@ bool CreateTreeTooSmall(void) {
 bool CreateDataUnaligned(void) {
     BEGIN_TEST;
     InitData(kUnaligned);
-    Tree merkleTree;
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     Digest expected;
     rc = expected.Parse(kUnalignedDigest, strlen(kUnalignedDigest));
@@ -436,13 +424,11 @@ bool CreateDataUnaligned(void) {
 
 bool Verify(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
@@ -465,14 +451,12 @@ bool VerifyCWrapper(void) {
 
 bool VerifyNodeByNode(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     for (uint64_t i = 0; i < gDataLen; i += kNodeSize) {
-        rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, i, kNodeSize,
-                               gDigest);
+        rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, i, kNodeSize,
+                          gDigest);
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     }
     END_TEST;
@@ -480,241 +464,206 @@ bool VerifyNodeByNode(void) {
 
 bool VerifyWithoutData(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc = merkleTree.Create(gData, 0, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, 0, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = gDigest.Parse(kNoDataDigest, strlen(kNoDataDigest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, 0, gTree, gTreeLen, 0, 0, gDigest);
+    rc = Tree::Verify(gData, 0, gTree, gTreeLen, 0, 0, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyWithoutTree(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, kNodeSize, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, kNodeSize, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     rc = gDigest.Parse(kOneNodeDigest, strlen(kOneNodeDigest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, kNodeSize, nullptr, 0, 0, kNodeSize, gDigest);
+    rc = Tree::Verify(gData, kNodeSize, nullptr, 0, 0, kNodeSize, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyMissingData(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(nullptr, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(nullptr, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyMissingTree(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, kNodeSize, nullptr, gTreeLen, 0, kNodeSize,
-                           gDigest);
+    rc = Tree::Verify(gData, kNodeSize, nullptr, gTreeLen, 0, kNodeSize,
+                      gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyUnalignedTreeLength(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen + 1, gOffset,
-                           gLength, gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen + 1, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyUnalignedDataLength(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen - 1, gTree, gTreeLen, gOffset,
-                           gLength, gDigest);
+    rc = Tree::Verify(gData, gDataLen - 1, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyTreeTooSmall(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    gTreeLen = merkleTree.GetTreeLength(kSmall);
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen - 1, gOffset,
-                           gLength, gDigest);
+    gTreeLen = Tree::GetTreeLength(kSmall);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen - 1, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, ERR_BUFFER_TOO_SMALL, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyDataUnaligned(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kUnaligned);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    gTreeLen = merkleTree.GetTreeLength(kUnaligned);
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset,
-                           gDataLen - gOffset, gDigest);
+    gTreeLen = Tree::GetTreeLength(kUnaligned);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset,
+                      gDataLen - gOffset, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyUnalignedOffset(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset - 1,
-                           gLength, gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset - 1, gLength,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyUnalignedLength(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset,
-                           gLength - 1, gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength - 1,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyOutOfBounds(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen,
-                           gDataLen - kNodeSize, gLength, gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gDataLen - kNodeSize,
+                      gLength, gDigest);
     ASSERT_EQ(rc, ERR_INVALID_ARGS, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyZeroLength(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, 0,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, 0, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyBadRoot(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     uint8_t digest[Digest::kLength];
     rc = gDigest.CopyTo(digest, sizeof(digest));
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     digest[0] ^= 1;
     gDigest = digest;
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyGoodPartOfBadTree(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     // gTree[0] ^= 1;
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 256 * kNodeSize,
-                           kNodeSize, gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 256 * kNodeSize,
+                      kNodeSize, gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyBadTree(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kLarge);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     uint64_t hash_off = gOffset / kNodeSize * Digest::kLength;
     gTree[hash_off] ^= 1;
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyGoodPartOfBadLeaves(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     gData[0] ^= 1;
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool VerifyBadLeaves(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     InitData(kSmall);
-    mx_status_t rc =
-        merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+    mx_status_t rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     gData[gOffset] ^= 1;
-    rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
-                           gDigest);
+    rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, gOffset, gLength,
+                      gDigest);
     ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
     END_TEST;
 }
 
 bool CreateAndVerifyHugePRNGData(void) {
     BEGIN_TEST;
-    Tree merkleTree;
     mx_status_t rc = NO_ERROR;
     uint8_t digest[Digest::kLength];
     for (gDataLen = kNodeSize; gDataLen <= sizeof(gData); gDataLen <<= 1) {
@@ -723,8 +672,8 @@ bool CreateAndVerifyHugePRNGData(void) {
             gData[i] = static_cast<uint8_t>(rand());
         }
         // Create the Merkle tree
-        gTreeLen = merkleTree.GetTreeLength(gDataLen);
-        rc = merkleTree.Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
+        gTreeLen = Tree::GetTreeLength(gDataLen);
+        rc = Tree::Create(gData, gDataLen, gTree, gTreeLen, &gDigest);
         ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
         // Randomly pick one of the four cases below.
         rc = gDigest.CopyTo(digest, sizeof(digest));
@@ -739,8 +688,8 @@ bool CreateAndVerifyHugePRNGData(void) {
                     static_cast<uint8_t>(1 << tmp);
             }
             gDigest = digest;
-            rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
-                                   gDataLen, gDigest);
+            rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 0, gDataLen,
+                              gDigest);
             ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
             break;
         case 2:
@@ -749,8 +698,8 @@ bool CreateAndVerifyHugePRNGData(void) {
                 uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
                 gData[rand() % gDataLen] ^= static_cast<uint8_t>(1 << tmp);
             }
-            rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
-                                   gDataLen, gDigest);
+            rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 0, gDataLen,
+                              gDigest);
             ASSERT_EQ(rc, ERR_IO_DATA_INTEGRITY, mx_status_get_string(rc));
             break;
         case 3:
@@ -759,8 +708,8 @@ bool CreateAndVerifyHugePRNGData(void) {
                 uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
                 gTree[rand() % gTreeLen] ^= static_cast<uint8_t>(1 << tmp);
             }
-            rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
-                                   gDataLen, gDigest);
+            rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 0, gDataLen,
+                              gDigest);
 
             if (gTreeLen < kNodeSize) {
                 ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
@@ -770,8 +719,8 @@ bool CreateAndVerifyHugePRNGData(void) {
             break;
         default:
             // Normal verification without modification
-            rc = merkleTree.Verify(gData, gDataLen, gTree, gTreeLen, 0,
-                                   gDataLen, gDigest);
+            rc = Tree::Verify(gData, gDataLen, gTree, gTreeLen, 0, gDataLen,
+                              gDigest);
             ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
             break;
         }

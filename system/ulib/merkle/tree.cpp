@@ -126,15 +126,16 @@ mx_status_t Tree::CreateFinal(void* tree, Digest* digest) {
 
 mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
                          uint64_t tree_len, Digest* digest) {
-    mx_status_t rc = CreateInit(data_len, tree, tree_len);
+    Tree mt;
+    mx_status_t rc = mt.CreateInit(data_len, tree, tree_len);
     if (rc != NO_ERROR) {
         return rc;
     }
-    rc = CreateUpdate(data, data_len, tree);
+    rc = mt.CreateUpdate(data, data_len, tree);
     if (rc != NO_ERROR) {
         return rc;
     }
-    rc = CreateFinal(tree, digest);
+    rc = mt.CreateFinal(tree, digest);
     if (rc != NO_ERROR) {
         return rc;
     }
@@ -143,49 +144,71 @@ mx_status_t Tree::Create(const void* data, uint64_t data_len, void* tree,
 
 mx_status_t Tree::Verify(const void* data, uint64_t data_len, const void* tree,
                          uint64_t tree_len, uint64_t offset, uint64_t length,
-                         const Digest& digest) {
+                         const Digest& root) {
+    Tree mt;
     if ((!data && data_len != 0) || (!tree && tree_len != 0)) {
         return ERR_INVALID_ARGS;
     }
-    mx_status_t rc = SetLengths(data_len, tree_len);
+    mx_status_t rc = mt.SetLengths(data_len, tree_len);
     if (rc != NO_ERROR) {
         return rc;
     }
-    rc = SetRanges(data_len, offset, length);
+    rc = mt.SetRanges(data_len, offset, length);
     if (rc != NO_ERROR) {
         return rc;
     }
-    // Check the root
+    uint64_t level = 0;
+    rc = mt.VerifyRoot(data, tree, &level, root);
+    if (rc != NO_ERROR) {
+        return rc;
+    }
+    while (level != 0) {
+        --level;
+        rc = mt.VerifyLevel(data, data_len, tree, offset, length, level);
+        if (rc != NO_ERROR) {
+            return rc;
+        }
+    }
+    return NO_ERROR;
+}
+
+mx_status_t Tree::VerifyRoot(const void* data, const void* tree,
+                             uint64_t* level, const Digest& expected) {
     level_ = offsets_.size();
     offset_ = level_ == 0 ? 0 : offsets_[level_ - 1];
     HashNode(level_ == 0 ? data : tree);
-    if (digest != digest_) {
+    if (expected != digest_) {
         return ERR_IO_DATA_INTEGRITY;
     }
-    // Check the Merkle tree.
+    *level = level_;
+    return NO_ERROR;
+}
+
+mx_status_t Tree::VerifyLevel(const void* data, uint64_t data_len,
+                              const void* tree, uint64_t offset,
+                              uint64_t length, uint64_t level) {
+    level_ = level;
+    offset_ = level == 0 ? 0 : offsets_[level - 1];
     const uint8_t* hashes = static_cast<const uint8_t*>(tree);
     uint64_t hash_offset = 0;
     uint64_t finish = 0;
-    while (level_ != 0) {
-        --level_;
-        if (level_ == 0) {
-            offset_ = offset - (offset % kNodeSize);
-            finish =
-                mxtl::min(mxtl::roundup(offset + length, kNodeSize), data_len);
-            hash_offset = (offset_ / kDigestsPerNode);
-        } else {
-            offset_ = ranges_[level_ - 1].offset;
-            finish = offset_ + ranges_[level_ - 1].length;
-            hash_offset = offsets_[level_] +
-                          (offset_ - offsets_[level_ - 1]) / kDigestsPerNode;
+    if (level == 0) {
+        offset_ = offset - (offset % kNodeSize);
+        finish = mxtl::min(mxtl::roundup(offset + length, kNodeSize),
+                           data_len);
+        hash_offset = (offset_ / kDigestsPerNode);
+    } else {
+        offset_ = ranges_[level - 1].offset;
+        finish = offset_ + ranges_[level - 1].length;
+        hash_offset =
+            offsets_[level] + (offset_ - offsets_[level - 1]) / kDigestsPerNode;
+    }
+    while (offset_ < finish) {
+        HashNode(level == 0 ? data : tree);
+        if (digest_ != hashes + hash_offset) {
+            return ERR_IO_DATA_INTEGRITY;
         }
-        while (offset_ < finish) {
-            HashNode(level_ == 0 ? data : tree);
-            if (digest_ != hashes + hash_offset) {
-                return ERR_IO_DATA_INTEGRITY;
-            }
-            hash_offset += Digest::kLength;
-        }
+        hash_offset += Digest::kLength;
     }
     return NO_ERROR;
 }
@@ -230,7 +253,8 @@ mx_status_t Tree::SetLengths(uint64_t data_len, uint64_t tree_len) {
     return NO_ERROR;
 }
 
-mx_status_t Tree::SetRanges(uint64_t data_len, uint64_t offset, uint64_t length) {
+mx_status_t Tree::SetRanges(uint64_t data_len, uint64_t offset,
+                            uint64_t length) {
     uint64_t finish = offset + length;
     if (finish < offset || finish > data_len) {
         return ERR_INVALID_ARGS;

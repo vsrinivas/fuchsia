@@ -197,8 +197,7 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     info->size_data = size_data;
 
     // Generate the Merkle Tree
-    merkle::Tree tree;
-    info->size_merkle = tree.GetTreeLength(size_data);
+    info->size_merkle = merkle::Tree::GetTreeLength(size_data);
     if (info->size_merkle == 0) {
         info->merkle = nullptr;
     } else {
@@ -206,16 +205,16 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
         ASSERT_EQ(ac.check(), true, "");
     }
     merkle::Digest digest;
-    ASSERT_EQ(tree.Create(&info->data[0], info->size_data, &info->merkle[0],
-                          info->size_merkle, &digest), NO_ERROR,
-              "Couldn't create Merkle Tree");
+    ASSERT_EQ(merkle::Tree::Create(&info->data[0], info->size_data, &info->merkle[0],
+                                   info->size_merkle, &digest),
+              NO_ERROR, "Couldn't create Merkle Tree");
     strcpy(info->path, MOUNT_PATH "/");
     size_t prefix_len = strlen(info->path);
     digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
 
     // Sanity-check the merkle tree
-    ASSERT_EQ(tree.Verify(&info->data[0], info->size_data, &info->merkle[0],
-                          info->size_merkle, 0, info->size_data, digest),
+    ASSERT_EQ(merkle::Tree::Verify(&info->data[0], info->size_data, &info->merkle[0],
+                                   info->size_merkle, 0, info->size_data, digest),
               NO_ERROR, "Failed to validate Merkle Tree");
 
     *out = mxtl::move(info);
