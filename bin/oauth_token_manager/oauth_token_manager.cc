@@ -43,6 +43,9 @@
 namespace modular {
 namespace auth {
 
+using FirebaseTokenCallback =
+    std::function<void(modular::auth::FirebaseTokenPtr)>;
+
 namespace {
 
 // TODO(alhaad/ukode): Move the following to a configuration file.
@@ -51,8 +54,13 @@ namespace {
 constexpr char kClientId[] =
     "1051596886047-kjfjv6tuoluj61n5cedv71ansrj3ggi8.apps."
     "googleusercontent.com";
-constexpr char kGoogleOAuthEndpoint[] =
+constexpr char kGoogleOAuthAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
+constexpr char kGoogleOAuthTokenEndpoint[] =
+    "https://www.googleapis.com/oauth2/v4/token";
+constexpr char kFirebaseAuthEndpoint[] =
+    "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
+    "verifyAssertion";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
 constexpr char kCredentialsFile[] = "/data/modular/device/v2/creds.db";
 constexpr char kWebViewUrl[] = "file:///system/apps/web_view";
@@ -66,6 +74,13 @@ constexpr auto kScopes = {"openid",
                           "https://www.googleapis.com/auth/youtube.readonly",
                           "https://www.googleapis.com/auth/contacts",
                           "https://www.googleapis.com/auth/plus.login"};
+
+// Type of token requested.
+enum TokenType {
+  ACCESS_TOKEN = 0,
+  ID_TOKEN = 1,
+  FIREBASE_JWT_TOKEN = 2,
+};
 
 // TODO(alhaad/ukode): Don't use a hand-rolled version of this.
 std::string UrlEncode(const std::string& value) {
@@ -149,17 +164,22 @@ bool WriteCredsFile(const std::string& serialized_creds) {
 // Exactly one of success_callback and failure_callback is ever invoked.
 void Post(const std::string& request_body,
           network::URLLoader* const url_loader,
+          const std::string& url,
           const std::function<void()>& success_callback,
           const std::function<void(std::string)>& failure_callback,
           const std::function<bool(rapidjson::Document)>& set_token_callback) {
-  auto encoded_request_body = UrlEncode(request_body);
+  std::string encoded_request_body(request_body);
+  if (url.find(kFirebaseAuthEndpoint) == std::string::npos) {
+    encoded_request_body = UrlEncode(request_body);
+  }
 
   mx::vmo data;
   auto result = mtl::VmoFromString(encoded_request_body, &data);
+  FTL_VLOG(1) << "Post Data:" << encoded_request_body;
   FTL_DCHECK(result);
 
   network::URLRequestPtr request(network::URLRequest::New());
-  request->url = "https://www.googleapis.com/oauth2/v4/token";
+  request->url = url;
   request->method = "POST";
   request->auto_follow_redirects = true;
 
@@ -173,7 +193,18 @@ void Post(const std::string& request_body,
   // content-type header.
   network::HttpHeaderPtr content_type_header = network::HttpHeader::New();
   content_type_header->name = "content-type";
-  content_type_header->value = "application/x-www-form-urlencoded";
+  if (url.find("identitytoolkit") != std::string::npos) {
+    // set accept header
+    network::HttpHeaderPtr accept_header = network::HttpHeader::New();
+    accept_header->name = "accept";
+    accept_header->value = "application/json";
+    request->headers.push_back(std::move(accept_header));
+
+    // set content_type header
+    content_type_header->value = "application/json";
+  } else {
+    content_type_header->value = "application/x-www-form-urlencoded";
+  }
   request->headers.push_back(std::move(content_type_header));
 
   request->body = network::URLBody::New();
@@ -189,29 +220,35 @@ void Post(const std::string& request_body,
       return;
     }
 
-    if (response->status_code != 200) {
-      failure_callback("Status code: " + std::to_string(response->status_code) +
-                       " while fetching access token.");
-      return;
-    }
-
+    std::string response_body;
     if (!response->body.is_null()) {
       FTL_DCHECK(response->body->is_stream());
-      std::string response_body;
       // TODO(alhaad/ukode): Use non-blocking variant.
       if (!mtl::BlockingCopyToString(std::move(response->body->get_stream()),
                                      &response_body)) {
-        failure_callback("Failed to read from socket.");
+        failure_callback("Failed to read response from socket with status:" +
+                         std::to_string(response->status_code));
         return;
       }
-
-      rapidjson::Document doc;
-      doc.Parse(response_body);
-      FTL_DCHECK(!doc.HasParseError());
-      auto result = set_token_callback(std::move(doc));
-      FTL_DCHECK(result);
-      success_callback();
     }
+
+    if (response->status_code != 200) {
+      failure_callback(
+          "Status code: " + std::to_string(response->status_code) +
+          " while fetching tokens with error description:" + response_body);
+      return;
+    }
+
+    rapidjson::Document doc;
+    rapidjson::ParseResult ok = doc.Parse(response_body);
+    if (!ok) {
+      std::string error_msg = GetParseError_En(ok.Code());
+      failure_callback("JSON parse error: " + error_msg);
+      return;
+    };
+    auto result = set_token_callback(std::move(doc));
+    FTL_DCHECK(result);
+    success_callback();
   });
 }
 
@@ -240,9 +277,16 @@ class OAuthTokenManagerApp : AccountProvider {
   // Generate a random account id.
   std::string GenerateAccountId();
 
+  // Refresh access and id tokens.
   void RefreshToken(const std::string& account_id,
-                    bool refresh_id_token,
+                    const TokenType& token_type,
                     const std::function<void(std::string)>& callback);
+
+  // Refresh firebase tokens.
+  void RefreshFirebaseToken(const std::string& account_id,
+                            const std::string& firebase_api_key,
+                            const std::string& id_token,
+                            const FirebaseTokenCallback& callback);
 
   std::shared_ptr<app::ApplicationContext> application_context_;
 
@@ -261,21 +305,39 @@ class OAuthTokenManagerApp : AccountProvider {
   // user credentials.
   const ::auth::CredentialStore* creds_ = nullptr;
 
+  // In-memory cache for short lived firebase auth id tokens. These tokens get
+  // reset on system reboots. Tokens are cached based on the expiration time
+  // set by the Firebase servers. Cache is indexed by firebase api keys.
+  struct FirebaseAuthToken {
+    uint64_t creation_ts;
+    uint64_t expires_in;
+    std::string id_token;
+    std::string local_id;
+    std::string email;
+  };
+
   // In-memory cache for short lived oauth tokens that resets on system reboots.
   // Tokens are cached based on the expiration time set by the Identity
-  // provider.
+  // provider. Cache is indexed by unique account_ids.
   struct ShortLivedToken {
     uint64_t creation_ts;
     uint64_t expires_in;
     std::string access_token;
     std::string id_token;
+    std::map<std::string, FirebaseAuthToken> fb_tokens_;
   };
   std::map<std::string, ShortLivedToken> oauth_tokens_;
 
   // We are using operations here not to guard state across asynchronous calls
   // but rather to clean up state after an 'operation' is done.
-  OperationCollection operation_collection_;
+  // TODO(ukode): All operations are running in a queue now which is
+  // inefficient because we block on operations that could be done in parallel.
+  // Instead we may want to create an operation for what
+  // TokenProviderFactoryImpl::GetFirebaseAuthToken() is doing in an sub
+  // operation queue.
+  OperationQueue operation_queue_;
 
+  class GoogleFirebaseTokensCall;
   class GoogleOAuthTokensCall;
   class GoogleUserCredsCall;
 
@@ -305,12 +367,28 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   // |TokenProvider|
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
-    app_->RefreshToken(account_id_, false, callback);
+    FTL_DCHECK(app_);
+    app_->RefreshToken(account_id_, ACCESS_TOKEN, callback);
   }
 
   // |TokenProvider|
   void GetIdToken(const GetIdTokenCallback& callback) override {
-    app_->RefreshToken(account_id_, true, callback);
+    FTL_DCHECK(app_);
+    app_->RefreshToken(account_id_, ID_TOKEN, callback);
+  }
+
+  // |TokenProvider|
+  void GetFirebaseAuthToken(
+      const fidl::String& firebase_api_key,
+      const GetFirebaseAuthTokenCallback& callback) override {
+    FTL_DCHECK(app_);
+
+    // Oauth id token is used as input to fetch firebase auth token.
+    GetIdToken([ this, firebase_api_key = firebase_api_key,
+                 callback ](const std::string id_token) {
+      app_->RefreshFirebaseToken(account_id_, firebase_api_key, id_token,
+                                 callback);
+    });
   }
 
   // |TokenProvider|
@@ -327,16 +405,183 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
   FTL_DISALLOW_COPY_AND_ASSIGN(TokenProviderFactoryImpl);
 };
 
+class OAuthTokenManagerApp::GoogleFirebaseTokensCall
+    : Operation<modular::auth::FirebaseTokenPtr> {
+ public:
+  GoogleFirebaseTokensCall(OperationContainer* const container,
+                           const std::string& account_id,
+                           const std::string& firebase_api_key,
+                           const std::string& id_token,
+                           OAuthTokenManagerApp* const app,
+                           const FirebaseTokenCallback& callback)
+      : Operation(container, callback),
+        account_id_(account_id),
+        firebase_api_key_(firebase_api_key),
+        id_token_(id_token),
+        app_(app) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &firebase_token_};
+
+    if (account_id_.empty()) {
+      Failure(flow, "Account id is empty, running in guest mode.");
+      return;
+    }
+
+    if (firebase_api_key_.empty()) {
+      Failure(flow, "Firebase Api key is empty");
+      return;
+    }
+
+    if (id_token_.empty()) {
+      Failure(
+          flow,
+          "Unable to refresh id_token. Check if the account is still valid.");
+      return;
+    }
+
+    // check cache for existing firebase tokens.
+    bool cacheValid = HasCacheExpired();
+    if (!cacheValid) {
+      FetchFirebaseToken(flow);
+    }
+    Success(flow);
+    return;
+  }
+
+  // Fetch fresh firebase auth token by exchanging idToken from Google.
+  void FetchFirebaseToken(FlowToken flow) {
+    FTL_CHECK(!id_token_.empty());
+    FTL_CHECK(!firebase_api_key_.empty());
+
+    // JSON post request body
+    const std::string json_request_body =
+        "{  \"postBody\": \"id_token=" + id_token_ +
+        "&providerId=google.com\"," + "   \"returnIdpCredential\": true," +
+        "   \"returnSecureToken\": true," +
+        "   \"requestUri\": \"http://localhost\"" + "}";
+
+    app_->application_context_->ConnectToEnvironmentService(
+        network_service_.NewRequest());
+    network_service_->CreateURLLoader(url_loader_.NewRequest());
+
+    std::string url(kFirebaseAuthEndpoint);
+    url += "?key=" + UrlEncode(firebase_api_key_);
+
+    // This flow exclusively branches below, so we need to put it in a shared
+    // container from which it can be removed once for all branches.
+    FlowTokenHolder branch{flow};
+
+    Post(json_request_body, url_loader_.get(), url,
+         [this, branch] {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Success(*flow);
+         },
+         [this, branch](const std::string error_message) {
+           std::unique_ptr<FlowToken> flow = branch.Continue();
+           FTL_CHECK(flow);
+           Failure(*flow, error_message);
+         },
+         [this](rapidjson::Document doc) {
+           return GetFirebaseToken(std::move(doc));
+         });
+  }
+
+  // Parses firebase jwt auth token from firebase auth endpoint response and
+  // saves it to local token in-memory cache.
+  bool GetFirebaseToken(rapidjson::Document jwt_token) {
+    FTL_LOG(INFO) << "Firebase Token: "
+                  << modular::JsonValueToPrettyString(jwt_token);
+
+    if (!jwt_token.HasMember("idToken") || !jwt_token.HasMember("localId") ||
+        !jwt_token.HasMember("email") || !jwt_token.HasMember("expiresIn")) {
+      FTL_LOG(ERROR)
+          << "Firebase Token returned from server is missing "
+          << "either idToken or email or localId fields. Returned token: "
+          << modular::JsonValueToPrettyString(jwt_token);
+      return false;
+    }
+
+    uint64_t expiresIn;
+    std::istringstream(jwt_token["expiresIn"].GetString()) >> expiresIn;
+
+    app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_] = {
+        static_cast<uint64_t>(ftl::TimePoint::Now().ToEpochDelta().ToSeconds()),
+        expiresIn,
+        jwt_token["idToken"].GetString(),
+        jwt_token["localId"].GetString(),
+        jwt_token["email"].GetString(),
+    };
+    return true;
+  }
+
+  // Returns true if the access and idtokens stored in cache are expired.
+  bool HasCacheExpired() {
+    FTL_DCHECK(app_);
+    FTL_DCHECK(!account_id_.empty());
+    FTL_DCHECK(!firebase_api_key_.empty());
+
+    if (app_->oauth_tokens_[account_id_].fb_tokens_.find(firebase_api_key_) ==
+        app_->oauth_tokens_[account_id_].fb_tokens_.end()) {
+      FTL_LOG(INFO) << "Firebase api key: [" << firebase_api_key_
+                    << "] not found in cache.";
+      return false;
+    }
+
+    uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    auto fb_token =
+        app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
+    uint64_t creation_ts = fb_token.creation_ts;
+    uint64_t token_expiry = fb_token.expires_in;
+    if ((current_ts - creation_ts) < token_expiry) {
+      FTL_LOG(INFO) << "Returning firebase token for api key ["
+                    << firebase_api_key_ << "] from cache. ";
+      return true;
+    }
+
+    return false;
+  }
+
+  void Success(FlowToken flow) {
+    firebase_token_ = auth::FirebaseToken::New();
+    auto fb_token =
+        app_->oauth_tokens_[account_id_].fb_tokens_[firebase_api_key_];
+    firebase_token_->id_token = fb_token.id_token;
+    firebase_token_->local_id = fb_token.local_id;
+    firebase_token_->email = fb_token.email;
+  }
+
+  void Failure(FlowToken flow, const std::string& error_message) {
+    FTL_LOG(ERROR) << error_message;
+  }
+
+  const std::string account_id_;
+  const std::string firebase_api_key_;
+  const std::string id_token_;
+  OAuthTokenManagerApp* const app_;
+
+  modular::auth::FirebaseTokenPtr firebase_token_;
+
+  network::NetworkServicePtr network_service_;
+  network::URLLoaderPtr url_loader_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GoogleFirebaseTokensCall);
+};
+
 class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
  public:
   GoogleOAuthTokensCall(OperationContainer* const container,
                         const std::string& account_id,
-                        const bool refresh_id_token,
+                        const TokenType& token_type,
                         OAuthTokenManagerApp* const app,
                         const std::function<void(fidl::String)>& callback)
       : Operation(container, callback),
         account_id_(account_id),
-        refresh_id_token_(refresh_id_token),
+        token_type_(token_type),
         app_(app) {
     Ready();
   }
@@ -345,33 +590,32 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    FTL_LOG(INFO) << "Fetching tokens for Account_ID:" << account_id_;
+    if (account_id_.empty()) {
+      Failure(flow, "Account id is empty, running in guest mode.");
+      return;
+    }
 
+    FTL_LOG(INFO) << "Fetching access/id tokens for Account_ID:" << account_id_;
     const std::string refresh_token = GetRefreshToken();
     if (refresh_token.empty()) {
       Failure(flow, "User not found");
       return;
     }
 
-    // TODO(ukode): Change logs to verbose mode once they are supported.
-    FTL_LOG(INFO) << "RT:" << refresh_token;
-
-    // Check for existing expiry time before fetching it from server.
-    auto token_it = app_->oauth_tokens_.find(account_id_);
-    if (token_it != app_->oauth_tokens_.end()) {
-      uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
-      uint64_t creation_ts = token_it->second.creation_ts;
-      uint64_t token_expiry = token_it->second.expires_in;
-
-      if ((current_ts - creation_ts) < token_expiry) {
-        // access/id token is still valid.
-        Success(flow);
-        return;
-      }
+    bool cacheValid = HasCacheExpired();
+    if (!cacheValid) {
+      // fetching tokens from server.
+      FetchAccessAndIdToken(refresh_token, flow);
     }
+    Success(flow);  // fetching tokens from local cache.
+    return;
+  }
 
-    // Existing tokens expired, exchange refresh token for fresh access and
-    // id tokens.
+  // Fetch fresh access and id tokens by exchanging refresh token from Google
+  // token endpoint.
+  void FetchAccessAndIdToken(const std::string& refresh_token, FlowToken flow) {
+    FTL_CHECK(!refresh_token.empty());
+
     const std::string request_body = "refresh_token=" + refresh_token +
                                      "&client_id=" + kClientId +
                                      "&grant_type=refresh_token";
@@ -384,7 +628,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     // container from which it can be removed once for all branches.
     FlowTokenHolder branch{flow};
 
-    Post(request_body, url_loader_.get(),
+    Post(request_body, url_loader_.get(), kGoogleOAuthTokenEndpoint,
          [this, branch] {
            std::unique_ptr<FlowToken> flow = branch.Continue();
            FTL_CHECK(flow);
@@ -403,10 +647,10 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   // Read saved user's refresh token from Credential store. If account is not
   // found, an empty token is returned.
   std::string GetRefreshToken() {
-    // TODO(ukode): Check if app_->creds_ is valid before parsing.
+    // TODO(ukode): Read from app_->creds_ if valid before parsing.
     const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
     if (credentials_storage == nullptr) {
-      FTL_DCHECK(false) << "Failed to parse credentials.";
+      FTL_LOG(ERROR) << "Failed to parse credentials.";
       return "";
     }
 
@@ -417,8 +661,8 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
             case ::auth::IdentityProvider_GOOGLE:
               return token->refresh_token()->str();
             default:
-              FTL_DCHECK(false) << "Unrecognized IdentityProvider"
-                                << token->identity_provider();
+              FTL_LOG(WARNING) << "Unrecognized IdentityProvider"
+                               << token->identity_provider();
           }
         }
       }
@@ -426,36 +670,69 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     return "";
   }
 
-  // local token in-memory cache.
+  // Parse access and id tokens from OAUth endpoints into local token in-memory
+  // cache.
   bool GetShortLivedTokens(rapidjson::Document tokens) {
     if (!tokens.HasMember("access_token")) {
-      FTL_DCHECK(false) << "Tokens returned from server does not contain "
-                        << "access_token. Returned token: "
-                        << modular::JsonValueToPrettyString(tokens);
+      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+                     << "access_token. Returned token: "
+                     << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
-    if (refresh_id_token_ && !tokens.HasMember("id_token")) {
-      FTL_DCHECK(false) << "Tokens returned from server does not contain "
-                        << "id_token. Returned token: "
-                        << modular::JsonValueToPrettyString(tokens);
+    if ((token_type_ == ID_TOKEN) && !tokens.HasMember("id_token")) {
+      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+                     << "id_token. Returned token: "
+                     << modular::JsonValueToPrettyString(tokens);
       return false;
     }
 
     // Add the token generation timestamp to |tokens| for caching.
     uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
     app_->oauth_tokens_[account_id_] = {
-        creation_ts, tokens["expires_in"].GetUint64(),
-        tokens["access_token"].GetString(), tokens["id_token"].GetString()};
+        creation_ts,
+        tokens["expires_in"].GetUint64(),
+        tokens["access_token"].GetString(),
+        tokens["id_token"].GetString(),
+        std::map<std::string, FirebaseAuthToken>(),
+    };
 
     return true;
   }
 
+  // Returns true if the access and idtokens stored in cache are expired.
+  bool HasCacheExpired() {
+    FTL_DCHECK(app_);
+    FTL_DCHECK(!account_id_.empty());
+
+    if (app_->oauth_tokens_.find(account_id_) == app_->oauth_tokens_.end()) {
+      FTL_LOG(INFO) << "Account: [" << account_id_ << "] not found in cache.";
+      return false;
+    }
+
+    uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
+    uint64_t creation_ts = app_->oauth_tokens_[account_id_].creation_ts;
+    uint64_t token_expiry = app_->oauth_tokens_[account_id_].expires_in;
+    if ((current_ts - creation_ts) < token_expiry) {
+      FTL_LOG(INFO) << "Returning access/id tokens for account [" << account_id_
+                    << "] from cache. ";
+      return true;
+    }
+
+    return false;
+  }
+
   void Success(FlowToken flow) {
-    if (!refresh_id_token_) {
-      result_ = app_->oauth_tokens_[account_id_].access_token;
-    } else {
-      result_ = app_->oauth_tokens_[account_id_].id_token;
+    switch (token_type_) {
+      case ACCESS_TOKEN:
+        result_ = app_->oauth_tokens_[account_id_].access_token;
+        break;
+      case ID_TOKEN:
+        result_ = app_->oauth_tokens_[account_id_].id_token;
+        break;
+      case FIREBASE_JWT_TOKEN:
+      default:
+        Failure(flow, "invalid token type");
     }
   }
 
@@ -464,7 +741,8 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   }
 
   const std::string account_id_;
-  const bool refresh_id_token_;
+  const std::string firebase_api_key_;
+  TokenType token_type_;
   OAuthTokenManagerApp* const app_;
 
   network::NetworkServicePtr network_service_;
@@ -510,7 +788,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     const std::vector<std::string> scopes(kScopes.begin(), kScopes.end());
     std::string joined_scopes = ftl::JoinStrings(scopes, "+");
 
-    std::string url = kGoogleOAuthEndpoint;
+    std::string url = kGoogleOAuthAuthEndpoint;
     url += "?scope=" + joined_scopes;
     url += "&response_type=code&redirect_uri=";
     url += kRedirectUri;
@@ -544,10 +822,10 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
 
     app_->application_context_->ConnectToEnvironmentService(
         network_service_.NewRequest());
-
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    Post(request_body, url_loader_.get(), [this] { Success(); },
+    Post(request_body, url_loader_.get(), kGoogleOAuthTokenEndpoint,
+         [this] { Success(); },
          [this](const std::string error_message) { Failure(error_message); },
          [this](rapidjson::Document doc) {
            return SaveCredentials(std::move(doc));
@@ -558,9 +836,9 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   // |kCredentialsFile|.
   bool SaveCredentials(rapidjson::Document tokens) {
     if (!tokens.HasMember("refresh_token")) {
-      FTL_DCHECK(false) << "Tokens returned from server does not contain "
-                        << "refresh_token. Returned token: "
-                        << modular::JsonValueToPrettyString(tokens);
+      FTL_LOG(ERROR) << "Tokens returned from server does not contain "
+                     << "refresh_token. Returned token: "
+                     << modular::JsonValueToPrettyString(tokens);
       return false;
     };
 
@@ -722,7 +1000,7 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
       callback(std::move(account), nullptr);
       return;
     case IdentityProvider::GOOGLE:
-      new GoogleUserCredsCall(&operation_collection_, std::move(account), this,
+      new GoogleUserCredsCall(&operation_queue_, std::move(account), this,
                               callback);
       return;
     default:
@@ -738,11 +1016,21 @@ void OAuthTokenManagerApp::GetTokenProviderFactory(
 
 void OAuthTokenManagerApp::RefreshToken(
     const std::string& account_id,
-    const bool refresh_id_token,
+    const TokenType& token_type,
     const std::function<void(std::string)>& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshToken()";
-  new GoogleOAuthTokensCall(&operation_collection_, account_id,
-                            refresh_id_token, this, callback);
+  new GoogleOAuthTokensCall(&operation_queue_, account_id, token_type, this,
+                            callback);
+}
+
+void OAuthTokenManagerApp::RefreshFirebaseToken(
+    const std::string& account_id,
+    const std::string& firebase_api_key,
+    const std::string& id_token,
+    const FirebaseTokenCallback& callback) {
+  FTL_VLOG(1) << "OAuthTokenManagerApp::RefreshFirebaseToken()";
+  new GoogleFirebaseTokensCall(&operation_queue_, account_id, firebase_api_key,
+                               id_token, this, callback);
 }
 
 }  // namespace auth
