@@ -643,15 +643,6 @@ bool vmo_cache_test(void* context) {
         EXPECT_EQ(cache_policy, cache_policy_get, "compare flags");
     }
 
-    // Test that we can't set the flags twice
-    {
-        auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
-        EXPECT_TRUE(vmo, "");
-        EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "try set");
-        EXPECT_EQ(ERR_ACCESS_DENIED, vmo->SetMappingCachePolicy(cache_policy),
-                  "try set a second time");
-    }
-
     // Test valid flags
     for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
         auto vmo = VmObjectPhysical::Create(pa, PAGE_SIZE);
@@ -681,7 +672,7 @@ bool vmo_cache_test(void* context) {
         EXPECT_TRUE(vmo, "");
         EXPECT_EQ(NO_ERROR, ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0,
                   kArchRwFlags), "map vmo");
-        EXPECT_EQ(ERR_UNAVAILABLE, vmo->SetMappingCachePolicy(cache_policy),
+        EXPECT_EQ(ERR_BAD_STATE, vmo->SetMappingCachePolicy(cache_policy),
                   "set flags while mapped");
         EXPECT_EQ(NO_ERROR, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
         EXPECT_EQ(NO_ERROR, vmo->SetMappingCachePolicy(cache_policy), "set flags after unmapping");
