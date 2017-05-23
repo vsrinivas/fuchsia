@@ -39,7 +39,7 @@ var (
 	bootloader  = flag.String("bootloader", filepath.Join(magentaBuildDir, "bootloader/bootx64.efi"), "path to bootx64.efi")
 	kernel      = flag.String("kernel", filepath.Join(magentaBuildDir, "magenta.bin"), "path to magenta.bin")
 	ramdisk     = flag.String("ramdisk", filepath.Join(magentaBuildDir, "bootdata.bin"), "path to bootdata.bin")
-	sysmanifest = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/user.bootfs.manifest"), "path to system manifest")
+	sysmanifest = flag.String("sysmanifest", filepath.Join(fuchsiaBuildDir, "gen/packages/gn/system.bootfs.manifest"), "path to system manifest")
 	cmdline     = flag.String("cmdline", filepath.Join(fuchsiaBuildDir, "cmdline"), "path to command line file (if exists)")
 
 	rpi3     = flag.Bool("rpi3", strings.Contains(os.Getenv("MAGENTA_PROJECT"), "rpi"), "install rpi3 layout")

@@ -582,7 +582,7 @@ function fbuild-sync() {
         return 1
       fi
     fi
-  done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/user.bootfs.manifest"
+  done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/system.bootfs.manifest"
 
   rm -f "$stamp"
   rm -f "$status_file"

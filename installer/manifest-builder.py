@@ -6,7 +6,7 @@ Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 
 This script is a wrappre for the manifest module that allows users
-to build minfs images from user.bootfs.manifest files.
+to build minfs images from system.bootfs.manifest files.
 
 """
 
@@ -17,7 +17,7 @@ import manifest
 def main():
     parser = argparse.ArgumentParser(description=("Copy build artifacts to minfs "
                                                   "formatted disk images using "
-                                                  "user.bootfs.manifest files as "
+                                                  "system.bootfs.manifest files as "
                                                   "input."))
 
     parser.add_argument('--disk_path', action='store', required=True,
