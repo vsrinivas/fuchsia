@@ -19,7 +19,7 @@
 namespace moterm {
 
 namespace {
-constexpr char kShell[] = "file:///boot/bin/sh";
+constexpr char kShell[] = "/boot/bin/sh";
 constexpr size_t kMaxHistoryEntrySize = 1024;
 
 constexpr char kGetHistoryCommand[] = "get_history";

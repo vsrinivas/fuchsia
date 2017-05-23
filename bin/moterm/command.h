@@ -13,7 +13,6 @@
 #include <functional>
 #include <vector>
 
-#include "application/services/application_launcher.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/io/redirection.h"
@@ -30,8 +29,7 @@ class Command : mtl::MessageLoopHandler {
   Command();
   ~Command();
 
-  bool Start(app::ApplicationLauncher* launcher,
-             std::vector<std::string> command,
+  bool Start(std::vector<std::string> command,
              std::vector<mtl::StartupHandle> startup_handles,
              ReceiveCallback receive_callback,
              ftl::Closure termination_callback);
@@ -42,14 +40,16 @@ class Command : mtl::MessageLoopHandler {
   // |mtl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
 
+  ftl::Closure termination_callback_;
   ReceiveCallback receive_callback_;
   mx::socket stdin_;
   mx::socket stdout_;
   mx::socket stderr_;
 
-  mtl::MessageLoop::HandlerKey out_key_;
-  mtl::MessageLoop::HandlerKey err_key_;
-  app::ApplicationControllerPtr application_controller_;
+  mtl::MessageLoop::HandlerKey termination_key_ = 0;
+  mtl::MessageLoop::HandlerKey out_key_ = 0;
+  mtl::MessageLoop::HandlerKey err_key_ = 0;
+  mx::process process_;
 };
 
 }  // namespace moterm

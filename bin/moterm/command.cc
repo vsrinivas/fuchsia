@@ -4,6 +4,7 @@
 
 #include "apps/moterm/command.h"
 
+#include <magenta/status.h>
 #include <unistd.h>
 
 #include "lib/ftl/logging.h"
@@ -11,17 +12,25 @@
 namespace moterm {
 namespace {
 
-mx_status_t AddRedirectedSocket(app::ApplicationLaunchInfo* launch_info,
-                                int startup_fd,
-                                mx::socket* out_socket) {
+mx_status_t AddRedirectedSocket(
+    std::vector<mtl::StartupHandle>* startup_handles,
+    int startup_fd,
+    mx::socket* out_socket) {
   mtl::StartupHandle startup_handle;
   mx_status_t status =
       mtl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
   if (status != NO_ERROR)
     return status;
-  launch_info->startup_handles.insert(startup_handle.id,
-                                      std::move(startup_handle.handle));
+  startup_handles->push_back(std::move(startup_handle));
   return NO_ERROR;
+}
+
+std::vector<const char*> GetArgv(const std::vector<std::string>& command) {
+  std::vector<const char*> argv;
+  argv.reserve(command.size());
+  for (const auto& arg : command)
+    argv.push_back(arg.c_str());
+  return argv;
 }
 
 }  // namespace
@@ -29,54 +38,67 @@ mx_status_t AddRedirectedSocket(app::ApplicationLaunchInfo* launch_info,
 Command::Command() = default;
 
 Command::~Command() {
-  if (out_key_) {
+  if (termination_key_)
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
+  if (out_key_)
     mtl::MessageLoop::GetCurrent()->RemoveHandler(out_key_);
-  }
-  if (err_key_) {
+  if (err_key_)
     mtl::MessageLoop::GetCurrent()->RemoveHandler(err_key_);
-  }
 }
 
-bool Command::Start(app::ApplicationLauncher* launcher,
-                    std::vector<std::string> command,
+bool Command::Start(std::vector<std::string> command,
                     std::vector<mtl::StartupHandle> startup_handles,
                     ReceiveCallback receive_callback,
                     ftl::Closure termination_callback) {
   FTL_DCHECK(!command.empty());
 
-  auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = command[0];
-  for (size_t i = 1; i < command.size(); ++i)
-    launch_info->arguments.push_back(command[i]);
-  for (mtl::StartupHandle& startup_handle : startup_handles) {
-    launch_info->startup_handles.insert(startup_handle.id,
-                                        std::move(startup_handle.handle));
-  }
-
   mx_status_t status;
-  if ((status =
-           AddRedirectedSocket(launch_info.get(), STDIN_FILENO, &stdin_))) {
+  if ((status = AddRedirectedSocket(&startup_handles, STDIN_FILENO, &stdin_))) {
     FTL_LOG(ERROR) << "Failed to create stdin pipe: status=" << status;
     return false;
   }
   if ((status =
-           AddRedirectedSocket(launch_info.get(), STDOUT_FILENO, &stdout_))) {
+           AddRedirectedSocket(&startup_handles, STDOUT_FILENO, &stdout_))) {
     FTL_LOG(ERROR) << "Failed to create stdout pipe: status=" << status;
     return false;
   }
   if ((status =
-           AddRedirectedSocket(launch_info.get(), STDERR_FILENO, &stderr_))) {
+           AddRedirectedSocket(&startup_handles, STDERR_FILENO, &stderr_))) {
     FTL_LOG(ERROR) << "Failed to create stderr pipe: status=" << status;
     return false;
   }
 
-  FTL_LOG(INFO) << "Starting " << command[0];
-  launcher->CreateApplication(std::move(launch_info),
-                              GetProxy(&application_controller_));
-  application_controller_.set_connection_error_handler(
-      std::move(termination_callback));
+  std::vector<uint32_t> ids;
+  std::vector<mx_handle_t> handles;
+  for (const auto& startup_handle : startup_handles) {
+    ids.push_back(startup_handle.id);
+    handles.push_back(startup_handle.handle.get());
+  }
 
+  launchpad_t* lp;
+  launchpad_create(0, command[0].c_str(), &lp);
+  launchpad_clone(lp, LP_CLONE_ALL & ~LP_CLONE_MXIO_STDIO);
+  launchpad_set_args(lp, command.size(), GetArgv(command).data());
+  launchpad_add_handles(lp, ids.size(), handles.data(), ids.data());
+  launchpad_load_from_file(lp, command[0].c_str());
+
+  mx_handle_t proc;
+  const char* errmsg;
+  status = launchpad_go(lp, &proc, &errmsg);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Cannot run executable " << command[0] << " due to error "
+                   << status << " (" << mx_status_get_string(status)
+                   << "): " << errmsg;
+    return false;
+  }
+  process_.reset(proc);
+
+  termination_callback_ = std::move(termination_callback);
   receive_callback_ = std::move(receive_callback);
+
+  termination_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+      this, process_.get(), MX_PROCESS_TERMINATED);
+
   out_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
                                                         MX_SOCKET_READABLE);
   err_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
@@ -85,7 +107,11 @@ bool Command::Start(app::ApplicationLauncher* launcher,
 }
 
 void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  if (pending & MX_SOCKET_READABLE) {
+  if (handle == process_.get() && (pending & MX_PROCESS_TERMINATED)) {
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_key_);
+    termination_key_ = 0;
+    termination_callback_();
+  } else if (pending & MX_SOCKET_READABLE) {
     char buffer[2048];
     size_t len;
 

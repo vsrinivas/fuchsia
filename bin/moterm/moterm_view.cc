@@ -91,8 +91,7 @@ void MotermView::StartCommand() {
     shell_controller_->Start();
   }
 
-  bool success = command_->Start(context_->launcher().get(), command_to_run,
-                                 std::move(startup_handles),
+  bool success = command_->Start(command_to_run, std::move(startup_handles),
                                  [this](const void* bytes, size_t num_bytes) {
                                    OnDataReceived(bytes, num_bytes);
                                  },
