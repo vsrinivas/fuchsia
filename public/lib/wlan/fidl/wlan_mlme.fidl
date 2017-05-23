@@ -34,8 +34,14 @@ struct ScanRequest {
     array<uint16>? channel_list;
     uint32 min_channel_time;
     uint32 max_channel_time;
+    // RequestInformation
     array<string>? ssid_list;
-    // etc
+    // ChannelUsage
+    // AccessNetworkType
+    // HESSID
+    // Mesh ID
+    // DiscoveryMode
+    // VendorSpecificInfo
 };
 
 
@@ -67,6 +73,13 @@ struct ScanResponse {
 // Method ordinals
 // To be replaced once FIDL interfaces are available for Go
 enum Method {
-    SCAN,
-    LAST = SCAN,
+    // MLME-SCAN.request
+    // Args: ScanRequest
+    SCAN_request,
+
+    // MLME-SCAN.confirm
+    // Args: ScanResponse
+    SCAN_confirm,
+
+    LAST = SCAN_confirm,
 };

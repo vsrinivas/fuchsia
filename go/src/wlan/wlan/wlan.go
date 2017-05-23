@@ -14,9 +14,11 @@ import (
 	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxerror"
+	"time"
 )
 
 const MX_SOCKET_READABLE = mx.SignalObject0
+const SLEEP_INTERVAL = 5 * time.Second
 
 type Client struct {
 	f        *os.File
@@ -54,10 +56,13 @@ func NewClient(path string) (*Client, error) {
 }
 
 func (c *Client) Scan() {
+	channels := []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 	req := &mlme.ScanRequest{
-		BssType:  mlme.BssTypes_Infrastructure,
-		ScanType: mlme.ScanTypes_Passive,
-		Ssid:     "GoogleGuest",
+		BssType:        mlme.BssTypes_Infrastructure,
+		ScanType:       mlme.ScanTypes_Passive,
+		ChannelList:    &channels,
+		MinChannelTime: 100,
+		MaxChannelTime: 300,
 	}
 	log.Printf("req: %v", req)
 
@@ -72,7 +77,7 @@ func (c *Client) Scan() {
 		log.Printf("could not encode flags: %v", err)
 		return
 	}
-	if err := enc.WriteInt32(int32(mlme.Method_Scan)); err != nil {
+	if err := enc.WriteInt32(int32(mlme.Method_ScanRequest)); err != nil {
 		log.Printf("could not encode ordinal: %v", err)
 		return
 	}
@@ -82,13 +87,13 @@ func (c *Client) Scan() {
 		return
 	}
 
-	data, _, encErr := enc.Data()
+	reqBuf, _, encErr := enc.Data()
 	if encErr != nil {
 		log.Printf("could not get encoding data: %v", encErr)
 		return
 	}
-	log.Printf("encoded ScanRequest: %v", data)
-	if err := c.wlanChan.Write(data, nil, 0); err != nil {
+	log.Printf("encoded ScanRequest: %v", reqBuf)
+	if err := c.wlanChan.Write(reqBuf, nil, 0); err != nil {
 		log.Printf("could not write to wlan channel: %v", err)
 		return
 	}
@@ -105,8 +110,36 @@ func (c *Client) Scan() {
 				log.Printf("channel closed")
 				return
 			case obs&MX_SOCKET_READABLE != 0:
-				log.Printf("TODO: read from the channel")
-				continue
+				var buf [4096]byte
+				_, _, err := c.wlanChan.Read(buf[:], nil, 0)
+				if err != nil {
+					log.Printf("error reading from channel: %v", err)
+					break
+				}
+
+				dec := bindings.NewDecoder(buf[:], nil)
+				var header APIHeader
+				if err := header.Decode(dec); err != nil {
+					log.Printf("could not decode api header: %v", err)
+					break
+				}
+				switch header.ordinal {
+				case int32(mlme.Method_ScanConfirm):
+					var resp mlme.ScanResponse
+					if err := resp.Decode(dec); err != nil {
+						log.Printf("could not decode ScanResponse: %v", err)
+					} else {
+						PrintScanResponse(&resp)
+					}
+					go func() {
+						time.Sleep(SLEEP_INTERVAL)
+						if err := c.wlanChan.Write(reqBuf, nil, 0); err != nil && mxerror.Status(err) != mx.ErrPeerClosed {
+							log.Printf("could not write to wlan channel: %v", err)
+						}
+					}()
+				default:
+					log.Printf("unknown message ordinal: %v", header.ordinal)
+				}
 			}
 		}
 	}
