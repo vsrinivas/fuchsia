@@ -77,10 +77,10 @@ class OperationQueue : public OperationContainer {
   void Drop(OperationBase* o) override;
   void Cont() override;
 
-  // Are there any operations running? An operation is considered once its
-  // |Run()| has been invoked, up until result callback has finished. Note that
-  // an operation could be running while it is not present in |operations_|: its
-  // result callback could be executing.
+  // Are there any operations running? An operation is considered running once
+  // its |Run()| has been invoked, up until result callback has finished. Note
+  // that an operation could be running while it is not present in
+  // |operations_|: its result callback could be executing.
   bool idle_ = true;
 
   std::queue<std::unique_ptr<OperationBase>> operations_;
@@ -144,7 +144,7 @@ class OperationBase {
  protected:
   // Derived classes need to pass the OperationContainer here. The constructor
   // adds the instance to the container.
-  OperationBase(OperationContainer* const container);
+  OperationBase(OperationContainer* container);
 
   // Derived classes call this when they are ready for |Run()| to be called.
   void Ready();
@@ -169,7 +169,7 @@ class OperationBase {
 template <typename T>
 class Operation : public OperationBase {
  public:
-  ~Operation() override { 
+  ~Operation() override {
     // We must invalidate our weakptrs before the result callback is destroyed
     // if it still hasn't been called; otherwise, the result callback may
     // contain FlowTokens that will attempt to call Done().
@@ -211,9 +211,6 @@ template <>
 class Operation<void> : public OperationBase {
  public:
   ~Operation() override {
-    // We must invalidate our weakptrs before the result callback is destroyed
-    // if it still hasn't been called; otherwise, the result callback may
-    // contain FlowTokens that will attempt to call Done().
     weak_ptr_factory_.InvalidateWeakPtrs();
   }
 
