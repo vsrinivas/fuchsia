@@ -9,6 +9,8 @@
 #include <magenta/compiler.h>
 #include <stdlib.h>
 
+#include <ddk/protocol/block.h>
+
 namespace virtio {
 
 class Ring;
@@ -34,10 +36,27 @@ private:
     static mx_status_t virtio_block_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                                       void* out_buf, size_t out_len, size_t* out_actual);
 
+    static void virtio_block_set_callbacks(mx_device_t* dev, block_callbacks_t* cb);
+    static void virtio_block_get_info(mx_device_t* dev, block_info_t* info);
+    static void virtio_block_complete(iotxn_t* txn, void* cookie);
+    static void virtio_block_read(mx_device_t* dev, mx_handle_t vmo,
+                                  uint64_t length, uint64_t vmo_offset,
+                                  uint64_t dev_offset, void* cookie);
+    static void virtio_block_write(mx_device_t* dev, mx_handle_t vmo,
+                                   uint64_t length, uint64_t vmo_offset,
+                                   uint64_t dev_offset, void* cookie);
+    static void block_do_txn(BlockDevice* dev, uint32_t opcode, mx_handle_t vmo,
+                             uint64_t length, uint64_t vmo_offset,
+                             uint64_t dev_offset, void* cookie);
+
+    void GetInfo(block_info_t* info);
+
     void QueueReadWriteTxn(iotxn_t* txn);
 
     // the main virtio ring
     Ring vring_ = {this};
+
+    static const uint16_t ring_size = 128; // 128 matches legacy pci
 
     // saved block device configuration out of the pci config BAR
     struct virtio_blk_config {
@@ -68,16 +87,23 @@ private:
     uint8_t* blk_res_ = nullptr;
 
     uint32_t blk_req_bitmap_ = 0;
+    static_assert(blk_req_count <= sizeof(blk_req_bitmap_) * CHAR_BIT, "");
 
-    unsigned int alloc_blk_req() {
-        unsigned int i = 31 - __builtin_clz(blk_req_bitmap_);
+    size_t alloc_blk_req() {
+        size_t i = 0;
+        if (blk_req_bitmap_ != 0)
+            i = sizeof(blk_req_bitmap_) * CHAR_BIT - __builtin_clz(blk_req_bitmap_);
         blk_req_bitmap_ |= (1 << i);
         return i;
     }
 
-    void free_blk_req(unsigned int i) {
+    void free_blk_req(size_t i) {
         blk_req_bitmap_ &= ~(1 << i);
     }
+
+    // Callbacks for PROTOCOL_BLOCK
+    block_callbacks_t* callbacks_;
+    block_ops_t device_block_ops_;
 
     // pending iotxns
     list_node iotxn_list = LIST_INITIAL_VALUE(iotxn_list);
