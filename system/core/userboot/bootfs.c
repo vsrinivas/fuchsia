@@ -25,7 +25,7 @@ void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct boo
     status = mx_handle_duplicate(
         vmo,
         MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
         &fs->vmo);
     check(log, status, "mx_handle_duplicate failed on bootfs VMO handle\n");
 }
@@ -114,12 +114,16 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
                                       file.offset, file.size, &vmo);
     if (status != NO_ERROR)
         fail(log, status, "mx_vmo_clone failed\n");
+    status = mx_object_set_property(vmo, MX_PROP_NAME,
+                                    filename, strlen(filename));
+    if (status != NO_ERROR)
+        fail(log, status, "mx_object_set_property failed for VMO name\n");
     // Drop unnecessary MX_RIGHT_WRITE rights.
     // TODO(mcgrathr): Should be superfluous with read-only mx_vmo_clone.
     status = mx_handle_replace(
         vmo,
         MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+        MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
         &vmo);
     if (status != NO_ERROR)
         fail(log, status, "mx_handle_replace failed\n");

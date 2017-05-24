@@ -32,7 +32,11 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
     mx_off_t* off = static_cast<mx_off_t*>(extra);
     mx_off_t* len = off + 1;
     mx_handle_t vmo;
-    mx_status_t status = mx_handle_duplicate(vmo_, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
+    mx_status_t status = mx_handle_duplicate(
+        vmo_,
+        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
+        MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
+        &vmo);
     if (status < 0)
         return status;
     xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%" PRIu64 "\n", vmo, vmo_, offset_, length_);

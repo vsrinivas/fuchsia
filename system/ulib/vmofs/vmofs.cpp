@@ -95,7 +95,11 @@ mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
     mx_handle_t vmo;
     // TODO(abarth): We should clone a restricted range of the VMO to avoid
     // leaking the whole VMO to the client.
-    mx_status_t status = mx_handle_duplicate(vmo_, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
+    mx_status_t status = mx_handle_duplicate(
+        vmo_,
+        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
+        MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
+        &vmo);
     if (status < 0) {
         return status;
     }

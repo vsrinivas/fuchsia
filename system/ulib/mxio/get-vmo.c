@@ -149,7 +149,7 @@ mx_status_t mxio_get_vmo(int fd, mx_handle_t* out_vmo) {
         status = mx_handle_replace(
             vmo,
             MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-            MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE,
+            MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
             out_vmo);
         if (status != NO_ERROR)
             mx_handle_close(vmo);
