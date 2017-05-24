@@ -30,6 +30,19 @@ class Channel : public benchmark::Fixture {
   mx_handle_t out;
 };
 
+BENCHMARK_F(Channel, Create)(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    state.PauseTiming();
+    mx_handle_close(in);
+    mx_handle_close(out);
+    state.ResumeTiming();
+    if (mx_channel_create(0, &in, &out) != NO_ERROR) {
+      state.SkipWithError("Failed to create channel");
+      return;
+    }
+  }
+}
+
 BENCHMARK_DEFINE_F(Channel, Write)(benchmark::State& state) {
   std::vector<char> buffer(state.range(0));
   mx_status_t status;

@@ -8,6 +8,7 @@ executable("benchmarks") {
     "channels.cc",
     "events.cc",
     "main.cc",
+    "ports.cc",
     "sockets.cc",
     "syscalls.cc",
   ]
