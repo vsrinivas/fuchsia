@@ -23,7 +23,7 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out);
 mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENAME + 1]);
 
 // Destroy a directory watcher.
-void mxio_watcher_destory(mxio_watcher_t* watcher);
+void mxio_watcher_destroy(mxio_watcher_t* watcher);
 
 typedef mx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, void* cookie);
 
