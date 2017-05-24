@@ -1,10 +1,11 @@
 #include "libc.h"
 #include <errno.h>
 #include <limits.h>
-#include <runtime/sysinfo.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <unistd.h>
+
+#include <magenta/syscalls.h>
 
 #define JT(x) (-256 | (x))
 #define VER JT(1)
@@ -188,7 +189,7 @@ long sysconf(int name) {
         return SEM_VALUE_MAX;
     case JT_NPROCESSORS_CONF & 255:
     case JT_NPROCESSORS_ONLN & 255:
-        return mxr_get_nprocs_conf();
+        return _mx_system_get_num_cpus();
     case JT_PHYS_PAGES & 255:
         return _mx_system_get_physmem() / PAGE_SIZE;
     case JT_AVPHYS_PAGES & 255:

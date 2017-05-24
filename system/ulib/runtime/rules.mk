@@ -14,7 +14,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/once.c \
     $(LOCAL_DIR)/processargs.c \
     $(LOCAL_DIR)/thread.c \
-    $(LOCAL_DIR)/sysinfo.c \
 
 MODULE_LIBS += \
     system/ulib/magenta
