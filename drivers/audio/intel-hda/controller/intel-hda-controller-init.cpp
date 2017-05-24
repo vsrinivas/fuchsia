@@ -25,32 +25,9 @@ static constexpr size_t CMD_BUFFER_SIZE = 4096;
 mx_status_t IntelHDAController::ResetControllerHW() {
     mx_status_t res;
 
-#if 1
-    {
-        // Sanity check our stream counts.
-        uint16_t gcap;
-        unsigned int input_stream_cnt, output_stream_cnt, bidir_stream_cnt, total_stream_cnt;
-        gcap              = REG_RD(&regs_->gcap);
-        input_stream_cnt  = HDA_REG_GCAP_ISS(gcap);
-        output_stream_cnt = HDA_REG_GCAP_OSS(gcap);
-        bidir_stream_cnt  = HDA_REG_GCAP_BSS(gcap);
-        total_stream_cnt  = input_stream_cnt + output_stream_cnt + bidir_stream_cnt;
-
-        LOG("XXXXXXXXX Reset test; stream counts %u, %u, %u, %u\n",
-            input_stream_cnt, output_stream_cnt, bidir_stream_cnt, total_stream_cnt);
-
-        hda_stream_desc_regs_t* sregs = regs_->stream_desc;
-        for (uint32_t i = 0; i < total_stream_cnt; ++i) {
-            LOG("XXXXXXXXX [%2u] - 0x%08x\n", i, REG_RD(&sregs[i].ctl_sts.w));
-            IntelHDAStream::Reset(sregs + i);
-            LOG("XXXXXXXXX [%2u] - 0x%08x (update)\n", i, REG_RD(&sregs[i].ctl_sts.w));
-        }
-    }
-#endif
-
     // Assert the reset signal and wait for the controller to ack.
     REG_CLR_BITS(&regs_->gctl, HDA_REG_GCTL_HWINIT);
-    hw_mb();
+    hw_rmb();
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
@@ -70,7 +47,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
 
     // Deassert the reset signal and wait for the controller to ack.
     REG_SET_BITS<uint32_t>(&regs_->gctl, HDA_REG_GCTL_HWINIT);
-    hw_mb();
+    hw_rmb();
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
@@ -95,8 +72,6 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     /* Set the reset bit, then wait for ack from the HW.  See Section 3.3.21 */
     REG_WR(&regs_->corbrp, HDA_REG_CORBRP_RST);
-    hw_mb();
-
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
                              [](void* r) -> bool {
@@ -109,8 +84,6 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     /* Clear the reset bit, then wait for ack */
     REG_WR(&regs_->corbrp, 0u);
-    hw_mb();
-
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
                              [](void* r) -> bool {
