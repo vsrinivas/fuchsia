@@ -16,14 +16,12 @@ namespace intel_hda {
 class IntelHDAController : public IntelHDADevice,
                            public mxtl::WAVLTreeContainable<mxtl::unique_ptr<IntelHDAController>> {
 public:
-    using CodecTree = mxtl::WAVLTree<uint32_t, mxtl::unique_ptr<IntelHDACodec>>;
     using ControllerTree = mxtl::WAVLTree<uint32_t, mxtl::unique_ptr<IntelHDAController>>;
 
     mx_status_t DumpRegs(int argc, const char** argv);
 
     uint32_t id()     const { return id_; }
     uint32_t GetKey() const { return id(); }
-    CodecTree& codecs() { return codecs_; }
 
     static mx_status_t Enumerate();
     static ControllerTree& controllers() { return controllers_; }
@@ -37,11 +35,7 @@ private:
 
     ~IntelHDAController() { }
 
-    mx_status_t EnumerateCodecs();
-
     const uint32_t id_;
-    CodecTree codecs_;
-
     static ControllerTree controllers_;
 };
 

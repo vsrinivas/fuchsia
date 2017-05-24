@@ -21,6 +21,8 @@ struct CodecResponse;
 class IntelHDACodec : public IntelHDADevice,
                       public mxtl::WAVLTreeContainable<mxtl::unique_ptr<IntelHDACodec>> {
 public:
+    using CodecTree = mxtl::WAVLTree<uint32_t, mxtl::unique_ptr<IntelHDACodec>>;
+
     template <typename TARGET_TYPE>
     struct CommandListEntry {
         CodecVerb verb;
@@ -32,7 +34,8 @@ public:
     uint32_t id()     const { return codec_id_; }
     uint32_t GetKey() const { return id(); }
 
-    static mxtl::unique_ptr<IntelHDACodec> Create(uint32_t codec_id, const char* const dev_name);
+    static mx_status_t Enumerate();
+    static CodecTree& codecs() { return codecs_; }
 
 private:
     friend class mxtl::unique_ptr<IntelHDACodec>;
@@ -61,6 +64,8 @@ private:
 
     const uint32_t codec_id_;
     CodecState codec_state_;
+
+    static CodecTree codecs_;
 };
 
 }  // namespace audio
