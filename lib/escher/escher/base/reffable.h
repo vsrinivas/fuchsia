@@ -56,7 +56,9 @@ class Reffable {
 
   // Called by ftl::RefPtr.
   void AddRef() const {
+#ifndef NDEBUG
     FTL_DCHECK(!adoption_required_);
+#endif
     ++ref_count_;
   }
 
