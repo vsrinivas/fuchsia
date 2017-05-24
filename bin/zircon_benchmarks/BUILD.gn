@@ -7,10 +7,12 @@ executable("benchmarks") {
   sources = [
     "channels.cc",
     "events.cc",
+    "fifos.cc",
     "main.cc",
     "ports.cc",
     "sockets.cc",
     "syscalls.cc",
+    "threads.cc",
   ]
   deps = [
     "//third_party/benchmark",
