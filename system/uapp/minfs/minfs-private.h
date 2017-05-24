@@ -52,6 +52,7 @@ class Minfs {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
+    ~Minfs();
     static mx_status_t Create(Minfs** out, Bcache* bc, const minfs_info_t* info);
 
     mx_status_t Unmount();

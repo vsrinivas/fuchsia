@@ -93,10 +93,6 @@ mx_status_t Bcache::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
 }
 #endif
 
-int Bcache::Close() {
-    return close(fd_);
-}
-
 Bcache::Bcache(int fd, uint32_t blockmax) :
     fd_(fd), blockmax_(blockmax) {}
 
@@ -104,8 +100,8 @@ Bcache::~Bcache() {
 #ifdef __Fuchsia__
     if (fifo_client_ != nullptr) {
         ioctl_block_free_txn(fd_, &txnid_);
-        block_fifo_release_client(fifo_client_);
         ioctl_block_fifo_close(fd_);
+        block_fifo_release_client(fifo_client_);
     }
 #endif
     close(fd_);

@@ -1200,6 +1200,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             if (status != NO_ERROR) {
                 error("minfs unmount failed to sync; unmounting anyway: %d\n", status);
             }
+            // 'fs_' is deleted after Unmount is called.
             return fs_->Unmount();
         }
         default: {

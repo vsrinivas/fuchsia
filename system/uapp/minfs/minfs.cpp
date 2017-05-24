@@ -90,6 +90,11 @@ Minfs::Minfs(Bcache* bc, const minfs_info_t* info)
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
+Minfs::~Minfs() {
+    vnode_hash_.clear();
+    delete bc_;
+}
+
 mx_status_t Minfs::InoFree(
 #ifdef __Fuchsia__
     const MappedVmo* vmo_indirect,
@@ -436,7 +441,11 @@ mx_status_t Minfs::Unmount() {
 #ifdef __Fuchsia__
     dispatcher_ = nullptr;
 #endif
-    return bc_->Close();
+    // Explicitly delete this (rather than just letting the memory release when
+    // the process exits) to ensure that the block device's fifo has been
+    // closed.
+    delete this;
+    return NO_ERROR;
 }
 
 #ifdef __Fuchsia__

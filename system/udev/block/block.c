@@ -20,8 +20,6 @@
 
 #include "server.h"
 
-#define FLAG_BG_THREAD_JOINABLE       0x0001
-
 typedef struct blkdev {
     mx_device_t* mxdev;
     mx_device_t* parent;
@@ -29,18 +27,22 @@ typedef struct blkdev {
 
     mtx_t lock;
     BlockServer* bs;
-    uint32_t flags;
-    thrd_t bs_thread;
 } blkdev_t;
 
 static int blockserver_thread(void* arg) {
     blkdev_t* bdev = (blkdev_t*)arg;
     BlockServer* bs = bdev->bs;
+    mtx_unlock(&bdev->lock);
+
     blockserver_serve(bs, device_get_parent(bdev->mxdev), bdev->blockops);
 
     mtx_lock(&bdev->lock);
-    bdev->bs = NULL;
-    bdev->flags |= FLAG_BG_THREAD_JOINABLE;
+    if (bdev->bs == bs) {
+        // Only nullify 'bs' if no one has replaced it yet. This is the
+        // case when the blockserver shuts itself down because the fifo
+        // has closed.
+        bdev->bs = NULL;
+    }
     mtx_unlock(&bdev->lock);
 
     blockserver_free(bs);
@@ -56,9 +58,6 @@ static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     if (bdev->bs != NULL) {
         status = ERR_ALREADY_BOUND;
         goto done;
-    } else if (bdev->flags & FLAG_BG_THREAD_JOINABLE) {
-        // Clean up the thread that came before us
-        thrd_join(bdev->bs_thread, NULL);
     }
 
     BlockServer* bs;
@@ -69,14 +68,17 @@ static mx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     // As soon as we launch a thread, the background thread is responsible
     // for the blockserver in the bdev->bs field.
     bdev->bs = bs;
-    if (thrd_create(&bdev->bs_thread, blockserver_thread, bdev) != thrd_success) {
+    thrd_t thread;
+    if (thrd_create(&thread, blockserver_thread, bdev) != thrd_success) {
         blockserver_free(bs);
         bdev->bs = NULL;
         status = ERR_NO_MEMORY;
         goto done;
     }
+    thrd_detach(thread);
 
-    status = sizeof(mx_handle_t);
+    // On success, the blockserver thread holds the lock.
+    return sizeof(mx_handle_t);
 done:
     mtx_unlock(&bdev->lock);
     return status;
@@ -156,14 +158,11 @@ static mx_status_t blkdev_fifo_close(blkdev_t* bdev) {
     mtx_lock(&bdev->lock);
     if (bdev->bs != NULL) {
         blockserver_shutdown(bdev->bs);
-        mtx_unlock(&bdev->lock);
-        thrd_join(bdev->bs_thread, NULL);
+        // Ensure that the next thread to call "get_fifos" will
+        // not see the previous block server.
         bdev->bs = NULL;
-        bdev->flags &= ~FLAG_BG_THREAD_JOINABLE;
-    } else {
-        // No background thread running.
-        mtx_unlock(&bdev->lock);
     }
+    mtx_unlock(&bdev->lock);
 
     return NO_ERROR;
 }

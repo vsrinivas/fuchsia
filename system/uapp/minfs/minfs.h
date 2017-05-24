@@ -185,7 +185,6 @@ public:
 #endif
 
     int Sync();
-    int Close();
 
     ~Bcache();
 
