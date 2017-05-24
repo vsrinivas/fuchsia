@@ -51,12 +51,12 @@ static enum handler_return pl011_uart_irq(void *arg)
     /* read interrupt status and mask */
     uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
-    if (isr & (1<<4)) { // rxmis
+    if (isr & ((1<<4) | (1<<6))) { // rxmis
         /* while fifo is not empty, read chars out of it */
         while ((UARTREG(uart_base, UART_TFR) & (1<<4)) == 0) {
             /* if we're out of rx buffer, mask the irq instead of handling it */
             if (cbuf_space_avail(&uart_rx_buf) == 0) {
-                UARTREG(uart_base, UART_IMSC) &= ~(1<<4); // !rxim
+                UARTREG(uart_base, UART_IMSC) &= ~((1<<4)|(1<<6)); // !rxim
                 break;
             }
 
@@ -85,7 +85,8 @@ static void pl011_uart_init(mdi_node_ref_t* node, uint level)
     UARTREG(uart_base, UART_IFLS) = 0; // 1/8 rxfifo, 1/8 txfifo
 
     // enable rx interrupt
-    UARTREG(uart_base, UART_IMSC) = (1<<4); // rxim
+    UARTREG(uart_base, UART_IMSC) = (1 <<4 ) |  //  rxim
+                                    (1 << 6);   //  rtim
 
     // enable receive
     UARTREG(uart_base, UART_CR) |= (1<<9); // rxen
@@ -108,7 +109,7 @@ static int pl011_uart_getc(bool wait)
 {
     char c;
     if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
-        UARTREG(uart_base, UART_IMSC) = (1<<4); // rxim
+        UARTREG(uart_base, UART_IMSC) = ((1<<4)|(1<<6)); // rxim
         return c;
     }
 
