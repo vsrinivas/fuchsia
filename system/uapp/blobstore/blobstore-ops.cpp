@@ -108,7 +108,7 @@ mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     a->inode = 0;
     a->size = IsDirectory() ? 0 : SizeData();
     a->blksize = kBlobstoreBlockSize;
-    a->blkcount = blobstore_->node_map_[map_index_].num_blocks *
+    a->blkcount = blobstore_->GetNode(map_index_)->num_blocks *
                   (kBlobstoreBlockSize / VNATTR_BLKSIZE);
     a->nlink = 1;
     a->create_time = 0;

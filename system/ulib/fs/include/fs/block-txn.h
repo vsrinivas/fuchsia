@@ -15,7 +15,7 @@ namespace fs {
 // Access the "blkno"-th block within data.
 // "blkno = 0" corresponds to the first block within data.
 template <size_t BlockSize>
-void* GetBlock(const void* data, uint32_t blkno) {
+void* GetBlock(const void* data, uint64_t blkno) {
     assert(BlockSize <= (blkno + 1) * BlockSize); // Avoid overflow
     return (void*)((uintptr_t)(data) + (uintptr_t)(BlockSize * blkno));
 }

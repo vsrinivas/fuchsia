@@ -230,6 +230,8 @@ private:
     void* GetBlockmapData(uint64_t n) const;
     // Access the nth block of the node map.
     void* GetNodemapData(uint64_t n) const;
+    // Access the nth inode of the node map
+    blobstore_inode_t* GetNode(size_t index) const;
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
@@ -247,7 +249,7 @@ private:
     WAVLTreeByMerkle hash_; // Map of all 'in use' blobs
 
     RawBitmap block_map_;
-    mxtl::unique_ptr<blobstore_inode_t[]> node_map_;
+    mxtl::unique_ptr<MappedVmo> node_map_;
 };
 
 int blobstore_mkfs(int fd);
