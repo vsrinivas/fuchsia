@@ -16,7 +16,7 @@
 
 constexpr mx_rights_t kDefaultThreadRights =
     MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-    MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
+    MX_RIGHT_DESTROY | MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
 
 // static
 status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,

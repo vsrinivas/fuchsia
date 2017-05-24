@@ -447,7 +447,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    auto status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_WRITE, &dispatcher);
+    auto status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_DESTROY, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
