@@ -409,10 +409,10 @@ function fset() {
   if [[ "${goma}" -eq 1 ]]; then
     fset-add-gen-arg --goma "${FUCHSIA_GOMA_DIR}"
     # macOS needs a lower value of -j parameter, because it has a limit on the
-    # number of open file descriptors. Use 15 * cpu_count, which works well in
+    # number of open file descriptors. Use 4 * cpu_count, which works well in
     # practice.
     if [[ "$(uname -s)" = "Darwin" ]]; then
-      numjobs=$(( $(sysctl -n hw.ncpu) * 15 ))
+      numjobs=$(( $(sysctl -n hw.ncpu) * 4 ))
       fset-add-ninja-arg -j ${numjobs}
     else
       fset-add-ninja-arg -j 1000
