@@ -464,7 +464,8 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
 
     // remove children
     mx_device_t* child;
-    list_for_every_entry(&dev->children, child, mx_device_t, node) {
+    mx_device_t* temp;
+    list_for_every_entry_safe(&dev->children, child, temp, mx_device_t, node) {
         devhost_device_remove(child);
     }
 
