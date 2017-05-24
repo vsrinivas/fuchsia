@@ -1,0 +1,21 @@
+
+group("client") {
+  deps = [
+    ":display_pipe_client",
+  ]
+}
+
+executable("display_pipe_client") {
+  sources = [
+    "buffer.cc",
+    "buffer.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magma/src/display_pipe/services",
+  ]
+}
