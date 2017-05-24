@@ -208,6 +208,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   std::shared_ptr<SuppliedPacketCounter> counter_;
   TimelineRate pts_rate_ = TimelineRate::Zero;  // Zero means do not adjust.
   uint64_t prev_packet_label_ = 0;
+  bool flush_pending_ = false;
 
 #ifndef NDEBUG
   ftl::ThreadChecker thread_checker_;

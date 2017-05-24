@@ -87,6 +87,11 @@ void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
+  if (flush_pending_) {
+    // We're currently flushing, so ignore spurious demand updates.
+    return;
+  }
+
   if (min_packets_outstanding == demand_.min_packets_outstanding &&
       min_pts == demand_.min_pts) {
     // Demand hasn't changed. Nothing to do.
@@ -247,8 +252,11 @@ void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;
 
+  flush_pending_ = true;
+
   OnFlushRequested([this, callback]() {
     FLOG(log_channel_, CompletingFlush());
+    flush_pending_ = false;
     callback();
   });
 }

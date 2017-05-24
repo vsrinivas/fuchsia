@@ -7,8 +7,8 @@
 #include <limits>
 #include <vector>
 
-#include "apps/media/src/audio_server/audio_server_impl.h"
 #include "apps/media/src/audio_server/audio_renderer_impl.h"
+#include "apps/media/src/audio_server/audio_server_impl.h"
 
 namespace media {
 namespace audio {
