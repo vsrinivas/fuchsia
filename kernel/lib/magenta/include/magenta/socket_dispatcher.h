@@ -24,9 +24,13 @@ class VmMapping;
 class VmObject;
 class PortClient;
 
-constexpr int kMBufSize = 2048 - 8 - 4 - 4;
+constexpr int kMBufHeaderSize = 8 + (4 * 4);
 
-constexpr int kSocketSizeMax = 128 * kMBufSize;
+constexpr int kMBufSize = 2048 - 16;
+
+constexpr int kMBufDataSize = kMBufSize - kMBufHeaderSize;
+
+constexpr int kSocketSizeMax = 128 * kMBufDataSize;
 
 class SocketDispatcher final : public Dispatcher {
 public:
@@ -59,10 +63,17 @@ private:
 
         uint32_t off_ = 0u;
         uint32_t len_ = 0u;
-        char data_[kMBufSize] = {0};
+        // pkt_len_ is set to the total number of bytes in a packet
+        // when a socket is in MX_SOCKET_DATAGRAM mode. A pkt_len_ of
+        // 0 means this mbuf is part of the body of a packet.
+        //
+        // Always 0 in MX_SOCKET_STREAM mode.
+        uint32_t pkt_len_ = 0u;
+        uint32_t unused;
+        char data_[kMBufDataSize] = {0};
         // TODO: maybe union data_ with char* blocks for large messages
     };
-    static_assert(sizeof(MBuf) == 2048, "");
+    static_assert(sizeof(MBuf) == kMBufSize, "");
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
@@ -70,8 +81,9 @@ private:
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
-    size_t WriteMBufs(user_ptr<const void> src, size_t len) TA_REQ(lock_);
-    size_t ReadMBufs(user_ptr<void> dst, size_t len) TA_REQ(lock_);
+    mx_status_t WriteStreamMBufsLocked(user_ptr<const void> src, size_t len, size_t* written) TA_REQ(lock_);
+    mx_status_t WriteDgramMBufsLocked(user_ptr<const void> src, size_t len, size_t* written) TA_REQ(lock_);
+    size_t ReadMBufsLocked(user_ptr<void> dst, size_t len) TA_REQ(lock_);
     MBuf* AllocMBuf() TA_REQ(lock_);
     void FreeMBuf(MBuf* buf) TA_REQ(lock_);
     bool is_full() const TA_REQ(lock_);
@@ -79,6 +91,7 @@ private:
 
     mxtl::Canary<mxtl::magic("SOCK")> canary_;
 
+    uint32_t flags_;
     mx_koid_t peer_koid_;
     StateTracker state_tracker_;
 

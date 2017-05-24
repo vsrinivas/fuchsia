@@ -27,6 +27,14 @@ endpoint of the socket will fail with **ERR_BAD_STATE**.
 
 If a NULL *actual* is passed in, it will be ignored.
 
+A **MX_SOCKET_STREAM** socket write can be short if the socket does not
+have enough space for all of *buffer*. The amount written is returned
+via *actual*.
+
+A **MX_SOCKET_DATAGRAM** socket write is never short. If the socket has
+insufficient space for *buffer*, it writes nothing and returns
+**ERR_SHOULD_WAIT**.
+
 ## RETURN VALUE
 
 **socket_write**() returns **NO_ERROR** on success.
@@ -43,7 +51,9 @@ not 0, or *options* was not 0 or **MX_SOCKET_HALF_CLOSE**.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
 
-**ERR_SHOULD_WAIT**  The buffer underlying the socket is full.
+**ERR_SHOULD_WAIT**  The buffer underlying the socket is full, or
+the socket was created with **MX_SOCKET_DATAGRAM** and *buffer* is
+larger than the remaining space in the socket.
 
 **ERR_BAD_STATE**  This side of the socket has been closed by a prior write
 to the other side with **MX_SOCKET_HALF_CLOSE**.

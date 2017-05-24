@@ -22,7 +22,8 @@ have a maximum capacity.
 
 Data written to one handle may be read from the opposite.
 
-The *options* must currently be 0.
+The *options* must currently be either **MX_SOCKET_STREAM** or
+**MX_SOCKET_DATAGRAM**.
 
 ## RETURN VALUE
 
@@ -37,9 +38,6 @@ failure, one of the following values is returned.
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## LIMITATIONS
-
-Sockets currently only support byte streams.  An option to support
-datagrams is likely in the future.
 
 The maximum capacity is not currently set-able or get-able.
 

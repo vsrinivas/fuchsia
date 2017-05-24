@@ -268,6 +268,8 @@ typedef int64_t mx_rel_off_t;
 
 // Socket options and limits.
 #define MX_SOCKET_HALF_CLOSE                1u
+#define MX_SOCKET_STREAM                    0u
+#define MX_SOCKET_DATAGRAM                  1u
 
 // Flags which can be used to to control cache policy for APIs which map memory.
 typedef enum {

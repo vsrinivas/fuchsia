@@ -26,6 +26,10 @@ via *actual*.
 
 If a NULL *actual* is passed in, it will be ignored.
 
+If the socket was created with **MX_SOCKET_DATAGRAM** and *buffer*
+is too small for the packet, then the packet will be truncated,
+and any remaining bytes in the packet are discarded.
+
 ## RETURN VALUE
 
 **socket_read**() returns **NO_ERROR** on success, and writes into

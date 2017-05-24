@@ -30,7 +30,7 @@
 mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     LTRACEF("entry out_handles %p, %p\n", _out0.get(), _out1.get());
 
-    if (options != 0u)
+    if (options != MX_SOCKET_STREAM && options != MX_SOCKET_DATAGRAM)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();

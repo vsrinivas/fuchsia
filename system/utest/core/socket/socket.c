@@ -332,6 +332,97 @@ static bool socket_short_write(void) {
     END_TEST;
 }
 
+static bool socket_datagram(void) {
+    BEGIN_TEST;
+
+    size_t count;
+    mx_status_t status;
+    mx_handle_t h0, h1;
+    unsigned char rbuf[4096] = {0}; // bigger than an mbuf
+
+    status = mx_socket_create(MX_SOCKET_DATAGRAM, &h0, &h1);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    status = mx_socket_write(h0, 0u, "packet1", 8u, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, 8u, "");
+
+    status = mx_socket_write(h0, 0u, "pkt2", 5u, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, 5u, "");
+
+    rbuf[0] = 'a';
+    rbuf[1000] = 'b';
+    rbuf[2000] = 'c';
+    rbuf[3000] = 'd';
+    rbuf[4000] = 'e';
+    rbuf[4095] = 'f';
+    status = mx_socket_write(h0, 0u, rbuf, sizeof(rbuf), &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, sizeof(rbuf), "");
+
+    status = mx_socket_read(h1, 0u, NULL, 0, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, sizeof(rbuf) + 8u + 5u, "");
+    count = 0;
+
+    bzero(rbuf, sizeof(rbuf));
+    status = mx_socket_read(h1, 0u, rbuf, 3, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, 3u, "");
+    ASSERT_EQ(memcmp(rbuf, "pac", 4), 0, ""); // short read "packet1"
+    count = 0;
+
+    status = mx_socket_read(h1, 0u, NULL, 0, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, sizeof(rbuf) + 5u, "");
+    count = 0;
+
+    status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, 5u, "");
+    ASSERT_EQ(memcmp(rbuf, "pkt2", 5), 0, "");
+
+    status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, sizeof(rbuf), "");
+    ASSERT_EQ(rbuf[0], 'a', "");
+    ASSERT_EQ(rbuf[1000], 'b', "");
+    ASSERT_EQ(rbuf[2000], 'c', "");
+    ASSERT_EQ(rbuf[3000], 'd', "");
+    ASSERT_EQ(rbuf[4000], 'e', "");
+    ASSERT_EQ(rbuf[4095], 'f', "");
+
+    status = mx_socket_read(h1, 0u, NULL, 0, &count);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(count, 0u, "");
+
+    END_TEST;
+}
+
+static bool socket_datagram_no_short_write(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+
+    mx_handle_t h0, h1;
+    status = mx_socket_create(MX_SOCKET_DATAGRAM, &h0, &h1);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
+    const size_t buffer_size = 256 * 1024 + 1;
+    char* buffer = malloc(buffer_size);
+    size_t written = 0;
+    status = mx_socket_write(h0, 0u, buffer, buffer_size, &written);
+    EXPECT_EQ(written, 0u, "");
+
+    free(buffer);
+    mx_handle_close(h0);
+    mx_handle_close(h1);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
@@ -339,6 +430,8 @@ RUN_TEST(socket_half_close)
 RUN_TEST(socket_bytes_outstanding)
 RUN_TEST(socket_bytes_outstanding_half_close)
 RUN_TEST(socket_short_write)
+RUN_TEST(socket_datagram)
+RUN_TEST(socket_datagram_no_short_write)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS
