@@ -32,8 +32,8 @@
 // class EthDevice : public EthDeviceType,
 //                   public ddk::EthmacIfc<EthDevice> {
 //   public:
-//     EthDevice(mx_driver_t* driver, mx_device_t* parent)
-//       : EthDeviceType(driver, "my-eth-device"),
+//     EthDevice(mx_device_t* parent)
+//       : EthDeviceType("my-eth-device"),
 //         parent_(parent) {}
 //
 //     mx_status_t Bind() {
@@ -76,8 +76,8 @@
 // class EthmacDevice : public EthmacDeviceType,
 //                      public ddk::EthmacProtocol<EthmacDevice> {
 //   public:
-//     EthmacDevice(mx_driver_t* driver, mx_device_t* parent)
-//       : EthmacDeviceType(driver, "my-ethmac-device"),
+//     EthmacDevice(mx_device_t* parent)
+//       : EthmacDeviceType("my-ethmac-device"),
 //         parent_(parent) {}
 //
 //     mx_status_t Bind() {

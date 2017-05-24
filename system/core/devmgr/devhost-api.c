@@ -12,21 +12,9 @@
 //
 // Driver code MUST NOT directly call devhost_* APIs
 
-void driver_add(mx_driver_t* drv) {
+static void _device_unbind(mx_device_t* dev) {
     DM_LOCK();
-    devhost_driver_add(drv);
-    DM_UNLOCK();
-}
-
-void driver_remove(mx_driver_t* drv) {
-    DM_LOCK();
-    devhost_driver_remove(drv);
-    DM_UNLOCK();
-}
-
-static void _driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    DM_LOCK();
-    devhost_driver_unbind(drv, dev);
+    devhost_device_unbind(dev);
     DM_UNLOCK();
 }
 
@@ -35,6 +23,9 @@ static mx_status_t _device_add(mx_device_t* parent, device_add_args_t* args,
     mx_status_t r;
     mx_device_t* dev = NULL;
 
+    if (!parent) {
+        return ERR_INVALID_ARGS;
+    }
     if (!args || args->version != DEVICE_ADD_ARGS_VERSION) {
         return ERR_INVALID_ARGS;
     }
@@ -49,7 +40,7 @@ static mx_status_t _device_add(mx_device_t* parent, device_add_args_t* args,
     }
 
     DM_LOCK();
-    r = devhost_device_create(args->name, args->ctx, args->ops, args->driver, &dev);
+    r = devhost_device_create(parent, args->name, args->ctx, args->ops, &dev);
     if (r != NO_ERROR) {
         DM_UNLOCK();
         return r;
@@ -126,17 +117,17 @@ __EXPORT mx_handle_t _get_root_resource(void) {
     return root_resource_handle;
 }
 
-static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
+static mx_status_t _load_firmware(mx_device_t* dev, const char* path, mx_handle_t* fw,
                                   size_t* size) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_load_firmware(drv, path, fw, size);
+    r = devhost_load_firmware(dev, path, fw, size);
     DM_UNLOCK();
     return r;
 }
 
 driver_api_t devhost_api = {
-    .driver_unbind = _driver_unbind,
+    .device_unbind = _device_unbind,
     .device_add = _device_add,
     .device_remove = _device_remove,
     .device_rebind = _device_rebind,

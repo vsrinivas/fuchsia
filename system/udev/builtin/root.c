@@ -16,9 +16,9 @@
 extern mx_driver_t _driver_null;
 extern mx_driver_t _driver_zero;
 
-mx_status_t root_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
-    _driver_null.ops->bind(drv, parent, cookie);
-    _driver_zero.ops->bind(drv, parent, cookie);
+mx_status_t root_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    _driver_null.ops->bind(ctx, parent, cookie);
+    _driver_zero.ops->bind(ctx, parent, cookie);
     return NO_ERROR;
 }
 

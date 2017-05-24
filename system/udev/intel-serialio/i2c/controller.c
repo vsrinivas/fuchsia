@@ -31,9 +31,6 @@
 
 #define ACER_I2C_TOUCH INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID
 
-// in serialio.c
-extern mx_driver_t _driver_intel_serialio;
-
 // Implement the functionality of the i2c bus device.
 
 static uint32_t chip_addr_mask(int width) {
@@ -123,7 +120,6 @@ static mx_status_t intel_serialio_i2c_add_slave(
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = slave,
-        .driver = &_driver_intel_serialio,
         .ops = &intel_serialio_i2c_slave_device_proto,
         .props = slave->props,
         .prop_count = count,
@@ -423,7 +419,7 @@ static mx_status_t intel_serialio_i2c_device_specific_init(
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
+mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     pci_protocol_t* pci;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -492,7 +488,6 @@ mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = device,
-        .driver = drv,
         .ops = &intel_serialio_i2c_device_proto,
     };
 

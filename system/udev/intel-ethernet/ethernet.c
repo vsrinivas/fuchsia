@@ -133,7 +133,7 @@ static mx_protocol_device_t device_ops = {
     .release = eth_release,
 };
 
-static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     ethernet_device_t* edev;
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
         return ERR_NO_MEMORY;
@@ -209,7 +209,6 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "intel-ethernet",
         .ctx = edev,
-        .driver = drv,
         .ops = &device_ops,
         .proto_id = MX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,

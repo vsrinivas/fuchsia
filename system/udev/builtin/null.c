@@ -30,19 +30,16 @@ static mx_protocol_device_t null_device_proto = {
 };
 
 
-mx_status_t null_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+mx_status_t null_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "null",
-        .driver = drv,
         .ops = &null_device_proto,
     };
 
     mx_device_t* dev;
     return device_add(parent, &args, &dev);
 }
-
-mx_driver_t _driver_null;
 
 static mx_driver_ops_t null_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -76,11 +76,10 @@ static mx_protocol_device_t sysinfo_ops = {
     .ioctl = sysinfo_ioctl,
 };
 
-mx_status_t sysinfo_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+mx_status_t sysinfo_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "sysinfo",
-        .driver = drv,
         .ops = &sysinfo_ops,
     };
 

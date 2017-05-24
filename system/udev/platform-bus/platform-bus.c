@@ -79,7 +79,7 @@ static platform_device_protocol_t platform_dev_proto_ops = {
     .find_protocol = platform_dev_find_protocol,
 };
 
-static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_ref_t* node, mx_driver_t* driver) {
+static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_ref_t* node) {
     mdi_node_ref_t  device_node;
     mdi_each_child(node, &device_node) {
         if (mdi_id(&device_node) != MDI_PLATFORM_BUS_DEVICE) {
@@ -140,7 +140,6 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = name,
             .ctx = dev,
-            .driver = driver,
             .ops = &platform_dev_proto,
             .proto_id = MX_PROTOCOL_PLATFORM_DEV,
             .proto_ops = &platform_dev_proto_ops,
@@ -161,7 +160,7 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
 }
 
 
-static mx_status_t platform_bus_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cookie) {
     mx_handle_t mdi_handle = device_get_resource(parent);
     if (mdi_handle == MX_HANDLE_INVALID) {
         printf("platform_bus_bind: mdi_handle invalid\n");
@@ -206,7 +205,6 @@ static mx_status_t platform_bus_bind(mx_driver_t* driver, mx_device_t* parent, v
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "platform-bus",
         .ctx = bus,
-        .driver = driver,
         .ops = &platform_bus_proto,
     };
 
@@ -215,7 +213,7 @@ static mx_status_t platform_bus_bind(mx_driver_t* driver, mx_device_t* parent, v
         goto fail;
     }
 
-    return platform_bus_publish_devices(bus, &bus_node, driver);
+    return platform_bus_publish_devices(bus, &bus_node);
 
 fail:
     if (addr) {

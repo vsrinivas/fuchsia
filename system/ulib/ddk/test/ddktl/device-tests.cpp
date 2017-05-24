@@ -13,7 +13,7 @@ namespace {
 
 class TestNone : public ddk::Device<TestNone> {
   public:
-    TestNone() : ddk::Device<TestNone>("ddktl-test", nullptr) {}
+    TestNone() : ddk::Device<TestNone>("ddktl-test") {}
 
     void DdkRelease() {}
 };
@@ -21,7 +21,7 @@ class TestNone : public ddk::Device<TestNone> {
 #define BEGIN_SUCCESS_CASE(name) \
 class Test##name : public ddk::Device<Test##name, ddk::name> { \
   public: \
-    Test##name() : ddk::Device<Test##name, ddk::name>("ddktl-test", nullptr) {} \
+    Test##name() : ddk::Device<Test##name, ddk::name>("ddktl-test") {} \
     void DdkRelease() {}
 
 #define END_SUCCESS_CASE };
@@ -94,7 +94,7 @@ static bool do_test() {
 }
 
 struct TestDispatch : public ddk::FullDevice<TestDispatch> {
-    TestDispatch() : ddk::FullDevice<TestDispatch>("ddktl-test", nullptr) {}
+    TestDispatch() : ddk::FullDevice<TestDispatch>("ddktl-test") {}
 
     // Give access to the device ops for testing
     mx_protocol_device_t* GetDeviceOps() {

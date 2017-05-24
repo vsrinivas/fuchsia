@@ -88,7 +88,7 @@ static mx_protocol_device_t kaveri_disp_device_proto = {
 
 // implement driver object:
 
-static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     mx_status_t status;
 
@@ -145,7 +145,6 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev, void** c
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "amd_kaveri_disp",
         .ctx = device,
-        .driver = drv,
         .ops = &kaveri_disp_device_proto,
         .proto_id = MX_PROTOCOL_DISPLAY,
         .proto_ops = &kaveri_disp_display_proto,

@@ -104,7 +104,7 @@ static int acpi_battery_poll_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_acpi_protocol_t* acpi;
     if (device_op_get_protocol(dev, MX_PROTOCOL_ACPI, (void**)&acpi)) {
         return ERR_NOT_SUPPORTED;
@@ -132,7 +132,6 @@ static mx_status_t acpi_battery_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "acpi-battery",
         .ctx = device,
-        .driver = drv,
         .ops = &acpi_battery_device_proto,
         .proto_id = MX_PROTOCOL_BATTERY,
     };

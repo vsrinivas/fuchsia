@@ -129,7 +129,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t intel_i915_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -196,7 +196,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "intel_i915_disp",
         .ctx = device,
-        .driver = drv,
         .ops = &intel_i915_device_proto,
         .proto_id = MX_PROTOCOL_DISPLAY,
         .proto_ops = &intel_i915_display_proto,

@@ -106,7 +106,7 @@ static mx_protocol_device_t console_device_proto = {
     .release = console_release,
 };
 
-static mx_status_t console_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+static mx_status_t console_bind(void* ctx, mx_device_t* parent, void** cookie) {
     console_device_t* console = calloc(1, sizeof(console_device_t));
     if (!console) {
         return ERR_NO_MEMORY;
@@ -115,7 +115,6 @@ static mx_status_t console_bind(mx_driver_t* drv, mx_device_t* parent, void** co
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "console",
         .ctx = console,
-        .driver = drv,
         .ops = &console_device_proto,
     };
 

@@ -529,7 +529,7 @@ static mx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
-static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);
@@ -628,7 +628,6 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device, void** coo
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "usb_bt_hci",
         .ctx = hci,
-        .driver = driver,
         .ops = &hci_device_proto,
         .proto_id = MX_PROTOCOL_BLUETOOTH_HCI,
     };

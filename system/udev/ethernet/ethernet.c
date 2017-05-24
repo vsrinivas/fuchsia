@@ -519,8 +519,6 @@ static mx_protocol_device_t ethdev_ops = {
     .release = eth_release,
 };
 
-mx_driver_t _driver_ethernet;
-
 static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
     ethdev0_t* edev0 = ctx;
 
@@ -534,7 +532,6 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ethernet",
         .ctx = edev,
-        .driver = &_driver_ethernet,
         .ops = &ethdev_ops,
         .proto_id = MX_PROTOCOL_ETHERNET,
         .flags = DEVICE_ADD_INSTANCE,
@@ -589,7 +586,7 @@ static mx_protocol_device_t ethdev0_ops = {
 
 #define BAD_FEATURES (ETHMAC_FEATURE_RX_QUEUE | ETHMAC_FEATURE_TX_QUEUE)
 
-static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
         return ERR_NO_MEMORY;
@@ -624,7 +621,6 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ethernet",
         .ctx = edev0,
-        .driver = drv,
         .ops = &ethdev0_ops,
         .proto_id = MX_PROTOCOL_ETHERNET,
     };

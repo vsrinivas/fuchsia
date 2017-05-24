@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <threads.h>
 
-mx_driver_t _driver_ramdisk;
 static mx_device_t* ramdisk_ctl_dev;
 
 typedef struct ramdisk_device {
@@ -240,7 +239,6 @@ static mx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = config->name,
             .ctx = ramdev,
-            .driver = &_driver_ramdisk,
             .ops = &ramdisk_instance_proto,
             .proto_id = MX_PROTOCOL_BLOCK_CORE,
             .proto_ops = &ramdisk_block_ops,
@@ -268,7 +266,6 @@ static mx_status_t ramctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags)
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ramctl-instance",
-        .driver = &_driver_ramdisk,
         .ops = &ramctl_instance_proto,
         .flags = DEVICE_ADD_INSTANCE,
     };
@@ -281,11 +278,10 @@ static mx_protocol_device_t ramdisk_ctl_proto = {
     .open = ramctl_open,
 };
 
-static mx_status_t ramdisk_driver_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t ramdisk_driver_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ramctl",
-        .driver = driver,
         .ops = &ramdisk_ctl_proto,
     };
 

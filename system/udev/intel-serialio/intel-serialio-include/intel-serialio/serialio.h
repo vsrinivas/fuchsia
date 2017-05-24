@@ -34,8 +34,8 @@
     } while (0)
 #endif
 
-mx_status_t intel_serialio_bind_dma(mx_driver_t* drv, mx_device_t* dev);
-mx_status_t intel_serialio_bind_i2c(mx_driver_t* drv, mx_device_t* dev);
-mx_status_t intel_serialio_bind_sdio(mx_driver_t* drv, mx_device_t* dev);
-mx_status_t intel_serialio_bind_spi(mx_driver_t* drv, mx_device_t* dev);
-mx_status_t intel_serialio_bind_uart(mx_driver_t* drv, mx_device_t* dev);
+mx_status_t intel_serialio_bind_dma(mx_device_t* dev);
+mx_status_t intel_serialio_bind_i2c(mx_device_t* dev);
+mx_status_t intel_serialio_bind_sdio(mx_device_t* dev);
+mx_status_t intel_serialio_bind_spi(mx_device_t* dev);
+mx_status_t intel_serialio_bind_uart(mx_device_t* dev);

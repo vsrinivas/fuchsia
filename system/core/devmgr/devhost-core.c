@@ -158,8 +158,25 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-mx_status_t devhost_device_create(const char* name, void* ctx, mx_protocol_device_t* ops,
-                                  mx_driver_t* driver, mx_device_t** out) {
+mx_status_t devhost_device_create(mx_device_t* parent, const char* name, void* ctx,
+                                  mx_protocol_device_t* ops, mx_device_t** out) {
+
+    mx_driver_rec_t* driver = NULL;
+
+    // determine driver for the new device
+    if (parent->owner) {
+        // typically the device is created by the driver bound to the parent
+        driver = parent->owner;
+    } else {
+        // but sometimes a driver may create devices with parent that has not been bound
+        // in that case we use the driver that created the parent
+        driver = parent->driver;
+    }
+    if (!driver) {
+        printf("_device_add could not find driver!\n");
+        return ERR_INVALID_ARGS;
+    }
+
     mx_device_t* dev = malloc(sizeof(mx_device_t));
     if (dev == NULL) {
         return ERR_NO_MEMORY;
@@ -439,7 +456,7 @@ mx_status_t devhost_device_remove(mx_device_t* dev) {
     // detach from owner, downref on behalf of owner
     if (dev->owner) {
         if (dev->owner->ops->unbind) {
-            dev->owner->ops->unbind(dev->owner, dev, dev->owner_cookie);
+            dev->owner->ops->unbind(dev->owner->ctx, dev, dev->owner_cookie);
         }
         dev->owner = NULL;
         dev_ref_release(dev);
@@ -475,7 +492,7 @@ mx_status_t devhost_device_rebind(mx_device_t* dev) {
     // detach from owner and downref
     if (dev->owner) {
         if (dev->owner->ops->unbind) {
-            dev->owner->ops->unbind(dev->owner, dev, dev->owner_cookie);
+            dev->owner->ops->unbind(dev->owner->ctx, dev, dev->owner_cookie);
         }
         dev->owner = NULL;
         dev_ref_release(dev);
@@ -524,8 +541,8 @@ mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     return r;
 }
 
-mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    if (dev->owner != drv) {
+mx_status_t devhost_device_unbind(mx_device_t* dev) {
+    if (!dev->owner) {
         return ERR_INVALID_ARGS;
     }
     dev->owner = NULL;
@@ -583,9 +600,9 @@ static int devhost_open_firmware(const char* fwpath) {
     return -1;
 }
 
-mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
+mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path, mx_handle_t* fw,
                                   size_t* size) {
-    xprintf("devhost: drv=%p path=%s fw=%p\n", drv, path, fw);
+    xprintf("devhost: dev=%p path=%s fw=%p\n", dev, path, fw);
 
     int fwfd = devhost_open_firmware(path);
     if (fwfd < 0) {

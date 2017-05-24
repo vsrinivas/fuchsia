@@ -66,7 +66,6 @@ typedef struct {
 
     mx_device_t* mxdev;
     mx_device_t* parent;
-    mx_driver_t* driver;
     bcm_pcm_regs_t* control_regs;
     bcm_gpio_ctrl_t* gpio_regs;
     volatile void* clock_regs;
@@ -694,7 +693,6 @@ static int pcm_bootstrap_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "pcm0",
         .ctx = pcm_ctx,
-        .driver = pcm_ctx->driver,
         .ops = &pcm_audio_ctx_device_proto,
         .proto_id = MX_PROTOCOL_AUDIO2_OUTPUT,
     };
@@ -713,13 +711,12 @@ pcm_err:
     return -1;
 }
 
-static mx_status_t bcm_pcm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t bcm_pcm_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     bcm_pcm_t* pcm_ctx = calloc(1, sizeof(*pcm_ctx));
     if (!pcm_ctx)
         return ERR_NO_MEMORY;
 
-    pcm_ctx->driver = driver;
     pcm_ctx->parent = parent;
 
     thrd_t bootstrap_thrd;

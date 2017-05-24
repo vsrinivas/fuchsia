@@ -20,7 +20,7 @@ namespace {
 class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
                        public ddk::WlanmacIfc<TestWlanmacIfc> {
   public:
-    TestWlanmacIfc() : ddk::Device<TestWlanmacIfc>("ddktl-test", nullptr) {
+    TestWlanmacIfc() : ddk::Device<TestWlanmacIfc>("ddktl-test") {
         this_ = get_this();
     }
 
@@ -61,7 +61,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
                             public ddk::WlanmacProtocol<TestWlanmacProtocol> {
   public:
     TestWlanmacProtocol()
-      : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>("ddktl-test", nullptr) {
+      : ddk::Device<TestWlanmacProtocol, ddk::GetProtocolable>("ddktl-test") {
         this_ = get_this();
     }
 

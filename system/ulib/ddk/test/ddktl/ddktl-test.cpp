@@ -63,7 +63,7 @@ mx_status_t ddktl_test_func(void* cookie, test_report_t* report, const void* arg
 
 }  // namespace
 
-extern "C" mx_status_t ddktl_test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+extern "C" mx_status_t ddktl_test_bind(void* ctx, mx_device_t* dev, void** cookie) {
     test_protocol_t* protocol;
     auto status =
         device_op_get_protocol(dev, MX_PROTOCOL_TEST, reinterpret_cast<void**>(&protocol));

@@ -933,7 +933,7 @@ static mx_protocol_device_t ipt_device_proto = {
     .release = ipt_release,
 };
 
-static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t ipt_bind(void* ctx, mx_device_t* parent, void** cookie) {
     x86_pt_init();
     if (!ipt_config_supported)
         return ERR_NOT_SUPPORTED;
@@ -946,7 +946,6 @@ static mx_status_t ipt_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "intel-pt",
         .ctx = ipt_dev,
-        .driver = driver,
         .ops = &ipt_device_proto,
     };
 

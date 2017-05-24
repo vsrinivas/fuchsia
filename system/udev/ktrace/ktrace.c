@@ -77,11 +77,10 @@ static mx_protocol_device_t ktrace_device_proto = {
     .get_size = ktrace_get_size,
 };
 
-static mx_status_t ktrace_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+static mx_status_t ktrace_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ktrace",
-        .driver = drv,
         .ops = &ktrace_device_proto,
     };
 

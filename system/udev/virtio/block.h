@@ -15,7 +15,7 @@ class Ring;
 
 class BlockDevice : public Device {
 public:
-    BlockDevice(mx_driver_t* driver, mx_device_t* device);
+    BlockDevice(mx_device_t* device);
     virtual ~BlockDevice();
 
     virtual mx_status_t Init();

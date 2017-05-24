@@ -18,7 +18,7 @@ class Ring;
 
 class GpuDevice : public Device {
 public:
-    GpuDevice(mx_driver_t* driver, mx_device_t* device);
+    GpuDevice(mx_device_t* device);
     virtual ~GpuDevice();
 
     virtual mx_status_t Init();

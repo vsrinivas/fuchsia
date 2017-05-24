@@ -149,7 +149,7 @@ static mx_protocol_device_t align_proto = {
     .release = align_release,
 };
 
-static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t align_bind(void* ctx, mx_device_t* dev, void** cookie) {
     align_device_t* device = calloc(1, sizeof(align_device_t));
     if (!device) {
         return ERR_NO_MEMORY;
@@ -175,7 +175,6 @@ static mx_status_t align_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie)
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = device,
-        .driver = drv,
         .ops = &align_proto,
         .proto_id = MX_PROTOCOL_BLOCK,
     };

@@ -28,11 +28,10 @@ static mx_protocol_device_t zero_device_proto = {
     .write = zero_write,
 };
 
-mx_status_t zero_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+mx_status_t zero_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "zero",
-        .driver = drv,
         .ops = &zero_device_proto,
     };
 

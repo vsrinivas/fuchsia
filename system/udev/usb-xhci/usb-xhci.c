@@ -25,8 +25,6 @@
 
 #define MAX_SLOTS 255
 
-extern mx_driver_t _driver_usb_xhci;
-
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     xprintf("xhci_add_new_device\n");
 
@@ -177,7 +175,6 @@ static int xhci_irq_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "usb-xhci",
         .ctx = xhci,
-        .driver = &_driver_usb_xhci,
         .ops = &xhci_device_proto,
         .proto_id = MX_PROTOCOL_USB_HCI,
         .proto_ops = &xhci_hci_protocol,
@@ -208,7 +205,7 @@ static int xhci_irq_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t usb_xhci_bind(mx_driver_t* driver, mx_device_t* dev, void** cookie) {
+static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
     mx_handle_t mmio_handle = MX_HANDLE_INVALID;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;

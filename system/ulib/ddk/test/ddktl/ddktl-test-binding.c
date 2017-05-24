@@ -8,7 +8,7 @@
 
 #include <magenta/types.h>
 
-extern mx_status_t ddktl_test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie);
+extern mx_status_t ddktl_test_bind(void* ctx, mx_device_t* dev, void** cookie);
 
 static mx_driver_ops_t ddktl_test_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -40,7 +40,6 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
-    mx_driver_t* driver;
 
     uint8_t mac_addr[6];
     uint8_t status[INTR_REQ_SIZE];
@@ -601,7 +600,6 @@ static int ax88179_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ax88179",
         .ctx = eth,
-        .driver = eth->driver,
         .ops = &ax88179_device_proto,
         .proto_id = MX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
@@ -636,7 +634,7 @@ fail:
     return status;
 }
 
-static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     xprintf("ax88179_bind\n");
     // find our endpoints
     usb_desc_iter_t iter;
@@ -685,7 +683,6 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device, void**
     list_initialize(&eth->free_write_reqs);
 
     eth->usb_device = device;
-    eth->driver = driver;
 
     mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {

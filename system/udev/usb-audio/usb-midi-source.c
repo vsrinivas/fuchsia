@@ -185,7 +185,7 @@ static mx_protocol_device_t usb_midi_source_device_proto = {
     .ioctl = usb_midi_source_ioctl,
 };
 
-mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_midi_source_create(mx_device_t* device, int index,
                                   usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
     usb_midi_source_t* source = calloc(1, sizeof(usb_midi_source_t));
     if (!source) {
@@ -220,7 +220,6 @@ mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = source,
-        .driver = driver,
         .ops = &usb_midi_source_device_proto,
         .proto_id = MX_PROTOCOL_MIDI,
     };

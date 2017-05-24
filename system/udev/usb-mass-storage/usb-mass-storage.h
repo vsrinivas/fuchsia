@@ -13,8 +13,6 @@
 
 #include <threads.h>
 
-extern mx_driver_t _driver_usb_mass_storage;
-
 // stack allocated struct used to implement IOCTL_DEVICE_SYNC
 typedef struct {
     iotxn_t* iotxn;             // iotxn we are waiting to complete

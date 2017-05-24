@@ -668,8 +668,6 @@ static void hid_release_device(void* ctx) {
     free(hid);
 }
 
-extern mx_driver_t _driver_hid;
-
 static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t flags) {
     hid_device_t* hid = ctx;
 
@@ -683,7 +681,6 @@ static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t fl
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "hid",
         .ctx = inst,
-        .driver = &_driver_hid,
         .ops = &hid_instance_proto,
         .proto_id = MX_PROTOCOL_INPUT,
         .flags = DEVICE_ADD_INSTANCE,
@@ -824,7 +821,7 @@ hidbus_ifc_t hid_ifc = {
     .io_queue = hid_io_queue,
 };
 
-static mx_status_t hid_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
     hid_device_t* hiddev;
     if ((hiddev = calloc(1, sizeof(hid_device_t))) == NULL) {
         return ERR_NO_MEMORY;
@@ -890,7 +887,6 @@ static mx_status_t hid_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = hiddev->name,
         .ctx = hiddev,
-        .driver = driver,
         .ops = &hid_device_proto,
         .proto_id = MX_PROTOCOL_INPUT,
     };

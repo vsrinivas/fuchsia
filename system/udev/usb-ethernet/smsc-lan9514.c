@@ -37,7 +37,6 @@
 typedef struct {
     mx_device_t* device;
     mx_device_t* usb_device;
-    mx_driver_t* driver;
 
     uint8_t phy_id;
     uint8_t mac_addr[6];
@@ -647,7 +646,6 @@ static int lan9514_start_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "smsc-lan9514",
         .ctx = eth,
-        .driver = eth->driver,
         .ops = &lan9514_device_proto,
         .proto_id = MX_PROTOCOL_ETHERMAC,
         .proto_ops = &ethmac_ops,
@@ -724,7 +722,7 @@ teardown:
     return status;
 }
 
-static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     printf("LAN9514 - attempting to bind\n");
 
     // find our endpoints
@@ -781,7 +779,6 @@ static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device, void**
     list_initialize(&eth->free_intr_reqs);
 
     eth->usb_device = device;
-    eth->driver = driver;
 
     mx_status_t status = NO_ERROR;
     for (int i = 0; i < READ_REQ_COUNT; i++) {

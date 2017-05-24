@@ -12,9 +12,6 @@
 #include <string.h>
 #include <magenta/listnode.h>
 
-// created by MAGENTA_DRIVER_BEGIN macro
-extern mx_driver_t _driver_test;
-
 typedef struct test_device {
     mx_device_t* mxdev;
     mx_handle_t output;
@@ -165,7 +162,6 @@ static mx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = devname,
         .ctx = device,
-        .driver = &_driver_test,
         .ops = &test_device_proto,
         .proto_id = MX_PROTOCOL_TEST,
         .proto_ops = &test_test_proto,
@@ -187,7 +183,7 @@ static mx_protocol_device_t test_root_proto = {
     .ioctl = test_ioctl,
 };
 
-static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t test_bind(void* ctx, mx_device_t* dev, void** cookie) {
     test_root_t* root = calloc(1, sizeof(test_root_t));
     if (!root) {
         return ERR_NO_MEMORY;
@@ -196,7 +192,6 @@ static mx_status_t test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
        .version = DEVICE_ADD_ARGS_VERSION,
         .name = "test",
         .ctx = root,
-        .driver = drv,
         .ops = &test_root_proto,
     };
 

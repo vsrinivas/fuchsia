@@ -17,8 +17,6 @@
 
 #define from_hid_device(d) containerof(d, hidctl_instance_t, hiddev)
 
-mx_driver_t _driver_hidctl;
-
 typedef struct hidctl_instance {
     mx_device_t* mxdev;
     mx_device_t* parent;
@@ -179,7 +177,7 @@ static mx_protocol_device_t hidctl_device_proto = {
     .release = hidctl_root_release,
 };
 
-static mx_status_t hidctl_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t hidctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     hidctl_root_t* root = calloc(1, sizeof(hidctl_root_t));
     if (!root) {
         return ERR_NO_MEMORY;

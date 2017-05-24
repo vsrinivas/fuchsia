@@ -121,7 +121,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_display_t* display, bcm_fb_desc_t*
     return sizeof(bcm_fb_desc_t);
 }
 
-mx_status_t bcm_display_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+mx_status_t bcm_display_bind(void* ctx, mx_device_t* parent, void** cookie) {
     bcm_display_t* display = calloc(1, sizeof(bcm_display_t));
     if (!display) {
         return ERR_NO_MEMORY;
@@ -166,7 +166,6 @@ mx_status_t bcm_display_bind(mx_driver_t* driver, mx_device_t* parent, void** co
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-vc-fbuff",
         .ctx = display,
-        .driver = driver,
         .ops = &empty_device_proto,
         .proto_id = MX_PROTOCOL_DISPLAY,
         .proto_ops = &vc_display_proto,

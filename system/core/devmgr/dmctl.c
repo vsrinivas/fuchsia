@@ -65,7 +65,7 @@ static mx_protocol_device_t dmctl_device_ops = {
     .ioctl = dmctl_ioctl,
 };
 
-mx_status_t dmctl_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+mx_status_t dmctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     // Don't try to ioctl to ourselves when this process loads libraries.
     // Call this before the device has been created; mxio_loader_service()
@@ -75,7 +75,6 @@ mx_status_t dmctl_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "dmctl",
-        .driver = drv,
         .ops = &dmctl_device_ops,
     };
 

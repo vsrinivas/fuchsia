@@ -132,7 +132,7 @@ static mx_protocol_device_t tpm_device_proto __UNUSED = {
 
 
 //TODO: bind against hw, not misc
-mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
     uintptr_t tmp;
     mx_status_t status = mx_mmap_device_memory(
@@ -147,7 +147,6 @@ mx_status_t tpm_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "tpm",
-        .driver = driver,
         .ops = &tpm_device_proto,
         .proto_id = MX_PROTOCOL_TPM,
     };

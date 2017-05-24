@@ -473,8 +473,6 @@ static mx_status_t vc_device_ioctl(void* ctx, uint32_t op, const void* cmd, size
 
 static mx_protocol_device_t vc_device_proto;
 
-extern mx_driver_t _driver_vc_root;
-
 // Create a new vc_device_t and add it to the console list.
 static mx_status_t vc_device_create(vc_device_t** vc_out) {
     mxtl::AutoLock lock(&g_vc_lock);
@@ -517,7 +515,6 @@ static mx_status_t vc_root_open(void* ctx, mx_device_t** dev_out, uint32_t flags
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = name;
     args.ctx = vc;
-    args.driver = &_driver_vc_root;
     args.ops = &vc_device_proto;
     args.proto_id = MX_PROTOCOL_CONSOLE;
     args.flags = DEVICE_ADD_INSTANCE;
@@ -648,7 +645,7 @@ static void display_flush(uint starty, uint endy) {
     g_fb_display_protocol->flush(g_fb_device);
 }
 
-static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t vc_root_bind(void* ctx, mx_device_t* dev, void** cookie) {
     if (g_vc_initialized) {
         // disallow multiple instances
         return ERR_NOT_SUPPORTED;
@@ -700,7 +697,6 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = VC_DEVNAME;
-    args.driver = &_driver_vc_root;
     args.ops = &vc_root_proto;
     args.proto_id = MX_PROTOCOL_CONSOLE;
 
@@ -748,7 +744,6 @@ __attribute__((constructor)) static void initialize() {
 
     vc_root_driver_ops.version = DRIVER_OPS_VERSION,
     vc_root_driver_ops.bind = vc_root_bind;
-    _driver_vc_root.ops = &vc_root_driver_ops;
 }
 
 MAGENTA_DRIVER_BEGIN(vc_root, vc_root_driver_ops, "magenta", "0.1", 1)

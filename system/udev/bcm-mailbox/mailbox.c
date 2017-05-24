@@ -307,7 +307,7 @@ static bcm_bus_protocol_t bcm_bus_protocol = {
     .set_framebuffer = bcm_bus_set_framebuffer,
 };
 
-static mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     uintptr_t page_base;
 
     // Carve out some address space for the device -- it's memory mapped.
@@ -326,7 +326,6 @@ static mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent, void**
     device_add_args_t vc_rpc_args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-vc-rpc",
-        .driver = driver,
         .ops = &mailbox_device_protocol,
         .proto_id = MX_PROTOCOL_BCM_BUS,
         .proto_ops = &bcm_bus_protocol,

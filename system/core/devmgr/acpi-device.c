@@ -75,7 +75,7 @@ static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hi
 
 extern mx_handle_t devhost_get_hacpi(void);
 
-static mx_status_t acpi_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t acpi_bind(void* ctx, mx_device_t* dev, void** cookie) {
     // Find the battery device.
     // TODO(yky,teisenbe) The battery device is in _SB.PCI0 on the acer. To be replaced by real
     // acpi device publishing code.
@@ -141,7 +141,7 @@ fail:
 
 void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id, const char* procname, int argc, char** argv);
 
-static mx_status_t acpi_root_init(mx_driver_t* driver) {
+static mx_status_t acpi_root_init(void** out_ctx) {
     // launch the acpi devhost
     char arg1[20];
     snprintf(arg1, sizeof(arg1), "acpi");

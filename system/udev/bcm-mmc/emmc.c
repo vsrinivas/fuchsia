@@ -181,7 +181,6 @@ typedef struct emmc {
 
 typedef struct emmc_setup_context {
     mx_device_t* dev;
-    mx_driver_t* drv;
 } emmc_setup_context_t;
 
 // If any of these interrupts is asserted in the SDHCI irq register, it means
@@ -588,7 +587,6 @@ static int emmc_bootstrap_thread(void *arg) {
     assert(arg);
     emmc_setup_context_t* ctx = (emmc_setup_context_t*)arg;
     mx_device_t* dev = ctx->dev;
-    mx_driver_t* drv = ctx->drv;
     free(arg);
 
     // Map the Device Registers so that we can perform MMIO against the device.
@@ -747,7 +745,6 @@ static int emmc_bootstrap_thread(void *arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-emmc",
         .ctx = emmc,
-        .driver = drv,
         .ops = &emmc_device_proto,
         .proto_id = MX_PROTOCOL_SDMMC,
     };
@@ -764,7 +761,7 @@ out:
     if (emmc)
         free(emmc);
 
-    driver_unbind(drv, dev);
+    device_unbind(dev);
 
     // If we're in the error path, make sure the error retcode is set.
     assert(st != NO_ERROR);
@@ -774,13 +771,12 @@ out:
     return -1;
 }
 
-static mx_status_t emmc_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t emmc_bind(void* drv_ctx, mx_device_t* dev, void** cookie) {
     // Create a context to pass bind variables to the bootstrap thread.
     emmc_setup_context_t* ctx = calloc(1, sizeof(*ctx));
     if (!ctx)
         return ERR_NO_MEMORY;
     ctx->dev = dev;
-    ctx->drv = drv;
 
     // Create a bootstrap thread.
     thrd_t bootstrap_thrd;

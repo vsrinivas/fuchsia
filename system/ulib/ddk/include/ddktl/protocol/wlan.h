@@ -32,7 +32,7 @@
 // class WlanDevice : public WlanDeviceType,
 //                    public ddk::WlanmacIfc<WlanDevice> {
 //   public:
-//     WlanDevice(mx_driver_t* driver, mx_device_t* parent)
+//     WlanDevice(mx_device_t* parent)
 //       : WlanDeviceType(driver, "my-wlan-device"),
 //         parent_(parent) {}
 //
@@ -76,7 +76,7 @@
 // class WlanmacDevice : public WlanmacDeviceType,
 //                       public ddk::WlanmacProtocol<WlanmacDevice> {
 //   public:
-//     WlanmacDevice(mx_driver_t* driver, mx_device_t* parent)
+//     WlanmacDevice(mx_device_t* parent)
 //       : WlanmacDeviceType(driver, "my-wlanmac-device"),
 //         parent_(parent) {}
 //

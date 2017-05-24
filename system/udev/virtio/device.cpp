@@ -20,8 +20,8 @@
 
 namespace virtio {
 
-Device::Device(mx_driver_t* driver, mx_device_t* bus_device)
-    : driver_(driver), bus_device_(bus_device) {
+Device::Device(mx_device_t* bus_device)
+    : bus_device_(bus_device) {
     LTRACE_ENTRY;
     device_ops_.version = DEVICE_OPS_VERSION;
 }

@@ -36,8 +36,8 @@
 //
 // class MyDevice : public MyDeviceType {
 //   public:
-//     MyDevice(mx_driver_t* driver, mx_device_t* parent)
-//       : MyDeviceType(driver, "my-device"),
+//     MyDevice(mx_device_t* parent)
+//       : MyDeviceType("my-device"),
 //         parent_(parent) {}
 //
 //     void DdkRelease() {

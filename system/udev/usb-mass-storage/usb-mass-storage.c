@@ -568,7 +568,6 @@ static int ums_worker_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "usb-mass-storage",
         .ctx = ums,
-        .driver = &_driver_usb_mass_storage,
         .ops = &ums_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -657,7 +656,7 @@ fail:
     return status;
 }
 
-static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t ums_bind(void* ctx, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);

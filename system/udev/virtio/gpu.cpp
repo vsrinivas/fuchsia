@@ -74,8 +74,8 @@ void GpuDevice::virtio_gpu_flush(mx_device_t* dev) {
     gd->Flush();
 }
 
-GpuDevice::GpuDevice(mx_driver_t* driver, mx_device_t* bus_device)
-    : Device(driver, bus_device) {
+GpuDevice::GpuDevice(mx_device_t* bus_device)
+    : Device(bus_device) {
 
     cnd_init(&request_cond_);
     cnd_init(&flush_cond_);
@@ -435,7 +435,6 @@ mx_status_t GpuDevice::virtio_gpu_start() {
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "virtio-gpu";
     args.ctx = this;
-    args.driver = driver_;
     args.ops = &device_ops_;
     args.proto_id = MX_PROTOCOL_DISPLAY;
     args.proto_ops = &display_proto_ops_;

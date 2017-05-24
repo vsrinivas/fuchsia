@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 
@@ -105,7 +104,7 @@ static mx_protocol_device_t usb_bus_device_proto = {
     .release = usb_bus_release,
 };
 
-static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_hci_protocol_t* hci_protocol;
     if (device_op_get_protocol(device, MX_PROTOCOL_USB_HCI, (void**)&hci_protocol)) {
         return ERR_NOT_SUPPORTED;
@@ -133,7 +132,6 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device, void**
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "usb_bus",
         .ctx = bus,
-        .driver = driver,
         .ops = &usb_bus_device_proto,
         .proto_id = MX_PROTOCOL_USB_BUS,
         .proto_ops = &_bus_protocol,

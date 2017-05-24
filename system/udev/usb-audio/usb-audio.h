@@ -8,21 +8,21 @@
 #include <magenta/hw/usb.h>
 #include <magenta/hw/usb-audio.h>
 
-mx_status_t usb_audio_sink_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_audio_sink_create(mx_device_t* device, int index,
                                   usb_interface_descriptor_t* intf,
                                   usb_endpoint_descriptor_t* ep,
                                   usb_audio_ac_format_type_i_desc* format_desc);
 
-mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_audio_source_create(mx_device_t* device, int index,
                                     usb_interface_descriptor_t* intf,
                                     usb_endpoint_descriptor_t* ep,
                                     usb_audio_ac_format_type_i_desc* format_desc);
 
-mx_status_t usb_midi_sink_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_midi_sink_create(mx_device_t* device, int index,
                                  usb_interface_descriptor_t* intf,
                                  usb_endpoint_descriptor_t* ep);
 
-mx_status_t usb_midi_source_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_midi_source_create(mx_device_t* device, int index,
                                    usb_interface_descriptor_t* intf,
                                    usb_endpoint_descriptor_t* ep);
 

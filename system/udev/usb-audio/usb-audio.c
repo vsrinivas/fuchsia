@@ -33,7 +33,7 @@ typedef struct {
     usb_audio_ac_feature_unit_desc* desc;
 } feature_unit_node_t;
 
-static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t status = usb_desc_iter_init(device, &iter);
@@ -88,10 +88,10 @@ static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device, void
                     if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_ISOCHRONOUS) {
                         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                            usb_audio_sink_create(driver, device, audio_sink_index++, intf, endp,
+                            usb_audio_sink_create(device, audio_sink_index++, intf, endp,
                                                   format_desc);
                         } else {
-                             usb_audio_source_create(driver, device, audio_source_index++, intf, endp,
+                             usb_audio_source_create(device, audio_source_index++, intf, endp,
                                                      format_desc);
                         }
                         // this is a quick and dirty hack to set volume to 75%
@@ -105,9 +105,9 @@ static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device, void
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                           usb_midi_sink_create(driver, device, midi_sink_index++, intf, endp);
+                           usb_midi_sink_create(device, midi_sink_index++, intf, endp);
                         } else {
-                           usb_midi_source_create(driver, device, midi_source_index++, intf, endp);
+                           usb_midi_source_create(device, midi_source_index++, intf, endp);
                         }
                     }
                 }

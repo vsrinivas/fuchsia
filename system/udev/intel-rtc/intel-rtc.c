@@ -335,7 +335,7 @@ static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
 };
 
 //TODO: bind against hw, not misc
-static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+static mx_status_t intel_rtc_bind(void* ctx, mx_device_t* parent, void** cookie) {
 #if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.
@@ -348,7 +348,6 @@ static mx_status_t intel_rtc_bind(mx_driver_t* drv, mx_device_t* parent, void** 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "rtc",
-        .driver = drv,
         .ops = &intel_rtc_device_proto,
     };
 

@@ -79,8 +79,8 @@
 //
 // class MyDevice : public DeviceType {
 //   public:
-//     MyDevice(mx_driver_t* driver, mx_device_t* parent)
-//       : DeviceType("my-device-name", driver),
+//     MyDevice(mx_device_t* parent)
+//       : DeviceType("my-device-name"),
 //         parent_(parent) {}
 //
 //     mx_status_t Bind() {
@@ -100,9 +100,9 @@
 //     mx_device_t* parent_;
 // };
 //
-// extern "C" mx_status_t my_bind(mx_driver_t* driver, mx_device_t* device,
+// extern "C" mx_status_t my_bind(mx_device_t* device,
 //                                void** cookie) {
-//     auto dev = unique_ptr<MyDevice>(new MyDevice(driver, device));
+//     auto dev = unique_ptr<MyDevice>(new MyDevice(device));
 //     auto status = dev->Bind();
 //     if (status == NO_ERROR) {
 //         // devmgr is now in charge of the memory for dev
@@ -112,8 +112,6 @@
 // }
 //
 // See also: protocol mixins for setting protocol_id and protocol_ops.
-
-typedef struct mx_driver mx_driver_t;
 
 namespace ddk {
 
@@ -304,7 +302,6 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         device_add_args_t args = {};
         args.version = DEVICE_ADD_ARGS_VERSION;
         args.name = name_;
-        args.driver = driver_;
         // Since we are stashing this as a D*, we can use ctx in all
         // the callback functions and cast it directly to a D*.
         args.ctx = static_cast<D*>(this);
@@ -327,9 +324,9 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     }
 
   protected:
-    Device(const char* name, mx_driver_t* driver)
+    Device(const char* name)
       : Mixins<D>(&ddk_device_proto_)...,
-        name_(name), driver_(driver) {
+        name_(name) {
         internal::CheckMixins<Mixins<D>...>();
         internal::CheckReleasable<D>();
 
@@ -360,7 +357,6 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
                      typename mxtl::enable_if<!is_protocol<T>::value, T>::type* dummy = 0) {}
 
     const char* name_;
-    mx_driver_t* driver_;
 };
 
 // Convenience type for implementations that would like to override all

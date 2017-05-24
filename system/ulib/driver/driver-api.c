@@ -16,8 +16,8 @@ __EXPORT void driver_api_init(driver_api_t* api) {
     }
 }
 
-__EXPORT void driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
-    API->driver_unbind(drv, dev);
+__EXPORT void device_unbind(mx_device_t* dev) {
+    API->device_unbind(dev);
 }
 
 __EXPORT mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
@@ -53,7 +53,7 @@ __EXPORT mx_handle_t get_root_resource(void) {
     return API->get_root_resource();
 }
 
-__EXPORT mx_status_t load_firmware(mx_driver_t* drv, const char* path,
+__EXPORT mx_status_t load_firmware(mx_device_t* device, const char* path,
                                    mx_handle_t* fw, size_t* size) {
-    return API->load_firmware(drv, path, fw, size);
+    return API->load_firmware(device, path, fw, size);
 }

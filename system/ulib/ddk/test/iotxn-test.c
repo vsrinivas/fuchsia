@@ -239,7 +239,7 @@ static mx_status_t iotxn_test_func(void* cookie, test_report_t* report, const vo
     return success ? NO_ERROR : ERR_INTERNAL;
 }
 
-static mx_status_t iotxn_test_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t iotxn_test_bind(void* ctx, mx_device_t* dev, void** cookie) {
     test_protocol_t* protocol;
     mx_status_t status = device_op_get_protocol(dev, MX_PROTOCOL_TEST, (void**)&protocol);
     if (status != NO_ERROR) {

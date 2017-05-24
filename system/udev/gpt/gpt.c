@@ -257,14 +257,12 @@ static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
 }
 
 typedef struct gpt_bind_info {
-    mx_driver_t* drv;
     mx_device_t* dev;
 } gpt_bind_info_t;
 
 static int gpt_bind_thread(void* arg) {
     gpt_bind_info_t* info = (gpt_bind_info_t*)arg;
     mx_device_t* dev = info->dev;
-    mx_driver_t* drv = info->drv;
     free(info);
 
     unsigned partitions = 0; // used to keep track of number of partitions found
@@ -372,7 +370,6 @@ static int gpt_bind_thread(void* arg) {
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = name,
             .ctx = device,
-            .driver = drv,
             .ops = &gpt_proto,
             .proto_id = MX_PROTOCOL_BLOCK_CORE,
             .proto_ops = &gpt_block_ops,
@@ -390,14 +387,13 @@ static int gpt_bind_thread(void* arg) {
     return NO_ERROR;
 unbind:
     if (partitions == 0) {
-        driver_unbind(drv, dev);
+        device_unbind(dev);
     }
     return NO_ERROR;
 }
 
-static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t gpt_bind(void* ctx, mx_device_t* dev, void** cookie) {
     gpt_bind_info_t* info = malloc(sizeof(gpt_bind_info_t));
-    info->drv = drv;
     info->dev = dev;
 
     // read partition table asynchronously

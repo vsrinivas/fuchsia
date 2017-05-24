@@ -29,7 +29,6 @@ typedef struct {
 
     mx_device_t*        mxdev;
     mx_device_t*        parent;
-    mx_driver_t*        driver;
     bcm_i2c_regs_t*     control_regs;
     uint32_t            dev_id;
 
@@ -247,7 +246,6 @@ static int i2c_bootstrap_thread(void *arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = id,
         .ctx = i2c_ctx,
-        .driver = i2c_ctx->driver,
         .ops = &i2c_device_proto,
     };
 
@@ -262,13 +260,12 @@ i2c_err:
     return -1;
 }
 
-static mx_status_t bootstrap_i2c(mx_driver_t* driver, mx_device_t* parent, uint32_t dev_id) {
+static mx_status_t bootstrap_i2c(mx_device_t* parent, uint32_t dev_id) {
 
     bcm_i2c_t* i2c_ctx = calloc(1, sizeof(*i2c_ctx));
     if (!i2c_ctx)
         return ERR_NO_MEMORY;
 
-    i2c_ctx->driver     = driver;
     i2c_ctx->parent     = parent;
     i2c_ctx->dev_id     = dev_id;
 
@@ -287,7 +284,7 @@ static mx_status_t bootstrap_i2c(mx_driver_t* driver, mx_device_t* parent, uint3
 }
 
 
-static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** cookie) {
+static mx_status_t i2c_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     mx_status_t ret = NO_ERROR;
 
@@ -308,13 +305,13 @@ static mx_status_t i2c_bind(mx_driver_t* driver, mx_device_t* parent, void** coo
     set_gpio_function(gpio_regs, BCM_SCL0_PIN, FSEL_ALT0);
 
 
-    status = bootstrap_i2c(driver,parent,0);
+    status = bootstrap_i2c(parent, 0);
     if (status != NO_ERROR) {
         ret = status;
         printf("Failed to initialize i2c0\n");
     }
 
-    status = bootstrap_i2c(driver,parent,1);
+    status = bootstrap_i2c(parent, 1);
     if (status != NO_ERROR) {
         ret = status;
         printf("Failed to initialize i2c1\n");

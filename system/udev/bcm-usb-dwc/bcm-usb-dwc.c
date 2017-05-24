@@ -1697,8 +1697,8 @@ finish:
 }
 
 // Bind is the entry point for this driver.
-static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
-    xprintf("usb_dwc_bind drv = %p, dev = %p\n", drv, dev);
+static mx_status_t usb_dwc_bind(void* ctx, mx_device_t* dev, void** cookie) {
+    xprintf("usb_dwc_bind dev = %p\n", dev);
 
     dwc_usb_t* usb_dwc = NULL;
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
@@ -1776,7 +1776,6 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "bcm-usb-dwc",
         .ctx = usb_dwc,
-        .driver = drv,
         .ops = &dwc_device_proto,
         .proto_id = MX_PROTOCOL_USB_HCI,
         .proto_ops = &dwc_hci_protocol,

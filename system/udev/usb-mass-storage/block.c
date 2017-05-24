@@ -155,7 +155,6 @@ mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = dev,
-        .driver = &_driver_usb_mass_storage,
         .ops = &ums_block_proto,
         .proto_id = MX_PROTOCOL_BLOCK_CORE,
         .proto_ops = &ums_block_ops,

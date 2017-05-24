@@ -13,7 +13,7 @@
 #include <string.h>
 
 // implemented in virtio_driver.cpp
-extern mx_status_t virtio_bind(mx_driver_t* driver, mx_device_t* device, void** cookie);
+extern mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie);
 
 static mx_driver_ops_t virtio_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -395,7 +394,6 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = dev,
-        .driver = &_driver_usb_bus,
         .ops = &usb_device_proto,
         .proto_id = MX_PROTOCOL_USB,
         // Do not allow binding to root of a composite device.

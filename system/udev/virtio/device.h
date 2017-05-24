@@ -18,7 +18,7 @@ namespace virtio {
 
 class Device {
 public:
-    Device(mx_driver_t* driver, mx_device_t* bus_device);
+    Device(mx_device_t* bus_device);
     virtual ~Device();
 
     mx_device_t* bus_device() { return bus_device_; }
@@ -52,7 +52,6 @@ protected:
     void IrqWorker();
 
     // members
-    mx_driver_t* driver_ = nullptr;
     mx_device_t* bus_device_ = nullptr;
     mxtl::Mutex lock_;
 

@@ -155,8 +155,14 @@ typedef struct __attribute__((packed)) {
     char version[16];
 } magenta_note_driver_t;
 
+typedef struct mx_driver {
+    const char* name;
+    mx_driver_ops_t* ops;
+    uint32_t flags;
+} mx_driver_t;
+
 typedef struct magenta_driver_info {
-    mx_driver_t* driver;
+    const mx_driver_t* driver;
     const magenta_note_driver_t* note;
 } magenta_driver_info_t;
 

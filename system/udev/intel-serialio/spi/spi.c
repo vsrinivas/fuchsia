@@ -9,7 +9,7 @@
 
 #include <intel-serialio/serialio.h>
 
-mx_status_t intel_serialio_bind_spi(mx_driver_t* drv, mx_device_t* dev) {
+mx_status_t intel_serialio_bind_spi(mx_device_t* dev) {
     // Not implemented yet.
     return ERR_NOT_SUPPORTED;
 }

@@ -697,7 +697,7 @@ fail:
 
 // implement driver object:
 
-static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci)) return ERR_NOT_SUPPORTED;
 
@@ -785,7 +785,6 @@ static mx_status_t ahci_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) 
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ahci",
         .ctx = device,
-        .driver = drv,
         .ops = &ahci_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };

@@ -218,7 +218,7 @@ static mx_protocol_device_t blkdev_ops = {
     .release = blkdev_release,
 };
 
-static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t block_driver_bind(void* ctx, mx_device_t* dev, void** cookie) {
     blkdev_t* bdev;
     if ((bdev = calloc(1, sizeof(blkdev_t))) == NULL) {
         return ERR_NO_MEMORY;
@@ -236,7 +236,6 @@ static mx_status_t block_driver_bind(mx_driver_t* drv, mx_device_t* dev, void** 
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "block",
         .ctx = bdev,
-        .driver = drv,
         .ops = &blkdev_ops,
         .proto_id = MX_PROTOCOL_BLOCK,
     };

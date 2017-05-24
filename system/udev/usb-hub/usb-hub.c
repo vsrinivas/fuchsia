@@ -26,8 +26,6 @@
     } while (0)
 #endif
 
-extern mx_driver_t _driver_usb_hub;
-
 typedef struct usb_hub {
     // the device we are publishing
     mx_device_t* mxdev;
@@ -289,7 +287,6 @@ static int usb_hub_thread(void* arg) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "usb-hub",
         .ctx = hub,
-        .driver = &_driver_usb_hub,
         .ops = &usb_hub_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -344,7 +341,7 @@ static int usb_hub_thread(void* arg) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+static mx_status_t usb_hub_bind(void* ctx, mx_device_t* device, void** cookie) {
     // search for the bus device
     mx_device_t* bus_device = device_get_parent(device);
     usb_bus_protocol_t* bus_protocol = NULL;

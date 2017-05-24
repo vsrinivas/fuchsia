@@ -18,8 +18,6 @@
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
 
-extern mx_driver_t _driver_framebuffer;
-
 typedef struct {
     mx_device_t* mxdev;
     mx_display_protocol_t* dpy;
@@ -213,7 +211,7 @@ static mx_protocol_device_t fb_ops = {
     .release = fb_release,
 };
 
-static mx_status_t fb_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     fb_t* fb;
     if ((fb = calloc(1, sizeof(fb_t))) == NULL) {
         return ERR_NO_MEMORY;
@@ -270,7 +268,6 @@ static mx_status_t fb_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "framebuffer",
         .ctx = fb,
-        .driver = drv,
         .ops = &fb_ops,
         .proto_id = MX_PROTOCOL_FRAMEBUFFER,
     };

@@ -7,8 +7,6 @@
 #include <ddk/device.h>
 #include <mxtl/type_support.h>
 
-typedef struct mx_driver mx_driver_t;
-
 namespace ddk {
 namespace internal {
 

@@ -37,8 +37,8 @@ static mx_protocol_device_t kpci_device_proto = {
 
 // initializes and optionally adds a new child device
 // device will be added if parent is not NULL
-static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
-                                   uint32_t index, bool save_handle, mx_device_t** out) {
+static mx_status_t kpci_init_child(mx_device_t* parent, uint32_t index, bool save_handle,
+                                   mx_device_t** out) {
     mx_pcie_device_info_t info;
 
     mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
@@ -92,7 +92,6 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = name,
             .ctx = device,
-            .driver = drv,
             .ops = &kpci_device_proto,
             .proto_id = MX_PROTOCOL_PCI,
             .proto_ops = &_pci_protocol,
@@ -120,14 +119,13 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t* parent,
     return status;
 }
 
-static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+static mx_status_t kpci_drv_bind(void* ctx, mx_device_t* parent, void** cookie) {
     mx_status_t status;
     mx_device_t* pcidev;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "pci",
-        .driver = drv,
         .ops =  &kpci_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -138,21 +136,21 @@ static mx_status_t kpci_drv_bind(mx_driver_t* drv, mx_device_t* parent, void** c
     for (uint32_t index = 0;; index++) {
         mx_device_t* dev;
         // don't hang onto the PCI handle - we don't need it any more
-        if (kpci_init_child(drv, pcidev, index, false, &dev) != NO_ERROR) {
+        if (kpci_init_child(pcidev, index, false, &dev) != NO_ERROR) {
             break;
         }
     }
     return NO_ERROR;
 }
 
-static mx_status_t kpci_drv_create(mx_driver_t* drv, mx_device_t* parent,
+static mx_status_t kpci_drv_create(void* ctx, mx_device_t* parent,
                                    const char* name, const char* args, mx_handle_t resource) {
     if (resource != MX_HANDLE_INVALID) {
         mx_handle_close(resource);
     }
     uint32_t index = strtoul(args, NULL, 10);
     mx_device_t* dev;
-    return kpci_init_child(drv, parent, index, true, &dev);
+    return kpci_init_child(parent, index, true, &dev);
 }
 
 static mx_driver_ops_t kpci_driver_ops = {

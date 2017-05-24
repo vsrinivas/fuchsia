@@ -15,15 +15,11 @@
 
 #include <intel-serialio/serialio.h>
 
-static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t intel_serialio_bind(void* ctx, mx_device_t* dev, void** cookie) {
     pci_protocol_t* pci;
     const pci_config_t* pci_config;
     mx_handle_t config_handle = MX_HANDLE_INVALID;
     mx_status_t res;
-
-    if (!drv || !dev) {
-        return ERR_INVALID_ARGS;
-    }
 
     if (device_op_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
         return ERR_NOT_SUPPORTED;
@@ -35,7 +31,7 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void*
 
     switch (pci_config->device_id) {
     case INTEL_WILDCAT_POINT_SERIALIO_DMA_DID:
-        res = intel_serialio_bind_dma(drv, dev);
+        res = intel_serialio_bind_dma(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID:
     case INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID:
@@ -43,22 +39,22 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev, void*
     case INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID:
     case INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID:
     case INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID:
-        res = intel_serialio_bind_i2c(drv, dev);
+        res = intel_serialio_bind_i2c(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_SDIO_DID:
-        res = intel_serialio_bind_sdio(drv, dev);
+        res = intel_serialio_bind_sdio(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_SPI0_DID:
-        res = intel_serialio_bind_spi(drv, dev);
+        res = intel_serialio_bind_spi(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_SPI1_DID:
-        res = intel_serialio_bind_spi(drv, dev);
+        res = intel_serialio_bind_spi(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_UART0_DID:
-        res = intel_serialio_bind_uart(drv, dev);
+        res = intel_serialio_bind_uart(dev);
         break;
     case INTEL_WILDCAT_POINT_SERIALIO_UART1_DID:
-        res = intel_serialio_bind_uart(drv, dev);
+        res = intel_serialio_bind_uart(dev);
         break;
     default:
         res = ERR_NOT_SUPPORTED;

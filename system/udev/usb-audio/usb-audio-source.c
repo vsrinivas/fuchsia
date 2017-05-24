@@ -323,7 +323,7 @@ static mx_protocol_device_t usb_audio_source_device_proto = {
     .ioctl = usb_audio_source_ioctl,
 };
 
-mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, int index,
+mx_status_t usb_audio_source_create(mx_device_t* device, int index,
                                     usb_interface_descriptor_t* intf,
                                     usb_endpoint_descriptor_t* ep,
                                     usb_audio_ac_format_type_i_desc* format_desc) {
@@ -383,7 +383,6 @@ mx_status_t usb_audio_source_create(mx_driver_t* driver, mx_device_t* device, in
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = source,
-        .driver = driver,
         .ops = &usb_audio_source_device_proto,
         .proto_id = MX_PROTOCOL_AUDIO,
     };

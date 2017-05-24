@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -280,7 +279,6 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = intf,
-        .driver = &_driver_usb_bus,
         .ops = &usb_interface_proto,
         .proto_id = MX_PROTOCOL_USB,
         .proto_ops = &_usb_protocol,
@@ -359,7 +357,6 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = name,
         .ctx = intf,
-        .driver = &_driver_usb_bus,
         .ops = &usb_interface_proto,
         .proto_id = MX_PROTOCOL_USB,
         .proto_ops = &_usb_protocol,

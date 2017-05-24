@@ -15,9 +15,6 @@
 #include <pty-core/pty-fifo.h>
 #include <magenta/device/pty.h>
 
-extern mx_driver_t _driver_ptmx;
-// pty server device
-
 typedef struct pty_server_dev {
     pty_server_t srv;
 
@@ -136,7 +133,6 @@ static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "pty",
         .ctx = psd,
-        .driver = &_driver_ptmx,
         .ops = &psd_ops,
         .proto_id = MX_PROTOCOL_PTY,
         .flags = DEVICE_ADD_INSTANCE,
@@ -158,11 +154,10 @@ static mx_protocol_device_t ptmx_ops = {
     .open = ptmx_open,
 };
 
-static mx_status_t ptmx_bind(mx_driver_t* drv, mx_device_t* parent, void** cookie) {
+static mx_status_t ptmx_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "ptmx",
-        .driver = drv,
         .ops = &ptmx_ops,
     };
 

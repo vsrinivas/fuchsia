@@ -207,7 +207,7 @@ static mx_protocol_device_t usb_hid_dev_ops = {
     .release = usb_hid_release,
 };
 
-static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(dev, &iter);
     if (result < 0) return result;
@@ -281,7 +281,6 @@ static mx_status_t usb_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
             .version = DEVICE_ADD_ARGS_VERSION,
             .name = "usb-hid",
             .ctx = usbhid,
-            .driver = drv,
             .ops = &usb_hid_dev_ops,
             .proto_id = MX_PROTOCOL_HIDBUS,
             .proto_ops = &usb_hid_bus_ops,

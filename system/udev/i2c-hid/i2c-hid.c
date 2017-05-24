@@ -233,7 +233,7 @@ static mx_protocol_device_t i2c_hid_dev_ops = {
     .release = i2c_hid_release,
 };
 
-static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cookie) {
+static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     printf("i2c_hid_bind\n");
 
     // Read the i2c HID descriptor
@@ -288,7 +288,6 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev, void** cooki
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "i2c-hid",
         .ctx = i2chid,
-        .driver = drv,
         .ops = &i2c_hid_dev_ops,
         .proto_id = MX_PROTOCOL_HIDBUS,
         .proto_ops = &i2c_hidbus_ops,
