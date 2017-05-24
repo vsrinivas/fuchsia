@@ -168,7 +168,7 @@ static bool vc_handle_device_control_keys(uint8_t keycode,
 static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     mxtl::AutoLock lock(&g_vc_lock);
 
-    // Handle device-level control keys
+    // Handle vc-level control keys
     if (vc_handle_device_control_keys(keycode, modifiers))
         return;
 
@@ -180,13 +180,13 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     if (vc_handle_control_keys(keycode, modifiers))
         return;
 
-    vc_t* dev = g_active_vc;
+    vc_t* vc = g_active_vc;
     char output[4];
     uint32_t length = hid_key_to_vt100_code(
-        keycode, modifiers, dev->keymap, output, sizeof(output));
+        keycode, modifiers, vc->keymap, output, sizeof(output));
     if (length > 0) {
-        //TODO: write(output,length) to dev
-        vc_scroll_viewport_bottom(dev);
+        //TODO: write(output,length) to vc
+        vc_scroll_viewport_bottom(vc);
     }
 }
 
@@ -195,31 +195,31 @@ static int vc_watch_for_keyboard_devices_thread(void* arg) {
     return -1;
 }
 
-static void __vc_set_active(vc_t* dev, unsigned index) TA_REQ(g_vc_lock) {
+static void __vc_set_active(vc_t* vc, unsigned index) TA_REQ(g_vc_lock) {
     if (g_active_vc)
         g_active_vc->active = false;
-    dev->active = true;
-    g_active_vc = dev;
+    vc->active = true;
+    g_active_vc = vc;
     g_active_vc->flags &= ~VC_FLAG_HASOUTPUT;
     g_active_vc_index = index;
 }
 
-static mx_status_t vc_set_console_to_active(vc_t* dev) TA_REQ(g_vc_lock) {
-    if (dev == NULL)
+static mx_status_t vc_set_console_to_active(vc_t* to_vc) TA_REQ(g_vc_lock) {
+    if (to_vc == NULL)
         return ERR_INVALID_ARGS;
 
     unsigned i = 0;
-    vc_t* device = NULL;
+    vc_t* vc = NULL;
 
-    list_for_every_entry (&g_vc_list, device, vc_t, node) {
-        if (device == dev)
+    list_for_every_entry (&g_vc_list, vc, vc_t, node) {
+        if (to_vc == vc)
             break;
         i++;
     }
     if (i == g_vc_count) {
         return ERR_INVALID_ARGS;
     }
-    __vc_set_active(dev, i);
+    __vc_set_active(to_vc, i);
     vc_render(g_active_vc);
     return NO_ERROR;
 }
@@ -229,38 +229,38 @@ static mx_status_t vc_set_active_console(unsigned console) {
         return ERR_INVALID_ARGS;
 
     unsigned i = 0;
-    vc_t* device = NULL;
-    list_for_every_entry (&g_vc_list, device, vc_t, node) {
+    vc_t* vc = NULL;
+    list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         if (i == console)
             break;
         i++;
     }
-    if (device == g_active_vc) {
+    if (vc == g_active_vc) {
         return NO_ERROR;
     }
-    __vc_set_active(device, console);
+    __vc_set_active(vc, console);
     vc_render(g_active_vc);
     return NO_ERROR;
 }
 
 void vc_get_status_line(char* str, int n) {
-    vc_t* device = NULL;
+    vc_t* vc = NULL;
     char* ptr = str;
     unsigned i = 0;
     // TODO add process name, etc.
-    list_for_every_entry (&g_vc_list, device, vc_t, node) {
+    list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         if (n <= 0) {
             break;
         }
 
-        int lines = vc_get_scrollback_lines(device);
+        int lines = vc_get_scrollback_lines(vc);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
-                             device->active ? "\033[33m\033[1m" : "",
+                             vc->active ? "\033[33m\033[1m" : "",
                              i,
-                             device->title,
-                             device->flags & VC_FLAG_HASOUTPUT ? '*' : ' ',
-                             lines > 0 && -device->viewport_y < lines ? '<' : ' ',
-                             device->viewport_y < 0 ? '>' : ' ');
+                             vc->title,
+                             vc->flags & VC_FLAG_HASOUTPUT ? '*' : ' ',
+                             lines > 0 && -vc->viewport_y < lines ? '<' : ' ',
+                             vc->viewport_y < 0 ? '>' : ' ');
         ptr += chars;
         n -= chars;
         i++;
@@ -344,13 +344,13 @@ static mx_status_t vc_create(vc_t** vc_out) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     mx_status_t status;
-    vc_t* device;
-    if ((status = vc_alloc(NULL, g_fb_fd, &device)) < 0) {
+    vc_t* vc;
+    if ((status = vc_alloc(NULL, g_fb_fd, &vc)) < 0) {
         return status;
     }
 
     // add to the vc list
-    list_add_tail(&g_vc_list, &device->node);
+    list_add_tail(&g_vc_list, &vc->node);
     g_vc_count++;
 
     // make this the active vc if it's the first one
@@ -360,12 +360,12 @@ static mx_status_t vc_create(vc_t** vc_out) {
         vc_render(g_active_vc);
     }
 
-    *vc_out = device;
+    *vc_out = vc;
     return NO_ERROR;
 }
 
 static int vc_log_reader_thread(void* arg) {
-    auto dev = reinterpret_cast<vc_t*>(arg);
+    auto vc = reinterpret_cast<vc_t*>(arg);
     mx_handle_t h;
 
     mx_koid_t koid = 0;
@@ -400,15 +400,15 @@ static int vc_log_reader_thread(void* arg) {
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                  rec->pid, rec->tid);
-        vc_write(dev, tmp, strlen(tmp), 0);
-        vc_write(dev, rec->data, rec->datalen, 0);
+        vc_write(vc, tmp, strlen(tmp), 0);
+        vc_write(vc, rec->data, rec->datalen, 0);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-            vc_write(dev, "\n", 1, 0);
+            vc_write(vc, "\n", 1, 0);
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
-    vc_write(dev, oops, strlen(oops), 0);
+    vc_write(vc, oops, strlen(oops), 0);
 
     return 0;
 }
@@ -440,7 +440,7 @@ static int vc_battery_poll_thread(void* arg) {
         }
 
         if (length <= 0) {
-            printf("vc: read() on battery device returned %d\n",
+            printf("vc: read() on battery vc returned %d\n",
                    static_cast<int>(length));
             break;
         }
@@ -457,7 +457,7 @@ static mx_status_t vc_battery_device_added(int dirfd, int event, const char* fn,
 
     int battery_fd = openat(dirfd, fn, O_RDONLY);
     if (battery_fd < 0) {
-        printf("vc: failed to open battery device \"%s\"\n", fn);
+        printf("vc: failed to open battery vc \"%s\"\n", fn);
         return NO_ERROR;
     }
 

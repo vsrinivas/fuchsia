@@ -90,7 +90,7 @@ extern mtx_t g_vc_lock;
 
 const gfx_font* vc_get_font();
 mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev);
-void vc_free(vc_t* dev);
+void vc_free(vc_t* vc);
 
 void vc_get_status_line(char* str, int n) TA_REQ(g_vc_lock);
 
@@ -104,36 +104,36 @@ typedef struct vc_battery_info {
 } vc_battery_info_t;
 void vc_get_battery_info(vc_battery_info_t* info) TA_REQ(g_vc_lock);
 
-void vc_write_status(vc_t* dev) TA_REQ(g_vc_lock);
-void vc_render(vc_t* dev) TA_REQ(g_vc_lock);
-void vc_invalidate_all_for_testing(vc_t* dev);
-int vc_get_scrollback_lines(vc_t* dev);
-vc_char_t* vc_get_scrollback_line_ptr(vc_t* dev, unsigned row);
-void vc_scroll_viewport(vc_t* dev, int dir) TA_REQ(g_vc_lock);
-void vc_scroll_viewport_top(vc_t* dev) TA_REQ(g_vc_lock);
-void vc_scroll_viewport_bottom(vc_t* dev) TA_REQ(g_vc_lock);
-void vc_set_fullscreen(vc_t* dev, bool fullscreen)
+void vc_write_status(vc_t* vc) TA_REQ(g_vc_lock);
+void vc_render(vc_t* vc) TA_REQ(g_vc_lock);
+void vc_invalidate_all_for_testing(vc_t* vc);
+int vc_get_scrollback_lines(vc_t* vc);
+vc_char_t* vc_get_scrollback_line_ptr(vc_t* vc, unsigned row);
+void vc_scroll_viewport(vc_t* vc, int dir) TA_REQ(g_vc_lock);
+void vc_scroll_viewport_top(vc_t* vc) TA_REQ(g_vc_lock);
+void vc_scroll_viewport_bottom(vc_t* vc) TA_REQ(g_vc_lock);
+void vc_set_fullscreen(vc_t* vc, bool fullscreen)
     TA_REQ(g_vc_lock);
 
-ssize_t vc_write(vc_t* dev, const void* buf, size_t count,
+ssize_t vc_write(vc_t* vc, const void* buf, size_t count,
                         mx_off_t off);
 
-static inline int vc_rows(vc_t* dev) {
-    return dev->flags & VC_FLAG_FULLSCREEN ? dev->rows : dev->rows - 1;
+static inline int vc_rows(vc_t* vc) {
+    return vc->flags & VC_FLAG_FULLSCREEN ? vc->rows : vc->rows - 1;
 }
 
 // drawing:
 
-void vc_gfx_invalidate_all(vc_t* dev);
-void vc_gfx_invalidate_status(vc_t* dev);
+void vc_gfx_invalidate_all(vc_t* vc);
+void vc_gfx_invalidate_status(vc_t* vc);
 // invalidates a region in characters
-void vc_gfx_invalidate(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
+void vc_gfx_invalidate(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h);
 // invalidates a region in pixels
-void vc_gfx_invalidate_region(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h);
-void vc_gfx_draw_char(vc_t* dev, vc_char_t ch, unsigned x, unsigned y,
+void vc_gfx_invalidate_region(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h);
+void vc_gfx_draw_char(vc_t* vc, vc_char_t ch, unsigned x, unsigned y,
                       bool invert);
 
-static inline uint32_t palette_to_color(vc_t* dev, uint8_t color) {
+static inline uint32_t palette_to_color(vc_t* vc, uint8_t color) {
     assert(color <= MAX_COLOR);
-    return dev->palette[color];
+    return vc->palette[color];
 }
