@@ -106,6 +106,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   std::string label_;
 
   mx::job job_;
+  mx::job job_for_child_;
 
   std::unordered_map<ApplicationEnvironmentImpl*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>

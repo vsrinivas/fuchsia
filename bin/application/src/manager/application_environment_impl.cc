@@ -27,6 +27,9 @@
 namespace app {
 namespace {
 
+constexpr mx_rights_t kChildJobRights =
+    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+
 constexpr char kFuchsiaMagic[] = "#!fuchsia ";
 constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
@@ -203,6 +206,7 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
   mx_handle_t parent_job =
       parent_ != nullptr ? parent_->job_.get() : mx_job_default();
   FTL_CHECK(mx::job::create(parent_job, 0u, &job_) == NO_ERROR);
+  FTL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == NO_ERROR);
 
   // Get the ApplicationLoader service up front.
   ServiceProviderPtr service_provider;
@@ -442,8 +446,8 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
   flat.path = paths;
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
-  mx::process process =
-      CreateProcess(job_, std::move(package), std::move(launch_info), &flat);
+  mx::process process = CreateProcess(job_for_child_, std::move(package),
+                                      std::move(launch_info), &flat);
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
@@ -478,7 +482,8 @@ void ApplicationEnvironmentImpl::CreateApplicationFromArchive(
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateSandboxedProcess(
-      job_, file_system->GetFileAsVMO(kAppPath), std::move(launch_info), &flat);
+      job_for_child_, file_system->GetFileAsVMO(kAppPath),
+      std::move(launch_info), &flat);
 
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
