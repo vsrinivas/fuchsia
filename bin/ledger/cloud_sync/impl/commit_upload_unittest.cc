@@ -28,12 +28,17 @@ namespace {
 // Fake implementation of storage::Commit.
 class TestCommit : public storage::test::CommitEmptyImpl {
  public:
-  TestCommit() = default;
+  TestCommit(std::string id, std::string storage_bytes)
+      : id(std::move(id)), storage_bytes(std::move(storage_bytes)) {}
   ~TestCommit() override = default;
 
   const storage::CommitId& GetId() const override { return id; }
 
   ftl::StringView GetStorageBytes() const override { return storage_bytes; }
+
+  std::unique_ptr<storage::Commit> Clone() const override {
+    return std::make_unique<TestCommit>(id, storage_bytes);
+  }
 
   storage::CommitId id;
   std::string storage_bytes;
@@ -66,6 +71,19 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   TestPageStorage() = default;
   ~TestPageStorage() override = default;
 
+  void GetUnsyncedCommits(
+      std::function<void(storage::Status,
+                         std::vector<std::unique_ptr<const storage::Commit>>)>
+          callback) override {
+    std::vector<std::unique_ptr<const storage::Commit>> results;
+    std::transform(unsynced_commits.begin(), unsynced_commits.end(),
+                   std::inserter(results, results.begin()),
+                   [](const std::unique_ptr<const storage::Commit>& commit) {
+                     return commit->Clone();
+                   });
+    callback(storage::Status::OK, std::move(results));
+  }
+
   void GetAllUnsyncedObjectIds(
       std::function<void(storage::Status, std::vector<storage::ObjectId>)>
           callback) override {
@@ -94,13 +112,28 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   storage::Status MarkCommitSynced(
       const storage::CommitId& commit_id) override {
     commits_marked_as_synced.insert(commit_id);
+    unsynced_commits.erase(
+        std::remove_if(
+            unsynced_commits.begin(), unsynced_commits.end(),
+            [&commit_id](const std::unique_ptr<const storage::Commit>& commit) {
+              return commit->GetId() == commit_id;
+            }),
+        unsynced_commits.end());
     return storage::Status::OK;
+  }
+
+  std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content) {
+    auto commit =
+        std::make_unique<TestCommit>(std::move(id), std::move(content));
+    unsynced_commits.push_back(commit->Clone());
+    return commit;
   }
 
   std::unordered_map<storage::ObjectId, std::unique_ptr<const TestObject>>
       unsynced_objects_to_return;
   std::set<storage::ObjectId> objects_marked_as_synced;
   std::set<storage::CommitId> commits_marked_as_synced;
+  std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
 };
 
 // Fake implementation of cloud_provider::CloudProvider. Injects the returned
@@ -117,8 +150,10 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
     add_commits_calls++;
-    std::move(commits.begin(), commits.end(),
-              std::back_inserter(received_commits));
+    if (commit_status_to_return == cloud_provider::Status::OK) {
+      std::move(commits.begin(), commits.end(),
+                std::back_inserter(received_commits));
+    }
     message_loop_->task_runner()->PostTask(
         [this, callback]() { callback(commit_status_to_return); });
   }
@@ -183,11 +218,8 @@ class CommitUploadTest : public test::TestWithMessageLoop {
 
 // Test an upload of a single commit with no unsynced objects.
 TEST_F(CommitUploadTest, SingleCommit) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
@@ -221,18 +253,8 @@ TEST_F(CommitUploadTest, SingleCommit) {
 // Test an upload of multiple commits with no unsynced objects.
 TEST_F(CommitUploadTest, MultipleCommits) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  {
-    auto commit = std::make_unique<TestCommit>();
-    commit->id = "id0";
-    commit->storage_bytes = "content0";
-    commits.push_back(std::move(commit));
-  }
-  {
-    auto commit = std::make_unique<TestCommit>();
-    commit->id = "id1";
-    commit->storage_bytes = "content1";
-    commits.push_back(std::move(commit));
-  }
+  commits.push_back(storage_.NewCommit("id0", "content0"));
+  commits.push_back(storage_.NewCommit("id1", "content1"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
@@ -268,11 +290,8 @@ TEST_F(CommitUploadTest, MultipleCommits) {
 
 // Test an upload of a commit with a few unsynced objects.
 TEST_F(CommitUploadTest, SingleCommitWithObjects) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id1"] =
       std::make_unique<TestObject>("obj_id1", "obj_data1");
@@ -315,11 +334,8 @@ TEST_F(CommitUploadTest, SingleCommitWithObjects) {
 // Verifies that the number of concurrent object uploads is limited to
 // |max_concurrent_uploads|.
 TEST_F(CommitUploadTest, ThrottleConcurrentUploads) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id0"] =
       std::make_unique<TestObject>("obj_id0", "obj_data0");
@@ -364,11 +380,8 @@ TEST_F(CommitUploadTest, ThrottleConcurrentUploads) {
 
 // Test un upload that fails on uploading objects.
 TEST_F(CommitUploadTest, FailedObjectUpload) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id1"] =
       std::make_unique<TestObject>("obj_id1", "obj_data1");
@@ -404,11 +417,8 @@ TEST_F(CommitUploadTest, FailedObjectUpload) {
 
 // Test an upload that fails on uploading commit commit.
 TEST_F(CommitUploadTest, FailedCommitUpload) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id1"] =
       std::make_unique<TestObject>("obj_id1", "obj_data1");
@@ -449,11 +459,8 @@ TEST_F(CommitUploadTest, FailedCommitUpload) {
 
 // Test an upload that fails and a subsequent retry that succeeds.
 TEST_F(CommitUploadTest, ErrorAndRetry) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id1"] =
       std::make_unique<TestObject>("obj_id1", "obj_data1");
@@ -511,11 +518,8 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
 // Verifies that if only one of many uploads fails, we still stop and notify the
 // client.
 TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
-  auto commit = std::make_unique<TestCommit>();
-  commit->id = "id";
-  commit->storage_bytes = "content";
   std::vector<std::unique_ptr<const storage::Commit>> commits;
-  commits.push_back(std::move(commit));
+  commits.push_back(storage_.NewCommit("id", "content"));
 
   storage_.unsynced_objects_to_return["obj_id0"] =
       std::make_unique<TestObject>("obj_id0", "obj_data0");
@@ -567,6 +571,78 @@ TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
   // Verify the sync status in storage.
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
   EXPECT_EQ(3u, storage_.objects_marked_as_synced.size());
+}
+
+// Verifies that we do not upload synced commits.
+TEST_F(CommitUploadTest, DoNotUploadSyncedCommits) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(std::make_unique<TestCommit>("id", "content"));
+
+  auto done_calls = 0u;
+  auto error_calls = 0u;
+  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
+                             [this, &done_calls] {
+                               done_calls++;
+                               message_loop_.PostQuitTask();
+                             },
+                             [this, &error_calls] {
+                               error_calls++;
+                               message_loop_.PostQuitTask();
+                             });
+
+  commit_upload.Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, done_calls);
+  EXPECT_EQ(0u, error_calls);
+
+  // Verify that the commit was not synced.
+  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(0u, cloud_provider_.received_commits.size());
+}
+
+// Verifies that we do not upload synced commits on retries.
+TEST_F(CommitUploadTest, DoNotUploadSyncedCommitsOnRetry) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content"));
+
+  auto done_calls = 0u;
+  auto error_calls = 0u;
+  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
+                             [this, &done_calls] {
+                               done_calls++;
+                               message_loop_.PostQuitTask();
+                             },
+                             [this, &error_calls] {
+                               error_calls++;
+                               message_loop_.PostQuitTask();
+                             });
+
+  cloud_provider_.commit_status_to_return =
+      cloud_provider::Status::NETWORK_ERROR;
+
+  commit_upload.Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(0u, done_calls);
+  EXPECT_EQ(1u, error_calls);
+
+  // Verify that the commit was not synced.
+  EXPECT_EQ(0u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(0u, cloud_provider_.received_commits.size());
+
+  // Mark commit as synced.
+  storage_.MarkCommitSynced("id");
+  EXPECT_EQ(0u, storage_.unsynced_commits.size());
+
+  // Retry
+  cloud_provider_.commit_status_to_return = cloud_provider::Status::OK;
+  commit_upload.Retry();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, done_calls);
+  EXPECT_EQ(1u, error_calls);
+
+  // Verify that the commit was not synced.
+  EXPECT_EQ(1u, storage_.commits_marked_as_synced.size());
+  EXPECT_EQ(0u, cloud_provider_.received_commits.size());
 }
 
 }  // namespace

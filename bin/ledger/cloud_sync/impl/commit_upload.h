@@ -63,6 +63,9 @@ class CommitUpload {
   // Uploads the given object.
   void UploadObject(std::unique_ptr<const storage::Object> object);
 
+  // Filters already synced commits.
+  void FilterAndUploadCommits();
+
   // Uploads the commit.
   void UploadCommits();
 

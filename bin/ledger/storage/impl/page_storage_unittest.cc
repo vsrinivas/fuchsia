@@ -385,6 +385,32 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
 }
 
+TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      storage_.get(), RandomId(kObjectIdSize), std::move(parent));
+  CommitId id = commit->GetId();
+  std::string storage_bytes = commit->GetStorageBytes().ToString();
+
+  storage_->AddCommitFromLocal(
+      commit->Clone(), [](Status status) { EXPECT_EQ(Status::OK, status); });
+
+  auto commits = GetUnsyncedCommits();
+  EXPECT_EQ(1u, commits.size());
+  EXPECT_EQ(id, commits[0]->GetId());
+
+  storage_->MarkCommitSynced(id);
+
+  // Add the commit again.
+  storage_->AddCommitFromLocal(
+      commit->Clone(), [](Status status) { EXPECT_EQ(Status::OK, status); });
+
+  // Check that the commit is not marked unsynced.
+  commits = GetUnsyncedCommits();
+  EXPECT_EQ(0u, commits.size());
+}
+
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -462,6 +488,54 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   // Check that the commit is not marked as unsynced.
   std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
   EXPECT_TRUE(commits.empty());
+}
+
+// Check that receiving a remote commit that is already present locally but not
+// synced will mark the commit as synced.
+TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
+  FakeSyncDelegate sync;
+  storage_->SetSyncDelegate(&sync);
+
+  std::unique_ptr<const TreeNode> node;
+  ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectId>(1), &node));
+  ObjectId root_id = node->GetId();
+
+  std::unique_ptr<const Object> root_object =
+      TryGetObject(root_id, PageStorage::Location::NETWORK);
+
+  ftl::StringView root_data;
+  ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
+  sync.AddObject(root_id, root_data.ToString());
+
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
+      storage_.get(), root_id, std::move(parent));
+  CommitId id = commit->GetId();
+
+  Status status;
+  storage_->AddCommitFromLocal(
+      std::move(commit),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  EXPECT_EQ(1u, GetUnsyncedCommits().size());
+  storage_->GetCommit(
+      id, callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                            &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit->GetId(),
+                                 commit->GetStorageBytes().ToString());
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(0u, GetUnsyncedCommits().size());
 }
 
 TEST_F(PageStorageTest, SyncCommits) {

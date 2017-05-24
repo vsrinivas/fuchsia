@@ -4,6 +4,9 @@
 
 #include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
 
+#include <algorithm>
+#include <unordered_set>
+
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "lib/ftl/logging.h"
@@ -57,7 +60,7 @@ void CommitUpload::StartObjectUpload() {
   FTL_DCHECK(current_uploads_ == 0u);
   // If there are no unsynced objects left, upload the commits.
   if (remaining_object_ids_.empty()) {
-    UploadCommits();
+    FilterAndUploadCommits();
     return;
   }
 
@@ -124,13 +127,42 @@ void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
         if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
           // All the referenced objects are uploaded, upload the commits.
-          UploadCommits();
+          FilterAndUploadCommits();
           return;
         }
 
         if (!errored_ && !remaining_object_ids_.empty()) {
           UploadNextObject();
         }
+      });
+}
+
+void CommitUpload::FilterAndUploadCommits() {
+  // Remove all commits that have been synced since this upload object was
+  // created. This will happen if a merge is executed on multiple devices at the
+  // same time.
+  storage_->GetUnsyncedCommits(
+      [this](storage::Status status,
+             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+        std::unordered_set<storage::CommitId> commit_ids;
+        commit_ids.reserve(commits.size());
+        std::transform(
+            commits.begin(), commits.end(),
+            std::inserter(commit_ids, commit_ids.begin()),
+            [](const std::unique_ptr<const storage::Commit>& commit) {
+              return commit->GetId();
+            });
+
+        commits_.erase(
+            std::remove_if(
+                commits_.begin(), commits_.end(),
+                [&commit_ids](
+                    const std::unique_ptr<const storage::Commit>& commit) {
+                  return commit_ids.count(commit->GetId()) == 0;
+                }),
+            commits_.end());
+
+        UploadCommits();
       });
 }
 

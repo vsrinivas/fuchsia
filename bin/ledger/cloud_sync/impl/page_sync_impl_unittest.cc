@@ -34,11 +34,9 @@ class TestCommit : public storage::test::CommitEmptyImpl {
       : id(id), content(content) {}
   ~TestCommit() override = default;
 
-  static std::vector<std::unique_ptr<const Commit>> AsList(
-      storage::CommitId id,
-      std::string content) {
+  std::vector<std::unique_ptr<const Commit>> AsList() {
     std::vector<std::unique_ptr<const Commit>> result;
-    result.push_back(std::make_unique<TestCommit>(id, content));
+    result.push_back(Clone());
     return result;
   }
 
@@ -62,6 +60,17 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
   TestPageStorage(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
+
+  std::unique_ptr<TestCommit> NewCommit(std::string id,
+                                        std::string content,
+                                        bool unsynced = true) {
+    auto commit =
+        std::make_unique<TestCommit>(std::move(id), std::move(content));
+    if (unsynced) {
+      unsynced_commits_to_return.push_back(commit->Clone());
+    }
+    return commit;
+  }
 
   storage::PageId GetId() override { return page_id_to_return; }
 
@@ -145,12 +154,26 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       callback(storage::Status::IO_ERROR, {});
       return;
     }
-    callback(storage::Status::OK, std::move(unsynced_commits_to_return));
-    unsynced_commits_to_return.clear();
+    std::vector<std::unique_ptr<const storage::Commit>> results;
+    results.resize(unsynced_commits_to_return.size());
+    std::transform(unsynced_commits_to_return.begin(),
+                   unsynced_commits_to_return.end(), results.begin(),
+                   [](const std::unique_ptr<const storage::Commit>& commit) {
+                     return commit->Clone();
+                   });
+    callback(storage::Status::OK, std::move(results));
   }
 
   storage::Status MarkCommitSynced(
       const storage::CommitId& commit_id) override {
+    unsynced_commits_to_return.erase(
+        std::remove_if(
+            unsynced_commits_to_return.begin(),
+            unsynced_commits_to_return.end(),
+            [&commit_id](const std::unique_ptr<const storage::Commit>& commit) {
+              return commit->GetId() == commit_id;
+            }),
+        unsynced_commits_to_return.end());
     commits_marked_as_synced.insert(commit_id);
     return storage::Status::OK;
   }
@@ -209,8 +232,11 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   void AddCommits(
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
-    std::move(commits.begin(), commits.end(),
-              std::back_inserter(received_commits));
+    ++add_commits_calls;
+    if (commit_status_to_return == cloud_provider::Status::OK) {
+      std::move(commits.begin(), commits.end(),
+                std::back_inserter(received_commits));
+    }
     message_loop_->task_runner()->PostTask(
         [this, callback]() { callback(commit_status_to_return); });
   }
@@ -279,6 +305,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   std::unordered_map<std::string, std::string> objects_to_return;
 
   std::vector<std::string> watch_call_min_timestamps;
+  unsigned int add_commits_calls = 0u;
   unsigned int get_commits_calls = 0u;
   unsigned int get_object_calls = 0u;
   std::vector<cloud_provider::Commit> received_commits;
@@ -345,10 +372,8 @@ class PageSyncImplTest : public test::TestWithMessageLoop {
 // Verifies that the backlog of commits to upload returned from
 // GetUnsyncedCommits() is uploaded to CloudProvider.
 TEST_F(PageSyncImplTest, UploadBacklog) {
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id2", "content2"));
+  storage_.NewCommit("id1", "content1");
+  storage_.NewCommit("id2", "content2");
   page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
 
@@ -370,10 +395,8 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
   // Verify that two local commits are not uploaded when there is two local
   // heads.
   storage_.head_count = 2;
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id0", "content0"));
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
+  storage_.NewCommit("id0", "content0");
+  storage_.NewCommit("id1", "content1");
   page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
 
@@ -383,10 +406,9 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
 
   // Add a new commit and reduce the number of heads to 1.
   storage_.head_count = 1;
-  storage_.new_commits_to_return["id2"] =
-      std::make_unique<const TestCommit>("id2", "content2");
-  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
-                          storage::ChangeSource::LOCAL);
+  auto commit = storage_.NewCommit("id2", "content2");
+  storage_.new_commits_to_return["id2"] = commit->Clone();
+  page_sync_.OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Verify that all local commits were uploaded.
@@ -411,7 +433,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(cloud_provider::Commit("id1", "content1", {}));
   page_sync_.OnRemoteCommits(std::move(commits), "44");
-  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+  page_sync_.OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
                           storage::ChangeSource::LOCAL);
 
   EXPECT_FALSE(storage_.delayed_add_commit_confirmations.empty());
@@ -425,10 +447,8 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
 TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   // Verify that two local commits are not uploaded when there is two local
   // heads.
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("local1", "content1"));
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("local2", "content2"));
+  storage_.NewCommit("local1", "content1");
+  storage_.NewCommit("local2", "content2");
 
   cloud_provider_.records_to_return.push_back(cloud_provider::Record(
       cloud_provider::Commit("remote3", "content3", {}), "42"));
@@ -459,22 +479,23 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
 // watcher are uploaded to CloudProvider, with the exception of commits that
 // themselves come from sync.
 TEST_F(PageSyncImplTest, UploadNewCommits) {
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
-  storage_.new_commits_to_return["id1"] =
-      std::make_unique<const TestCommit>("id1", "content1");
-  page_sync_.OnNewCommits(TestCommit::AsList("id1", "content1"),
-                          storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  auto commit1 = storage_.NewCommit("id1", "content1");
+  auto commit2 = storage_.NewCommit("id2", "content2");
+  auto commit3 = storage_.NewCommit("id3", "content3");
+
+  storage_.new_commits_to_return["id1"] = commit1->Clone();
+  page_sync_.OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   // The commit coming from sync should be ignored.
-  storage_.new_commits_to_return["id2"] =
-      std::make_unique<const TestCommit>("id2", "content2");
-  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
-                          storage::ChangeSource::SYNC);
+  storage_.new_commits_to_return["id2"] = commit2->Clone();
+  page_sync_.OnNewCommits(commit2->AsList(), storage::ChangeSource::SYNC);
 
-  storage_.new_commits_to_return["id3"] =
-      std::make_unique<const TestCommit>("id3", "content3");
-  page_sync_.OnNewCommits(TestCommit::AsList("id3", "content3"),
-                          storage::ChangeSource::LOCAL);
+  storage_.new_commits_to_return["id3"] = commit3->Clone();
+  page_sync_.OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
 
   message_loop_.SetAfterTaskCallback([this] {
     if (cloud_provider_.received_commits.size() == 2u) {
@@ -503,9 +524,8 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   // Add a new commit when there's only one head and verify that it is
   // uploaded.
   storage_.head_count = 1;
-  storage_.new_commits_to_return["id0"] =
-      std::make_unique<const TestCommit>("id0", "content0");
-  page_sync_.OnNewCommits(TestCommit::AsList("id0", "content0"),
+  storage_.new_commits_to_return["id0"] = storage_.NewCommit("id0", "content0");
+  page_sync_.OnNewCommits(storage_.NewCommit("id0", "content0")->AsList(),
                           storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_.IsIdle());
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -518,9 +538,8 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   // uploaded.
   cloud_provider_.received_commits.clear();
   storage_.head_count = 2;
-  storage_.new_commits_to_return["id1"] =
-      std::make_unique<const TestCommit>("id1", "content1");
-  page_sync_.OnNewCommits(TestCommit::AsList("id1", "content1"),
+  storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
+  page_sync_.OnNewCommits(storage_.NewCommit("id1", "content1")->AsList(),
                           storage::ChangeSource::LOCAL);
   EXPECT_TRUE(page_sync_.IsIdle());
   ASSERT_EQ(0u, cloud_provider_.received_commits.size());
@@ -529,9 +548,8 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   // Add another commit bringing the number of heads down to one and verify that
   // both commits are uploaded.
   storage_.head_count = 1;
-  storage_.new_commits_to_return["id2"] =
-      std::make_unique<const TestCommit>("id2", "content2");
-  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+  storage_.new_commits_to_return["id2"] = storage_.NewCommit("id2", "content2");
+  page_sync_.OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
                           storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_.IsIdle());
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -546,15 +564,13 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
 
 // Verifies that existing commits are uploaded before the new ones.
 TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
+  storage_.NewCommit("id1", "content1");
 
   page_sync_.SetOnBacklogDownloaded([this] {
     message_loop_.task_runner()->PostTask([this] {
-      storage_.new_commits_to_return["id2"] =
-          std::make_unique<const TestCommit>("id2", "content2");
-      page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
-                              storage::ChangeSource::LOCAL);
+      auto commit = storage_.NewCommit("id2", "content2");
+      storage_.new_commits_to_return["id2"] = commit->Clone();
+      page_sync_.OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
     });
   });
   page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
@@ -575,8 +591,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
 // Verifies that failing uploads are retried. In production the retries are
 // delayed, here we set the delays to 0.
 TEST_F(PageSyncImplTest, RetryUpload) {
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
+  storage_.NewCommit("id1", "content1");
   cloud_provider_.commit_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
   StartPageSync();
@@ -584,7 +599,7 @@ TEST_F(PageSyncImplTest, RetryUpload) {
   // Test cloud provider logs every commit, even if it reports that upload
   // failed for each. Here we loop through five attempts to upload the commit.
   message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.received_commits.size() == 5u) {
+    if (cloud_provider_.add_commits_calls == 5u) {
       message_loop_.PostQuitTask();
     }
   });
@@ -600,10 +615,8 @@ TEST_F(PageSyncImplTest, RetryUpload) {
 TEST_F(PageSyncImplTest, UploadIdleCallback) {
   int on_idle_calls = 0;
 
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id2", "content2"));
+  storage_.NewCommit("id1", "content1");
+  storage_.NewCommit("id2", "content2");
 
   page_sync_.SetOnIdle([&on_idle_calls] { on_idle_calls++; });
   StartPageSync();
@@ -629,9 +642,8 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 
   // Notify about a new commit to upload and verify that the idle callback was
   // called again on completion.
-  storage_.new_commits_to_return["id3"] =
-      std::make_unique<const TestCommit>("id3", "content3");
-  page_sync_.OnNewCommits(TestCommit::AsList("id3", "content3"),
+  storage_.new_commits_to_return["id3"] = storage_.NewCommit("id3", "content3");
+  page_sync_.OnNewCommits(storage_.NewCommit("id3", "content3")->AsList(),
                           storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_.IsIdle());
   message_loop_.SetAfterTaskCallback([this] {
@@ -970,10 +982,8 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
 
 // Verifies that uploads are paused until EnableUpload is called.
 TEST_F(PageSyncImplTest, UploadIsPaused) {
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id1", "content1"));
-  storage_.unsynced_commits_to_return.push_back(
-      std::make_unique<const TestCommit>("id2", "content2"));
+  storage_.NewCommit("id1", "content1");
+  storage_.NewCommit("id2", "content2");
   page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
 
   StartPageSync(UploadStatus::DISABLED);
@@ -985,6 +995,62 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(2u, cloud_provider_.received_commits.size());
+}
+
+// Verifies that already synced commit are not re-uploaded.
+TEST_F(PageSyncImplTest, DoNotUploadSyncedCommits) {
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
+
+  StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  auto commit = std::make_unique<TestCommit>("id", "content");
+  storage_.new_commits_to_return["id"] = commit->Clone();
+  page_sync_.OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Commit is already synced.
+  ASSERT_EQ(0u, cloud_provider_.received_commits.size());
+}
+
+// Verifies that commit that are received between the first upload and the retry
+// are not sent.
+TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
+
+  StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  cloud_provider_.commit_status_to_return =
+      cloud_provider::Status::NETWORK_ERROR;
+
+  auto commit = storage_.NewCommit("id", "content");
+  storage_.new_commits_to_return["id"] = commit->Clone();
+  page_sync_.OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
+
+  message_loop_.SetAfterTaskCallback([this] {
+    // Stop once cloud provider has rejected a commit.
+    if (cloud_provider_.add_commits_calls > 0u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  message_loop_.SetAfterTaskCallback([] {});
+
+  // Commit was rejected.
+  ASSERT_EQ(0u, cloud_provider_.received_commits.size());
+
+  cloud_provider_.commit_status_to_return = cloud_provider::Status::OK;
+  cloud_provider_.add_commits_calls = 0u;
+
+  // Simulate the commit being received from the cloud.
+  storage_.unsynced_commits_to_return.clear();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Commit is already synced.
+  EXPECT_EQ(0u, cloud_provider_.received_commits.size());
+  EXPECT_EQ(0u, cloud_provider_.add_commits_calls);
 }
 
 }  // namespace

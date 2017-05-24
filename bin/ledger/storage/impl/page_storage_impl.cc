@@ -455,6 +455,11 @@ void PageStorageImpl::GetCommit(
 
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::function<void(Status)> callback) {
+  // If the commit is already present, do nothing.
+  if (ContainsCommit(commit->GetId()) == Status::OK) {
+    callback(Status::OK);
+    return;
+  }
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
@@ -473,6 +478,7 @@ void PageStorageImpl::AddCommitsFromSync(
     ObjectId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
     if (ContainsCommit(id) == Status::OK) {
+      MarkCommitSynced(id);
       continue;
     }
 

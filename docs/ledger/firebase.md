@@ -36,7 +36,10 @@ In `Database / Rules`, paste the rules below and click "Publish".
           "$app": {
             "$page": {
               "commits": {
-                ".indexOn": ["timestamp"]
+                ".indexOn": ["timestamp"],
+                "$id": {
+                  ".validate": "!data.exists()"
+                }
               }
             }
           }
