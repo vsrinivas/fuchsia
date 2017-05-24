@@ -5,8 +5,7 @@
 #pragma once
 
 #include <assert.h>
-#include <ddk/device.h>
-#include <ddk/common/hid-fifo.h>
+
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 #include <mxio/vfs.h>
@@ -20,8 +19,6 @@
 #define MAX_COLOR 0xf
 
 typedef struct vc_device {
-    mx_device_t* mxdev;
-
     char title[8];
     // vc title, shown in status bar
     bool active;
@@ -33,8 +30,13 @@ typedef struct vc_device {
     gfx_surface* gfx;
     // surface to draw on
     gfx_surface* st_gfx;
-    // status bar surface
-    gfx_surface* hw_gfx;
+
+#if BUILD_FOR_TEST
+    gfx_surface* test_gfx;
+#endif
+
+    int fd;
+
     // backing store
     const gfx_font* font;
 
@@ -72,9 +74,6 @@ typedef struct vc_device {
 
     textcon_t textcon;
 
-    mx_hid_fifo_t fifo;
-    // FIFO for storing keyboard input.  Note that this stores characters,
-    // not HID events.
     keychar_t* keymap;
 
     struct list_node node;
@@ -90,7 +89,7 @@ typedef struct vc_device {
 extern mtx_t g_vc_lock;
 
 const gfx_font* vc_get_font();
-mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev);
+mx_status_t vc_device_alloc(gfx_surface* test, int fd, vc_device_t** out_dev);
 void vc_device_free(vc_device_t* dev);
 
 void vc_get_status_line(char* str, int n) TA_REQ(g_vc_lock);

@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 
+#include <magenta/device/display.h>
 #include <magenta/process.h>
+#include <magenta/syscalls.h>
+
 #include <mxtl/auto_lock.h>
 
 #define VCDEBUG 0
@@ -45,7 +49,6 @@ static uint32_t default_palette[] = {
 
 static mx_status_t vc_device_setup(vc_device_t* dev) {
     assert(dev->gfx);
-    assert(dev->hw_gfx);
 
     // calculate how many rows/columns we have
     dev->rows = dev->gfx->height / dev->charh;
@@ -478,13 +481,13 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
-mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
+mx_status_t vc_device_alloc(gfx_surface* test, int fd, vc_device_t** out_dev) {
     vc_device_t* device =
         reinterpret_cast<vc_device_t*>(calloc(1, sizeof(vc_device_t)));
     if (!device)
         return ERR_NO_MEMORY;
+    device->fd = -1;
 
-    mx_hid_fifo_init(&device->fifo);
     device->keymap = qwerty_map;
     char* keys = getenv("gfxconsole.keymap");
     if (keys) {
@@ -501,29 +504,60 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     device->charw = device->font->width;
     device->charh = device->font->height;
 
+#if BUILD_FOR_TEST
     // init the status bar
-    device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, device->charh, hw_gfx->stride, hw_gfx->format, 0);
+    device->st_gfx = gfx_create_surface(NULL, test->width, device->charh,
+                                        test->stride, test->format, 0);
     if (!device->st_gfx)
         goto fail;
 
-    size_t sz;  // Declare and initialize separately due to use of goto.
-    sz = hw_gfx->pixelsize * hw_gfx->stride * hw_gfx->height;
-    if ((mx_vmo_create(sz, 0, &device->gfx_vmo)) < 0)
+    // init the main surface
+    device->gfx = gfx_create_surface(NULL, test->width, test->height,
+                                     test->stride, test->format, 0);
+    if (!device->gfx)
         goto fail;
+
+    device->test_gfx = test;
+#else
+    ioctl_display_get_fb_t fb;
+    size_t sz = 0;
+
+    if (fd < 0) {
+        goto fail;
+    }
+    if ((fd = openat(fd, "0", O_RDWR)) < 0) {
+        printf("vc_device_alloc: cannot obtain fb driver instance\n");
+        goto fail;
+    }
+    if (ioctl_display_get_fb(fd, &fb) != sizeof(fb)) {
+        close(fd);
+        printf("vc_device_alloc: cannot get fb from driver instance\n");
+        goto fail;
+    }
+    device->fd = fd;
+    device->gfx_vmo = fb.vmo;
+
+    sz = fb.info.stride * fb.info.pixelsize * fb.info.height;
 
     uintptr_t ptr;
     if (mx_vmar_map(mx_vmar_root_self(), 0, device->gfx_vmo, 0, sz,
                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr) < 0) {
-        mx_handle_close(device->gfx_vmo);
         goto fail;
     }
 
+    // init the status bar
+    device->st_gfx = gfx_create_surface((void*) ptr, fb.info.width, device->charh,
+                                        fb.info.stride, fb.info.format, 0);
+    if (!device->st_gfx)
+        goto fail;
+
     // init the main surface
-    device->gfx = gfx_create_surface((void*) ptr, hw_gfx->width, hw_gfx->height,
-                                     hw_gfx->stride, hw_gfx->format, 0);
+    ptr += fb.info.stride * device->charh * fb.info.pixelsize;
+    device->gfx = gfx_create_surface((void*) ptr, fb.info.width, fb.info.height - device->charh,
+                                     fb.info.stride, fb.info.format, 0);
     if (!device->gfx)
         goto fail;
-    device->hw_gfx = hw_gfx;
+#endif
 
     vc_device_setup(device);
     vc_device_reset(device);
@@ -536,6 +570,10 @@ fail:
 }
 
 void vc_device_free(vc_device_t* device) {
+    //TODO: unmap framebuffer
+    if (device->fd >= 0) {
+        close(device->fd);
+    }
     if (device->st_gfx) {
         gfx_surface_destroy(device->st_gfx);
     }

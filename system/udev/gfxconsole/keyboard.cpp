@@ -8,7 +8,7 @@
 #include <string.h>
 #include <threads.h>
 
-#include <ddk/protocol/input.h>
+#include <magenta/device/input.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 #include <magenta/syscalls.h>

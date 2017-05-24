@@ -9,6 +9,8 @@
 #include "vc.h"
 #include "vcdebug.h"
 
+#include <magenta/device/display.h>
+
 void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
                       bool invert) {
     uint8_t fg_color = vc_char_get_fg_color(ch);
@@ -25,49 +27,76 @@ void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
                 palette_to_color(dev, bg_color));
 }
 
+#if BUILD_FOR_TEST
+void vc_gfx_invalidate_all(vc_device_t* dev) {
+        gfx_copylines(dev->test_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
+        gfx_copylines(dev->test_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height - dev->st_gfx->height);
+}
+
+void vc_gfx_invalidate_status(vc_device_t* dev) {
+    gfx_copylines(dev->test_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
+}
+
+void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+    unsigned desty = dev->st_gfx->height + y * dev->charh;
+    if ((x == 0) && (w == dev->columns)) {
+        gfx_copylines(dev->test_gfx, dev->gfx, y * dev->charh, desty, h * dev->charh);
+    } else {
+        gfx_blend(dev->test_gfx, dev->gfx, x * dev->charw, y * dev->charh,
+                  w * dev->charw, h * dev->charh, x * dev->charw, desty);
+    }
+}
+
+void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+    unsigned desty = dev->st_gfx->height + y;
+    if ((x == 0) && (w == dev->columns)) {
+        gfx_copylines(dev->test_gfx, dev->gfx, y, desty, h);
+    } else {
+        gfx_blend(dev->test_gfx, dev->gfx, x, y, w, h, x, desty);
+    }
+}
+#else
 void vc_gfx_invalidate_all(vc_device_t* dev) {
     if (!dev->active)
         return;
-    if (dev->flags & VC_FLAG_FULLSCREEN) {
-        gfx_copylines(dev->hw_gfx, dev->gfx, 0, 0, dev->gfx->height);
-    } else {
-        gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
-        gfx_copylines(dev->hw_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height - dev->st_gfx->height);
-    }
-    gfx_flush(dev->hw_gfx);
+    ioctl_display_flush_fb(dev->fd);
 }
 
 void vc_gfx_invalidate_status(vc_device_t* dev) {
     if (!dev->active)
         return;
-    if (dev->flags & VC_FLAG_FULLSCREEN) {
-        return;
-    }
-    gfx_copylines(dev->hw_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
-    gfx_flush_rows(dev->hw_gfx, 0, dev->st_gfx->height);
+    ioctl_display_region_t r = {
+        .x = 0,
+        .y = 0,
+        .width = dev->gfx->width,
+        .height = dev->charh,
+    };
+    ioctl_display_flush_fb_region(dev->fd, &r);
 }
 
-void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
-    if (!dev->active)
-        return;
-    unsigned desty = dev->flags & VC_FLAG_FULLSCREEN ? y * dev->charh : dev->st_gfx->height + y * dev->charh;
-    if ((x == 0) && (w == dev->columns)) {
-        gfx_copylines(dev->hw_gfx, dev->gfx, y * dev->charh, desty, h * dev->charh);
-    } else {
-        gfx_blend(dev->hw_gfx, dev->gfx, x * dev->charw, y * dev->charh,
-                  w * dev->charw, h * dev->charh, x * dev->charw, desty);
-    }
-    gfx_flush_rows(dev->hw_gfx, desty, desty + h * dev->charh);
-}
-
+// pixel coords
 void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
-    unsigned desty = dev->flags & VC_FLAG_FULLSCREEN ? y : dev->st_gfx->height + y;
-    if ((x == 0) && (w == dev->columns)) {
-        gfx_copylines(dev->hw_gfx, dev->gfx, y, desty, h);
-    } else {
-        gfx_blend(dev->hw_gfx, dev->gfx, x, y, w, h, x, desty);
-    }
-    gfx_flush_rows(dev->hw_gfx, desty, desty + h);
+    ioctl_display_region_t r = {
+        .x = x,
+        .y = dev->charh + y,
+        .width = w,
+        .height = h,
+    };
+    ioctl_display_flush_fb_region(dev->fd, &r);
 }
+
+// text coords
+void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+    if (!dev->active)
+        return;
+    ioctl_display_region_t r = {
+        .x = x * dev->charw,
+        .y = dev->charh + y * dev->charh,
+        .width = w * dev->charw,
+        .height = h * dev->charh,
+    };
+    ioctl_display_flush_fb_region(dev->fd, &r);
+}
+#endif

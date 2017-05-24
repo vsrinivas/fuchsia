@@ -73,7 +73,7 @@ public:
             MX_PIXEL_FORMAT_RGB_565, 0);
         EXPECT_TRUE(vc_surface, "");
         // This takes ownership of vc_surface.
-        EXPECT_EQ(vc_device_alloc(vc_surface, &vc_dev), NO_ERROR, "");
+        EXPECT_EQ(vc_device_alloc(vc_surface, -1, &vc_dev), NO_ERROR, "");
         EXPECT_EQ(vc_dev->columns, size_x, "");
         EXPECT_EQ(vc_device_rows(vc_dev), static_cast<int>(size_y), "");
         // Mark the console as active so that display updates get
