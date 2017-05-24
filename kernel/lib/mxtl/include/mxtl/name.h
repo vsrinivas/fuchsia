@@ -25,18 +25,32 @@ namespace mxtl {
 template <size_t Size>
 class Name {
 public:
+    // Need room for at least one character and a NUL to be useful.
+    static_assert(Size >= 1u, "Names must have size > 1");
+
+    // Create an empty (i.e., "" with exactly 1 byte: a nul) Name.
     Name() {}
+
+    // Create a name from the given data. This will be guaranteed to
+    // be nul terminated, so the given data may be truncated.
     Name(const char* name, size_t len) {
         set(name, len);
     }
 
     ~Name() = default;
 
+    // Copy the Name's data out. The written data is guaranteed to be
+    // nul terminated, except when out_len is 0, in which case no data
+    // is written.
     void get(size_t out_len, char *out_name) const {
-        AutoSpinLock lock(lock_);
-        memcpy(out_name, name_, min(out_len, Size));
+        if (out_len > 0u) {
+            AutoSpinLock lock(lock_);
+            strlcpy(out_name, name_, min(out_len, Size));
+        }
     }
 
+    // Reset the Name to the given data. This will be guaranteed to
+    // be nul terminated, so the given data may be truncated.
     mx_status_t set(const char* name, size_t len) {
         if (len >= Size)
             len = Size - 1;

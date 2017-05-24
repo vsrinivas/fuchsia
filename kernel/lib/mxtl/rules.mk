@@ -17,5 +17,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/arena.cpp \
     $(LOCAL_DIR)/arena_tests.cpp \
     $(LOCAL_DIR)/inline_array_tests.cpp \
+    $(LOCAL_DIR)/name_tests.cpp \
 
 include make/module.mk
