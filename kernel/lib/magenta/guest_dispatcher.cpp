@@ -63,6 +63,14 @@ mx_status_t GuestDispatcher::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     return arch_guest_get_gpr(context_, guest_gpr);
 }
 
+#if ARCH_X86_64
+mx_status_t GuestDispatcher::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
+    canary_.Assert();
+
+    return x86_guest_set_apic_mem(context_, apic_mem);
+}
+#endif // ARCH_X86_64
+
 mx_status_t GuestDispatcher::set_ip(uintptr_t guest_ip) {
     canary_.Assert();
 

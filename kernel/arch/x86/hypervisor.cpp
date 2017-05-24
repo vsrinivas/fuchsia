@@ -28,6 +28,7 @@ class FifoDispatcher : public mxtl::RefCounted<FifoDispatcher> {};
     "setna %[" #var "];"     // Check CF and ZF for error.
 
 extern uint8_t _gdt[];
+static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -424,16 +425,11 @@ status_t VmcsPerCpu::Init(const VmxInfo& vmx_info) {
         return status;
 
     memset(&vmx_state_, 0, sizeof(vmx_state_));
-
-    status = local_apic_state_.virtual_apic_page.Alloc(vmx_info, 0);
-    if (status != NO_ERROR)
-        return status;
     timer_initialize(&local_apic_state_.timer);
     event_init(&local_apic_state_.event, false, EVENT_FLAG_AUTOUNSIGNAL);
     local_apic_state_.active_interrupt = kInvalidInterrupt;
     local_apic_state_.tsc_deadline = 0;
-    local_apic_state_.virtual_apic = local_apic_state_.virtual_apic_page.VirtualAddress();
-
+    local_apic_state_.apic_addr = nullptr;
     memset(&io_apic_state_, 0, sizeof(io_apic_state_));
     return NO_ERROR;
 }
@@ -670,8 +666,7 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
 
     // Setup APIC handling.
     vmcs_write(VmcsField64::APIC_ACCESS_ADDRESS, apic_access_address);
-    vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS,
-               local_apic_state_.virtual_apic_page.PhysicalAddress());
+    vmcs_write(VmcsField64::VIRTUAL_APIC_ADDRESS, vaddr_to_paddr(local_apic_state_.apic_addr));
 
     // Setup MSR handling.
     vmcs_write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
@@ -880,6 +875,16 @@ status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     return NO_ERROR;
 }
 
+status_t VmcsPerCpu::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
+    auto get_page = [](void* context, size_t offset, size_t index, paddr_t pa) -> status_t {
+        *static_cast<void**>(context) = paddr_to_kvaddr(pa);
+        return NO_ERROR;
+    };
+    local_apic_state_.apic_mem = apic_mem;
+    return local_apic_state_.apic_mem->Lookup(0, PAGE_SIZE, kPfFlags, get_page,
+                                              &local_apic_state_.apic_addr);
+}
+
 static int vmcs_setup(void* arg) {
     VmcsContext* context = static_cast<VmcsContext*>(arg);
     VmcsPerCpu* per_cpu = context->PerCpu();
@@ -988,6 +993,8 @@ static int vmcs_enter(void* arg) {
     VmcsPerCpu* per_cpu = context->PerCpu();
     if (per_cpu->ShouldResume())
         return ERR_UNAVAILABLE;
+    if (!per_cpu->HasApicMem())
+        return ERR_BAD_STATE;
     status_t status;
     do {
         status = per_cpu->Enter(*context, context->gpas(), context->ctl_fifo());
@@ -1015,6 +1022,11 @@ status_t VmcsContext::SetGpr(const mx_guest_gpr_t& guest_gpr) {
 status_t VmcsContext::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     // TODO(abdulla): Update this when we move to an external VCPU model.
     return per_cpus_[0].GetGpr(guest_gpr);
+}
+
+status_t VmcsContext::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {
+    // TODO(abdulla): Update this when we move to an external VCPU model.
+    return per_cpus_[0].SetApicMem(apic_mem);
 }
 
 status_t VmcsContext::set_ip(uintptr_t guest_ip) {
@@ -1062,6 +1074,11 @@ status_t arch_guest_set_gpr(const mxtl::unique_ptr<GuestContext>& context,
 status_t arch_guest_get_gpr(const mxtl::unique_ptr<GuestContext>& context,
                             mx_guest_gpr_t* guest_gpr) {
     return context->GetGpr(guest_gpr);
+}
+
+status_t x86_guest_set_apic_mem(const mxtl::unique_ptr<GuestContext>& context,
+                                mxtl::RefPtr<VmObject> apic_mem) {
+    return context->SetApicMem(apic_mem);
 }
 
 status_t arch_guest_set_ip(const mxtl::unique_ptr<GuestContext>& context, uintptr_t guest_ip) {

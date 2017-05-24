@@ -248,6 +248,13 @@ int main(int argc, char** argv) {
         return status;
     }
 
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
+                              &guest_ip, sizeof(guest_ip), NULL, 0);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to set guest RIP\n");
+        return status;
+    }
+
 #if __x86_64__
     uintptr_t guest_cr3 = 0;
     status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
@@ -256,14 +263,21 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to set guest CR3\n");
         return status;
     }
-#endif // __x86_64__
 
-    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_IP,
-                              &guest_ip, sizeof(guest_ip), NULL, 0);
+    mx_handle_t apic_mem;
+    status = mx_vmo_create(PAGE_SIZE, 0, &apic_mem);
     if (status != NO_ERROR) {
-        fprintf(stderr, "Failed to set guest RIP\n");
+        fprintf(stderr, "Failed to create guest local APIC memory\n");
         return status;
     }
+
+    status = mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
+                              &apic_mem, sizeof(apic_mem), NULL, 0);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to set guest local APIC memory\n");
+        return status;
+    }
+#endif // __x86_64__
 
     thrd_t thread;
     int ret = thrd_create(&thread, ctl_thread, &ctl_fifo);

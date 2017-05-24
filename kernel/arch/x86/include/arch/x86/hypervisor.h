@@ -71,6 +71,7 @@ public:
     status_t MemTrap(vaddr_t guest_paddr, size_t size);
     status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
+    status_t SetApicMem(mxtl::RefPtr<VmObject> apic_mem);
 
     status_t set_ip(uintptr_t guest_ip);
     uintptr_t ip() const {  return ip_; }
@@ -95,6 +96,10 @@ private:
 using HypervisorContext = VmxonContext;
 using GuestContext = VmcsContext;
 
+/* Set the local APIC memory of the guest context.
+ */
+status_t x86_guest_set_apic_mem(const mxtl::unique_ptr<GuestContext>& context,
+                                mxtl::RefPtr<VmObject> apic_mem);
 
 /* Set the initial CR3 of the guest context.
  */

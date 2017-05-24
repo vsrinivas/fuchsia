@@ -296,7 +296,7 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
 }
 
 static uint32_t* apic_reg(LocalApicState* local_apic_state, ApicRegister reg) {
-    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->virtual_apic);
+    uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->apic_addr);
     return reinterpret_cast<uint32_t*>(addr + static_cast<uint16_t>(reg));
 }
 

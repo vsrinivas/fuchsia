@@ -146,6 +146,23 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
 
     return guest->set_cr3(guest_cr3);
 }
+
+static mx_status_t guest_set_apic_mem(mx_handle_t handle, mx_handle_t apic_mem_handle) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<GuestDispatcher> guest;
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &guest);
+    if (status != NO_ERROR)
+        return status;
+
+    mxtl::RefPtr<VmObjectDispatcher> apic_mem;
+    status = up->GetDispatcherWithRights(
+        apic_mem_handle, MX_RIGHT_READ | MX_RIGHT_WRITE, &apic_mem);
+    if (status != NO_ERROR)
+        return status;
+
+    return guest->SetApicMem(apic_mem->vmo());
+}
 #endif
 
  mx_status_t sys_hypervisor_op(mx_handle_t handle, uint32_t opcode, user_ptr<const void> args,
@@ -181,7 +198,7 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
         mx_guest_gpr_t guest_gpr;
         if (args_len != sizeof(guest_gpr))
             return ERR_INVALID_ARGS;
-        if (args.reinterpret<const mx_guest_gpr_t>().copy_from_user(&guest_gpr) != NO_ERROR)
+        if (args.copy_array_from_user(&guest_gpr, sizeof(guest_gpr)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         return guest_set_gpr(handle, guest_gpr);
     }
@@ -192,7 +209,7 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
         mx_status_t status = guest_get_gpr(handle, &guest_gpr);
         if (status != NO_ERROR)
             return status;
-        if (result.reinterpret<mx_guest_gpr_t>().copy_to_user(guest_gpr) != NO_ERROR)
+        if (result.copy_array_to_user(&guest_gpr, sizeof(guest_gpr)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         return NO_ERROR;
     }
@@ -212,6 +229,14 @@ static mx_status_t guest_set_cr3(mx_handle_t handle, uintptr_t guest_cr3) {
         if (args.copy_array_from_user(&guest_cr3, sizeof(guest_cr3)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         return guest_set_cr3(handle, guest_cr3);
+    }
+    case MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM: {
+        mx_handle_t apic_mem;
+        if (args_len != sizeof(apic_mem))
+            return ERR_INVALID_ARGS;
+        if (args.copy_array_from_user(&apic_mem, sizeof(apic_mem)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        return guest_set_apic_mem(handle, apic_mem);
     }
 #endif // ARCH_X86_64
     default:

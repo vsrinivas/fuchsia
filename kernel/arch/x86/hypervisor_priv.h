@@ -269,9 +269,9 @@ struct LocalApicState {
     // TSC deadline.
     uint64_t tsc_deadline;
     // Virtual local APIC address.
-    void* virtual_apic;
-    // Virtual local APIC page.
-    VmxPage virtual_apic_page;
+    void* apic_addr;
+    // Virtual local APIC memory.
+    mxtl::RefPtr<VmObject> apic_mem;
 };
 
 /* Stores the IO APIC state across VM exits. */
@@ -295,8 +295,10 @@ public:
                    FifoDispatcher* ctl_fifo);
     status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
     status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
+    status_t SetApicMem(mxtl::RefPtr<VmObject> apic_mem);
 
     bool ShouldResume() const { return vmx_state_.resume; }
+    bool HasApicMem() const { return local_apic_state_.apic_addr != nullptr; }
 
 private:
     VmxPage host_msr_page_;

@@ -147,6 +147,12 @@ static bool guest_start_test(void) {
     ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3,
                                &guest_cr3, sizeof(guest_cr3), NULL, 0),
               NO_ERROR, "");
+
+    mx_handle_t guest_apic_mem;
+    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &guest_apic_mem), NO_ERROR, "");
+    ASSERT_EQ(mx_hypervisor_op(guest, MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM,
+                               &guest_apic_mem, sizeof(guest_apic_mem), NULL, 0),
+              NO_ERROR, "");
 #endif // __x86_64__
 
     // Enter the guest.
@@ -171,6 +177,10 @@ static bool guest_start_test(void) {
     ASSERT_EQ(mx_handle_close(guest_ctl_fifo), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(guest_phys_mem), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(hypervisor), NO_ERROR, "");
+
+#if __x86_64__
+    ASSERT_EQ(mx_handle_close(guest_apic_mem), NO_ERROR, "");
+#endif // __x86_64__
 
     END_TEST;
 }

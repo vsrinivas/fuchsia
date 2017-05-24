@@ -24,6 +24,7 @@ __BEGIN_CDECLS
 
 #if __x86_64__
 #define MX_HYPERVISOR_OP_GUEST_SET_ENTRY_CR3    7u
+#define MX_HYPERVISOR_OP_GUEST_SET_APIC_MEM     8u
 #endif // __x86_64__
 
 typedef struct mx_guest_gpr {

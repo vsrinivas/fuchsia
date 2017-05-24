@@ -25,6 +25,9 @@ public:
     mx_status_t MemTrap(mx_vaddr_t guest_paddr, size_t size);
     mx_status_t SetGpr(const mx_guest_gpr_t& guest_gpr);
     mx_status_t GetGpr(mx_guest_gpr_t* guest_gpr) const;
+#if ARCH_X86_64
+    mx_status_t SetApicMem(mxtl::RefPtr<VmObject> apic_mem);
+#endif // ARCH_X86_64
 
     mx_status_t set_ip(uintptr_t guest_ip);
 #if ARCH_X86_64
