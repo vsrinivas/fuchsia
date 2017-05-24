@@ -70,7 +70,11 @@ mx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     mx_status_t res;
     switch (resp.data) {
         // Intel NUC
-        case 0x80862063: res = SetupIntelNUC(); break;
+        case 0x80862068:            // Kaby Lake NUC Impl ID
+        case 0x80862063:            // Skylake NUC Impl ID
+            res = SetupIntelNUC();
+            break;
+
         case 0x1025111e: res = SetupAcer12(); break;
         default:
             LOG("Unrecognized implementation ID %08x!  No streams will be published.\n", resp.data);
