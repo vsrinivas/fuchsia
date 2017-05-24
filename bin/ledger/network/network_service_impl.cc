@@ -70,6 +70,7 @@ class NetworkServiceImpl::RunningRequest {
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
     const std::string& url = request->url.get();
+    const std::string& method = request->method.get();
     url_loader_->Start(
         std::move(request),
         TRACE_CALLBACK(std::function<void(network::URLResponsePtr)>(
@@ -93,7 +94,8 @@ class NetworkServiceImpl::RunningRequest {
                              callback_(std::move(response));
                              return;
                            }),
-                       "ledger", "network_url_loader_start", "url", url));
+                       "ledger", "network_url_loader_start", "url", url,
+                       "method", method));
 
     url_loader_.set_connection_error_handler([this]() {
       // If the connection to the url loader failed, restart the request.
