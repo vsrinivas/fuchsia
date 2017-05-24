@@ -10,6 +10,8 @@ source_set("tests") {
     "test_with_message_loop.h",
   ]
   public_deps = [
+    "//application/lib/app:app",
+    "//apps/test_runner/services:test_runner",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",

@@ -75,7 +75,7 @@ source_set("testing_common") {
   testonly = true
 
   sources = [
-    "tests/run_all_tests.cc",
+    "tests/main.cc",
   ]
 
   public_deps = [
