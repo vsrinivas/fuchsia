@@ -23,4 +23,27 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/gfx system/ulib/hid \
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/keyboard-test.cpp \
+    $(LOCAL_DIR)/keyboard-vt100.cpp \
+    $(LOCAL_DIR)/keyboard.cpp \
+    $(LOCAL_DIR)/vc-device.cpp \
+    $(LOCAL_DIR)/vc-gfx.cpp \
+    $(LOCAL_DIR)/textcon-test.cpp \
+    $(LOCAL_DIR)/textcon.cpp \
+    $(LOCAL_DIR)/main.cpp \
+
+MODULE_NAME := gfxconsole-test
+
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl
+
+MODULE_LIBS := system/ulib/driver system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
+
+include make/module.mk
+
 endif
