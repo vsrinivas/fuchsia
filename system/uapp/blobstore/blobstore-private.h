@@ -16,6 +16,8 @@
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
+#include <block-client/client.h>
+#include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
 #include <fs/vfs.h>
 
@@ -23,6 +25,9 @@ namespace blobstore {
 
 class Blobstore;
 class VnodeBlob;
+
+using WriteTxn = fs::WriteTxn<kBlobstoreBlockSize, Blobstore>;
+using ReadTxn = fs::ReadTxn<kBlobstoreBlockSize, Blobstore>;
 
 typedef uint32_t BlobFlags;
 
@@ -146,8 +151,7 @@ private:
     // the contents of a VMO into memory when it is opened.
     mx_status_t InitVmos();
 
-    mx_status_t WriteShared(size_t start, size_t len, uint64_t maxlen,
-                            mx_handle_t vmo, uint64_t start_block);
+    mx_status_t WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block);
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
     mx_status_t WriteMetadata();
@@ -163,6 +167,7 @@ private:
     // 1) The Merkle Tree
     // 2) The Blob itself, aligned to the nearest kBlobstoreBlockSize
     mxtl::unique_ptr<MappedVmo> blob_;
+    vmoid_t vmoid_;
 
     mx::event readable_event_;
     uint64_t bytes_written_;
@@ -218,6 +223,12 @@ public:
 
     mx_status_t Readdir(void* cookie, void* dirents, size_t len);
 
+    mx_status_t AttachVmo(mx_handle_t vmo, vmoid_t* out);
+    mx_status_t Txn(block_fifo_request_t* requests, size_t count) {
+        return block_fifo_txn(fifo_client_, requests, count);
+    }
+    txnid_t TxnId() const { return txnid_; }
+
     int blockfd_;
     blobstore_info_t info_;
 private:
@@ -232,19 +243,15 @@ private:
     mx_status_t AllocateNode(size_t* node_index_out);
     void FreeNode(size_t node_index);
 
-    // Access the nth block of the block bitmap.
-    void* GetBlockmapData(uint64_t n) const;
-    // Access the nth block of the node map.
-    void* GetNodemapData(uint64_t n) const;
     // Access the nth inode of the node map
     blobstore_inode_t* GetNode(size_t index) const;
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
-    mx_status_t WriteBitmap(uint64_t nblocks, uint64_t start_block);
+    mx_status_t WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block);
 
     // Given a node within the node map at an index, write it to disk.
-    mx_status_t WriteNode(size_t map_index);
+    mx_status_t WriteNode(WriteTxn* txn, size_t map_index);
 
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
@@ -254,8 +261,12 @@ private:
                                             VnodeBlob::TypeWavlTraits>;
     WAVLTreeByMerkle hash_; // Map of all 'in use' blobs
 
+    fifo_client_t* fifo_client_;
+    txnid_t txnid_;
     RawBitmap block_map_;
+    vmoid_t block_map_vmoid_;
     mxtl::unique_ptr<MappedVmo> node_map_;
+    vmoid_t node_map_vmoid_;
 };
 
 int blobstore_mkfs(int fd);

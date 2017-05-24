@@ -45,7 +45,7 @@ public:
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(vmoid_t id, uint32_t relative_block, uint32_t absolute_block, uint32_t nblocks) {
+    void Enqueue(vmoid_t id, uint64_t relative_block, uint64_t absolute_block, uint64_t nblocks) {
         for (size_t i = 0; i < count_; i++) {
             if (requests_[i].vmoid != id) {
                 continue;
@@ -125,8 +125,8 @@ public:
 
     // Identify that a block should be written to disk
     // as a later point in time.
-    void Enqueue(const void* id, uint32_t relative_block,
-                 uint32_t absolute_block, uint32_t nblocks) {
+    void Enqueue(const void* id, uint64_t relative_block,
+                 uint64_t absolute_block, uint64_t nblocks) {
         for (size_t b = 0; b < nblocks; b++) {
             if (Write) {
                 handler_->Writeblk(absolute_block + b, GetBlock<BlockSize>(id, relative_block + b));

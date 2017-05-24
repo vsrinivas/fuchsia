@@ -18,6 +18,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/rpc.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
     system/ulib/fs \
     system/ulib/merkle \
     third_party/ulib/cryptolib \
@@ -25,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
+    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/c \
