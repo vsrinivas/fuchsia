@@ -16,17 +16,18 @@ source_set("cpp") {
 }
 
 executable("apptests") {
-  output_name = "geometry_util_unittest"
+  output_name = "geometry_util_unittests"
 
   testonly = true
 
   sources = [
-    "geometry_util_unittest.cc",
+    "tests/main.cc",
+    "tests/geometry_util_unittests.cc",
   ]
 
   deps = [
     ":cpp",
-    "//lib/mtl/test",
+    "//apps/mozart/lib/tests",
     "//third_party/gtest",
   ]
 }
