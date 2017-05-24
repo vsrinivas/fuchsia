@@ -25,8 +25,8 @@
             "bootfs_path": "test/composer_unittests"
         },
         {
-            "binary": "geometry_util_unittest",
-            "bootfs_path": "apps/geometry_util_unittest"
+            "binary": "geometry_util_unittests",
+            "bootfs_path": "test/geometry_util_unittests"
         },
         {
             "binary": "hello_composer",
@@ -50,7 +50,7 @@
         },
         {
             "binary": "input_apptests",
-            "bootfs_path": "apps/input_apptests"
+            "bootfs_path": "test/input_apptests"
         },
         {
             "binary": "input",
@@ -110,7 +110,7 @@
         },
         {
             "binary": "view_manager_apptests",
-            "bootfs_path": "apps/view_manager_apptests"
+            "bootfs_path": "test/view_manager_apptests"
         }
     ],
     "resources": [
