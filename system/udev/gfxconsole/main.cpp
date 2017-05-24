@@ -46,13 +46,13 @@ mtx_t g_vc_lock = MTX_INIT;
 static struct list_node g_vc_list TA_GUARDED(g_vc_lock)
     = LIST_INITIAL_VALUE(g_vc_list);
 static unsigned g_vc_count TA_GUARDED(g_vc_lock) = 0;
-static vc_device_t* g_active_vc TA_GUARDED(g_vc_lock);
+static vc_t* g_active_vc TA_GUARDED(g_vc_lock);
 static unsigned g_active_vc_index TA_GUARDED(g_vc_lock);
 static vc_battery_info_t g_battery_info TA_GUARDED(g_vc_lock);
 
 static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
 
-static void vc_device_toggle_framebuffer() {
+static void vc_toggle_framebuffer() {
     //TODO
 }
 
@@ -80,7 +80,7 @@ static bool vc_handle_control_keys(uint8_t keycode,
 
     case HID_USAGE_KEY_F11:
         if (g_active_vc && (modifiers & MOD_ALT)) {
-            vc_device_set_fullscreen(g_active_vc, !(g_active_vc->flags & VC_FLAG_FULLSCREEN));
+            vc_set_fullscreen(g_active_vc, !(g_active_vc->flags & VC_FLAG_FULLSCREEN));
             return true;
         }
         break;
@@ -98,37 +98,37 @@ static bool vc_handle_control_keys(uint8_t keycode,
 
     case HID_USAGE_KEY_UP:
         if (modifiers & MOD_ALT) {
-            vc_device_scroll_viewport(g_active_vc, -1);
+            vc_scroll_viewport(g_active_vc, -1);
             return true;
         }
         break;
     case HID_USAGE_KEY_DOWN:
         if (modifiers & MOD_ALT) {
-            vc_device_scroll_viewport(g_active_vc, 1);
+            vc_scroll_viewport(g_active_vc, 1);
             return true;
         }
         break;
     case HID_USAGE_KEY_PAGEUP:
         if (modifiers & MOD_SHIFT) {
-            vc_device_scroll_viewport(g_active_vc, -(vc_device_rows(g_active_vc) / 2));
+            vc_scroll_viewport(g_active_vc, -(vc_rows(g_active_vc) / 2));
             return true;
         }
         break;
     case HID_USAGE_KEY_PAGEDOWN:
         if (modifiers & MOD_SHIFT) {
-            vc_device_scroll_viewport(g_active_vc, vc_device_rows(g_active_vc) / 2);
+            vc_scroll_viewport(g_active_vc, vc_rows(g_active_vc) / 2);
             return true;
         }
         break;
     case HID_USAGE_KEY_HOME:
         if (modifiers & MOD_SHIFT) {
-            vc_device_scroll_viewport_top(g_active_vc);
+            vc_scroll_viewport_top(g_active_vc);
             return true;
         }
         break;
     case HID_USAGE_KEY_END:
         if (modifiers & MOD_SHIFT) {
-            vc_device_scroll_viewport_bottom(g_active_vc);
+            vc_scroll_viewport_bottom(g_active_vc);
             return true;
         }
         break;
@@ -157,7 +157,7 @@ static bool vc_handle_device_control_keys(uint8_t keycode,
 
     case HID_USAGE_KEY_ESC:
         if (modifiers & MOD_ALT) {
-            vc_device_toggle_framebuffer();
+            vc_toggle_framebuffer();
             return true;
         }
         break;
@@ -180,13 +180,13 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     if (vc_handle_control_keys(keycode, modifiers))
         return;
 
-    vc_device_t* dev = g_active_vc;
+    vc_t* dev = g_active_vc;
     char output[4];
     uint32_t length = hid_key_to_vt100_code(
         keycode, modifiers, dev->keymap, output, sizeof(output));
     if (length > 0) {
         //TODO: write(output,length) to dev
-        vc_device_scroll_viewport_bottom(dev);
+        vc_scroll_viewport_bottom(dev);
     }
 }
 
@@ -195,7 +195,7 @@ static int vc_watch_for_keyboard_devices_thread(void* arg) {
     return -1;
 }
 
-static void __vc_set_active(vc_device_t* dev, unsigned index) TA_REQ(g_vc_lock) {
+static void __vc_set_active(vc_t* dev, unsigned index) TA_REQ(g_vc_lock) {
     if (g_active_vc)
         g_active_vc->active = false;
     dev->active = true;
@@ -204,14 +204,14 @@ static void __vc_set_active(vc_device_t* dev, unsigned index) TA_REQ(g_vc_lock) 
     g_active_vc_index = index;
 }
 
-static mx_status_t vc_set_console_to_active(vc_device_t* dev) TA_REQ(g_vc_lock) {
+static mx_status_t vc_set_console_to_active(vc_t* dev) TA_REQ(g_vc_lock) {
     if (dev == NULL)
         return ERR_INVALID_ARGS;
 
     unsigned i = 0;
-    vc_device_t* device = NULL;
+    vc_t* device = NULL;
 
-    list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
+    list_for_every_entry (&g_vc_list, device, vc_t, node) {
         if (device == dev)
             break;
         i++;
@@ -220,7 +220,7 @@ static mx_status_t vc_set_console_to_active(vc_device_t* dev) TA_REQ(g_vc_lock) 
         return ERR_INVALID_ARGS;
     }
     __vc_set_active(dev, i);
-    vc_device_render(g_active_vc);
+    vc_render(g_active_vc);
     return NO_ERROR;
 }
 
@@ -229,8 +229,8 @@ static mx_status_t vc_set_active_console(unsigned console) {
         return ERR_INVALID_ARGS;
 
     unsigned i = 0;
-    vc_device_t* device = NULL;
-    list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
+    vc_t* device = NULL;
+    list_for_every_entry (&g_vc_list, device, vc_t, node) {
         if (i == console)
             break;
         i++;
@@ -239,21 +239,21 @@ static mx_status_t vc_set_active_console(unsigned console) {
         return NO_ERROR;
     }
     __vc_set_active(device, console);
-    vc_device_render(g_active_vc);
+    vc_render(g_active_vc);
     return NO_ERROR;
 }
 
 void vc_get_status_line(char* str, int n) {
-    vc_device_t* device = NULL;
+    vc_t* device = NULL;
     char* ptr = str;
     unsigned i = 0;
     // TODO add process name, etc.
-    list_for_every_entry (&g_vc_list, device, vc_device_t, node) {
+    list_for_every_entry (&g_vc_list, device, vc_t, node) {
         if (n <= 0) {
             break;
         }
 
-        int lines = vc_device_get_scrollback_lines(device);
+        int lines = vc_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
                              device->active ? "\033[33m\033[1m" : "",
                              i,
@@ -271,7 +271,7 @@ void vc_get_battery_info(vc_battery_info_t* info) {
     memcpy(info, &g_battery_info, sizeof(vc_battery_info_t));
 }
 
-static void vc_device_destroy(vc_device_t* vc) {
+static void vc_destroy(vc_t* vc) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     list_delete(&vc->node);
@@ -285,9 +285,9 @@ static void vc_device_destroy(vc_device_t* vc) {
     }
 
     // need to fixup g_active_vc and g_active_vc_index after deletion
-    vc_device_t* d = NULL;
+    vc_t* d = NULL;
     unsigned i = 0;
-    list_for_every_entry (&g_vc_list, d, vc_device_t, node) {
+    list_for_every_entry (&g_vc_list, d, vc_t, node) {
         if (g_active_vc) {
             if (d == g_active_vc) {
                 g_active_vc_index = i;
@@ -302,26 +302,26 @@ static void vc_device_destroy(vc_device_t* vc) {
         i++;
     }
 
-    vc_device_free(vc);
+    vc_free(vc);
 
     // redraw the status line, or the full screen
     if (g_active_vc) {
-        vc_device_render(g_active_vc);
+        vc_render(g_active_vc);
     }
 }
 
 //TODO wire output from vc proc to here
-ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t off) {
+ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
     mxtl::AutoLock lock(&g_vc_lock);
 
-    vc->invy0 = vc_device_rows(vc) + 1;
+    vc->invy0 = vc_rows(vc) + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
     for (size_t i = 0; i < count; i++) {
         vc->textcon.putc(&vc->textcon, str[i]);
     }
     if (vc->invy1 >= 0) {
-        int rows = vc_device_rows(vc);
+        int rows = vc_rows(vc);
         // Adjust for the current viewport position.  Convert
         // console-relative row numbers to screen-relative row numbers.
         int invalidate_y0 = MIN(vc->invy0 - vc->viewport_y, rows);
@@ -331,7 +331,7 @@ ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t
     }
     if (!vc->active && !(vc->flags & VC_FLAG_HASOUTPUT)) {
         vc->flags |= VC_FLAG_HASOUTPUT;
-        vc_device_write_status(vc);
+        vc_write_status(vc);
         vc_gfx_invalidate_status(vc);
     }
     return count;
@@ -339,13 +339,13 @@ ssize_t vc_device_write(vc_device_t* vc, const void* buf, size_t count, mx_off_t
 
 int g_fb_fd = -1;
 
-// Create a new vc_device_t and add it to the console list.
-static mx_status_t vc_device_create(vc_device_t** vc_out) {
+// Create a new vc_t and add it to the console list.
+static mx_status_t vc_create(vc_t** vc_out) {
     mxtl::AutoLock lock(&g_vc_lock);
 
     mx_status_t status;
-    vc_device_t* device;
-    if ((status = vc_device_alloc(NULL, g_fb_fd, &device)) < 0) {
+    vc_t* device;
+    if ((status = vc_alloc(NULL, g_fb_fd, &device)) < 0) {
         return status;
     }
 
@@ -357,7 +357,7 @@ static mx_status_t vc_device_create(vc_device_t** vc_out) {
     if (!g_active_vc) {
         vc_set_active_console(0);
     } else {
-        vc_device_render(g_active_vc);
+        vc_render(g_active_vc);
     }
 
     *vc_out = device;
@@ -365,7 +365,7 @@ static mx_status_t vc_device_create(vc_device_t** vc_out) {
 }
 
 static int vc_log_reader_thread(void* arg) {
-    auto dev = reinterpret_cast<vc_device_t*>(arg);
+    auto dev = reinterpret_cast<vc_t*>(arg);
     mx_handle_t h;
 
     mx_koid_t koid = 0;
@@ -400,15 +400,15 @@ static int vc_log_reader_thread(void* arg) {
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                  rec->pid, rec->tid);
-        vc_device_write(dev, tmp, strlen(tmp), 0);
-        vc_device_write(dev, rec->data, rec->datalen, 0);
+        vc_write(dev, tmp, strlen(tmp), 0);
+        vc_write(dev, rec->data, rec->datalen, 0);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-            vc_device_write(dev, "\n", 1, 0);
+            vc_write(dev, "\n", 1, 0);
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
-    vc_device_write(dev, oops, strlen(oops), 0);
+    vc_write(dev, oops, strlen(oops), 0);
 
     return 0;
 }
@@ -434,7 +434,7 @@ static int vc_battery_poll_thread(void* arg) {
                 }
             }
             if (g_active_vc) {
-                vc_device_write_status(g_active_vc);
+                vc_write_status(g_active_vc);
                 vc_gfx_invalidate_status(g_active_vc);
             }
         }
@@ -509,8 +509,8 @@ int main(int argc, char** argv) {
     thrd_create_with_name(&u, vc_battery_dir_poll_thread, NULL,
                           "vc-battery-dir-poll");
 
-    vc_device_t* vc;
-    if (vc_device_create(&vc) == NO_ERROR) {
+    vc_t* vc;
+    if (vc_create(&vc) == NO_ERROR) {
         thrd_t t;
         thrd_create_with_name(&t, vc_log_reader_thread, vc, "vc-log-reader");
     }

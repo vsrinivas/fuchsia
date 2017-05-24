@@ -47,7 +47,7 @@ static uint32_t default_palette[] = {
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
 
-static mx_status_t vc_device_setup(vc_device_t* dev) {
+static mx_status_t vc_setup(vc_t* dev) {
     assert(dev->gfx);
 
     // calculate how many rows/columns we have
@@ -79,8 +79,8 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     return NO_ERROR;
 }
 
-static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
 
     assert(h >= 0);
     int y1 = y0 + h;
@@ -91,14 +91,14 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
     // outside the visible range, and so that we don't draw characters into
     // the bottom margin.
     int visible_y0 = dev->viewport_y;
-    int visible_y1 = dev->viewport_y + vc_device_rows(dev);
+    int visible_y1 = dev->viewport_y + vc_rows(dev);
     y0 = MAX(y0, visible_y0);
     y1 = MIN(y1, visible_y1);
 
     for (int y = y0; y < y1; y++) {
         if (y < 0) {
             // Scrollback row.
-            vc_char_t* row = vc_device_get_scrollback_line_ptr(
+            vc_char_t* row = vc_get_scrollback_line_ptr(
                 dev, y + dev->scrollback_rows_count);
             for (int x = x0; x < x0 + w; x++) {
                 vc_gfx_draw_char(dev, row[x], x, y - dev->viewport_y,
@@ -125,7 +125,7 @@ static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
 
 // implement tc callbacks:
 
-static inline void vc_invalidate_lines(vc_device_t* dev, int y, int h) {
+static inline void vc_invalidate_lines(vc_t* dev, int y, int h) {
     if (y < dev->invy0) {
         dev->invy0 = y;
     }
@@ -137,30 +137,30 @@ static inline void vc_invalidate_lines(vc_device_t* dev, int y, int h) {
 
 static void vc_tc_invalidate(void* cookie, int x0, int y0,
                              int w, int h) TA_REQ(g_vc_lock) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
-    vc_device_invalidate(cookie, x0, y0, w, h);
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
+    vc_invalidate(cookie, x0, y0, w, h);
     vc_invalidate_lines(dev, y0, h);
 }
 
 static void vc_tc_movecursor(void* cookie, int x, int y) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
     unsigned old_x = dev->cursor_x;
     unsigned old_y = dev->cursor_y;
     dev->cursor_x = x;
     dev->cursor_y = y;
     if (!dev->hide_cursor) {
         // Clear the cursor from its old position.
-        vc_device_invalidate(cookie, old_x, old_y, 1, 1);
+        vc_invalidate(cookie, old_x, old_y, 1, 1);
         vc_invalidate_lines(dev, old_y, 1);
 
         // Display the cursor in its new position.
-        vc_device_invalidate(cookie, dev->cursor_x, dev->cursor_y, 1, 1);
+        vc_invalidate(cookie, dev->cursor_x, dev->cursor_y, 1, 1);
         vc_invalidate_lines(dev, dev->cursor_y, 1);
     }
 }
 
 static void vc_tc_push_scrollback_line(void* cookie, int y) TA_REQ(g_vc_lock) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
 
     unsigned dest_row;
     assert(dev->scrollback_rows_count <= dev->scrollback_rows_max);
@@ -199,31 +199,31 @@ static void vc_tc_push_scrollback_line(void* cookie, int y) TA_REQ(g_vc_lock) {
             // display and remove the scrollback line that was lost.
             //
             // For simplicity, fall back to redrawing everything.
-            vc_device_invalidate(dev, 0, -dev->scrollback_rows_max,
-                                 dev->columns, vc_device_rows(dev));
-            vc_device_render(dev);
+            vc_invalidate(dev, 0, -dev->scrollback_rows_max,
+                                 dev->columns, vc_rows(dev));
+            vc_render(dev);
         }
     }
 }
 
-static void vc_set_cursor_hidden(vc_device_t* dev, bool hide) {
+static void vc_set_cursor_hidden(vc_t* dev, bool hide) {
     if (dev->hide_cursor == hide)
         return;
     dev->hide_cursor = hide;
-    vc_device_invalidate(dev, dev->cursor_x, dev->cursor_y, 1, 1);
+    vc_invalidate(dev, dev->cursor_x, dev->cursor_y, 1, 1);
     vc_invalidate_lines(dev, dev->cursor_y, 1);
 }
 
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
                              int line_count) TA_REQ(g_vc_lock) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
     if (dev->viewport_y < 0) {
         tc_copy_lines(&dev->textcon, y_dest, y_src, line_count);
 
         // The viewport is scrolled.  For simplicity, fall back to
         // redrawing all of the non-scrollback lines in this case.
-        int rows = vc_device_rows(dev);
-        vc_device_invalidate(dev, 0, 0, dev->columns, rows);
+        int rows = vc_rows(dev);
+        vc_invalidate(dev, 0, 0, dev->columns, rows);
         vc_invalidate_lines(dev, 0, rows);
         return;
     }
@@ -244,19 +244,19 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
     // Restore the cursor.
     vc_set_cursor_hidden(dev, old_hide_cursor);
 
-    vc_device_write_status(dev);
+    vc_write_status(dev);
     vc_gfx_invalidate_status(dev);
-    vc_invalidate_lines(dev, 0, vc_device_rows(dev));
+    vc_invalidate_lines(dev, 0, vc_rows(dev));
 }
 
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg,
                            size_t arglen) TA_REQ(g_vc_lock) {
-    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
+    vc_t* dev = reinterpret_cast<vc_t*>(cookie);
     switch (param) {
     case TC_SET_TITLE:
         strncpy(dev->title, (char*)arg, sizeof(dev->title));
         dev->title[sizeof(dev->title) - 1] = '\0';
-        vc_device_write_status(dev);
+        vc_write_status(dev);
         vc_gfx_invalidate_status(dev);
         break;
     case TC_SHOW_CURSOR:
@@ -269,20 +269,20 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg,
     }
 }
 
-static void vc_device_clear_gfx(vc_device_t* dev) {
+static void vc_clear_gfx(vc_t* dev) {
     // Fill display with background color
     gfx_fillrect(dev->gfx, 0, 0, dev->gfx->width, dev->gfx->height,
                  palette_to_color(dev, dev->back_color));
 }
 
-static void vc_device_reset(vc_device_t* dev) {
+static void vc_reset(vc_t* dev) {
     // reset the cursor
     dev->cursor_x = 0;
     dev->cursor_y = 0;
     // reset the viewport position
     dev->viewport_y = 0;
 
-    tc_init(&dev->textcon, dev->columns, vc_device_rows(dev), dev->text_buf, dev->front_color, dev->back_color);
+    tc_init(&dev->textcon, dev->columns, vc_rows(dev), dev->text_buf, dev->front_color, dev->back_color);
     dev->textcon.cookie = dev;
     dev->textcon.invalidate = vc_tc_invalidate;
     dev->textcon.movecursor = vc_tc_movecursor;
@@ -297,7 +297,7 @@ static void vc_device_reset(vc_device_t* dev) {
         *ptr++ = vc_char_make(' ', dev->front_color, dev->back_color);
     }
 
-    vc_device_clear_gfx(dev);
+    vc_clear_gfx(dev);
     gfx_flush(dev->gfx);
 
     vc_gfx_invalidate_all(dev);
@@ -306,7 +306,7 @@ static void vc_device_reset(vc_device_t* dev) {
 #define STATUS_FG 7
 #define STATUS_BG 0
 
-static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) {
+static void write_status_at(vc_t* dev, const char* str, unsigned offset) {
     static enum { NORMAL,
                   ESCAPE } state = NORMAL;
     uint8_t fg = STATUS_FG;
@@ -346,7 +346,7 @@ static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) 
     }
 }
 
-void vc_device_write_status(vc_device_t* dev) {
+void vc_write_status(vc_t* dev) {
     char str[512];
 
     // draw the tabs
@@ -381,28 +381,28 @@ void vc_device_write_status(vc_device_t* dev) {
     gfx_flush(dev->st_gfx);
 }
 
-void vc_device_render(vc_device_t* dev) {
-    vc_device_write_status(dev);
+void vc_render(vc_t* dev) {
+    vc_write_status(dev);
     vc_gfx_invalidate_all(dev);
 }
 
-void vc_device_invalidate_all_for_testing(vc_device_t* dev) {
+void vc_invalidate_all_for_testing(vc_t* dev) {
     // This function is called from tests which don't use threading and so
     // don't need locking.  We claim the following lock just to keep
     // Clang's thread annotations checker happy.
     mxtl::AutoLock lock(&g_vc_lock);
 
-    vc_device_clear_gfx(dev);
-    int scrollback_lines = vc_device_get_scrollback_lines(dev);
-    vc_device_invalidate(dev, 0, -scrollback_lines,
+    vc_clear_gfx(dev);
+    int scrollback_lines = vc_get_scrollback_lines(dev);
+    vc_invalidate(dev, 0, -scrollback_lines,
                          dev->columns, scrollback_lines + dev->rows);
 }
 
-int vc_device_get_scrollback_lines(vc_device_t* dev) {
+int vc_get_scrollback_lines(vc_t* dev) {
     return dev->scrollback_rows_count;
 }
 
-vc_char_t* vc_device_get_scrollback_line_ptr(vc_device_t* dev, unsigned row) {
+vc_char_t* vc_get_scrollback_line_ptr(vc_t* dev, unsigned row) {
     assert(row < dev->scrollback_rows_count);
     row += dev->scrollback_offset;
     if (row >= dev->scrollback_rows_max)
@@ -410,50 +410,50 @@ vc_char_t* vc_device_get_scrollback_line_ptr(vc_device_t* dev, unsigned row) {
     return &dev->scrollback_buf[row * dev->columns];
 }
 
-static void vc_device_scroll_viewport_abs(vc_device_t* dev,
+static void vc_scroll_viewport_abs(vc_t* dev,
                                           int vpy) TA_REQ(g_vc_lock) {
     vpy = MIN(vpy, 0);
-    vpy = MAX(vpy, -vc_device_get_scrollback_lines(dev));
+    vpy = MAX(vpy, -vc_get_scrollback_lines(dev));
     int diff = vpy - dev->viewport_y;
     if (diff == 0)
         return;
     int diff_abs = ABS(diff);
     dev->viewport_y = vpy;
-    int rows = vc_device_rows(dev);
+    int rows = vc_rows(dev);
     if (diff_abs >= rows) {
         // We are scrolling the viewport by a large delta.  Invalidate all
         // of the visible area of the console.
-        vc_device_invalidate(dev, 0, vpy, dev->columns, rows);
+        vc_invalidate(dev, 0, vpy, dev->columns, rows);
     } else {
         if (diff > 0) {
             gfx_copyrect(dev->gfx, 0, diff_abs * dev->charh,
                          dev->gfx->width, (rows - diff_abs) * dev->charh, 0, 0);
-            vc_device_invalidate(dev, 0, vpy + rows - diff_abs, dev->columns,
+            vc_invalidate(dev, 0, vpy + rows - diff_abs, dev->columns,
                                  diff_abs);
         } else {
             gfx_copyrect(dev->gfx, 0, 0, dev->gfx->width,
                          (rows - diff_abs) * dev->charh, 0,
                          diff_abs * dev->charh);
-            vc_device_invalidate(dev, 0, vpy, dev->columns, diff_abs);
+            vc_invalidate(dev, 0, vpy, dev->columns, diff_abs);
         }
     }
     gfx_flush(dev->gfx);
-    vc_device_render(dev);
+    vc_render(dev);
 }
 
-void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
-    vc_device_scroll_viewport_abs(dev, dev->viewport_y + dir);
+void vc_scroll_viewport(vc_t* dev, int dir) {
+    vc_scroll_viewport_abs(dev, dev->viewport_y + dir);
 }
 
-void vc_device_scroll_viewport_top(vc_device_t* dev) {
-    vc_device_scroll_viewport_abs(dev, INT_MIN);
+void vc_scroll_viewport_top(vc_t* dev) {
+    vc_scroll_viewport_abs(dev, INT_MIN);
 }
 
-void vc_device_scroll_viewport_bottom(vc_device_t* dev) {
-    vc_device_scroll_viewport_abs(dev, 0);
+void vc_scroll_viewport_bottom(vc_t* dev) {
+    vc_scroll_viewport_abs(dev, 0);
 }
 
-void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
+void vc_set_fullscreen(vc_t* dev, bool fullscreen) {
     unsigned flags;
     if (fullscreen) {
         flags = dev->flags | VC_FLAG_FULLSCREEN;
@@ -462,9 +462,9 @@ void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
     }
     if (flags != dev->flags) {
         dev->flags = flags;
-        tc_seth(&dev->textcon, vc_device_rows(dev));
+        tc_seth(&dev->textcon, vc_rows(dev));
     }
-    vc_device_render(dev);
+    vc_render(dev);
 }
 
 const gfx_font* vc_get_font() {
@@ -481,9 +481,9 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
-mx_status_t vc_device_alloc(gfx_surface* test, int fd, vc_device_t** out_dev) {
-    vc_device_t* device =
-        reinterpret_cast<vc_device_t*>(calloc(1, sizeof(vc_device_t)));
+mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
+    vc_t* device =
+        reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
     if (!device)
         return ERR_NO_MEMORY;
     device->fd = -1;
@@ -526,12 +526,12 @@ mx_status_t vc_device_alloc(gfx_surface* test, int fd, vc_device_t** out_dev) {
         goto fail;
     }
     if ((fd = openat(fd, "0", O_RDWR)) < 0) {
-        printf("vc_device_alloc: cannot obtain fb driver instance\n");
+        printf("vc_alloc: cannot obtain fb driver instance\n");
         goto fail;
     }
     if (ioctl_display_get_fb(fd, &fb) != sizeof(fb)) {
         close(fd);
-        printf("vc_device_alloc: cannot get fb from driver instance\n");
+        printf("vc_alloc: cannot get fb from driver instance\n");
         goto fail;
     }
     device->fd = fd;
@@ -559,17 +559,17 @@ mx_status_t vc_device_alloc(gfx_surface* test, int fd, vc_device_t** out_dev) {
         goto fail;
 #endif
 
-    vc_device_setup(device);
-    vc_device_reset(device);
+    vc_setup(device);
+    vc_reset(device);
 
     *out_dev = device;
     return NO_ERROR;
 fail:
-    vc_device_free(device);
+    vc_free(device);
     return ERR_NO_MEMORY;
 }
 
-void vc_device_free(vc_device_t* device) {
+void vc_free(vc_t* device) {
     //TODO: unmap framebuffer
     if (device->fd >= 0) {
         close(device->fd);

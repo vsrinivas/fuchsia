@@ -11,7 +11,7 @@
 
 #include <magenta/device/display.h>
 
-void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
+void vc_gfx_draw_char(vc_t* dev, vc_char_t ch, unsigned x, unsigned y,
                       bool invert) {
     uint8_t fg_color = vc_char_get_fg_color(ch);
     uint8_t bg_color = vc_char_get_bg_color(ch);
@@ -28,16 +28,16 @@ void vc_gfx_draw_char(vc_device_t* dev, vc_char_t ch, unsigned x, unsigned y,
 }
 
 #if BUILD_FOR_TEST
-void vc_gfx_invalidate_all(vc_device_t* dev) {
+void vc_gfx_invalidate_all(vc_t* dev) {
         gfx_copylines(dev->test_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
         gfx_copylines(dev->test_gfx, dev->gfx, 0, dev->st_gfx->height, dev->gfx->height - dev->st_gfx->height);
 }
 
-void vc_gfx_invalidate_status(vc_device_t* dev) {
+void vc_gfx_invalidate_status(vc_t* dev) {
     gfx_copylines(dev->test_gfx, dev->st_gfx, 0, 0, dev->st_gfx->height);
 }
 
-void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+void vc_gfx_invalidate(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     unsigned desty = dev->st_gfx->height + y * dev->charh;
     if ((x == 0) && (w == dev->columns)) {
         gfx_copylines(dev->test_gfx, dev->gfx, y * dev->charh, desty, h * dev->charh);
@@ -47,7 +47,7 @@ void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, uns
     }
 }
 
-void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+void vc_gfx_invalidate_region(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     unsigned desty = dev->st_gfx->height + y;
     if ((x == 0) && (w == dev->columns)) {
         gfx_copylines(dev->test_gfx, dev->gfx, y, desty, h);
@@ -56,13 +56,13 @@ void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned
     }
 }
 #else
-void vc_gfx_invalidate_all(vc_device_t* dev) {
+void vc_gfx_invalidate_all(vc_t* dev) {
     if (!dev->active)
         return;
     ioctl_display_flush_fb(dev->fd);
 }
 
-void vc_gfx_invalidate_status(vc_device_t* dev) {
+void vc_gfx_invalidate_status(vc_t* dev) {
     if (!dev->active)
         return;
     ioctl_display_region_t r = {
@@ -75,7 +75,7 @@ void vc_gfx_invalidate_status(vc_device_t* dev) {
 }
 
 // pixel coords
-void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+void vc_gfx_invalidate_region(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
     ioctl_display_region_t r = {
@@ -88,7 +88,7 @@ void vc_gfx_invalidate_region(vc_device_t* dev, unsigned x, unsigned y, unsigned
 }
 
 // text coords
-void vc_gfx_invalidate(vc_device_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
+void vc_gfx_invalidate(vc_t* dev, unsigned x, unsigned y, unsigned w, unsigned h) {
     if (!dev->active)
         return;
     ioctl_display_region_t r = {

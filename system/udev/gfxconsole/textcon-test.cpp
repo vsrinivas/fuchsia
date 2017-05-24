@@ -34,13 +34,13 @@ void setparam_callback(void* cookie, int param, uint8_t* arg, size_t arglen) {
 // creates two console instances:
 //
 //  * A textcon_t (non-graphical), for testing character-level output.
-//  * A vc_device_t (graphical), for testing incremental updates to the
+//  * A vc_t (graphical), for testing incremental updates to the
 //    gfx_surface.
 //
 // In principle, we could test the character-level output via the textcon_t
-// that the vc_device_t creates internally.  However, using our own
+// that the vc_t creates internally.  However, using our own
 // separate textcon_t instance helps check that textcon_t can be used on
-// its own, outside of vc_device_t.
+// its own, outside of vc_t.
 class TextconHelper {
 public:
     TextconHelper(uint32_t size_x, uint32_t size_y) : size_x(size_x),
@@ -59,7 +59,7 @@ public:
         for (size_t i = 0; i < size_x * size_y; ++i)
             textbuf[i] = ' ';
 
-        // Create a vc_device_t with the same size in characters.
+        // Create a vc_t with the same size in characters.
         const gfx_font* font = vc_get_font();
         int pixels_x = font->width * size_x;
         int pixels_y = font->height * (size_y + 1); // Add 1 for status line.
@@ -73,9 +73,9 @@ public:
             MX_PIXEL_FORMAT_RGB_565, 0);
         EXPECT_TRUE(vc_surface, "");
         // This takes ownership of vc_surface.
-        EXPECT_EQ(vc_device_alloc(vc_surface, -1, &vc_dev), NO_ERROR, "");
+        EXPECT_EQ(vc_alloc(vc_surface, -1, &vc_dev), NO_ERROR, "");
         EXPECT_EQ(vc_dev->columns, size_x, "");
-        EXPECT_EQ(vc_device_rows(vc_dev), static_cast<int>(size_y), "");
+        EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y), "");
         // Mark the console as active so that display updates get
         // propagated to vc_surface.
         vc_dev->active = true;
@@ -85,10 +85,10 @@ public:
 
     ~TextconHelper() {
         delete[] textbuf;
-        vc_device_free(vc_dev);
+        vc_free(vc_dev);
     }
 
-    // Takes a snapshot of the vc_device_t's display.
+    // Takes a snapshot of the vc_t's display.
     class DisplaySnapshot {
     public:
         DisplaySnapshot(TextconHelper* helper)
@@ -98,7 +98,7 @@ public:
                    helper->vc_surface->len);
         }
 
-        // Returns whether the vc_device_t's display changed since the
+        // Returns whether the vc_t's display changed since the
         // snapshot was taken.
         bool ChangedSinceSnapshot() {
             return memcmp(snapshot_.get(), helper_->vc_surface->ptr,
@@ -106,7 +106,7 @@ public:
         }
 
         mxtl::unique_ptr<char[]> ComparisonString() {
-            vc_device_t* vc_dev = helper_->vc_dev;
+            vc_t* vc_dev = helper_->vc_dev;
             gfx_surface* vc_surface = helper_->vc_surface;
             // Add 1 to these sizes to account for the margins.
             uint32_t cmp_size_x = vc_dev->columns + 1;
@@ -149,7 +149,7 @@ public:
             return string;
         }
 
-        // Prints a representation of which characters in the vc_device_t's
+        // Prints a representation of which characters in the vc_t's
         // display changed since the snapshot was taken.
         void PrintComparison() {
             printf("%s", ComparisonString().get());
@@ -161,7 +161,7 @@ public:
     };
 
     void InvalidateAllGraphics() {
-        vc_device_invalidate_all_for_testing(vc_dev);
+        vc_invalidate_all_for_testing(vc_dev);
         vc_gfx_invalidate_all(vc_dev);
     }
 
@@ -169,7 +169,7 @@ public:
         for (const char* ptr = str; *ptr; ++ptr)
             textcon.putc(&textcon, *ptr);
 
-        vc_device_write(vc_dev, str, strlen(str), 0);
+        vc_write(vc_dev, str, strlen(str), 0);
         // Test that the incremental update of the display was correct.  We
         // do that by refreshing the entire display, and checking that
         // there was no change.
@@ -204,7 +204,7 @@ public:
     textcon_t textcon = {};
 
     gfx_surface* vc_surface;
-    vc_device_t* vc_dev;
+    vc_t* vc_dev;
 };
 
 bool test_simple() {
@@ -312,7 +312,7 @@ bool test_scroll_up() {
     tc.AssertLineContains(1, "CCC");
     tc.AssertLineContains(2, "DDD");
     tc.AssertLineContains(3, "");
-    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 1, "");
+    EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1, "");
 
     END_TEST;
 }
@@ -330,7 +330,7 @@ bool test_scroll_up_nel() {
     tc.AssertLineContains(1, "CCC");
     tc.AssertLineContains(2, "DDD");
     tc.AssertLineContains(3, "");
-    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 1, "");
+    EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 1, "");
 
     END_TEST;
 }
@@ -348,7 +348,7 @@ bool test_insert_lines() {
     tc.AssertLineContains(2, "   Z");
     tc.AssertLineContains(3, "");
     tc.AssertLineContains(4, "CCC");
-    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 0, "");
+    EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 0, "");
 
     END_TEST;
 }
@@ -369,7 +369,7 @@ bool test_delete_lines() {
     // TODO(mseaborn): We probably don't want to be adding the deleted
     // lines to the scrollback in this case, because they are not from the
     // top of the console.
-    EXPECT_EQ(vc_device_get_scrollback_lines(tc.vc_dev), 2, "");
+    EXPECT_EQ(vc_get_scrollback_lines(tc.vc_dev), 2, "");
 
     END_TEST;
 }
@@ -511,11 +511,11 @@ bool test_scroll_viewport_by_large_delta() {
         mxtl::AutoLock lock(&g_vc_lock);
 
         // Scroll up, to show older lines.
-        vc_device_scroll_viewport_top(tc.vc_dev);
+        vc_scroll_viewport_top(tc.vc_dev);
         EXPECT_EQ(tc.vc_dev->viewport_y, -lines, "");
 
         // Scroll down, to show newer lines.
-        vc_device_scroll_viewport_bottom(tc.vc_dev);
+        vc_scroll_viewport_bottom(tc.vc_dev);
         EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
     }
 
@@ -549,7 +549,7 @@ bool test_viewport_scrolling_follows_scrollback() {
     tc.PutString("\n\n\n");
     {
         mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_device_scroll_viewport(tc.vc_dev, -2);
+        vc_scroll_viewport(tc.vc_dev, -2);
     }
     EXPECT_EQ(tc.vc_dev->viewport_y, -2, "");
     int limit = tc.vc_dev->scrollback_rows_max;
@@ -574,7 +574,7 @@ bool test_output_when_viewport_scrolled() {
     EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
     {
         mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_device_scroll_viewport_top(tc.vc_dev);
+        vc_scroll_viewport_top(tc.vc_dev);
     }
     EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
     // Check redrawing consistency.
@@ -609,7 +609,7 @@ bool test_scrolling_when_viewport_scrolled() {
     EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
     {
         mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_device_scroll_viewport_top(tc.vc_dev);
+        vc_scroll_viewport_top(tc.vc_dev);
     }
     EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
     // Check redrawing consistency.
@@ -624,7 +624,7 @@ bool test_scrolling_when_viewport_scrolled() {
     END_TEST;
 }
 
-// Test that vc_device_get_scrollback_lines() gives the correct results.
+// Test that vc_get_scrollback_lines() gives the correct results.
 bool test_scrollback_lines_count() {
     BEGIN_TEST;
 
@@ -639,7 +639,7 @@ bool test_scrollback_lines_count() {
     for (int lines = 1; lines < kLimit * 4; ++lines) {
         tc.PutString("\n");
         EXPECT_EQ(MIN(lines, kLimit),
-                  vc_device_get_scrollback_lines(tc.vc_dev), "");
+                  vc_get_scrollback_lines(tc.vc_dev), "");
     }
 
     END_TEST;
@@ -662,18 +662,18 @@ bool test_scrollback_lines_contents() {
         tc.vc_dev->text_buf[0] = test_val++;
         tc.PutString("\n");
 
-        EXPECT_EQ(lines, vc_device_get_scrollback_lines(tc.vc_dev), "");
+        EXPECT_EQ(lines, vc_get_scrollback_lines(tc.vc_dev), "");
         for (int i = 0; i < lines; ++i)
-            EXPECT_EQ(i, vc_device_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+            EXPECT_EQ(i, vc_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
     }
     for (int lines = 0; lines < kLimit * 3; ++lines) {
         tc.vc_dev->text_buf[0] = test_val++;
         tc.PutString("\n");
 
-        EXPECT_EQ(kLimit, vc_device_get_scrollback_lines(tc.vc_dev), "");
+        EXPECT_EQ(kLimit, vc_get_scrollback_lines(tc.vc_dev), "");
         for (int i = 0; i < kLimit; ++i) {
             EXPECT_EQ(test_val + i - kLimit,
-                      vc_device_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
+                      vc_get_scrollback_line_ptr(tc.vc_dev, i)[0], "");
         }
     }
 
