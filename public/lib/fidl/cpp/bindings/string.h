@@ -19,6 +19,10 @@ namespace fidl {
 // object.
 class String {
  public:
+  // Provide iterator access to the underlying std::string.
+  using ConstIterator = typename std::string::const_iterator;
+  using Iterator = typename std::string::iterator;
+
   typedef internal::String_Data Data_;
 
   String() : is_null_(true) {}
@@ -97,6 +101,13 @@ class String {
     is_null_ = false;
     value_.swap(*other);
   }
+
+  // std::string iterators into the string. The behavior is undefined
+  // if the string is null.
+  Iterator begin() { return value_.begin(); }
+  Iterator end() { return value_.end(); }
+  ConstIterator begin() const { return value_.begin(); }
+  ConstIterator end() const { return value_.end(); }
 
  private:
   std::string value_;
