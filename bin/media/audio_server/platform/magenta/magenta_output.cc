@@ -33,8 +33,8 @@ static constexpr uint32_t kDefaultRingBufferFrames =
     ((kDefaultRingBufferMsec * kDefaultFramesPerSec) + 999) / 1000;
 static constexpr uint32_t kDefaultRingBufferBytes =
     kDefaultRingBufferFrames * kDefaultFrameSize;
-static constexpr int64_t kDefaultLowWaterNsec = 2000000;   // 2 msec for now
-static constexpr int64_t kDefaultHighWaterNsec = 4000000;  // 4 msec for now
+static constexpr int64_t kDefaultLowWaterNsec = 15000000;   // 15 msec for now
+static constexpr int64_t kDefaultHighWaterNsec = 20000000;  // 20 msec for now
 static constexpr mx_duration_t kUnderflowCooldown = MX_SEC(1);
 
 static mxtl::atomic<mx_txid_t> TXID_GEN(1);
