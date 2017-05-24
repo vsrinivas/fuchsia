@@ -15,8 +15,8 @@ Sections will be populated over time.
 
  - Device Manager & Device Hosts
  - Device Driver Model (DDK)
- - C Library (libc) & POSIX IO (libmxio)
- - Process Start / ELF Loading (liblaunchpad)
+ - [C Library (libc) & POSIX IO (libmxio)](libc.md)
+ - [Process Start / ELF Loading (liblaunchpad)](launchpad.md)
 
 # Framework
 

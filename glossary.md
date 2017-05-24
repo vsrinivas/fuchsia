@@ -100,10 +100,11 @@ never crashing. For example, Init does not dynamically allocate memory.
 
 #### **Launchpad**
 
-Launchpad is a library provided by Magenta that provides the functionality to create
-and start new processes (including loading ELF binaries, passing initial RPC messages
-needed by runtime init, etc).  It is a low-level library and over time it is expected
-that few pieces of code will make direct use of it.
+[Launchpad](launchpad.md) is a library provided by Magenta that provides the
+functionality to create and start new processes (including loading ELF binaries,
+passing initial RPC messages needed by runtime init, etc).  It is a low-level
+library and over time it is expected that few pieces of code will make direct
+use of it.
 - [Launchpad API (launchpad.h)](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/launchpad/include/launchpad/launchpad.h)
 
 #### **LK**
