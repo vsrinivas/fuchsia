@@ -45,11 +45,10 @@ class DummyStoryShellApp
   }
 
   // |StoryShell|
-  void ConnectView(
-      fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
-      const uint64_t view_id,
-      const uint64_t parent_id,
-      modular::SurfaceRelationPtr surface_relation) override {
+  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
+                   const fidl::String& view_id,
+                   const fidl::String& parent_id,
+                   modular::SurfaceRelationPtr surface_relation) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {

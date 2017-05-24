@@ -66,7 +66,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   //
   // Returns the module instance id so StartModuleInShell() can pass it to the
   // StoryShell.
-  void StartModule(
+  fidl::String StartModule(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
       const fidl::String& query,
@@ -74,8 +74,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
-      std::function<void(uint32_t)> done);
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
 
   // Called by ModuleContextImpl.
   void StartModuleInShell(
@@ -86,7 +85,6 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      uint64_t parent_id,
       SurfaceRelationPtr surface_relation);
 
   // Called by ModuleContextImpl.
@@ -183,7 +181,6 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   app::ApplicationControllerPtr story_shell_controller_;
   StoryShellPtr story_shell_;
   fidl::Binding<StoryContext> story_context_binding_;
-  uint64_t next_module_instance_id_{1};
 
   // Needed to hold on to a running story. They get reset on Stop().
   fidl::BindingSet<ModuleWatcher> module_watcher_bindings_;

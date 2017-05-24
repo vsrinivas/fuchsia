@@ -17,13 +17,11 @@ namespace modular {
 ModuleContextImpl::ModuleContextImpl(
     const fidl::Array<fidl::String>& module_path,
     const ModuleContextInfo& info,
-    const uint64_t id,
     const std::string& module_url,
     const LinkPathPtr& default_link_path,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<ModuleContext> module_context)
     : module_path_(module_path.Clone()),
-      id_(id),
       story_impl_(info.story_impl),
       module_url_(module_url),
       default_link_path_(default_link_path.Clone()),
@@ -59,10 +57,10 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(
-      module_path_, name, query, link_name, std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller),
-      std::move(view_owner), [](uint32_t) {});
+  story_impl_->StartModule(module_path_, name, query, link_name,
+                           std::move(outgoing_services),
+                           std::move(incoming_services),
+                           std::move(module_controller), std::move(view_owner));
 }
 
 void ModuleContextImpl::StartModuleInShell(
@@ -75,7 +73,7 @@ void ModuleContextImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation) {
   story_impl_->StartModuleInShell(
       module_path_, name, query, link_name, std::move(outgoing_services),
-      std::move(incoming_services), std::move(module_controller), id_,
+      std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation));
 }
 

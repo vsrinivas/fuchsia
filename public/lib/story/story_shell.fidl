@@ -31,7 +31,7 @@ interface StoryShell {
   // context that allows the story shell to decide how to layout will
   // be added later. Also, interface to influence life cycle and focus
   // is obviously missing.
-  ConnectView(mozart.ViewOwner owner, uint64 view_id, uint64 parent_id,
+  ConnectView(mozart.ViewOwner owner, string view_id, string parent_id,
               SurfaceRelation? surface_relation);
 
   // Signals to the StoryShell to tear down itself. Upon response the

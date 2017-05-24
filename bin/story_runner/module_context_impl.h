@@ -42,7 +42,6 @@ class ModuleContextImpl : ModuleContext {
   // resources that belong to this module (message queues, Links).
   ModuleContextImpl(const fidl::Array<fidl::String>& module_path,
                     const ModuleContextInfo& info,
-                    const uint64_t id,
                     const std::string& module_url,
                     const LinkPathPtr& default_link_path,
                     ModuleControllerImpl* module_controller_impl,
@@ -90,12 +89,6 @@ class ModuleContextImpl : ModuleContext {
   // name this module was given (as part of ModuleContext.StartModule() or
   // related).
   const fidl::Array<fidl::String> module_path_;
-
-  // Used to identify the module instance within the story,
-  // and everything directly associated with it,
-  // specifically the view of the module instance to
-  // the story shell.
-  const uint64_t id_;
 
   // Not owned. The StoryImpl instance this ModuleContextImpl instance
   // connects to.

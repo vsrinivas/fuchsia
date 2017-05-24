@@ -27,11 +27,20 @@
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/join_strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
+
+namespace {
+
+fidl::String PathString(const fidl::Array<fidl::String>& module_path) {
+  return ftl::JoinStrings(module_path, ":");
+}
+
+}  // namespace
 
 class StoryImpl::StoryMarkerImpl : StoryMarker {
  public:
@@ -372,13 +381,13 @@ class StoryImpl::DeleteCall : Operation<void> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
-class StoryImpl::StartModuleCall : Operation<uint32_t> {
+class StoryImpl::StartModuleCall : Operation<void> {
  public:
   StartModuleCall(
       OperationContainer* const container,
       StoryImpl* const story_impl,
       const fidl::Array<fidl::String>& parent_module_path,
-      const fidl::String& module_name,
+      const fidl::Array<fidl::String>& module_path,
       const fidl::String& query,
       const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
@@ -389,16 +398,13 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
       : Operation(container, std::move(done)),
         story_impl_(story_impl),
         parent_module_path_(parent_module_path.Clone()),
-        module_name_(module_name),
+        module_path_(module_path.Clone()),
         query_(query),
         link_name_(link_name),
         outgoing_services_(std::move(outgoing_services)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)) {
-    module_path_ = parent_module_path_.Clone();
-    module_path_.push_back(module_name_);
-
     FTL_DCHECK(!parent_module_path_.is_null());
 
     Ready();
@@ -482,22 +488,21 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
         story_impl_,
         story_impl_->story_provider_impl_->user_intelligence_provider()};
 
-    const auto id = story_impl_->next_module_instance_id_++;
     connection.module_context_impl.reset(new ModuleContextImpl(
-        module_path_, module_context_info, id, query_, link_path_,
+        module_path_, module_context_info, query_, link_path_,
         connection.module_controller_impl.get(), std::move(self_request)));
 
     story_impl_->connections_.emplace_back(std::move(connection));
 
     NotifyWatchers();
 
-    Done(id);
+    Done();
   }
 
   // Passed in:
   StoryImpl* const story_impl_;  // not owned
   const fidl::Array<fidl::String> parent_module_path_;
-  const fidl::String module_name_;
+  const fidl::Array<fidl::String> module_path_;
   const fidl::String query_;
   const fidl::String link_name_;
   fidl::InterfaceHandle<app::ServiceProvider> outgoing_services_;
@@ -505,7 +510,6 @@ class StoryImpl::StartModuleCall : Operation<uint32_t> {
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
 
-  fidl::Array<fidl::String> module_path_;
   LinkPathPtr link_path_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
@@ -622,7 +626,7 @@ void StoryImpl::StartRootModule(const fidl::String& module_name,
   ModuleControllerPtr module_controller;
   StartModuleInShell(fidl::Array<fidl::String>::New(0), module_name, url,
                      link_name, nullptr, nullptr,
-                     module_controller.NewRequest(), 0L, nullptr);
+                     module_controller.NewRequest(), nullptr);
 
   // TODO(mesch): Watch all root modules and compute story state from that.
   if (module_name == kRootModuleName) {
@@ -744,7 +748,7 @@ bool StoryImpl::IsRunning() {
   }
 }
 
-void StoryImpl::StartModule(
+fidl::String StoryImpl::StartModule(
     const fidl::Array<fidl::String>& parent_module_path,
     const fidl::String& module_name,
     const fidl::String& module_url,
@@ -752,13 +756,15 @@ void StoryImpl::StartModule(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    std::function<void(uint32_t)> done) {
-  new StartModuleCall(&operation_queue_, this, parent_module_path, module_name,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  fidl::Array<fidl::String> module_path = parent_module_path.Clone();
+  module_path.push_back(module_name);
+  new StartModuleCall(&operation_queue_, this, parent_module_path, module_path,
                       module_url, link_name, std::move(outgoing_services),
                       std::move(incoming_services),
                       std::move(module_controller_request),
-                      std::move(view_owner_request), done);
+                      std::move(view_owner_request), []() {});
+  return PathString(module_path);
 }
 
 void StoryImpl::StartModuleInShell(
@@ -769,25 +775,21 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
-    const uint64_t parent_id,
     SurfaceRelationPtr surface_relation) {
   mozart::ViewOwnerPtr view_owner;
-  StartModule(parent_module_path, module_name, module_url, link_name,
-              std::move(outgoing_services), std::move(incoming_services),
-              std::move(module_controller_request), view_owner.NewRequest(),
-              ftl::MakeCopyable([
-                this, view_owner = std::move(view_owner), parent_id,
-                surface_relation = std::move(surface_relation)
-              ](uint32_t id) mutable {
-                // If this is called during Stop(), story_shell_ might already
-                // have been reset. TODO(mesch): Then the whole operation should
-                // fail.
-                if (story_shell_) {
-                  story_shell_->ConnectView(view_owner.PassInterfaceHandle(),
-                                            id, parent_id,
-                                            std::move(surface_relation));
-                }
-              }));
+  fidl::String id = StartModule(
+      parent_module_path, module_name, module_url, link_name,
+      std::move(outgoing_services), std::move(incoming_services),
+      std::move(module_controller_request), view_owner.NewRequest());
+  // If this is called during Stop(), story_shell_ might already
+  // have been reset. TODO(mesch): Then the whole operation should
+  // fail.
+  fidl::String parent_id = PathString(parent_module_path);
+  if (story_shell_) {
+    story_shell_->ConnectView(std::move(view_owner), std::move(id),
+                              std::move(parent_id),
+                              std::move(surface_relation));
+  }
 }
 
 const fidl::String& StoryImpl::GetStoryId() const {
