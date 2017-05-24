@@ -98,6 +98,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   AudioRendererToOutputLinkSet output_links_;
   AudioRendererToOutputLinkPtr throttle_output_link_;
   float db_gain_ = 0.0;
+  bool is_shutdown_ = false;
 };
 
 }  // namespace audio

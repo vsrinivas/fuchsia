@@ -57,13 +57,23 @@ AudioRendererImpl::AudioRendererImpl(
   FTL_CHECK(nullptr != owner_);
 
   audio_renderer_binding_.set_connection_error_handler([this]() -> void {
-    if (!audio_renderer_binding_.is_bound()) {
+    audio_renderer_binding_.set_connection_error_handler(nullptr);
+    audio_renderer_binding_.Close();
+
+    // If the media_renderer binding has also been closed, it is time to shut
+    // down.
+    if (!media_renderer_binding_.is_bound()) {
       Shutdown();
     }
   });
 
   media_renderer_binding_.set_connection_error_handler([this]() -> void {
-    if (!media_renderer_binding_.is_bound()) {
+    media_renderer_binding_.set_connection_error_handler(nullptr);
+    media_renderer_binding_.Close();
+
+    // If the audio_renderer binding has also been closed, it is time to shut
+    // down.
+    if (!audio_renderer_binding_.is_bound()) {
       Shutdown();
     }
   });
@@ -92,24 +102,29 @@ AudioRendererImplPtr AudioRendererImpl::Create(
 }
 
 void AudioRendererImpl::Shutdown() {
-  if (audio_renderer_binding_.is_bound()) {
-    audio_renderer_binding_.set_connection_error_handler(nullptr);
-    audio_renderer_binding_.Close();
-  }
 
-  // If we are unbound, then we have already been shut down and are just waiting
-  // for the service to destroy us.  Run some FTL_DCHECK sanity checks and get
-  // out.
-  if (!media_renderer_binding_.is_bound()) {
+  // If we have already been shutdown, then we are just waiting for the service
+  // to destroy us.  Run some FTL_DCHECK sanity checks and get out.
+  if (is_shutdown_) {
+    FTL_DCHECK(!audio_renderer_binding_.is_bound());
+    FTL_DCHECK(!media_renderer_binding_.is_bound());
     FTL_DCHECK(!pipe_.is_bound());
     FTL_DCHECK(!timeline_control_point_.is_bound());
     FTL_DCHECK(!output_links_.size());
     return;
   }
 
-  // Close the connection to our client
-  media_renderer_binding_.set_connection_error_handler(nullptr);
-  media_renderer_binding_.Close();
+  is_shutdown_ = true;
+
+  if (audio_renderer_binding_.is_bound()) {
+    audio_renderer_binding_.set_connection_error_handler(nullptr);
+    audio_renderer_binding_.Close();
+  }
+
+  if (media_renderer_binding_.is_bound()) {
+    media_renderer_binding_.set_connection_error_handler(nullptr);
+    media_renderer_binding_.Close();
+  }
 
   // reset all of our internal state and close any other client connections in
   // the process.
