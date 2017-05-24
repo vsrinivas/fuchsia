@@ -87,6 +87,10 @@ class Array {
   // Indicates whether the array is null (which is distinct from empty).
   bool is_null() const { return is_null_; }
 
+  // Indicates whether the array is empty. The behavior is undefined
+  // if the array is null.
+  bool empty() const { return vec_.empty(); }
+
   // Returns a reference to the first element of the array. Calling this on a
   // null or empty array causes undefined behavior.
   ConstRefType front() const { return vec_.front(); }
