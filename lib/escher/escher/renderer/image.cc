@@ -39,7 +39,6 @@ ImageCore::ImageCore(ResourceCoreManager* image_owner,
       has_stencil_ = true;
       break;
     default:
-      FTL_DCHECK(false);
       // No depth or stencil component.
       has_depth_ = false;
       has_stencil_ = false;
