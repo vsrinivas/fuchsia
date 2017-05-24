@@ -7,6 +7,7 @@
 
 #include <tuple>
 
+#include "lib/ftl/functional/apply.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -24,33 +25,11 @@ class AsynchronousCallback {
 
   template <typename... ArgType>
   void operator()(ArgType&&... args) {
-    task_runner_->PostTask(ftl::MakeCopyable(
-        AsynchronousClosure<typename std::decay<ArgType>::type...>(
-            std::move(func_),
-            std::forward<typename std::decay<ArgType>::type>(args)...)));
+    task_runner_->PostTask(ftl::MakeCopyable([
+      f = std::move(func_),
+      tuple = std::make_tuple(std::forward<ArgType>(args)...)
+    ]() mutable { ftl::Apply(std::move(f), std::move(tuple)); }));
   }
-
- private:
-  template <typename... Args>
-  class AsynchronousClosure {
-   public:
-    AsynchronousClosure(T function, Args&&... args)
-        : function_(std::move(function)),
-          params_(std::make_tuple(std::forward<Args>(args)...)) {}
-
-    void operator()() {
-      return CallFunction(std::index_sequence_for<Args...>{});
-    }
-
-   private:
-    template <size_t... S>
-    void CallFunction(std::integer_sequence<size_t, S...>) {
-      function_(std::get<S>(std::move(params_))...);
-    }
-
-    T function_;
-    std::tuple<Args...> params_;
-  };
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   T func_;
