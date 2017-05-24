@@ -1,4 +1,9 @@
 {
+    "imports": [
+        "magma",
+        "zlib",
+        "tracing"
+    ],
     "labels": [
         "//apps/mozart"
     ],
