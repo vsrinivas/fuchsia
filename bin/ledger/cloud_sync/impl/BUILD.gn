@@ -32,6 +32,7 @@ source_set("impl") {
   ]
 
   deps = [
+    "//apps/tracing/lib/trace",
     "//lib/mtl",
   ]
 

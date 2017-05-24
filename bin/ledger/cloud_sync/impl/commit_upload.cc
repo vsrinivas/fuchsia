@@ -9,6 +9,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -27,11 +28,14 @@ CommitUpload::CommitUpload(
       on_done_(on_done),
       on_error_(on_error),
       max_concurrent_uploads_(max_concurrent_uploads) {
+  TRACE_ASYNC_BEGIN("ledger", "commit_upload", reinterpret_cast<uintptr_t>(this));
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
 }
 
-CommitUpload::~CommitUpload() {}
+CommitUpload::~CommitUpload() {
+  TRACE_ASYNC_END("ledger", "commit_upload", reinterpret_cast<uintptr_t>(this));
+}
 
 void CommitUpload::Start() {
   FTL_DCHECK(!started_);
