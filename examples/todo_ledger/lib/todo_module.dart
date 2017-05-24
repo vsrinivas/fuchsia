@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -90,7 +89,6 @@ class TodoModule extends Module implements PageWatcher {
         _pageWatcherBinding.wrap(this), _handleResponse("Watch"));
 
     _readItems(snapshot);
-    _changeItems();
   }
 
   /// Implementation of Module.stop().
@@ -126,6 +124,17 @@ class TodoModule extends Module implements PageWatcher {
 
   /// Adds a watcher to be notified when the todo items change.
   void watch(ItemsChangedCallback callback) => _callbacks.add(callback);
+
+  /// Adds an item.
+  void addItem() {
+    _page.put(_generator.makeKey(), UTF8.encode(_generator.makeContent()),
+        _handleResponse("Put"));
+  }
+
+  /// Removes an item.
+  void removeItem(List<int> key) {
+    _page.delete(key, _handleResponse("Delete"));
+  }
 
   void _readItems(PageSnapshotProxy snapshot) {
     _getEntries(snapshot, (Status status, Map<List<int>, String> items) {
@@ -166,13 +175,5 @@ class TodoModule extends Module implements PageWatcher {
       }
       _getEntriesRecursive(snapshot, items, nextToken, callback);
     });
-  }
-
-  Future<Null> _changeItems() async {
-    while (true) {
-      await new Future.delayed(const Duration(seconds: 3));
-      _page.put(_generator.makeKey(), UTF8.encode(_generator.makeContent()),
-          _handleResponse("Put"));
-    }
   }
 }

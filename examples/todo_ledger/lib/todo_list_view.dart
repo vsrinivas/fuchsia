@@ -61,9 +61,13 @@ class TodoListViewState extends State<TodoListView> {
   @override
   Widget build(BuildContext context) {
     List<Widget> listItems = <Widget>[];
-    for (String item in _items.values) {
-      listItems.add(new _TodoItem(content: item));
-    }
+    _items.forEach((key, value) {
+      listItems.add(new _TodoItem(
+          content: value,
+          onDone: () {
+            _module.removeItem(key);
+          }));
+    });
 
     return new Theme(
         data: new ThemeData(
@@ -88,13 +92,16 @@ class TodoListViewState extends State<TodoListView> {
   Widget _buildNewItemInput(BuildContext context) {
     return new Row(children: <Widget>[
       new Expanded(
-          child:
-              new TextField(
-                  decoration: const InputDecoration(
-                      hintText: 'What would you like to achieve today?'))),
+          child: new TextField(
+              decoration: const InputDecoration(
+                  hintText: 'What would you like to achieve today?'))),
       new SizedBox(
           width: 72.0,
-          child: new IconButton(icon: new Icon(Icons.add), onPressed: () {})),
+          child: new IconButton(
+              icon: new Icon(Icons.add),
+              onPressed: () {
+                this._module.addItem();
+              })),
     ]);
   }
 }
