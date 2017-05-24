@@ -236,7 +236,8 @@ UserRunnerImpl::UserRunnerImpl(
                                               ledger_repository_.get()};
 
   maxwell_component_context_impl_.reset(new ComponentContextImpl(
-      component_context_info, kMaxwellComponentNamespace, kMaxwellUrl));
+      component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
+      kMaxwellUrl));
 
   maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
       maxwell_component_context_impl_.get()));

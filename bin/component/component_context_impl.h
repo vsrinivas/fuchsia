@@ -37,9 +37,12 @@ class ComponentContextImpl : public ComponentContext {
   // * A component instance ID identifies a particular instance of a component;
   //   for modules, this is the module path in their story. For agents, it is
   //   the agent URL.
+  // * A component URL is the origin from which the executable associated with
+  //   the component was fetched from.
   explicit ComponentContextImpl(const ComponentContextInfo& info,
                                 const std::string& component_namespace,
-                                const std::string& component_instance_id);
+                                const std::string& component_instance_id,
+                                const std::string& component_url);
 
   ~ComponentContextImpl() override;
 
@@ -75,6 +78,7 @@ class ComponentContextImpl : public ComponentContext {
 
   const std::string component_namespace_;
   const std::string component_instance_id_;
+  const std::string component_url_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

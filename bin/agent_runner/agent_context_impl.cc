@@ -137,7 +137,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace,
-                              url),
+                              url, url),
       token_provider_factory_(info.token_provider_factory),
       user_intelligence_provider_(info.user_intelligence_provider) {
   new StartAndInitializeCall(&operation_queue_, this);

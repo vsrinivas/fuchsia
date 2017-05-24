@@ -31,7 +31,8 @@ ModuleContextImpl::ModuleContextImpl(
       component_context_impl_(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_impl->GetStoryId()),
-          EncodeModulePath(module_path_)),
+          EncodeModulePath(module_path_),
+          module_url_),
       user_intelligence_provider_(info.user_intelligence_provider),
       binding_(this, std::move(module_context)) {}
 

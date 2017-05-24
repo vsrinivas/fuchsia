@@ -13,12 +13,14 @@ namespace modular {
 ComponentContextImpl::ComponentContextImpl(
     const ComponentContextInfo& info,
     const std::string& component_namespace,
-    const std::string& component_instance_id)
+    const std::string& component_instance_id,
+    const std::string& component_url)
     : message_queue_manager_(info.message_queue_manager),
       agent_runner_(info.agent_runner),
       ledger_repository_(info.ledger_repository),
       component_namespace_(component_namespace),
-      component_instance_id_(component_instance_id) {
+      component_instance_id_(component_instance_id),
+      component_url_(component_url) {
   FTL_DCHECK(message_queue_manager_);
   FTL_DCHECK(agent_runner_);
   FTL_DCHECK(ledger_repository_);
@@ -29,7 +31,7 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
-  ledger_repository_->GetLedger(to_array(component_instance_id_),
+  ledger_repository_->GetLedger(to_array(component_url_),
                                 std::move(request), result);
 }
 
