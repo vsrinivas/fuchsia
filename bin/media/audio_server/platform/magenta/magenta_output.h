@@ -102,6 +102,8 @@ class MagentaOutput : public StandardOutputBase {
                              RespType* resp,
                              mx_handle_t* resp_handle_out = nullptr);
 
+  void ScheduleNextLowWaterWakeup();
+
   mx::channel stream_channel_;
   mx::channel rb_channel_;
   mx::vmo rb_vmo_;
@@ -115,6 +117,8 @@ class MagentaOutput : public StandardOutputBase {
   uint32_t frames_to_mix_ = 0;
   int64_t fifo_frames_ = 0;
   int64_t low_water_frames_ = 0;
+  mx_time_t underflow_start_time_ = 0;
+  mx_time_t underflow_cooldown_deadline_ = 0;
   TimelineRate local_to_frames_;
   TimelineFunction local_to_output_;
 };

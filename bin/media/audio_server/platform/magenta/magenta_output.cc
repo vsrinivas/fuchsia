@@ -33,9 +33,9 @@ static constexpr uint32_t kDefaultRingBufferFrames =
     ((kDefaultRingBufferMsec * kDefaultFramesPerSec) + 999) / 1000;
 static constexpr uint32_t kDefaultRingBufferBytes =
     kDefaultRingBufferFrames * kDefaultFrameSize;
-
 static constexpr int64_t kDefaultLowWaterNsec = 2000000;   // 2 msec for now
 static constexpr int64_t kDefaultHighWaterNsec = 4000000;  // 4 msec for now
+static constexpr mx_duration_t kUnderflowCooldown = MX_SEC(1);
 
 static mxtl::atomic<mx_txid_t> TXID_GEN(1);
 static thread_local mx_txid_t TXID = TXID_GEN.fetch_add(1);
@@ -73,8 +73,8 @@ mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
   uint32_t bytes, handles;
   mx_status_t read_status, write_status;
 
-  write_status =
-      channel.call(0, mx_deadline_after(CALL_TIMEOUT), &args, &bytes, &handles, &read_status);
+  write_status = channel.call(0, mx_deadline_after(CALL_TIMEOUT),
+                              &args, &bytes, &handles, &read_status);
 
   if (write_status != NO_ERROR) {
     if (write_status == ERR_CALL_FAILED) {
@@ -327,15 +327,14 @@ bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     frames_sent_ = low_water_frames_;
 
     if (VERBOSE_TIMING_DEBUG) {
-      FTL_LOG(INFO) << "Audio output: FIFO depth (" << fifo_frames_
-                    << " frames " << std::fixed << std::setprecision(3)
-                    << local_to_frames_.Inverse().Scale(fifo_frames_) /
-                           1000000.0
-                    << " mSec) Low Water (" << low_water_frames_ << " frames "
-                    << std::fixed << std::setprecision(3)
-                    << local_to_frames_.Inverse().Scale(low_water_frames_) /
-                           1000000.0
-                    << " mSec)";
+      FTL_LOG(INFO)
+        << "Audio output: FIFO depth (" << fifo_frames_
+        << " frames " << std::fixed << std::setprecision(3)
+        << local_to_frames_.Inverse().Scale(fifo_frames_) / 1000000.0
+        << " mSec) Low Water (" << low_water_frames_ << " frames "
+        << std::fixed << std::setprecision(3)
+        << local_to_frames_.Inverse().Scale(low_water_frames_) / 1000000.0
+        << " mSec)";
     }
 
     started_ = true;
@@ -345,18 +344,70 @@ bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     now = process_start.ToEpochDelta().ToNanoseconds();
   }
 
+  // If frames_to_mix_ is 0, then this is the start of a new cycle.  Check to
+  // make sure we have not underflowed while we were sleeping, then compute how
+  // many frames we need to mix during this wakeup cycle, and return a job
+  // containing the largest contiguous buffer we can mix during this phase of
+  // this cycle.
   if (!frames_to_mix_) {
-    int64_t rd_ptr_frames = local_to_output_.Apply(now);
-    if (rd_ptr_frames >= frames_sent_) {
-      FTL_LOG(ERROR)
-          << "Fatal underflow: implied read pointer " << rd_ptr_frames
-          << " is greater than the number of frames we have sent so far "
-          << frames_sent_ << ".";
-      return false;
+    int64_t rd_ptr_frames  = local_to_output_.Apply(now);
+    int64_t fifo_threshold = rd_ptr_frames + fifo_frames_;
+
+    if (fifo_threshold >= frames_sent_) {
+      if (!underflow_start_time_) {
+        // If this was the first time we missed our limit, log a message, mark
+        // the start time of the underflow event, and fill our entire ring
+        // buffer with silence.
+        int64_t rd_limit_miss        = rd_ptr_frames - frames_sent_;
+        int64_t fifo_limit_miss      = rd_limit_miss + fifo_frames_;
+        int64_t low_water_limit_miss = rd_limit_miss + low_water_frames_;
+
+        FTL_LOG(ERROR)
+          << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
+          << std::fixed << std::setprecision(3)
+          << local_to_frames_.Inverse().Scale(rd_limit_miss) / 1000000.0
+          << ", "
+          << local_to_frames_.Inverse().Scale(fifo_limit_miss) / 1000000.0
+          << ", "
+          << local_to_frames_.Inverse().Scale(low_water_limit_miss) / 1000000.0
+          << ") mSec.  Cooling down for at least "
+          << kUnderflowCooldown / 1000000.0
+          << " mSec.";
+
+        underflow_start_time_ = now;
+        output_formatter_->FillWithSilence(rb_virt_, rb_frames_);
+      }
+
+      // Regardless of whether this was the first or a subsequent underflow,
+      // update the cooldown deadline (the time at which we will start producing
+      // frames again, provided we don't underflow again)
+      underflow_cooldown_deadline_ = mx_deadline_after(kUnderflowCooldown);
+    }
+
+    int64_t fill_target = local_to_output_.Apply(now + kDefaultHighWaterNsec);
+
+    // Are we in the middle of an underflow cooldown?  If so, check to see if we
+    // have recovered yet.
+    if (underflow_start_time_) {
+      if (static_cast<mx_time_t>(now) < underflow_cooldown_deadline_) {
+        // Looks like we have not recovered yet.  Pretend to have produced the
+        // frames we were going to produce and schedule the next wakeup time.
+        frames_sent_ = fill_target;
+        ScheduleNextLowWaterWakeup();
+        return false;
+      } else {
+        // Looks like we recovered.  Log and go back to mixing.
+        FTL_LOG(INFO)
+          << "UNDERFLOW: Recovered after "
+          << std::fixed << std::setprecision(3)
+          << (now - underflow_start_time_) / 1000000.0
+          << " mSec.";
+        underflow_start_time_ = 0;
+        underflow_cooldown_deadline_ = 0;
+      }
     }
 
     int64_t frames_in_flight = frames_sent_ - rd_ptr_frames;
-    int64_t fill_target = local_to_output_.Apply(now + kDefaultHighWaterNsec);
     FTL_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb_frames_));
     FTL_DCHECK(frames_sent_ < fill_target);
 
@@ -415,16 +466,20 @@ bool MagentaOutput::FinishMixJob(const MixJob& job) {
   frames_to_mix_ -= job.buf_frames;
 
   if (!frames_to_mix_) {
-    // Schedule the next callback for when we are at the low water mark behind
-    // the write pointer.
-    int64_t low_water_time =
-        local_to_output_.ApplyInverse(frames_sent_ - low_water_frames_);
-    SetNextSchedTime(ftl::TimePoint::FromEpochDelta(
-        ftl::TimeDelta::FromNanoseconds(low_water_time)));
+    ScheduleNextLowWaterWakeup();
     return false;
   }
 
   return true;
+}
+
+void MagentaOutput::ScheduleNextLowWaterWakeup() {
+  // Schedule the next callback for when we are at the low water mark behind
+  // the write pointer.
+  int64_t low_water_frames = frames_sent_ - low_water_frames_;
+  int64_t low_water_time   = local_to_output_.ApplyInverse(low_water_frames);
+  SetNextSchedTime(ftl::TimePoint::FromEpochDelta(
+      ftl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
 mx_status_t MagentaOutput::EventReflector::Activate(

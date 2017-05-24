@@ -90,6 +90,7 @@ void StandardOutputBase::Process() {
                              output_formatter_->channels();
       ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
+
       // Mix each renderer into the intermediate buffer, then clip/format into
       // the final buffer.
       ForeachRenderer(setup_mix_, process_mix_);
@@ -101,7 +102,8 @@ void StandardOutputBase::Process() {
   }
 
   if (!next_sched_time_known_) {
-    // TODO(johngro): log this as an error.
+    FTL_LOG(ERROR) << "Output failed to schedule next service time.  "
+                   << "Shutting down!";
     ShutdownSelf();
     return;
   }
