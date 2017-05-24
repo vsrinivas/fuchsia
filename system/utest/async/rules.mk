@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+LOCAL_DIR := $(GET_LOCAL_DIR)
+
+MODULE := $(LOCAL_DIR)
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/async_stub.cpp \
+    $(LOCAL_DIR)/async_tests.cpp \
+    $(LOCAL_DIR)/async_wrapper_tests.cpp \
+    $(LOCAL_DIR)/loop_tests.cpp \
+    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/timeout_tests.cpp
+
+MODULE_NAME := async-test
+
+MODULE_STATIC_LIBS := \
+    system/ulib/mx \
+    system/ulib/mxalloc \
+    system/ulib/mxcpp \
+    system/ulib/mxtl
+
+MODULE_LIBS := \
+    system/ulib/async \
+    system/ulib/c \
+    system/ulib/magenta \
+    system/ulib/mxio \
+    system/ulib/unittest
+
+include make/module.mk
