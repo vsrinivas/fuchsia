@@ -17,8 +17,8 @@ unsigned __kernel_cmdline_count;
 // characters to '.', combining multiple spaces, and
 // converting into a \0 separated, \0\0 terminated
 // style environment string
-void cmdline_init(const char* data) {
-    unsigned i = 0;
+void cmdline_append(const char* data) {
+    unsigned i = __kernel_cmdline_size;
     unsigned max = CMDLINE_MAX - 2;
 
     bool found_equal = false;

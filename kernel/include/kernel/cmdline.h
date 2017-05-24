@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 
 // initialize commandline from str
 // if string is not null terminated, it will be limited to CMDLINE_MAX
-void cmdline_init(const char* str);
+void cmdline_append(const char* str);
 
 // look for "name" or "name=..." in the commandline
 // returns NULL if not found, asciiz string if found

@@ -102,7 +102,7 @@ static int process_bootitem(bootdata_t* bd, void* item) {
             break;
         }
         ((char*) item)[bd->length - 1] = 0;
-        cmdline_init((char*) item);
+        cmdline_append((char*) item);
         break;
     case BOOTDATA_EFI_MEMORY_MAP:
         bootloader.efi_mmap = item;
@@ -166,7 +166,7 @@ static void platform_save_bootloader_data(void) {
         if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline) {
             const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
             printf("multiboot: cmdline @ %p\n", cmdline);
-            cmdline_init(cmdline);
+            cmdline_append(cmdline);
         }
         if ((mi->flags & MB_INFO_MODS) && mi->mods_addr) {
             module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);

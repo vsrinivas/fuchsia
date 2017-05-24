@@ -153,7 +153,7 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
         static_cast<const char*>(fdt_getprop(fdt, offset, "bootargs", &length));
     if (bootargs) {
         printf("kernel command line: %s\n", bootargs);
-        cmdline_init(bootargs);
+        cmdline_append(bootargs);
     }
 
     if (ramdisk_base && ramdisk_size) {
@@ -468,7 +468,7 @@ static uint32_t process_bootsection(bootdata_t* section) {
         }
         char* contents = reinterpret_cast<char*>(section + 1);
         contents[section->length - 1] = '\0';
-        cmdline_init(contents);
+        cmdline_append(contents);
         break;
     }
 
