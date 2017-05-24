@@ -56,6 +56,7 @@ struct fsentry {
 #define ITEM_BOOTFS_BOOT 1
 #define ITEM_BOOTFS_SYSTEM 2
 #define ITEM_KERNEL 3
+#define ITEM_CMDLINE 4
 
 typedef struct item item_t;
 
@@ -691,6 +692,26 @@ int write_bootdata(const char* fn, item_t* item) {
             }
             break;
         }
+        case ITEM_CMDLINE: {
+            // Make room for the null terminator
+            const size_t cmdline_len = item->first->length + 1;
+            bootdata_t cmdline_hdr = {
+                .type = BOOTDATA_CMDLINE,
+                .length = cmdline_len,
+                .extra = 0,
+                .flags = 0,
+            };
+            if (writex(fd, &cmdline_hdr, sizeof(cmdline_hdr)) < 0) {
+                goto fail;
+            }
+            CHECK(copyfile(fd, item->first->srcpath, item->first->length, NULL));
+
+            size_t pad = BOOTDATA_ALIGN(cmdline_len) - item->first->length;
+            if (pad) {
+                write(fd, fill, pad);
+            }
+            break;
+        }
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
             CHECK(write_bootfs(fd, op, item, compressed));
@@ -777,6 +798,9 @@ int dump_bootdata(const char* fn) {
         case BOOTDATA_MDI:
             printf("%08zx: %08x MDI\n", off, hdr.length);
             break;
+        case BOOTDATA_CMDLINE:
+            printf("%08zx: %08x CMDLINE\n", off, hdr.length);
+            break;
         default:
             printf("%08zx: %08x UNKNOWN (type=%08x)\n", off, hdr.length, hdr.type);
             break;
@@ -805,6 +829,7 @@ void usage(void) {
     "\n"
     "options: -o <filename>    output bootdata file name\n"
     "         -k <filename>    include kernel (must be first)\n"
+    "         -C <filename>    include kernel command line\n"
     "         -c               compress bootfs image (default)\n"
     "         -v               verbose output\n"
     "         -t <filename>    dump bootdata contents\n"
@@ -827,6 +852,7 @@ int main(int argc, char **argv) {
 
     bool compressed = true;
     bool have_kernel = false;
+    bool have_cmdline = false;
     unsigned incount = 0;
 
     if (argc == 1) {
@@ -868,6 +894,22 @@ int main(int argc, char **argv) {
             }
             have_kernel = 1;
             if (import_file_as(argv[1], ITEM_KERNEL, 0) < 0) {
+                return -1;
+            }
+            argc--;
+            argv++;
+        } else if (!strcmp(cmd, "-C")) {
+            if (have_cmdline) {
+                fprintf(stderr, "error: only one command line may be included\n");
+                return -1;
+            }
+            if (argc < 2) {
+                fprintf(stderr, "error: no kernel command line file given\n");
+                return -1;
+            }
+            have_cmdline = true;
+
+            if (import_file_as(argv[1], ITEM_CMDLINE, 0) < 0) {
                 return -1;
             }
             argc--;
