@@ -1,0 +1,39 @@
+include "kernel/include/mdi/kernel-defs.mdi"
+
+cpu-map = {
+    clusters = {
+        {
+            name = "a53"
+            cpu-count = 4
+        }
+        {
+            name = "a73"
+            cpu-count = 4
+        }
+    }
+}
+
+kernel-drivers = {
+    // Keep pll011 uart at top so it is initialized first
+    //  (uart6)
+    pl011-uart = {
+        base-virt = 0xffffffffd7e32000
+        base-phys = 0xfff32000
+        irq = 111
+    }
+
+    arm-gic-v2 = {
+        base-virt = 0xffffffffc01b0000
+        base-phys = 0xe82b0000
+        gicc-offset = 0x002000
+        gicd-offset = 0x001000
+        ipi-base = 13
+    }
+
+    arm-psci = {
+        use-smc = true
+    }
+    arm-generic-timer = {
+        irq-virt = 27
+    }
+}

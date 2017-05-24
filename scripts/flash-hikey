@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+BUILD_DIR=build-magenta-hikey960-arm64
+
+KERNEL=$BUILD_DIR/zmagenta.bin
+RAMDISK=$BUILD_DIR/bootdata.bin
+
+OUT_IMAGE=$BUILD_DIR/boot.img
+DTB_FILE=kernel/target/hikey960/device-tree.dtb
+DT_IMAGE=$BUILD_DIR/dt.img
+
+MEMBASE=0x00000000
+KERNEL_OFFSET=0x00080000
+RAMDISK_OFFSET=0x07c00000
+DT_OFFSET=0x07a00000
+
+CMDLINE="TERM=uart"
+
+# mkdtimg and mkbootimg can be found at:
+#  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
+
+mkdtimg -c -d $DTB_FILE -o $DT_IMAGE
+
+mkbootimg --kernel $KERNEL \
+--kernel_offset $KERNEL_OFFSET \
+--base $MEMBASE \
+--ramdisk_offset $RAMDISK_OFFSET \
+--ramdisk $RAMDISK \
+--tags_offset $DT_OFFSET \
+--cmdline $CMDLINE \
+-o $OUT_IMAGE
+
+fastboot flash dts $DT_IMAGE
+fastboot flash boot $OUT_IMAGE
+fastboot reboot

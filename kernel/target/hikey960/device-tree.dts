@@ -1,0 +1,12 @@
+/dts-v1/;
+
+/ {
+    model = "HiKey960";
+
+    chosen {
+        bootargs = "TERM=uart";
+    };
+
+    // empty node needed to make fastboot happy
+    memory {};
+};
