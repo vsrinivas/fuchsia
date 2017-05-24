@@ -25,9 +25,44 @@ static constexpr size_t CMD_BUFFER_SIZE = 4096;
 mx_status_t IntelHDAController::ResetControllerHW() {
     mx_status_t res;
 
+    // Are we currently being held in reset?  If not, try to make sure that all
+    // of our DMA streams are stopped and have been reset (but are not being
+    // held in reset) before cycling the controller.  Anecdotally, holding a
+    // stream in reset while attempting to reset the controller on some Skylake
+    // hardware has caused some pretty profound hardware lockups which require
+    // fully removing power (warm reboot == not good enough) to recover from.
+    if (REG_RD(&regs_->gctl) & HDA_REG_GCTL_HWINIT) {
+        // Explicitly disable all top level interrupt sources.
+        REG_WR(&regs_->intsts, 0u);
+        hw_mb();
+
+        // Count the number of streams present in the hardware and
+        // unconditionally stop and reset all of them.
+        uint16_t gcap = REG_RD(&regs_->gcap);
+        unsigned int total_stream_cnt = HDA_REG_GCAP_ISS(gcap)
+                                      + HDA_REG_GCAP_OSS(gcap)
+                                      + HDA_REG_GCAP_BSS(gcap);
+
+        if (total_stream_cnt > countof(regs_->stream_desc)) {
+            LOG("Fatal error during reset!  Controller reports more streams (%u) "
+                "than should be possible for IHDA hardware.  (GCAP = 0x%04hx)\n",
+                total_stream_cnt, gcap);
+            return ERR_INTERNAL;
+        }
+
+        hda_stream_desc_regs_t* sregs = regs_->stream_desc;
+        for (uint32_t i = 0; i < total_stream_cnt; ++i) {
+            IntelHDAStream::Reset(sregs + i);
+        }
+
+        // Explicitly shut down any CORB/RIRB DMA
+        REG_WR(&regs_->corbctl, 0u);
+        REG_WR(&regs_->rirbctl, 0u);
+    }
+
     // Assert the reset signal and wait for the controller to ack.
     REG_CLR_BITS(&regs_->gctl, HDA_REG_GCTL_HWINIT);
-    hw_rmb();
+    hw_mb();
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
@@ -47,7 +82,7 @@ mx_status_t IntelHDAController::ResetControllerHW() {
 
     // Deassert the reset signal and wait for the controller to ack.
     REG_SET_BITS<uint32_t>(&regs_->gctl, HDA_REG_GCTL_HWINIT);
-    hw_rmb();
+    hw_mb();
 
     res = WaitCondition(INTEL_HDA_RESET_TIMEOUT_NSEC,
                         INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
@@ -72,6 +107,8 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     /* Set the reset bit, then wait for ack from the HW.  See Section 3.3.21 */
     REG_WR(&regs_->corbrp, HDA_REG_CORBRP_RST);
+    hw_mb();
+
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
                              [](void* r) -> bool {
@@ -84,6 +121,8 @@ mx_status_t IntelHDAController::ResetCORBRdPtrLocked() {
 
     /* Clear the reset bit, then wait for ack */
     REG_WR(&regs_->corbrp, 0u);
+    hw_mb();
+
     if ((res = WaitCondition(INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC,
                              INTEL_HDA_RESET_POLL_TIMEOUT_NSEC,
                              [](void* r) -> bool {
@@ -147,29 +186,6 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
         return res;
     }
 
-    // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
-    // that fails, fall back on legacy IRQs.
-    res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_MSI, 1);
-    if (res != NO_ERROR) {
-        res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_LEGACY, 1);
-        if (res != NO_ERROR) {
-            LOG("Failed to set IRQ mode (%d)!\n", res);
-            return res;
-        } else {
-            LOG("Falling back on legacy IRQ mode!\n");
-            msi_irq_ = false;
-        }
-    } else {
-        msi_irq_ = true;
-    }
-
-    MX_DEBUG_ASSERT(irq_handle_ == MX_HANDLE_INVALID);
-    res = pci_proto_->map_interrupt(pci_dev_, 0, &irq_handle_);
-    if (res != NO_ERROR) {
-        LOG("Failed to map IRQ! (res %d)\n", res);
-        return res;
-    }
-
     // Map in the registers located at BAR 0.  Make sure that they are the size
     // we expect them to be.
     MX_DEBUG_ASSERT(regs_handle_ == MX_HANDLE_INVALID);
@@ -192,14 +208,43 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
         return ERR_INVALID_ARGS;
     }
 
+    regs_ = &all_regs->regs;
+
+    return NO_ERROR;
+}
+
+mx_status_t IntelHDAController::SetupPCIInterrupts() {
+    MX_DEBUG_ASSERT(pci_dev_ != nullptr);
+
+    // Configure our IRQ mode and map our IRQ handle.  Try to use MSI, but if
+    // that fails, fall back on legacy IRQs.
+    mx_status_t res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_MSI, 1);
+    if (res != NO_ERROR) {
+        res = pci_proto_->set_irq_mode(pci_dev_, MX_PCIE_IRQ_MODE_LEGACY, 1);
+        if (res != NO_ERROR) {
+            LOG("Failed to set IRQ mode (%d)!\n", res);
+            return res;
+        } else {
+            LOG("Falling back on legacy IRQ mode!\n");
+            msi_irq_ = false;
+        }
+    } else {
+        msi_irq_ = true;
+    }
+
+    MX_DEBUG_ASSERT(irq_handle_ == MX_HANDLE_INVALID);
+    res = pci_proto_->map_interrupt(pci_dev_, 0, &irq_handle_);
+    if (res != NO_ERROR) {
+        LOG("Failed to map IRQ! (res %d)\n", res);
+        return res;
+    }
+
     // Enable Bus Mastering so we can DMA data and receive MSIs
     res = pci_proto_->enable_bus_master(pci_dev_, true);
     if (res != NO_ERROR) {
         LOG("Failed to enable PCI bus mastering!\n");
         return res;
     }
-
-    regs_ = &all_regs->regs;
 
     return NO_ERROR;
 }
@@ -438,6 +483,11 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
 
     // Completely reset the hardware
     res = ResetControllerHW();
+    if (res != NO_ERROR)
+        return res;
+
+    // Setup interrupts and enable bus mastering.
+    res = SetupPCIInterrupts();
     if (res != NO_ERROR)
         return res;
 

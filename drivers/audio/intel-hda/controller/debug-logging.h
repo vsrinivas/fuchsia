@@ -16,6 +16,10 @@
 #define VERBOSE_LOGGING 0
 #define DEBUG_LOGGING (VERBOSE_LOGGING || 0)
 
+#define GLOBAL_LOG(...) do {              \
+    printf("[IHDA Driver] " __VA_ARGS__); \
+} while (false)
+
 #define LOG_EX(obj, ...) do { \
     (obj).PrintDebugPrefix(); \
     printf(__VA_ARGS__);      \

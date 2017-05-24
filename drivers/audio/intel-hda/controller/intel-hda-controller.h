@@ -97,6 +97,7 @@ private:
     mx_status_t InitInternal(mx_device_t* pci_dev);
     mx_status_t ResetControllerHW();
     mx_status_t SetupPCIDevice(mx_device_t* pci_dev);
+    mx_status_t SetupPCIInterrupts();
     mx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
     mx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
     mx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);

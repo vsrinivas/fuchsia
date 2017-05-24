@@ -86,6 +86,7 @@ private:
     void PrintDebugPrefix() const;
 
     void DeactivateLocked() TA_REQ(channel_lock_);
+    void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
 
     // Client request handlers
     mx_status_t ProcessGetFifoDepthLocked(const audio2_proto::RingBufGetFifoDepthReq& req)
@@ -98,16 +99,23 @@ private:
     // Release the client ring buffer (if one has been assigned)
     void ReleaseRingBufferLocked() TA_REQ(channel_lock_);
 
-    // Enter and exit the HW reset state.  When streams are not in use, we
-    // place them in reset so that we know their FIFOs will be cleared and
-    // ready to go when it is time to use them.
-    void EnterReset();
-    void ExitReset();
+    // Enter and exit the HW reset state.
+    //
+    // TODO(johngro) : leaving streams in reset at all times seems to have
+    // trouble with locking up the hardware (it becomes completely unresponsive
+    // to reset, both stream reset and top level reset).  One day we should
+    // figure out why; in the meantime, do not leave streams held in reset for
+    // any length of time.
+    void Reset() { Reset(regs_); }
 
     // Called during stream allocation and release to configure the type of
     // stream (in the case of a bi-directional stream) and the tag that the
     // stream will put into the outbound SDO frames.
     void Configure(Type type, uint8_t tag);
+
+    // Static helpers which can be used during early initialization
+    static void EnsureStopped(hda_stream_desc_regs_t* regs);
+    static void Reset(hda_stream_desc_regs_t* regs);
 
     // Paramters determined construction time.
     const Type                    type_       = Type::INVALID;
@@ -127,8 +135,13 @@ private:
     mx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
+    uint16_t encoded_fmt_ = 0;
     uint16_t fifo_depth_ = 0;
     uint32_t bytes_per_frame_ TA_GUARDED(channel_lock_) = 0;
+
+    // Paramters determined after ring buffer allocation.
+    uint32_t cyclic_buffer_length_ TA_GUARDED(channel_lock_) = 0;
+    uint32_t bdl_last_valid_index_ TA_GUARDED(channel_lock_) = 0;
 
     // Start/stop flag.
     bool running_ TA_GUARDED(channel_lock_) = false;
