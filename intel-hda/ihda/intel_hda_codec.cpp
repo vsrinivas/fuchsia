@@ -7,6 +7,8 @@
 namespace audio {
 namespace intel_hda {
 
+IntelHDACodec::CodecTree IntelHDACodec::codecs_;
+
 extern void print_codec_state(const CodecState& codec);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -404,9 +406,24 @@ static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMAN
     { GET_PARAM(CodecParam::SUBORDINATE_NODE_COUNT), ParseFnGroupCount },
 };
 
-mxtl::unique_ptr<IntelHDACodec> IntelHDACodec::Create(uint32_t codec_id,
-                                                      const char* const dev_name) {
-    return mxtl::unique_ptr<IntelHDACodec>(new IntelHDACodec(codec_id, dev_name));
+mx_status_t IntelHDACodec::Enumerate() {
+    static const char* const DEV_PATH = "/dev/class/intel-hda-codec";
+    static const char* const DEV_FMT  = "%03hu";
+
+    mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
+    [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
+        auto codec = mxtl::unique_ptr<IntelHDACodec>(new IntelHDACodec(id, dev_name));
+
+        if (codec == nullptr)
+            return ERR_NO_MEMORY;
+
+        if (!codecs_.insert_or_find(mxtl::move(codec)))
+            return ERR_INTERNAL;
+
+        return NO_ERROR;
+    });
+
+    return res;
 }
 
 mx_status_t IntelHDACodec::DumpCodec(int argc, const char** argv) {

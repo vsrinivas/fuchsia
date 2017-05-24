@@ -114,31 +114,7 @@ mx_status_t IntelHDAController::Enumerate() {
     if (res != NO_ERROR)
         return res;
 
-    for (auto& controller : controllers_) {
-        res = controller.EnumerateCodecs();
-        if (res != NO_ERROR)
-            return res;
-    }
-
     return NO_ERROR;
-}
-
-mx_status_t IntelHDAController::EnumerateCodecs() {
-    static const char* const DEV_FMT  = "intel-hda-codec-%03hu";
-
-    return MagentaDevice::Enumerate(this, dev_name(), DEV_FMT,
-    [](void* ctx, uint32_t id, const char* const dev_name) -> mx_status_t {
-        auto controller = static_cast<IntelHDAController*>(ctx);
-        auto codec = IntelHDACodec::Create(id, dev_name);
-
-        if (codec == nullptr)
-            return ERR_NO_MEMORY;
-
-        if (!controller->codecs_.insert_or_find(mxtl::move(codec)))
-            return ERR_INTERNAL;
-
-        return NO_ERROR;
-    });
 }
 
 mx_status_t IntelHDAController::DumpRegs(int argc, const char** argv) {

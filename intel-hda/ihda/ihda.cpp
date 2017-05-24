@@ -18,15 +18,10 @@ static IntelHDAController::ControllerTree::iterator GetController(int id) {
         : IntelHDAController::controllers().find(id);
 }
 
-static IntelHDAController::CodecTree::iterator GetCodec(int controller_id, int codec_id) {
-    auto controller = GetController(controller_id);
-
-    if (!controller.IsValid())
-        return IntelHDAController::CodecTree::iterator();
-
-    return (codec_id < 0)
-        ? controller->codecs().begin()
-        : controller->codecs().find(codec_id);
+static IntelHDACodec::CodecTree::iterator GetCodec(int id) {
+    return (id < 0)
+        ? IntelHDACodec::codecs().begin()
+        : IntelHDACodec::codecs().find(id);
 }
 
 int main(int argc, const char** argv) {
@@ -58,13 +53,18 @@ int main(int argc, const char** argv) {
 
     res = IntelHDAController::Enumerate();
     if (res != NO_ERROR) {
-        printf("Failed to enumerate devices (%d)\n", res);
+        printf("Failed to enumerate controller devices (%d)\n", res);
+        return res;
+    }
+
+    res = IntelHDACodec::Enumerate();
+    if (res != NO_ERROR) {
+        printf("Failed to enumerate codec devices (%d)\n", res);
         return res;
     }
 
     if (!strcmp("list", argv[arg])) {
         printf("Found %zu Intel HDA Controllers\n", IntelHDAController::controllers().size());
-
         for (auto& controller : IntelHDAController::controllers()) {
             res = controller.Probe();
 
@@ -76,42 +76,36 @@ int main(int argc, const char** argv) {
 
             controller.Disconnect();
 
-            printf("Controller %u [%04hx:%04hx %u.%u] : %zu codec%s : %s\n",
+            printf("Controller %u [%04hx:%04hx %u.%u] : %s\n",
                     controller.id(),
                     controller.vid(),
                     controller.did(),
                     controller.ihda_vmaj(),
                     controller.ihda_vmin(),
-                    controller.codecs().size(),
-                    controller.codecs().size() == 1 ? "" : "s",
                     controller.dev_name());
-
-            for (auto& codec : controller.codecs()) {
-                res = codec.Probe();
-
-                if (res != NO_ERROR) {
-                    printf("Failed to probe codec at \"%s\" (res %d)\n",
-                            codec.dev_name(), res);
-                    return res;
-                }
-
-                printf("  Codec %u.%u [%04hx:%04hx %u.%u] : %s\n",
-                        controller.id(),
-                        codec.id(),
-                        codec.vid(),
-                        codec.did(),
-                        controller.ihda_vmaj(),
-                        controller.ihda_vmin(),
-                        codec.dev_name());
-
-                codec.Disconnect();
-            }
         }
 
+        printf("Found %zu Intel HDA Codecs\n", IntelHDACodec::codecs().size());
+        for (auto& codec : IntelHDACodec::codecs()) {
+            res = codec.Probe();
+
+            if (res != NO_ERROR) {
+                printf("Failed to probe codec at \"%s\" (res %d)\n",
+                        codec.dev_name(), res);
+                return res;
+            }
+
+            printf("  Codec %u [%04hx:%04hx] : %s\n",
+                    codec.id(),
+                    codec.vid(),
+                    codec.did(),
+                    codec.dev_name());
+
+            codec.Disconnect();
+        }
 
         return 0;
     }
-
 
     static const struct {
         const char* name;
@@ -146,7 +140,7 @@ int main(int argc, const char** argv) {
         if (strcmp(cmd.name, argv[arg]))
             continue;
 
-        auto iter = GetCodec(dev_id, codec_id);
+        auto iter = GetCodec(codec_id);
 
         if (!iter.IsValid()) {
             printf("Intel HDA codec not found!\n");
