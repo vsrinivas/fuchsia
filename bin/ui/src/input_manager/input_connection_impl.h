@@ -45,6 +45,7 @@ class InputConnectionImpl : public mozart::InputConnection,
       fidl::InterfaceHandle<mozart::ViewHitTester> listener) override;
   void GetInputMethodEditor(
       mozart::KeyboardType keyboard_type,
+      mozart::InputMethodAction action,
       mozart::TextInputStatePtr initial_state,
       fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
       fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
@@ -59,11 +60,13 @@ class InputConnectionImpl : public mozart::InputConnection,
   // |mozart::InputMethodEditorClient|
   void DidUpdateState(mozart::TextInputStatePtr state,
                       mozart::InputEventPtr event) override;
+  void OnAction(mozart::InputMethodAction action) override;
 
  private:
   void OnEditorDied();
   void OnClientDied();
   void ConnectWithImeService(mozart::KeyboardType keyboard_type,
+                             mozart::InputMethodAction action,
                              mozart::TextInputStatePtr state);
   void Reset();
 

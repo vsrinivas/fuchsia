@@ -28,6 +28,7 @@ class App : public mozart::ImeService {
   // |mozart::ImeService|
   void GetInputMethodEditor(
       mozart::KeyboardType keyboard_type,
+      mozart::InputMethodAction action,
       mozart::TextInputStatePtr initial_state,
       fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
       fidl::InterfaceRequest<mozart::InputMethodEditor> editor) override;

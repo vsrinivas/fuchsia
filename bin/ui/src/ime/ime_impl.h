@@ -21,6 +21,7 @@ namespace ime {
 class ImeImpl : public mozart::InputMethodEditor {
  public:
   ImeImpl(mozart::KeyboardType keyboard_type,
+          mozart::InputMethodAction action,
           mozart::TextInputStatePtr initial_state,
           fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
           fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request);
@@ -39,6 +40,7 @@ class ImeImpl : public mozart::InputMethodEditor {
   fidl::Binding<mozart::InputMethodEditor> editor_binding_;
   mozart::InputMethodEditorClientPtr client_;
   mozart::KeyboardType keyboard_type_;
+  mozart::InputMethodAction action_ = mozart::InputMethodAction::UNSPECIFIED;
   mozart::TextInputStatePtr state_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);

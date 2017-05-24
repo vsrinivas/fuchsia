@@ -14,6 +14,17 @@ enum KeyboardType {
   DATETIME,
 };
 
+enum InputMethodAction {
+  UNSPECIFIED = 0,
+  NONE = 1,
+  GO = 2,
+  SEARCH = 3,
+  SEND = 4,
+  NEXT = 5,
+  DONE = 6,
+  PREVIOUS = 7,
+};
+
 // The current text, selection, and composing state for editing a run of text.
 struct TextInputState {
   // Current state revision to avoid race conditions.
@@ -41,4 +52,5 @@ interface InputMethodEditor {
 // An interface to receive information from |TextInputService|.
 interface InputMethodEditorClient {
   DidUpdateState(TextInputState state, InputEvent? event);
+  OnAction(InputMethodAction action);
 };

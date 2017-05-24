@@ -12,6 +12,7 @@ import "apps/mozart/services/input/input_events.fidl";
 [ServiceName="mozart::ImeService"]
 interface ImeService {
   GetInputMethodEditor(KeyboardType keyboard_type,
+                       InputMethodAction action,
                        TextInputState initial_state,
                        InputMethodEditorClient client,
                        InputMethodEditor& editor);

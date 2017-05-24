@@ -30,6 +30,7 @@ interface InputConnection {
 
   // Retrieves an |InputMethodEditor| to handle text editing.
   GetInputMethodEditor(KeyboardType keyboard_type,
+                       InputMethodAction action,
                        TextInputState initial_state,
                        InputMethodEditorClient client,
                        InputMethodEditor& editor);

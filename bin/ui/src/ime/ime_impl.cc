@@ -13,11 +13,13 @@ namespace ime {
 
 ImeImpl::ImeImpl(
     mozart::KeyboardType keyboard_type,
+    mozart::InputMethodAction action,
     mozart::TextInputStatePtr initial_state,
     fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
     fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request)
     : editor_binding_(this, std::move(editor_request)),
       keyboard_type_(keyboard_type),
+      action_(action),
       state_(std::move(initial_state)) {
   FTL_VLOG(1) << "ImeImpl: "
               << ", keyboard_type=" << keyboard_type
@@ -125,6 +127,9 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
 
           FTL_VLOG(1) << "Notifying (state = " << *state_ << "')";
           client_->DidUpdateState(state_.Clone(), std::move(event));
+        } break;
+        case HID_USAGE_KEY_ENTER: {
+          client_->OnAction(action_);
         } break;
       }
     }

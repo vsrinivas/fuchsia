@@ -27,6 +27,7 @@ App::~App() {}
 
 void App::GetInputMethodEditor(
     mozart::KeyboardType keyboard_type,
+    mozart::InputMethodAction action,
     mozart::TextInputStatePtr initial_state,
     fidl::InterfaceHandle<mozart::InputMethodEditorClient> client,
     fidl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
@@ -35,11 +36,11 @@ void App::GetInputMethodEditor(
   FTL_DCHECK(editor_request.is_pending());
 
   FTL_VLOG(1) << "GetInputMethodEditor: "
-              << ", keyboard_type=" << keyboard_type
+              << ", keyboard_type=" << keyboard_type << ", action=" << action
               << ", initial_state=" << *initial_state;
 
   std::unique_ptr<ImeImpl> ime_impl =
-      std::make_unique<ImeImpl>(keyboard_type, std::move(initial_state),
+      std::make_unique<ImeImpl>(keyboard_type, action, std::move(initial_state),
                                 std::move(client), std::move(editor_request));
   // FIXME(jpoichet) we're leaking
   ime_.emplace(ime_.end(), std::move(ime_impl));
