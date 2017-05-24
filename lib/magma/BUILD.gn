@@ -79,4 +79,9 @@ group("vulkan") {
 
 group("tools") {
   deps = [ "src/tools" ]
+
+}
+
+group("display_pipe") {
+  deps = [ "src/display_pipe" ]
 }
