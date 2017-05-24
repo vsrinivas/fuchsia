@@ -29,7 +29,7 @@ namespace memfs {
 
 mxtl::unique_ptr<fs::Dispatcher> memfs_global_dispatcher;
 
-constexpr size_t kMinfsMaxFileSize = (8192 * 8192);
+constexpr size_t kMemfsMaxFileSize = (8192 * 8192);
 
 static mxtl::RefPtr<VnodeDir> vfs_root = nullptr;
 static mxtl::RefPtr<VnodeDir> memfs_root = nullptr;
@@ -99,7 +99,7 @@ ssize_t VnodeVmo::Read(void* data, size_t len, size_t off) {
 ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     mx_status_t status;
     size_t newlen = off + len;
-    newlen = newlen > kMinfsMaxFileSize ? kMinfsMaxFileSize : newlen;
+    newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
 
     // TODO(smklein): Round up to PAGE_SIZE increments to reduce overhead on a series of small
     // writes.
@@ -123,7 +123,7 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     if (newlen > length_) {
         length_ = newlen;
     }
-    if (actual == 0 && off >= kMinfsMaxFileSize) {
+    if (actual == 0 && off >= kMemfsMaxFileSize) {
         // short write because we're beyond the end of the permissible length
         return ERR_FILE_BIG;
     }
@@ -260,7 +260,7 @@ mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
 
 mx_status_t VnodeFile::Truncate(size_t len) {
     mx_status_t status;
-    len = len > kMinfsMaxFileSize ? kMinfsMaxFileSize : len;
+    len = len > kMemfsMaxFileSize ? kMemfsMaxFileSize : len;
 
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
