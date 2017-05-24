@@ -417,7 +417,7 @@ void usage(void) {
             "  -1      only boot once, then exit\n"
             "  -a      only boot device with this IPv6 address\n"
             "  -i <NN> number of microseconds between packets\n"
-            "          set between 50-250 to deal with poor bootloader network stacks (default=%d)\n"
+            "          set between 50-500 to deal with poor bootloader network stacks (default=%d)\n"
             "  -n      only boot device with this nodename\n",
             appname, DEFAULT_US_BETWEEN_PACKETS);
     exit(1);
