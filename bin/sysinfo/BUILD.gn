@@ -2,11 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cmdutils") {
+executable("sysinfo") {
+  sources = [
+    "sysinfo.cc",
+  ]
+  libs = [
+    "launchpad",
+    "magenta",
+  ]
   deps = [
-    "cowsay",
-    "sysinfo",
-    "time",
-    "uname",
+    "//lib/ftl",
   ]
 }
