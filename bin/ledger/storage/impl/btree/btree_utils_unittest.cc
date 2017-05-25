@@ -258,7 +258,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   }
 }
 
-TEST_F(BTreeUtilsTest, UpdateValue) {
+TEST_F(BTreeUtilsTest, DISABLED_UpdateValue) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -360,7 +360,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   }
 }
 
-TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
+TEST_F(BTreeUtilsTest, DISABLED_UpdateValueSplitChange) {
   // Expected layout (XX is key "keyXX"):
   // [00, 04]
   std::vector<EntryChange> golden_entries;
@@ -482,7 +482,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   }
 }
 
-TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
+TEST_F(BTreeUtilsTest, DISABLED_DeleteLevel1Changes) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
