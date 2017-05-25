@@ -16,6 +16,7 @@
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"
+#include "apps/media/src/util/timeline_control_point.h"
 #include "apps/media/src/video/video_converter.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
@@ -24,10 +25,7 @@
 namespace media {
 
 // Implements MediaRenderer for an app that wants to show video.
-class VideoFrameSource : public MediaPacketConsumerBase,
-                         public MediaRenderer,
-                         public MediaTimelineControlPoint,
-                         public TimelineConsumer {
+class VideoFrameSource : public MediaPacketConsumerBase, public MediaRenderer {
  public:
   VideoFrameSource();
 
@@ -49,11 +47,7 @@ class VideoFrameSource : public MediaPacketConsumerBase,
 
   // Determines if views should animate because presentation time is
   // progressing.
-  bool views_should_animate() {
-    return !end_of_stream_published_ &&
-           (current_timeline_function_.subject_delta() != 0 ||
-            pending_timeline_function_.subject_delta() != 0);
-  }
+  bool views_should_animate() { return timeline_control_point_.Progressing(); }
 
   // Gets status (see |VideoRenderer::GetStatus|).
   void GetStatus(uint64_t version_last_seen,
@@ -85,20 +79,6 @@ class VideoFrameSource : public MediaPacketConsumerBase,
 
   void OnFailure() override;
 
-  // MediaTimelineControlPoint implementation.
-  void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
-
-  void GetTimelineConsumer(fidl::InterfaceRequest<TimelineConsumer>
-                               timeline_consumer_request) override;
-
-  void Prime(const PrimeCallback& callback) override;
-
-  // TimelineConsumer implementation.
-  void SetTimelineTransform(
-      TimelineTransformPtr timeline_transform,
-      const SetTimelineTransformCallback& callback) override;
-
   // Returns the supported media types.
   fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
@@ -108,25 +88,6 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   // Checks |packet| for a revised media type and updates state accordingly.
   void CheckForRevisedMediaType(const MediaPacketPtr& packet);
 
-  // Clears the pending timeline function and calls its associated callback
-  // with the indicated completed status.
-  void ClearPendingTimelineFunction(bool completed);
-
-  // Apply a pending timeline change if there is one an it's due.
-  void MaybeApplyPendingTimelineChange(int64_t reference_time);
-
-  // Clears end-of-stream if it's set.
-  void MaybeClearEndOfStream();
-
-  // Publishes end-of-stream as needed.
-  void MaybePublishEndOfStream();
-
-  // Sends status updates to waiting callers of GetStatus.
-  void SendStatusUpdates();
-
-  // Calls the callback with the current status.
-  void CompleteGetStatus(const GetStatusCallback& callback);
-
   // Calls Invalidate on all registered views.
   void InvalidateViews() {
     for (mozart::BaseView* view : views_) {
@@ -135,21 +96,14 @@ class VideoFrameSource : public MediaPacketConsumerBase,
   }
 
   fidl::Binding<MediaRenderer> media_renderer_binding_;
-  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   TimelineFunction current_timeline_function_;
-  TimelineFunction pending_timeline_function_;
-  SetTimelineTransformCallback set_timeline_transform_callback_;
   int64_t pts_ = kUnspecifiedTime;
-  int64_t end_of_stream_pts_ = kUnspecifiedTime;
-  bool end_of_stream_published_ = false;
-  uint64_t status_version_ = 1u;
-  std::vector<GetStatusCallback> pending_status_callbacks_;
   VideoConverter converter_;
   std::unordered_set<mozart::BaseView*> views_;
   FidlPublisher<VideoRenderer::GetStatusCallback> status_publisher_;
-  PrimeCallback prime_callback_;
+  MediaTimelineControlPoint::PrimeCallback prime_callback_;
+  TimelineControlPoint timeline_control_point_;
 
   // We don't use FLOG_INSTANCE_CHANNEL, because we don't need to know the
   // address (this), and the consumer (our base class) will register with that

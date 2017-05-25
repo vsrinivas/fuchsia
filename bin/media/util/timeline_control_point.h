@@ -19,6 +19,8 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
                              public TimelineConsumer {
  public:
   using PrimeRequestedCallback = std::function<void(const PrimeCallback&)>;
+  using ProgressStartedCallback = std::function<void()>;
+
   TimelineControlPoint();
 
   ~TimelineControlPoint() override;
@@ -37,6 +39,18 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
     prime_requested_callback_ = callback;
   }
 
+  // Sets a callback to be called when priming is requested.
+  void SetProgressStartedCallback(const ProgressStartedCallback& callback) {
+    progress_started_callback_ = callback;
+  }
+
+  // Determines if presentation time is progressing or a pending change will
+  // cause it to progress.
+  bool Progressing() {
+    ftl::MutexLocker locker(&mutex_);
+    return ProgressingInternal();
+  }
+
   // Get the TimelineFunction for the reference_time (which should be 'now',
   // approximately).
   void SnapshotCurrentFunction(int64_t reference_time,
@@ -45,6 +59,10 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   // Sets the current end_of_stream status published by the control point.
   void SetEndOfStreamPts(int64_t end_of_stream_pts);
+
+  // Clears a pending end-of-stream transition scheduled with
+  // |SetEndOfStreamPts|.
+  void ClearEndOfStream();
 
   // MediaTimelineControlPoint implementation.
   void GetStatus(uint64_t version_last_seen,
@@ -76,16 +94,23 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
     return pending_timeline_function_.reference_time() != kUnspecifiedTime;
   }
 
+  void ClearEndOfStreamInternal() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
   // Determines whether end-of-stream has been reached.
   bool ReachedEndOfStream() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Unbinds from clients and resets to initial state.
   void PostReset() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
+  // Determines if presentation time is progressing or a pending change will
+  // cause it to progress.
+  bool ProgressingInternal() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
   fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
   fidl::Binding<TimelineConsumer> consumer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   PrimeRequestedCallback prime_requested_callback_;
+  ProgressStartedCallback progress_started_callback_;
 
   ftl::Mutex mutex_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_ FTL_GUARDED_BY(mutex_);

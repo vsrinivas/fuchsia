@@ -11,15 +11,29 @@
 
 namespace media {
 
-VideoFrameSource::VideoFrameSource()
-    : media_renderer_binding_(this),
-      control_point_binding_(this),
-      timeline_consumer_binding_(this) {
+VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
 
   // We accept revised media types.
   AcceptRevisedMediaType();
+
+  timeline_control_point_.SetPrimeRequestedCallback(
+      [this](const MediaTimelineControlPoint::PrimeCallback& callback) {
+        FLOG(log_channel_, PrimeRequested());
+        pts_ = kUnspecifiedTime;
+        SetDemand(kPacketDemand);
+
+        if (packet_queue_.size() >= kPacketDemand) {
+          FLOG(log_channel_, CompletingPrime());
+          callback();
+        } else {
+          prime_callback_ = callback;
+        }
+      });
+
+  timeline_control_point_.SetProgressStartedCallback(
+      [this]() { InvalidateViews(); });
 
   status_publisher_.SetCallbackRunner(
       [this](const VideoRenderer::GetStatusCallback& callback,
@@ -39,13 +53,7 @@ VideoFrameSource::~VideoFrameSource() {
     media_renderer_binding_.Close();
   }
 
-  if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
-  }
-
-  if (timeline_consumer_binding_.is_bound()) {
-    timeline_consumer_binding_.Close();
-  }
+  timeline_control_point_.Reset();
 }
 
 void VideoFrameSource::Bind(
@@ -58,8 +66,9 @@ void VideoFrameSource::Bind(
 }
 
 void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
-  MaybeApplyPendingTimelineChange(reference_time);
-  MaybePublishEndOfStream();
+  uint32_t generation;
+  timeline_control_point_.SnapshotCurrentFunction(
+      reference_time, &current_timeline_function_, &generation);
 
   pts_ = current_timeline_function_(reference_time);
 
@@ -117,7 +126,7 @@ void VideoFrameSource::GetPacketConsumer(
 
 void VideoFrameSource::GetTimelineControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
-  control_point_binding_.Bind(std::move(control_point_request));
+  timeline_control_point_.Bind(std::move(control_point_request));
 }
 
 fidl::Array<MediaTypeSetPtr> VideoFrameSource::SupportedMediaTypes() {
@@ -147,7 +156,7 @@ void VideoFrameSource::OnPacketSupplied(
              TimelineRate::NsPerSecond.reference_delta());
 
   if (supplied_packet->packet()->end_of_stream) {
-    end_of_stream_pts_ = supplied_packet->packet()->pts;
+    timeline_control_point_.SetEndOfStreamPts(supplied_packet->packet()->pts);
   }
 
   // Discard empty packets so they don't confuse the selection logic.
@@ -185,7 +194,8 @@ void VideoFrameSource::OnFlushRequested(const FlushCallback& callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }
-  MaybeClearEndOfStream();
+
+  timeline_control_point_.ClearEndOfStream();
   callback();
   InvalidateViews();
 }
@@ -195,75 +205,9 @@ void VideoFrameSource::OnFailure() {
     media_renderer_binding_.Close();
   }
 
-  if (control_point_binding_.is_bound()) {
-    control_point_binding_.Close();
-  }
-
-  if (timeline_consumer_binding_.is_bound()) {
-    timeline_consumer_binding_.Close();
-  }
+  timeline_control_point_.Reset();
 
   MediaPacketConsumerBase::OnFailure();
-}
-
-void VideoFrameSource::GetStatus(uint64_t version_last_seen,
-                                 const GetStatusCallback& callback) {
-  if (version_last_seen < status_version_) {
-    CompleteGetStatus(callback);
-  } else {
-    pending_status_callbacks_.push_back(callback);
-  }
-}
-
-void VideoFrameSource::GetTimelineConsumer(
-    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
-  timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
-}
-
-void VideoFrameSource::Prime(const PrimeCallback& callback) {
-  FLOG(log_channel_, PrimeRequested());
-  pts_ = kUnspecifiedTime;
-  SetDemand(kPacketDemand);
-
-  if (packet_queue_.size() >= kPacketDemand) {
-    FLOG(log_channel_, CompletingPrime());
-    callback();
-  } else {
-    prime_callback_ = callback;
-  }
-}
-
-void VideoFrameSource::SetTimelineTransform(
-    TimelineTransformPtr timeline_transform,
-    const SetTimelineTransformCallback& callback) {
-  FTL_DCHECK(timeline_transform);
-  FTL_DCHECK(timeline_transform->reference_delta != 0);
-
-  FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
-
-  if (timeline_transform->subject_time != kUnspecifiedTime) {
-    MaybeClearEndOfStream();
-  }
-
-  int64_t reference_time =
-      timeline_transform->reference_time == kUnspecifiedTime
-          ? Timeline::local_now()
-          : timeline_transform->reference_time;
-  int64_t subject_time = timeline_transform->subject_time == kUnspecifiedTime
-                             ? current_timeline_function_(reference_time)
-                             : timeline_transform->subject_time;
-
-  // Eject any previous pending change.
-  ClearPendingTimelineFunction(false);
-
-  // Queue up the new pending change.
-  pending_timeline_function_ = TimelineFunction(
-      reference_time, subject_time, timeline_transform->reference_delta,
-      timeline_transform->subject_delta);
-
-  set_timeline_transform_callback_ = callback;
-
-  InvalidateViews();
 }
 
 void VideoFrameSource::DiscardOldPackets() {
@@ -289,75 +233,6 @@ void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
     converter_.SetMediaType(revised_media_type);
     status_publisher_.SendUpdates();
   }
-}
-
-void VideoFrameSource::ClearPendingTimelineFunction(bool completed) {
-  pending_timeline_function_ =
-      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
-  if (set_timeline_transform_callback_) {
-    set_timeline_transform_callback_(completed);
-    set_timeline_transform_callback_ = nullptr;
-  }
-}
-
-void VideoFrameSource::MaybeApplyPendingTimelineChange(int64_t reference_time) {
-  if (pending_timeline_function_.reference_time() == kUnspecifiedTime ||
-      pending_timeline_function_.reference_time() > reference_time) {
-    return;
-  }
-
-  FLOG(log_channel_, ApplyTimelineTransform(
-                         TimelineTransform::From(pending_timeline_function_)));
-
-  current_timeline_function_ = pending_timeline_function_;
-  pending_timeline_function_ =
-      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
-
-  if (set_timeline_transform_callback_) {
-    set_timeline_transform_callback_(true);
-    set_timeline_transform_callback_ = nullptr;
-  }
-
-  SendStatusUpdates();
-}
-
-void VideoFrameSource::MaybeClearEndOfStream() {
-  if (end_of_stream_pts_ != kUnspecifiedTime) {
-    end_of_stream_pts_ = kUnspecifiedTime;
-    end_of_stream_published_ = false;
-    SendStatusUpdates();
-  }
-}
-
-void VideoFrameSource::MaybePublishEndOfStream() {
-  if (!end_of_stream_published_ && end_of_stream_pts_ != kUnspecifiedTime &&
-      current_timeline_function_(Timeline::local_now()) >= end_of_stream_pts_) {
-    end_of_stream_published_ = true;
-    SendStatusUpdates();
-  }
-}
-
-void VideoFrameSource::SendStatusUpdates() {
-  ++status_version_;
-
-  std::vector<GetStatusCallback> pending_status_callbacks;
-  pending_status_callbacks_.swap(pending_status_callbacks);
-
-  for (const GetStatusCallback& pending_status_callback :
-       pending_status_callbacks) {
-    CompleteGetStatus(pending_status_callback);
-  }
-}
-
-void VideoFrameSource::CompleteGetStatus(const GetStatusCallback& callback) {
-  MediaTimelineControlPointStatusPtr status =
-      MediaTimelineControlPointStatus::New();
-  status->timeline_transform =
-      TimelineTransform::From(current_timeline_function_);
-  status->end_of_stream =
-      end_of_stream_pts_ != kUnspecifiedTime &&
-      current_timeline_function_(Timeline::local_now()) >= end_of_stream_pts_;
-  callback(status_version_, std::move(status));
 }
 
 }  // namespace media

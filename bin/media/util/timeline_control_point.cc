@@ -108,6 +108,19 @@ void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
   }
 }
 
+void TimelineControlPoint::ClearEndOfStream() {
+  ftl::MutexLocker locker(&mutex_);
+  ClearEndOfStreamInternal();
+}
+
+void TimelineControlPoint::ClearEndOfStreamInternal() {
+  mutex_.AssertHeld();
+  if (end_of_stream_pts_ != kUnspecifiedTime) {
+    end_of_stream_pts_ = kUnspecifiedTime;
+    end_of_stream_published_ = false;
+  }
+}
+
 bool TimelineControlPoint::ReachedEndOfStream() {
   mutex_.AssertHeld();
 
@@ -146,11 +159,11 @@ void TimelineControlPoint::SetTimelineTransform(
   RCHECK(timeline_transform);
   RCHECK(timeline_transform->reference_delta != 0);
 
-  if (timeline_transform->subject_time != kUnspecifiedTime &&
-      end_of_stream_pts_ != kUnspecifiedTime) {
-    end_of_stream_pts_ = kUnspecifiedTime;
-    end_of_stream_published_ = false;
+  if (timeline_transform->subject_time != kUnspecifiedTime) {
+    ClearEndOfStreamInternal();
   }
+
+  bool was_progressing = ProgressingInternal();
 
   int64_t reference_time =
       timeline_transform->reference_time == kUnspecifiedTime
@@ -169,6 +182,14 @@ void TimelineControlPoint::SetTimelineTransform(
       timeline_transform->subject_delta);
 
   set_timeline_transform_callback_ = callback;
+
+  if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
+    task_runner_->PostTask([this]() {
+      if (progress_started_callback_) {
+        progress_started_callback_();
+      }
+    });
+  }
 }
 
 void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
@@ -203,6 +224,13 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
 void TimelineControlPoint::PostReset() {
   mutex_.AssertHeld();
   task_runner_->PostTask([this]() { Reset(); });
+}
+
+bool TimelineControlPoint::ProgressingInternal() {
+  mutex_.AssertHeld();
+  return !end_of_stream_published_ &&
+         (current_timeline_function_.subject_delta() != 0 ||
+          pending_timeline_function_.subject_delta() != 0);
 }
 
 }  // namespace media
