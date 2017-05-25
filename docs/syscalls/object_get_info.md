@@ -220,7 +220,29 @@ typedef struct mx_info_task_stats {
     // Will be no larger than mem_mapped_bytes.
     // Some of the pages may be double-mapped (and thus double-counted),
     // or may be shared with other tasks.
+    // TODO(dbort): Remove mem_committed_bytes, which is equal to
+    // mem_private_bytes + mem_shared_bytes.
     size_t mem_committed_bytes;
+
+    // For the fields below, a byte is considered committed if it's backed by
+    // physical memory. Some of the memory may be double-mapped, and thus
+    // double-counted.
+
+    // Committed memory that is only mapped into this task.
+    size_t mem_private_bytes;
+
+    // Committed memory that is mapped into this and at least one other task.
+    size_t mem_shared_bytes;
+
+    // A number that estimates the fraction of mem_shared_bytes that this
+    // task is responsible for keeping alive.
+    //
+    // An estimate of:
+    //   For each shared, committed byte:
+    //   mem_scaled_shared_bytes += 1 / (number of tasks mapping this byte)
+    //
+    // This number is strictly smaller than mem_shared_bytes.
+    size_t mem_scaled_shared_bytes;
 } mx_info_task_stats_t;
 ```
 
