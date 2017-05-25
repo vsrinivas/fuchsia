@@ -26,7 +26,8 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
 
   // mozart2::Composer interface methods.
   void CreateSession(
-      ::fidl::InterfaceRequest<mozart2::Session> request) override;
+      ::fidl::InterfaceRequest<mozart2::Session> request,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
   // SessionContext interface methods.
   LinkPtr CreateLink(Session* session,
@@ -40,11 +41,19 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
 
   Renderer* renderer() const { return renderer_.get(); }
 
+  SessionHandler* FindSession(SessionId id);
+
  private:
   friend class SessionHandler;
   void ApplySessionUpdate(std::unique_ptr<SessionUpdate> update);
 
   void TearDownSession(SessionId id);
+
+  // Allow overriding to support tests.
+  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
+      SessionId id,
+      ::fidl::InterfaceRequest<mozart2::Session> request,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
 
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;
   std::atomic<size_t> session_count_;

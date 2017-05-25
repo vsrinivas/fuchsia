@@ -21,10 +21,18 @@ class ViewImpl : public mozart::View,
                  public mozart::ViewOwner,
                  public app::ServiceProvider {
  public:
-  ViewImpl(ViewRegistry* registry, ViewState* state);
+  ViewImpl(ViewRegistry* registry);
   ~ViewImpl() override;
 
+  // Called by ViewState constructor.
+  void set_state(ViewState* state);
+
  private:
+  // Temporary.  Allow access from these two subclasses as we transition from
+  // ViewImpl1 to ViewImpl2.
+  friend class ViewImpl1;
+  friend class ViewImpl2;
+
   // |View|:
   void GetToken(const mozart::View::GetTokenCallback& callback) override;
   void GetServiceProvider(fidl::InterfaceRequest<app::ServiceProvider>
@@ -33,6 +41,9 @@ class ViewImpl : public mozart::View,
       fidl::InterfaceHandle<app::ServiceProvider> service_provider,
       fidl::Array<fidl::String> service_names) override;
   void CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) override;
+  void CreateSession(
+      ::fidl::InterfaceRequest<mozart2::Session> session,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
   void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
   void Invalidate() override;
@@ -58,9 +69,12 @@ class ViewImpl : public mozart::View,
                         mx::channel client_handle) override;
 
   ViewRegistry* const registry_;
-  ViewState* const state_;
+  ViewState* const state_ = nullptr;  // set by ViewState constructor
   fidl::BindingSet<app::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<mozart::ViewContainer> container_bindings_;
+
+  // Called by set_state() to allow subclasses to react.
+  virtual void OnSetState() = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };

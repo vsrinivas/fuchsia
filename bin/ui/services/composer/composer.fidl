@@ -8,5 +8,5 @@ import "apps/mozart/services/composer/session.fidl";
 
 [ServiceName="mozart2::Composer"]
 interface Composer {
-  CreateSession(Session& session);
+  CreateSession(Session& session, SessionListener? listener);
 };

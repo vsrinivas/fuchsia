@@ -80,7 +80,8 @@ class HelloComposerApp {
   void Update() {
     FTL_LOG(INFO) << "Creating new Session";
     mozart2::SessionPtr session;
-    composer_->CreateSession(session.NewRequest());
+    // TODO: set up SessionListener.
+    composer_->CreateSession(session.NewRequest(), nullptr);
 
     auto ops = CreateLinkAndSampleScene();
 

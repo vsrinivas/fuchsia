@@ -49,6 +49,7 @@ class ViewState : public ViewContainerState {
 
   ViewState(ViewRegistry* registry,
             mozart::ViewTokenPtr view_token,
+            std::unique_ptr<ViewImpl> impl,
             fidl::InterfaceRequest<mozart::View> view_request,
             mozart::ViewListenerPtr view_listener,
             const std::string& label);

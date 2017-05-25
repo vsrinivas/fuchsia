@@ -9,10 +9,18 @@
 
 namespace view_manager {
 
-ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
-    : registry_(registry), state_(state) {}
+ViewImpl::ViewImpl(ViewRegistry* registry) : registry_(registry) {}
 
 ViewImpl::~ViewImpl() {}
+
+void ViewImpl::set_state(ViewState* state) {
+  FTL_DCHECK(state && !state_);
+  ViewState** unconst_state = const_cast<ViewState**>(&state_);
+  *unconst_state = state;
+  FTL_DCHECK(state_);
+  // Let subclasses react.
+  OnSetState();
+}
 
 void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
   callback(state_->view_token()->Clone());
@@ -32,7 +40,15 @@ void ViewImpl::OfferServiceProvider(
 }
 
 void ViewImpl::CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) {
-  registry_->CreateScene(state_, std::move(scene));
+  // Subclasses must implement.
+  registry_->OnViewDied(state_, "View does not support CreateScene");
+}
+
+void ViewImpl::CreateSession(
+    ::fidl::InterfaceRequest<mozart2::Session> session,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+  // Subclasses must implement.
+  registry_->OnViewDied(state_, "View does not support CreateSession");
 }
 
 void ViewImpl::GetContainer(

@@ -7,7 +7,8 @@
 #include "apps/mozart/services/composer/session.fidl.h"
 #include "apps/mozart/src/composer/session/session.h"
 #include "apps/mozart/src/composer/util/error_reporter.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mozart {
@@ -19,19 +20,26 @@ class ComposerImpl;
 // operations from Enqueue() before passing them all to |session_| when Commit()
 // is called.  Eventually, this class may do more work if performance profiling
 // suggests to.
-class SessionHandler final : public mozart2::Session, private ErrorReporter {
+class SessionHandler : public mozart2::Session, private ErrorReporter {
  public:
   SessionHandler(ComposerImpl* composer,
                  SessionId session_id,
-                 ::fidl::InterfaceRequest<mozart2::Session> request);
+                 ::fidl::InterfaceRequest<mozart2::Session> request,
+                 ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
   ~SessionHandler() override;
 
- private:
+  composer::Session* session() const { return session_.get(); }
+
+ protected:
   // mozart2::Session interface methods.
   void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
   void Present(::fidl::Array<mx::event> wait_events,
                ::fidl::Array<mx::event> signal_events) override;
+  void Connect(
+      ::fidl::InterfaceRequest<mozart2::Session> session,
+      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
+ private:
   friend class ComposerImpl;
 
   // Called by |binding_| when the connection closes, or by the SessionHandler
@@ -47,7 +55,9 @@ class SessionHandler final : public mozart2::Session, private ErrorReporter {
 
   ComposerImpl* const composer_;
   composer::SessionPtr session_;
-  ::fidl::Binding<mozart2::Session> binding_;
+
+  ::fidl::BindingSet<mozart2::Session> bindings_;
+  ::fidl::InterfacePtrSet<mozart2::SessionListener> listeners_;
 
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
 };

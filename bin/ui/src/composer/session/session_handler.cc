@@ -13,19 +13,22 @@ namespace composer {
 SessionHandler::SessionHandler(
     ComposerImpl* composer,
     SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request)
+    ::fidl::InterfaceRequest<mozart2::Session> request,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
     : composer_(composer),
       session_(::ftl::MakeRefCounted<composer::Session>(
           session_id,
           composer,
-          static_cast<ErrorReporter*>(this))),
-      binding_(this, std::move(request)) {
+          static_cast<ErrorReporter*>(this))) {
   FTL_DCHECK(composer_);
-  binding_.set_connection_error_handler([this]() {
+
+  bindings_.set_on_empty_set_handler([this]() {
     FTL_DCHECK(session_->is_valid());
     composer_->TearDownSession(session_->id());
     FTL_DCHECK(!session_->is_valid());
   });
+
+  Connect(std::move(request), std::move(listener));
 }
 
 SessionHandler::~SessionHandler() {}
@@ -47,6 +50,16 @@ void SessionHandler::Present(::fidl::Array<mx::event> wait_events,
   composer_->ApplySessionUpdate(std::move(update));
 }
 
+void SessionHandler::Connect(
+    ::fidl::InterfaceRequest<mozart2::Session> session,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+  bindings_.AddBinding(this, std::move(session));
+  if (listener) {
+    listeners_.AddInterfacePtr(
+        mozart2::SessionListenerPtr::Create(std::move(listener)));
+  }
+}
+
 void SessionHandler::ReportError(ftl::LogSeverity severity,
                                  std::string error_string) {
   switch (severity) {
@@ -58,6 +71,8 @@ void SessionHandler::ReportError(ftl::LogSeverity severity,
       break;
     case ftl::LOG_ERROR:
       FTL_LOG(ERROR) << error_string;
+      listeners_.ForAllPtrs(
+          [&error_string](auto listener) { listener->OnError(error_string); });
       break;
     case ftl::LOG_FATAL:
       FTL_LOG(FATAL) << error_string;
@@ -69,8 +84,9 @@ void SessionHandler::ReportError(ftl::LogSeverity severity,
 }
 
 void SessionHandler::TearDown() {
+  bindings_.CloseAllBindings();
+  listeners_.CloseAll();
   session_->TearDown();
-  binding_.Close();
 }
 
 }  // namespace composer

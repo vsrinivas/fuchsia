@@ -16,13 +16,30 @@ ComposerImpl::ComposerImpl()
 ComposerImpl::~ComposerImpl() {}
 
 void ComposerImpl::CreateSession(
-    ::fidl::InterfaceRequest<mozart2::Session> request) {
+    ::fidl::InterfaceRequest<mozart2::Session> request,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
   SessionId session_id = next_session_id_++;
 
   auto handler =
-      std::make_unique<SessionHandler>(this, session_id, std::move(request));
+      CreateSessionHandler(session_id, std::move(request), std::move(listener));
   sessions_.insert({session_id, std::move(handler)});
   ++session_count_;
+}
+
+std::unique_ptr<SessionHandler> ComposerImpl::CreateSessionHandler(
+    SessionId session_id,
+    ::fidl::InterfaceRequest<mozart2::Session> request,
+    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+  return std::make_unique<SessionHandler>(this, session_id, std::move(request),
+                                          std::move(listener));
+}
+
+SessionHandler* ComposerImpl::FindSession(SessionId id) {
+  auto it = sessions_.find(id);
+  if (it != sessions_.end()) {
+    return it->second.get();
+  }
+  return nullptr;
 }
 
 void ComposerImpl::ApplySessionUpdate(std::unique_ptr<SessionUpdate> update) {
@@ -47,6 +64,11 @@ void ComposerImpl::TearDownSession(SessionId id) {
     sessions_.erase(it);
     --session_count_;
     handler->TearDown();
+
+    // Don't destroy handler immediately, since it may be the one calling
+    // TearDownSession().
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+        ftl::MakeCopyable([handler = std::move(handler)]{}));
   }
 }
 

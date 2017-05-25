@@ -74,10 +74,8 @@ mozart::FocusChainPtr CopyFocusChain(const mozart::FocusChain* chain) {
 }
 }  // namespace
 
-ViewRegistry::ViewRegistry(app::ApplicationContext* application_context,
-                           mozart::CompositorPtr compositor)
-    : application_context_(application_context),
-      compositor_(std::move(compositor)) {}
+ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
+    : application_context_(application_context) {}
 
 ViewRegistry::~ViewRegistry() {}
 
@@ -98,9 +96,9 @@ void ViewRegistry::CreateView(
   FTL_CHECK(!FindView(view_token->value));
 
   // Create the state and bind the interfaces to it.
-  ViewState* view_state =
-      new ViewState(this, std::move(view_token), std::move(view_request),
-                    std::move(view_listener), SanitizeLabel(label));
+  ViewState* view_state = new ViewState(
+      this, std::move(view_token), CreateViewImpl(), std::move(view_request),
+      std::move(view_listener), SanitizeLabel(label));
   view_state->BindOwner(std::move(view_owner_request));
 
   // Add to registry and return token.
@@ -205,20 +203,6 @@ void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
 }
 
 // SCENE MANAGEMENT
-
-void ViewRegistry::CreateScene(ViewState* view_state,
-                               fidl::InterfaceRequest<mozart::Scene> scene) {
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_DCHECK(scene.is_pending());
-  FTL_VLOG(1) << "CreateScene: view=" << view_state;
-
-  compositor_->CreateScene(std::move(scene), view_state->label(), [
-    this, weak = view_state->GetWeakPtr()
-  ](mozart::SceneTokenPtr scene_token) {
-    if (weak)
-      OnViewSceneTokenAvailable(weak, std::move(scene_token));
-  });
-}
 
 void ViewRegistry::OnViewSceneTokenAvailable(
     ftl::WeakPtr<ViewState> view_state_weak,
@@ -556,34 +540,6 @@ void ViewRegistry::TransferViewOwner(
     view_state->ReleaseOwner();  // don't need the ViewOwner pipe anymore
     view_state->BindOwner(std::move(transferred_view_owner_request));
   }
-}
-
-void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
-                                               ViewState* view_state) {
-  FTL_DCHECK(view_stub);
-  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FTL_VLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
-
-  // Create the scene and get its token asynchronously.
-  // TODO(jeffbrown): It would be really nice to have a way to pipeline
-  // getting the scene token.
-  mozart::ScenePtr stub_scene;
-  compositor_->CreateScene(
-      stub_scene.NewRequest(),
-      ftl::StringPrintf("*%s", view_state->label().c_str()),
-      [ this,
-        weak = view_stub->GetWeakPtr() ](mozart::SceneTokenPtr scene_token) {
-        if (weak)
-          OnStubSceneTokenAvailable(weak, std::move(scene_token));
-      });
-
-  // Hijack the view from its current container, if needed.
-  HijackView(view_state);
-
-  // Attach the view.
-  view_state->ReleaseOwner();  // don't need the ViewOwner pipe anymore
-  view_stub->AttachView(view_state, std::move(stub_scene));
-  ScheduleViewInvalidation(view_state, ViewState::INVALIDATION_PARENT_CHANGED);
 }
 
 void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
