@@ -9,8 +9,8 @@
 namespace wlan {
 namespace testing {
 
-Device::Device(mx_driver_t* driver, mx_device_t* device, test_protocol_t* test_ops)
-  : TestBaseDevice("wlan-test", driver),
+Device::Device(mx_device_t* device, test_protocol_t* test_ops)
+  : TestBaseDevice("wlan-test"),
     test_proxy_(test_ops, device) {}
 
 mx_status_t Device::Bind() {

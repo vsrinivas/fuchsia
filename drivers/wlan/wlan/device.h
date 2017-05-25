@@ -31,7 +31,7 @@ class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
                public ddk::WlanmacIfc<Device> {
   public:
-    Device(mx_driver_t* driver, mx_device_t* device, wlanmac_protocol_t* wlanmac_ops);
+    Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops);
     ~Device();
 
     mx_status_t Bind();

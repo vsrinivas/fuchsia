@@ -22,8 +22,8 @@
 
 namespace wlan {
 
-Device::Device(mx_driver_t* driver, mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
-  : WlanBaseDevice("wlan", driver),
+Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
+  : WlanBaseDevice("wlan"),
     parent_(device),
     mlme_(ddk::WlanmacProtocolProxy(wlanmac_ops, device)),
     buffer_alloc_(kNumSlabs, true) {

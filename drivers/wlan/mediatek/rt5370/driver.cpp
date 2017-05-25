@@ -14,7 +14,7 @@
 
 #include "device.h"
 
-extern "C" mx_status_t rt5370_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     usb_desc_iter_t iter;
@@ -46,7 +46,7 @@ extern "C" mx_status_t rt5370_bind(mx_driver_t* driver, mx_device_t* device, voi
         return ERR_NOT_SUPPORTED;
     }
 
-    auto rtdev = new rt5370::Device(driver, device, blkin_endpt, std::move(blkout_endpts));
+    auto rtdev = new rt5370::Device(device, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
                 auto status = rtdev->Bind();
                 if (status != NO_ERROR) {

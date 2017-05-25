@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <memory>
 
-extern "C" mx_status_t wlan_bind(mx_driver_t* driver, mx_device_t* device, void** cookie) {
+extern "C" mx_status_t wlan_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     wlanmac_protocol_t* wlanmac_ops;
@@ -19,7 +19,7 @@ extern "C" mx_status_t wlan_bind(mx_driver_t* driver, mx_device_t* device, void*
         return ERR_INTERNAL;
     }
 
-    auto wlandev = std::make_unique<wlan::Device>(driver, device, wlanmac_ops);
+    auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_ops);
     auto status = wlandev->Bind();
     if (status != NO_ERROR) {
         std::printf("wlan: could not bind: %d\n", status);

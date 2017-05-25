@@ -64,14 +64,13 @@ namespace rt5370 {
 
 constexpr mx_duration_t Device::kDefaultBusyWait;
 
-Device::Device(mx_driver_t* driver, mx_device_t* device, uint8_t bulk_in,
+Device::Device(mx_device_t* device, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-  : ddk::Device<Device, ddk::Unbindable>("rt5370", driver),
-    driver_(driver),
+  : ddk::Device<Device, ddk::Unbindable>("rt5370"),
     usb_device_(device),
     rx_endpt_(bulk_in),
     tx_endpts_(std::move(bulk_out)) {
-    debugf("Device drv=%p dev=%p bulk_in=%u\n", driver_, usb_device_, rx_endpt_);
+    debugf("Device dev=%p bulk_in=%u\n", usb_device_, rx_endpt_);
 
     channels_.insert({
             {1, Channel(1, 0, 241, 2, 2)},
@@ -377,7 +376,7 @@ mx_status_t Device::LoadFirmware() {
     debugfn();
     mx_handle_t fw_handle;
     size_t fw_size = 0;
-    auto status = load_firmware(driver_, kFirmwareFile, &fw_handle, &fw_size);
+    auto status = load_firmware(mxdev(), kFirmwareFile, &fw_handle, &fw_size);
     if (status != NO_ERROR) {
         errorf("failed to load firmware '%s': err=%d\n", kFirmwareFile, status);
         return status;

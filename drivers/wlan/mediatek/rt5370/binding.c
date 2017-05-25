@@ -8,7 +8,7 @@
 
 #include <magenta/types.h>
 
-extern mx_status_t rt5370_bind(mx_driver_t* driver, mx_device_t* device, void** cookie);
+extern mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie);
 
 static mx_driver_ops_t rt5370_driver_ops = {
     .version = DRIVER_OPS_VERSION,
