@@ -322,46 +322,12 @@ static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, va_list va) {
 }
 
 static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
-    size_t n = 0;
-    for (;;) {
-        ssize_t r;
-        mxrio_t* rio = (mxrio_t*)io;
-        // TODO: if mx_socket support dgram mode, we'll switch to it
-        if ((r = mx_channel_read(rio->h2, 0, buf, NULL, buflen,
-                                 0, (uint32_t*)&n, NULL)) == MX_OK) {
-            return n;
-        }
-        if (r == MX_ERR_PEER_CLOSED) {
-            return 0;
-        } else if (r == MX_ERR_SHOULD_WAIT) {
-            if (io->flags & MXIO_FLAG_NONBLOCK) {
-                return r;
-            }
-            mx_signals_t pending;
-            r = mx_object_wait_one(rio->h2,
-                                   MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                   MX_TIME_INFINITE, &pending);
-            if (r < 0) {
-                return r;
-            }
-            if (pending & MX_CHANNEL_READABLE) {
-                continue;
-            }
-            if (pending & MX_CHANNEL_PEER_CLOSED) {
-                return 0;
-            }
-            // impossible
-            return MX_ERR_INTERNAL;
-        }
-        return (ssize_t)n;
-    }
+    return mxsio_read_stream(io, buf, buflen);
 }
 
 static ssize_t mxsio_tx_dgram(mxio_t* io, const void* buf, size_t buflen) {
-    mxrio_t* rio = (mxrio_t*)io;
-    // TODO: mx_channel_write never returns MX_ERR_SHOULD_WAIT, which is a problem.
-    // if mx_socket supports dgram mode, we'll switch to it.
-    return mx_channel_write(rio->h2, 0, buf, buflen, NULL, 0);
+    mx_status_t r = mxsio_write_stream(io, buf, buflen);
+    return (r < 0) ? r : MX_OK;
 }
 
 static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags);
@@ -503,12 +469,13 @@ static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* han
     *handle = rio->h2;
     mx_signals_t signals = MXSIO_SIGNAL_ERROR;
     if (events & POLLIN) {
-        signals |= MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
     }
     if (events & POLLOUT) {
-        signals |= MX_CHANNEL_WRITABLE;
+        signals |= MX_SOCKET_WRITABLE;
     }
     if (events & POLLRDHUP) {
+        signals |= MX_SOCKET_PEER_CLOSED;
         signals |= MX_CHANNEL_PEER_CLOSED;
     }
     *_signals = signals;
@@ -516,16 +483,16 @@ static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* han
 
 static void mxsio_wait_end_dgram(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
+    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
         events |= POLLIN;
     }
-    if (signals & MX_CHANNEL_WRITABLE) {
+    if (signals & MX_SOCKET_WRITABLE) {
         events |= POLLOUT;
     }
     if (signals & MXSIO_SIGNAL_ERROR) {
         events |= POLLERR;
     }
-    if (signals & MX_CHANNEL_PEER_CLOSED) {
+    if (signals & MX_SOCKET_PEER_CLOSED) {
         events |= POLLRDHUP;
     }
     *_events = events;
