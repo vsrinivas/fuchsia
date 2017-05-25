@@ -23,15 +23,6 @@
 # define DEBUG_PRINT(x) do {} while (0)
 #endif
 
-// extra data for clone txns
-typedef struct {
-    ums_t*      ums;
-    mx_off_t    offset;
-    size_t      total_length;
-    size_t      max_packet;
-} ums_txn_extra_t;
-static_assert(sizeof(ums_txn_extra_t) <= sizeof (iotxn_extra_data_t), "");
-
 static csw_status_t ums_verify_csw(ums_t* ums, iotxn_t* csw_request, uint32_t* out_residue);
 
 
@@ -246,50 +237,14 @@ static mx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_da
     return status;
 }
 
-static void clone_complete(iotxn_t* clone, void* cookie) {
-    ums_txn_extra_t* extra = (ums_txn_extra_t *)&clone->extra;
-    ums_t* ums = extra->ums;
-
-    if (clone->status == NO_ERROR) {
-        extra->offset += clone->actual;
-        // Queue another read if we haven't read full length and did not receive a short packet
-        if (extra->offset < extra->total_length && clone->actual != 0 &&
-                (clone->actual % extra->max_packet) == 0) {
-            size_t length = extra->total_length - extra->offset;
-            if (length > ums->max_transfer) {
-                length = ums->max_transfer;
-            }
-            clone->length = length;
-            clone->vmo_offset += clone->actual;
-            clone->vmo_length -= clone->actual;
-            ums_queue_request(ums, clone);
-            return;
-        }
-    }
-
-    // transfer is done if we get here
-    completion_signal((completion_t *)cookie);
-}
-
-static void ums_queue_data_transfer(ums_t* ums, iotxn_t* txn, uint8_t ep_address, size_t max_packet) {
+static mx_status_t ums_data_transfer(ums_t* ums, iotxn_t* txn, mx_off_t offset, size_t length,
+                                     uint8_t ep_address) {
     iotxn_t* clone = NULL;
-    mx_status_t status = iotxn_clone(txn, &clone);
+    mx_status_t status = iotxn_clone_partial(txn, offset, length, &clone);
     if (status != NO_ERROR) {
-        iotxn_complete(txn, status, 0);
-        return;
+        return status;
     }
-
-    clone->complete_cb = clone_complete;
-
-    ums_txn_extra_t* extra = (ums_txn_extra_t *)&clone->extra;
-    extra->ums = ums;
-    extra->offset = 0;
-    extra->total_length = txn->length;
-    extra->max_packet = max_packet;
-
-    if (clone->length > ums->max_transfer) {
-        clone->length = ums->max_transfer;
-    }
+    clone->complete_cb = ums_txn_complete;
 
     usb_protocol_data_t* pdata = iotxn_pdata(clone, usb_protocol_data_t);
     memset(pdata, 0, sizeof(*pdata));
@@ -300,14 +255,17 @@ static void ums_queue_data_transfer(ums_t* ums, iotxn_t* txn, uint8_t ep_address
     ums_queue_request(ums, clone);
     completion_wait(&completion, MX_TIME_INFINITE);
 
-    txn->status = clone->status;
-    txn->actual = (txn->status == NO_ERROR ? extra->offset : 0);
+    status = clone->status;
+    if (status == NO_ERROR && clone->actual != length) {
+        status = ERR_IO;
+    }
 
     iotxn_release(clone);
+    return status;
 }
 
-static mx_status_t ums_read(ums_block_t* dev, iotxn_t* txn) {
-    if (txn->length > UINT32_MAX) return ERR_INVALID_ARGS;
+static ssize_t ums_read(ums_block_t* dev, iotxn_t* txn) {
+    ums_t* ums = block_to_ums(dev);
 
     uint64_t lba = txn->offset / dev->block_size;
     if (lba > dev->total_blocks) {
@@ -320,50 +278,66 @@ static mx_status_t ums_read(ums_block_t* dev, iotxn_t* txn) {
             return 0;
         }
     }
-    uint32_t transfer_length = num_blocks * dev->block_size;
-    ums_t* ums = block_to_ums(dev);
 
-    // CBW Configuration
+    size_t blocks_transferred = 0;
+    size_t max_blocks = ums->max_transfer / dev->block_size;
+    mx_status_t status = NO_ERROR;
 
-    // Need to use UMS_READ16 if block addresses are greater than 32 bit
-    if (dev->total_blocks > UINT32_MAX) {
-        scsi_command16_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_READ16;
-        command.lba = htobe64(lba);
-        command.length = htobe32(num_blocks);
+    while (status == NO_ERROR && blocks_transferred < num_blocks) {
+        size_t blocks = num_blocks - blocks_transferred;
+        if (blocks > max_blocks) {
+            blocks = max_blocks;
+        }
+        size_t length = blocks * dev->block_size;
 
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_IN, sizeof(command), &command);
-    } else if (num_blocks <= UINT16_MAX) {
-        scsi_command10_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_READ10;
-        command.lba = htobe32(lba);
-        command.length_hi = num_blocks >> 8;
-        command.length_lo = num_blocks & 0xFF;
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_IN, sizeof(command), &command);
-    } else {
-        scsi_command12_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_READ12;
-        command.lba = htobe32(lba);
-        command.length = htobe32(num_blocks);
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_IN, sizeof(command), &command);
+        // CBW Configuration
+        // Need to use UMS_READ16 if block addresses are greater than 32 bit
+        if (dev->total_blocks > UINT32_MAX) {
+            scsi_command16_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_READ16;
+            command.lba = htobe64(lba + blocks_transferred);
+            command.length = htobe32(blocks);
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_IN, sizeof(command), &command);
+        } else if (blocks <= UINT16_MAX) {
+            scsi_command10_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_READ10;
+            command.lba = htobe32(lba + blocks_transferred);
+            command.length_hi = blocks >> 8;
+            command.length_lo = blocks & 0xFF;
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_IN, sizeof(command), &command);
+        } else {
+            scsi_command12_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_READ12;
+            command.lba = htobe32(lba + blocks_transferred);
+            command.length = htobe32(blocks);
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_IN, sizeof(command), &command);
+        }
+
+        status = ums_data_transfer(ums, txn, blocks_transferred * dev->block_size, length,
+                                   ums->bulk_in_addr);
+        blocks_transferred += blocks;
+
+        // receive CSW
+        uint32_t residue;
+        status = ums_read_csw(ums, &residue);
+        if (status == NO_ERROR && residue) {
+            printf("unexpected residue in ums_read\n");
+            status = ERR_IO;
+        }
     }
 
-    ums_queue_data_transfer(ums, txn, ums->bulk_in_addr, ums->bulk_in_max_packet);
-
-    uint32_t residue;
-    mx_status_t status = ums_read_csw(ums, &residue);
     if (status == NO_ERROR) {
-        status = txn->actual - residue;
+        return num_blocks * dev->block_size;
+    } else {
+        return status;
     }
-
-    return status;
 }
 
-static mx_status_t ums_write(ums_block_t* dev, iotxn_t* txn) {
-    if (txn->length > UINT32_MAX) return ERR_INVALID_ARGS;
+static ssize_t ums_write(ums_block_t* dev, iotxn_t* txn) {
+    ums_t* ums = block_to_ums(dev);
 
     uint64_t lba = txn->offset / dev->block_size;
     if (lba > dev->total_blocks) {
@@ -376,44 +350,61 @@ static mx_status_t ums_write(ums_block_t* dev, iotxn_t* txn) {
             return 0;
         }
     }
-    uint32_t transfer_length = num_blocks * dev->block_size;
-    ums_t* ums = block_to_ums(dev);
 
-    // Need to use UMS_WRITE16 if block addresses are greater than 32 bit
-    if (dev->total_blocks > UINT32_MAX) {
-        scsi_command16_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_WRITE16;
-        command.lba = htobe64(lba);
-        command.length = htobe32(num_blocks);
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_OUT, sizeof(command), &command);
-    } else if (num_blocks <= UINT16_MAX) {
-        scsi_command10_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_WRITE10;
-        command.lba = htobe32(lba);
-        command.length_hi = num_blocks >> 8;
-        command.length_lo = num_blocks & 0xFF;
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_OUT, sizeof(command), &command);
-    } else {
-        scsi_command12_t command;
-        memset(&command, 0, sizeof(command));
-        command.opcode = UMS_WRITE12;
-        command.lba = htobe32(lba);
-        command.length = htobe32(num_blocks);
-        ums_send_cbw(ums, dev->lun, transfer_length, USB_DIR_OUT, sizeof(command), &command);
+    size_t blocks_transferred = 0;
+    size_t max_blocks = ums->max_transfer / dev->block_size;
+    mx_status_t status = NO_ERROR;
+
+    while (status == NO_ERROR && blocks_transferred < num_blocks) {
+        size_t blocks = num_blocks - blocks_transferred;
+        if (blocks > max_blocks) {
+            blocks = max_blocks;
+        }
+        size_t length = blocks * dev->block_size;
+
+        // Need to use UMS_WRITE16 if block addresses are greater than 32 bit
+        if (dev->total_blocks > UINT32_MAX) {
+            scsi_command16_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_WRITE16;
+            command.lba = htobe64(lba + blocks_transferred);
+            command.length = htobe32(blocks);
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_OUT, sizeof(command), &command);
+        } else if (blocks <= UINT16_MAX) {
+            scsi_command10_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_WRITE10;
+            command.lba = htobe32(lba + blocks_transferred);
+            command.length_hi = blocks >> 8;
+            command.length_lo = blocks & 0xFF;
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_OUT, sizeof(command), &command);
+        } else {
+            scsi_command12_t command;
+            memset(&command, 0, sizeof(command));
+            command.opcode = UMS_WRITE12;
+            command.lba = htobe32(lba + blocks_transferred);
+            command.length = htobe32(blocks);
+            ums_send_cbw(ums, dev->lun, length, USB_DIR_OUT, sizeof(command), &command);
+        }
+
+        status = ums_data_transfer(ums, txn, blocks_transferred * dev->block_size, length,
+                                   ums->bulk_in_addr);
+        blocks_transferred += blocks;
+
+        // receive CSW
+        uint32_t residue;
+        status = ums_read_csw(ums, &residue);
+        if (status == NO_ERROR && residue) {
+            printf("unexpected residue in ums_write\n");
+            status = ERR_IO;
+        }
     }
 
-    ums_queue_data_transfer(ums, txn, ums->bulk_out_addr, ums->bulk_out_max_packet);
-
-    // receive CSW
-    uint32_t residue;
-    mx_status_t status = ums_read_csw(ums, &residue);
     if (status == NO_ERROR) {
-        status = transfer_length - residue;
+        return num_blocks * dev->block_size;
+    } else {
+        return status;
     }
-
-    return status;
 }
 
 static void ums_unbind(void* ctx) {
@@ -641,7 +632,7 @@ static int ums_worker_thread(void* arg) {
         mtx_unlock(&ums->iotxn_lock);
 
         if (status >= 0) {
-            iotxn_complete(txn, NO_ERROR, status);
+            iotxn_complete(txn, NO_ERROR, txn->length);
         } else {
             iotxn_complete(txn, status, 0);
         }
