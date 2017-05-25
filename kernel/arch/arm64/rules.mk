@@ -40,8 +40,7 @@ MODULE_DEPS += \
 KERNEL_DEFINES += \
 	ARM64_CPU_$(ARM_CPU)=1 \
 	ARM_ISA_ARMV8=1 \
-	ARM_ISA_ARMV8A=1 \
-	ARCH_DEFAULT_STACK_SIZE=4096
+	ARM_ISA_ARMV8A=1
 
 # if its requested we build with SMP, arm generically supports 4 cpus
 

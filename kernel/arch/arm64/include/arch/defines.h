@@ -30,6 +30,8 @@
 #define CACHE_LINE 64
 #elif ARM64_CPU_CORTEX_A72
 #define CACHE_LINE 64
+#elif ARM64_CPU_CORTEX_A73
+#define CACHE_LINE 64
 #else
 #error "define CACHE_LINE for the specific core"
 #endif
@@ -43,4 +45,6 @@
 #define ARM64_MMFR0_ASIDBITS_16     BM(4,4,2)
 #define ARM64_MMFR0_ASIDBITS_8      BM(4,4,0)
 #define ARM64_MMFR0_ASIDBITS_MASK   BM(4,4,15)
+
+#define ARCH_DEFAULT_STACK_SIZE 8192
 
