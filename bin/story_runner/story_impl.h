@@ -93,6 +93,9 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   // Called by StoryProviderImpl.
   StoryState GetStoryState() const;
 
+  // Called by ModuleControllerImpl
+  void FocusModule(const fidl::Array<fidl::String>& module_path);
+
   // Called by ModuleControllerImpl.
   //
   // Releases ownership of |controller|, which deletes itself after return.

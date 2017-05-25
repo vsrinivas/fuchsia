@@ -79,6 +79,12 @@ class StoryShellImpl extends StoryShell {
 
   /// StoryShell
   @override
+  void focusView(String viewId) {
+    // Nothing
+  }
+
+  /// StoryShell
+  @override
   void terminate(void done()) {
     _log('StoryShellImpl::terminate call');
     done();

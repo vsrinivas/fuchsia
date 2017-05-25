@@ -21,10 +21,12 @@ ModuleControllerImpl::ModuleControllerImpl(
     StoryImpl* const story_impl,
     app::ApplicationControllerPtr module_application,
     ModulePtr module,
+    const fidl::Array<fidl::String>& module_path,
     fidl::InterfaceRequest<ModuleController> module_controller)
     : story_impl_(story_impl),
       module_application_(std::move(module_application)),
       module_(std::move(module)),
+      module_path_(module_path.Clone()),
       binding_(this, std::move(module_controller)) {
   module_application_.set_connection_error_handler(
       [this] { SetState(ModuleState::ERROR); });
@@ -111,6 +113,10 @@ void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
   auto ptr = fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher));
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
+}
+
+void ModuleControllerImpl::Focus() {
+  story_impl_->FocusModule(module_path_);
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {

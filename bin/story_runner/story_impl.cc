@@ -481,7 +481,7 @@ class StoryImpl::StartModuleCall : Operation<> {
 
     connection.module_controller_impl.reset(new ModuleControllerImpl(
         story_impl_, std::move(application_controller), std::move(module),
-        std::move(module_controller_request_)));
+        module_path_, std::move(module_controller_request_)));
 
     ModuleContextInfo module_context_info = {
         story_impl_->story_provider_impl_->component_context_info(),
@@ -789,6 +789,12 @@ void StoryImpl::StartModuleInShell(
     story_shell_->ConnectView(std::move(view_owner), std::move(id),
                               std::move(parent_id),
                               std::move(surface_relation));
+  }
+}
+
+void StoryImpl::FocusModule(const fidl::Array<fidl::String>& module_path) {
+  if (story_shell_) {
+    story_shell_->FocusView(PathString(module_path));
   }
 }
 

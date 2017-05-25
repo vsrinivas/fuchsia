@@ -17,6 +17,9 @@ interface ModuleController {
   // otherwise stops.
   Watch(ModuleWatcher watcher);
 
+  // Requests that this module become the focused module in the story.
+  Focus();
+
   // Requests the Module instance to stop (see Module.Stop() for how).
   Stop() => ();
 };

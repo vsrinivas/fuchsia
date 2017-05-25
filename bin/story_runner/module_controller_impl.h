@@ -31,6 +31,7 @@ class ModuleControllerImpl : ModuleController {
       StoryImpl* const story_impl,
       app::ApplicationControllerPtr module_application,
       ModulePtr module,
+      const fidl::Array<fidl::String>& module_path,
       fidl::InterfaceRequest<ModuleController> module_controller);
 
   ~ModuleControllerImpl() override;
@@ -48,6 +49,7 @@ class ModuleControllerImpl : ModuleController {
  private:
   // |ModuleController|
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
+  void Focus() override;
   void Stop(const StopCallback& done) override;
 
   // Used as connection error handler on the Module connection.
@@ -61,6 +63,9 @@ class ModuleControllerImpl : ModuleController {
 
   // The Module instance.
   ModulePtr module_;
+
+  // The Module path
+  const fidl::Array<fidl::String> module_path_;
 
   // The service provided here.
   fidl::Binding<ModuleController> binding_;

@@ -34,6 +34,9 @@ interface StoryShell {
   ConnectView(mozart.ViewOwner owner, string view_id, string parent_id,
               SurfaceRelation? surface_relation);
 
+  // Focus the view with view_id, bringing it to the foreground.
+  FocusView(string view_id);
+
   // Signals to the StoryShell to tear down itself. Upon response the
   // caller terminates the StoryShell process if it hasn't done so
   // already.
