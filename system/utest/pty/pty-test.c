@@ -198,7 +198,7 @@ static bool pty_test(void) {
 
     // verify that server observes depature of last client
     close(pc);
-    ASSERT_EQ(fd_signals(ps), EPOLLHUP, "");
+    ASSERT_EQ(fd_signals(ps), EPOLLHUP | EPOLLIN, "");
 
     close(ps);
 

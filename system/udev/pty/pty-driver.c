@@ -49,11 +49,17 @@ static mx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
 static mx_status_t psd_read(void* ctx, void* buf, size_t count, mx_off_t off, size_t* actual) {
     pty_server_dev_t* psd = ctx;
 
+    bool eof = false;
+
     mtx_lock(&psd->srv.lock);
     bool was_full = pty_fifo_is_full(&psd->fifo);
     size_t length = pty_fifo_read(&psd->fifo, buf, count);
     if (pty_fifo_is_empty(&psd->fifo)) {
-        device_state_clr(psd->srv.mxdev, DEV_STATE_READABLE);
+        if (list_is_empty(&psd->srv.clients)) {
+            eof = true;
+        } else {
+            device_state_clr(psd->srv.mxdev, DEV_STATE_READABLE);
+        }
     }
     if (was_full && length) {
         pty_server_resume_locked(&psd->srv);
@@ -62,6 +68,9 @@ static mx_status_t psd_read(void* ctx, void* buf, size_t count, mx_off_t off, si
 
     if (length > 0) {
         *actual = length;
+        return NO_ERROR;
+    } else if (eof) {
+        *actual = 0;
         return NO_ERROR;
     } else {
         return ERR_SHOULD_WAIT;

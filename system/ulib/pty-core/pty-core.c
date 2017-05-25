@@ -12,6 +12,7 @@
 
 #include <magenta/errors.h>
 #include <magenta/device/pty.h>
+#include <magenta/device/console.h>
 
 #if 1
 #define xprintf(fmt...) printf(fmt)
@@ -151,6 +152,18 @@ static mx_status_t pty_client_ioctl(void* ctx, uint32_t op,
         mtx_unlock(&ps->lock);
         return NO_ERROR;
     }
+    case IOCTL_CONSOLE_GET_DIMENSIONS: {
+        ioctl_console_dimensions_t* dims = out_buf;
+        if (out_len != sizeof(ioctl_console_dimensions_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        mtx_lock(&ps->lock);
+        dims->width = ps->width;
+        dims->height = ps->height;
+        mtx_unlock(&ps->lock);
+        *out_actual = sizeof(pty_window_size_t);
+        return NO_ERROR;
+    }
     case IOCTL_PTY_GET_WINDOW_SIZE: {
         pty_window_size_t* wsz = out_buf;
         if (out_len != sizeof(pty_window_size_t)) {
@@ -234,7 +247,7 @@ static void pty_client_release(void* ctx) {
     }
     // signal server, if the last client has gone away
     if (list_is_empty(&ps->clients)) {
-        device_state_set_clr(ps->mxdev, DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
+        device_state_set_clr(ps->mxdev, DEV_STATE_READABLE | DEV_STATE_HANGUP, DEV_STATE_WRITABLE);
     }
     mtx_unlock(&ps->lock);
 
@@ -327,7 +340,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
         ps->control = pc;
         pc->flags |= PTY_CLI_CONTROL;
     }
- 
+
     xprintf("pty cli %p (id=%u) created (srv %p)\n", pc, pc->id, ps);
 
     mtx_lock(&ps->lock);
