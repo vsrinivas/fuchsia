@@ -74,7 +74,7 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h);
 // Attempt to connect a channel to a named service relative to dir.
 // On success the channel is connected.  On failure
 // an error is returned and the handle is closed.
-mx_handle_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle_t h);
+mx_status_t mxio_service_connect_at(mx_handle_t dir, const char* path, mx_handle_t h);
 
 // Attempt to clone a sevice handle by doing a pipelined
 // CLONE operation, returning the new channel endpoint,
