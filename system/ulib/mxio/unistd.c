@@ -447,7 +447,7 @@ static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const ch
         clean[1] = 0;
     }
 
-    mx_status_t r = iodir->ops->open(iodir, clean, O_DIRECTORY, 0, io);
+    mx_status_t r = iodir->ops->open(iodir, clean, O_RDONLY | O_DIRECTORY, 0, io);
     mxio_release(iodir);
     return r;
 }
@@ -586,7 +586,7 @@ void __libc_extensions_init(uint32_t handle_count,
     if (mxio_root_handle) {
         mxio_root_init = true;
         if(!mxio_cwd_handle) {
-            __mxio_open(&mxio_cwd_handle, mxio_cwd_path, O_DIRECTORY, 0);
+            __mxio_open(&mxio_cwd_handle, mxio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
         }
     } else {
         // placeholder null handle
@@ -1300,7 +1300,7 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
 
     mode = (mode & 0777) | S_IFDIR;
 
-    if ((r = __mxio_open_at(&io, dirfd, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
+    if ((r = __mxio_open_at(&io, dirfd, path, O_RDONLY | O_CREAT | O_EXCL, mode)) < 0) {
         return ERROR(r);
     }
     io->ops->close(io);
@@ -1506,7 +1506,7 @@ void mxio_chdir(mxio_t* io, const char* path) {
 int chdir(const char* path) {
     mxio_t* io;
     mx_status_t r;
-    if ((r = __mxio_open(&io, path, O_DIRECTORY, 0)) < 0) {
+    if ((r = __mxio_open(&io, path, O_RDONLY | O_DIRECTORY, 0)) < 0) {
         return STATUS(r);
     }
     mxio_chdir(io, path);
@@ -1540,7 +1540,7 @@ static DIR* internal_opendir(int fd) {
 }
 
 DIR* opendir(const char* name) {
-    int fd = open(name, O_DIRECTORY);
+    int fd = open(name, O_RDONLY | O_DIRECTORY);
     if (fd < 0)
         return NULL;
     DIR* dir = internal_opendir(fd);

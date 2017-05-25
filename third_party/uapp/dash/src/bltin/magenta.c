@@ -375,7 +375,7 @@ static int mxc_rm_recursive(int atfd, char* path, bool force) {
         return force ? 0 : -1;
     }
     if (S_ISDIR(st.st_mode)) {
-        int dfd = openat(atfd, path, 0, O_DIRECTORY | O_RDWR);
+        int dfd = openat(atfd, path, 0, O_RDONLY | O_DIRECTORY);
         if (dfd < 0) {
             return -1;
         }

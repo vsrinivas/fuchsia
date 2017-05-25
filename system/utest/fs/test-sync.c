@@ -29,7 +29,7 @@ bool test_sync(void) {
     ASSERT_EQ(unlink("::alpha"), 0, "");
 
     ASSERT_EQ(mkdir("::dirname", 0755), 0, "");
-    fd = open("::dirname", O_RDWR, 0644);
+    fd = open("::dirname", O_RDONLY | O_DIRECTORY, 0644);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(fsync(fd), 0, "");
     ASSERT_EQ(fdatasync(fd), 0, "");

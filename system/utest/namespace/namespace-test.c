@@ -28,7 +28,7 @@ int run_in_namespace(const char* bin, size_t count, char** mapping) {
             return -1;
         }
         *src++ = 0;
-        int fd = open(src, O_RDWR | O_DIRECTORY);
+        int fd = open(src, O_RDONLY | O_DIRECTORY);
         if (fd < 0) {
             fprintf(stderr, "error: cannot open '%s'\n", src);
             return -1;
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     for (unsigned n = 0; n < sizeof(NS) / sizeof(NS[0]); n++) {
-        int fd = open(NS[n].remote, O_RDWR | O_DIRECTORY);
+        int fd = open(NS[n].remote, O_RDONLY | O_DIRECTORY);
         if (fd < 0) {
             printf("ns open '%s' failed\n", NS[n].remote);
             return -1;

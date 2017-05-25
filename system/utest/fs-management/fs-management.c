@@ -23,7 +23,7 @@
 #include <fs-management/ramdisk.h>
 
 static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) {
-    int fd = open(path, O_RDWR);
+    int fd = open(path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
     char out[128];
     ASSERT_EQ(ioctl_vfs_query_fs(fd, out, sizeof(out)), (ssize_t)len,
@@ -92,7 +92,7 @@ static bool fmount_funmount(void) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
 
-    int mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
@@ -118,7 +118,7 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
 
-    int mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    int mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
 
     // Everything *would* be perfect to call fmount, when suddenly...
@@ -149,7 +149,7 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
     ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
-    mountfd = open(mount_path, O_DIRECTORY | O_RDWR);
+    mountfd = open(mount_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
@@ -185,7 +185,7 @@ static bool mount_evil_minfs(void) {
     ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), NO_ERROR, "");
     const char* parent_path = "/tmp/parent";
     ASSERT_EQ(mkdir(parent_path, 0666), 0, "");
-    int mountfd = open(parent_path, O_DIRECTORY | O_RDWR);
+    int mountfd = open(parent_path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(mountfd, 0, "Couldn't open mount point");
     int ramdiskfd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(ramdiskfd, 0, "");

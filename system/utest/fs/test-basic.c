@@ -35,7 +35,7 @@ bool test_basic(void) {
 
     ASSERT_EQ(unlink("::file.txt"), 0, "");
     ASSERT_EQ(mkdir("::emptydir", 0755), 0, "");
-    fd1 = open("::emptydir", O_RDWR, 0644);
+    fd1 = open("::emptydir", O_RDONLY, 0644);
     ASSERT_GT(fd1, 0, "");
 
     ASSERT_EQ(read(fd1, NULL, 0), -1, "");

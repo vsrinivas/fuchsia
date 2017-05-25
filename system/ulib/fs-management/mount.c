@@ -118,7 +118,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
 
     // Install remote handle.
     if (options->create_mountpoint) {
-        int fd = open("/", O_DIRECTORY | O_RDWR);
+        int fd = open("/", O_RDONLY | O_DIRECTORY);
         if (fd < 0) {
             goto fail;
         }
@@ -242,7 +242,7 @@ mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
         mp.path = mountpath;
     } else {
         // Open mountpoint; use it directly
-        if ((mp.fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
+        if ((mp.fd = open(mountpath, O_RDONLY | O_DIRECTORY)) < 0) {
             return ERR_BAD_STATE;
         }
     }

@@ -82,11 +82,11 @@ bool test_dot_dot_server(void) {
         {false, "baz", DT_DIR},
     };
 
-    int foo_fd = open("::foo", O_RDWR | O_DIRECTORY);
+    int foo_fd = open("::foo", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(foo_fd, 0, "");
 
     // ".." from foo --> "foo"
-    int fd = openat(foo_fd, "..", O_RDWR | O_DIRECTORY);
+    int fd = openat(foo_fd, "..", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
     DIR* dir = fdopendir(fd); // Consumes 'fd'
     ASSERT_NONNULL(dir, "");
@@ -94,7 +94,7 @@ bool test_dot_dot_server(void) {
     ASSERT_EQ(closedir(dir), 0, "");
 
     // "bar/.." from foo --> "foo"
-    fd = openat(foo_fd, "bar/..", O_RDWR | O_DIRECTORY);
+    fd = openat(foo_fd, "bar/..", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
     dir = fdopendir(fd); // Consumes 'fd'
     ASSERT_NONNULL(dir, "");
@@ -102,7 +102,7 @@ bool test_dot_dot_server(void) {
     ASSERT_EQ(closedir(dir), 0, "");
 
     // "bar/../.." from foo --> "foo"
-    fd = openat(foo_fd, "bar/../..", O_RDWR | O_DIRECTORY);
+    fd = openat(foo_fd, "bar/../..", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
     dir = fdopendir(fd); // Consumes 'fd'
     ASSERT_NONNULL(dir, "");
@@ -110,7 +110,7 @@ bool test_dot_dot_server(void) {
     ASSERT_EQ(closedir(dir), 0, "");
 
     // "../../../../../bar" --> "bar"
-    fd = openat(foo_fd, "../../../../../bar", O_RDWR | O_DIRECTORY);
+    fd = openat(foo_fd, "../../../../../bar", O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
     dir = fdopendir(fd); // Consumes 'fd'
     ASSERT_NONNULL(dir, "");

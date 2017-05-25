@@ -273,7 +273,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         }
         mxtl::AutoLock lock(&vfs_lock);
         mx_status_t r = Open(vn, &vn, name, &name,
-                             O_CREAT | O_RDWR | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
+                             O_CREAT | O_RDONLY | O_DIRECTORY | O_NOREMOTE, S_IFDIR);
         MX_DEBUG_ASSERT(r <= NO_ERROR); // Should not be accessing remote nodes
         if (r < 0) {
             return r;
