@@ -343,7 +343,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 // implement driver object:
 
-static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_device, void** cookie)
+static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** cookie)
 {
     DLOG("intel_i915_bind start mx_device %p", mx_device);
 
@@ -435,7 +435,6 @@ static mx_status_t intel_i915_bind(mx_driver_t* mx_driver, mx_device_t* mx_devic
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "intel_i915_disp";
     args.ctx = device.get();
-    args.driver = mx_driver;
     args.ops = &intel_i915_device_proto;
     args.proto_id = MX_PROTOCOL_DISPLAY;
     args.proto_ops = &intel_i915_display_proto;
