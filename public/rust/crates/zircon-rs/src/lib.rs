@@ -93,8 +93,7 @@ pub enum Status {
 }
 
 impl Status {
-    // should these conversions be public?
-    fn from_raw(raw: sys::mx_status_t) -> Self {
+    pub fn from_raw(raw: sys::mx_status_t) -> Self {
         match raw {
             // Auto-generated using tools/gen_status.py
             sys::NO_ERROR => Status::NoError,
