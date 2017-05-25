@@ -309,7 +309,7 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValue) {
   }
 }
 
-TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
+TEST_F(BTreeUtilsTest, DISABLED_UpdateValueLevel1) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -434,7 +434,7 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   EXPECT_EQ(0u, new_nodes.size());
 }
 
-TEST_F(BTreeUtilsTest, DeleteChanges) {
+TEST_F(BTreeUtilsTest, DISABLED_DeleteChanges) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -561,7 +561,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   EXPECT_EQ(0u, new_nodes.size());
 }
 
-TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
+TEST_F(BTreeUtilsTest, DISABLED_SplitMergeUpdate) {
   // Expected layout (XX is key "keyXX"):
   //        [50]
   //     /        \
