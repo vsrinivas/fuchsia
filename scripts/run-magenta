@@ -188,7 +188,7 @@ if (( $DISK )); then
 
     ARGS+=" -drive file=${DISKFILE},format=raw,if=none,id=mydisk"
     if [[ "$DISKTYPE" == "virtio" ]]; then
-        ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
+        ARGS+=" -device virtio-blk-pci,drive=mydisk"
     elif [[ "$DISKTYPE" == "ahci" ]]; then
         ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
     elif [[ "$DISKTYPE" == "nvme" ]]; then

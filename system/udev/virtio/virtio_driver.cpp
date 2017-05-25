@@ -51,9 +51,9 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     LTRACEF("0x%x:0x%x\n", config->vendor_id, config->device_id);
 
     mxtl::unique_ptr<virtio::Device> vd = nullptr;
-    AllocChecker ac;
     switch (config->device_id) {
     case 0x1001:
+    case 0x1042:
         LTRACEF("found block device\n");
         vd.reset(new virtio::BlockDevice(device));
         break;

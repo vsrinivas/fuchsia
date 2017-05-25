@@ -42,6 +42,13 @@ mx_status_t Ring::Init(uint16_t index, uint16_t count) {
 
     index_ = index;
 
+    // make sure the count is available in this ring
+    uint16_t max_ring_size = device_->GetRingSize(index);
+    if (count > max_ring_size) {
+        VIRTIO_ERROR("ring init count too big for hardware %u > %u\n", count, max_ring_size);
+        return ERR_OUT_OF_RANGE;
+    }
+
     // allocate a ring
     size_t size = vring_size(count, PAGE_SIZE);
     LTRACEF("need %zu bytes\n", size);
