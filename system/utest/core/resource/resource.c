@@ -13,10 +13,16 @@
 static mx_status_t check_signals(mx_handle_t h, mx_signals_t expected) {
     mx_signals_t observed;
     mx_status_t status = mx_object_wait_one(h, 0u, 0u, &observed);
+
+    // mask out the last handle status
+    observed &= ~(__MX_OBJECT_LAST_HANDLE);
+
     if (status != ERR_TIMED_OUT) {
         return status;
     }
     if (expected != observed) {
+        unittest_printf_critical("Observed state (%08x) != expected state (%08x)\n",
+                                 observed, expected);
         return ERR_BAD_STATE;
     }
     return NO_ERROR;
