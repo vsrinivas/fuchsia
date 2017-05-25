@@ -29,6 +29,10 @@
             "binary": "agents/module_suggester.dartx",
             "bootfs_path": "apps/agents/module_suggester.dartx"
         },
+	{
+	    "binary": "gen/apps/maxwell/src/modules/basic_text_reporter/basic_text_reporter.flx",
+	    "bootfs_path": "apps/maxwell/btr"
+	},
         {
             "binary": "context_engine",
             "bootfs_path": "apps/context_engine"
