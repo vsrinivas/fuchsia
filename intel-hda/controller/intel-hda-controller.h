@@ -55,11 +55,10 @@ public:
     void ReturnStream(mxtl::RefPtr<IntelHDAStream>&& stream)
         TA_EXCL(stream_pool_lock_);
 
-    static mx_status_t DriverInit(mx_driver_t* driver);
-    static mx_status_t DriverBind(mx_driver_t* driver, mx_device_t* device, void** cookie);
-    static void        DriverUnbind(mx_driver_t* driver, mx_device_t* device, void* cookie);
-    static mx_status_t DriverRelease(mx_driver_t* driver);
-    static mx_driver_t* driver() { return driver_; }
+    static mx_status_t DriverInit(void** out_ctx);
+    static mx_status_t DriverBind(void* ctx, mx_device_t* device, void** cookie);
+    static void        DriverUnbind(void* ctx, mx_device_t* device, void* cookie);
+    static void        DriverRelease(void* ctx);
 
 private:
     using StateStorage = uint32_t;
@@ -195,7 +194,6 @@ private:
     mxtl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
     static mxtl::atomic_uint32_t device_id_gen_;
-    static mx_driver_t*          driver_;
     static mx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
 };
 

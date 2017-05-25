@@ -7,10 +7,10 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 
-extern mx_status_t ihda_init_hook(mx_driver_t*);
-extern mx_status_t ihda_bind_hook(mx_driver_t*, mx_device_t*, void**);
-extern void        ihda_unbind_hook(mx_driver_t*, mx_device_t*, void*);
-extern mx_status_t ihda_release_hook(mx_driver_t*);
+extern mx_status_t ihda_init_hook(void**);
+extern mx_status_t ihda_bind_hook(void*, mx_device_t*, void**);
+extern void        ihda_unbind_hook(void*, mx_device_t*, void*);
+extern void        ihda_release_hook(void*);
 
 static mx_driver_ops_t intel_hda_driver_ops = {
     .version = DRIVER_OPS_VERSION,

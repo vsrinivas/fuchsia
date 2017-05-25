@@ -24,14 +24,13 @@ void IntelHDACodecDriverBase::PrintDebugPrefix() const {
     printf("HDACodec : ");
 }
 
-mx_status_t IntelHDACodecDriverBase::Bind(mx_driver_t* driver, mx_device_t* codec_dev) {
+mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     mx_status_t res;
     void* proto_void;
 
     if (codec_dev == nullptr)
         return ERR_INVALID_ARGS;
 
-    MX_DEBUG_ASSERT((codec_driver_ == nullptr) == (codec_device_ == nullptr));
     if (codec_device_ != nullptr)
         return ERR_BAD_STATE;
 
@@ -73,7 +72,6 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_driver_t* driver, mx_device_t* code
 
     // Success!  Now that we are started, stash a pointer to the codec device
     // that we are the driver for.
-    codec_driver_ = driver;
     codec_device_ = codec_dev;
     return NO_ERROR;
 }

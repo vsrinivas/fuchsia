@@ -7,8 +7,8 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 
-extern mx_status_t realtek_ihda_codec_bind_hook(mx_driver_t*, mx_device_t*, void**);
-extern void        realtek_ihda_codec_unbind_hook(mx_driver_t*, mx_device_t*, void*);
+extern mx_status_t realtek_ihda_codec_bind_hook(void*, mx_device_t*, void**);
+extern void        realtek_ihda_codec_unbind_hook(void*, mx_device_t*, void*);
 
 static mx_driver_ops_t realtek_ihda_codec_driver_ops = {
     .version = DRIVER_OPS_VERSION,

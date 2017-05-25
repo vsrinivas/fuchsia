@@ -25,8 +25,8 @@ mxtl::RefPtr<RealtekCodec> RealtekCodec::Create() {
     return mxtl::AdoptRef(new RealtekCodec);
 }
 
-mx_status_t RealtekCodec::Init(mx_driver_t* driver, mx_device_t* codec_dev) {
-    mx_status_t res = Bind(driver, codec_dev);
+mx_status_t RealtekCodec::Init(mx_device_t* codec_dev) {
+    mx_status_t res = Bind(codec_dev);
     if (res != NO_ERROR)
         return res;
 
@@ -328,7 +328,7 @@ mx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
     return NO_ERROR;
 }
 
-extern "C" mx_status_t realtek_ihda_codec_bind_hook(mx_driver_t* driver,
+extern "C" mx_status_t realtek_ihda_codec_bind_hook(void* ctx,
                                                     mx_device_t* codec_dev,
                                                     void** cookie) {
     if (cookie == nullptr)
@@ -339,14 +339,14 @@ extern "C" mx_status_t realtek_ihda_codec_bind_hook(mx_driver_t* driver,
 
     // Init our codec.  If we succeed, transfer our reference to the unmanaged
     // world.  We will re-claim it later when unbind is called.
-    mx_status_t res = codec->Init(driver, codec_dev);
+    mx_status_t res = codec->Init(codec_dev);
     if (res == NO_ERROR)
         *cookie = codec.leak_ref();
 
     return res;
 }
 
-extern "C" void realtek_ihda_codec_unbind_hook(mx_driver_t* driver,
+extern "C" void realtek_ihda_codec_unbind_hook(void* ctx,
                                                mx_device_t* codec_dev,
                                                void* cookie) {
     MX_DEBUG_ASSERT(cookie != nullptr);

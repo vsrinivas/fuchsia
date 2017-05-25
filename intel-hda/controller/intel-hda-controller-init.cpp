@@ -556,7 +556,6 @@ mx_status_t IntelHDAController::InitInternal(mx_device_t* pci_dev) {
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = debug_tag_;
     args.ctx = this;
-    args.driver = driver_;
     args.ops = &CONTROLLER_DEVICE_THUNKS;
     args.proto_id = MX_PROTOCOL_IHDA;
 
