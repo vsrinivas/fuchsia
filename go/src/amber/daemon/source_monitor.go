@@ -6,7 +6,6 @@ package daemon
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -146,7 +145,6 @@ func (sm *SourceMonitor) check(t time.Time, ps *PackageSet) {
 
 	sm.runGate.Lock()
 	defer sm.runGate.Unlock()
-	fmt.Printf(".")
 
 	// track the number of workers updating specific packages
 	var workers sync.WaitGroup
@@ -163,7 +161,7 @@ func (sm *SourceMonitor) check(t time.Time, ps *PackageSet) {
 
 		go func(orig *Package, upd *Package) {
 			if err := sm.processor(upd, orig, sm.src, sm.pkgs); err != nil {
-				fmt.Printf("error processing package %v\n", err)
+				Log.Printf("error processing package %v\n", err)
 			}
 			workers.Done()
 		}(pkg, &update)
