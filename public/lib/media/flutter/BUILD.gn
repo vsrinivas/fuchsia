@@ -1,17 +1,18 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//flutter/build/flutter_app.gni")
+import("//build/dart/dart_package.gni")
 
-flutter_app("media_player_flutter") {
-  main_dart = "lib/main.dart"
+dart_package("flutter") {
+  infer_package_name = true
+
+  source_dir = "."
 
   deps = [
     "//application/lib/app/dart",
-    "//apps/media/lib/flutter",
-    "//apps/modular/services/module:module_dart",
-    "//apps/modular/services/story:story_dart",
+    "//apps/media/lib/dart",
+    "//apps/media/services:services_dart",
     "//apps/mozart/lib/flutter",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",

@@ -13,28 +13,23 @@ import 'package:apps.media.services/media_service.fidl.dart';
 import 'package:apps.media.services/net_media_player.fidl.dart';
 import 'package:apps.media.services/net_media_service.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
-import 'package:apps.media.services/video_renderer.fidl.dart';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.mozart.lib.flutter/child_view.dart';
-import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+/// Type for |AudioPlayerController| update callbacks.
+typedef void UpdateCallback();
 
-/// Controller for MediaPlayer widgets.
-class MediaPlayerController extends ChangeNotifier {
+/// Controller for audio-only playback.
+class AudioPlayerController {
   final MediaServiceProxy _mediaService = new MediaServiceProxy();
   final NetMediaServiceProxy _netMediaService = new NetMediaServiceProxy();
 
   NetMediaPlayerProxy _netMediaPlayer;
-  ChildViewConnection _videoViewConnection;
 
-  // We don't mess with these except during _activate, but they need to
-  // stay in scope even after _activate returns.
+  // We don't mess with this except during _activate, but it needs to stay in
+  // scope even after _activate returns.
   AudioRendererProxy _audioRenderer;
-  VideoRendererProxy _videoRenderer;
 
   bool _active = false;
   bool _loading = false;
@@ -42,7 +37,6 @@ class MediaPlayerController extends ChangeNotifier {
   bool _ended = false;
   bool _hasVideo = false;
 
-  Size _videoSize;
   TimelineFunction _timelineFunction;
   Problem _problem;
   MediaMetadata _metadata;
@@ -52,12 +46,15 @@ class MediaPlayerController extends ChangeNotifier {
   int _progressBarReferenceTime;
   int _durationNanoseconds;
 
-  /// Constructs a MediaPlayerController.
-  MediaPlayerController(ServiceProvider services) {
+  /// Constructs a AudioPlayerController.
+  AudioPlayerController(ServiceProvider services) {
     connectToService(services, _mediaService.ctrl);
     connectToService(services, _netMediaService.ctrl);
     _close(); // Initialize stuff.
   }
+
+  /// Called when properties have changed.
+  UpdateCallback updateCallback;
 
   /// Opens a URI for playback. If there is no player or player proxy (because
   /// the controller has never been opened or has been closed), a new local
@@ -65,7 +62,7 @@ class MediaPlayerController extends ChangeNotifier {
   /// will be set on it. |serviceName| indicates the name under which the
   /// player will be published via NetConnector. It only applies when creating
   /// a new local player.
-  void open(Uri uri, {String serviceName = 'media_player'}) {
+  void open(Uri uri, {String serviceName = 'audio_player'}) {
     if (uri == null) {
       throw new ArgumentError.notNull('uri');
     }
@@ -82,17 +79,15 @@ class MediaPlayerController extends ChangeNotifier {
       _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     }
 
-    notifyListeners();
+    updateCallback?.call();
   }
 
   /// Connects to a remote media player.
-  void connectToRemote({
-    @required String device,
-    @required String service
-  }) {
+  void connectToRemote({ String device, String service }) {
     if (device == null) {
       throw new ArgumentError.notNull('device');
     }
+
     if (service == null) {
       throw new ArgumentError.notNull('service');
     }
@@ -107,20 +102,14 @@ class MediaPlayerController extends ChangeNotifier {
     );
 
     _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
-    notifyListeners();
+    updateCallback?.call();
   }
 
   /// Closes this controller, undoing a previous |open| or |connectToRemote|
   /// call. Does nothing if the controller is already closed.
   void close() {
     _close();
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    close();
-    super.dispose();
+    updateCallback?.call();
   }
 
   /// Internal version of |close|.
@@ -135,14 +124,9 @@ class MediaPlayerController extends ChangeNotifier {
       _audioRenderer.ctrl.close();
     }
 
-    if (_videoRenderer != null) {
-      _videoRenderer.ctrl.close();
-    }
-
     _netMediaPlayer = new NetMediaPlayerProxy();
 
     _audioRenderer = new AudioRendererProxy();
-    _videoRenderer = new VideoRendererProxy();
 
     _playing = false;
     _ended = false;
@@ -165,24 +149,6 @@ class MediaPlayerController extends ChangeNotifier {
       audioMediaRenderer.passRequest(),
     );
 
-    InterfacePair<MediaRenderer> videoMediaRenderer =
-      new InterfacePair<MediaRenderer>();
-    _mediaService.createVideoRenderer(
-      _videoRenderer.ctrl.request(),
-      videoMediaRenderer.passRequest(),
-    );
-
-    InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
-    _videoRenderer.createView(viewOwnerPair.passRequest());
-
-    _videoViewConnection =
-      new ChildViewConnection(viewOwnerPair.passHandle());
-
-    _handleVideoRendererStatusUpdates(
-      VideoRenderer.kInitialStatus,
-      null
-    );
-
     InterfacePair<mp.MediaPlayer> mediaPlayer =
       new InterfacePair<mp.MediaPlayer>();
     _mediaService.createPlayer(
@@ -198,17 +164,14 @@ class MediaPlayerController extends ChangeNotifier {
     _netMediaPlayer.setUrl(uri.toString());
   }
 
-  /// Gets the physical size of the video.
-  Size get videoPhysicalSize => _hasVideo ? _videoSize : Size.zero;
-
-  /// Gets the video view connection.
-  ChildViewConnection get videoViewConnection => _videoViewConnection;
-
-  /// Indicates whether the player has video to present.
-  bool get hasVideo => _hasVideo;
+  /// Indicates whether the player open or connected (as opposed to closed).
+  bool get openOrConnected => _active;
 
   /// Indicates whether the player is in the process of loading content.
   bool get loading => _loading;
+
+  /// Indicates whether the content has a video stream.
+  bool get hasVideo => _hasVideo;
 
   /// Indicates whether the player is currently playing.
   bool get playing => _playing;
@@ -250,6 +213,10 @@ class MediaPlayerController extends ChangeNotifier {
     int referenceNanoseconds = microseconds * 1000 + _progressBarReferenceTime;
     return _timelineFunction(referenceNanoseconds);
   }
+
+  /// Gets the video media renderer when creating a new local player. This
+  /// getter always returns null and is intended to be overridden by subclasses.
+  InterfacePair<MediaRenderer> get videoMediaRenderer => null;
 
   /// Starts or resumes playback.
   void play() {
@@ -331,40 +298,14 @@ class MediaPlayerController extends ChangeNotifier {
         _prepareProgressBar();
       }
 
-      scheduleMicrotask(() {
-        notifyListeners();
-      });
+      if (updateCallback != null) {
+        scheduleMicrotask(() {
+          updateCallback();
+        });
+      }
     }
 
     _netMediaPlayer.getStatus(version, _handlePlayerStatusUpdates);
-  }
-
-  // Handles a status update from the video renderer and requests a new update.
-  // Call with kInitialStatus, null to initiate status updates.
-  void _handleVideoRendererStatusUpdates(
-    int version,
-    VideoRendererStatus status
-  ) {
-    if (!_active) {
-      return;
-    }
-
-    if (status != null) {
-      double pixelAspectRatio =
-        status.pixelAspectRatio.width.toDouble() /
-        status.pixelAspectRatio.height.toDouble();
-
-      _videoSize = new Size(
-        status.videoSize.width.toDouble() * pixelAspectRatio,
-        status.videoSize.height.toDouble()
-      );
-
-      scheduleMicrotask(() {
-        notifyListeners();
-      });
-    }
-
-    _videoRenderer.getStatus(version, _handleVideoRendererStatusUpdates);
   }
 
   /// Captures information required to implement the progress bar.

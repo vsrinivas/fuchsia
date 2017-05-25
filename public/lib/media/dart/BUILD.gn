@@ -12,11 +12,7 @@ dart_package("dart") {
   deps = [
     "//application/lib/app/dart",
     "//apps/media/services:services_dart",
-    "//apps/modular/services/story:story_dart",
-    "//apps/mozart/lib/flutter",
-    "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
-    "//lib/flutter/packages/flutter",
   ]
 
   analysis_options = "//apps/modules/common/.analysis_options"

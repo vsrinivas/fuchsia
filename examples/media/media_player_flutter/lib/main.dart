@@ -7,8 +7,8 @@ import 'dart:io' as io;
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.media.lib.dart/media_player.dart';
-import 'package:apps.media.lib.dart/media_player_controller.dart';
+import 'package:apps.media.lib.flutter/media_player.dart';
+import 'package:apps.media.lib.flutter/media_player_controller.dart';
 import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
