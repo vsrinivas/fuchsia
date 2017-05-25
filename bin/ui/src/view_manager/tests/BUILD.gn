@@ -17,7 +17,6 @@ executable("view_manager_apptests") {
 
   sources = [
     "main.cc",
-    "view_associate_table_test.cc",
     "view_manager_test.cc",
   ]
 

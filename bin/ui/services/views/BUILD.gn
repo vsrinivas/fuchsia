@@ -6,8 +6,8 @@ import("//lib/fidl/fidl.gni")
 
 fidl("views") {
   sources = [
-    "view_associates.fidl",
     "view_containers.fidl",
+    "view_inspector.fidl",
     "view_manager.fidl",
     "view_properties.fidl",
     "view_provider.fidl",

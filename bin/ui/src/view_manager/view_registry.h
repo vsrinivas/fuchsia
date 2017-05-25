@@ -10,10 +10,10 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
-#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "apps/mozart/src/view_manager/view_associate_table.h"
+#include "apps/mozart/src/view_manager/input_connection_impl.h"
+#include "apps/mozart/src/view_manager/input_dispatcher_impl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "apps/mozart/src/view_manager/view_state.h"
 #include "apps/mozart/src/view_manager/view_stub.h"
@@ -26,9 +26,6 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public mozart::ViewInspector {
  public:
-  using AssociateConnectionErrorCallback =
-      ViewAssociateTable::AssociateConnectionErrorCallback;
-
   explicit ViewRegistry(app::ApplicationContext* application_context,
                         mozart::CompositorPtr compositor);
   ~ViewRegistry() override;
@@ -46,14 +43,6 @@ class ViewRegistry : public mozart::ViewInspector {
       fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       mozart::ViewTreeListenerPtr view_tree_listener,
       const fidl::String& label);
-
-  void RegisterViewAssociate(
-      mozart::ViewInspector* view_inspector,
-      mozart::ViewAssociatePtr view_associate,
-      fidl::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
-      const fidl::String& label);
-
-  void FinishedRegisteringViewAssociates();
 
   // VIEW STUB REQUESTS
 
@@ -152,6 +141,22 @@ class ViewRegistry : public mozart::ViewInspector {
       mozart::ViewTokenPtr view_token,
       fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
 
+  // Delivers an event to a view.
+  void DeliverEvent(const mozart::ViewToken* view_token,
+                    mozart::InputEventPtr event,
+                    OnEventDelivered callback);
+
+  // Query view for hit test
+  void ViewHitTest(const mozart::ViewToken* view_token,
+                   mozart::PointFPtr point,
+                   const mozart::ViewHitTester::HitTestCallback& callback);
+
+  // INPUT CONNECTION CALLBACKS
+  void OnInputConnectionDied(InputConnectionImpl* connection);
+
+  // INPUT DISPATCHER CALLBACKS
+  void OnInputDispatcherDied(InputDispatcherImpl* dispatcher);
+
  private:
   // LIFETIME
 
@@ -207,6 +212,16 @@ class ViewRegistry : public mozart::ViewInspector {
   void SendChildUnavailable(ViewContainerState* container_state,
                             uint32_t child_key);
 
+  // INPUT CONNECTION
+  void CreateInputConnection(
+      mozart::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<mozart::InputConnection> request);
+
+  // INPUT DISPATCHER
+  void CreateInputDispatcher(
+      mozart::ViewTreeTokenPtr view_tree_token,
+      fidl::InterfaceRequest<mozart::InputDispatcher> request);
+
   // LOOKUP
 
   // Walk up the view tree starting at |view_token| to find a service
@@ -234,13 +249,17 @@ class ViewRegistry : public mozart::ViewInspector {
 
   app::ApplicationContext* application_context_;
   mozart::CompositorPtr compositor_;
-  ViewAssociateTable associate_table_;
 
   uint32_t next_view_token_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;
   std::unordered_map<uint32_t, ViewState*> views_by_token_;
   std::unordered_map<uint32_t, ViewState*> views_by_scene_token_;
   std::unordered_map<uint32_t, ViewTreeState*> view_trees_by_token_;
+
+  std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
+      input_connections_by_view_token_;
+  std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
+      input_dispatchers_by_view_tree_token_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
 };

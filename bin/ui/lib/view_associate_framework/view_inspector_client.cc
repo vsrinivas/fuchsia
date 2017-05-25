@@ -12,9 +12,8 @@
 
 namespace mozart {
 
-ViewInspectorClient::ViewInspectorClient(
-    fidl::InterfaceHandle<ViewInspector> view_inspector)
-    : view_inspector_(ViewInspectorPtr::Create(std::move(view_inspector))) {
+ViewInspectorClient::ViewInspectorClient(ViewInspector* view_inspector)
+    : view_inspector_(view_inspector) {
   FTL_DCHECK(view_inspector_);
 }
 

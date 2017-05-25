@@ -12,8 +12,6 @@ source_set("mocks") {
     "mock_input_device_registry.h",
     "mock_renderer.cc",
     "mock_renderer.h",
-    "mock_view_associate.cc",
-    "mock_view_associate.h",
     "mock_view_container_listener.cc",
     "mock_view_container_listener.h",
     "mock_view_listener.cc",

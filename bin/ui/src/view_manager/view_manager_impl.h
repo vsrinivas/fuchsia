@@ -27,11 +27,6 @@ class ViewManagerImpl : public mozart::ViewManager {
       fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       fidl::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
       const fidl::String& label) override;
-  void RegisterViewAssociate(
-      fidl::InterfaceHandle<mozart::ViewAssociate> view_associate,
-      fidl::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
-      const fidl::String& label) override;
-  void FinishedRegisteringViewAssociates() override;
 
   ViewRegistry* registry_;
 

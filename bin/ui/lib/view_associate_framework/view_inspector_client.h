@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/mozart/lib/view_associate_framework/resolved_hits.h"
-#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/views/view_inspector.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -19,9 +19,9 @@ namespace mozart {
 class ViewInspectorClient
     : public ftl::RefCountedThreadSafe<ViewInspectorClient> {
  public:
-  ViewInspectorClient(fidl::InterfaceHandle<ViewInspector> view_inspector);
+  ViewInspectorClient(ViewInspector* view_inspector);
 
-  ViewInspector* view_inspector() { return view_inspector_.get(); }
+  ViewInspector* view_inspector() { return view_inspector_; }
 
   // Resolves all of the scene tokens referenced in the hit test result
   // then invokes the callback.
@@ -41,7 +41,7 @@ class ViewInspectorClient
                         const ResolvedHitsCallback& callback,
                         fidl::Array<ViewTokenPtr> view_tokens);
 
-  ViewInspectorPtr view_inspector_;
+  ViewInspector* view_inspector_;
 
   // TODO(jeffbrown): Decide how this should be pruned.
   SceneTokenValueToViewTokenMap resolved_scene_cache_;

@@ -5,7 +5,6 @@
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "apps/mozart/lib/tests/mocks/mock_renderer.h"
-#include "apps/mozart/lib/tests/mocks/mock_view_associate.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_container_listener.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_listener.h"
 #include "apps/mozart/lib/tests/mocks/mock_view_tree_listener.h"
@@ -219,106 +218,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
   // since the view hasn't had enough time to be resolved
-}
-
-TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
-  // Create and bind a mozart::test::MockViewAssociate
-  fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-  mozart::test::MockViewAssociate mock_view_associate;
-  fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, associate.NewRequest());
-
-  // Call ViewManager::RegisterViewAssociate.
-  // mozart::test::MockViewAssociate::Connect should be called back
-  EXPECT_EQ(0, mock_view_associate.connect_invokecount);
-  mozart::ViewAssociateOwnerPtr view_associate_owner;
-  g_view_manager->RegisterViewAssociate(std::move(associate),
-                                        view_associate_owner.NewRequest(),
-                                        "test_view_associate");
-
-  RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
-
-  EXPECT_EQ(1, mock_view_associate.connect_invokecount);
-}
-
-TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
-  mozart::ViewAssociateOwnerPtr view_associate_owner;
-  int owner_connection_error_callback_invokecount = 0;
-
-  {
-    // Create and bind a mozart::test::MockViewAssociate
-    fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-    mozart::test::MockViewAssociate mock_view_associate;
-    fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-        &mock_view_associate, associate.NewRequest());
-
-    // Call ViewManager::RegisterViewAssociate.
-    // mozart::test::MockViewAssociate::Connect should be called back
-    EXPECT_EQ(0, mock_view_associate.connect_invokecount);
-
-    g_view_manager->RegisterViewAssociate(std::move(associate),
-                                          view_associate_owner.NewRequest(),
-                                          "test_view_associate_xyz");
-
-    // set a callback for errors
-    view_associate_owner.set_connection_error_handler(
-        // use lambda function as callback
-        [&owner_connection_error_callback_invokecount]() {
-          owner_connection_error_callback_invokecount++;
-        });
-
-    RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
-
-    EXPECT_EQ(1, mock_view_associate.connect_invokecount);
-
-    EXPECT_EQ(0, owner_connection_error_callback_invokecount);
-  }
-
-  // mock_view_associate is out of scope, should be destroyed
-  // we expect to get a connection error from the owner
-  RUN_MESSAGE_LOOP_WHILE(owner_connection_error_callback_invokecount != 1);
-
-  EXPECT_EQ(1, owner_connection_error_callback_invokecount);
-}
-
-TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
-  // Create and bind a mozart::test::MockViewAssociate
-  fidl::InterfaceHandle<mozart::ViewAssociate> associate;
-  mozart::test::MockViewAssociate mock_view_associate;
-  fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, associate.NewRequest());
-
-  // set a callback for errors
-  int connection_error_callback_invokecount = 0;
-  view_associate_binding.set_connection_error_handler(
-      // use lambda function as callback
-      [&connection_error_callback_invokecount]() {
-        connection_error_callback_invokecount++;
-      });
-
-  {
-    mozart::ViewAssociateOwnerPtr view_associate_owner;
-
-    // Call ViewManager::RegisterViewAssociate.
-    // mozart::test::MockViewAssociate::Connect should be called back
-    EXPECT_EQ(0, mock_view_associate.connect_invokecount);
-
-    g_view_manager->RegisterViewAssociate(std::move(associate),
-                                          view_associate_owner.NewRequest(),
-                                          "test_view_associate_xyz");
-
-    RUN_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
-
-    EXPECT_EQ(1, mock_view_associate.connect_invokecount);
-
-    EXPECT_EQ(0, connection_error_callback_invokecount);
-  }
-
-  // view_associate_owner is out of scope, should be destroyed
-  // we expect to get a connection error from the view associate
-  RUN_MESSAGE_LOOP_WHILE(connection_error_callback_invokecount != 1);
-
-  EXPECT_EQ(1, connection_error_callback_invokecount);
 }
 
 }  // namespace test

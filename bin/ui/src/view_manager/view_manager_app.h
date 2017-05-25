@@ -26,16 +26,11 @@ class ViewManagerApp {
   ~ViewManagerApp();
 
  private:
-   void LaunchAssociates(Params* params);
-
   std::unique_ptr<app::ApplicationContext> application_context_;
 
   std::unique_ptr<ViewRegistry> registry_;
   fidl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
       view_manager_bindings_;
-
-  std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
-  std::vector<app::ApplicationControllerPtr> view_associate_controllers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };

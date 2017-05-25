@@ -7,8 +7,6 @@ group("src") {
     "compositor",
     "ime",
     "input",
-    "input_manager",
-    "input_reader",
     "launch",
     "print_input",
     "root_presenter",

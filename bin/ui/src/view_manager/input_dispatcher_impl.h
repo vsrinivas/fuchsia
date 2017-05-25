@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_INPUT_MANAGER_INPUT_DISPATCHER_IMPL_H_
-#define APPS_MOZART_SRC_INPUT_MANAGER_INPUT_DISPATCHER_IMPL_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_
 
 #include <queue>
 
@@ -11,21 +11,21 @@
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "apps/mozart/src/input_manager/view_hit_resolver.h"
+#include "apps/mozart/src/view_manager/view_hit_resolver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
-namespace input_manager {
+namespace view_manager {
 
-class InputAssociate;
+class ViewRegistry;
 
 // InputDispatcher implementation.
 // Binds incoming requests to the relevant view token.
 class InputDispatcherImpl : public mozart::InputDispatcher {
  public:
-  InputDispatcherImpl(InputAssociate* associate,
+  InputDispatcherImpl(ViewRegistry* registry,
                       mozart::ViewTreeTokenPtr view_tree_token,
                       fidl::InterfaceRequest<mozart::InputDispatcher> request);
   ~InputDispatcherImpl() override;
@@ -56,8 +56,9 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   void OnHitTestResult(mozart::PointFPtr point,
                        std::unique_ptr<mozart::ResolvedHits> resolved_hits);
 
-  InputAssociate* const associate_;
+  ViewRegistry* const registry_;
   mozart::ViewTreeTokenPtr view_tree_token_;
+  ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
   ftl::RefPtr<mozart::ViewTreeHitTesterClient> hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
@@ -76,6 +77,6 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   FTL_DISALLOW_COPY_AND_ASSIGN(InputDispatcherImpl);
 };
 
-}  // namespace input_manager
+}  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_INPUT_MANAGER_INPUT_DISPATCHER_IMPL_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_

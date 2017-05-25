@@ -9,7 +9,6 @@
 
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/geometry/cpp/formatting.h"
-#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
 
@@ -26,8 +25,6 @@ std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value);
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value);
 
 std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value);
-
-std::ostream& operator<<(std::ostream& os, const ViewAssociateInfo& value);
 
 }  // namespace mozart
 

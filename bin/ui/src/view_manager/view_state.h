@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/views/view_inspector.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/bindings/binding.h"

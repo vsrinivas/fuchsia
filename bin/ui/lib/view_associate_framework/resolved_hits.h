@@ -9,7 +9,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/composition/hit_tests.fidl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {

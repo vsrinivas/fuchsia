@@ -40,10 +40,4 @@ std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value) {
             << ", frame_info=" << value.frame_info << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const ViewAssociateInfo& value) {
-  return os << "{view_service_names=" << value.view_service_names
-            << ", view_tree_service_names=" << value.view_tree_service_names
-            << "}";
-}
-
 }  // namespace mozart

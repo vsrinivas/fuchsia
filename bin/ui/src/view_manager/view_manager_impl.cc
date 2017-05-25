@@ -36,19 +36,4 @@ void ViewManagerImpl::CreateViewTree(
       label);
 }
 
-// TODO(mikejurka): This should only be called by trusted code (ie launcher),
-// once we have a security story.
-void ViewManagerImpl::RegisterViewAssociate(
-    fidl::InterfaceHandle<mozart::ViewAssociate> view_associate,
-    fidl::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
-    const fidl::String& label) {
-  registry_->RegisterViewAssociate(
-      registry_, mozart::ViewAssociatePtr::Create(std::move(view_associate)),
-      std::move(view_associate_owner), label);
-}
-
-void ViewManagerImpl::FinishedRegisteringViewAssociates() {
-  registry_->FinishedRegisteringViewAssociates();
-}
-
 }  // namespace view_manager

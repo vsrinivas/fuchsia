@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/input_manager/view_hit_resolver.h"
+#include "apps/mozart/src/view_manager/view_hit_resolver.h"
 
 #include <queue>
 
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/input_manager/input_associate.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace input_manager {
+namespace view_manager {
 
 constexpr ftl::TimeDelta kHitTestReplyTimeout =
     ftl::TimeDelta::FromMilliseconds(30);
@@ -45,8 +45,8 @@ bool operator==(const ViewHitResolver::ViewHitNode& lhs,
   return lhs.event_path_->token->value == rhs.event_path_->token->value;
 }
 
-ViewHitResolver::ViewHitResolver(InputAssociate* associate)
-    : associate_(associate) {}
+ViewHitResolver::ViewHitResolver(ViewRegistry* registry)
+    : registry_(registry) {}
 
 ViewHitResolver::~ViewHitResolver() {}
 
@@ -125,7 +125,7 @@ void ViewHitResolver::Resolve(
     p->y = transformed.y;
 
     FTL_VLOG(1) << "ViewHitTesting: " << node;
-    associate_->ViewHitTest(
+    registry_->ViewHitTest(
         node->event_path_->token.get(), std::move(p),
         [node, resolution](bool was_hit,
                            fidl::Array<mozart::ViewTokenPtr> views) mutable {
@@ -227,4 +227,4 @@ void ViewHitResolver::Resolution::Watch() {
       kHitTestReplyTimeout);
 }
 
-}  // namespace input_manager
+}  // namespace view_manager

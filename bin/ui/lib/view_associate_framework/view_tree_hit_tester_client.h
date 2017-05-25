@@ -9,6 +9,7 @@
 
 #include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 #include "apps/mozart/services/composition/hit_tests.fidl.h"
+#include "apps/mozart/services/views/view_inspector.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"

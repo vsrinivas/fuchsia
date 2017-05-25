@@ -26,7 +26,6 @@ ViewManagerApp::ViewManagerApp(Params* params)
 
   registry_.reset(
       new ViewRegistry(application_context_.get(), std::move(compositor)));
-  LaunchAssociates(params);
 
   application_context_->outgoing_services()->AddService<mozart::ViewManager>(
       [this](fidl::InterfaceRequest<mozart::ViewManager> request) {
@@ -37,31 +36,5 @@ ViewManagerApp::ViewManagerApp(Params* params)
 }
 
 ViewManagerApp::~ViewManagerApp() {}
-
-void ViewManagerApp::LaunchAssociates(Params* params) {
-  for (auto& launch_info : params->TakeAssociates()) {
-    auto url = launch_info->url;
-    app::ServiceProviderPtr services;
-    app::ApplicationControllerPtr controller;
-
-    launch_info->services = services.NewRequest();
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), controller.NewRequest());
-    auto view_associate =
-        app::ConnectToService<mozart::ViewAssociate>(services.get());
-
-    // Wire up the associate to the ViewManager.
-    mozart::ViewAssociateOwnerPtr owner;
-    registry_->RegisterViewAssociate(
-        registry_.get(),
-        mozart::ViewAssociatePtr::Create(std::move(view_associate)),
-        owner.NewRequest(), url);
-    owner.set_connection_error_handler(
-        [url] { FTL_LOG(ERROR) << "View associate " << url << " died"; });
-    view_associate_controllers_.push_back(std::move(controller));
-    view_associate_owners_.push_back(std::move(owner));
-  }
-  registry_->FinishedRegisteringViewAssociates();
-}
 
 }  // namespace view_manager

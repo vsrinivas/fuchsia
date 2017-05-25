@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_INPUT_MANAGER_HIT_RESOLVER_H_
-#define APPS_MOZART_SRC_INPUT_MANAGER_HIT_RESOLVER_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
 
 #include <map>
 #include <memory>
@@ -17,9 +17,9 @@
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace input_manager {
+namespace view_manager {
 
-class InputAssociate;
+class ViewRegistry;
 
 struct EventPath {
   mozart::ViewTokenPtr token;
@@ -42,7 +42,7 @@ using OnResolvedCallback =
 
 class ViewHitResolver {
  public:
-  explicit ViewHitResolver(InputAssociate* associate);
+  explicit ViewHitResolver(ViewRegistry* registry);
   ~ViewHitResolver();
 
   struct ViewHitNode {
@@ -55,7 +55,7 @@ class ViewHitResolver {
     bool skipped_ = true;
     std::vector<mozart::ViewTokenPtr> hit_children_;
 
-    friend bool operator== ( const ViewHitNode &lhs, const ViewHitNode &rhs);
+    friend bool operator==(const ViewHitNode& lhs, const ViewHitNode& rhs);
   };
 
   void Resolve(const mozart::SceneHit* root_scene,
@@ -92,7 +92,7 @@ class ViewHitResolver {
 
   Resolution* CreateResolution(OnResolvedCallback callback);
 
-  InputAssociate* const associate_;
+  ViewRegistry* const registry_;
   std::vector<std::unique_ptr<Resolution>> resolutions_;
 };
 
@@ -101,6 +101,6 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const ViewHitResolver::ViewHitNode* value);
 
-}  // namespace input_manager
+}  // namespace view_manager
 
-#endif
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
