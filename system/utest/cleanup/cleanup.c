@@ -45,7 +45,6 @@ bool cleanup_test(void) {
     ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     mx_handle_close(p1[0]);
-    mx_handle_close(p1[1]);
 
     // TEST2
     // Create a channel, close one end. Then create an event and write a
