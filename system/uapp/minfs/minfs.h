@@ -167,7 +167,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static mx_status_t Create(Bcache** out, int fd, uint32_t blockmax);
+    static mx_status_t Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)

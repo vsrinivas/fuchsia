@@ -85,14 +85,12 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* i
     return NO_ERROR;
 }
 
-Minfs::Minfs(Bcache* bc, const minfs_info_t* info)
-    : bc_(bc) {
+Minfs::Minfs(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(mxtl::move(bc)) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
 Minfs::~Minfs() {
     vnode_hash_.clear();
-    delete bc_;
 }
 
 mx_status_t Minfs::InoFree(
@@ -101,7 +99,7 @@ mx_status_t Minfs::InoFree(
 #endif
     const minfs_inode_t& inode, uint32_t ino) {
     // We're going to be updating block bitmaps repeatedly.
-    WriteTxn txn(bc_);
+    WriteTxn txn(bc_.get());
 #ifdef __Fuchsia__
     auto ibm_id = inode_map_vmoid_;
     auto bbm_id = block_map_vmoid_;
@@ -318,7 +316,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 static const unsigned kPoolSize = 4;
 #endif
 
-mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
+mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = info->inode_count;
 
@@ -328,7 +326,7 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
     }
 
     AllocChecker ac;
-    mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(bc, info));
+    mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(mxtl::move(bc), info));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
@@ -380,7 +378,7 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
         return status;
     }
 
-    ReadTxn txn(fs->bc_);
+    ReadTxn txn(fs->bc_.get());
     txn.Enqueue(fs->block_map_vmoid_, 0, fs->info_.abm_block, fs->abmblks_);
     txn.Enqueue(fs->inode_map_vmoid_, 0, fs->info_.ibm_block, fs->ibmblks_);
     txn.Enqueue(fs->inode_table_vmoid_, 0, fs->info_.ino_block, inoblks);
@@ -407,7 +405,7 @@ mx_status_t Minfs::Create(Minfs** out, Bcache* bc, const minfs_info_t* info) {
     return NO_ERROR;
 }
 
-mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, Bcache* bc) {
+mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> bc) {
     mx_status_t status;
 
     char blk[kMinfsBlockSize];
@@ -420,7 +418,7 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, Bcache* bc) {
     minfs_dump_info(info);
 
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, bc, info)) != NO_ERROR) {
+    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != NO_ERROR) {
         error("minfs: mount failed\n");
         return status;
     }
@@ -454,7 +452,7 @@ fs::Dispatcher* VnodeMinfs::GetDispatcher() {
 }
 #endif
 
-int minfs_mkfs(Bcache* bc) {
+int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = 32768;
 

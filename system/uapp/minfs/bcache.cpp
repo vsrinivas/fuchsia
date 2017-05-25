@@ -50,7 +50,7 @@ int Bcache::Sync() {
     return fsync(fd_);
 }
 
-mx_status_t Bcache::Create(Bcache** out, int fd, uint32_t blockmax) {
+mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax) {
     AllocChecker ac;
     mxtl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
     if (!ac.check()) {
@@ -73,7 +73,7 @@ mx_status_t Bcache::Create(Bcache** out, int fd, uint32_t blockmax) {
     }
 #endif
 
-    *out = bc.release();
+    *out = mxtl::move(bc);
     return NO_ERROR;
 }
 

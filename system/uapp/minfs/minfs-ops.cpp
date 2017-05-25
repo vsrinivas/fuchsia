@@ -193,7 +193,7 @@ mx_status_t VnodeMinfs::InitIndirectVmo() {
         return status;
     }
 
-    ReadTxn txn(fs_->bc_);
+    ReadTxn txn(fs_->bc_.get());
     for (uint32_t i = 0; i < kMinfsIndirect; i++) {
         uint32_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
@@ -227,7 +227,7 @@ mx_status_t VnodeMinfs::InitVmo() {
         vmo_.reset();
         return status;
     }
-    ReadTxn txn(fs_->bc_);
+    ReadTxn txn(fs_->bc_.get());
 
     // Initialize all direct blocks
     uint32_t bno;
@@ -848,7 +848,7 @@ ssize_t VnodeMinfs::Write(const void* data, size_t len, size_t off) {
     if (IsDirectory()) {
         return ERR_NOT_FILE;
     }
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     size_t actual;
     mx_status_t status = WriteInternal(&txn, data, len, off, &actual);
     if (status != NO_ERROR) {
@@ -1013,7 +1013,7 @@ mx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
     }
     if (dirty) {
         // write to disk, but don't overwrite the time
-        WriteTxn txn(fs_->bc_);
+        WriteTxn txn(fs_->bc_.get());
         InodeSync(&txn, kMxFsSyncDefault);
     }
     return NO_ERROR;
@@ -1151,7 +1151,7 @@ mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
     // creating a directory?
     uint32_t type = S_ISDIR(mode) ? kMinfsTypeDir : kMinfsTypeFile;
 
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     // mint a new inode and vnode for it
     mxtl::RefPtr<VnodeMinfs> vn;
     if ((status = fs_->VnodeNew(&txn, &vn, type)) < 0) {
@@ -1222,7 +1222,7 @@ mx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
     if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
         return ERR_BAD_STATE;
     }
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;
@@ -1236,7 +1236,7 @@ mx_status_t VnodeMinfs::Truncate(size_t len) {
         return ERR_NOT_FILE;
     }
 
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     mx_status_t status = TruncateInternal(&txn, len);
     if (status == NO_ERROR) {
         // Successful truncates update inode
@@ -1390,7 +1390,7 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
 
     // if the entry for 'newname' exists, make sure it can be replaced by
     // the vnode behind 'oldname'.
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     args.txn = &txn;
     args.name = newname;
     args.len = newlen;
@@ -1464,7 +1464,7 @@ mx_status_t VnodeMinfs::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnod
         return (status == NO_ERROR) ? ERR_ALREADY_EXISTS : status;
     }
 
-    WriteTxn txn(fs_->bc_);
+    WriteTxn txn(fs_->bc_.get());
     args.ino = target->ino_;
     args.type = kMinfsTypeFile; // We can't hard link directories
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(len)));

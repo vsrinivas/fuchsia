@@ -106,7 +106,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                     }
                     minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
                     de->reclen |= kMinfsReclenLast;
-                    WriteTxn txn(fs_->bc_);
+                    WriteTxn txn(fs_->bc_.get());
                     vn->WriteInternal(&txn, data, MINFS_DIRENT_SIZE, prev_off, &actual);
                     return NO_ERROR;
                 } else {
@@ -382,7 +382,7 @@ mx_status_t MinfsChecker::CheckLinkCounts() const {
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), links_(){};
 
-mx_status_t MinfsChecker::Init(Bcache* bc, const minfs_info_t* info) {
+mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
     links_[0] = -1;
 
@@ -394,14 +394,14 @@ mx_status_t MinfsChecker::Init(Bcache* bc, const minfs_info_t* info) {
         return status;
     }
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, bc, info)) < 0) {
+    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) < 0) {
         return status;
     }
     fs_.reset(fs);
     return NO_ERROR;
 }
 
-mx_status_t minfs_check(Bcache* bc) {
+mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
     mx_status_t status;
 
     char data[kMinfsBlockSize];
@@ -416,7 +416,7 @@ mx_status_t minfs_check(Bcache* bc) {
     }
 
     MinfsChecker chk;
-    if ((status = chk.Init(bc, info)) != NO_ERROR) {
+    if ((status = chk.Init(mxtl::move(bc), info)) != NO_ERROR) {
         return status;
     }
 

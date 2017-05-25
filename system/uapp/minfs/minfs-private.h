@@ -53,7 +53,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
     ~Minfs();
-    static mx_status_t Create(Minfs** out, Bcache* bc, const minfs_info_t* info);
+    static mx_status_t Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info);
 
     mx_status_t Unmount();
 
@@ -92,7 +92,7 @@ public:
         MX_DEBUG_ASSERT(bno < info_.block_count);
     }
 
-    Bcache* bc_;
+    mxtl::unique_ptr<Bcache> bc_;
     RawBitmap block_map_;
 #ifdef __Fuchsia__
     vmoid_t block_map_vmoid_;
@@ -102,7 +102,7 @@ public:
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
-    Minfs(Bcache* bc_, const minfs_info_t* info_);
+    Minfs(mxtl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     mx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out);
 
@@ -267,14 +267,14 @@ mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
 void minfs_dump_info(const minfs_info_t* info);
 void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino);
 
-int minfs_mkfs(Bcache* bc);
+int minfs_mkfs(mxtl::unique_ptr<Bcache> bc);
 
 #ifdef __Fuchsia__
 
 class MinfsChecker {
 public:
     MinfsChecker();
-    mx_status_t Init(Bcache* bc, const minfs_info_t* info);
+    mx_status_t Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info);
     mx_status_t CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot);
     mx_status_t CheckForUnusedBlocks() const;
     mx_status_t CheckForUnusedInodes() const;
@@ -301,10 +301,10 @@ private:
     mxtl::Array<int32_t> links_;
 };
 
-mx_status_t minfs_check(Bcache* bc);
+mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc);
 #endif
 
-mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, Bcache* bc);
+mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, mxtl::unique_ptr<Bcache> bc);
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);
 
