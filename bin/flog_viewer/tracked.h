@@ -27,7 +27,7 @@ class Tracked {
   uint64_t total() const { return total_; }
 
   // Returns the average of all values added.
-  uint64_t average() const { return total_ / count_; }
+  uint64_t average() const { return count_ == 0 ? 0 : (total_ / count_); }
 
   // Returns the count of values added minus the count of values removed.
   size_t outstanding_count() const { return outstanding_count_; }
@@ -37,7 +37,8 @@ class Tracked {
 
   // Returns |outstanding_total| divided by |outstanding_count|.
   uint64_t outstanding_average() const {
-    return outstanding_total_ / outstanding_count_;
+    return outstanding_count_ == 0 ? 0
+                                   : (outstanding_total_ / outstanding_count_);
   }
 
   // Returns the highest value attained by |outstanding_count|.
