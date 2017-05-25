@@ -2,16 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
+import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
+import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
+final TextEditingController _controller = new TextEditingController();
 
 /// This is used for keeping the reference around.
 ModuleImpl _module;
@@ -26,6 +32,11 @@ class ModuleImpl extends Module {
 
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
+
+  final ContextPublisherProxy _publisher = new ContextPublisherProxy();
+  final IntelligenceServicesProxy _intelligenceServices =
+    new IntelligenceServicesProxy();
+
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -48,6 +59,9 @@ class ModuleImpl extends Module {
     _moduleContext.getLink(null, _link.ctrl.request());
 
     // Do something with the story and link services.
+    _moduleContext
+        .getIntelligenceServices(_intelligenceServices.ctrl.request());
+    _intelligenceServices.getContextPublisher(_publisher.ctrl.request());
   }
 
   /// Implementation of the Stop() => (); method.
@@ -61,6 +75,17 @@ class ModuleImpl extends Module {
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+  }
+
+  void publishText(String text) {
+    _publisher.publish(
+      'raw/text',
+      JSON.encode(
+        <String, String> {
+          'text' : text,
+        },
+      ),
+    );
   }
 }
 
@@ -77,5 +102,21 @@ void main() {
     Module.serviceName,
   );
 
-  runApp(new Text("Here's text!"));
+  _controller.addListener(() {
+    String currentText = _controller.text;
+    _log("Current text: $currentText");
+    _module.publishText(currentText);
+  });
+
+  runApp(
+      new Container(
+        child: new TextField(
+            controller: _controller,
+            decoration: new InputDecoration(
+                hintText: 'Type something',
+            ),
+        ),
+        color : Colors.white,
+      )
+  );
 }

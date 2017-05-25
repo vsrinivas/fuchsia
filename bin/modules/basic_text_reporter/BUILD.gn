@@ -8,6 +8,9 @@ flutter_app("basic_text_reporter") {
   main_dart = "lib/main.dart"
   deps = [
     "//application/lib/app/dart",
+    "//apps/maxwell/lib/dart",
+    "//apps/maxwell/services/context:context_dart",
+    "//apps/maxwell/services/user:user_dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/services/views:views_dart",
