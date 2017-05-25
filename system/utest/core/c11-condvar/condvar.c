@@ -28,6 +28,10 @@ static int cond_thread(void* arg) {
 bool cnd_test(void) {
     BEGIN_TEST;
 
+    threads_waked = 0;
+    threads_started = 0;
+    threads_woke_first_barrier = 0;
+
     thrd_t thread1, thread2, thread3;
 
     thrd_create(&thread1, cond_thread, (void*)(uintptr_t)0);
