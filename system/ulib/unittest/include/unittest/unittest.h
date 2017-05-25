@@ -147,22 +147,9 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_NAMED_TEST_TYPE(name, test, test_type)                  \
-    {                                                               \
-        if (utest_test_type & test_type) {                          \
-            unittest_printf_critical("    %-51s [RUNNING]", name);  \
-            struct test_info test_info;                             \
-            current_test_info = &test_info;                         \
-            if (!test()) {                                          \
-                all_success = false;                                \
-            } else {                                                \
-                unittest_printf_critical(" [PASSED] \n");           \
-            }                                                       \
-            current_test_info = NULL;                               \
-        } else {                                                    \
-            unittest_printf_critical("    %-51s [IGNORED]\n", name);  \
-        }                                                           \
-    }
+#define RUN_NAMED_TEST_TYPE(name, test, test_type)                     \
+    unittest_run_named_test(name, test, test_type, &current_test_info, \
+                            &all_success);
 
 #define TEST_CASE_ELEMENT(case_name) &_##case_name##_element
 
@@ -426,5 +413,11 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
                               const char* msg);
 
 bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len, const char* msg);
+
+/* Used to implement RUN_TEST() and other variants. */
+void unittest_run_named_test(const char* name, bool (*test)(void),
+                             test_type_t test_type,
+                             struct test_info** current_test_info,
+                             bool* all_success);
 
 __END_CDECLS

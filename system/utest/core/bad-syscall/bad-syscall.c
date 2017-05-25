@@ -8,7 +8,7 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-int bad_syscall_test(void) {
+bool bad_syscall_test(void) {
     BEGIN_TEST;
     void* unmapped_addr = (void*)4096;
     mx_handle_t h[2];

@@ -12,7 +12,7 @@
 
 #include "private.h"
 
-int thread_injection_test(void) {
+bool thread_injection_test(void) {
     BEGIN_TEST;
 
     // Create a channel to communicate with the injector.  This channel
