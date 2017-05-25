@@ -20,12 +20,10 @@ VideoFrameSource::VideoFrameSource() : media_renderer_binding_(this) {
 
   timeline_control_point_.SetPrimeRequestedCallback(
       [this](const MediaTimelineControlPoint::PrimeCallback& callback) {
-        FLOG(log_channel_, PrimeRequested());
         pts_ = kUnspecifiedTime;
         SetDemand(kPacketDemand);
 
         if (packet_queue_.size() >= kPacketDemand) {
-          FLOG(log_channel_, CompletingPrime());
           callback();
         } else {
           prime_callback_ = callback;
@@ -62,7 +60,8 @@ void VideoFrameSource::Bind(
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
   FLOG(log_channel_,
        Config(SupportedMediaTypes(),
-              FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(this))));
+              FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(this)),
+              FLOG_ADDRESS(&timeline_control_point_)));
 }
 
 void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
@@ -178,7 +177,6 @@ void VideoFrameSource::OnPacketSupplied(
     // skip more packets than we demand when GetRgbaFrame is called.
     DiscardOldPackets();
   } else if (packet_queue_.size() >= kPacketDemand) {
-    FLOG(log_channel_, CompletingPrime());
     prime_callback_();
     prime_callback_ = nullptr;
   }

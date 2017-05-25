@@ -18,7 +18,7 @@ namespace handlers {
 
 class MediaPacketProducerAccumulator;
 
-// Handler for MediaPacketProducerChannel messages, digest format.
+// Handler for MediaPacketProducerChannel messages.
 class MediaPacketProducer : public ChannelHandler,
                             public media::logs::MediaPacketProducerChannel {
  public:

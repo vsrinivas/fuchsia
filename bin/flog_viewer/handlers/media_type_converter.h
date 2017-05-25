@@ -15,7 +15,7 @@ namespace handlers {
 
 class MediaTypeConverterAccumulator;
 
-// Handler for MediaTypeConverterChannel messages, digest format.
+// Handler for MediaTypeConverterChannel messages.
 class MediaTypeConverter : public ChannelHandler,
                            public media::logs::MediaTypeConverterChannel {
  public:

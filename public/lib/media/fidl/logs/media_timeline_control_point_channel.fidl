@@ -1,0 +1,17 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media.logs;
+
+import "apps/media/services/timelines.fidl";
+
+[ServiceName="media::logs::MediaTimelineControlPointChannel"]
+interface MediaTimelineControlPointChannel {
+  BoundAs(uint64 koid);
+  PrimeRequested();
+  CompletingPrime();
+  ScheduleTimelineTransform(TimelineTransform timeline_transform);
+  ApplyTimelineTransform(TimelineTransform timeline_transform);
+  ReachedEndOfStream();
+};

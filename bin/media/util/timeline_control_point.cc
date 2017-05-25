@@ -62,6 +62,7 @@ void TimelineControlPoint::Bind(
   }
 
   control_point_binding_.Bind(std::move(request));
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(control_point_binding_)));
 }
 
 void TimelineControlPoint::Reset() {
@@ -95,6 +96,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
   }
 
   if (ReachedEndOfStream() && !end_of_stream_published_) {
+    FLOG(log_channel_, ReachedEndOfStream());
     end_of_stream_published_ = true;
     task_runner_->PostTask([this]() { status_publisher_.SendUpdates(); });
   }
@@ -144,9 +146,15 @@ void TimelineControlPoint::GetTimelineConsumer(
 }
 
 void TimelineControlPoint::Prime(const PrimeCallback& callback) {
+  FLOG(log_channel_, PrimeRequested());
+
   if (prime_requested_callback_) {
-    prime_requested_callback_(callback);
+    prime_requested_callback_([this, callback]() {
+      FLOG(log_channel_, CompletingPrime());
+      callback();
+    });
   } else {
+    FLOG(log_channel_, CompletingPrime());
     callback();
   }
 }
@@ -154,6 +162,8 @@ void TimelineControlPoint::Prime(const PrimeCallback& callback) {
 void TimelineControlPoint::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
+  FLOG(log_channel_, ScheduleTimelineTransform(timeline_transform.Clone()));
+
   ftl::MutexLocker locker(&mutex_);
 
   RCHECK(timeline_transform);
@@ -199,6 +209,9 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
       pending_timeline_function_.reference_time() > reference_time) {
     return;
   }
+
+  FLOG(log_channel_, ApplyTimelineTransform(
+                         TimelineTransform::From(pending_timeline_function_)));
 
   current_timeline_function_ = pending_timeline_function_;
   ClearPendingTimelineFunction(true);

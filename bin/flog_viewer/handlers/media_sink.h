@@ -15,7 +15,7 @@ namespace handlers {
 
 class MediaSinkAccumulator;
 
-// Handler for MediaSinkChannel messages, digest format.
+// Handler for MediaSinkChannel messages.
 class MediaSink : public ChannelHandler, public media::logs::MediaSinkChannel {
  public:
   MediaSink(const std::string& format);

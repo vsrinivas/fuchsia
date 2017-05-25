@@ -10,11 +10,10 @@ import "apps/media/services/timelines.fidl";
 [ServiceName="media::logs::MediaRendererChannel"]
 interface MediaRendererChannel {
   BoundAs(uint64 koid);
-  Config(array<MediaTypeSet> supported_types, uint64 consumer_address);
+  Config(
+      array<MediaTypeSet> supported_types,
+      uint64 consumer_address,
+      uint64 timeline_control_point_address);
   SetMediaType(MediaType media_type);
-  PrimeRequested();
-  CompletingPrime();
-  ScheduleTimelineTransform(TimelineTransform timeline_transform);
-  ApplyTimelineTransform(TimelineTransform timeline_transform);
   EngagePacket(int64 current_pts, int64 packet_pts, uint64 packet_label);
 };

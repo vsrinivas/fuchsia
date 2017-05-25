@@ -15,7 +15,7 @@ namespace handlers {
 
 class MediaDemuxAccumulator;
 
-// Handler for MediaDemuxChannel messages, digest format.
+// Handler for MediaDemuxChannel messages.
 class MediaDemux : public ChannelHandler,
                    public media::logs::MediaDemuxChannel {
  public:

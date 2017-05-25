@@ -21,6 +21,7 @@ source_set("util") {
 
   deps = [
     "//application/lib/app",
+    "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//lib/ftl",

@@ -15,7 +15,7 @@ namespace handlers {
 
 class MediaPlayerAccumulator;
 
-// Handler for MediaPlayerChannel messages, digest format.
+// Handler for MediaPlayerChannel messages.
 class MediaPlayer : public ChannelHandler,
                     public media::logs::MediaPlayerChannel {
  public:

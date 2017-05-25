@@ -73,7 +73,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
   friend class MediaPacketConsumer;
 };
 
-// Handler for MediaPacketConsumerChannel messages, digest format.
+// Handler for MediaPacketConsumerChannel messages.
 class MediaPacketConsumer : public ChannelHandler,
                             public media::logs::MediaPacketConsumerChannel {
  public:

@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/lib/timeline/timeline_function.h"
+#include "apps/media/services/logs/media_timeline_control_point_channel.fidl.h"
 #include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -121,6 +123,8 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   uint32_t generation_ FTL_GUARDED_BY(mutex_) = 1;
   int64_t end_of_stream_pts_ FTL_GUARDED_BY(mutex_) = kUnspecifiedTime;
   bool end_of_stream_published_ FTL_GUARDED_BY(mutex_) = false;
+
+  FLOG_INSTANCE_CHANNEL(logs::MediaTimelineControlPointChannel, log_channel_);
 };
 
 }  // namespace media

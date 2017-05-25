@@ -13,6 +13,7 @@
 #include "apps/media/tools/flog_viewer/handlers/media_renderer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink.h"
 #include "apps/media/tools/flog_viewer/handlers/media_source.h"
+#include "apps/media/tools/flog_viewer/handlers/media_timeline_control_point.h"
 #include "apps/media/tools/flog_viewer/handlers/media_type_converter.h"
 
 namespace flog {
@@ -48,6 +49,8 @@ std::unique_ptr<ChannelHandler> ChannelHandler::Create(
     handler = new handlers::MediaSink(format);
   } else if (type_name == handlers::MediaSource::Name_) {
     handler = new handlers::MediaSource(format);
+  } else if (type_name == handlers::MediaTimelineControlPoint::Name_) {
+    handler = new handlers::MediaTimelineControlPoint(format);
   }
 
   if (handler == nullptr) {

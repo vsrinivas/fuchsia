@@ -37,6 +37,8 @@ executable("flog_viewer") {
     "handlers/media_sink.h",
     "handlers/media_source.cc",
     "handlers/media_source.h",
+    "handlers/media_timeline_control_point.cc",
+    "handlers/media_timeline_control_point.h",
     "handlers/media_type_converter.cc",
     "handlers/media_type_converter.h",
     "tracked.h",
