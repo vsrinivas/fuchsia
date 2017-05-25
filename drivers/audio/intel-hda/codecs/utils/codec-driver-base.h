@@ -27,7 +27,6 @@ public:
     virtual void Shutdown();
 
     // Properties
-    mx_driver_t* codec_driver() const { return codec_driver_; }
     mx_device_t* codec_device() const { return codec_device_; }
     mx_time_t    create_time()  const { return create_time_; }
 
@@ -50,7 +49,7 @@ protected:
     // Bind should only ever be called exactly once (during driver
     // instantiation).  Drivers must make sure that no other methods are in
     // flight during a call to Bind.
-    mx_status_t Bind(mx_driver_t* driver, mx_device_t* codec_dev);
+    mx_status_t Bind(mx_device_t* codec_dev);
 
     // Send a codec command to our codec device.
     mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
@@ -106,7 +105,6 @@ private:
                                       uint32_t resp_size,
                                       mx::handle&& rxed_handle);
 
-    mx_driver_t* codec_driver_ = nullptr;
     mx_device_t* codec_device_ = nullptr;
     mx_time_t    create_time_  = mx_time_get(MX_CLOCK_MONOTONIC);
 

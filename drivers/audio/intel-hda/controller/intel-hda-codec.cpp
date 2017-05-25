@@ -228,7 +228,6 @@ mx_status_t IntelHDACodec::PublishDevice() {
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = name;
     args.ctx = this;
-    args.driver = IntelHDAController::driver();
     args.ops =  &CODEC_DEVICE_THUNKS;
     args.proto_id = MX_PROTOCOL_IHDA_CODEC;
     args.proto_ops = &CODEC_PROTO_THUNKS;

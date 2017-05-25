@@ -26,7 +26,6 @@ namespace intel_hda {
 
 // static member variable declaration
 constexpr uint        IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
-mx_driver_t*          IntelHDAController::driver_;
 mxtl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device interface thunks
@@ -268,23 +267,18 @@ mx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
     }
 }
 
-mx_status_t IntelHDAController::DriverInit(mx_driver_t* driver) {
+mx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // Note: It is assumed that calls to Init/Release are serialized by the
     // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
     // serialization will need to be added here.
-    if (driver_ != nullptr)
-        return ERR_BAD_STATE;
-
-    driver_ = driver;
 
     return NO_ERROR;
 }
 
-mx_status_t IntelHDAController::DriverBind(mx_driver_t* driver,
+mx_status_t IntelHDAController::DriverBind(void* ctx,
                                            mx_device_t* device,
                                            void** cookie) {
     if (cookie == nullptr) return ERR_INVALID_ARGS;
-    if (driver != driver_) return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<IntelHDAController> controller(mxtl::AdoptRef(new IntelHDAController()));
 
@@ -297,7 +291,7 @@ mx_status_t IntelHDAController::DriverBind(mx_driver_t* driver,
     return ret;
 }
 
-void IntelHDAController::DriverUnbind(mx_driver_t* driver,
+void IntelHDAController::DriverUnbind(void* ctx,
                                       mx_device_t* device,
                                       void* cookie) {
     MX_DEBUG_ASSERT(cookie != nullptr);
@@ -310,34 +304,29 @@ void IntelHDAController::DriverUnbind(mx_driver_t* driver,
     controller.reset();
 }
 
-mx_status_t IntelHDAController::DriverRelease(mx_driver_t* driver) {
-    MX_DEBUG_ASSERT(driver == driver_);
-
+void IntelHDAController::DriverRelease(void* ctx) {
     // If we are the last one out the door, turn off the lights in the thread pool.
     audio::DispatcherThread::ShutdownThreadPool();
-
-    driver_ = nullptr;
-    return NO_ERROR;
 }
 
 }  // namespace intel_hda
 }  // namespace audio
 
 extern "C" {
-mx_status_t ihda_init_hook(mx_driver_t* driver) {
-    return ::audio::intel_hda::IntelHDAController::DriverInit(driver);
+mx_status_t ihda_init_hook(void** out_ctx) {
+    return ::audio::intel_hda::IntelHDAController::DriverInit(out_ctx);
 }
 
-mx_status_t ihda_bind_hook(mx_driver_t* driver, mx_device_t* pci_dev, void** cookie) {
-    return ::audio::intel_hda::IntelHDAController::DriverBind(driver, pci_dev, cookie);
+mx_status_t ihda_bind_hook(void* ctx, mx_device_t* pci_dev, void** cookie) {
+    return ::audio::intel_hda::IntelHDAController::DriverBind(ctx, pci_dev, cookie);
 }
 
-void ihda_unbind_hook(mx_driver_t* driver, mx_device_t* pci_dev, void* cookie) {
-    ::audio::intel_hda::IntelHDAController::DriverUnbind(driver, pci_dev, cookie);
+void ihda_unbind_hook(void* ctx, mx_device_t* pci_dev, void* cookie) {
+    ::audio::intel_hda::IntelHDAController::DriverUnbind(ctx, pci_dev, cookie);
 }
 
-mx_status_t ihda_release_hook(mx_driver_t* driver) {
-    return ::audio::intel_hda::IntelHDAController::DriverRelease(driver);
+void ihda_release_hook(void* ctx) {
+    ::audio::intel_hda::IntelHDAController::DriverRelease(ctx);
 }
 }  // extern "C"
 

@@ -168,7 +168,6 @@ mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = dev_name_;
     args.ctx = this;
-    args.driver = parent_codec_->codec_driver();
     args.ops = &STREAM_DEVICE_THUNKS;
     args.proto_id = (is_input() ? MX_PROTOCOL_AUDIO2_INPUT : MX_PROTOCOL_AUDIO2_OUTPUT);
 
