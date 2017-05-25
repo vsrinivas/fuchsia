@@ -17,6 +17,7 @@
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver_v6.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace netconnector {
@@ -143,13 +144,15 @@ void MdnsInterfaceTransceiver::InboundReady(mx_status_t status,
   sockaddr_storage source_address_storage;
   socklen_t source_address_length =
       address_.is_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-  ssize_t result = recvfrom(
-      socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(),
-      0, reinterpret_cast<sockaddr*>(&source_address_storage),
-      &source_address_length);
+  ssize_t result =
+      recvfrom(socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(),
+               0, reinterpret_cast<sockaddr*>(&source_address_storage),
+               &source_address_length);
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
-    WaitForInbound();
+    // Wait a bit before trying again to avoid spamming the log.
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this]() { WaitForInbound(); }, ftl::TimeDelta::FromSeconds(10));
     return;
   }
 
