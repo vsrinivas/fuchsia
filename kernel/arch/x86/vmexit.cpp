@@ -30,8 +30,9 @@ static const uint16_t kUartStatusIoPort = 0x3fd;
 static const uint64_t kUartStatusIdle = 1u << 6;
 #endif // WITH_LIB_MAGENTA
 
-static const uint64_t kIa32ApicBase =
+static const uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_BSP | IA32_APIC_BASE_XAPIC_ENABLE;
+static const uint16_t kLocalApicLvtTimer = 0x320;
 
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptInfoValid = 1u << 31;
@@ -264,7 +265,7 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info);
-        guest_state->rax = kIa32ApicBase;
+        guest_state->rax = kLocalApicPhysBase;
         guest_state->rdx = 0;
         return NO_ERROR;
     // From Volume 3, Section 28.2.6.2: The MTRRs have no effect on the memory
@@ -284,16 +285,16 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     }
 }
 
-static uint32_t* apic_reg(LocalApicState* local_apic_state, ApicRegister reg) {
+static uint32_t* apic_reg(LocalApicState* local_apic_state, uint16_t reg) {
     uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic_state->apic_addr);
-    return reinterpret_cast<uint32_t*>(addr + static_cast<uint16_t>(reg));
+    return reinterpret_cast<uint32_t*>(addr + reg);
 }
 
 static handler_return deadline_callback(timer_t* timer, lk_time_t now, void* arg) {
     LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
     DEBUG_ASSERT(local_apic_state->active_interrupt == kInvalidInterrupt);
 
-    uint32_t* lvt_timer = apic_reg(local_apic_state, ApicRegister::LVT_TIMER);
+    uint32_t* lvt_timer = apic_reg(local_apic_state, kLocalApicLvtTimer);
     local_apic_state->active_interrupt = *lvt_timer & LVT_TIMER_VECTOR_MASK;
     local_apic_state->tsc_deadline = 0;
     event_signal(&local_apic_state->event, false);
@@ -304,7 +305,7 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
                              LocalApicState* local_apic_state) {
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
-        if (guest_state->rax != kIa32ApicBase || guest_state->rdx != 0)
+        if (guest_state->rax != kLocalApicPhysBase || guest_state->rdx != 0)
             return ERR_INVALID_ARGS;
         next_rip(exit_info);
         return NO_ERROR;
@@ -318,7 +319,7 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
         next_rip(exit_info);
         return NO_ERROR;
     case X86_MSR_IA32_TSC_DEADLINE: {
-        uint32_t* reg = apic_reg(local_apic_state, ApicRegister::LVT_TIMER);
+        uint32_t* reg = apic_reg(local_apic_state, kLocalApicLvtTimer);
         if ((*reg & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
             return ERR_INVALID_ARGS;
         next_rip(exit_info);

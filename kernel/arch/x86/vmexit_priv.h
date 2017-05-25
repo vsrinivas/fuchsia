@@ -55,28 +55,17 @@ struct IoInfo {
     IoInfo(uint64_t qualification);
 };
 
-/* VM entry interruption type. */
-enum class InterruptionType : uint32_t {
-    EXTERNAL_INTERRUPT  = 0u,
-    HARDWARE_EXCEPTION  = 3u,
-};
-
-/* Local APIC registers. */
-enum class ApicRegister : uint16_t {
-    LOCAL_APIC_ID   = 0x0020,
-    EOI             = 0x00b0,
-    SVR             = 0x00f0,
-    ESR             = 0x0280,
-    LVT_TIMER       = 0x0320,
-    LVT_ERROR       = 0x0370,
-    INITIAL_COUNT   = 0x0380,
-};
-
 /* Stores local APIC access info from the VMCS exit qualification field. */
 struct ApicAccessInfo {
     uint16_t offset;
 
     ApicAccessInfo(uint64_t qualification);
+};
+
+/* VM entry interruption type. */
+enum class InterruptionType : uint32_t {
+    EXTERNAL_INTERRUPT  = 0u,
+    HARDWARE_EXCEPTION  = 3u,
 };
 
 void interrupt_window_exiting(bool enable);
