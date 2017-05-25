@@ -35,14 +35,8 @@ KERNEL_DEFINES += \
     BOOTLOADER_RESERVE_SIZE=$(BOOTLOADER_RESERVE_SIZE) \
     PLATFORM_SUPPORTS_PANIC_SHELL=1 \
 
+# build MDI
+MDI_SRCS := $(LOCAL_DIR)/hikey960.mdi
+
 # extra build rules for building fastboot compatible image
 include make/fastboot.mk
-
-# build MDI
-MDI_SRCS := \
-    $(LOCAL_DIR)/hikey960.mdi \
-
-MDI_DEPS := \
-    kernel/include/mdi/kernel-defs.mdi \
-
-include make/mdi.mk
