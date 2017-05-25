@@ -23,7 +23,7 @@ struct arch_aspace {
 
     /* pointer to the translation table */
     paddr_t tt_phys;
-    pte_t *tt_virt;
+    volatile pte_t *tt_virt;
 
     uint flags;
 
