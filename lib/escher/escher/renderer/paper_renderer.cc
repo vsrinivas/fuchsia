@@ -19,6 +19,7 @@
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
+#include "escher/util/image_utils.h"
 
 // If 1 uses a compute kernel to perform SSDO sampling, otherwise uses a
 // fragment shader.  For not-yet-understood reasons, the compute kernel is
@@ -56,10 +57,11 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       ssdo_(std::make_unique<impl::SsdoSampler>(
           escher->resource_life_preserver(),
           full_screen_,
-          escher->image_cache()->NewNoiseImage(
-              impl::SsdoSampler::kNoiseSize,
-              impl::SsdoSampler::kNoiseSize,
-              vk::ImageUsageFlagBits::eStorage),
+          image_utils::NewNoiseImage(escher->image_cache(),
+                                     escher->gpu_uploader(),
+                                     impl::SsdoSampler::kNoiseSize,
+                                     impl::SsdoSampler::kNoiseSize,
+                                     vk::ImageUsageFlagBits::eStorage),
           escher->glsl_compiler())),
       ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
           escher->glsl_compiler(),
@@ -339,8 +341,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   FTL_CHECK(height % kSsdoAccelDownsampleFactor == 0);
   uint32_t ssdo_accel_width = width / kSsdoAccelDownsampleFactor;
   uint32_t ssdo_accel_height = height / kSsdoAccelDownsampleFactor;
-  ImagePtr ssdo_accel_depth_image = image_cache_->NewDepthImage(
-      depth_format_, ssdo_accel_width, ssdo_accel_height,
+  ImagePtr ssdo_accel_depth_image = image_utils::NewDepthImage(
+      image_cache_, depth_format_, ssdo_accel_width, ssdo_accel_height,
       vk::ImageUsageFlagBits::eSampled);
   TexturePtr ssdo_accel_depth_texture = ftl::MakeRefCounted<Texture>(
       escher_->resource_life_preserver(), ssdo_accel_depth_image,
@@ -370,8 +372,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
   SubmitPartialFrame();
 
   // Depth-only pre-pass.
-  ImagePtr depth_image = image_cache_->NewDepthImage(
-      depth_format_, width, height,
+  ImagePtr depth_image = image_utils::NewDepthImage(
+      image_cache_, depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
   {
     current_frame()->TakeWaitSemaphore(
@@ -442,8 +444,9 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     ImagePtr depth_image_multisampled = image_cache_->NewImage(info);
 
     FramebufferPtr multisample_fb = ftl::MakeRefCounted<Framebuffer>(
-        escher_, width, height, std::vector<ImagePtr>{color_image_multisampled,
-                                                      depth_image_multisampled},
+        escher_, width, height,
+        std::vector<ImagePtr>{color_image_multisampled,
+                              depth_image_multisampled},
         model_renderer_->lighting_pass());
 
     current_frame()->KeepAlive(multisample_fb);

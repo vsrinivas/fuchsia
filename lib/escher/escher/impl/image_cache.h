@@ -10,6 +10,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/renderer/image.h"
+#include "escher/renderer/image_factory.h"
 #include "escher/resources/resource_manager.h"
 #include "escher/util/hash.h"
 #include "escher/vk/gpu_mem.h"
@@ -24,58 +25,16 @@ class GpuUploader;
 
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
-class ImageCache : public ResourceManager {
+class ImageCache : public ResourceManager, public ImageFactory {
  public:
   // The allocator is used to allocate memory for newly-created images.  The
   // queue and CommandBufferPool are used to schedule image layout transitions.
-  ImageCache(const VulkanContext& context,
-             CommandBufferPool* pool,
-             GpuAllocator* allocator,
-             GpuUploader* uploader);
-  ~ImageCache();
+  ImageCache(const VulkanContext& context, GpuAllocator* allocator);
+  ~ImageCache() override;
 
   // Obtain an unused Image with the required properties.  A new Image might be
   // created, or an existing one reused.
-  ImagePtr NewImage(const ImageInfo& info);
-
-  // Return a new Image that is suitable for use as a depth attachment.  A new
-  // Image might be created, or an existing one reused.
-  ImagePtr NewDepthImage(vk::Format format,
-                         uint32_t width,
-                         uint32_t height,
-                         vk::ImageUsageFlags additional_flags);
-
-  // Return a new Image that is suitable for use as a color attachment.  A new
-  // Image might be created, or an existing one reused.
-  ImagePtr NewColorAttachmentImage(uint32_t width,
-                                   uint32_t height,
-                                   vk::ImageUsageFlags additional_flags);
-
-  // Return new Image containing the provided pixels.  A new Image might be
-  // created, or an existing one reused.  Uses transfer queue to efficiently
-  // transfer image data to GPU.
-  ImagePtr NewImageFromPixels(
-      vk::Format format,
-      uint32_t width,
-      uint32_t height,
-      uint8_t* pixels,
-      vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
-
-  // Return new Image containing the provided pixels.  A new Image might be
-  // created, or an existing one reused.  Uses transfer queue to efficiently
-  // transfer image data to GPU.  If bytes is null, don't bother transferring.
-  ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
-
-  // Returns RGBA image.  A new Image might be created, or an existing one
-  // reused.
-  ImagePtr NewCheckerboardImage(uint32_t width, uint32_t height);
-
-  // Returns single-channel luminance image containing white noise.  A new Image
-  // might be created, or an existing one reused.
-  ImagePtr NewNoiseImage(
-      uint32_t width,
-      uint32_t height,
-      vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
+  ImagePtr NewImage(const ImageInfo& info) override;
 
  private:
   // Implements Owner::OnReceiveOwnable().  Adds the image to unused_images_.
@@ -85,9 +44,7 @@ class ImageCache : public ResourceManager {
   // remove and return it.  Otherwise, return nullptr.
   ImagePtr FindImage(const ImageInfo& info);
 
-  vk::Queue queue_;
   GpuAllocator* allocator_;
-  GpuUploader* uploader_;
 
   // Keep track of all images that are available for reuse.
   // TODO: need some method of trimming the cache, to free images that haven't

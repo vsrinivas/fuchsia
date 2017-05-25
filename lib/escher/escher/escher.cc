@@ -10,6 +10,7 @@
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"
 #include "escher/util/cplusplus.h"
+#include "escher/util/image_utils.h"
 #include "escher/vk/gpu_allocator.h"
 
 namespace escher {
@@ -27,15 +28,18 @@ MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
-  return impl_->image_cache()->NewRgbaImage(width, height, bytes);
+  return image_utils::NewRgbaImage(impl_->image_cache(), impl_->gpu_uploader(),
+                                   width, height, bytes);
 }
 
 ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
-  return impl_->image_cache()->NewCheckerboardImage(width, height);
+  return image_utils::NewCheckerboardImage(
+      impl_->image_cache(), impl_->gpu_uploader(), width, height);
 }
 
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
-  return impl_->image_cache()->NewNoiseImage(width, height);
+  return image_utils::NewNoiseImage(impl_->image_cache(), impl_->gpu_uploader(),
+                                    width, height);
 }
 
 PaperRendererPtr Escher::NewPaperRenderer() {

@@ -21,7 +21,7 @@
 #include "escher/scene/model.h"
 #include "escher/scene/shape.h"
 #include "escher/scene/stage.h"
-#include "escher/util/image_loader.h"
+#include "escher/util/image_utils.h"
 
 namespace escher {
 namespace impl {
@@ -220,7 +220,8 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
-  auto image = escher->image_cache()->NewRgbaImage(1, 1, channels);
+  auto image = image_utils::NewRgbaImage(
+      escher->image_cache(), escher->gpu_uploader(), 1, 1, channels);
   return ftl::MakeRefCounted<Texture>(escher->resource_life_preserver(),
                                       std::move(image), vk::Filter::eNearest);
 }

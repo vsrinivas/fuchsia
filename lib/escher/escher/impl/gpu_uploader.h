@@ -69,6 +69,8 @@ class GpuUploader : ResourceManager {
   // Get a Writer that has the specified amount of scratch space.
   Writer GetWriter(size_t size);
 
+  vk::Device device() const { return device_; }
+
  private:
   // Implement ResourceManager::OnReceiveOwnable().
   void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;

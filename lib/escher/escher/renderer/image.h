@@ -45,11 +45,6 @@ class Image : public WaitableResource {
   // passing nullptr as the |mem| argument.
   Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem);
 
-  // Helper function that creates a VkImage given the parameters in ImageInfo.
-  // This does not bind the the VkImage to memory; the caller must do that
-  // separately after calling this function.
-  static vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
-
   const ImageInfo& info() const { return info_; }
   vk::Image get() const { return image_; }
   vk::Format format() const { return info_.format; }

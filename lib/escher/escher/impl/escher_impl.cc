@@ -81,10 +81,8 @@ EscherImpl::EscherImpl(const VulkanContext& context)
       pipeline_cache_(std::make_unique<PipelineCache>()),
       resource_life_preserver_(
           std::make_unique<ResourceLifePreserver>(vulkan_context_)),
-      image_cache_(std::make_unique<ImageCache>(vulkan_context_,
-                                                command_buffer_pool(),
-                                                gpu_allocator(),
-                                                gpu_uploader())),
+      image_cache_(
+          std::make_unique<ImageCache>(vulkan_context_, gpu_allocator())),
       mesh_manager_(NewMeshManager(command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator(),
