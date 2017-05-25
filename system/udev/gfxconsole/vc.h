@@ -37,6 +37,8 @@ typedef struct vc {
 
     int fd;
 
+    int client_fd;
+
     // backing store
     const gfx_font* font;
 

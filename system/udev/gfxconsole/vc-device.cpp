@@ -487,6 +487,7 @@ mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
     if (!vc)
         return ERR_NO_MEMORY;
     vc->fd = -1;
+    vc->client_fd = -1;
 
     vc->keymap = qwerty_map;
     char* keys = getenv("gfxconsole.keymap");
@@ -538,7 +539,6 @@ mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
     vc->gfx_vmo = fb.vmo;
 
     sz = fb.info.stride * fb.info.pixelsize * fb.info.height;
-
     uintptr_t ptr;
     if (mx_vmar_map(mx_vmar_root_self(), 0, vc->gfx_vmo, 0, sz,
                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr) < 0) {
@@ -573,6 +573,9 @@ void vc_free(vc_t* vc) {
     //TODO: unmap framebuffer
     if (vc->fd >= 0) {
         close(vc->fd);
+    }
+    if (vc->client_fd >= 0) {
+        close(vc->client_fd);
     }
     if (vc->st_gfx) {
         gfx_surface_destroy(vc->st_gfx);

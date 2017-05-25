@@ -27,6 +27,10 @@
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/object.h>
 
+#if !BUILD_FOR_TEST
+#include <launchpad/launchpad.h>
+#endif
+
 #define VCDEBUG 1
 
 #include "keyboard-vt100.h"
@@ -185,7 +189,9 @@ static void vc_handle_key_press(uint8_t keycode, int modifiers) {
     uint32_t length = hid_key_to_vt100_code(
         keycode, modifiers, vc->keymap, output, sizeof(output));
     if (length > 0) {
-        //TODO: write(output,length) to vc
+        if (vc->client_fd >= 0) {
+            write(vc->client_fd, output, length);
+        }
         vc_scroll_viewport_bottom(vc);
     }
 }
@@ -486,6 +492,85 @@ static int vc_battery_dir_poll_thread(void* arg) {
 }
 
 #if !BUILD_FOR_TEST
+#include <magenta/device/pty.h>
+
+int mkpty(vc_t* vc, int fd[2]) {
+    fd[0] = open("/dev/misc/ptmx", O_RDWR);
+    if (fd[0] < 0) {
+        return -1;
+    }
+    fd[1] = openat(fd[0], "0", O_RDWR);
+    if (fd[1] < 0) {
+        close(fd[0]);
+        return -1;
+    }
+    pty_window_size_t wsz = {
+        .width = vc->columns,
+        .height = vc->rows,
+    };
+    ioctl_pty_set_window_size(fd[0], &wsz);
+
+    return 0;
+}
+
+static int vc_shell_thread(void* arg) {
+    vc_t* vc;
+    if (vc_create(&vc)) {
+        return 0;
+    }
+
+    if ((vc->client_fd = open("/dev/misc/ptmx", O_RDWR)) < 0) {
+        goto done;
+    }
+
+    for (;;) {
+        int fd[2];
+        if (mkpty(vc, fd) < 0) {
+            vc_destroy(vc);
+            return 0;
+        }
+
+        const char* args[] = { "/boot/bin/sh" };
+
+        launchpad_t* lp;
+        launchpad_create(mx_job_default(), "vc:sh", &lp);
+        launchpad_load_from_file(lp, args[0]);
+        launchpad_set_args(lp, 1, args);
+        launchpad_transfer_fd(lp, fd[1], MXIO_FLAG_USE_FOR_STDIO | 0);
+        launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+
+        const char* errmsg;
+        mx_handle_t proc;
+        mx_status_t r;
+        if ((r = launchpad_go(lp, &proc, &errmsg)) < 0) {
+            printf("vc: cannot spawn shell: %s: %d\n", errmsg, r);
+            close(fd[0]);
+            goto done;
+        }
+
+        vc->client_fd = fd[0];
+
+        for (;;) {
+            char data[8192];
+            ssize_t r = read(vc->client_fd, data, sizeof(data));
+            if (r <= 0) {
+                printf("< %zd >\n", r);
+                break;
+            }
+            vc_write(vc, data, r, 0);
+        }
+
+        vc->client_fd = -1;
+        close(fd[0]);
+
+        mx_task_kill(proc);
+    }
+
+done:
+    vc_destroy(vc);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     int fd;
     for (;;) {
@@ -514,6 +599,13 @@ int main(int argc, char** argv) {
         thrd_t t;
         thrd_create_with_name(&t, vc_log_reader_thread, vc, "vc-log-reader");
     }
+
+    setenv("TERM", "xterm", 1);
+
+    thrd_t t;
+    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
 
     for (;;) {
         sleep(1000);
