@@ -148,6 +148,9 @@ def main():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--file", "-f", nargs="?", type=argparse.FileType("r"),
+                        default=sys.stdin,
+                        help="File to read from, stdin by default")
     parser.add_argument("--build-dir", "-b", nargs="*",
                         help="List of additional build directories to search")
     parser.add_argument("--disassemble", "-d", action="store_true",
@@ -155,7 +158,12 @@ def main():
     parser.add_argument("--stack_size", "-s", type=int,
                         default=256*1024,
                         help="Change the assumed size of the stack (e.g. use 1048576 for ftl or mtl default thread size")
+    parser.add_argument("--echo", dest="echo", action="store_true",
+                        help="Echo lines of input (on by default)")
+    parser.add_argument("--no-echo", dest="echo", action="store_false",
+                        help="Don't echo lines of input")
     parser.add_argument("app", nargs="?", help="Name of primary application")
+    parser.set_defaults(echo=True)
     args = parser.parse_args()
 
     magenta_build_dir = os.path.join(
@@ -200,8 +208,8 @@ def main():
     magenta_pc = ''
 
     while True:
-        line = sys.stdin.readline()
-        if not sys.stdin.isatty():
+        line = args.file.readline()
+        if args.echo and not args.file.isatty():
             writeline(line)
         end_of_file = (line == '')
         # Strip any trailing carriage return character ("\r"), since
