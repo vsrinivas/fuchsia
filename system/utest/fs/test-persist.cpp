@@ -21,7 +21,7 @@
 #include "filesystems.h"
 #include "misc.h"
 
-constexpr bool is_directory(const char* const path) {
+bool is_directory(const char* const path) {
     return path[strlen(path) - 1] == '/';
 }
 
