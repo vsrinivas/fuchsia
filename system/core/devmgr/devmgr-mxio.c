@@ -97,6 +97,11 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
     mx_handle_t h = vfs_create_global_root_handle();
     launchpad_add_handle(lp, h, PA_MXIO_ROOT);
 
+    //TODO: constrain to /svc/debug, or other as appropriate
+    if (strcmp(name, "init") && ((h = get_service_root()) != MX_HANDLE_INVALID)) {
+        launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
+    }
+
     if (stdiofd < 0) {
         mx_status_t r;
         if ((r = mx_log_create(0, &h) < 0)) {

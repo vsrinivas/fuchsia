@@ -436,10 +436,10 @@ int main(int argc, char** argv) {
                       NULL, -1, NULL, NULL, 0);
     }
 
-    start_console_shell();
-
     mx_channel_create(0, &application_launcher, &application_launcher_child);
     mx_channel_create(0, &svc_root_handle, &svc_request_handle);
+
+    start_console_shell();
 
     if (secondary_bootfs_ready()) {
         devmgr_start_system_init(NULL);

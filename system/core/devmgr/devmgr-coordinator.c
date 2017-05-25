@@ -264,6 +264,8 @@ static mx_status_t dc_launch_devhost(devhost_t* host,
     //TODO: eventually devhosts should not have vfs access
     launchpad_add_handle(lp, vfs_create_global_root_handle(),
                          PA_HND(PA_MXIO_ROOT, 0));
+
+    //TODO: constrain to /svc/device
     if ((h = get_service_root()) != MX_HANDLE_INVALID) {
         launchpad_add_handle(lp, h, PA_SERVICE_ROOT);
     }
