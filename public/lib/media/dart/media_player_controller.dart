@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:apps.media.lib.flutter/timeline.dart';
+import 'package:apps.media.lib.dart/timeline.dart';
 import 'package:apps.media.services/audio_renderer.fidl.dart';
 import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/media_player.fidl.dart' as mp;

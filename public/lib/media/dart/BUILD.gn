@@ -4,7 +4,7 @@
 
 import("//build/dart/dart_package.gni")
 
-dart_package("flutter") {
+dart_package("dart") {
   infer_package_name = true
 
   source_dir = "."

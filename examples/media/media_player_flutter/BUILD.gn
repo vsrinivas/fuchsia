@@ -9,7 +9,7 @@ flutter_app("media_player_flutter") {
 
   deps = [
     "//application/lib/app/dart",
-    "//apps/media/lib/flutter",
+    "//apps/media/lib/dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/lib/flutter",
