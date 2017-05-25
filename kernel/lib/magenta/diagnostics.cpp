@@ -426,8 +426,17 @@ public:
     bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
                      uint depth) override {
         usage.mapped_pages += map->size() / PAGE_SIZE;
-        usage.committed_pages += map->vmo()->AllocatedPagesInRange(
+
+        size_t committed_pages = map->vmo()->AllocatedPagesInRange(
             map->object_offset(), map->size());
+        uint32_t share_count = map->vmo()->share_count();
+        if (share_count == 1) {
+            usage.private_pages += committed_pages;
+        } else {
+            usage.shared_pages += committed_pages;
+            usage.scaled_shared_bytes +=
+                committed_pages * PAGE_SIZE / share_count;
+        }
         return true;
     }
 

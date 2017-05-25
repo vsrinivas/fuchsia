@@ -76,10 +76,28 @@ public:
         // A count of pages covered by VmMapping ranges.
         size_t mapped_pages;
 
-        // A count of committed pages. A page is considered committed if a
-        // VmMapping covers a range of a VmObject that contains that page, and
-        // that page has physical memory allocated to it.
-        size_t committed_pages;
+        // For the fields below, a page is considered committed if a VmMapping
+        // covers a range of a VmObject that contains that page, and that page
+        // has physical memory allocated to it.
+
+        // A count of committed pages that are only mapped into this address
+        // space.
+        size_t private_pages;
+
+        // A count of committed pages that are mapped into this and at least
+        // one other address spaces.
+        size_t shared_pages;
+
+        // A number that estimates the fraction of shared_pages that this
+        // address space is responsible for keeping alive.
+        //
+        // An estimate of:
+        //   For each shared, committed page:
+        //   scaled_shared_bytes +=
+        //       PAGE_SIZE / (number of address spaces mapping this page)
+        //
+        // This number is strictly smaller than shared_pages * PAGE_SIZE.
+        size_t scaled_shared_bytes;
     };
 
     // Counts memory usage under the VmAspace.

@@ -497,7 +497,8 @@ status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
         return s;
     }
     stats->mem_mapped_bytes = usage.mapped_pages * PAGE_SIZE;
-    stats->mem_committed_bytes = usage.committed_pages * PAGE_SIZE;
+    stats->mem_committed_bytes =
+        (usage.private_pages + usage.shared_pages) * PAGE_SIZE;
     return NO_ERROR;
 }
 
