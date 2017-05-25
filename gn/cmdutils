@@ -8,6 +8,10 @@
             "bootfs_path": "bin/cowsay"
         },
         {
+            "binary": "sysinfo",
+            "bootfs_path": "bin/sysinfo"
+        },
+        {
             "binary": "time",
             "bootfs_path": "bin/time"
         },
