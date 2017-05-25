@@ -6,8 +6,6 @@
 #include <errno.h>
 #include <launchpad/launchpad.h>
 #include <magenta/process.h>
-#include <map>
-#include <memory>
 #include <mx/job.h>
 #include <mxio/io.h>
 #include <netinet/in.h>
@@ -17,8 +15,10 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <thread>
 #include <unistd.h>
+#include <map>
+#include <memory>
+#include <thread>
 #include <vector>
 
 #include "application/lib/app/application_context.h"
@@ -28,9 +28,13 @@
 #include "lib/mtl/tasks/fd_waiter.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+constexpr mx_rights_t kChildJobRights =
+    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+
 class Service {
  public:
-  Service(int port, int argc, const char** argv) : port_(port), argc_(argc), argv_(argv) {
+  Service(int port, int argc, const char** argv)
+      : port_(port), argc_(argc), argv_(argv) {
     sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
       FTL_LOG(FATAL) << "Failed to create socket: " << strerror(errno);
@@ -41,31 +45,35 @@ class Service {
     addr.sin6_port = htons(port_);
     addr.sin6_addr = in6addr_any;
     if (bind(sock_, (struct sockaddr*)&addr, sizeof addr) < 0) {
-      FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": " << strerror(errno);
+      FTL_LOG(FATAL) << "Failed to bind to " << port_ << ": "
+                     << strerror(errno);
     }
 
     if (listen(sock_, 10) < 0) {
       FTL_LOG(FATAL) << "Failed to listen:" << strerror(errno);
     }
 
-    mx_status_t status = mx::job::create(mx_job_default(), 0, &job_);
-    FTL_CHECK(status == 0);
+    FTL_CHECK(mx::job::create(mx_job_default(), 0, &job_) == NO_ERROR);
     std::string job_name = ftl::StringPrintf("tcp:%d", port);
-    status = job_.set_property(MX_PROP_NAME, job_name.data(), job_name.size());
+    FTL_CHECK(job_.set_property(MX_PROP_NAME, job_name.data(),
+                                job_name.size()) == NO_ERROR);
+    FTL_CHECK(job_.replace(kChildJobRights, &job_) == NO_ERROR);
 
     Wait();
   }
 
  private:
   void Wait() {
-    waiter_.Wait([this](mx_status_t success, uint32_t events) {
-      int conn = accept(sock_, NULL, NULL);
-      if (conn < 0) {
-        FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
-      }
-      Launch(conn);
-      Wait();
-    }, sock_, EPOLLIN);
+    waiter_.Wait(
+        [this](mx_status_t success, uint32_t events) {
+          int conn = accept(sock_, NULL, NULL);
+          if (conn < 0) {
+            FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
+          }
+          Launch(conn);
+          Wait();
+        },
+        sock_, EPOLLIN);
   }
 
   void Launch(int conn) {
