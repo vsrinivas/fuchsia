@@ -205,6 +205,13 @@ bool test_work_single_thread(void) {
         }
     }
 
+    worker_t* w = env.all_workers;
+    worker_t* next;
+    while (w != NULL) {
+        next = w->next;
+        free(w);
+        w = next;
+    }
     END_TEST;
 }
 
@@ -271,7 +278,9 @@ static int do_threaded_work(void* arg) {
             w->status == DONE ? "finished" : "failed");
     EXPECT_EQ(unlink(w->name), 0, "");
 
-    return w->status;
+    mx_status_t status = w->status;
+    free(w);
+    return status;
 }
 
 static bool test_work_concurrently(void) {
@@ -291,10 +300,12 @@ static bool test_work_concurrently(void) {
     }
 
     thread_list_t* next;
-    list_for_every_entry(&env.threads, next, thread_list_t, node) {
+    thread_list_t* tmp;
+    list_for_every_entry_safe(&env.threads, next, tmp, thread_list_t, node) {
         int rc;
         ASSERT_EQ(thrd_join(next->t, &rc), thrd_success, "");
         ASSERT_EQ(rc, DONE, "Thread joined, but failed");
+        free(next);
     }
 
     END_TEST;
