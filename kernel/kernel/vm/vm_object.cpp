@@ -117,6 +117,52 @@ uint32_t VmObject::num_mappings() const {
     return mapping_list_len_;
 }
 
+uint32_t VmObject::share_count() const {
+    canary_.Assert();
+
+    AutoLock a(&lock_);
+    if (mapping_list_len_ < 2) {
+        return 1;
+    }
+
+    // Find the number of unique VmAspaces that we're mapped into.
+    // Use this buffer to hold VmAspace pointers.
+    static constexpr int kAspaceBuckets = 64;
+    uintptr_t aspaces[kAspaceBuckets];
+    unsigned int num_mappings = 0; // Number of mappings we've visited
+    unsigned int num_aspaces = 0;  // Unique aspaces we've seen
+    for (const auto& m : mapping_list_) {
+        uintptr_t as = reinterpret_cast<uintptr_t>(m.aspace().get());
+        // Simple O(n^2) should be fine.
+        for (unsigned int i = 0; i < num_aspaces; i++) {
+            if (aspaces[i] == as) {
+                goto found;
+            }
+        }
+        if (num_aspaces < kAspaceBuckets) {
+            aspaces[num_aspaces++] = as;
+        } else {
+            // Maxed out the buffer. Estimate the remaining number of aspaces.
+            num_aspaces +=
+                // The number of mappings we haven't visited yet
+                (mapping_list_len_ - num_mappings)
+                // Scaled down by the ratio of unique aspaces we've seen so far.
+                * num_aspaces / num_mappings;
+            break;
+        }
+    found:
+        num_mappings++;
+    }
+    DEBUG_ASSERT_MSG(num_aspaces <= mapping_list_len_,
+                     "num_aspaces %u should be <= mapping_list_len_ %" PRIu32,
+                     num_aspaces, mapping_list_len_);
+
+    // TODO: Cache this value as long as the set of mappings doesn't change.
+    // Or calculate it when adding/removing a new mapping under an aspace
+    // not in the list.
+    return num_aspaces;
+}
+
 void VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());

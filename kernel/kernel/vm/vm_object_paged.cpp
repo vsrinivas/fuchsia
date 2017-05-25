@@ -138,6 +138,8 @@ size_t VmObjectPaged::AllocatedPagesInRange(uint64_t offset, uint64_t len) const
         return 0;
     }
     size_t count = 0;
+    // TODO: Figure out what to do with our parent's pages. If we're a clone,
+    // page_list_ only contains pages that we've made copies of.
     page_list_.ForEveryPage(
         [&count, offset, new_len](const auto p, uint64_t off) {
             if (off >= offset && off < offset + new_len) {
