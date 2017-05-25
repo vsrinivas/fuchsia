@@ -13,7 +13,7 @@ typedef struct mx_guest_gpr mx_guest_gpr_t;
 /* Stores info from a decoded instruction. */
 typedef struct instruction {
     bool read;
-    bool rex;
+    uint8_t mem;
     uint32_t imm;
     uint64_t* reg;
 } instruction_t;

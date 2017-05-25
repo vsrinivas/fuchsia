@@ -76,6 +76,27 @@ static uint64_t* select_register(mx_guest_gpr_t* guest_gpr, uint8_t register_id)
     }
 }
 
+mx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
+                                    uint16_t* opcode, uint8_t* mod_rm) {
+    if (inst_len == 0)
+        return ERR_NOT_SUPPORTED;
+    switch (inst_buf[0]) {
+    case 0x0f:
+        if (inst_len < 3)
+            return ERR_NOT_SUPPORTED;
+        *opcode = *(uint16_t*)inst_buf;
+        *mod_rm = inst_buf[2];
+        break;
+    default:
+        if (inst_len < 2)
+            return ERR_OUT_OF_RANGE;
+        *opcode = inst_buf[0];
+        *mod_rm = inst_buf[1];
+        break;
+    }
+    return NO_ERROR;
+}
+
 mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
                                mx_guest_gpr_t* guest_gpr, instruction_t* inst) {
     if (inst_len == 0)
@@ -97,23 +118,22 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         inst_len--;
     }
 
-    if (inst_len == 0)
-        return ERR_NOT_SUPPORTED;
-    if (inst_len < 2)
-        return ERR_OUT_OF_RANGE;
-
-    const uint8_t mod_rm = inst_buf[1];
+    uint16_t opcode;
+    uint8_t mod_rm;
+    mx_status_t status = deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm);
+    if (status != NO_ERROR)
+        return status;
     if (has_sib_byte(mod_rm))
         return ERR_NOT_SUPPORTED;
 
     const uint8_t disp_size = displacement_size(mod_rm);
-    switch (inst_buf[0]) {
+    switch (opcode) {
     // Move r to r/m.
     case 0x89:
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
         inst->read = false;
-        inst->rex = rex_w;
+        inst->mem = rex_w ? 8 : 4;
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
@@ -122,7 +142,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
         inst->read = true;
-        inst->rex = rex_w;
+        inst->mem = rex_w ? 8 : 4;
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
@@ -134,12 +154,21 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         if ((mod_rm & kModRMRegMask) != 0)
             return ERR_INVALID_ARGS;
         inst->read = false;
-        inst->rex = false;
+        inst->mem = rex_w ? 8 : 4;
         inst->imm = 0;
         inst->reg = NULL;
         memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
         return NO_ERROR;
     }
+    // Move (8-bit) with zero-extend r/m to r.
+    case 0xb60f:
+        if (inst_len != disp_size + 3u)
+            return ERR_OUT_OF_RANGE;
+        inst->read = true;
+        inst->mem = 1;
+        inst->imm = 0;
+        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
     }
