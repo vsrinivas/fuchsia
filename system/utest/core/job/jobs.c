@@ -110,11 +110,11 @@ static bool kill_test(void) {
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    ASSERT_EQ(signals, MX_TASK_TERMINATED, "");
+    ASSERT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
 
     ASSERT_EQ(mx_object_wait_one(
         job_child, MX_JOB_NO_PROCESSES, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS | MX_SIGNAL_LAST_HANDLE, "");
 
     END_TEST;
 }
@@ -137,14 +137,14 @@ static bool wait_test(void) {
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
         job_child, MX_JOB_NO_JOBS, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    ASSERT_EQ(signals, MX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, MX_JOB_NO_JOBS | MX_SIGNAL_LAST_HANDLE, "");
 
     mx_nanosleep(mx_deadline_after(MX_MSEC(5)));
     ASSERT_EQ(mx_task_kill(process), NO_ERROR, "");
 
     ASSERT_EQ(mx_object_wait_one(
         job_child, MX_JOB_NO_PROCESSES, MX_TIME_INFINITE, &signals), NO_ERROR, "");
-    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS, "");
+    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS | MX_SIGNAL_LAST_HANDLE, "");
 
     ASSERT_EQ(mx_handle_close(thread), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
