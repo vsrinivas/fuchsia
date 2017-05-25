@@ -31,7 +31,7 @@ type SourceMonitor struct {
 func (sm *SourceMonitor) Run() {
 	sm.done = make(chan struct{})
 	t := time.Now()
-	sm.ticker = time.NewTicker(sm.src.CheckInterval())
+	sm.ticker = newTicker(sm.src.CheckInterval())
 	sm.check(t)
 
 	for {

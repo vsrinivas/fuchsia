@@ -11,7 +11,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
+
+var newTicker = time.NewTicker
 
 // ErrSrcNotFound is returned when a request is made to RemoveSource, but the
 // passed in Source is not known to the Daemon

@@ -27,30 +27,23 @@ func randSeq(n int) string {
 
 type testSrc struct {
 	mu         sync.Mutex
-	UpdateReqs map[string][]time.Time
+	UpdateReqs map[string]int
 	getReqs    map[Package]*struct{}
 	interval   time.Duration
 }
 
 func (t *testSrc) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
 	t.mu.Lock()
-	now := time.Now()
 
 	updates := make(map[Package]Package)
 	for _, p := range pkgs {
-		tList := t.UpdateReqs[p.Name]
-		if tList == nil {
-			tList = []time.Time{}
-		}
-		tList = append(tList, now)
-		t.UpdateReqs[p.Name] = tList
+		t.UpdateReqs[p.Name] = t.UpdateReqs[p.Name] + 1
 		up := Package{Name: p.Name, Version: randSeq(6)}
 		t.getReqs[up] = &struct{}{}
 		updates[*p] = up
 	}
 
 	t.mu.Unlock()
-	fmt.Print("*")
 	return updates, nil
 }
 
@@ -63,8 +56,6 @@ func (t *testSrc) FetchPkg(pkg *Package) (*os.File, error) {
 	}
 
 	delete(t.getReqs, *pkg)
-
-	fmt.Print("|")
 	return nil, nil
 }
 
@@ -86,13 +77,47 @@ func processPackage(pkg *Package, src Source) error {
 	return err
 }
 
+var (
+	tickers     = []testTicker{}
+	muTickers   sync.Mutex
+	tickerGroup sync.WaitGroup
+)
+
+type testTicker struct {
+	i    time.Duration
+	last time.Time
+	C    chan time.Time
+}
+
+func testBuildTicker(d time.Duration) *time.Ticker {
+	muTickers.Lock()
+	defer muTickers.Unlock()
+	defer tickerGroup.Done()
+
+	c := make(chan time.Time)
+	t := time.NewTicker(d)
+	t.C = c
+
+	tt := testTicker{i: d, last: time.Now(), C: c}
+	tickers = append(tickers, tt)
+	return t
+}
+
+func (t *testTicker) makeTick() {
+	t.last = t.last.Add(t.i)
+	t.C <- t.last
+}
+
 // TestDaemon tests daemon.go with a fake package source. The test runs for ~30
 // seconds.
 func TestDaemon(t *testing.T) {
-	tSrc := testSrc{UpdateReqs: make(map[string][]time.Time),
+	newTicker = testBuildTicker
+	tickerGroup.Add(2)
+
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[Package]*struct{}),
 		interval: time.Second * 3}
-	tSrc2 := testSrc{UpdateReqs: make(map[string][]time.Time),
+	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[Package]*struct{}),
 		interval: time.Second * 5}
 	sources := []*testSrc{&tSrc, &tSrc2}
@@ -102,53 +127,51 @@ func TestDaemon(t *testing.T) {
 	pkgSet.Add(&Package{Name: "search", Version: "fa08207e"})
 
 	d := NewDaemon(pkgSet, processPackage)
-
-	startTime := time.Now()
 	for _, src := range sources {
 		d.AddSource(src)
 	}
 
-	// sleep for 30 seconds while we run
-	runTime := 30 * time.Second
-	time.Sleep(runTime)
+	tickerGroup.Wait()
+
+	// protect against improper test rewrites
+	if len(tickers) != 2 {
+		t.Errorf("Unexpected number of tickers!", len(tickers))
+	}
+
+	sepRuns := 10
+	simulRuns := 20
+
+	// run 10 times with a slight separation
+	for i := 0; i < sepRuns; i++ {
+		o := i % 2
+		tickers[o].makeTick()
+		time.Sleep(10 * time.Millisecond)
+		o++
+		o = o % 2
+		tickers[o].makeTick()
+	}
+
+	// run 20 times together
+	for i := 0; i < simulRuns; i++ {
+		o := i % 2
+		tickers[o].makeTick()
+		o++
+		o = o % 2
+		tickers[o].makeTick()
+	}
+
 	d.CancelAll()
 
 	for _, src := range sources {
-		verify(t, src, pkgSet, runTime, startTime)
+		verify(t, src, pkgSet, sepRuns+simulRuns+1)
 	}
 }
 
-func verify(t *testing.T, src *testSrc, pkgs *PackageSet, runTime time.Duration,
-	startTime time.Time) {
-	runs := int(runTime/src.interval) + 1
-	runsAlt := runs
-	if runTime%src.interval == 0 {
-		runsAlt--
-	} else {
-		runsAlt = -1
-	}
-
+func verify(t *testing.T, src *testSrc, pkgs *PackageSet, runs int) {
 	for _, pkg := range pkgs.Packages() {
 		actRuns := src.UpdateReqs[pkg.Name]
-		if len(actRuns) != runs && len(actRuns) != runsAlt {
-			t.Errorf("Incorrect execution could, found %d, but expected %d for %s\n", len(actRuns), runs, pkg.Name)
-		}
-
-		thresh := src.interval / 10
-		maxThresh := 10 * time.Second
-		minThresh := 200 * time.Millisecond
-		if thresh > maxThresh {
-			thresh = maxThresh
-		} else if thresh < minThresh {
-			thresh = minThresh
-		}
-
-		for _, time := range actRuns {
-			delta := time.Sub(startTime)
-			expected := delta % src.interval
-			if expected > thresh && expected <= src.interval-thresh {
-				t.Errorf("Execution accuracy %s exceeds tolerance of %s\n", delta, thresh)
-			}
+		if actRuns != runs {
+			t.Errorf("Incorrect execution count, found %d, but expected %d for %s\n", actRuns, runs, pkg.Name)
 		}
 	}
 
