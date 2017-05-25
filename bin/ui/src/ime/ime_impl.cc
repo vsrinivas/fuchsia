@@ -66,7 +66,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
       extent = extent == -1 ? 0 : extent;
       text.replace(base, extent - base, replacement);
       state_->text = fidl::String(text);
-      state_->selection->base = state_->selection->base + replacement.length();
+      state_->selection->base = base + replacement.length();
       state_->selection->extent = state_->selection->base;
 
       FTL_VLOG(1) << "Notifying (state = " << *state_ << "')";
@@ -82,9 +82,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
             base = state_->text.size() - 1;
             extent = base + 1;
           } else if (base == extent) {
-            if (base == 0) {
-              extent++;
-            } else {
+            if (base != 0) {
               base--;
             }
           }
