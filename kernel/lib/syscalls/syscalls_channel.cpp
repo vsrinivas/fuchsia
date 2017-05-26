@@ -22,15 +22,11 @@
 #include <magenta/user_copy.h>
 
 #include <mxtl/algorithm.h>
-#include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
-
-constexpr size_t kChannelReadHandlesChunkCount = 16u;
-constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
 mx_status_t sys_channel_create(
     uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
@@ -73,28 +69,22 @@ mx_status_t sys_channel_create(
     return NO_ERROR;
 }
 
-void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
-                     user_ptr<mx_handle_t> _handles, uint32_t num_handles) {
+static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
+                            user_ptr<mx_handle_t> _handles, uint32_t num_handles) {
     Handle* const* handle_list = msg->handles();
     msg->set_owns_handles(false);
 
-    // Copy the handle values out in chunks.
-    mx_handle_t hvs[kChannelReadHandlesChunkCount];
-    size_t num_copied = 0;
+    mx_handle_t hvs[kMaxMessageHandles];
+    for (size_t i = 0; i < num_handles; ++i) {
+        hvs[i] = up->MapHandleToValue(handle_list[i]);
+    }
+    _handles.copy_array_to_user(hvs, num_handles);
 
-    do {
-        size_t this_chunk_size = mxtl::min(num_handles - num_copied,
-                                           kChannelReadHandlesChunkCount);
-        for (size_t i = 0; i < this_chunk_size; i++)
-            hvs[i] = up->MapHandleToValue(handle_list[num_copied + i]);
-        _handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
-        num_copied += this_chunk_size;
-    } while (num_copied < num_handles);
-
-    for (size_t idx = 0u; idx < num_handles; ++idx) {
-        if (handle_list[idx]->dispatcher()->get_state_tracker())
-            handle_list[idx]->dispatcher()->get_state_tracker()->Cancel(handle_list[idx]);
-        HandleOwner handle(handle_list[idx]);
+    for (size_t i = 0; i < num_handles; ++i) {
+        if (handle_list[i]->dispatcher()->get_state_tracker())
+            handle_list[i]->dispatcher()->get_state_tracker()->Cancel(handle_list[i]);
+        HandleOwner handle(handle_list[i]);
+        //TODO: This takes a lock per call. Consider doing these in a batch.
         up->AddHandle(mxtl::move(handle));
     }
 }
@@ -227,12 +217,9 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
             return ERR_INVALID_ARGS;
     }
 
-    AllocChecker ac;
-    mxtl::InlineArray<mx_handle_t, kChannelWriteHandlesInlineCount> handles(&ac, num_handles);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    mx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
-        result = msg_put_handles(up, msg.get(), handles.get(), _handles, num_handles,
+        result = msg_put_handles(up, msg.get(), handles, _handles, num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
@@ -285,12 +272,9 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
             return ERR_INVALID_ARGS;
     }
 
-    AllocChecker ac;
-    mxtl::InlineArray<mx_handle_t, kChannelWriteHandlesInlineCount> handles(&ac, num_handles);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+    mx_handle_t handles[kMaxMessageHandles];
     if (num_handles > 0u) {
-        result = msg_put_handles(up, msg.get(), handles.get(),
+        result = msg_put_handles(up, msg.get(), handles,
                                  make_user_ptr<const mx_handle_t>(args.wr_handles), num_handles,
                                  static_cast<Dispatcher*>(channel.get()));
         if (result)

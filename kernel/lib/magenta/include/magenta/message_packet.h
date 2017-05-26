@@ -12,6 +12,13 @@
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/unique_ptr.h>
 
+constexpr uint32_t kMaxMessageSize = 65536u;
+constexpr uint32_t kMaxMessageHandles = 64u;
+
+// ensure public constants are aligned
+static_assert(MX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
+static_assert(MX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
+
 class Handle;
 
 class MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
