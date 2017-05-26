@@ -244,8 +244,8 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   // |TokenProvider|
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
-    if (!app_->user_creds_.HasMember(account_id_) ||
-        !app_->user_creds_[account_id_].HasMember("refresh_token")) {
+    if (!app_->user_creds_.IsObject() ||
+        !app_->user_creds_.HasMember(account_id_)) {
       FTL_VLOG(1) << "User not found";
       callback(nullptr);
       return;
@@ -255,8 +255,8 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   // |TokenProvider|
   void GetIdToken(const GetIdTokenCallback& callback) override {
-    if (!app_->user_creds_.HasMember(account_id_) ||
-        !app_->user_creds_[account_id_].HasMember("refresh_token")) {
+    if (!app_->user_creds_.IsObject() ||
+        !app_->user_creds_.HasMember(account_id_)) {
       FTL_VLOG(1) << "User not found";
       callback(nullptr);
       return;
@@ -297,8 +297,11 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    const std::string refresh_token =
-        app_->user_creds_[account_id_]["refresh_token"].GetString();
+    FTL_LOG(1) << "Account_ID:" << account_id_;
+    const rapidjson::Value& creds = app_->user_creds_[account_id_];
+    FTL_DCHECK(creds.IsObject());
+    FTL_DCHECK(creds.HasMember("refresh_token"));
+    const std::string refresh_token = creds["refresh_token"].GetString();
 
     if (refresh_token.empty()) {
       Failure(flow, "User not found");
@@ -609,7 +612,11 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
       FTL_DCHECK(false) << "Unable to read file " << kCredentialsFile;
     }
     user_creds_.Parse(serialized_tokens);
-    FTL_DCHECK(!user_creds_.HasParseError());
+    if (!user_creds_.HasParseError() || !user_creds_.IsObject()) {
+      FTL_LOG(WARNING) << "Credentials file got corrupted, " <<
+                       "previous user records are lost.";
+      user_creds_.SetObject();
+    }
   } else {
     // Create an empty DOM.
     user_creds_.SetObject();
