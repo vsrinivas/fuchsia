@@ -500,9 +500,6 @@ status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
     stats->mem_private_bytes = usage.private_pages * PAGE_SIZE;
     stats->mem_shared_bytes = usage.shared_pages * PAGE_SIZE;
     stats->mem_scaled_shared_bytes = usage.scaled_shared_bytes;
-    // TODO: Remove mem_committed_bytes.
-    stats->mem_committed_bytes =
-        stats->mem_private_bytes + stats->mem_shared_bytes;
     return NO_ERROR;
 }
 

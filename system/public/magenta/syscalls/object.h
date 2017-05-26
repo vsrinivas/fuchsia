@@ -122,14 +122,6 @@ typedef struct mx_info_task_stats {
     // Not all will be backed by physical memory.
     size_t mem_mapped_bytes;
 
-    // The amount of mapped address space backed by physical memory.
-    // Will be no larger than mem_mapped_bytes.
-    // Some of the pages may be double-mapped (and thus double-counted),
-    // or may be shared with other tasks.
-    // TODO(dbort): Remove mem_committed_bytes, which is equal to
-    // mem_private_bytes + mem_shared_bytes.
-    size_t mem_committed_bytes;
-
     // For the fields below, a byte is considered committed if it's backed by
     // physical memory. Some of the memory may be double-mapped, and thus
     // double-counted.
