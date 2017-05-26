@@ -10,8 +10,6 @@ MODULE := $(LOCAL_DIR)
 
 WITH_SMP := 1
 
-LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
-
 MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.cpp \
 	$(LOCAL_DIR)/bcm28xx-spin.S \

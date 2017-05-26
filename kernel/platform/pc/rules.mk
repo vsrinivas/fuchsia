@@ -46,7 +46,5 @@ KERNEL_DEFINES += \
 WITH_SMP ?= 1
 SMP_MAX_CPUS ?= 8
 
-LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
-
 include make/module.mk
 

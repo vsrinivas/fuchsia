@@ -18,7 +18,6 @@
 #include <kernel/spinlock.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/heap.h>
-#include <lib/page_alloc.h>
 #include <platform.h>
 
 // Malloc implementation tuned for space.
@@ -266,7 +265,7 @@ static bool is_end_of_os_allocation(char *address)
 static void free_to_os(header_t *header, size_t size)
 {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-    page_free(header, size >> PAGE_SIZE_SHIFT);
+    heap_page_free(header, size >> PAGE_SIZE_SHIFT);
     theheap.size -= size;
 }
 
@@ -701,7 +700,7 @@ void cmpct_trim(void)
                 create_allocation_header(free_area, new_free_size, 0, free_area);
                 // Also puts it in the correct bucket.
                 create_free_area(free_area, untag(free_area->header.left), new_free_size, NULL);
-                page_free(new_os_allocation_end, freed_up >> PAGE_SIZE_SHIFT);
+                heap_page_free(new_os_allocation_end, freed_up >> PAGE_SIZE_SHIFT);
                 theheap.size -= freed_up;
             } else if (is_start_of_os_allocation(untag(free_area->header.left))) {
                 char *old_os_allocation_start =
@@ -732,7 +731,7 @@ void cmpct_trim(void)
                     create_free_area(new_free, new_os_allocation_start, new_free_size, NULL);
                     FixLeftPointer(right, (header_t *)new_free);
                 }
-                page_free(old_os_allocation_start, freed_up >> PAGE_SIZE_SHIFT);
+                heap_page_free(old_os_allocation_start, freed_up >> PAGE_SIZE_SHIFT);
                 theheap.size -= freed_up;
             }
         }
@@ -896,7 +895,7 @@ static ssize_t heap_grow(size_t size, free_t **bucket)
     size += 2 * sizeof(header_t);
     size = ROUNDUP(size, PAGE_SIZE);
 
-    void *ptr = page_alloc(size >> PAGE_SIZE_SHIFT);
+    void *ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
     if (ptr == NULL)
         return ERR_NO_MEMORY;
 
