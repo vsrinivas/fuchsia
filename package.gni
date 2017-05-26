@@ -198,7 +198,7 @@ template("package") {
       }
     } else {
       # We have to do something in our action
-      script = "/bin/touch"
+      script = "/usr/bin/touch"
       output = output_base + ".stamp"
       outputs = [
         output,
