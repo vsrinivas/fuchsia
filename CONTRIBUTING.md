@@ -47,13 +47,19 @@ BUG-123 #done
 `done` is the most common issue action, though any workflow action can be
 indicated in this way.
 
+Issue actions take place when the relevant commit becomes visible in a Gerrit
+branch, with the exception that commits under refs/changes/ are ignored.
+Usually, this means the action will happen when the commit is merged to
+master, but note that it will also happen if a change is uploaded to a private
+branch.
+
 *Note*: Fuchsia's issue tracker is not open to external contributors at this
 time.
 
 ## Cross-repo changes
 
-Changes in two or more separate repos will be automatically tracked for you by Gerrit
-if you use the same topic.
+Changes in two or more separate repos will be automatically tracked for you by
+Gerrit if you use the same topic.
 
 ### Using jiri upload
 Create branch with same name on all repos and upload the changes
