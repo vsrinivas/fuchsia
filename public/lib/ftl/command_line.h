@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace ftl {
 
@@ -112,6 +113,10 @@ class CommandLine final {
   // Gets the value of the option |name|. Returns true (and sets |*value|) on
   // success and false (leaving |*value| alone) on failure.
   bool GetOptionValue(const std::string& name, std::string* value) const;
+
+  // Gets all values of the option |name|. Returns all values, which may be empty if the option is
+  // not specified.
+  std::vector<std::string> GetOptionValues(const std::string& name) const;
 
   // Gets the value of the option |name|, with a default if the option is not
   // specified. (Note: This doesn't return a const reference, since this would

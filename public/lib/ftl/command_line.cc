@@ -54,6 +54,15 @@ bool CommandLine::GetOptionValue(const std::string& name,
   return true;
 }
 
+std::vector<std::string> CommandLine::GetOptionValues(const std::string& name) const {
+  std::vector<std::string> ret;
+  for (const auto& option : options_) {
+    if (option.name == name)
+      ret.push_back(option.value);
+  }
+  return ret;
+}
+
 std::string CommandLine::GetOptionValueWithDefault(
     const std::string& name,
     const std::string& default_value) const {
