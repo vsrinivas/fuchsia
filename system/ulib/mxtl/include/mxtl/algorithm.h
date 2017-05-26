@@ -5,6 +5,7 @@
 #pragma once
 
 #include <mxtl/type_support.h>
+#include <stdlib.h>
 
 namespace mxtl {
 
@@ -94,6 +95,11 @@ const T* lower_bound(const T* first, const T* last, const U& value, Compare comp
         }
     }
     return last;
+}
+
+template <typename T, size_t N>
+constexpr size_t count_of(T const(&)[N]) {
+    return N;
 }
 
 }  // namespace mxtl
