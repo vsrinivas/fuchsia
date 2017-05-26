@@ -27,8 +27,13 @@ class OperationContainer {
   // Checks whether the container is empty.
   virtual bool Empty() = 0;
 
+ protected:
+  void InvalidateWeakPtrs(OperationBase* o);
+
  private:
+  // OperationBase calls the methods below.
   friend class OperationBase;
+
   virtual ftl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
   virtual void Hold(OperationBase* o) = 0;
   virtual void Drop(OperationBase* o) = 0;
@@ -139,8 +144,9 @@ class OperationBase {
   virtual ~OperationBase();
 
   // Derived classes need to implement this method which will get called when
-  // this Operation gets scheduled. |Done()| must be called after |Run()|
-  // completes.
+  // this Operation gets scheduled. The container of this Operation will call
+  // |Run()| to run this operation when it is ready. At some point after Run()
+  // is invoked, |Done()| must be called to signal completion of this operation.
   virtual void Run() = 0;
 
  protected:
@@ -148,9 +154,24 @@ class OperationBase {
   // adds the instance to the container.
   OperationBase(OperationContainer* container);
 
-  // Derived classes call this when they are ready for |Run()| to be called.
+  // Derived classes call this when they are ready for |Run()| to be called by
+  // their container.
   void Ready();
 
+  class FlowTokenBase;
+
+ private:
+  // OperationContainer calls InvalidateWeakPtrs().
+  friend class OperationContainer;
+
+  // Operation<..> calls DispatchCallback().
+  template <typename... Args>
+  friend class Operation;
+
+  // Only OperationContainer is meant to call this before it i.
+  void InvalidateWeakPtrs() { weak_ptr_factory_.InvalidateWeakPtrs(); }
+
+  // Only Operation<...> is meant to call this.
   template <typename... Args,
             typename ResultCall = std::function<void(Args...)>>
   void DispatchCallback(ResultCall callback, Args... result_args) {
@@ -160,20 +181,19 @@ class OperationBase {
       container->Drop(this);
       // Can no longer refer to |this|.
       result_call(std::move(result_args)...);
+      // The result callback may cause the container to be deleted, so we should
+      // check it still exists before telling it to continue.
       if (container) {
         container->Cont();
       }
     }
   }
 
-  class FlowTokenBase;
-
- private:
   ftl::WeakPtr<OperationContainer> const container_;
 
- protected:
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
-  // is deleted.
+  // is deleted. Our OperationContainer will invalidate us before we are
+  // destroyed.
   ftl::WeakPtrFactory<OperationBase> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationBase);
@@ -182,9 +202,7 @@ class OperationBase {
 template <typename... Args>
 class Operation : public OperationBase {
  public:
-  ~Operation() override {
-    weak_ptr_factory_.InvalidateWeakPtrs();
-  }
+  ~Operation() override = default;
 
   using ResultCall = std::function<void(Args...)>;
 

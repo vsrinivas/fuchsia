@@ -12,9 +12,20 @@ OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
 
+void OperationContainer::InvalidateWeakPtrs(OperationBase* const o) {
+  o->InvalidateWeakPtrs();
+}
+
 OperationCollection::OperationCollection() : weak_ptr_factory_(this) {}
 
-OperationCollection::~OperationCollection() = default;
+OperationCollection::~OperationCollection() {
+  // We invalidate weakptrs to all Operation<>s first before destroying them, so
+  // that an outstanding FlowToken<> that gets destroyed in the process doesn't
+  // erroneously call Operation<>::Done.
+  for (auto& operation : operations_) {
+    InvalidateWeakPtrs(operation.get());
+  }
+}
 
 bool OperationCollection::Empty() {
   return operations_.empty();
@@ -44,7 +55,15 @@ void OperationCollection::Cont() {
 
 OperationQueue::OperationQueue() : weak_ptr_factory_(this) {}
 
-OperationQueue::~OperationQueue() = default;
+OperationQueue::~OperationQueue() {
+  // We invalidate weakptrs to all Operation<>s first before destroying them, so
+  // that an outstanding FlowToken<> that gets destroyed in the process doesn't
+  // erroneously call Operation<>::Done.
+  while (!operations_.empty()) {
+    InvalidateWeakPtrs(operations_.front().get());
+    operations_.pop();
+  }
+}
 
 bool OperationQueue::Empty() {
   return operations_.empty();
@@ -80,12 +99,7 @@ void OperationQueue::Cont() {
 OperationBase::OperationBase(OperationContainer* const c)
     : container_(c->GetWeakPtr()), weak_ptr_factory_(this) {}
 
-OperationBase::~OperationBase() {
-  // In case this Operation holds a callback (which will be destroyed) that
-  // contains a |FlowToken|, we invalid our weak pointer before that
-  // |FlowToken| tries to call us.
-  weak_ptr_factory_.InvalidateWeakPtrs();
-}
+OperationBase::~OperationBase() = default;
 
 void OperationBase::Ready() {
   FTL_DCHECK(container_);
