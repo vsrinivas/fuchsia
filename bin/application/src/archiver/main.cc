@@ -55,13 +55,15 @@ int Create(const ftl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kArchive, kCreateUsage, &archive_path))
     return -1;
 
-  std::string manifest_path;
-  if (!GetOptionValue(command_line, kManifest, kCreateUsage, &manifest_path))
+  std::vector<std::string> manifest_paths = command_line.GetOptionValues(kManifest);
+  if (manifest_paths.empty())
     return -1;
 
   archive::ArchiveWriter writer;
-  if (!archive::ReadManifest(manifest_path.c_str(), &writer))
-    return -1;
+  for (const auto& manifest_path : manifest_paths) {
+    if (!archive::ReadManifest(manifest_path.c_str(), &writer))
+      return -1;
+  }
   ftl::UniqueFD fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
                         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (!fd.is_valid())
