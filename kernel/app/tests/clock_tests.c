@@ -14,6 +14,7 @@
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <kernel/event.h>
+#include <kernel/mp.h>
 #include <platform.h>
 
 void clock_tests(void)
@@ -52,13 +53,29 @@ void clock_tests(void)
         printf("%d\n", i + 1);
     }
 
-    printf("measuring cpu clock against current_time()\n");
-    for (int i = 0; i < 5; i++) {
-        uint64_t cycles = arch_cycle_count();
-        lk_time_t start = current_time();
-        while ((current_time() - start) < LK_SEC(1))
-            ;
-        cycles = arch_cycle_count() - cycles;
-        printf("%" PRIu64 " cycles per second\n", cycles);
+    int old_affinity = thread_pinned_cpu(get_current_thread());
+
+    for (int cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
+        if (!mp_is_cpu_online(cpu))
+            continue;
+
+        printf("measuring cpu clock against current_time() on cpu %u\n", cpu);
+
+        thread_set_pinned_cpu(get_current_thread(), cpu);
+        mp_reschedule(1 << cpu, 0);
+        thread_yield();
+
+        for (int i = 0; i < 3; i++) {
+            uint64_t cycles = arch_cycle_count();
+            lk_time_t start = current_time();
+            while ((current_time() - start) < LK_SEC(1))
+                ;
+            cycles = arch_cycle_count() - cycles;
+            printf("cpu %u: %" PRIu64 " cycles per second\n", cpu, cycles);
+        }
     }
+
+    thread_set_pinned_cpu(get_current_thread(), old_affinity);
+    mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
+    thread_yield();
 }
