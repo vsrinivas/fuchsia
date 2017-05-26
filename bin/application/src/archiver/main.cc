@@ -18,33 +18,33 @@
 namespace archive {
 
 // Commands
-constexpr char kCreate[] = "create";
-constexpr char kList[] = "list";
-constexpr char kExtractFile[] = "extract-file";
+constexpr ftl::StringView kCreate = "create";
+constexpr ftl::StringView kList = "list";
+constexpr ftl::StringView kExtractFile = "extract-file";
 
-constexpr char kKnownCommands[] = "create, list, or extract-file";
+constexpr ftl::StringView kKnownCommands = "create, list, or extract-file";
 
 // Options
-constexpr char kArchive[] = "archive";
-constexpr char kManifest[] = "manifest";
-constexpr char kFile[] = "file";
-constexpr char kOuput[] = "output";
+constexpr ftl::StringView kArchive = "archive";
+constexpr ftl::StringView kManifest = "manifest";
+constexpr ftl::StringView kFile = "file";
+constexpr ftl::StringView kOuput = "output";
 
-constexpr char kCreateUsage[] =
+constexpr ftl::StringView kCreateUsage =
     "create --archive=<archive> --manifest=<manifest>";
-constexpr char kListUsage[] = "list --archive=<archive>";
-constexpr char kExtractFileUsage[] =
+constexpr ftl::StringView kListUsage = "list --archive=<archive>";
+constexpr ftl::StringView kExtractFileUsage =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
 bool GetOptionValue(const ftl::CommandLine& command_line,
-                    const char* option,
-                    const char* usage,
+                    ftl::StringView option,
+                    ftl::StringView usage,
                     std::string* value) {
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
             "error: Missing --%s argument.\n"
             "Usuage: far %s\n",
-            option, usage);
+            option.data(), usage.data());
     return false;
   }
   return true;
@@ -55,13 +55,14 @@ int Create(const ftl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kArchive, kCreateUsage, &archive_path))
     return -1;
 
-  std::vector<std::string> manifest_paths = command_line.GetOptionValues(kManifest);
+  std::vector<ftl::StringView> manifest_paths =
+      command_line.GetOptionValues(kManifest);
   if (manifest_paths.empty())
     return -1;
 
   archive::ArchiveWriter writer;
   for (const auto& manifest_path : manifest_paths) {
-    if (!archive::ReadManifest(manifest_path.c_str(), &writer))
+    if (!archive::ReadManifest(manifest_path, &writer))
       return -1;
   }
   ftl::UniqueFD fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
@@ -123,7 +124,7 @@ int RunCommand(std::string command, const ftl::CommandLine& command_line) {
     fprintf(stderr,
             "error: Unknown command: %s\n"
             "Known commands: %s.\n",
-            command.c_str(), kKnownCommands);
+            command.c_str(), kKnownCommands.data());
     return -1;
   }
 }
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
             "error: Missing command.\n"
             "Usuage: far <command> ...\n"
             "  where <command> is %s.\n",
-            archive::kKnownCommands);
+            archive::kKnownCommands.data());
     return -1;
   }
 

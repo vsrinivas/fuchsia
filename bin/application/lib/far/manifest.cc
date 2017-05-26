@@ -13,10 +13,10 @@
 
 namespace archive {
 
-bool ReadManifest(const char* path, ArchiveWriter* writer) {
+bool ReadManifest(ftl::StringView path, ArchiveWriter* writer) {
   std::string manifest;
-  if (!files::ReadFileToString(path, &manifest)) {
-    fprintf(stderr, "error: Faile to read '%s'\n", path);
+  if (!files::ReadFileToString(path.ToString(), &manifest)) {
+    fprintf(stderr, "error: Faile to read '%s'\n", path.ToString().c_str());
     return false;
   }
 
