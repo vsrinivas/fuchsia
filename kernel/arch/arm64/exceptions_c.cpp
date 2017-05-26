@@ -41,7 +41,7 @@ static void dump_iframe(const struct arm64_iframe_long *iframe)
     printf("spsr %#18" PRIx64 "\n", iframe->spsr);
 }
 
-__WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint32_t syscall_imm, uint64_t pc)
+__WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint64_t pc)
 {
     panic("unhandled syscall vector\n");
 }

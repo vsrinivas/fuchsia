@@ -275,13 +275,13 @@ FUNCTION(x86_syscall)
 
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
-
+#if WITH_LIB_SYSCALLS
     // Verify the syscall is in range and jump to it.
     cmp     $MX_SYS_COUNT, %eax
     jae     .Lunknown_syscall
     jmp     *.Lcall_wrapper_table(, %rax, 8)
 #include <magenta/syscall-kernel-branches.S>
-
+#endif
 .Lunknown_syscall:
     pre_0_args
     call    unknown_syscall
