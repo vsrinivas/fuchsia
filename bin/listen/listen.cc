@@ -8,6 +8,7 @@
 #include <magenta/process.h>
 #include <mx/job.h>
 #include <mxio/io.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #include <map>
 #include <memory>
 #include <thread>
@@ -31,7 +33,7 @@
 constexpr mx_rights_t kChildJobRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-class Service {
+class Service : private mtl::MessageLoopHandler {
  public:
   Service(int port, int argc, const char** argv)
       : port_(port), argc_(argc), argv_(argv) {
@@ -62,23 +64,49 @@ class Service {
     Wait();
   }
 
+  ~Service() {
+    for (auto iter = process_handler_key_.begin(); iter != process_handler_key_.end(); iter++) {
+      process_handler_key_.erase(iter);
+      mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
+      FTL_CHECK(mx_task_kill(iter->first) == NO_ERROR);
+      FTL_CHECK(mx_handle_close(iter->first) == NO_ERROR);
+    }
+  }
+
  private:
   void Wait() {
     waiter_.Wait(
         [this](mx_status_t success, uint32_t events) {
-          int conn = accept(sock_, NULL, NULL);
+          struct sockaddr_in6 peer_addr;
+          socklen_t peer_addr_len = sizeof(peer_addr);
+          int conn = accept(sock_, (struct sockaddr*)&peer_addr, &peer_addr_len);
           if (conn < 0) {
             FTL_LOG(FATAL) << "Failed to accept:" << strerror(errno);
           }
-          Launch(conn);
+          std::string peer_name = "unknown";
+          char host[32];
+          char port[16];
+          if (getnameinfo((struct sockaddr*)&peer_addr, peer_addr_len, host,
+                          sizeof(host), port, sizeof(port),
+                          NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+            peer_name = ftl::StringPrintf("%s:%s", host, port);
+          }
+          Launch(conn, peer_name);
           Wait();
         },
         sock_, EPOLLIN);
   }
 
-  void Launch(int conn) {
+  void Launch(int conn, const std::string& peer_name) {
+    // Create a new job to run the child in.
+    mx::job child_job;
+    FTL_CHECK(mx::job::create(job_.get(), 0, &child_job) == NO_ERROR);
+    FTL_CHECK(child_job.set_property(MX_PROP_NAME, peer_name.data(),
+                                peer_name.size()) == NO_ERROR);
+    FTL_CHECK(child_job.replace(kChildJobRights, &child_job) == NO_ERROR);
+
     launchpad_t* lp;
-    launchpad_create(job_.get(), argv_[0], &lp);
+    launchpad_create(child_job.get(), argv_[0], &lp);
     launchpad_load_from_file(lp, argv_[0]);
     launchpad_set_args(lp, argc_, argv_);
     // TODO: configurable cwd
@@ -99,6 +127,22 @@ class Service {
     if (status < 0) {
       FTL_LOG(FATAL) << "error from launchpad_go: " << errmsg;
     }
+
+    auto handler_key = mtl::MessageLoop::GetCurrent()->AddHandler(
+        this, proc, MX_PROCESS_SIGNALED);
+    FTL_CHECK(handler_key != 0);
+    process_handler_key_.insert(std::make_pair(proc, handler_key));
+  }
+
+  // mtl::MessageLoopHandler
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+    FTL_CHECK(pending & MX_PROCESS_SIGNALED);
+    auto iter = process_handler_key_.find(handle);
+    FTL_CHECK(iter != process_handler_key_.end());
+    process_handler_key_.erase(iter);
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
+    FTL_CHECK(mx_task_kill(handle) == NO_ERROR);
+    FTL_CHECK(mx_handle_close(handle) == NO_ERROR);
   }
 
   int port_;
@@ -107,6 +151,7 @@ class Service {
   int sock_;
   mtl::FDWaiter waiter_;
   mx::job job_;
+  std::map<mx_handle_t, mtl::MessageLoop::HandlerKey> process_handler_key_;
 };
 
 void usage(const char* command) {
