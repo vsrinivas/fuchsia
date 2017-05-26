@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include <lib/user_copy/user_ptr.h>
+
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
@@ -42,13 +44,11 @@ public:
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
-    mx_status_t Write(const void* src, size_t len, bool from_user,
-                      size_t* written);
+    mx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
 
     status_t HalfClose();
 
-    mx_status_t Read(void* dst, size_t len, bool from_user,
-                     size_t* nread);
+    mx_status_t Read(user_ptr<void> dst, size_t len, size_t* nread);
 
     void OnPeerZeroHandles();
 
@@ -66,13 +66,12 @@ private:
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
-    mx_status_t WriteSelf(const void* src, size_t len, bool from_user,
-                          size_t* nwritten);
+    mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
-    size_t WriteMBufs(const void* src, size_t len, bool from_user) TA_REQ(lock_);
-    size_t ReadMBufs(void* dst, size_t len, bool from_user) TA_REQ(lock_);
+    size_t WriteMBufs(user_ptr<const void> src, size_t len) TA_REQ(lock_);
+    size_t ReadMBufs(user_ptr<void> dst, size_t len) TA_REQ(lock_);
     MBuf* AllocMBuf() TA_REQ(lock_);
     void FreeMBuf(MBuf* buf) TA_REQ(lock_);
     bool is_full() const TA_REQ(lock_);

@@ -201,8 +201,8 @@ status_t SocketDispatcher::HalfCloseOther() {
     return NO_ERROR;
 }
 
-mx_status_t SocketDispatcher::Write(const void* src, size_t len,
-                                    bool from_user, size_t* nwritten) {
+mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
+                                    size_t* nwritten) {
     canary_.Assert();
 
     mxtl::RefPtr<SocketDispatcher> other;
@@ -215,11 +215,11 @@ mx_status_t SocketDispatcher::Write(const void* src, size_t len,
         other = other_;
     }
 
-    return other->WriteSelf(src, len, from_user, nwritten);
+    return other->WriteSelf(src, len, nwritten);
 }
 
-mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
-                                        bool from_user, size_t* written) {
+mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
+                                        size_t* written) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -229,7 +229,7 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
 
     bool was_empty = is_empty();
 
-    auto st = WriteMBufs(src, len, from_user);
+    auto st = WriteMBufs(src, len);
 
     if (st > 0) {
         if (was_empty)
@@ -245,7 +245,7 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
     return NO_ERROR;
 }
 
-size_t SocketDispatcher::WriteMBufs(const void* src, size_t len, bool from_user) {
+size_t SocketDispatcher::WriteMBufs(user_ptr<const void> src, size_t len) {
     if (head_ == nullptr) {
         head_ = AllocMBuf();
         if (head_ == nullptr)
@@ -269,14 +269,8 @@ size_t SocketDispatcher::WriteMBufs(const void* src, size_t len, bool from_user)
             if (copy_len == 0)
                 break;
         }
-        if (from_user) {
-            // TODO: find a safer way to do this
-            user_ptr<const void> usrc(src);
-            if (usrc.byte_offset(pos).copy_array_from_user(dst, copy_len) != NO_ERROR)
-                return pos;
-        } else {
-            memcpy(dst, reinterpret_cast<const char*>(src) + pos, copy_len);
-        }
+        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != NO_ERROR)
+            return pos;
         pos += copy_len;
         head_->len_ += static_cast<uint32_t>(copy_len);
         size_ += copy_len;
@@ -284,8 +278,8 @@ size_t SocketDispatcher::WriteMBufs(const void* src, size_t len, bool from_user)
     return pos;
 }
 
-mx_status_t SocketDispatcher::Read(void* dst, size_t len,
-                                   bool from_user, size_t* nread) {
+mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
+                                   size_t* nread) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -303,7 +297,7 @@ mx_status_t SocketDispatcher::Read(void* dst, size_t len,
 
     bool was_full = is_full();
 
-    auto st = ReadMBufs(dst, len, from_user);
+    auto st = ReadMBufs(dst, len);
 
     if (is_empty())
         state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);
@@ -315,7 +309,7 @@ mx_status_t SocketDispatcher::Read(void* dst, size_t len,
     return NO_ERROR;
 }
 
-size_t SocketDispatcher::ReadMBufs(void* dst, size_t len, bool from_user) {
+size_t SocketDispatcher::ReadMBufs(user_ptr<void> dst, size_t len) {
     size_t pos = 0;
     while (pos < len) {
         if (tail_.is_empty())
@@ -323,14 +317,8 @@ size_t SocketDispatcher::ReadMBufs(void* dst, size_t len, bool from_user) {
         MBuf& cur = tail_.front();
         char* src = cur.data_ + cur.off_;
         size_t copy_len = MIN(cur.len_, len - pos);
-        if (from_user) {
-            // TODO: find a safer way to do this
-            user_ptr<void> udst(dst);
-            if (udst.byte_offset(pos).copy_array_to_user(src, copy_len) != NO_ERROR)
-                return pos;
-        } else {
-            memcpy(reinterpret_cast<char*>(dst) + pos, src, copy_len);
-        }
+        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != NO_ERROR)
+            return pos;
         pos += copy_len;
         cur.off_ += static_cast<uint32_t>(copy_len);
         cur.len_ -= static_cast<uint32_t>(copy_len);

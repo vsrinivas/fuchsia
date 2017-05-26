@@ -78,8 +78,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
     switch (options) {
     case 0: {
         size_t nwritten;
-        // TODO(andymutton): Change SocketDispatcher to accept a user_ptr?
-        status = socket->Write(_buffer.get(), size, true, &nwritten);
+        status = socket->Write(_buffer, size, &nwritten);
 
         // Caller may ignore results if desired.
         if (status == NO_ERROR && _actual)
@@ -115,8 +114,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
         return status;
 
     size_t nread;
-    // TODO(andymutton): Change SocketDispatcher to accept a user_ptr?
-    status = socket->Read(_buffer.get(), size, true, &nread);
+    status = socket->Read(_buffer, size, &nread);
 
     // Caller may ignore results if desired.
     if (status == NO_ERROR && _actual)
