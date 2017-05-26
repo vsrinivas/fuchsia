@@ -243,7 +243,6 @@ void ktrace_init(unsigned level) {
 }
 
 void ktrace_tiny(uint32_t tag, uint32_t arg) {
-    uint64_t ts = ktrace_timestamp();
     ktrace_state_t* ks = &KTRACE_STATE;
     if (tag & atomic_load(&ks->grpmask)) {
         tag = (tag & 0xFFFFFFF0) | 2;
@@ -253,7 +252,7 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
             atomic_store(&ks->grpmask, 0);
         } else {
             ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);
-            hdr->ts = ts;
+            hdr->ts = ktrace_timestamp();
             hdr->tag = tag;
             hdr->tid = arg;
         }
@@ -261,7 +260,6 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
 }
 
 void* ktrace_open(uint32_t tag) {
-    uint64_t ts = ktrace_timestamp();
     ktrace_state_t* ks = &KTRACE_STATE;
     if (!(tag & atomic_load(&ks->grpmask))) {
         return nullptr;
@@ -275,7 +273,7 @@ void* ktrace_open(uint32_t tag) {
     }
 
     ktrace_header_t* hdr = (ktrace_header_t*) (ks->buffer + off);
-    hdr->ts = ts;
+    hdr->ts = ktrace_timestamp();
     hdr->tag = tag;
     hdr->tid = (uint32_t)get_current_thread()->user_tid;
     return hdr + 1;
