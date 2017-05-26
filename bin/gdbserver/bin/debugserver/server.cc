@@ -160,7 +160,8 @@ bool RspServer::Listen() {
 
   ftl::UniqueFD server_sock(socket(AF_INET, SOCK_STREAM, 0));
   if (!server_sock.is_valid()) {
-    util::LogErrorWithErrno("Failed to open socket");
+    FTL_LOG(ERROR) << "Failed to open socket" << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 
@@ -172,12 +173,14 @@ bool RspServer::Listen() {
   addr.sin_port = htons(port_);
 
   if (bind(server_sock.get(), (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-    util::LogErrorWithErrno("Failed to bind socket");
+    FTL_LOG(ERROR) << "Failed to bind socket" << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 
   if (listen(server_sock.get(), 1) < 0) {
-    util::LogErrorWithErrno("Listen failed");
+    FTL_LOG(ERROR) << "Listen failed" << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 
@@ -188,7 +191,8 @@ bool RspServer::Listen() {
   ftl::UniqueFD client_sock(
       accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
   if (!client_sock.is_valid()) {
-    util::LogErrorWithErrno("Accept failed");
+    FTL_LOG(ERROR) << "Accept failed" << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 

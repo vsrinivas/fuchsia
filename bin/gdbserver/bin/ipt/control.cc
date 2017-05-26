@@ -59,7 +59,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ipt_fd) {
     ipt_fd = open(ipt_device_path, O_RDONLY);
     if (ipt_fd < 0) {
-      util::LogErrorWithErrno("open intel-pt");
+      FTL_LOG(ERROR) << "open intel-pt" << ", " << util::ErrnoString(errno);
       return false;
     }
   }
@@ -67,7 +67,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ktrace_fd || out_ktrace_handle) {
     ktrace_fd = open(ktrace_device_path, O_RDONLY);
     if (ktrace_fd < 0) {
-      util::LogErrorWithErrno("open ktrace");
+      FTL_LOG(ERROR) << "open ktrace" << ", " << util::ErrnoString(errno);
       close(ipt_fd);
       return false;
     }
@@ -76,7 +76,7 @@ static bool OpenDevices(ftl::UniqueFD* out_ipt_fd,
   if (out_ktrace_handle) {
     ssize_t ssize = ioctl_ktrace_get_handle(ktrace_fd, &ktrace_handle);
     if (ssize != sizeof(ktrace_handle)) {
-      util::LogErrorWithErrno("get ktrace handle");
+      FTL_LOG(ERROR) << "get ktrace handle" << ", " << util::ErrnoString(errno);
       close(ipt_fd);
       close(ktrace_fd);
       return false;
@@ -446,8 +446,8 @@ static mx_status_t WriteBufferData(const IptConfig& config,
 
   ftl::UniqueFD fd(open(c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
-    util::LogErrorWithErrno(ftl::StringPrintf("unable to write file: %s",
-                                              c_path));
+    FTL_LOG(ERROR) << ftl::StringPrintf("unable to write file: %s", c_path)
+                   << ", " << util::ErrnoString(errno);
     return ERR_BAD_PATH;
   }
 
@@ -594,8 +594,8 @@ void DumpPerf(const IptConfig& config) {
         }
       }
     } else {
-      util::LogErrorWithErrno(ftl::StringPrintf("unable to create %s",
-                                                ktrace_c_path));
+      FTL_LOG(ERROR) << ftl::StringPrintf("unable to create %s", ktrace_c_path)
+                     << ", " << util::ErrnoString(errno);
     }
   }
 

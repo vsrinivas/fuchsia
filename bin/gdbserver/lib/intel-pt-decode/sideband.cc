@@ -24,7 +24,7 @@
 
 namespace intel_processor_trace {
 
-using debugserver::util::LogErrorWithErrno;
+using debugserver::util::ErrnoString;
 
 // For passing data from ReadKtraceFile to ProcessKtraceRecord.
 struct KtraceData {
@@ -100,7 +100,7 @@ bool DecoderState::ReadKtraceFile(const std::string& file) {
 
   ftl::UniqueFD fd(open(file.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
-    LogErrorWithErrno("error opening ktrace file");
+    FTL_LOG(ERROR) << "error opening ktrace file" << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -129,7 +129,8 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    LogErrorWithErrno("error opening pt file list file");
+    FTL_LOG(ERROR) << "error opening pt file list file" << ", "
+                   << ErrnoString(errno);
     return false;
   }
 

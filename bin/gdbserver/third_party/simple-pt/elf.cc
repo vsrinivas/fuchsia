@@ -215,7 +215,7 @@ static bool ElfOpen(const char* file_name,
                     std::unique_ptr<elf::Reader>* out_elf) {
   int fd = open(file_name, O_RDONLY);
   if (fd < 0) {
-    util::LogErrorWithErrno(file_name);
+    FTL_LOG(ERROR) << file_name << ", " << util::ErrnoString(errno);
     return false;
   }
 

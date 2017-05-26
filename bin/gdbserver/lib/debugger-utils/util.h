@@ -54,10 +54,6 @@ std::string EscapeNonPrintableString(const ftl::StringView& data);
 // Return a string representation of errno value |err|.
 std::string ErrnoString(int err);
 
-// Logs the given |message| using the global errno variable, including the
-// result of strerror in a nicely formatted way.
-void LogErrorWithErrno(const std::string& message);
-
 #ifdef __Fuchsia__
 // Logs the given |message| using the string representation of |status| in a
 // nicely formatted way.

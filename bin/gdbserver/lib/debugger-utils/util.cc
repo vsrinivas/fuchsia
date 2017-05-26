@@ -133,10 +133,6 @@ std::string ErrnoString(int err) {
   return ftl::StringPrintf("%s(%d)", strerror(err), err);
 }
 
-void LogErrorWithErrno(const std::string& message) {
-  FTL_LOG(ERROR) << message << ", " << ErrnoString(errno);
-}
-
 size_t JoinStrings(const std::deque<std::string>& strings,
                    const char delimiter,
                    char* buffer,

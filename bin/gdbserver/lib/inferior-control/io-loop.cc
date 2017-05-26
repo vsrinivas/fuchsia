@@ -79,7 +79,8 @@ void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
     // impossible to send a large enough packet to cause an overflow (at
     // least with the GDB Remote protocol).
     if (bytes_written != static_cast<ssize_t>(bytes.size())) {
-      util::LogErrorWithErrno("Failed to send bytes");
+      FTL_LOG(ERROR) << "Failed to send bytes" << ", "
+                     << util::ErrnoString(errno);
       ReportError();
       return;
     }

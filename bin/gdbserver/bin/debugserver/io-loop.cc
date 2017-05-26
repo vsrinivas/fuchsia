@@ -32,7 +32,8 @@ void RspIOLoop::OnReadTask() {
 
   // There was an error
   if (read_size < 0) {
-    util::LogErrorWithErrno("Error occurred while waiting for a packet");
+    FTL_LOG(ERROR) << "Error occurred while waiting for a packet" << ", "
+                   << util::ErrnoString(errno);
     ReportError();
     return;
   }

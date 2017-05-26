@@ -30,16 +30,16 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
 
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
-    util::LogErrorWithErrno(ftl::StringPrintf("lseek to 0x%" PRIxPTR,
-                                              address));
+    FTL_LOG(ERROR) << ftl::StringPrintf("lseek to 0x%" PRIxPTR, address)
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
   ssize_t bytes_read = read(fd_, out_buffer, length);
   if (bytes_read < 0) {
-    util::LogErrorWithErrno(
-      ftl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR,
-                        address));
+    FTL_LOG(ERROR) <<
+      ftl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
@@ -65,16 +65,16 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
 
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
-    util::LogErrorWithErrno(ftl::StringPrintf("lseek to 0x%" PRIxPTR,
-                                              address));
+    FTL_LOG(ERROR) << ftl::StringPrintf("lseek to 0x%" PRIxPTR, address)
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
   ssize_t bytes_written = write(fd_, buffer, length);
   if (bytes_written < 0) {
-    util::LogErrorWithErrno(
-      ftl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR,
-                        address));
+    FTL_LOG(ERROR) <<
+      ftl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
