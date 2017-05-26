@@ -94,12 +94,14 @@ class TestOwner
 
   ftl::RefPtr<Ownable1> NewOwnable1() {
     auto result = escher::Make<Ownable1>(destroyed_count_);
+    EXPECT_EQ(1U, result->ref_count());
     BecomeOwnerOf(result.get());
     return result;
   }
 
   void OnReceiveOwnable(
       std::unique_ptr<OwnableBaseClassForTest> unreffed) override {
+    EXPECT_EQ(0U, unreffed->ref_count());
     unreffed_.push_back(
         ftl::RefPtr<OwnableBaseClassForTest>(unreffed.release()));
   }

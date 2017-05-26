@@ -15,8 +15,7 @@ Reffable::~Reffable() {
 #ifndef NDEBUG
 void Reffable::Adopt() {
   FTL_DCHECK(adoption_required_);
-  FTL_DCHECK(ref_count() == 0);
-  ++ref_count_;
+  FTL_DCHECK(ref_count_ == 1);
   adoption_required_ = false;
 }
 #endif

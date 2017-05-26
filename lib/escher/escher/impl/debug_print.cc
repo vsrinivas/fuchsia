@@ -9,6 +9,7 @@
 
 #include "escher/geometry/transform.h"
 #include "escher/impl/model_pipeline_spec.h"
+#include "escher/renderer/image.h"
 
 namespace escher {
 
@@ -80,9 +81,9 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
   str << "MeshSpec[";
   // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
   // enumerate over the values in an enum class.
-  std::array<MeshAttribute, 4> all_flags = {{
-      MeshAttribute::kPosition, MeshAttribute::kPositionOffset,
-      MeshAttribute::kUV, MeshAttribute::kPerimeterPos}};
+  std::array<MeshAttribute, 4> all_flags = {
+      {MeshAttribute::kPosition, MeshAttribute::kPositionOffset,
+       MeshAttribute::kUV, MeshAttribute::kPerimeterPos}};
   for (auto flag : all_flags) {
     if (spec.flags & flag) {
       // Put a pipe after the previous flag, if there is one.
@@ -134,6 +135,12 @@ std::ostream& operator<<(std::ostream& str, const ShapeModifiers& flags) {
   }
   str << "]";
   return str;
+}
+
+std::ostream& operator<<(std::ostream& str, const ImageInfo& info) {
+  return str << "ImageInfo[" << info.width << "x" << info.height << " "
+             << vk::to_string(info.format) << "  samples: " << info.sample_count
+             << "]";
 }
 
 }  // namespace escher

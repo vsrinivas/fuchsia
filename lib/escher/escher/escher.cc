@@ -47,8 +47,8 @@ TexturePtr Escher::NewTexture(ImagePtr image,
                               vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
-  return ftl::MakeRefCounted<Texture>(impl_->resource_life_preserver(), image,
-                                      filter, aspect_mask,
+  return ftl::MakeRefCounted<Texture>(impl_->resource_life_preserver(),
+                                      std::move(image), filter, aspect_mask,
                                       use_unnormalized_coordinates);
 }
 

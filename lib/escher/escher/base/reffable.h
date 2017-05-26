@@ -62,7 +62,7 @@ class Reffable {
     ++ref_count_;
   }
 
-  mutable uint32_t ref_count_ = 0;
+  mutable uint32_t ref_count_ = 1;
 
 #ifndef NDEBUG
   // Called by ftl::RefPtr, but only in debug builds.

@@ -7,6 +7,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/renderer/semaphore_wait.h"
 #include "escher/resources/resource.h"
+#include "escher/util/debug_print.h"
 
 namespace escher {
 
@@ -74,6 +75,9 @@ class Image : public Resource2 {
 };
 
 typedef ftl::RefPtr<Image> ImagePtr;
+
+// Debugging.
+ESCHER_DEBUG_PRINTABLE(ImageInfo);
 
 // Inline function definitions.
 
