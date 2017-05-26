@@ -268,6 +268,11 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
   if (waiting_for_termination) {
     StopTrackingClient(teardown_client, false);
   } else {
+    // Once teardown is signalled, it's no longer a test failure if the child
+    // app controller connection closes. If this is not reset, a connection
+    // close may call test_runner_connection_->Teardown() again and override the
+    // success status set here.
+    child_app_controller_.set_connection_error_handler(nullptr);
     test_runner_connection_->Teardown(test_id_, success_);
   }
 }
