@@ -229,15 +229,18 @@ public:
     //     // Ok to create a channel.
     mx_status_t QueryPolicy(uint32_t condition) const;
 
+    // return a cached copy of the vdso code address or compute a new one
     uintptr_t vdso_code_address() {
         if (unlikely(vdso_code_address_ == 0)) {
-            AutoLock a(&state_lock_);
-            vdso_code_address_ = aspace()->vdso_code_address();
+            return cache_vdso_code_address();
         }
         return vdso_code_address_;
     }
 
 private:
+    // compute the vdso code address and store in vdso_code_address_
+    uintptr_t cache_vdso_code_address();
+
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);

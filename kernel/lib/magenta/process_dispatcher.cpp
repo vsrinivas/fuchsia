@@ -720,6 +720,12 @@ mx_status_t ProcessDispatcher::QueryPolicy(uint32_t condition) const {
     return (action & MX_POL_ACTION_DENY) ? ERR_ACCESS_DENIED : NO_ERROR;
 }
 
+uintptr_t ProcessDispatcher::cache_vdso_code_address() {
+    AutoLock a(&state_lock_);
+    vdso_code_address_ = aspace_->vdso_code_address();
+    return vdso_code_address_;
+}
+
 const char* StateToString(ProcessDispatcher::State state) {
     switch (state) {
     case ProcessDispatcher::State::INITIAL:
