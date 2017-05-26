@@ -2,7 +2,7 @@
   "tests":[
     {
       "name":"input_tests",
-      "exec":"input_apptests",
+      "exec":"/system/test/input_apptests",
       "copy":{
         "/system/test":[
           "input_apptests"
@@ -11,7 +11,7 @@
     },
     {
       "name":"view_manager_apptests",
-      "exec":"view_manager_apptests",
+      "exec":"/system/test/view_manager_apptests",
       "copy":{
         "/system/test":[
           "view_manager_apptests"
@@ -20,7 +20,7 @@
     },
     {
       "name":"composer_apptests",
-      "exec":"composer_apptests",
+      "exec":"/system/test/composer_apptests",
       "copy":{
         "/system/test":[
           "composer_apptests"
@@ -29,7 +29,7 @@
     },
     {
       "name":"composer_unittests",
-      "exec":"composer_unittests",
+      "exec":"/system/test/composer_unittests",
       "copy":{
         "/system/test":[
           "composer_unittests"
@@ -38,7 +38,7 @@
     },
     {
       "name":"geometry_util_unittests",
-      "exec":"geometry_util_unittests",
+      "exec":"/system/test/geometry_util_unittests",
       "copy":{
         "/system/test":[
           "geometry_util_unittests"
