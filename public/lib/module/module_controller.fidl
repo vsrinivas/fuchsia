@@ -20,6 +20,9 @@ interface ModuleController {
   // Requests that this module become the focused module in the story.
   Focus();
 
+  // Requests that this module be hidden in the story.
+  Defocus();
+
   // Requests the Module instance to stop (see Module.Stop() for how).
   Stop() => ();
 };

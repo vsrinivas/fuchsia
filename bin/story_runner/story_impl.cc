@@ -798,6 +798,12 @@ void StoryImpl::FocusModule(const fidl::Array<fidl::String>& module_path) {
   }
 }
 
+void StoryImpl::DefocusModule(const fidl::Array<fidl::String>& module_path) {
+  if (story_shell_) {
+    story_shell_->DefocusView(PathString(module_path));
+  }
+}
+
 const fidl::String& StoryImpl::GetStoryId() const {
   return story_id_;
 }

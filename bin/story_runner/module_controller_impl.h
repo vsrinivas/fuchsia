@@ -50,6 +50,7 @@ class ModuleControllerImpl : ModuleController {
   // |ModuleController|
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
   void Focus() override;
+  void Defocus() override;
   void Stop(const StopCallback& done) override;
 
   // Used as connection error handler on the Module connection.

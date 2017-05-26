@@ -60,6 +60,9 @@ class DummyStoryShellApp
   void FocusView(const fidl::String& view_id) override {}
 
   // |StoryShell|
+  void DefocusView(const fidl::String& view_id) override {}
+
+  // |StoryShell|
   void Terminate(const TerminateCallback& done) override {
     FTL_LOG(INFO) << "StoryShell::Terminate()";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();

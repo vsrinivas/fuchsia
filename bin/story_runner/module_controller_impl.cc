@@ -119,6 +119,10 @@ void ModuleControllerImpl::Focus() {
   story_impl_->FocusModule(module_path_);
 }
 
+void ModuleControllerImpl::Defocus() {
+  story_impl_->DefocusModule(module_path_);
+}
+
 void ModuleControllerImpl::Stop(const StopCallback& done) {
   Teardown(done);
 }
