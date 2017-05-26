@@ -173,33 +173,37 @@ template("package") {
       assert(system_manifest_contents == [])
     }
 
-    mkbootfs_path = "$magenta_build_dir/tools/mkbootfs"
+    if (defined(invoker.archive) && invoker.archive) {
+      deps += [ "//application/src/archiver($host_toolchain)" ]
 
-    # TODO(jamesr): Update to Fuchsia Archive Format as soon as the system can
-    # consume that instead of bootfs.
-    output = output_base + "bootfs"
+      far_path = "$root_build_dir/host_$host_cpu/far"
 
-    script = mkbootfs_path
-    outputs = [
-      output,
-    ]
-    args = [
-      "-o",
-      rebase_path(output),
-    ]
-    if (!boot_manifest_empty) {
-      args += [
-        "--target=boot",
-        rebase_path(boot_manifest),
+      output = output_base + package_name + ".far"
+
+      script = far_path
+      outputs = [
+        output,
       ]
-      sources += [ boot_manifest ]
-    }
-    if (!system_manifest_empty) {
-      args += [
-        "--target=system",
-        rebase_path(system_manifest),
+      args = [
+        "create",
+        "--archive=" + rebase_path(output),
       ]
-      sources += [ system_manifest ]
+      if (!boot_manifest_empty) {
+        args += [ "--manifest=" + rebase_path(boot_manifest) ]
+        sources += [ boot_manifest ]
+      }
+      if (!system_manifest_empty) {
+        args += [ "--manifest=" + rebase_path(system_manifest) ]
+        sources += [ system_manifest ]
+      }
+    } else {
+      # We have to do something in our action
+      script = "/bin/touch"
+      output = output_base + ".stamp"
+      outputs = [
+        output,
+      ]
+      args = [ rebase_path(output) ]
     }
   }
 
