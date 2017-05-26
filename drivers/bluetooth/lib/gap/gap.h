@@ -59,5 +59,32 @@ enum AdvFlag : uint8_t {
   kSimultaneousLEAndBREDRHost       = (1 << 4),
 };
 
+// Constants used in Low Energy Discovery (see Core Spec v5.0, Vol 3, Part C, Appendix A).
+constexpr int64_t kLEGeneralDiscoveryScanMinMs = 10240;       // 10.24 seconds
+constexpr int64_t kLEGeneralDiscoveryScanMinCodedMs = 30720;  // 30.72 seconds
+constexpr int64_t kLEScanFastPeriodMs = 30720;                // 30.72 seconds
+
+// Recommended scan parameters that can be passed directly to the HCI commands. The HCI spec defines
+// the time conversion as follows: Time =  N * 0.625 ms, where N is the value of the constant.
+//
+// A constant that contans the word "Coded" is recommended when using the LE Coded PHY. Otherwise
+// the constant is recommended when using the LE 1M PHY.
+
+// For user-initiated scanning
+constexpr uint16_t kLEScanFastInterval = 0x0060;       // 60 ms
+constexpr uint16_t kLEScanFastIntervalCoded = 0x0120;  // 180 ms
+constexpr uint16_t kLEScanFastWindow = 0x0030;         // 30 ms
+constexpr uint16_t kLEScanFastWindowCoded = 0x90;      // 90 ms
+
+// For background scanning
+constexpr uint16_t kLEScanSlowInterval1 = 0x0800;       // 1.28 s
+constexpr uint16_t kLEScanSlowInterval1Coded = 0x1800;  // 3.84 s
+constexpr uint16_t kLEScanSlowWindow1 = 0x0012;         // 11.25 ms
+constexpr uint16_t kLEScanSlowWindow1Coded = 0x0036;    // 33.75 ms
+constexpr uint16_t kLEScanSlowInterval2 = 0x1000;       // 2.56 s
+constexpr uint16_t kLEScanSlowInterval2Coded = 0x3000;  // 7.68 s
+constexpr uint16_t kLEScanSlowWindow2 = 0x0024;         // 22.5 ms
+constexpr uint16_t kLEScanSlowWindow2Coded = 0x006C;    // 67.5 ms
+
 }  // namespace gap
 }  // namespace bluetooth

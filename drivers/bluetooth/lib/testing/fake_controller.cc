@@ -98,6 +98,15 @@ void FakeController::AddLEDevice(std::unique_ptr<FakeDevice> le_device) {
   le_devices_.push_back(std::move(le_device));
 }
 
+void FakeController::SetScanStateCallback(const ScanStateCallback& callback,
+                                          ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  FTL_DCHECK(callback);
+  FTL_DCHECK(task_runner);
+
+  scan_state_cb_ = callback;
+  scan_state_cb_task_runner_ = task_runner;
+}
+
 void FakeController::RespondWithCommandComplete(hci::OpCode opcode, void* return_params,
                                                 uint8_t return_params_size) {
   // Either both are zero or neither is.
@@ -283,6 +292,15 @@ void FakeController::OnCommandPacketReceived(const hci::CommandPacket& command_p
       le_scan_state_.enabled = (in_params->scanning_enabled == hci::GenericEnableParam::kEnable);
       le_scan_state_.filter_duplicates =
           (in_params->filter_duplicates == hci::GenericEnableParam::kEnable);
+
+      // Post the scan state update before scheduling the HCI Command Complete event. This
+      // guarantees that single-threaded unit tests receive the scan state update BEFORE the HCI
+      // command sequence terminates.
+      if (scan_state_cb_) {
+        FTL_DCHECK(scan_state_cb_task_runner_);
+        scan_state_cb_task_runner_->PostTask(
+            [ cb = scan_state_cb_, enabled = le_scan_state_.enabled ] { cb(enabled); });
+      }
 
       hci::SimpleReturnParams out_params;
       out_params.status = hci::Status::kSuccess;

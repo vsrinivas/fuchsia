@@ -13,6 +13,8 @@ static_library("gap") {
     "discovery_filter.cc",
     "discovery_filter.h",
     "gap.h",
+    "low_energy_discovery_manager.cc",
+    "low_energy_discovery_manager.h",
     "low_energy_state.cc",
     "low_energy_state.h",
   ]
@@ -31,6 +33,7 @@ source_set("tests") {
     "adapter_unittest.cc",
     "advertising_data_unittest.cc",
     "discovery_filter_unittest.cc",
+    "low_energy_discovery_manager_unittest.cc",
   ]
 
   deps = [

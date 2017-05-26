@@ -15,6 +15,10 @@ namespace testing {
 // FakeDevice is used to emulate remote Bluetooth devices.
 class FakeDevice {
  public:
+  // NOTE: Setting |connectable| to true will result in a "Connectable and Scannable Advertisement"
+  // (i.e. ADV_IND) even if |scannable| is set to false. This is OK since we use |scannable| to
+  // drive the receipt of Scan Response PDUs: we use this to test the condition in which the
+  // advertisement is scannable but the host never receives a scan response.
   FakeDevice(const common::DeviceAddress& address, bool connectable, bool scannable);
 
   void SetAdvertisingData(const common::ByteBuffer& data);
@@ -33,6 +37,8 @@ class FakeDevice {
   // corresponding FakeController which decides how the reports should be generated.
   bool should_batch_reports() const { return should_batch_reports_; }
 
+  // Returns true if this device is scannable. We use this to tell FakeController whether or not it
+  // should send scan response PDUs.
   bool scannable() const { return scannable_; }
 
   // Generates and returns a LE Advertising Report Event payload. If |include_scan_rsp| is true,

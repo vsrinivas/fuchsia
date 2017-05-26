@@ -94,6 +94,11 @@ class FakeController : public FakeControllerBase {
   // procedures.
   void AddLEDevice(std::unique_ptr<FakeDevice> le_device);
 
+  // Sets a callback to invoked when the scan state changes.
+  using ScanStateCallback = std::function<void(bool enabled)>;
+  void SetScanStateCallback(const ScanStateCallback& callback,
+                            ftl::RefPtr<ftl::TaskRunner> task_runner);
+
  private:
   // Sends a HCI_Command_Complete event in response to the command with |opcode| and using the given
   // data as the parameter payload.
@@ -116,6 +121,9 @@ class FakeController : public FakeControllerBase {
 
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
+
+  ScanStateCallback scan_state_cb_;
+  ftl::RefPtr<ftl::TaskRunner> scan_state_cb_task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };
