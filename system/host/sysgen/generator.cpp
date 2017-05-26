@@ -115,7 +115,7 @@ bool CategoryGenerator::footer(ofstream& os) {
 
         os << "SYSCALL_CATEGORY_END(" << category.first << ")\n";
     }
-  return os.good();
+    return os.good();
 }
 
 void write_syscall_signature_line(ofstream& os, const Syscall& sc, string name_prefix,
@@ -129,7 +129,7 @@ void write_syscall_signature_line(ofstream& os, const Syscall& sc, string name_p
     // Writes all arguments.
     os << before_args;
     bool first = true;
-    sc.for_each_kernel_arg([&] (const TypeSpec& arg) {
+    sc.for_each_kernel_arg([&](const TypeSpec& arg) {
         if (!first) {
             os << inter_arg;
         }

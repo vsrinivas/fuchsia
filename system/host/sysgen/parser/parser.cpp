@@ -31,7 +31,7 @@ std::vector<string> tokenize_string(const string& str) {
     return tokens;
 }
 
-std::vector<string>& operator +=(std::vector<string>& v1, const std::vector<string>& v2) {
+std::vector<string>& operator+=(std::vector<string>& v1, const std::vector<string>& v2) {
     v1.insert(v1.end(), v2.begin(), v2.end());
     return v1;
 }
@@ -39,10 +39,10 @@ std::vector<string>& operator +=(std::vector<string>& v1, const std::vector<stri
 void FileCtx::print_error(const char* what, const string& extra) const {
     if (line_end) {
         fprintf(stderr, "error: %s : lines %d-%d : %s '%s' [near: %s]\n",
-            file, line_start, line_end, what, extra.c_str(), last_token);
+                file, line_start, line_end, what, extra.c_str(), last_token);
     } else {
         fprintf(stderr, "error: %s : line %d : %s '%s' [near: %s]\n",
-            file, line_start, what, extra.c_str(), last_token);
+                file, line_start, what, extra.c_str(), last_token);
     }
 }
 

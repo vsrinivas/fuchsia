@@ -8,20 +8,19 @@
 #include <numeric>
 #include <string>
 
-#include "types.h"
 #include "syscall_parser.h"
 #include "sysgen_generator.h"
+#include "types.h"
 
 using std::string;
 
 constexpr Dispatch<SysgenGenerator> sysgen_table[] = {
     // comments start with '#' and terminate at the end of line.
-    { "#", nullptr, process_comment },
+    {"#", nullptr, process_comment},
     // sycalls start with 'syscall' and terminate with ';'.
-    { "syscall", ";", process_syscall },
+    {"syscall", ";", process_syscall},
     // table terminator.
-    { nullptr, nullptr, nullptr }
-};
+    {nullptr, nullptr, nullptr}};
 
 // =================================== driver ====================================================
 
@@ -58,12 +57,14 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "usage: sysgen [-a] [-v] [-o output_prefix] "
                             "[-<type> filename] file1 ... fileN\n");
             const string delimiter = ", ";
-            const string valid_types = std::accumulate(get_type_to_default_suffix().begin(),
-                get_type_to_default_suffix().end(), std::string(),
-                [delimiter](const std::string& s,
-                            const std::pair<const std::string, std::string>& p) {
-                    return s + (s.empty() ? std::string() : delimiter) + p.first;
-                });
+            const string valid_types =
+                std::accumulate(
+                    get_type_to_default_suffix().begin(),
+                    get_type_to_default_suffix().end(), std::string(),
+                    [delimiter](const std::string& s,
+                                const std::pair<const std::string, std::string>& p) {
+                        return s + (s.empty() ? std::string() : delimiter) + p.first;
+                    });
             fprintf(stderr, "\n       Valid <type>s: %s\n", valid_types.c_str());
             return 0;
         } else {

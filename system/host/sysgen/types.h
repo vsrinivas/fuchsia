@@ -5,9 +5,9 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "parser/parser.h" // for FileCtx
 
@@ -46,7 +46,6 @@ struct TypeSpec {
     std::string as_cpp_cast(const std::string& arg) const;
 };
 
-
 struct Syscall {
     FileCtx fc;
     std::string name;
@@ -76,6 +75,6 @@ struct Syscall {
 };
 
 const std::string map_override(
-        const std::string& name, const std::map<std::string, std::string>& overrides);
+    const std::string& name, const std::map<std::string, std::string>& overrides);
 const bool has_attribute(const char* attr, const std::vector<std::string>& attrs);
 const void dump_attributes(const std::vector<std::string>& attrs);

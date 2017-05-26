@@ -18,13 +18,13 @@ public:
                     const std::string& no_args_type,
                     bool allow_pointer_wrapping,
                     const std::map<std::string, std::string>& attributes,
-                    bool skip_vdso_calls) :
-        function_prefix_(function_prefix),
-        name_prefixes_(name_prefixes),
-        no_args_type_(no_args_type),
-        attributes_(attributes),
-        allow_pointer_wrapping_(allow_pointer_wrapping),
-        skip_vdso_calls_(skip_vdso_calls) {}
+                    bool skip_vdso_calls)
+        : function_prefix_(function_prefix),
+          name_prefixes_(name_prefixes),
+          no_args_type_(no_args_type),
+          attributes_(attributes),
+          allow_pointer_wrapping_(allow_pointer_wrapping),
+          skip_vdso_calls_(skip_vdso_calls) {}
 
     bool syscall(std::ofstream& os, const Syscall& sc) override;
 

@@ -121,6 +121,14 @@ private:
     const std::string define_prefix_;
 };
 
+/* Generates the Rust bindings. */
+class RustBindingGenerator : public Generator {
+public:
+    bool header(std::ofstream& os) override;
+    bool footer(std::ofstream& os) override;
+    bool syscall(std::ofstream& os, const Syscall& sc) override;
+};
+
 // Writes the signature of a syscall, up to the end of the args list.
 //
 // Can wrap pointers with user_ptr.

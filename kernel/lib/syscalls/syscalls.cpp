@@ -8,8 +8,8 @@
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lib/vdso.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/mx-syscall-numbers.h>
+#include <magenta/process_dispatcher.h>
 #include <platform.h>
 #include <trace.h>
 
@@ -35,9 +35,10 @@ inline uint64_t invoke_syscall(
     const uint64_t pc_offset =
         pc - ProcessDispatcher::GetCurrent()->vdso_code_address();
 
-#define CHECK_SYSCALL_PC(name) do {                             \
-        if (unlikely(!VDso::ValidSyscallPC::name(pc_offset)))   \
-            return sys_invalid_syscall(syscall_num, pc);        \
+#define CHECK_SYSCALL_PC(name)                                \
+    do {                                                      \
+        if (unlikely(!VDso::ValidSyscallPC::name(pc_offset))) \
+            return sys_invalid_syscall(syscall_num, pc);      \
     } while (0)
 
     switch (syscall_num) {
@@ -100,7 +101,7 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 // The reason is the two calls two arch_curr_cpu_num in the ktrace calls: we
 // don't want the cpu changing during the call.
 
-template<typename T>
+template <typename T>
 inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
                                         bool (*valid_pc)(uintptr_t), T make_call) {
     ktrace_tiny(TAG_SYSCALL_ENTER, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
@@ -138,11 +139,13 @@ inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
 }
 
 inline x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip) {
-    return do_syscall(syscall_num, ip, [](uintptr_t) {
-        return true;
-    }, [&]() {
-        return sys_invalid_syscall(syscall_num, ip);
-    });
+    return do_syscall(syscall_num, ip,
+                      [](uintptr_t) {
+                          return true;
+                      },
+                      [&]() {
+                          return sys_invalid_syscall(syscall_num, ip);
+                      });
 }
 
 #endif

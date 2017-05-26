@@ -18,7 +18,8 @@ const std::map<std::string, Generator&>& get_type_to_generator();
 
 class SysgenGenerator {
 public:
-    SysgenGenerator(bool verbose) : verbose_(verbose) {}
+    SysgenGenerator(bool verbose)
+        : verbose_(verbose) {}
     bool AddSyscall(Syscall& syscall);
     bool Generate(const std::map<std::string, std::string>& type_to_filename);
     bool verbose() const;

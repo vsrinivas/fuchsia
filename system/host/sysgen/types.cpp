@@ -12,8 +12,7 @@ using std::vector;
 const std::map<string, string> rust_overrides = {
     {"any[]IN", "*const u8"},
     {"any[]OUT", "*mut u8"},
-    {"any[]INOUT", "*mut u8"}
-};
+    {"any[]INOUT", "*mut u8"}};
 
 const std::map<string, string> rust_primitives = {
     {"int8_t", "i8"},
@@ -49,9 +48,12 @@ const void dump_attributes(const vector<string>& attrs) {
 
 string ArraySpec::kind_str() const {
     switch (kind) {
-    case IN: return "IN";
-    case OUT: return "OUT";
-    default: return "INOUT";
+    case IN:
+        return "IN";
+    case OUT:
+        return "OUT";
+    default:
+        return "INOUT";
     }
 }
 
@@ -76,7 +78,6 @@ const string map_override(const string& name, const std::map<string, string>& ov
     auto ft = overrides.find(name);
     return (ft == overrides.end()) ? name : ft->second;
 }
-
 
 void TypeSpec::debug_dump() const {
     fprintf(stderr, "  + %s %s\n", type.c_str(), name.c_str());

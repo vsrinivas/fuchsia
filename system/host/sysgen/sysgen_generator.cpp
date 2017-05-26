@@ -8,7 +8,6 @@
 #include "generator.h"
 #include "header_generator.h"
 #include "kernel_invocation_generator.h"
-#include "rust_binding_generator.h"
 #include "vdso_wrapper_generator.h"
 
 #include "sysgen_generator.h"
@@ -52,9 +51,9 @@ static KernelInvocationGenerator kernel_code(
     "arg");     // prefix for syscall arguments);
 
 static KernelWrapperGenerator kernel_wrappers(
-    "sys_",      // function prefix
-    "wrapper_",  // wrapper prefix
-    "MX_SYS_");  // syscall numbers constant prefix
+    "sys_",     // function prefix
+    "wrapper_", // wrapper prefix
+    "MX_SYS_"); // syscall numbers constant prefix
 
 static HeaderGenerator user_header(
     "extern ",                       // function prefix
@@ -181,7 +180,8 @@ bool SysgenGenerator::verbose() const {
     return verbose_;
 }
 
-bool SysgenGenerator::generate_one(const string& output_file, Generator& generator, const string& type) {
+bool SysgenGenerator::generate_one(
+    const string& output_file, Generator& generator, const string& type) {
     std::ofstream ofile;
     ofile.open(output_file.c_str(), std::ofstream::out);
 

@@ -14,9 +14,9 @@
 class KernelInvocationGenerator : public Generator {
 public:
     KernelInvocationGenerator(const std::string& syscall_prefix, const std::string& return_var,
-                              const std::string& return_type, const std::string& arg_prefix) :
-        syscall_prefix_(syscall_prefix), return_var_(return_var),
-        return_type_(return_type), arg_prefix_(arg_prefix) {}
+                              const std::string& return_type, const std::string& arg_prefix)
+        : syscall_prefix_(syscall_prefix), return_var_(return_var),
+          return_type_(return_type), arg_prefix_(arg_prefix) {}
 
     bool syscall(std::ofstream& os, const Syscall& sc) override;
 

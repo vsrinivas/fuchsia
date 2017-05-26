@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-std::vector<std::string>& operator +=(std::vector<std::string>& v1,
-                                      const std::vector<std::string>& v2);
+std::vector<std::string>& operator+=(std::vector<std::string>& v1,
+                                     const std::vector<std::string>& v2);
 std::vector<std::string> tokenize_string(const std::string& str);
 
 struct FileCtx {
@@ -52,17 +52,17 @@ private:
 };
 
 // ======================= generic parsing machinery =============================================
-template<typename P>
-using ProcFn = bool (*) (P* parser, TokenStream& ts);
+template <typename P>
+using ProcFn = bool (*)(P* parser, TokenStream& ts);
 
-template<typename P>
+template <typename P>
 struct Dispatch {
     const char* first_token;
     const char* last_token;
     ProcFn<P> fn;
 };
 
-template<typename P>
+template <typename P>
 bool process_line(P* parser, const Dispatch<P>* table,
                   const std::vector<std::string>& tokens,
                   const FileCtx& fc) {
@@ -109,7 +109,7 @@ bool process_line(P* parser, const Dispatch<P>* table,
     return false;
 }
 
-template<typename P>
+template <typename P>
 bool run_parser(P* parser, const Dispatch<P>* table, const char* input, bool verbose) {
     std::ifstream infile;
     infile.open(input, std::ifstream::in);
