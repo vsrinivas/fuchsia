@@ -25,7 +25,7 @@ CMDLINE="TERM=uart"
 # mkdtimg and mkbootimg can be found at:
 #  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
 
-mkdtimg -c -d $DTB_FILE -o $DT_IMAGE
+mkdtimg -c -d $DTB_FILE -o $DT_IMAGE || exit 1
 
 mkbootimg --kernel $KERNEL \
 --kernel_offset $KERNEL_OFFSET \
@@ -34,8 +34,8 @@ mkbootimg --kernel $KERNEL \
 --ramdisk $RAMDISK \
 --tags_offset $DT_OFFSET \
 --cmdline $CMDLINE \
--o $OUT_IMAGE
+-o $OUT_IMAGE || exit 1
 
-fastboot flash dts $DT_IMAGE
-fastboot flash boot $OUT_IMAGE
-fastboot reboot
+fastboot flash dts $DT_IMAGE || exit 1
+fastboot flash boot $OUT_IMAGE || exit 1
+fastboot reboot || exit 1
