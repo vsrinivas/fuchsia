@@ -8,6 +8,8 @@ set -e
 readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
 readonly FUCHSIA_URL_BASE="https://storage.googleapis.com/fuchsia-build/fuchsia"
 
+. "${SCRIPT_ROOT}/download.sh"
+
 case "$(uname -s)" in
   Darwin)
     readonly HOST_PLATFORM="mac"
@@ -21,87 +23,53 @@ case "$(uname -s)" in
     ;;
 esac
 
-# download <url> <path>
-function download() {
-  local url="${1}"
-  local path="${2}"
-  curl -f --progress-bar -continue-at=- --location --output "${path}" "${url}"
-}
-
-# download_file_if_needed <name> <url> <base path> <extension>
-function download_file_if_needed() {
-  local name="${1}"
-  local url="${2}"
-  local base_path="${3}"
-  local extension="${4}"
-
-  local path="${base_path}${extension}"
-  local stamp_path="${base_path}.stamp"
-  local requested_hash="$(cat "${base_path}.sha1")"
-
-  if [[ ! -f "${stamp_path}" ]] || [[ "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
-    echo "Downloading ${name}..."
-    rm -f -- "${path}"
-    download "${url}/${requested_hash}" "${path}"
-    echo "${requested_hash}" > "${stamp_path}"
-  fi
-}
-
 # download_tool <name> <base url>
 function download_tool() {
   local name="${1}"
   local base_url="${2}"
   local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
-  download_file_if_needed "${name}" "${base_url}" "${tool_path}"
-  chmod a+x "${tool_path}"
+  download_executable "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${tool_path}"
 }
 
 # download_tarball <name> <base url> <untar directory>
-function download_tarball() {
+function download_host_tarball() {
   local name="${1}"
   local base_url="${2}"
   local untar_dir="${3}"
   local base_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
-  local tar_path="${base_path}.tar.bz2"
-
-  download_file_if_needed "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${base_path}" ".tar.bz2"
-  if [[ -f "${tar_path}" ]]; then
-    mkdir -p -- "${untar_dir}"
-    (cd -- "${untar_dir}" && rm -rf -- "${name}" && tar xf "${tar_path}")
-    rm -f -- "${tar_path}"
-  fi
+  download_tarball "${name}" "${FUCHSIA_URL_BASE}/${base_url}" "${untar_dir}" "${base_path}"
 }
 
 function download_ninja() {
-  download_tool ninja "${FUCHSIA_URL_BASE}/ninja/${HOST_PLATFORM}"
+  download_tool ninja "ninja/${HOST_PLATFORM}"
 }
 
 function download_gn() {
-  download_tool gn "${FUCHSIA_URL_BASE}/gn/${HOST_PLATFORM}"
+  download_tool gn "gn/${HOST_PLATFORM}"
 }
 
 function download_toolchain() {
-  download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
+  download_host_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
 }
 
 function download_rust() {
-  download_tarball rust "rust/${HOST_PLATFORM}" "${SCRIPT_ROOT}/rust"
+  download_host_tarball rust "rust/${HOST_PLATFORM}" "${SCRIPT_ROOT}/rust"
 }
 
 function download_go() {
-  download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
+  download_host_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 }
 
 function download_godepfile() {
-  download_tool godepfile "${FUCHSIA_URL_BASE}/godepfile/${HOST_PLATFORM}"
+  download_tool godepfile "godepfile/${HOST_PLATFORM}"
 }
 
 function download_qemu() {
-  download_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+  download_host_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 }
 
 function download_gdb() {
-  download_tarball gdb "gdb/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+  download_host_tarball gdb "gdb/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
 }
 
 # Download the default set of tools.
