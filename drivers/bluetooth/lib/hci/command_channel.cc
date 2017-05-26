@@ -87,13 +87,25 @@ void CommandChannel::ShutDown() {
 
   FTL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
-  io_task_runner_->PostTask([handler_key = io_handler_key_] {
+  std::mutex init_mutex;
+  std::condition_variable init_cv;
+  bool ready = false;
+
+  io_task_runner_->PostTask([&, handler_key = io_handler_key_ ] {
     FTL_DCHECK(mtl::MessageLoop::GetCurrent());
     FTL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
+    SetPendingCommand(nullptr);
     mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+
+    {
+      std::lock_guard<std::mutex> lock(init_mutex);
+      ready = true;
+    }
+    init_cv.notify_one();
   });
 
-  SetPendingCommand(nullptr);
+  std::unique_lock<std::mutex> lock(init_mutex);
+  init_cv.wait(lock, [&ready] { return ready; });
 
   is_initialized_ = false;
 
@@ -338,11 +350,13 @@ void CommandChannel::HandlePendingCommandStatus(const EventPacket& event) {
 }
 
 CommandChannel::PendingTransactionData* CommandChannel::GetPendingCommand() {
-  if (is_command_pending_) return &pending_command_;
-  return nullptr;
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  return is_command_pending_ ? &pending_command_ : nullptr;
 }
 
 void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
+  FTL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+
   // Cancel the pending command timeout handler as the pending command is being reset.
   pending_cmd_timeout_.Cancel();
 

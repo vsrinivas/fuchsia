@@ -33,6 +33,9 @@ class Transport;
 
 // Represents the HCI Bluetooth command channel. Manages HCI command and event
 // packet control flow.
+//
+// TODO(armansito): Consider making this class fully single-threaded, i.e. use the creation thread
+// for all tasks rather than the I/O thread. OTOH the ACLDataChannel would use the I/O thread.
 class CommandChannel final : public ::mtl::MessageLoopHandler {
  public:
   // |hci_command_channel| is a Magenta channel construct that can receive
