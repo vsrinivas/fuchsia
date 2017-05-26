@@ -108,6 +108,17 @@ scripts/qemu-ifup-macos, so QEMU can be started with:
 ./scripts/run-magenta-x86-64 -Nu ./scripts/qemu-ifup-macos
 ```
 
+## Using Emulated Disk under QEMU
+
+Please follow the minfs instructions on how to create a disk image
+[here][minfs-create-image].
+
+After creating the image, you can run magenta in QEMU with the disk image:
+```
+./scripts/run-magenta-x86-64 -d [-D <disk_image_path (default: "blk.bin")>]
+```
+
+
 ## Debugging the kernel with GDB
 
 ### Sample session
@@ -256,3 +267,6 @@ bash$ qemu <normal_launch_args> -drive if=none,format=qcow2,file=/tmp/my_snapsho
 In theory, you could package up the qcow2 image along with your build output
 directory and anyone should be able to restore your state and start to poke
 at stuff from the QEMU console.
+
+
+[minfs-create-image]: https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md#Host-Device-QEMU-Only
