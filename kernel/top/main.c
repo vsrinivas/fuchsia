@@ -128,7 +128,6 @@ void lk_secondary_cpu_entry(void)
         return;
     }
 
-    dprintf(SPEW, "running final init tasks on cpu %u\n", cpu);
     /* secondary cpu initialize from threading level up. 0 to threading was handled in arch */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_LAST);
 
@@ -144,7 +143,6 @@ void lk_init_secondary_cpus(uint secondary_cpu_count)
         secondary_cpu_count = SMP_MAX_CPUS - 1;
     }
     for (uint i = 0; i < secondary_cpu_count; i++) {
-        dprintf(SPEW, "creating idle thread for cpu %u\n", i + 1);
         thread_t *t = thread_create_idle_thread(i + 1);
         if (!t) {
             dprintf(CRITICAL, "could not allocate idle thread %u\n", i + 1);

@@ -21,6 +21,7 @@
 #include <magenta/errors.h>
 #include <inttypes.h>
 #include <platform.h>
+#include <string.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
@@ -84,9 +85,9 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
     }
     if (i==SMP_MAX_CPUS)
         return ERR_NO_RESOURCES;
-    printf("Set mpid 0x%lx sp to %p\n", mpid, sp);
+    LTRACEF("set mpid 0x%lx sp to %p\n", mpid, sp);
 #if __has_feature(safe_stack)
-    printf("Set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
+    LTRACEF("set mpid 0x%lx unsafe-sp to %p\n", mpid, unsafe_sp);
 #else
     DEBUG_ASSERT(unsafe_sp == NULL);
 #endif
@@ -233,12 +234,46 @@ void arch_early_init(void)
     platform_init_mmu_mappings();
 }
 
+static void midr_to_core(uint32_t midr, char *str, size_t len)
+{
+    __UNUSED uint32_t implementer = BITS_SHIFT(midr, 31, 24);
+    __UNUSED uint32_t variant = BITS_SHIFT(midr, 23, 20);
+    __UNUSED uint32_t architecture = BITS_SHIFT(midr, 19, 16);
+    __UNUSED uint32_t partnum = BITS_SHIFT(midr, 15, 4);
+    __UNUSED uint32_t revision = BITS_SHIFT(midr, 3, 0);
+
+    const char *partnum_str = "unknown";
+    if (implementer == 'A') {
+        // ARM cores
+        switch (partnum) {
+            case 0xd03: partnum_str = "ARM Cortex-a53"; break;
+            case 0xd04: partnum_str = "ARM Cortex-a35"; break;
+            case 0xd07: partnum_str = "ARM Cortex-a57"; break;
+            case 0xd08: partnum_str = "ARM Cortex-a72"; break;
+            case 0xd09: partnum_str = "ARM Cortex-a73"; break;
+        }
+    } else if (implementer == 'C' && partnum == 0xa1) {
+        // Cavium
+        partnum_str = "Cavium CN88XX";
+    }
+
+    snprintf(str, len, "%s r%up%u", partnum_str, variant, revision);
+}
+
+static void print_midr()
+{
+    uint32_t midr = (uint32_t)ARM64_READ_SYSREG(midr_el1);
+    char cpu_name[128];
+    midr_to_core(midr, cpu_name, sizeof(cpu_name));
+    dprintf(INFO, "ARM cpu %u: midr_el1 %#x %s\n", arch_curr_cpu_num(), midr, cpu_name);
+}
+
 void arch_init(void)
 {
 #if WITH_SMP
     arch_mp_init_percpu();
 
-    LTRACEF("midr_el1 %#" PRIx64 "\n", ARM64_READ_SYSREG(midr_el1));
+    print_midr();
 
     uint32_t max_cpus = arch_max_num_cpus();
     uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", max_cpus);
@@ -315,7 +350,7 @@ extern "C" void arm64_secondary_entry(void)
 
     arch_mp_init_percpu();
 
-    LTRACEF("cpu num %u\n", cpu);
+    print_midr();
 
     lk_secondary_cpu_entry();
 }
