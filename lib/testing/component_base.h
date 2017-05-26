@@ -68,13 +68,14 @@ class ComponentBase : protected SingleServiceApp<Component> {
   void Delete(const std::function<void()>& done) {
     auto binding = Base::PassBinding();  // To invoke done() after delete this.
     delete this;
-    modular::testing::Done();
-    done();
+    modular::testing::Done(done);
   }
 
   void DeleteAndQuit(const std::function<void()>& done) {
-    Delete(done);
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    Delete([done] {
+        done();
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      });
   }
 
  private:

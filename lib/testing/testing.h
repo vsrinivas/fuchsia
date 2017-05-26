@@ -31,11 +31,29 @@ void Fail(const std::string& log_msg);
 // the test has finished altogether. If Done() is not called and the connection
 // to the TestService is broken, the test is declared as failed and is torn
 // down. If Done() is called, it is not possible to call Teardown().
+//
+// The calling test component should defer its own exit until test runner has
+// acknowledged the receipt of the message using the ack callback. Otherwise
+// there is a race between the teardown request and the close of the connection
+// to the application controller. If the close of the application controller is
+// noticed first by the test runner, it terminates the test as failed.
+void Done(const std::function<void()>& ack);
+
+// Deprecated. This variant of the function suffers from a race condition.
 void Done();
 
 // A test may call Teardown() to finish the test run and tear down the service.
 // Unless Fail() is called, the TestRunner will consider the test run as having
 // passed successfully.
+//
+// The calling test component should defer its own exit until test runner has
+// acknowledged the receipt of the message using the ack callback. Otherwise
+// there is a race between the teardown request and the close of the connection
+// to the application controller. If the close of the application controller is
+// noticed first by the test runner, it terminates the test as failed.
+void Teardown(const std::function<void()>& ack);
+
+// Deprecated. This variant of the function suffers from a race condition.
 void Teardown();
 
 // Signals that this process expects to be terminated within the time specified.

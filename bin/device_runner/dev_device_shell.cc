@@ -73,9 +73,13 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
     FTL_LOG(INFO) << "DeviceShell::Terminate()";
 
     if (settings_.test) {
-      modular::testing::Teardown();
+      modular::testing::Teardown([this, done] { Exit(done); });
+    } else {
+      Exit(done);
     }
+  }
 
+  void Exit(const TerminateCallback& done) {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     done();
   }

@@ -36,22 +36,40 @@ void Fail(const std::string& log_msg) {
   }
 }
 
-void Done() {
+void Done(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Done([] {});
+    g_test_runner->Done(ack);
     g_test_runner.reset();
+  } else {
+    ack();
   }
+
+  if (g_test_runner_store.is_bound())
+    g_test_runner_store.reset();
+}
+
+void Done() {
+  FTL_LOG(WARNING) << "Done() used in a race. Test is flaky."
+                   << " Use Done with callback instead.";
+  Done([]{});
+}
+
+void Teardown(const std::function<void()>& ack) {
+  if (g_test_runner.is_bound()) {
+    g_test_runner->Teardown(ack);
+    g_test_runner.reset();
+  } else {
+    ack();
+  }
+
   if (g_test_runner_store.is_bound())
     g_test_runner_store.reset();
 }
 
 void Teardown() {
-  if (g_test_runner.is_bound()) {
-    g_test_runner->Teardown([] {});
-    g_test_runner.reset();
-  }
-  if (g_test_runner_store.is_bound())
-    g_test_runner_store.reset();
+  FTL_LOG(WARNING) << "Teardown() used in a race. Test is flaky."
+                   << " Use Teardown with callback instead.";
+  Teardown([]{});
 }
 
 void WillTerminate(double withinSeconds) {
