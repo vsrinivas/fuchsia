@@ -57,10 +57,6 @@
             "bootfs_path": "apps/input"
         },
         {
-            "binary": "input_manager_service",
-            "bootfs_path": "apps/input_manager_service"
-        },
-        {
             "binary": "gen/apps/mozart/examples/basic_wm/basic_wm.flx",
             "bootfs_path": "apps/basic_wm"
         },
@@ -117,10 +113,6 @@
       {
           "file": "apps/mozart/src/root_presenter/resources/cursor32.png",
           "bootfs_path": "data/root_presenter/cursor32.png"
-      },
-      {
-          "file": "apps/mozart/src/view_manager/associates.config",
-          "bootfs_path": "data/view_manager_service/associates.config"
       }
     ]
 }
