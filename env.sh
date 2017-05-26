@@ -17,7 +17,7 @@
 #
 
 if [[ -n "${ZSH_VERSION}" ]]; then
-  export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+  export FUCHSIA_SCRIPTS_DIR=${${(%):-%x}:a:h}
 else
   export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
@@ -25,7 +25,7 @@ export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
 export QEMU_DIR="${FUCHSIA_DIR}/buildtools/qemu/bin"
-export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_DIR}/scripts/.git rev-parse HEAD)"
+export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
 ### envhelp: print usage for command or list of commands
 
@@ -751,27 +751,14 @@ function fsftp() {
 
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
-  fpath=(${FUCHSIA_SCRIPTS_DIR}/zsh-completion $fpath[@])
-  if whence -w _path_files > /dev/null; then
-    # clear cached load of _path_files
-    unfunction _path_files
+  if [[ ${fpath[(Ie)${FUCHSIA_SCRIPTS_DIR}/zsh-completion]} -eq 0 ]]; then
+    # if the fuchsia zsh completion dir isn't in the fpath yet...
+    # add zsh completion function dir to the fpath
+    fpath=(${FUCHSIA_SCRIPTS_DIR}/zsh-completion $fpath[@])
+    # load and run compinit
+    autoload -U compinit
+    compinit
   fi
-  autoload -U _path_files
-  # load and run compinit
-  autoload -U compinit
-  compinit
-
-  ### Map paths that start // to $FUCHSIA_DIR
-  function fuchsia::zle::accept-line() {
-    # make a shorter version of $FUCHSIA_DIR using ~
-    local short_dir=${FUCHSIA_DIR/${HOME}/\~}
-    # at the start of the line
-    BUFFER=${BUFFER/#\/\//$short_dir\/}
-    # anywhere in the line
-    BUFFER=${BUFFER// \/\// $short_dir\/}
-    zle .accept-line
-  }
-  zle -N accept-line fuchsia::zle::accept-line
 fi
 
 alias gce="$FUCHSIA_SCRIPTS_DIR/gce/gce"
