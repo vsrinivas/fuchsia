@@ -141,6 +141,8 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
             return ERR_INVALID_ARGS;
     }
 
+    // The documented public API states that that writing to the handles buffer
+    // must happen after writing to the data buffer.
     if (num_handles > 0u) {
         msg_get_handles(up, msg.get(), _handles, num_handles);
     }

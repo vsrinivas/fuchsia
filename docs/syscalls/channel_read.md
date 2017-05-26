@@ -26,6 +26,10 @@ size of the read buffers.
 Channel messages may contain both byte data and handle payloads and may
 only be read in their entirety.  Partial reads are not possible.
 
+The *bytes* buffer is written before the *handles* buffer. In the event of
+overlap between these two buffers, the contents written to *handles*
+will overwrite the portion of *bytes* it overlaps.
+
 ## RETURN VALUE
 
 **channel_read**() returns **NO_ERROR** on success, if *actual_bytes*
