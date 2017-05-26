@@ -104,19 +104,24 @@ void main() {
 
   _controller.addListener(() {
     String currentText = _controller.text;
-    _log("Current text: $currentText");
+//    _log("Current text: $currentText");
     _module.publishText(currentText);
   });
 
   runApp(
-      new Container(
-        child: new TextField(
-            controller: _controller,
-            decoration: new InputDecoration(
-                hintText: 'Type something',
+    new MaterialApp(
+        title : "Basic Text Reporter",
+        home : new Scaffold(
+            appBar : new AppBar(
+              title : new Text("Basic Text Reporter"),
             ),
-        ),
-        color : Colors.white,
-      )
+            body : new TextField(
+                controller : _controller,
+                decoration : new InputDecoration(
+                    hintText : 'Type something',
+                ),
+            ),
+        )
+    )
   );
 }
