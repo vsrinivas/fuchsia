@@ -1,5 +1,8 @@
-Fuchsia Open Source Template Repository
+Rust Ledger Example (WIP)
 =======================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This is an example Rust app for Fuchsia that interacts with the
+[ledger](https://fuchsia.googlesource.com/ledger/) data store.
+
+It is currently a work in progress and doesn't yet actually connect to ledger
+or do anything of note except build and print out a message.
