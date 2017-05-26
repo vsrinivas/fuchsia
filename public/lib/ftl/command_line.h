@@ -108,21 +108,21 @@ class CommandLine final {
   // Returns true if this command line has the option |name| (and if |index| is
   // non-null, sets |*index| to the index of the *last* occurrence of the given
   // option in |options()|) and false if not.
-  bool HasOption(const std::string& name, size_t* index = nullptr) const;
+  bool HasOption(StringView name, size_t* index = nullptr) const;
 
   // Gets the value of the option |name|. Returns true (and sets |*value|) on
   // success and false (leaving |*value| alone) on failure.
-  bool GetOptionValue(const std::string& name, std::string* value) const;
+  bool GetOptionValue(StringView name, std::string* value) const;
 
-  // Gets all values of the option |name|. Returns all values, which may be empty if the option is
-  // not specified.
-  std::vector<std::string> GetOptionValues(const std::string& name) const;
+  // Gets all values of the option |name|. Returns all values, which may be
+  // empty if the option is not specified.
+  std::vector<StringView> GetOptionValues(StringView name) const;
 
   // Gets the value of the option |name|, with a default if the option is not
   // specified. (Note: This doesn't return a const reference, since this would
   // make the |default_value| argument inconvenient/dangerous.)
-  std::string GetOptionValueWithDefault(const std::string& name,
-                                        const std::string& default_value) const;
+  std::string GetOptionValueWithDefault(StringView name,
+                                        StringView default_value) const;
 
  private:
   bool has_argv0_ = false;

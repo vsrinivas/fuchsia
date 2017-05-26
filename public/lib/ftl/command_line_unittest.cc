@@ -6,9 +6,9 @@
 
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/macros.h"
-#include "gtest/gtest.h"
 
 namespace ftl {
 namespace {
@@ -257,9 +257,9 @@ TEST(CommandLineTest, CommandLineFromInitializerList) {
 TEST(CommandLineTest, OddArguments) {
   {
     // Except for "arg", these are all options.
-    auto cl =
-        CommandLineFromInitializerList({"my_program", "--=", "--=foo", "--bar=",
-                                        "--==", "--===", "--==x", "arg"});
+    auto cl = CommandLineFromInitializerList(
+        {"my_program", "--=", "--=foo", "--bar=", "--==", "--===", "--==x",
+         "arg"});
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ("my_program", cl.argv0());
     std::vector<CommandLine::Option> expected_options = {
@@ -315,7 +315,7 @@ TEST(CommandLineTest, MultipleOccurrencesOfOption) {
       CommandLine::Option("flag1", "value3")};
   EXPECT_EQ("value3", cl.GetOptionValueWithDefault("flag1", "nope"));
   EXPECT_EQ("value2", cl.GetOptionValueWithDefault("flag2", "nope"));
-  std::vector<std::string> values = cl.GetOptionValues("flag1");
+  std::vector<StringView> values = cl.GetOptionValues("flag1");
   ASSERT_EQ(2u, values.size());
   EXPECT_EQ("value1", values[0]);
   EXPECT_EQ("value3", values[1]);
