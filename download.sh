@@ -19,9 +19,9 @@ function download_file_if_needed() {
 
   local path="${base_path}${extension}"
   local stamp_path="${base_path}.stamp"
-  local requested_hash="$(cat "${base_path}.sha1")"
+  local requested_hash="$(<${base_path}.sha1)"
 
-  if [[ ! -f "${stamp_path}" ]] || [[ "${requested_hash}" != "$(cat "${stamp_path}")" ]]; then
+  if [[ ! -f "${stamp_path}" ]] || [[ "${requested_hash}" != "$(<${stamp_path})" ]]; then
     echo "Downloading ${name}..."
     rm -f -- "${path}"
     download "${url}/${requested_hash}" "${path}"
@@ -51,5 +51,21 @@ function download_tarball() {
     mkdir -p -- "${untar_dir}"
     (cd -- "${untar_dir}" && rm -rf -- "${name}" && tar xf "${tar_path}")
     rm -f -- "${tar_path}"
+  fi
+}
+
+# download_zipfile <name> <base url> <unzip directory>
+function download_zipfile() {
+  local name="${1}"
+  local base_url="${2}"
+  local unzip_dir="${3}"
+  local base_path="${SCRIPT_ROOT}/${name}"
+  local zip_path="${base_path}.zip"
+
+  download_file_if_needed "${name}" "${base_url}" "${base_path}" ".zip"
+  if [[ -f "${zip_path}" ]]; then
+    mkdir -p -- "${unzip_dir}"
+    (cd -- "${unzip_dir}" && rm -rf -- "${name}" && unzip -o -q "${zip_path}")
+    rm -f -- "${zip_path}"
   fi
 }
