@@ -127,7 +127,7 @@ AcpiTbLoadNamespace (
 
     (void) AcpiUtAcquireMutex (ACPI_MTX_TABLES);
 
-    if (AcpiGbl_DsdtIndex == UINT32_MAX ||
+    if (AcpiGbl_DsdtIndex == ACPI_INVALID_TABLE_INDEX ||
         !AcpiGbl_RootTableList.CurrentTableCount)
     {
         Status = AE_NO_ACPI_TABLES;
