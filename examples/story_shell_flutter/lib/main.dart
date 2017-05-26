@@ -79,7 +79,7 @@ class StoryShellImpl extends StoryShell {
 
   /// StoryShell
   @override
-  void focusView(String viewId) {
+  void focusView(String viewId, String relativeViewId) {
     // Nothing
   }
 

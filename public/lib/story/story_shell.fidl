@@ -35,7 +35,9 @@ interface StoryShell {
               SurfaceRelation? surface_relation);
 
   // Focus the view with view_id, bringing it to the foreground.
-  FocusView(string view_id);
+  // Optionally provide a relative_view_id to focus relative to another
+  // view instead of absolutely.
+  FocusView(string view_id, string? relative_view_id);
 
   // Defocus the view with view_id, dismissing it to the background.
   DefocusView(string view_id);

@@ -794,7 +794,16 @@ void StoryImpl::StartModuleInShell(
 
 void StoryImpl::FocusModule(const fidl::Array<fidl::String>& module_path) {
   if (story_shell_) {
-    story_shell_->FocusView(PathString(module_path));
+    if (module_path.size() > 0) {
+      // Focus modules relative to their parent modules.
+      fidl::Array<fidl::String> parent_module_path = module_path.Clone();
+      parent_module_path.resize(parent_module_path.size() - 1);
+      story_shell_->FocusView(PathString(module_path),
+                              PathString(parent_module_path));
+    } else {
+      // Focus root modules absolutely.
+      story_shell_->FocusView(PathString(module_path), nullptr);
+    }
   }
 }
 
