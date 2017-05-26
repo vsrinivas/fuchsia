@@ -21,34 +21,42 @@ Use the `ps` tool:
 
 ```
 magenta$ ps
-TASK        VIRT     RES NAME
-p:1041     16.2M   1716k bin/devmgr
-j:1068                   magenta-drivers
-  p:1208   13.1M   1676k devhost:root
-  p:1473  261.7M   1624k /boot/bin/acpisvc
-  p:1621   4216k   1260k devhost:acpi
-  p:1669   4172k   1240k devhost:pci#0:8086:29c0
-  p:1756   30.1M   4684k devhost:pci#1:1234:1111
-  p:1818   4172k   1240k devhost:pci#2:8086:2918
-  p:1993   6724k   1760k devhost:pci#3:8086:2922
-  p:2180   4172k   1240k devhost:pci#4:8086:2930
-j:1082                   magenta-services
-  p:1083   4716k   1332k crashlogger
-  p:1173   4032k   1176k netsvc
-  p:2988   4220k   1324k sh:console
-  p:3020   4136k   1296k sh:vc
-  p:3183   4044k   1108k /boot/bin/ps
-TASK        VIRT     RES NAME
+TASK           PSS PRIVATE  SHARED NAME
+j:1028                             root
+  p:1041   1390.7k   1388k     32k bin/devmgr
+  j:1080                           magenta-drivers
+    p:1260  774.7k    772k     32k /boot/bin/acpisvc
+    p:1554  242.7k    240k     32k devhost:root
+    p:1598  642.7k    640k     32k devhost:misc
+    p:1668  258.7k    256k     32k devhost:platform
+    p:1852 3914.7k   3912k     32k devhost:pci#1:1234:1111
+    p:1925   24.4M   24.4M     32k devhost:pci#3:8086:2922
+  j:1101                           magenta-services
+    p:1102  294.7k    292k     32k crashlogger
+    p:1207  234.7k    232k     32k netsvc
+    p:2210  362.7k    360k     32k sh:console
+    p:2327  258.7k    256k     32k sh:vc
+    p:2430  322.7k    320k     32k /boot/bin/ps
+TASK           PSS PRIVATE  SHARED NAME
 ```
 
-**RES** (resident memory) is the one to care about: it shows how many physical
-pages are mapped into the process, and physical pages are what the system runs
-out of.
+**PSS** (proportional shared state) is a number of bytes that estimates how much
+in-process mapped physical memory the process is consuming. Its value is
+`PRIVATE + (SHARED / sharing-ratio)`, where `sharing-ratio` is based on the
+number of processes that share each of the pages in this process.
 
-**VIRT** is the amount of potentially-mappable virtual address space allocated
-to a process (via mappings on a VMAR). Apart from the metadata necessary to keep
-track of the ranges, high VIRT values don't necessarily mean high physical
-memory usage.
+The intent is that, e.g., if four processes share a single page, 1/4 of the
+bytes of that page is included in each of the four process's `PSS`. If another
+page is shared between two processes, then each gets 1/2 of that page's bytes.
+
+**PRIVATE** is the number of bytes that are mapped only by this process. I.e.,
+none of this memory is mapped into another process. Note that this does not
+account for private VMOs that are not mapped.
+
+**SHARED** is the number of bytes that are mapped by this process and at least
+one other process. Note that this does not account for shared VMOs that are not
+mapped. It also does not indicate how many processes share the memory: it could
+be 2, it could be 50.
 
 ### Dump a process's detailed memory maps
 

@@ -16,17 +16,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STATE_LEN (7 + 1)  // +1 for trailing NUL
+#define MAX_STATE_LEN (7 + 1) // +1 for trailing NUL
 
 // A single task (job or process).
 typedef struct {
-    char type; // 'j' (job), 'p' (process), or 't' (thread)
+    char type;                                     // 'j' (job), 'p' (process), or 't' (thread)
     char koid_str[sizeof("18446744073709551616")]; // 1<<64 + NUL
     int depth;
     char name[MX_MAX_NAME_LEN];
-    char mapped_bytes_str[MAX_FORMAT_SIZE_LEN];
     char state_str[MAX_STATE_LEN];
-    char allocated_bytes_str[MAX_FORMAT_SIZE_LEN];
+    char private_bytes_str[MAX_FORMAT_SIZE_LEN];
+    char shared_bytes_str[MAX_FORMAT_SIZE_LEN];
+    char pss_bytes_str[MAX_FORMAT_SIZE_LEN];
 } task_entry_t;
 
 // An array of tasks.
@@ -79,14 +80,15 @@ static mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t ko
     if (status == ERR_BAD_STATE) {
         // process has exited, but has not been destroyed
         info.mem_mapped_bytes = 0;
-        info.mem_committed_bytes = 0;
     } else if (status != NO_ERROR) {
         return status;
     }
-    format_size(e.mapped_bytes_str, sizeof(e.mapped_bytes_str),
-                info.mem_mapped_bytes);
-    format_size(e.allocated_bytes_str, sizeof(e.allocated_bytes_str),
-                info.mem_committed_bytes);
+    format_size(e.private_bytes_str, sizeof(e.private_bytes_str),
+                info.mem_private_bytes);
+    format_size(e.shared_bytes_str, sizeof(e.shared_bytes_str),
+                info.mem_shared_bytes);
+    format_size(e.pss_bytes_str, sizeof(e.pss_bytes_str),
+                info.mem_private_bytes + info.mem_scaled_shared_bytes);
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     add_entry(&tasks, &e);
     return NO_ERROR;
@@ -98,20 +100,20 @@ static const char* state_string(const mx_info_thread_t* info) {
         return "excp";
     } else {
         switch (info->state) {
-            case MX_THREAD_STATE_NEW:
-                return "new";
-            case MX_THREAD_STATE_RUNNING:
-                return "running";
-            case MX_THREAD_STATE_SUSPENDED:
-                return "susp";
-            case MX_THREAD_STATE_BLOCKED:
-                return "blocked";
-            case MX_THREAD_STATE_DYING:
-                return "dying";
-            case MX_THREAD_STATE_DEAD:
-                return "dead";
-            default:
-                return "???";
+        case MX_THREAD_STATE_NEW:
+            return "new";
+        case MX_THREAD_STATE_RUNNING:
+            return "running";
+        case MX_THREAD_STATE_SUSPENDED:
+            return "susp";
+        case MX_THREAD_STATE_BLOCKED:
+            return "blocked";
+        case MX_THREAD_STATE_DYING:
+            return "dying";
+        case MX_THREAD_STATE_DEAD:
+            return "dead";
+        default:
+            return "???";
         }
     }
 }
@@ -138,9 +140,11 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
 
 void print_header(int id_w, bool with_threads) {
     if (with_threads) {
-        printf("%*s %7s %7s %7s %s\n", -id_w, "TASK", "VIRT", "RES", "STATE", "NAME");
+        printf("%*s %7s %7s %7s %7s %s\n",
+               -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
     } else {
-        printf("%*s %7s %7s %s\n", -id_w, "TASK", "VIRT", "RES", "NAME");
+        printf("%*s %7s %7s %7s %s\n",
+               -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "NAME");
     }
 }
 
@@ -171,13 +175,20 @@ void print_table(task_table_t* table, bool with_threads) {
         snprintf(idbuf, id_w + 1,
                  "%*s%c:%s", e->depth * 2, "", e->type, e->koid_str);
         if (with_threads) {
+            printf("%*s %7s %7s %7s %7s %s\n",
+                   -id_w, idbuf,
+                   e->pss_bytes_str,
+                   e->private_bytes_str,
+                   e->shared_bytes_str,
+                   e->state_str,
+                   e->name);
+        } else {
             printf("%*s %7s %7s %7s %s\n",
                    -id_w, idbuf,
-                   e->mapped_bytes_str, e->allocated_bytes_str, e->state_str, e->name);
-        } else {
-            printf("%*s %7s %7s %s\n",
-                   -id_w, idbuf,
-                   e->mapped_bytes_str, e->allocated_bytes_str, e->name);
+                   e->pss_bytes_str,
+                   e->private_bytes_str,
+                   e->shared_bytes_str,
+                   e->name);
         }
     }
     free(idbuf);
