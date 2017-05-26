@@ -111,7 +111,12 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
-        if (thread->exception_context->frame == NULL)
+        if (thread->exception_context->frame == nullptr)
+            return ERR_NOT_SUPPORTED;
+    } else {
+        // TODO(dje): Punt if, for example, suspended in channel call.
+        // Can be removed when MG-747 done.
+        if (thread->arch.suspended_general_regs.gregs == nullptr)
             return ERR_NOT_SUPPORTED;
     }
 
@@ -141,7 +146,12 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
     if (thread_stopped_in_exception(thread)) {
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
-        if (thread->exception_context->frame == NULL)
+        if (thread->exception_context->frame == nullptr)
+            return ERR_NOT_SUPPORTED;
+    } else {
+        // TODO(dje): Punt if, for example, suspended in channel call.
+        // Can be removed when MG-747 done.
+        if (thread->arch.suspended_general_regs.gregs == nullptr)
             return ERR_NOT_SUPPORTED;
     }
 

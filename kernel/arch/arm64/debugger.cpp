@@ -30,6 +30,11 @@ static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_re
         // exception where there is no frame.
         if (thread->exception_context->frame == NULL)
             return ERR_NOT_SUPPORTED;
+    } else {
+        // TODO(dje): Punt if, for example, suspended in channel call.
+        // Can be removed when MG-747 done.
+        if (thread->arch.suspended_general_regs == nullptr)
+            return ERR_NOT_SUPPORTED;
     }
 
     struct arm64_iframe_long *in = thread->arch.suspended_general_regs;
@@ -54,6 +59,11 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_gene
         // TODO(dje): We could get called while processing a synthetic
         // exception where there is no frame.
         if (thread->exception_context->frame == NULL)
+            return ERR_NOT_SUPPORTED;
+    } else {
+        // TODO(dje): Punt if, for example, suspended in channel call.
+        // Can be removed when MG-747 done.
+        if (thread->arch.suspended_general_regs == nullptr)
             return ERR_NOT_SUPPORTED;
     }
 
