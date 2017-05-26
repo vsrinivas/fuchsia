@@ -30,6 +30,12 @@ remain accessible to the caller's process and are not transferred.
 It is invalid to include *handle* (the handle of the channel being written
 to) in the *handles* array (the handles being sent in the message).
 
+The maximum number of handles which may be sent in a message is
+*MX_CHANNEL_MAX_MSG_HANDLES*, which is 64.
+
+The maximum number of bytes which may be sent in a message is
+*MX_CHANNEL_MAX_MSG_BYTES*, which is 65536.
+
 
 ## RETURN VALUE
 
@@ -64,6 +70,8 @@ largest allowable size for channel messages.
 
 *num_handles* is a count of the number of elements in the *handles*
 array, not its size in bytes.
+
+The byte size limitation on messages is not yet finalized.
 
 ## SEE ALSO
 

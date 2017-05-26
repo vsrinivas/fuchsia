@@ -13,7 +13,11 @@
 #include <mxcpp/new.h>
 
 constexpr uint32_t kMaxMessageSize = 65536u;
-constexpr uint32_t kMaxMessageHandles = 1024u;
+constexpr uint32_t kMaxMessageHandles = 64u;
+
+// ensure public constants are aligned
+static_assert(MX_CHANNEL_MAX_MSG_BYTES == kMaxMessageSize, "");
+static_assert(MX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
 
 // static
 mx_status_t MessagePacket::Create(uint32_t data_size, uint32_t num_handles,

@@ -263,6 +263,9 @@ typedef int64_t mx_rel_off_t;
 // Channel options and limits.
 #define MX_CHANNEL_READ_MAY_DISCARD         1u
 
+#define MX_CHANNEL_MAX_MSG_BYTES            65536u
+#define MX_CHANNEL_MAX_MSG_HANDLES          64u
+
 // Socket options and limits.
 #define MX_SOCKET_HALF_CLOSE                1u
 
