@@ -52,6 +52,7 @@
         "tracing",
         "url",
         "vim",
+        "web_view",
         "wlanstack"
     ]
 }

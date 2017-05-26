@@ -1,8 +1,11 @@
 {
     "imports": [
+        "curl",
         "fonts",
+        "libxml2",
         "mozart",
-        "webkit"
+        "sqlite",
+        "zlib"
     ],
     "labels": [
         "//apps/web_view"
@@ -11,6 +14,10 @@
         {
             "binary": "web_view",
             "bootfs_path": "apps/web_view"
+        },
+        {
+            "binary": "x64-shared/libwebkit.so",
+            "bootfs_path": "lib/libwebkit.so"
         }
     ]
 }
