@@ -4,6 +4,17 @@ This file contains a random collection of notes for hacking on Magenta.
 
 [TOC]
 
+## Building and testing
+
+To ensure changes don't impact any of the builds it is recommended that
+that one tests all targets, with gcc and clang, and in both release mode
+and debug mode. This can all be executed with the `buildall` script:
+
+```./scripts/buildall -q -c -r```
+
+From the magenta shell run `k ut all` to execute all kernel tests, and
+`runtests` to execute all userspace tests.
+
 ## Syscall generation
 
 Syscall support is generated from
