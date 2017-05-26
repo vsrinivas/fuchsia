@@ -1,0 +1,95 @@
+%YAML 1.2
+---
+# Go to Sublime Text > Preferences > Browse Packages and copy this file into the "User" package
+# See http://www.sublimetext.com/docs/3/syntax.html
+name: FIDL
+file_extensions:
+  - fidl
+scope: source.fidl
+contexts:
+  main:
+    - include: comments
+    - include: literal
+    - match: \b(import|module)\b
+      scope: keyword.control.fidl
+    - match: \b(default|const)\b
+      scope: keyword.fidl
+    - match: \b(bool|float|double|int8|int16|int32|int64|uint8|uint16|uint32|uint64|string)\b
+      scope: storage.type.basic.fidl
+    - match: \b(handle|array|map)\b
+      scope: storage.type.compound.fidl
+    - match: \b(struct|union)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+      captures:
+        1: storage.type.fidl
+        2: entity.name.type.fidl
+      push:
+        - match: \{
+          scope: punctuation.section.block.begin.fidl
+          push:
+            - match: \}
+              scope: punctuation.section.block.end.fidl
+              pop: true
+            - include: main
+        - match: (?<=\})
+          pop: true
+    - match: \b(interface)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+      captures:
+        1: storage.type.fidl
+        2: entity.name.type.fidl
+      push:
+        - match: \b[_A-Za-z][_A-Za-z0-9]*\b
+          scope: entity.name.function.fidl
+          push:
+            - match: (?<=;)
+              pop: true
+            - include: main
+        - match: (?<=\})
+          pop: true
+        - include: main
+    - match: \b(enum)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+      captures:
+        1: storage.type.fidl
+        2: entity.name.type.fidl
+      scope: meta.enum-block.fidl
+      push:
+        - match: (?<=\})
+          pop: true
+        - match: '[A-Z_]+'
+          scope: entity.name.constant.enum.fidl
+        - include: main
+
+  double_quoted_string:
+    - meta_scope: string.quoted.double.fidl
+    - match: \\(\\|[abefnprtv\'"?]|[0-3]\\d{,2}|[4-7]\\d?|x[a-fA-F0-9]{,2}|u[a-fA-F0-9]{,4}|U[a-fA-F0-9]{,8})
+      scope: constant.character.escape.fidl
+    - match: '"'
+      scope: punctuation.definition.string.end.fidl
+      pop: true
+
+  line_comment:
+    - meta_scope: comment.line.fidl
+    - match: $
+      pop: true
+
+  comments:
+    - match: /\*
+      scope: punctuation.definition.comment.begin.fidl
+      push:
+        - meta_scope: comment.block.fidl
+        - match: \*/
+          scope: punctuation.definition.comment.end.fidl
+          pop: true
+    - match: '//'
+      scope: punctuation.definition.comment.fidl
+      push: line_comment
+
+  literal:
+    - match: '"'
+      scope: punctuation.definition.string.begin.fidl
+      push: double_quoted_string
+    - match: \b(true|false)\b
+      scope: constant.bool.language.fidl
+    - match: \b(float|double)(.INFINITY|.NEGATIVE_INFINITY|.NAN)\b
+      scope: constant.float.language.fidl
+    - match: \b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\.?[0-9]*)|(\.[0-9]+))((e|E)(\+|-)?[0-9]+)?)\b
+      scope: constant.numeric.c
