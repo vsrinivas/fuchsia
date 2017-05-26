@@ -16,6 +16,7 @@
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
+#include <mxtl/string_piece.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -101,11 +102,7 @@ bool benchmark_write_read(void) {
 
 #define START_STRING "/aaa"
 
-size_t constexpr cStrlen(const char* str) {
-    return *str ? 1 + cStrlen(str + 1) : 0;
-}
-
-size_t constexpr kComponentLength = cStrlen(START_STRING);
+size_t constexpr kComponentLength = mxtl::constexpr_strlen(START_STRING);
 
 template <size_t len>
 void increment_str(char* str) {
@@ -123,7 +120,7 @@ void increment_str(char* str) {
 
 template <size_t MaxComponents>
 bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
-    static_assert(MaxComponents * kComponentLength + cStrlen(MOUNT_POINT) < PATH_MAX,
+    static_assert(MaxComponents * kComponentLength + mxtl::constexpr_strlen(MOUNT_POINT) < PATH_MAX,
                   "Path depth is too long");
     size_t path_len = strlen(path);
     char path_component[kComponentLength + 1];
@@ -142,7 +139,7 @@ bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
 bool walk_up_path_components(char* path, bool (*cb)(const char* path)) {
     size_t path_len = strlen(path);
 
-    while (path_len != cStrlen(MOUNT_POINT)) {
+    while (path_len != mxtl::constexpr_strlen(MOUNT_POINT)) {
         ASSERT_TRUE(cb(path), "Callback failure");
         path[path_len - kComponentLength] = 0;
         path_len -= kComponentLength;

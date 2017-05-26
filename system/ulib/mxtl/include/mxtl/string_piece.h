@@ -8,6 +8,14 @@
 
 namespace mxtl {
 
+constexpr static size_t constexpr_strlen(const char* str) {
+#if defined(_MSC_VER)
+#error "__builtin_strlen not defined for MSVC++"
+#else
+    return __builtin_strlen(str);
+#endif
+}
+
 // A string-like object that points to a sized piece of memory.
 // |length_| does NOT include a trailing NUL and no guarantee is made that
 // you can check |ptr_[length_]| to see if a NUL is there.

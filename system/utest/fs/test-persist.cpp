@@ -16,13 +16,14 @@
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
 #include <mxtl/array.h>
+#include <mxtl/string_piece.h>
 #include <mxtl/unique_ptr.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
-bool is_directory(const char* const path) {
-    return path[strlen(path) - 1] == '/';
+constexpr bool is_directory(const char* const path) {
+    return path[mxtl::constexpr_strlen(path) - 1] == '/';
 }
 
 bool test_persist_simple(void) {
