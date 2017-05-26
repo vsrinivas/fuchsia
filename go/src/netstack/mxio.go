@@ -387,7 +387,7 @@ func (ios *iostate) loopShutdown() {
 
 // loopDgramRead connects libc read to the network stack for UDP messages.
 func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
-	dataHandle := mx.Channel{ios.dataHandle}
+	dataHandle := mx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
@@ -421,7 +421,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 
 	writeLoop:
 		for {
-			err = dataHandle.Write(out, nil, 0)
+			_, err = dataHandle.Write(out, 0)
 			switch mxerror.Status(err) {
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
@@ -437,25 +437,25 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 
 // loopDgramWrite connects libc write to the network stack for UDP messages.
 func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
-	dataHandle := mx.Channel{ios.dataHandle}
+	dataHandle := mx.Socket(ios.dataHandle)
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	for {
 		v := buffer.NewView(2048)
-		n, _, err := dataHandle.Read([]byte(v), nil, 0)
+		n, err := dataHandle.Read([]byte(v), 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
 		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return
 		case mx.ErrShouldWait:
-			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+			obs, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			case mx.ErrOk:
 				switch {
-				case obs&mx.SignalChannelPeerClosed != 0:
+				case obs&mx.SignalSocketPeerClosed != 0:
 					return
 				case obs&mx.SignalChannelReadable != 0:
 					continue
@@ -510,7 +510,7 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 		}
 		if ep != nil {
 			switch transProto {
-			case tcp.ProtocolNumber:
+			case tcp.ProtocolNumber, udp.ProtocolNumber:
 				s0, s1, err := mx.NewSocket(0)
 				if err != nil {
 					return nil, err
@@ -523,13 +523,6 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 					ios.peerDataHandle.Close()
 					return nil, err
 				}
-			case udp.ProtocolNumber:
-				c0, c1, err := mx.NewChannel(0)
-				if err != nil {
-					return nil, err
-				}
-				ios.dataHandle = c0.Handle
-				peerS = c1.Handle
 			default:
 				panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 			}
