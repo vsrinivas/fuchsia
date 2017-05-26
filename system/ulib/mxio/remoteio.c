@@ -94,11 +94,15 @@ static void discard_handles(mx_handle_t* handles, unsigned count) {
 mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, void* cookie) {
     mx_status_t r;
 
-    msg->hcount = MXIO_MAX_HANDLES;
+    // NOTE: hcount intentionally received out-of-bound from the message to
+    // avoid letting "client-supplied" bytes override the REAL hcount value.
+    uint32_t hcount = 0;
     uint32_t dsz = sizeof(mxrio_msg_t);
-    if ((r = mx_channel_read(h, 0, msg, msg->handle, dsz, msg->hcount, &dsz, &msg->hcount)) < 0) {
+    if ((r = mx_channel_read(h, 0, msg, msg->handle, dsz, MXIO_MAX_HANDLES, &dsz, &hcount)) < 0) {
         return r;
     }
+    // Now, "msg->hcount" can be trusted once again.
+    msg->hcount = hcount;
 
     if (!is_message_reply_valid(msg, dsz)) {
         discard_handles(msg->handle, msg->hcount);
