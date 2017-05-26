@@ -44,11 +44,14 @@ class StandardOutputBase : public AudioOutput {
     ~RendererBookkeeping() override;
 
     // The output values of these functions are in fractional frames.
-    TimelineFunction lt_to_renderer_frames;
-    TimelineFunction out_frames_to_renderer_frames;
+    TimelineFunction local_time_to_renderer_subframes;
+    TimelineFunction output_frames_to_renderer_subframes;
 
-    uint32_t lt_to_renderer_frames_gen = 0;
-    uint32_t out_frames_to_renderer_frames_gen = MixJob::kInvalidGeneration;
+    TimelineFunction local_time_to_renderer_frames;
+    TimelineFunction output_frames_to_renderer_frames;
+
+    uint32_t local_time_to_renderer_subframes_gen = 0;
+    uint32_t out_frames_to_renderer_subframes_gen = MixJob::kInvalidGeneration;
     uint32_t step_size;
     Gain::AScale amplitude_scale;
     MixerPtr mixer;

@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
@@ -53,6 +54,7 @@ std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value);
 std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value);
 std::ostream& operator<<(std::ostream& os,
                          const media::MediaPacketDemandPtr& value);
+std::ostream& operator<<(std::ostream& os, media::TimelineRate value);
 
 struct AsTime {
   explicit AsTime(int64_t time) : time_(time) {}

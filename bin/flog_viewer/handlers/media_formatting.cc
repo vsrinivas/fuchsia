@@ -314,5 +314,9 @@ const char* StringFromAudioSampleFormat(media::AudioSampleFormat value) {
   return "UNKNOWN FORMAT";
 }
 
+std::ostream& operator<<(std::ostream& os, media::TimelineRate value) {
+  return os << value.subject_delta() << "/" << value.reference_delta();
+}
+
 }  // namespace handlers
 }  // namespace flog

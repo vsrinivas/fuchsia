@@ -6,6 +6,7 @@
 
 #include <limits>
 
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/src/audio_server/audio_renderer_format_info.h"
 #include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
@@ -90,7 +91,6 @@ void StandardOutputBase::Process() {
       size_t bytes_to_zero = sizeof(int32_t) * cur_mix_job_.buf_frames *
                              output_formatter_->channels();
       ::memset(mix_buf_.get(), 0, bytes_to_zero);
-
 
       // Mix each renderer into the intermediate buffer, then clip/format into
       // the final buffer.
@@ -195,6 +195,21 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
 
     bool setup_done = false;
     AudioPipe::AudioPacketRefPtr pkt_ref;
+
+#ifdef FLOG_ENABLED
+    if (&setup == &setup_mix_) {
+      setup_done = setup(renderer, info);
+      if (!setup_done)
+        return;
+
+      // Just starting the job. Report consumption.
+      renderer->OnRenderRange(
+          info->output_frames_to_renderer_frames(cur_mix_job_.start_pts_of),
+          cur_mix_job_.buf_frames *
+              info->output_frames_to_renderer_frames.rate());
+    }
+#endif
+
     while (true) {
       // Try to grab the front of the packet queue.  If it has been flushed
       // since the last time we grabbed it, be sure to reset our mixer's
@@ -289,7 +304,7 @@ bool StandardOutputBase::ProcessMix(
 
   // Figure out where the first and last sampling points of this job are,
   // expressed in fractional renderer frames.
-  int64_t first_sample_ftf = info->out_frames_to_renderer_frames(
+  int64_t first_sample_ftf = info->output_frames_to_renderer_subframes(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
 
   FTL_DCHECK(frames_left);
@@ -392,7 +407,7 @@ bool StandardOutputBase::SetupTrim(const AudioRendererImplPtr& renderer,
   // which should be impossible unless the user has defined a playback rate
   // where the ratio between media time ticks and local time ticks is
   // greater than one.
-  trim_threshold_ = info->lt_to_renderer_frames(local_now_ticks);
+  trim_threshold_ = info->local_time_to_renderer_subframes(local_now_ticks);
 
   return true;
 }
@@ -423,7 +438,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
 
   // If the local time -> media time transformation has not changed since the
   // last time we examines it, just get out now.
-  if (lt_to_renderer_frames_gen == gen) {
+  if (local_time_to_renderer_subframes_gen == gen) {
     return;
   }
 
@@ -432,7 +447,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
   TimelineRate rate_in_frames_per_ns =
       timeline_function.rate() * format_info.frames_per_ns();
 
-  TimelineFunction tmp(
+  local_time_to_renderer_frames = TimelineFunction(
       timeline_function.reference_time(),
       timeline_function.subject_time() * format_info.frames_per_ns(),
       rate_in_frames_per_ns.reference_delta(),
@@ -440,12 +455,13 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
 
   // The transformation has changed, re-compute the local time -> renderer frame
   // transformation.
-  lt_to_renderer_frames =
-      TimelineFunction(format_info.frame_to_media_ratio()) * tmp;
+  local_time_to_renderer_subframes =
+      TimelineFunction(format_info.frame_to_media_ratio()) *
+      local_time_to_renderer_frames;
 
   // Update the generation, and invalidate the output to renderer generation.
-  lt_to_renderer_frames_gen = gen;
-  out_frames_to_renderer_frames_gen = MixJob::kInvalidGeneration;
+  local_time_to_renderer_subframes_gen = gen;
+  out_frames_to_renderer_subframes_gen = MixJob::kInvalidGeneration;
 }
 
 void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
@@ -458,7 +474,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.
-  if (out_frames_to_renderer_frames_gen == job.local_to_output_gen) {
+  if (out_frames_to_renderer_subframes_gen == job.local_to_output_gen) {
     return;
   }
 
@@ -467,19 +483,22 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   //
   // TODO(johngro): Don't assume that 0 means invalid.  Make it a proper
   // constant defined somewhere.
-  FTL_DCHECK(lt_to_renderer_frames_gen);
+  FTL_DCHECK(local_time_to_renderer_subframes_gen);
+
+  output_frames_to_renderer_frames =
+      local_time_to_renderer_frames * job.local_to_output->Inverse();
 
   // Compose the job supplied transformation from local to output with the
   // renderer supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
-  TimelineFunction& dst = out_frames_to_renderer_frames;
+  TimelineFunction& dst = output_frames_to_renderer_subframes;
 
-  dst = lt_to_renderer_frames * job.local_to_output->Inverse();
+  dst = local_time_to_renderer_subframes * job.local_to_output->Inverse();
 
-  // Finally, compute the step size in fractional frames.  IOW, every time we
-  // move forward one output frame, how many fractional frames of input do we
-  // consume.  Don't bother doing the multiplication if we already know that the
-  // numerator is zero.
+  // Finally, compute the step size in fractional frames.  IOW, every time
+  // we move forward one output frame, how many fractional frames of input
+  // do we consume.  Don't bother doing the multiplication if we already
+  // know that the numerator is zero.
   FTL_DCHECK(dst.rate().reference_delta());
   if (!dst.rate().subject_delta()) {
     step_size = 0;
@@ -493,7 +512,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   }
 
   // Done, update our generation.
-  out_frames_to_renderer_frames_gen = job.local_to_output_gen;
+  out_frames_to_renderer_subframes_gen = job.local_to_output_gen;
 }
 
 }  // namespace audio

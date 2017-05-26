@@ -7,9 +7,11 @@
 #include <deque>
 #include <set>
 
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/audio_renderer.fidl.h"
+#include "apps/media/services/logs/media_renderer_channel.fidl.h"
 #include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
@@ -42,6 +44,9 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   void RemoveAllOutputs();
   void SetThrottleOutput(
       const AudioRendererToOutputLinkPtr& throttle_output_link);
+
+  // Used by the output to report packet usage.
+  void OnRenderRange(int64_t presentation_time, uint32_t duration);
 
   // Note: format_info() is subject to change and must only be accessed from the
   // main message loop thread.  Outputs which are running on mixer threads
@@ -87,6 +92,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // AudioRendererImpl (just that we implement its interface).
   void OnPacketReceived(AudioPipe::AudioPacketRefPtr packet);
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
+  fidl::Array<MediaTypeSetPtr> SupportedMediaTypes();
 
   AudioRendererImplWeakPtr weak_this_;
   AudioServerImpl* owner_;
@@ -99,6 +105,8 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   AudioRendererToOutputLinkPtr throttle_output_link_;
   float db_gain_ = 0.0;
   bool is_shutdown_ = false;
+
+  FLOG_INSTANCE_CHANNEL(logs::MediaRendererChannel, log_channel_);
 };
 
 }  // namespace audio

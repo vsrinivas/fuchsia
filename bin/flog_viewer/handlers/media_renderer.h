@@ -6,10 +6,13 @@
 
 #include <vector>
 
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/logs/media_renderer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/counted.h"
+#include "apps/media/tools/flog_viewer/handlers/media_packet_consumer.h"
+#include "apps/media/tools/flog_viewer/handlers/media_timeline_control_point.h"
 #include "apps/media/tools/flog_viewer/tracked.h"
 
 namespace flog {
@@ -41,13 +44,30 @@ class MediaRenderer : public ChannelHandler,
 
   void SetMediaType(media::MediaTypePtr type) override;
 
+  void PtsRate(uint32_t ticks, uint32_t seconds) override;
+
   void EngagePacket(int64_t current_pts,
                     int64_t packet_pts,
                     uint64_t packet_label) override;
 
+  void RenderRange(int64_t pts, uint32_t duration) override;
+
  private:
+  MediaTimelineControlPoint* GetTimelineControlPoint();
+
+  MediaPacketConsumer* GetConsumer();
+
+  void RecordPacketEarliness(MediaPacketConsumerAccumulator::Packet* packet,
+                             MediaTimelineControlPoint* timeline_control_point);
+
   media::logs::MediaRendererChannelStub stub_;
   std::shared_ptr<MediaRendererAccumulator> accumulator_;
+  media::TimelineRate audio_frame_rate_;
+  uint32_t audio_frame_size_;
+  int64_t expected_range_pts_ = media::MediaPacket::kNoTimestamp;
+  uint64_t earliness_prev_packet_label_ = 0;
+  bool end_of_stream_ = false;
+  bool was_paused_ = true;
 };
 
 // Status of a media renderer as understood by MediaRenderer.
@@ -64,11 +84,17 @@ class MediaRendererAccumulator : public Accumulator {
   std::shared_ptr<Channel> consumer_channel_;
   std::shared_ptr<Channel> timeline_control_point_channel_;
   media::MediaTypePtr type_;
+  media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
   Counted preroll_packets_;
+  Counted preroll_renders_;
   Tracked packet_earliness_ns_;
   Counted starved_no_packet_;
   Tracked starved_ns_;
   Counted missing_packets_;
+  Tracked gaps_in_frames_before_first_;
+  Tracked gaps_in_frames_no_packet_;
+  Tracked gaps_in_frames_between_packets_;
+  Tracked gaps_in_frames_end_of_stream_;
 
   friend class MediaRenderer;
 };

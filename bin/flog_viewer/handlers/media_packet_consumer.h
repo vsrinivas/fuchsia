@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <map>
 #include <unordered_map>
 
 #include "apps/media/services/logs/media_packet_consumer_channel.fidl.h"
@@ -64,7 +65,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
   media::MediaPacketDemandPtr current_demand_;
   uint32_t min_packets_outstanding_highest_ = 0;
 
-  std::unordered_map<uint64_t, std::shared_ptr<Packet>> outstanding_packets_;
+  std::map<uint64_t, std::shared_ptr<Packet>> outstanding_packets_;
   Tracked packets_;
 
   std::unordered_map<uint32_t, PayloadBuffer> outstanding_payload_buffers_;
@@ -85,6 +86,12 @@ class MediaPacketConsumer : public ChannelHandler,
 
   std::shared_ptr<MediaPacketConsumerAccumulator::Packet> FindOutstandingPacket(
       uint64_t label);
+
+  const std::map<uint64_t,
+                 std::shared_ptr<MediaPacketConsumerAccumulator::Packet>>&
+  outstanding_packets() {
+    return accumulator_->outstanding_packets_;
+  }
 
  protected:
   // ChannelHandler implementation.
