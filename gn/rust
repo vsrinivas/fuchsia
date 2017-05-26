@@ -1,12 +1,17 @@
 {
     "labels": [
         "//apps/xi",
+        "//rust/ledger_example",
         "//rust/magenta-rs/examples"
     ],
     "binaries": [
         {
             "binary": "mx_toy",
             "bootfs_path": "bin/example_mx_toy"
+        },
+        {
+            "binary": "ledger_example",
+            "bootfs_path": "bin/rust_ledger_example"
         },
         {
             "binary": "xi-core",
