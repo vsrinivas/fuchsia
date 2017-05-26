@@ -16,10 +16,10 @@ import (
 
 	"fuchsia.googlesource.com/thinfs/fs"
 	"fuchsia.googlesource.com/thinfs/fs/msdosfs"
-
 	"fuchsia.googlesource.com/thinfs/magenta/rpc"
 
 	"syscall/mx/mxio/mxc"
+	"syscall/mx/mxruntime"
 )
 
 var blockFDPtr = flag.Int("blockFD", -1, "File Descriptor to Block Device")
@@ -81,8 +81,14 @@ func main() {
 			os.Exit(1)
 		}
 
+		h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
+		if h == 0 {
+			println("Invalid storage handle")
+			os.Exit(1)
+		}
+
 		// Mount the filesystem
-		err = rpc.StartServer(filesys)
+		err = rpc.StartServer(filesys, h)
 		filesys.Close()
 	default:
 		println("Unsupported arg")

@@ -7,7 +7,6 @@
 package rpc
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -22,7 +21,6 @@ import (
 	"syscall/mx/mxio"
 	"syscall/mx/mxio/dispatcher"
 	"syscall/mx/mxio/rio"
-	"syscall/mx/mxruntime"
 )
 
 type directoryWrapper struct {
@@ -43,7 +41,7 @@ type ThinVFS struct {
 var vfs *ThinVFS
 
 // Creates a new VFS and dispatcher and begin accepting RIO message on it.
-func StartServer(filesys fs.FileSystem) error {
+func StartServer(filesys fs.FileSystem, h mx.Handle) error {
 	vfs = &ThinVFS{
 		files: make(map[int64]interface{}),
 		fs:    filesys,
@@ -54,11 +52,6 @@ func StartServer(filesys fs.FileSystem) error {
 		return err
 	}
 
-	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
-	if h == 0 {
-		println("Invalid storage handle")
-		return errors.New("Invalid initial handle: Expected handle to vnode in HandlerUser0")
-	}
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
 	if err := d.AddHandler(h, serverHandler, int64(cookie)); err != nil {
