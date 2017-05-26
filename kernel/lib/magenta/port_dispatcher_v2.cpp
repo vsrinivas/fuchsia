@@ -69,7 +69,7 @@ bool PortObserver::OnCancel(Handle* handle) {
 }
 
 bool PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
-    if ((key_ != key) || (handle_ != handle))
+    if ((key_ != key) || (handle_ != handle) || (port_.get() != port))
         return false;
     remove_ = true;
     return false;
