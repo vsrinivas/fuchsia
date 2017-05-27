@@ -8,6 +8,7 @@
 #include <gfx/gfx.h>
 #include <hid/usages.h>
 #include <magenta/device/console.h>
+#include <magenta/device/display.h>
 #include <magenta/listnode.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,8 +44,6 @@ thrd_t g_input_poll_thread;
 // remember whether the virtual console controls the display
 static int g_vc_owns_display = 1;
 
-static mx_handle_t g_vc_owner_event = MX_HANDLE_INVALID;
-
 mtx_t g_vc_lock = MTX_INIT;
 
 static struct list_node g_vc_list TA_GUARDED(g_vc_lock)
@@ -56,18 +55,8 @@ static vc_battery_info_t g_battery_info TA_GUARDED(g_vc_lock);
 
 static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
 
-static void vc_toggle_framebuffer() {
-    //TODO
-}
+static void vc_toggle_framebuffer();
 
-static void vc_display_ownership_callback(bool acquired) {
-    atomic_store(&g_vc_owns_display, acquired ? 1 : 0);
-    if (acquired) {
-        mx_object_signal(g_vc_owner_event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
-    } else {
-        mx_object_signal(g_vc_owner_event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
-    }
-}
 
 // Process key sequences that affect the console (scrolling, switching
 // console, etc.) without sending input to the current console.  This
@@ -571,10 +560,21 @@ done:
     return 0;
 }
 
+static void vc_owns_display(bool acquired) {
+    printf("vc: %s display\n", acquired ? "gained" : "lost");
+    atomic_store(&g_vc_owns_display, acquired ? 1 : 0);
+}
+
+static void vc_toggle_framebuffer() {
+    uint32_t n = g_vc_owns_display ? 1 : 0;
+    printf("vc: set owner %d\n", n);
+    ioctl_display_set_owner(g_fb_fd, &n);
+}
+
 int main(int argc, char** argv) {
     int fd;
     for (;;) {
-        if ((fd = open("/dev/class/framebuffer/000", O_RDWR)) >= 0) {
+        if ((fd = open("/dev/class/framebuffer/000/virtcon", O_RDWR)) >= 0) {
             break;
         }
         usleep(100000);
@@ -607,8 +607,17 @@ int main(int argc, char** argv) {
     thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
     thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
 
+    mx_handle_t e;
+    ioctl_display_get_ownership_change_event(fd, &e);
+
     for (;;) {
-        sleep(1000);
+        if (g_vc_owns_display) {
+            mx_object_wait_one(e, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL);
+            vc_owns_display(false);
+        } else {
+            mx_object_wait_one(e, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+            vc_owns_display(true);
+        }
     }
     return NO_ERROR;
 }

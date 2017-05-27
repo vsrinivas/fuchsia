@@ -526,7 +526,7 @@ mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
     if (fd < 0) {
         goto fail;
     }
-    if ((fd = openat(fd, "0", O_RDWR)) < 0) {
+    if ((fd = openat(fd, "virtcon", O_RDWR)) < 0) {
         printf("vc_alloc: cannot obtain fb driver instance\n");
         goto fail;
     }
