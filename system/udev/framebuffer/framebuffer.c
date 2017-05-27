@@ -18,24 +18,38 @@
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
 
-typedef struct {
+typedef struct fbi fbi_t;
+typedef struct fb fb_t;
+
+#define GROUP_VIRTCON 0
+#define GROUP_FULLSCREEN 1
+
+struct fb {
     mx_device_t* mxdev;
     mx_display_protocol_t* dpy;
     mx_display_info_t info;
     size_t bufsz;
     void* buffer;
     mtx_t lock;
-    int refcount;
-    list_node_t list;
-} fb_t;
 
-typedef struct {
+    // which group is active
+    uint32_t active;
+
+    // event to notify which group is active
+    mx_handle_t event;
+
+    // only one fullscreen client may exist at a time
+    // and we keep track of it here
+    fbi_t* fullscreen;
+};
+
+struct fbi {
     mx_device_t* mxdev;
     fb_t* fb;
     void* buffer;
     mx_handle_t vmo;
-    list_node_t node;
-} fbi_t;
+    uint32_t group;
+};
 
 static mx_status_t fbi_get_vmo(fbi_t* fbi, mx_handle_t* vmo) {
     mtx_lock(&fbi->fb->lock);
@@ -90,14 +104,22 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return ERR_OUT_OF_RANGE;
         }
         uint32_t linesize = fb->info.stride * fb->info.pixelsize;
-        memcpy(fb->buffer + y * linesize, fbi->buffer + y * linesize, h * linesize);
+        mtx_lock(&fb->lock);
+        if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
+            memcpy(fb->buffer + y * linesize, fbi->buffer + y * linesize, h * linesize);
+        }
+        mtx_unlock(&fb->lock);
         return NO_ERROR;
     }
     case IOCTL_DISPLAY_FLUSH_FB:
-        memcpy(fb->buffer, fbi->buffer, fb->bufsz);
+        mtx_lock(&fb->lock);
+        if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
+            memcpy(fb->buffer, fbi->buffer, fb->bufsz);
+        }
+        mtx_unlock(&fb->lock);
         return NO_ERROR;
 
-    case IOCTL_DISPLAY_GET_FB:
+    case IOCTL_DISPLAY_GET_FB: {
         if (out_len < sizeof(ioctl_display_get_fb_t)) {
             return ERR_BUFFER_TOO_SMALL;
         }
@@ -115,35 +137,67 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             *out_actual = sizeof(ioctl_display_get_fb_t);
             return NO_ERROR;
         }
+    }
+    case IOCTL_DISPLAY_SET_OWNER: {
+        if (in_len != sizeof(uint32_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        if (fbi->group != GROUP_VIRTCON) {
+            return ERR_ACCESS_DENIED;
+        }
+        const uint32_t* n = (const uint32_t*) in_buf;
+        mtx_lock(&fb->lock);
+        if ((*n == GROUP_VIRTCON) || (fb->fullscreen == NULL)) {
+            fb->active = GROUP_VIRTCON;
+            mx_object_signal(fb->event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
+        } else {
+            fb->active = GROUP_FULLSCREEN;
+            mx_object_signal(fb->event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
+            if (fb->fullscreen->buffer) {
+                memcpy(fb->buffer, fb->fullscreen->buffer, fb->bufsz);
+            } else {
+                memset(fb->buffer, 0, fb->bufsz);
+            }
+        }
+        mtx_unlock(&fb->lock);
+        return NO_ERROR;
+    }
+    case IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT: {
+        if (out_len != sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_handle_t* out = (mx_handle_t*) out_buf;
+        if ((r = mx_handle_duplicate(fb->event, MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE, out)) < 0) {
+            return r;
+        } else {
+            *out_actual = sizeof(mx_handle_t);
+            return NO_ERROR;
+        }
+    }
+
     default:
         return ERR_NOT_SUPPORTED;
-    }
-}
-
-static void fb_release(void* ctx) {
-    fb_t* fb = ctx;
-    mtx_lock(&fb->lock);
-    if (--fb->refcount == 0) {
-        mtx_unlock(&fb->lock);
-        free(fb);
-    } else {
-        mtx_unlock(&fb->lock);
     }
 }
 
 static void fbi_release(void* ctx) {
     fbi_t* fbi = ctx;
 
-    // detach instance from device
-    if (fbi->fb) {
-        mtx_lock(&fbi->fb->lock);
-        list_delete(&fbi->node);
-        mtx_unlock(&fbi->fb->lock);
-        fb_release(fbi->fb);
+    // if we were the group 1 client
+    // make group 1 available for future clients
+    // and if group 1 was active, make group 0 active
+    fb_t* fb = fbi->fb;
+    mtx_lock(&fb->lock);
+    if (fb->fullscreen == fbi) {
+        fb->fullscreen = NULL;
+        if (fb->active == GROUP_FULLSCREEN) {
+            fb->active = GROUP_VIRTCON;
+            mx_object_signal(fb->event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
+        }
     }
+    mtx_unlock(&fb->lock);
 
     if (fbi->buffer) {
-        printf("fb: unmap buffer %p (%zu bytes)\n", fbi->buffer, fbi->fb->bufsz);
         mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) fbi->buffer, fbi->fb->bufsz);
     }
     if (fbi->vmo != MX_HANDLE_INVALID) {
@@ -152,13 +206,13 @@ static void fbi_release(void* ctx) {
     free(fbi);
 }
 
-static mx_status_t fb_open(void* ctx, mx_device_t** out, uint32_t flags);
+static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags);
 
 // Allow use of openat() to obtain another offscreen framebuffer from
 // an existing framebuffer instance
 static mx_status_t fbi_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
     fbi_t* fbi = ctx;
-    return fb_open(fbi->fb, out, flags);
+    return fb_open_at(fbi->fb, out, path, flags);
 }
 
 mx_protocol_device_t fbi_ops = {
@@ -168,46 +222,70 @@ mx_protocol_device_t fbi_ops = {
     .release = fbi_release,
 };
 
-static mx_status_t fb_open(void* ctx, mx_device_t** out, uint32_t flags) {
+static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
     fb_t* fb = ctx;
 
     fbi_t* fbi;
     if ((fbi = calloc(1, sizeof(fbi_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
-
-    mtx_lock(&fb->lock);
-    fb->refcount++;
     fbi->fb = fb;
-    list_add_tail(&fb->list, &fbi->node);
-    mtx_unlock(&fb->lock);
+
+    if (!strcmp(path, "virtcon")) {
+        fbi->group = GROUP_VIRTCON;
+    } else {
+        fbi->group = GROUP_FULLSCREEN;
+    }
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "framebuffer",
         .ctx = fbi,
-        .driver = &_driver_framebuffer,
         .ops = &fbi_ops,
         .proto_id = MX_PROTOCOL_DISPLAY,
         .flags = DEVICE_ADD_INSTANCE,
     };
+
+    // if we are a new fullscreen client,
+    // fail if there's already a fullscreen client
+    // otherwise the fullscreen client becomes active
+    mtx_lock(&fb->lock);
+    if (fbi->group == GROUP_FULLSCREEN) {
+        if (fb->fullscreen != NULL) {
+            mtx_unlock(&fb->lock);
+            free(fbi);
+            return ERR_ALREADY_BOUND;
+        }
+        fb->fullscreen = fbi;
+        fb->active = GROUP_FULLSCREEN;
+        mx_object_signal(fb->event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
+    }
+    mtx_unlock(&fb->lock);
 
     mx_status_t r;
     if ((r = device_add(fb->mxdev, &args, &fbi->mxdev)) < 0) {
         fbi_release(fbi);
         return r;
     }
+
     *out = fbi->mxdev;
     return NO_ERROR;
 }
 
-static void fb_unbind(void* ctx) {
+static mx_status_t fb_open(void* ctx, mx_device_t** out, uint32_t flags) {
+    return fb_open_at(ctx, out, "", flags);
+}
+
+static void fb_release(void* ctx) {
+    fb_t* fb = ctx;
+    mx_handle_close(fb->event);
+    free(fb);
 }
 
 static mx_protocol_device_t fb_ops = {
     .version = DEVICE_OPS_VERSION,
     .open = fb_open,
-    .unbind = fb_unbind,
+    .open_at = fb_open_at,
     .release = fb_release,
 };
 
@@ -230,6 +308,11 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
         printf("fb: display get framebuffer failed: %d\n", r);
         goto fail;
     }
+
+    if ((r = mx_event_create(0, &fb->event)) < 0) {
+        goto fail;
+    }
+    mx_object_signal(fb->event, 0, MX_USER_SIGNAL_0);
 
     // Our display drivers do not initialize pixelsize
     // Determine it based on pixel format
@@ -259,9 +342,6 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
            fb->info.width, fb->info.height,
            fb->info.stride, fb->info.pixelsize, fb->info.format, fb->bufsz);
 
-    // initial reference for ourself, later ones for children
-    fb->refcount = 1;
-    list_initialize(&fb->list);
     mtx_init(&fb->lock, mtx_plain);
 
     device_add_args_t args = {
@@ -278,6 +358,7 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     return NO_ERROR;
 
 fail:
+    mx_handle_close(fb->event);
     free(fb);
     return r;
 }

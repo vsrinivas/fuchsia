@@ -54,6 +54,11 @@ typedef struct mx_display_info {
 #define IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY, 5)
 
+// in: uint32_t owner
+// out: none
+#define IOCTL_DISPLAY_SET_OWNER \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 6)
+
 typedef struct {
     mx_handle_t vmo;
     mx_display_info_t info;
@@ -80,3 +85,6 @@ IOCTL_WRAPPER_IN(ioctl_display_set_fullscreen, IOCTL_DISPLAY_SET_FULLSCREEN, uin
 
 // ssize_t ioctl_display_get_ownership_change_event(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_display_get_ownership_change_event, IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT, mx_handle_t);
+
+// ssize_t ioctl_display_set_owner(int fd, uint32_t owner);
+IOCTL_WRAPPER_IN(ioctl_display_set_owner, IOCTL_DISPLAY_SET_OWNER, uint32_t)
