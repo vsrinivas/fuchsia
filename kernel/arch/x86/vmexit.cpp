@@ -99,8 +99,7 @@ void interrupt_window_exiting(bool enable) {
     uint32_t controls = vmcs_read(VmcsField32::PROCBASED_CTLS);
     if (enable) {
         controls |= PROCBASED_CTLS_INT_WINDOW_EXITING;
-    }
-    else {
+    } else {
         controls &= ~PROCBASED_CTLS_INT_WINDOW_EXITING;
     }
     vmcs_write(VmcsField32::PROCBASED_CTLS, controls);
@@ -243,8 +242,11 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
 #if WITH_LIB_MAGENTA
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.input) {
-        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort)
+        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort) {
             guest_state->rax = kUartStatusIdle;
+        } else {
+            guest_state->rax = 0;
+        }
         return NO_ERROR;
     }
     if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
@@ -255,7 +257,6 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
     packet.io_port.access_size = io_info.access_size;
     memcpy(packet.io_port.data, &guest_state->rax, io_info.access_size);
     return packet_write(ctl_fifo, packet);
-    return NO_ERROR;
 #else // WITH_LIB_MAGENTA
     return ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
