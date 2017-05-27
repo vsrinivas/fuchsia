@@ -1,6 +1,5 @@
 {
     "imports": [
-        "amber",
         "apps",
         "asio",
         "boringssl",

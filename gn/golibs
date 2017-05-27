@@ -5,6 +5,7 @@
     {"third_party/golibs/github.com/flynn/go-docopt": "github.com/flynn/go-docopt"},
     {"third_party/golibs/github.com/golang/snappy": "github.com/golang/snappy"},
     {"third_party/golibs/github.com/syndtr/goleveldb/leveldb": "github.com/syndtr/goleveldb/leveldb"},
-    {"third_party/golibs/github.com/tent/canonical-json-go": "github.com/tent/canonical-json-go"}
+    {"third_party/golibs/github.com/tent/canonical-json-go": "github.com/tent/canonical-json-go"},
+    {"third_party/golibs/github.com/flynn/go-tuf": "github.com/flynn/go-tuf"}
   ]
 }
