@@ -53,7 +53,7 @@ VmObjectDispatcher::~VmObjectDispatcher() {
 
 void VmObjectDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     canary_.Assert();
-    vmo_->get_name(out_name);
+    vmo_->get_name(out_name, MX_MAX_NAME_LEN);
 }
 
 status_t VmObjectDispatcher::set_name(const char* name, size_t len) {

@@ -102,7 +102,6 @@ public:
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
     uint32_t flags() const { return flags_; }
-    const char* name() const { return name_; }
     const mxtl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
     // Recursively compute the number of allocated pages within this region
@@ -145,7 +144,7 @@ protected:
     };
 
     VmAddressRegionOrMapping(vaddr_t base, size_t size, uint32_t flags,
-                             VmAspace* aspace, VmAddressRegion* parent, const char* name);
+                             VmAspace* aspace, VmAddressRegion* parent);
 
     // Check if the given *arch_mmu_flags* are allowed under this
     // regions *flags_*
@@ -197,8 +196,6 @@ protected:
 
     // node for element in list of parent's children.
     mxtl::WAVLTreeNodeState<mxtl::RefPtr<VmAddressRegionOrMapping>, bool> subregion_list_node_;
-
-    char name_[32];
 };
 
 // A representation of a contiguous range of virtual address space
@@ -233,6 +230,7 @@ public:
     // Protect() will fail.
     virtual status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
+    const char* name() const { return name_; }
     bool is_mapping() const override { return false; }
 
     void Dump(uint depth, bool verbose) const override;
@@ -290,7 +288,7 @@ private:
     // fails.
     status_t OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
                                 mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                uint arch_mmu_flags, const char* name,
+                                uint arch_mmu_flags,
                                 mxtl::RefPtr<VmAddressRegionOrMapping>* out);
 
     // Implementation for Unmap() and OverwriteVmMapping() that does not hold
@@ -329,6 +327,8 @@ private:
 
     // list of subregions, indexed by base address
     ChildList subregions_;
+
+    const char name_[32] = {};
 };
 
 // A VmAddressRegion that always returns errors.  This is used to break a
@@ -454,8 +454,7 @@ private:
 
     // private constructors, use VmAddressRegion::Create...() instead
     VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-              mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
-              const char* name);
+              mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
 
     // Version of Destroy() that does not acquire the aspace lock
     status_t DestroyLocked() override;

@@ -52,9 +52,9 @@ VmObject::~VmObject() {
     DEBUG_ASSERT(children_list_.is_empty());
 }
 
-void VmObject::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+void VmObject::get_name(char *out_name, size_t len) const {
     canary_.Assert();
-    name_.get(MX_MAX_NAME_LEN, out_name);
+    name_.get(len, out_name);
 }
 
 status_t VmObject::set_name(const char* name, size_t len) {

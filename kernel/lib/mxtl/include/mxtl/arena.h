@@ -64,7 +64,8 @@ private:
         // Initializes the pool. |mapping| must be fully backed by its
         // VMO, but should not have any committed pages. |slot_size|
         // is the size of object returned/accepted by Pop/Push.
-        void Init(mxtl::RefPtr<VmMapping> mapping, size_t slot_size);
+        void Init(const char* name, mxtl::RefPtr<VmMapping> mapping,
+                  size_t slot_size);
 
         // Returns a pointer to a |slot_size| piece of memory, or nullptr
         // if there is no memory available.
@@ -93,6 +94,8 @@ private:
         void Dump() const;
 
     private:
+        const char name_[32] = {};
+
         mxtl::RefPtr<VmMapping> mapping_;
         size_t slot_size_;
         char* start_;

@@ -21,12 +21,10 @@
 
 VmAddressRegionOrMapping::VmAddressRegionOrMapping(
     vaddr_t base, size_t size, uint32_t flags,
-    VmAspace* aspace, VmAddressRegion* parent, const char* name)
+    VmAspace* aspace, VmAddressRegion* parent)
     : state_(LifeCycleState::NOT_READY), base_(base), size_(size),
       flags_(flags), aspace_(aspace), parent_(parent) {
-
-    strlcpy(name_, name, sizeof(name_));
-    LTRACEF("%p '%s'\n", this, name_);
+    LTRACEF("%p\n", this);
 }
 
 status_t VmAddressRegionOrMapping::Destroy() {
@@ -41,7 +39,7 @@ status_t VmAddressRegionOrMapping::Destroy() {
 }
 
 VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
-    LTRACEF("%p '%s'\n", this, name_);
+    LTRACEF("%p\n", this);
 
     if (state_ == LifeCycleState::ALIVE) {
         Destroy();

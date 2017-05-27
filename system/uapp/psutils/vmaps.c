@@ -145,7 +145,7 @@ mx_status_t print_maps(mx_info_maps_t* maps, size_t count, size_t avail) {
             printf("%12s", "");
         }
 
-        printf("  %s\n", e->name);
+        printf("  '%s'\n", e->name);
     }
     if (avail > count) {
         printf("[%zd entries truncated]\n", avail - count);

@@ -242,7 +242,7 @@ static void DumpVmObject(
     }
 
     char name[MX_MAX_NAME_LEN];
-    vmo.get_name(name);
+    vmo.get_name(name, sizeof(name));
     if (name[0] == '\0') {
         name[0] = '-';
         name[1] = '\0';
@@ -486,7 +486,7 @@ public:
         available_++;
         if (nelem_ < max_) {
             mx_info_maps_t entry = {};
-            strncpy(entry.name, vmar->name(), sizeof(entry.name));
+            strlcpy(entry.name, vmar->name(), sizeof(entry.name));
             entry.base = vmar->base();
             entry.size = vmar->size();
             entry.depth = depth + 1; // The root aspace is depth 0.
@@ -504,7 +504,7 @@ public:
         available_++;
         if (nelem_ < max_) {
             mx_info_maps_t entry = {};
-            strncpy(entry.name, map->name(), sizeof(entry.name));
+            map->vmo()->get_name(entry.name, sizeof(entry.name));
             entry.base = map->base();
             entry.size = map->size();
             entry.depth = depth + 1; // The root aspace is depth 0.
@@ -547,7 +547,7 @@ status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
     }
     if (max > 0) {
         mx_info_maps_t entry = {};
-        strncpy(entry.name, aspace->name(), sizeof(entry.name));
+        strlcpy(entry.name, aspace->name(), sizeof(entry.name));
         entry.base = aspace->base();
         entry.size = aspace->size();
         entry.depth = 0;

@@ -15,8 +15,8 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object_paged.h>
-#include <mxtl/auto_call.h>
 #include <mxcpp/new.h>
+#include <mxtl/auto_call.h>
 
 #define LOCAL_TRACE 0
 
@@ -68,6 +68,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     char vname[32];
     snprintf(vname, sizeof(vname), "arena:%s", name);
+    vmo->set_name(vname, sizeof(vname));
 
     // Create the VMAR.
     mxtl::RefPtr<VmAddressRegion> vmar;
@@ -85,7 +86,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     }
     // The VMAR's parent holds a ref, so it won't be destroyed
     // automatically when we return.
-    auto destroy_vmar = mxtl::MakeAutoCall([&vmar](){ vmar->Destroy(); });
+    auto destroy_vmar = mxtl::MakeAutoCall([&vmar]() { vmar->Destroy(); });
 
     // Create a mapping for the control pool.
     mxtl::RefPtr<VmMapping> control_mapping;
@@ -125,8 +126,8 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     // TODO(dbort): Add a VmMapping flag that says "do not demand page",
     // requiring and ensuring that we commit our pages manually.
 
-    control_.Init(control_mapping, sizeof(Node));
-    data_.Init(data_mapping, ob_size);
+    control_.Init("control", control_mapping, sizeof(Node));
+    data_.Init("data", data_mapping, ob_size);
 
     vmar_ = vmar;
     destroy_vmar.cancel();
@@ -137,10 +138,12 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     return NO_ERROR;
 }
 
-void Arena::Pool::Init(mxtl::RefPtr<VmMapping> mapping, size_t slot_size) {
+void Arena::Pool::Init(const char* name, mxtl::RefPtr<VmMapping> mapping,
+                       size_t slot_size) {
     DEBUG_ASSERT(mapping != nullptr);
     DEBUG_ASSERT(slot_size > 0);
 
+    strlcpy(const_cast<char*>(name_), name, sizeof(name_));
     slot_size_ = slot_size;
     mapping_ = mapping;
     committed_max_ = committed_ = top_ = start_ =
@@ -159,7 +162,7 @@ static_assert(kPoolCommitIncrease < kPoolDecommitThreshold, "");
 
 void* Arena::Pool::Pop() {
     if (static_cast<size_t>(end_ - top_) < slot_size_) {
-        LTRACEF("%s: no room\n", mapping_->name());
+        LTRACEF("%s: no room\n", name_);
         return nullptr;
     }
     if (top_ + slot_size_ > committed_) {
@@ -168,14 +171,14 @@ void* Arena::Pool::Pop() {
         if (nc > end_) {
             nc = end_;
         }
-        LTRACEF("%s: commit 0x%p..0x%p\n", mapping_->name(), committed_, nc);
+        LTRACEF("%s: commit 0x%p..0x%p\n", name_, committed_, nc);
         const size_t offset =
             reinterpret_cast<vaddr_t>(committed_) - mapping_->base();
         const size_t len = nc - committed_;
         status_t st = mapping_->MapRange(offset, len, /* commit */ true);
         if (st != NO_ERROR) {
             LTRACEF("%s: can't map range 0x%p..0x%p: %d\n",
-                    mapping_->name(), committed_, nc, st);
+                    name_, committed_, nc, st);
             // Try to clean up any committed pages, but don't require
             // that it succeeds.
             mapping_->DecommitRange(offset, len, /* decommitted */ nullptr);
@@ -205,7 +208,7 @@ void Arena::Pool::Push(void* p) {
         if (nc >= committed_) {
             return;
         }
-        LTRACEF("%s: decommit 0x%p..0x%p\n", mapping_->name(), nc, committed_);
+        LTRACEF("%s: decommit 0x%p..0x%p\n", name_, nc, committed_);
         const size_t offset = reinterpret_cast<vaddr_t>(nc) - mapping_->base();
         const size_t len = committed_ - nc;
         // If this fails or decommits less than we asked for, oh well.
@@ -216,7 +219,7 @@ void Arena::Pool::Push(void* p) {
 
 void Arena::Pool::Dump() const {
     printf("  pool '%s' slot size %zu, %zu pages committed:\n",
-           mapping_->name(), slot_size_, mapping_->AllocatedPages());
+           name_, slot_size_, mapping_->AllocatedPages());
     printf("  |     start 0x%p\n", start_);
     size_t nslots = static_cast<size_t>(top_ - start_) / slot_size_;
     printf("  |       top 0x%p (%zu slots popped)\n", top_, nslots);

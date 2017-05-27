@@ -97,7 +97,7 @@ public:
 
     // Returns a null-terminated name, or the empty string if set_name() has not
     // been called.
-    void get_name(char out_name[MX_MAX_NAME_LEN]) const;
+    void get_name(char* out_name, size_t len) const;
 
     // Sets the name of the object. May truncate internally. |len| is the size
     // of the buffer pointed to by |name|.

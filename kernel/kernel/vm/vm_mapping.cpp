@@ -22,19 +22,19 @@
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
-                     const char* name)
+                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
     : VmAddressRegionOrMapping(base, size, vmar_flags,
-                               parent.aspace_.get(), &parent, name),
+                               parent.aspace_.get(), &parent),
       object_(mxtl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
-    LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
-            this, name_, aspace_.get(), base_, size_, vmo_offset);
+    LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
+            this, aspace_.get(), base_, size_, vmo_offset);
 }
 
 VmMapping::~VmMapping() {
     canary_.Assert();
-    LTRACEF("%p '%s' aspace %p base %#" PRIxPTR " size %#zx\n", this, name_, aspace_.get(), base_, size_);
+    LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx\n",
+            this, aspace_.get(), base_, size_);
 }
 
 size_t VmMapping::AllocatedPagesLocked() const {
@@ -52,6 +52,8 @@ void VmMapping::Dump(uint depth, bool verbose) const {
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
+    char vmo_name[32];
+    object_->get_name(vmo_name, sizeof(vmo_name));
     printf("map %p [%#" PRIxPTR " %#" PRIxPTR
            "] sz %#zx mmufl %#x vmo %p off %#" PRIx64
            " pages %zu ref %d '%s'\n",
@@ -61,14 +63,14 @@ void VmMapping::Dump(uint depth, bool verbose) const {
            // consistently. Currently, Dump() may be called without the aspace
            // lock.
            object_->AllocatedPagesInRange(object_offset_, size_),
-           ref_count_debug(), name_);
+           ref_count_debug(), vmo_name);
     if (verbose)
         object_->Dump(depth + 1, false);
 }
 
 status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
     canary_.Assert();
-    LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, new_arch_mmu_flags);
+    LTRACEF("%p %#" PRIxPTR " %#x %#x\n", this, base_, flags_, new_arch_mmu_flags);
 
     if (!IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
@@ -130,7 +132,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
         AllocChecker ac;
         mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
             new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_,
-                                object_, object_offset_ + size, arch_mmu_flags_, name_)));
+                                object_, object_offset_ + size, arch_mmu_flags_)));
         if (!ac.check()) {
             return ERR_NO_MEMORY;
         }
@@ -153,7 +155,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
         mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
             new (&ac) VmMapping(*parent_, base, size, flags_,
                                 object_, object_offset_ + base - base_,
-                                new_arch_mmu_flags, name_)));
+                                new_arch_mmu_flags)));
         if (!ac.check()) {
             return ERR_NO_MEMORY;
         }
@@ -176,13 +178,13 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     AllocChecker ac;
     mxtl::RefPtr<VmMapping> center_mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, base, size, flags_,
-                            object_, center_vmo_offset, new_arch_mmu_flags, name_)));
+                            object_, center_vmo_offset, new_arch_mmu_flags)));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
     mxtl::RefPtr<VmMapping> right_mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, base + size, right_size, flags_,
-                            object_, right_vmo_offset, arch_mmu_flags_, name_)));
+                            object_, right_vmo_offset, arch_mmu_flags_)));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
@@ -200,7 +202,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 }
 
 status_t VmMapping::Unmap(vaddr_t base, size_t size) {
-    LTRACEF("%p %s %#" PRIxPTR " %zu\n", this, name_, base, size);
+    LTRACEF("%p %#" PRIxPTR " %zu\n", this, base, size);
 
     if (!IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
@@ -245,7 +247,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     // If our parent VMAR is DEAD, then we can only unmap everything.
     DEBUG_ASSERT(parent_->state_ != LifeCycleState::DEAD || (base == base_ && size == size_));
 
-    LTRACEF("%p '%s'\n", this, name_);
+    LTRACEF("%p\n", this);
 
     // grab the lock for the vmo
     DEBUG_ASSERT(object_);
@@ -282,7 +284,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     AllocChecker ac;
     mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
-                            arch_mmu_flags_, name_)));
+                            arch_mmu_flags_)));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
@@ -303,8 +305,8 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     canary_.Assert();
 
-    LTRACEF("region %p '%s' obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
-            this, name_, object_offset_, size_, offset, len);
+    LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+            this, object_offset_, size_, offset, len);
 
     // NOTE: must be acquired with the vmo lock held, but doesn't need to take
     // the address space lock, since it will not manipulate its location in the
@@ -375,7 +377,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         return ERR_BAD_STATE;
     }
 
-    LTRACEF("region %p '%s', offset %#zx, size %#zx, commit %d\n", this, name_, offset, len, commit);
+    LTRACEF("region %p, offset %#zx, size %#zx, commit %d\n", this, offset, len, commit);
 
     DEBUG_ASSERT(object_);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -433,8 +435,8 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
 status_t VmMapping::DecommitRange(size_t offset, size_t len,
                                   size_t* decommitted) {
     canary_.Assert();
-    LTRACEF("%p '%s' [%#zx+%#zx], offset %#zx, len %#zx\n",
-            this, name_, base_, size_, offset, len);
+    LTRACEF("%p [%#zx+%#zx], offset %#zx, len %#zx\n",
+            this, base_, size_, offset, len);
 
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
@@ -451,7 +453,7 @@ status_t VmMapping::DecommitRange(size_t offset, size_t len,
 status_t VmMapping::DestroyLocked() {
     canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
-    LTRACEF("%p '%s'\n", this, name_);
+    LTRACEF("%p\n", this);
 
     // Take a reference to ourself, so that we do not get destructed after
     // dropping our last reference in this method (e.g. when calling
@@ -508,8 +510,8 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     uint64_t vmo_offset = va - base_ + object_offset_;
 
     __UNUSED char pf_string[5];
-    LTRACEF("%p '%s', va %#" PRIxPTR " vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n",
-            this, name_, va, vmo_offset, pf_flags,
+    LTRACEF("%p va %#" PRIxPTR " vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n",
+            this, va, vmo_offset, pf_flags,
             vmm_pf_flags_to_string(pf_flags, pf_string));
 
     // make sure we have permission to continue
@@ -546,7 +548,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     status_t status = object_->GetPageLocked(vmo_offset, pf_flags, &page, &new_pa);
     if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
-        TRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, name_, vmo_offset, pf_flags);
+        TRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);
         return status;
     }
 
