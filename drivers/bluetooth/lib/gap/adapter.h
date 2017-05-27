@@ -10,7 +10,7 @@
 #include "apps/bluetooth/lib/gap/adapter_state.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace bluetooth {
@@ -26,17 +26,18 @@ namespace gap {
 // Represents the host-subsystem state for a Bluetooth controller. All asynchronous callbacks are
 // posted on the MessageLoop on which this Adapter instances is created.
 //
-// This class is intended to be thread-safe, however Initialize() and ShutDown() MUST be called on
-// the thread on which the Adapter instance was created.
+// This class is not thread-safe and it is intended to be created, deleted, and accessed on the same
+// event loop. No internal locking is provided.
 //
 // NOTE: We currently only support primary controllers. AMP controllers are not supported.
-class Adapter final : public ftl::RefCountedThreadSafe<Adapter> {
+class Adapter final {
  public:
   // A mtl::MessageLoop must have been initialized when an Adapter instance is created. The Adapter
   // instance will use the MessageLoop it is created on for all of its asynchronous tasks.
   //
   // This will take ownership of |hci_device|.
-  static ftl::RefPtr<Adapter> Create(std::unique_ptr<hci::DeviceWrapper> hci_device);
+  explicit Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device);
+  ~Adapter();
 
   // Returns a 128-bit UUID that uniquely identifies this adapter on the current system.
   std::string identifier() const { return identifier_; }
@@ -57,7 +58,7 @@ class Adapter final : public ftl::RefCountedThreadSafe<Adapter> {
   // Shuts down this Adapter. Invokes |callback| when shut down has completed.
   // TODO(armansito): This needs to do several things to potentially preserve the state of various
   // sub-protocols. For now we keep the interface pretty simple.
-  void ShutDown(const ftl::Closure& callback);
+  void ShutDown();
 
   // Returns true if the Initialize() sequence has started but not completed yet (i.e. the
   // InitializeCallback that was passed to Initialize() has not yet been called).
@@ -69,12 +70,10 @@ class Adapter final : public ftl::RefCountedThreadSafe<Adapter> {
   // Returns the global adapter setting parameters.
   const AdapterState& state() const { return state_; }
 
+  // Returns a weak pointer to this adapter.
+  ftl::WeakPtr<Adapter> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(Adapter);
-
-  explicit Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device);
-  ~Adapter();
-
   // Second step of the initialization sequence. Called by Initialize() when the first batch of HCI
   // commands have been sent.
   void InitializeStep2(const InitializeCallback& callback);
@@ -120,6 +119,10 @@ class Adapter final : public ftl::RefCountedThreadSafe<Adapter> {
 
   // Contains the global adapter state.
   AdapterState state_;
+
+  // This must remain the last member to make sure that all weak pointers are invalidating before
+  // other members are destroyed.
+  ftl::WeakPtrFactory<Adapter> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Adapter);
 };

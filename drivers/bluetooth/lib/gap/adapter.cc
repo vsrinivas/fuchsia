@@ -18,13 +18,10 @@
 namespace bluetooth {
 namespace gap {
 
-// static
-ftl::RefPtr<Adapter> Adapter::Create(std::unique_ptr<hci::DeviceWrapper> hci_device) {
-  return AdoptRef(new Adapter(std::move(hci_device)));
-}
-
 Adapter::Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device)
-    : identifier_(ftl::GenerateUUID()), init_state_(State::kNotInitialized) {
+    : identifier_(ftl::GenerateUUID()),
+      init_state_(State::kNotInitialized),
+      weak_ptr_factory_(this) {
   FTL_DCHECK(hci_device);
 
   auto message_loop = mtl::MessageLoop::GetCurrent();
@@ -34,13 +31,16 @@ Adapter::Adapter(std::unique_ptr<hci::DeviceWrapper> hci_device)
   hci_ = hci::Transport::Create(std::move(hci_device));
   init_seq_runner_ = std::make_unique<hci::SequentialCommandRunner>(task_runner_, hci_);
 
-  // We're passing |this| directly as |hci_| is owned by us.
-  // TODO(armansito): Pass WeakPtr?
-  hci_->SetTransportClosedCallback(std::bind(&Adapter::OnTransportClosed, this), task_runner_);
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  hci_->SetTransportClosedCallback(
+      [self] {
+        if (self) self->OnTransportClosed();
+      },
+      task_runner_);
 }
 
 Adapter::~Adapter() {
-  if (IsInitialized()) ShutDown([] {});
+  if (IsInitialized()) ShutDown();
 }
 
 bool Adapter::Initialize(const InitializeCallback& callback,
@@ -124,15 +124,13 @@ bool Adapter::Initialize(const InitializeCallback& callback,
   return true;
 }
 
-void Adapter::ShutDown(const ftl::Closure& callback) {
+void Adapter::ShutDown() {
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
   FTL_DCHECK(IsInitialized());
 
   CleanUp();
 
   // TODO(armansito): Clean up all protocol layers and send HCI Reset.
-
-  task_runner_->PostTask(callback);
 }
 
 void Adapter::InitializeStep2(const InitializeCallback& callback) {

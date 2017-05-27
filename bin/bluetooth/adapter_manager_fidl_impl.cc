@@ -42,9 +42,7 @@ void AdapterManagerFidlImpl::SetDelegate(
 void AdapterManagerFidlImpl::GetAdapters(const GetAdaptersCallback& callback) {
   ::fidl::Array<::bt_control::AdapterInfoPtr> adapters;
   app_->adapter_manager()->ForEachAdapter(
-      [&adapters](ftl::RefPtr<::bluetooth::gap::Adapter> adapter) {
-        adapters.push_back(fidl_helpers::NewAdapterInfo(*adapter));
-      });
+      [&adapters](auto* adapter) { adapters.push_back(fidl_helpers::NewAdapterInfo(*adapter)); });
 
   callback(std::move(adapters));
 }
@@ -64,20 +62,16 @@ void AdapterManagerFidlImpl::SetActiveAdapter(const ::fidl::String& identifier,
   auto status = bt_fidl::Status::New();
   auto ac = ftl::MakeAutoCall([&status, &callback] { callback(std::move(status)); });
 
-  auto adapter = app_->adapter_manager()->GetAdapter(identifier);
-  if (!adapter) {
+  if (!app_->adapter_manager()->SetActiveAdapter(identifier)) {
     status->error = bt_fidl::Error::New();
     status->error->error_code = bt_fidl::ErrorCode::NOT_FOUND;
     status->error->description = "Adapter not found";
-    return;
   }
-
-  app_->adapter_manager()->SetActiveAdapter(adapter);
 }
 
 void AdapterManagerFidlImpl::GetActiveAdapter(
     ::fidl::InterfaceRequest<::bt_control::Adapter> request) {
-  auto adapter = app_->adapter_manager()->active_adapter();
+  auto adapter = app_->adapter_manager()->GetActiveAdapter();
   if (adapter) {
     CreateAdapterFidlImpl(adapter, std::move(request));
   } else {
@@ -85,7 +79,7 @@ void AdapterManagerFidlImpl::GetActiveAdapter(
   }
 }
 
-void AdapterManagerFidlImpl::OnActiveAdapterChanged(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void AdapterManagerFidlImpl::OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) {
   if (!delegate_) return;
 
   ::bt_control::AdapterInfoPtr adapter_info;
@@ -93,11 +87,11 @@ void AdapterManagerFidlImpl::OnActiveAdapterChanged(ftl::RefPtr<bluetooth::gap::
   delegate_->OnActiveAdapterChanged(std::move(adapter_info));
 }
 
-void AdapterManagerFidlImpl::OnAdapterCreated(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void AdapterManagerFidlImpl::OnAdapterCreated(bluetooth::gap::Adapter* adapter) {
   if (delegate_) delegate_->OnAdapterAdded(fidl_helpers::NewAdapterInfo(*adapter));
 }
 
-void AdapterManagerFidlImpl::OnAdapterRemoved(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void AdapterManagerFidlImpl::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) {
   if (delegate_) delegate_->OnAdapterRemoved(adapter->identifier());
 }
 
@@ -115,7 +109,7 @@ void AdapterManagerFidlImpl::OnAdapterFidlImplDisconnected(AdapterFidlImpl* adap
 }
 
 void AdapterManagerFidlImpl::CreateAdapterFidlImpl(
-    ftl::RefPtr<bluetooth::gap::Adapter> adapter,
+    ftl::WeakPtr<bluetooth::gap::Adapter> adapter,
     ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request) {
   FTL_DCHECK(adapter);
 

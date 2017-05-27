@@ -4,6 +4,7 @@
 
 #include "app.h"
 
+#include "apps/bluetooth/lib/gap/adapter.h"
 #include "lib/ftl/logging.h"
 
 using std::placeholders::_1;
@@ -23,17 +24,17 @@ App::~App() {
   adapter_manager_.RemoveObserver(this);
 }
 
-void App::OnActiveAdapterChanged(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void App::OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) {
   FTL_LOG(INFO) << "Active adapter changed: " << (adapter ? adapter->identifier() : "(null)");
   // TODO(armansito): Do something meaningful here.
 }
 
-void App::OnAdapterCreated(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void App::OnAdapterCreated(bluetooth::gap::Adapter* adapter) {
   FTL_LOG(INFO) << "Adapter added: " << adapter->identifier();
   // TODO(armansito): Do something meaningful here.
 }
 
-void App::OnAdapterRemoved(ftl::RefPtr<bluetooth::gap::Adapter> adapter) {
+void App::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) {
   FTL_LOG(INFO) << "Adapter removed: " << adapter->identifier();
   // TODO(armansito): Do something meaningful here.
 }

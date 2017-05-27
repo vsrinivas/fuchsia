@@ -10,7 +10,7 @@
 
 namespace bluetooth_service {
 
-AdapterFidlImpl::AdapterFidlImpl(ftl::RefPtr<::bluetooth::gap::Adapter> adapter,
+AdapterFidlImpl::AdapterFidlImpl(const ftl::WeakPtr<::bluetooth::gap::Adapter>& adapter,
                                  ::fidl::InterfaceRequest<::bluetooth::control::Adapter> request,
                                  const ConnectionErrorHandler& connection_error_handler)
     : adapter_(adapter), binding_(this, std::move(request)) {

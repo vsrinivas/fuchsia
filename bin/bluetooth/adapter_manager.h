@@ -7,12 +7,18 @@
 #include <unordered_map>
 
 #include "apps/bluetooth/lib/common/observer_list.h"
-#include "apps/bluetooth/lib/gap/adapter.h"
 
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/io/device_watcher.h"
+
+namespace bluetooth {
+namespace gap {
+
+class Adapter;
+
+}  // namespace gap
+}  // namespace bluetooth
 
 namespace bluetooth_service {
 
@@ -28,16 +34,16 @@ class AdapterManager final {
 
     // Called when the active adapter changes. |adapter| will be nullptr if all adapters have been
     // removed and no new default was set.
-    virtual void OnActiveAdapterChanged(ftl::RefPtr<bluetooth::gap::Adapter> adapter) = 0;
+    virtual void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) = 0;
 
     // Called when a new Bluetooth HCI device is found. This will be called with a fully initialized
     // Adapter instance.
-    virtual void OnAdapterCreated(ftl::RefPtr<bluetooth::gap::Adapter> adapter) = 0;
+    virtual void OnAdapterCreated(bluetooth::gap::Adapter* adapter) = 0;
 
     // Called when a Bluetooth HCI device has been removed from the system or any of the transport
     // channels was shut down for an unknown reason. The returned adapter will have been completely
     // shut down and is ready for removal.
-    virtual void OnAdapterRemoved(ftl::RefPtr<bluetooth::gap::Adapter> adapter) = 0;
+    virtual void OnAdapterRemoved(bluetooth::gap::Adapter* adapter) = 0;
   };
 
   AdapterManager();
@@ -45,10 +51,10 @@ class AdapterManager final {
 
   // Returns the adapter with the given |identifier|. Returns nullptr if |identifier| is not
   // recognized.
-  ftl::RefPtr<bluetooth::gap::Adapter> GetAdapter(const std::string& identifier) const;
+  ftl::WeakPtr<bluetooth::gap::Adapter> GetAdapter(const std::string& identifier) const;
 
   // Calls the given iterator function over all currently known adapters.
-  using ForEachAdapterFunc = std::function<void(ftl::RefPtr<bluetooth::gap::Adapter>)>;
+  using ForEachAdapterFunc = std::function<void(bluetooth::gap::Adapter*)>;
   void ForEachAdapter(const ForEachAdapterFunc& func) const;
 
   // Returns true if any Bluetooth adapters are currently managed by this AdapterManager.
@@ -59,18 +65,21 @@ class AdapterManager final {
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);
 
-  // Assigns the current active adapter.
-  void SetActiveAdapter(ftl::RefPtr<bluetooth::gap::Adapter> adapter);
-
   // Returns the current active adapter. Returns nullptr if no active adapter was set.
-  ftl::RefPtr<bluetooth::gap::Adapter> active_adapter() const { return active_adapter_; }
+  ftl::WeakPtr<bluetooth::gap::Adapter> GetActiveAdapter();
+
+  // Assigns the current active adapter. Returns false if |identifier| is not recognized.
+  // Otherwise notifies all observers and returns true.
+  bool SetActiveAdapter(const std::string& identifier);
 
  private:
+  bool SetActiveAdapterInternal(bluetooth::gap::Adapter* adapter);
+
   // Called by |device_watcher_| for Bluetooth HCI devices that are found on the system.
   void OnDeviceFound(int dir_fd, std::string filename);
 
   // Called after an Adapter is initialized.
-  void RegisterAdapter(ftl::RefPtr<bluetooth::gap::Adapter> adapter);
+  void RegisterAdapter(std::unique_ptr<bluetooth::gap::Adapter> adapter);
 
   // Called when an adapter object's underlying transport gets closed.
   void OnAdapterTransportClosed(std::string adapter_identifier);
@@ -87,10 +96,10 @@ class AdapterManager final {
   std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
 
   // All Adapter instances that we are managing.
-  std::unordered_map<std::string, ftl::RefPtr<bluetooth::gap::Adapter>> adapters_;
+  std::unordered_map<std::string, std::unique_ptr<bluetooth::gap::Adapter>> adapters_;
 
   // The current active adapter.
-  ftl::RefPtr<bluetooth::gap::Adapter> active_adapter_;
+  bluetooth::gap::Adapter* active_adapter_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

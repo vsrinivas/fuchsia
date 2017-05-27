@@ -29,12 +29,12 @@ class AdapterTest : public TestingBase {
 
   void SetUp() override {
     transport_closed_called_ = false;
-    adapter_ = Adapter::Create(TestingBase::SetUpTestDevice());
+    adapter_ = std::make_unique<Adapter>(TestingBase::SetUpTestDevice());
     test_device()->Start();
   }
 
   void TearDown() override {
-    if (adapter_->IsInitialized()) adapter_->ShutDown([] {});
+    if (adapter_->IsInitialized()) adapter_->ShutDown();
     adapter_ = nullptr;
     TestingBase::TearDown();
   }
@@ -53,7 +53,7 @@ class AdapterTest : public TestingBase {
 
  private:
   bool transport_closed_called_;
-  ftl::RefPtr<Adapter> adapter_;
+  std::unique_ptr<Adapter> adapter_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AdapterTest);
 };
