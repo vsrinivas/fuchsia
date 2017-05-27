@@ -174,6 +174,7 @@ static mx_handle_t make_bootstrap_channel(
 
 enum bootstrap_handle_index {
     BOOTSTRAP_VDSO,
+    BOOTSTRAP_VDSO_LAST_VARIANT = BOOTSTRAP_VDSO + VDso::variants() - 1,
     BOOTSTRAP_RAMDISK,
     BOOTSTRAP_RESOURCE_ROOT,
     BOOTSTRAP_STACK,
@@ -211,8 +212,8 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     for (int i = 0; i < BOOTSTRAP_HANDLES; ++i) {
         uint32_t info = 0;
         switch (static_cast<bootstrap_handle_index>(i)) {
-        case BOOTSTRAP_VDSO:
-            info = PA_HND(PA_VMO_VDSO, 0);
+        case BOOTSTRAP_VDSO ... BOOTSTRAP_VDSO_LAST_VARIANT:
+            info = PA_HND(PA_VMO_VDSO, i - BOOTSTRAP_VDSO);
             break;
         case BOOTSTRAP_RAMDISK:
             info = PA_HND(PA_VMO_BOOTDATA, 0);
@@ -295,7 +296,11 @@ static int attempt_userboot() {
     handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar, vmar_rights);
 
     const VDso* vdso = VDso::Create();
-    handles[BOOTSTRAP_VDSO] = vdso->vmo_handle().release();
+    for (size_t i = BOOTSTRAP_VDSO; i <= BOOTSTRAP_VDSO_LAST_VARIANT; ++i) {
+        HandleOwner vmo_handle =
+            vdso->vmo_handle(static_cast<VDso::Variant>(i - BOOTSTRAP_VDSO));
+        handles[i] = vmo_handle.release();
+    }
 
     UserbootImage userboot(vdso);
     uintptr_t vdso_base = 0;

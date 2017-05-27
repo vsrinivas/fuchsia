@@ -21,8 +21,10 @@
 
 #define LOCAL_TRACE 0
 
-int sys_invalid_syscall(uint64_t num, uint64_t pc) {
-    LTRACEF("invalid syscall %lu from PC %#lx \n", num, pc);
+int sys_invalid_syscall(uint64_t num, uint64_t pc,
+                        uintptr_t vdso_code_address) {
+    LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n",
+            num, pc, vdso_code_address);
     return ERR_BAD_SYSCALL;
 }
 
@@ -32,13 +34,14 @@ inline uint64_t invoke_syscall(
     uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8) {
     uint64_t ret;
 
-    const uint64_t pc_offset =
-        pc - ProcessDispatcher::GetCurrent()->vdso_code_address();
+    const uintptr_t vdso_code_address =
+        ProcessDispatcher::GetCurrent()->vdso_code_address();
+    const uint64_t pc_offset = pc - vdso_code_address;
 
-#define CHECK_SYSCALL_PC(name)                                \
-    do {                                                      \
-        if (unlikely(!VDso::ValidSyscallPC::name(pc_offset))) \
-            return sys_invalid_syscall(syscall_num, pc);      \
+#define CHECK_SYSCALL_PC(name)                                          \
+    do {                                                                \
+        if (unlikely(!VDso::ValidSyscallPC::name(pc_offset)))           \
+            return sys_invalid_syscall(syscall_num, pc, vdso_code_address); \
     } while (0)
 
     switch (syscall_num) {
@@ -116,12 +119,12 @@ inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
                   get_current_thread(), syscall_num, ip);
 
-    const uint64_t pc_offset =
-        ip - ProcessDispatcher::GetCurrent()->vdso_code_address();
+    const uintptr_t vdso_code_address =
+        ProcessDispatcher::GetCurrent()->vdso_code_address();
 
     uint64_t ret;
-    if (unlikely(!valid_pc(pc_offset))) {
-        ret = sys_invalid_syscall(syscall_num, ip);
+    if (unlikely(!valid_pc(ip - vdso_code_address))) {
+        ret = sys_invalid_syscall(syscall_num, ip, vdso_code_address);
     } else {
         ret = make_call();
     }
@@ -140,11 +143,10 @@ inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
 
 inline x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip) {
     return do_syscall(syscall_num, ip,
-                      [](uintptr_t) {
-                          return true;
-                      },
+                      [](uintptr_t) { return false; },
                       [&]() {
-                          return sys_invalid_syscall(syscall_num, ip);
+                          __builtin_unreachable();
+                          return ERR_INTERNAL;
                       });
 }
 

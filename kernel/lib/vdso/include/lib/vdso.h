@@ -17,7 +17,7 @@ public:
     static const VDso* Create();
 
     static bool vmo_is_vdso(const mxtl::RefPtr<VmObject>& vmo) {
-        return instance_ && vmo == instance_->vmo()->vmo();
+        return likely(instance_) && instance_->vmo_is_vdso_impl(vmo);
     }
 
     static bool valid_code_mapping(uint64_t vmo_offset, size_t size) {
@@ -36,8 +36,41 @@ public:
     // for entering the kernel with <syscall-name>'s syscall number.
     struct ValidSyscallPC;
 
+    enum class Variant {
+        FULL,
+        TEST1,
+        TEST2,
+        COUNT
+    };
+
+    static constexpr size_t variants() {
+        return static_cast<size_t>(Variant::COUNT);
+    }
+
+    // Return a handle to the VMO for the given variant.
+    HandleOwner vmo_handle(Variant) const;
+
 private:
     VDso();
+    void CreateVariant(Variant);
+
+    bool vmo_is_vdso_impl(const mxtl::RefPtr<VmObject>& vmo_ref) const {
+        if (vmo_ref == vmo()->vmo())
+            return true;
+        for (const auto& v : variant_vmo_) {
+            if (vmo_ref == v->vmo())
+                return true;
+        }
+        return false;
+    }
+
+    static constexpr size_t variant_index(Variant v) {
+        DEBUG_ASSERT(v > Variant::FULL);
+        return static_cast<size_t>(v) - 1;
+    }
+
+    mxtl::RefPtr<VmObjectDispatcher> variant_vmo_[
+        static_cast<size_t>(Variant::COUNT) - 1];
 
     static const VDso* instance_;
 };

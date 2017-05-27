@@ -150,29 +150,29 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t* thread_handle_loc = NULL;
     mx_handle_t* stack_vmo_handle_loc = NULL;
     for (uint32_t i = 0; i < nhandles; ++i) {
-        switch (PA_HND_TYPE(handle_info[i])) {
-        case PA_VMO_VDSO:
+        switch (handle_info[i]) {
+        case PA_HND(PA_VMO_VDSO, 0):
             vdso_vmo = handles[i];
             break;
-        case PA_PROC_SELF:
+        case PA_HND(PA_PROC_SELF, 0):
             proc_handle_loc = &handles[i];
             break;
-        case PA_VMAR_ROOT:
+        case PA_HND(PA_VMAR_ROOT, 0):
             vmar_root_handle_loc = &handles[i];
             break;
-        case PA_THREAD_SELF:
+        case PA_HND(PA_THREAD_SELF, 0):
             thread_handle_loc = &handles[i];
             break;
-        case PA_VMO_STACK:
+        case PA_HND(PA_VMO_STACK, 0):
             stack_vmo_handle_loc = &handles[i];
             break;
-        case PA_RESOURCE:
+        case PA_HND(PA_RESOURCE, 0):
             resource_root = handles[i];
             break;
-        case PA_JOB_DEFAULT:
+        case PA_HND(PA_JOB_DEFAULT, 0):
             job = handles[i];
             break;
-        case PA_VMO_BOOTDATA:
+        case PA_HND(PA_VMO_BOOTDATA, 0):
             if (bootdata_vmo == MX_HANDLE_INVALID)
                 bootdata_vmo = handles[i];
             break;

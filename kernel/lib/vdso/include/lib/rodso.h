@@ -31,6 +31,8 @@ protected:
     RoDso(const char* name, const void* image, size_t size,
           uintptr_t code_start);
 
+    mx_rights_t vmo_rights() const { return vmo_rights_; }
+
 private:
 
     mx_status_t MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,

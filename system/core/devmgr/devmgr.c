@@ -8,6 +8,7 @@
 #include <ddk/protocol/device.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
+#include <launchpad/launchpad.h>
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
 #include <magenta/device/vfs.h>
@@ -15,6 +16,7 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/status.h>
 #include <mxio/debug.h>
 #include <mxio/loader-service.h>
 #include <mxio/watcher.h>
@@ -372,6 +374,43 @@ int virtcon_starter(void* arg) {
     return 0;
 }
 
+static void fetch_vdsos(void) {
+    for (uint_fast16_t i = 0; true; ++i) {
+        mx_handle_t vdso_vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, i));
+        if (vdso_vmo == MX_HANDLE_INVALID)
+            break;
+        if (i == 0) {
+            // The first one is the default vDSO.  Since we've stolen
+            // the startup handle, launchpad won't find it on its own.
+            // So point launchpad at it.
+            launchpad_set_vdso_vmo(vdso_vmo);
+        }
+
+        // The vDSO VMOs have names like "vdso/default", so those
+        // become VMO files at "/boot/vdso/default".
+        char name[MX_MAX_NAME_LEN];
+        size_t size;
+        mx_status_t status = mx_object_get_property(vdso_vmo, MX_PROP_NAME,
+                                                    name, sizeof(name));
+        if (status != NO_ERROR) {
+            printf("devmgr: mx_object_get_property on PA_VMO_VDSO %u: %s\n",
+                   i, mx_status_get_string(status));
+            continue;
+        }
+        status = mx_vmo_get_size(vdso_vmo, &size);
+        if (status != NO_ERROR) {
+            printf("devmgr: mx_vmo_get_size on PA_VMO_VDSO %u: %s\n",
+                   i, mx_status_get_string(status));
+            continue;
+        }
+        status = bootfs_add_file(name, vdso_vmo, 0, size);
+        if (status != NO_ERROR) {
+            printf("devmgr: failed to add PA_VMO_VDSO %u to filesystem: %s\n",
+                   i, mx_status_get_string(status));
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     // Close the loader-service channel so the service can go away.
     // We won't use it any more (no dlopen calls in this process).
@@ -398,6 +437,8 @@ int main(int argc, char** argv) {
     devmgr_vfs_init();
 
     mx_object_set_property(root_job_handle, MX_PROP_NAME, "root", 4);
+
+    fetch_vdsos();
 
     mx_status_t status = mx_job_create(root_job_handle, 0u, &svcs_job_handle);
     if (status < 0) {
