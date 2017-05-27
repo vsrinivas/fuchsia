@@ -637,7 +637,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
 
 fail:
     printf("hci_bind failed: %s\n", mx_status_get_string(status));
-    hci_release(hci->mxdev);
+    hci_release(hci);
     return status;
 }
 
