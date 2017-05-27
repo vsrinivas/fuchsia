@@ -189,31 +189,15 @@ mx_status_t VnodeBlob::InitVmos() {
     mx_status_t status;
     int fd = blobstore_->blockfd_;
     blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
-    uint64_t merkle_vmo_size = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
-    uint64_t data_vmo_size = BlobDataBlocks(*inode) * kBlobstoreBlockSize;
 
-    if (merkle_vmo_size != 0) {
-        if ((status = MappedVmo::Create(merkle_vmo_size, "merkle-tree", &merkle_tree_)) != NO_ERROR) {
-            FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
-            goto fail;
-        }
-
-        for (uint64_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
-            uint64_t bno = inode->start_block + n;
-            if ((status = vn_fill_block(fd, merkle_tree_->GetVmo(), n, bno)) != NO_ERROR) {
-                FS_TRACE_ERROR("Failed to fill bno\n");
-                goto fail;
-            }
-        }
-    }
-
-    if ((status = MappedVmo::Create(data_vmo_size, "blob", &blob_)) != NO_ERROR) {
+    uint64_t num_blocks = BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode);
+    if ((status = MappedVmo::Create(num_blocks * kBlobstoreBlockSize, "blob", &blob_)) != NO_ERROR) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         goto fail;
     }
 
-    for (uint64_t n = 0; n < BlobDataBlocks(*inode); n++) {
-        uint64_t bno = inode->start_block + n + MerkleTreeBlocks(*inode);
+    for (uint64_t n = 0; n < num_blocks; n++) {
+        uint64_t bno = inode->start_block + n;
         if ((status = vn_fill_block(fd, blob_->GetVmo(), n, bno)) != NO_ERROR) {
             FS_TRACE_ERROR("Failed to fill bno\n");
             goto fail;
@@ -248,7 +232,6 @@ VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs) :
     flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
 
 void VnodeBlob::BlobCloseHandles() {
-    merkle_tree_ = nullptr;
     blob_ = nullptr;
     readable_event_.reset();
 }
@@ -274,13 +257,7 @@ mx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     inode->num_blocks = MerkleTreeBlocks(*inode) + BlobDataBlocks(*inode);
 
     // Open VMOs, so we can begin writing after allocate succeeds.
-    uint64_t size_merkle = merkle::Tree::GetTreeLength(size_data);
-    if (size_merkle != 0) {
-        if ((status = MappedVmo::Create(size_merkle, "merkle-tree", &merkle_tree_)) != NO_ERROR) {
-            goto fail;
-        }
-    }
-    if ((status = MappedVmo::Create(size_data, "blob", &blob_)) != NO_ERROR) {
+    if ((status = MappedVmo::Create(inode->num_blocks * kBlobstoreBlockSize, "blob", &blob_)) != NO_ERROR) {
         goto fail;
     }
 
@@ -326,6 +303,16 @@ mx_status_t VnodeBlob::WriteShared(size_t start, size_t len, uint64_t maxlen,
 
     assert(start + len <= maxlen);
     return NO_ERROR;
+}
+
+void* VnodeBlob::GetData() const {
+    auto inode = blobstore_->GetNode(map_index_);
+    return fs::GetBlock<kBlobstoreBlockSize>(blob_->GetData(),
+                                             MerkleTreeBlocks(*inode));
+}
+
+void* VnodeBlob::GetMerkle() const {
+    return blob_->GetData();
 }
 
 mx_status_t VnodeBlob::WriteMetadata() {
@@ -377,18 +364,17 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     }
 
     auto inode = blobstore_->GetNode(map_index_);
-
+    const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
     if (GetState() == kBlobStateDataWrite) {
         size_t to_write = mxtl::min(len, inode->blob_size - bytes_written_);
-        mx_status_t status = vmo_write_exact(blob_->GetVmo(), data,
-                                             bytes_written_, to_write);
+        size_t offset = bytes_written_ + data_start;
+        mx_status_t status = vmo_write_exact(blob_->GetVmo(), data, offset, to_write);
         if (status != NO_ERROR) {
             return status;
         }
 
-        status = WriteShared(bytes_written_, len, inode->blob_size,
-                             blob_->GetVmo(),
-                             inode->start_block + MerkleTreeBlocks(*inode));
+        status = WriteShared(offset, len, data_start + inode->blob_size,
+                             blob_->GetVmo(), inode->start_block);
         if (status != NO_ERROR) {
             SetState(kBlobStateError);
             return status;
@@ -408,7 +394,9 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         size_t merkle_size = merkle::Tree::GetTreeLength(inode->blob_size);
         if (merkle_size > 0) {
             merkle::Digest digest;
-            if (merkle::Tree::Create(blob_->GetData(), inode->blob_size, merkle_tree_->GetData(),
+            void* merkle_data = GetMerkle();
+            const void* blob_data = GetData();
+            if (merkle::Tree::Create(blob_data, inode->blob_size, merkle_data,
                                      merkle_size, &digest) != NO_ERROR) {
                 SetState(kBlobStateError);
                 return status;
@@ -418,7 +406,7 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
                 return status;
             }
 
-            status = WriteShared(0, merkle_size, merkle_size, merkle_tree_->GetVmo(),
+            status = WriteShared(0, merkle_size, merkle_size, blob_->GetVmo(),
                                  inode->start_block);
             if (status != NO_ERROR) {
                 SetState(kBlobStateError);
@@ -465,24 +453,36 @@ mx_status_t VnodeBlob::CopyVmo(mx_rights_t rights, mx_handle_t* out) {
         return status;
     }
 
-    // TODO(smklein): We could lazily verify more of the VMO if:
-    // 1) We could fault in pages on-demand, or
-    // 2) We could create a COW subsection of the original VMO.
+    // TODO(smklein): We could lazily verify more of the VMO if
+    // we could fault in pages on-demand.
     //
     // For now, we aggressively verify the entire VMO up front.
     merkle::Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = blobstore_->GetNode(map_index_);
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
-    const void* merkle_data = (merkle_tree_ != nullptr) ? merkle_tree_->GetData() : nullptr;
-    status = merkle::Tree::Verify(blob_->GetData(), inode->blob_size,
-                                  merkle_data, size_merkle,
-                                  0, inode->blob_size, d);
+    const void* merkle_data = GetMerkle();
+    const void* blob_data = GetData();
+    status = merkle::Tree::Verify(blob_data, inode->blob_size, merkle_data,
+                                  size_merkle, 0, inode->blob_size, d);
     if (status != NO_ERROR) {
         return status;
     }
 
-    return mx_handle_duplicate(blob_->GetVmo(), rights, out);
+    // TODO(smklein): Only clone / verify the part of the vmo that
+    // was requested.
+    const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
+    mx_handle_t clone;
+    if ((status = mx_vmo_clone(blob_->GetVmo(), MX_VMO_CLONE_COPY_ON_WRITE,
+                               data_start, inode->blob_size, &clone)) != NO_ERROR) {
+        return status;
+    }
+
+    if ((status = mx_handle_replace(clone, rights, out)) != NO_ERROR) {
+        mx_handle_close(clone);
+        return status;
+    }
+    return NO_ERROR;
 }
 
 mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
@@ -507,15 +507,16 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     }
 
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
-    const void* merkle_data = (merkle_tree_ != nullptr) ? merkle_tree_->GetData() : nullptr;
-    status = merkle::Tree::Verify(blob_->GetData(), inode->blob_size,
-                                  merkle_data, size_merkle,
-                                  off, len, d);
+    const void* merkle_data = GetMerkle();
+    const void* blob_data = GetData();
+    status = merkle::Tree::Verify(blob_data, inode->blob_size, merkle_data,
+                                  size_merkle, off, len, d);
     if (status != NO_ERROR) {
         return status;
     }
 
-    return mx_vmo_read(blob_->GetVmo(), data, off, len, actual);
+    const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
+    return mx_vmo_read(blob_->GetVmo(), data, data_start + off, len, actual);
 }
 
 void VnodeBlob::QueueUnlink() {

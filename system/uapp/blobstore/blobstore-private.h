@@ -152,10 +152,16 @@ private:
     // on-disk metadata.
     mx_status_t WriteMetadata();
 
+    // Acquire a pointer to the mapped data or merkle tree
+    void* GetData() const;
+    void* GetMerkle() const;
+
     WAVLTreeNodeState type_wavl_state_;
 
     const mxtl::RefPtr<Blobstore> blobstore_;
-    mxtl::unique_ptr<MappedVmo> merkle_tree_;
+    // The blob_ here consists of:
+    // 1) The Merkle Tree
+    // 2) The Blob itself, aligned to the nearest kBlobstoreBlockSize
     mxtl::unique_ptr<MappedVmo> blob_;
 
     mx::event readable_event_;
