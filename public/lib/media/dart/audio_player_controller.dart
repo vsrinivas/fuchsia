@@ -154,7 +154,7 @@ class AudioPlayerController {
     _mediaService.createPlayer(
       null,
       audioMediaRenderer.passHandle(),
-      videoMediaRenderer.passHandle(),
+      videoMediaRenderer?.passHandle(),
       mediaPlayer.passRequest(),
     );
 
