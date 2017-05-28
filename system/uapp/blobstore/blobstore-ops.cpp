@@ -31,6 +31,16 @@ VnodeBlob::~VnodeBlob() {
 mx_status_t VnodeBlob::Open(uint32_t flags) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ERR_NOT_DIR;
+    } else if (IsDirectory() && ((flags & O_ACCMODE) != 0)) {
+        return ERR_NOT_FILE;
+    }
+
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        if (GetState() != kBlobStateEmpty) {
+            return ERR_ACCESS_DENIED;
+        }
     }
     return NO_ERROR;
 }

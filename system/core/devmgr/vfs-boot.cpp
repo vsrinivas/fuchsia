@@ -22,6 +22,18 @@
 
 namespace memfs {
 
+mx_status_t VnodeVmo::Open(uint32_t flags) {
+    if (flags & O_DIRECTORY) {
+        return ERR_NOT_DIR;
+    }
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        return ERR_ACCESS_DENIED;
+    }
+    return NO_ERROR;
+}
+
 mx_status_t VnodeVmo::Serve(mx_handle_t h, uint32_t flags) {
     mx_handle_close(h);
     return NO_ERROR;

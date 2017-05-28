@@ -63,8 +63,17 @@ VnodeVmo::VnodeVmo(mx_handle_t vmo, mx_off_t offset, mx_off_t length) :
     vmo_(vmo), offset_(offset), length_(length) {}
 VnodeVmo::~VnodeVmo() {}
 
-mx_status_t VnodeMemfs::Open(uint32_t flags) {
-    if ((flags & O_DIRECTORY) && !IsDirectory()) {
+mx_status_t VnodeDir::Open(uint32_t flags) {
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        return ERR_NOT_FILE;
+    }
+    return NO_ERROR;
+}
+
+mx_status_t VnodeFile::Open(uint32_t flags) {
+    if (flags & O_DIRECTORY) {
         return ERR_NOT_DIR;
     }
     return NO_ERROR;

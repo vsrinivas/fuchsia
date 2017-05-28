@@ -30,7 +30,6 @@ class Dnode;
 
 class VnodeMemfs : public fs::Vnode {
 public:
-    virtual mx_status_t Open(uint32_t flags) override;
     virtual mx_status_t Setattr(vnattr_t* a) override;
     virtual mx_status_t Sync() override;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
@@ -62,6 +61,8 @@ public:
     VnodeFile();
     ~VnodeFile();
 
+    virtual mx_status_t Open(uint32_t flags) override;
+
 private:
     ssize_t Read(void* data, size_t len, size_t off) final;
     ssize_t Write(const void* data, size_t len, size_t off) final;
@@ -77,6 +78,7 @@ public:
     VnodeDir();
     virtual ~VnodeDir();
 
+    virtual mx_status_t Open(uint32_t flags) override;
     mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
 
@@ -125,6 +127,8 @@ class VnodeVmo final : public VnodeMemfs {
 public:
     VnodeVmo(mx_handle_t vmo, mx_off_t offset, mx_off_t length);
     ~VnodeVmo();
+
+    virtual mx_status_t Open(uint32_t flags) override;
 
 private:
     mx_status_t Serve(mx_handle_t h, uint32_t flags) final;

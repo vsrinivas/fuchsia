@@ -237,7 +237,7 @@ static bool TestBasic(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd), "");
         ASSERT_EQ(close(fd), 0, "");
-        fd = open(info->path, O_RDWR);
+        fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
@@ -263,7 +263,7 @@ static bool TestMmap(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd), "");
         ASSERT_EQ(close(fd), 0, "");
-        fd = open(info->path, O_RDWR);
+        fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
         void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_SHARED,
@@ -303,7 +303,7 @@ static bool TestReaddir(void) {
         ASSERT_TRUE(MakeBlob(info[i]->path, info[i]->merkle.get(), info[i]->size_merkle,
                              info[i]->data.get(), info[i]->size_data, &fd), "");
         ASSERT_EQ(close(fd), 0, "");
-        fd = open(info[i]->path, O_RDWR);
+        fd = open(info[i]->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
         ASSERT_TRUE(VerifyContents(fd, info[i]->data.get(), info[i]->size_data), "");
         ASSERT_EQ(close(fd), 0, "");
@@ -366,7 +366,7 @@ static bool UseAfterUnlink(void) {
 
         // After closing the fd, however, we should not be able to re-open the blob
         ASSERT_EQ(close(fd), 0, "");
-        ASSERT_LT(open(info->path, O_RDWR), 0, "Expected blob to be deleted");
+        ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
     }
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -432,6 +432,7 @@ static bool BadAllocation(void) {
     // it will be inaccessible.
     ASSERT_EQ(close(fd), 0, "");
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
+    ASSERT_LT(open(info->path, O_RDONLY), 0, "Cannot access partial blob");
 
     // And once more -- let's write everything but the last byte of a blob's data.
     fd = open(info->path, O_CREAT | O_RDWR);
@@ -553,7 +554,7 @@ static bool CreateUmountRemountSmall(void) {
         ASSERT_EQ(umount(MOUNT_PATH), NO_ERROR, "Could not unmount blobstore");
         ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
-        fd = open(info->path, O_RDWR);
+        fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to open blob");
 
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
@@ -716,7 +717,7 @@ static bool CreateUmountRemountLarge(void) {
     for (auto& state: bl.list) {
         if (state.state == readable) {
             // If a blob was readable before being unmounted, it should still exist.
-            int fd = open(state.info->path, O_RDWR);
+            int fd = open(state.info->path, O_RDONLY);
             ASSERT_GT(fd, 0, "Failed to create blob");
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
                                        state.info->size_data), "");
@@ -724,7 +725,7 @@ static bool CreateUmountRemountLarge(void) {
             ASSERT_EQ(close(fd), 0, "");
         } else {
             // ... otherwise, the blob should have been deleted.
-            ASSERT_LT(open(state.info->path, O_RDWR), 0, "");
+            ASSERT_LT(open(state.info->path, O_RDONLY), 0, "");
         }
     }
 
@@ -789,7 +790,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     for (auto& state: bl.list) {
         if (state.state == readable) {
             // If a blob was readable before being unmounted, it should still exist.
-            int fd = open(state.info->path, O_RDWR);
+            int fd = open(state.info->path, O_RDONLY);
             ASSERT_GT(fd, 0, "Failed to create blob");
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
                                        state.info->size_data), "");
@@ -797,7 +798,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
             ASSERT_EQ(close(fd), 0, "");
         } else {
             // ... otherwise, the blob should have been deleted.
-            ASSERT_LT(open(state.info->path, O_RDWR), 0, "");
+            ASSERT_LT(open(state.info->path, O_RDONLY), 0, "");
         }
     }
 
@@ -1080,7 +1081,7 @@ static bool RootDirectory(void) {
     char ramdisk_path[PATH_MAX];
     ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
 
-    int dirfd = open(MOUNT_PATH "/.", O_RDWR);
+    int dirfd = open(MOUNT_PATH "/.", O_RDONLY);
     ASSERT_GT(dirfd, 0, "Cannot open root directory");
 
     mxtl::unique_ptr<blob_info_t> info;

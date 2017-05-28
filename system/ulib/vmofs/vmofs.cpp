@@ -56,6 +56,11 @@ mx_status_t VnodeFile::Open(uint32_t flags) {
     if (flags & O_DIRECTORY) {
         return ERR_NOT_DIR;
     }
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        return ERR_ACCESS_DENIED;
+    }
     return NO_ERROR;
 }
 
