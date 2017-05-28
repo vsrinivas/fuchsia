@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/channel.cpp \
     $(LOCAL_DIR)/event.cpp \
     $(LOCAL_DIR)/eventpair.cpp \
+    $(LOCAL_DIR)/fifo.cpp \
     $(LOCAL_DIR)/job.cpp \
     $(LOCAL_DIR)/log.cpp \
     $(LOCAL_DIR)/port.cpp \
