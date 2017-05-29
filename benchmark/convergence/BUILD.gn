@@ -2,32 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("benchmark") {
+group("convergence") {
   deps = [
-    ":launch_benchmark",
-    "//apps/ledger/benchmark/convergence",
-    "//apps/ledger/benchmark/lib",
-    "//apps/ledger/benchmark/put",
-    "//apps/ledger/benchmark/sync",
+    ":ledger_benchmark_convergence",
   ]
 }
 
-executable("launch_benchmark") {
-  sources = [
-    "constants.h",
-    "launch_benchmark.cc",
-  ]
-
+executable("ledger_benchmark_convergence") {
   deps = [
     "//application/lib/app",
     "//apps/ledger/benchmark/lib",
-    "//apps/ledger/benchmark/put:lib",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
+    "//apps/ledger/src/callback",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+
+  sources = [
+    "convergence.cc",
+    "convergence.h",
   ]
 }

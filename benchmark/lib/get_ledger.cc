@@ -63,7 +63,7 @@ void GetPageEnsureInitialized(
   ledger->GetPage(std::move(id), page.NewRequest(),
                   benchmark::QuitOnErrorCallback("GetRootPage"));
   page.set_connection_error_handler([] {
-    FTL_LOG(ERROR) << "The root page connection was closed, quitting.";
+    FTL_LOG(ERROR) << "The page connection was closed, quitting.";
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
