@@ -4,8 +4,29 @@
 
 group("benchmark") {
   deps = [
+    ":launch_benchmark",
     "//apps/ledger/benchmark/lib",
     "//apps/ledger/benchmark/put",
     "//apps/ledger/benchmark/sync",
+  ]
+}
+
+executable("launch_benchmark") {
+  sources = [
+    "constants.h",
+    "launch_benchmark.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/benchmark/lib",
+    "//apps/ledger/benchmark/put:lib",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/tracing/lib/trace",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
   ]
 }

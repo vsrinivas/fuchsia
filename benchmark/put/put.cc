@@ -42,6 +42,10 @@ PutBenchmark::PutBenchmark(int entry_count,
 }
 
 void PutBenchmark::Run() {
+  FTL_LOG(INFO) << "--entry-count=" << entry_count_
+                << " --transaction-size=" << transaction_size_
+                << " --key-size=" << key_size_
+                << " --value-size=" << value_size_ << (update_ ? "update" : "");
   application_controller_ = std::make_unique<app::ApplicationControllerPtr>();
   ledger_controller_ = std::make_unique<ledger::LedgerControllerPtr>();
   tmp_dir_ = std::make_unique<files::ScopedTempDir>(kStoragePath);

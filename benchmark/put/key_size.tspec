@@ -1,0 +1,15 @@
+{
+  "test_suite_name": "fuchsia.ledger",
+  "app": "launch_benchmark",
+  "categories": ["benchmark", "ledger"],
+  "args": ["key-size", "--min-value=10", "--max-value=100", "--step=10"],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "put",
+      "event_category": "benchmark",
+      "split_samples_at": [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
+    }
+  ]
+}
