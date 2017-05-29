@@ -104,10 +104,11 @@ done:
         obj.hcount = (r > 0) ? r : 0;
         mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
                          obj.handle, obj.hcount);
-        if (r < 0) {
-            mx_handle_close(rh);
-            return;
-        }
+    }
+
+    if (r < 0) {
+        mx_handle_close(rh);
+        return;
     }
 
     vn->Serve(rh, open_flags);
