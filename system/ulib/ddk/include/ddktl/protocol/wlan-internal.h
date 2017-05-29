@@ -32,10 +32,10 @@ constexpr void CheckWlanmacIfc() {
     static_assert(internal::has_wlanmac_recv<D>::value,
                   "WlanmacIfc subclasses must implement WlanmacRecv");
     static_assert(mxtl::is_same<decltype(&D::WlanmacRecv),
-                                void (D::*)(void*, size_t, uint32_t)>::value,
+                                void (D::*)(uint32_t, const void*, size_t, wlan_rx_info_t*)>::value,
                   "WlanmacQuery must be a non-static member function with signature "
-                  "'void WlanmacRecv(void*, size_t, uint32_t)', and be visible to "
-                  "ddk::WlanmacIfc<D> (either because they are public, or because of "
+                  "'void WlanmacRecv(uint32_t, const void*, size_t, wlan_rx_info_t*)', and be "
+                  "visible to ddk::WlanmacIfc<D> (either because they are public, or because of "
                   "friendship).");
 }
 
@@ -73,9 +73,9 @@ constexpr void CheckWlanmacProtocolSubclass() {
     static_assert(internal::has_wlanmac_send<D>::value,
                   "WlanmacProtocol subclasses must implement WlanmacTx");
     static_assert(mxtl::is_same<decltype(&D::WlanmacTx),
-                                void (D::*)(uint32_t, void*, size_t)>::value,
+                                void (D::*)(uint32_t, const void*, size_t)>::value,
                   "WlanmacTx must be a non-static member function with signature "
-                  "'mx_status_t WlanmacTx(uint32_t, void*, size_t)', and be visible to "
+                  "'mx_status_t WlanmacTx(uint32_t, const void*, size_t)', and be visible to "
                   "ddk::WlanmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
     static_assert(internal::has_wlanmac_set_channel<D>::value,

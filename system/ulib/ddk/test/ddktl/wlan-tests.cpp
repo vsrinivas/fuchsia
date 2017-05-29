@@ -31,7 +31,7 @@ class TestWlanmacIfc : public ddk::Device<TestWlanmacIfc>,
         status_called_ = true;
     }
 
-    void WlanmacRecv(void* data, size_t length, uint32_t flags) {
+    void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
         recv_this_ = get_this();
         recv_called_ = true;
     }
@@ -91,7 +91,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         return NO_ERROR;
     }
 
-    void WlanmacTx(uint32_t options, void* data, size_t length) {
+    void WlanmacTx(uint32_t options, const void* data, size_t length) {
         tx_this_ = get_this();
         tx_called_ = true;
     }
@@ -121,7 +121,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         if (!proxy_) return false;
         // Use the provided proxy to test the ifc proxy.
         proxy_->Status(0);
-        proxy_->Recv(nullptr, 0, 0);
+        proxy_->Recv(0, nullptr, 0, nullptr);
         return true;
     }
 
@@ -148,7 +148,7 @@ static bool test_wlanmac_ifc() {
 
     auto ifc = dev.wlanmac_ifc();
     ifc->status(&dev, 0);
-    ifc->recv(&dev, nullptr, 0, 0);
+    ifc->recv(&dev, 0, nullptr, 0, nullptr);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 
@@ -162,7 +162,7 @@ static bool test_wlanmac_ifc_proxy() {
     ddk::WlanmacIfcProxy proxy(dev.wlanmac_ifc(), &dev);
 
     proxy.Status(0);
-    proxy.Recv(nullptr, 0, 0);
+    proxy.Recv(0, nullptr, 0, nullptr);
 
     EXPECT_TRUE(dev.VerifyCalls(), "");
 

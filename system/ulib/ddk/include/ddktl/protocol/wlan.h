@@ -59,7 +59,8 @@
 //         // Report status
 //     }
 //
-//     void WlanmacRecv(void* buf, size_t length, uint32_t flags) {
+//     void WlanmacRecv(uint32_t flags, const void* buf, size_t length,
+//                      wlan_rx_info_t* info) {
 //         // Receive data buffer from wlanmac device
 //     }
 //
@@ -135,8 +136,9 @@ class WlanmacIfc {
         static_cast<D*>(cookie)->WlanmacStatus(status);
     }
 
-    static void Recv(void* cookie, void* data, size_t length, uint32_t flags) {
-        static_cast<D*>(cookie)->WlanmacRecv(data, length, flags);
+    static void Recv(void* cookie, uint32_t flags, const void* data, size_t length,
+                     wlan_rx_info_t* info) {
+        static_cast<D*>(cookie)->WlanmacRecv(flags, data, length, info);
     }
 
     wlanmac_ifc_t ifc_ = {};
@@ -151,8 +153,8 @@ class WlanmacIfcProxy {
         ifc_->status(cookie_, status);
     }
 
-    void Recv(void* data, size_t length, uint32_t flags) {
-        ifc_->recv(cookie_, data, length, flags);
+    void Recv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
+        ifc_->recv(cookie_, flags, data, length, info);
     }
 
   private:
@@ -191,7 +193,7 @@ class WlanmacProtocol : public internal::base_protocol {
         return static_cast<D*>(dev->ctx)->WlanmacStart(mxtl::move(ifc_proxy));
     }
 
-    static void Tx(mx_device_t* dev, uint32_t options, void* data, size_t length) {
+    static void Tx(mx_device_t* dev, uint32_t options, const void* data, size_t length) {
         static_cast<D*>(dev->ctx)->WlanmacTx(options, data, length);
     }
 
@@ -222,7 +224,7 @@ class WlanmacProtocolProxy {
         ops_->stop(dev_);
     }
 
-    void Tx(uint32_t options, void* data, size_t length) {
+    void Tx(uint32_t options, const void* data, size_t length) {
         ops_->tx(dev_, options, data, length);
     }
 
