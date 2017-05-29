@@ -15,6 +15,8 @@
 
 #ifdef __cplusplus
 
+#include <mx/fifo.h>
+#include <mx/vmo.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
@@ -32,7 +34,7 @@ public:
     // checking it and using it.  This will require a mechanism to "pin" VMO pages.
     mx_status_t ValidateVmoHack(uint64_t length, uint64_t vmo_offset);
 
-    IoBuffer(mx_handle_t vmo, vmoid_t vmoid);
+    IoBuffer(mx::vmo vmo, vmoid_t vmoid);
     ~IoBuffer();
 
 private:
@@ -40,7 +42,7 @@ private:
     friend struct TypeWAVLTraits;
     DISALLOW_COPY_ASSIGN_AND_MOVE(IoBuffer);
 
-    const mx_handle_t io_vmo_;
+    const mx::vmo io_vmo_;
     const vmoid_t vmoid_;
 };
 
@@ -81,11 +83,11 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer
-    static mx_status_t Create(mx_handle_t* fifo_out, BlockServer** out);
+    static mx_status_t Create(mx::fifo* fifo_out, BlockServer** out);
 
     // Starts the BlockServer using the current thread
     mx_status_t Serve(mx_device_t* dev, block_ops_t* ops);
-    mx_status_t AttachVmo(mx_handle_t vmo, vmoid_t* out);
+    mx_status_t AttachVmo(mx::vmo vmo, vmoid_t* out);
     mx_status_t AllocateTxn(txnid_t* out);
     void FreeTxn(txnid_t txnid);
 
@@ -99,7 +101,7 @@ private:
     mx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
     mxtl::Mutex server_lock_;
-    mx_handle_t fifo_ TA_GUARDED(server_lock_);
+    mx::fifo fifo_ TA_GUARDED(server_lock_);
     mxtl::WAVLTree<vmoid_t, mxtl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
     mxtl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
     vmoid_t last_id TA_GUARDED(server_lock_);

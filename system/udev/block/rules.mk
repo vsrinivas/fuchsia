@@ -15,6 +15,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
+    system/ulib/mx \
     system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \

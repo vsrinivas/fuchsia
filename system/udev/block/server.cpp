@@ -109,16 +109,14 @@ void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
     msg->iobuf.reset();
 }
 
-IoBuffer::IoBuffer(mx_handle_t vmo, vmoid_t id) : io_vmo_(vmo), vmoid_(id) {}
+IoBuffer::IoBuffer(mx::vmo vmo, vmoid_t id) : io_vmo_(mxtl::move(vmo)), vmoid_(id) {}
 
-IoBuffer::~IoBuffer() {
-    mx_handle_close(io_vmo_);
-}
+IoBuffer::~IoBuffer() {}
 
 mx_status_t IoBuffer::ValidateVmoHack(uint64_t length, uint64_t vmo_offset) {
     uint64_t vmo_size;
     mx_status_t status;
-    if ((status = mx_vmo_get_size(io_vmo_, &vmo_size)) != NO_ERROR) {
+    if ((status = io_vmo_.get_size(&vmo_size)) != NO_ERROR) {
         return status;
     } else if (length + vmo_offset > vmo_size) {
         return ERR_INVALID_ARGS;
@@ -144,7 +142,7 @@ mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
     return ERR_NO_RESOURCES;
 }
 
-mx_status_t BlockServer::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
+mx_status_t BlockServer::AttachVmo(mx::vmo vmo, vmoid_t* out) {
     mx_status_t status;
     vmoid_t id;
     mxtl::AutoLock server_lock(&server_lock_);
@@ -153,7 +151,7 @@ mx_status_t BlockServer::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
     }
 
     AllocChecker ac;
-    mxtl::RefPtr<IoBuffer> ibuf = mxtl::AdoptRef(new (&ac) IoBuffer(vmo, id));
+    mxtl::RefPtr<IoBuffer> ibuf = mxtl::AdoptRef(new (&ac) IoBuffer(mxtl::move(vmo), id));
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
@@ -168,7 +166,7 @@ mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             AllocChecker ac;
-            txns_[i] = mxtl::AdoptRef(new (&ac) BlockTransaction(fifo_, txnid));
+            txns_[i] = mxtl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
             if (!ac.check()) {
                 return ERR_NO_MEMORY;
             }
@@ -188,7 +186,7 @@ void BlockServer::FreeTxn(txnid_t txnid) {
     txns_[txnid] = nullptr;
 }
 
-mx_status_t BlockServer::Create(mx_handle_t* fifo_out, BlockServer** out) {
+mx_status_t BlockServer::Create(mx::fifo* fifo_out, BlockServer** out) {
     AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer();
     if (!ac.check()) {
@@ -196,8 +194,8 @@ mx_status_t BlockServer::Create(mx_handle_t* fifo_out, BlockServer** out) {
     }
 
     mx_status_t status;
-    if ((status = mx_fifo_create(BLOCK_FIFO_MAX_DEPTH, BLOCK_FIFO_ESIZE, 0,
-                                 fifo_out, &bs->fifo_)) != NO_ERROR) {
+    if ((status = mx::fifo::create(BLOCK_FIFO_MAX_DEPTH, BLOCK_FIFO_ESIZE, 0,
+                                   fifo_out, &bs->fifo_)) != NO_ERROR) {
         delete bs;
         return status;
     }
@@ -235,7 +233,7 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
     mx_handle_t fifo;
     {
         mxtl::AutoLock server_lock(&server_lock_);
-        fifo = fifo_;
+        fifo = fifo_.get();
     }
     while (true) {
         if ((status = do_read(fifo, &requests[0], &count)) != NO_ERROR) {
@@ -287,10 +285,10 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
                 }
 
                 if ((requests[i].opcode & BLOCKIO_OP_MASK) == BLOCKIO_READ) {
-                    ops->read(dev, iobuf->io_vmo_, requests[i].length,
+                    ops->read(dev, iobuf->io_vmo_.get(), requests[i].length,
                               requests[i].vmo_offset, requests[i].dev_offset, msg);
                 } else {
-                    ops->write(dev, iobuf->io_vmo_, requests[i].length,
+                    ops->write(dev, iobuf->io_vmo_.get(), requests[i].length,
                                requests[i].vmo_offset, requests[i].dev_offset, msg);
                 }
                 break;
@@ -316,22 +314,21 @@ mx_status_t BlockServer::Serve(mx_device_t* dev, block_ops_t* ops) {
     }
 }
 
-BlockServer::BlockServer() : fifo_(MX_HANDLE_INVALID), last_id(0) {}
+BlockServer::BlockServer() : last_id(0) {}
 BlockServer::~BlockServer() {
     ShutDown();
 }
 
 void BlockServer::ShutDown() {
     mxtl::AutoLock server_lock(&server_lock_);
-    if (fifo_ != MX_HANDLE_INVALID) {
-        mx_handle_close(fifo_);
-    }
-    fifo_ = MX_HANDLE_INVALID;
 }
 
 // C declarations
 mx_status_t blockserver_create(mx_handle_t* fifo_out, BlockServer** out) {
-    return BlockServer::Create(fifo_out, out);
+    mx::fifo fifo;
+    mx_status_t status = BlockServer::Create(&fifo, out);
+    *fifo_out = fifo.release();
+    return status;
 }
 void blockserver_shutdown(BlockServer* bs) {
     bs->ShutDown();
@@ -342,8 +339,9 @@ void blockserver_free(BlockServer* bs) {
 mx_status_t blockserver_serve(BlockServer* bs, mx_device_t* dev, block_ops_t* ops) {
     return bs->Serve(dev, ops);
 }
-mx_status_t blockserver_attach_vmo(BlockServer* bs, mx_handle_t vmo, vmoid_t* out) {
-    return bs->AttachVmo(vmo, out);
+mx_status_t blockserver_attach_vmo(BlockServer* bs, mx_handle_t raw_vmo, vmoid_t* out) {
+    mx::vmo vmo(raw_vmo);
+    return bs->AttachVmo(mxtl::move(vmo), out);
 }
 mx_status_t blockserver_allocate_txn(BlockServer* bs, txnid_t* out) {
     return bs->AllocateTxn(out);
