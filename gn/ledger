@@ -28,6 +28,10 @@
             "bootfs_path": "apps/launch_benchmark"
         },
         {
+            "binary": "ledger_benchmark_convergence",
+            "bootfs_path": "apps/ledger_benchmark_convergence"
+        },
+        {
             "binary": "ledger_benchmark_put",
             "bootfs_path": "apps/ledger_benchmark_put"
         },
@@ -45,6 +49,10 @@
         }
     ],
     "resources": [
+        {
+            "file": "apps/ledger/benchmark/convergence/convergence.tspec",
+            "bootfs_path": "data/ledger/benchmark/convergence.tspec"
+        },
         {
             "file": "apps/ledger/benchmark/put/transaction.tspec",
             "bootfs_path": "data/ledger/benchmark/transaction.tspec"
