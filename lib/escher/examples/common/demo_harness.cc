@@ -527,7 +527,7 @@ DemoHarness::SwapchainImageOwner::SwapchainImageOwner(
     : escher::ResourceManager(context) {}
 
 void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
-    std::unique_ptr<escher::Resource2> resource) {
+    std::unique_ptr<escher::Resource> resource) {
   FTL_DCHECK(resource->IsKindOf<escher::Image>());
   FTL_LOG(INFO) << "Destroying Image for swapchain image";
 }

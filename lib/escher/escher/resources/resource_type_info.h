@@ -10,10 +10,20 @@ namespace escher {
 
 // All subclasses of Resource are represented here.
 enum class ResourceType {
+  // Abstract base classes.
   kResource = 1,
-  kImage = 1 << 1,
-  kTexture = 1 << 2,
-  kFramebuffer = 1 << 3,
+  kWaitableResource = 1 << 1,
+
+  // Concrete subclasses.
+  kImage = 1 << 2,
+  kTexture = 1 << 3,
+  kFramebuffer = 1 << 4,
+  kBuffer = 1 << 5,
+  kMesh = 1 << 6,
+
+  // Resources defined in escher::impl namespace.
+  kImplModelDisplayList = 1 << 30,
+  kImplDescriptorSetAllocation = 1 << 31,
 };
 
 typedef TypeInfo<ResourceType> ResourceTypeInfo;

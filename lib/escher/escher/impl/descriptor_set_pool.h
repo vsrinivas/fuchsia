@@ -7,7 +7,8 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include <escher/impl/resource.h>
+#include "escher/resources/resource.h"
+#include "escher/resources/resource_manager.h"
 
 namespace escher {
 namespace impl {
@@ -23,6 +24,9 @@ class DescriptorSetPool;
 // nor destroyed while it is still in use by the device.
 class DescriptorSetAllocation : public Resource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   ~DescriptorSetAllocation() override;
 
   const vk::DescriptorSet& get(size_t index) const { return sets_[index]; }
@@ -34,7 +38,6 @@ class DescriptorSetAllocation : public Resource {
   DescriptorSetAllocation(DescriptorSetPool* pool,
                           std::vector<vk::DescriptorSet> descriptor_sets);
 
-  DescriptorSetPool* pool_;
   std::vector<vk::DescriptorSet> sets_;
 };
 
@@ -44,9 +47,9 @@ typedef ftl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
 // a particular CommandBuffer.  When that CommandBuffer is retired, all such
 // DescriptorSets are returned to the pool from which they originated, so that
 // they can be reused.
-class DescriptorSetPool {
+class DescriptorSetPool : public ResourceManager {
  public:
-  DescriptorSetPool(vk::Device device,
+  DescriptorSetPool(const VulkanContext& context,
                     const vk::DescriptorSetLayoutCreateInfo& layout_info,
                     uint32_t initial_capacity = 10);
   ~DescriptorSetPool();
@@ -61,15 +64,12 @@ class DescriptorSetPool {
   vk::DescriptorSetLayout layout() const { return layout_; }
 
  private:
-  // Called by ~DescriptorSetAllocation() to return unused sets to free_sets_.
-  friend class DescriptorSetAllocation;
-  void ReturnDescriptorSets(std::vector<vk::DescriptorSet> unused_sets);
+  // Implement Owner::OnReceiveOwnable().
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   // Create a new vk::DescriptorPool, and use it to allocate the specified
   // number of vk::DescriptorSets, which are then added to free_sets_.
   void InternalAllocate(uint32_t descriptor_set_count);
-
-  vk::Device device_;
 
   // These are used each time that more descriptor sets must be allocated.
   vk::DescriptorSetLayout layout_;
@@ -78,9 +78,6 @@ class DescriptorSetPool {
   // Sets that are free to be used in a new allocation.
   std::vector<vk::DescriptorSet> free_sets_;
   std::vector<vk::DescriptorPool> pools_;
-
-  // Number of outstanding DescriptorSetAllocations.
-  uint32_t allocation_count_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DescriptorSetPool);
 };

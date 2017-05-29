@@ -149,7 +149,7 @@ ImagePtr ImageCache::FindImage(const ImageInfo& info) {
   }
 }
 
-void ImageCache::OnReceiveOwnable(std::unique_ptr<Resource2> resource) {
+void ImageCache::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
   FTL_DCHECK(resource->IsKindOf<Image>());
   std::unique_ptr<Image> image(static_cast<Image*>(resource.release()));
   auto& queue = unused_images_[image->info()];

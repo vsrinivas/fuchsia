@@ -29,10 +29,10 @@ class ResourceLifePreserver : public ResourceManager,
   // Implement Owner::OnReceiveOwnable().  Destroys the resource immediately if
   // it is safe to do so.  Otherwise, adds the resource to a set of resources
   // to be destroyed later; see CommandBufferFinished().
-  void OnReceiveOwnable(std::unique_ptr<Resource2> resource) override;
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   uint64_t last_finished_sequence_number_ = 0;
-  std::unordered_set<std::unique_ptr<Resource2>> unused_resources_;
+  std::unordered_set<std::unique_ptr<Resource>> unused_resources_;
 };
 
 }  // namespace escher

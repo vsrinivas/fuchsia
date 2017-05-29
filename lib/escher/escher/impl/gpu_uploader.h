@@ -4,14 +4,17 @@
 
 #pragma once
 
+#include "escher/resources/resource_manager.h"
 #include "escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {
 
-class GpuUploader : BufferOwner {
+class GpuUploader : ResourceManager {
  public:
-  GpuUploader(CommandBufferPool* command_buffer_pool, GpuAllocator* allocator);
+  GpuUploader(const VulkanContext& context,
+              CommandBufferPool* command_buffer_pool,
+              GpuAllocator* allocator);
   ~GpuUploader();
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this
@@ -52,11 +55,6 @@ class GpuUploader : BufferOwner {
            vk::DeviceSize size,
            vk::DeviceSize offset);
 
-    // Add the resource to command_buffer_.  If semaphore is not null, set it as
-    // target's wait-sempahore, and signal it when the command-buffer is
-    // retired.
-    void RememberTarget(ResourcePtr target, SemaphorePtr semaphore);
-
     BufferPtr buffer_;
     CommandBuffer* command_buffer_;
     vk::Queue queue_;
@@ -72,30 +70,8 @@ class GpuUploader : BufferOwner {
   Writer GetWriter(size_t size);
 
  private:
-  // Implement BufferOwner::RecycleBuffer().
-  void RecycleBuffer(std::unique_ptr<BufferInfo> info) override;
-
-  // Item in free_buffers_.
-  class TransferBufferInfo : public BufferInfo {
-   public:
-    TransferBufferInfo(vk::Buffer buffer,
-                       vk::DeviceSize size,
-                       uint8_t* ptr,
-                       GpuMemPtr mem);
-    ~TransferBufferInfo();
-
-    vk::Buffer GetBuffer() override;
-    vk::DeviceSize GetSize() override;
-    uint8_t* GetMappedPointer() override;
-
-    // Not part of public BufferInfo interface.  Called by GpuUploader.
-    void DestroyBuffer(vk::Device device);
-
-    vk::Buffer buffer;
-    vk::DeviceSize size;
-    uint8_t* ptr;
-    GpuMemPtr mem;
-  };
+  // Implement ResourceManager::OnReceiveOwnable().
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   // If current_buffer_ doesn't have enough room, release it and prepare a
   // suitable buffer.
@@ -114,16 +90,13 @@ class GpuUploader : BufferOwner {
   GpuAllocator* allocator_;
 
   // List of free buffers that are available for allocation.
-  std::vector<std::unique_ptr<BufferInfo>> free_buffers_;
+  std::vector<std::unique_ptr<Buffer>> free_buffers_;
 
   // The buffer that is currently being used for writes.
   BufferPtr current_buffer_;
 
   // The offset within the buffer that will be used for the next created Writer.
   vk::DeviceSize current_offset_;
-  // Number of currently-existing TransferBufferInfo objects that were created
-  // by this uploader.
-  uint32_t allocation_count_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GpuUploader);
 };

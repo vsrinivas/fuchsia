@@ -49,7 +49,7 @@ void GpuUploader::Writer::Submit() {
   FTL_CHECK(command_buffer_);
   if (has_writes_) {
     if (has_writes_) {
-      command_buffer_->AddUsedResource(std::move(buffer_));
+      command_buffer_->KeepAlive(std::move(buffer_));
       command_buffer_->Submit(queue_, nullptr);
     } else {
       // We need to submit the buffer anyway, otherwise we'll stall the
@@ -76,8 +76,11 @@ void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
                                       SemaphorePtr semaphore) {
   has_writes_ = true;
   region.srcOffset += offset_;
-  RememberTarget(target, std::move(semaphore));
-
+  if (semaphore) {
+    target->SetWaitSemaphore(semaphore);
+    command_buffer_->AddSignalSemaphore(std::move(semaphore));
+  }
+  command_buffer_->KeepAlive(target);
   command_buffer_->get().copyBuffer(buffer_->get(), target->get(), 1, &region);
 }
 
@@ -100,69 +103,21 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
     target->SetWaitSemaphore(semaphore);
     command_buffer_->AddSignalSemaphore(std::move(semaphore));
   }
-  target->KeepAlive(command_buffer_);
+  command_buffer_->KeepAlive(target);
 }
 
-void GpuUploader::Writer::RememberTarget(ResourcePtr target,
-                                         SemaphorePtr semaphore) {
-  if (semaphore) {
-    target->SetWaitSemaphore(semaphore);
-    command_buffer_->AddSignalSemaphore(std::move(semaphore));
-  }
-  command_buffer_->AddUsedResource(std::move(target));
-}
-
-GpuUploader::TransferBufferInfo::TransferBufferInfo(vk::Buffer buf,
-                                                    vk::DeviceSize sz,
-                                                    uint8_t* p,
-                                                    GpuMemPtr m)
-    : buffer(buf), size(sz), ptr(p), mem(m) {}
-
-GpuUploader::TransferBufferInfo::~TransferBufferInfo() {
-  // GpuUploader is responsible for destroying the buffer.
-  FTL_DCHECK(!buffer);
-}
-
-vk::Buffer GpuUploader::TransferBufferInfo::GetBuffer() {
-  return buffer;
-}
-
-vk::DeviceSize GpuUploader::TransferBufferInfo::GetSize() {
-  return size;
-}
-
-uint8_t* GpuUploader::TransferBufferInfo::GetMappedPointer() {
-  return ptr;
-}
-
-void GpuUploader::TransferBufferInfo::DestroyBuffer(vk::Device device) {
-  if (buffer) {
-    device.destroyBuffer(buffer);
-    buffer = nullptr;
-  }
-}
-
-GpuUploader::GpuUploader(CommandBufferPool* command_buffer_pool,
+GpuUploader::GpuUploader(const VulkanContext& context,
+                         CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
-    : command_buffer_pool_(command_buffer_pool),
+    : ResourceManager(context),
+      command_buffer_pool_(command_buffer_pool),
       device_(command_buffer_pool_->device()),
       queue_(command_buffer_pool_->queue()),
       allocator_(allocator),
-      current_offset_(0),
-      allocation_count_(0) {}
+      current_offset_(0) {}
 
 GpuUploader::~GpuUploader() {
   current_buffer_ = nullptr;
-
-  // Destroy all free buffers (which should include the formerly-current
-  // buffer that was just released).
-  while (!free_buffers_.empty()) {
-    auto info = std::move(free_buffers_.back());
-    free_buffers_.pop_back();
-    static_cast<TransferBufferInfo*>(info.get())->DestroyBuffer(device_);
-    --allocation_count_;
-  }
-  FTL_DCHECK(allocation_count_ == 0);
 }
 
 GpuUploader::Writer GpuUploader::GetWriter(size_t s) {
@@ -183,10 +138,6 @@ GpuUploader::Writer GpuUploader::GetWriter(size_t s) {
   return writer;
 }
 
-void GpuUploader::RecycleBuffer(std::unique_ptr<BufferInfo> info) {
-  free_buffers_.push_back(std::move(info));
-}
-
 void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
   if (current_buffer_ && current_buffer_->size() >= current_offset_ + size) {
     // There is enough space in the current buffer.
@@ -197,15 +148,14 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
 
   // Try to find a large-enough buffer in the free-list.
   while (!free_buffers_.empty()) {
-    auto info = std::move(free_buffers_.back());
+    std::unique_ptr<Buffer> buf(std::move(free_buffers_.back()));
     free_buffers_.pop_back();
-    if (info->GetSize() >= size) {
-      current_buffer_ = NewBuffer(std::move(info));
+
+    // Return buffer if it is big enough, otherwise destroy it and keep looking.
+    if (buf->size() >= size) {
+      current_buffer_ = BufferPtr(buf.release());
       return;
     }
-    // Destroy buffer if it is too small.
-    static_cast<TransferBufferInfo*>(info.get())->DestroyBuffer(device_);
-    --allocation_count_;
   }
 
   // No large-enough buffer was found, so create a new one.  Make it big enough
@@ -213,26 +163,16 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
   constexpr vk::DeviceSize kMinBufferSize = 1024 * 1024;
   constexpr vk::DeviceSize kOverAllocationFactor = 2;
   size = std::max(kMinBufferSize, size * kOverAllocationFactor);
-  vk::Buffer buffer;
-  {
-    vk::BufferCreateInfo buffer_create_info;
-    buffer_create_info.size = size;
-    buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
-    buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-    buffer = ESCHER_CHECKED_VK_RESULT(device_.createBuffer(buffer_create_info));
-  }
-  // Allocate memory and bind it to the buffer.
   auto memory_properties = vk::MemoryPropertyFlagBits::eHostVisible |
                            vk::MemoryPropertyFlagBits::eHostCoherent;
-  GpuMemPtr mem = allocator_->Allocate(
-      device_.getBufferMemoryRequirements(buffer), memory_properties);
-  device_.bindBufferMemory(buffer, mem->base(), mem->offset());
-  void* ptr = ESCHER_CHECKED_VK_RESULT(
-      device_.mapMemory(mem->base(), mem->offset(), mem->size()));
-  // Wrap everything in a TransferBufferInfo, and wrap that in a Buffer.
-  current_buffer_ = NewBuffer(std::make_unique<TransferBufferInfo>(
-      buffer, size, reinterpret_cast<uint8_t*>(ptr), std::move(mem)));
-  ++allocation_count_;
+  current_buffer_ =
+      Buffer::New(this, allocator_, size, vk::BufferUsageFlagBits::eTransferSrc,
+                  memory_properties);
+}
+
+void GpuUploader::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
+  FTL_DCHECK(resource->IsKindOf<Buffer>());
+  free_buffers_.emplace_back(static_cast<Buffer*>(resource.release()));
 }
 
 }  // namespace impl

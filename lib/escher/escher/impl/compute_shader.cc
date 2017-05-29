@@ -10,6 +10,7 @@
 #include "escher/impl/vk/pipeline_spec.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/texture.h"
+#include "escher/vk/vulkan_context.h"
 
 namespace escher {
 namespace impl {
@@ -106,18 +107,18 @@ PipelinePtr CreatePipeline(vk::Device device,
 
 }  // namespace
 
-ComputeShader::ComputeShader(vk::Device device,
+ComputeShader::ComputeShader(const VulkanContext& context,
                              std::vector<vk::ImageLayout> layouts,
                              size_t push_constants_size,
                              const char* source_code,
                              GlslToSpirvCompiler* compiler)
-    : device_(device),
+    : device_(context.device),
       descriptor_set_layout_bindings_(CreateLayoutBindings(layouts)),
       descriptor_set_layout_create_info_(
           CreateDescriptorSetLayoutCreateInfo(descriptor_set_layout_bindings_)),
       push_constants_size_(static_cast<uint32_t>(push_constants_size)),
-      pool_(device, descriptor_set_layout_create_info_),
-      pipeline_(CreatePipeline(device,
+      pool_(context, descriptor_set_layout_create_info_),
+      pipeline_(CreatePipeline(device_,
                                pool_.layout(),
                                push_constants_size_,
                                source_code,
@@ -159,7 +160,7 @@ void ComputeShader::Dispatch(std::vector<TexturePtr> textures,
     descriptor_set_writes_[i].dstSet = descriptor_set;
     descriptor_image_info_[i].imageView = textures[i]->image_view();
     descriptor_image_info_[i].sampler = textures[i]->sampler();
-    textures[i]->KeepAlive(command_buffer);
+    command_buffer->KeepAlive(textures[i]);
   }
   device_.updateDescriptorSets(
       static_cast<uint32_t>(descriptor_set_writes_.size()),

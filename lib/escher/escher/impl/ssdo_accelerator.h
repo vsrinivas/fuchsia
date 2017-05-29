@@ -56,6 +56,8 @@ class SsdoAccelerator {
   void CycleMode();
 
  private:
+  const VulkanContext& vulkan_context() const;
+
   TexturePtr GenerateHighLowLookupTable(CommandBuffer* command_buffer,
                                         const TexturePtr& depth_texture,
                                         vk::ImageUsageFlags image_flags,

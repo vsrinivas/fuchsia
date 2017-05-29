@@ -33,7 +33,7 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
                              uint32_t lighting_pass_sample_count,
                              vk::Format depth_format)
     : device_(escher->vulkan_context().device),
-      life_preserver(escher->resource_life_preserver()),
+      life_preserver_(escher->resource_life_preserver()),
       mesh_manager_(escher->mesh_manager()),
       model_data_(model_data) {
   rectangle_ = CreateRectangle();
@@ -154,7 +154,7 @@ void ModelRenderer::Draw(const Stage& stage,
   vk_command_buffer.setViewport(0, 1, &viewport);
 
   // Retain all display-list resources until the frame is finished rendering.
-  command_buffer->AddUsedResource(display_list);
+  command_buffer->KeepAlive(display_list);
 
   vk::Pipeline current_pipeline;
   vk::PipelineLayout current_pipeline_layout;

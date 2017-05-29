@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/forward_declarations.h"
+#include "escher/resources/resource_manager.h"
 #include "escher/vk/buffer.h"
 
 namespace escher {
@@ -18,10 +19,10 @@ namespace impl {
 // buffers (and allocating backing memory for them).  |additional_flags| allows
 // the user to customize the memory that is allocated by the pool; by default,
 // only eHostVisible is used.  Not thread-safe.
-class UniformBufferPool : public BufferOwner {
+class UniformBufferPool : public ResourceManager {
  public:
   UniformBufferPool(
-      vk::Device device,
+      const VulkanContext& context,
       GpuAllocator* allocator,
       vk::MemoryPropertyFlags additional_flags = vk::MemoryPropertyFlags());
   ~UniformBufferPool();
@@ -29,13 +30,11 @@ class UniformBufferPool : public BufferOwner {
   BufferPtr Allocate();
 
  private:
-  // Implement BufferOwner::RecycleBuffer().
-  void RecycleBuffer(std::unique_ptr<BufferInfo> info) override;
+  // Implement ResourceManager::OnReceiveOwnable().
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   // Create a batch of new buffers, which are added to free_buffers_.
   void InternalAllocate();
-
-  const vk::Device device_;
 
   // Used to allocate backing memory for the pool's buffers.
   GpuAllocator* const allocator_;
@@ -47,29 +46,8 @@ class UniformBufferPool : public BufferOwner {
   // The size of each allocated buffer.
   const vk::DeviceSize buffer_size_;
 
-  // Item in free_buffers_.
-  class UniformBufferInfo : public BufferInfo {
-   public:
-    UniformBufferInfo(vk::Buffer buffer, uint8_t* ptr);
-    ~UniformBufferInfo();
-
-    vk::Buffer GetBuffer() override;
-    vk::DeviceSize GetSize() override;
-    uint8_t* GetMappedPointer() override;
-
-    vk::Buffer buffer;
-    uint8_t* ptr;
-  };
-
   // List of free buffers that are available for allocation.
-  std::vector<std::unique_ptr<BufferInfo>> free_buffers_;
-
-  // Memory allocated to back all of the buffers created by this pool.
-  std::vector<GpuMemPtr> backing_memory_;
-
-  // Number of currently-existing UniformBuffer objects that were created by
-  // this pool.
-  uint32_t allocation_count_;
+  std::vector<std::unique_ptr<Buffer>> free_buffers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UniformBufferPool);
 };

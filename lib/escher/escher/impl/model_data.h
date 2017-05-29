@@ -58,7 +58,7 @@ class ModelData {
     ModifierWobble wobble;
   };
 
-  ModelData(vk::Device device, GpuAllocator* allocator);
+  ModelData(const VulkanContext& context, GpuAllocator* allocator);
   ~ModelData();
 
   vk::Device device() { return device_; }

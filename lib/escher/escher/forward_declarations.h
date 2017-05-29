@@ -25,7 +25,7 @@ class Mesh;
 class Model;
 class Object;
 class PaperRenderer;
-class Resource2;
+class Resource;
 class ResourceLifePreserver;
 class Renderer;
 class Semaphore;
@@ -44,7 +44,7 @@ typedef ftl::RefPtr<Material> MaterialPtr;
 typedef ftl::RefPtr<Mesh> MeshPtr;
 typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;
 typedef ftl::RefPtr<PaperRenderer> PaperRendererPtr;
-typedef ftl::RefPtr<Resource2> Resource2Ptr;
+typedef ftl::RefPtr<Resource> ResourcePtr;
 typedef ftl::RefPtr<Renderer> RendererPtr;
 typedef ftl::RefPtr<Semaphore> SemaphorePtr;
 typedef ftl::RefPtr<Texture> TexturePtr;
@@ -64,13 +64,11 @@ class ModelPipeline;
 class ModelPipelineCache;
 class ModelRenderer;
 class Pipeline;
-class Resource;
 class SsdoAccelerator;
 class SsdoSampler;
 
 typedef ftl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
 typedef ftl::RefPtr<Pipeline> PipelinePtr;
-typedef ftl::RefPtr<Resource> ResourcePtr;
 
 }  // namespace impl
 

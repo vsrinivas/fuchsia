@@ -43,20 +43,24 @@ std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
 }
 
 // Constructor helper.
-std::unique_ptr<GpuUploader> NewGpuUploader(CommandBufferPool* main_pool,
+std::unique_ptr<GpuUploader> NewGpuUploader(const VulkanContext& context,
+                                            CommandBufferPool* main_pool,
                                             CommandBufferPool* transfer_pool,
                                             GpuAllocator* allocator) {
   return std::make_unique<GpuUploader>(
-      transfer_pool ? transfer_pool : main_pool, allocator);
+      context, transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
 // Constructor helper.
-std::unique_ptr<MeshManager> NewMeshManager(CommandBufferPool* main_pool,
-                                            CommandBufferPool* transfer_pool,
-                                            GpuAllocator* allocator,
-                                            GpuUploader* uploader) {
+std::unique_ptr<MeshManager> NewMeshManager(
+    CommandBufferPool* main_pool,
+    CommandBufferPool* transfer_pool,
+    GpuAllocator* allocator,
+    GpuUploader* uploader,
+    ResourceLifePreserver* life_preserver) {
   return std::make_unique<MeshManager>(
-      transfer_pool ? transfer_pool : main_pool, allocator, uploader);
+      transfer_pool ? transfer_pool : main_pool, allocator, uploader,
+      life_preserver);
 }
 
 }  // namespace
@@ -70,10 +74,13 @@ EscherImpl::EscherImpl(const VulkanContext& context)
           NewTransferCommandBufferPool(context,
                                        command_buffer_sequencer_.get())),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
-      gpu_uploader_(NewGpuUploader(command_buffer_pool(),
+      gpu_uploader_(NewGpuUploader(context,
+                                   command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
       pipeline_cache_(std::make_unique<PipelineCache>()),
+      resource_life_preserver_(
+          std::make_unique<ResourceLifePreserver>(vulkan_context_)),
       image_cache_(std::make_unique<ImageCache>(vulkan_context_,
                                                 command_buffer_pool(),
                                                 gpu_allocator(),
@@ -81,10 +88,9 @@ EscherImpl::EscherImpl(const VulkanContext& context)
       mesh_manager_(NewMeshManager(command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator(),
-                                   gpu_uploader())),
+                                   gpu_uploader(),
+                                   resource_life_preserver_.get())),
       glsl_compiler_(std::make_unique<GlslToSpirvCompiler>()),
-      resource_life_preserver_(
-          std::make_unique<ResourceLifePreserver>(vulkan_context_)),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
   FTL_DCHECK(context.physical_device);

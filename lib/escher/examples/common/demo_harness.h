@@ -79,7 +79,7 @@ class DemoHarness {
     explicit SwapchainImageOwner(const escher::VulkanContext& context);
 
    private:
-    void OnReceiveOwnable(std::unique_ptr<escher::Resource2> resource) override;
+    void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override;
   };
 
   // Called by New() after instantiation is complete, so that virtual functions

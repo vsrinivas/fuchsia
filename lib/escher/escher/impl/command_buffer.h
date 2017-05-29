@@ -57,7 +57,11 @@ class CommandBuffer {
 
   // These resources will be retained until the command-buffer is finished
   // running on the GPU.
-  void AddUsedResource(ResourcePtr resource);
+  void KeepAlive(Resource* resource);
+  template <typename ResourceT>
+  void KeepAlive(const ftl::RefPtr<ResourceT>& ptr) {
+    KeepAlive(ptr.get());
+  }
 
   // Bind index/vertex buffers and write draw command.
   // Retain mesh in used_resources.

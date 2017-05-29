@@ -7,13 +7,16 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/impl/model_data.h"
-#include "escher/impl/resource.h"
+#include "escher/resources/resource.h"
 
 namespace escher {
 namespace impl {
 
 class ModelDisplayList : public Resource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   struct Item {
     vk::DescriptorSet descriptor_sets[ModelData::PerObject::kDescriptorCount];
     ModelPipeline* pipeline;
@@ -21,15 +24,11 @@ class ModelDisplayList : public Resource {
     uint32_t stencil_reference;
   };
 
-  ModelDisplayList(vk::DescriptorSet stage_data,
+  ModelDisplayList(ResourceLifePreserver* life_preserver,
+                   vk::DescriptorSet stage_data,
                    std::vector<Item> items,
                    std::vector<TexturePtr> textures,
-                   std::vector<ResourcePtr> resources)
-      : Resource(nullptr),
-        stage_data_(stage_data),
-        items_(std::move(items)),
-        textures_(std::move(textures)),
-        resources_(std::move(resources)) {}
+                   std::vector<ResourcePtr> resources);
 
   const std::vector<Item>& items() { return items_; }
   const std::vector<TexturePtr>& textures() { return textures_; }

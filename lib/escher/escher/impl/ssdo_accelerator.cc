@@ -595,6 +595,10 @@ SsdoAccelerator::SsdoAccelerator(GlslToSpirvCompiler* compiler,
 
 SsdoAccelerator::~SsdoAccelerator() {}
 
+const VulkanContext& SsdoAccelerator::vulkan_context() const {
+  return life_preserver_->vulkan_context();
+}
+
 TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
                                                 const TexturePtr& depth_texture,
                                                 vk::ImageUsageFlags image_flags,
@@ -649,7 +653,7 @@ TexturePtr SsdoAccelerator::GenerateSampleLookupTable(
   if (!sampling_filtering_packed_kernel_) {
     FTL_DLOG(INFO) << "Lazily instantiating sampling_filtering_packed_kernel_";
     sampling_filtering_packed_kernel_ = std::make_unique<ComputeShader>(
-        device_,
+        vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
         0, g_sampling_filtering_packed_kernel_src, compiler_);
@@ -690,7 +694,7 @@ TexturePtr SsdoAccelerator::GenerateHighLowLookupTable(
       FTL_DLOG(INFO)
           << "Lazily instantiating high_low_neighbors_packed_kernel_";
       high_low_neighbors_packed_kernel_ = std::make_unique<ComputeShader>(
-          device_,
+          vulkan_context(),
           std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                        vk::ImageLayout::eGeneral},
           0, g_high_low_neighbors_packed_kernel_src, compiler_);
@@ -712,7 +716,7 @@ TexturePtr SsdoAccelerator::GenerateHighLowLookupTable(
           << "Lazily instantiating high_low_neighbors_packed_parallel_kernel_";
       high_low_neighbors_packed_parallel_kernel_ =
           std::make_unique<ComputeShader>(
-              device_,
+              vulkan_context(),
               std::vector<vk::ImageLayout>{
                   vk::ImageLayout::eShaderReadOnlyOptimal,
                   vk::ImageLayout::eGeneral},
@@ -784,7 +788,7 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   if (!null_packed_kernel_) {
     FTL_DLOG(INFO) << "Lazily instantiating null_packed_kernel_";
     null_packed_kernel_ = std::make_unique<ComputeShader>(
-        device_,
+        vulkan_context(),
         std::vector<vk::ImageLayout>{vk::ImageLayout::eShaderReadOnlyOptimal,
                                      vk::ImageLayout::eGeneral},
         0, g_null_packed_kernel_src, compiler_);
@@ -825,8 +829,9 @@ TexturePtr SsdoAccelerator::UnpackLookupTable(
   if (!unpack_32_to_2_kernel_) {
     FTL_DLOG(INFO) << "Lazily instantiating unpack_32_to_2_kernel_";
     unpack_32_to_2_kernel_ = std::make_unique<ComputeShader>(
-        device_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
-                                              vk::ImageLayout::eGeneral},
+        vulkan_context(),
+        std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
+                                     vk::ImageLayout::eGeneral},
         0, g_unpack_32_to_2_kernel_src, compiler_);
   }
   unpack_32_to_2_kernel_->Dispatch({packed_lookup_table, result_texture},

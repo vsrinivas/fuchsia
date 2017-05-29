@@ -12,22 +12,29 @@
 namespace escher {
 namespace impl {
 
+const ResourceTypeInfo DescriptorSetAllocation::kTypeInfo(
+    "DescriptorSetAllocation",
+    ResourceType::kResource,
+    ResourceType::kImplDescriptorSetAllocation);
+
 DescriptorSetAllocation::DescriptorSetAllocation(
     DescriptorSetPool* pool,
     std::vector<vk::DescriptorSet> descriptor_sets)
-    : Resource(nullptr), pool_(pool), sets_(std::move(descriptor_sets)) {}
+    : Resource(pool), sets_(std::move(descriptor_sets)) {}
 
 DescriptorSetAllocation::~DescriptorSetAllocation() {
-  pool_->ReturnDescriptorSets(std::move(sets_));
+  // We expect that any descriptor sets were recycled by our owner before our
+  // destructor is called.
+  FTL_DCHECK(sets_.empty());
 }
 
 DescriptorSetPool::DescriptorSetPool(
-    vk::Device device,
+    const VulkanContext& context,
     const vk::DescriptorSetLayoutCreateInfo& layout_info,
     uint32_t initial_capacity)
-    : device_(device),
+    : ResourceManager(context),
       layout_(ESCHER_CHECKED_VK_RESULT(
-          device_.createDescriptorSetLayout(layout_info))) {
+          device().createDescriptorSetLayout(layout_info))) {
   std::map<vk::DescriptorType, uint32_t> descriptor_type_counts;
   for (uint32_t i = 0; i < layout_info.bindingCount; ++i) {
     descriptor_type_counts[layout_info.pBindings[i].descriptorType] +=
@@ -45,12 +52,11 @@ DescriptorSetPool::DescriptorSetPool(
 }
 
 DescriptorSetPool::~DescriptorSetPool() {
-  FTL_DCHECK(allocation_count_ == 0);
   for (auto pool : pools_) {
-    device_.resetDescriptorPool(pool);
-    device_.destroyDescriptorPool(pool);
+    device().resetDescriptorPool(pool);
+    device().destroyDescriptorPool(pool);
   }
-  device_.destroyDescriptorSetLayout(layout_);
+  device().destroyDescriptorSetLayout(layout_);
 }
 
 DescriptorSetAllocationPtr DescriptorSetPool::Allocate(
@@ -72,10 +78,9 @@ DescriptorSetAllocationPtr DescriptorSetPool::Allocate(
 
   auto allocation = ftl::AdoptRef(
       new DescriptorSetAllocation(this, std::move(allocated_sets)));
-  ++allocation_count_;
 
   if (command_buffer) {
-    command_buffer->AddUsedResource(allocation);
+    command_buffer->KeepAlive(allocation);
   }
 
   return allocation;
@@ -91,7 +96,8 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   pool_info.poolSizeCount = static_cast<uint32_t>(counts.size());
   pool_info.pPoolSizes = counts.data();
   pool_info.maxSets = descriptor_set_count;
-  auto pool = ESCHER_CHECKED_VK_RESULT(device_.createDescriptorPool(pool_info));
+  auto pool =
+      ESCHER_CHECKED_VK_RESULT(device().createDescriptorPool(pool_info));
   pools_.push_back(pool);
 
   // Allocate the new descriptor sets.
@@ -101,7 +107,7 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   std::vector<vk::DescriptorSetLayout> layouts(descriptor_set_count, layout_);
   allocate_info.pSetLayouts = layouts.data();
   std::vector<vk::DescriptorSet> new_descriptor_sets(
-      ESCHER_CHECKED_VK_RESULT(device_.allocateDescriptorSets(allocate_info)));
+      ESCHER_CHECKED_VK_RESULT(device().allocateDescriptorSets(allocate_info)));
 
   // Add the newly-allocated descriptor sets to the free list.
   free_sets_.reserve(free_sets_.capacity() + descriptor_set_count);
@@ -110,11 +116,11 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   }
 }
 
-void DescriptorSetPool::ReturnDescriptorSets(
-    std::vector<vk::DescriptorSet> unused_sets) {
-  auto count = --allocation_count_;
-  FTL_DCHECK(count >= 0);
-  free_sets_.insert(free_sets_.end(), unused_sets.begin(), unused_sets.end());
+void DescriptorSetPool::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
+  FTL_DCHECK(resource->IsKindOf<DescriptorSetAllocation>());
+  auto& returned = static_cast<DescriptorSetAllocation*>(resource.get())->sets_;
+  free_sets_.insert(free_sets_.end(), returned.begin(), returned.end());
+  returned.clear();
 }
 
 }  // namespace impl

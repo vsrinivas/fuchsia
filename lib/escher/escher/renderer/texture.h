@@ -9,7 +9,7 @@
 
 namespace escher {
 
-class Texture : public Resource2 {
+class Texture : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }

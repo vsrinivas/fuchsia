@@ -6,7 +6,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/renderer/semaphore_wait.h"
-#include "escher/resources/resource.h"
+#include "escher/resources/waitable_resource.h"
 #include "escher/util/debug_print.h"
 
 namespace escher {
@@ -30,8 +30,8 @@ struct ImageInfo {
 };
 #pragma pack(pop)
 
-// An Image is a Resource that encapsulates a vk::Image.
-class Image : public Resource2 {
+// An Image is a WaitableResource that encapsulates a vk::Image.
+class Image : public WaitableResource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
@@ -58,18 +58,12 @@ class Image : public Resource2 {
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
 
-  // TODO: eventually make these private, callable only by friends.
-  void SetWaitSemaphore(SemaphorePtr semaphore);
-  SemaphorePtr TakeWaitSemaphore();
-
  private:
   const ImageInfo info_;
   const vk::Image image_;
   GpuMemPtr mem_;
   bool has_depth_;
   bool has_stencil_;
-
-  SemaphorePtr wait_semaphore_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
@@ -78,18 +72,5 @@ typedef ftl::RefPtr<Image> ImagePtr;
 
 // Debugging.
 ESCHER_DEBUG_PRINTABLE(ImageInfo);
-
-// Inline function definitions.
-
-inline void Image::SetWaitSemaphore(SemaphorePtr semaphore) {
-  // This is not necessarily an error, but the consequences will depend on the
-  // specific usage-pattern that first triggers it; we'll deal with it then.
-  FTL_CHECK(!wait_semaphore_);
-  wait_semaphore_ = std::move(semaphore);
-}
-
-inline SemaphorePtr Image::TakeWaitSemaphore() {
-  return std::move(wait_semaphore_);
-}
 
 }  // namespace escher

@@ -11,8 +11,9 @@ namespace escher {
 
 GpuMem::GpuMem(vk::DeviceMemory base,
                vk::DeviceSize size,
-               vk::DeviceSize offset)
-    : base_(base), size_(size), offset_(offset) {}
+               vk::DeviceSize offset,
+               uint8_t* mapped_ptr)
+    : base_(base), size_(size), offset_(offset), mapped_ptr_(mapped_ptr) {}
 
 GpuMem::~GpuMem() {}
 
@@ -27,8 +28,8 @@ GpuMemPtr GpuMem::New(vk::Device device,
                       vk::DeviceMemory mem,
                       vk::DeviceSize size,
                       uint32_t memory_type_index) {
-  return ftl::AdoptRef(
-      new impl::GpuMemSlab(device, mem, size, memory_type_index));
+  return ftl::AdoptRef(new impl::GpuMemSlab(device, mem, size, nullptr,
+                                            memory_type_index, nullptr));
 }
 
 GpuMemPtr GpuMem::Allocate(vk::DeviceSize size, vk::DeviceSize offset) {
@@ -36,7 +37,7 @@ GpuMemPtr GpuMem::Allocate(vk::DeviceSize size, vk::DeviceSize offset) {
     return GpuMemPtr();
   }
   return ftl::AdoptRef(
-      new impl::GpuMemSuballocation(GpuMemPtr(this), size, offset_ + offset));
+      new impl::GpuMemSuballocation(GpuMemPtr(this), size, offset));
 }
 
 }  // namespace escher

@@ -11,13 +11,14 @@ namespace escher {
 
 const ResourceTypeInfo Image::kTypeInfo("Image",
                                         ResourceType::kResource,
+                                        ResourceType::kWaitableResource,
                                         ResourceType::kImage);
 
 Image::Image(ResourceManager* image_owner,
              ImageInfo info,
              vk::Image vk_image,
              GpuMemPtr mem)
-    : Resource2(image_owner),
+    : WaitableResource(image_owner),
       info_(info),
       image_(vk_image),
       mem_(std::move(mem)) {

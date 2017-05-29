@@ -41,6 +41,8 @@ class ModelRenderer {
     return pipeline_cache_.get();
   }
 
+  ResourceLifePreserver* life_preserver() const { return life_preserver_; }
+
   ModelDisplayListPtr CreateDisplayList(const Stage& stage,
                                         const Model& model,
                                         vec2 scale,
@@ -63,9 +65,9 @@ class ModelRenderer {
   vk::RenderPass depth_prepass_;
   vk::RenderPass lighting_pass_;
 
-  ResourceLifePreserver* life_preserver;
-  MeshManager* mesh_manager_;
-  ModelData* model_data_;
+  ResourceLifePreserver* const life_preserver_;
+  MeshManager* const mesh_manager_;
+  ModelData* const model_data_;
 
   std::unique_ptr<impl::ModelPipelineCache> pipeline_cache_;
 

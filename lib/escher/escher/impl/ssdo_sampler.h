@@ -8,7 +8,6 @@
 #include "escher/geometry/types.h"
 #include "escher/impl/compute_shader.h"
 #include "escher/impl/descriptor_set_pool.h"
-#include "escher/impl/resource.h"
 #include "escher/scene/stage.h"
 
 namespace escher {

@@ -15,14 +15,14 @@ namespace impl {
 constexpr uint32_t kInitialPerModelDescriptorSetCount = 50;
 constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
 
-ModelData::ModelData(vk::Device device, GpuAllocator* allocator)
-    : device_(device),
-      uniform_buffer_pool_(device, allocator),
-      per_model_descriptor_set_pool_(device,
+ModelData::ModelData(const VulkanContext& context, GpuAllocator* allocator)
+    : device_(context.device),
+      uniform_buffer_pool_(context, allocator),
+      per_model_descriptor_set_pool_(context,
                                      GetPerModelDescriptorSetLayoutCreateInfo(),
                                      kInitialPerModelDescriptorSetCount),
       per_object_descriptor_set_pool_(
-          device,
+          context,
           GetPerObjectDescriptorSetLayoutCreateInfo(),
           kInitialPerObjectDescriptorSetCount) {}
 

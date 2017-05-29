@@ -4,8 +4,8 @@
 
 #include "escher/impl/command_buffer.h"
 
+#include "escher/impl/descriptor_set_pool.h"
 #include "escher/impl/mesh_impl.h"
-#include "escher/impl/resource.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 
@@ -96,13 +96,27 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   }
 }
 
-void CommandBuffer::AddUsedResource(ResourcePtr resource) {
+void CommandBuffer::KeepAlive(Resource* resource) {
   FTL_DCHECK(is_active_);
-  used_resources_.push_back(std::move(resource));
+  if (sequence_number_ == resource->sequence_number()) {
+    // The resource is already being kept alive by this CommandBuffer.
+    return;
+  }
+
+  FTL_DCHECK(resource->sequence_number() <= sequence_number_);
+  resource->set_sequence_number(sequence_number_);
+  if (resource->IsKindOf<DescriptorSetAllocation>()) {
+    // TODO: DescriptorSetPool will immediately recycle allocations, even while
+    // they're still in use.  Therefore, we must ref the allocations until the
+    // CommandBuffer has completed.  One way to fix this would be for
+    // DescriptorSetPool to become a CommandBufferSequencerListener, similar to
+    // ResourceLifePreserver.
+    used_resources_.push_back(ResourcePtr(resource));
+  }
 }
 
 void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
-  AddUsedResource(mesh);
+  KeepAlive(mesh);
 
   AddWaitSemaphore(mesh->TakeWaitSemaphore(),
                    vk::PipelineStageFlagBits::eVertexInput);
@@ -125,8 +139,8 @@ void CommandBuffer::CopyImage(const ImagePtr& src_image,
                               vk::ImageCopy* region) {
   command_buffer_.copyImage(src_image->get(), src_layout, dst_image->get(),
                             dst_layout, 1, region);
-  src_image->KeepAlive(this);
-  dst_image->KeepAlive(this);
+  KeepAlive(src_image);
+  KeepAlive(dst_image);
 }
 
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
@@ -263,7 +277,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
                                   vk::DependencyFlagBits::eByRegion, 0, nullptr,
                                   0, nullptr, 1, &barrier);
 
-  image->KeepAlive(this);
+  KeepAlive(image);
 }
 
 void CommandBuffer::BeginRenderPass(

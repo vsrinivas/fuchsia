@@ -16,7 +16,7 @@ class GlslToSpirvCompiler;
 // implementation is limited to using images and push-constants for in/output.
 class ComputeShader {
  public:
-  ComputeShader(vk::Device device,
+  ComputeShader(const VulkanContext& context,
                 std::vector<vk::ImageLayout> layouts,
                 size_t push_constants_size,
                 const char* source_code,

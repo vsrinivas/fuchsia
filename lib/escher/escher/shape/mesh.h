@@ -7,15 +7,18 @@
 #include <map>
 
 #include "escher/forward_declarations.h"
-#include "escher/impl/resource.h"
+#include "escher/resources/waitable_resource.h"
 #include "escher/shape/mesh_spec.h"
 
 namespace escher {
 
 // Immutable container for vertex indices and attribute data required to render
 // a triangle mesh.
-class Mesh : public impl::Resource {
+class Mesh : public WaitableResource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   const MeshSpec spec;
   const uint32_t num_vertices;
   const uint32_t num_indices;
@@ -29,7 +32,7 @@ class Mesh : public impl::Resource {
 
  private:
   friend class escher::impl::MeshImpl;
-  Mesh(impl::EscherImpl* escher,
+  Mesh(ResourceLifePreserver* life_preserver,
        MeshSpec spec,
        uint32_t num_vertices,
        uint32_t num_indices);

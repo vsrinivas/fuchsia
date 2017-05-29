@@ -175,4 +175,76 @@ TEST(GpuMem, AllocatorCallbacks) {
   EXPECT_EQ(12U, last_offset);
 }
 
+namespace {
+class FakeGpuMem : public GpuMem {
+ public:
+  FakeGpuMem(vk::DeviceMemory base,
+             vk::DeviceSize size,
+             vk::DeviceSize offset,
+             uint8_t* mapped_ptr)
+      : GpuMem(base, size, offset, mapped_ptr) {}
+};
+}  // anonymous namespace
+
+TEST(GpuMem, RecursiveAllocations) {
+  const vk::DeviceMemory kVkMem(reinterpret_cast<VkDeviceMemory>(10000));
+
+  const vk::DeviceSize kSize0 = 100;
+  const vk::DeviceSize kOffset0 = 0;
+  const vk::DeviceSize kSize1 = 50;
+  const vk::DeviceSize kOffset1 = 10;
+  const vk::DeviceSize kSize2 = 20;
+  const vk::DeviceSize kOffset2 = 20;
+  const vk::DeviceSize kSize3 = 5;
+  const vk::DeviceSize kOffset3 = 10;
+
+  GpuMemPtr mem =
+      ftl::MakeRefCounted<FakeGpuMem>(kVkMem, kSize0, kOffset0, nullptr);
+  auto sub = mem->Allocate(kSize1, kOffset1);
+  auto subsub = sub->Allocate(kSize2, kOffset2);
+  auto subsubsub = subsub->Allocate(kSize3, kOffset3);
+
+  EXPECT_NE(vk::DeviceMemory(), mem->base());
+  EXPECT_EQ(mem->base(), sub->base());
+  EXPECT_EQ(sub->base(), subsub->base());
+  EXPECT_EQ(subsub->base(), subsubsub->base());
+
+  EXPECT_EQ(kOffset1, sub->offset());
+  EXPECT_EQ(kOffset1 + kOffset2, subsub->offset());
+  EXPECT_EQ(kOffset1 + kOffset2 + kOffset3, subsubsub->offset());
+}
+
+TEST(GpuMem, MappedPointer) {
+  const vk::DeviceMemory kVkMem(reinterpret_cast<VkDeviceMemory>(10000));
+
+  uint8_t* const kNullPtr = nullptr;
+  uint8_t* const kFakePtr = reinterpret_cast<uint8_t*>(1000);
+  const vk::DeviceSize kSize1 = 100;
+  const vk::DeviceSize kOffset1 = 0;
+  const vk::DeviceSize kSize2 = 50;
+  const vk::DeviceSize kOffset2 = 10;
+  const vk::DeviceSize kSize3 = 20;
+  const vk::DeviceSize kOffset3 = 20;
+
+  GpuMemPtr mem = ftl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1,
+                                                  kOffset1, kNullPtr);
+  GpuMemPtr sub = mem->Allocate(kSize2, kOffset2);
+  GpuMemPtr subsub = sub->Allocate(kSize3, kOffset3);
+  EXPECT_EQ(nullptr, mem->mapped_ptr());
+  EXPECT_EQ(nullptr, sub->mapped_ptr());
+  EXPECT_EQ(nullptr, subsub->mapped_ptr());
+
+  mem = ftl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1,
+                                        kFakePtr);
+  sub = mem->Allocate(kSize2, kOffset2);
+  subsub = sub->Allocate(kSize3, kOffset3);
+  EXPECT_EQ(kFakePtr, mem->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset2),
+            sub->mapped_ptr() - mem->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3 + kOffset2),
+            subsub->mapped_ptr() - mem->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3),
+            subsub->mapped_ptr() - sub->mapped_ptr());
+}
+
 }  // namespace

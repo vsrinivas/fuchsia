@@ -21,7 +21,7 @@ Framebuffer::Framebuffer(impl::EscherImpl* escher,
                          uint32_t height,
                          std::vector<ImagePtr> images,
                          vk::RenderPass render_pass)
-    : Resource2(escher->resource_life_preserver()),
+    : Resource(escher->resource_life_preserver()),
       width_(width),
       height_(height),
       images_(std::move(images)) {

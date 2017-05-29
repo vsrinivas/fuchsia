@@ -30,7 +30,8 @@ class MeshManager : public MeshBuilderFactory {
  public:
   MeshManager(CommandBufferPool* command_buffer_pool,
               GpuAllocator* allocator,
-              GpuUploader* uploader);
+              GpuUploader* uploader,
+              ResourceLifePreserver* life_preserver);
   ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
@@ -39,6 +40,8 @@ class MeshManager : public MeshBuilderFactory {
                                 size_t max_index_count) override;
 
   const MeshSpecImpl& GetMeshSpecImpl(MeshSpec spec);
+
+  ResourceLifePreserver* life_preserver() const { return life_preserver_; }
 
  private:
   void UpdateBusyResources();
@@ -72,11 +75,12 @@ class MeshManager : public MeshBuilderFactory {
   void IncrementMeshCount() { ++mesh_count_; }
   void DecrementMeshCount() { --mesh_count_; }
 
-  CommandBufferPool* command_buffer_pool_;
-  GpuAllocator* allocator_;
-  GpuUploader* uploader_;
-  vk::Device device_;
-  vk::Queue queue_;
+  CommandBufferPool* const command_buffer_pool_;
+  GpuAllocator* const allocator_;
+  GpuUploader* const uploader_;
+  ResourceLifePreserver* const life_preserver_;
+  const vk::Device device_;
+  const vk::Queue queue_;
 
   std::unordered_map<MeshSpec, std::unique_ptr<MeshSpecImpl>, MeshSpec::Hash>
       spec_cache_;

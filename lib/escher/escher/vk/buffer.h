@@ -5,47 +5,37 @@
 #pragma once
 
 #include "escher/forward_declarations.h"
-#include "escher/impl/resource.h"
+#include "escher/resources/waitable_resource.h"
 
 namespace escher {
 
-// Escher's standard interface to Vulkan buffer objects.  Defined below.
 class Buffer;
-
-// Interface that allows a Buffer to obtain access to its underlying vk::Buffer,
-// its size, etc.  For a given instance of BufferInfo, all methods must always
-// return the same value.
-class BufferInfo {
- public:
-  virtual ~BufferInfo() {}
-
-  virtual vk::Buffer GetBuffer() = 0;
-  virtual vk::DeviceSize GetSize() = 0;
-  virtual uint8_t* GetMappedPointer() = 0;
-};
-
-// Interface that allows BufferInfo to be recycled when a Buffer is
-// destroyed.
-class BufferOwner {
- public:
-  virtual void RecycleBuffer(std::unique_ptr<BufferInfo> info) = 0;
-
- protected:
-  // Allows subclasses to instantiate buffers.  Owner must be guaranteed to
-  // outlive the returned Buffer.
-  BufferPtr NewBuffer(std::unique_ptr<BufferInfo> info);
-};
+typedef ftl::RefPtr<Buffer> BufferPtr;
 
 // Escher's standard interface to Vulkan buffer objects.
-class Buffer : public impl::Resource {
+class Buffer : public WaitableResource {
  public:
+  static const ResourceTypeInfo kTypeInfo;
+  const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
+
   // Construct an ownerless Buffer.  When the Buffer is destroyed, all resources
   // are immediately freed/destroyed.
-  Buffer(vk::Device device,
+  Buffer(ResourceManager* manager,
          GpuAllocator* allocator,
          vk::DeviceSize size,
          vk::BufferUsageFlags usage_flags,
          vk::MemoryPropertyFlags memory_property_flags);
+
+  static BufferPtr New(ResourceManager* manager,
+                       GpuAllocator* allocator,
+                       vk::DeviceSize size,
+                       vk::BufferUsageFlags usage_flags,
+                       vk::MemoryPropertyFlags memory_property_flags);
+
+  Buffer(ResourceManager* manager,
+         GpuMemPtr mem,
+         vk::Buffer buffer,
+         vk::DeviceSize size);
   ~Buffer() override;
 
   // Return the underlying Vulkan buffer object.
@@ -59,21 +49,13 @@ class Buffer : public impl::Resource {
   uint8_t* ptr() const { return ptr_; }
 
  private:
-  // Called by BufferOwner::NewBuffer().
-  friend class BufferOwner;
-  Buffer(std::unique_ptr<BufferInfo> info, BufferOwner* owner);
-
-  // When the Buffer is destroyed, these resources will either be recycled or
-  // immediately destroyed, depending on whether owner_ is nullptr.
-  std::unique_ptr<BufferInfo> info_;
+  GpuMemPtr mem_;
   // Underlying Vulkan buffer object.
   vk::Buffer buffer_;
   // Size of the buffer.
   vk::DeviceSize size_;
   // Pointer to mapped, cache-coherent, host-accessible memory.  Or nullptr.
   uint8_t* ptr_;
-  // Notified when Buffer is destroyed.
-  BufferOwner* owner_;
 };
 
 }  // namespace escher

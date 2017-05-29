@@ -4,13 +4,21 @@
 
 #include "escher/shape/mesh.h"
 
+#include "escher/impl/escher_impl.h"
+#include "escher/resources/resource_life_preserver.h"
+
 namespace escher {
 
-Mesh::Mesh(impl::EscherImpl* escher,
+const ResourceTypeInfo Mesh::kTypeInfo("Mesh",
+                                       ResourceType::kResource,
+                                       ResourceType::kWaitableResource,
+                                       ResourceType::kMesh);
+
+Mesh::Mesh(ResourceLifePreserver* life_preserver,
            MeshSpec spec,
            uint32_t num_vertices,
            uint32_t num_indices)
-    : Resource(escher),
+    : WaitableResource(life_preserver),
       spec(std::move(spec)),
       num_vertices(num_vertices),
       num_indices(num_indices) {}

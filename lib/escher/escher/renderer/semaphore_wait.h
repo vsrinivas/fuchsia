@@ -16,6 +16,7 @@ typedef ftl::RefPtr<Semaphore> SemaphorePtr;
 
 // TODO: rename file.
 // TODO: perhaps return semaphores to a pool instead of destroying them.
+// TODO: make this a subclass of Reffable.
 class Semaphore : public ftl::RefCountedThreadSafe<Semaphore> {
  public:
   explicit Semaphore(vk::Device device);

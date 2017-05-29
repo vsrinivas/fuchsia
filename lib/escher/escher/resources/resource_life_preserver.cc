@@ -14,7 +14,7 @@ ResourceLifePreserver::~ResourceLifePreserver() {
 }
 
 void ResourceLifePreserver::OnReceiveOwnable(
-    std::unique_ptr<Resource2> resource) {
+    std::unique_ptr<Resource> resource) {
   if (resource->sequence_number() <= last_finished_sequence_number_) {
     // Destroy immediately.
   } else {

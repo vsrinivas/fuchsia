@@ -18,7 +18,7 @@ namespace escher {
 // destroying resources while they are used by pending Vulkan command-buffers.
 //
 // Not thread-safe.
-class ResourceManager : public Owner<Resource2, ResourceTypeInfo> {
+class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
  public:
   explicit ResourceManager(const VulkanContext& context);
 
@@ -26,7 +26,10 @@ class ResourceManager : public Owner<Resource2, ResourceTypeInfo> {
   vk::Device device() const { return vulkan_context_.device; }
 
  private:
-  friend class Resource2;
+  friend class Resource;
+
+  // Must be implemented by subclasses.
+  virtual void OnReceiveOwnable(std::unique_ptr<Resource> resource) = 0;
 
   VulkanContext vulkan_context_;
 

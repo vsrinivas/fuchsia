@@ -8,9 +8,13 @@ namespace escher {
 namespace impl {
 
 GpuMemSuballocation::GpuMemSuballocation(GpuMemPtr mem,
-                                         vk::DeviceSize offset,
-                                         vk::DeviceSize size)
-    : GpuMem(mem->base(), mem->offset() + offset, size), mem_(std::move(mem)) {}
+                                         vk::DeviceSize size,
+                                         vk::DeviceSize offset)
+    : GpuMem(mem->base(),
+             size,
+             mem->offset() + offset,
+             mem->mapped_ptr() ? mem->mapped_ptr() + offset : nullptr),
+      mem_(std::move(mem)) {}
 
 GpuMemSuballocation::~GpuMemSuballocation() {
   mem_->OnAllocationDestroyed(size(), offset());

@@ -41,8 +41,9 @@ class GpuMemSlab final : public GpuMem {
   GpuMemSlab(vk::Device device,
              vk::DeviceMemory base,
              vk::DeviceSize size,
+             uint8_t* mapped_ptr,
              uint32_t memory_type_index,
-             GpuAllocator* allocator = nullptr);
+             GpuAllocator* allocator);
 
   void OnAllocationDestroyed(vk::DeviceSize size,
                              vk::DeviceSize offset) override;

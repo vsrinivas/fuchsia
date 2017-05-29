@@ -19,8 +19,8 @@ class GpuMemSuballocation final : public GpuMem {
  private:
   friend class ::escher::GpuMem;
   GpuMemSuballocation(GpuMemPtr mem,
-                      vk::DeviceSize offset,
-                      vk::DeviceSize size);
+                      vk::DeviceSize size,
+                      vk::DeviceSize offset);
 
   // The memory that this was sub-allocated from.
   GpuMemPtr mem_;

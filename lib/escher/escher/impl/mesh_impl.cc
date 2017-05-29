@@ -17,9 +17,7 @@ MeshImpl::MeshImpl(MeshSpec spec,
                    BufferPtr vertex_buffer,
                    BufferPtr index_buffer,
                    const MeshSpecImpl& spec_impl)
-    // TODO: shouldn't pass nullptr as first argument.  Leaving for now, because
-    // we might remove the EscherImpl field from Resource.
-    : Mesh(nullptr, spec, num_vertices, num_indices),
+    : Mesh(manager->life_preserver(), spec, num_vertices, num_indices),
       manager_(manager),
       vertex_buffer_(vertex_buffer->get()),
       index_buffer_(index_buffer->get()),

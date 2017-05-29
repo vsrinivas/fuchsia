@@ -10,6 +10,7 @@
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/resources/resource_life_preserver.h"
 #include "escher/vk/buffer.h"
 #include "escher/vk/vulkan_context.h"
 
@@ -18,10 +19,12 @@ namespace impl {
 
 MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator,
-                         GpuUploader* uploader)
+                         GpuUploader* uploader,
+                         ResourceLifePreserver* life_preserver)
     : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
       uploader_(uploader),
+      life_preserver_(life_preserver),
       device_(command_buffer_pool->device()),
       queue_(command_buffer_pool->queue()),
       builder_count_(0),
@@ -74,16 +77,16 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   GpuAllocator* allocator = manager_->allocator_;
 
   // TODO: use eTransferDstOptimal instead of eTransferDst?
-  auto vertex_buffer = ftl::MakeRefCounted<Buffer>(
-      device, allocator, vertex_count_ * vertex_stride_,
-      vk::BufferUsageFlagBits::eVertexBuffer |
-          vk::BufferUsageFlagBits::eTransferDst,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
-  auto index_buffer = ftl::MakeRefCounted<Buffer>(
-      device, allocator, index_count_ * sizeof(uint32_t),
-      vk::BufferUsageFlagBits::eIndexBuffer |
-          vk::BufferUsageFlagBits::eTransferDst,
-      vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto vertex_buffer = Buffer::New(manager_->life_preserver(), allocator,
+                                   vertex_count_ * vertex_stride_,
+                                   vk::BufferUsageFlagBits::eVertexBuffer |
+                                       vk::BufferUsageFlagBits::eTransferDst,
+                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto index_buffer = Buffer::New(manager_->life_preserver(), allocator,
+                                  index_count_ * sizeof(uint32_t),
+                                  vk::BufferUsageFlagBits::eIndexBuffer |
+                                      vk::BufferUsageFlagBits::eTransferDst,
+                                  vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   vertex_writer_.WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
                              Semaphore::New(device));

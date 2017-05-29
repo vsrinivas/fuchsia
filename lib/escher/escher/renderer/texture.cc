@@ -20,7 +20,7 @@ Texture::Texture(ResourceLifePreserver* life_preserver,
                  vk::Filter filter,
                  vk::ImageAspectFlags aspect_mask,
                  bool use_unnormalized_coordinates)
-    : Resource2(life_preserver),
+    : Resource(life_preserver),
       image_(std::move(image)),
       width_(image_->width()),
       height_(image_->height()) {

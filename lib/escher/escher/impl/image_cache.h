@@ -79,7 +79,7 @@ class ImageCache : public ResourceManager {
 
  private:
   // Implements Owner::OnReceiveOwnable().  Adds the image to unused_images_.
-  void OnReceiveOwnable(std::unique_ptr<Resource2> resource) override;
+  void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   // Try to find an unused image that meets the required specs.  If successful,
   // remove and return it.  Otherwise, return nullptr.

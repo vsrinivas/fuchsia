@@ -11,7 +11,7 @@
 
 namespace escher {
 
-class Framebuffer : public Resource2 {
+class Framebuffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }

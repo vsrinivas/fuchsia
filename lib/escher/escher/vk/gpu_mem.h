@@ -43,13 +43,17 @@ class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
   GpuMemPtr Allocate(vk::DeviceSize size, vk::DeviceSize offset);
 
   vk::DeviceMemory base() const { return base_; }
-  vk::DeviceSize offset() const { return offset_; }
   vk::DeviceSize size() const { return size_; }
+  vk::DeviceSize offset() const { return offset_; }
+  uint8_t* mapped_ptr() const { return mapped_ptr_; }
 
  protected:
   // |offset| + |size| must be <= the size of |base|.  Takes ownership of
   // |base|.
-  GpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset = 0);
+  GpuMem(vk::DeviceMemory base,
+         vk::DeviceSize size,
+         vk::DeviceSize offset,
+         uint8_t* mapped_ptr);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(GpuMem);
   virtual ~GpuMem();
@@ -65,6 +69,7 @@ class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
   vk::DeviceMemory base_;
   vk::DeviceSize size_;
   vk::DeviceSize offset_;
+  uint8_t* mapped_ptr_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GpuMem);
 };

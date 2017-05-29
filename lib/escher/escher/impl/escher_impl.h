@@ -57,10 +57,10 @@ class EscherImpl {
   std::unique_ptr<GpuAllocator> gpu_allocator_;
   std::unique_ptr<GpuUploader> gpu_uploader_;
   std::unique_ptr<PipelineCache> pipeline_cache_;
+  std::unique_ptr<ResourceLifePreserver> resource_life_preserver_;
   std::unique_ptr<ImageCache> image_cache_;
   std::unique_ptr<MeshManager> mesh_manager_;
   std::unique_ptr<GlslToSpirvCompiler> glsl_compiler_;
-  std::unique_ptr<ResourceLifePreserver> resource_life_preserver_;
 
   std::atomic<uint32_t> renderer_count_;
   std::atomic<uint32_t> resource_count_;
