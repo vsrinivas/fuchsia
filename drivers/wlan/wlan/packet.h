@@ -10,13 +10,18 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace wlan {
 
 constexpr size_t kBufferSize = 2560;
+constexpr size_t kCtrlSize = 32;
 namespace internal {
 struct Buffer {
     uint8_t data[kBufferSize];
+    // Embedding the control data directly into the buffer is not ideal.
+    // TODO(tkilbourn): replace this with a general solution.
+    uint8_t ctrl[kCtrlSize];
 };
 }  // namespace internal
 
@@ -60,11 +65,35 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
         return reinterpret_cast<const T*>(buffer_->data + offset);
     }
 
+    template <typename T>
+    bool has_ctrl_data() const {
+        return ctrl_len_ == sizeof(T);
+    }
+
+    template <typename T>
+    const T* ctrl_data() const {
+        static_assert(mxtl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(kCtrlSize >= sizeof(T),
+                      "Control data type too large for Buffer ctrl_data field");
+        if (ctrl_len_ < sizeof(T)) return nullptr;
+        return reinterpret_cast<const T*>(buffer_->ctrl);
+    }
+
+    template <typename T>
+    void CopyCtrlFrom(const T& t) {
+        static_assert(mxtl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(kCtrlSize >= sizeof(T),
+                      "Control data type too large for Buffer ctrl_data field");
+        std::memcpy(buffer_->ctrl, &t, sizeof(T));
+        ctrl_len_ = sizeof(T);
+    }
+
     void CopyFrom(const void* src, size_t len, size_t offset);
 
   private:
     mxtl::unique_ptr<Buffer> buffer_;
     size_t len_ = 0;
+    size_t ctrl_len_ = 0;
     Source src_ = Source::kUnknown;
 };
 

@@ -171,6 +171,12 @@ TEST_F(ScannerTest, ScanResponse) {
 
     Packet p(std::move(buf), sizeof(kBeacon));
     p.CopyFrom(kBeacon, sizeof(kBeacon), 0);
+    wlan_rx_info_t info;
+    info.flags = WLAN_RX_INFO_RSSI_PRESENT | WLAN_RX_INFO_SNR_PRESENT;
+    info.chan = { 1 };
+    info.rssi = 10;
+    info.snr = 60;
+    p.CopyCtrlFrom(info);
 
     EXPECT_EQ(Scanner::Status::kContinueScan, scanner_.HandleBeacon(&p));
     clock_.Set(1);
@@ -187,6 +193,10 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(BSSTypes::INFRASTRUCTURE, bss->bss_type);
     EXPECT_EQ(100u, bss->beacon_period);
     EXPECT_EQ(1024u, bss->timestamp);
+    EXPECT_EQ(1u, bss->channel);
+    EXPECT_EQ(10u, bss->rssi_measurement);
+    EXPECT_EQ(0xff, bss->rcpi_measurement);
+    EXPECT_EQ(60u, bss->rsni_measurement);
 }
 
 }  // namespace

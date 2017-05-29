@@ -51,8 +51,18 @@ class Device : public WlanBaseDevice,
     void EthmacSend(uint32_t options, void* data, size_t length);
 
   private:
-    mx_status_t QueuePacket(const void* data, size_t length, Packet::Source src)
-        __TA_EXCLUDES(packet_queue_lock_);
+    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src);
+    template <typename T>
+    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src,
+                                           const T& ctrl_data) {
+        auto packet = PreparePacket(data, length, src);
+        if (packet != nullptr) {
+            packet->CopyCtrlFrom(ctrl_data);
+        }
+        return packet;
+    }
+
+    mx_status_t QueuePacket(mxtl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
     void MainLoop();
     bool ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);

@@ -113,6 +113,8 @@ Scanner::Status Scanner::HandleBeacon(const Packet* packet) {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
 
+    auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
+    MX_DEBUG_ASSERT(rxinfo);
     auto hdr = packet->field<MgmtFrameHeader>(0);
     auto bcn = packet->field<Beacon>(hdr->size());
     debugf("timestamp: %" PRIu64 " beacon interval: %u capabilities: %04x\n",
@@ -140,6 +142,22 @@ Scanner::Status Scanner::HandleBeacon(const Packet* packet) {
     }
     bss->beacon_period = bcn->beacon_interval;
     bss->timestamp = bcn->timestamp;
+    bss->channel = rxinfo->chan.channel_num;
+    if (rxinfo->flags & WLAN_RX_INFO_RSSI_PRESENT) {
+        bss->rssi_measurement = rxinfo->rssi;
+    } else {
+        bss->rssi_measurement = 0xff;
+    }
+    if (rxinfo->flags & WLAN_RX_INFO_RCPI_PRESENT) {
+        bss->rcpi_measurement = rxinfo->rcpi;
+    } else {
+        bss->rcpi_measurement = 0xff;
+    }
+    if (rxinfo->flags & WLAN_RX_INFO_SNR_PRESENT) {
+        bss->rsni_measurement = rxinfo->snr;
+    } else {
+        bss->rsni_measurement = 0xff;
+    }
 
     size_t elt_len = packet->len() - hdr->size() - sizeof(Beacon);
     ElementReader reader(bcn->elements, elt_len);

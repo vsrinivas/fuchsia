@@ -78,31 +78,37 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
 }
 
-mx_status_t Device::QueuePacket(const void* data, size_t length, Packet::Source src) {
+mxtl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
+                                               Packet::Source src) {
     if (length > kBufferSize) {
-        return ERR_BUFFER_TOO_SMALL;
+        return nullptr;
     }
     auto buffer = buffer_alloc_.New();
     if (buffer == nullptr) {
-        return ERR_NO_RESOURCES;
+        return nullptr;
     }
     auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
     packet->set_src(src);
     packet->CopyFrom(data, length, 0);
-    {
-        std::lock_guard<std::mutex> lock(packet_queue_lock_);
-        packet_queue_.push_front(std::move(packet));
+    return packet;
+}
 
-        mx_port_packet_t pkt = {};
-        pkt.key = to_u64(PortKey::kDevice);
-        pkt.type = MX_PKT_TYPE_USER;
-        pkt.user.u64[0] = to_u64(DevicePacket::kPacketQueued);
-        mx_status_t status = port_.queue(&pkt, 0);
-        if (status != NO_ERROR) {
-            warnf("could not send packet queued msg err=%d\n", status);
-            packet_queue_.pop_front();
-            return status;
-        }
+mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
+    if (packet == nullptr) {
+        return ERR_NO_RESOURCES;
+    }
+    std::lock_guard<std::mutex> lock(packet_queue_lock_);
+    packet_queue_.push_front(std::move(packet));
+
+    mx_port_packet_t pkt = {};
+    pkt.key = to_u64(PortKey::kDevice);
+    pkt.type = MX_PKT_TYPE_USER;
+    pkt.user.u64[0] = to_u64(DevicePacket::kPacketQueued);
+    mx_status_t status = port_.queue(&pkt, 0);
+    if (status != NO_ERROR) {
+        warnf("could not send packet queued msg err=%d\n", status);
+        packet_queue_.pop_front();
+        return status;
     }
     return NO_ERROR;
 }
@@ -174,7 +180,8 @@ void Device::EthmacStop() {
 
 void Device::EthmacSend(uint32_t options, void* data, size_t length) {
     // no debugfn() because it's too noisy
-    mx_status_t status = QueuePacket(data, length, Packet::Source::kEthernet);
+    auto packet = PreparePacket(data, length, Packet::Source::kEthernet);
+    mx_status_t status = QueuePacket(std::move(packet));
     if (status != NO_ERROR) {
         warnf("could not queue outbound packet err=%d\n", status);
     }
@@ -186,7 +193,8 @@ void Device::WlanmacStatus(uint32_t status) {
 
 void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
     // no debugfn() because it's too noisy
-    mx_status_t status = QueuePacket(data, length, Packet::Source::kWlan);
+    auto packet = PreparePacket(data, length, Packet::Source::kWlan, *info);
+    mx_status_t status = QueuePacket(std::move(packet));
     if (status != NO_ERROR) {
         warnf("could not queue inbound packet err=%d\n", status);
     }
