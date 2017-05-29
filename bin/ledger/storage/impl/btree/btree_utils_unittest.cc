@@ -258,7 +258,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   }
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_UpdateValue) {
+TEST_F(BTreeUtilsTest, UpdateValue) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -299,7 +299,8 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValue) {
   ASSERT_EQ(golden_entries.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    if (golden_entries[i].entry.key == entries_to_update[updated_index].key) {
+    if (updated_index < entries_to_update.size() &&
+        golden_entries[i].entry.key == entries_to_update[updated_index].key) {
       EXPECT_EQ(entries_to_update[updated_index], entries[i]);
       // Skip the updated entries.
       updated_index++;
@@ -309,7 +310,7 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValue) {
   }
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_UpdateValueLevel1) {
+TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -350,7 +351,8 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValueLevel1) {
   ASSERT_EQ(golden_entries.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    if (golden_entries[i].entry.key == entries_to_update[updated_index].key) {
+    if (updated_index < entries_to_update.size() &&
+        golden_entries[i].entry.key == entries_to_update[updated_index].key) {
       EXPECT_EQ(entries_to_update[updated_index], entries[i]);
       // Skip the updated entries.
       updated_index++;
@@ -360,7 +362,7 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValueLevel1) {
   }
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_UpdateValueSplitChange) {
+TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   // Expected layout (XX is key "keyXX"):
   // [00, 04]
   std::vector<EntryChange> golden_entries;
@@ -399,11 +401,13 @@ TEST_F(BTreeUtilsTest, DISABLED_UpdateValueSplitChange) {
   ASSERT_EQ(golden_entries.size() + update_changes.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
-    if (entries[i] == update_changes[updated_index].entry) {
+    if (updated_index < update_changes.size() &&
+        entries[i] == update_changes[updated_index].entry) {
       // Skip the updated entries.
       updated_index++;
       continue;
     }
+    ASSERT_GT(golden_entries.size(), i - updated_index);
     EXPECT_EQ(golden_entries[i - updated_index].entry, entries[i]);
   }
 }
@@ -434,7 +438,7 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   EXPECT_EQ(0u, new_nodes.size());
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_DeleteChanges) {
+TEST_F(BTreeUtilsTest, DeleteChanges) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -472,17 +476,19 @@ TEST_F(BTreeUtilsTest, DISABLED_DeleteChanges) {
   ASSERT_EQ(golden_entries.size() - delete_changes.size(), entries.size());
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    if (golden_entries[i].entry.key ==
-        delete_changes[deleted_index].entry.key) {
+    if (deleted_index < delete_changes.size() &&
+        golden_entries[i].entry.key ==
+            delete_changes[deleted_index].entry.key) {
       // Skip the deleted entries.
       deleted_index++;
       continue;
     }
+    ASSERT_LT(i - deleted_index, entries.size());
     EXPECT_EQ(golden_entries[i].entry, entries[i - deleted_index]);
   }
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_DeleteLevel1Changes) {
+TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
@@ -520,12 +526,14 @@ TEST_F(BTreeUtilsTest, DISABLED_DeleteLevel1Changes) {
   ASSERT_EQ(golden_entries.size() - delete_changes.size(), entries.size());
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    if (golden_entries[i].entry.key ==
-        delete_changes[deleted_index].entry.key) {
+    if (deleted_index < delete_changes.size() &&
+        golden_entries[i].entry.key ==
+            delete_changes[deleted_index].entry.key) {
       // Skip the deleted entries.
       deleted_index++;
       continue;
     }
+    ASSERT_LT(i - deleted_index, entries.size());
     EXPECT_EQ(golden_entries[i].entry, entries[i - deleted_index]);
   }
 }
@@ -561,7 +569,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   EXPECT_EQ(0u, new_nodes.size());
 }
 
-TEST_F(BTreeUtilsTest, DISABLED_SplitMergeUpdate) {
+TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   // Expected layout (XX is key "keyXX"):
   //        [50]
   //     /        \
@@ -605,11 +613,13 @@ TEST_F(BTreeUtilsTest, DISABLED_SplitMergeUpdate) {
   ASSERT_EQ(golden_entries.size() + update_changes.size(), entries.size());
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
-    if (entries[i] == update_changes[updated_index].entry) {
+    if (updated_index < update_changes.size() &&
+        entries[i] == update_changes[updated_index].entry) {
       // Skip the updated entries.
       updated_index++;
       continue;
     }
+    ASSERT_LT(i - updated_index, golden_entries.size());
     EXPECT_EQ(golden_entries[i - updated_index].entry, entries[i]);
   }
 
