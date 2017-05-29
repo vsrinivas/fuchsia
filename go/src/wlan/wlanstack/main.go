@@ -50,7 +50,7 @@ func tryAddEth(path string) error {
 	}
 	if w != nil {
 		log.Printf("found wlan device %q", path)
-		go w.Scan()
+		go w.Run()
 	}
 
 	return nil

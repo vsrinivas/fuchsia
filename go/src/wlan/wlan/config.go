@@ -10,7 +10,8 @@ import (
 )
 
 type Config struct {
-	SSID string
+	SSID         string
+	ScanInterval int
 }
 
 func NewConfig() *Config {
