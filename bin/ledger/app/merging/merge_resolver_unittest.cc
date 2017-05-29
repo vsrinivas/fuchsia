@@ -40,6 +40,32 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
+class RecordingTestStrategy : public MergeStrategy {
+ public:
+  RecordingTestStrategy() {}
+  ~RecordingTestStrategy() override {}
+  void SetOnError(ftl::Closure on_error) override {
+    this->on_error = std::move(on_error);
+  }
+
+  void Merge(storage::PageStorage* storage,
+             PageManager* page_manager,
+             std::unique_ptr<const storage::Commit> head_1,
+             std::unique_ptr<const storage::Commit> head_2,
+             std::unique_ptr<const storage::Commit> ancestor,
+             ftl::Closure on_done) override {
+    this->on_done = std::move(on_done);
+    merge_calls++;
+  }
+
+  void Cancel() override { cancel_calls++; }
+
+  ftl::Closure on_error;
+  ftl::Closure on_done;
+  uint32_t merge_calls = 0;
+  uint32_t cancel_calls = 0;
+};
+
 std::string MakeObjectId(std::string str) {
   // Resize id to the required size, adding trailing underscores if needed.
   str.resize(storage::kObjectIdSize, '_');
@@ -396,6 +422,35 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
   EXPECT_EQ(1u, ids.size());
   EXPECT_GT(get_next_count, 0);
+}
+
+TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
+  // Set up conflict
+  storage::CommitId commit_1 = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+
+  storage::CommitId commit_2 = CreateCommit(
+      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+
+  std::vector<storage::CommitId> ids;
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(2u, ids.size());
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_1));
+  EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_2));
+
+  MergeResolver resolver([] {}, &environment_, page_storage_.get(),
+                         std::make_unique<TestBackoff>(nullptr));
+  resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
+  auto merge_strategy = std::make_unique<RecordingTestStrategy>();
+  auto merge_strategy_ptr = merge_strategy.get();
+  resolver.SetMergeStrategy(std::move(merge_strategy));
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_TRUE(resolver.IsEmpty());
+  EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
+  EXPECT_EQ(1u, ids.size());
+  EXPECT_EQ(0u, merge_strategy_ptr->merge_calls);
 }
 
 }  // namespace
