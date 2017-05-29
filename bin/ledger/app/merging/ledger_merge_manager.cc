@@ -7,11 +7,11 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/app/merging/auto_merge_strategy.h"
 #include "apps/ledger/src/app/merging/custom_merge_strategy.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 
 namespace ledger {
 LedgerMergeManager::LedgerMergeManager(Environment* environment)

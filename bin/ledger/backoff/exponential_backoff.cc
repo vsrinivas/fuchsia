@@ -26,7 +26,8 @@ ExponentialBackoff::ExponentialBackoff(ftl::TimeDelta initial_delay,
       max_delay_(max_delay),
       max_delay_divided_by_factor_(max_delay_ / retry_factor_),
       rng_(seed_generator()) {
-  FTL_DCHECK(ftl::TimeDelta() <= initial_delay_ && initial_delay_ <= max_delay_);
+  FTL_DCHECK(ftl::TimeDelta() <= initial_delay_ &&
+             initial_delay_ <= max_delay_);
   FTL_DCHECK(0 < retry_factor_);
   FTL_DCHECK(ftl::TimeDelta() <= max_delay_);
 }
