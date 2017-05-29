@@ -355,6 +355,8 @@ mx_status_t Device::ValidateEeprom() {
     if (abs(erbg.offset1()) > 10) {
         erbg.set_offset1(0);
     }
+    bg_rssi_offset_[0] = erbg.offset0();
+    bg_rssi_offset_[1] = erbg.offset1();
     WriteEepromField(erbg);
 
     EepromRssiBg2 erbg2;
@@ -365,6 +367,7 @@ mx_status_t Device::ValidateEeprom() {
     if (erbg2.lna_a1() == 0x00 || erbg2.lna_a1() == 0xff) {
         erbg2.set_lna_a1(default_lna_gain);
     }
+    bg_rssi_offset_[2] = erbg2.offset2();
     WriteEepromField(erbg2);
 
     // TODO(tkilbourn): check and set RSSI for A
@@ -2045,6 +2048,87 @@ static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
 #endif
 }
 
+static const uint8_t kDataRates[4][8] = {
+    // Legacy CCK
+    { 2, 4, 11, 22, 0, 0, 0, 0, },
+    // Legacy OFDM
+    { 12, 18, 24, 36, 48, 72, 96, 108, },
+    // HT Mix mode
+    { 13, 26, 39, 52, 78, 104, 117, 130, },
+    // HT Greenfield
+    { 13, 26, 39, 52, 78, 104, 117, 130, },
+};
+
+static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3,
+                         uint8_t* rssi_offsets, uint8_t lna_gain) {
+    info->flags |= WLAN_RX_INFO_PHY_PRESENT;
+    MX_DEBUG_ASSERT(rxwi1.phy_mode() < 4);
+    switch (rxwi1.phy_mode()) {
+    case PhyMode::kLegacyCck:
+        info->phy = WLAN_PHY_CCK;
+        break;
+    case PhyMode::kLegacyOfdm:
+        info->phy = WLAN_PHY_OFDM;
+        break;
+    case PhyMode::kHtMixMode:
+        info->phy = WLAN_PHY_HT_MIXED;
+        break;
+    case PhyMode::kHtGreenfield:
+        info->phy = WLAN_PHY_HT_GREENFIELD;
+        break;
+    default:
+        // This should not happen!
+        warnf("unknown PHY: %u\n", rxwi1.phy_mode());
+        info->flags &= ~(WLAN_RX_INFO_PHY_PRESENT);
+        break;
+    }
+
+    bool ht_phy = rxwi1.phy_mode() == PhyMode::kHtMixMode ||
+        rxwi1.phy_mode() == PhyMode::kHtGreenfield;
+    uint8_t mcs = rxwi1.mcs();
+    if (rxwi1.phy_mode() == PhyMode::kLegacyCck && mcs > 8) {
+        mcs -= 8;
+    }
+    if (rxwi1.phy_mode() < mxtl::count_of(kDataRates) && mcs < mxtl::count_of(kDataRates[0])) {
+        uint8_t rate = kDataRates[rxwi1.phy_mode()][mcs];
+        if (rate > 0) {
+            info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
+            info->data_rate = rate;
+        }
+    } else if (ht_phy && rxwi1.mcs() == 32) {
+        info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
+        info->data_rate = 12;
+    }
+
+    info->flags |= WLAN_RX_INFO_CHAN_WIDTH_PRESENT;
+    info->chan_width = rxwi1.bw() ? WLAN_CHAN_WIDTH_40MHZ : WLAN_CHAN_WIDTH_20MHZ;
+
+    if (ht_phy) {
+        if (info->flags & WLAN_RX_INFO_DATA_RATE_PRESENT) {
+            if (rxwi1.bw()) info->data_rate *= 2;
+            if (rxwi1.sgi()) info->data_rate = (info->data_rate * 10) / 9;
+        }
+        if (rxwi1.mcs() < 8) {
+            info->flags |= WLAN_RX_INFO_MOD_PRESENT;
+            info->mod = rxwi1.mcs();
+        }
+    }
+
+    // TODO(tkilbourn): check rssi1 and rssi2 and figure out what to do with them
+    if (rxwi2.rssi0() > 0) {
+        info->flags |= WLAN_RX_INFO_RSSI_PRESENT;
+        // Use rssi offsets from the EEPROM to convert to RSSI
+        info->rssi = static_cast<uint8_t>(-12 - rssi_offsets[0] - lna_gain - rxwi2.rssi0());
+    }
+
+    // TODO(tkilbourn): check snr1 and figure out what to do with it
+    if (rxwi1.phy_mode() != PhyMode::kLegacyCck && rxwi3.snr0() > 0) {
+        info->flags |= WLAN_RX_INFO_SNR_PRESENT;
+        // Convert to SNR
+        info->snr = ((rxwi3.snr0() * 3 / 16) + 10) * 2;
+    }
+}
+
 void Device::HandleRxComplete(iotxn_t* request) {
     if (request->status == ERR_PEER_CLOSED) {
         iotxn_release(request);
@@ -2076,8 +2160,12 @@ void Device::HandleRxComplete(iotxn_t* request) {
         Rxwi1 rxwi1(letoh32(data32[Rxwi1::addr()]));
         Rxwi2 rxwi2(letoh32(data32[Rxwi2::addr()]));
         Rxwi3 rxwi3(letoh32(data32[Rxwi3::addr()]));
+
         if (wlanmac_proxy_ != nullptr) {
-            wlanmac_proxy_->Recv(data + 20, rxwi0.mpdu_total_byte_count(), 0u);
+            wlan_rx_info_t wlan_rx_info = {};
+            fill_rx_info(&wlan_rx_info, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
+            wlan_rx_info.chan.channel_num = current_channel_;
+            wlanmac_proxy_->Recv(0u, data + 20, rxwi0.mpdu_total_byte_count(), &wlan_rx_info);
         }
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
@@ -2246,7 +2334,7 @@ void Device::WlanmacStop() {
     // TODO(tkilbourn) disable radios, stop queues, etc.
 }
 
-void Device::WlanmacTx(uint32_t options, void* data, size_t len) {
+void Device::WlanmacTx(uint32_t options, const void* data, size_t len) {
     iotxn_t* req = nullptr;
     while (req == nullptr) {
         {
@@ -2323,6 +2411,7 @@ mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
         return status;
     }
 
+    current_channel_ = chan->channel_num;
     return NO_ERROR;
 }
 

@@ -914,6 +914,13 @@ class Rxwi1 : public AddressableBitField<uint16_t, uint32_t, 2> {
     BIT_FIELD(phy_mode, 30, 2);
 };
 
+enum PhyMode : uint8_t {
+    kLegacyCck = 0,
+    kLegacyOfdm = 1,
+    kHtMixMode = 2,
+    kHtGreenfield = 3,
+};
+
 class Rxwi2 : public AddressableBitField<uint16_t, uint32_t, 3> {
   public:
     constexpr explicit Rxwi2(uint32_t val) : AddressableBitField(val) {}

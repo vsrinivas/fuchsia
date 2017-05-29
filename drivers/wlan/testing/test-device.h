@@ -35,7 +35,7 @@ class Device : public TestBaseDevice,
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
     void WlanmacStop();
     mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
-    void WlanmacTx(uint32_t options, void* data, size_t length);
+    void WlanmacTx(uint32_t options, const void* data, size_t length);
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:

@@ -67,7 +67,7 @@ mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     return NO_ERROR;
 }
 
-void Device::WlanmacTx(uint32_t options, void* data, size_t length) {
+void Device::WlanmacTx(uint32_t options, const void* data, size_t length) {
 
 }
 

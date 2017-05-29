@@ -42,7 +42,7 @@ class Device : public WlanBaseDevice,
                          size_t out_len, size_t* out_actual);
 
     void WlanmacStatus(uint32_t status);
-    void WlanmacRecv(void* data, size_t length, uint32_t flags);
+    void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
 
     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);

@@ -43,7 +43,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
     mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
-    void WlanmacTx(uint32_t options, void* data, size_t len);
+    void WlanmacTx(uint32_t options, const void* data, size_t len);
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
@@ -140,7 +140,9 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     uint8_t mac_addr_[ETH_MAC_SIZE];
     std::unordered_map<int, Channel> channels_;
+    int current_channel_ = -1;
     uint16_t lna_gain_ = 0;
+    uint8_t bg_rssi_offset_[3] = {};
 
     std::mutex lock_;
     std::vector<iotxn_t*> free_write_reqs_ __TA_GUARDED(lock_);

@@ -172,7 +172,7 @@ void Device::WlanmacStatus(uint32_t status) {
     debugf("WlanmacStatus %u\n", status);
 }
 
-void Device::WlanmacRecv(void* data, size_t length, uint32_t flags) {
+void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
     // no debugfn() because it's too noisy
     mx_status_t status = QueuePacket(data, length, Packet::Source::kWlan);
     if (status != NO_ERROR) {
