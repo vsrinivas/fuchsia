@@ -24,6 +24,10 @@
             "bootfs_path": "apps/ledger_apptests"
         },
         {
+            "binary": "launch_benchmark",
+            "bootfs_path": "apps/launch_benchmark"
+        },
+        {
             "binary": "ledger_benchmark_put",
             "bootfs_path": "apps/ledger_benchmark_put"
         },
@@ -46,8 +50,28 @@
             "bootfs_path": "data/ledger/benchmark/transaction.tspec"
         },
         {
+            "file": "apps/ledger/benchmark/put/entry_count.tspec",
+            "bootfs_path": "data/ledger/benchmark/entry_count.tspec"
+        },
+        {
+            "file": "apps/ledger/benchmark/put/entry_count_update.tspec",
+            "bootfs_path": "data/ledger/benchmark/entry_count_update.tspec"
+        },
+        {
+            "file": "apps/ledger/benchmark/put/key_size.tspec",
+            "bootfs_path": "data/ledger/benchmark/key_size.tspec"
+        },
+        {
             "file": "apps/ledger/benchmark/put/put.tspec",
             "bootfs_path": "data/ledger/benchmark/put.tspec"
+        },
+        {
+            "file": "apps/ledger/benchmark/put/transaction_size.tspec",
+            "bootfs_path": "data/ledger/benchmark/transaction_size.tspec"
+        },
+        {
+            "file": "apps/ledger/benchmark/put/value_size.tspec",
+            "bootfs_path": "data/ledger/benchmark/value_size.tspec"
         },
         {
             "file": "apps/ledger/benchmark/sync/sync.tspec",
