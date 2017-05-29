@@ -55,6 +55,13 @@ struct BSSDescription {
     uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;
+
+    uint8 channel;
+
+    // For the following measurements, 255 means measurement not available.
+    uint8 rssi_measurement;  // not in the standard
+    uint8 rcpi_measurement;
+    uint8 rsni_measurement;
     // etc
 };
 

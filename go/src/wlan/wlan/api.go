@@ -56,6 +56,26 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	log.Print("    DTIM period: ", bss.DtimPeriod)
 	log.Print("    Timestamp: ", bss.Timestamp)
 	log.Print("    Local time: ", bss.LocalTime)
+	log.Print("    Channel: ", bss.Channel)
+	if bss.RssiMeasurement != 0xff {
+		log.Printf("    RSSI: %d dBm", int8(bss.RssiMeasurement))
+	}
+	if bss.RcpiMeasurement != 0xff {
+		var rcpiStr string
+		if bss.RcpiMeasurement == 0 {
+			rcpiStr = "RCPI: < -109.5 dBm"
+		} else if bss.RcpiMeasurement == 220 {
+			rcpiStr = "RCPI: >= 0 dBm"
+		} else if bss.RcpiMeasurement > 220 {
+			rcpiStr = "RCPI: invalid"
+		} else {
+			rcpiStr = fmt.Sprintf("RCPI: %.1f dBm", float32(bss.RcpiMeasurement) / 2 - 110)
+		}
+		log.Print("    ", rcpiStr)
+	}
+	if bss.RsniMeasurement != 0xff {
+		log.Printf("    RSNI: %.1f dBm", float32(int8(bss.RsniMeasurement)) / 2 - 10)
+	}
 }
 
 func PrintScanResponse(resp *mlme.ScanResponse) {
