@@ -34,20 +34,10 @@ bool vdso_open_test(void) {
         EXPECT_GE(fd, 0, d->d_name);
         EXPECT_EQ(close(fd), 0, "");
 
-        // TODO(MG-804): Currently the fs layer allows open for writing
-        // even when the VMO underlying the file doesn't permit writing.
-        // mxio's write for VMO files just does nothing any claims to
-        // succeed, so there's nothing we can really test.  We could
-        // use mxio_get_vmo and test that we can't write into that VMO,
-        // but mxio_get_vmo always returns a handle without MX_RIGHT_WRITE
-        // so we'd really just be testing that and not anything about the
-        // vDSO VMOs.
-#if 0
         // Test that we cannot open for write.
         EXPECT_EQ(openat(vdso_dir_fd, d->d_name, O_RDWR), -1,
                   "opening vDSO file for writing");
         EXPECT_EQ(errno, EACCES, "opening vDSO file for writing");
-#endif
     }
 
     EXPECT_GT(vdso_files_found, 1, "didn't find vDSO files");
