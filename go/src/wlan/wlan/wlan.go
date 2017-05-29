@@ -23,9 +23,10 @@ const SLEEP_INTERVAL = 5 * time.Second
 type Client struct {
 	f        *os.File
 	wlanChan mx.Channel
+	cfg      *Config
 }
 
-func NewClient(path string) (*Client, error) {
+func NewClient(path string, config *Config) (*Client, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("wlan: client open: %v", err)
@@ -51,6 +52,7 @@ func NewClient(path string) (*Client, error) {
 	c := &Client{
 		f:        f,
 		wlanChan: mx.Channel{ch},
+		cfg:      config,
 	}
 	return c, nil
 }
@@ -63,6 +65,9 @@ func (c *Client) Scan() {
 		ChannelList:    &channels,
 		MinChannelTime: 100,
 		MaxChannelTime: 300,
+	}
+	if c.cfg != nil {
+		req.Ssid = c.cfg.SSID
 	}
 	log.Printf("req: %v", req)
 

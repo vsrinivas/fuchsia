@@ -11,10 +11,20 @@ import (
 	"log"
 )
 
+var wlanConfig = wlan.NewConfig()
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("wlanstack: ")
 	log.Print("started")
+
+	// TODO(tkilbourn): monitor this file for changes
+	// TODO(tkilbourn): replace this with a FIDL interface
+	const configFile = "/system/data/wlanstack/config.json"
+	var err error
+	if wlanConfig, err = wlan.ReadConfigFromFile(configFile); err != nil {
+		log.Printf("[W] could not open config (%v)", configFile)
+	}
 
 	const ethdir = "/dev/class/ethernet"
 	w, err := watcher.NewWatcher(ethdir)
@@ -34,7 +44,7 @@ func main() {
 func tryAddEth(path string) error {
 	log.Printf("trying ethernet device %q", path)
 
-	w, err := wlan.NewClient(path)
+	w, err := wlan.NewClient(path, wlanConfig)
 	if err != nil {
 		return err
 	}
