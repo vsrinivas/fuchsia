@@ -12,7 +12,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
 
 namespace ledger {
 
@@ -21,13 +20,11 @@ class Environment {
  public:
   Environment(ftl::RefPtr<ftl::TaskRunner> main_runner,
               NetworkService* network_service,
-              ftl::TimeDelta max_merging_delay,
               ftl::RefPtr<ftl::TaskRunner> io_runner = nullptr);
   ~Environment();
 
   const ftl::RefPtr<ftl::TaskRunner> main_runner() { return main_runner_; }
   NetworkService* network_service() { return network_service_; }
-  ftl::TimeDelta max_merging_delay() { return max_merging_delay_; }
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
   }
@@ -39,7 +36,6 @@ class Environment {
  private:
   ftl::RefPtr<ftl::TaskRunner> main_runner_;
   NetworkService* const network_service_;
-  ftl::TimeDelta max_merging_delay_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
 
   std::thread io_thread_;

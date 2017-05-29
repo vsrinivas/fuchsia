@@ -15,21 +15,19 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/glue/crypto/rand.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
 
 MergeResolver::MergeResolver(ftl::Closure on_destroyed,
                              Environment* environment,
-                             storage::PageStorage* storage)
-    : storage_(storage),
-      environment_(environment),
-      wait_distribution_(0, environment_->max_merging_delay().ToMilliseconds()),
-      rng_(glue::RandUint64()),
+                             storage::PageStorage* storage,
+                             std::unique_ptr<backoff::Backoff> backoff)
+    : environment_(environment),
+      storage_(storage),
+      backoff_(std::move(backoff)),
       on_destroyed_(on_destroyed),
       weak_ptr_factory_(this) {
   storage_->AddCommitWatcher(this);
@@ -74,15 +72,14 @@ void MergeResolver::OnNewCommits(
 }
 
 void MergeResolver::PostCheckConflicts() {
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [weak_this_ptr = weak_ptr_factory_.GetWeakPtr()]() {
-        if (weak_this_ptr) {
-          weak_this_ptr->CheckConflicts();
-        }
-      },
-      ftl::TimeDelta::FromMilliseconds(wait_distribution_(rng_)));
+  environment_->main_runner()->PostTask([weak_this_ptr =
+                                             weak_ptr_factory_.GetWeakPtr()]() {
+    if (weak_this_ptr) {
+      weak_this_ptr->CheckConflicts(DelayedStatus::INITIAL);
+    }
+  });
 }
-void MergeResolver::CheckConflicts() {
+void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   if (!strategy_ || merge_in_progress_) {
     // No strategy, or a merge already in progress. Let's bail out early.
     return;
@@ -96,10 +93,11 @@ void MergeResolver::CheckConflicts() {
     return;
   }
   heads.resize(2);
-  ResolveConflicts(std::move(heads));
+  ResolveConflicts(delayed_status, std::move(heads));
 }
 
-void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
+void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
+                                     std::vector<storage::CommitId> heads) {
   FTL_DCHECK(heads.size() == 2);
 
   merge_in_progress_ = true;
@@ -124,11 +122,29 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }
-  waiter->Finalize(ftl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
-      storage::Status status,
-      std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
+  waiter->Finalize(ftl::MakeCopyable([
+    this, delayed_status, cleanup = std::move(cleanup)
+  ](storage::Status status,
+    std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
     FTL_DCHECK(commits.size() == 2);
     FTL_DCHECK(commits[0]->GetTimestamp() <= commits[1]->GetTimestamp());
+
+    if (commits[0]->GetParentIds().size() == 2 &&
+        commits[1]->GetParentIds().size() == 2 &&
+        commits[0]->GetRootId() == commits[1]->GetRootId()) {
+      if (delayed_status == DelayedStatus::INITIAL) {
+        // If trying to merge 2 merge commits, add some delay with exponential
+        // backoff.
+        environment_->main_runner()->PostDelayedTask(
+            [this] { CheckConflicts(DelayedStatus::DELAYED); },
+            backoff_->GetNext());
+        return;
+      }
+    } else {
+      // No longer merging 2 merge commits, reinitialize the exponential
+      // backoff.
+      backoff_->Reset();
+    }
 
     // Check if the 2 parents have the same content.
     if (commits[0]->GetRootId() == commits[1]->GetRootId()) {

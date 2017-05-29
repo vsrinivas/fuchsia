@@ -5,10 +5,10 @@
 #ifndef APPS_LEDGER_SRC_APP_MERGING_MERGE_RESOLVER_H_
 #define APPS_LEDGER_SRC_APP_MERGING_MERGE_RESOLVER_H_
 
-#include <random>
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
@@ -25,7 +25,8 @@ class MergeResolver : public storage::CommitWatcher {
  public:
   MergeResolver(ftl::Closure on_destroyed,
                 Environment* environment,
-                storage::PageStorage* storage);
+                storage::PageStorage* storage,
+                std::unique_ptr<backoff::Backoff> backoff);
   ~MergeResolver();
 
   void set_on_empty(ftl::Closure on_empty_callback);
@@ -39,19 +40,24 @@ class MergeResolver : public storage::CommitWatcher {
   void SetPageManager(PageManager* page_manager);
 
  private:
+  enum class DelayedStatus {
+    INITIAL,
+    DELAYED,
+  };
+
   // storage::CommitWatcher:
   void OnNewCommits(
       const std::vector<std::unique_ptr<const storage::Commit>>& commits,
       storage::ChangeSource source) override;
 
   void PostCheckConflicts();
-  void CheckConflicts();
-  void ResolveConflicts(std::vector<storage::CommitId> heads);
+  void CheckConflicts(DelayedStatus delayed_status);
+  void ResolveConflicts(DelayedStatus delayed_status,
+                        std::vector<storage::CommitId> heads);
 
-  storage::PageStorage* const storage_;
   Environment* const environment_;
-  std::uniform_int_distribution<uint64_t> wait_distribution_;
-  std::default_random_engine rng_;
+  storage::PageStorage* const storage_;
+  std::unique_ptr<backoff::Backoff> backoff_;
   PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;

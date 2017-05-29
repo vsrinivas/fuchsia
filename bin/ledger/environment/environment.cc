@@ -12,11 +12,9 @@ namespace ledger {
 
 Environment::Environment(ftl::RefPtr<ftl::TaskRunner> main_runner,
                          NetworkService* network_service,
-                         ftl::TimeDelta max_merging_delay,
                          ftl::RefPtr<ftl::TaskRunner> io_runner)
     : main_runner_(std::move(main_runner)),
       network_service_(network_service),
-      max_merging_delay_(max_merging_delay),
       coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()),
       io_runner_(std::move(io_runner)) {
   FTL_DCHECK(main_runner_);

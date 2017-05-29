@@ -11,6 +11,7 @@
 #include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
@@ -39,8 +40,7 @@ std::string ToString(const mx::vmo& vmo) {
 
 class PageImplTest : public test::TestWithMessageLoop {
  public:
-  PageImplTest()
-      : environment_(message_loop_.task_runner(), nullptr, ftl::TimeDelta()) {}
+  PageImplTest() : environment_(message_loop_.task_runner(), nullptr) {}
   ~PageImplTest() override {}
 
  protected:
@@ -51,8 +51,11 @@ class PageImplTest : public test::TestWithMessageLoop {
     auto fake_storage =
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
-    auto resolver =
-        std::make_unique<MergeResolver>([] {}, &environment_, fake_storage_);
+    auto resolver = std::make_unique<MergeResolver>(
+        [] {}, &environment_, fake_storage_,
+        std::make_unique<backoff::ExponentialBackoff>(
+            ftl::TimeDelta::FromSeconds(0), 1u,
+            ftl::TimeDelta::FromSeconds(0)));
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver));

@@ -8,6 +8,7 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
@@ -26,7 +27,10 @@ namespace {
 
 std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
                                                 storage::PageStorage* storage) {
-  return std::make_unique<MergeResolver>([] {}, environment, storage);
+  return std::make_unique<MergeResolver>(
+      [] {}, environment, storage,
+      std::make_unique<backoff::ExponentialBackoff>(
+          ftl::TimeDelta::FromSeconds(0), 1u, ftl::TimeDelta::FromSeconds(0)));
 }
 
 class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
@@ -45,9 +49,7 @@ class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
 class PageManagerTest : public test::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(mtl::MessageLoop::GetCurrent()->task_runner(),
-                     nullptr,
-                     ftl::TimeDelta()) {}
+      : environment_(mtl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}
   ~PageManagerTest() override {}
 
  protected:

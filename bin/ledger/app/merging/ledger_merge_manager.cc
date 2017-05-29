@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/app/merging/auto_merge_strategy.h"
 #include "apps/ledger/src/app/merging/custom_merge_strategy.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
@@ -42,7 +43,8 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
     storage::PageStorage* storage) {
   storage::PageId page_id = storage->GetId();
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-      [this, page_id]() { RemoveResolver(page_id); }, environment_, storage);
+      [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
+      std::make_unique<backoff::ExponentialBackoff>());
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(
       page_id,
