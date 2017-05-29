@@ -30,10 +30,14 @@ GoogleTestReporter::~GoogleTestReporter() {
 void GoogleTestReporter::InitOnThread() {
   application_context_ =
       app::ApplicationContext::CreateFromStartupInfoNotChecked();
-  if (application_context_->environment()) {
+  if (application_context_->has_environment_services()) {
     tracing::InitializeTracer(application_context_.get(), {identity_});
     test_runner_ = application_context_
                        ->ConnectToEnvironmentService<test_runner::TestRunner>();
+    test_runner_.set_connection_error_handler([this]() {
+      test_runner_ = nullptr;
+      QuitOnThread();
+    });
     test_runner_->Identify(identity_);
   }
 }
