@@ -412,6 +412,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // make sure we update valid_keys if we ever add new options
     if (key_idx >= sizeof(valid_keys)) goto fail;
 
+    // Disable WDT
+    // The second parameter can be any value outside of the range [0,0xffff]
+    gBS->SetWatchdogTimer(0, 0x10000, 0, NULL);
+
     int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
     while (true) {
         printf("\nPress (b) for the boot menu");
