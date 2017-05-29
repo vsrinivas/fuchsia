@@ -10,7 +10,6 @@ source_set("test") {
     "commit_empty_impl.h",
     "commit_random_impl.cc",
     "commit_random_impl.h",
-    "data_source_unittest.cc",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
     "storage_test_utils.cc",

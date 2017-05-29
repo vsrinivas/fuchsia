@@ -30,3 +30,17 @@ source_set("public") {
 
   configs += [ "//apps/ledger/src:ledger_config" ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "data_source_unittest.cc",
+  ]
+
+  deps = [
+    ":public",
+    "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/test:lib",
+  ]
+}
