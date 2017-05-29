@@ -24,10 +24,6 @@
 #if WITH_LIB_MAGENTA
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
-
-static const uint16_t kUartReceiveIoPort = 0x3f8;
-static const uint16_t kUartStatusIoPort = 0x3fd;
-static const uint64_t kUartStatusIdle = 1u << 6;
 #endif // WITH_LIB_MAGENTA
 
 static const uint64_t kLocalApicPhysBase =
@@ -241,22 +237,35 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, GuestState* gue
     next_rip(exit_info);
 #if WITH_LIB_MAGENTA
     IoInfo io_info(exit_info.exit_qualification);
-    if (io_info.input) {
-        if (!io_info.string && !io_info.repeat && io_info.port == kUartStatusIoPort) {
-            guest_state->rax = kUartStatusIdle;
-        } else {
-            guest_state->rax = 0;
-        }
-        return NO_ERROR;
-    }
-    if (io_info.string || io_info.repeat || io_info.port != kUartReceiveIoPort)
-        return NO_ERROR;
+    if (io_info.string || io_info.repeat)
+        return ERR_NOT_SUPPORTED;
     mx_guest_packet_t packet;
     memset(&packet, 0, sizeof(packet));
-    packet.type = MX_GUEST_PKT_TYPE_IO_PORT;
-    packet.io_port.access_size = io_info.access_size;
-    memcpy(packet.io_port.data, &guest_state->rax, io_info.access_size);
-    return packet_write(ctl_fifo, packet);
+    if (!io_info.input) {
+        packet.type = MX_GUEST_PKT_TYPE_PORT_OUT;
+        packet.port_out.access_size = io_info.access_size;
+        packet.port_out.port = io_info.port;
+        memcpy(packet.port_out.data, &guest_state->rax, io_info.access_size);
+        return packet_write(ctl_fifo, packet);
+    }
+    packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
+    packet.port_in.port = io_info.port;
+    packet.port_in.access_size = io_info.access_size;
+    mx_status_t status = packet_write(ctl_fifo, packet);
+    if (status != NO_ERROR)
+        return status;
+    status = packet_read(ctl_fifo, &packet);
+    if (status != NO_ERROR)
+        return status;
+    if (packet.type != MX_GUEST_PKT_TYPE_PORT_IN)
+        return ERR_INVALID_ARGS;
+    // From Volume 1, Section 3.4.1.1: 32-bit operands generate a 32-bit result,
+    // zero-extended to a 64-bit result in the destination general-purpose
+    // register.
+    if (io_info.access_size == 4)
+        guest_state->rax = 0;
+    memcpy(&guest_state->rax, packet.port_in_ret.data, io_info.access_size);
+    return NO_ERROR;
 #else // WITH_LIB_MAGENTA
     return ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
@@ -413,9 +422,9 @@ static status_t handle_mem_trap(const ExitInfo& exit_info, vaddr_t guest_paddr,
     status = packet_read(ctl_fifo, &packet);
     if (status != NO_ERROR)
         return status;
-    if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION)
+    if (packet.type != MX_GUEST_PKT_TYPE_MEM_TRAP)
         return ERR_INVALID_ARGS;
-    if (packet.mem_trap_action.fault) {
+    if (packet.mem_trap_ret.fault) {
         // Inject a GP fault if there was an EPT violation outside of the IO APIC page.
         set_interrupt(X86_INT_GP_FAULT, 0, InterruptionType::HARDWARE_EXCEPTION);
     } else {

@@ -61,12 +61,12 @@ static bool guest_enter(void) {
     uint32_t num_packets;
     ASSERT_EQ(mx_fifo_read(guest_ctl_fifo, packet, sizeof(packet), &num_packets), NO_ERROR, "");
     ASSERT_EQ(num_packets, 2u, "");
-    ASSERT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_IO_PORT, "");
-    ASSERT_EQ(packet[0].io_port.access_size, 1u, "");
-    ASSERT_EQ(packet[0].io_port.data[0], 'm', "");
-    ASSERT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_IO_PORT, "");
-    ASSERT_EQ(packet[1].io_port.access_size, 1u, "");
-    ASSERT_EQ(packet[1].io_port.data[0], 'x', "");
+    ASSERT_EQ(packet[0].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
+    ASSERT_EQ(packet[0].port_out.access_size, 1u, "");
+    ASSERT_EQ(packet[0].port_out.data[0], 'm', "");
+    ASSERT_EQ(packet[1].type, MX_GUEST_PKT_TYPE_PORT_OUT, "");
+    ASSERT_EQ(packet[1].port_out.access_size, 1u, "");
+    ASSERT_EQ(packet[1].port_out.data[0], 'x', "");
 
     ASSERT_EQ(mx_handle_close(guest), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(guest_ctl_fifo), NO_ERROR, "");

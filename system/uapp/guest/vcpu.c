@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include <hypervisor/decode.h>
 #include <magenta/assert.h>
@@ -46,16 +47,126 @@
 /* TPM register names. */
 #define TPM_REGISTER_ACCESS                 0x00
 
-static mx_status_t handle_io_port(vcpu_context_t* context, const mx_guest_io_port_t* io_port) {
-    io_port_state_t* io_port_state = &context->guest_state->io_port_state;
-    for (int i = 0; i < io_port->access_size; i++) {
-        io_port_state->buffer[io_port_state->offset++] = io_port->data[i];
-        if (io_port_state->offset == IO_BUFFER_SIZE || io_port->data[i] == '\r') {
-            printf("%.*s", io_port_state->offset, io_port_state->buffer);
-            io_port_state->offset = 0;
-        }
+/* UART ports. */
+#define UART_RECEIVE_IO_PORT                0x3f8
+#define UART_STATUS_IO_PORT                 0x3fd
+
+/* UART configuration flags. */
+#define UART_STATUS_IDLE                    (1u << 6)
+
+/* RTC ports. */
+#define RTC_INDEX_PORT                      0x70
+#define RTC_DATA_PORT                       0x71
+
+/* RTC registers. */
+#define RTC_REGISTER_SECONDS                0u
+#define RTC_REGISTER_MINUTES                2u
+#define RTC_REGISTER_HOURS                  4u
+#define RTC_REGISTER_DAY_OF_MONTH           7u
+#define RTC_REGISTER_MONTH                  8u
+#define RTC_REGISTER_YEAR                   9u
+#define RTC_REGISTER_A                      10u
+#define RTC_REGISTER_B                      11u
+#define RTC_REGISTER_C                      12u
+#define RTC_REGISTER_D                      13u
+
+/* RTC register B flags. */
+#define RTC_REGISTER_B_DAYLIGHT_SAVINGS     (1u << 0)
+#define RTC_REGISTER_B_HOUR_FORMAT          (1u << 1)
+#define RTC_REGISTER_B_DATA_MODE            (1u << 2)
+
+/* Miscellaneous ports. */
+#define PIC1_PORT                           0x20
+#define PIC2_PORT                           0xa0
+#define I8253_CONTROL_PORT                  0x43
+
+mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
+    time_t now = time(NULL);
+    struct tm tm;
+    if (localtime_r(&now, &tm) == NULL)
+        return ERR_INTERNAL;
+    switch (rtc_index) {
+    case RTC_REGISTER_SECONDS:
+        *value = tm.tm_sec;
+        break;
+    case RTC_REGISTER_MINUTES:
+        *value = tm.tm_min;
+        break;
+    case RTC_REGISTER_HOURS:
+        *value = tm.tm_hour;
+        break;
+    case RTC_REGISTER_DAY_OF_MONTH:
+        *value = tm.tm_mday;
+        break;
+    case RTC_REGISTER_MONTH:
+        *value = tm.tm_mon;
+        break;
+    case RTC_REGISTER_YEAR:
+        // RTC expects the number of years since 2000.
+        *value = tm.tm_year - 100;
+        break;
+    case RTC_REGISTER_B:
+        *value = RTC_REGISTER_B_HOUR_FORMAT | RTC_REGISTER_B_DATA_MODE;
+        if (tm.tm_isdst)
+            *value |= RTC_REGISTER_B_DAYLIGHT_SAVINGS;
+        break;
+    default:
+        return ERR_NOT_SUPPORTED;
     }
     return NO_ERROR;
+}
+
+static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
+    if (port_in->access_size != 1)
+        return ERR_NOT_SUPPORTED;
+
+    mx_guest_packet_t packet;
+    packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
+
+    switch (port_in->port) {
+    default:
+        // TODO(abdulla): Make all unknown port reads an error.
+    case UART_RECEIVE_IO_PORT + 4:
+        packet.port_in_ret.u8 = 0;
+        break;
+    case UART_STATUS_IO_PORT:
+        packet.port_in_ret.u8 = UART_STATUS_IDLE;
+        break;
+    case RTC_DATA_PORT: {
+        mx_status_t status = handle_rtc(context->guest_state->io_port_state.rtc_index,
+                                        &packet.port_in_ret.u8);
+        if (status != NO_ERROR)
+            return status;
+        break;
+    }}
+
+    uint32_t num_packets;
+    return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
+}
+
+static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_out_t* port_out) {
+    io_port_state_t* io_port_state = &context->guest_state->io_port_state;
+    switch (port_out->port) {
+    default:
+        // TODO(abdulla): Make all unknown port writes an error.
+    case PIC1_PORT ... PIC1_PORT + 1:
+    case PIC2_PORT ... PIC2_PORT + 2:
+    case I8253_CONTROL_PORT:
+    case UART_RECEIVE_IO_PORT + 1 ... UART_RECEIVE_IO_PORT + 5:
+        return NO_ERROR;
+    case UART_RECEIVE_IO_PORT:
+        for (int i = 0; i < port_out->access_size; i++) {
+            io_port_state->buffer[io_port_state->offset++] = port_out->data[i];
+            if (io_port_state->offset == IO_BUFFER_SIZE || port_out->data[i] == '\r') {
+                printf("%.*s", io_port_state->offset, io_port_state->buffer);
+                io_port_state->offset = 0;
+            }
+        }
+        return NO_ERROR;
+    case RTC_INDEX_PORT:
+        io_port_state->rtc_index = port_out->u8;
+        return NO_ERROR;
+    }
 }
 
 static uint32_t get_value(const instruction_t* inst) {
@@ -63,10 +174,11 @@ static uint32_t get_value(const instruction_t* inst) {
 }
 
 static void apply_inst(const instruction_t* inst, uint32_t* value) {
-    if (inst->read)
+    if (inst->read) {
         *inst->reg = *value;
-    else
+    } else {
         *value = get_value(inst);
+    }
 }
 
 static mx_status_t handle_local_apic(vcpu_context_t* context, const mx_guest_mem_trap_t* mem_trap,
@@ -193,8 +305,8 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
     }
 
     mx_guest_packet_t packet;
-    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION;
-    packet.mem_trap_action.fault = status != NO_ERROR;
+    packet.type = MX_GUEST_PKT_TYPE_MEM_TRAP;
+    packet.mem_trap_ret.fault = status != NO_ERROR;
 
     // If there was an attempt to read from memory, update the GPRs.
     if (status == NO_ERROR && inst.read) {
@@ -237,9 +349,14 @@ mx_status_t vcpu_loop(vcpu_context_t* context) {
         for (uint32_t i = 0; i < num_packets; i++) {
             mx_status_t status;
             switch (packet[i].type) {
-            case MX_GUEST_PKT_TYPE_IO_PORT:
+            case MX_GUEST_PKT_TYPE_PORT_IN:
                 mtx_lock(&context->guest_state->mutex);
-                status = handle_io_port(context, &packet[i].io_port);
+                status = handle_port_in(context, &packet[i].port_in);
+                mtx_unlock(&context->guest_state->mutex);
+                break;
+            case MX_GUEST_PKT_TYPE_PORT_OUT:
+                mtx_lock(&context->guest_state->mutex);
+                status = handle_port_out(context, &packet[i].port_out);
                 mtx_unlock(&context->guest_state->mutex);
                 break;
             case MX_GUEST_PKT_TYPE_MEM_TRAP:

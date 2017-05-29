@@ -35,6 +35,8 @@ typedef struct io_port_state {
     uint8_t buffer[IO_BUFFER_SIZE];
     // Write position within the buffer.
     uint16_t offset;
+    // Index of the RTC register to use.
+    uint8_t rtc_index;
 } io_port_state_t;
 
 typedef struct guest_state {

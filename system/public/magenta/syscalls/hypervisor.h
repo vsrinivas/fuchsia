@@ -53,11 +53,26 @@ typedef struct mx_guest_gpr {
 
 // Packets for communication over the control FIFO.
 
-#define MX_GUEST_PKT_TYPE_IO_PORT               1u
-#define MX_GUEST_PKT_TYPE_MEM_TRAP              2u
-#define MX_GUEST_PKT_TYPE_MEM_TRAP_ACTION       3u
+#define MX_GUEST_PKT_TYPE_PORT_IN               1u
+#define MX_GUEST_PKT_TYPE_PORT_OUT              2u
+#define MX_GUEST_PKT_TYPE_MEM_TRAP              3u
 
-typedef struct mx_guest_io_port {
+typedef struct mx_guest_port_in {
+    uint16_t port;
+    uint8_t access_size;
+} mx_guest_port_in_t;
+
+typedef struct mx_guest_port_in_ret {
+    union {
+        uint8_t u8;
+        uint16_t u16;
+        uint32_t u32;
+        uint8_t data[4];
+    };
+} mx_guest_port_in_ret_t;
+
+typedef struct mx_guest_port_out {
+    uint16_t port;
     uint8_t access_size;
     union {
         uint8_t u8;
@@ -65,7 +80,7 @@ typedef struct mx_guest_io_port {
         uint32_t u32;
         uint8_t data[4];
     };
-} mx_guest_io_port_t;
+} mx_guest_port_out_t;
 
 typedef struct mx_guest_mem_trap {
 #if __aarch64__
@@ -80,16 +95,21 @@ typedef struct mx_guest_mem_trap {
     mx_vaddr_t guest_paddr;
 } mx_guest_mem_trap_t;
 
-typedef struct mx_guest_mem_trap_action {
+typedef struct mx_guest_mem_trap_ret {
     bool fault;
-} mx_guest_mem_trap_action_t;
+} mx_guest_mem_trap_ret_t;
 
 typedef struct mx_guest_packet {
     uint8_t type;
     union {
-        mx_guest_io_port_t io_port;
+        // MX_GUEST_PKT_TYPE_PORT_IN
+        mx_guest_port_in_t port_in;
+        mx_guest_port_in_ret_t port_in_ret;
+        // MX_GUEST_PKT_TYPE_PORT_OUT
+        mx_guest_port_out_t port_out;
+        // MX_GUEST_PKT_TYPE_MEM_TRAP
         mx_guest_mem_trap_t mem_trap;
-        mx_guest_mem_trap_action_t mem_trap_action;
+        mx_guest_mem_trap_ret_t mem_trap_ret;
     };
 } mx_guest_packet_t;
 
