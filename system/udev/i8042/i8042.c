@@ -811,10 +811,26 @@ static int i8042_init_thread(void* arg) {
     return NO_ERROR;
 }
 
+static mx_protocol_device_t i8042_root_proto = {
+    .version = DEVICE_OPS_VERSION,
+};
+
 static mx_status_t i8042_bind(void* ctx, mx_device_t* parent, void** cookie) {
+    mx_device_t* root;
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "i8042",
+        .ops = &i8042_root_proto,
+    };
+
+    mx_status_t status = device_add(parent, &args, &root);
+    if (status != NO_ERROR) {
+        printf("i8042_bind device_add failed: %d\n", status);
+        return status;
+    }
+
     thrd_t t;
-    int rc = thrd_create_with_name(&t, i8042_init_thread, parent, "i8042-init");
-    return rc;
+    return thrd_create_with_name(&t, i8042_init_thread, root, "i8042-init");
 }
 
 static mx_driver_ops_t i8042_driver_ops = {
