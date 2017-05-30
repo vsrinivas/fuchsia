@@ -16,8 +16,8 @@ integration tests).
   For QEMU, see also the warning below.
 
 - A build configuration that runs `test_runner` at startup. For example,
-  `./package/gn/gen.py -m boot_test_modular`. Alternatively, you can run `@boot
-  test_runner` from a `magenta$` prompt.
+  `./package/gn/gen.py -m boot_test_modular`. Alternatively, you can run
+  `test_runner` from the shell.
 
 - The `FUCHSIA_` environment variables used below are set by sourcing
   `//scripts/env.sh`.
