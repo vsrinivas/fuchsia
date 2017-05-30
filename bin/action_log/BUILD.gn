@@ -14,6 +14,7 @@ executable("action_log") {
   deps = [
     "//application/lib/app",
     "//apps/maxwell/services/action_log",
+    "//apps/maxwell/services/suggestion",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",

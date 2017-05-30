@@ -8,6 +8,8 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+#include "apps/maxwell/services/suggestion/proposal.fidl.h"
+#include "apps/maxwell/services/suggestion/suggestion_display.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_data.h"
 
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -16,11 +18,12 @@
 
 namespace maxwell {
 
-UserActionLogImpl::UserActionLogImpl()
+UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
     : action_log_([this](const std::string& component_url,
                          const std::string& method, const std::string& params) {
         BroadcastToSubscribers(component_url, method, params);
-      }) {
+      }),
+      proposal_publisher_(std::move(proposal_publisher)) {
   // TODO(azani): Remove before production!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   LogDummyActionDelayed();
 }
@@ -34,6 +37,24 @@ void UserActionLogImpl::BroadcastToSubscribers(const std::string& component_url,
   action->parameters = params;
   subscribers_.ForAllPtrs([action = std::move(action)](
       ActionLogListener * listener) { listener->OnAction(action.Clone()); });
+}
+
+void UserActionLogImpl::ProposeSharingVideo(const std::string& component_url,
+                                            const std::string& method,
+                                            const std::string& params) {
+  if (method.compare("ViewVideo") == 0) {
+    // TODO(azani): Put information relevant to the video in the proposal.
+    ProposalPtr proposal(Proposal::New());
+    proposal->id = "";
+    proposal->on_selected = fidl::Array<ActionPtr>::New(0);
+    proposal->display = SuggestionDisplay::New();
+    proposal->display->headline = "Share Video";
+    proposal->display->subheadline = "";
+    proposal->display->details = "";
+    proposal->display->icon_urls = fidl::Array<fidl::String>::New(0);
+    proposal->display->image_url = "";
+    proposal_publisher_->Propose(std::move(proposal));
+  }
 }
 
 void UserActionLogImpl::GetComponentActionLog(

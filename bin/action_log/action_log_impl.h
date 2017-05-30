@@ -11,6 +11,7 @@
 #include "apps/maxwell/services/action_log/component.fidl.h"
 #include "apps/maxwell/services/action_log/listener.fidl.h"
 #include "apps/maxwell/services/action_log/user.fidl.h"
+#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/maxwell/src/action_log/action_log_data.h"
 
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -19,7 +20,8 @@
 namespace maxwell {
 
 class UserActionLogImpl : public UserActionLog {
-  UserActionLogImpl();
+ public:
+  UserActionLogImpl(ProposalPublisherPtr proposal_publisher);
 
  private:
   void GetComponentActionLog(
@@ -35,9 +37,14 @@ class UserActionLogImpl : public UserActionLog {
                               const std::string& method,
                               const std::string& params);
 
+  void ProposeSharingVideo(const std::string& component_url,
+                           const std::string& method,
+                           const std::string& params);
+
   void LogDummyActionDelayed();
 
   ActionLogData action_log_;
+  ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;
   fidl::InterfacePtrSet<ActionLogListener> subscribers_;

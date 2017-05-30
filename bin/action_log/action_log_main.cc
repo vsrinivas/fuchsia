@@ -21,8 +21,10 @@ class UserActionLogApp {
  public:
   UserActionLogApp()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    std::unique_ptr<UserActionLogImpl> factory_impl;
-    factory_impl_.swap(factory_impl);
+    ProposalPublisherPtr proposal_publisher =
+        context_->ConnectToEnvironmentService<ProposalPublisher>();
+    factory_impl_ =
+        std::make_unique<UserActionLogImpl>(std::move(proposal_publisher));
 
     // Singleton service
     context_->outgoing_services()->AddService<UserActionLog>(
