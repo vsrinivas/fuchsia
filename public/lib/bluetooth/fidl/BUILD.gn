@@ -8,5 +8,6 @@ fidl("interfaces") {
   sources = [
     "common.fidl",
     "control.fidl",
+    "low_energy.fidl",
   ]
 }

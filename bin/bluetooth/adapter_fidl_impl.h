@@ -36,6 +36,8 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
   void SetLocalName(const ::fidl::String& local_name, const ::fidl::String& shortened_local_name,
                     const SetLocalNameCallback& callback) override;
   void SetPowered(bool powered, const SetPoweredCallback& callback) override;
+  void StartDiscovery(const StartDiscoveryCallback& callback) override;
+  void StopDiscovery(const StopDiscoveryCallback& callback) override;
 
   // The underlying Adapter object.
   ftl::WeakPtr<::bluetooth::gap::Adapter> adapter_;

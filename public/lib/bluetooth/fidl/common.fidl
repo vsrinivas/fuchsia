@@ -6,10 +6,13 @@ module bluetooth;
 
 enum ErrorCode {
   UNKNOWN,
+  BAD_STATE,
+  BLUETOOTH_NOT_AVAILABLE,
+  FAILED,
+  IN_PROGRESS,
+  INVALID_ARGUMENTS,
   NOT_FOUND,
   PROTOCOL_ERROR,
-
-  // TODO(armansito): Populate
 };
 
 // Represents an error result returned from an asynchronous operation.
@@ -34,7 +37,16 @@ struct Status {
   Error? error;
 };
 
-// Convenience wrapper around "bool" to make it a nullable type.
+// Nullable primitive types:
+
 struct Bool {
   bool value;
+};
+
+struct Int8 {
+  int8 value;
+};
+
+struct UInt16 {
+  uint16 value;
 };

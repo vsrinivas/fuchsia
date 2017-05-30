@@ -24,7 +24,6 @@ namespace fidl_helpers {
 
   adapter_info->identifier = adapter.identifier();
   adapter_info->address = adapter.state().controller_address().ToString();
-  adapter_info->appearance = ::fidl_control::Appearance::UNKNOWN;
 
   return adapter_info;
 }

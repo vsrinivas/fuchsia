@@ -10,6 +10,8 @@ executable("bluetoothcli") {
     "app.h",
     "commands.cc",
     "commands.h",
+    "helpers.cc",
+    "helpers.h",
     "logging.cc",
     "logging.h",
     "main.cc",

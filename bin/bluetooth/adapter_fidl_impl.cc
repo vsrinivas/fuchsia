@@ -39,4 +39,12 @@ void AdapterFidlImpl::SetPowered(bool powered, const SetPoweredCallback& callbac
   FTL_NOTIMPLEMENTED();
 }
 
+void AdapterFidlImpl::StartDiscovery(const StartDiscoveryCallback& callback) {
+  FTL_NOTIMPLEMENTED();
+}
+
+void AdapterFidlImpl::StopDiscovery(const StopDiscoveryCallback& callback) {
+  FTL_NOTIMPLEMENTED();
+}
+
 }  // namespace bluetooth_service
