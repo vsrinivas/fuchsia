@@ -63,12 +63,6 @@ graphics server.  For more information see
 The systems boots up with three Fuchsia shells and one Magenta shell.  Alt-F1
 through Alt-F4 can be used to switch between virtual consoles.
 
-All of the examples below use `netruncmd` on your host system.  `netruncmd`
-executes commands in the same environment as the Magenta shell.  Because of
-this, they need an `@boot` prefix to run in the "boot" environment.  This is
-functionally the same as running them in the Fuchsia shell.  The @boot is not
-needed when entering commands in a Fuchsia shell (`$` prompt).
-
 ### Wipe Data
 
 The format of the Ledger as well as the format of the data each story syncs is
@@ -85,7 +79,7 @@ $ netruncmd <nodename> cloud_sync clean
 Use the `device_runner` to start a story on one device:
 
 ```
-$ netruncmd <first-node-name> "@boot device_runner --user_shell=dev_user_shell \
+$ netruncmd <first-node-name> "device_runner --user_shell=dev_user_shell \
   --user_shell_args=--root_module=example_todo_story"
 ```
 
@@ -105,7 +99,7 @@ specifying the story ID.
 Launch the system UI using `device_runner`:
 
 ```
-$ netruncmd <second-node-name> "@boot device_runner"
+$ netruncmd <second-node-name> "device_runner"
 ```
 
 Once the system UI starts, you should be able to see the story started in the
@@ -116,7 +110,7 @@ step above.  Click on that to open it.
 With the story ID noted above from launch the story from a shell:
 
 ```
-$ netruncmd <second-node-name> "@boot device_runner \
+$ netruncmd <second-node-name> "device_runner \
   --user_shell=dev_user_shell \
   --user_shell_args=--story_id=<story_id>
 ```
