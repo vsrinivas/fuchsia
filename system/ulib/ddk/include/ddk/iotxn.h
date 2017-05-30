@@ -78,10 +78,7 @@ struct iotxn {
                           // it is invalid to modify this value after initialization
     uint64_t vmo_length;  // buffer size starting at vmo_offset
 
-    // optional virtual address pointing to vmo_offset
-    // the current "owner" of the iotxn may set this to specify a virtual
-    // mapping of the vmo. this field is also set by iotxn_mmap()
-    void* virt;           // mapped address of vmo
+    /* --- cacheline 1 boundary (64 bytes) --- */
 
     // optional physical pages list
     // the current "owner" of the iotxn may set these to specify physical
@@ -98,6 +95,8 @@ struct iotxn {
     // this field may be modified by any intermediate processors.
     iotxn_proto_data_t protocol_data;
 
+    /* --- cacheline 2 boundary (128 bytes) --- */
+
     // extra requestor data
     // this field may not be modified by anyone except the requestor
     iotxn_extra_data_t extra;
@@ -108,7 +107,15 @@ struct iotxn {
     // and when it's queued the processor may use node to hold the iotxn
     // in a transaction queue)
     list_node_t node;
+
+    /* --- cacheline 3 boundary (192 bytes) --- */
+
     void *context;
+
+    // optional virtual address pointing to vmo_offset
+    // the current "owner" of the iotxn may set this to specify a virtual
+    // mapping of the vmo. this field is also set by iotxn_mmap()
+    void* virt;           // mapped address of vmo
 
     // The complete_cb() callback is set by the requestor and is
     // invoked by the 'complete' ops method when it is called by
