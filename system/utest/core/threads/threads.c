@@ -497,7 +497,7 @@ static bool test_suspend_stops_thread(void) {
 
     mxr_thread_t thread;
 
-    struct test_writing_thread_arg arg;
+    struct test_writing_thread_arg arg = { .v = 0 };
     ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread), "");
     mx_handle_t thread_h = mxr_thread_get_handle(&thread);
 
