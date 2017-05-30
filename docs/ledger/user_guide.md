@@ -50,8 +50,8 @@ permission to use.
 
 Once you picked the instance to use, add a new Fuchsia user in the device shell,
 entering the Firebase project ID (see the [Firebase configuration](firebase.md)
-doc) as the "server id". After login, Ledger data of this user will sync using
-the indicated Firebase instance.
+doc) into the "firebase_id" field. After login, Ledger data of this user will
+sync using the indicated Firebase instance.
 
 ### Diagnose
 
