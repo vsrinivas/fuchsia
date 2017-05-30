@@ -8,6 +8,7 @@ group("agents") {
     # produces the expected build products but is not sensitive to source file
     # changes.
     ":module_suggester",
+    "//apps/maxwell/src/agents/basic_text_listener",
     "//apps/maxwell/src/agents/mi_dashboard",
     "//apps/maxwell/src/agents/module_suggester_dart",
   ]

@@ -92,6 +92,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/module_suggester");
   StartAgent("file:///system/apps/agents/module_suggester.dartx");
   StartAgent("file:///system/apps/concert_agent");
+  StartAgent("file:///system/apps/agents/maxwell_btl");
 
 // Toggle using the "kronk_dev" gn arg (see README).
 #ifdef KRONK_DEV
