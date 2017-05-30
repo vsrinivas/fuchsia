@@ -212,7 +212,59 @@ func (c *Client) doJoin() error {
 		log.Printf("doJoin")
 	}
 
-	time.Sleep(5 * time.Second)
+	if err := c.requestJoin(); err != nil {
+		return fmt.Errorf("join failed: %v", err)
+	}
+
+	var resp mlme.JoinResponse
+	obs, err := c.wlanChan.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+
+	switch mxerror.Status(err) {
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		return fmt.Errorf("error waiting on handle: %v", err)
+	case mx.ErrOk:
+		switch {
+		case obs&mx.SignalChannelPeerClosed != 0:
+			c.state = StateStopped
+			return fmt.Errorf("channel closed")
+
+		case obs&MX_SOCKET_READABLE != 0:
+			var buf [4096]byte
+			_, _, err := c.wlanChan.Read(buf[:], nil, 0)
+			if err != nil {
+				c.state = StateStopped
+				return fmt.Errorf("error reading from channel: %v", err)
+			}
+
+			dec := bindings.NewDecoder(buf[:], nil)
+			var header APIHeader
+			if err := header.Decode(dec); err != nil {
+				return fmt.Errorf("could not decode api header: %v", err)
+			}
+			switch header.ordinal {
+			case int32(mlme.Method_JoinConfirm):
+				if err := resp.Decode(dec); err != nil {
+					return fmt.Errorf("could not decode JoinResponse: %v", err)
+				}
+			default:
+				if debug {
+					log.Printf("unknown message ordinal: %v", header.ordinal)
+				}
+				return nil
+			}
+		}
+	}
+
+	if debug {
+		PrintJoinResponse(&resp)
+	}
+
+	if resp.ResultCode == mlme.JoinResultCodes_Success {
+		c.state = StateAuthenticating
+	} else {
+		c.state = StateScanning
+	}
+
 	return nil
 }
 
@@ -256,21 +308,20 @@ func (c *Client) requestScan() error {
 	if c.cfg != nil {
 		req.Ssid = c.cfg.SSID
 	}
-	log.Printf("req: %v", req)
+	if debug {
+		log.Printf("scan req: %v", req)
+	}
+
+	h := &APIHeader{
+		txid:    1,
+		flags:   0,
+		ordinal: int32(mlme.Method_ScanRequest),
+	}
 
 	enc := bindings.NewEncoder()
-	// Create a method call header, similar to that of FIDL2
-	enc.StartStruct(16, 0)
-	if err := enc.WriteUint64(1); err != nil {
-		return fmt.Errorf("could not encode txid: %v", err)
+	if err := h.Encode(enc); err != nil {
+		return fmt.Errorf("could not encode header: %v", err)
 	}
-	if err := enc.WriteUint32(0); err != nil {
-		return fmt.Errorf("could not encode flags: %v", err)
-	}
-	if err := enc.WriteInt32(int32(mlme.Method_ScanRequest)); err != nil {
-		return fmt.Errorf("could not encode ordinal: %v", err)
-	}
-	enc.Finish()
 	if err := req.Encode(enc); err != nil {
 		return fmt.Errorf("could not encode ScanRequest: %v", err)
 	}
@@ -279,7 +330,49 @@ func (c *Client) requestScan() error {
 	if encErr != nil {
 		return fmt.Errorf("could not get encoding data: %v", encErr)
 	}
-	log.Printf("encoded ScanRequest: %v", reqBuf)
+	if debug {
+		log.Printf("encoded ScanRequest: %v", reqBuf)
+	}
+	if err := c.wlanChan.Write(reqBuf, nil, 0); err != nil {
+		return fmt.Errorf("could not write to wlan channel: %v", err)
+	}
+	return nil
+}
+
+func (c *Client) requestJoin() error {
+	if c.state != StateJoining {
+		panic(fmt.Sprintf("invalid state for joining: %v", c.state))
+	}
+
+	req := &mlme.JoinRequest{
+		SelectedBss:        *c.ap.BSSDesc,
+		JoinFailureTimeout: 5,
+	}
+	if debug {
+		log.Printf("join req: %v", req)
+	}
+
+	h := &APIHeader{
+		txid:    2,
+		flags:   0,
+		ordinal: int32(mlme.Method_JoinRequest),
+	}
+
+	enc := bindings.NewEncoder()
+	if err := h.Encode(enc); err != nil {
+		return fmt.Errorf("could not encode header: %v", err)
+	}
+	if err := req.Encode(enc); err != nil {
+		return fmt.Errorf("could not encode JoinRequest: %v", err)
+	}
+
+	reqBuf, _, encErr := enc.Data()
+	if encErr != nil {
+		return fmt.Errorf("could not get encoding data: %v", encErr)
+	}
+	if debug {
+		log.Printf("encoded JoinRequest: %v", reqBuf)
+	}
 	if err := c.wlanChan.Write(reqBuf, nil, 0); err != nil {
 		return fmt.Errorf("could not write to wlan channel: %v", err)
 	}
@@ -317,7 +410,7 @@ func CollectResults(resp *mlme.ScanResponse, ssid string) []AP {
 	aps := []AP{}
 	for _, s := range resp.BssDescriptionSet {
 		if s.Ssid == ssid {
-			ap := NewAP(s.Bssid, s.Ssid)
+			ap := NewAP(&s)
 			ap.LastRSSI = s.RssiMeasurement
 			aps = append(aps, *ap)
 		}

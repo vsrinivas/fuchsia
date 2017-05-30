@@ -17,6 +17,23 @@ type APIHeader struct {
 	ordinal int32
 }
 
+func (h *APIHeader) Encode(enc *bindings.Encoder) error {
+	// Create a method call header, similar to that of FIDL2
+	enc.StartStruct(16, 0)
+	defer enc.Finish()
+
+	if err := enc.WriteUint64(h.txid); err != nil {
+		return fmt.Errorf("could not encode txid: %v", err)
+	}
+	if err := enc.WriteUint32(h.flags); err != nil {
+		return fmt.Errorf("could not encode flags: %v", err)
+	}
+	if err := enc.WriteInt32(h.ordinal); err != nil {
+		return fmt.Errorf("could not encode ordinal: %v", err)
+	}
+	return nil
+}
+
 func (h *APIHeader) Decode(decoder *bindings.Decoder) error {
 	_, err := decoder.StartStruct()
 	if err != nil {
@@ -82,9 +99,9 @@ func PrintScanResponse(resp *mlme.ScanResponse) {
 	log.Print("ScanResponse")
 	var resCode string
 	switch resp.ResultCode {
-	case mlme.ResultCodes_Success:
+	case mlme.ScanResultCodes_Success:
 		resCode = "Success"
-	case mlme.ResultCodes_NotSupported:
+	case mlme.ScanResultCodes_NotSupported:
 		resCode = "Not supported"
 	}
 	log.Print("  Result code: ", resCode)
@@ -92,4 +109,16 @@ func PrintScanResponse(resp *mlme.ScanResponse) {
 	for _, bss := range resp.BssDescriptionSet {
 		PrintBssDescription(&bss)
 	}
+}
+
+func PrintJoinResponse(resp *mlme.JoinResponse) {
+	log.Print("JoinResponse")
+	var resCode string
+	switch resp.ResultCode {
+	case mlme.JoinResultCodes_Success:
+		resCode = "Success"
+	case mlme.JoinResultCodes_JoinFailureTimeout:
+		resCode = "Join failure timeout"
+	}
+	log.Print("  Result code: ", resCode)
 }

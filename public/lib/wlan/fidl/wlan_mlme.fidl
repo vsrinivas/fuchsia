@@ -65,7 +65,7 @@ struct BSSDescription {
     // etc
 };
 
-enum ResultCodes {
+enum ScanResultCodes {
     SUCCESS,
     NOT_SUPPORTED,
     LAST = NOT_SUPPORTED,
@@ -74,7 +74,26 @@ enum ResultCodes {
 struct ScanResponse {
     array<BSSDescription> bss_description_set;
     // BSSDescriptionFromMeasurementPilotSet
-    ResultCodes result_code;
+    ScanResultCodes result_code;
+};
+
+struct JoinRequest {
+    BSSDescription selected_bss;
+    uint32 join_failure_timeout;
+    uint32 nav_sync_delay;
+    array<uint16> op_rate_set;
+
+    // etc
+};
+
+enum JoinResultCodes {
+    SUCCESS,
+    JOIN_FAILURE_TIMEOUT,
+    LAST = JOIN_FAILURE_TIMEOUT,
+};
+
+struct JoinResponse {
+    JoinResultCodes result_code;
 };
 
 // Method ordinals
@@ -88,5 +107,13 @@ enum Method {
     // Args: ScanResponse
     SCAN_confirm,
 
-    LAST = SCAN_confirm,
+    // MLME-JOIN.request
+    // Args: JoinRequest
+    JOIN_request,
+
+    // MLME-JOIN.confirm
+    // Args: JoinResponse
+    JOIN_confirm,
+
+    LAST = JOIN_confirm,
 };

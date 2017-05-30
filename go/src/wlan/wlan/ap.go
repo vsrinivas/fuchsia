@@ -4,18 +4,23 @@
 
 package wlan
 
+import mlme "apps/wlan/services/wlan_mlme"
+
 type AP struct {
 	BSSID    [6]uint8
 	SSID     string
-	state    State
+	BSSDesc  *mlme.BssDescription
 	LastRSSI uint8
+
+	state    State
 }
 
-func NewAP(bssid [6]byte, ssid string) *AP {
+func NewAP(bssDesc *mlme.BssDescription) *AP {
 	return &AP{
-		BSSID:    bssid,
-		SSID:     ssid,
-		state:    StateUnknown,
+		BSSID:    bssDesc.Bssid,
+		SSID:     bssDesc.Ssid,
+		BSSDesc:  bssDesc,
 		LastRSSI: 0xff,
+		state:    StateUnknown,
 	}
 }
