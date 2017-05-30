@@ -40,10 +40,6 @@ class LedgerSync {
   LedgerSync() {}
   virtual ~LedgerSync() {}
 
-  // Returns true iff the page of the given id is present in the cloud.
-  virtual void RemoteContains(ftl::StringView page_id,
-                              std::function<void(RemoteResponse)> callback) = 0;
-
   // Creates a new page sync along with its context for the given page. The page
   // could already have data synced to the cloud or not.
   //

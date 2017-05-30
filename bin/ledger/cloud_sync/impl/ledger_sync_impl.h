@@ -24,9 +24,6 @@ class LedgerSyncImpl : public LedgerSync {
                  ftl::StringView app_id);
   ~LedgerSyncImpl();
 
-  void RemoteContains(ftl::StringView page_id,
-                      std::function<void(RemoteResponse)> callback) override;
-
   std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) override;

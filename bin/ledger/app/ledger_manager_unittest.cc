@@ -89,15 +89,6 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
       : called(false), task_runner_(task_runner) {}
   ~FakeLedgerSync() {}
 
-  void RemoteContains(
-      ftl::StringView page_id,
-      std::function<void(cloud_sync::RemoteResponse)> callback) override {
-    called = true;
-    task_runner_->PostTask([callback = std::move(callback)] {
-      callback(cloud_sync::RemoteResponse::NOT_FOUND);
-    });
-  }
-
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) override {

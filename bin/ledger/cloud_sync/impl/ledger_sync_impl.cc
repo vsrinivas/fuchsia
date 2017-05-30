@@ -37,37 +37,6 @@ LedgerSyncImpl::~LedgerSyncImpl() {
   }
 }
 
-void LedgerSyncImpl::RemoteContains(
-    ftl::StringView page_id,
-    std::function<void(RemoteResponse)> callback) {
-  app_firebase_->Get(
-      firebase::EncodeKey(page_id), "shallow=true",
-      [callback = std::move(callback)](firebase::Status status,
-                                       const rapidjson::Value& value) {
-        if (status != firebase::Status::OK) {
-          FTL_LOG(WARNING) << "Failed to look up the page in Firebase, error: "
-                           << status;
-          switch (status) {
-            case firebase::Status::NETWORK_ERROR:
-              callback(RemoteResponse::NETWORK_ERROR);
-              return;
-            case firebase::Status::PARSE_ERROR:
-              callback(RemoteResponse::PARSE_ERROR);
-              return;
-            case firebase::Status::SERVER_ERROR:
-              callback(RemoteResponse::SERVER_ERROR);
-              return;
-            default:
-              FTL_NOTREACHED();
-          }
-          return;
-        }
-
-        callback(value.IsNull() ? RemoteResponse::NOT_FOUND
-                                : RemoteResponse::FOUND);
-      });
-}
-
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     storage::PageStorage* page_storage,
     ftl::Closure error_callback) {

@@ -45,7 +45,6 @@ source_set("unittests") {
   sources = [
     "batch_download_unittest.cc",
     "commit_upload_unittest.cc",
-    "ledger_sync_impl_unittest.cc",
     "local_version_checker_unittest.cc",
     "page_sync_impl_unittest.cc",
   ]
