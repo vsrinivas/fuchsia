@@ -1,0 +1,35 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "proposal.fidl";
+import "user_input.fidl";
+
+// Debug service provider interface that provides the ability to listen to
+// the internal state of the suggestion service.
+[ServiceName="maxwell.SuggestionDebug"]
+interface SuggestionDebug {
+  WatchAskProposals(AskProposalListener listener);
+  WatchInterruptionProposals(InterruptionProposalListener listener);
+  WatchPersistentProposals(PersistentProposalListener listener);
+};
+
+interface AskProposalListener {
+  // Receives the current ask query and ranked proposals
+  OnQueryUpdate(UserInput query, array<Proposal> proposals);
+  // Receives notification of query completion or dismissal.
+  // |selected_proposal| is null if query was dismissed
+  OnQueryEnd(Proposal selected_proposal);
+};
+
+interface InterruptionProposalListener {
+  // Receives updates to the current proposal list and rankings
+  OnInterrupt(Proposal interruption_proposal);
+};
+
+interface PersistentProposalListener {
+  // Receives updates to the current proposal list and rankings
+  OnUpdate(array<Proposal> proposals);
+};

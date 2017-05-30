@@ -29,3 +29,13 @@ fidl("suggestion_provider") {
     "user_input.fidl",
   ]
 }
+
+fidl("debug") {
+  sources = [
+    "debug.fidl",
+  ]
+
+  deps = [
+    ":suggestion",
+  ]
+}
