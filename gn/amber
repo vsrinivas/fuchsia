@@ -1,0 +1,17 @@
+{
+    "labels": [
+      "//apps/amber:amber"
+    ],
+    "gopaths": [
+        { "apps/amber": "fuchsia.googlesource.com/amber" }
+    ],
+    "binaries": [
+        {
+            "binary": "amber",
+            "bootfs_path": "apps/amber"
+        }
+    ],
+    "imports": [
+      "golibs"
+    ]
+}
