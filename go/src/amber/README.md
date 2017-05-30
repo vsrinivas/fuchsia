@@ -7,9 +7,6 @@ service, an application, etc.
 Many things are uncertain and/or undecided and this uncertainty is increased by
 the fluidity of other parts of the system with which Amber must interoperate.
 We do know that we are exploring using [The Update Framework (TUF)](http://theupdateframework.com/)
-as a basis for distribution and thus you will find many similarities between
-this repository and the Go implementation of TUF from
-https://github.com/flynn/go-tuf. Many thanks to the Flynn team, we hope to
-upstream any relevant changes!
-
-Note: The go-tuf README can be found [here](README-tuf.md).
+as a basis for secure distribution. We use the Go implementation of TUF from
+https://github.com/flynn/go-tuf which we mirror at http://fuchsia.googlesource.com/third_party/go-tuf.
+Many thanks to the Flynn team for such an excellent implementation in Go.
