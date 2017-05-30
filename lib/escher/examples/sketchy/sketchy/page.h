@@ -45,9 +45,11 @@ class Page {
   std::map<StrokeId, std::unique_ptr<Stroke>> strokes_;
   std::unordered_set<Stroke*> dirty_strokes_;
 
+  static constexpr size_t kStrokeColorCount = 1000;
+
   escher::Escher* const escher_;
   escher::MaterialPtr page_material_;
-  escher::MaterialPtr stroke_material_;
+  escher::MaterialPtr stroke_materials_[kStrokeColorCount];
 
   std::unique_ptr<escher::Model> model_;
 };

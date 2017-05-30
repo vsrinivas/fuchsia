@@ -4,6 +4,7 @@
 
 #include "sketchy/page.h"
 
+#include "escher/material/color_utils.h"
 #include "escher/scene/model.h"
 #include "escher/scene/object.h"
 #include "escher/scene/stage.h"
@@ -13,11 +14,15 @@
 namespace sketchy {
 
 Page::Page(escher::Escher* escher)
-    : escher_(escher),
-      page_material_(ftl::MakeRefCounted<escher::Material>()),
-      stroke_material_(ftl::MakeRefCounted<escher::Material>()) {
-  page_material_->set_color(vec3(0.8f, 0.8f, 0.8f));
-  stroke_material_->set_color(vec3(0.9f, 0.f, 0.f));
+    : escher_(escher), page_material_(ftl::MakeRefCounted<escher::Material>()) {
+  page_material_->set_color(vec3(0.6f, 0.6f, 0.6f));
+
+  constexpr float h_step = 360.0 / kStrokeColorCount;
+  for (size_t i = 0; i < kStrokeColorCount; ++i) {
+    stroke_materials_[i] = ftl::MakeRefCounted<escher::Material>();
+    stroke_materials_[i]->set_color(
+        escher::HsvToLinear(escher::vec3(i * h_step, 0.7f, 0.8f)));
+  }
 }
 
 Page::~Page() {}
@@ -84,10 +89,15 @@ escher::Model* Page::GetModel(const escher::Stopwatch& stopwatch,
     const float depth_increment = depth_range / (strokes_.size() + 1);
     float height = depth_increment;
 
+    size_t material_index =
+        fabs(fmod(current_time_sec, kStrokeColorCount)) * 40.f;
+    size_t material_step = 10;
     for (auto& pair : strokes_) {
       auto& stroke = pair.second;
       if (auto& mesh = stroke->mesh()) {
-        objects.emplace_back(mesh, vec3(0, 0, height), stroke_material_);
+        material_index = (material_index + material_step) % kStrokeColorCount;
+        objects.emplace_back(mesh, vec3(0, 0, height),
+                             stroke_materials_[material_index]);
 
         constexpr float PI = 3.14159265359f;
         constexpr float TWO_PI = PI * 2.f;

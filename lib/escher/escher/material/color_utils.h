@@ -14,4 +14,6 @@ vec3 LinearToSrgb(vec3 linear_color);
 
 vec3 SrgbToLinear(vec3 srgb_color);
 
+vec3 HsvToLinear(vec3 hsv_color);
+
 }  // namespace escher
