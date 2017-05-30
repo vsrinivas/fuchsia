@@ -23,10 +23,10 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
-#include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/join_strings.h"
@@ -36,6 +36,7 @@
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
+#include "third_party/rapidjson/rapidjson/error/en.h"
 
 namespace modular {
 namespace auth {
@@ -297,16 +298,26 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    FTL_VLOG(1) << "Account_ID:" << account_id_;
-    const rapidjson::Value& creds = app_->user_creds_[account_id_];
-    FTL_DCHECK(creds.IsObject());
-    FTL_DCHECK(creds.HasMember("refresh_token"));
-    const std::string refresh_token = creds["refresh_token"].GetString();
+    FTL_LOG(INFO) << "Fetching tokens for Account_ID:" << account_id_;
+    FTL_LOG(INFO) << "User Creds:"
+                  << modular::JsonValueToPrettyString(app_->user_creds_);
 
-    if (refresh_token.empty()) {
+    if (!app_->user_creds_.HasMember(account_id_)) {
       Failure(flow, "User not found");
       return;
     }
+
+    const std::string refresh_token =
+        app_->user_creds_[account_id_].GetString();
+    if (refresh_token.empty()) {
+      Failure(flow, "Credentials are empty");
+      return;
+    }
+
+    // TODO(ukode): Change logs to verbose mode once they are supported.
+    FTL_LOG(INFO) << "RT:" << refresh_token;
+    FTL_LOG(INFO) << "Cached OAuth Tokens:"
+                  << modular::JsonValueToPrettyString(app_->oauth_tokens_);
 
     // Check for existing expiry time before fetching it from server.
     if (app_->oauth_tokens_.HasMember(account_id_)) {
@@ -348,12 +359,14 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
            FTL_CHECK(flow);
            Failure(*flow, error_message);
          },
-         [this](rapidjson::Document doc) { return GetTokens(std::move(doc)); });
+         [this](rapidjson::Document doc) {
+           return GetShortLivedTokens(std::move(doc));
+         });
   }
 
   // Parses access and idtokens from token endpoint response and saves it to
   // local token in-memory cache.
-  bool GetTokens(rapidjson::Document tokens) {
+  bool GetShortLivedTokens(rapidjson::Document tokens) {
     if (!tokens.HasMember("access_token")) {
       FTL_DCHECK(false) << "Tokens returned from server does not contain "
                         << "access_token. Returned token: "
@@ -500,16 +513,6 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
       return false;
     };
 
-    // Keep only persistent refresh tokens in this db, other short lived tokens
-    // are saved only in in-memory cache.
-    if (tokens.HasMember("access_token")) {
-      tokens.RemoveMember("access_token");
-    };
-
-    if (tokens.HasMember("id_token")) {
-      tokens.RemoveMember("id_token");
-    };
-
     auto& account_id = account_->id;
     auto& allocator = app_->user_creds_.GetAllocator();
 
@@ -518,13 +521,15 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
       app_->user_creds_.RemoveMember(account_id);
     }
 
-    app_->user_creds_.AddMember(rapidjson::Value(account_id, allocator), tokens,
+    rapidjson::Value rt_val;
+    rt_val.SetString(tokens["refresh_token"].GetString(), allocator);
+    app_->user_creds_.AddMember(rapidjson::Value(account_id, allocator), rt_val,
                                 allocator);
 
-    // Save tokens to disk.
+    // Save credentials to disk.
     if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
-      FTL_DCHECK(false) << "Unable to create directory for " <<
-                        kCredentialsFile;
+      FTL_DCHECK(false) << "Unable to create directory for "
+                        << kCredentialsFile;
       return false;
     }
     auto serialized_tokens = modular::JsonValueToString(app_->user_creds_);
@@ -559,15 +564,15 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     web_view_launch_info->services = web_view_services.NewRequest();
     app_->application_context_->launcher()->CreateApplication(
         std::move(web_view_launch_info), web_view_controller_.NewRequest());
-    web_view_controller_.set_connection_error_handler(
-        [this] {
-          // web_view is not build by default because of the time it adds to the
-          // build.
-          // TODO(alhaad/ukode): Fallback to a pre-build version.
-          FTL_CHECK(false) << "web_view not found at " << kWebViewUrl << ". "
-                           << "Please build web_view locally. Instructions at "
-                           << "https://fuchsia.googlesource.com/web_view/+/master/README.md";
-        });
+    web_view_controller_.set_connection_error_handler([this] {
+      // web_view is not build by default because of the time it adds to the
+      // build.
+      // TODO(alhaad/ukode): Fallback to a pre-build version.
+      FTL_CHECK(false)
+          << "web_view not found at " << kWebViewUrl << ". "
+          << "Please build web_view locally. Instructions at "
+          << "https://fuchsia.googlesource.com/web_view/+/master/README.md";
+    });
 
     mozart::ViewOwnerPtr view_owner;
     mozart::ViewProviderPtr view_provider;
@@ -610,12 +615,18 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
     std::string serialized_tokens;
     if (!files::ReadFileToString(kCredentialsFile, &serialized_tokens)) {
       FTL_DCHECK(false) << "Unable to read file " << kCredentialsFile;
-    }
-    user_creds_.Parse(serialized_tokens);
-    if (!user_creds_.HasParseError() || !user_creds_.IsObject()) {
-      FTL_LOG(WARNING) << "Credentials file got corrupted, " <<
-                       "previous user records are lost.";
+      files::DeletePath(kCredentialsFile, false);
       user_creds_.SetObject();
+    } else {
+      rapidjson::ParseResult result = user_creds_.Parse(serialized_tokens);
+      if (!user_creds_.HasParseError() || !user_creds_.IsObject()) {
+        FTL_LOG(WARNING) << "Credentials file got corrupted with error: "
+                         << rapidjson::GetParseError_En(result.Code())
+                         << ", deleting previous user records: "
+                         << serialized_tokens;
+        files::DeletePath(kCredentialsFile, false);
+        user_creds_.SetObject();
+      }
     }
   } else {
     // Create an empty DOM.
