@@ -388,7 +388,7 @@ static ssize_t ums_write(ums_block_t* dev, iotxn_t* txn) {
         }
 
         status = ums_data_transfer(ums, txn, blocks_transferred * dev->block_size, length,
-                                   ums->bulk_in_addr);
+                                   ums->bulk_out_addr);
         blocks_transferred += blocks;
 
         // receive CSW
