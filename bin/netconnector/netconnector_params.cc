@@ -54,7 +54,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
 
 void NetConnectorParams::Usage() {
   FTL_LOG(INFO) << "netconnector usage:";
-  FTL_LOG(INFO) << "    @boot netconnector [ options ]";
+  FTL_LOG(INFO) << "    netconnector [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO)
       << "    --config=<file>                  read config file (default "

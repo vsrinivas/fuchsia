@@ -27,7 +27,7 @@ NetConnectorExampleParams::NetConnectorExampleParams(
 
 void NetConnectorExampleParams::Usage() {
   FTL_LOG(INFO) << "netconnector_example usage:";
-  FTL_LOG(INFO) << "    @boot netconnector_example [ options ]";
+  FTL_LOG(INFO) << "    netconnector_example [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO)
       << "    --request-device=<name>   request example service from device";
