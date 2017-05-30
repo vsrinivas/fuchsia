@@ -87,13 +87,6 @@ void PageStorageEmptyImpl::GetAllUnsyncedObjectIds(
   callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
 }
 
-void PageStorageEmptyImpl::GetUnsyncedObjectIds(
-    const CommitId& commit_id,
-    std::function<void(Status, std::vector<ObjectId>)> callback) {
-  FTL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
-}
-
 Status PageStorageEmptyImpl::MarkObjectSynced(ObjectIdView object_id) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;

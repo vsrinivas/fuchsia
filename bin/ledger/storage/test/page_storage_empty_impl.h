@@ -59,10 +59,6 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetAllUnsyncedObjectIds(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
 
-  void GetUnsyncedObjectIds(
-      const CommitId& commit_id,
-      std::function<void(Status, std::vector<ObjectId>)> callback) override;
-
   Status MarkObjectSynced(ObjectIdView object_id) override;
 
   void AddObjectFromLocal(

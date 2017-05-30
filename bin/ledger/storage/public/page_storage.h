@@ -107,12 +107,6 @@ class PageStorage {
   // vector.
   virtual void GetAllUnsyncedObjectIds(
       std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
-  // Finds all objects in the storage tree of the commit with the given
-  // |commit_id| that are not yet synced, and calls |callback| with the
-  // operation status and the corresponding |ObjectId|s vector.
-  virtual void GetUnsyncedObjectIds(
-      const CommitId& commit_id,
-      std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
   // Marks the object with the given |object_id| as synced.
   virtual Status MarkObjectSynced(ObjectIdView object_id) = 0;
   // Adds the given local object and passes the new object's id to the callback.

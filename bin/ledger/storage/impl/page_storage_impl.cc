@@ -594,38 +594,6 @@ void PageStorageImpl::GetAllUnsyncedObjectIds(
   callback(s, unsynced_object_ids);
 }
 
-void PageStorageImpl::GetUnsyncedObjectIds(
-    const CommitId& commit_id,
-    std::function<void(Status, std::vector<ObjectId>)> callback) {
-  GetCommit(commit_id, [ this, callback = std::move(callback) ](
-                           Status s, std::unique_ptr<const Commit> commit) {
-    if (s != Status::OK) {
-      callback(s, {});
-      return;
-    }
-    btree::GetObjectIds(coroutine_service_, this, commit->GetRootId(), [
-      this, callback = std::move(callback)
-    ](Status s, std::set<ObjectId> commit_objects) {
-      if (s != Status::OK) {
-        callback(s, {});
-        return;
-      }
-      std::vector<ObjectId> object_ids;
-      std::vector<ObjectId> unsynced_objects;
-      s = db_.GetUnsyncedObjectIds(&unsynced_objects);
-      if (s != Status::OK) {
-        callback(s, std::move(object_ids));
-        return;
-      }
-
-      std::set_intersection(commit_objects.begin(), commit_objects.end(),
-                            unsynced_objects.begin(), unsynced_objects.end(),
-                            std::back_inserter(object_ids));
-      callback(Status::OK, std::move(object_ids));
-    });
-  });
-}
-
 Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
   return db_.MarkObjectIdSynced(object_id);
 }

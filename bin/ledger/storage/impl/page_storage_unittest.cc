@@ -839,37 +839,15 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
                           data[i].object_id) != object_ids.end());
   }
 
-  // Without syncing anything, the unsynced objects of any of the commits should
-  // be the values added up to that point and also the root node of the given
-  // commit.
-  for (int i = 0; i < size; ++i) {
-    std::vector<ObjectId> objects;
-    storage_->GetUnsyncedObjectIds(
-        commits[i], callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &objects));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
-
-    std::unique_ptr<const Commit> commit = GetCommit(commits[i]);
-    EXPECT_TRUE(std::find(objects.begin(), objects.end(),
-                          commit->GetRootId()) != objects.end());
-    for (int j = 0; j <= i; ++j) {
-      EXPECT_TRUE(std::find(objects.begin(), objects.end(),
-                            data[j].object_id) != objects.end());
-    }
-  }
-
-  // Mark the 2nd object as synced. We now expect to find the 2 unsynced values
-  // and the (also unsynced) root node.
+  // Mark the 2nd object as synced. We now expect to still find the 2 unsynced
+  // values and the (also unsynced) root node.
   EXPECT_EQ(Status::OK, storage_->MarkObjectSynced(data[1].object_id));
   std::vector<ObjectId> objects;
-  storage_->GetUnsyncedObjectIds(
-      commits[2], callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &objects));
+  storage_->GetAllUnsyncedObjectIds(callback::Capture(
+      [this] { message_loop_.PostQuitTask(); }, &status, &objects));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(3u, objects.size());
+  EXPECT_EQ(5u, objects.size());
   std::unique_ptr<const Commit> commit = GetCommit(commits[2]);
   EXPECT_TRUE(std::find(objects.begin(), objects.end(), commit->GetRootId()) !=
               objects.end());
