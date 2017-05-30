@@ -5,15 +5,14 @@
 #include <stdint.h>
 #include <limits.h>
 
-#include <hypervisor/guest.h>
+#include <hypervisor/acpi.h>
+#include <hypervisor/ports.h>
 
 #if __x86_64__
 #include <acpica/acpi.h>
 #include <acpica/actables.h>
 #include <acpica/actypes.h>
 
-static const uint32_t kPm1EventPort = 0x1000;
-static const uint32_t kPm1ControlPort = 0x2000;
 static const size_t kIoApicAddress = 0xfec00000;
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
@@ -55,9 +54,9 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     rsdt->TableOffsetEntry[0] = rsdp->RsdtPhysicalAddress + rsdt_length;
     ACPI_TABLE_FADT* fadt = (ACPI_TABLE_FADT*)(addr + rsdt->TableOffsetEntry[0]);
     fadt->Dsdt = rsdt->TableOffsetEntry[0] + sizeof(ACPI_TABLE_FADT);
-    fadt->Pm1aEventBlock = kPm1EventPort;
+    fadt->Pm1aEventBlock = PM1_EVENT_PORT;
     fadt->Pm1EventLength = ACPI_PM1_REGISTER_WIDTH * 2 /* enable and status registers */;
-    fadt->Pm1aControlBlock = kPm1ControlPort;
+    fadt->Pm1aControlBlock = PM1_CONTROL_PORT;
     fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH;
     acpi_header(&fadt->Header, ACPI_SIG_FADT, sizeof(ACPI_TABLE_FADT));
 

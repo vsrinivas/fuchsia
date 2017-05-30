@@ -11,7 +11,7 @@ MODULE_SO_NAME := hypervisor
 MODULE_TYPE := userlib
 
 MODULE_CFLAGS += \
-	-Ithird_party/lib/acpica/source/include
+    -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \

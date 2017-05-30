@@ -7,10 +7,17 @@
 #include <string.h>
 #include <time.h>
 
+#include <hypervisor/acpi.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/ports.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+
+#if __x86_64__
+#include <acpica/acpi.h>
+#include <acpica/actypes.h>
+#endif // __x86_64__
 
 #include "vcpu.h"
 
@@ -47,16 +54,8 @@
 /* TPM register names. */
 #define TPM_REGISTER_ACCESS                 0x00
 
-/* UART ports. */
-#define UART_RECEIVE_IO_PORT                0x3f8
-#define UART_STATUS_IO_PORT                 0x3fd
-
 /* UART configuration flags. */
 #define UART_STATUS_IDLE                    (1u << 6)
-
-/* RTC ports. */
-#define RTC_INDEX_PORT                      0x70
-#define RTC_DATA_PORT                       0x71
 
 /* RTC registers. */
 #define RTC_REGISTER_SECONDS                0u
@@ -75,10 +74,6 @@
 #define RTC_REGISTER_B_HOUR_FORMAT          (1u << 1)
 #define RTC_REGISTER_B_DATA_MODE            (1u << 2)
 
-/* I8042 ports. */
-#define I8042_DATA_PORT                     0x60
-#define I8042_COMMAND_PORT                  0x64
-
 /* I8042 status flags. */
 #define I8042_STATUS_OUTPUT_FULL            (1u << 0)
 #define I8042_STATUS_INPUT_FULL             (1u << 1)
@@ -87,10 +82,8 @@
 #define I8042_COMMAND_TEST                  0xaa
 #define I8042_DATA_TEST_RESPONSE            0x55
 
-/* Miscellaneous ports. */
-#define PIC1_PORT                           0x20
-#define PIC2_PORT                           0xa0
-#define I8253_CONTROL_PORT                  0x43
+/* PM registers */
+#define PM1A_REGISTER_ENABLE                (ACPI_PM1_REGISTER_WIDTH / 8)
 
 mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(NULL);
@@ -129,13 +122,15 @@ mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
 }
 
 static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
+    uint8_t input_size = 1;
     mx_guest_packet_t packet;
+    memset(&packet, 0, sizeof(packet));
     packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
 
     io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_in->port) {
     default:
-        // TODO(abdulla): Make all unknown port reads an error.
+        return ERR_NOT_SUPPORTED;
     case UART_RECEIVE_IO_PORT + 4:
         packet.port_in_ret.u8 = 0;
         break;
@@ -158,8 +153,16 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     case I8042_COMMAND_PORT:
         packet.port_in_ret.u8 = I8042_STATUS_OUTPUT_FULL;
         break;
+#if __x86_64__
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
+        input_size = 2;
+        packet.port_in_ret.u16 = io_port_state->pm1_enable;
+        break;
+#endif // __x86_64__
     }
 
+    if (port_in->access_size != input_size)
+        return ERR_IO_DATA_INTEGRITY;
     uint32_t num_packets;
     return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
 }
@@ -168,7 +171,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_out->port) {
     default:
-        // TODO(abdulla): Make all unknown port writes an error.
+        return ERR_NOT_SUPPORTED;
     case PIC1_PORT ... PIC1_PORT + 1:
     case PIC2_PORT ... PIC2_PORT + 2:
     case I8253_CONTROL_PORT:
@@ -194,6 +197,13 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
             return ERR_IO_DATA_INTEGRITY;
         io_port_state->i8042_command = port_out->u8;
         return NO_ERROR;
+#if __x86_64__
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
+        if (port_out->access_size != 2)
+            return ERR_IO_DATA_INTEGRITY;
+        io_port_state->pm1_enable = port_out->u16;
+        return NO_ERROR;
+#endif // __x86_64__
     }
 }
 

@@ -8,6 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
+MODULE_CFLAGS += \
+    -Ithird_party/lib/acpica/source/include
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/guest.c \
     $(LOCAL_DIR)/vcpu.c \

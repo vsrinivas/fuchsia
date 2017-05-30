@@ -27,15 +27,6 @@ mx_status_t guest_create_phys_mem(uintptr_t* addr, size_t size, mx_handle_t* phy
 mx_status_t guest_create_page_table(uintptr_t addr, size_t size, uintptr_t* end_off);
 
 /**
- * Create an ACPI 1.0 table.
- *
- * @param addr The mapped address of guest physical memory.
- * @param size The size of guest physical memory.
- * @param acpi_off The offset to write the ACPI table.
- */
-mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_off);
-
-/**
  * Create bootdata for the guest.
  *
  * @param addr The mapped address of guest physical memory.

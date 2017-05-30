@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <hypervisor/acpi.h>
 #include <hypervisor/decode.h>
 #include <hypervisor/guest.h>
 #include <magenta/assert.h>
