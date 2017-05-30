@@ -49,10 +49,11 @@ class CloudProviderImpl : public CloudProvider {
           callback) override;
 
  private:
-  // Returns the Firebase query filtering the commits so that only commits not
-  // older than |min_timestamp| are returned. Passing empty |min_timestamp|
-  // returns empty query.
-  std::string GetTimestampQuery(const std::string& min_timestamp);
+  // Returns the Firebase query params.
+  //
+  // If |min_timestamp| is not empty, the resulting query params filter the
+  // commits so that only commits not older than |min_timestamp| are returned.
+  std::vector<std::string> GetQueryParams(const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
   gcs::CloudStorage* const cloud_storage_;

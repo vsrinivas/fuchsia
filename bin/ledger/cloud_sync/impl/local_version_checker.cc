@@ -39,7 +39,7 @@ void LocalVersionChecker::CheckCloudVersion(
     }
 
     user_firebase->Get(
-        GetMetaDataKey(local_version), "",
+        GetMetaDataKey(local_version), {},
         [callback = std::move(callback)](firebase::Status status,
                                          const rapidjson::Value& value) {
           if (status != firebase::Status::OK) {
@@ -66,7 +66,7 @@ void LocalVersionChecker::CheckCloudVersion(
   std::string local_version =
       convert::ToHex(ftl::StringView(local_version_array, kDeviceIdSize));
   std::string firebase_key = GetMetaDataKey(local_version);
-  user_firebase->Put(firebase_key, "true", [
+  user_firebase->Put(firebase_key, {}, "true", [
     local_version_path = std::move(local_version_path),
     local_version = std::move(local_version), callback = std::move(callback)
   ](firebase::Status status) {

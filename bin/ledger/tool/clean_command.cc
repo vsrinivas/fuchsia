@@ -52,7 +52,7 @@ void CleanCommand::Start(ftl::Closure on_done) {
 
   std::cout << "> Erasing " << firebase_->api_url() << " ";
   firebase_->Delete(
-      "", [on_done = std::move(on_done)](firebase::Status status) {
+      "", {}, [on_done = std::move(on_done)](firebase::Status status) {
         std::cout << status << std::endl;
         on_done();
       });

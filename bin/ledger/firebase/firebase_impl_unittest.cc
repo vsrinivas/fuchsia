@@ -88,7 +88,7 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
 // Verifies that GET requests are handled correctly.
 TEST_F(FirebaseImplTest, Get) {
   fake_network_service_.SetStringResponse("\"content\"", 200);
-  firebase_.Get("bazinga", "",
+  firebase_.Get("bazinga", {},
                 [this](Status status, const rapidjson::Value& value) {
                   std::string response_string;
                   EXPECT_EQ(Status::OK, status);
@@ -105,7 +105,7 @@ TEST_F(FirebaseImplTest, Get) {
 
 TEST_F(FirebaseImplTest, GetError) {
   fake_network_service_.SetStringResponse("\"content\"", 404);
-  firebase_.Get("bazinga", "",
+  firebase_.Get("bazinga", {},
                 [this](Status status, const rapidjson::Value& value) {
                   std::string response_string;
                   EXPECT_NE(Status::OK, status);
@@ -116,9 +116,9 @@ TEST_F(FirebaseImplTest, GetError) {
   EXPECT_FALSE(RunLoopWithTimeout());
 }
 
-TEST_F(FirebaseImplTest, GetWithQuery) {
+TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
   fake_network_service_.SetStringResponse("content", 200);
-  firebase_.Get("bazinga", "orderBy=\"timestamp\"",
+  firebase_.Get("bazinga", {"orderBy=\"timestamp\""},
                 [this](Status status, const rapidjson::Value& value) {
                   message_loop_.PostQuitTask();
                 });
@@ -131,10 +131,25 @@ TEST_F(FirebaseImplTest, GetWithQuery) {
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 }
 
+TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
+  fake_network_service_.SetStringResponse("content", 200);
+  firebase_.Get("bazinga", {"one_param", "other_param=bla"},
+                [this](Status status, const rapidjson::Value& value) {
+                  message_loop_.PostQuitTask();
+                });
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(
+      "https://example.firebaseio.com/pre/fix/"
+      "bazinga.json?one_param&other_param=bla",
+      fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+}
+
 // Verifies that request urls for root of the db are correctly formed.
 TEST_F(FirebaseImplTest, Root) {
   fake_network_service_.SetStringResponse("42", 200);
-  firebase_.Get("", "", [this](Status status, const rapidjson::Value& value) {
+  firebase_.Get("", {}, [this](Status status, const rapidjson::Value& value) {
     message_loop_.PostQuitTask();
   });
 
@@ -148,7 +163,7 @@ TEST_F(FirebaseImplTest, Put) {
   // Firebase server seems to respond with the data we sent to it. This is not
   // useful for the client so our API doesn't expose it to the client.
   fake_network_service_.SetStringResponse("\"Alice\"", 200);
-  firebase_.Put("name", "\"Alice\"", [this](Status status) {
+  firebase_.Put("name", {}, "\"Alice\"", [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   });
@@ -163,7 +178,7 @@ TEST_F(FirebaseImplTest, Put) {
 TEST_F(FirebaseImplTest, Patch) {
   fake_network_service_.SetStringResponse("\"ok\"", 200);
   std::string data = R"({"name":"Alice"})";
-  firebase_.Patch("person", data, [this](Status status) {
+  firebase_.Patch("person", {}, data, [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   });
@@ -177,7 +192,7 @@ TEST_F(FirebaseImplTest, Patch) {
 // Verifies that DELETE requests are made correctly.
 TEST_F(FirebaseImplTest, Delete) {
   fake_network_service_.SetStringResponse("", 200);
-  firebase_.Delete("name", [this](Status status) {
+  firebase_.Delete("name", {}, [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   });
@@ -192,7 +207,7 @@ TEST_F(FirebaseImplTest, Delete) {
 TEST_F(FirebaseImplTest, WatchRequest) {
   fake_network_service_.SetStringResponse("", 200);
 
-  firebase_.Watch("some/path", "", this);
+  firebase_.Watch("some/path", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/some/path.json",
@@ -207,7 +222,7 @@ TEST_F(FirebaseImplTest, WatchRequest) {
 TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   fake_network_service_.SetStringResponse("", 200);
 
-  firebase_.Watch("some/path", "orderBy=\"timestamp\"", this);
+  firebase_.Watch("some/path", {"orderBy=\"timestamp\""}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(
@@ -234,7 +249,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(3u, put_count_);
@@ -261,7 +276,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -282,7 +297,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("name", "", this);
+  firebase_.Watch("name", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -299,7 +314,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -316,7 +331,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -335,7 +350,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
       "\n");
   fake_network_service_.SetStringResponse(stream_body, 200);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -348,7 +363,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
 TEST_F(FirebaseImplTest, WatchHttpError) {
   fake_network_service_.SetStringResponse("", 404);
 
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(0u, put_count_);
@@ -366,7 +381,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
       "\n");
   glue::SocketPair socket;
   fake_network_service_.SetSocketResponse(std::move(socket.socket1), 200);
-  firebase_.Watch("/", "", this);
+  firebase_.Watch("/", {}, this);
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
   message_loop_.SetAfterTaskCallback([this] {

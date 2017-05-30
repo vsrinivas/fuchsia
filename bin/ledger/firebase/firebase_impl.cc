@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/firebase/firebase_impl.h"
 
+#include <sstream>
 #include <utility>
 
 #include "apps/ledger/src/glue/socket/socket_drainer_client.h"
@@ -11,6 +12,7 @@
 #include "apps/ledger/src/glue/socket/socket_writer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
+#include "lib/ftl/strings/join_strings.h"
 
 namespace firebase {
 
@@ -69,7 +71,7 @@ FirebaseImpl::~FirebaseImpl() {}
 
 void FirebaseImpl::Get(
     const std::string& key,
-    const std::string& query,
+    const std::vector<std::string>& query_params,
     const std::function<void(Status status, const rapidjson::Value& value)>&
         callback) {
   auto request_callback = [callback](Status status,
@@ -89,13 +91,14 @@ void FirebaseImpl::Get(
     callback(Status::OK, document);
   };
 
-  Request(BuildRequestUrl(key, query), "GET", "", request_callback);
+  Request(BuildRequestUrl(key, query_params), "GET", "", request_callback);
 }
 
 void FirebaseImpl::Put(const std::string& key,
+                       const std::vector<std::string>& query_params,
                        const std::string& data,
                        const std::function<void(Status status)>& callback) {
-  Request(BuildRequestUrl(key, ""), "PUT", data,
+  Request(BuildRequestUrl(key, query_params), "PUT", data,
           [callback](Status status, const std::string& response) {
             // Ignore the response body, which is the same data we sent to the
             // server.
@@ -104,9 +107,10 @@ void FirebaseImpl::Put(const std::string& key,
 }
 
 void FirebaseImpl::Patch(const std::string& key,
+                         const std::vector<std::string>& query_params,
                          const std::string& data,
                          const std::function<void(Status status)>& callback) {
-  Request(BuildRequestUrl(key, ""), "PATCH", data,
+  Request(BuildRequestUrl(key, query_params), "PATCH", data,
           [callback](Status status, const std::string& response) {
             // Ignore the response body, which is the same data we sent to the
             // server.
@@ -115,19 +119,20 @@ void FirebaseImpl::Patch(const std::string& key,
 }
 
 void FirebaseImpl::Delete(const std::string& key,
+                          const std::vector<std::string>& query_params,
                           const std::function<void(Status status)>& callback) {
-  Request(BuildRequestUrl(key, ""), "DELETE", "",
+  Request(BuildRequestUrl(key, query_params), "DELETE", "",
           [callback](Status status, const std::string& response) {
             callback(status);
           });
 }
 
 void FirebaseImpl::Watch(const std::string& key,
-                         const std::string& query,
+                         const std::vector<std::string>& query_params,
                          WatchClient* watch_client) {
   watch_data_[watch_client] = std::unique_ptr<WatchData>(new WatchData());
   watch_data_[watch_client]->request.Reset(network_service_->Request(
-      MakeRequest(BuildRequestUrl(key, query), "GET", "", true),
+      MakeRequest(BuildRequestUrl(key, query_params), "GET", "", true),
       [this, watch_client](network::URLResponsePtr response) {
         OnStream(watch_client, std::move(response));
       }));
@@ -152,17 +157,17 @@ std::string FirebaseImpl::BuildApiUrl(const std::string& db_id,
   return api_url;
 }
 
-std::string FirebaseImpl::BuildRequestUrl(const std::string& key,
-                                          const std::string& query) const {
-  std::string url = api_url_;
-  url.append("/");
-  url.append(key);
-  url.append(".json");
-  if (!query.empty()) {
-    url.append("?");
-    url.append(query);
+std::string FirebaseImpl::BuildRequestUrl(
+    const std::string& key,
+    const std::vector<std::string>& query_params) const {
+  std::ostringstream result;
+  result << api_url_;
+  result << "/" << key << ".json";
+  if (query_params.empty()) {
+    return result.str();
   }
-  return url;
+  result << "?" << ftl::JoinStrings(query_params, "&");
+  return result.str();
 }
 
 void FirebaseImpl::Request(

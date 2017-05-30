@@ -22,7 +22,7 @@ class WatchClientImpl : public firebase::WatchClient {
  public:
   WatchClientImpl(firebase::Firebase* firebase,
                   const std::string& firebase_key,
-                  const std::string& query,
+                  const std::vector<std::string>& query_params,
                   CommitWatcher* commit_watcher);
   ~WatchClientImpl() override;
 

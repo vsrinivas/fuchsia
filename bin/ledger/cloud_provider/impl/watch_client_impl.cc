@@ -17,10 +17,10 @@ namespace cloud_provider {
 
 WatchClientImpl::WatchClientImpl(firebase::Firebase* firebase,
                                  const std::string& firebase_key,
-                                 const std::string& query,
+                                 const std::vector<std::string>& query_params,
                                  CommitWatcher* commit_watcher)
     : firebase_(firebase), commit_watcher_(commit_watcher) {
-  firebase_->Watch(firebase_key, query, this);
+  firebase_->Watch(firebase_key, query_params, this);
 }
 
 WatchClientImpl::~WatchClientImpl() {

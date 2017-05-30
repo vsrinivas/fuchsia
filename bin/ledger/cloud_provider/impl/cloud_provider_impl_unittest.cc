@@ -64,12 +64,12 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   // firebase::Firebase:
   void Get(const std::string& key,
-           const std::string& query,
+           const std::vector<std::string>& query_params,
            const std::function<void(firebase::Status status,
                                     const rapidjson::Value& value)>& callback)
       override {
     get_keys_.push_back(key);
-    get_queries_.push_back(query);
+    get_queries_.push_back(query_params);
     message_loop_.task_runner()->PostTask([this, callback]() {
       callback(firebase::Status::OK, *get_response_);
       message_loop_.PostQuitTask();
@@ -78,6 +78,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   void Put(
       const std::string& key,
+      const std::vector<std::string>& query_params,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
     put_keys_.push_back(key);
@@ -90,6 +91,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   void Patch(
       const std::string& key,
+      const std::vector<std::string>& query_params,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
     patch_keys_.push_back(key);
@@ -102,16 +104,17 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   void Delete(
       const std::string& key,
+      const std::vector<std::string>& query_params,
       const std::function<void(firebase::Status status)>& callback) override {
     // Should never be called.
     FAIL();
   }
 
   void Watch(const std::string& key,
-             const std::string& query,
+             const std::vector<std::string>& query_params,
              firebase::WatchClient* watch_client) override {
     watch_keys_.push_back(key);
-    watch_queries_.push_back(query);
+    watch_queries_.push_back(query_params);
     watch_client_ = watch_client;
   }
 
@@ -150,13 +153,13 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   // These members track calls made by CloudProviderImpl to Firebase client.
   std::vector<std::string> get_keys_;
-  std::vector<std::string> get_queries_;
+  std::vector<std::vector<std::string>> get_queries_;
   std::vector<std::string> put_keys_;
   std::vector<std::string> put_data_;
   std::vector<std::string> patch_keys_;
   std::vector<std::string> patch_data_;
   std::vector<std::string> watch_keys_;
-  std::vector<std::string> watch_queries_;
+  std::vector<std::vector<std::string>> watch_queries_;
   unsigned int unwatch_count_ = 0u;
   firebase::WatchClient* watch_client_ = nullptr;
 
@@ -240,7 +243,7 @@ TEST_F(CloudProviderImplTest, WatchUnwatch) {
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("commits", watch_keys_[0]);
-  EXPECT_EQ("", watch_queries_[0]);
+  EXPECT_EQ(std::vector<std::string>{}, watch_queries_[0]);
   EXPECT_EQ(0u, unwatch_count_);
 
   cloud_provider_->UnwatchCommits(this);
@@ -252,7 +255,8 @@ TEST_F(CloudProviderImplTest, WatchWithQuery) {
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("commits", watch_keys_[0]);
-  EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", watch_queries_[0]);
+  EXPECT_EQ((std::vector<std::string>{"orderBy=\"timestamp\"", "startAt=42"}),
+            watch_queries_[0]);
 }
 
 // Tests handling a server event containing multiple separate (not batched)
@@ -547,7 +551,8 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ(1u, get_queries_.size());
   EXPECT_EQ("commits", get_keys_[0]);
-  EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
+  EXPECT_EQ((std::vector<std::string>{"orderBy=\"timestamp\"", "startAt=42"}),
+            get_queries_[0]);
 }
 
 // Verifies that out-of-order batch commits are reordered when retrieved through

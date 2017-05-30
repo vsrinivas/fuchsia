@@ -40,19 +40,22 @@ class FirebaseImpl : public Firebase {
   // Firebase:
   void Get(
       const std::string& key,
-      const std::string& query,
+      const std::vector<std::string>& query_params,
       const std::function<void(Status status, const rapidjson::Value& value)>&
           callback) override;
   void Put(const std::string& key,
+           const std::vector<std::string>& query_params,
            const std::string& data,
            const std::function<void(Status status)>& callback) override;
   void Patch(const std::string& key,
+             const std::vector<std::string>& query_params,
              const std::string& data,
              const std::function<void(Status status)>& callback) override;
   void Delete(const std::string& key,
+              const std::vector<std::string>& query_params,
               const std::function<void(Status status)>& callback) override;
   void Watch(const std::string& key,
-             const std::string& query,
+             const std::vector<std::string>& query_params,
              WatchClient* watch_client) override;
   void UnWatch(WatchClient* watch_client) override;
 
@@ -61,8 +64,9 @@ class FirebaseImpl : public Firebase {
  private:
   std::string BuildApiUrl(const std::string& db_id, const std::string& prefix);
 
-  std::string BuildRequestUrl(const std::string& key,
-                              const std::string& query) const;
+  std::string BuildRequestUrl(
+      const std::string& key,
+      const std::vector<std::string>& query_params) const;
 
   void Request(
       const std::string& url,

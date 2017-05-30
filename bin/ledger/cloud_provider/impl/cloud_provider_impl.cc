@@ -34,7 +34,7 @@ void CloudProviderImpl::AddCommits(
   bool ok = EncodeCommits(commits, &encoded_batch);
   FTL_DCHECK(ok);
 
-  firebase_->Patch(kCommitRoot.ToString(), encoded_batch,
+  firebase_->Patch(kCommitRoot.ToString(), {}, encoded_batch,
                    [callback](firebase::Status status) {
                      callback(ConvertFirebaseStatus(status));
                    });
@@ -42,9 +42,9 @@ void CloudProviderImpl::AddCommits(
 
 void CloudProviderImpl::WatchCommits(const std::string& min_timestamp,
                                      CommitWatcher* watcher) {
-  watchers_[watcher] = std::make_unique<WatchClientImpl>(
-      firebase_, kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
-      watcher);
+  watchers_[watcher] =
+      std::make_unique<WatchClientImpl>(firebase_, kCommitRoot.ToString(),
+                                        GetQueryParams(min_timestamp), watcher);
 }
 
 void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
@@ -55,7 +55,7 @@ void CloudProviderImpl::GetCommits(
     const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
   firebase_->Get(
-      kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
+      kCommitRoot.ToString(), GetQueryParams(min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
           callback(ConvertFirebaseStatus(status), std::vector<Record>());
@@ -104,14 +104,15 @@ void CloudProviderImpl::GetObject(
       });
 }
 
-std::string CloudProviderImpl::GetTimestampQuery(
+std::vector<std::string> CloudProviderImpl::GetQueryParams(
     const std::string& min_timestamp) {
   if (min_timestamp.empty()) {
-    return "";
+    return {};
   }
 
-  return "orderBy=\"timestamp\"&startAt=" +
-         ftl::NumberToString(BytesToServerTimestamp(min_timestamp));
+  return {
+      "orderBy=\"timestamp\"",
+      "startAt=" + ftl::NumberToString(BytesToServerTimestamp(min_timestamp))};
 }
 
 }  // namespace cloud_provider
