@@ -1,0 +1,7 @@
+Name: Bup
+URL: https://github.com/apenwarr/bup
+License: BSD
+License File: LICENSE
+
+This repository has the relevant components from Bup copied to handle rolling
+hashes.
