@@ -53,8 +53,13 @@ void DeviceAddressBytes::SetToZero() {
 }
 
 std::size_t DeviceAddressBytes::Hash() const {
-  uint64_t bytes_as_int = (bytes_[0] | (bytes_[1] << 1) | (bytes_[2] << 2) |
-                           (bytes_[3] << 3) | (bytes_[4] << 4) | bytes_[5] << 5);
+  uint64_t bytes_as_int = 0;
+  int shift_amount = 0;
+  for (const uint8_t& byte : bytes_) {
+    bytes_as_int |= (static_cast<uint64_t>(byte) << shift_amount);
+    shift_amount += 8;
+  }
+
   std::hash<uint64_t> hash_func;
   return hash_func(bytes_as_int);
 }
