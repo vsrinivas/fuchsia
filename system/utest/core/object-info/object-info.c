@@ -29,13 +29,8 @@ bool info_task_stats_smoke(void) {
     ASSERT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_TASK_STATS,
                                  &info, sizeof(info), NULL, NULL),
               NO_ERROR, "");
-    ASSERT_GT(info.mem_private_bytes, 0u, "");
-    ASSERT_GT(info.mem_shared_bytes, 0u, "");
-    ASSERT_GE(info.mem_mapped_bytes,
-        info.mem_private_bytes + info.mem_shared_bytes, "");
-
-    ASSERT_GT(info.mem_scaled_shared_bytes, 0u, "");
-    ASSERT_GT(info.mem_shared_bytes, info.mem_scaled_shared_bytes, "");
+    ASSERT_GT(info.mem_committed_bytes, 0u, "");
+    ASSERT_GE(info.mem_mapped_bytes, info.mem_committed_bytes, "");
     END_TEST;
 }
 
