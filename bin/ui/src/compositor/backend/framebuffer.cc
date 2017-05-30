@@ -17,7 +17,7 @@ namespace compositor {
 namespace {
 
 constexpr char kDisplayPath[] = "/dev/class/display/000";
-constexpr char kVirtualConsolePath[] = "/dev/class/console/vc";
+constexpr char kVirtualConsolePath[] = "/dev/class/framebuffer/000";
 
 }  // namespace
 
@@ -59,23 +59,7 @@ Framebuffer::Framebuffer(ftl::UniqueFD fd, FramebufferType type)
 Framebuffer::~Framebuffer() {}
 
 bool Framebuffer::Initialize() {
-  uint32_t full_screen = 1;
   ssize_t result;
-  if (type_ == FramebufferType::kVirtualConsole) {
-    result = ioctl_display_set_fullscreen(fd_.get(), &full_screen);
-    if (result < 0) {
-      FTL_DLOG(ERROR) << "IOCTL_DISPLAY_SET_FULLSCREEN failed: result="
-                      << result;
-      return false;
-    }
-
-    result = ioctl_console_set_active_vc(fd_.get());
-    if (result < 0) {
-      FTL_DLOG(ERROR) << "IOCTL_CONSOLE_SET_ACTIVE_VC failed: result="
-                      << result;
-      return false;
-    }
-  }
 
   ioctl_display_get_fb_t description;
   result = ioctl_display_get_fb(fd_.get(), &description);

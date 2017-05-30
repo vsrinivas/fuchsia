@@ -9,8 +9,8 @@
 #include <unistd.h>
 
 #define DEV_INPUT "/dev/class/input"
-#define DEV_CONSOLE "/dev/class/console"
-#define DEV_VC "vc"
+#define DEV_CONSOLE "/dev/class/framebuffer"
+#define DEV_VC "000"
 
 namespace mozart {
 namespace input {

@@ -296,8 +296,8 @@ void FramebufferOutput::WaitForVirtualConsole() {
   // TODO: Replace this with the proper way of waiting for a display once
   // we have a Fuchsia Display API.
   device_watcher_ = mtl::DeviceWatcher::Create(
-      "/dev/class/console", [this](int dir_fd, std::string filename) {
-        if (filename == "vc") {
+      "/dev/class/framebuffer", [this](int dir_fd, std::string filename) {
+        if (filename == "000") {
           device_watcher_.reset();
           VirtualConsoleReady();
         }
