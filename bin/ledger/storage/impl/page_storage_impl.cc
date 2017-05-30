@@ -630,27 +630,6 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
   return db_.MarkObjectIdSynced(object_id);
 }
 
-void PageStorageImpl::AddObjectFromSync(
-    ObjectIdView object_id,
-    std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status)>& callback) {
-  AddObject(std::move(data_source),
-            [ this, object_id = object_id.ToString(), callback ](
-                Status status, ObjectId found_id) {
-              if (status != Status::OK) {
-                callback(status);
-              } else if (found_id != object_id) {
-                FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
-                               << convert::ToHex(object_id)
-                               << ". Found: " << convert::ToHex(found_id);
-                files::DeletePath(GetFilePath(found_id), false);
-                callback(Status::OBJECT_ID_MISMATCH);
-              } else {
-                callback(Status::OK);
-              }
-            });
-}
-
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {
@@ -831,6 +810,26 @@ Status PageStorageImpl::ContainsCommit(CommitIdView id) {
 
 bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
   return id == kFirstPageCommitId;
+}
+
+void PageStorageImpl::AddObjectFromSync(ObjectIdView object_id,
+                                        std::unique_ptr<DataSource> data_source,
+                                        std::function<void(Status)> callback) {
+  AddObject(std::move(data_source), [
+    this, object_id = object_id.ToString(), callback = std::move(callback)
+  ](Status status, ObjectId found_id) {
+    if (status != Status::OK) {
+      callback(status);
+    } else if (found_id != object_id) {
+      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: "
+                     << convert::ToHex(object_id)
+                     << ". Found: " << convert::ToHex(found_id);
+      files::DeletePath(GetFilePath(found_id), false);
+      callback(Status::OBJECT_ID_MISMATCH);
+    } else {
+      callback(Status::OK);
+    }
+  });
 }
 
 void PageStorageImpl::AddObject(

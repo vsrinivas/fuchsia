@@ -65,10 +65,6 @@ class PageStorageEmptyImpl : public PageStorage {
 
   Status MarkObjectSynced(ObjectIdView object_id) override;
 
-  void AddObjectFromSync(ObjectIdView object_id,
-                         std::unique_ptr<DataSource> data_source,
-                         const std::function<void(Status)>& callback) override;
-
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       const std::function<void(Status, ObjectId)>& callback) override;

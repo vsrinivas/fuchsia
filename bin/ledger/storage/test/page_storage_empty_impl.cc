@@ -99,14 +99,6 @@ Status PageStorageEmptyImpl::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-void PageStorageEmptyImpl::AddObjectFromSync(
-    ObjectIdView object_id,
-    std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status)>& callback) {
-  FTL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED);
-}
-
 void PageStorageEmptyImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
     const std::function<void(Status, ObjectId)>& callback) {

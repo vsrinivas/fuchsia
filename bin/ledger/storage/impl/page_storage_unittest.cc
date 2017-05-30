@@ -46,6 +46,14 @@ class PageStorageImplAccessorForTest {
                                  ObjectIdView object_id) {
     return storage.GetFilePath(object_id);
   }
+
+  static void AddObjectFromSync(const std::unique_ptr<PageStorageImpl>& storage,
+                                ObjectIdView object_id,
+                                std::unique_ptr<DataSource> data_source,
+                                std::function<void(Status)> callback) {
+    storage->AddObjectFromSync(object_id, std::move(data_source),
+                               std::move(callback));
+  }
 };
 
 namespace {
@@ -713,11 +721,12 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
 TEST_F(PageStorageTest, AddObjectFromSync) {
   ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
 
-  storage_->AddObjectFromSync(data.object_id, data.ToDataSource(),
-                              [this](Status returned_status) {
-                                EXPECT_EQ(Status::OK, returned_status);
-                                message_loop_.PostQuitTask();
-                              });
+  PageStorageImplAccessorForTest::AddObjectFromSync(
+      storage_, data.object_id, data.ToDataSource(),
+      [this](Status returned_status) {
+        EXPECT_EQ(Status::OK, returned_status);
+        message_loop_.PostQuitTask();
+      });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   std::string file_path = GetFilePath(data.object_id);
@@ -731,8 +740,8 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
   ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
   ObjectId wrong_id = RandomId(kObjectIdSize);
 
-  storage_->AddObjectFromSync(
-      wrong_id, data.ToDataSource(), [this](Status returned_status) {
+  PageStorageImplAccessorForTest::AddObjectFromSync(
+      storage_, wrong_id, data.ToDataSource(), [this](Status returned_status) {
         EXPECT_EQ(Status::OBJECT_ID_MISMATCH, returned_status);
         message_loop_.PostQuitTask();
       });
@@ -742,8 +751,8 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
 TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
   ObjectData data("Some data", ObjectData::InlineBehavior::PREVENT);
 
-  storage_->AddObjectFromSync(
-      data.object_id,
+  PageStorageImplAccessorForTest::AddObjectFromSync(
+      storage_, data.object_id,
       DataSource::Create(mtl::WriteStringToSocket(data.value), 123),
       [this](Status returned_status) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);

@@ -76,9 +76,6 @@ class PageStorageImpl : public PageStorage {
       const CommitId& commit_id,
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
-  void AddObjectFromSync(ObjectIdView object_id,
-                         std::unique_ptr<DataSource> data_source,
-                         const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       const std::function<void(Status, ObjectId)>& callback) override;
@@ -112,6 +109,12 @@ class PageStorageImpl : public PageStorage {
                   std::function<void(Status)> callback);
   Status ContainsCommit(CommitIdView id);
   bool IsFirstCommit(CommitIdView id);
+  // Adds the given synced object. |object_id| will be validated against the
+  // expected one based on the |data| and an |OBJECT_ID_MISSMATCH| error will be
+  // returned in case of missmatch.
+  void AddObjectFromSync(ObjectIdView object_id,
+                         std::unique_ptr<DataSource> data_source,
+                         std::function<void(Status)> callback);
   void AddObject(std::unique_ptr<DataSource> data_source,
                  const std::function<void(Status, ObjectId)>& callback);
   void GetObjectFromSync(
