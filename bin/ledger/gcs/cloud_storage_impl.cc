@@ -19,6 +19,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/concatenate.h"
+#include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/socket/files.h"
@@ -76,9 +77,10 @@ CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(
     const std::string& key,
+    const std::vector<std::string>& query_params,
     mx::vmo data,
     const std::function<void(Status)>& callback) {
-  std::string url = GetUploadUrl(key);
+  std::string url = GetUrl(key, query_params, UrlType::UPLOAD);
 
   uint64_t data_size;
   mx_status_t status = data.get_size(&data_size);
@@ -127,9 +129,10 @@ void CloudStorageImpl::UploadObject(
 
 void CloudStorageImpl::DownloadObject(
     const std::string& key,
+    const std::vector<std::string>& query_params,
     const std::function<void(Status status, uint64_t size, mx::socket data)>&
         callback) {
-  std::string url = GetDownloadUrl(key);
+  std::string url = GetUrl(key, query_params, UrlType::DOWNLOAD);
 
   Request(
       [url = std::move(url)] {
@@ -146,14 +149,20 @@ void CloudStorageImpl::DownloadObject(
       });
 }
 
-std::string CloudStorageImpl::GetDownloadUrl(ftl::StringView key) {
+std::string CloudStorageImpl::GetUrl(ftl::StringView key,
+                                     std::vector<std::string> query_params,
+                                     UrlType url_type) {
   FTL_DCHECK(key.find('/') == std::string::npos);
-  return ftl::Concatenate({url_prefix_, key, "?alt=media"});
-}
+  std::ostringstream result;
+  result << url_prefix_ << key;
+  if (url_type == UrlType::DOWNLOAD) {
+    query_params.push_back("alt=media");
+  }
 
-std::string CloudStorageImpl::GetUploadUrl(ftl::StringView key) {
-  FTL_DCHECK(key.find('/') == std::string::npos);
-  return ftl::Concatenate({url_prefix_, key});
+  if (!query_params.empty()) {
+    result << "?" << ftl::JoinStrings(query_params, "&");
+  }
+  return result.str();
 }
 
 void CloudStorageImpl::Request(

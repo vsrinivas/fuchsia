@@ -29,18 +29,22 @@ class CloudStorageImpl : public CloudStorage {
 
   // CloudStorage implementation.
   void UploadObject(const std::string& key,
+                    const std::vector<std::string>& query_params,
                     mx::vmo data,
                     const std::function<void(Status)>& callback) override;
 
   void DownloadObject(
       const std::string& key,
+      const std::vector<std::string>& query_params,
       const std::function<void(Status status, uint64_t size, mx::socket data)>&
           callback) override;
 
  private:
-  std::string GetDownloadUrl(ftl::StringView key);
+  enum class UrlType { DOWNLOAD, UPLOAD };
 
-  std::string GetUploadUrl(ftl::StringView key);
+  std::string GetUrl(ftl::StringView key,
+                     std::vector<std::string> query_params,
+                     UrlType url_type);
 
   void Request(
       std::function<network::URLRequestPtr()> request_factory,
