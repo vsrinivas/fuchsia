@@ -27,7 +27,7 @@ under fuchsia. You can either:
 * Run it after starting fuchsia. At your `magenta$` prompt, do:
 
 ```
-@boot /system/apps/test_runner
+/system/apps/test_runner
 ```
 
 Each subdirectory contains one integration test, which can be run by invoking
@@ -45,13 +45,7 @@ sourcing [scripts/env.sh][env_sh].
 `run_modular_tests` is a command that runs all of the Modular tests. It is based
 on the [Test Runner][test_runner] framework.
 
-It can be run directly from the Magenta shell:
-
-```
-magenta$ @boot /system/test/run_modular_tests
-```
-
-Or from the fuchsia shell:
+It can be run directly from either the shell:
 
 ```
 $ /system/test/run_modular_tests

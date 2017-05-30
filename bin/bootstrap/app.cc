@@ -37,10 +37,6 @@ App::App(Params* params)
   // then.
   RegisterAppLoaders(params->TakeAppLoaders());
 
-  mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
-  if (request != MX_HANDLE_INVALID)
-    env_services_.ServeDirectory(mx::channel(request));
-
   // Launch startup applications.
   for (auto& launch_info : params->TakeApps())
     LaunchApplication(std::move(launch_info));

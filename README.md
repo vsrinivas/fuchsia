@@ -49,7 +49,7 @@ Note: if you are running this through `netruncmd` you will need to double-escape
 the quotes:
 
 ```sh
-netruncmd : "@boot device_runner --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={\\\"http://schema.domokit.org/counter\\\":5}'"
+netruncmd : "device_runner --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={\\\"http://schema.domokit.org/counter\\\":5}'"
 ```
 
 The flags `--user_shell` and `--user_shell_args` are read by `device_runner`.

@@ -156,12 +156,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         device_shell_context_binding_(this),
         account_provider_context_binding_(this) {
     // 0a. Check if environment handle / services have been initialized.
-    if (!app_context_->launcher()) {
-      FTL_LOG(ERROR) << "Environment handle not set. Please use @boot.";
-      exit(1);
-    }
     if (!app_context_->has_environment_services()) {
-      FTL_LOG(ERROR) << "Services handle not set. Please use @boot.";
+      FTL_LOG(ERROR) << "Failed to receive services from the environment.";
       exit(1);
     }
 
@@ -175,8 +171,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
       app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
       monitor_.set_connection_error_handler([] {
-        FTL_LOG(ERROR) << "No device runner monitor found. "
-                       << " Please use @boot.";
+        FTL_LOG(ERROR) << "No device runner monitor found.";
         exit(1);
       });
 
