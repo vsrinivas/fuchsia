@@ -44,8 +44,7 @@ std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfo() {
   auto startup_info = CreateFromStartupInfoNotChecked();
   FTL_CHECK(startup_info->environment().get() != nullptr)
-      << "The ApplicationEnvironment is null. Usually this means you need to "
-         "use @boot on the Magenta command line. Otherwise, use "
+      << "The ApplicationEnvironment is null. If this is expected, use "
          "CreateFromStartupInfoNotChecked() to allow |environment| to be null.";
   return startup_info;
 }
