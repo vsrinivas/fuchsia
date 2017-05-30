@@ -75,6 +75,18 @@
 #define RTC_REGISTER_B_HOUR_FORMAT          (1u << 1)
 #define RTC_REGISTER_B_DATA_MODE            (1u << 2)
 
+/* I8042 ports. */
+#define I8042_DATA_PORT                     0x60
+#define I8042_COMMAND_PORT                  0x64
+
+/* I8042 status flags. */
+#define I8042_STATUS_OUTPUT_FULL            (1u << 0)
+#define I8042_STATUS_INPUT_FULL             (1u << 1)
+
+/* I8042 test constants. */
+#define I8042_COMMAND_TEST                  0xaa
+#define I8042_DATA_TEST_RESPONSE            0x55
+
 /* Miscellaneous ports. */
 #define PIC1_PORT                           0x20
 #define PIC2_PORT                           0xa0
@@ -117,12 +129,10 @@ mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
 }
 
 static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_in_t* port_in) {
-    if (port_in->access_size != 1)
-        return ERR_NOT_SUPPORTED;
-
     mx_guest_packet_t packet;
     packet.type = MX_GUEST_PKT_TYPE_PORT_IN;
 
+    io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_in->port) {
     default:
         // TODO(abdulla): Make all unknown port reads an error.
@@ -133,12 +143,22 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
         packet.port_in_ret.u8 = UART_STATUS_IDLE;
         break;
     case RTC_DATA_PORT: {
-        mx_status_t status = handle_rtc(context->guest_state->io_port_state.rtc_index,
-                                        &packet.port_in_ret.u8);
+        mx_status_t status = handle_rtc(io_port_state->rtc_index, &packet.port_in_ret.u8);
         if (status != NO_ERROR)
             return status;
         break;
-    }}
+    }
+    case I8042_DATA_PORT:
+        if (io_port_state->i8042_command == I8042_COMMAND_TEST) {
+            packet.port_in_ret.u8 = I8042_DATA_TEST_RESPONSE;
+        } else {
+            packet.port_in_ret.u8 = 0;
+        }
+        break;
+    case I8042_COMMAND_PORT:
+        packet.port_in_ret.u8 = I8042_STATUS_OUTPUT_FULL;
+        break;
+    }
 
     uint32_t num_packets;
     return mx_fifo_write(context->vcpu_fifo, &packet, sizeof(packet), &num_packets);
@@ -152,6 +172,7 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     case PIC1_PORT ... PIC1_PORT + 1:
     case PIC2_PORT ... PIC2_PORT + 2:
     case I8253_CONTROL_PORT:
+    case I8042_DATA_PORT:
     case UART_RECEIVE_IO_PORT + 1 ... UART_RECEIVE_IO_PORT + 5:
         return NO_ERROR;
     case UART_RECEIVE_IO_PORT:
@@ -164,7 +185,14 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
         }
         return NO_ERROR;
     case RTC_INDEX_PORT:
+        if (port_out->access_size != 1)
+            return ERR_IO_DATA_INTEGRITY;
         io_port_state->rtc_index = port_out->u8;
+        return NO_ERROR;
+    case I8042_COMMAND_PORT:
+        if (port_out->access_size != 1)
+            return ERR_IO_DATA_INTEGRITY;
+        io_port_state->i8042_command = port_out->u8;
         return NO_ERROR;
     }
 }
