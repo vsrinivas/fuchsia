@@ -27,6 +27,7 @@ static_library("mx") {
     "include/mx/socket.h",
     "include/mx/task.h",
     "include/mx/thread.h",
+    "include/mx/timer.h",
     "include/mx/time.h",
     "include/mx/vmar.h",
     "include/mx/vmo.h",
@@ -36,6 +37,7 @@ static_library("mx") {
     "process.cpp",
     "socket.cpp",
     "thread.cpp",
+    "timer.cpp",
     "vmar.cpp",
     "vmo.cpp",
   ]
