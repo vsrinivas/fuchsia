@@ -78,17 +78,17 @@ mx::channel CloneMxioRoot() {
   return mx::channel(mxio_service_clone(GetMxioRoot()));
 }
 
-// The very first process we create gets the PA_SERVICE_REQUEST given to us by
-// our parent. This handle comes from the devmgr and is intended as a short term
-// solution for wiring up the graphics driver to the tracing services.
-// TODO(abarth): Once namespaces are a thing, switch to a more robust approach.
-void ForwardServiceRequestToFirstProcess(std::vector<uint32_t>* ids,
-                                         std::vector<mx_handle_t>* handles) {
+// The very first nested environment process we create gets the
+// PA_SERVICE_REQUEST given to us by our parent. It's slightly awkward that we
+// don't publish the root environment's services. We should consider
+// reorganizing the boot process so that the root environment's services are
+// the ones we want to publish.
+void PublishServicesForFirstNestedEnvironment(
+    const ServiceProviderBridge& services) {
   static mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
   if (request == MX_HANDLE_INVALID)
     return;
-  ids->push_back(PA_SERVICE_REQUEST);
-  handles->push_back(request);
+  services.ServeDirectory(mx::channel(request));
   request = MX_HANDLE_INVALID;
 }
 
@@ -105,9 +105,10 @@ mx::process Launch(const mx::job& job,
                    const std::vector<const char*>& argv,
                    mxio_flat_namespace_t* flat,
                    mx::channel app_services,
-                   std::vector<uint32_t> ids,
-                   std::vector<mx_handle_t> handles,
                    mx::vmo data) {
+  std::vector<uint32_t> ids;
+  std::vector<mx_handle_t> handles;
+
   if (app_services) {
     ids.push_back(PA_APP_SERVICES);
     handles.push_back(app_services.release());
@@ -147,14 +148,10 @@ mx::process CreateProcess(const mx::job& job,
                           ApplicationPackagePtr package,
                           ApplicationLaunchInfoPtr launch_info,
                           mxio_flat_namespace_t* flat) {
-  std::vector<uint32_t> ids;
-  std::vector<mx_handle_t> handles;
-  ForwardServiceRequestToFirstProcess(&ids, &handles);
-
   return Launch(job, GetLabelFromURL(launch_info->url),
                 LP_CLONE_MXIO_CWD | LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON,
                 GetArgv(launch_info), flat, TakeAppServices(launch_info),
-                std::move(ids), std::move(handles), std::move(package->data));
+                std::move(package->data));
 }
 
 mx::process CreateSandboxedProcess(const mx::job& job,
@@ -166,8 +163,7 @@ mx::process CreateSandboxedProcess(const mx::job& job,
 
   return Launch(job, GetLabelFromURL(launch_info->url),
                 LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
-                flat, TakeAppServices(launch_info), std::vector<uint32_t>(),
-                std::vector<mx_handle_t>(), std::move(data));
+                flat, TakeAppServices(launch_info), std::move(data));
 }
 
 LaunchType Classify(const mx::vmo& data, std::string* runner) {
@@ -313,6 +309,8 @@ void ApplicationEnvironmentImpl::CreateNestedEnvironment(
   ApplicationEnvironmentImpl* child = controller->environment();
   child->Duplicate(std::move(environment));
   children_.emplace(child, std::move(controller));
+
+  PublishServicesForFirstNestedEnvironment(child->services_);
 }
 
 void ApplicationEnvironmentImpl::GetApplicationLauncher(

@@ -33,7 +33,7 @@ void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
   name_to_service_connector_[service_name] = std::move(connector);
 }
 
-bool ServiceProviderBridge::ServeDirectory(mx::channel channel) {
+bool ServiceProviderBridge::ServeDirectory(mx::channel channel) const {
   if (directory_->Open(O_DIRECTORY) < 0)
     return false;
 
