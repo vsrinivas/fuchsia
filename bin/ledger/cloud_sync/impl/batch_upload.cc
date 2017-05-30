@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -15,7 +15,7 @@
 
 namespace cloud_sync {
 
-CommitUpload::CommitUpload(
+BatchUpload::BatchUpload(
     storage::PageStorage* storage,
     cloud_provider::CloudProvider* cloud_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
@@ -28,16 +28,17 @@ CommitUpload::CommitUpload(
       on_done_(on_done),
       on_error_(on_error),
       max_concurrent_uploads_(max_concurrent_uploads) {
-  TRACE_ASYNC_BEGIN("ledger", "commit_upload", reinterpret_cast<uintptr_t>(this));
+  TRACE_ASYNC_BEGIN("ledger", "batch_upload",
+                    reinterpret_cast<uintptr_t>(this));
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
 }
 
-CommitUpload::~CommitUpload() {
-  TRACE_ASYNC_END("ledger", "commit_upload", reinterpret_cast<uintptr_t>(this));
+BatchUpload::~BatchUpload() {
+  TRACE_ASYNC_END("ledger", "batch_upload", reinterpret_cast<uintptr_t>(this));
 }
 
-void CommitUpload::Start() {
+void BatchUpload::Start() {
   FTL_DCHECK(!started_);
   FTL_DCHECK(!errored_);
   started_ = true;
@@ -53,14 +54,14 @@ void CommitUpload::Start() {
       });
 }
 
-void CommitUpload::Retry() {
+void BatchUpload::Retry() {
   FTL_DCHECK(started_);
   FTL_DCHECK(errored_);
   errored_ = false;
   StartObjectUpload();
 }
 
-void CommitUpload::StartObjectUpload() {
+void BatchUpload::StartObjectUpload() {
   FTL_DCHECK(current_uploads_ == 0u);
   // If there are no unsynced objects left, upload the commits.
   if (remaining_object_ids_.empty()) {
@@ -74,7 +75,7 @@ void CommitUpload::StartObjectUpload() {
   }
 }
 
-void CommitUpload::UploadNextObject() {
+void BatchUpload::UploadNextObject() {
   FTL_DCHECK(!remaining_object_ids_.empty());
   FTL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
@@ -89,7 +90,7 @@ void CommitUpload::UploadNextObject() {
   remaining_object_ids_.pop();
 }
 
-void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
+void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   ftl::StringView data_view;
   auto status = object->GetData(&data_view);
   FTL_DCHECK(status == storage::Status::OK);
@@ -141,7 +142,7 @@ void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
       });
 }
 
-void CommitUpload::FilterAndUploadCommits() {
+void BatchUpload::FilterAndUploadCommits() {
   // Remove all commits that have been synced since this upload object was
   // created. This will happen if a merge is executed on multiple devices at the
   // same time.
@@ -170,7 +171,7 @@ void CommitUpload::FilterAndUploadCommits() {
       });
 }
 
-void CommitUpload::UploadCommits() {
+void BatchUpload::UploadCommits() {
   FTL_DCHECK(!errored_);
   std::vector<cloud_provider::Commit> commits;
   std::vector<storage::CommitId> ids;

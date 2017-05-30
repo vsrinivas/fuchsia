@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
 
 #include <functional>
 #include <unordered_map>
@@ -63,7 +63,7 @@ class TestObject : public storage::Object {
 };
 
 // Fake implementation of storage::PageStorage. Injects the data that
-// CommitUpload asks about: page id and unsynced objects to be uploaded.
+// BatchUpload asks about: page id and unsynced objects to be uploaded.
 // Registers the reported results of the upload: commits and objects marked as
 // synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
@@ -138,7 +138,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
 // Fake implementation of cloud_provider::CloudProvider. Injects the returned
 // status for the upload operations, allowing the test to make them fail.
-// Registers the data uploaded by CommitUpload.
+// Registers the data uploaded by BatchUpload.
 class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
  public:
   TestCloudProvider(mtl::MessageLoop* message_loop)
@@ -203,37 +203,37 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   mtl::MessageLoop* message_loop_;
 };
 
-class CommitUploadTest : public test::TestWithMessageLoop {
+class BatchUploadTest : public test::TestWithMessageLoop {
  public:
-  CommitUploadTest() : cloud_provider_(&message_loop_) {}
-  ~CommitUploadTest() override {}
+  BatchUploadTest() : cloud_provider_(&message_loop_) {}
+  ~BatchUploadTest() override {}
 
  protected:
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitUploadTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(BatchUploadTest);
 };
 
 // Test an upload of a single commit with no unsynced objects.
-TEST_F(CommitUploadTest, SingleCommit) {
+TEST_F(BatchUploadTest, SingleCommit) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(0u, error_calls);
@@ -251,24 +251,24 @@ TEST_F(CommitUploadTest, SingleCommit) {
 }
 
 // Test an upload of multiple commits with no unsynced objects.
-TEST_F(CommitUploadTest, MultipleCommits) {
+TEST_F(BatchUploadTest, MultipleCommits) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id0", "content0"));
   commits.push_back(storage_.NewCommit("id1", "content1"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(0u, error_calls);
@@ -289,7 +289,7 @@ TEST_F(CommitUploadTest, MultipleCommits) {
 }
 
 // Test an upload of a commit with a few unsynced objects.
-TEST_F(CommitUploadTest, SingleCommitWithObjects) {
+TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -300,17 +300,17 @@ TEST_F(CommitUploadTest, SingleCommitWithObjects) {
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(0u, error_calls);
@@ -333,7 +333,7 @@ TEST_F(CommitUploadTest, SingleCommitWithObjects) {
 
 // Verifies that the number of concurrent object uploads is limited to
 // |max_concurrent_uploads|.
-TEST_F(CommitUploadTest, ThrottleConcurrentUploads) {
+TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -347,18 +347,18 @@ TEST_F(CommitUploadTest, ThrottleConcurrentUploads) {
   auto done_calls = 0u;
   auto error_calls = 0u;
   // Create the commit upload with |max_concurrent_uploads| = 2.
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             2);
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           2);
 
-  commit_upload.Start();
+  batch_upload.Start();
   EXPECT_EQ(2u, cloud_provider_.add_object_calls);
   cloud_provider_.RunPendingCallbacks();
   ASSERT_FALSE(RunLoopWithTimeout());
@@ -379,7 +379,7 @@ TEST_F(CommitUploadTest, ThrottleConcurrentUploads) {
 }
 
 // Test un upload that fails on uploading objects.
-TEST_F(CommitUploadTest, FailedObjectUpload) {
+TEST_F(BatchUploadTest, FailedObjectUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -390,19 +390,19 @@ TEST_F(CommitUploadTest, FailedObjectUpload) {
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
   cloud_provider_.object_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -416,7 +416,7 @@ TEST_F(CommitUploadTest, FailedObjectUpload) {
 }
 
 // Test an upload that fails on uploading commit commit.
-TEST_F(CommitUploadTest, FailedCommitUpload) {
+TEST_F(BatchUploadTest, FailedCommitUpload) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -427,19 +427,19 @@ TEST_F(CommitUploadTest, FailedCommitUpload) {
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
   cloud_provider_.commit_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -458,7 +458,7 @@ TEST_F(CommitUploadTest, FailedCommitUpload) {
 }
 
 // Test an upload that fails and a subsequent retry that succeeds.
-TEST_F(CommitUploadTest, ErrorAndRetry) {
+TEST_F(BatchUploadTest, ErrorAndRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -469,19 +469,19 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
   cloud_provider_.object_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -496,7 +496,7 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
   storage_.unsynced_objects_to_return["obj_id2"] =
       std::make_unique<TestObject>("obj_id2", "obj_data2");
   cloud_provider_.object_status_to_return = cloud_provider::Status::OK;
-  commit_upload.Retry();
+  batch_upload.Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
 
   // Verify the artifacts uploaded to cloud provider.
@@ -517,7 +517,7 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
 
 // Verifies that if only one of many uploads fails, we still stop and notify the
 // client.
-TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
+TEST_F(BatchUploadTest, ErrorOneOfMultipleObject) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
@@ -530,20 +530,20 @@ TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
   cloud_provider_.object_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
   cloud_provider_.reset_object_status_after_call = true;
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -563,7 +563,7 @@ TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
       std::make_unique<TestObject>("obj_id2", "obj_data2");
 
   // Try upload again.
-  commit_upload.Retry();
+  batch_upload.Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -574,23 +574,23 @@ TEST_F(CommitUploadTest, ErrorOneOfMultipleObject) {
 }
 
 // Verifies that we do not upload synced commits.
-TEST_F(CommitUploadTest, DoNotUploadSyncedCommits) {
+TEST_F(BatchUploadTest, DoNotUploadSyncedCommits) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(std::make_unique<TestCommit>("id", "content"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(0u, error_calls);
@@ -601,26 +601,26 @@ TEST_F(CommitUploadTest, DoNotUploadSyncedCommits) {
 }
 
 // Verifies that we do not upload synced commits on retries.
-TEST_F(CommitUploadTest, DoNotUploadSyncedCommitsOnRetry) {
+TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.push_back(storage_.NewCommit("id", "content"));
 
   auto done_calls = 0u;
   auto error_calls = 0u;
-  CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commits),
-                             [this, &done_calls] {
-                               done_calls++;
-                               message_loop_.PostQuitTask();
-                             },
-                             [this, &error_calls] {
-                               error_calls++;
-                               message_loop_.PostQuitTask();
-                             });
+  BatchUpload batch_upload(&storage_, &cloud_provider_, std::move(commits),
+                           [this, &done_calls] {
+                             done_calls++;
+                             message_loop_.PostQuitTask();
+                           },
+                           [this, &error_calls] {
+                             error_calls++;
+                             message_loop_.PostQuitTask();
+                           });
 
   cloud_provider_.commit_status_to_return =
       cloud_provider::Status::NETWORK_ERROR;
 
-  commit_upload.Start();
+  batch_upload.Start();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, done_calls);
   EXPECT_EQ(1u, error_calls);
@@ -635,7 +635,7 @@ TEST_F(CommitUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Retry
   cloud_provider_.commit_status_to_return = cloud_provider::Status::OK;
-  commit_upload.Retry();
+  batch_upload.Retry();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls);
   EXPECT_EQ(1u, error_calls);

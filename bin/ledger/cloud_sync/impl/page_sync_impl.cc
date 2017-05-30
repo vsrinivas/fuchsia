@@ -70,7 +70,7 @@ void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
 }
 
 bool PageSyncImpl::IsIdle() {
-  return !commit_upload_ && download_list_retrieved_ && !batch_download_ &&
+  return !batch_upload_ && download_list_retrieved_ && !batch_download_ &&
          commits_to_download_.empty();
 }
 
@@ -298,7 +298,7 @@ void PageSyncImpl::HandleLocalCommits(
     return;
   }
 
-  if (commit_upload_) {
+  if (batch_upload_) {
     // If we are already uploading a commit batch, return early too.
     return;
   }
@@ -319,16 +319,16 @@ void PageSyncImpl::HandleLocalCommits(
 }
 
 void PageSyncImpl::UploadStagedCommits() {
-  FTL_DCHECK(!commit_upload_);
+  FTL_DCHECK(!batch_upload_);
   FTL_DCHECK(!commits_staged_for_upload_.empty());
 
-  commit_upload_ =
-      std::make_unique<CommitUpload>(
+  batch_upload_ =
+      std::make_unique<BatchUpload>(
           storage_, cloud_provider_, std::move(commits_staged_for_upload_),
           [this] {
             // Upload succeeded, reset the backoff delay.
             backoff_->Reset();
-            commit_upload_.reset();
+            batch_upload_.reset();
             HandleLocalCommits(
                 std::vector<std::unique_ptr<const storage::Commit>>());
             CheckIdle();
@@ -337,10 +337,10 @@ void PageSyncImpl::UploadStagedCommits() {
             FTL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
-            Retry([this] { commit_upload_->Retry(); });
+            Retry([this] { batch_upload_->Retry(); });
           });
   commits_staged_for_upload_.clear();
-  commit_upload_->Start();
+  batch_upload_->Start();
 }
 
 void PageSyncImpl::Retry(ftl::Closure callable) {

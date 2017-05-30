@@ -12,7 +12,7 @@
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
-#include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -153,7 +153,7 @@ class PageSyncImpl : public PageSync,
   bool upload_enabled_ = false;
 
   // Current batch of local commits being uploaded.
-  std::unique_ptr<CommitUpload> commit_upload_;
+  std::unique_ptr<BatchUpload> batch_upload_;
   // Commits staged to be uploaded when the current upload is finished and the
   // number of heads is 1.
   std::vector<std::unique_ptr<const storage::Commit>>

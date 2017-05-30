@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_UPLOAD_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_UPLOAD_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
+#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
 
 #include <functional>
 #include <memory>
@@ -33,19 +33,19 @@ namespace cloud_sync {
 // TODO(ppi): rather than DCHECK on storage errors, take separate callbacks for
 // network and disk errors and let PageSync decide on how to handle each.
 //
-// Lifetime: if CommitUpload is deleted between Start() and |on_done| being
+// Lifetime: if BatchUpload is deleted between Start() and |on_done| being
 // called, it has to be deleted along with |storage| and |cloud_provider|, which
 // otherwise can retain callbacks for pending uploads. This isn't a problem as
 // long as the lifetime of page storage and page sync is managed together.
-class CommitUpload {
+class BatchUpload {
  public:
-  CommitUpload(storage::PageStorage* storage,
-               cloud_provider::CloudProvider* cloud_provider,
-               std::vector<std::unique_ptr<const storage::Commit>> commits,
-               ftl::Closure on_done,
-               ftl::Closure on_error,
-               unsigned int max_concurrent_uploads = 10);
-  ~CommitUpload();
+  BatchUpload(storage::PageStorage* storage,
+              cloud_provider::CloudProvider* cloud_provider,
+              std::vector<std::unique_ptr<const storage::Commit>> commits,
+              ftl::Closure on_done,
+              ftl::Closure on_error,
+              unsigned int max_concurrent_uploads = 10);
+  ~BatchUpload();
 
   // Starts a new upload attempt. Results are reported through |on_done|
   // and |on_error| passed in the constructor. Can be called only once.
@@ -85,9 +85,9 @@ class CommitUpload {
   bool started_ = false;
   bool errored_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitUpload);
+  FTL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
 };
 
 }  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_UPLOAD_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_UPLOAD_H_
