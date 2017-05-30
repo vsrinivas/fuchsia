@@ -1,5 +1,6 @@
 {
     "labels": [
+        "//apps/wlan:wlanstack_test",
         "//drivers/wifi/wlan/tests",
         "//drivers/wifi/testing"
     ],
@@ -11,6 +12,10 @@
     ],
     "binaries": [
         {
+            "binary": "wlanstack_test",
+            "bootfs_path": "test/wlanstack_test"
+        },
+        {
             "binary": "wlan_mac_unittest",
             "bootfs_path": "test/wlan_mac_unittest"
         },
@@ -21,6 +26,13 @@
         {
             "binary": "wlan-testutil",
             "bootfs_path": "bin/wlan-testutil"
+        }
+    ],
+    "resources": [
+        {
+            "file": "apps/wlan/default.json",
+            "bootfs_path": "data/wlanstack/config.json",
+            "default": "true"
         }
     ]
 }
