@@ -297,7 +297,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    FTL_LOG(1) << "Account_ID:" << account_id_;
+    FTL_VLOG(1) << "Account_ID:" << account_id_;
     const rapidjson::Value& creds = app_->user_creds_[account_id_];
     FTL_DCHECK(creds.IsObject());
     FTL_DCHECK(creds.HasMember("refresh_token"));
