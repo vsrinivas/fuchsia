@@ -73,6 +73,7 @@ class StoryInfoAcquirer : public modular::Agent,
   fidl::Binding<modular::VisibleStoriesWatcher>
       visible_stories_watcher_binding_;
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
+  fidl::Binding<modular::FocusWatcher> focus_watcher_binding_;
 
   app::ServiceProviderImpl agent_services_;
 

@@ -59,7 +59,8 @@ std::string StoryStateToString(modular::StoryState state) {
 StoryInfoAcquirer::StoryInfoAcquirer()
     : initializer_binding_(this),
       visible_stories_watcher_binding_(this),
-      story_provider_watcher_binding_(this) {
+      story_provider_watcher_binding_(this),
+      focus_watcher_binding_(this) {
   // This ServiceProvider is handed out in Connect().
   agent_services_.AddService<StoryInfoInitializer>(
       [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
@@ -115,6 +116,9 @@ void StoryInfoAcquirer::Initialize(
 
   // Watch for changes in Story state.
   story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
+
+  // Watch for changes in the focused Story.
+  focus_provider_->Watch(focus_watcher_binding_.NewBinding());
 
   // Write initial values for visible stories.
   OnVisibleStoriesChange({});
