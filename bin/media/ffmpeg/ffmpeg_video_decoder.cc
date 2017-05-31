@@ -89,15 +89,15 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   } else {
     if (av_codec_context.colorspace != colorspace_) {
       FTL_LOG(WARNING) << " colorspace changed to "
-                       << av_codec_context.colorspace << std::endl;
+                       << av_codec_context.colorspace << "\n";
     }
     if (coded_size.width() != coded_size_.width()) {
       FTL_LOG(WARNING) << " coded_size width changed to " << coded_size.width()
-                       << std::endl;
+                       << "\n";
     }
     if (coded_size.height() != coded_size_.height()) {
       FTL_LOG(WARNING) << " coded_size height changed to "
-                       << coded_size.height() << std::endl;
+                       << coded_size.height() << "\n";
     }
     colorspace_ = av_codec_context.colorspace;
     coded_size_ = coded_size;

@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
 
   int index = 0;
   for (T& element : const_cast<fidl::Array<T>&>(value)) {
-    os << std::endl << begl << "[" << index++ << "] " << element;
+    os << "\n" << begl << "[" << index++ << "] " << element;
   }
 
   return os;
@@ -106,7 +106,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
   int index = 0;
   for (const T& element : value) {
-    os << std::endl << begl << "[" << index++ << "] " << element;
+    os << "\n" << begl << "[" << index++ << "] " << element;
   }
 
   return os;

@@ -19,13 +19,13 @@ std::ostream& operator<<(std::ostream& os,
     return os << begl << "NULL STREAM";
   }
 
-  os << indent << std::endl;
-  os << begl << "type: " << value.type_ << std::endl;
+  os << indent << "\n";
+  os << begl << "type: " << value.type_ << "\n";
   if (value.producer_channel_) {
     os << begl << "producer: " << *value.producer_channel_ << " ";
     value.producer_channel_->PrintAccumulator(os);
   } else {
-    os << begl << "producer: <none>" << std::endl;
+    os << begl << "producer: <none>\n";
   }
 
   return os << outdent;
@@ -48,9 +48,9 @@ std::shared_ptr<Accumulator> MediaDemux::GetAccumulator() {
 }
 
 void MediaDemux::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaDemux.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaDemux.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
@@ -61,12 +61,12 @@ void MediaDemux::NewStream(uint32_t index,
                            uint64_t producer_address) {
   FTL_DCHECK(type);
 
-  terse_out() << entry() << "MediaDemux.NewStream" << std::endl;
+  terse_out() << entry() << "MediaDemux.NewStream\n";
   terse_out() << indent;
-  terse_out() << begl << "index: " << index << std::endl;
-  terse_out() << begl << "type: " << type << std::endl;
+  terse_out() << begl << "index: " << index << "\n";
+  terse_out() << begl << "type: " << type << "\n";
   terse_out() << begl << "producer_address: " << *AsChannel(producer_address)
-              << std::endl;
+              << "\n";
   terse_out() << outdent;
 
   while (accumulator_->streams_.size() <= index) {
@@ -87,7 +87,7 @@ MediaDemuxAccumulator::MediaDemuxAccumulator() {}
 MediaDemuxAccumulator::~MediaDemuxAccumulator() {}
 
 void MediaDemuxAccumulator::Print(std::ostream& os) {
-  os << "MediaDemux" << std::endl;
+  os << "MediaDemux\n";
   os << indent;
   os << begl << "streams: " << streams_;
   Accumulator::Print(os);

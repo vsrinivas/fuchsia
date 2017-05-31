@@ -67,54 +67,52 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 std::ostream& operator<<(std::ostream& os,
                          const std::unique_ptr<StreamType>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   }
 
   return os << *value;
 }
 
 std::ostream& operator<<(std::ostream& os, const StreamType& value) {
-  os << std::endl;
+  os << "\n";
 
   os << indent;
-  os << begl << "Medium medium(): " << value.medium() << std::endl;
-  os << begl << "std::string encoding: " << value.encoding() << std::endl;
+  os << begl << "Medium medium(): " << value.medium() << "\n";
+  os << begl << "std::string encoding: " << value.encoding() << "\n";
   os << begl << "Bytes encoding_parameters: " << value.encoding_parameters()
-     << std::endl;
+     << "\n";
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
       os << begl
          << "SampleFormat sample_format: " << value.audio()->sample_format()
-         << std::endl;
-      os << begl << "uint32_t channels: " << value.audio()->channels()
-         << std::endl;
+         << "\n";
+      os << begl << "uint32_t channels: " << value.audio()->channels() << "\n";
       os << begl
          << "uint32_t frames_per_second: " << value.audio()->frames_per_second()
-         << std::endl;
+         << "\n";
       break;
     case StreamType::Medium::kVideo:
       os << begl << "VideoProfile profile: " << value.video()->profile()
-         << std::endl;
+         << "\n";
       os << begl
          << "PixelFormat pixel_format: " << value.video()->pixel_format()
-         << std::endl;
+         << "\n";
       os << begl << "ColorSpace color_space: " << value.video()->color_space()
-         << std::endl;
-      os << begl << "uint32_t width: " << value.video()->width() << std::endl;
-      os << begl << "uint32_t height: " << value.video()->height() << std::endl;
+         << "\n";
+      os << begl << "uint32_t width: " << value.video()->width() << "\n";
+      os << begl << "uint32_t height: " << value.video()->height() << "\n";
       os << begl << "uint32_t coded_width: " << value.video()->coded_width()
-         << std::endl;
+         << "\n";
       os << begl << "uint32_t coded_height: " << value.video()->coded_height()
-         << std::endl;
+         << "\n";
       os << begl << "uint32_t pixel_aspect_ratio_width: "
-         << value.video()->pixel_aspect_ratio_width() << std::endl;
+         << value.video()->pixel_aspect_ratio_width() << "\n";
       os << begl << "uint32_t pixel_aspect_ratio_height: "
-         << value.video()->pixel_aspect_ratio_height() << std::endl;
+         << value.video()->pixel_aspect_ratio_height() << "\n";
       os << begl << "std::vector<uint32_t> line_stride: "
-         << AsInlineVector<uint32_t>(value.video()->line_stride()) << std::endl;
+         << AsInlineVector<uint32_t>(value.video()->line_stride()) << "\n";
       os << begl << "std::vector<uint32_t> plane_offset: "
-         << AsInlineVector<uint32_t>(value.video()->plane_offset())
-         << std::endl;
+         << AsInlineVector<uint32_t>(value.video()->plane_offset()) << "\n";
       break;
     default:
       break;
@@ -126,34 +124,33 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
 std::ostream& operator<<(std::ostream& os,
                          const std::unique_ptr<StreamTypeSet>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   }
 
   return os << *value;
 }
 
 std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value) {
-  os << std::endl;
+  os << "\n";
 
   os << indent;
-  os << begl << "Medium medium(): " << value.medium() << std::endl;
+  os << begl << "Medium medium(): " << value.medium() << "\n";
   os << begl << "std::vector<std::string>& encodings(): " << value.encodings()
-     << std::endl;
+     << "\n";
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
       os << begl
          << "SampleFormat sample_format: " << value.audio()->sample_format()
-         << std::endl;
+         << "\n";
       os << begl << "Range<uint32_t> channels: " << value.audio()->channels()
-         << std::endl;
+         << "\n";
       os << begl << "Range<uint32_t> frames_per_second: "
-         << value.audio()->frames_per_second() << std::endl;
+         << value.audio()->frames_per_second() << "\n";
       break;
     case StreamType::Medium::kVideo:
-      os << begl << "Range<uint32_t> width: " << value.video()->width()
-         << std::endl;
+      os << begl << "Range<uint32_t> width: " << value.video()->width() << "\n";
       os << begl << "Range<uint32_t> height: " << value.video()->height()
-         << std::endl;
+         << "\n";
       break;
     default:
       break;
@@ -166,11 +163,11 @@ std::ostream& operator<<(
     std::ostream& os,
     const std::unique_ptr<std::vector<std::unique_ptr<StreamType>>>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else if (value->size() == 0) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   int index = 0;
@@ -185,11 +182,11 @@ std::ostream& operator<<(
     std::ostream& os,
     const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else if (value->size() == 0) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   int index = 0;

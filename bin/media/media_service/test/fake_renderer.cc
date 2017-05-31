@@ -124,7 +124,7 @@ void FakeRenderer::OnPacketSupplied(
               << std::setw(16) << std::setfill('0')
               << Hash(supplied_packet->payload(),
                       supplied_packet->payload_size())
-              << std::dec << " }," << std::endl;
+              << std::dec << " },\n";
   }
 
   if (!expected_packets_info_.empty()) {

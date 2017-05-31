@@ -30,9 +30,9 @@ std::shared_ptr<Accumulator> MediaSink::GetAccumulator() {
 }
 
 void MediaSink::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaSink.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaSink.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
@@ -45,12 +45,12 @@ void MediaSink::Config(media::MediaTypePtr input_type,
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
-  terse_out() << entry() << "MediaSink.Config" << std::endl;
+  terse_out() << entry() << "MediaSink.Config\n";
   terse_out() << indent;
-  terse_out() << begl << "input_type: " << input_type << std::endl;
-  terse_out() << begl << "output_type: " << output_type << std::endl;
-  terse_out() << begl << "converter_koids: " << converter_koids << std::endl;
-  terse_out() << begl << "renderer_koid: " << renderer_koid << std::endl;
+  terse_out() << begl << "input_type: " << input_type << "\n";
+  terse_out() << begl << "output_type: " << output_type << "\n";
+  terse_out() << begl << "converter_koids: " << converter_koids << "\n";
+  terse_out() << begl << "renderer_koid: " << renderer_koid << "\n";
   terse_out() << outdent;
 
   accumulator_->input_type_ = std::move(input_type);
@@ -69,11 +69,11 @@ MediaSinkAccumulator::MediaSinkAccumulator() {}
 MediaSinkAccumulator::~MediaSinkAccumulator() {}
 
 void MediaSinkAccumulator::Print(std::ostream& os) {
-  os << "MediaSink" << std::endl;
+  os << "MediaSink\n";
   os << indent;
-  os << begl << "input_type: " << input_type_ << std::endl;
-  os << begl << "output_type: " << output_type_ << std::endl;
-  os << begl << "converters: " << converters_ << std::endl;
+  os << begl << "input_type: " << input_type_ << "\n";
+  os << begl << "output_type: " << output_type_ << "\n";
+  os << begl << "converters: " << converters_ << "\n";
   os << begl << "renderer: " << renderer_;
 
   Accumulator::Print(os);

@@ -32,9 +32,9 @@ std::shared_ptr<Accumulator> MediaTimelineControlPoint::GetAccumulator() {
 }
 
 void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaTimelineControlPoint.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaTimelineControlPoint.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
@@ -42,14 +42,14 @@ void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
 
 void MediaTimelineControlPoint::PrimeRequested() {
   terse_out() << entry() << "MediaTimelineControlPoint.PrimeRequested"
-              << std::endl;
+              << "\n";
 
   accumulator_->prime_requests_.Add();
 }
 
 void MediaTimelineControlPoint::CompletingPrime() {
   terse_out() << entry() << "MediaTimelineControlPoint.CompletingPrime"
-              << std::endl;
+              << "\n";
 
   accumulator_->prime_requests_.Remove();
 }
@@ -58,10 +58,9 @@ void MediaTimelineControlPoint::ScheduleTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
   terse_out() << entry()
               << "MediaTimelineControlPoint.ScheduleTimelineTransform"
-              << std::endl;
+              << "\n";
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform
-              << std::endl;
+  terse_out() << begl << "timeline_transform: " << timeline_transform << "\n";
   terse_out() << outdent;
 
   accumulator_->timeline_updates_.Add();
@@ -71,10 +70,9 @@ void MediaTimelineControlPoint::ScheduleTimelineTransform(
 void MediaTimelineControlPoint::ApplyTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
   terse_out() << entry() << "MediaTimelineControlPoint.ApplyTimelineTransform"
-              << std::endl;
+              << "\n";
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform
-              << std::endl;
+  terse_out() << begl << "timeline_transform: " << timeline_transform << "\n";
   terse_out() << outdent;
 
   accumulator_->timeline_updates_.Remove();
@@ -84,7 +82,7 @@ void MediaTimelineControlPoint::ApplyTimelineTransform(
 
 void MediaTimelineControlPoint::ReachedEndOfStream() {
   terse_out() << entry() << "MediaTimelineControlPoint.ReachedEndOfStream"
-              << std::endl;
+              << "\n";
 
   accumulator_->end_of_streams_reached_.Remove();
 }
@@ -94,26 +92,26 @@ MediaTimelineControlPointAccumulator::MediaTimelineControlPointAccumulator() {}
 MediaTimelineControlPointAccumulator::~MediaTimelineControlPointAccumulator() {}
 
 void MediaTimelineControlPointAccumulator::Print(std::ostream& os) {
-  os << "MediaTimelineControlPoint" << std::endl;
+  os << "MediaTimelineControlPoint\n";
   os << indent;
-  os << begl << "timeline updates: " << timeline_updates_.count() << std::endl;
+  os << begl << "timeline updates: " << timeline_updates_.count() << "\n";
 
   os << begl << "current timeline transform: " << current_timeline_transform_
-     << std::endl;
+     << "\n";
 
   if (pending_timeline_transform_) {
     os << begl
        << "SUSPENSE: pending timeline update: " << pending_timeline_transform_
-       << std::endl;
+       << "\n";
   }
 
-  os << begl << "prime requests: " << prime_requests_.count() << std::endl;
+  os << begl << "prime requests: " << prime_requests_.count() << "\n";
   if (prime_requests_.outstanding_count() == 1) {
-    os << begl << "SUSPENSE: prime request outstanding" << std::endl;
+    os << begl << "SUSPENSE: prime request outstanding\n";
   } else if (prime_requests_.outstanding_count() > 1) {
     // There should by at most one outstanding prime request.
     os << begl << "PROBLEM: prime requests outstanding: "
-       << prime_requests_.outstanding_count() << std::endl;
+       << prime_requests_.outstanding_count() << "\n";
   }
 
   os << begl << "end-of-streams reached: " << end_of_streams_reached_.count();

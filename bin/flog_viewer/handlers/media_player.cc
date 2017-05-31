@@ -56,18 +56,18 @@ std::shared_ptr<Accumulator> MediaPlayer::GetAccumulator() {
 }
 
 void MediaPlayer::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaPlayer.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaPlayer.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
 }
 
 void MediaPlayer::CreatedSource(uint64_t related_koid) {
-  terse_out() << entry() << "MediaPlayer.CreatedSource" << std::endl;
+  terse_out() << entry() << "MediaPlayer.CreatedSource\n";
   terse_out() << indent;
-  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
 
   SetBindingKoid(&accumulator_->source_, related_koid);
@@ -76,9 +76,9 @@ void MediaPlayer::CreatedSource(uint64_t related_koid) {
 void MediaPlayer::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
   terse_out() << entry() << "MediaPlayer.ReceivedSourceDescription"
-              << std::endl;
+              << "\n";
   terse_out() << indent;
-  terse_out() << begl << "stream_types: " << stream_types << std::endl;
+  terse_out() << begl << "stream_types: " << stream_types << "\n";
   terse_out() << outdent;
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kInitial) {
@@ -96,10 +96,10 @@ void MediaPlayer::ReceivedSourceDescription(
 }
 
 void MediaPlayer::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
-  terse_out() << entry() << "MediaPlayer.CreatedSink" << std::endl;
+  terse_out() << entry() << "MediaPlayer.CreatedSink\n";
   terse_out() << indent;
-  terse_out() << begl << "stream_index: " << stream_index << std::endl;
-  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  terse_out() << begl << "stream_index: " << stream_index << "\n";
+  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
 
   if (accumulator_->sinks_.size() <= stream_index) {
@@ -113,7 +113,7 @@ void MediaPlayer::CreatedSink(uint64_t stream_index, uint64_t related_koid) {
 }
 
 void MediaPlayer::StreamsPrepared() {
-  terse_out() << entry() << "MediaPlayer.StreamsPrepared" << std::endl;
+  terse_out() << entry() << "MediaPlayer.StreamsPrepared\n";
 
   if (accumulator_->state_ !=
       MediaPlayerAccumulator::State::kDescriptionReceived) {
@@ -124,7 +124,7 @@ void MediaPlayer::StreamsPrepared() {
 }
 
 void MediaPlayer::Flushed() {
-  terse_out() << entry() << "MediaPlayer.Flushed" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Flushed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kStreamsPrepared &&
@@ -136,7 +136,7 @@ void MediaPlayer::Flushed() {
 }
 
 void MediaPlayer::Primed() {
-  terse_out() << entry() << "MediaPlayer.Primed" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Primed\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
@@ -148,7 +148,7 @@ void MediaPlayer::Primed() {
 }
 
 void MediaPlayer::Playing() {
-  terse_out() << entry() << "MediaPlayer.Playing" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Playing\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed) {
@@ -159,7 +159,7 @@ void MediaPlayer::Playing() {
 }
 
 void MediaPlayer::EndOfStream() {
-  terse_out() << entry() << "MediaPlayer.EndOfStream" << std::endl;
+  terse_out() << entry() << "MediaPlayer.EndOfStream\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
@@ -172,30 +172,30 @@ void MediaPlayer::EndOfStream() {
 }
 
 void MediaPlayer::PlayRequested() {
-  terse_out() << entry() << "MediaPlayer.PlayRequested" << std::endl;
+  terse_out() << entry() << "MediaPlayer.PlayRequested\n";
 
   accumulator_->target_state_ = MediaPlayerAccumulator::State::kPlaying;
 }
 
 void MediaPlayer::PauseRequested() {
-  terse_out() << entry() << "MediaPlayer.PauseRequested" << std::endl;
+  terse_out() << entry() << "MediaPlayer.PauseRequested\n";
 
   accumulator_->target_state_ = MediaPlayerAccumulator::State::kPrimed;
 }
 
 void MediaPlayer::SeekRequested(int64_t position) {
-  terse_out() << entry() << "MediaPlayer.SeekRequested" << std::endl;
+  terse_out() << entry() << "MediaPlayer.SeekRequested\n";
   terse_out() << indent;
-  terse_out() << begl << "position: " << position << std::endl;
+  terse_out() << begl << "position: " << position << "\n";
   terse_out() << outdent;
 
   accumulator_->target_position_ = position;
 }
 
 void MediaPlayer::Seeking(int64_t position) {
-  terse_out() << entry() << "MediaPlayer.Seeking" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Seeking\n";
   terse_out() << indent;
-  terse_out() << begl << "position: " << position << std::endl;
+  terse_out() << begl << "position: " << position << "\n";
   terse_out() << outdent;
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed) {
@@ -210,7 +210,7 @@ void MediaPlayer::Seeking(int64_t position) {
 }
 
 void MediaPlayer::Priming() {
-  terse_out() << entry() << "MediaPlayer.Priming" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Priming\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kFlushed) {
     ReportProblem() << "Priming out of sequence";
@@ -220,7 +220,7 @@ void MediaPlayer::Priming() {
 }
 
 void MediaPlayer::Flushing() {
-  terse_out() << entry() << "MediaPlayer.Flushing" << std::endl;
+  terse_out() << entry() << "MediaPlayer.Flushing\n";
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kEndOfStream) {
@@ -232,10 +232,9 @@ void MediaPlayer::Flushing() {
 
 void MediaPlayer::SettingTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << entry() << "MediaPlayer.SettingTimelineTransform" << std::endl;
+  terse_out() << entry() << "MediaPlayer.SettingTimelineTransform\n";
   terse_out() << indent;
-  terse_out() << begl << "timeline_transform: " << timeline_transform
-              << std::endl;
+  terse_out() << begl << "timeline_transform: " << timeline_transform << "\n";
   terse_out() << outdent;
 
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
@@ -252,25 +251,24 @@ MediaPlayerAccumulator::MediaPlayerAccumulator() {}
 MediaPlayerAccumulator::~MediaPlayerAccumulator() {}
 
 void MediaPlayerAccumulator::Print(std::ostream& os) {
-  os << "MediaPlayer" << std::endl;
+  os << "MediaPlayer\n";
   os << indent;
-  os << begl << "state: " << state_ << std::endl;
-  os << begl << "target_state: " << target_state_ << std::endl;
-  os << begl << "target_position: " << AsTime(target_position_) << std::endl;
-  os << begl << "source: " << source_ << std::endl;
-  os << begl << "stream_types: " << stream_types_ << std::endl;
-  os << begl << "sinks: " << sinks_ << std::endl;
+  os << begl << "state: " << state_ << "\n";
+  os << begl << "target_state: " << target_state_ << "\n";
+  os << begl << "target_position: " << AsTime(target_position_) << "\n";
+  os << begl << "source: " << source_ << "\n";
+  os << begl << "stream_types: " << stream_types_ << "\n";
+  os << begl << "sinks: " << sinks_ << "\n";
   os << begl << "timeline_transform: " << timeline_transform_;
 
   if (state_ != target_state_) {
-    os << std::endl
+    os << "\n"
        << begl << "SUSPENSE: transitioning to state " << target_state_
        << ", currently in state " << state_;
   }
 
   if (target_position_ != media::kUnspecifiedTime) {
-    os << std::endl
-       << begl << "SUSPENSE: seeking to position " << target_position_;
+    os << "\n" << begl << "SUSPENSE: seeking to position " << target_position_;
   }
 
   Accumulator::Print(os);

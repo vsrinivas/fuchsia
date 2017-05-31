@@ -33,17 +33,17 @@ void FlogViewer::ProcessLogs() {
 
   service_->GetLogDescriptions(
       [this](fidl::Array<FlogDescriptionPtr> descriptions) {
-        std::cout << std::endl;
-        std::cout << "     id  label" << std::endl;
+        std::cout << "\n";
+        std::cout << "     id  label\n";
         std::cout << "-------- ---------------------------------------------"
-                  << std::endl;
+                  << "\n";
 
         for (const FlogDescriptionPtr& description : descriptions) {
           std::cout << std::setw(8) << description->log_id << " "
-                    << description->label << std::endl;
+                    << description->label << "\n";
         }
 
-        std::cout << std::endl;
+        std::cout << "\n";
 
         terminate_callback_();
       });
@@ -55,7 +55,7 @@ void FlogViewer::ProcessLog(uint32_t log_id) {
 
   service_->CreateReader(reader_.NewRequest(), log_id);
 
-  std::cout << std::endl;
+  std::cout << "\n";
   ProcessEntries(0);
 }
 
@@ -74,9 +74,9 @@ void FlogViewer::ProcessLastLog(const std::string& label) {
         }
 
         if (last_id == 0) {
-          std::cout << std::endl;
-          std::cout << "no logs found" << std::endl;
-          std::cout << std::endl;
+          std::cout << "\n";
+          std::cout << "no logs found\n";
+          std::cout << "\n";
           terminate_callback_();
           return;
         }
@@ -137,7 +137,7 @@ void FlogViewer::ProcessEntries(uint32_t start_index) {
                         uint32_t entry_index = start_index;
                         for (const FlogEntryPtr& entry : entries) {
                           if (entry_index > stop_index_) {
-                            std::cout << std::endl;
+                            std::cout << "\n";
                             PrintRemainingAccumulators();
                             terminate_callback_();
                             return;
@@ -149,7 +149,7 @@ void FlogViewer::ProcessEntries(uint32_t start_index) {
                         if (entries.size() == kGetEntriesMaxCount) {
                           ProcessEntries(start_index + kGetEntriesMaxCount);
                         } else {
-                          std::cout << std::endl;
+                          std::cout << "\n";
                           PrintRemainingAccumulators();
                           terminate_callback_();
                         }
@@ -170,7 +170,7 @@ void FlogViewer::ProcessEntry(uint32_t entry_index, const FlogEntryPtr& entry) {
     OnChannelDeleted(entry_index, entry,
                      entry->details->get_channel_deletion());
   } else {
-    std::cout << entry << "NO KNOWN DETAILS" << std::endl;
+    std::cout << entry << "NO KNOWN DETAILS\n";
   }
 }
 
@@ -184,7 +184,7 @@ void FlogViewer::PrintRemainingAccumulators() {
     if (pair.second->has_accumulator() && !pair.second->has_parent()) {
       std::cout << *pair.second << " ";
       pair.second->PrintAccumulator(std::cout);
-      std::cout << std::endl;
+      std::cout << "\n";
     }
   }
 }
@@ -197,13 +197,12 @@ void FlogViewer::OnChannelCreated(
       format_ == ChannelHandler::kFormatFull) {
     std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
     std::cout << entry << "channel created, type " << details->type_name
-              << ", address " << AsAddress(details->subject_address)
-              << std::endl;
+              << ", address " << AsAddress(details->subject_address) << "\n";
   }
 
   auto iter = channels_by_channel_id_.find(entry->channel_id);
   if (iter != channels_by_channel_id_.end()) {
-    std::cout << entry << "    ERROR: CHANNEL ALREADY EXISTS" << std::endl;
+    std::cout << entry << "    ERROR: CHANNEL ALREADY EXISTS\n";
   }
 
   std::shared_ptr<Channel> channel;
@@ -215,7 +214,7 @@ void FlogViewer::OnChannelCreated(
       std::cout << entry
                 << "    ERROR: NEW CHANNEL SHARES SUBJECT ADDRESS WITH "
                    "EXISTING CHANNEL "
-                << subject_iter->second << std::endl;
+                << subject_iter->second << "\n";
     } else {
       channel = subject_iter->second;
       channel->Resolve(
@@ -247,7 +246,7 @@ void FlogViewer::OnChannelMessage(
 
   auto iter = channels_by_channel_id_.find(entry->channel_id);
   if (iter == channels_by_channel_id_.end()) {
-    std::cout << entry << "    ERROR: CHANNEL DOESN'T EXIST" << std::endl;
+    std::cout << entry << "    ERROR: CHANNEL DOESN'T EXIST\n";
     return;
   }
 
@@ -267,12 +266,12 @@ void FlogViewer::OnChannelDeleted(
   if (format_ == ChannelHandler::kFormatTerse ||
       format_ == ChannelHandler::kFormatFull) {
     std::cout << std::setfill('0') << std::setw(6) << entry_index << " ";
-    std::cout << entry << "channel deleted" << std::endl;
+    std::cout << entry << "channel deleted\n";
   }
 
   auto iter = channels_by_channel_id_.find(entry->channel_id);
   if (iter == channels_by_channel_id_.end()) {
-    std::cout << entry << "    ERROR: CHANNEL DOESN'T EXIST" << std::endl;
+    std::cout << entry << "    ERROR: CHANNEL DOESN'T EXIST\n";
     return;
   }
 

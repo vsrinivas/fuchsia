@@ -40,18 +40,18 @@ MediaPacketConsumer::FindOutstandingPacket(uint64_t label) {
 }
 
 void MediaPacketConsumer::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaPacketConsumer.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaPacketConsumer.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
 }
 
 void MediaPacketConsumer::DemandSet(media::MediaPacketDemandPtr demand) {
-  full_out() << entry() << "MediaPacketConsumer.DemandSet" << std::endl;
+  full_out() << entry() << "MediaPacketConsumer.DemandSet\n";
   full_out() << indent;
-  full_out() << begl << "demand: " << demand << std::endl;
+  full_out() << begl << "demand: " << demand << "\n";
   full_out() << outdent;
 
   accumulator_->current_demand_ = std::move(demand);
@@ -63,11 +63,11 @@ void MediaPacketConsumer::DemandSet(media::MediaPacketDemandPtr demand) {
 }
 
 void MediaPacketConsumer::Reset() {
-  terse_out() << entry() << "MediaPacketConsumer.Reset" << std::endl;
+  terse_out() << entry() << "MediaPacketConsumer.Reset\n";
 }
 
 void MediaPacketConsumer::Failed() {
-  terse_out() << entry() << "MediaPacketConsumer.Failed" << std::endl;
+  terse_out() << entry() << "MediaPacketConsumer.Failed\n";
 
   accumulator_->failed_ = true;
 }
@@ -75,9 +75,9 @@ void MediaPacketConsumer::Failed() {
 void MediaPacketConsumer::RespondingToGetDemandUpdate(
     media::MediaPacketDemandPtr demand) {
   full_out() << entry() << "MediaPacketConsumer.RespondingToGetDemandUpdate"
-             << std::endl;
+             << "\n";
   full_out() << indent;
-  full_out() << begl << "demand: " << demand << std::endl;
+  full_out() << begl << "demand: " << demand << "\n";
   full_out() << outdent;
 
   accumulator_->get_demand_update_responses_ += 1;
@@ -86,10 +86,10 @@ void MediaPacketConsumer::RespondingToGetDemandUpdate(
 void MediaPacketConsumer::AddPayloadBufferRequested(uint32_t id,
                                                     uint64_t size) {
   terse_out() << entry() << "MediaPacketConsumer.AddPayloadBufferRequested"
-              << std::endl;
+              << "\n";
   terse_out() << indent;
-  terse_out() << begl << "id: " << id << std::endl;
-  terse_out() << begl << "size: " << size << std::endl;
+  terse_out() << begl << "id: " << id << "\n";
+  terse_out() << begl << "size: " << size << "\n";
   terse_out() << outdent;
 
   auto iter = accumulator_->outstanding_payload_buffers_.find(id);
@@ -104,9 +104,9 @@ void MediaPacketConsumer::AddPayloadBufferRequested(uint32_t id,
 
 void MediaPacketConsumer::RemovePayloadBufferRequested(uint32_t id) {
   terse_out() << entry() << "MediaPacketConsumer.RemovePayloadBufferRequested"
-              << std::endl;
+              << "\n";
   terse_out() << indent;
-  terse_out() << begl << "id: " << id << std::endl;
+  terse_out() << begl << "id: " << id << "\n";
   terse_out() << outdent;
 
   auto iter = accumulator_->outstanding_payload_buffers_.find(id);
@@ -120,7 +120,7 @@ void MediaPacketConsumer::RemovePayloadBufferRequested(uint32_t id) {
 }
 
 void MediaPacketConsumer::FlushRequested() {
-  terse_out() << entry() << "MediaPacketConsumer.FlushRequested" << std::endl;
+  terse_out() << entry() << "MediaPacketConsumer.FlushRequested\n";
 
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
     ReportProblem() << "FlushRequested when another flush was outstanding";
@@ -129,7 +129,7 @@ void MediaPacketConsumer::FlushRequested() {
 }
 
 void MediaPacketConsumer::CompletingFlush() {
-  terse_out() << entry() << "MediaPacketConsumer.CompletingFlush" << std::endl;
+  terse_out() << entry() << "MediaPacketConsumer.CompletingFlush\n";
 
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
     ReportProblem() << "CompletingFlush when no flush was outstanding";
@@ -142,14 +142,13 @@ void MediaPacketConsumer::PacketSupplied(uint64_t label,
                                          media::MediaPacketPtr packet,
                                          uint64_t payload_address,
                                          uint32_t packets_outstanding) {
-  full_out() << entry() << "MediaPacketConsumer.PacketSupplied" << std::endl;
+  full_out() << entry() << "MediaPacketConsumer.PacketSupplied\n";
   full_out() << indent;
-  full_out() << begl << "label: " << label << std::endl;
-  full_out() << begl << "packet: " << packet << std::endl;
+  full_out() << begl << "label: " << label << "\n";
+  full_out() << begl << "packet: " << packet << "\n";
   full_out() << begl << "payload_address: " << AsAddress(payload_address)
-             << std::endl;
-  full_out() << begl << "packets_outstanding: " << packets_outstanding
-             << std::endl;
+             << "\n";
+  full_out() << begl << "packets_outstanding: " << packets_outstanding << "\n";
   full_out() << outdent;
 
   auto iter = accumulator_->outstanding_packets_.find(label);
@@ -167,11 +166,10 @@ void MediaPacketConsumer::PacketSupplied(uint64_t label,
 
 void MediaPacketConsumer::ReturningPacket(uint64_t label,
                                           uint32_t packets_outstanding) {
-  full_out() << entry() << "MediaPacketConsumer.ReturningPacket" << std::endl;
+  full_out() << entry() << "MediaPacketConsumer.ReturningPacket\n";
   full_out() << indent;
-  full_out() << begl << "label: " << label << std::endl;
-  full_out() << begl << "packets_outstanding: " << packets_outstanding
-             << std::endl;
+  full_out() << begl << "label: " << label << "\n";
+  full_out() << begl << "packets_outstanding: " << packets_outstanding << "\n";
   full_out() << outdent;
 
   auto iter = accumulator_->outstanding_packets_.find(label);
@@ -189,44 +187,44 @@ MediaPacketConsumerAccumulator::MediaPacketConsumerAccumulator() {}
 MediaPacketConsumerAccumulator::~MediaPacketConsumerAccumulator() {}
 
 void MediaPacketConsumerAccumulator::Print(std::ostream& os) {
-  os << "MediaPacketConsumer" << std::endl;
+  os << "MediaPacketConsumer\n";
   os << indent;
   os << begl << "GetDemandUpdate responses: " << get_demand_update_responses_
-     << std::endl;
-  os << begl << "flushes: " << flush_requests_.count() << std::endl;
+     << "\n";
+  os << begl << "flushes: " << flush_requests_.count() << "\n";
 
-  os << begl << "current demand: " << current_demand_ << std::endl;
+  os << begl << "current demand: " << current_demand_ << "\n";
   os << begl << "min packets outstanding: max "
-     << min_packets_outstanding_highest_ << std::endl;
+     << min_packets_outstanding_highest_ << "\n";
 
   os << begl << "outstanding packet count: curr "
      << packets_.outstanding_count() << ", max "
-     << packets_.max_outstanding_count() << std::endl;
+     << packets_.max_outstanding_count() << "\n";
   if (packets_.count() != 0) {
     os << begl << "outstanding packet size: curr "
        << packets_.outstanding_total() << ", max "
-       << packets_.max_outstanding_total() << std::endl;
+       << packets_.max_outstanding_total() << "\n";
   }
 
-  os << begl << "packet count: " << packets_.count() << std::endl;
+  os << begl << "packet count: " << packets_.count() << "\n";
   if (packets_.count() != 0) {
     os << begl << "packet size: "
        << "min " << packets_.min() << ", avg " << packets_.average() << ", max "
-       << packets_.max() << ", total " << packets_.total() << std::endl;
+       << packets_.max() << ", total " << packets_.total() << "\n";
   }
 
   os << begl << "outstanding payload buffer count: "
      << "curr " << buffers_.outstanding_count() << ", max "
-     << buffers_.max_outstanding_count() << std::endl;
+     << buffers_.max_outstanding_count() << "\n";
   if (buffers_.count() != 0) {
     os << begl << "outstanding payload buffer size: "
        << "curr " << buffers_.outstanding_total() << ", max "
-       << buffers_.max_outstanding_total() << std::endl;
+       << buffers_.max_outstanding_total() << "\n";
   }
 
   os << begl << "payload buffer count: " << buffers_.count();
   if (buffers_.count() != 0) {
-    os << std::endl
+    os << "\n"
        << begl << "payload buffer size: "
        << "min " << buffers_.min() << ", avg " << buffers_.average() << ", max "
        << buffers_.max() << ", total " << buffers_.total();
@@ -234,23 +232,22 @@ void MediaPacketConsumerAccumulator::Print(std::ostream& os) {
 
   for (const std::pair<uint64_t, std::shared_ptr<Packet>>& pair :
        outstanding_packets_) {
-    os << std::endl << begl << "SUSPENSE: outstanding packet" << std::endl;
+    os << "\n" << begl << "SUSPENSE: outstanding packet\n";
     os << indent;
-    os << begl << "label: " << pair.second->label_ << std::endl;
-    os << begl << "packet: " << pair.second->packet_ << std::endl;
+    os << begl << "label: " << pair.second->label_ << "\n";
+    os << begl << "packet: " << pair.second->packet_ << "\n";
     os << begl
        << "payload address: " << AsAddress(pair.second->payload_address_)
-       << std::endl;
+       << "\n";
     os << begl << "packets outstanding: " << pair.second->packets_outstanding_;
     os << outdent;
   }
 
   for (const std::pair<uint32_t, PayloadBuffer>& pair :
        outstanding_payload_buffers_) {
-    os << std::endl
-       << begl << "SUSPENSE: outstanding payload buffer" << std::endl;
+    os << "\n" << begl << "SUSPENSE: outstanding payload buffer\n";
     os << indent;
-    os << begl << "id: " << pair.second.id_ << std::endl;
+    os << begl << "id: " << pair.second.id_ << "\n";
     os << begl << "size: " << pair.second.size_;
     os << outdent;
   }

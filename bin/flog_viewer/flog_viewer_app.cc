@@ -101,34 +101,34 @@ class FlogViewerApp {
 
  private:
   void Usage() {
-    std::cout << std::endl;
-    std::cout << "fidl:flog_viewer <args>\"" << std::endl;
+    std::cout << "\n";
+    std::cout << "fidl:flog_viewer <args>\"\n";
     std::cout << "    <log id>                    process specified log"
-              << std::endl;
+              << "\n";
     std::cout << "    --last=<label>              process last log with "
                  "specified label"
-              << std::endl;
+              << "\n";
     std::cout
         << "    --last                      process last log with any label"
-        << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
+        << "\n";
+    std::cout << "\n";
+    std::cout << "\n";
     std::cout << "    --format=<format>           terse (default), full, digest"
-              << std::endl;
+              << "\n";
     std::cout
         << "    --channel(s)=<channel ids>  process only the indicated channels"
-        << std::endl;
+        << "\n";
     std::cout << "    --stop-index=<time>         process up to the indicated "
                  "entry index"
-              << std::endl;
+              << "\n";
     std::cout << "    --delete-log(s)=<log ids>   delete the indicated logs"
-              << std::endl;
-    std::cout << "    --delete-all-logs           delete all logs" << std::endl;
+              << "\n";
+    std::cout << "    --delete-all-logs           delete all logs\n";
     std::cout << "If no log is specified, a list of logs is printed."
-              << std::endl;
+              << "\n";
     std::cout << "Value lists are comma-separated (channel ids, log ids)."
-              << std::endl;
-    std::cout << std::endl;
+              << "\n";
+    std::cout << "\n";
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }

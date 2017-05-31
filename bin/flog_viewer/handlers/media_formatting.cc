@@ -23,11 +23,10 @@ std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value) {
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
-  os << begl << "medium: " << StringFromMediaTypeMedium(value->medium)
-     << std::endl;
-  os << begl << "details: " << value->details << std::endl;
-  os << begl << "encoding: " << value->encoding << std::endl;
+  os << indent << "\n";
+  os << begl << "medium: " << StringFromMediaTypeMedium(value->medium) << "\n";
+  os << begl << "details: " << value->details << "\n";
+  os << begl << "encoding: " << value->encoding << "\n";
   if (value->encoding_parameters) {
     os << begl << "encoding_parameters: " << value->encoding_parameters.size()
        << " bytes";
@@ -43,10 +42,9 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
-  os << begl << "medium: " << StringFromMediaTypeMedium(value->medium)
-     << std::endl;
-  os << begl << "details: " << value->details << std::endl;
+  os << indent << "\n";
+  os << begl << "medium: " << StringFromMediaTypeMedium(value->medium) << "\n";
+  os << begl << "details: " << value->details << "\n";
   os << begl << "encodings: " << AsInlineArray<fidl::String>(value->encodings);
   return os << outdent;
 }
@@ -59,7 +57,7 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<empty>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   if (value->is_audio()) {
     return os << begl << "audio: " << value->get_audio() << outdent;
   }
@@ -83,7 +81,7 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<empty>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   if (value->is_audio()) {
     return os << begl << "audio: " << value->get_audio() << outdent;
   }
@@ -105,11 +103,11 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   os << begl
      << "sample_format: " << StringFromAudioSampleFormat(value->sample_format)
-     << std::endl;
-  os << begl << "channels: " << int(value->channels) << std::endl;
+     << "\n";
+  os << begl << "channels: " << int(value->channels) << "\n";
   os << begl << "frames_per_second: " << value->frames_per_second;
   return os << outdent;
 }
@@ -120,14 +118,14 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   os << begl
      << "sample_format: " << StringFromAudioSampleFormat(value->sample_format)
-     << std::endl;
-  os << begl << "min_channels: " << int(value->min_channels) << std::endl;
-  os << begl << "max_channels: " << int(value->max_channels) << std::endl;
+     << "\n";
+  os << begl << "min_channels: " << int(value->min_channels) << "\n";
+  os << begl << "max_channels: " << int(value->max_channels) << "\n";
   os << begl << "min_frames_per_second: " << value->min_frames_per_second
-     << std::endl;
+     << "\n";
   os << begl << "max_frames_per_second: " << value->max_frames_per_second;
   return os << outdent;
 }
@@ -138,21 +136,21 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
-  os << begl << "profile: " << value->profile << std::endl;
-  os << begl << "pixel_format: " << value->pixel_format << std::endl;
-  os << begl << "color_space: " << value->color_space << std::endl;
-  os << begl << "width: " << value->width << std::endl;
-  os << begl << "height: " << value->height << std::endl;
-  os << begl << "coded_width: " << value->coded_width << std::endl;
-  os << begl << "coded_height: " << value->coded_height << std::endl;
+  os << indent << "\n";
+  os << begl << "profile: " << value->profile << "\n";
+  os << begl << "pixel_format: " << value->pixel_format << "\n";
+  os << begl << "color_space: " << value->color_space << "\n";
+  os << begl << "width: " << value->width << "\n";
+  os << begl << "height: " << value->height << "\n";
+  os << begl << "coded_width: " << value->coded_width << "\n";
+  os << begl << "coded_height: " << value->coded_height << "\n";
   os << begl << "pixel_aspect_ratio_width: " << value->pixel_aspect_ratio_width
-     << std::endl;
+     << "\n";
   os << begl
      << "pixel_aspect_ratio_height: " << value->pixel_aspect_ratio_height
-     << std::endl;
+     << "\n";
   os << begl << "line_stride: " << AsInlineArray<uint32_t>(value->line_stride)
-     << std::endl;
+     << "\n";
   os << begl
      << "plane_offset: " << AsInlineArray<uint32_t>(value->plane_offset);
   return os << outdent;
@@ -165,9 +163,9 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent;
-  os << begl << "min_width: " << value->min_width << std::endl;
-  os << begl << "max_width: " << value->max_width << std::endl;
-  os << begl << "min_height: " << value->min_height << std::endl;
+  os << begl << "min_width: " << value->min_width << "\n";
+  os << begl << "max_width: " << value->max_width << "\n";
+  os << begl << "min_height: " << value->min_height << "\n";
   os << begl << "max_height: " << value->max_height;
   return os << outdent;
 }
@@ -178,7 +176,7 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
@@ -202,7 +200,7 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   os << begl << "NO MEMBERS";
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
@@ -226,11 +224,10 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
-  os << begl << "reference_time: " << AsTime(value->reference_time)
-     << std::endl;
-  os << begl << "subject_time: " << AsTime(value->subject_time) << std::endl;
-  os << begl << "reference_delta: " << value->reference_delta << std::endl;
+  os << indent << "\n";
+  os << begl << "reference_time: " << AsTime(value->reference_time) << "\n";
+  os << begl << "subject_time: " << AsTime(value->subject_time) << "\n";
+  os << begl << "reference_delta: " << value->reference_delta << "\n";
   os << begl << "subject_delta: " << value->subject_delta;
   return os << outdent;
 }
@@ -244,14 +241,14 @@ std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value) {
-  os << std::endl;
+  os << "\n";
   os << indent;
-  os << begl << "pts: " << AsTime(value.pts) << std::endl;
-  os << begl << "pts_rate_ticks: " << value.pts_rate_ticks << std::endl;
-  os << begl << "pts_rate_seconds: " << value.pts_rate_seconds << std::endl;
-  os << begl << "end_of_stream: " << value.end_of_stream << std::endl;
-  os << begl << "payload_buffer_id: " << value.payload_buffer_id << std::endl;
-  os << begl << "payload_offset: " << value.payload_offset << std::endl;
+  os << begl << "pts: " << AsTime(value.pts) << "\n";
+  os << begl << "pts_rate_ticks: " << value.pts_rate_ticks << "\n";
+  os << begl << "pts_rate_seconds: " << value.pts_rate_seconds << "\n";
+  os << begl << "end_of_stream: " << value.end_of_stream << "\n";
+  os << begl << "payload_buffer_id: " << value.payload_buffer_id << "\n";
+  os << begl << "payload_offset: " << value.payload_offset << "\n";
   os << begl << "payload_size: " << value.payload_size;
   return os << outdent;
 }
@@ -262,9 +259,9 @@ std::ostream& operator<<(std::ostream& os,
     return os << "<nullptr>";
   }
 
-  os << indent << std::endl;
+  os << indent << "\n";
   os << begl << "min_packets_outstanding: " << value->min_packets_outstanding
-     << std::endl;
+     << "\n";
   os << begl << "min_pts: " << AsTime(value->min_pts);
   return os << outdent;
 }

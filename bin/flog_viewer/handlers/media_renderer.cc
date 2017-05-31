@@ -34,9 +34,9 @@ std::shared_ptr<Accumulator> MediaRenderer::GetAccumulator() {
 }
 
 void MediaRenderer::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaRenderer.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaRenderer.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
@@ -45,11 +45,11 @@ void MediaRenderer::BoundAs(uint64_t koid) {
 void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
                            uint64_t consumer_address,
                            uint64_t timeline_control_point_address) {
-  terse_out() << entry() << "MediaRenderer.Config" << std::endl;
+  terse_out() << entry() << "MediaRenderer.Config\n";
   terse_out() << indent;
-  terse_out() << begl << "supported_types: " << supported_types << std::endl;
+  terse_out() << begl << "supported_types: " << supported_types << "\n";
   terse_out() << begl << "consumer_address: " << *AsChannel(consumer_address)
-              << std::endl;
+              << "\n";
   terse_out() << outdent;
 
   FTL_DCHECK(supported_types);
@@ -64,9 +64,9 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
 }
 
 void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
-  terse_out() << entry() << "MediaRenderer.SetMediaType" << std::endl;
+  terse_out() << entry() << "MediaRenderer.SetMediaType\n";
   terse_out() << indent;
-  terse_out() << begl << "type: " << type << std::endl;
+  terse_out() << begl << "type: " << type << "\n";
   terse_out() << outdent;
 
   FTL_DCHECK(type);
@@ -76,11 +76,11 @@ void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
 void MediaRenderer::EngagePacket(int64_t current_pts,
                                  int64_t packet_pts,
                                  uint64_t packet_label) {
-  terse_out() << entry() << "MediaRenderer.EngagePacket" << std::endl;
+  terse_out() << entry() << "MediaRenderer.EngagePacket\n";
   terse_out() << indent;
-  terse_out() << begl << "current_pts: " << AsTime(current_pts) << std::endl;
-  terse_out() << begl << "packet_pts: " << AsTime(packet_pts) << std::endl;
-  terse_out() << begl << "packet_label: " << packet_label << std::endl;
+  terse_out() << begl << "current_pts: " << AsTime(current_pts) << "\n";
+  terse_out() << begl << "packet_pts: " << AsTime(packet_pts) << "\n";
+  terse_out() << begl << "packet_label: " << packet_label << "\n";
   terse_out() << outdent;
 
   if (packet_label == 0) {
@@ -164,17 +164,17 @@ MediaRendererAccumulator::MediaRendererAccumulator() {}
 MediaRendererAccumulator::~MediaRendererAccumulator() {}
 
 void MediaRendererAccumulator::Print(std::ostream& os) {
-  os << "MediaRenderer" << std::endl;
+  os << "MediaRenderer\n";
   os << indent;
-  os << begl << "supported_types: " << supported_types_ << std::endl;
+  os << begl << "supported_types: " << supported_types_ << "\n";
 
   if (consumer_channel_) {
     os << begl << "consumer: " << *consumer_channel_ << " ";
     FTL_DCHECK(consumer_channel_->resolved());
     consumer_channel_->PrintAccumulator(os);
-    os << std::endl;
+    os << "\n";
   } else {
-    os << begl << "consumer: <none>" << std::endl;
+    os << begl << "consumer: <none>\n";
   }
 
   if (timeline_control_point_channel_) {
@@ -182,15 +182,15 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
        << " ";
     FTL_DCHECK(timeline_control_point_channel_->resolved());
     timeline_control_point_channel_->PrintAccumulator(os);
-    os << std::endl;
+    os << "\n";
   } else {
-    os << begl << "timeline control point:: <none>" << std::endl;
+    os << begl << "timeline control point:: <none>\n";
   }
 
-  os << begl << "type: " << type_ << std::endl;
+  os << begl << "type: " << type_ << "\n";
 
   if (preroll_packets_.count() != 0) {
-    os << begl << "preroll packets: " << preroll_packets_.count() << std::endl;
+    os << begl << "preroll packets: " << preroll_packets_.count() << "\n";
   }
 
   os << begl << "packet earliness: min " << AsTime(packet_earliness_ns_.min())
@@ -198,12 +198,11 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
      << AsTime(packet_earliness_ns_.max());
 
   if (starved_no_packet_.count() != 0) {
-    os << std::endl
-       << begl << "STARVED (no packet): " << starved_no_packet_.count();
+    os << "\n" << begl << "STARVED (no packet): " << starved_no_packet_.count();
   }
 
   if (starved_ns_.count() != 0) {
-    os << std::endl
+    os << "\n"
        << begl << "STARVED (stale packet): count " << starved_ns_.count()
        << ", staleness min " << AsTime(starved_ns_.min()) << ", avg "
        << AsTime(starved_ns_.average()) << ", max "
@@ -211,8 +210,7 @@ void MediaRendererAccumulator::Print(std::ostream& os) {
   }
 
   if (missing_packets_.count() != 0) {
-    os << std::endl
-       << begl << "PACKETS NOT FOUND: " << missing_packets_.count();
+    os << "\n" << begl << "PACKETS NOT FOUND: " << missing_packets_.count();
   }
 
   Accumulator::Print(os);

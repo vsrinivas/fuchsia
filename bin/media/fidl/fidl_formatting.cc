@@ -9,45 +9,45 @@ namespace media {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
   if (!value.is_bound()) {
-    return os << "<not bound>" << std::endl;
+    return os << "<not bound>\n";
   } else {
-    return os << "<bound>" << std::endl;
+    return os << "<bound>\n";
   }
 }
 
 std::ostream& operator<<(std::ostream& os, const MediaTypePtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
   os << begl
      << "MediaTypeMedium medium: " << StringFromMediaTypeMedium(value->medium)
-     << std::endl;
+     << "\n";
   os << begl << "MediaTypeDetailsPtr details: " << value->details;
-  os << begl << "string encoding: " << value->encoding << std::endl;
+  os << begl << "string encoding: " << value->encoding << "\n";
   if (value->encoding_parameters) {
     os << begl << "array<uint8>? encoding_parameters: "
-       << value->encoding_parameters.size() << " bytes" << std::endl;
+       << value->encoding_parameters.size() << " bytes\n";
   } else {
-    os << begl << "array<uint8>? encoding_parameters: <nullptr>" << std::endl;
+    os << begl << "array<uint8>? encoding_parameters: <nullptr>\n";
   }
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const MediaTypeSetPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
   os << begl
      << "MediaTypeMedium medium: " << StringFromMediaTypeMedium(value->medium)
-     << std::endl;
+     << "\n";
   os << begl << "MediaTypeSetDetailsPtr details: " << value->details;
   os << begl << "array<string> encodings: " << value->encodings;
   return os << outdent;
@@ -55,11 +55,11 @@ std::ostream& operator<<(std::ostream& os, const MediaTypeSetPtr& value) {
 
 std::ostream& operator<<(std::ostream& os, const MediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else if (value->has_unknown_tag()) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -81,17 +81,17 @@ std::ostream& operator<<(std::ostream& os, const MediaTypeDetailsPtr& value) {
     return os << begl << "SubpictureMediaTypeDetailsPtr* video: "
               << value->get_subpicture() << outdent;
   }
-  return os << begl << "UNKNOWN TAG" << std::endl << outdent;
+  return os << begl << "UNKNOWN TAG\n" << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const MediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else if (value->has_unknown_tag()) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -114,96 +114,93 @@ std::ostream& operator<<(std::ostream& os,
     return os << begl << "SubpictureMediaTypeSetDetailsPtr* video: "
               << value->get_subpicture() << outdent;
   }
-  return os << begl << "UNKNOWN TAG" << std::endl << outdent;
+  return os << begl << "UNKNOWN TAG\n" << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const AudioMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
   os << begl << "AudioSampleFormat sample_format: "
-     << StringFromAudioSampleFormat(value->sample_format) << std::endl;
-  os << begl << "uint32_t channels: " << int(value->channels) << std::endl;
+     << StringFromAudioSampleFormat(value->sample_format) << "\n";
+  os << begl << "uint32_t channels: " << int(value->channels) << "\n";
   os << begl << "uint32_t frames_per_second: " << value->frames_per_second
-     << std::endl;
+     << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const AudioMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
   os << begl << "AudioSampleFormat sample_format: "
-     << StringFromAudioSampleFormat(value->sample_format) << std::endl;
-  os << begl << "uint32_t min_channels: " << int(value->min_channels)
-     << std::endl;
-  os << begl << "uint32_t max_channels: " << int(value->max_channels)
-     << std::endl;
+     << StringFromAudioSampleFormat(value->sample_format) << "\n";
+  os << begl << "uint32_t min_channels: " << int(value->min_channels) << "\n";
+  os << begl << "uint32_t max_channels: " << int(value->max_channels) << "\n";
   os << begl
      << "uint32_t min_frames_per_second: " << value->min_frames_per_second
-     << std::endl;
+     << "\n";
   os << begl
      << "uint32_t max_cframes_per_second: " << value->max_frames_per_second
-     << std::endl;
+     << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const VideoMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
-  os << begl << "VideoProfile profile: " << value->profile << std::endl;
-  os << begl << "PixelFormat pixel_format: " << value->pixel_format
-     << std::endl;
-  os << begl << "ColorSpace color_space: " << value->color_space << std::endl;
-  os << begl << "uint32_t width: " << value->width << std::endl;
-  os << begl << "uint32_t height: " << value->height << std::endl;
-  os << begl << "uint32_t coded_width: " << value->coded_width << std::endl;
-  os << begl << "uint32_t coded_height: " << value->coded_height << std::endl;
+  os << begl << "VideoProfile profile: " << value->profile << "\n";
+  os << begl << "PixelFormat pixel_format: " << value->pixel_format << "\n";
+  os << begl << "ColorSpace color_space: " << value->color_space << "\n";
+  os << begl << "uint32_t width: " << value->width << "\n";
+  os << begl << "uint32_t height: " << value->height << "\n";
+  os << begl << "uint32_t coded_width: " << value->coded_width << "\n";
+  os << begl << "uint32_t coded_height: " << value->coded_height << "\n";
   os << begl << "array<uint32_t> line_stride: "
-     << AsInlineArray<uint32_t>(value->line_stride) << std::endl;
+     << AsInlineArray<uint32_t>(value->line_stride) << "\n";
   os << begl << "array<uint32_t> plane_offset: "
-     << AsInlineArray<uint32_t>(value->plane_offset) << std::endl;
+     << AsInlineArray<uint32_t>(value->plane_offset) << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const VideoMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
-  os << begl << "uint32_t min_width: " << value->min_width << std::endl;
-  os << begl << "uint32_t max_width: " << value->max_width << std::endl;
-  os << begl << "uint32_t min_height: " << value->min_height << std::endl;
-  os << begl << "uint32_t max_height: " << value->max_height << std::endl;
+  os << begl << "uint32_t min_width: " << value->min_width << "\n";
+  os << begl << "uint32_t max_width: " << value->max_width << "\n";
+  os << begl << "uint32_t min_height: " << value->min_height << "\n";
+  os << begl << "uint32_t max_height: " << value->max_height << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const TextMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -213,9 +210,9 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const TextMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -225,9 +222,9 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const SubpictureMediaTypeDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -237,9 +234,9 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const SubpictureMediaTypeSetDetailsPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
@@ -248,39 +245,38 @@ std::ostream& operator<<(std::ostream& os,
 
 std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
-  os << begl << "int64 reference_time: " << value->reference_time << std::endl;
-  os << begl << "int64 subject_time: " << value->subject_time << std::endl;
-  os << begl << "uint32 reference_delta: " << value->reference_delta
-     << std::endl;
-  os << begl << "uint32 subject_delta: " << value->subject_delta << std::endl;
+  os << begl << "int64 reference_time: " << value->reference_time << "\n";
+  os << begl << "int64 subject_time: " << value->subject_time << "\n";
+  os << begl << "uint32 reference_delta: " << value->reference_delta << "\n";
+  os << begl << "uint32 subject_delta: " << value->subject_delta << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const network::HttpHeaderPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    return os << value->name << ":" << value->value << std::endl;
+    return os << value->name << ":" << value->value << "\n";
   }
 }
 
 std::ostream& operator<<(std::ostream& os, const network::URLBodyPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
     if (value->is_stream()) {
-      return os << "mx::socket stream: " << value->get_stream() << std::endl;
+      return os << "mx::socket stream: " << value->get_stream() << "\n";
     } else if (value->is_buffer()) {
-      return os << "mx::vmo buffer: " << value->get_buffer() << std::endl;
+      return os << "mx::vmo buffer: " << value->get_buffer() << "\n";
     } else {
-      return os << "<unknown>" << std::endl;
+      return os << "<unknown>\n";
     }
   }
 }
@@ -288,65 +284,64 @@ std::ostream& operator<<(std::ostream& os, const network::URLBodyPtr& value) {
 std::ostream& operator<<(std::ostream& os,
                          const network::URLRequestPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
-  os << begl << "fidl::String url: " << value->url << std::endl;
-  os << begl << "fidl::String method: " << value->method << std::endl;
+  os << begl << "fidl::String url: " << value->url << "\n";
+  os << begl << "fidl::String method: " << value->method << "\n";
   os << begl
      << "fidl::Array<network::HttpHeaderPtr> headers: " << value->headers;
   os << begl << "network::URLBody body: " << value->body;
   os << begl << "uint32_t response_body_buffer_size: "
-     << value->response_body_buffer_size << std::endl;
+     << value->response_body_buffer_size << "\n";
   os << begl << "bool auto_follow_redirects: " << value->auto_follow_redirects
-     << std::endl;
+     << "\n";
   os << begl
      << "network::URLRequest::CacheMode cache_mode: " << value->cache_mode
-     << std::endl;
+     << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const network::URLResponsePtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
   os << begl << "network::NetworkErrorPtr error: " << value->error;
-  os << begl << "mx::socket body: " << value->body << std::endl;
-  os << begl << "fidl::String url: " << value->url << std::endl;
-  os << begl << "uint32_t status_code: " << value->status_code << std::endl;
-  os << begl << "fidl::String status_line: " << value->status_line << std::endl;
+  os << begl << "mx::socket body: " << value->body << "\n";
+  os << begl << "fidl::String url: " << value->url << "\n";
+  os << begl << "uint32_t status_code: " << value->status_code << "\n";
+  os << begl << "fidl::String status_line: " << value->status_line << "\n";
   os << begl
      << "fidl::Array<network::HttpHeaderPtr> headers: " << value->headers;
-  os << begl << "fidl::String mime_type: " << value->mime_type << std::endl;
-  os << begl << "fidl::String charset: " << value->charset << std::endl;
+  os << begl << "fidl::String mime_type: " << value->mime_type << "\n";
+  os << begl << "fidl::String charset: " << value->charset << "\n";
   os << begl << "fidl::String redirect_method: " << value->redirect_method
-     << std::endl;
-  os << begl << "fidl::String redirect_url: " << value->redirect_url
-     << std::endl;
+     << "\n";
+  os << begl << "fidl::String redirect_url: " << value->redirect_url << "\n";
   os << begl << "fidl::String redirect_referrer: " << value->redirect_referrer
-     << std::endl;
+     << "\n";
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os,
                          const network::NetworkErrorPtr& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   os << indent;
-  os << begl << "int32_t code: " << value->code << std::endl;
-  os << begl << "fidl::String description: " << value->description << std::endl;
+  os << begl << "int32_t code: " << value->code << "\n";
+  os << begl << "fidl::String description: " << value->description << "\n";
   return os << outdent;
 }
 

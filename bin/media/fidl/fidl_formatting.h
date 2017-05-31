@@ -73,11 +73,11 @@ std::ostream& operator<<(std::ostream& os, const mx::object<T>& value) {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
   if (!value) {
-    return os << "<nullptr>" << std::endl;
+    return os << "<nullptr>\n";
   } else if (value.size() == 0) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   } else {
-    os << std::endl;
+    os << "\n";
   }
 
   int index = 0;

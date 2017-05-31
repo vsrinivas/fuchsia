@@ -52,13 +52,13 @@ void Channel::Resolve(uint32_t log_id,
 
 void Channel::PrintAccumulator(std::ostream& os) const {
   if (!resolved()) {
-    os << "NOT RESOLVED" << std::endl;
+    os << "NOT RESOLVED\n";
     return;
   }
 
   std::shared_ptr<Accumulator> accumulator = handler()->GetAccumulator();
   if (!accumulator) {
-    os << "NO ACCUMULATOR" << std::endl;
+    os << "NO ACCUMULATOR\n";
     return;
   }
 

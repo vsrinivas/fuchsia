@@ -20,7 +20,7 @@ Default::~Default() {}
 void Default::HandleMessage(fidl::Message* message) {
   terse_out() << entry() << "channel message, size "
               << message->data_num_bytes() << " name " << message->name()
-              << std::endl;
+              << "\n";
   if (format() == kFormatFull) {
     PrintData(message->data(), message->data_num_bytes());
   }
@@ -54,7 +54,7 @@ void Default::PrintData(const uint8_t* data, size_t size) {
       }
     }
 
-    std::cout << "  " << chars << std::endl;
+    std::cout << "  " << chars << "\n";
 
     if (size <= kDataBytesPerLine) {
       break;

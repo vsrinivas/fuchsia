@@ -119,7 +119,8 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
   // value and print a second header.
   if (os.iword(ostream_entry_second_index()) != second) {
     os.iword(ostream_entry_second_index()) = second;
-    os << AsNiceDateTime(value->time_ns) << std::endl << "       ";
+    os << AsNiceDateTime(value->time_ns) << "\n"
+       << "       ";
   }
 
   // Print <nanoseconds> <log_id>.<channel_id>

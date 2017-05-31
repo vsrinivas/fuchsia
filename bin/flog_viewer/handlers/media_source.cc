@@ -19,8 +19,8 @@ std::ostream& operator<<(std::ostream& os,
     return os << begl << "NULL STREAM";
   }
 
-  os << indent << std::endl;
-  os << begl << "output_type: " << value.output_type_ << std::endl;
+  os << indent << "\n";
+  os << begl << "output_type: " << value.output_type_ << "\n";
   os << begl << "converters: " << value.converters_;
   return os << outdent;
 }
@@ -42,18 +42,18 @@ std::shared_ptr<Accumulator> MediaSource::GetAccumulator() {
 }
 
 void MediaSource::BoundAs(uint64_t koid) {
-  terse_out() << entry() << "MediaSource.BoundAs" << std::endl;
+  terse_out() << entry() << "MediaSource.BoundAs\n";
   terse_out() << indent;
-  terse_out() << begl << "koid: " << AsKoid(koid) << std::endl;
+  terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
 
   BindAs(koid);
 }
 
 void MediaSource::CreatedDemux(uint64_t related_koid) {
-  terse_out() << entry() << "MediaSource.CreatedDemux" << std::endl;
+  terse_out() << entry() << "MediaSource.CreatedDemux\n";
   terse_out() << indent;
-  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << std::endl;
+  terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
   terse_out() << outdent;
 
   SetBindingKoid(&accumulator_->demux_, related_koid);
@@ -65,11 +65,11 @@ void MediaSource::NewStream(uint32_t index,
   FTL_DCHECK(output_type);
   FTL_DCHECK(converter_koids);
 
-  terse_out() << entry() << "MediaSource.NewStream" << std::endl;
+  terse_out() << entry() << "MediaSource.NewStream\n";
   terse_out() << indent;
-  terse_out() << begl << "index: " << index << std::endl;
-  terse_out() << begl << "output_type: " << output_type << std::endl;
-  terse_out() << begl << "converter_koids: " << converter_koids << std::endl;
+  terse_out() << begl << "index: " << index << "\n";
+  terse_out() << begl << "output_type: " << output_type << "\n";
+  terse_out() << begl << "converter_koids: " << converter_koids << "\n";
   terse_out() << outdent;
 
   while (accumulator_->streams_.size() <= index) {
@@ -94,9 +94,9 @@ MediaSourceAccumulator::MediaSourceAccumulator() {}
 MediaSourceAccumulator::~MediaSourceAccumulator() {}
 
 void MediaSourceAccumulator::Print(std::ostream& os) {
-  os << "MediaSource" << std::endl;
+  os << "MediaSource\n";
   os << indent;
-  os << begl << "demux: " << demux_ << std::endl;
+  os << begl << "demux: " << demux_ << "\n";
   os << begl << "streams: " << streams_;
 
   Accumulator::Print(os);
