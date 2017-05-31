@@ -19,7 +19,7 @@
 static bool basic_test() {
     BEGIN_TEST;
     mx::handle timer;
-    ASSERT_EQ(mx_timer_create(0, timer.get_address()), NO_ERROR, "");
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
 
     mx_signals_t pending;
     EXPECT_EQ(timer.wait_one(MX_TIMER_SIGNALED, 0u, &pending), ERR_TIMED_OUT, "");
@@ -39,7 +39,7 @@ static bool basic_test() {
 static bool restart_test() {
     BEGIN_TEST;
     mx::handle timer;
-    ASSERT_EQ(mx_timer_create(0, timer.get_address()), NO_ERROR, "");
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
 
     mx_signals_t pending;
     for (int ix = 0; ix != 10; ++ix) {
@@ -53,9 +53,23 @@ static bool restart_test() {
     END_TEST;
 }
 
+static bool invalid_calls() {
+    BEGIN_TEST;
+
+    mx::handle timer;
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_UTC, timer.get_address()), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(mx_timer_create(1, MX_CLOCK_MONOTONIC, timer.get_address()), ERR_INVALID_ARGS, "");
+
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
+    ASSERT_EQ(mx_timer_start(timer.get(), 0u, 0u, 0u), ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(timers_test)
 RUN_TEST(basic_test)
 RUN_TEST(restart_test)
+RUN_TEST(invalid_calls)
 END_TEST_CASE(timers_test)
 
 int main(int argc, char** argv) {

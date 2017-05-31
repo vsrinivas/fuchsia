@@ -316,7 +316,7 @@ syscall port_cancel
 # Timers
 
 syscall timer_create
-    (options: uint32_t)
+    (options: uint32_t, clock_id: uint32_t)
     returns (mx_status_t, out: mx_handle_t);
 
 syscall timer_start

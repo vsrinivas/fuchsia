@@ -21,9 +21,10 @@
 
 #include "syscalls_priv.h"
 
-mx_status_t sys_timer_create(uint32_t options, user_ptr<mx_handle_t> _out) {
-    // Currently, the only allowed option is to switch on PortsV2.
+mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_handle_t> _out) {
     if (options != 0u)
+        return ERR_INVALID_ARGS;
+    if (clock_id != MX_CLOCK_MONOTONIC)
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> dispatcher;
