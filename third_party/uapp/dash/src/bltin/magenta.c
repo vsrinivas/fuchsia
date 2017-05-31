@@ -530,14 +530,3 @@ int mxc_k(int argc, char** argv) {
 
     return send_dmctl(buffer, command_length);
 }
-
-int mxc_at(int argc, char** argv) {
-    char command[1024];
-    char* command_end = join(command, sizeof(command), argc, argv);
-    if (!command_end) {
-        fprintf(stderr, "error: application environment command too long\n");
-        return -1;
-    }
-
-    return send_dmctl(command, command_end - command);
-}

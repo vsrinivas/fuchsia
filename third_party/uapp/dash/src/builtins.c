@@ -44,12 +44,10 @@ int mxc_list(int, char **);
 int mxc_msleep(int, char **);
 int mxc_dm(int, char **);
 int mxc_k(int, char **);
-int mxc_at(int, char **);
 
 const struct builtincmd builtincmd[] = {
 	{ ".", dotcmd, 3 },
 	{ ":", truecmd, 3 },
-	{ "@", mxc_at, 0 },
 	{ "[", testcmd, 0 },
 	{ "alias", aliascmd, 6 },
 	{ "break", breakcmd, 3 },

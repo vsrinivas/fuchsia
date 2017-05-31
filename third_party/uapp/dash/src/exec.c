@@ -490,10 +490,6 @@ struct builtincmd *
 find_builtin(const char *name)
 {
 	struct builtincmd *bp;
-
-	if (*name == '@')
-		return MXC_AT;
-
 	bp = bsearch(
 		&name, builtincmd, NUMBUILTINS, sizeof(struct builtincmd),
 		pstrcmp
