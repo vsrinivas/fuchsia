@@ -12,6 +12,13 @@
 namespace bluetooth {
 namespace gap {
 
+// Bluetooth technologies that a device can support.
+enum class TechnologyType {
+  kLowEnergy,
+  kClassic,
+  kDualMode,
+};
+
 // EIR Data Type, Advertising Data Type (AD Type), OOB Data Type definitions.
 enum class DataType : uint8_t {
   kFlags                        = 0x01,
