@@ -141,7 +141,7 @@ inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
     return {ret, thread_is_signaled(get_current_thread())};
 }
 
-inline x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip) {
+x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip) {
     return do_syscall(syscall_num, ip,
                       [](uintptr_t) { return false; },
                       [&]() {
