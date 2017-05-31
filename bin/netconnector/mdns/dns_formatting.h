@@ -20,12 +20,12 @@ inline std::ostream& outdent(std::ostream& os);
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
   if (value.size() == 0) {
-    return os << "<empty>" << std::endl;
+    return os << "<empty>\n";
   }
 
   int index = 0;
   for (const T& element : value) {
-    os << std::endl << begl << "[" << index++ << "] " << element;
+    os << "\n" << begl << "[" << index++ << "] " << element;
   }
 
   return os;

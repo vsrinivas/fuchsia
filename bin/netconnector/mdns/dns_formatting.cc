@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t>& value) {
   const uint8_t* bytes = value.data();
 
   while (true) {
-    os << std::endl
+    os << "\n"
        << begl << std::hex << std::setw(4) << std::setfill('0') << line_offset
        << " ";
 
@@ -144,20 +144,20 @@ std::ostream& operator<<(std::ostream& os, const DnsV6Address& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsHeader& value) {
-  os << std::endl;
+  os << "\n";
   os << indent;
-  os << begl << "id: " << value.id_ << std::endl;
+  os << begl << "id: " << value.id_ << "\n";
   os << begl << "flags: 0x" << std::hex << std::setw(4) << std::setfill('0')
      << value.flags_ << std::dec;
   return os << outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsQuestion& value) {
-  os << std::endl;
+  os << "\n";
   os << indent;
-  os << begl << "name: " << value.name_ << std::endl;
-  os << begl << "type: " << value.type_ << std::endl;
-  os << begl << "class: " << value.class_ << std::endl;
+  os << begl << "name: " << value.name_ << "\n";
+  os << begl << "type: " << value.type_ << "\n";
+  os << begl << "class: " << value.class_ << "\n";
   os << begl << "unicast_response: " << value.unicast_response_;
   return os << outdent;
 }
@@ -183,7 +183,7 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataTxt& value) {
   return os << begl << "text: ";
   os << indent;
   for (auto& string : value.strings_) {
-    os << std::endl << begl << "\"" << string << "\"";
+    os << "\n" << begl << "\"" << string << "\"";
   }
   return os << outdent;
 }
@@ -193,9 +193,9 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataAaaa& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataSrv& value) {
-  os << begl << "priority: " << value.priority_ << std::endl;
-  os << begl << "weight: " << value.weight_ << std::endl;
-  os << begl << "port: " << value.port_ << std::endl;
+  os << begl << "priority: " << value.priority_ << "\n";
+  os << begl << "weight: " << value.weight_ << "\n";
+  os << begl << "port: " << value.port_ << "\n";
   return os << begl << "target: " << value.target_;
 }
 
@@ -204,18 +204,18 @@ std::ostream& operator<<(std::ostream& os, const DnsResourceDataOpt& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResourceDataNSec& value) {
-  os << begl << "next_domain: " << value.next_domain_ << std::endl;
+  os << begl << "next_domain: " << value.next_domain_ << "\n";
   return os << begl << "bits: " << value.bits_;
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsResource& value) {
-  os << std::endl;
+  os << "\n";
   os << indent;
-  os << begl << "name: " << value.name_ << std::endl;
-  os << begl << "type: " << value.type_ << std::endl;
-  os << begl << "class: " << value.class_ << std::endl;
-  os << begl << "cache_flush: " << value.cache_flush_ << std::endl;
-  os << begl << "time_to_live: " << value.time_to_live_ << std::endl;
+  os << begl << "name: " << value.name_ << "\n";
+  os << begl << "type: " << value.type_ << "\n";
+  os << begl << "class: " << value.class_ << "\n";
+  os << begl << "cache_flush: " << value.cache_flush_ << "\n";
+  os << begl << "time_to_live: " << value.time_to_live_ << "\n";
   switch (value.type_) {
     case DnsType::kA:
       os << value.a_;
@@ -251,20 +251,20 @@ std::ostream& operator<<(std::ostream& os, const DnsResource& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const DnsMessage& value) {
-  os << std::endl;
+  os << "\n";
   os << indent;
   os << begl << "header: " << value.header_;
   if (!value.questions_.empty()) {
-    os << std::endl << begl << "questions: " << value.questions_;
+    os << "\n" << begl << "questions: " << value.questions_;
   }
   if (!value.answers_.empty()) {
-    os << std::endl << begl << "answers: " << value.answers_;
+    os << "\n" << begl << "answers: " << value.answers_;
   }
   if (!value.authorities_.empty()) {
-    os << std::endl << begl << "authorities: " << value.authorities_;
+    os << "\n" << begl << "authorities: " << value.authorities_;
   }
   if (!value.additionals_.empty()) {
-    os << std::endl << begl << "additionals: " << value.additionals_;
+    os << "\n" << begl << "additionals: " << value.additionals_;
   }
   return os << outdent;
 }

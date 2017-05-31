@@ -49,10 +49,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
           ftl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
               uint64_t version, fidl::Array<fidl::String> device_names) {
             if (device_names.size() == 0) {
-              std::cout << "No remote devices found" << std::endl;
+              std::cout << "No remote devices found\n";
             } else {
               for (auto& device_name : device_names) {
-                std::cout << device_name << std::endl;
+                std::cout << device_name << "\n";
               }
             }
 
