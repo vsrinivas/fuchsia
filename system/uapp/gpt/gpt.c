@@ -63,7 +63,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
         return NULL;
     }
 
-    printf("blocksize=%x blocks=%" PRIu64 "\n", info.block_size, info.block_count);
+    printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
     if (warn) {
         printf("WARNING: You are about to permanently alter %s\n\n"
@@ -152,6 +152,7 @@ static void init_gpt(const char* dev) {
     if (!gpt) return;
 
     // generate a default header
+    gpt_partition_remove_all(gpt);
     commit(gpt, fd);
     gpt_device_release(gpt);
     close(fd);

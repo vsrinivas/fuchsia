@@ -81,6 +81,9 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
 int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);
 // removes a partition
 
+int gpt_partition_remove_all(gpt_device_t* dev);
+// removes all partitions
+
 void uint8_to_guid_string(char* dst, const uint8_t* src);
 // converts GUID to a string
 

@@ -422,6 +422,11 @@ int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid) {
     return 0;
 }
 
+int gpt_partition_remove_all(gpt_device_t* dev) {
+    memset(dev->partitions, 0, sizeof(dev->partitions));
+    return 0;
+}
+
 // Since the human-readable representation of a GUID is the following format,
 // ordered little-endian, it is useful to group a GUID into these
 // appropriately-sized groups.
