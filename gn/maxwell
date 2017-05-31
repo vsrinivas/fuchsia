@@ -34,6 +34,10 @@
             "bootfs_path": "apps/maxwell_btr"
         },
         {
+            "binary": "agents/basic_text_listener",
+            "bootfs_path": "apps/agents/maxwell_btl"
+        },
+        {
             "binary": "context_engine",
             "bootfs_path": "apps/context_engine"
         },
