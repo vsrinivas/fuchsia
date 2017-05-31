@@ -95,16 +95,6 @@ static int mutex_test(void)
 
     thread_sleep_relative(LK_MSEC(100));
 
-    static const uint count = 128*1024*1024;
-    uint64_t c = arch_cycle_count();
-    for (uint i = 0; i < count; i++) {
-        mutex_acquire(&m);
-        mutex_release(&m);
-    }
-    c = arch_cycle_count() - c;
-
-    printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
-
     printf("done with mutex tests\n");
 
     return 0;
@@ -469,30 +459,11 @@ static void spinlock_test(void)
     spin_lock_irqsave(&lock, state);
     ASSERT(arch_ints_disabled());
     ASSERT(spin_lock_held(&lock));
+    ASSERT(spin_lock_holder_cpu(&lock) == arch_curr_cpu_num());
     spin_unlock_irqrestore(&lock, state);
     ASSERT(!spin_lock_held(&lock));
     ASSERT(!arch_ints_disabled());
     printf("seems to work\n");
-
-#define COUNT (1024*1024)
-    uint64_t c = arch_cycle_count();
-    for (uint i = 0; i < COUNT; i++) {
-        spin_lock(&lock);
-        spin_unlock(&lock);
-    }
-    c = arch_cycle_count() - c;
-
-    printf("%" PRIu64 " cycles to acquire/release lock %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
-
-    c = arch_cycle_count();
-    for (uint i = 0; i < COUNT; i++) {
-        spin_lock_irqsave(&lock, state);
-        spin_unlock_irqrestore(&lock, state);
-    }
-    c = arch_cycle_count() - c;
-
-    printf("%" PRIu64 " cycles to acquire/release lock w/irqsave %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
-#undef COUNT
 }
 
 static void sleeper_thread_exit(enum thread_user_state_change new_state, void *arg)

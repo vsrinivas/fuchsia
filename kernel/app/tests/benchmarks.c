@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel/thread.h>
+#include <kernel/spinlock.h>
+#include <kernel/mutex.h>
 #include <platform.h>
 #include <arch/ops.h>
 #include <inttypes.h>
@@ -48,7 +50,7 @@ __NO_INLINE static void bench_memset(void)
     count = arch_cycle_count() - count;
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
-    printf("took %" PRIu64 " cycles to memset a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
+    printf("took %" PRIu64 " cycles to memset a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
            count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
@@ -67,7 +69,7 @@ __NO_INLINE static void bench_memset_per_page(void)
     count = arch_cycle_count() - count;
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
-    printf("took %" PRIu64 " cycles to per-page memset a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
+    printf("took %" PRIu64 " cycles to per-page memset a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
            count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
@@ -86,7 +88,7 @@ __NO_INLINE static void bench_zero_page(void)
     count = arch_cycle_count() - count;
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
-    printf("took %" PRIu64 " cycles to arch_zero_page a buffer of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n",
+    printf("took %" PRIu64 " cycles to arch_zero_page a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
            count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
@@ -106,7 +108,7 @@ __NO_INLINE static void bench_cset_##type(void) \
     count = arch_cycle_count() - count; \
  \
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count; \
-    printf("took %" PRIu64 " cycles to manually clear a buffer using wordsize %d of size %u %d times (%u bytes), %llu.%03llu bytes/cycle\n", \
+    printf("took %" PRIu64 " cycles to clear a buffer using wordsize %d of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n", \
            count, sizeof(*buf), BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000); \
  \
     free(buf); \
@@ -137,7 +139,7 @@ __NO_INLINE static void bench_cset_wide(void)
     count = arch_cycle_count() - count;
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
-    printf("took %" PRIu64 " cycles to manually clear a buffer of size %u %d times 8 words at a time (%u bytes), %llu.%03llu bytes/cycle\n",
+    printf("took %" PRIu64 " cycles to clear a buffer of size %zu %d times 8 words at a time (%zu bytes), %llu.%03llu bytes/cycle\n",
            count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
@@ -154,52 +156,76 @@ __NO_INLINE static void bench_memcpy(void)
     count = arch_cycle_count() - count;
 
     uint64_t bytes_cycle = (BUFSIZE / 2 * ITER * 1000ULL) / count;
-    printf("took %" PRIu64 " cycles to memcpy a buffer of size %u %d times (%u source bytes), %llu.%03llu source bytes/cycle\n",
+    printf("took %" PRIu64 " cycles to memcpy a buffer of size %zu %d times (%zu source bytes), %llu.%03llu source bytes/cycle\n",
            count, BUFSIZE / 2, ITER, BUFSIZE / 2 * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
     free(buf);
 }
 
-#if WITH_LIB_LIBM && !WITH_NO_FP
-#include <math.h>
-
-__NO_INLINE static void bench_sincos(void)
+__NO_INLINE static void bench_spinlock(void)
 {
-    printf("touching the floating point unit\n");
-    __UNUSED volatile double _hole = sin(0);
+    spin_lock_saved_state_t state;
+    spin_lock_saved_state_t state2;
+    spin_lock_t lock;
 
-    uint64_t count = arch_cycle_count();
-    __UNUSED double a = sin(2.0);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for sin()\n", count);
+    spin_lock_init(&lock);
 
-    count = arch_cycle_count();
-    a = cos(2.0);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for cos()\n", count);
+#define COUNT (128*1024*1024)
+    // test 1: acquire/release a spinlock with interrupts already disabled
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
-    count = arch_cycle_count();
-    a = sinf(2.0);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for sinf()\n", count);
+    uint64_t c = arch_cycle_count();
+    for (uint i = 0; i < COUNT; i++) {
+        spin_lock(&lock);
+        spin_unlock(&lock);
+    }
+    c = arch_cycle_count() - c;
 
-    count = arch_cycle_count();
-    a = cosf(2.0);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for cosf()\n", count);
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
-    count = arch_cycle_count();
-    a = sqrt(1234567.0);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for sqrt()\n", count);
+    printf("%" PRIu64 " cycles to acquire/release spinlock %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
 
-    count = arch_cycle_count();
-    a = sqrtf(1234567.0f);
-    count = arch_cycle_count() - count;
-    printf("took %" PRIu64 " cycles for sqrtf()\n", count);
+    // test 2: acquire/release a spinlock with irq save and irqs already disabled
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    c = arch_cycle_count();
+    for (uint i = 0; i < COUNT; i++) {
+        spin_lock_irqsave(&lock, state2);
+        spin_unlock_irqrestore(&lock, state2);
+    }
+    c = arch_cycle_count() - c;
+
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+
+    printf("%" PRIu64 " cycles to acquire/release spinlock w/irqsave (already disabled) %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
+
+    // test 2: acquire/release a spinlock with irq save and irqs enabled
+    c = arch_cycle_count();
+    for (uint i = 0; i < COUNT; i++) {
+        spin_lock_irqsave(&lock, state2);
+        spin_unlock_irqrestore(&lock, state2);
+    }
+    c = arch_cycle_count() - c;
+
+    printf("%" PRIu64 " cycles to acquire/release spinlock w/irqsave %u times (%" PRIu64 " cycles per)\n", c, COUNT, c / COUNT);
+#undef COUNT
 }
 
-#endif // WITH_LIB_LIBM
+__NO_INLINE static void bench_mutex(void)
+{
+    mutex_t m;
+    mutex_init(&m);
+
+    static const uint count = 128*1024*1024;
+    uint64_t c = arch_cycle_count();
+    for (uint i = 0; i < count; i++) {
+        mutex_acquire(&m);
+        mutex_release(&m);
+    }
+    c = arch_cycle_count() - c;
+
+    printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
+}
 
 void benchmarks(void)
 {
@@ -216,8 +242,7 @@ void benchmarks(void)
     bench_cset_uint64_t();
     bench_cset_wide();
 
-#if WITH_LIB_LIBM && !WITH_NO_FP
-    bench_sincos();
-#endif
+    bench_spinlock();
+    bench_mutex();
 }
 
