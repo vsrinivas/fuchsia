@@ -20,8 +20,9 @@ __EXPORT void device_unbind(mx_device_t* dev) {
     API->device_unbind(dev);
 }
 
-__EXPORT mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
-    return API->device_add(parent, args, out);
+__EXPORT mx_status_t device_add_from_driver(mx_driver_rec_t* driver, mx_device_t* parent,
+                                            device_add_args_t* args, mx_device_t** out) {
+    return API->device_add(driver, parent, args, out);
 }
 
 __EXPORT mx_status_t device_op_get_protocol(mx_device_t* dev, uint32_t proto_id,

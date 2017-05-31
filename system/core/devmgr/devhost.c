@@ -101,9 +101,15 @@ static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_drive
         goto done;
     }
 
-    const magenta_driver_info_t* di = dlsym(dl, "__magenta_driver__");
+    const magenta_driver_info_t* di = dlsym(dl, "__magenta_driver_info__");
     if (di == NULL) {
-        log(ERROR, "devhost: driver '%s' missing __magenta_driver__ symbol\n", libname);
+        log(ERROR, "devhost: driver '%s' missing __magenta_driver_info__ symbol\n", libname);
+        rec->status = ERR_IO;
+        goto done;
+    }
+    mx_driver_rec_t** dr = dlsym(dl, "__magenta_driver_rec__");
+    if (dr == NULL) {
+        log(ERROR, "devhost: driver '%s' missing __magenta_driver_rec__ symbol\n", libname);
         rec->status = ERR_IO;
         goto done;
     }
@@ -122,6 +128,7 @@ static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_drive
 
     rec->name = di->driver->name;
     rec->ops = di->driver->ops;
+    *dr = rec;
 
     if (rec->ops->init) {
         rec->status = rec->ops->init(&rec->ctx);
@@ -305,15 +312,15 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
             if (rec->ops->bind) {
-                // set owner first so device_add() will be able to find the driver
-                ios->dev->owner = rec;
                 r = rec->ops->bind(rec->ctx, ios->dev, &ios->dev->owner_cookie);
             } else {
                 r = ERR_NOT_SUPPORTED;
             }
             if (r < 0) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
-                ios->dev->owner = NULL;
+            } else {
+                //TODO: best behaviour for multibind? maybe retire "owner"?
+                ios->dev->owner = rec;
             }
         }
         dc_msg_t reply = {

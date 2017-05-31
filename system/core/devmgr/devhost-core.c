@@ -158,22 +158,12 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-mx_status_t devhost_device_create(mx_device_t* parent, const char* name, void* ctx,
+mx_status_t devhost_device_create(mx_driver_rec_t* drv, mx_device_t* parent,
+                                  const char* name, void* ctx,
                                   mx_protocol_device_t* ops, mx_device_t** out) {
 
-    mx_driver_rec_t* driver = NULL;
-
-    // determine driver for the new device
-    if (parent->owner) {
-        // typically the device is created by the driver bound to the parent
-        driver = parent->owner;
-    } else {
-        // but sometimes a driver may create devices with parent that has not been bound
-        // in that case we use the driver that created the parent
-        driver = parent->driver;
-    }
-    if (!driver) {
-        printf("_device_add could not find driver!\n");
+    if (!drv) {
+        printf("devhost: _device_add could not find driver!\n");
         return ERR_INVALID_ARGS;
     }
 
@@ -185,7 +175,7 @@ mx_status_t devhost_device_create(mx_device_t* parent, const char* name, void* c
     memset(dev, 0, sizeof(mx_device_t));
     dev->magic = DEV_MAGIC;
     dev->ops = ops;
-    dev->driver = driver;
+    dev->driver = drv;
     list_initialize(&dev->children);
     list_initialize(&dev->instances);
 

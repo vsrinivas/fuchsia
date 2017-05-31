@@ -14,6 +14,7 @@ __BEGIN_CDECLS;
 typedef struct mx_device mx_device_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 typedef struct mx_device_prop mx_device_prop_t;
+typedef struct mx_driver_rec mx_driver_rec_t;
 
 typedef struct mx_bind_inst mx_bind_inst_t;
 typedef struct mx_driver_binding mx_driver_binding_t;
@@ -86,7 +87,16 @@ typedef struct device_add_args {
     uint32_t flags;
 } device_add_args_t;
 
-mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out);
+// This global symbol is initialized by the driver loader in devhost
+extern mx_driver_rec_t* __magenta_driver_rec__;
+
+mx_status_t device_add_from_driver(mx_driver_rec_t* drv, mx_device_t* parent,
+                              device_add_args_t* args, mx_device_t** out);
+
+static inline mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
+    return device_add_from_driver(__magenta_driver_rec__, parent, args, out);
+}
+
 // Creates a device and adds it to the devmgr.
 // device_add_args_t contains all "in" arguments.
 // All device_add_args_t values are copied, so device_add_args_t can be stack allocated.
@@ -98,11 +108,6 @@ mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t
 
 mx_status_t device_remove(mx_device_t* device);
 mx_status_t device_rebind(mx_device_t* device);
-
-// These are only for the use of core platform drivers and may return
-// NULL for non-approved callers.
-mx_device_t* driver_get_root_device(void);
-mx_device_t* driver_get_misc_device(void);
 
 void device_unbind(mx_device_t* dev);
 

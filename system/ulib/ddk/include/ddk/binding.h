@@ -175,6 +175,7 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_ATTR_DEF __ALIGNED(sizeof(void*)) __SECTION("magenta_drivers")
 #define MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_PASTE(__magenta_driver_info__,Driver)
 #define MAGENTA_DRIVER_NOTE(Driver)
+#define MAGENTA_DRIVER_REC
 #else
 // GCC has a quirk about how '__attribute__((visibility("default")))'
 // (__EXPORT here) works for const variables in C++.  The attribute has no
@@ -184,7 +185,8 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_ATTR_DECL __EXPORT
 #define MAGENTA_DRIVER_ATTR_DEF
 #define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
-#define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver__
+#define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver_info__
+#define MAGENTA_DRIVER_REC mx_driver_rec_t* __magenta_driver_rec__;
 #endif
 
 #define MAGENTA_DRIVER_DEF(Driver,Ops,Flags) \
@@ -225,6 +227,7 @@ extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_
 const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DEF = { \
     /* .driver = */ &MAGENTA_DRIVER_PASTE(_driver_,Driver),\
     /* .note = */ &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
-};
+};\
+MAGENTA_DRIVER_REC
 
 __END_CDECLS;
