@@ -81,8 +81,20 @@ class ModuleImpl extends Module {
     _publisher.publish(
       'raw/text',
       JSON.encode(
-        <String, String> {
-          'text' : text,
+        <String, String>{
+          'text': text,
+        },
+      ),
+    );
+  }
+
+  void publishSelection(int start, int end) {
+    _publisher.publish(
+      'raw/text_selection',
+      JSON.encode(
+        <String, int>{
+          'start': start,
+          'end': end,
         },
       ),
     );
@@ -104,8 +116,12 @@ void main() {
 
   _controller.addListener(() {
     String currentText = _controller.text;
+    int selectionStart = _controller.selection.start;
+    int selectionEnd = _controller.selection.end;
 //    _log("Current text: $currentText");
+//    _log("selected text: $selectionStart to $selectionEnd");
     _module.publishText(currentText);
+    _module.publishSelection(selectionStart, selectionEnd);
   });
 
   runApp(
