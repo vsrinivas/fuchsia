@@ -15,3 +15,7 @@ mx_status_t read_driver_info(int fd, void *cookie,
 // the name is not known.  Used by debug code to do things like dump the
 // published parameters of a device, or dump the bind program of a driver.
 const char* lookup_bind_param_name(uint32_t param_num);
+
+// Disassemble a bind program instruction and dump it to the buffer provided by
+// the caller.  If the buffer is too small, the disassembly may be truncated.
+void dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len);

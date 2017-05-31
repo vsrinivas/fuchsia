@@ -14,8 +14,11 @@ void callback(magenta_note_driver_t* dn, mx_bind_inst_t* bi, void* cookie) {
     printf("vendor:  %s\n", dn->vendor);
     printf("version: %s\n", dn->version);
     printf("binding:\n");
+
+    char line[256];
     for (size_t n = 0; n < dn->bindcount; n++) {
-        printf(" %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
+        dump_bind_inst(bi + n, line, sizeof(line));
+        printf("  %s\n", line);
     }
 }
 

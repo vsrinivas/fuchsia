@@ -26,6 +26,7 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static void dc_dump_state(void);
 static void dc_dump_devprops(void);
+static void dc_dump_drivers(void);
 
 static mx_handle_t dmctl_socket;
 
@@ -61,12 +62,17 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
                      "ktraceon    - start kernel tracing\n"
                      "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
                      "devprops    - dump published devices and their binding properties\n"
+                     "drivers     - list discovered drivers and their properties\n"
                      );
             return NO_ERROR;
         }
     }
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
         devhost_acpi_reboot();
+        return NO_ERROR;
+    }
+    if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
+        dc_dump_drivers();
         return NO_ERROR;
     }
     if (len == 8) {
@@ -285,6 +291,27 @@ static void dc_dump_devprops(void) {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
     dc_dump_device_props(&platform_device);
+}
+
+static void dc_dump_drivers(void) {
+    driver_t* drv;
+    bool first = true;
+    list_for_every_entry(&list_drivers, drv, driver_t, node) {
+        dmprintf("%sName    : %s\n", first ? "" : "\n", drv->name);
+        dmprintf("Driver  : %s\n", drv->libname ? drv->libname : "(null)");
+        dmprintf("Flags   : 0x%08x\n", drv->flags);
+        if (drv->binding_size) {
+            char line[256];
+            uint32_t count = drv->binding_size / sizeof(drv->binding[0]);
+            dmprintf("Binding : %u instruction%s (%u bytes)\n",
+                     count, (count == 1) ? "" : "s", drv->binding_size);
+            for (uint32_t i = 0; i < count; ++i) {
+                dump_bind_inst(drv->binding + i, line, sizeof(line));
+                dmprintf("[%u/%u]: %s\n", i + 1, count, line);
+            }
+        }
+        first = false;
+    }
 }
 
 static void dc_handle_new_device(device_t* dev);

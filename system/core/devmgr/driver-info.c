@@ -168,3 +168,94 @@ const char* lookup_bind_param_name(uint32_t param_num) {
         default: return NULL;
     }
 }
+
+void dump_bind_inst(const mx_bind_inst_t* b, char* buf, size_t buf_len) {
+    if (!b || !buf || !buf_len) {
+        return;
+    }
+
+    uint32_t cc = BINDINST_CC(b->op);
+    uint32_t op = BINDINST_OP(b->op);
+    uint32_t pa = BINDINST_PA(b->op);
+    uint32_t pb = BINDINST_PB(b->op);
+    size_t off = 0;
+    buf[0] = 0;
+
+    switch (op) {
+    case OP_ABORT:
+    case OP_MATCH:
+    case OP_GOTO:
+    case OP_SET:
+    case OP_CLEAR:
+        break;
+    case OP_LABEL:
+        snprintf(buf + off, buf_len - off, "L.%u:\n", b->arg);
+        return;
+    default:
+        snprintf(buf + off, buf_len - off,
+                "Unknown Op 0x%1x [0x%08x, 0x%08x]\n", op, b->op, b->arg);
+        return;
+    }
+
+    off += snprintf(buf + off, buf_len - off, "if (");
+    if (cc == COND_AL) {
+        off += snprintf(buf + off, buf_len - off, "true");
+    } else {
+        const char* pb_name = lookup_bind_param_name(pb);
+        if (pb_name) {
+            off += snprintf(buf + off, buf_len - off, "%s", pb_name);
+        } else {
+            off += snprintf(buf + off, buf_len - off, "P.%04x", pb);
+        }
+
+        switch (cc) {
+        case COND_EQ:
+            off += snprintf(buf + off, buf_len - off, " == 0x%08x", b->arg);
+            break;
+        case COND_NE:
+            off += snprintf(buf + off, buf_len - off, " != 0x%08x", b->arg);
+            break;
+        case COND_GT:
+            off += snprintf(buf + off, buf_len - off, " > 0x%08x", b->arg);
+            break;
+        case COND_LT:
+            off += snprintf(buf + off, buf_len - off, " < 0x%08x", b->arg);
+            break;
+        case COND_GE:
+            off += snprintf(buf + off, buf_len - off, " >= 0x%08x", b->arg);
+            break;
+        case COND_LE:
+            off += snprintf(buf + off, buf_len - off, " <= 0x%08x", b->arg);
+            break;
+        case COND_MASK:
+            off += snprintf(buf + off, buf_len - off, " & 0x%08x != 0", b->arg);
+            break;
+        case COND_BITS:
+            off += snprintf(buf + off, buf_len - off, " & 0x%08x == 0x%08x", b->arg, b->arg);
+            break;
+        default:
+            off += snprintf(buf + off, buf_len - off,
+                            " ?(0x%x) 0x%08x", cc, b->arg);
+            break;
+        }
+    }
+    off += snprintf(buf + off, buf_len - off, ") ");
+
+    switch (op) {
+    case OP_ABORT:
+        off += snprintf(buf + off, buf_len - off, "return no-match;");
+        break;
+    case OP_MATCH:
+        off += snprintf(buf + off, buf_len - off, "return match;");
+        break;
+    case OP_GOTO:
+        off += snprintf(buf + off, buf_len - off, "goto L.%u;", b->arg);
+        break;
+    case OP_SET:
+        off += snprintf(buf + off, buf_len - off, "flags |= 0x%02x;", pa);
+        break;
+    case OP_CLEAR:
+        off += snprintf(buf + off, buf_len - off, "flags &= 0x%02x;", ~pa & 0xFF);
+        break;
+    }
+}
