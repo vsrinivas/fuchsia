@@ -240,7 +240,7 @@ static mx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_da
 static mx_status_t ums_data_transfer(ums_t* ums, iotxn_t* txn, mx_off_t offset, size_t length,
                                      uint8_t ep_address) {
     iotxn_t* clone = NULL;
-    mx_status_t status = iotxn_clone_partial(txn, offset, length, &clone);
+    mx_status_t status = iotxn_clone_partial(txn, txn->vmo_offset + offset, length, &clone);
     if (status != NO_ERROR) {
         return status;
     }
