@@ -16,6 +16,7 @@
 #include <pthread.h>
 #endif
 
+#include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 
 namespace ftl {
@@ -34,9 +35,7 @@ class ThreadChecker final {
   ThreadChecker() : self_(GetCurrentThreadId()) {}
   ~ThreadChecker() {}
 
-  bool IsCreationThreadCurrent() const {
-    return GetCurrentThreadId() == self_;
-  }
+  bool IsCreationThreadCurrent() const { return GetCurrentThreadId() == self_; }
 
  private:
   const DWORD self_;
@@ -57,6 +56,15 @@ class ThreadChecker final {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ThreadChecker);
 };
+
+#ifndef NDEBUG
+#define FTL_DECLARE_THREAD_CHECKER(c) ftl::ThreadChecker c
+#define FTL_DCHECK_CREATION_THREAD_IS_CURRENT(c) \
+  FTL_DCHECK((c).IsCreationThreadCurrent())
+#else
+#define FTL_DECLARE_THREAD_CHECKER(c)
+#define FTL_DCHECK_CREATION_THREAD_IS_CURRENT(c) ((void)0)
+#endif
 
 }  // namespace ftl
 
