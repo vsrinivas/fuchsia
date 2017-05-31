@@ -775,17 +775,21 @@ static mx_status_t get_part_size(gpt_device_t *dev, int device_fd,
  * for the partition and format that partition as the requested format with the
  * supplied label.
  */
-static mx_status_t make_part(int device_fd, size_t offset, size_t length,
-                             uint8_t (*guid)[GPT_GUID_LEN],
-                             disk_format_t format, const char *label) {
+static mx_status_t make_part(int device_fd, const char *dev_dir_path,
+                             size_t offset, size_t length,
+                             uint8_t (*guid)[GPT_GUID_LEN], disk_format_t format,
+                             const char *label) {
   uint64_t block_size;
+  uint8_t disk_guid[GPT_GUID_LEN];
 
-  // add the data partition of the requested size that the requested location
+  // ADD the data partition of the requested size that the requested location
   gpt_device_t *gpt_edit = read_gpt(device_fd, &block_size);
   if (gpt_edit == NULL) {
     fprintf(stderr, "Couldn't read GPT from device.\n");
+    return ERR_IO;
   }
 
+  gpt_device_get_header_guid(gpt_edit, &disk_guid);
   mx_status_t rc = add_partition(gpt_edit, offset, length, *guid, label);
   gpt_device_release(gpt_edit);
   if (rc != NO_ERROR) {
@@ -801,7 +805,32 @@ static mx_status_t make_part(int device_fd, size_t offset, size_t length,
   // a brief pause is required while the system absorbs the GPT change
   sleep(1);
   unmount_all();
+
+  // find the new path of the device
+  DIR* dirfp = opendir(dev_dir_path);
+  if (dirfp == NULL) {
+    fprintf(stderr, "Couldn't open devices directory to read\n");
+    return ERR_IO;
+  }
+
+  char disk_path[PATH_MAX];
+  rc = find_disk_by_guid(dirfp, dev_dir_path, &disk_guid, &gpt_edit, disk_path,
+                         PATH_MAX);
+
+  closedir(dirfp);
+  if (rc != NO_ERROR) {
+    fprintf(stderr, "Couldn't locate disk after adding partition.\n");
+    return rc;
+  }
+  device_fd = open(disk_path, O_RDWR);
+
+  if (device_fd < 0) {
+    fprintf(stderr, "Couldn't open rebound device.\n");
+    return ERR_IO;
+  }
+
   gpt_edit = read_gpt(device_fd, &block_size);
+  close(device_fd);
   if (gpt_edit == NULL) {
     fprintf(stderr, "Couldn't read GPT after partition addition.\n");
     return ERR_IO;
@@ -821,8 +850,8 @@ static mx_status_t make_part(int device_fd, size_t offset, size_t length,
   }
 
   // find the partition in the block device directory
-  char data_path[PATH_MAX];
-  char *path_holder[1] = {data_path};
+  char part_path[PATH_MAX];
+  char *path_holder[1] = {part_path};
   DIR *dir = opendir(PATH_BLOCKDEVS);
   gpt_partition_t *const *ptr_cpy = &gpt_edit->partitions[part_idx];
   rc = find_partition_path(ptr_cpy, path_holder, dir, 1);
@@ -833,21 +862,24 @@ static mx_status_t make_part(int device_fd, size_t offset, size_t length,
     return ERR_INTERNAL;
   }
 
-  if (strlen(PATH_BLOCKDEVS) + strlen(data_path) > PATH_MAX) {
+  // construct the full path in-place now that we know which device it is
+  size_t len_temp = strlen(part_path) + 1;
+  size_t total_len = strlen(part_path) + strlen(dev_dir_path) + 1;
+
+  // check that the total length required does not exceed available space AND
+  // that accounting for the length of dev_dir_path we can copy part_path
+  // around without source and destination regions not overlapping for memcpy
+  if (total_len > PATH_MAX) {
     fprintf(stderr, "Device path is too long!\n");
     return ERR_INTERNAL;
   }
 
-  // construct the full path now that we know which device it is
-  int len_temp = strlen(data_path);
-  memcpy(&data_path[PATH_MAX - len_temp], data_path, len_temp);
-  strcpy(data_path, PATH_BLOCKDEVS);
-  strcat(data_path, "/");
-  memcpy(&data_path[strlen(data_path)], &data_path[PATH_MAX - len_temp],
-         len_temp);
+  // move the device-specific part to make space for the prefix
+  memmove(&part_path[strlen(dev_dir_path)], part_path, len_temp);
+  memcpy(part_path, dev_dir_path, strlen(dev_dir_path));
 
   // kick off formatting of the device
-  rc = mkfs(data_path, format, launch_stdio_sync, &default_mkfs_options);
+  rc = mkfs(part_path, format, launch_stdio_sync, &default_mkfs_options);
   if (rc != NO_ERROR) {
     fprintf(stderr, "ERROR: Partition formatting failed.\n");
     return ERR_INTERNAL;
@@ -866,7 +898,7 @@ static mx_status_t make_part(int device_fd, size_t offset, size_t length,
  * returns an error.
  */
 static mx_status_t make_empty_partition(gpt_device_t *install_dev,
-                                        char *device_path,
+                                        char *device_path, char *dev_dir_path,
                                         uint8_t (*guid)[GPT_GUID_LEN],
                                         uint64_t size_pref, uint64_t size_min,
                                         disk_format_t disk_format, char *name) {
@@ -883,7 +915,7 @@ static mx_status_t make_empty_partition(gpt_device_t *install_dev,
     size_t blk_len;
     if ((get_part_size(install_dev, device_fd, size_pref, size_min, &blk_off,
                        &blk_len) != NO_ERROR) ||
-        (make_part(device_fd, blk_off, blk_len, guid, disk_format, name) !=
+        (make_part(device_fd, dev_dir_path, blk_off, blk_len, guid, disk_format, name) !=
          NO_ERROR)) {
       close(device_fd);
       return ERR_INTERNAL;
@@ -1333,7 +1365,9 @@ int main(int argc, char **argv) {
         uint8_t disk_guid[GPT_GUID_LEN];
         gpt_device_get_header_guid(install_dev, &disk_guid);
 
-        if (make_empty_partition(install_dev, disk_path, &data_guid,
+        strcpy(path_buffer, PATH_BLOCKDEVS);
+        strcat(path_buffer, "/");
+        if (make_empty_partition(install_dev, disk_path, path_buffer, &data_guid,
                                  PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
                                  DISK_FORMAT_MINFS, "data") != NO_ERROR) {
           printf("WARNING: Problem locating or creating data partition.\n");
@@ -1358,9 +1392,10 @@ int main(int argc, char **argv) {
         closedir(dir);
 
         // add a blobfs partition
-        if (make_empty_partition(install_dev, disk_path, &blobfs_guid,
-                                 PREFERRED_SIZE_DATA, MIN_SIZE_DATA,
-                                 DISK_FORMAT_BLOBFS, "blobfs") != NO_ERROR) {
+        if (make_empty_partition(install_dev, disk_path, path_buffer,
+                                 &blobfs_guid, PREFERRED_SIZE_DATA,
+                                 MIN_SIZE_DATA, DISK_FORMAT_BLOBFS, "blobfs")
+            != NO_ERROR) {
           printf("WARNING: Problem locating or creating blobfs partition.\n");
         } else {
           part_blob_avail = true;
