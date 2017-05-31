@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -37,6 +38,15 @@ static mxtl::RefPtr<VnodeDir> devfs_root = nullptr;
 static mxtl::RefPtr<VnodeDir> bootfs_root = nullptr;
 static mxtl::RefPtr<VnodeDir> systemfs_root = nullptr;
 
+static bool WindowMatchesVMO(mx_handle_t vmo, mx_off_t offset, mx_off_t length) {
+    if (offset != 0)
+        return false;
+    uint64_t size;
+    if (mx_vmo_get_size(vmo, &size) < 0)
+        return false;
+    return size == length;
+}
+
 VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
@@ -60,8 +70,12 @@ VnodeDir::VnodeDir() {
 VnodeDir::~VnodeDir() {}
 
 VnodeVmo::VnodeVmo(mx_handle_t vmo, mx_off_t offset, mx_off_t length) :
-    vmo_(vmo), offset_(offset), length_(length) {}
-VnodeVmo::~VnodeVmo() {}
+    vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {}
+VnodeVmo::~VnodeVmo() {
+    if (have_local_clone_) {
+        mx_handle_close(vmo_);
+    }
+}
 
 mx_status_t VnodeDir::Open(uint32_t flags) {
     switch (flags & O_ACCMODE) {
@@ -77,6 +91,53 @@ mx_status_t VnodeFile::Open(uint32_t flags) {
         return ERR_NOT_DIR;
     }
     return NO_ERROR;
+}
+
+mx_status_t VnodeVmo::Open(uint32_t flags) {
+    if (flags & O_DIRECTORY) {
+        return ERR_NOT_DIR;
+    }
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        return ERR_ACCESS_DENIED;
+    }
+    return NO_ERROR;
+}
+
+mx_status_t VnodeVmo::Serve(mx_handle_t h, uint32_t flags) {
+    mx_handle_close(h);
+    return NO_ERROR;
+}
+
+mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
+                                 uint32_t* type, void* extra, uint32_t* esize) {
+    mx_off_t* off = static_cast<mx_off_t*>(extra);
+    mx_off_t* len = off + 1;
+    mx_handle_t vmo;
+    mx_status_t status;
+    if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
+        status = mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
+        if (status < 0)
+            return status;
+        offset_ = 0;
+        have_local_clone_ = true;
+    }
+    status = mx_handle_duplicate(
+        vmo_,
+        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
+        MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
+        &vmo);
+    if (status < 0)
+        return status;
+    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%" PRIu64 "\n", vmo, vmo_, offset_, length_);
+
+    *off = offset_;
+    *len = length_;
+    hnds[0] = vmo;
+    *type = MXIO_PROTOCOL_VMOFILE;
+    *esize = sizeof(mx_off_t) * 2;
+    return 1;
 }
 
 ssize_t VnodeFile::Read(void* data, size_t len, size_t off) {

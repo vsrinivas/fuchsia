@@ -140,6 +140,7 @@ private:
     mx_handle_t vmo_;
     mx_off_t offset_;
     mx_off_t length_;
+    bool have_local_clone_;
 };
 
 } // namespace memfs

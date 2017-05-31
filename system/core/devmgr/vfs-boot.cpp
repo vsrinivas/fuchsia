@@ -22,45 +22,6 @@
 
 namespace memfs {
 
-mx_status_t VnodeVmo::Open(uint32_t flags) {
-    if (flags & O_DIRECTORY) {
-        return ERR_NOT_DIR;
-    }
-    switch (flags & O_ACCMODE) {
-    case O_WRONLY:
-    case O_RDWR:
-        return ERR_ACCESS_DENIED;
-    }
-    return NO_ERROR;
-}
-
-mx_status_t VnodeVmo::Serve(mx_handle_t h, uint32_t flags) {
-    mx_handle_close(h);
-    return NO_ERROR;
-}
-
-mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
-                                 uint32_t* type, void* extra, uint32_t* esize) {
-    mx_off_t* off = static_cast<mx_off_t*>(extra);
-    mx_off_t* len = off + 1;
-    mx_handle_t vmo;
-    mx_status_t status = mx_handle_duplicate(
-        vmo_,
-        MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-        MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
-        &vmo);
-    if (status < 0)
-        return status;
-    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%" PRIu64 "\n", vmo, vmo_, offset_, length_);
-
-    *off = offset_;
-    *len = length_;
-    hnds[0] = vmo;
-    *type = MXIO_PROTOCOL_VMOFILE;
-    *esize = sizeof(mx_off_t) * 2;
-    return 1;
-}
-
 static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_handle_t vmo,
                             mx_off_t off, size_t len) {
     mx_status_t r;

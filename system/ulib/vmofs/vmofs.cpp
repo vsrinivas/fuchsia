@@ -44,9 +44,14 @@ VnodeFile::VnodeFile(fs::Dispatcher* dispatcher,
                      mx_handle_t vmo,
                      mx_off_t offset,
                      mx_off_t length)
-    : Vnode(dispatcher), vmo_(vmo), offset_(offset), length_(length) {}
+    : Vnode(dispatcher), vmo_(vmo), offset_(offset), length_(length),
+      have_local_clone_(false) {}
 
-VnodeFile::~VnodeFile() = default;
+VnodeFile::~VnodeFile() {
+    if (have_local_clone_) {
+        mx_handle_close(vmo_);
+    }
+}
 
 uint32_t VnodeFile::GetVType() {
     return V_TYPE_FILE;
@@ -98,9 +103,17 @@ mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
     mx_off_t* offset = static_cast<mx_off_t*>(extra);
     mx_off_t* length = offset + 1;
     mx_handle_t vmo;
-    // TODO(abarth): We should clone a restricted range of the VMO to avoid
-    // leaking the whole VMO to the client.
-    mx_status_t status = mx_handle_duplicate(
+    mx_status_t status;
+
+    if (!have_local_clone_) {
+        status = mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, offset_, length_, &vmo_);
+        if (status < 0)
+            return status;
+        offset_ = 0;
+        have_local_clone_ = true;
+    }
+
+    status = mx_handle_duplicate(
         vmo_,
         MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
         MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_GET_PROPERTY,
