@@ -2,7 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("fidl_config") {
+  include_dirs = [ "." ]
+  visibility = [ ":*" ]
+}
+
 source_set("compiler") {
+  public_configs = [ ":fidl_config" ]
   sources = [
     "ast.h",
     "identifier_table.cpp",
