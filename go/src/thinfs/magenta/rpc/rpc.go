@@ -38,38 +38,36 @@ type ThinVFS struct {
 	nextCookie int64
 }
 
-// NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
-func NewServer(filesys fs.FileSystem, h mx.Handle) (*ThinVFS, error) {
-	vfs := &ThinVFS{
+var vfs *ThinVFS
+
+// Creates a new VFS and dispatcher and begin accepting RIO message on it.
+func StartServer(filesys fs.FileSystem, h mx.Handle) error {
+	vfs = &ThinVFS{
 		files: make(map[int64]interface{}),
 		fs:    filesys,
 	}
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		println("Failed to create dispatcher")
-		return vfs, err
+		return err
 	}
 
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
 	if err := d.AddHandler(h, serverHandler, int64(cookie)); err != nil {
 		h.Close()
-		return vfs, err
+		return err
 	}
 	vfs.dispatcher = d
 
 	// We're ready to serve
 	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
 		h.Close()
-		return vfs, err
+		return err
 	}
 
-	return vfs, nil
-}
-
-// Serve begins dispatching rio requests. Serve blocks, so callers will normally want to run it in a new goroutine.
-func (vfs *ThinVFS) Serve() {
-	vfs.dispatcher.Serve()
+	d.Serve()
+	return nil
 }
 
 // AddHandler uses the given handle and cookie as the primary mechanism to communicate with the VFS
