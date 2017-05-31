@@ -41,6 +41,13 @@ static inline bool spin_lock_held(spin_lock_t *lock)
     return arch_spin_lock_held(lock);
 }
 
+/* which cpu currently holds the spin lock */
+/* undefined if the lock is unheld */
+static inline uint spin_lock_holder_cpu(spin_lock_t *lock)
+{
+    return arch_spin_lock_holder_cpu(lock);
+}
+
 /* spin lock irq save flags: */
 
 /* Possible future flags:

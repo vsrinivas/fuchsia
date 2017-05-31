@@ -18,6 +18,7 @@
 #define PERCPU_SAVED_USER_SP_OFFSET    0x28
 #define PERCPU_IN_IRQ_OFFSET           0x30
 #define PERCPU_GPF_RETURN_OFFSET       0x38
+#define PERCPU_CPU_NUM_OFFSET          0x40
 #define PERCPU_DEFAULT_TSS_OFFSET      0x50
 
 #ifndef ASSEMBLY
@@ -81,6 +82,7 @@ static_assert(__offsetof(struct x86_percpu, kernel_sp) == PERCPU_KERNEL_SP_OFFSE
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, in_irq) == PERCPU_IN_IRQ_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, gpf_return_target) == PERCPU_GPF_RETURN_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, cpu_num) == PERCPU_CPU_NUM_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 
 // This needs to be run very early in the boot process from start.S and as

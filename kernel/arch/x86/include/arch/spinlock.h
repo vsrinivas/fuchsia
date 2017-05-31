@@ -21,31 +21,11 @@ typedef x86_flags_t spin_lock_saved_state_t;
 typedef uint spin_lock_save_flags_t;
 
 #if WITH_SMP
-static inline void arch_spin_lock_init(spin_lock_t *lock)
-{
-    *lock = SPIN_LOCK_INITIAL_VALUE;
-}
-
-static inline bool arch_spin_lock_held(spin_lock_t *lock)
-{
-    return *lock != 0;
-}
-
 void arch_spin_lock(spin_lock_t *lock);
 int arch_spin_trylock(spin_lock_t *lock);
 void arch_spin_unlock(spin_lock_t *lock);
 #else
 /* simple implementation of spinlocks for no smp support */
-static inline void arch_spin_lock_init(spin_lock_t *lock)
-{
-    *lock = SPIN_LOCK_INITIAL_VALUE;
-}
-
-static inline bool arch_spin_lock_held(spin_lock_t *lock)
-{
-    return *lock != 0;
-}
-
 static inline void arch_spin_lock(spin_lock_t *lock)
 {
     *lock = 1;
@@ -65,6 +45,21 @@ static inline void arch_spin_unlock(spin_lock_t *lock)
     *lock = 0;
 }
 #endif // WITH_SMP
+
+static inline void arch_spin_lock_init(spin_lock_t *lock)
+{
+    *lock = SPIN_LOCK_INITIAL_VALUE;
+}
+
+static inline bool arch_spin_lock_held(spin_lock_t *lock)
+{
+    return __atomic_load_n(lock, __ATOMIC_RELAXED) != 0;
+}
+
+static inline uint arch_spin_lock_holder_cpu(spin_lock_t *lock)
+{
+    return (uint)__atomic_load_n(lock, __ATOMIC_RELAXED) - 1;
+}
 
 /* flags are unused on x86 */
 #define ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS  0

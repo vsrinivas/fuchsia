@@ -43,6 +43,7 @@ static inline void arch_spin_unlock(spin_lock_t *lock)
 {
     *lock = 0;
 }
+
 #endif
 
 static inline void arch_spin_lock_init(spin_lock_t *lock)
@@ -52,7 +53,12 @@ static inline void arch_spin_lock_init(spin_lock_t *lock)
 
 static inline bool arch_spin_lock_held(spin_lock_t *lock)
 {
-    return *lock != 0;
+    return __atomic_load_n(lock, __ATOMIC_RELAXED) != 0;
+}
+
+static inline uint arch_spin_lock_holder_cpu(spin_lock_t *lock)
+{
+    return (uint)__atomic_load_n(lock, __ATOMIC_RELAXED) - 1;
 }
 
 enum {

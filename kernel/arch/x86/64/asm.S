@@ -33,15 +33,21 @@ FUNCTION(x86_64_context_switch)
     retq
 
 #if WITH_SMP
+#include <arch/x86/mp.h>
+
 /* void arch_spin_lock(unsigned long *lock) */
 FUNCTION(arch_spin_lock)
+    /* fetch the current cpu number + 1 */
+    mov %gs:PERCPU_CPU_NUM_OFFSET, %rsi
+    inc %rsi
+
 .Lspin:
     cmpq $0, (%rdi)
     je .Ltake_lock
     pause
     jmp .Lspin
 .Ltake_lock:
-    mov $1, %rax
+    mov %rsi, %rax
     xchg %rax, (%rdi)
     cmp $0, %rax // make sure we actually got the lock
     jne .Lspin // if we lost the race, resume waiting
@@ -49,7 +55,10 @@ FUNCTION(arch_spin_lock)
 
 /* int arch_spin_trylock(unsigned long *lock) */
 FUNCTION(arch_spin_trylock)
-    mov $1, %rax
+    /* fetch the current cpu number + 1 */
+    mov %gs:PERCPU_CPU_NUM_OFFSET, %rax
+    inc %rax
+
     xchg %rax, (%rdi)
     ret // return 0 if we got the lock
 

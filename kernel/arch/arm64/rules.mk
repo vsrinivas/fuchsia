@@ -27,7 +27,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/hypervisor.cpp \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
-	$(LOCAL_DIR)/spinlock.S \
+	$(LOCAL_DIR)/spinlock.cpp \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/thread.cpp \
 	$(LOCAL_DIR)/user_copy.S \
