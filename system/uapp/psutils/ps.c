@@ -59,7 +59,8 @@ typedef struct {
 } task_table_t;
 
 // Adds a task entry to the specified table. |*entry| is copied.
-static void add_entry(task_table_t* table, const task_entry_t* entry) {
+// Returns a pointer to the new table entry.
+task_entry_t* add_entry(task_table_t* table, const task_entry_t* entry) {
     if (table->num_entries + 1 >= table->capacity) {
         size_t new_cap = table->capacity * 2;
         if (new_cap < 128) {
@@ -68,11 +69,17 @@ static void add_entry(task_table_t* table, const task_entry_t* entry) {
         table->entries = realloc(table->entries, new_cap * sizeof(*entry));
         table->capacity = new_cap;
     }
-    table->entries[table->num_entries++] = *entry;
+    table->entries[table->num_entries] = *entry;
+    return table->entries + table->num_entries++;
 }
 
 // The array of tasks built by the callbacks.
 static task_table_t tasks = {};
+
+// The current stack of ancestor jobs, indexed by depth.
+// process_callback may touch any entry whose depth is less that its own.
+#define JOB_STACK_SIZE 128
+static task_entry_t* job_stack[JOB_STACK_SIZE];
 
 // Adds a job's information to |tasks|.
 static mx_status_t job_callback(int depth, mx_handle_t job,
@@ -81,11 +88,16 @@ static mx_status_t job_callback(int depth, mx_handle_t job,
     mx_status_t status =
         mx_object_get_property(job, MX_PROP_NAME, e.name, sizeof(e.name));
     if (status != NO_ERROR) {
+        // This will abort walk_job_tree(), so we don't need to worry
+        // about job_stack.
         return status;
     }
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
-    add_entry(&tasks, &e);
+
+    // Put our entry pointer on the job stack so our descendants can find us.
+    assert(depth < JOB_STACK_SIZE);
+    job_stack[depth] = add_entry(&tasks, &e);
     return NO_ERROR;
 }
 
@@ -114,6 +126,17 @@ static mx_status_t process_callback(int depth, mx_handle_t process,
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     add_entry(&tasks, &e);
+
+    // Update our ancestor jobs.
+    assert(depth > 0);
+    assert(depth < JOB_STACK_SIZE);
+    for (int i = 0; i < depth; i++) {
+        task_entry_t* job = job_stack[i];
+        job->pss_bytes += info.mem_private_bytes + info.mem_scaled_shared_bytes;
+        job->private_bytes += info.mem_private_bytes;
+        // shared_bytes doesn't mean much as a sum, so leave it at zero.
+    }
+
     return NO_ERROR;
 }
 
@@ -201,22 +224,18 @@ static void print_table(task_table_t* table, bool with_threads) {
         snprintf(idbuf, id_w + 1,
                  "%*s%c:%s", e->depth * 2, "", e->type, e->koid_str);
 
-        char pss_bytes_str[MAX_FORMAT_SIZE_LEN];
-        char private_bytes_str[MAX_FORMAT_SIZE_LEN];
-        char shared_bytes_str[MAX_FORMAT_SIZE_LEN];
-        if (e->pss_bytes > 0 || e->private_bytes > 0 || e->shared_bytes > 0) {
-            // If any of the values are set, show all of them.
-            format_size(pss_bytes_str, sizeof(pss_bytes_str),
-                        e->pss_bytes);
+        // Format the size fields for entry types that need them.
+        char pss_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
+        char private_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
+        if (e->type == 'j' || e->type == 'p') {
+            format_size(pss_bytes_str, sizeof(pss_bytes_str), e->pss_bytes);
             format_size(private_bytes_str, sizeof(private_bytes_str),
                         e->private_bytes);
+        }
+        char shared_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
+        if (e->type == 'p') {
             format_size(shared_bytes_str, sizeof(shared_bytes_str),
                         e->shared_bytes);
-        } else {
-            // If none of the values are set, don't print anything.
-            pss_bytes_str[0] = '\0';
-            private_bytes_str[0] = '\0';
-            shared_bytes_str[0] = '\0';
         }
 
         if (with_threads) {
@@ -253,12 +272,16 @@ static void print_json(task_table_t* table) {
                    "\"type\": \"%c\", "
                    "\"koid\": %s, "
                    "\"parent\": %s, "
-                   "\"name\": \"%s\""
+                   "\"name\": \"%s\", "
+                   "\"private_bytes\": %zu, "
+                   "\"pss_bytes\": %zu"
                    "}%s\n",
                    e->type,
                    e->koid_str,
                    e->parent_koid_str,
                    e->name,
+                   e->private_bytes,
+                   e->pss_bytes,
                    delimiter);
         } else if (e->type == 'p') {
             printf("  {"

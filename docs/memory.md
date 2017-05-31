@@ -22,21 +22,21 @@ Use the `ps` tool:
 ```
 $ ps
 TASK           PSS PRIVATE  SHARED NAME
-j:1028                             root
-  p:1041   1390.7k   1388k     32k bin/devmgr
-  j:1080                           magenta-drivers
-    p:1260  774.7k    772k     32k /boot/bin/acpisvc
-    p:1554  242.7k    240k     32k devhost:root
-    p:1598  642.7k    640k     32k devhost:misc
-    p:1668  258.7k    256k     32k devhost:platform
-    p:1852 3914.7k   3912k     32k devhost:pci#1:1234:1111
-    p:1925   24.4M   24.4M     32k devhost:pci#3:8086:2922
-  j:1101                           magenta-services
-    p:1102  294.7k    292k     32k crashlogger
-    p:1207  234.7k    232k     32k netsvc
-    p:2210  362.7k    360k     32k sh:console
-    p:2327  258.7k    256k     32k sh:vc
-    p:2430  322.7k    320k     32k /boot/bin/ps
+j:1028       32.9M   32.8M         root
+  p:1043   1386.3k   1384k     28k bin/devmgr
+  j:1082     30.0M   30.0M         magenta-drivers
+    p:1209  774.3k    772k     28k /boot/bin/acpisvc
+    p:1565  250.3k    248k     28k devhost:root
+    p:1619  654.3k    652k     28k devhost:misc
+    p:1688  258.3k    256k     28k devhost:platform
+    p:1867 3878.3k   3876k     28k devhost:pci#1:1234:1111
+    p:1916   24.4M   24.4M     28k devhost:pci#3:8086:2922
+  j:1103   1475.7k   1464k         magenta-services
+    p:1104  298.3k    296k     28k crashlogger
+    p:1290  242.3k    240k     28k netsvc
+    p:2115  362.3k    360k     28k sh:console
+    p:2334  266.3k    264k     28k sh:vc
+    p:2441  306.3k    304k     28k /boot/bin/ps
 TASK           PSS PRIVATE  SHARED NAME
 ```
 
