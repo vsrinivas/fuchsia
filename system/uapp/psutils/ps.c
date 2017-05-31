@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STATE_LEN (7 + 1) // +1 for trailing NUL
+#define MAX_STATE_LEN (7 + 1)                       // +1 for trailing NUL
 #define MAX_KOID_LEN sizeof("18446744073709551616") // 1<<64 + NUL
 
 static const char kJSONSchema[] =
@@ -40,18 +40,15 @@ static const char kJSONSchema[] =
 
 // A single task (job or process).
 typedef struct {
-    char type;                                     // 'j' (job), 'p' (process), or 't' (thread)
+    char type; // 'j' (job), 'p' (process), or 't' (thread)
     char koid_str[MAX_KOID_LEN];
     char parent_koid_str[MAX_KOID_LEN];
     int depth;
     char name[MX_MAX_NAME_LEN];
     char state_str[MAX_STATE_LEN];
-    size_t private_bytes;
-    char private_bytes_str[MAX_FORMAT_SIZE_LEN];
-    size_t shared_bytes;
-    char shared_bytes_str[MAX_FORMAT_SIZE_LEN];
     size_t pss_bytes;
-    char pss_bytes_str[MAX_FORMAT_SIZE_LEN];
+    size_t private_bytes;
+    size_t shared_bytes;
 } task_entry_t;
 
 // An array of tasks.
@@ -78,7 +75,8 @@ static void add_entry(task_table_t* table, const task_entry_t* entry) {
 static task_table_t tasks = {};
 
 // Adds a job's information to |tasks|.
-static mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid, mx_koid_t parent_koid) {
+static mx_status_t job_callback(int depth, mx_handle_t job,
+                                mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 'j', .depth = depth};
     mx_status_t status =
         mx_object_get_property(job, MX_PROP_NAME, e.name, sizeof(e.name));
@@ -92,7 +90,8 @@ static mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid, mx_k
 }
 
 // Adds a process's information to |tasks|.
-static mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid, mx_koid_t parent_koid) {
+static mx_status_t process_callback(int depth, mx_handle_t process,
+                                    mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 'p', .depth = depth};
     mx_status_t status =
         mx_object_get_property(process, MX_PROP_NAME, e.name, sizeof(e.name));
@@ -103,17 +102,15 @@ static mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t ko
     status = mx_object_get_info(
         process, MX_INFO_TASK_STATS, &info, sizeof(info), NULL, NULL);
     if (status == ERR_BAD_STATE) {
-        // process has exited, but has not been destroyed
-        info.mem_mapped_bytes = 0;
+        // Process has exited, but has not been destroyed.
+        // Default to zero for all sizes.
     } else if (status != NO_ERROR) {
         return status;
+    } else {
+        e.private_bytes = info.mem_private_bytes;
+        e.shared_bytes = info.mem_shared_bytes;
+        e.pss_bytes = info.mem_private_bytes + info.mem_scaled_shared_bytes;
     }
-    e.private_bytes = info.mem_private_bytes;
-    e.shared_bytes = info.mem_shared_bytes;
-    e.pss_bytes = info.mem_private_bytes + info.mem_scaled_shared_bytes;
-    format_size(e.private_bytes_str, sizeof(e.private_bytes_str), e.private_bytes);
-    format_size(e.shared_bytes_str, sizeof(e.shared_bytes_str), e.shared_bytes);
-    format_size(e.pss_bytes_str, sizeof(e.pss_bytes_str), e.pss_bytes);
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     add_entry(&tasks, &e);
@@ -145,7 +142,8 @@ static const char* state_string(const mx_info_thread_t* info) {
 }
 
 // Adds a thread's information to |tasks|.
-static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid, mx_koid_t parent_koid) {
+static mx_status_t thread_callback(int depth, mx_handle_t thread,
+                                   mx_koid_t koid, mx_koid_t parent_koid) {
     task_entry_t e = {.type = 't', .depth = depth};
     mx_status_t status =
         mx_object_get_property(thread, MX_PROP_NAME, e.name, sizeof(e.name));
@@ -153,7 +151,8 @@ static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid
         return status;
     }
     mx_info_thread_t info;
-    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
+    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info),
+                                NULL, NULL);
     if (status != NO_ERROR) {
         return status;
     }
@@ -201,20 +200,39 @@ static void print_table(task_table_t* table, bool with_threads) {
         }
         snprintf(idbuf, id_w + 1,
                  "%*s%c:%s", e->depth * 2, "", e->type, e->koid_str);
+
+        char pss_bytes_str[MAX_FORMAT_SIZE_LEN];
+        char private_bytes_str[MAX_FORMAT_SIZE_LEN];
+        char shared_bytes_str[MAX_FORMAT_SIZE_LEN];
+        if (e->pss_bytes > 0 || e->private_bytes > 0 || e->shared_bytes > 0) {
+            // If any of the values are set, show all of them.
+            format_size(pss_bytes_str, sizeof(pss_bytes_str),
+                        e->pss_bytes);
+            format_size(private_bytes_str, sizeof(private_bytes_str),
+                        e->private_bytes);
+            format_size(shared_bytes_str, sizeof(shared_bytes_str),
+                        e->shared_bytes);
+        } else {
+            // If none of the values are set, don't print anything.
+            pss_bytes_str[0] = '\0';
+            private_bytes_str[0] = '\0';
+            shared_bytes_str[0] = '\0';
+        }
+
         if (with_threads) {
             printf("%*s %7s %7s %7s %7s %s\n",
                    -id_w, idbuf,
-                   e->pss_bytes_str,
-                   e->private_bytes_str,
-                   e->shared_bytes_str,
+                   pss_bytes_str,
+                   private_bytes_str,
+                   shared_bytes_str,
                    e->state_str,
                    e->name);
         } else {
             printf("%*s %7s %7s %7s %s\n",
                    -id_w, idbuf,
-                   e->pss_bytes_str,
-                   e->private_bytes_str,
-                   e->shared_bytes_str,
+                   pss_bytes_str,
+                   private_bytes_str,
+                   shared_bytes_str,
                    e->name);
         }
     }
@@ -232,48 +250,48 @@ static void print_json(task_table_t* table) {
 
         if (e->type == 'j') {
             printf("  {"
-                "\"type\": \"%c\", "
-                "\"koid\": %s, "
-                "\"parent\": %s, "
-                "\"name\": \"%s\""
-                "}%s\n",
-                e->type,
-                e->koid_str,
-                e->parent_koid_str,
-                e->name,
-                delimiter);
+                   "\"type\": \"%c\", "
+                   "\"koid\": %s, "
+                   "\"parent\": %s, "
+                   "\"name\": \"%s\""
+                   "}%s\n",
+                   e->type,
+                   e->koid_str,
+                   e->parent_koid_str,
+                   e->name,
+                   delimiter);
         } else if (e->type == 'p') {
             printf("  {"
-                "\"type\": \"%c\", "
-                "\"koid\": %s, "
-                "\"parent\": %s, "
-                "\"name\": \"%s\", "
-                "\"private_bytes\": %zu, "
-                "\"shared_bytes\": %zu, "
-                "\"pss_bytes\": %zu"
-                "}%s\n",
-                e->type,
-                e->koid_str,
-                e->parent_koid_str,
-                e->name,
-                e->private_bytes,
-                e->shared_bytes,
-                e->pss_bytes,
-                delimiter);
+                   "\"type\": \"%c\", "
+                   "\"koid\": %s, "
+                   "\"parent\": %s, "
+                   "\"name\": \"%s\", "
+                   "\"private_bytes\": %zu, "
+                   "\"shared_bytes\": %zu, "
+                   "\"pss_bytes\": %zu"
+                   "}%s\n",
+                   e->type,
+                   e->koid_str,
+                   e->parent_koid_str,
+                   e->name,
+                   e->private_bytes,
+                   e->shared_bytes,
+                   e->pss_bytes,
+                   delimiter);
         } else if (e->type == 't') {
             printf("  {"
-                "\"type\": \"%c\", "
-                "\"koid\": %s, "
-                "\"parent\": %s, "
-                "\"name\": \"%s\", "
-                "\"state\": \"%s\""
-                "}%s\n",
-                e->type,
-                e->koid_str,
-                e->parent_koid_str,
-                e->name,
-                e->state_str,
-                delimiter);
+                   "\"type\": \"%c\", "
+                   "\"koid\": %s, "
+                   "\"parent\": %s, "
+                   "\"name\": \"%s\", "
+                   "\"state\": \"%s\""
+                   "}%s\n",
+                   e->type,
+                   e->koid_str,
+                   e->parent_koid_str,
+                   e->name,
+                   e->state_str,
+                   delimiter);
         } else {
             fprintf(stderr, "ERROR: unknown task type: %c\n", e->type);
         }
@@ -288,7 +306,7 @@ static void print_help(FILE* f) {
     // -T for compatibility with linux ps
     fprintf(f, " -T             Include threads in the output\n");
     fprintf(f, " --json         Print output in JSON\n");
-    fprintf(f, " --json-schema  Print a scheme for the JSON output format\n");
+    fprintf(f, " --json-schema  Print a schema for the JSON output format\n");
 }
 
 int main(int argc, char** argv) {
@@ -316,8 +334,9 @@ int main(int argc, char** argv) {
     }
 
     int ret = 0;
-    mx_status_t status = walk_root_job_tree(job_callback, process_callback,
-                                            with_threads ? thread_callback : NULL);
+    mx_status_t status =
+        walk_root_job_tree(job_callback, process_callback,
+                           with_threads ? thread_callback : NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "WARNING: walk_root_job_tree failed: %s (%d)\n",
                 mx_status_get_string(status), status);
