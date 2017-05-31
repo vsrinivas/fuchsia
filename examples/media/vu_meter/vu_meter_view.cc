@@ -53,6 +53,7 @@ VuMeterView::VuMeterView(
 
   media_capturer_.set_connection_error_handler([this]() {
     FTL_LOG(ERROR) << "Connection error occurred. Quitting.";
+    media_capturer_.reset();
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 

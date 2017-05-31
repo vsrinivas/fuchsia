@@ -116,6 +116,7 @@ void MediaPacketConsumerBase::Reset() {
   bool unbind = binding_.is_bound();
 
   if (unbind) {
+    binding_.set_connection_error_handler(nullptr);
     binding_.Close();
   }
 

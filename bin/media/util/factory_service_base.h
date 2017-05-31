@@ -48,7 +48,11 @@ class FactoryServiceBase {
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FTL_DCHECK(impl);
       Retain();
-      binding_.set_connection_error_handler([this]() { Release(); });
+      binding_.set_connection_error_handler([this]() {
+        binding_.set_connection_error_handler(nullptr);
+        binding_.Close();
+        Release();
+      });
     }
 
     // Returns the binding established via the request in the constructor.

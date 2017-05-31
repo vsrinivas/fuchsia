@@ -34,7 +34,10 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
                                            std::move(validators),
                                            fidl::GetDefaultAsyncWaiter()));
   router_->set_incoming_receiver(this);
-  router_->set_connection_error_handler([this]() { ReleaseFromOwner(); });
+  router_->set_connection_error_handler([this]() {
+    router_.reset();
+    ReleaseFromOwner();
+  });
 }
 
 FlogLoggerImpl::~FlogLoggerImpl() {}

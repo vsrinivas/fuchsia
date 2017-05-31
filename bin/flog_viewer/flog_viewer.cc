@@ -24,6 +24,7 @@ void FlogViewer::Initialize(app::ApplicationContext* application_context,
   service_ = application_context->ConnectToEnvironmentService<FlogService>();
   service_.set_connection_error_handler([this]() {
     FTL_LOG(ERROR) << "FlogService connection failed";
+    service_.reset();
     terminate_callback_();
   });
 }
