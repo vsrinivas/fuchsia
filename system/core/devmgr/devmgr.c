@@ -42,9 +42,6 @@ static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
 
-static mx_handle_t application_launcher_child;
-mx_handle_t application_launcher;
-
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
@@ -246,13 +243,6 @@ int devmgr_start_system_init(void* arg) {
         unsigned int init_hnd_count = 0;
         mx_handle_t init_hnds[2] = {};
         uint32_t init_ids[2] = {};
-        if (application_launcher_child) {
-            assert(init_hnd_count < countof(init_hnds));
-            init_hnds[init_hnd_count] = application_launcher_child;
-            init_ids[init_hnd_count] = PA_HND(PA_APP_LAUNCHER, 0);
-            init_hnd_count++;
-            application_launcher_child = 0;
-        }
         if (svc_request_handle) {
             assert(init_hnd_count < countof(init_hnds));
             init_hnds[init_hnd_count] = svc_request_handle;
@@ -481,7 +471,6 @@ int main(int argc, char** argv) {
                       NULL, -1, NULL, NULL, 0);
     }
 
-    mx_channel_create(0, &application_launcher, &application_launcher_child);
     mx_channel_create(0, &svc_root_handle, &svc_request_handle);
 
     start_console_shell();

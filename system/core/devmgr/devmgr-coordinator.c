@@ -23,8 +23,6 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static void dc_dump_state(void);
 
-extern mx_handle_t application_launcher;
-
 static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if (len == 4) {
         if (!memcmp(cmd, "dump", 4)) {
@@ -72,9 +70,6 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
-    }
-    if ((len > 1) && (cmd[0] == '@')) {
-        return mx_channel_write(application_launcher, 0, cmd, len, NULL, 0);
     }
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ERR_NOT_SUPPORTED;
