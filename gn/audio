@@ -24,6 +24,10 @@
         {
             "binary": "libaudio-dispatcher-pool.so",
             "bootfs_path": "lib/libaudio-dispatcher-pool.so"
+        },
+        {
+            "binary": "libusb-audio.so",
+            "bootfs_path": "lib/driver/libusb-audio.so"
         }
     ]
 }
