@@ -147,6 +147,8 @@ func errorToRIO(err error) mx.Status {
 		return mx.ErrNotFile
 	case fs.ErrNotADir:
 		return mx.ErrNotDir
+	case fs.ErrNotSupported:
+		return mx.ErrNotSupported
 	default:
 		return mx.ErrInternal
 	}

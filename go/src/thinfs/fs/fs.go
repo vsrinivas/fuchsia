@@ -58,6 +58,9 @@ var (
 
 	// ErrEOF indicates that an operation ended because the end the file / directory was reached
 	ErrEOF = errors.New("EOF hit before operation completed")
+
+	// ErrNotSupported indicates that the requested operation is not supported
+	ErrNotSupported = errors.New("operation not supported")
 )
 
 // FileType describes the type of a given file.
