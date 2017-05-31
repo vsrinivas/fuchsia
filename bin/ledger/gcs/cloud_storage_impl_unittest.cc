@@ -85,7 +85,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   SetResponse("", 0, 200);
   Status status;
   gcs_.UploadObject(
-      "hello-world", std::move(data),
+      "", "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -117,6 +117,24 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("0", if_generation_match_header->value);
 }
 
+TEST_F(CloudStorageImplTest, TestUploadAuth) {
+  std::string content = "Hello World\n";
+  mx::vmo data;
+  ASSERT_TRUE(mtl::VmoFromString(content, &data));
+
+  SetResponse("", 0, 200);
+  Status status;
+  gcs_.UploadObject(
+      "this-is-a-token", "hello-world", std::move(data),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  network::HttpHeaderPtr authorization_header =
+      GetHeader(fake_network_service_.GetRequest()->headers, "authorization");
+  EXPECT_TRUE(authorization_header);
+  EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);
+}
+
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   std::string content = "";
   mx::vmo data;
@@ -125,7 +143,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
 
   Status status;
   gcs_.UploadObject(
-      "hello-world", std::move(data),
+      "", "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -140,8 +158,9 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &size, &data));
+      "", "hello-world",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -157,6 +176,25 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ(size, content.size());
 }
 
+TEST_F(CloudStorageImplTest, TestDownloadAuth) {
+  const std::string content = "Hello World\n";
+  SetResponse(content, content.size(), 200);
+
+  Status status;
+  uint64_t size;
+  mx::socket data;
+  gcs_.DownloadObject(
+      "this-is-a-token", "hello-world",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  network::HttpHeaderPtr authorization_header =
+      GetHeader(fake_network_service_.GetRequest()->headers, "authorization");
+  EXPECT_TRUE(authorization_header);
+  EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);
+}
+
 TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   SetResponse("", 0, 404);
 
@@ -164,8 +202,9 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "whoa", callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                &status, &size, &data));
+      "", "whoa",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);
@@ -184,8 +223,9 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                       &status, &size, &data));
+      "", "hello-world",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   std::string downloaded_content;

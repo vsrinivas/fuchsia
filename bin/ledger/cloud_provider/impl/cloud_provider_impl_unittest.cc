@@ -41,7 +41,8 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   ~CloudProviderImplTest() override {}
 
   // gcs::CloudStorage:
-  void UploadObject(const std::string& key,
+  void UploadObject(std::string auth_token,
+                    const std::string& key,
                     mx::vmo data,
                     const std::function<void(gcs::Status)>& callback) override {
     upload_keys_.push_back(key);
@@ -51,6 +52,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   }
 
   void DownloadObject(
+      std::string auth_token,
       const std::string& key,
       const std::function<
           void(gcs::Status status, uint64_t size, mx::socket data)>& callback)

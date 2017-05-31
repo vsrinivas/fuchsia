@@ -28,11 +28,13 @@ class CloudStorageImpl : public CloudStorage {
   ~CloudStorageImpl() override;
 
   // CloudStorage implementation.
-  void UploadObject(const std::string& key,
+  void UploadObject(std::string auth_token,
+                    const std::string& key,
                     mx::vmo data,
                     const std::function<void(Status)>& callback) override;
 
   void DownloadObject(
+      std::string auth_token,
       const std::string& key,
       const std::function<void(Status status, uint64_t size, mx::socket data)>&
           callback) override;

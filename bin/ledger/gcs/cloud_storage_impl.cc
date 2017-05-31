@@ -28,6 +28,7 @@ namespace gcs {
 
 namespace {
 
+const char kAuthorizationHeader[] = "authorization";
 const char kContentLengthHeader[] = "content-length";
 
 constexpr ftl::StringView kApiEndpoint =
@@ -43,6 +44,13 @@ network::HttpHeaderPtr GetHeader(
     }
   }
   return nullptr;
+}
+
+network::HttpHeaderPtr MakeAuthorizationHeader(const std::string& auth_token) {
+  network::HttpHeaderPtr authorization_header = network::HttpHeader::New();
+  authorization_header->name = kAuthorizationHeader;
+  authorization_header->value = "Bearer " + auth_token;
+  return authorization_header;
 }
 
 void RunUploadObjectCallback(const std::function<void(Status)>& callback,
@@ -75,6 +83,7 @@ CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadObject(
+    std::string auth_token,
     const std::string& key,
     mx::vmo data,
     const std::function<void(Status)>& callback) {
@@ -89,13 +98,18 @@ void CloudStorageImpl::UploadObject(
   }
 
   auto request_factory = ftl::MakeCopyable([
-    url = std::move(url), task_runner = task_runner_, data = std::move(data),
-    data_size
+    auth_token = std::move(auth_token), url = std::move(url),
+    task_runner = task_runner_, data = std::move(data), data_size
   ] {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
     request->method = "POST";
     request->auto_follow_redirects = true;
+
+    // Authorization header.
+    if (!auth_token.empty()) {
+      request->headers.push_back(MakeAuthorizationHeader(auth_token));
+    }
 
     // Content-Length header.
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
@@ -126,24 +140,27 @@ void CloudStorageImpl::UploadObject(
 }
 
 void CloudStorageImpl::DownloadObject(
+    std::string auth_token,
     const std::string& key,
     const std::function<void(Status status, uint64_t size, mx::socket data)>&
         callback) {
   std::string url = GetDownloadUrl(key);
 
-  Request(
-      [url = std::move(url)] {
-        network::URLRequestPtr request(network::URLRequest::New());
-        request->url = url;
-        request->method = "GET";
-        request->auto_follow_redirects = true;
-        return request;
-      },
-      [ this, callback = std::move(callback) ](
-          Status status, network::URLResponsePtr response) {
-        OnDownloadResponseReceived(std::move(callback), status,
-                                   std::move(response));
-      });
+  Request([ auth_token = std::move(auth_token), url = std::move(url) ] {
+    network::URLRequestPtr request(network::URLRequest::New());
+    request->url = url;
+    request->method = "GET";
+    request->auto_follow_redirects = true;
+    if (!auth_token.empty()) {
+      request->headers.push_back(MakeAuthorizationHeader(auth_token));
+    }
+    return request;
+  },
+          [ this, callback = std::move(callback) ](
+              Status status, network::URLResponsePtr response) {
+            OnDownloadResponseReceived(std::move(callback), status,
+                                       std::move(response));
+          });
 }
 
 std::string CloudStorageImpl::GetDownloadUrl(ftl::StringView key) {
