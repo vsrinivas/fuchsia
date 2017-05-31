@@ -86,7 +86,7 @@ void CloudProviderImpl::AddObject(ObjectIdView object_id,
   // encoding, as it happens to produce valid GCS object names. To be revisited
   // when we redo the encoding in LE-118.
   cloud_storage_->UploadObject(
-      firebase::EncodeKey(object_id), {},
+      firebase::EncodeKey(object_id),
       std::move(data), [callback = std::move(callback)](gcs::Status status) {
         callback(ConvertGcsStatus(status));
       });
@@ -97,9 +97,9 @@ void CloudProviderImpl::GetObject(
     std::function<void(Status status, uint64_t size, mx::socket data)>
         callback) {
   cloud_storage_->DownloadObject(
-      firebase::EncodeKey(object_id), {},
-      [callback = std::move(callback)](gcs::Status status, uint64_t size,
-                                       mx::socket data) {
+      firebase::EncodeKey(object_id), [callback = std::move(callback)](
+                                          gcs::Status status, uint64_t size,
+                                          mx::socket data) {
         callback(ConvertGcsStatus(status), size, std::move(data));
       });
 }

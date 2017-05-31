@@ -21,13 +21,11 @@ class CloudStorage {
   virtual ~CloudStorage(){};
 
   virtual void UploadObject(const std::string& key,
-                            const std::vector<std::string>& query_params,
                             mx::vmo data,
                             const std::function<void(Status)>& callback) = 0;
 
   virtual void DownloadObject(
       const std::string& key,
-      const std::vector<std::string>& query_params,
       const std::function<void(Status status, uint64_t size, mx::socket data)>&
           callback) = 0;
 

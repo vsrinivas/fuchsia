@@ -85,7 +85,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   SetResponse("", 0, 200);
   Status status;
   gcs_.UploadObject(
-      "hello-world", {}, std::move(data),
+      "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -117,25 +117,6 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("0", if_generation_match_header->value);
 }
 
-TEST_F(CloudStorageImplTest, TestUploadQueryParams) {
-  std::string content = "Hello World\n";
-  mx::vmo data;
-  ASSERT_TRUE(mtl::VmoFromString(content, &data));
-
-  SetResponse("", 0, 200);
-  Status status;
-  gcs_.UploadObject(
-      "bla", {"some_param", "other_param=42"}, std::move(data),
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(
-      "https://firebasestorage.googleapis.com"
-      "/v0/b/project.appspot.com/o/prefixbla?some_param&other_param=42",
-      fake_network_service_.GetRequest()->url);
-}
-
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   std::string content = "";
   mx::vmo data;
@@ -144,7 +125,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
 
   Status status;
   gcs_.UploadObject(
-      "hello-world", {}, std::move(data),
+      "hello-world", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -159,9 +140,8 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "hello-world", {},
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                       &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -177,27 +157,6 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ(size, content.size());
 }
 
-TEST_F(CloudStorageImplTest, TestDownloadQueryParams) {
-  const std::string content = "Hello World\n";
-  SetResponse(content, content.size(), 200);
-
-  Status status;
-  uint64_t size;
-  mx::socket data;
-  gcs_.DownloadObject(
-      "bla", {"some_param", "other_param=42"},
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
-  ASSERT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(
-      "https://firebasestorage.googleapis.com"
-      "/v0/b/project.appspot.com/o/prefixbla"
-      "?some_param&other_param=42&alt=media",
-      fake_network_service_.GetRequest()->url);
-}
-
 TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   SetResponse("", 0, 404);
 
@@ -205,9 +164,8 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "whoa", {},
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      "whoa", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);
@@ -226,9 +184,8 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   uint64_t size;
   mx::socket data;
   gcs_.DownloadObject(
-      "hello-world", {},
-      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &size, &data));
+      "hello-world", callback::Capture([this] { message_loop_.PostQuitTask(); },
+                                       &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   std::string downloaded_content;
