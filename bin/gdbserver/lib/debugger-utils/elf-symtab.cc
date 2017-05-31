@@ -98,7 +98,7 @@ void SymbolTable::Finalize() {
   qsort(symbols_, num_symbols_, sizeof(Symbol), CompareSymbol);
 }
 
-const Symbol* SymbolTable::FindSymbol(uintptr_t addr) const {
+const Symbol* SymbolTable::FindSymbol(uint64_t addr) const {
   Symbol search = {.addr = addr};
 
   /* add last hit cache here */
