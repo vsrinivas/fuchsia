@@ -14,11 +14,11 @@ class BasicTextListener : ContextListener {
  public:
   BasicTextListener()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(
-            app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this) {
-    FTL_LOG(INFO) << "[Basic Text Listener] " << "Initializing";
+    FTL_LOG(INFO) << "Initializing";
     auto query = ContextQuery::New();
+    query->topics.push_back("raw/text");
     provider_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
@@ -27,12 +27,11 @@ class BasicTextListener : ContextListener {
   void OnUpdate(ContextUpdatePtr result) override {
     const auto& values = result.get()->values;
     for (auto it = values.cbegin(); it != values.cend(); ++it) {
-      FTL_LOG(INFO) << "[Basic Text Listener] " << it.GetKey() << ":" << it.GetValue();
-      std::cout << it.GetKey() << ":" << it.GetValue();
+      FTL_LOG(INFO) << it.GetKey() << " : " << it.GetValue();
     }
   }
-  std::unique_ptr<app::ApplicationContext> app_context_;
 
+  std::unique_ptr<app::ApplicationContext> app_context_;
   ContextProviderPtr provider_;
   fidl::Binding<ContextListener> binding_;
 };
