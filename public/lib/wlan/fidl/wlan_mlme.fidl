@@ -77,6 +77,8 @@ struct ScanResponse {
     ScanResultCodes result_code;
 };
 
+// MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
+
 struct JoinRequest {
     BSSDescription selected_bss;
     uint32 join_failure_timeout;
@@ -86,6 +88,8 @@ struct JoinRequest {
     // etc
 };
 
+// MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
+
 enum JoinResultCodes {
     SUCCESS,
     JOIN_FAILURE_TIMEOUT,
@@ -94,6 +98,44 @@ enum JoinResultCodes {
 
 struct JoinResponse {
     JoinResultCodes result_code;
+};
+
+// MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
+
+enum AuthenticationTypes {
+    OPEN_SYSTEM,
+    SHARED_KEY,
+    FAST_BSS_TRANSITION,
+    SAE,
+    LAST = SAE,
+};
+
+struct AuthenticateRequest {
+    array<uint8, 6> peer_sta_address;
+    AuthenticationTypes auth_type;
+    uint32 auth_failure_timeout;
+
+    // etc
+};
+
+// MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
+
+enum AuthenticateResultCodes {
+    SUCCESS,
+    REFUSED,
+    ANTI_CLOGGING_TOKEN_REQUIRED,
+    FINITE_CYCLIC_GROUP_NOT_SUPPORTED,
+    AUTHENTICATION_REJECTED,
+    AUTH_FAILURE_TIMEOUT,
+    LAST = AUTH_FAILURE_TIMEOUT,
+};
+
+struct AuthenticateResponse {
+    array<uint8, 6> peer_sta_address;
+    AuthenticationTypes auth_type;
+    AuthenticateResultCodes result_code;
+
+    // etc
 };
 
 // Method ordinals
@@ -115,5 +157,13 @@ enum Method {
     // Args: JoinResponse
     JOIN_confirm,
 
-    LAST = JOIN_confirm,
+    // MLME-AUTHENTICATE.request
+    // Args: AuthenticateRequest
+    AUTHENTICATE_request,
+
+    // MLME-AUTHENTICATE.confirm
+    // Args: AuthenticateResponse
+    AUTHENTICATE_confirm,
+
+    LAST = AUTHENTICATE_confirm,
 };

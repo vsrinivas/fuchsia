@@ -273,7 +273,57 @@ func (c *Client) doAuthenticate() error {
 		log.Printf("doAuthenticate")
 	}
 
-	time.Sleep(5 * time.Second)
+	if err := c.requestAuthenticate(); err != nil {
+		return fmt.Errorf("authenticate failed: %v", err)
+	}
+
+	var resp mlme.AuthenticateResponse
+	obs, err := c.wlanChan.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
+
+	switch mxerror.Status(err) {
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		return fmt.Errorf("error waiting on handle: %v", err)
+	case mx.ErrOk:
+		switch {
+		case obs&mx.SignalChannelPeerClosed != 0:
+			c.state = StateStopped
+			return fmt.Errorf("channel closed")
+
+		case obs&MX_SOCKET_READABLE != 0:
+			var buf [4096]byte
+			if _, _, err := c.wlanChan.Read(buf[:], nil, 0); err != nil {
+				c.state = StateStopped
+				return fmt.Errorf("error reading from channel: %v", err)
+			}
+
+			dec := bindings.NewDecoder(buf[:], nil)
+			var header APIHeader
+			if err := header.Decode(dec); err != nil {
+				return fmt.Errorf("could not decode api header: %v", err)
+			}
+			if header.ordinal == int32(mlme.Method_AuthenticateConfirm) {
+				if err := resp.Decode(dec); err != nil {
+					return fmt.Errorf("could not decode AuthenticateResponse: %v", err)
+				}
+			} else {
+				if debug {
+					log.Printf("unknown message ordinal: %v", header.ordinal)
+				}
+				return nil
+			}
+		}
+	}
+
+	if debug {
+		PrintAuthenticateResponse(&resp)
+	}
+
+	if resp.ResultCode == mlme.AuthenticateResultCodes_Success {
+		c.state = StateAssociating
+	} else {
+		c.state = StateScanning
+	}
+
 	return nil
 }
 
@@ -404,6 +454,47 @@ func parseScanResponse(buf []byte) *mlme.ScanResponse {
 		}
 		return nil
 	}
+}
+
+func (c *Client) requestAuthenticate() error {
+	if c.state != StateAuthenticating {
+		panic(fmt.Sprintf("invalid state for authenticating: %v", c.state))
+	}
+
+	req := &mlme.AuthenticateRequest{
+		PeerStaAddress: c.ap.BSSDesc.Bssid,
+		AuthType: mlme.AuthenticationTypes_OpenSystem,
+		AuthFailureTimeout: 5,
+	}
+	if debug {
+		log.Printf("auth req: %v", req)
+	}
+
+	h := &APIHeader{
+		txid: 3,
+		flags: 0,
+		ordinal: int32(mlme.Method_AuthenticateRequest),
+	}
+
+	enc := bindings.NewEncoder()
+	if err := h.Encode(enc); err != nil {
+		return fmt.Errorf("could not encode header: %v", err)
+	}
+	if err := req.Encode(enc); err != nil {
+		return fmt.Errorf("could not encode AuthenticateRequest: %v", err)
+	}
+
+	reqBuf, _, encErr := enc.Data()
+	if encErr != nil {
+		return fmt.Errorf("could not code encoded data: %v", encErr)
+	}
+	if debug {
+		log.Printf("encoded AuthenticateRequest: %v", reqBuf)
+	}
+	if err := c.wlanChan.Write(reqBuf, nil, 0); err != nil {
+		return fmt.Errorf("could not write to wlan channel: %v", err)
+	}
+	return nil
 }
 
 func CollectResults(resp *mlme.ScanResponse, ssid string) []AP {

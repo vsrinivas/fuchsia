@@ -122,3 +122,35 @@ func PrintJoinResponse(resp *mlme.JoinResponse) {
 	}
 	log.Print("  Result code: ", resCode)
 }
+
+func PrintAuthenticateResponse(resp *mlme.AuthenticateResponse) {
+	log.Print("AuthenticateResponse")
+	var authType string
+	switch resp.AuthType {
+	case mlme.AuthenticationTypes_OpenSystem:
+		authType = "Open"
+	case mlme.AuthenticationTypes_SharedKey:
+		authType = "Shared key"
+	case mlme.AuthenticationTypes_FastBssTransition:
+		authType = "Fast BSS transition"
+	case mlme.AuthenticationTypes_Sae:
+		authType = "SAE"
+	}
+	log.Print("  Authentication type: ", authType)
+	var resCode string
+	switch resp.ResultCode {
+	case mlme.AuthenticateResultCodes_Success:
+		resCode = "Success"
+	case mlme.AuthenticateResultCodes_Refused:
+		resCode = "Refused"
+	case mlme.AuthenticateResultCodes_AntiCloggingTokenRequired:
+		resCode = "Anti-clogging token required"
+	case mlme.AuthenticateResultCodes_FiniteCyclicGroupNotSupported:
+		resCode = "Finite cyclic group not supported"
+	case mlme.AuthenticateResultCodes_AuthenticationRejected:
+		resCode = "Authentication rejected"
+	case mlme.AuthenticateResultCodes_AuthFailureTimeout:
+		resCode = "Authentication failure timeout"
+	}
+	log.Print("  Result code: ", resCode)
+}
