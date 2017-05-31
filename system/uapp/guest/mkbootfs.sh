@@ -11,6 +11,8 @@ KERNEL="${2:-$BUILDDIR/magenta.bin}"
 BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
 
 echo "
+data/dsdt.aml=system/ulib/hypervisor/acpi/dsdt.aml
+data/madt.aml=system/ulib/hypervisor/acpi/madt.aml
 data/kernel.bin=$KERNEL
 data/bootdata.bin=$BOOTDATA
 " > /tmp/guest.manifest
