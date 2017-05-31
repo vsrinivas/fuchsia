@@ -88,7 +88,12 @@ func main() {
 		}
 
 		// Mount the filesystem
-		err = rpc.StartServer(filesys, h)
+		vfs, err := rpc.NewServer(filesys, h)
+		if err != nil {
+			println("failed to mount filesystem: ", err.Error())
+			os.Exit(1)
+		}
+		vfs.Serve()
 		filesys.Close()
 	default:
 		println("Unsupported arg")
