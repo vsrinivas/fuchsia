@@ -182,13 +182,15 @@ out_file = args.out_file
 if out_file is None:
   out_file = os.path.join(args.build_dir, "installer.bootfs")
 
+build_gen_dir = os.path.join(args.build_dir, "gen", "packages", "gn")
+
 primary_manifest = args.file_manifest
 if primary_manifest is None:
-  primary_manifest = os.path.join(args.build_dir, "gen", "packages", "gn",
-                                  "system.bootfs.manifest")
+  primary_manifest = os.path.join(build_gen_dir, "system.bootfs.manifest")
 # TODO: Allow configuring this with a command line argument.
-boot_manifest = os.path.join(args.build_dir, "gen", "packages", "gn",
-                              "boot.bootfs.manifest")
+boot_manifest = os.path.join(build_gen_dir, "boot.bootfs.manifest")
+package_list = os.path.join(build_gen_dir, "packages")
+
 mkbootfs_path = args.mkbootfs
 if mkbootfs_path is None:
   mkbootfs_path = os.path.join(args.build_dir, "..", "build-magenta", "tools",
@@ -213,9 +215,26 @@ bootloader_remote_path = "%s/BOOT%s.EFI" % (DIR_EFI_BOOT, arch)
 print "Copying files to disk image."
 working_dir = os.getcwd()
 
-# Take the file referenced by primary_manifest and write them into the
-# minfs image at disk_path using the minfs binary pointed to by minfs_bin.
-file_count = manifest.build_minfs_image(primary_manifest, \
+# Take the files referenced by primary_manifest and each package's system
+# manifests and write them into the minfs image at disk_path using the minfs
+# binary pointed to by minfs_bin.
+system_manifests = [ primary_manifest ]
+boot_manifests = []
+if os.path.exists(boot_manifest):
+    boot_manifests.append(boot_manifest)
+
+with open(package_list) as package_list_file:
+    for name in package_list_file:
+        package_dir = os.path.join(args.build_dir, "package", name)
+        package_system_manifest = os.path.join(package_dir, "system_manifest")
+        if os.path.exists(package_system_manifest):
+            system_manifests.append(package_system_manifest)
+
+        package_boot_manifest = os.path.join(package_dir, "boot_manifest")
+        if os.path.exists(package_boot_manifest):
+            boot_manifests.append(package_boot_manifest)
+
+file_count = manifest.build_minfs_image(system_manifests, \
                                         disk_path, minfs_bin)
 
 print "\nCopied %i files" % file_count
@@ -230,11 +249,11 @@ if not (mkdir_fat(mmd_path, disk_path_efi, DIR_EFI, working_dir) and
         mkdir_fat(mmd_path, disk_path_efi, DIR_EFI_BOOT, working_dir)):
   sys.exit(-1)
 
-# Append contents of boot_manifest if it exists to provided bootdata.
-if os.path.exists(boot_manifest):
+# Append contents of each boot_manifest to provided bootdata.
+if len(boot_manifests) != 0:
     out_bootdata = os.path.join(args.build_dir, "installer.bootdata.bootfs")
-    bootdata_mkfs_cmd = [mkbootfs_path, "-c", "--target=boot", "-o", out_bootdata, bootdata,
-            boot_manifest]
+    bootdata_mkfs_cmd = [mkbootfs_path, "-c", "--target=boot", "-o",
+            out_bootdata, bootdata] + boot_manifests
     subprocess.check_call(bootdata_mkfs_cmd, cwd=working_dir)
     bootdata = out_bootdata
 

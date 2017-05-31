@@ -23,23 +23,8 @@ def _get_file_len(path):
     finally:
         os.close(fd)
 
-
-def build_minfs_image(manifest_path, minfs_image_path, minfs_bin):
-    """Populate a minfs container with the contents specified by the fuchsia
-       manifest file.
-    """
-
-    # Determine the length of the minfs image. Note that this works on
-    # regular files as well as block devices so it should allow us to
-    # use the minfs tool to manipulate block devices.
-    minfs_image_len = _get_file_len(minfs_image_path)
-    disk_path = "%s@%d" % (minfs_image_path, minfs_image_len)
-
-    minfs_cmd = [minfs_bin, disk_path, "cp", None, None]
-
-    # parse the manifest file and find the files to copy
+def process_manifest(manifest_path, disk_path, minfs_bin, minfs_cmd, created_dirs):
     file_count = 0
-    created_dirs = set()
     with open(manifest_path, "r") as manifest_file:
         for line in manifest_file:
             if "=" not in line:
@@ -88,7 +73,7 @@ def build_minfs_image(manifest_path, minfs_image_path, minfs_bin):
             try:
                 subprocess.check_call(minfs_cmd)
             except (subprocess.CalledProcessError):
-                print "Error copying file %s" % parts[1]
+                print "Error copying file %s command %s" % (parts[1], minfs_cmd)
                 sys.exit(-1)
             except (OSError):
                 print "Unable to execute minfs"
@@ -99,5 +84,26 @@ def build_minfs_image(manifest_path, minfs_image_path, minfs_bin):
             sys.stdout.write("%s\r" % (" " * 100))
             sys.stdout.write("Copying '%s' \r" % parts[0])
             sys.stdout.flush()
+    return file_count
+
+def build_minfs_image(manifests, minfs_image_path, minfs_bin):
+    """Populate a minfs container with the contents specified by the fuchsia
+       manifest files.
+    """
+
+    # Determine the length of the minfs image. Note that this works on
+    # regular files as well as block devices so it should allow us to
+    # use the minfs tool to manipulate block devices.
+    minfs_image_len = _get_file_len(minfs_image_path)
+    disk_path = "%s@%d" % (minfs_image_path, minfs_image_len)
+
+    minfs_cmd = [minfs_bin, disk_path, "cp", None, None]
+
+    # parse the manifest files and find the files to copy
+    file_count = 0
+    created_dirs = set()
+    for manifest_path in manifests:
+        file_count += process_manifest(manifest_path, disk_path, minfs_bin,
+                minfs_cmd, created_dirs)
 
     return file_count
