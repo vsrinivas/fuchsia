@@ -4,6 +4,8 @@
 
 #include "low_energy_discovery_manager.h"
 
+#include "apps/bluetooth/lib/gap/remote_device.h"
+#include "apps/bluetooth/lib/gap/remote_device_cache.h"
 #include "apps/bluetooth/lib/hci/legacy_low_energy_scanner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -29,8 +31,10 @@ LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
 void LowEnergyDiscoverySession::SetResultCallback(const DeviceFoundCallback& callback) {
   device_found_callback_ = callback;
   if (!manager_) return;
-  for (const auto& cached_result : manager_->cached_scan_results()) {
-    NotifyDiscoveryResult(cached_result.second.result, cached_result.second.data);
+  for (const auto& cached_device_id : manager_->cached_scan_results()) {
+    auto device = manager_->device_cache()->FindDeviceById(cached_device_id);
+    FTL_DCHECK(device);
+    NotifyDiscoveryResult(*device);
   }
 }
 
@@ -41,34 +45,21 @@ void LowEnergyDiscoverySession::Stop() {
   active_ = false;
 }
 
-void LowEnergyDiscoverySession::NotifyDiscoveryResult(const hci::LowEnergyScanResult& result,
-                                                      const common::ByteBuffer& data) const {
-  if (device_found_callback_ &&
-      filter_.MatchLowEnergyResult(data, result.connectable, result.rssi)) {
-    device_found_callback_(result, data);
+void LowEnergyDiscoverySession::NotifyDiscoveryResult(const RemoteDevice& device) const {
+  if (device_found_callback_ && filter_.MatchLowEnergyResult(device.advertising_data(),
+                                                             device.connectable(), device.rssi())) {
+    device_found_callback_(device);
   }
 }
 
-// TODO(armansito): data.CopyContents() dynamically allocates memory for and copies the contents of
-// |data|. The memory management needs optimization. Improve this when adding a generalized
-// DeviceCache class.
-LowEnergyDiscoveryManager::CachedScanResult::CachedScanResult(
-    const hci::LowEnergyScanResult& result, const common::ByteBuffer& data)
-    : result(result), data(data.GetSize(), data.CopyContents()) {}
-
-LowEnergyDiscoveryManager::CachedScanResult&
-LowEnergyDiscoveryManager::CachedScanResult::CachedScanResult::operator=(CachedScanResult&& other) {
-  result = other.result;
-  data = std::move(other.data);
-  return *this;
-}
-
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
-                                                     ftl::RefPtr<ftl::TaskRunner> task_runner)
-    : task_runner_(task_runner), weak_ptr_factory_(this) {
+                                                     ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                                     RemoteDeviceCache* device_cache)
+    : task_runner_(task_runner), device_cache_(device_cache), weak_ptr_factory_(this) {
   FTL_DCHECK(hci);
   FTL_DCHECK(task_runner_);
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FTL_DCHECK(device_cache_);
 
   // We currently do not support the Extended Advertising feature.
   FTL_DCHECK(mode == Mode::kLegacy);
@@ -140,12 +131,13 @@ void LowEnergyDiscoveryManager::OnDeviceFound(const hci::LowEnergyScanResult& re
                                               const common::ByteBuffer& data) {
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
-  // TODO(armansito): The CachedScanResult constructor dynamically allocates memory for and copies
-  // the contents of |data|. The memory management needs optimization.
-  cached_scan_results_[result.address] = CachedScanResult(result, data);
+  auto device = device_cache_->StoreLowEnergyScanResult(result, data);
+  FTL_DCHECK(device);
+
+  cached_scan_results_.insert(device->identifier());
 
   for (const auto& session : sessions_) {
-    session->NotifyDiscoveryResult(result, data);
+    session->NotifyDiscoveryResult(*device);
   }
 }
 

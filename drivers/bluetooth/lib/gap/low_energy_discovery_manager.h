@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <queue>
-#include <unordered_map>
 #include <unordered_set>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
@@ -29,6 +28,8 @@ class Transport;
 namespace gap {
 
 class LowEnergyDiscoveryManager;
+class RemoteDevice;
+class RemoteDeviceCache;
 
 // LowEnergyDiscoveryManager implements GAP LE central/observer role device discovery procedures.
 // This class provides mechanisms for multiple clients to simultaneously scan for nearby devices
@@ -105,8 +106,7 @@ class LowEnergyDiscoverySession final {
   // When this callback is set, it will immediately receive notifications for the cached results
   // from the most recent scan period. If a filter was assigned earlier, then the callback will only
   // receive results that match the filter.
-  using DeviceFoundCallback =
-      std::function<void(const hci::LowEnergyScanResult& result, const common::ByteBuffer& data)>;
+  using DeviceFoundCallback = std::function<void(const RemoteDevice& device)>;
   void SetResultCallback(const DeviceFoundCallback& callback);
 
   // Returns the filter that belongs to this session. The caller may modify the filter as desired.
@@ -128,8 +128,7 @@ class LowEnergyDiscoverySession final {
   explicit LowEnergyDiscoverySession(ftl::WeakPtr<LowEnergyDiscoveryManager> manager);
 
   // Called by LowEnergyDiscoveryManager on newly discovered scan results.
-  void NotifyDiscoveryResult(const hci::LowEnergyScanResult& result,
-                             const common::ByteBuffer& data) const;
+  void NotifyDiscoveryResult(const RemoteDevice& device) const;
 
   bool active_;
   ftl::WeakPtr<LowEnergyDiscoveryManager> manager_;
@@ -152,8 +151,10 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
     kExtended,
   };
 
+  // |device_cache| MUST out-live this LowEnergyDiscoveryManager.
   LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
-                            ftl::RefPtr<ftl::TaskRunner> task_runner);
+                            ftl::RefPtr<ftl::TaskRunner> task_runner,
+                            RemoteDeviceCache* device_cache);
   virtual ~LowEnergyDiscoveryManager();
 
   // Starts a new discovery session and reports the result via |callback|. If a session has been
@@ -171,23 +172,9 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
  private:
   friend class LowEnergyDiscoverySession;
 
-  // Stores a single cached scan result.
-  struct CachedScanResult {
-    CachedScanResult() = default;
-    CachedScanResult(const hci::LowEnergyScanResult& result, const common::ByteBuffer& data);
-    CachedScanResult& operator=(CachedScanResult&& other);
+  const RemoteDeviceCache* device_cache() const { return device_cache_; }
 
-    hci::LowEnergyScanResult result;
-
-    // TODO(armansito): We should improve the dynamic allocations required for this. For example we
-    // could just modify without reallocating if a newer report contains a data field that is
-    // smaller than the existing one.
-    // TODO(armansito): Move the caching to a generalized DeviceCache class.
-    common::DynamicByteBuffer data;
-  };
-
-  // Returns the cached results for the current scan period.
-  const std::unordered_map<common::DeviceAddress, CachedScanResult>& cached_scan_results() const {
+  const std::unordered_set<std::string>& cached_scan_results() const {
     return cached_scan_results_;
   }
 
@@ -210,6 +197,10 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // The task runner that we use for invoking callbacks asynchronously.
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
+  // The device cache that we use for storing and looking up scan results. We hold a raw pointer as
+  // we expect this to out-live us.
+  RemoteDeviceCache* device_cache_;
+
   // The list of currently pending calls to start discovery.
   std::queue<SessionCallback> pending_;
 
@@ -222,15 +213,12 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // element.
   std::unordered_set<LowEnergyDiscoverySession*> sessions_;
 
-  // The cached scan results for the current scan period during device discovery. The minimum (and
-  // default) scan period is 10.24 seconds when performing LE discovery. This can cause a long wait
-  // for a discovery session that joined in the middle of a scan period and duplicate filtering is
-  // enabled. We maintain this cache to immediately notify new sessions of the currently cached
-  // results for this period.
-  //
-  // TODO(armansito): Introduce a device cache class and only store the addresses here as keys to
-  // look up from the cache.
-  std::unordered_map<common::DeviceAddress, CachedScanResult> cached_scan_results_;
+  // Identifiers for the cached scan results for the current scan period during device discovery.
+  // The minimum (and default) scan period is 10.24 seconds when performing LE discovery. This can
+  // cause a long wait for a discovery session that joined in the middle of a scan period and
+  // duplicate filtering is enabled. We maintain this cache to immediately notify new sessions of
+  // the currently cached results for this period.
+  std::unordered_set<std::string> cached_scan_results_;
 
   // The value (in ms) that we use for the duration of each scan period.
   int64_t scan_period_ = kLEGeneralDiscoveryScanMinMs;

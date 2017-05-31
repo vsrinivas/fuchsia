@@ -9,6 +9,8 @@
 
 #include "gtest/gtest.h"
 
+#include "apps/bluetooth/lib/gap/remote_device.h"
+#include "apps/bluetooth/lib/gap/remote_device_cache.h"
 #include "apps/bluetooth/lib/testing/fake_controller.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
 #include "apps/bluetooth/lib/testing/test_base.h"
@@ -44,7 +46,8 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     test_device()->set_settings(settings);
 
     discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kLegacy, transport(), message_loop()->task_runner());
+        LowEnergyDiscoveryManager::Mode::kLegacy, transport(), message_loop()->task_runner(),
+        &device_cache_);
     test_device()->SetScanStateCallback(
         std::bind(&LowEnergyDiscoveryManagerTest::OnScanStateChanged, this, std::placeholders::_1),
         message_loop()->task_runner());
@@ -162,6 +165,8 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
 
  private:
   std::unique_ptr<hci::DeviceWrapper> hci_dev_;
+
+  RemoteDeviceCache device_cache_;
   std::unique_ptr<LowEnergyDiscoveryManager> discovery_manager_;
 
   bool scan_enabled_;
@@ -501,17 +506,15 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   // Session 0 is interested in performing general discovery.
   std::unordered_set<common::DeviceAddress> devices_session0;
-  LowEnergyDiscoverySession::DeviceFoundCallback result_cb = [&devices_session0](const auto& result,
-                                                                                 const auto& data) {
-    devices_session0.insert(result.address);
-  };
+  LowEnergyDiscoverySession::DeviceFoundCallback result_cb =
+      [&devices_session0](const auto& device) { devices_session0.insert(device.address()); };
   sessions.push_back(StartDiscoverySession());
   sessions[0]->SetResultCallback(result_cb);
 
   // Session 1 is interested in performing limited discovery.
   std::unordered_set<common::DeviceAddress> devices_session1;
-  result_cb = [&devices_session1](const auto& result, const auto& data) {
-    devices_session1.insert(result.address);
+  result_cb = [&devices_session1](const auto& device) {
+    devices_session1.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[1]->filter()->set_flags(static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode));
@@ -519,8 +522,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   // Session 2 is interested in devices with UUID 0x180d.
   std::unordered_set<common::DeviceAddress> devices_session2;
-  result_cb = [&devices_session2](const auto& result, const auto& data) {
-    devices_session2.insert(result.address);
+  result_cb = [&devices_session2](const auto& device) {
+    devices_session2.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
 
@@ -530,8 +533,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   // Session 3 is interested in devices whose names contain "Device".
   std::unordered_set<common::DeviceAddress> devices_session3;
-  result_cb = [&devices_session3](const auto& result, const auto& data) {
-    devices_session3.insert(result.address);
+  result_cb = [&devices_session3](const auto& device) {
+    devices_session3.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[3]->filter()->set_name_substring("Device");
@@ -539,8 +542,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   // Session 4 is interested in non-connectable devices.
   std::unordered_set<common::DeviceAddress> devices_session4;
-  result_cb = [&devices_session4](const auto& result, const auto& data) {
-    devices_session4.insert(result.address);
+  result_cb = [&devices_session4](const auto& device) {
+    devices_session4.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[4]->filter()->set_connectable(false);
@@ -592,8 +595,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFiltersCachedDeviceNotif
   // Session 0 is interested in performing general discovery.
   std::unordered_set<common::DeviceAddress> devices_session0;
   LowEnergyDiscoverySession::DeviceFoundCallback result_cb =
-      [this, &devices_session0](const auto& result, const auto& data) {
-        devices_session0.insert(result.address);
+      [this, &devices_session0](const auto& device) {
+        devices_session0.insert(device.address());
 
         // We expect this session to discover all devices. End the loop once all devices have been
         // cached.
@@ -607,8 +610,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFiltersCachedDeviceNotif
 
   // Session 1 is interested in performing limited discovery.
   std::unordered_set<common::DeviceAddress> devices_session1;
-  result_cb = [&devices_session1](const auto& result, const auto& data) {
-    devices_session1.insert(result.address);
+  result_cb = [&devices_session1](const auto& device) {
+    devices_session1.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[1]->filter()->set_flags(static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode));
@@ -616,8 +619,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFiltersCachedDeviceNotif
 
   // Session 2 is interested in devices with UUID 0x180d.
   std::unordered_set<common::DeviceAddress> devices_session2;
-  result_cb = [&devices_session2](const auto& result, const auto& data) {
-    devices_session2.insert(result.address);
+  result_cb = [&devices_session2](const auto& device) {
+    devices_session2.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
 
@@ -627,8 +630,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFiltersCachedDeviceNotif
 
   // Session 3 is interested in devices whose names contain "Device".
   std::unordered_set<common::DeviceAddress> devices_session3;
-  result_cb = [&devices_session3](const auto& result, const auto& data) {
-    devices_session3.insert(result.address);
+  result_cb = [&devices_session3](const auto& device) {
+    devices_session3.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[3]->filter()->set_name_substring("Device");
@@ -636,8 +639,8 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWithFiltersCachedDeviceNotif
 
   // Session 4 is interested in non-connectable devices.
   std::unordered_set<common::DeviceAddress> devices_session4;
-  result_cb = [&devices_session4](const auto& result, const auto& data) {
-    devices_session4.insert(result.address);
+  result_cb = [&devices_session4](const auto& device) {
+    devices_session4.insert(device.address());
   };
   sessions.push_back(StartDiscoverySession());
   sessions[4]->filter()->set_connectable(false);
