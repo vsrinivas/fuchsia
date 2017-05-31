@@ -20,7 +20,7 @@ namespace tool {
 // Command that runs a series of check-ups for the sync configuration.
 class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
  public:
-  DoctorCommand(const cloud_sync::UserConfig& user_config,
+  DoctorCommand(cloud_sync::UserConfig* user_config,
                 ledger::NetworkService* network_service);
   ~DoctorCommand();
 
@@ -57,7 +57,7 @@ class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
 
   void Done();
 
-  const cloud_sync::UserConfig user_config_;
+  cloud_sync::UserConfig* const user_config_;
   ledger::NetworkService* const network_service_;
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<gcs::CloudStorage> cloud_storage_;

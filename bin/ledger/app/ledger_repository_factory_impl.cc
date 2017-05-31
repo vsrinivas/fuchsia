@@ -27,9 +27,11 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
   return repository_path.substr(separator + 1);
 }
 
-cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
-                                     ftl::StringView user_id,
-                                     ftl::StringView user_directory) {
+cloud_sync::UserConfig GetUserConfig(
+    const fidl::String& server_id,
+    ftl::StringView user_id,
+    ftl::StringView user_directory,
+    modular::auth::TokenProviderPtr token_provider) {
   if (!server_id || server_id.size() == 0) {
     cloud_sync::UserConfig user_config;
     user_config.use_sync = false;
@@ -41,6 +43,7 @@ cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
   user_config.server_id = server_id.get();
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
+  user_config.token_provider = std::move(token_provider);
   return user_config;
 }
 
@@ -125,8 +128,9 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
     ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
-    cloud_sync::UserConfig user_config =
-        GetUserConfig(server_id, user_id, sanitized_path);
+    cloud_sync::UserConfig user_config = GetUserConfig(
+        server_id, user_id, sanitized_path,
+        modular::auth::TokenProviderPtr::Create(std::move(token_provider)));
     if (!user_config.use_sync &&
         config_persistence_ == ConfigPersistence::PERSIST) {
       FTL_LOG(WARNING) << "No sync configuration set, "

@@ -12,6 +12,7 @@
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/environment/environment.h"
+#include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {

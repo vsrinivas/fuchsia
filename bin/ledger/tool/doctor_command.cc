@@ -77,22 +77,22 @@ std::string FirebaseUrlFromId(const std::string& firebase_id) {
 
 }  // namespace
 
-DoctorCommand::DoctorCommand(const cloud_sync::UserConfig& user_config,
+DoctorCommand::DoctorCommand(cloud_sync::UserConfig* user_config,
                              ledger::NetworkService* network_service)
     : user_config_(user_config), network_service_(network_service) {
   FTL_DCHECK(network_service_);
-  FTL_DCHECK(!user_config.server_id.empty());
+  FTL_DCHECK(!user_config->server_id.empty());
 
   std::string app_firebase_path =
-      cloud_sync::GetFirebasePathForApp(user_config_.user_id, kDoctorAppId);
+      cloud_sync::GetFirebasePathForApp(user_config_->user_id, kDoctorAppId);
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
-      network_service_, user_config_.server_id,
+      network_service_, user_config_->server_id,
       cloud_sync::GetFirebasePathForPage(app_firebase_path, RandomString()));
   std::string app_gcs_prefix =
-      cloud_sync::GetGcsPrefixForApp(user_config_.user_id, kDoctorAppId);
+      cloud_sync::GetGcsPrefixForApp(user_config_->user_id, kDoctorAppId);
   cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
       mtl::MessageLoop::GetCurrent()->task_runner(), network_service_,
-      user_config_.server_id,
+      user_config_->server_id,
       cloud_sync::GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
   cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
       firebase_.get(), cloud_storage_.get());
@@ -267,7 +267,7 @@ void DoctorCommand::CheckCommits() {
           hint(ftl::Concatenate(
               {"It seems that we can't access the Firebase instance. "
                "Please verify that you can access ",
-               FirebaseUrlFromId(user_config_.server_id),
+               FirebaseUrlFromId(user_config_->server_id),
                " on your host machine. If not, refer to the User Guide for the "
                "recommended Firebase configuration."}));
           on_done_();

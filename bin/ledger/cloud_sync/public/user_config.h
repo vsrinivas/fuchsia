@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "apps/modular/services/auth/token_provider.fidl.h"
+
 namespace cloud_sync {
 
 // Sync configuration for a particular user.
@@ -18,6 +20,8 @@ struct UserConfig {
   std::string user_id;
   // Directory for the user persistent data.
   std::string user_directory;
+  // Provider of the auth data for the user.
+  modular::auth::TokenProviderPtr token_provider;
 };
 
 }  // namespace cloud_sync

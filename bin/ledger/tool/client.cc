@@ -65,7 +65,7 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
     if (!user_config_.use_sync) {
       std::cout << "the `doctor` command requires sync" << std::endl;
     }
-    return std::make_unique<DoctorCommand>(user_config_,
+    return std::make_unique<DoctorCommand>(&user_config_,
                                            network_service_.get());
   }
 
