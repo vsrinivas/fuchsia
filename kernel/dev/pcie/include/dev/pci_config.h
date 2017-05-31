@@ -76,7 +76,7 @@ public:
     static constexpr PciReg8 kInterruptPin = PciReg8(0x3D);
     static constexpr PciReg8 kMinGrant = PciReg8(0x3E);
     static constexpr PciReg8 kMaxLatency = PciReg8(0x3F);
-    static constexpr uint8_t kStdCfgEnd = kMaxLatency.offset() + sizeof(uint8_t);
+    static constexpr uint8_t kStdCfgEnd = static_cast<uint8_t>(kMaxLatency.offset() + sizeof(uint8_t));
 
     /* pci to pci bridge config
      * Unlike a normal PCI header, a bridge only has two BARs, but the BAR offset in config space
