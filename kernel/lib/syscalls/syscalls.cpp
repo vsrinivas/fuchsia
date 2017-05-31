@@ -47,10 +47,7 @@ inline uint64_t invoke_syscall(
     switch (syscall_num) {
 #include <magenta/syscall-invocation-cases.inc>
     default:
-        // This should be unreachable because the numbers are densely packed.
-        ASSERT_MSG(
-            0, "invalid syscall number %lu from PC %#lx reached switch!",
-            syscall_num, pc);
+        return ERR_BAD_SYSCALL;
     }
 
     return ret;
