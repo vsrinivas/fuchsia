@@ -8,7 +8,8 @@
       "chat",
       "contacts",
       "email",
-      "music"
+      "music",
+      "video"
     ],
     "binaries": [
         {

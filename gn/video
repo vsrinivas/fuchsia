@@ -1,0 +1,12 @@
+{
+  "labels": [
+    "//apps/modules/video",
+    "//apps/modules/video:test"
+  ],
+  "binaries": [
+    {
+      "binary": "gen/apps/modules/video/modules/video/video.flx",
+      "bootfs_path": "apps/video/video"
+    }
+  ]
+}
