@@ -38,8 +38,10 @@ void Fail(const std::string& log_msg) {
 
 void Done(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Done(ack);
-    g_test_runner.reset();
+    g_test_runner->Done([ack] {
+      ack();
+      g_test_runner.reset();
+    });
   } else {
     ack();
   }
@@ -56,8 +58,10 @@ void Done() {
 
 void Teardown(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Teardown(ack);
-    g_test_runner.reset();
+    g_test_runner->Teardown([ack] {
+      ack();
+      g_test_runner.reset();
+    });
   } else {
     ack();
   }
