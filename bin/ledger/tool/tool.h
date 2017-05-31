@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_TOOL_CLIENT_H_
-#define APPS_LEDGER_SRC_TOOL_CLIENT_H_
+#ifndef APPS_LEDGER_SRC_TOOL_TOOL_H_
+#define APPS_LEDGER_SRC_TOOL_TOOL_H_
 
 #include <memory>
 #include <string>
@@ -19,9 +19,9 @@
 
 namespace tool {
 
-class ClientApp {
+class ToolApp {
  public:
-  ClientApp(ftl::CommandLine command_line);
+  ToolApp(ftl::CommandLine command_line);
 
  private:
   std::unique_ptr<Command> CommandFromArgs(
@@ -43,9 +43,9 @@ class ClientApp {
   std::unique_ptr<ledger::NetworkService> network_service_;
   std::unique_ptr<Command> command_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ClientApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ToolApp);
 };
 
 }  // namespace tool
 
-#endif  // APPS_LEDGER_SRC_TOOL_CLIENT_H_
+#endif  // APPS_LEDGER_SRC_TOOL_TOOL_H_

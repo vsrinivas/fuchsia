@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/tool/client.h"
+#include "apps/ledger/src/tool/tool.h"
 
 #include <iostream>
 #include <unordered_set>
@@ -30,7 +30,7 @@ constexpr ftl::StringView kForceFlag = "force";
 
 }  // namespace
 
-ClientApp::ClientApp(ftl::CommandLine command_line)
+ToolApp::ToolApp(ftl::CommandLine command_line)
     : command_line_(std::move(command_line)),
       context_(app::ApplicationContext::CreateFromStartupInfo()) {
   if (Initialize()) {
@@ -40,7 +40,7 @@ ClientApp::ClientApp(ftl::CommandLine command_line)
   }
 }
 
-void ClientApp::PrintUsage() {
+void ToolApp::PrintUsage() {
   std::cout << "Usage: ledger_tool [options] <COMMAND>" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << " --user-id=<string> overrides the user ID to use" << std::endl;
@@ -54,7 +54,7 @@ void ClientApp::PrintUsage() {
   std::cout << " - `inspect` - inspects the state of a ledger" << std::endl;
 }
 
-std::unique_ptr<Command> ClientApp::CommandFromArgs(
+std::unique_ptr<Command> ToolApp::CommandFromArgs(
     const std::vector<std::string>& args) {
   // `doctor` is the default command.
   if (args.empty() || args[0] == "doctor") {
@@ -90,7 +90,7 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
   return nullptr;
 }
 
-bool ClientApp::Initialize() {
+bool ToolApp::Initialize() {
   if (command_line_.argv0() == "file://cloud_sync") {
     std::cout << "The 'cloud_sync' command is deprecated. "
               << "Please use 'ledger_tool' instead." << std::endl;
@@ -152,7 +152,7 @@ bool ClientApp::Initialize() {
   return true;
 }
 
-bool ClientApp::ReadConfig() {
+bool ToolApp::ReadConfig() {
   if (command_line_.GetOptionValue(kUserIdFlag.ToString(),
                                    &user_config_.user_id)) {
     FTL_LOG(INFO) << "using the user id passed on the command line";
@@ -186,7 +186,7 @@ bool ClientApp::ReadConfig() {
   return true;
 }
 
-void ClientApp::Start() {
+void ToolApp::Start() {
   FTL_DCHECK(command_);
   command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
@@ -198,7 +198,7 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
 
-  tool::ClientApp app(std::move(command_line));
+  tool::ToolApp app(std::move(command_line));
 
   loop.Run();
   return 0;

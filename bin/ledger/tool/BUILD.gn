@@ -8,8 +8,6 @@ executable("tool") {
   sources = [
     "clean_command.cc",
     "clean_command.h",
-    "client.cc",
-    "client.h",
     "command.h",
     "convert.cc",
     "convert.h",
@@ -17,6 +15,8 @@ executable("tool") {
     "doctor_command.h",
     "inspect_command.cc",
     "inspect_command.h",
+    "tool.cc",
+    "tool.h",
   ]
 
   deps = [
