@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -17,12 +18,14 @@
 
 #include "acpi.h"
 #include "devcoordinator.h"
+#include "driver-info.h"
 #include "log.h"
 #include "memfs-private.h"
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static void dc_dump_state(void);
+static void dc_dump_devprops(void);
 
 static mx_handle_t dmctl_socket;
 
@@ -57,6 +60,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
                      "ktraceoff   - stop kernel tracing\n"
                      "ktraceon    - start kernel tracing\n"
                      "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
+                     "devprops    - dump published devices and their binding properties\n"
                      );
             return NO_ERROR;
         }
@@ -72,6 +76,10 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         }
         if (!memcmp(cmd, "ktraceon", 8)) {
             mx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, NULL);
+            return NO_ERROR;
+        }
+        if (!memcmp(cmd, "devprops", 8)) {
+            dc_dump_devprops();
             return NO_ERROR;
         }
     }
@@ -218,6 +226,65 @@ static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
     dc_dump_device(&platform_device, 1);
+}
+
+static void dc_dump_device_props(device_t* dev) {
+    if (dev->host) {
+        dmprintf("Name [%s]%s%s%s\n",
+                 dev->name,
+                 dev->libname ? " Driver [" : "",
+                 dev->libname ? dev->libname : "",
+                 dev->libname ? "]" : "");
+        dmprintf("Flags   :%s%s%s%s%s%s%s\n",
+                 dev->flags & DEV_CTX_IMMORTAL   ? " Immortal"  : "",
+                 dev->flags & DEV_CTX_BUSDEV     ? " BusDev"    : "",
+                 dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
+                 dev->flags & DEV_CTX_BOUND      ? " Bound"     : "",
+                 dev->flags & DEV_CTX_DEAD       ? " Dead"      : "",
+                 dev->flags & DEV_CTX_ZOMBIE     ? " Zombie"    : "",
+                 dev->flags & DEV_CTX_SHADOW     ? " Shadow"    : "");
+
+        char a = (char)((dev->protocol_id >> 24) & 0xFF);
+        char b = (char)((dev->protocol_id >> 16) & 0xFF);
+        char c = (char)((dev->protocol_id >> 8) & 0xFF);
+        char d = (char)(dev->protocol_id & 0xFF);
+        dmprintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n",
+                 isprint(a) ? a : '.',
+                 isprint(b) ? b : '.',
+                 isprint(c) ? c : '.',
+                 isprint(d) ? d : '.',
+                 dev->protocol_id,
+                 dev->protocol_id);
+
+        dmprintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
+        for (uint32_t i = 0; i < dev->prop_count; ++i) {
+            const mx_device_prop_t* p = dev->props + i;
+            const char* param_name = lookup_bind_param_name(p->id);
+
+            if (param_name) {
+                dmprintf("[%2u/%2u] : Value 0x%08x Id %s\n",
+                         i, dev->prop_count, p->value, param_name);
+            } else {
+                dmprintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n",
+                         i, dev->prop_count, p->value, p->id);
+            }
+        }
+        dmprintf("\n");
+    }
+
+    device_t* child;
+    if (dev->shadow) {
+        dc_dump_device_props(dev->shadow);
+    }
+    list_for_every_entry(&dev->children, child, device_t, node) {
+        dc_dump_device_props(child);
+    }
+}
+
+static void dc_dump_devprops(void) {
+    dc_dump_device_props(&root_device);
+    dc_dump_device_props(&misc_device);
+    dc_dump_device_props(&platform_device);
 }
 
 static void dc_handle_new_device(device_t* dev);

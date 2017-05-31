@@ -136,3 +136,35 @@ mx_status_t read_driver_info(int fd, void *cookie,
     return for_each_note(fd, "Magenta", MAGENTA_NOTE_DRIVER,
                          data, sizeof(data), callback, &ctx);
 }
+
+const char* lookup_bind_param_name(uint32_t param_num) {
+    switch (param_num) {
+        case BIND_FLAGS:                  return "P.Flags";
+        case BIND_PROTOCOL:               return "P.Protocol";
+        case BIND_AUTOBIND:               return "P.Autobind";
+        case BIND_PCI_VID:                return "P.PCI.VID";
+        case BIND_PCI_DID:                return "P.PCI.DID";
+        case BIND_PCI_CLASS:              return "P.PCI.Class";
+        case BIND_PCI_SUBCLASS:           return "P.PCI.Subclass";
+        case BIND_PCI_INTERFACE:          return "P.PCI.Interface";
+        case BIND_PCI_REVISION:           return "P.PCI.Revision";
+        case BIND_PCI_BDF_ADDR:           return "P.PCI.BDFAddr";
+        case BIND_USB_VID:                return "P.USB.VID";
+        case BIND_USB_PID:                return "P.USB.PID";
+        case BIND_USB_CLASS:              return "P.USB.Class";
+        case BIND_USB_SUBCLASS:           return "P.USB.Subclass";
+        case BIND_USB_PROTOCOL:           return "P.USB.Protocol";
+        case BIND_PLATFORM_DEV_VID:       return "P.PlatDev.VID";
+        case BIND_PLATFORM_DEV_PID:       return "P.PlatDev.PID";
+        case BIND_PLATFORM_DEV_DID:       return "P.PlatDev.DID";
+        case BIND_ACPI_HID_0_3:           return "P.ACPI.HID[0-3]";
+        case BIND_ACPI_HID_4_7:           return "P.ACPI.HID[4-7]";
+        case BIND_IHDA_CODEC_VID:         return "P.IHDA.Codec.VID";
+        case BIND_IHDA_CODEC_DID:         return "P.IHDA.Codec.DID";
+        case BIND_IHDA_CODEC_MAJOR_REV:   return "P.IHDACodec.MajorRev";
+        case BIND_IHDA_CODEC_MINOR_REV:   return "P.IHDACodec.MinorRev";
+        case BIND_IHDA_CODEC_VENDOR_REV:  return "P.IHDACodec.VendorRev";
+        case BIND_IHDA_CODEC_VENDOR_STEP: return "P.IHDACodec.VendorStep";
+        default: return NULL;
+    }
+}
