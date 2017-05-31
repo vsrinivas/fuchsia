@@ -42,7 +42,7 @@ env.sh functions:
 magenta functions:
   mboot, mbuild, mcheck, mgo, mrun, mset, msymbolize
 fuchsia functions:
-  fboot, fbuild, fbuild-sysroot, fcheck, fgen,
+  fboot, fbuild, fbuild-sysroot, fcheck, fcmd, fcp, fgen,
   fgen-if-changed, fgo, finstall, freboot, frun, fset, fsymbolize, ftrace
 END
     return
@@ -752,6 +752,34 @@ function fscp() {
 
 function fsftp() {
   sftp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+}
+
+function fcmd() {
+  local host="$(netaddr --fuchsia)"
+  fssh -q "${host}" $*
+}
+
+function fcp-usage() {
+  cat >&2 <<END
+Usage: fcp src dst
+Copies a file from the host to the target device.
+END
+}
+
+function fcp() {
+  if [[ $# -ne 2 ]]; then
+    fcp-usage
+    return 1
+  fi
+
+  local src=$1
+  local dst=$2
+  local host="$(netaddr --fuchsia)"
+
+  fsftp -q -b - "[${host}]" > /dev/null << EOF
+! rm -f ${dst}
+put ${src} ${dst}
+EOF
 }
 
 if [[ -n "${ZSH_VERSION}" ]]; then
