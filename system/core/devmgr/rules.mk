@@ -99,3 +99,20 @@ MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ul
 MODULE_DEFINES := DDK_INTERNAL=1
 
 include make/module.mk
+
+
+MODULE := $(LOCAL_DIR).driver-info
+
+MODULE_TYPE := userapp
+
+MODULE_NAME := driverinfo
+
+MODULE_SRCS := \
+	$(LOCAL_DIR)/driver-info.c \
+	$(LOCAL_DIR)/driver-info-app.c
+
+MODULE_HEADER_DEPS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/mxio system/ulib/c
+
+include make/module.mk
