@@ -56,6 +56,9 @@ class RollSumSplit {
   // |max_length| is the maximal size of a chunk.
   RollSumSplit(size_t min_length, size_t max_length);
 
+  // Copy constructor.
+  RollSumSplit(const RollSumSplit& other);
+
   // Reset the state of the rolling hash.
   void Reset();
 
@@ -77,8 +80,6 @@ class RollSumSplit {
   uint64_t s1_, s2_;
   uint8_t window_[kWindowSize];
   size_t window_index_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(RollSumSplit);
 };
 
 }  // namespace bup

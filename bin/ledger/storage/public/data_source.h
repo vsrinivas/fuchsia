@@ -15,6 +15,7 @@
 #include "lib/ftl/strings/string_view.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
 
@@ -29,6 +30,11 @@ class DataSource {
     virtual ~DataChunk() {}
 
     virtual ftl::StringView Get() = 0;
+
+    // Factory methods.
+    static std::unique_ptr<DataChunk> Create(std::string value);
+    static std::unique_ptr<DataChunk> Create(
+        std::unique_ptr<flatbuffers::FlatBufferBuilder> builder);
 
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(DataChunk);

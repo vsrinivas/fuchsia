@@ -23,6 +23,14 @@ flatbuffer("commit_storage") {
   extra_configs = [ "//apps/ledger/src:ledger_config" ]
 }
 
+flatbuffer("file_index") {
+  sources = [
+    "file_index.fbs",
+  ]
+
+  extra_configs = [ "//apps/ledger/src:ledger_config" ]
+}
+
 source_set("lib") {
   sources = [
     "commit_impl.cc",
@@ -39,14 +47,19 @@ source_set("lib") {
     "journal_db_impl.h",
     "ledger_storage_impl.cc",
     "ledger_storage_impl.h",
+    "object_id.cc",
+    "object_id.h",
     "object_impl.cc",
     "object_impl.h",
     "page_storage_impl.cc",
     "page_storage_impl.h",
+    "split.cc",
+    "split.h",
   ]
 
   deps = [
     ":commit_storage",
+    ":file_index",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
@@ -59,6 +72,7 @@ source_set("lib") {
   public_deps = [
     "//apps/ledger/src/convert",
     "//apps/ledger/src/coroutine",
+    "//apps/ledger/src/third_party/bup",
     "//apps/tracing/lib/trace",
     "//third_party/leveldb",
   ]
@@ -75,11 +89,14 @@ source_set("unittests") {
     "db_empty_impl.h",
     "db_unittest.cc",
     "ledger_storage_unittest.cc",
+    "object_id_unittest.cc",
     "object_impl_unittest.cc",
     "page_storage_unittest.cc",
+    "split_unittest.cc",
   ]
 
   deps = [
+    ":file_index",
     ":lib",
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/glue/crypto",

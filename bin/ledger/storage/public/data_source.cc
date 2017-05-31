@@ -178,7 +178,31 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
   std::function<void(std::unique_ptr<DataChunk>, Status)> callback_;
 };
 
+class FlatBufferDataChunk : public DataSource::DataChunk {
+ public:
+  FlatBufferDataChunk(std::unique_ptr<flatbuffers::FlatBufferBuilder> value)
+      : value_(std::move(value)) {}
+
+ private:
+  ftl::StringView Get() override {
+    return ftl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()),
+                           value_->GetSize());
+  }
+
+  std::unique_ptr<flatbuffers::FlatBufferBuilder> value_;
+};
+
 }  // namespace
+
+std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(
+    std::string value) {
+  return std::make_unique<StringLikeDataChunk<std::string>>(std::move(value));
+}
+
+std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> value) {
+  return std::make_unique<FlatBufferDataChunk>(std::move(value));
+}
 
 std::unique_ptr<DataSource> DataSource::Create(std::string value) {
   return std::make_unique<StringLikeDataSource<std::string>>(std::move(value));

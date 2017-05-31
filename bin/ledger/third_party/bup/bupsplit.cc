@@ -50,6 +50,8 @@ RollSumSplit::RollSumSplit(size_t min_length, size_t max_length)
   Reset();
 }
 
+RollSumSplit::RollSumSplit(const RollSumSplit& other) = default;
+
 void RollSumSplit::Reset() {
   current_length_ = 0u;
   s1_ = kWindowSize * kRollsumCharOffset;
