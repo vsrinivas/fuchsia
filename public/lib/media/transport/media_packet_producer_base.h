@@ -103,9 +103,7 @@ class MediaPacketProducerBase {
       std::numeric_limits<int64_t>::min();
   bool end_of_stream_ FTL_GUARDED_BY(mutex_) = false;
 
-#ifndef NDEBUG
-  ftl::ThreadChecker thread_checker_;
-#endif
+  FTL_DECLARE_THREAD_CHECKER(thread_checker_);
 
  protected:
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketProducerChannel, log_channel_);

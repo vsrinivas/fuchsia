@@ -50,9 +50,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     SupplyPacketCallback callback_;
     std::shared_ptr<SuppliedPacketCounter> counter_;
 
-#ifndef NDEBUG
-    ftl::ThreadChecker thread_checker_;
-#endif
+    FTL_DECLARE_THREAD_CHECKER(thread_checker_);
 
     // So the constructor can be private.
     friend class MediaPacketConsumerBase;
@@ -141,26 +139,20 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
-#ifndef NDEBUG
-      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-#endif
+      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       owner_ = nullptr;
     }
 
     // Records the arrival of a packet.
     void OnPacketArrival() {
-#ifndef NDEBUG
-      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-#endif
+      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       ++packets_outstanding_;
     }
 
     // Records the departure of a packet and returns the current demand update,
     // if any.
     MediaPacketDemandPtr OnPacketDeparture(uint64_t label) {
-#ifndef NDEBUG
-      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-#endif
+      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       --packets_outstanding_;
       return (owner_ == nullptr) ? nullptr
                                  : owner_->GetDemandForPacketDeparture(label);
@@ -168,9 +160,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     // Returns number of packets currently outstanding.
     uint32_t packets_outstanding() {
-#ifndef NDEBUG
-      FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-#endif
+      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       return packets_outstanding_;
     }
 
@@ -182,9 +172,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     SharedBufferSet buffer_set_;
     uint32_t packets_outstanding_ = 0;
 
-#ifndef NDEBUG
-    ftl::ThreadChecker thread_checker_;
-#endif
+    FTL_DECLARE_THREAD_CHECKER(thread_checker_);
   };
 
   // Completes a pending PullDemandUpdate if there is one and if there's an
@@ -210,9 +198,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   uint64_t prev_packet_label_ = 0;
   bool flush_pending_ = false;
 
-#ifndef NDEBUG
-  ftl::ThreadChecker thread_checker_;
-#endif
+  FTL_DECLARE_THREAD_CHECKER(thread_checker_);
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPacketConsumerChannel, log_channel_);
 };
