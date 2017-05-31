@@ -43,6 +43,7 @@ struct intel_i915_device_t {
     uint32_t flags;
 
     mx_display_cb_t ownership_change_callback{nullptr};
+    void* ownership_change_cookie{nullptr};
 
     std::unique_ptr<magma::PlatformBuffer> console_buffer;
     std::unique_ptr<magma::PlatformBuffer> placeholder_buffer;
@@ -115,41 +116,43 @@ static void intel_i915_flush(mx_device_t* dev)
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
 }
 
-static void intel_i915_acquire_or_release_display(mx_device_t* dev)
+static void intel_i915_acquire_or_release_display(mx_device_t* dev, bool acquire)
 {
     intel_i915_device_t* device = get_i915_device(dev->ctx);
     DLOG("intel_i915_acquire_or_release_display");
 
     std::unique_lock<std::mutex> lock(device->magma_mutex);
 
-    if (device->magma_system_device->page_flip_enabled()) {
+    if (acquire && device->magma_system_device->page_flip_enabled()) {
         DLOG("flipping to console");
         // Ensure any software writes to framebuffer are visible
         device->console_visible = true;
         if (device->ownership_change_callback)
-            device->ownership_change_callback(true);
+            device->ownership_change_callback(true, device->ownership_change_cookie);
         clflush_range(device->framebuffer_addr, device->framebuffer_size);
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
         auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
             device->console_framebuffer, &image_desc, false);
         if (last_framebuffer)
             device->placeholder_framebuffer = last_framebuffer;
-    } else {
+    } else if (!acquire && !device->magma_system_device->page_flip_enabled()) {
+        DLOG("flipping to placeholder_framebuffer");
         magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
         device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer, &image_desc,
                                                        true);
         device->console_visible = false;
         if (device->ownership_change_callback)
-            device->ownership_change_callback(false);
+            device->ownership_change_callback(false, device->ownership_change_cookie);
     }
 }
 
-static void intel_i915_set_ownership_change_callback(mx_device_t* dev,
-                                                          mx_display_cb_t callback)
+static void intel_i915_set_ownership_change_callback(mx_device_t* dev, mx_display_cb_t callback,
+                                                     void* cookie)
 {
     intel_i915_device_t* device = get_i915_device(dev->ctx);
     std::unique_lock<std::mutex> lock(device->magma_mutex);
     device->ownership_change_callback = callback;
+    device->ownership_change_cookie = cookie;
 }
 
 static mx_display_protocol_t intel_i915_display_proto = {
@@ -242,7 +245,7 @@ static mx_status_t intel_i915_ioctl(void* ctx, uint32_t op, const void* in_buf, 
                                                                &image_desc, true);
                 device->console_visible = false;
                 if (device->ownership_change_callback)
-                    device->ownership_change_callback(false);
+                    device->ownership_change_callback(false, device->ownership_change_cookie);
             }
 
             auto connection = MagmaSystemDevice::Open(device->magma_system_device,
