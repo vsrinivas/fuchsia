@@ -45,6 +45,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
                     const std::string& key,
                     mx::vmo data,
                     const std::function<void(gcs::Status)>& callback) override {
+    upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
     message_loop_.task_runner()->PostTask(
@@ -57,6 +58,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       const std::function<
           void(gcs::Status status, uint64_t size, mx::socket data)>& callback)
       override {
+    download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
     message_loop_.task_runner()->PostTask([this, callback] {
       callback(download_status_, download_response_size_,
@@ -72,7 +74,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    message_loop_.task_runner()->PostTask([this, callback]() {
+    message_loop_.task_runner()->PostTask([this, callback] {
       callback(firebase::Status::OK, *get_response_);
       message_loop_.PostQuitTask();
     });
@@ -85,7 +87,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       const std::function<void(firebase::Status status)>& callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    message_loop_.task_runner()->PostTask([this, callback]() {
+    message_loop_.task_runner()->PostTask([this, callback] {
       callback(firebase::Status::OK);
       message_loop_.PostQuitTask();
     });
@@ -97,8 +99,9 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
     patch_keys_.push_back(key);
+    patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    message_loop_.task_runner()->PostTask([this, callback]() {
+    message_loop_.task_runner()->PostTask([this, callback] {
       callback(firebase::Status::OK);
       message_loop_.PostQuitTask();
     });
@@ -143,7 +146,9 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   const std::unique_ptr<CloudProviderImpl> cloud_provider_;
 
   // These members keep track of calls made on the GCS client.
+  std::vector<std::string> download_auth_tokens_;
   std::vector<std::string> download_keys_;
+  std::vector<std::string> upload_auth_tokens_;
   std::vector<std::string> upload_keys_;
   std::vector<mx::vmo> upload_data_;
 
@@ -159,6 +164,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   std::vector<std::string> put_keys_;
   std::vector<std::string> put_data_;
   std::vector<std::string> patch_keys_;
+  std::vector<std::vector<std::string>> patch_queries_;
   std::vector<std::string> patch_data_;
   std::vector<std::string> watch_keys_;
   std::vector<std::vector<std::string>> watch_queries_;
@@ -190,14 +196,17 @@ TEST_F(CloudProviderImplTest, AddCommit) {
 
   Status status;
   cloud_provider_->AddCommits(
-      std::move(commits),
+      "this-is-a-token", std::move(commits),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, patch_keys_.size());
-  ASSERT_EQ(patch_keys_.size(), patch_data_.size());
   EXPECT_EQ("commits", patch_keys_[0]);
+  ASSERT_EQ(1u, patch_queries_.size());
+  EXPECT_EQ(std::vector<std::string>{"auth=this-is-a-token"},
+            patch_queries_[0]);
+  ASSERT_EQ(1u, patch_data_.size());
   EXPECT_EQ(
       "{\"commit_idV\":{\"id\":\"commit_idV\","
       "\"content\":\"some_contentV\","
@@ -222,7 +231,7 @@ TEST_F(CloudProviderImplTest, AddMultipleCommits) {
 
   Status status;
   cloud_provider_->AddCommits(
-      std::move(commits),
+      "", std::move(commits),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -240,8 +249,17 @@ TEST_F(CloudProviderImplTest, AddMultipleCommits) {
       patch_data_[0]);
 }
 
+TEST_F(CloudProviderImplTest, Watch) {
+  cloud_provider_->WatchCommits("this-is-a-token", "", this);
+  EXPECT_EQ(1u, watch_keys_.size());
+  EXPECT_EQ(1u, watch_queries_.size());
+  EXPECT_EQ("commits", watch_keys_[0]);
+  EXPECT_EQ(std::vector<std::string>{"auth=this-is-a-token"},
+            watch_queries_[0]);
+}
+
 TEST_F(CloudProviderImplTest, WatchUnwatch) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("commits", watch_keys_[0]);
@@ -253,7 +271,7 @@ TEST_F(CloudProviderImplTest, WatchUnwatch) {
 }
 
 TEST_F(CloudProviderImplTest, WatchWithQuery) {
-  cloud_provider_->WatchCommits(ServerTimestampToBytes(42), this);
+  cloud_provider_->WatchCommits("", ServerTimestampToBytes(42), this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("commits", watch_keys_[0]);
@@ -264,7 +282,7 @@ TEST_F(CloudProviderImplTest, WatchWithQuery) {
 // Tests handling a server event containing multiple separate (not batched)
 // commits.
 TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content =
       "{\"id_1V\":"
@@ -296,7 +314,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
 
 // Tests handling a server event containing a complete batch of commits.
 TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content = R"({
     "id_1V": {
@@ -335,7 +353,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
 
 // Tests handling a batch delivered over two separate calls.
 TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string content_1 = R"({
     "id_1V": {
@@ -379,7 +397,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
 
 // Tests handling a batch delivered over two separate calls in incorrect order.
 TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string content_2 = R"({
     "id_2V": {
@@ -421,7 +439,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
 
 // Tests handling a server event containing a single commit.
 TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content =
       "{\"id\":\"commit_idV\","
@@ -450,7 +468,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
 // Verifies that the initial response when there is no matching commits is
 // ignored.
 TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 
   std::string put_content = "null";
   rapidjson::Document document;
@@ -473,7 +491,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   // Not a dictionary.
   document.Parse("[]");
   ASSERT_FALSE(document.HasParseError());
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnPut("/commits/commit_idV", document);
   EXPECT_EQ(1u, malformed_notification_calls_);
   EXPECT_EQ(1u, unwatch_count_);
@@ -481,7 +499,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   // Missing fields.
   document.Parse("{}");
   ASSERT_FALSE(document.HasParseError());
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnPut("/commits/commit_idV", document);
   EXPECT_EQ(2u, malformed_notification_calls_);
   EXPECT_EQ(2u, unwatch_count_);
@@ -494,7 +512,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
       "}";
   document.Parse(content);
   ASSERT_FALSE(document.HasParseError());
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnPut("/commits/commit_idV", document);
   EXPECT_EQ(3u, malformed_notification_calls_);
 }
@@ -506,7 +524,7 @@ TEST_F(CloudProviderImplTest, WatchConnectionError) {
   EXPECT_EQ(0u, connection_error_calls_);
   EXPECT_EQ(0u, unwatch_count_);
 
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnConnectionError();
   EXPECT_EQ(1u, connection_error_calls_);
   EXPECT_EQ(1u, unwatch_count_);
@@ -534,7 +552,7 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
-      ServerTimestampToBytes(42),
+      "this-is-a-token", ServerTimestampToBytes(42),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &records));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -553,7 +571,8 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ(1u, get_queries_.size());
   EXPECT_EQ("commits", get_keys_[0]);
-  EXPECT_EQ((std::vector<std::string>{"orderBy=\"timestamp\"", "startAt=42"}),
+  EXPECT_EQ((std::vector<std::string>{"auth=this-is-a-token",
+                                      "orderBy=\"timestamp\"", "startAt=42"}),
             get_queries_[0]);
 }
 
@@ -583,7 +602,7 @@ TEST_F(CloudProviderImplTest, GetCommitsBatch) {
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
-      ServerTimestampToBytes(42),
+      "", ServerTimestampToBytes(42),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &records));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -609,7 +628,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   Status status;
   std::vector<Record> records;
   cloud_provider_->GetCommits(
-      ServerTimestampToBytes(42),
+      "", ServerTimestampToBytes(42),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                         &records));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -624,14 +643,14 @@ TEST_F(CloudProviderImplTest, AddObject) {
 
   Status status;
   cloud_provider_->AddObject(
-      "object_id", std::move(data),
+      "this-is-a-token", "object_id", std::move(data),
       callback::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, upload_keys_.size());
   EXPECT_EQ(upload_keys_.size(), upload_data_.size());
-  EXPECT_EQ("object_idV", upload_keys_[0]);
+  EXPECT_EQ(std::vector<std::string>{"this-is-a-token"}, upload_auth_tokens_);
+  EXPECT_EQ(std::vector<std::string>{"object_idV"}, upload_keys_);
 
   std::string uploaded_content;
   ASSERT_TRUE(
@@ -648,8 +667,9 @@ TEST_F(CloudProviderImplTest, GetObject) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &size, &data));
+      "this-is-a-token", "object_id",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -659,8 +679,8 @@ TEST_F(CloudProviderImplTest, GetObject) {
   EXPECT_EQ(7u, data_str.size());
   EXPECT_EQ(7u, size);
 
-  EXPECT_EQ(1u, download_keys_.size());
-  EXPECT_EQ("object_idV", download_keys_[0]);
+  EXPECT_EQ(std::vector<std::string>{"this-is-a-token"}, download_auth_tokens_);
+  EXPECT_EQ(std::vector<std::string>{"object_idV"}, download_keys_);
 }
 
 TEST_F(CloudProviderImplTest, GetObjectNotFound) {
@@ -671,8 +691,9 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &size, &data));
+      "", "object_id",
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);

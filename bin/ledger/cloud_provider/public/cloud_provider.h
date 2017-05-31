@@ -33,12 +33,16 @@ class CloudProvider {
   CloudProvider() {}
   virtual ~CloudProvider() {}
 
+  // Common parameters:
+  //   |auth_token| - Firebase authentication token
+
   // Adds the given commits to the cloud.
   //
   // The commits are added in one batch - on the receiving side they will be
   // delivered in a single watch commits notification, in the same order as
   // they were passed in the AddCommits() call.
-  virtual void AddCommits(std::vector<Commit> commits,
+  virtual void AddCommits(const std::string& auth_token,
+                          std::vector<Commit> commits,
                           const std::function<void(Status)>& callback) = 0;
 
   // Registers the given watcher to be notified about commits already present
@@ -55,7 +59,8 @@ class CloudProvider {
   // Passing empty |min_timestamp| covers all commits.
   //
   // Each |watcher| object can be registered only once at a time.
-  virtual void WatchCommits(const std::string& min_timestamp,
+  virtual void WatchCommits(const std::string& auth_token,
+                            const std::string& min_timestamp,
                             CommitWatcher* watcher) = 0;
 
   // Unregisters the given watcher. No methods on the watcher will be called
@@ -68,11 +73,13 @@ class CloudProvider {
   // Result is a vector of pairs of the retrieved commits and their
   // corresponding server timestamps.
   virtual void GetCommits(
+      const std::string& auth_token,
       const std::string& min_timestamp,
       std::function<void(Status, std::vector<Record>)> callback) = 0;
 
   // Uploads the given object to the cloud under the given id.
-  virtual void AddObject(ObjectIdView object_id,
+  virtual void AddObject(const std::string& auth_token,
+                         ObjectIdView object_id,
                          mx::vmo data,
                          std::function<void(Status)> callback) = 0;
 
@@ -80,6 +87,7 @@ class CloudProvider {
   // is passed to the callback along with the socket handle, so that the client
   // can verify that all data was streamed when draining the socket.
   virtual void GetObject(
+      const std::string& auth_token,
       ObjectIdView object_id,
       std::function<void(Status status, uint64_t size, mx::socket data)>
           callback) = 0;

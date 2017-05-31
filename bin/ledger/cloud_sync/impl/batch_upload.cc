@@ -103,7 +103,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(
-      object->GetId(), std::move(data),
+      "", object->GetId(), std::move(data),
       [ this, id = std::move(id) ](cloud_provider::Status status) {
         FTL_DCHECK(current_uploads_ > 0);
         current_uploads_--;
@@ -184,7 +184,7 @@ void BatchUpload::UploadCommits() {
     ids.push_back(std::move(id));
   }
   cloud_provider_->AddCommits(
-      std::move(commits),
+      "", std::move(commits),
       [ this, commit_ids = std::move(ids) ](cloud_provider::Status status) {
         // UploadCommit() is called as a last step of a so-far-successful upload
         // attempt, so we couldn't have failed before.

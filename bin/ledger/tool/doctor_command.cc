@@ -195,7 +195,7 @@ void DoctorCommand::CheckObjects() {
 
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->AddObject(
-      id, std::move(data),
+      "", id, std::move(data),
       [this, id, content, request_start](cloud_provider::Status status) {
 
         if (status != cloud_provider::Status::OK) {
@@ -216,7 +216,7 @@ void DoctorCommand::CheckObjects() {
 void DoctorCommand::CheckGetObject(std::string id,
                                    std::string expected_content) {
   what("GCS - retrieve test object");
-  cloud_provider_->GetObject(id, [
+  cloud_provider_->GetObject("", id, [
     this, expected_content = std::move(expected_content),
     request_start = ftl::TimePoint::Now()
   ](cloud_provider::Status status, uint64_t size, mx::socket data) {
@@ -259,7 +259,7 @@ void DoctorCommand::CheckCommits() {
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(commit.Clone());
   cloud_provider_->AddCommits(
-      std::move(commits),
+      "", std::move(commits),
       ftl::MakeCopyable([ this, commit = commit.Clone(),
                           request_start ](cloud_provider::Status status) {
         if (status != cloud_provider::Status::OK) {
@@ -283,9 +283,10 @@ void DoctorCommand::CheckGetCommits(cloud_provider::Commit commit) {
   what("Firebase - retrieve all commits");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetCommits(
-      "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
-              cloud_provider::Status status,
-              std::vector<cloud_provider::Record> records) {
+      "", "",
+      ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
+          cloud_provider::Status status,
+          std::vector<cloud_provider::Record> records) {
         if (status != cloud_provider::Status::OK) {
           error(status);
           hint(kIndexConfigurationHint);
@@ -310,23 +311,24 @@ void DoctorCommand::CheckGetCommitsByTimestamp(
     cloud_provider::Commit expected_commit,
     std::string timestamp) {
   what("Firebase - retrieve commits by timestamp");
-  cloud_provider_->GetCommits(
-      timestamp, ftl::MakeCopyable([
-        this, commit = std::move(expected_commit),
-        request_start = ftl::TimePoint::Now()
-      ](cloud_provider::Status status,
-                 std::vector<cloud_provider::Record> records) {
-        if (status != cloud_provider::Status::OK) {
-          error(status);
-          hint(kIndexConfigurationHint);
-          on_done_();
-          return;
-        }
+  cloud_provider_->GetCommits("", timestamp,
+                              ftl::MakeCopyable([
+                                this, commit = std::move(expected_commit),
+                                request_start = ftl::TimePoint::Now()
+                              ](cloud_provider::Status status,
+                                std::vector<cloud_provider::Record> records) {
+                                if (status != cloud_provider::Status::OK) {
+                                  error(status);
+                                  hint(kIndexConfigurationHint);
+                                  on_done_();
+                                  return;
+                                }
 
-        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok(delta);
-        CheckWatchExistingCommits(commit.Clone());
-      }));
+                                ftl::TimeDelta delta =
+                                    ftl::TimePoint::Now() - request_start;
+                                ok(delta);
+                                CheckWatchExistingCommits(commit.Clone());
+                              }));
 }
 
 void DoctorCommand::CheckWatchExistingCommits(
@@ -353,7 +355,7 @@ void DoctorCommand::CheckWatchExistingCommits(
     error(description);
     on_done_();
   };
-  cloud_provider_->WatchCommits("", this);
+  cloud_provider_->WatchCommits("", "", this);
 }
 
 void DoctorCommand::CheckWatchNewCommits() {
@@ -385,7 +387,7 @@ void DoctorCommand::CheckWatchNewCommits() {
 
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(commit.Clone());
-  cloud_provider_->AddCommits(std::move(commits), ftl::MakeCopyable([
+  cloud_provider_->AddCommits("", std::move(commits), ftl::MakeCopyable([
                                 this, expected_commit = commit.Clone()
                               ](cloud_provider::Status status) {
                                 if (status != cloud_provider::Status::OK) {

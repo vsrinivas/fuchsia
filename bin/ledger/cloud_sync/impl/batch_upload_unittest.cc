@@ -147,6 +147,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   ~TestCloudProvider() override = default;
 
   void AddCommits(
+      const std::string& auth_token,
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
     add_commits_calls++;
@@ -159,6 +160,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   }
 
   void AddObject(
+      const std::string& auth_token,
       cloud_provider::ObjectIdView object_id,
       mx::vmo data,
       std::function<void(cloud_provider::Status)> callback) override {

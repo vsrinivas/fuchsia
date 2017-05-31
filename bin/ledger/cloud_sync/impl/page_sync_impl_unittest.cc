@@ -223,6 +223,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   ~TestCloudProvider() override = default;
 
   void AddCommits(
+      const std::string& auth_token,
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
     ++add_commits_calls;
@@ -234,7 +235,8 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
         [this, callback]() { callback(commit_status_to_return); });
   }
 
-  void WatchCommits(const std::string& min_timestamp,
+  void WatchCommits(const std::string& auth_token,
+                    const std::string& min_timestamp,
                     cloud_provider::CommitWatcher* watcher) override {
     watch_call_min_timestamps.push_back(min_timestamp);
     for (auto& record : notifications_to_deliver) {
@@ -253,7 +255,8 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     watcher_removed = true;
   }
 
-  void GetCommits(const std::string& min_timestamp,
+  void GetCommits(const std::string& auth_token,
+                  const std::string& min_timestamp,
                   std::function<void(cloud_provider::Status,
                                      std::vector<cloud_provider::Record>)>
                       callback) override {
@@ -270,7 +273,8 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     });
   }
 
-  void GetObject(cloud_provider::ObjectIdView object_id,
+  void GetObject(const std::string& auth_token,
+                 cloud_provider::ObjectIdView object_id,
                  std::function<void(cloud_provider::Status status,
                                     uint64_t size,
                                     mx::socket data)> callback) override {

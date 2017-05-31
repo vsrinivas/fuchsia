@@ -23,23 +23,28 @@ class CloudProviderEmptyImpl : public CloudProvider {
   CloudProviderEmptyImpl() = default;
   ~CloudProviderEmptyImpl() override = default;
 
-  void AddCommits(std::vector<Commit> commits,
+  void AddCommits(const std::string& auth_token,
+                  std::vector<Commit> commits,
                   const std::function<void(Status)>& callback) override;
 
-  void WatchCommits(const std::string& min_timestamp,
+  void WatchCommits(const std::string& auth_token,
+                    const std::string& min_timestamp,
                     CommitWatcher* watcher) override;
 
   void UnwatchCommits(CommitWatcher* watcher) override;
 
   void GetCommits(
+      const std::string& auth_token,
       const std::string& min_timestamp,
       std::function<void(Status, std::vector<Record>)> callback) override;
 
-  void AddObject(ObjectIdView object_id,
+  void AddObject(const std::string& auth_token,
+                 ObjectIdView object_id,
                  mx::vmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
+      const std::string& auth_token,
       ObjectIdView object_id,
       std::function<void(Status status, uint64_t size, mx::socket data)>
           callback) override;

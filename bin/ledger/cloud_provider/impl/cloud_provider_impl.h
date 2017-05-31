@@ -27,23 +27,28 @@ class CloudProviderImpl : public CloudProvider {
   ~CloudProviderImpl() override;
 
   // CloudProvider:
-  void AddCommits(std::vector<Commit> commits,
+  void AddCommits(const std::string& auth_token,
+                  std::vector<Commit> commits,
                   const std::function<void(Status)>& callback) override;
 
-  void WatchCommits(const std::string& min_timestamp,
+  void WatchCommits(const std::string& auth_token,
+                    const std::string& min_timestamp,
                     CommitWatcher* watcher) override;
 
   void UnwatchCommits(CommitWatcher* watcher) override;
 
   void GetCommits(
+      const std::string& auth_token,
       const std::string& min_timestamp,
       std::function<void(Status, std::vector<Record>)> callback) override;
 
-  void AddObject(ObjectIdView object_id,
+  void AddObject(const std::string& auth_token,
+                 ObjectIdView object_id,
                  mx::vmo data,
                  std::function<void(Status)> callback) override;
 
   void GetObject(
+      const std::string& auth_token,
       ObjectIdView object_id,
       std::function<void(Status status, uint64_t size, mx::socket data)>
           callback) override;
@@ -53,7 +58,8 @@ class CloudProviderImpl : public CloudProvider {
   //
   // If |min_timestamp| is not empty, the resulting query params filter the
   // commits so that only commits not older than |min_timestamp| are returned.
-  std::vector<std::string> GetQueryParams(const std::string& min_timestamp);
+  std::vector<std::string> GetQueryParams(const std::string& auth_token,
+                                          const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
   gcs::CloudStorage* const cloud_storage_;

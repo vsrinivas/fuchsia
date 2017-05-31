@@ -102,7 +102,7 @@ void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
     std::function<void(storage::Status status, uint64_t size, mx::socket data)>
         callback) {
-  cloud_provider_->GetObject(object_id, [
+  cloud_provider_->GetObject("", object_id, [
     this, object_id = object_id.ToString(), callback
   ](cloud_provider::Status status, uint64_t size, mx::socket data) {
     if (status == cloud_provider::Status::NETWORK_ERROR) {
@@ -179,7 +179,7 @@ void PageSyncImpl::StartDownload() {
 
   // TODO(ppi): handle pagination when the response is huge.
   cloud_provider_->GetCommits(
-      std::move(last_commit_ts),
+      "", std::move(last_commit_ts),
       [this](cloud_provider::Status cloud_status,
              std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
@@ -278,7 +278,7 @@ void PageSyncImpl::SetRemoteWatcher() {
     return;
   }
 
-  cloud_provider_->WatchCommits(last_commit_ts, this);
+  cloud_provider_->WatchCommits("", last_commit_ts, this);
   remote_watch_set_ = true;
 }
 

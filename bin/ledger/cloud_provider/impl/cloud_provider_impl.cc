@@ -28,23 +28,25 @@ CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::AddCommits(
+    const std::string& auth_token,
     std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   std::string encoded_batch;
   bool ok = EncodeCommits(commits, &encoded_batch);
   FTL_DCHECK(ok);
 
-  firebase_->Patch(kCommitRoot.ToString(), {}, encoded_batch,
-                   [callback](firebase::Status status) {
+  firebase_->Patch(kCommitRoot.ToString(), GetQueryParams(auth_token, ""),
+                   encoded_batch, [callback](firebase::Status status) {
                      callback(ConvertFirebaseStatus(status));
                    });
 }
 
-void CloudProviderImpl::WatchCommits(const std::string& min_timestamp,
+void CloudProviderImpl::WatchCommits(const std::string& auth_token,
+                                     const std::string& min_timestamp,
                                      CommitWatcher* watcher) {
-  watchers_[watcher] =
-      std::make_unique<WatchClientImpl>(firebase_, kCommitRoot.ToString(),
-                                        GetQueryParams(min_timestamp), watcher);
+  watchers_[watcher] = std::make_unique<WatchClientImpl>(
+      firebase_, kCommitRoot.ToString(),
+      GetQueryParams(auth_token, min_timestamp), watcher);
 }
 
 void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
@@ -52,10 +54,11 @@ void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
 }
 
 void CloudProviderImpl::GetCommits(
+    const std::string& auth_token,
     const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
   firebase_->Get(
-      kCommitRoot.ToString(), GetQueryParams(min_timestamp),
+      kCommitRoot.ToString(), GetQueryParams(auth_token, min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
           callback(ConvertFirebaseStatus(status), std::vector<Record>());
@@ -79,25 +82,27 @@ void CloudProviderImpl::GetCommits(
       });
 }
 
-void CloudProviderImpl::AddObject(ObjectIdView object_id,
+void CloudProviderImpl::AddObject(const std::string& auth_token,
+                                  ObjectIdView object_id,
                                   mx::vmo data,
                                   std::function<void(Status)> callback) {
   // Even though this yields path to be used in GCS, we use Firebase key
   // encoding, as it happens to produce valid GCS object names. To be revisited
   // when we redo the encoding in LE-118.
   cloud_storage_->UploadObject(
-      "", firebase::EncodeKey(object_id),
+      auth_token, firebase::EncodeKey(object_id),
       std::move(data), [callback = std::move(callback)](gcs::Status status) {
         callback(ConvertGcsStatus(status));
       });
 }
 
 void CloudProviderImpl::GetObject(
+    const std::string& auth_token,
     ObjectIdView object_id,
     std::function<void(Status status, uint64_t size, mx::socket data)>
         callback) {
   cloud_storage_->DownloadObject(
-      "", firebase::EncodeKey(object_id),
+      auth_token, firebase::EncodeKey(object_id),
       [callback = std::move(callback)](gcs::Status status, uint64_t size,
                                        mx::socket data) {
         callback(ConvertGcsStatus(status), size, std::move(data));
@@ -105,14 +110,21 @@ void CloudProviderImpl::GetObject(
 }
 
 std::vector<std::string> CloudProviderImpl::GetQueryParams(
+    const std::string& auth_token,
     const std::string& min_timestamp) {
-  if (min_timestamp.empty()) {
-    return {};
+  std::vector<std::string> result;
+
+  if (!auth_token.empty()) {
+    result.push_back("auth=" + auth_token);
   }
 
-  return {
-      "orderBy=\"timestamp\"",
-      "startAt=" + ftl::NumberToString(BytesToServerTimestamp(min_timestamp))};
+  if (!min_timestamp.empty()) {
+    result.push_back("orderBy=\"timestamp\"");
+    result.push_back("startAt=" + ftl::NumberToString(
+                                      BytesToServerTimestamp(min_timestamp)));
+  }
+
+  return result;
 }
 
 }  // namespace cloud_provider

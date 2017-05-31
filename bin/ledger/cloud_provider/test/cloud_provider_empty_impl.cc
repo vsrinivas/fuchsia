@@ -10,12 +10,14 @@ namespace cloud_provider {
 namespace test {
 
 void CloudProviderEmptyImpl::AddCommits(
+    const std::string& auth_token,
     std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
   FTL_NOTIMPLEMENTED();
 }
 
-void CloudProviderEmptyImpl::WatchCommits(const std::string& min_timestamp,
+void CloudProviderEmptyImpl::WatchCommits(const std::string& auth_token,
+                                          const std::string& min_timestamp,
                                           CommitWatcher* watcher) {
   FTL_NOTIMPLEMENTED();
 }
@@ -25,18 +27,21 @@ void CloudProviderEmptyImpl::UnwatchCommits(CommitWatcher* watcher) {
 }
 
 void CloudProviderEmptyImpl::GetCommits(
+    const std::string& auth_token,
     const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
   FTL_NOTIMPLEMENTED();
 }
 
-void CloudProviderEmptyImpl::AddObject(ObjectIdView object_id,
+void CloudProviderEmptyImpl::AddObject(const std::string& auth_token,
+                                       ObjectIdView object_id,
                                        mx::vmo data,
                                        std::function<void(Status)> callback) {
   FTL_NOTIMPLEMENTED();
 }
 
 void CloudProviderEmptyImpl::GetObject(
+    const std::string& auth_token,
     ObjectIdView object_id,
     std::function<void(Status status, uint64_t size, mx::socket data)>
         callback) {
