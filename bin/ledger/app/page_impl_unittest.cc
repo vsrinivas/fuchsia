@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/page_impl.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 
@@ -101,7 +102,13 @@ class PageImplTest : public test::TestWithMessageLoop {
     return object;
   }
 
-  void AddEntries(int entry_count) {
+  std::string GetKey(size_t index, size_t min_key_size = 0u) {
+    std::string result = ftl::StringPrintf("key %04" PRIuMAX, index);
+    result.resize(std::max(result.size(), min_key_size));
+    return result;
+  }
+
+  void AddEntries(int entry_count, size_t min_key_size = 0u) {
     FTL_DCHECK(entry_count <= 10000);
     auto callback_statusok = [this](Status status) {
       EXPECT_EQ(Status::OK, status);
@@ -111,7 +118,7 @@ class PageImplTest : public test::TestWithMessageLoop {
     EXPECT_FALSE(RunLoopWithTimeout());
 
     for (int i = 0; i < entry_count; ++i) {
-      page_ptr_->Put(convert::ToArray(ftl::StringPrintf("key %04d", i)),
+      page_ptr_->Put(convert::ToArray(GetKey(i, min_key_size)),
                      convert::ToArray(ftl::StringPrintf("val %04d", i)),
                      callback_statusok);
       EXPECT_FALSE(RunLoopWithTimeout());
@@ -523,15 +530,56 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
 }
 
-TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
-  // The expected size per entry is:
-  // |entry| = |key| + |value| + 2 * |array_header| + |priority| + |ptr_header|
-  //         = 48 bytes
-  // entry_count * |entry| = 3120
-  FTL_DCHECK(fidl_serialization::kMaxInlineDataSize < 3120)
-      << "Update test to store more entries";
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
+  const size_t entry_count = 20;
+  const size_t min_key_size =
+      fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count;
+  AddEntries(entry_count, min_key_size);
+  PageSnapshotPtr snapshot = GetSnapshot();
 
-  int entry_count = 65;
+  // Call GetEntries and find a partial result.
+  fidl::Array<EntryPtr> actual_entries;
+  fidl::Array<uint8_t> actual_next_token;
+  auto callback_getentries = [this, &actual_entries, &actual_next_token](
+                                 Status status, fidl::Array<EntryPtr> entries,
+                                 fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::PARTIAL_RESULT, status);
+    EXPECT_FALSE(next_token.is_null());
+    actual_entries = std::move(entries);
+    actual_next_token = std::move(next_token);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Call GetEntries with the previous token and receive the remaining results.
+  auto callback_getentries2 = [this, &actual_entries](
+                                  Status status, fidl::Array<EntryPtr> entries,
+                                  fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    for (size_t i = 0; i < entries.size(); ++i) {
+      actual_entries.push_back(std::move(entries[i]));
+    }
+    EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetEntries(nullptr, std::move(actual_next_token),
+                       callback_getentries2);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Check that the correct values of the keys are all present in the result and
+  // in the correct order.
+  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+    ASSERT_EQ(GetKey(i, min_key_size),
+              convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(ftl::StringPrintf("val %04d", i),
+              ToString(actual_entries[i]->value));
+  }
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
+  const size_t entry_count = 100;
   AddEntries(entry_count);
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -551,7 +599,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Call GetEntries with the previous token and receive the remaining results.
-  auto callback_getentries2 = [this, entry_count, &actual_entries](
+  auto callback_getentries2 = [this, &actual_entries](
                                   Status status, fidl::Array<EntryPtr> entries,
                                   fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
@@ -569,8 +617,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithToken) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
-    ASSERT_EQ(ftl::StringPrintf("key %04d", i),
-              convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(ftl::StringPrintf("val %04d", i),
               ToString(actual_entries[i]->value));
   }
@@ -751,13 +798,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
-  // The expected size of the result is:
-  // key_count * (|key| + |array_header|) = 200 * (8 + 8) = 3200
-  FTL_DCHECK(fidl_serialization::kMaxInlineDataSize < 3200)
-      << "Update test to store more keys";
-
-  int key_count = 200;
-  AddEntries(key_count);
+  const size_t key_count = 20;
+  const size_t min_key_size =
+      fidl_serialization::kMaxInlineDataSize * 3 / 2 / key_count;
+  AddEntries(key_count, min_key_size);
   PageSnapshotPtr snapshot = GetSnapshot();
 
   // Call GetKeys and find a partial result.
@@ -777,7 +821,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Call GetKeys with the previous token and receive the remaining results.
-  auto callback_getkeys2 = [this, key_count, &actual_keys](
+  auto callback_getkeys2 = [this, &actual_keys](
                                Status status,
                                fidl::Array<fidl::Array<uint8_t>> keys,
                                fidl::Array<uint8_t> next_token) {
@@ -795,8 +839,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (size_t i = 0; i < actual_keys.size(); ++i) {
-    ASSERT_EQ(ftl::StringPrintf("key %04d", static_cast<int>(i)),
-              convert::ToString(actual_keys[i]));
+    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys[i]));
   }
 }
 

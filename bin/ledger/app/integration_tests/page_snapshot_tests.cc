@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
@@ -230,7 +231,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
     keys[i] = RandomArray(
-        40, {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+        fidl_serialization::kMaxInlineDataSize * 3 / N / 2,
+        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
   for (size_t i = 0; i < N; ++i) {
@@ -326,7 +328,49 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(0u, entries.size());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPart) {
+TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
+  PagePtr page = GetTestPage();
+
+  // Grab a snapshot before adding any entries and verify that GetEntries()
+  // returns empty results.
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  int num_queries;
+  fidl::Array<EntryPtr> entries =
+      SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>(), &num_queries);
+  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(1, num_queries);
+
+  // Add entries and grab a new snapshot.
+  const size_t N = 10;
+  fidl::Array<uint8_t> keys[N];
+  fidl::Array<uint8_t> values[N];
+  for (size_t i = 0; i < N; ++i) {
+    // Generate keys so that they are in increasing order to match the order
+    // of results from GetEntries().
+    keys[i] = RandomArray(
+        fidl_serialization::kMaxInlineDataSize * 3 / N / 2,
+        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    values[i] = RandomArray(100);
+  }
+
+  for (size_t i = 0; i < N; ++i) {
+    page->Put(keys[i].Clone(), values[i].Clone(),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    ASSERT_TRUE(page.WaitForIncomingResponse());
+  }
+  snapshot = PageGetSnapshot(&page);
+
+  // Get all entries.
+  entries = SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>(), &num_queries);
+  EXPECT_TRUE(num_queries > 1);
+  ASSERT_EQ(N, entries.size());
+  for (size_t i = 0; i < N; ++i) {
+    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
+  }
+}
+
+TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   PagePtr page = GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetEntries()

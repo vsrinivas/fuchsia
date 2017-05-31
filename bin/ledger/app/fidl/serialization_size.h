@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_APP_FIDL_SERIALIZATION_SIZE_H_
 #define APPS_LEDGER_SRC_APP_FIDL_SERIALIZATION_SIZE_H_
 
+#include <magenta/types.h>
 #include <stddef.h>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
@@ -13,7 +14,8 @@ namespace ledger {
 namespace fidl_serialization {
 
 // Maximal size of data that will be returned inline.
-const size_t kMaxInlineDataSize = 2048;
+constexpr size_t kMaxInlineDataSize = MX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
+constexpr size_t kMaxMessageHandles = MX_CHANNEL_MAX_MSG_HANDLES;
 
 const size_t kArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
 const size_t kPointerSize = sizeof(uint64_t);

@@ -54,7 +54,8 @@ fidl::Array<uint8_t> PageGetId(PagePtr* page) {
   fidl::Array<uint8_t> page_id;
   (*page)->GetId(
       [&page_id](fidl::Array<uint8_t> id) { page_id = std::move(id); });
-  EXPECT_TRUE(page->WaitForIncomingResponse());
+  EXPECT_TRUE(
+      page->WaitForIncomingResponseWithTimeout(ftl::TimeDelta::FromSeconds(1)));
   return page_id;
 }
 
@@ -62,7 +63,8 @@ PageSnapshotPtr PageGetSnapshot(PagePtr* page, fidl::Array<uint8_t> prefix) {
   PageSnapshotPtr snapshot;
   (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
                        [](Status status) { EXPECT_EQ(Status::OK, status); });
-  EXPECT_TRUE(page->WaitForIncomingResponse());
+  EXPECT_TRUE(
+      page->WaitForIncomingResponseWithTimeout(ftl::TimeDelta::FromSeconds(1)));
   return snapshot;
 }
 
@@ -94,7 +96,8 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
           }
           next_token = std::move(new_next_token);
         });
-    EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+    EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
+        ftl::TimeDelta::FromSeconds(1)));
   } while (next_token);
   return result;
 }
@@ -127,7 +130,8 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
           }
           next_token = std::move(new_next_token);
         });
-    EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+    EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
+        ftl::TimeDelta::FromSeconds(1)));
   } while (next_token);
   return result;
 }
@@ -153,7 +157,8 @@ std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
                               EXPECT_EQ(status, Status::OK);
                               EXPECT_TRUE(mtl::StringFromVmo(buffer, &result));
                             });
-  EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+  EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   return result;
 }
 
@@ -201,13 +206,15 @@ LedgerPtr LedgerApplicationBaseTest::GetTestLedger() {
   ledger_repository_factory_->GetRepository(
       tmp_dir_.path(), nullptr, nullptr, repository.NewRequest(),
       [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(Status::OK, status);
 
   LedgerPtr ledger;
   repository->GetLedger(RandomArray(1), ledger.NewRequest(),
                         [&status](Status s) { status = s; });
-  EXPECT_TRUE(repository.WaitForIncomingResponse());
+  EXPECT_TRUE(repository.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(Status::OK, status);
   return ledger;
 }
@@ -218,7 +225,8 @@ PagePtr LedgerApplicationBaseTest::GetTestPage() {
 
   ledger_->GetPage(nullptr, page.NewRequest(),
                    [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(Status::OK, status);
 
   return fidl::InterfacePtr<Page>::Create(std::move(page));
@@ -231,7 +239,8 @@ PagePtr LedgerApplicationBaseTest::GetPage(const fidl::Array<uint8_t>& page_id,
 
   ledger_->GetPage(page_id.Clone(), page_ptr.NewRequest(),
                    [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
 
   return page_ptr;
@@ -243,7 +252,8 @@ void LedgerApplicationBaseTest::DeletePage(const fidl::Array<uint8_t>& page_id,
   Status status;
 
   ledger_->DeletePage(page_id.Clone(), [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
 }
 

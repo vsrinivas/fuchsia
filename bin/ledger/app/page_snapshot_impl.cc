@@ -52,14 +52,17 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
   // Initially, all entries starting from |token| are requested from storage.
   // Iteration stops if either all entries were found, or if the serialization
   // size of entries, including the value, exceeds
-  // fidl_serialization::kMaxInlineDataSize. In the second case callback will
-  // run with PARTIAL_RESULT status.
+  // fidl_serialization::kMaxInlineDataSize, or if the number of entries exceeds
+  // fidl_serialization::kMaxMessageHandles. In the second and third case
+  // callback will run with PARTIAL_RESULT status.
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
     fidl::Array<EntryPtr> entries;
     // The serialization size of all entries.
     size_t size = fidl_serialization::kArrayHeaderSize;
+    // The number of entries.
+    size_t entry_count = 0u;
     // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
     // have the value of the following entry's key.
     std::string next_token = "";
@@ -82,7 +85,9 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_start,
       return false;
     }
     context->size += fidl_serialization::GetEntrySize(entry.key.size());
-    if (context->size > fidl_serialization::kMaxInlineDataSize &&
+    ++context->entry_count;
+    if ((context->size > fidl_serialization::kMaxInlineDataSize ||
+         context->entry_count > fidl_serialization::kMaxMessageHandles) &&
         context->entries.size()) {
       context->next_token = std::move(entry.key);
       return false;

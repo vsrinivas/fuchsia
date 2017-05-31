@@ -91,6 +91,7 @@ class BranchTracker::PageWatcherContainer {
     std::vector<PageChangePtr> changes;
 
     size_t fidl_size;
+    size_t handle_count;
     size_t timestamp = change->timestamp;
     auto entries = std::move(change->changes);
     auto deletions = std::move(change->deleted_keys);
@@ -102,17 +103,22 @@ class BranchTracker::PageWatcherContainer {
       size_t entry_size =
           add_entry ? fidl_serialization::GetEntrySize(entries[i]->key.size())
                     : fidl_serialization::GetByteArraySize(deletions[j].size());
+      size_t entry_handle_count = add_entry ? 1 : 0;
 
       if (changes.empty() ||
-          fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize) {
+          fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize ||
+          handle_count + entry_handle_count >
+              fidl_serialization::kMaxMessageHandles) {
         changes.push_back(PageChange::New());
         changes.back()->timestamp = timestamp;
         changes.back()->changes = fidl::Array<EntryPtr>::New(0);
         changes.back()->deleted_keys =
             fidl::Array<fidl::Array<uint8_t>>::New(0);
         fidl_size = fidl_serialization::kPageChangeHeaderSize;
+        handle_count = 0u;
       }
       fidl_size += entry_size;
+      handle_count += entry_handle_count;
       if (add_entry) {
         changes.back()->changes.push_back(std::move(entries[i]));
         ++i;
@@ -170,7 +176,7 @@ class BranchTracker::PageWatcherContainer {
     // TODO(etiennej): See LE-74: clean object ownership
     diff_utils::ComputePageChange(
         storage_, *last_commit_, *current_commit_, key_prefix_, key_prefix_,
-        std::numeric_limits<size_t>::max(),
+        diff_utils::PaginationBehavior::NO_PAGINATION,
         ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
             Status status,
             std::pair<PageChangePtr, std::string> page_change_ptr) mutable {

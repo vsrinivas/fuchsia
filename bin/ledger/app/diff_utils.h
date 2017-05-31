@@ -13,21 +13,29 @@
 
 namespace ledger {
 namespace diff_utils {
+
+// Configure the pagination behavior of |ComputePageChange|.
+enum class PaginationBehavior {
+  NO_PAGINATION,
+  BY_SIZE,
+};
+
 // Asynchronously creates a PageChange representing the diff of the two provided
-// commits, starting from the given |min_key| and providing as many results as
-// possible, given the |max_fidl_size| constraint. The result, or an error, will
-// be provided in |callback| status. The second argument of the callback is a
-// pair of the PageChangePtr, containing the diff result, and the string
-// representation of the next token, if the result is paginated, or empty, if
-// there are no more results to return. Note that the PageChangePtr in the
-// callback will be NULL if the diff is empty.
+// commits, starting from the given |min_key|. If |pagination_behavior| is
+// |NO_PAGINATION|, it provide all results. If |pagination_behavior| is |BY_SIZE| it
+// will provide a number of results that fits in a fidl message.  The result, or
+// an error, will be provided in |callback| status. The second argument of the
+// callback is a pair of the PageChangePtr, containing the diff result, and the
+// string representation of the next token, if the result is paginated, or
+// empty, if there are no more results to return. Note that the PageChangePtr in
+// the callback will be NULL if the diff is empty.
 void ComputePageChange(
     storage::PageStorage* storage,
     const storage::Commit& base,
     const storage::Commit& other,
     std::string prefix_key,
     std::string min_key,
-    size_t max_fidl_size,
+    PaginationBehavior pagination_behavior,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback);
 

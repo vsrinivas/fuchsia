@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/app/fidl/serialization_size.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
@@ -109,7 +110,65 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
 }
 
-TEST_F(PageWatcherIntegrationTest, DISABLED_PageWatcherBigChange) {
+TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
+  const size_t entry_count = 2;
+  const auto key_generator = [](size_t i) {
+    std::string filler(
+        fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count, 'k');
+    return ftl::StringPrintf("key%02" PRIuMAX "%s", i, filler.c_str());
+  };
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+                    [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  for (size_t i = 0; i < entry_count; ++i) {
+    page->Put(convert::ToArray(key_generator(i)), convert::ToArray("value"),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+  }
+
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(100)));
+  EXPECT_EQ(0u, watcher.changes_seen);
+
+  page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  // Get the first OnChagne call.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, watcher.changes_seen);
+  EXPECT_EQ(watcher.last_result_state_, ResultState::PARTIAL_STARTED);
+  PageChangePtr change = std::move(watcher.last_page_change_);
+  size_t initial_size = change->changes.size();
+  for (size_t i = 0; i < initial_size; ++i) {
+    EXPECT_EQ(key_generator(i), convert::ToString(change->changes[i]->key));
+    EXPECT_EQ("value", ToString(change->changes[i]->value));
+    EXPECT_EQ(Priority::EAGER, change->changes[i]->priority);
+  }
+
+  // Get the second OnChagne call.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(2u, watcher.changes_seen);
+  EXPECT_EQ(ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
+  change = std::move(watcher.last_page_change_);
+
+  ASSERT_EQ(entry_count, initial_size + change->changes.size());
+  for (size_t i = 0; i < change->changes.size(); ++i) {
+    EXPECT_EQ(key_generator(i + initial_size),
+              convert::ToString(change->changes[i]->key));
+    EXPECT_EQ("value", ToString(change->changes[i]->value));
+    EXPECT_EQ(Priority::EAGER, change->changes[i]->priority);
+  }
+}
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   size_t entry_count = 70;
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
@@ -130,7 +189,7 @@ TEST_F(PageWatcherIntegrationTest, DISABLED_PageWatcherBigChange) {
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
 
-  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(100)));
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -207,10 +266,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  mtl::MessageLoop::GetCurrent()->Run();
+  EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(0u, watcher.changes_seen);
 
   page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -316,10 +372,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
 
   page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  mtl::MessageLoop::GetCurrent()->Run();
+  EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 

@@ -165,7 +165,7 @@ void ConflictResolverClient::GetDiff(
         callback) {
   diff_utils::ComputePageChange(
       storage_, *ancestor_, commit, "", convert::ToString(token),
-      fidl_serialization::kMaxInlineDataSize,
+      diff_utils::PaginationBehavior::BY_SIZE,
       [
         weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
       ](Status status,

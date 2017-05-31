@@ -24,7 +24,7 @@ void ComputePageChange(
     const storage::Commit& other,
     std::string prefix_key,
     std::string min_key,
-    size_t max_fidl_size,
+    PaginationBehavior pagination_behavior,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback) {
   struct Context {
@@ -32,6 +32,8 @@ void ComputePageChange(
     PageChangePtr page_change = PageChange::New();
     // The serialization size of all entries.
     size_t fidl_size = fidl_serialization::kPageChangeHeaderSize;
+    // The number of handles.
+    size_t handles_count = 0u;
     // The next token to be returned through the callback.
     std::string next_token = "";
   };
@@ -51,7 +53,7 @@ void ComputePageChange(
   // |on_next| is called for each change on the diff
   auto on_next = [
     storage, waiter, prefix_key = std::move(prefix_key),
-    context = context.get(), max_fidl_size
+    context = context.get(), pagination_behavior
   ](storage::EntryChange change) {
     if (!PageUtils::MatchesPrefix(change.entry.key, prefix_key)) {
       return false;
@@ -60,11 +62,19 @@ void ComputePageChange(
         change.deleted
             ? fidl_serialization::GetByteArraySize(change.entry.key.size())
             : fidl_serialization::GetEntrySize(change.entry.key.size());
-    if (context->fidl_size + entry_size > max_fidl_size) {
+    size_t entry_handle_count = change.deleted ? 0 : 1;
+    if (pagination_behavior == PaginationBehavior::BY_SIZE &&
+        (context->fidl_size + entry_size >
+             fidl_serialization::kMaxInlineDataSize ||
+         context->handles_count + entry_handle_count >
+             fidl_serialization::kMaxMessageHandles
+
+         )) {
       context->next_token = change.entry.key;
       return false;
     }
     context->fidl_size += entry_size;
+    context->handles_count += entry_handle_count;
     if (change.deleted) {
       context->page_change->deleted_keys.push_back(
           convert::ToArray(change.entry.key));
