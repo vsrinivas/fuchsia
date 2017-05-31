@@ -69,10 +69,10 @@ static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
 
 static void vc_device_toggle_framebuffer() {
     if (g_fb_display_protocol->acquire_or_release_display)
-        g_fb_display_protocol->acquire_or_release_display(g_fb_device);
+        g_fb_display_protocol->acquire_or_release_display(g_fb_device, !g_vc_owns_display);
 }
 
-static void vc_display_ownership_callback(bool acquired) {
+static void vc_display_ownership_callback(bool acquired, void* cookie) {
     atomic_store(&g_vc_owns_display, acquired ? 1 : 0);
     if (acquired) {
         mx_object_signal(g_vc_owner_event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
@@ -685,7 +685,7 @@ static mx_status_t vc_root_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // Request notification of display ownership changes
     if (disp->set_ownership_change_callback) {
-        disp->set_ownership_change_callback(dev, &vc_display_ownership_callback);
+        disp->set_ownership_change_callback(dev, &vc_display_ownership_callback, nullptr);
     }
 
     // if the underlying device requires flushes, set the pointer to a flush op

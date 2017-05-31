@@ -17,7 +17,7 @@ __BEGIN_CDECLS;
  * protocol/display.h - display protocol definitions
  */
 
-typedef void (*mx_display_cb_t)(bool acquired);
+typedef void (*mx_display_cb_t)(bool acquired, void* cookie);
 
 typedef struct mx_display_protocol {
     mx_status_t (*set_mode)(mx_device_t* dev, mx_display_info_t* info);
@@ -32,7 +32,7 @@ typedef struct mx_display_protocol {
     void (*flush)(mx_device_t* dev);
     // flushes the framebuffer
 
-    void (*acquire_or_release_display)(mx_device_t* dev);
+    void (*acquire_or_release_display)(mx_device_t* dev, bool acquire);
     // Controls ownership of the display between multiple display clients.
     // Useful for switching to and from the gfxconsole.
     // If the framebuffer is visible, release ownership of the display and
@@ -42,7 +42,7 @@ typedef struct mx_display_protocol {
     // If the display is owned when when a new graphics client is created,
     // ownership will automatically be released.
 
-    void (*set_ownership_change_callback)(mx_device_t* dev, mx_display_cb_t callback);
+    void (*set_ownership_change_callback)(mx_device_t* dev, mx_display_cb_t callback, void* cookie);
     // Registers a callback to be invoked when display ownership changes.
     // The provided callback will be invoked with a value of true if the display
     // has been acquired, false if it has been released.
