@@ -183,9 +183,9 @@ typedef struct {
 #define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
 // max packet size is in bits 10..0
 #define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize) & 0x07FF)
-// for isochronous endpoints, additional transactions per microframe
+// for high speed interrupt and isochronous endpoints, additional transactions per microframe
 // are in bits 12..11
-#define usb_ep_max_burst(ep) (((le16toh((ep)->wMaxPacketSize) >> 11) & 3) + 1)
+#define usb_ep_add_mf_transactions(ep) ((le16toh((ep)->wMaxPacketSize) >> 11) & 3)
 
 typedef struct {
     uint8_t bLength;

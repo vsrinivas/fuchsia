@@ -557,6 +557,7 @@ static size_t dwc_get_max_device_count(mx_device_t* device) {
 
 static mx_status_t dwc_enable_ep(mx_device_t* hci_device, uint32_t device_id,
                                  usb_endpoint_descriptor_t* ep_desc,
+                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                  bool enable) {
     xprintf("dwc_enable_ep: device_id = %u, ep_addr = %u\n", device_id,
             ep_desc->bEndpointAddress);

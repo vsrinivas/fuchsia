@@ -498,7 +498,8 @@ mx_status_t xhci_queue_start_root_hubs(xhci_t* xhci) {
     return xhci_queue_command(xhci, START_ROOT_HUBS, 0, 0, USB_SPEED_UNDEFINED);
 }
 
-mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc, bool enable) {
+mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_descriptor_t* ep_desc,
+                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
         return NO_ERROR;
@@ -527,7 +528,18 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         // See Table 65 in XHCI spec
         int cerr = (ep_type == USB_ENDPOINT_ISOCHRONOUS ? 0 : 3);
         int max_packet_size = usb_ep_max_packet(ep_desc);
-        int max_burst = usb_ep_max_burst(ep_desc);
+
+        int max_burst = 0;
+        if (speed == USB_SPEED_SUPER) {
+            if (ss_comp_desc != NULL) {
+                max_burst = ss_comp_desc->bMaxBurst;
+            }
+        } else if (speed == USB_SPEED_HIGH) {
+            if (ep_type == USB_ENDPOINT_ISOCHRONOUS || ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+                max_burst = usb_ep_add_mf_transactions(ep_desc);
+            }
+        }
+
         int avg_trb_length = max_packet_size * max_burst;
         int max_esit_payload = 0;
         if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {

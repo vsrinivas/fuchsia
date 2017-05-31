@@ -153,9 +153,10 @@ static mx_protocol_device_t usb_interface_proto = {
 
 static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
                                                  usb_endpoint_descriptor_t* ep,
+                                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc,
                                                  bool enable) {
     mx_status_t status = intf->hci_protocol->enable_endpoint(intf->hci_mxdev, intf->device_id, ep,
-                                                             enable);
+                                                             ss_comp_desc, enable);
     if (status != NO_ERROR) {
         printf("usb_interface_enable_endpoint failed\n");
     }
@@ -191,11 +192,18 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
         usb_endpoint_descriptor_t* new_ep = new_endpoints[i];
         if (old_ep != new_ep) {
             if (old_ep) {
-                mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, false);
+                mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
                 if (ret != NO_ERROR) status = ret;
             }
             if (new_ep) {
-                mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, true);
+                usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
+                usb_descriptor_header_t* next =
+                                (usb_descriptor_header_t *)((void *)new_ep + new_ep->bLength);
+                if (next + sizeof(*ss_comp_desc) <= end
+                    && next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+                    ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)next;
+                }
+                mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
                 if (ret != NO_ERROR) status = ret;
             }
             intf->active_endpoints[i] = new_ep;

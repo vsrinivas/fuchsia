@@ -17,7 +17,8 @@ typedef struct usb_hci_protocol {
     size_t (*get_max_device_count)(mx_device_t* dev);
     // enables or disables an endpoint using parameters derived from ep_desc
     mx_status_t (*enable_endpoint)(mx_device_t* hci_device, uint32_t device_id,
-                                   usb_endpoint_descriptor_t* ep_desc, bool enable);
+                                   usb_endpoint_descriptor_t* ep_desc,
+                                   usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable);
 
     // returns the current frame (in milliseconds), used for isochronous transfers
     uint64_t (*get_current_frame)(mx_device_t* hci_device);
