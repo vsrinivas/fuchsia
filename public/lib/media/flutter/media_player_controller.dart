@@ -73,6 +73,8 @@ class MediaPlayerController
   }
 
   void _close() {
+    _videoViewConnection = null;
+
     if (_videoRenderer != null) {
       _videoRenderer.ctrl.close();
     }
