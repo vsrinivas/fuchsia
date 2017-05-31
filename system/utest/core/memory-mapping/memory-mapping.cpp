@@ -39,8 +39,8 @@ bool address_space_limits_test() {
 
     // This is the lowest non-canonical address on x86-64.  We want to
     // make sure that userland cannot map a page immediately below
-    // this address.  See docs/magenta/sysret_problem.md for an
-    // explanation of the reason.
+    // this address.  See docs/sysret_problem.md for an explanation of
+    // the reason.
     uintptr_t noncanon_addr =
         ((uintptr_t) 1) << (x86_linear_address_width() - 1);
 

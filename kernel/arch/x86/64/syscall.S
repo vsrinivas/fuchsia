@@ -323,7 +323,7 @@ FUNCTION(x86_syscall)
     swapgs
 
     /* This will fault if the return address is non-canonical.  See
-     * docs/magenta/sysret_problem.md for how we avoid that. */
+     * docs/sysret_problem.md for how we avoid that. */
     sysretq
 
 .Lthread_signaled:
