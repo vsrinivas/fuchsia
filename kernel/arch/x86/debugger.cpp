@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <kernel/thread.h>
 #include <arch/x86.h>
+#include <arch/x86/feature.h>
 #include <arch/debugger.h>
 #include <magenta/syscalls/debug.h>
 
@@ -157,9 +158,19 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
 
     DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
     switch (thread->arch.general_regs_source) {
-        case X86_GENERAL_REGS_SYSCALL:
+        case X86_GENERAL_REGS_SYSCALL: {
+            // Disallow setting RIP to a non-canonical address, to prevent
+            // returning to such addresses using the SYSRET instruction.
+            // See docs/sysret_problem.md.  Note that this check also
+            // disallows canonical top-bit-set addresses, but allowing such
+            // addresses is not useful and it is simpler to disallow them.
+            uint8_t addr_width = x86_linear_address_width();
+            uint64_t noncanonical_addr = ((uint64_t) 1) << (addr_width - 1);
+            if (in->rip >= noncanonical_addr)
+                return ERR_INVALID_ARGS;
             x86_fill_in_syscall_from_gregs(thread->arch.suspended_general_regs.syscall, in);
             break;
+        }
         case X86_GENERAL_REGS_IFRAME:
             x86_fill_in_iframe_from_gregs(thread->arch.suspended_general_regs.iframe, in);
             break;

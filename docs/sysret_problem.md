@@ -13,8 +13,13 @@ address to be non-canonical is by mapping a 4k executable page immediately
 below that address (at 0x00007ffffffff000), putting a SYSCALL instruction
 at the end of that page, and executing the SYSCALL instruction.
 
-To avoid this problem, we disallow mapping a page when the virtual address
-of the following page will be non-canonical.
+To avoid this problem:
+
+* We disallow mapping a page when the virtual address of the following page
+  will be non-canonical.
+
+* We disallow setting the RIP register to a non-canonical address using
+  **mx_thread_write_state**() when the address would be used with SYSRET.
 
 For more background, see "A Stitch In Time Saves Nine: A Case Of Multiple
 OS Vulnerability", Rafal Wojtczuk
