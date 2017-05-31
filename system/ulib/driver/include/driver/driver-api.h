@@ -8,15 +8,16 @@
 #include <magenta/types.h>
 
 typedef struct mx_device mx_device_t;
+typedef struct mx_driver mx_driver_t;
 typedef struct device_add_args device_add_args_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 typedef struct mx_device_prop mx_device_prop_t;
-typedef struct mx_driver_rec mx_driver_rec_t;
+
 
 typedef struct driver_api {
     void (*device_unbind)(mx_device_t* dev);
 
-    mx_status_t (*device_add)(mx_driver_rec_t* driver, mx_device_t* parent,
+    mx_status_t (*device_add)(mx_driver_t* driver, mx_device_t* parent,
                               device_add_args_t* args, mx_device_t** out);
     mx_status_t (*device_remove)(mx_device_t* dev);
     mx_status_t (*device_rebind)(mx_device_t* dev);

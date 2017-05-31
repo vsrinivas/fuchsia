@@ -19,7 +19,7 @@ static bool is_driver_disabled(const char* name) {
     return getenv(opt) != NULL;
 }
 
-static void found_driver(magenta_note_driver_t* note, mx_bind_inst_t* bi, void* cookie) {
+static void found_driver(magenta_driver_note_t* note, mx_bind_inst_t* bi, void* cookie) {
     // ensure strings are terminated
     note->name[sizeof(note->name) - 1] = 0;
     note->vendor[sizeof(note->vendor) - 1] = 0;

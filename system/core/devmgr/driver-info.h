@@ -7,10 +7,9 @@
 #include <ddk/binding.h>
 
 mx_status_t read_driver_info(int fd, void *cookie,
-                             void (*func)(magenta_note_driver_t* note,
+                             void (*func)(magenta_driver_note_t* note,
                                           mx_bind_inst_t* binding,
                                           void *cookie));
-
 // Lookup the human readable name of a bind program parameter, or return NULL if
 // the name is not known.  Used by debug code to do things like dump the
 // published parameters of a device, or dump the bind program of a driver.

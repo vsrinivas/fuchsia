@@ -138,85 +138,68 @@ mx_bind_inst_t i915_binding[] = {
 };
 #endif
 
-#define MAGENTA_NOTE_DRIVER 0x00010000
+#define MAGENTA_NOTE_DRIVER 0x31565244 // DRV1
 
-typedef struct __attribute__((packed)) {
+#define MAGENTA_DRIVER_NOTE_HEADERSZ (sizeof(uint32_t) * 3u + 8u)
+
+typedef struct {
+    // ELF NOTE Header fields
     uint32_t namesz;
     uint32_t descsz;
-    uint32_t type;
-    char name[8];
-} magenta_note_header_t;
+    uint32_t notetype;
+    char notename[8];
 
-typedef struct __attribute__((packed)) {
+    // Future Expansion
+    uint32_t flags;
+
+    // Driver Metadata
     uint32_t bindcount;
-    uint32_t reserved;
+    uint32_t reserved0;
     char name[32];
     char vendor[16];
     char version[16];
-} magenta_note_driver_t;
 
-typedef struct mx_driver {
-    const char* name;
-    mx_driver_ops_t* ops;
-    uint32_t flags;
-} mx_driver_t;
+    // Driver Bind Program follows
+} magenta_driver_note_t;
 
-typedef struct magenta_driver_info {
-    const mx_driver_t* driver;
-    const magenta_note_driver_t* note;
-} magenta_driver_info_t;
-
-#define MAGENTA_DRIVER_PASTE(a,b) a##b
-#define MAGENTA_STRINGIFY(x) #x
-#define MAGENTA_TOSTRING(x) MAGENTA_STRINGIFY(x)
+#define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
 
 // GCC has a quirk about how '__attribute__((visibility("default")))'
 // (__EXPORT here) works for const variables in C++.  The attribute has no
 // effect when used on the definition of a const variable, and GCC gives a
 // warning/error about that.  The attribute must appear on the "extern"
 // declaration of the variable instead.
-#define MAGENTA_DRIVER_ATTR_DECL __EXPORT
-#define MAGENTA_DRIVER_ATTR_DEF
-#define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
-#define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver_info__
-#define MAGENTA_DRIVER_REC mx_driver_rec_t* __magenta_driver_rec__ __EXPORT;
-
-#define MAGENTA_DRIVER_DEF(Driver,Ops) \
-mx_driver_t MAGENTA_DRIVER_PASTE(_driver_,Driver) = {\
-    /* .name */ MAGENTA_TOSTRING(Driver),\
-    /* .ops */ &Ops,\
-    /* .flags */ 0,\
-};
 
 #define MAGENTA_DRIVER_BEGIN(Driver,Ops,VendorName,Version,BindCount) \
-MAGENTA_DRIVER_DEF(Driver, Ops) \
+mx_driver_rec_t __magenta_driver_rec__ __EXPORT = {\
+    /* .ops = */ &(Ops),\
+    /* .driver = */ NULL,\
+};\
+extern const struct magenta_driver_note_struct __magenta_driver_note__ __EXPORT;\
 MAGENTA_DRIVER_NOTE(Driver)\
-const struct __attribute__((packed)) {\
-    magenta_note_header_t note;\
-    magenta_note_driver_t driver;\
+const struct magenta_driver_note_struct {\
+    magenta_driver_note_t note;\
     mx_bind_inst_t binding[BindCount];\
-} MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver) = {\
-    /* .note = */ {\
+} __magenta_driver_note__ = {\
+    /* .note = */{\
         /* .namesz = */ 7,\
-        /* .descsz = */ sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
-        /* .type = */ MAGENTA_NOTE_DRIVER,\
-        /* .name = */ "Magenta",\
-    },\
-    /* .driver = */ {\
+        /* .descsz = */ sizeof(magenta_driver_note_t) - MAGENTA_DRIVER_NOTE_HEADERSZ + sizeof(mx_bind_inst_t) * (BindCount),\
+        /* .notetype = */ MAGENTA_NOTE_DRIVER,\
+        /* .notename = */ "Magenta",\
+        /* .flags = */ 0,\
         /* .bindcount = */ (BindCount),\
-        /* .reserved = */ 0,\
-        /* .name = */ MAGENTA_TOSTRING(Driver),\
+        /* .reserved0 = */ 0,\
+        /* .name = */ #Driver,\
         /* .vendor = */ VendorName,\
         /* .version = */ Version,\
     },\
     /* .binding = */ {
 
-#define MAGENTA_DRIVER_END(Driver) }};\
-extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DECL; \
-const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DEF = { \
-    /* .driver = */ &MAGENTA_DRIVER_PASTE(_driver_,Driver),\
-    /* .note = */ &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
-};\
-MAGENTA_DRIVER_REC
+#define MAGENTA_DRIVER_END(Driver) }};
+
+//TODO: if we moved the Ops from the BEGIN() to END() macro we
+//      could add a magenta_driver_note_t* to the mx_driver_rec_t,
+//      define it in END(), and have only one symbol to dlsym()
+//      when loading drivers
 
 __END_CDECLS;

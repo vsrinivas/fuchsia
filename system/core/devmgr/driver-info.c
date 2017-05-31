@@ -27,19 +27,14 @@ static mx_status_t find_note(const char* name, uint32_t type,
                              void* cookie) {
     size_t nlen = strlen(name);
     while (size >= sizeof(notehdr)) {
-        // ignore padding between notes
-        if (*((uint32_t*) data) == 0) {
-            size -= sizeof(uint32_t);
-            data += sizeof(uint32_t);
-            continue;
-        }
         notehdr* hdr = data;
         uint32_t nsz = (hdr->namesz + 3) & (~3);
         if (nsz > (size - sizeof(notehdr))) {
             return ERR_INTERNAL;
         }
-        data += sizeof(notehdr) + nsz;
-        size -= sizeof(notehdr) + nsz;
+        size_t hsz = sizeof(notehdr) + nsz;
+        data += hsz;
+        size -= hsz;
 
         uint32_t dsz = (hdr->descsz + 3) & (~3);
         if (dsz > size) {
@@ -49,7 +44,7 @@ static mx_status_t find_note(const char* name, uint32_t type,
         if ((hdr->type == type) &&
             (hdr->namesz == nlen) &&
             (memcmp(name, hdr->name, nlen) == 0)) {
-            return func(data, hdr->descsz, cookie);
+            return func(data - hsz, hdr->descsz + hsz, cookie);
         }
 
         data += dsz;
@@ -101,31 +96,27 @@ static mx_status_t for_each_note(int fd, const char* name, uint32_t type,
 }
 
 typedef struct {
-    magenta_note_driver_t drv;
-    mx_bind_inst_t bi[0];
-} drivernote;
-
-typedef struct {
     void* cookie;
-    void (*func)(magenta_note_driver_t*, mx_bind_inst_t*, void*);
+    void (*func)(magenta_driver_note_t*, mx_bind_inst_t*, void*);
 } context;
 
 static mx_status_t callback(void* note, size_t sz, void* _ctx) {
     context* ctx = _ctx;
-    drivernote* dn = note;
-    if (sz < sizeof(drivernote)) {
+    magenta_driver_note_t* dn = note;
+    if (sz < sizeof(magenta_driver_note_t)) {
         return ERR_INTERNAL;
     }
-    size_t max = (sz - sizeof(drivernote)) / sizeof(mx_bind_inst_t);
-    if (dn->drv.bindcount > max) {
+    size_t max = (sz - sizeof(magenta_driver_note_t)) / sizeof(mx_bind_inst_t);
+    if (dn->bindcount > max) {
         return ERR_INTERNAL;
     }
-    ctx->func(&dn->drv, dn->bi, ctx->cookie);
+    mx_bind_inst_t* bi = (mx_bind_inst_t*) (note + sizeof(magenta_driver_note_t));
+    ctx->func(dn, bi, ctx->cookie);
     return NO_ERROR;
 }
 
 mx_status_t read_driver_info(int fd, void *cookie,
-                             void (*func)(magenta_note_driver_t* note,
+                             void (*func)(magenta_driver_note_t* note,
                                           mx_bind_inst_t* binding,
                                           void *cookie)) {
     context ctx = {

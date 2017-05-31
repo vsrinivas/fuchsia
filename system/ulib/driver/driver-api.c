@@ -20,7 +20,7 @@ __EXPORT void device_unbind(mx_device_t* dev) {
     API->device_unbind(dev);
 }
 
-__EXPORT mx_status_t device_add_from_driver(mx_driver_rec_t* driver, mx_device_t* parent,
+__EXPORT mx_status_t device_add_from_driver(mx_driver_t* driver, mx_device_t* parent,
                                             device_add_args_t* args, mx_device_t** out) {
     return API->device_add(driver, parent, args, out);
 }

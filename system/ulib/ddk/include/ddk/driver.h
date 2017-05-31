@@ -12,6 +12,7 @@
 __BEGIN_CDECLS;
 
 typedef struct mx_device mx_device_t;
+typedef struct mx_driver mx_driver_t;
 typedef struct mx_protocol_device mx_protocol_device_t;
 typedef struct mx_device_prop mx_device_prop_t;
 typedef struct mx_driver_rec mx_driver_rec_t;
@@ -87,14 +88,19 @@ typedef struct device_add_args {
     uint32_t flags;
 } device_add_args_t;
 
-// This global symbol is initialized by the driver loader in devhost
-extern mx_driver_rec_t* __magenta_driver_rec__;
+struct mx_driver_rec {
+    const mx_driver_ops_t* ops;
+    mx_driver_t* driver;
+};
 
-mx_status_t device_add_from_driver(mx_driver_rec_t* drv, mx_device_t* parent,
+// This global symbol is initialized by the driver loader in devhost
+extern mx_driver_rec_t __magenta_driver_rec__;
+
+mx_status_t device_add_from_driver(mx_driver_t* drv, mx_device_t* parent,
                               device_add_args_t* args, mx_device_t** out);
 
 static inline mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
-    return device_add_from_driver(__magenta_driver_rec__, parent, args, out);
+    return device_add_from_driver(__magenta_driver_rec__.driver, parent, args, out);
 }
 
 // Creates a device and adds it to the devmgr.

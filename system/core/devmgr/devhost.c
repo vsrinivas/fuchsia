@@ -72,77 +72,77 @@ static const char* mkdevpath(mx_device_t* dev, char* path, size_t max) {
     return end;
 }
 
-static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_driver_rec_t** out) {
+static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_driver_t** out) {
     // check for already-loaded driver first
-    mx_driver_rec_t* rec;
-    list_for_every_entry(&dh_drivers, rec, mx_driver_rec_t, node) {
-        if (!strcmp(libname, rec->libname)) {
-            *out = rec;
+    mx_driver_t* drv;
+    list_for_every_entry(&dh_drivers, drv, mx_driver_t, node) {
+        if (!strcmp(libname, drv->libname)) {
+            *out = drv;
             mx_handle_close(vmo);
-            return rec->status;
+            return drv->status;
         }
     }
 
     int len = strlen(libname) + 1;
-    rec = calloc(1, sizeof(mx_driver_rec_t) + len);
-    if (rec == NULL) {
+    drv = calloc(1, sizeof(mx_driver_t) + len);
+    if (drv == NULL) {
         mx_handle_close(vmo);
         return ERR_NO_MEMORY;
     }
-    memcpy((void*) (rec + 1), libname, len);
-    rec->libname = (const char*) (rec + 1);
-    list_add_tail(&dh_drivers, &rec->node);
-    *out = rec;
+    memcpy((void*) (drv + 1), libname, len);
+    drv->libname = (const char*) (drv + 1);
+    list_add_tail(&dh_drivers, &drv->node);
+    *out = drv;
 
     void* dl = dlopen_vmo(vmo, RTLD_NOW);
     if (dl == NULL) {
         log(ERROR, "devhost: cannot load '%s': %s\n", libname, dlerror());
-        rec->status = ERR_IO;
+        drv->status = ERR_IO;
         goto done;
     }
 
-    const magenta_driver_info_t* di = dlsym(dl, "__magenta_driver_info__");
-    if (di == NULL) {
-        log(ERROR, "devhost: driver '%s' missing __magenta_driver_info__ symbol\n", libname);
-        rec->status = ERR_IO;
+    const magenta_driver_note_t* dn = dlsym(dl, "__magenta_driver_note__");
+    if (dn == NULL) {
+        log(ERROR, "devhost: driver '%s' missing __magenta_driver_note__ symbol\n", libname);
+        drv->status = ERR_IO;
         goto done;
     }
-    mx_driver_rec_t** dr = dlsym(dl, "__magenta_driver_rec__");
+    mx_driver_rec_t* dr = dlsym(dl, "__magenta_driver_rec__");
     if (dr == NULL) {
         log(ERROR, "devhost: driver '%s' missing __magenta_driver_rec__ symbol\n", libname);
-        rec->status = ERR_IO;
+        drv->status = ERR_IO;
         goto done;
     }
-    if (!di->driver->ops) {
+    if (!dr->ops) {
         log(ERROR, "devhost: driver '%s' has NULL ops\n", libname);
-        rec->status = ERR_INVALID_ARGS;
+        drv->status = ERR_INVALID_ARGS;
         goto done;
     }
-    if (di->driver->ops->version != DRIVER_OPS_VERSION) {
+    if (dr->ops->version != DRIVER_OPS_VERSION) {
         log(ERROR, "devhost: driver '%s' has bad driver ops version %" PRIx64
             ", expecting %" PRIx64 "\n", libname,
-            di->driver->ops->version, DRIVER_OPS_VERSION);
-        rec->status = ERR_INVALID_ARGS;
+            dr->ops->version, DRIVER_OPS_VERSION);
+        drv->status = ERR_INVALID_ARGS;
         goto done;
     }
 
-    rec->name = di->driver->name;
-    rec->ops = di->driver->ops;
-    *dr = rec;
+    drv->name = dn->name;
+    drv->ops = dr->ops;
+    dr->driver = drv;
 
-    if (rec->ops->init) {
-        rec->status = rec->ops->init(&rec->ctx);
-        if (rec->status < 0) {
+    if (drv->ops->init) {
+        drv->status = drv->ops->init(&drv->ctx);
+        if (drv->status < 0) {
             log(ERROR, "devhost: driver '%s' failed in init: %d\n",
-                libname, rec->status);
+                libname, drv->status);
         }
     } else {
-        rec->status = NO_ERROR;
+        drv->status = NO_ERROR;
     }
 
 done:
     mx_handle_close(vmo);
-    return rec->status;
+    return drv->status;
 }
 
 static void dh_handle_open(mxrio_msg_t* msg, size_t len,
@@ -258,20 +258,20 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         }
 
         // named driver -- ask it to create the device
-        mx_driver_rec_t* rec;
-        if ((r = dh_find_driver(name, hin[1], &rec)) < 0) {
+        mx_driver_t* drv;
+        if ((r = dh_find_driver(name, hin[1], &drv)) < 0) {
             free(newios);
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
             break;
         }
-        if (rec->ops->create) {
+        if (drv->ops->create) {
             // magic cookie for device create handshake
             mx_device_t parent = {
                 .name = "device_create dummy",
-                .owner = rec,
+                .owner = drv,
             };
             device_create_setup(&parent);
-            if ((r = rec->ops->create(rec->ctx, &parent, "shadow", args, hin[2])) < 0) {
+            if ((r = drv->ops->create(drv->ctx, &parent, "shadow", args, hin[2])) < 0) {
                 log(ERROR, "devhost[%s] driver create() failed: %d\n", path, r);
                 device_create_setup(NULL);
                 break;
@@ -307,12 +307,12 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         }
         //TODO: api lock integration
         log(RPC_IN, "devhost[%s] bind driver '%s'\n", path, name);
-        mx_driver_rec_t* rec;
-        if ((r = dh_find_driver(name, hin[0], &rec)) < 0) {
+        mx_driver_t* drv;
+        if ((r = dh_find_driver(name, hin[0], &drv)) < 0) {
             log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
         } else {
-            if (rec->ops->bind) {
-                r = rec->ops->bind(rec->ctx, ios->dev, &ios->dev->owner_cookie);
+            if (drv->ops->bind) {
+                r = drv->ops->bind(drv->ctx, ios->dev, &ios->dev->owner_cookie);
             } else {
                 r = ERR_NOT_SUPPORTED;
             }
@@ -320,7 +320,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
                 log(ERROR, "devhost[%s] bind driver '%s' failed: %d\n", path, name, r);
             } else {
                 //TODO: best behaviour for multibind? maybe retire "owner"?
-                ios->dev->owner = rec;
+                ios->dev->owner = drv;
             }
         }
         dc_msg_t reply = {

@@ -158,7 +158,7 @@ void dev_ref_release(mx_device_t* dev) {
     }
 }
 
-mx_status_t devhost_device_create(mx_driver_rec_t* drv, mx_device_t* parent,
+mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
                                   const char* name, void* ctx,
                                   mx_protocol_device_t* ops, mx_device_t** out) {
 

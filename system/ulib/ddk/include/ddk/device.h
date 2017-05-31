@@ -14,7 +14,7 @@
 __BEGIN_CDECLS;
 
 typedef struct mx_device mx_device_t;
-typedef struct mx_driver_rec mx_driver_rec_t;
+typedef struct mx_driver mx_driver_t;
 typedef struct mx_device_prop mx_device_prop_t;
 
 typedef struct mx_protocol_device mx_protocol_device_t;
@@ -54,13 +54,13 @@ struct mx_device {
     void* DDK_PRIVATE(protocol_ops);
 
     // driver that has published this device
-    mx_driver_rec_t* DDK_PRIVATE(driver);
+    mx_driver_t* DDK_PRIVATE(driver);
 
     // parent in the device tree
     mx_device_t* DDK_PRIVATE(parent);
 
     // driver that is bound to this device, NULL if unbound
-    mx_driver_rec_t* DDK_PRIVATE(owner);
+    mx_driver_t* DDK_PRIVATE(owner);
 
     void* DDK_PRIVATE(owner_cookie);
 

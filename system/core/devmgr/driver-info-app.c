@@ -9,7 +9,7 @@
 
 #include "driver-info.h"
 
-void callback(magenta_note_driver_t* dn, mx_bind_inst_t* bi, void* cookie) {
+static void callback(magenta_driver_note_t* dn, mx_bind_inst_t* bi, void* cookie) {
     printf("name:    %s\n", dn->name);
     printf("vendor:  %s\n", dn->vendor);
     printf("version: %s\n", dn->version);

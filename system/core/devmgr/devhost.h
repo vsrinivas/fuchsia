@@ -33,14 +33,14 @@
 
 // Safe external APIs are in device.h and device_internal.h
 
-typedef struct mx_driver_rec {
+typedef struct mx_driver {
     const char* name;
-    mx_driver_ops_t* ops;
+    const mx_driver_ops_t* ops;
     void* ctx;
     const char* libname;
     list_node_t node;
     mx_status_t status;
-} mx_driver_rec_t;
+} mx_driver_t;
 
 extern mx_protocol_device_t device_default_ops;
 
@@ -54,7 +54,7 @@ mx_status_t devhost_device_add_root(mx_device_t* dev);
 mx_status_t devhost_device_remove(mx_device_t* dev);
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname);
 mx_status_t devhost_device_rebind(mx_device_t* dev);
-mx_status_t devhost_device_create(mx_driver_rec_t* drv, mx_device_t* parent,
+mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
                                   const char* name, void* ctx,
                                   mx_protocol_device_t* ops, mx_device_t** out);
 void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
