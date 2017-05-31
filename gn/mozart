@@ -17,6 +17,10 @@
             "bootfs_path": "apps/compositor_services_apptests"
         },
         {
+            "binary": "composer_service",
+            "bootfs_path": "apps/composer_service"
+        },
+        {
             "binary": "composer_apptests",
             "bootfs_path": "test/composer_apptests"
         },
