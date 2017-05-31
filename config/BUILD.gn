@@ -131,16 +131,6 @@ config("default_include_dirs") {
     "//",
     root_gen_dir,
   ]
-  if (!is_fuchsia) {
-    if (current_cpu == "x64") {
-      include_dirs += [ "//out/magenta-host-x86_64/include" ]
-    } else if (current_cpu == "arm64") {
-      include_dirs += [ "//out/magenta-host-aarch64/include" ]
-    } else {
-      assert(false,
-             "unable to determine path to host copies of magenta includes")
-    }
-  }
 }
 
 config("default_warnings") {
