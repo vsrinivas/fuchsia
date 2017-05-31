@@ -5,3 +5,8 @@ License File: LICENSE
 
 This repository has the relevant components from Bup copied to handle rolling
 hashes.
+
+The code has been modified to:
+- Change from C to C++.
+- Allow to add data in multiple passes.
+- Have a minimal and maximal size for chunks.

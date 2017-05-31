@@ -4,11 +4,24 @@
 
 source_set("bup") {
   sources = [
-    "bupsplit.c",
+    "bupsplit.cc",
     "bupsplit.h",
   ]
 
-  defines = [
-    "BUP_NO_SELFTEST",
+  public_deps = [
+    "//lib/ftl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "bupsplit_unittest.cc",
+  ]
+
+  deps = [
+    ":bup",
+    "//apps/ledger/src/test:lib",
   ]
 }
