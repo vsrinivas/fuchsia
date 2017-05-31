@@ -109,7 +109,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherBigChange) {
+TEST_F(PageWatcherIntegrationTest, DISABLED_PageWatcherBigChange) {
   size_t entry_count = 70;
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
