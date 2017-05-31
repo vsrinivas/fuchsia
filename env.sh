@@ -547,13 +547,13 @@ function fbuild() {
 }
 
 function fbuild-sync() {
-  local stamp status_file userfs_path build_path
+  local stamp status_file userfs_path build_path host
 
   stamp="${FUCHSIA_BUILD_DIR}/.fbuild-sync-stamp"
   status_file="${FUCHSIA_BUILD_DIR}/.fbuild-sync-status"
+  batch_file="${FUCHSIA_BUILD_DIR}/.fbuild-sync-batchfile"
 
-  touch $status_file
-
+  touch "$status_file"
   if [[ "$(cat $status_file)" != "failed" ]]; then
     touch $stamp
   fi
@@ -565,8 +565,8 @@ function fbuild-sync() {
     return 1
   fi
 
-  export stamp
-  echo "Syncing changed user.bootfs files..."
+  echo -n > "$batch_file"
+
   while IFS=\= read userfs_path build_path; do
     if [[ -z "${build_path}" ]]; then
       continue
@@ -575,17 +575,22 @@ function fbuild-sync() {
     if [[ $build_path -nt $stamp ]]; then
       local device_path=/system/${userfs_path}
       echo "Updating ${device_path} with ${build_path}"
-      netcp $build_path :${device_path}
-
-      if [ $? -ne 0 ]; then
-        echo failed > $status_file
-        return 1
-      fi
+      echo "-rm ${device_path}" >> "$batch_file"
+      echo "put ${build_path} ${device_path}" >> "$batch_file"
     fi
   done < "${FUCHSIA_BUILD_DIR}/gen/packages/gn/system.bootfs.manifest"
 
-  rm -f "$stamp"
-  rm -f "$status_file"
+  echo "Syncing changed system.bootfs files..."
+  host="$(netaddr --fuchsia)"
+  fsftp -q -b "${batch_file}" "[${host}]" > /dev/null
+  if [ $? -ne 0 ]; then
+    echo failed > "${status_file}"
+    return 1
+  fi
+
+  rm -f "${stamp}"
+  rm -f "${status_file}"
+  rm -f "${batch_file}"
 }
 
 ### fboot: run fuchsia bootserver
