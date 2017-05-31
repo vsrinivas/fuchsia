@@ -39,6 +39,8 @@ DeviceServiceProvider::DeviceServiceProvider(
 
   binding_.set_connection_error_handler([this]() {
     FTL_DCHECK(owner_ != nullptr);
+    binding_.set_connection_error_handler(nullptr);
+    binding_.Close();
     owner_->ReleaseDeviceServiceProvider(this);
   });
 }
