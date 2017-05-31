@@ -103,6 +103,11 @@
 + [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](syscalls/ticks_per_second.md) - read the number of high-precision timer ticks in a second
 
+## Timers
++ [timer_create](syscalls/timer_create.md) - create a timer object
++ [timer_start](syscalls/timer_start.md) - start a timer
++ [timer_cancel](syscalls/timer_cancel.md) - cancel a timer
+
 ## Global system information
 + [system_get_num_cpus](syscalls/system_get_num_cpus.md) - get number of CPUs
 + [system_get_physmem](syscalls/system_get_physmem.md) - get physical memory size
