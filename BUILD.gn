@@ -6,5 +6,6 @@ group("audio") {
     deps = [
         "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
         "//drivers/audio/intel-hda",
+        "//drivers/audio/usb-audio",
     ]
 }
