@@ -5,10 +5,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/mx-syscall-numbers.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-bool bad_syscall_test(void) {
+extern mx_status_t bad_syscall(uint64_t num);
+
+bool bad_access_test(void) {
     BEGIN_TEST;
     void* unmapped_addr = (void*)4096;
     mx_handle_t h[2];
@@ -25,8 +28,18 @@ bool bad_syscall_test(void) {
     END_TEST;
 }
 
+bool bad_syscall_num_test(void) {
+    BEGIN_TEST;
+    EXPECT_EQ(bad_syscall(MX_SYS_COUNT), ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0x80000000ull), ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0xff00ff0000000000ull), ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0xff00ff0000000010ull), ERR_BAD_SYSCALL, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(bad_syscall_tests)
-RUN_TEST(bad_syscall_test)
+RUN_TEST(bad_access_test)
+RUN_TEST(bad_syscall_num_test)
 END_TEST_CASE(bad_syscall_tests)
 
 #ifndef BUILD_COMBINED_TESTS

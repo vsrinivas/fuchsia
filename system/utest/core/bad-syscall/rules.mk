@@ -10,8 +10,8 @@ MODULE_TYPE := usertest
 
 MODULE_USERTEST_GROUP := core
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/bad-syscall.c
+MODULE_SRCS += $(LOCAL_DIR)/bad-syscall.c \
+			   $(LOCAL_DIR)/syscall.S
 
 MODULE_NAME := bad-syscall-test
 
