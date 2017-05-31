@@ -29,7 +29,6 @@ static mx_protocol_device_t null_device_proto = {
     .write = null_write,
 };
 
-
 mx_status_t null_bind(void* ctx, mx_device_t* parent, void** cookie) {
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -40,11 +39,3 @@ mx_status_t null_bind(void* ctx, mx_device_t* parent, void** cookie) {
     mx_device_t* dev;
     return device_add(parent, &args, &dev);
 }
-
-static mx_driver_ops_t null_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = null_bind,
-};
-
-MAGENTA_DRIVER_BEGIN(null, null_driver_ops, "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(null)

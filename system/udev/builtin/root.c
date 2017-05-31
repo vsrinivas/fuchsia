@@ -2,23 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This is defined by our rules.mk so the dmctl, null, etc
-// devices have _driver_xyz symbols.  We need to undefine it
-// for us, so we have a __magenta_driver__ symbol to allow us
-// to be loaded as a wrapper driver around these "builtin"
-// drivers that we contain.
-#undef MAGENTA_BUILTIN_DRIVERS
-
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-extern mx_driver_t _driver_null;
-extern mx_driver_t _driver_zero;
+mx_status_t null_bind(void* ctx, mx_device_t* parent, void** cookie);
+mx_status_t zero_bind(void* ctx, mx_device_t* parent, void** cookie);
 
 mx_status_t root_bind(void* ctx, mx_device_t* parent, void** cookie) {
-    _driver_null.ops->bind(ctx, parent, cookie);
-    _driver_zero.ops->bind(ctx, parent, cookie);
+    null_bind(ctx, parent, cookie);
+    zero_bind(ctx, parent, cookie);
     return NO_ERROR;
 }
 

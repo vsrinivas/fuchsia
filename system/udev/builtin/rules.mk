@@ -17,6 +17,4 @@ MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
-MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
-
 include make/module.mk

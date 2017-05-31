@@ -38,11 +38,3 @@ mx_status_t zero_bind(void* ctx, mx_device_t* parent, void** cookie) {
     mx_device_t* dev;
     return device_add(parent, &args, &dev);
 }
-
-static mx_driver_ops_t zero_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = zero_bind,
-};
-
-MAGENTA_DRIVER_BEGIN(zero, zero_driver_ops, "magenta", "0.1", 0)
-MAGENTA_DRIVER_END(zero)

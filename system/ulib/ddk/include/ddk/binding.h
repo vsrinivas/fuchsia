@@ -170,13 +170,6 @@ typedef struct magenta_driver_info {
 #define MAGENTA_STRINGIFY(x) #x
 #define MAGENTA_TOSTRING(x) MAGENTA_STRINGIFY(x)
 
-#if MAGENTA_BUILTIN_DRIVERS
-#define MAGENTA_DRIVER_ATTR_DECL
-#define MAGENTA_DRIVER_ATTR_DEF __ALIGNED(sizeof(void*)) __SECTION("magenta_drivers")
-#define MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_PASTE(__magenta_driver_info__,Driver)
-#define MAGENTA_DRIVER_NOTE(Driver)
-#define MAGENTA_DRIVER_REC
-#else
 // GCC has a quirk about how '__attribute__((visibility("default")))'
 // (__EXPORT here) works for const variables in C++.  The attribute has no
 // effect when used on the definition of a const variable, and GCC gives a
@@ -187,17 +180,16 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
 #define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver_info__
 #define MAGENTA_DRIVER_REC mx_driver_rec_t* __magenta_driver_rec__;
-#endif
 
-#define MAGENTA_DRIVER_DEF(Driver,Ops,Flags) \
+#define MAGENTA_DRIVER_DEF(Driver,Ops) \
 mx_driver_t MAGENTA_DRIVER_PASTE(_driver_,Driver) = {\
     /* .name */ MAGENTA_TOSTRING(Driver),\
     /* .ops */ &Ops,\
-    /* .flags */ Flags,\
+    /* .flags */ 0,\
 };
 
-#define MAGENTA_DRIVER_BEGIN_ETC(Driver,Ops,Flags,VendorName,Version,BindCount) \
-MAGENTA_DRIVER_DEF(Driver, Ops, Flags) \
+#define MAGENTA_DRIVER_BEGIN(Driver,Ops,VendorName,Version,BindCount) \
+MAGENTA_DRIVER_DEF(Driver, Ops) \
 MAGENTA_DRIVER_NOTE(Driver)\
 const struct __attribute__((packed)) {\
     magenta_note_header_t note;\
@@ -218,9 +210,6 @@ const struct __attribute__((packed)) {\
         /* .version = */ Version,\
     },\
     /* .binding = */ {
-
-#define MAGENTA_DRIVER_BEGIN(Driver,Ops,VendorName,Version,BindCount) \
-    MAGENTA_DRIVER_BEGIN_ETC(Driver,Ops,0,VendorName,Version,BindCount) \
 
 #define MAGENTA_DRIVER_END(Driver) }};\
 extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DECL; \
