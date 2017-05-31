@@ -8,7 +8,6 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/gap/advertising_data.h"
-#include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
 
 namespace bluetooth {
@@ -35,15 +34,15 @@ bool MatchUUIDs(const std::vector<common::UUID>& uuids, const common::BufferView
 
 }  // namespace
 
-bool DiscoveryFilter::MatchLowEnergyResult(const hci::LowEnergyScanResult& scan_result,
-                                           const common::ByteBuffer& advertising_data) const {
+bool DiscoveryFilter::MatchLowEnergyResult(const common::ByteBuffer& advertising_data,
+                                           bool connectable, int8_t rssi) const {
   // No need to iterate over |advertising_data| for the |connectable_| filter.
-  if (connectable_ && *connectable_ != scan_result.connectable) return false;
+  if (connectable_ && *connectable_ != connectable) return false;
 
   // If a pathloss filter is not set then apply the RSSI filter before iterating over
   // |advertising_data|. (An RSSI value of kRSSIInvalid means that RSSI is not available, which we
   // check for here).
-  bool rssi_ok = !rssi_ || (scan_result.rssi != hci::kRSSIInvalid && scan_result.rssi >= *rssi_);
+  bool rssi_ok = !rssi_ || (rssi != hci::kRSSIInvalid && rssi >= *rssi_);
   if (!pathloss_ && !rssi_ok) return false;
 
   // Filters that require iterating over advertising data.
@@ -88,15 +87,15 @@ bool DiscoveryFilter::MatchLowEnergyResult(const hci::LowEnergyScanResult& scan_
         tx_power_found = true;
 
         // An RSSI value of kRSSIInvalid means that RSSI is not available.
-        if (scan_result.rssi == hci::kRSSIInvalid) break;
+        if (rssi == hci::kRSSIInvalid) break;
 
         int8_t tx_power_lvl = static_cast<int8_t>(*data.GetData());
-        if (tx_power_lvl < scan_result.rssi) {
+        if (tx_power_lvl < rssi) {
           FTL_LOG(WARNING) << "gap: DiscoveryFilter: Reported Tx Power Level is less than the RSSI";
           break;
         }
 
-        int8_t pathloss = tx_power_lvl - scan_result.rssi;
+        int8_t pathloss = tx_power_lvl - rssi;
         pathloss_ok = (pathloss <= *pathloss_);
         break;
       }

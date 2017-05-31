@@ -9,6 +9,7 @@
 
 #include "apps/bluetooth/lib/common/optional.h"
 #include "apps/bluetooth/lib/common/uuid.h"
+#include "apps/bluetooth/lib/hci/hci_constants.h"
 
 namespace bluetooth {
 
@@ -16,11 +17,9 @@ namespace common {
 class ByteBuffer;
 }  // namespace common
 
-namespace hci {
-struct LowEnergyScanResult;
-}  // namespace hci
-
 namespace gap {
+
+class RemoteDevice;
 
 // A DiscoveryFilter allows clients of discovery procedures to filter results based on certain
 // parameters, such as service UUIDs that might be present in EIR or advertising data, or based on
@@ -86,8 +85,8 @@ class DiscoveryFilter final {
 
   // Returns true, if the given LE scan result satisfies this filter. Otherwise returns false.
   // |advertising_data| should include scan response data, if any.
-  bool MatchLowEnergyResult(const hci::LowEnergyScanResult& scan_result,
-                            const common::ByteBuffer& advertising_data) const;
+  bool MatchLowEnergyResult(const common::ByteBuffer& advertising_data, bool connectable,
+                            int8_t rssi) const;
 
   // Clears all the fields of this filter.
   void Reset();

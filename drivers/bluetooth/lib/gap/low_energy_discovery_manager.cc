@@ -43,7 +43,8 @@ void LowEnergyDiscoverySession::Stop() {
 
 void LowEnergyDiscoverySession::NotifyDiscoveryResult(const hci::LowEnergyScanResult& result,
                                                       const common::ByteBuffer& data) const {
-  if (device_found_callback_ && filter_.MatchLowEnergyResult(result, data)) {
+  if (device_found_callback_ &&
+      filter_.MatchLowEnergyResult(data, result.connectable, result.rssi)) {
     device_found_callback_(result, data);
   }
 }
