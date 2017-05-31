@@ -1,0 +1,29 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("compiler") {
+  sources = [
+    "ast.h",
+    "identifier_table.cpp",
+    "identifier_table.h",
+    "lexer.cpp",
+    "lexer.h",
+    "parser.cpp",
+    "parser.h",
+    "source_manager.cpp",
+    "source_manager.h",
+    "string_view.h",
+    "token_definitions.h",
+    "token.h",
+  ]
+}
+
+executable("fidl") {
+  sources = [
+    "main.cpp",
+  ]
+  deps = [
+    ":compiler",
+  ]
+}
