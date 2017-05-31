@@ -138,6 +138,36 @@ struct AuthenticateResponse {
     // etc
 };
 
+// MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
+
+struct AssociateRequest {
+    array<uint8, 6> peer_sta_address;
+
+    // etc
+};
+
+// MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
+
+enum AssociateResultCodes {
+    SUCCESS,
+    REFUSED_REASON_UNSPECIFIED,
+    REFUSED_NOT_AUTHENTICATED,
+    REFUSED_CAPABILITIES_MISMATCH,
+    REFUSED_EXTERNAL_REASON,
+    REFUSED_AP_OUT_OF_MEMORY,
+    REFUSED_BASIC_RATES_MISMATCH,
+    REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
+    REFUSED_TEMPORARILY,
+};
+
+struct AssociateResponse {
+    AssociateResultCodes result_code;
+    // CapabilityInformation
+    uint16 association_id;
+
+    // etc
+};
+
 // Method ordinals
 // To be replaced once FIDL interfaces are available for Go
 enum Method {
@@ -165,5 +195,13 @@ enum Method {
     // Args: AuthenticateResponse
     AUTHENTICATE_confirm,
 
-    LAST = AUTHENTICATE_confirm,
+    // MLME-ASSOCIATE.request
+    // Args: AssociateRequest
+    ASSOCIATE_request,
+
+    // MLME-ASSOCIATE.confirm
+    // Args: AssociateResponse
+    ASSOCIATE_confirm,
+
+    LAST = ASSOCIATE_confirm,
 };

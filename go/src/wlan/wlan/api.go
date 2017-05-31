@@ -154,3 +154,30 @@ func PrintAuthenticateResponse(resp *mlme.AuthenticateResponse) {
 	}
 	log.Print("  Result code: ", resCode)
 }
+
+func PrintAssociateResponse(resp *mlme.AssociateResponse) {
+	log.Print("AssociateResponse")
+	var resCode string
+	switch resp.ResultCode {
+	case mlme.AssociateResultCodes_Success:
+		resCode = "Success"
+	case mlme.AssociateResultCodes_RefusedReasonUnspecified:
+		resCode = "Refused (unspecified)"
+	case mlme.AssociateResultCodes_RefusedNotAuthenticated:
+		resCode = "Refused (not authenticated)"
+	case mlme.AssociateResultCodes_RefusedCapabilitiesMismatch:
+		resCode = "Refused (capabilities mismatch)"
+	case mlme.AssociateResultCodes_RefusedExternalReason:
+		resCode = "Refused (external reason)"
+	case mlme.AssociateResultCodes_RefusedApOutOfMemory:
+		resCode = "Refused (AP out of memory)"
+	case mlme.AssociateResultCodes_RefusedBasicRatesMismatch:
+		resCode = "Refused (basic rates mismatch)"
+	case mlme.AssociateResultCodes_RejectedEmergencyServicesNotSupported:
+		resCode = "Rejected (emergency services not supported)"
+	case mlme.AssociateResultCodes_RefusedTemporarily:
+		resCode = "Refused (temporarily)"
+	}
+	log.Print("  Result code: ", resCode)
+	log.Print("  Association ID: ", resp.AssociationId)
+}
