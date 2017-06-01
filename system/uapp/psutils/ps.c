@@ -197,6 +197,9 @@ static void print_header(int id_w, bool with_threads) {
     }
 }
 
+// The |unit| param to pass to format_size_fixed().
+static char format_unit = 0;
+
 // Prints the contents of |table| to stdout.
 static void print_table(task_table_t* table, bool with_threads) {
     if (table->num_entries == 0) {
@@ -228,14 +231,15 @@ static void print_table(task_table_t* table, bool with_threads) {
         char pss_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
         char private_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
         if (e->type == 'j' || e->type == 'p') {
-            format_size(pss_bytes_str, sizeof(pss_bytes_str), e->pss_bytes);
-            format_size(private_bytes_str, sizeof(private_bytes_str),
-                        e->private_bytes);
+            format_size_fixed(pss_bytes_str, sizeof(pss_bytes_str),
+                              e->pss_bytes, format_unit);
+            format_size_fixed(private_bytes_str, sizeof(private_bytes_str),
+                              e->private_bytes, format_unit);
         }
         char shared_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
         if (e->type == 'p') {
-            format_size(shared_bytes_str, sizeof(shared_bytes_str),
-                        e->shared_bytes);
+            format_size_fixed(shared_bytes_str, sizeof(shared_bytes_str),
+                              e->shared_bytes, format_unit);
         }
 
         if (with_threads) {
@@ -330,6 +334,8 @@ static void print_help(FILE* f) {
     fprintf(f, " -T             Include threads in the output\n");
     fprintf(f, " --json         Print output in JSON\n");
     fprintf(f, " --json-schema  Print a schema for the JSON output format\n");
+    fprintf(f, " --units=?      Fix all sizes to the named unit\n");
+    fprintf(f, "                where ? is one of [BkMGTPE]\n");
 }
 
 int main(int argc, char** argv) {
@@ -349,6 +355,8 @@ int main(int argc, char** argv) {
             with_threads = true;
         } else if (!strcmp(arg, "--json")) {
             use_json = true;
+        } else if (!strncmp(arg, "--units=", sizeof("--units=") - 1)) {
+            format_unit = arg[sizeof("--units=") - 1];
         } else {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_help(stderr);
