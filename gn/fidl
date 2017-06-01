@@ -1,7 +1,6 @@
 {
     "labels": [
-        "//lib/fidl",
-        "//magenta/system/host/fidl(//build/toolchain:host_x64)"
+        "//lib/fidl"
     ],
     "binaries": [
         {
