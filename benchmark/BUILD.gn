@@ -14,8 +14,8 @@ group("benchmark") {
 
 executable("launch_benchmark") {
   sources = [
-    "constants.h",
     "launch_benchmark.cc",
+    "launch_benchmark.h",
   ]
 
   deps = [

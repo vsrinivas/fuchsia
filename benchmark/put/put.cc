@@ -27,7 +27,8 @@ PutBenchmark::PutBenchmark(int entry_count,
                            int key_size,
                            int value_size,
                            bool update)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : tmp_dir_(kStoragePath),
+      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -46,13 +47,10 @@ void PutBenchmark::Run() {
                 << " --transaction-size=" << transaction_size_
                 << " --key-size=" << key_size_
                 << " --value-size=" << value_size_ << (update_ ? "update" : "");
-  application_controller_ = std::make_unique<app::ApplicationControllerPtr>();
-  ledger_controller_ = std::make_unique<ledger::LedgerControllerPtr>();
-  tmp_dir_ = std::make_unique<files::ScopedTempDir>(kStoragePath);
+  ledger::LedgerPtr ledger =
+      benchmark::GetLedger(application_context_.get(), &application_controller_,
+                           "put", tmp_dir_.path(), false, "");
 
-  ledger::LedgerPtr ledger = benchmark::GetLedger(
-      application_context_.get(), application_controller_.get(), "put",
-      tmp_dir_->path(), false, "", ledger_controller_.get());
   InitializeKeys(ftl::MakeCopyable([ this, ledger = std::move(ledger) ](
       std::vector<fidl::Array<uint8_t>> keys) {
     benchmark::GetPageEnsureInitialized(
@@ -75,22 +73,6 @@ void PutBenchmark::Run() {
           }
         }));
   }));
-}
-
-void PutBenchmark::ResetLedger() {
-  page_.reset();
-  (*ledger_controller_)->Terminate();
-  bool response = application_controller_->WaitForIncomingResponseWithTimeout(
-      ftl::TimeDelta::FromSeconds(1));
-  FTL_DCHECK(!response);
-  FTL_DCHECK(application_controller_->encountered_error());
-  if (on_done_) {
-    on_done_();
-  }
-}
-
-void PutBenchmark::ShutDown() {
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 void PutBenchmark::InitializeKeys(
@@ -128,9 +110,9 @@ void PutBenchmark::AddInitialEntries(
 void PutBenchmark::RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys) {
   if (i == entry_count_) {
     if (transaction_size_ > 1) {
-      CommitAndReset();
+      CommitAndShutDown();
     } else {
-      ResetLedger();
+      ShutDown();
     }
     return;
   }
@@ -176,7 +158,7 @@ void PutBenchmark::CommitAndRunNext(int i,
       }));
 }
 
-void PutBenchmark::CommitAndReset() {
+void PutBenchmark::CommitAndShutDown() {
   TRACE_ASYNC_BEGIN("benchmark", "commit", entry_count_ / transaction_size_);
   page_->Commit([this](ledger::Status status) {
     if (benchmark::QuitOnError(status, "Page::Commit")) {
@@ -185,8 +167,16 @@ void PutBenchmark::CommitAndReset() {
     TRACE_ASYNC_END("benchmark", "commit", entry_count_ / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction",
                     entry_count_ / transaction_size_);
-    ResetLedger();
+    ShutDown();
   });
+}
+
+void PutBenchmark::ShutDown() {
+  // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
+  application_controller_->Kill();
+  application_controller_.WaitForIncomingResponseWithTimeout(
+      ftl::TimeDelta::FromSeconds(5));
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace benchmark

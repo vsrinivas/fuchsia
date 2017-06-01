@@ -2,37 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/benchmark/launch_benchmark.h"
+
 #include <iostream>
 
-#include "apps/ledger/benchmark/constants.h"
 #include "apps/ledger/benchmark/put/put.h"
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
-// Test type.
-constexpr ftl::StringView kEntryCountFlag = "entry-count";
-constexpr ftl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr ftl::StringView kKeySizeFlag = "key-size";
-constexpr ftl::StringView kValueSizeFlag = "value-size";
+constexpr ftl::StringView kAppUrlFlag = "app";
 
-// Value arguments.
+// Test argument and its values.
+constexpr ftl::StringView kTestArgFlag = "test-arg";
 constexpr ftl::StringView kMinValueFlag = "min-value";
 constexpr ftl::StringView kMaxValueFlag = "max-value";
 constexpr ftl::StringView kStepFlag = "step";
 
-// Optional argument.
-constexpr ftl::StringView kUpdateFlag = "update";
+constexpr ftl::StringView kAppendArgsFlag = "append-args";
 
 void PrintUsage(const char* executable_name) {
-  std::cout << "Usage: " << executable_name << " <test-type> --"
+  std::cout << "Usage: " << executable_name << " --" << kAppUrlFlag
+            << "=<app url> --" << kTestArgFlag << "=<argument to test> --"
             << kMinValueFlag << "=<int> --" << kMaxValueFlag << "=<int> --"
-            << kStepFlag << "=<int> [" << kUpdateFlag << "]" << std::endl;
-  std::cout << "Where <test-type>: " << kEntryCountFlag << " | "
-            << kTransactionSizeFlag << " | " << kKeySizeFlag << " | "
-            << kValueSizeFlag << std::endl;
+            << kStepFlag << "=<int> --" << kAppendArgsFlag
+            << "<extra arguments for the app>" << std::endl;
 }
 
 bool GetPositiveIntValue(const ftl::CommandLine& command_line,
@@ -43,74 +41,72 @@ bool GetPositiveIntValue(const ftl::CommandLine& command_line,
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
       !ftl::StringToNumberWithError(value_str, &found_value) ||
       found_value <= 0) {
-    std::cout << "Missing or incorrect " << flag << " argument." << std::endl;
+    std::cout << "Missing or invalid " << flag << " argument." << std::endl;
     return false;
   }
   *value = found_value;
   return true;
 }
 
-void Run(std::function<void(benchmark::PutBenchmark*, int)> update_value,
-         int min_value,
-         int max_value,
-         int step,
-         bool update) {
-  mtl::MessageLoop loop;
-  int value = min_value;
-  benchmark::PutBenchmark app(kDefaultEntryCount, kDefaultTransactionSize,
-                              kDefaultKeySize, kDefaultValueSize, update);
-  update_value(&app, value);
-
-  app.set_on_done([
-    &app, update_value = std::move(update_value), &value, max_value, step
-  ]() {
-    if (value >= max_value) {
-      app.ShutDown();
-      return;
-    }
-    value += step;
-    update_value(&app, value);
-    app.Run();
-  });
-  loop.task_runner()->PostTask([&app] { app.Run(); });
-  loop.Run();
-}
-
 }  // namespace
 
+LaunchBenchmark::LaunchBenchmark(std::string app_url,
+                                 std::string test_arg,
+                                 int min_value,
+                                 int max_value,
+                                 int step,
+                                 std::vector<std::string> args)
+    : app_url_(std::move(app_url)),
+      test_arg_(std::move(test_arg)),
+      current_value_(min_value),
+      max_value_(max_value),
+      step_(step),
+      args_(std::move(args)),
+      context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  FTL_DCHECK(step > 0);
+  FTL_DCHECK(max_value_ >= min_value);
+}
+
+void LaunchBenchmark::StartNext() {
+  if (current_value_ > max_value_) {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    return;
+  }
+
+  app::ServiceProviderPtr child_services;
+  auto launch_info = app::ApplicationLaunchInfo::New();
+  launch_info->url = app_url_;
+  launch_info->services = child_services.NewRequest();
+  launch_info->arguments.push_back("--" + test_arg_ + "=" +
+                                   ftl::NumberToString(current_value_));
+  for (auto& arg : args_) {
+    launch_info->arguments.push_back(arg);
+  }
+  context_->launcher()->CreateApplication(std::move(launch_info),
+                                          GetProxy(&application_controller_));
+
+  application_controller_.set_connection_error_handler([this] {
+    current_value_ += step_;
+    StartNext();
+  });
+}
+
 int main(int argc, const char** argv) {
-  if (argc < 5 || argc > 6) {
-    std::cout << "Incorrect number of arguments (" << argc << ")" << std::endl;
+  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+
+  std::string app_url;
+  if (!command_line.GetOptionValue(kAppUrlFlag.ToString(), &app_url)) {
+    std::cout << "Missing " << kAppUrlFlag << " argument." << std::endl;
     PrintUsage(argv[0]);
     return -1;
   }
-  std::function<void(benchmark::PutBenchmark*, int)> update_value;
-  std::string type = argv[1];
-  if (type == kEntryCountFlag) {
-    update_value = [](benchmark::PutBenchmark* app, int value) {
-      app->set_entry_count(value);
-    };
-  } else if (type == kTransactionSizeFlag) {
-    update_value = [](benchmark::PutBenchmark* app, int value) {
-      app->set_transaction_size(value);
-    };
-  } else if (type == kKeySizeFlag) {
-    update_value = [](benchmark::PutBenchmark* app, int value) {
-      app->set_key_size(value);
-    };
-  } else if (type == kValueSizeFlag) {
-    update_value = [](benchmark::PutBenchmark* app, int value) {
-      app->set_value_size(value);
-    };
-  } else {
-    std::cout << "Incorrect test type: " << type << std::endl;
+  std::string test_arg;
+  if (!command_line.GetOptionValue(kTestArgFlag.ToString(), &test_arg)) {
+    std::cout << "Missing " << kTestArgFlag << " argument." << std::endl;
     PrintUsage(argv[0]);
     return -1;
   }
 
-  ftl::CommandLine command_line =
-      ftl::CommandLineFromArgcArgv(argc - 1, &argv[1]);
-  bool update = command_line.HasOption(kUpdateFlag.ToString());
   int min_value;
   int max_value;
   int step;
@@ -120,7 +116,27 @@ int main(int argc, const char** argv) {
     PrintUsage(argv[0]);
     return -1;
   }
+  if (max_value < min_value) {
+    std::cout << kMaxValueFlag << " should be >= " << kMinValueFlag
+              << " (Found: " << max_value << " < " << min_value << ")";
+    PrintUsage(argv[0]);
+    return -1;
+  }
 
-  Run(std::move(update_value), min_value, max_value, step, update);
+  size_t index;
+  std::vector<std::string> append_args;
+  if (command_line.HasOption(kAppendArgsFlag, &index)) {
+    append_args =
+        ftl::SplitStringCopy(command_line.options()[index].value, ",",
+                             ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
+  }
+
+  mtl::MessageLoop loop;
+  LaunchBenchmark launch_benchmark(std::move(app_url), std::move(test_arg),
+                                   min_value, max_value, step,
+                                   std::move(append_args));
+  loop.task_runner()->PostTask(
+      [&launch_benchmark] { launch_benchmark.StartNext(); });
+  loop.Run();
   return 0;
 }

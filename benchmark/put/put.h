@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 
@@ -34,18 +33,6 @@ class PutBenchmark {
                bool update);
 
   void Run();
-  void ResetLedger();
-  void ShutDown();
-
-  void set_entry_count(int entry_count) { entry_count_ = entry_count; }
-  void set_transaction_size(int transaction_size) {
-    transaction_size_ = transaction_size;
-  }
-  void set_key_size(int key_size) { key_size_ = key_size; }
-  void set_value_size(int value_size) { value_size_ = value_size; }
-
-  // The given |on_done| is called at the end of the excecution of |Run|.
-  void set_on_done(ftl::Closure on_done) { on_done_ = std::move(on_done); }
 
  private:
   // Initilizes the keys to be used in the benchmark. In case the benchmark is
@@ -63,20 +50,18 @@ class PutBenchmark {
   void RunSingle(int i, std::vector<fidl::Array<uint8_t>> keys);
   void CommitAndRunNext(int i, std::vector<fidl::Array<uint8_t>> keys);
 
-  void CommitAndReset();
+  void CommitAndShutDown();
+  void ShutDown();
 
-  std::unique_ptr<files::ScopedTempDir> tmp_dir_;
+  files::ScopedTempDir tmp_dir_;
   std::unique_ptr<app::ApplicationContext> application_context_;
-  int entry_count_;
-  int transaction_size_;
-  int key_size_;
-  int value_size_;
+  const int entry_count_;
+  const int transaction_size_;
+  const int key_size_;
+  const int value_size_;
   const bool update_;
 
-  ftl::Closure on_done_;
-
-  std::unique_ptr<app::ApplicationControllerPtr> application_controller_;
-  std::unique_ptr<ledger::LedgerControllerPtr> ledger_controller_;
+  app::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);

@@ -60,8 +60,9 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
                               value_size, update);
-  app.set_on_done([&app]() { app.ShutDown(); });
-  loop.task_runner()->PostTask([&app] { app.Run(); });
+  // TODO(nellyv): A delayed task is necessary because of US-257.
+  loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
+                                      ftl::TimeDelta::FromSeconds(1));
   loop.Run();
   return 0;
 }
