@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
+#include <mutex>
 #include <unordered_set>
 
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -11,9 +12,12 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
+
+constexpr ftl::TimeDelta kTeardownTimeout = ftl::TimeDelta::FromSeconds(3);
 
 struct AgentRunner::TriggerInfo {
   std::string agent_url;
@@ -178,22 +182,27 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   *terminating_ = true;
 
   // No agents were running, we are good to go.
-  if (running_agents_.size() == 0) {
+  if (running_agents_.empty()) {
     callback();
     return;
   }
 
-  auto cont = [this, callback] {
-    // The running agent will call |AgentRunner::RemoveAgent()| which erases it
-    // from the |running_agents_|.
-    if (running_agents_.size() == 0) {
-      callback();
-    }
-  };
+  auto once = std::make_unique<std::once_flag>();
+  // This is called when agents are done being removed
+  termination_callback_ =
+      ftl::MakeCopyable([ this, callback, once = std::move(once) ]() {
+        std::call_once(*once, callback);
+      });
 
   for (auto& it : running_agents_) {
-    it.second->StopForTeardown(cont);
+    // The running agent will call |AgentRunner::RemoveAgent()| to remove itself
+    // from the agent runner. When all agents are done being removed,
+    // |RemoveAgent()| will call |termination_callback_|.
+    it.second->StopForTeardown();
   }
+
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      termination_callback_, kTeardownTimeout);
 }
 
 void AgentRunner::MaybeRunAgent(const std::string& agent_url,
@@ -262,6 +271,13 @@ void AgentRunner::ConnectToAgent(
 
 void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
+
+  if (*terminating_ && running_agents_.empty()) {
+    FTL_DCHECK(termination_callback_);
+    termination_callback_();
+    return;
+  }
+
   UpdateWatchers();
 
   // At this point, if there are pending requests to start the agent (because
@@ -422,7 +438,8 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
   message_queue_manager_->RegisterWatcher(
       kAgentComponentNamespace, agent_url, queue_name,
       [this, agent_url, task_id, terminating] {
-        // If agent runner is terminating, do not run any new tasks.
+        // If agent runner is terminating or has already terminated, do not run
+        // any new tasks.
         if (*terminating) {
           return;
         }
@@ -493,7 +510,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
 }
 
 void AgentRunner::UpdateWatchers() {
-  if (terminating_)
+  if (*terminating_)
     return;
 
   // A set of all agents that are either running or scheduled to be run.

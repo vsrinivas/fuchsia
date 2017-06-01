@@ -120,7 +120,10 @@ class AgentContextImpl::StopCall : Operation<bool> {
       agent_context_impl_->agent_context_binding_.Close();
     };
 
+    // Whichever of the 3 signals triggers first:
     agent_context_impl_->agent_->Stop(kill_agent);
+    agent_context_impl_->application_controller_.set_connection_error_handler(
+        kill_agent);
     kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
                       kill_agent, kKillTimeout);
   }
@@ -225,13 +228,12 @@ void AgentContextImpl::MaybeStopAgent() {
                });
 }
 
-void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
+void AgentContextImpl::StopForTeardown() {
   new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
-               [this, callback] (bool stopped) {
+               [this] (bool stopped) {
                  FTL_DCHECK(stopped);
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.
-                 callback();
                });
 }
 

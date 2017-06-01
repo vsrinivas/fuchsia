@@ -176,6 +176,9 @@ class AgentRunner : AgentProvider, PageClient {
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
+  // This is called as part of the |StopForTeardown()| flow, when the last agent
+  // is torn down.
+  std::function<void()> termination_callback_;
 
   OperationQueue operation_queue_;
 

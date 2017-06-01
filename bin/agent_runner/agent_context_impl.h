@@ -47,8 +47,9 @@ class AgentContextImpl : AgentContext, AgentController {
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
-  // AgentControllers or outstanding tasks.
-  void StopForTeardown(const std::function<void()>& callback);
+  // AgentControllers or outstanding tasks. Calls into
+  // |AgentRunner::RemoveAgent()| to remove itself.
+  void StopForTeardown();
 
   // Called by AgentRunner when a component wants to connect to this agent.
   // Connections will pend until Agent::Initialize() responds back, at which
