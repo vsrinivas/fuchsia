@@ -8,6 +8,7 @@ executable("integration_tests") {
   testonly = true
 
   sources = [
+    "ledger_repository_tests.cc",
     "merging_tests.cc",
     "page_snapshot_tests.cc",
     "page_tests.cc",
@@ -22,9 +23,11 @@ executable("integration_tests") {
     "//apps/ledger/src/app:lib",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/socket",
+    "//apps/ledger/src/network:fake",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
+    "//apps/modular/services/auth",
     "//apps/test_runner/src:gtest_main",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",

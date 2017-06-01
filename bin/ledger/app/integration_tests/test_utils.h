@@ -10,6 +10,7 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
+#include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -59,13 +60,15 @@ class LedgerRepositoryFactoryContainer {
       ftl::RefPtr<ftl::TaskRunner> task_runner,
       const std::string& path,
       fidl::InterfaceRequest<LedgerRepositoryFactory> request)
-      : environment_(task_runner, nullptr),
+      : network_service_(task_runner),
+        environment_(task_runner, &network_service_),
         factory_impl_(&environment_,
                       LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
         factory_binding_(&factory_impl_, std::move(request)) {}
   ~LedgerRepositoryFactoryContainer() {}
 
  private:
+  FakeNetworkService network_service_;
   Environment environment_;
   LedgerRepositoryFactoryImpl factory_impl_;
   fidl::Binding<LedgerRepositoryFactory> factory_binding_;

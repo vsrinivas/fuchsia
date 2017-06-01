@@ -128,9 +128,19 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
     ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
+    auto token_provider_ptr =
+        modular::auth::TokenProviderPtr::Create(std::move(token_provider));
+    if (token_provider_ptr) {
+      token_provider_ptr.set_connection_error_handler([this, sanitized_path] {
+        FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
+                       << "shutting down the repository.";
+        auto find_repository = repositories_.find(sanitized_path);
+        FTL_DCHECK(find_repository != repositories_.end());
+        repositories_.erase(find_repository);
+      });
+    }
     cloud_sync::UserConfig user_config = GetUserConfig(
-        server_id, user_id, sanitized_path,
-        modular::auth::TokenProviderPtr::Create(std::move(token_provider)));
+        server_id, user_id, sanitized_path, std::move(token_provider_ptr));
     if (!user_config.use_sync &&
         config_persistence_ == ConfigPersistence::PERSIST) {
       FTL_LOG(WARNING) << "No sync configuration set, "

@@ -44,6 +44,10 @@ ftl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
   bool* cancelled_ptr = cancelled.get();
   auto cancellable = callback::CancellableImpl::Create(ftl::MakeCopyable(
       [cancelled = std::move(cancelled)] { *cancelled = true; }));
+  if (!response_to_return_) {
+    return cancellable;
+  }
+
   task_runner_->PostTask([
     this, cancelled_ptr, callback = cancellable->WrapCallback(callback),
     request_factory = std::move(request_factory)
