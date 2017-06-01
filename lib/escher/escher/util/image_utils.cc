@@ -178,11 +178,16 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory,
 }
 
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
-                                                 uint32_t height) {
+                                                 uint32_t height,
+                                                 size_t* out_size) {
   FTL_DCHECK(width % 2 == 0);
   FTL_DCHECK(height % 2 == 0);
 
-  auto ptr = std::make_unique<uint8_t[]>(width * height * sizeof(RGBA));
+  size_t size_in_bytes = width * height * sizeof(RGBA);
+  auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
+  if (out_size) {
+    (*out_size) = size_in_bytes;
+  }
   RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
 
   for (uint32_t j = 0; j < height; ++j) {
@@ -197,8 +202,15 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
   return ptr;
 }
 
-std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height) {
-  auto ptr = std::make_unique<uint8_t[]>(width * height);
+std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width,
+                                          uint32_t height,
+                                          size_t* out_size) {
+  size_t size_in_bytes = width * height;
+  auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
+  if (out_size) {
+    (*out_size) = size_in_bytes;
+  }
+
   auto pixels = ptr.get();
 
 // TODO: when we have a random source, use it.

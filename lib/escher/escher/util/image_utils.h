@@ -88,10 +88,13 @@ ImagePtr NewNoiseImage(
 // Return RGBA pixels containing a checkerboard pattern, where each white/black
 // region is a single pixel.  Only works for even values of width/height.
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
-                                                 uint32_t height);
+                                                 uint32_t height,
+                                                 size_t* out_size = nullptr);
 
 // Return eR8Unorm pixels containing random noise.
-std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height);
+std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width,
+                                          uint32_t height,
+                                          size_t* out_size = nullptr);
 
 }  // namespace image_utils
 }  // namespace escher
