@@ -4,6 +4,7 @@
 
 #include <vmofs/vmofs.h>
 
+#include <fcntl.h>
 #include <string.h>
 
 #include <mxalloc/new.h>

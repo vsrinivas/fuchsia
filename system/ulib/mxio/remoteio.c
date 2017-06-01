@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
 #include <pthread.h>
@@ -10,7 +11,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <threads.h>
 
@@ -30,7 +30,7 @@
 
 #define MXDEBUG 0
 
-// POLL_MASK and POLL_SHIFT intend to convert the lower five EPOLL events into
+// POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // MX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
 // an mx_signal_t, if they are desired.
 #define POLL_SHIFT  24
@@ -841,19 +841,19 @@ static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 
     mx_signals_t signals = 0;
     // Manually add signals that don't fit within POLL_MASK
-    if (events & EPOLLRDHUP) {
+    if (events & POLLRDHUP) {
         signals |= MX_CHANNEL_PEER_CLOSED;
     }
 
     // POLLERR is always detected
-    *_signals = (((EPOLLERR | events) & POLL_MASK) << POLL_SHIFT) | signals;
+    *_signals = (((POLLERR | events) & POLL_MASK) << POLL_SHIFT) | signals;
 }
 
 static void mxrio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     // Manually add events that don't fit within POLL_MASK
     uint32_t events = 0;
     if (signals & MX_CHANNEL_PEER_CLOSED) {
-        events |= EPOLLRDHUP;
+        events |= POLLRDHUP;
     }
     *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }

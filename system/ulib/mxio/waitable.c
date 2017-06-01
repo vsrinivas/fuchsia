@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <poll.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <sys/epoll.h>
 
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
@@ -19,10 +19,10 @@ struct mxwio {
     // arbitrary handle
     mx_handle_t h;
 
-    // signals that cause EPOLLIN
+    // signals that cause POLLIN
     mx_signals_t signals_in;
 
-    // signals that cause EPOLLOUT
+    // signals that cause POLLOUT
     mx_signals_t signals_out;
 
     // if true, don't close handle on close() op
@@ -44,10 +44,10 @@ static void mxwio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
     mxwio_t* wio = (void*)io;
     *handle = wio->h;
     mx_signals_t signals = 0;
-    if (events & EPOLLIN) {
+    if (events & POLLIN) {
         signals |= wio->signals_in;
     }
-    if (events & EPOLLOUT) {
+    if (events & POLLOUT) {
         signals |= wio->signals_out;
     }
     *_signals = signals;
@@ -57,10 +57,10 @@ static void mxwio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
     mxwio_t* wio = (void*)io;
     uint32_t events = 0;
     if (signals & wio->signals_in) {
-        events |= EPOLLIN;
+        events |= POLLIN;
     }
     if (signals & wio->signals_out) {
-        events |= EPOLLOUT;
+        events |= POLLOUT;
     }
     *_events = events;
 }

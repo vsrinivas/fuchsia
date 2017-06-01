@@ -4,6 +4,7 @@
 
 #include <svcfs/svcfs.h>
 
+#include <fcntl.h>
 #include <string.h>
 
 #include <fs/dispatcher.h>

@@ -5,8 +5,8 @@
 #pragma once
 
 #include <limits.h>
+#include <poll.h>
 #include <stdbool.h>
-#include <sys/epoll.h>
 #include <unistd.h> // for ssize_t
 
 #include <magenta/types.h>
@@ -29,10 +29,10 @@
 #define MXIO_PROTOCOL_SERVICE 5
 
 // events for mxio_wait_fd()
-#define MXIO_EVT_READABLE EPOLLIN
-#define MXIO_EVT_WRITABLE EPOLLOUT
-#define MXIO_EVT_ERROR EPOLLERR
-#define MXIO_EVT_ALL (EPOLLIN | EPOLLOUT | EPOLLERR)
+#define MXIO_EVT_READABLE POLLIN
+#define MXIO_EVT_WRITABLE POLLOUT
+#define MXIO_EVT_ERROR POLLERR
+#define MXIO_EVT_ALL (POLLIN | POLLOUT | POLLERR)
 
 __BEGIN_CDECLS
 
@@ -40,7 +40,7 @@ __BEGIN_CDECLS
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t deadline);
 
 // create a fd that works with wait APIs (epoll, select, etc.) from a handle
-// and expected signals (signals_in/signals_out correspond to EPOLLIN/EPOLLOUT
+// and expected signals (signals_in/signals_out correspond to POLLIN/POLLOUT
 // events respectively). the handle will be closed when the fd is closed, unless
 // shared_handle is true.
 int mxio_handle_fd(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);

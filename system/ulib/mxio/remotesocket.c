@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -201,26 +202,26 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
     mx_signals_t signals = MXSIO_SIGNAL_ERROR;
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if socket is connected
-        if (events & EPOLLIN) {
+        if (events & POLLIN) {
             signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
         }
-        if (events & EPOLLOUT) {
+        if (events & POLLOUT) {
             signals |= MX_SOCKET_WRITABLE;
         }
     } else {
         // if socket is not connected
-        if (events & EPOLLIN) {
+        if (events & POLLIN) {
             // signal when a listening socket gets an incoming connection
             // or a connecting socket gets connected and receives data
             signals |= MXSIO_SIGNAL_INCOMING |
                 MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
         }
-        if (events & EPOLLOUT) {
+        if (events & POLLOUT) {
             // signal when connect() operation is finished
             signals |= MXSIO_SIGNAL_OUTGOING;
         }
     }
-    if (events & EPOLLRDHUP) {
+    if (events & POLLRDHUP) {
         signals |= MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
@@ -237,24 +238,24 @@ static void mxsio_wait_end_stream(mxio_t* io, mx_signals_t signals, uint32_t* _e
     uint32_t events = 0;
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
-            events |= EPOLLIN;
+            events |= POLLIN;
         }
         if (signals & MX_SOCKET_WRITABLE) {
-            events |= EPOLLOUT;
+            events |= POLLOUT;
         }
     } else {
         if (signals & (MXSIO_SIGNAL_INCOMING | MX_SOCKET_PEER_CLOSED)) {
-            events |= EPOLLIN;
+            events |= POLLIN;
         }
         if (signals & MXSIO_SIGNAL_OUTGOING) {
-            events |= EPOLLOUT;
+            events |= POLLOUT;
         }
     }
     if (signals & MXSIO_SIGNAL_ERROR) {
-        events |= EPOLLERR;
+        events |= POLLERR;
     }
     if (signals & MX_SOCKET_PEER_CLOSED) {
-        events |= EPOLLRDHUP;
+        events |= POLLRDHUP;
     }
     *_events = events;
 }
@@ -461,13 +462,13 @@ static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* han
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
     mx_signals_t signals = MXSIO_SIGNAL_ERROR;
-    if (events & EPOLLIN) {
+    if (events & POLLIN) {
         signals |= MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     }
-    if (events & EPOLLOUT) {
+    if (events & POLLOUT) {
         signals |= MX_CHANNEL_WRITABLE;
     }
-    if (events & EPOLLRDHUP) {
+    if (events & POLLRDHUP) {
         signals |= MX_CHANNEL_PEER_CLOSED;
     }
     *_signals = signals;
@@ -476,16 +477,16 @@ static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* han
 static void mxsio_wait_end_dgram(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
     if (signals & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
-        events |= EPOLLIN;
+        events |= POLLIN;
     }
     if (signals & MX_CHANNEL_WRITABLE) {
-        events |= EPOLLOUT;
+        events |= POLLOUT;
     }
     if (signals & MXSIO_SIGNAL_ERROR) {
-        events |= EPOLLERR;
+        events |= POLLERR;
     }
     if (signals & MX_CHANNEL_PEER_CLOSED) {
-        events |= EPOLLRDHUP;
+        events |= POLLRDHUP;
     }
     *_events = events;
 }

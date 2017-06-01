@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <poll.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 
 #include <magenta/processargs.h>
@@ -128,13 +128,13 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
     mx_pipe_t* p = (void*)io;
     *handle = p->h;
     mx_signals_t signals = 0;
-    if (events & EPOLLIN) {
+    if (events & POLLIN) {
         signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
     }
-    if (events & EPOLLOUT) {
+    if (events & POLLOUT) {
         signals |= MX_SOCKET_WRITABLE;
     }
-    if (events & EPOLLRDHUP) {
+    if (events & POLLRDHUP) {
         signals |= MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
@@ -143,13 +143,13 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
 static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
     if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
-        events |= EPOLLIN;
+        events |= POLLIN;
     }
     if (signals & MX_SOCKET_WRITABLE) {
-        events |= EPOLLOUT;
+        events |= POLLOUT;
     }
     if (signals & MX_SOCKET_PEER_CLOSED) {
-        events |= EPOLLRDHUP;
+        events |= POLLRDHUP;
     }
     *_events = events;
 }

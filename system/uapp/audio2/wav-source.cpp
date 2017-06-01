@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "wav-source.h"
+
+#include <fcntl.h>
+#include <stdio.h>
+
 #include <magenta/assert.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/algorithm.h>
 #include <mxio/io.h>
-#include <stdio.h>
-
-#include "wav-source.h"
 
 static inline constexpr uint32_t fetch_fourcc(const void* source) {
   return (static_cast<uint32_t>(static_cast<const uint8_t*>(source)[0]) << 24) |

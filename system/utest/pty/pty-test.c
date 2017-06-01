@@ -192,13 +192,13 @@ static bool pty_test(void) {
 
     // make sure controlling client observes departing active client
     close(pc1);
-    ASSERT_EQ(fd_signals(pc), EPOLLHUP | EPOLLPRI, "");
+    ASSERT_EQ(fd_signals(pc), POLLHUP | POLLPRI, "");
     ASSERT_EQ(ioctl_pty_read_events(pc, &events), (ssize_t)sizeof(events), "");
     ASSERT_EQ(events, PTY_EVENT_HANGUP, "");
 
     // verify that server observes depature of last client
     close(pc);
-    ASSERT_EQ(fd_signals(ps), EPOLLHUP | EPOLLIN, "");
+    ASSERT_EQ(fd_signals(ps), POLLHUP | POLLIN, "");
 
     close(ps);
 

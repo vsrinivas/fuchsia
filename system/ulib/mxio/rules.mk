@@ -12,7 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/dispatcher.c \
-    $(LOCAL_DIR)/epoll.c \
     $(LOCAL_DIR)/logger.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \

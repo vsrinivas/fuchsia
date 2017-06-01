@@ -12,7 +12,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
@@ -1783,7 +1782,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
                     uint32_t events = 0;
                     io->ops->wait_end(io, items[j].pending, &events);
                     // mask unrequested events except HUP/ERR
-                    pfd->revents = events & (pfd->events | EPOLLHUP | EPOLLERR);
+                    pfd->revents = events & (pfd->events | POLLHUP | POLLERR);
                     if (pfd->revents != 0) {
                         nfds++;
                     }
@@ -1821,11 +1820,11 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
 
         uint32_t events = 0;
         if (rfds && FD_ISSET(fd, rfds))
-            events |= EPOLLIN;
+            events |= POLLIN;
         if (wfds && FD_ISSET(fd, wfds))
-            events |= EPOLLOUT;
+            events |= POLLOUT;
         if (efds && FD_ISSET(fd, efds))
-            events |= EPOLLERR;
+            events |= POLLERR;
         if (events == 0) {
             continue;
         }
@@ -1870,21 +1869,21 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
                     uint32_t events = 0;
                     io->ops->wait_end(io, items[j].pending, &events);
                     if (rfds && FD_ISSET(fd, rfds)) {
-                        if (events & EPOLLIN) {
+                        if (events & POLLIN) {
                             nfds++;
                         } else {
                             FD_CLR(fd, rfds);
                         }
                     }
                     if (wfds && FD_ISSET(fd, wfds)) {
-                        if (events & EPOLLOUT) {
+                        if (events & POLLOUT) {
                             nfds++;
                         } else {
                             FD_CLR(fd, wfds);
                         }
                     }
                     if (efds && FD_ISSET(fd, efds)) {
-                        if (events & EPOLLERR) {
+                        if (events & POLLERR) {
                             nfds++;
                         } else {
                             FD_CLR(fd, efds);

@@ -5,10 +5,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
+#include <poll.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <threads.h>
 #include <unistd.h>
@@ -98,13 +98,13 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     // wait for the completion
-    uint32_t events = EPOLLOUT;
+    uint32_t events = POLLOUT;
     mx_handle_t h;
     mx_signals_t sigs;
     io->ops->wait_begin(io, events, &h, &sigs);
     r = mx_object_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
     io->ops->wait_end(io, sigs, &events);
-    if (!(events & EPOLLOUT)) {
+    if (!(events & POLLOUT)) {
         mxio_release(io);
         return ERRNO(EIO);
     }
@@ -176,13 +176,13 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
                 return EWOULDBLOCK;
             }
             // wait for an incoming connection
-            uint32_t events = EPOLLIN;
+            uint32_t events = POLLIN;
             mx_handle_t h;
             mx_signals_t sigs;
             io->ops->wait_begin(io, events, &h, &sigs);
             r = mx_object_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
             io->ops->wait_end(io, sigs, &events);
-            if (!(events & EPOLLIN)) {
+            if (!(events & POLLIN)) {
                 mxio_release(io);
                 return ERRNO(EIO);
             }
