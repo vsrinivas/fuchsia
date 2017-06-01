@@ -7,6 +7,7 @@
 #include <limits>
 #include <vector>
 
+#include "apps/media/src/audio_server/audio_renderer_format_info.h"
 #include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"
 
@@ -64,8 +65,15 @@ void AudioPipe::PrimeRequested(
 void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   FTL_DCHECK(supplied_packet);
   FTL_DCHECK(owner_);
+
+  if (!owner_->format_info_valid()) {
+    FTL_LOG(ERROR) << "Packet supplied, but format has not set.";
+    Reset();
+    return;
+  }
+
   FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
-             owner_->format()->frames_per_second);
+             owner_->format_info()->format()->frames_per_second);
   FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
@@ -74,7 +82,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   //
   // TODO(johngro): Someday, automatically enforce this using
   // alignment/allocation restrictions at the MediaPipe level of things.
-  uint32_t frame_size = owner_->bytes_per_frame();
+  uint32_t frame_size = owner_->format_info()->bytes_per_frame();
 
   if ((frame_size > 1) && (supplied_packet->payload_size() % frame_size)) {
     FTL_LOG(ERROR) << "Region length (" << supplied_packet->payload_size()
@@ -100,7 +108,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
     // The user provided an explicit PTS for this audio.  Transform it into
     // units of fractional frames.
     start_pts = supplied_packet->packet()->pts *
-                owner_->FractionalFrameToMediaTimeRatio();
+                owner_->format_info()->frame_to_media_ratio();
   } else {
     // No PTS was provided.  Use the end time of the last audio packet, if
     // known.  Otherwise, just assume a media time of 0.

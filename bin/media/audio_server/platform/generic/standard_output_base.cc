@@ -6,6 +6,7 @@
 
 #include <limits>
 
+#include "apps/media/src/audio_server/audio_renderer_format_info.h"
 #include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/platform/generic/mixer.h"
@@ -134,15 +135,9 @@ MediaResult StandardOutputBase::InitializeLink(
     return MediaResult::INTERNAL_ERROR;
   }
 
-  // We cannot proceed if our renderer has somehow managed to go away already.
-  AudioRendererImplPtr renderer = link->GetRenderer();
-  if (!renderer) {
-    return MediaResult::INVALID_ARGUMENT;
-  }
-
   // Pick a mixer based on the input and output formats.
   bk->mixer =
-      Mixer::Select(renderer->format(),
+      Mixer::Select(link->format_info().format(),
                     output_formatter_ ? &output_formatter_->format() : nullptr);
   if (bk->mixer == nullptr) {
     return MediaResult::UNSUPPORTED_CONFIG;
@@ -176,10 +171,11 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
       return;
     }
 
-    // Is the renderer still around?  If so, process it.  Otherwise, remove the
-    // renderer entry and move on.
+    // Is the link still valid and the renderer still around?  If so, process
+    // it.  Otherwise, remove the renderer entry and move on.
     const AudioRendererToOutputLinkPtr& link = *iter;
-    AudioRendererImplPtr renderer(link->GetRenderer());
+    AudioRendererImplPtr renderer(link->valid() ? link->GetRenderer()
+                                                : nullptr);
 
     auto tmp_iter = iter++;
     if (!renderer) {
@@ -195,7 +191,7 @@ void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
 
     // Make sure that the mapping between the renderer's frame time domain and
     // local time is up to date.
-    info->UpdateRendererTrans(renderer);
+    info->UpdateRendererTrans(renderer, link->format_info());
 
     bool setup_done = false;
     AudioPipe::AudioPacketRefPtr pkt_ref;
@@ -416,12 +412,14 @@ bool StandardOutputBase::ProcessTrim(
 }
 
 void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
-    const AudioRendererImplPtr& renderer) {
-  TimelineFunction tmp;
+    const AudioRendererImplPtr& renderer,
+    const AudioRendererFormatInfo& format_info) {
+  FTL_DCHECK(renderer != nullptr);
+  TimelineFunction timeline_function;
   uint32_t gen;
 
-  FTL_DCHECK(renderer);
-  renderer->SnapshotRateTrans(&tmp, &gen);
+  renderer->timeline_control_point().SnapshotCurrentFunction(
+      Timeline::local_now(), &timeline_function, &gen);
 
   // If the local time -> media time transformation has not changed since the
   // last time we examines it, just get out now.
@@ -429,10 +427,21 @@ void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
     return;
   }
 
+  // The control point works in ns units. We want the rate in frames per
+  // nanosecond, so we convert here.
+  TimelineRate rate_in_frames_per_ns =
+      timeline_function.rate() * format_info.frames_per_ns();
+
+  TimelineFunction tmp(
+      timeline_function.reference_time(),
+      timeline_function.subject_time() * format_info.frames_per_ns(),
+      rate_in_frames_per_ns.reference_delta(),
+      rate_in_frames_per_ns.subject_delta());
+
   // The transformation has changed, re-compute the local time -> renderer frame
   // transformation.
   lt_to_renderer_frames =
-      TimelineFunction(renderer->FractionalFrameToMediaTimeRatio()) * tmp;
+      TimelineFunction(format_info.frame_to_media_ratio()) * tmp;
 
   // Update the generation, and invalidate the output to renderer generation.
   lt_to_renderer_frames_gen = gen;

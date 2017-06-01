@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <mxtl/ref_ptr.h>
 #include <set>
 
 namespace media {
@@ -13,9 +14,12 @@ namespace audio {
 class AudioOutput;
 class AudioOutputManager;
 class AudioServerImpl;
+class AudioRendererFormatInfo;
 class AudioRendererImpl;
 class AudioRendererToOutputLink;
 
+// TODO(johngro) : Remove these aliases and move to a style where we always
+// explicitly declare our managed pointer types.
 using AudioOutputPtr = std::shared_ptr<AudioOutput>;
 using AudioOutputSet =
     std::set<AudioOutputPtr, std::owner_less<AudioOutputPtr>>;

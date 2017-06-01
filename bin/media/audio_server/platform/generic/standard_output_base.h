@@ -53,7 +53,8 @@ class StandardOutputBase : public AudioOutput {
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
 
-    void UpdateRendererTrans(const AudioRendererImplPtr& renderer);
+    void UpdateRendererTrans(const AudioRendererImplPtr& renderer,
+                             const AudioRendererFormatInfo& format_info);
     void UpdateOutputTrans(const MixJob& job);
   };
 

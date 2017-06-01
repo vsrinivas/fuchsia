@@ -27,7 +27,7 @@ AudioOutputManager::~AudioOutputManager() {
 
 MediaResult AudioOutputManager::Init() {
   // Step #1: Instantiate and initialize the default throttle output.
-  auto throttle_output = ThrottleOutput::New(this);
+  auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
     FTL_LOG(WARNING)
         << "AudioOutputManager failed to create default throttle output!";
@@ -137,7 +137,7 @@ void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
 void AudioOutputManager::SelectOutputsForRenderer(
     AudioRendererImplPtr renderer) {
   FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->format_valid());
+  FTL_DCHECK(renderer->format_info_valid());
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
@@ -173,9 +173,9 @@ void AudioOutputManager::LinkOutputToRenderer(AudioOutputPtr output,
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
   // finally has its format set via AudioRendererImpl::SetMediaType
-  if (!renderer->format_valid()) return;
+  if (!renderer->format_info_valid()) return;
 
-  auto link = AudioRendererToOutputLink::New(renderer, output);
+  auto link = AudioRendererToOutputLink::Create(renderer, output);
   FTL_DCHECK(link);
 
   // If we cannot add this link to the output, it's because the output is in

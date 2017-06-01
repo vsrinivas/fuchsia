@@ -19,7 +19,8 @@ ThrottleOutput::ThrottleOutput(AudioOutputManager* manager)
 
 ThrottleOutput::~ThrottleOutput() {}
 
-AudioOutputPtr ThrottleOutput::New(AudioOutputManager* manager) {
+// static
+AudioOutputPtr ThrottleOutput::Create(AudioOutputManager* manager) {
   return AudioOutputPtr(new ThrottleOutput(manager));
 }
 

@@ -5,6 +5,7 @@
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 
 #include "apps/media/src/audio_server/audio_output.h"
+#include "apps/media/src/audio_server/audio_renderer_format_info.h"
 #include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "lib/ftl/logging.h"
 
@@ -15,8 +16,13 @@ AudioRendererToOutputLink::Bookkeeping::~Bookkeeping() {}
 
 AudioRendererToOutputLink::AudioRendererToOutputLink(
     AudioRendererImplWeakPtr renderer,
+    mxtl::RefPtr<AudioRendererFormatInfo> format_info,
     AudioOutputWeakPtr output)
-    : renderer_(renderer), output_(output), pending_queue_(new PacketQueue) {}
+    : renderer_(renderer),
+      format_info_(std::move(format_info)),
+      output_(output),
+      pending_queue_(new PacketQueue),
+      valid_(true) {}
 
 AudioRendererToOutputLink::~AudioRendererToOutputLink() {
   ReleaseQueue(pending_queue_);
@@ -49,11 +55,17 @@ void AudioRendererToOutputLink::UpdateGain() {
   gain_.Set(db_gain);
 }
 
-AudioRendererToOutputLinkPtr AudioRendererToOutputLink::New(
-    AudioRendererImplWeakPtr renderer,
+// static
+AudioRendererToOutputLinkPtr AudioRendererToOutputLink::Create(
+    const AudioRendererImplPtr& renderer,
     AudioOutputWeakPtr output) {
+  FTL_DCHECK(renderer);
+  FTL_DCHECK(renderer->format_info_valid());
+
   return AudioRendererToOutputLinkPtr(
-      new AudioRendererToOutputLink(renderer, output));
+      new AudioRendererToOutputLink(renderer,
+                                    renderer->format_info(),
+                                    output));
 }
 
 void AudioRendererToOutputLink::PushToPendingQueue(

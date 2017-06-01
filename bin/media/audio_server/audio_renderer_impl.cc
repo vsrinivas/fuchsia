@@ -11,6 +11,7 @@
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
+#include "apps/media/src/audio_server/audio_renderer_format_info.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"
 #include "lib/ftl/arraysize.h"
@@ -217,39 +218,31 @@ void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
     return;
   }
 
-  frames_per_ns_ =
-      TimelineRate(cfg->frames_per_second, Timeline::ns_from_seconds(1));
+  bool has_pending = (throttle_output_link_ &&
+                     !throttle_output_link_->pending_queue_empty());
+  if (!has_pending) {
+    for (const auto& link : output_links_) {
+      if (!link->pending_queue_empty()) {
+        has_pending = true;
+        break;
+      }
+    }
+  }
+
+  if (has_pending) {
+    FTL_LOG(ERROR) << "Attempted to set format with audio still pending!";
+    Shutdown();
+    return;
+  }
+
+  // Everything checks out.  Discard any existing output links we are holding
+  // onto.  New links need to be created with our new format.
+  RemoveAllOutputs();
 
   pipe_.SetPtsRate(TimelineRate(cfg->frames_per_second, 1));
 
-  // Figure out the rate we need to scale by in order to produce our fixed
-  // point timestamps.
-  frame_to_media_ratio_ = TimelineRate(1 << PTS_FRACTIONAL_BITS, 1);
-
-  // Figure out how many bytes we need to hold the requested number of nSec of
-  // audio.
-  switch (cfg->sample_format) {
-    case AudioSampleFormat::UNSIGNED_8:
-      bytes_per_frame_ = 1;
-      break;
-
-    case AudioSampleFormat::SIGNED_16:
-      bytes_per_frame_ = 2;
-      break;
-
-    case AudioSampleFormat::SIGNED_24_IN_32:
-      bytes_per_frame_ = 4;
-      break;
-
-    default:
-      FTL_DCHECK(false) << "unrecognized sample format";
-      bytes_per_frame_ = 2;
-      break;
-  }
-  bytes_per_frame_ *= cfg->channels;
-
-  // Stash our configuration.
-  format_ = std::move(cfg);
+  // Create a new format info object so we can create links to outputs.
+  format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
 
   // Have the audio output manager initialize our set of outputs.  Note; there
   // is currently no need for a lock here.  Methods called from our user-facing
@@ -303,6 +296,8 @@ void AudioRendererImpl::SetGain(float db_gain) {
 void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
+  FTL_DCHECK(link->valid());
+
   auto res = output_links_.emplace(link);
   FTL_DCHECK(res.second);
   link->UpdateGain();
@@ -316,6 +311,8 @@ void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
 void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
+
+  link->Invalidate();
 
   if (link == throttle_output_link_) {
     throttle_output_link_ = nullptr;
@@ -332,6 +329,19 @@ void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
   }
 }
 
+void AudioRendererImpl::RemoveAllOutputs() {
+  if (throttle_output_link_) {
+    throttle_output_link_->Invalidate();
+    throttle_output_link_ = nullptr;
+  }
+
+  for (const auto& link : output_links_) {
+    link->Invalidate();
+  }
+
+  output_links_.clear();
+}
+
 void AudioRendererImpl::SetThrottleOutput(
     const AudioRendererToOutputLinkPtr& throttle_output_link) {
   // TODO(johngro): assert that we are on the main message loop thread.
@@ -340,25 +350,9 @@ void AudioRendererImpl::SetThrottleOutput(
   throttle_output_link_ = throttle_output_link;
 }
 
-void AudioRendererImpl::SnapshotRateTrans(TimelineFunction* out,
-                                          uint32_t* generation) {
-  TimelineFunction timeline_function;
-  timeline_control_point_.SnapshotCurrentFunction(
-      Timeline::local_now(), &timeline_function, generation);
-
-  // The control point works in ns units. We want the rate in frames per
-  // nanosecond, so we convert here.
-  TimelineRate rate_in_frames_per_ns =
-      timeline_function.rate() * frames_per_ns_;
-
-  *out = TimelineFunction(timeline_function.reference_time(),
-                          timeline_function.subject_time() * frames_per_ns_,
-                          rate_in_frames_per_ns.reference_delta(),
-                          rate_in_frames_per_ns.subject_delta());
-}
-
 void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   FTL_DCHECK(packet);
+  FTL_DCHECK(format_info_valid());
 
   if (throttle_output_link_ != nullptr) {
     throttle_output_link_->PushToPendingQueue(packet);
@@ -371,11 +365,11 @@ void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
 
   if (packet->supplied_packet()->packet()->end_of_stream) {
     FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_ticks ==
-               format_->frames_per_second);
+               format_info_->format()->frames_per_second);
     FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_seconds == 1);
     timeline_control_point_.SetEndOfStreamPts(
         (packet->supplied_packet()->packet()->pts + packet->frame_count()) /
-        frames_per_ns_);
+        format_info_->frames_per_ns());
   }
 }
 

@@ -39,21 +39,24 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // different outputs.
   void AddOutput(AudioRendererToOutputLinkPtr link);
   void RemoveOutput(AudioRendererToOutputLinkPtr link);
+  void RemoveAllOutputs();
   void SetThrottleOutput(
       const AudioRendererToOutputLinkPtr& throttle_output_link);
 
-  // Accessors used by AudioOutputs during mixing to access parameters which are
-  // important for the mixing process.
-  void SnapshotRateTrans(TimelineFunction* out, uint32_t* generation = nullptr);
-
-  TimelineRate FractionalFrameToMediaTimeRatio() const {
-    return frame_to_media_ratio_;
+  // Note: format_info() is subject to change and must only be accessed from the
+  // main message loop thread.  Outputs which are running on mixer threads
+  // should never access format_info() directly from a renderer.  Instead, they
+  // should use the format_info which was assigned to the RendererToOutput link
+  // at the time the link was created.
+  const mxtl::RefPtr<AudioRendererFormatInfo>& format_info() const {
+    return format_info_;
   }
+  bool format_info_valid() const { return (format_info_ != nullptr); }
 
-  uint32_t bytes_per_frame() const { return bytes_per_frame_; }
-  const AudioMediaTypeDetailsPtr& format() const { return format_; }
-  bool format_valid() const { return (format_.get() != nullptr); }
   float db_gain() const { return db_gain_; }
+  TimelineControlPoint& timeline_control_point() {
+    return timeline_control_point_;
+  }
 
  private:
   friend class AudioPipe;
@@ -91,10 +94,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   fidl::Binding<MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
-  TimelineRate frames_per_ns_;
-  TimelineRate frame_to_media_ratio_;
-  uint32_t bytes_per_frame_ = 1;
-  AudioMediaTypeDetailsPtr format_;
+  mxtl::RefPtr<AudioRendererFormatInfo> format_info_;
   AudioRendererToOutputLinkSet output_links_;
   AudioRendererToOutputLinkPtr throttle_output_link_;
   float db_gain_ = 0.0;

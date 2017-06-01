@@ -64,8 +64,8 @@ class AudioRendererToOutputLink {
   using PacketQueue = std::deque<AudioPipe::AudioPacketRefPtr>;
   using PacketQueuePtr = std::unique_ptr<PacketQueue>;
 
-  static AudioRendererToOutputLinkPtr New(AudioRendererImplWeakPtr renderer,
-                                          AudioOutputWeakPtr output);
+  static AudioRendererToOutputLinkPtr Create(
+      const AudioRendererImplPtr& renderer, AudioOutputWeakPtr output);
   virtual ~AudioRendererToOutputLink();
 
   // Utility function which recomputes the amplitude scale factor as function of
@@ -75,6 +75,14 @@ class AudioRendererToOutputLink {
 
   // Accessor for the current value of the gain's amplitude scalar.
   Gain::AScale amplitude_scale() const { return gain_.amplitude_scale(); }
+
+  // Accessor for the format info assigned to this link.
+  const AudioRendererFormatInfo& format_info() const { return *format_info_; }
+
+  // Current validity.  Renderers invalidate links when they either go away, or
+  // change formats.
+  void Invalidate() { valid_.store(false); }
+  bool valid() const { return valid_.load(); }
 
   // Accessors for the renderer and output pointers.  Automatically attempts to
   // promote the weak pointer to a strong pointer.
@@ -92,6 +100,10 @@ class AudioRendererToOutputLink {
   void PushToPendingQueue(const AudioPipe::AudioPacketRefPtr& pkt);
   void FlushPendingQueue();
   void InitPendingQueue(const AudioRendererToOutputLinkPtr& source);
+  bool pending_queue_empty() const {
+      ftl::MutexLocker locker(&pending_queue_mutex_);
+      return pending_queue_->empty();
+  }
 
   // AudioOutput PendingQueue operations.  Never call these from the
   // AudioRenderer.
@@ -120,17 +132,20 @@ class AudioRendererToOutputLink {
   void ReleaseQueue(const PacketQueuePtr& queue);
 
   AudioRendererToOutputLink(AudioRendererImplWeakPtr renderer,
+                            mxtl::RefPtr<AudioRendererFormatInfo> format_info,
                             AudioOutputWeakPtr output);
 
   AudioRendererImplWeakPtr renderer_;
+  mxtl::RefPtr<AudioRendererFormatInfo> format_info_;
   AudioOutputWeakPtr output_;
   BookkeepingPtr output_bookkeeping_;
 
   ftl::Mutex flush_mutex_;
-  ftl::Mutex pending_queue_mutex_;
+  mutable ftl::Mutex pending_queue_mutex_;
   PacketQueuePtr pending_queue_ FTL_GUARDED_BY(pending_queue_mutex_);
   bool flushed_ FTL_GUARDED_BY(flush_mutex_) = true;
   Gain gain_;
+  std::atomic_bool valid_;
 };
 
 }  // namespace audio

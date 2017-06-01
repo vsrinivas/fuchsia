@@ -11,7 +11,7 @@ namespace audio {
 
 class ThrottleOutput : public StandardOutputBase {
  public:
-  static AudioOutputPtr New(AudioOutputManager* manager);
+  static AudioOutputPtr Create(AudioOutputManager* manager);
   ~ThrottleOutput() override;
 
  protected:
