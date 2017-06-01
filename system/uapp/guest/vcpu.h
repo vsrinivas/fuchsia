@@ -8,7 +8,7 @@
 
 #include <magenta/types.h>
 
-#define IO_APIC_REDIRECT_OFFSETS    0x36
+#define IO_APIC_REDIRECT_OFFSETS    128u
 #define IO_BUFFER_SIZE              512u
 
 /* Stores the local APIC state across VM exits. */

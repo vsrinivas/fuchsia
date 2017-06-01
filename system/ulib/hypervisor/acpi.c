@@ -18,6 +18,7 @@
 
 static const char kDsdtPath[] = "/boot/data/dsdt.aml";
 static const char kMadtPath[] = "/boot/data/madt.aml";
+static const char kMcfgPath[] = "/boot/data/mcfg.aml";
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
     return UINT8_MAX - AcpiTbChecksum(table, length) + 1;
@@ -60,7 +61,7 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     if (size < acpi_off + PAGE_SIZE)
         return ERR_BUFFER_TOO_SMALL;
 
-    const uint32_t rsdt_entries = 2;
+    const uint32_t rsdt_entries = 3;
     const uint32_t rsdt_length = sizeof(ACPI_TABLE_RSDT) + (rsdt_entries - 1) * sizeof(uint32_t);
 
     // RSDP. ACPI 1.0.
@@ -93,10 +94,17 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     if (status != NO_ERROR)
         return status;
 
+    // MCFG.
+    const uintptr_t mcfg_off = madt_off + actual;
+    status = load_file(kMcfgPath, addr + mcfg_off, size - mcfg_off, &actual);
+    if (status != NO_ERROR)
+        return status;
+
     // RSDT.
     ACPI_TABLE_RSDT* rsdt = (ACPI_TABLE_RSDT*)(addr + rsdp->RsdtPhysicalAddress);
     rsdt->TableOffsetEntry[0] = fadt_off;
     rsdt->TableOffsetEntry[1] = madt_off;
+    rsdt->TableOffsetEntry[2] = mcfg_off;
     acpi_header(&rsdt->Header, ACPI_SIG_RSDT, rsdt_length);
     return NO_ERROR;
 #else // __x86_64__

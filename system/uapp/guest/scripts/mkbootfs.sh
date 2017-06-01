@@ -17,6 +17,7 @@ LINUX="${4:-$BUILDDIR/linux-x86/vmlinux}"
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
 data/madt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/madt.aml
+data/mcfg.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/mcfg.aml
 data/kernel.bin=$KERNEL
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 

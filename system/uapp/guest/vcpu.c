@@ -22,68 +22,100 @@
 #include "vcpu.h"
 
 /* Memory-mapped device physical addresses. */
-#define LOCAL_APIC_PHYS_BASE                0xfee00000
-#define LOCAL_APIC_PHYS_TOP                 (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define IO_APIC_PHYS_BASE                   0xfec00000
-#define IO_APIC_PHYS_TOP                    (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define TPM_PHYS_BASE                       0xfed40000
-#define TPM_PHYS_TOP                        (TPM_PHYS_BASE + 0x5000 - 1)
+#define LOCAL_APIC_PHYS_BASE                    0xfee00000
+#define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
+#define IO_APIC_PHYS_BASE                       0xfec00000
+#define IO_APIC_PHYS_TOP                        (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
+#define TPM_PHYS_BASE                           0xfed40000
+#define TPM_PHYS_TOP                            (TPM_PHYS_BASE + 0x5000 - 1)
+#define PCI_PHYS_BASE(bus, device, function)    (0xd0000000 + (((bus) << 20) | ((device) << 15) | ((function) << 12)))
+#define PCI_PHYS_TOP(bus, device, function)     (PCI_PHYS_BASE(bus, device, function) + 4095)
 
 /* Local APIC register addresses. */
-#define LOCAL_APIC_REGISTER_ID              0x0020
-#define LOCAL_APIC_REGISTER_EOI             0x00b0
-#define LOCAL_APIC_REGISTER_SVR             0x00f0
-#define LOCAL_APIC_REGISTER_ESR             0x0280
-#define LOCAL_APIC_REGISTER_LVT_TIMER       0x0320
-#define LOCAL_APIC_REGISTER_LVT_ERROR       0x0370
-#define LOCAL_APIC_REGISTER_INITIAL_COUNT   0x0380
+#define LOCAL_APIC_REGISTER_ID                  0x0020
+#define LOCAL_APIC_REGISTER_EOI                 0x00b0
+#define LOCAL_APIC_REGISTER_SVR                 0x00f0
+#define LOCAL_APIC_REGISTER_ESR                 0x0280
+#define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
+#define LOCAL_APIC_REGISTER_LVT_ERROR           0x0370
+#define LOCAL_APIC_REGISTER_INITIAL_COUNT       0x0380
 
 /* IO APIC register addresses. */
-#define IO_APIC_IOREGSEL                    0x00
-#define IO_APIC_IOWIN                       0x10
+#define IO_APIC_IOREGSEL                        0x00
+#define IO_APIC_IOWIN                           0x10
 
-/* IO APIC register names. */
-#define IO_APIC_REGISTER_ID                 0x00
-#define IO_APIC_REGISTER_VER                0x01
+/* IO APIC register addresses. */
+#define IO_APIC_REGISTER_ID                     0x00
+#define IO_APIC_REGISTER_VER                    0x01
 
 /* IO APIC configuration constants. */
-#define IO_APIC_VERSION                     0x11
-#define FIRST_REDIRECT_OFFSET               0x10
-#define LAST_REDIRECT_OFFSET                (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
+#define IO_APIC_VERSION                         0x11
+#define FIRST_REDIRECT_OFFSET                   0x10
+#define LAST_REDIRECT_OFFSET                    (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
-/* TPM register names. */
-#define TPM_REGISTER_ACCESS                 0x00
+/* TPM register addresses. */
+#define TPM_REGISTER_ACCESS                     0x00
 
 /* UART configuration flags. */
-#define UART_STATUS_IDLE                    (1u << 6)
+#define UART_STATUS_IDLE                        (1u << 6)
 
-/* RTC registers. */
-#define RTC_REGISTER_SECONDS                0u
-#define RTC_REGISTER_MINUTES                2u
-#define RTC_REGISTER_HOURS                  4u
-#define RTC_REGISTER_DAY_OF_MONTH           7u
-#define RTC_REGISTER_MONTH                  8u
-#define RTC_REGISTER_YEAR                   9u
-#define RTC_REGISTER_A                      10u
-#define RTC_REGISTER_B                      11u
-#define RTC_REGISTER_C                      12u
-#define RTC_REGISTER_D                      13u
+/* RTC register addresses. */
+#define RTC_REGISTER_SECONDS                    0u
+#define RTC_REGISTER_MINUTES                    2u
+#define RTC_REGISTER_HOURS                      4u
+#define RTC_REGISTER_DAY_OF_MONTH               7u
+#define RTC_REGISTER_MONTH                      8u
+#define RTC_REGISTER_YEAR                       9u
+#define RTC_REGISTER_A                          10u
+#define RTC_REGISTER_B                          11u
+#define RTC_REGISTER_C                          12u
+#define RTC_REGISTER_D                          13u
 
 /* RTC register B flags. */
-#define RTC_REGISTER_B_DAYLIGHT_SAVINGS     (1u << 0)
-#define RTC_REGISTER_B_HOUR_FORMAT          (1u << 1)
-#define RTC_REGISTER_B_DATA_MODE            (1u << 2)
+#define RTC_REGISTER_B_DAYLIGHT_SAVINGS         (1u << 0)
+#define RTC_REGISTER_B_HOUR_FORMAT              (1u << 1)
+#define RTC_REGISTER_B_DATA_MODE                (1u << 2)
 
 /* I8042 status flags. */
-#define I8042_STATUS_OUTPUT_FULL            (1u << 0)
-#define I8042_STATUS_INPUT_FULL             (1u << 1)
+#define I8042_STATUS_OUTPUT_FULL                (1u << 0)
+#define I8042_STATUS_INPUT_FULL                 (1u << 1)
 
 /* I8042 test constants. */
-#define I8042_COMMAND_TEST                  0xaa
-#define I8042_DATA_TEST_RESPONSE            0x55
+#define I8042_COMMAND_TEST                      0xaa
+#define I8042_DATA_TEST_RESPONSE                0x55
 
-/* PM registers */
-#define PM1A_REGISTER_ENABLE                (ACPI_PM1_REGISTER_WIDTH / 8)
+/* PM register addresses. */
+#define PM1A_REGISTER_ENABLE                    (ACPI_PM1_REGISTER_WIDTH / 8)
+
+/* PCI register addresses. */
+#define PCI_REGISTER_VENDOR_ID                  0x00
+#define PCI_REGISTER_DEVICE_ID                  0x02
+#define PCI_REGISTER_COMMAND                    0x04
+#define PCI_REGISTER_REVISION_ID                0x08
+#define PCI_REGISTER_PROGRAM_INTERFACE          0x09
+#define PCI_REGISTER_SUB_CLASS                  0x0a
+#define PCI_REGISTER_BASE_CLASS                 0x0b
+#define PCI_REGISTER_HEADER_TYPE                0x0e
+#define PCI_REGISTER_BAR_0                      0x10
+#define PCI_REGISTER_BAR_1                      0x14
+#define PCI_REGISTER_BAR_2                      0x18
+#define PCI_REGISTER_BAR_3                      0x1c
+#define PCI_REGISTER_BAR_4                      0x20
+#define PCI_REGISTER_BAR_5                      0x24
+#define PCI_REGISTER_CAPABILITIES_PTR           0x34
+#define PCI_REGISTER_INTERRUPT_PIN              0x3d
+
+/* PCI configuration constants. */
+#define PCI_HEADER_TYPE_STANDARD                0x00
+#define PCI_HEADER_TYPE_PCI_BRIDGE              0x01
+#define PCI_BAR_IO_TYPE_PIO                     0x01
+#define PCI_VENDOR_ID_VIRTIO                    0x1af4
+#define PCI_VENDOR_ID_INTEL                     0x8086
+#define PCI_VENDOR_ID_INVALID                   0xffff
+#define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1001
+#define PCI_DEVICE_ID_INTEL_Q35                 0x29c0
+
+#define PCI_DEVICE(addr)                        (((addr - PCI_PHYS_BASE(0, 0, 0)) >> 15) & 0xff)
 
 mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     time_t now = time(NULL);
@@ -306,6 +338,64 @@ static mx_status_t handle_tpm(const mx_guest_mem_trap_t* mem_trap, instruction_t
     return ERR_NOT_SUPPORTED;
 }
 
+static mx_status_t handle_pci_device(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst,
+                                     uint8_t device, uint16_t vendor_id, uint16_t device_id) {
+    MX_ASSERT(mem_trap->guest_paddr >= PCI_PHYS_BASE(0, device, 0));
+    mx_vaddr_t offset = mem_trap->guest_paddr - PCI_PHYS_BASE(0, device, 0);
+    switch (offset) {
+    case PCI_REGISTER_VENDOR_ID:
+        if (!inst->read || inst->mem != 2u)
+            return ERR_NOT_SUPPORTED;
+        *inst->reg = vendor_id;
+        return NO_ERROR;
+    case PCI_REGISTER_DEVICE_ID:
+        if (!inst->read || inst->mem != 2u)
+            return ERR_NOT_SUPPORTED;
+        *inst->reg = device_id;
+        return NO_ERROR;
+    case PCI_REGISTER_COMMAND:
+        if (inst->mem != 2u)
+            return ERR_NOT_SUPPORTED;
+        if (inst->read)
+            *inst->reg = 0;
+        return NO_ERROR;
+    case PCI_REGISTER_HEADER_TYPE:
+        if (!inst->read || inst->mem != 1u)
+            return ERR_NOT_SUPPORTED;
+        *inst->reg = PCI_HEADER_TYPE_STANDARD;
+        return NO_ERROR;
+    case PCI_REGISTER_REVISION_ID:
+    case PCI_REGISTER_PROGRAM_INTERFACE:
+    case PCI_REGISTER_BASE_CLASS:
+    case PCI_REGISTER_SUB_CLASS:
+    case PCI_REGISTER_CAPABILITIES_PTR:
+    case PCI_REGISTER_INTERRUPT_PIN:
+        if (!inst->read || inst->mem != 1u)
+            return ERR_NOT_SUPPORTED;
+        *inst->reg = 0;
+        return NO_ERROR;
+    case PCI_REGISTER_BAR_0:
+    case PCI_REGISTER_BAR_1:
+    case PCI_REGISTER_BAR_2:
+    case PCI_REGISTER_BAR_3:
+    case PCI_REGISTER_BAR_4:
+    case PCI_REGISTER_BAR_5:
+        if (inst->mem != 4u)
+            return ERR_NOT_SUPPORTED;
+        if (inst->read)
+            *inst->reg = PCI_BAR_IO_TYPE_PIO;
+        return NO_ERROR;
+    }
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t unhandled_mem_trap(const mx_guest_mem_trap_t* mem_trap, instruction_t* inst) {
+    fprintf(stderr, "Unhandled address %#lx\n", mem_trap->guest_paddr);
+    if (inst->read)
+        *inst->reg = UINT64_MAX;
+    return NO_ERROR;
+}
+
 static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_trap_t* mem_trap) {
     mx_guest_gpr_t guest_gpr;
     mx_status_t status = mx_hypervisor_op(context->guest, MX_HYPERVISOR_OP_GUEST_GET_GPR,
@@ -338,6 +428,21 @@ static mx_status_t handle_mem_trap(vcpu_context_t* context, const mx_guest_mem_t
             break;
         case TPM_PHYS_BASE ... TPM_PHYS_TOP:
             status = handle_tpm(mem_trap, &inst);
+            break;
+        case PCI_PHYS_BASE(0, 0, 0) ... PCI_PHYS_TOP(0, 0, 0):
+            status = handle_pci_device(mem_trap, &inst, 0,
+                                       PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35);
+            break;
+        case PCI_PHYS_BASE(0, 1, 0) ... PCI_PHYS_TOP(0, 1, 0):
+            status = handle_pci_device(mem_trap, &inst, 1,
+                                       PCI_VENDOR_ID_VIRTIO, PCI_DEVICE_ID_VIRTIO_BLOCK);
+            break;
+        case PCI_PHYS_BASE(0, 2, 0) ... PCI_PHYS_TOP(0, 31, 0):
+            status = handle_pci_device(mem_trap, &inst, PCI_DEVICE(mem_trap->guest_paddr),
+                                       PCI_VENDOR_ID_INVALID, 0);
+            break;
+        default:
+            status = unhandled_mem_trap(mem_trap, &inst);
             break;
         }
     }
