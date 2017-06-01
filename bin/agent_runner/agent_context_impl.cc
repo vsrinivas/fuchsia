@@ -70,8 +70,10 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
 };
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
-// of whether there is an open-connection or running task.
-class AgentContextImpl::StopCall : Operation<> {
+// of whether there is an open-connection or running task. Returns |true| if the
+// agent was stopped, false otherwise (could be because agent has pending
+// tasks).
+class AgentContextImpl::StopCall : Operation<bool> {
  public:
   StopCall(OperationContainer* const container,
            const bool terminating,
@@ -85,7 +87,7 @@ class AgentContextImpl::StopCall : Operation<> {
 
  private:
   void Run() override {
-    FlowToken flow{this};
+    FlowToken flow{this, &stopped_};
 
     if (agent_context_impl_->state_ == State::TERMINATING) {
       return;
@@ -111,6 +113,7 @@ class AgentContextImpl::StopCall : Operation<> {
         return;
       }
 
+      stopped_ = true;
       agent_context_impl_->application_controller_.reset();
       agent_context_impl_->application_services_.reset();
       agent_context_impl_->agent_.reset();
@@ -122,6 +125,7 @@ class AgentContextImpl::StopCall : Operation<> {
                       kill_agent, kKillTimeout);
   }
 
+  bool stopped_ = false;
   AgentContextImpl* const agent_context_impl_;
   const bool terminating_;  // is the agent runner terminating?
   ftl::OneShotTimer kill_timer_;
@@ -213,15 +217,18 @@ void AgentContextImpl::Done() {}
 
 void AgentContextImpl::MaybeStopAgent() {
   new StopCall(&operation_queue_, false /* is agent runner terminating? */,
-               this, [this] {
-                 agent_runner_->RemoveAgent(url_);
-                 // |this| is no longer valid at this point.
+               this, [this] (bool stopped) {
+                 if (stopped) {
+                   agent_runner_->RemoveAgent(url_);
+                   // |this| is no longer valid at this point.
+                 }
                });
 }
 
 void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
   new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
-               [this, callback]() {
+               [this, callback] (bool stopped) {
+                 FTL_DCHECK(stopped);
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.
                  callback();
