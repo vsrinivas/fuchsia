@@ -11,7 +11,7 @@
 
 #include <magenta/assert.h>
 
-char* format_size(char* str, size_t str_size, size_t bytes) {
+char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit) {
     static const char units[] = "BkMGTPE";
     static int num_units = sizeof(units) - 1;
 
@@ -20,20 +20,40 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
         return str;
     }
     MX_DEBUG_ASSERT(str != NULL);
+    if (str_size == 1) {
+        str[0] = '\0';
+        return str;
+    }
 
+    char* orig_str = str;
+    size_t orig_bytes = bytes;
+retry:;
     int ui = 0;
     uint16_t r = 0;
     bool whole = true;
-    // Divide until we reach a unit that can express the value
+    // If we have a fixed (non-zero) unit, divide until we hit it.
+    //
+    // Otherwise, divide until we reach a unit that can express the value
     // with 4 or fewer whole digits.
     // - If we can express the value without a fraction (it's a whole
     //   kibi/mebi/gibibyte), use the largest possible unit (e.g., favor
     //   "1M" over "1024k").
     // - Otherwise, favor more whole digits to retain precision (e.g.,
     //   favor "1025k" or "1025.0k" over "1.0M").
-    while (bytes >= 10000 || (bytes != 0 && (bytes & 1023) == 0)) {
+    while (unit != 0
+               ? units[ui] != unit
+               : (bytes >= 10000 || (bytes != 0 && (bytes & 1023) == 0))) {
         ui++;
-        MX_DEBUG_ASSERT(ui < num_units); // Can't happen with a 64-bit number.
+        if (ui >= num_units) {
+            // We probably got an unknown unit. Fall back to a natural unit,
+            // but leave a hint that something's wrong.
+            MX_DEBUG_ASSERT(str_size > 1);
+            *str++ = '?';
+            str_size--;
+            unit = 0;
+            bytes = orig_bytes;
+            goto retry;
+        }
         if (bytes & 1023) {
             whole = false;
         }
@@ -55,5 +75,9 @@ char* format_size(char* str, size_t str_size, size_t bytes) {
         }
         snprintf(str, str_size, "%zu.%1u%c", bytes, r, units[ui]);
     }
-    return str;
+    return orig_str;
+}
+
+char* format_size(char* str, size_t str_size, size_t bytes) {
+    return format_size_fixed(str, str_size, bytes, 0);
 }
