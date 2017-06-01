@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,14 +12,15 @@ import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 import 'data_handler.dart';
 
 class ContextDataHandler extends DataHandler {
+  @override
   String get name => "context";
 
   // cache for current context state
   final _contextCache = new Map<String, String>();
 
   // connection to context provider
-  ContextProvider _contextProvider;
-  ContextListener _contextListener;
+  ContextProviderProxy _contextProvider;
+  ContextListenerImpl _contextListener;
 
   SendWebSocketMessage _sendMessage;
 

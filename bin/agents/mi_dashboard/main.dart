@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 
 import 'package:path/path.dart' as path;
 
