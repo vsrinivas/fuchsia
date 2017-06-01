@@ -302,6 +302,20 @@ func (r *Reader) Open(path string) (io.ReaderAt, error) {
 	return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 }
 
+// ReadFile reads a whole file out of the archive
+func (r *Reader) ReadFile(path string) ([]byte, error) {
+	bpath := []byte(path)
+	for i := range r.dirEntries {
+		de := &r.dirEntries[i]
+		if bytes.Equal(bpath, r.pathData[de.NameOffset:de.NameOffset+uint32(de.NameLength)]) {
+			buf := make([]byte, de.DataLength)
+			_, err := r.source.ReadAt(buf, int64(de.DataOffset))
+			return buf, err
+		}
+	}
+	return nil, os.ErrNotExist
+}
+
 // IsFAR looks for the FAR magic header, returning true if it is found. Only the header is consumed from the given input. If any IO error occurs, false is returned.
 func IsFAR(r io.Reader) bool {
 	m := make([]byte, len(Magic))

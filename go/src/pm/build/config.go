@@ -26,12 +26,13 @@ type Config struct {
 
 // NewConfig initializes a new configuration with conventional defaults
 func NewConfig() *Config {
-	return &Config{
+	cfg := &Config{
 		OutputDir:    ".",
 		ManifestPath: ".",
 		KeyPath:      "",
 		TempDir:      os.TempDir(),
 	}
+	return cfg
 }
 
 // TestConfig produces a configuration suitable for testing. It creates a

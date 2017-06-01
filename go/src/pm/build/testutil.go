@@ -63,7 +63,7 @@ func TestPackage(cfg *Config) {
 		if err != nil {
 			panic(err)
 		}
-		if _, err := fmt.Fprintf(f, "%s\n", path); err != nil {
+		if _, err := fmt.Fprintf(f, "%s\n", name); err != nil {
 			panic(err)
 		}
 		err = f.Close()

@@ -25,6 +25,14 @@ import (
 // is generated with a name matching the output directory name.
 func Init(cfg *Config) error {
 	pkgName := filepath.Base(cfg.OutputDir)
+	if pkgName == "." {
+		var err error
+		pkgName, err = filepath.Abs(pkgName)
+		if err != nil {
+			return fmt.Errorf("build: unable to compute package name from directory: %s", err)
+		}
+		pkgName = filepath.Base(pkgName)
+	}
 	metadir := filepath.Join(cfg.OutputDir, "meta")
 	os.MkdirAll(metadir, os.ModePerm)
 
@@ -105,6 +113,14 @@ func Sign(cfg *Config) error {
 
 	manifest, err := cfg.Manifest()
 	if err != nil {
+		return err
+	}
+
+	p, err := manifest.Package()
+	if err != nil {
+		return err
+	}
+	if err := p.Validate(); err != nil {
 		return err
 	}
 

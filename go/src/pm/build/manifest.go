@@ -12,7 +12,10 @@ import (
 	"sort"
 	"strings"
 
+	"encoding/json"
+
 	"fuchsia.googlesource.com/pm/ignores"
+	"fuchsia.googlesource.com/pm/pkg"
 )
 
 // Manifest describes the list of files that are to become the contents of a package
@@ -58,6 +61,17 @@ func (m *Manifest) Meta() map[string]string {
 		}
 	}
 	return meta
+}
+
+// Package loads the package descriptor from the package.json listed in the manifest and returns it.
+func (m *Manifest) Package() (*pkg.Package, error) {
+	f, err := os.Open(m.Paths["meta/package.json"])
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var p pkg.Package
+	return &p, json.NewDecoder(f).Decode(&p)
 }
 
 // Content returns the list of files from the manifest that are not to be

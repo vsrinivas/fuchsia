@@ -183,6 +183,44 @@ func TestReaderOpen(t *testing.T) {
 		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
 	}
 }
+func TestReaderReadFile(t *testing.T) {
+	far := exampleArchive()
+	r, err := NewReader(bytes.NewReader(far))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := len(r.dirEntries), 3; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	for _, f := range []string{"a", "b", "dir/c"} {
+		got, err := r.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// buffer past the far content padding to check clamping of the readat range
+		want := []byte(f + "\n")
+		if !bytes.Equal(got, want) {
+			t.Errorf("got %x, want %x", got, want)
+		}
+	}
+
+	ra, err := r.Open("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ensure that negative offsets are rejected
+	n, err := ra.ReadAt(make([]byte, 10), -10)
+	if err != io.EOF || n != 0 {
+		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
+	}
+	// ensure that offsets beyond length are rejected
+	n, err = ra.ReadAt(make([]byte, 10), 10)
+	if err != io.EOF || n != 0 {
+		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
+	}
+}
 
 func TestReadEmpty(t *testing.T) {
 	r, err := NewReader(bytes.NewReader(emptyArchive()))

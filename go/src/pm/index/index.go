@@ -27,12 +27,16 @@ func New(root string) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Index{root: root}, nil
+	index := &Index{root: root}
+	if err := os.MkdirAll(index.NeedsBlobsDir(), os.ModePerm); err != nil {
+		return nil, err
+	}
+	return index, nil
 }
 
 // List returns a list of all known packages in byte-lexical order.
 func (idx *Index) List() ([]pkg.Package, error) {
-	paths, err := filepath.Glob(idx.packagePath("*/*"))
+	paths, err := filepath.Glob(idx.PackageVersionPath("*", "*"))
 	if err != nil {
 		return nil, err
 	}
@@ -47,22 +51,59 @@ func (idx *Index) List() ([]pkg.Package, error) {
 
 // Add adds a package to the index
 func (idx *Index) Add(p pkg.Package) error {
-	if err := os.MkdirAll(idx.packagePath(p.Name), os.ModePerm); err != nil {
+	if err := os.MkdirAll(idx.PackagePath(p.Name), os.ModePerm); err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(idx.packagePath(filepath.Join(p.Name, p.Version)), []byte{}, os.ModePerm)
+	return ioutil.WriteFile(idx.PackagePath(filepath.Join(p.Name, p.Version)), []byte{}, os.ModePerm)
 }
 
 // Remove removes a package from the index
 func (idx *Index) Remove(p pkg.Package) error {
-	return os.RemoveAll(idx.packageVersionPath(p.Name, p.Version))
+	return os.RemoveAll(idx.PackageVersionPath(p.Name, p.Version))
 }
 
-func (idx *Index) packagePath(name string) string {
+func (idx *Index) PackagePath(name string) string {
 	return filepath.Join(idx.root, "packages", name)
 }
 
-func (idx *Index) packageVersionPath(name, version string) string {
+func (idx *Index) PackageVersionPath(name, version string) string {
 	return filepath.Join(idx.root, "packages", name, version)
+}
+
+// NeedsDir is the root of the needs directory
+func (idx *Index) NeedsDir() string {
+	return filepath.Join(idx.root, "needs")
+}
+func (idx *Index) InstallingDir() string {
+	return filepath.Join(idx.root, "installing")
+}
+func (idx *Index) PackagesDir() string {
+	return filepath.Join(idx.root, "packages")
+}
+
+// NeedsBlob provides the path to an index blob need, given a blob digest root
+func (idx *Index) NeedsBlob(root string) string {
+	return filepath.Join(idx.root, "needs", "blobs", root)
+}
+
+func (idx *Index) NeedsFile(name string) string {
+	return filepath.Join(idx.root, "needs", name)
+}
+
+// NeedsBlobsDir provides the location of the index directory of needed blobs
+func (idx *Index) NeedsBlobsDir() string {
+	return filepath.Join(idx.root, "needs", "blobs")
+}
+
+func (idx *Index) WaitingDir() string {
+	return filepath.Join(idx.root, "waiting")
+}
+
+func (idx *Index) WaitingPackageVersionPath(pkg, version string) string {
+	return filepath.Join(idx.root, "waiting", pkg, version)
+}
+
+func (idx *Index) InstallingPackageVersionPath(pkg, version string) string {
+	return filepath.Join(idx.root, "installing", pkg, version)
 }
