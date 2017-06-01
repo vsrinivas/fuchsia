@@ -117,23 +117,6 @@ sudo ifconfig $INTERFACE inet $HOST_IP
 
 if $DARWIN
 then
-  # On macOS the IPv6 link local address needs to be explicitly configured.
-
-  # Calculate the link-local IPv6 address for $INTERFACE
-  function calc_link_local() {
-      local mac
-      IFS=':' read -ra mac <<< "$1"
-      mac[0]=$(printf "%x\n" "$((0x${mac[0]} ^ 0x2))")
-      echo fe80::${mac[0]}${mac[1]}:${mac[2]}ff:fe${mac[3]}:${mac[4]}${mac[5]}
-  }
-  MAC=`ifconfig $INTERFACE | awk '/ether/ {print $2}'`
-  LINK_LOCAL=`calc_link_local $MAC`
-
-  sudo ifconfig $INTERFACE inet6 $LINK_LOCAL
-fi
-
-if $DARWIN
-then
   LOOPBACK=lo0
 else
   LOOPBACK=lo
@@ -154,6 +137,16 @@ sudo $DNSMASQ \
 
 if $DARWIN
 then
+  # OSX will not bring up ipv6 until an ipv6 address is assigned, but as soon
+  # as an address is assigned, it will also assign a link-local address. Here
+  # we assign the same address as used by the magenta ifup script, and let OSX
+  # assign the link-local address. Previously we computed and assigned a
+  # link-local address, but this resulted in duplicate addresses assigned to
+  # the interface, and TAP just duplicated that traffic to applications.
+  # This is configured after dnsmasq is started, as dnsmasq has no need to
+  # listen on ipv6, and fails to bind fc00.
+  sudo ifconfig $INTERFACE inet6 fc00::/7 up
+
   DEFAULT_INTERFACE=$(route -n get default | awk '/interface:/ { print $2 }') || true
 else
   DEFAULT_INTERFACE=$(ip route get 8.8.8.8 | awk '/^8.8.8.8/ { print $5 }')
