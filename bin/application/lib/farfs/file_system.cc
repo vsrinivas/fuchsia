@@ -4,6 +4,8 @@
 
 #include "application/lib/farfs/file_system.h"
 
+#include <fcntl.h>
+
 #include "lib/mtl/vfs/vfs_handler.h"
 
 namespace archive {
