@@ -16,5 +16,5 @@ private:
     unsigned state_;
 };
 
-void* operator new(size_t, AllocChecker* ac);
-void* operator new[](size_t, AllocChecker* ac);
+void* operator new(size_t, AllocChecker* ac) noexcept;
+void* operator new[](size_t, AllocChecker* ac) noexcept;
