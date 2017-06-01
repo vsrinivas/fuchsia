@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 typedef struct mac_addr_t mac_addr;
 typedef struct ip6_addr_t ip6_addr;
 typedef struct ip6_hdr_t ip6_hdr;
