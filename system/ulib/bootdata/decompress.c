@@ -115,6 +115,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
         *err = "mx_vmo_create failed for decompressing bootfs";
         return status;
     }
+    mx_object_set_property(dst_vmo, MX_PROP_NAME, "bootfs", 6);
 
     uintptr_t dst_addr = 0;
     status = mx_vmar_map(vmar, 0, dst_vmo, 0, newsize,

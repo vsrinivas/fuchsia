@@ -173,8 +173,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             job = handles[i];
             break;
         case PA_HND(PA_VMO_BOOTDATA, 0):
-            if (bootdata_vmo == MX_HANDLE_INVALID)
+            if (bootdata_vmo == MX_HANDLE_INVALID) {
                 bootdata_vmo = handles[i];
+                mx_object_set_property(bootdata_vmo, MX_PROP_NAME, "bootdata", 8);
+            }
             break;
         }
     }
