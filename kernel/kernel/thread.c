@@ -628,6 +628,16 @@ static void thread_do_suspend(void)
         current_thread->signals &= ~THREAD_SIGNAL_SUSPEND;
 
         thread_resched();
+
+        // If the thread was killed, we should not allow it to resume.  We
+        // shouldn't call user_callback() with THREAD_USER_STATE_RESUME in
+        // this case, because there might not have been any request to
+        // resume the thread.
+        if (current_thread->signals & THREAD_SIGNAL_KILL) {
+            THREAD_UNLOCK(state);
+            thread_exit(0);
+            /* unreachable */
+        }
     }
 
     THREAD_UNLOCK(state);

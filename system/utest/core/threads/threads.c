@@ -289,31 +289,6 @@ static bool test_resume_suspended(void) {
     END_TEST;
 }
 
-static bool test_kill_suspended(void) {
-    BEGIN_TEST;
-
-    mx_handle_t event;
-    mxr_thread_t thread;
-
-    ASSERT_EQ(mx_event_create(0, &event), NO_ERROR, "");
-    ASSERT_TRUE(start_thread(test_wait_thread_fn, &event, &thread), "");
-    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
-    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
-    mx_nanosleep(mx_deadline_after(MX_MSEC(10)));
-    ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
-
-    ASSERT_EQ(mx_object_wait_one(
-        thread_h, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
-
-    // make sure the thread did not execute more user code.
-    ASSERT_EQ(mx_object_wait_one(event, MX_USER_SIGNAL_1, mx_deadline_after(MX_MSEC(100)), NULL), ERR_TIMED_OUT, "");
-
-    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
-
-    END_TEST;
-}
-
 static bool test_suspend_sleeping(void) {
     BEGIN_TEST;
 
@@ -528,6 +503,59 @@ static bool test_suspend_stops_thread(void) {
     END_TEST;
 }
 
+// This tests for a bug in which killing a suspended thread causes the
+// thread to be resumed and execute more instructions in userland.
+static bool test_kill_suspended_thread(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t thread;
+    struct test_writing_thread_arg arg = { .v = 0 };
+    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread), "");
+    mx_handle_t thread_h = mxr_thread_get_handle(&thread);
+
+    // Wait until the thread has started and has modified arg.v.
+    while (arg.v != 1) {
+        mx_nanosleep(0);
+    }
+
+    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_EQ(mx_task_suspend(thread_h), NO_ERROR, "");
+
+    // Wait for the thread to suspend.
+    mx_exception_packet_t packet;
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
+              NO_ERROR, "");
+    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_THREAD_SUSPENDED,
+              "");
+
+    // Reset the test memory location.
+    arg.v = 100;
+    ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
+    // Wait for the thread termination to complete.
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    // Check for the bug.  The thread should not have resumed execution and
+    // so should not have modified arg.v.
+    EXPECT_EQ(arg.v, 100, "");
+
+    // Check that the thread is reported as exiting and not as resumed.
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
+              NO_ERROR, "");
+    ASSERT_EQ(packet.hdr.key, kExceptionPortKey, "");
+    ASSERT_EQ(packet.report.header.type, (uint32_t)MX_EXCP_THREAD_EXITING,
+              "");
+
+    // Clean up.
+    ASSERT_EQ(mx_handle_close(eport), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
+
+    END_TEST;
+}
+
 #if defined(__x86_64__)
 
 // This is based on code from kernel/ which isn't usable by code in system/.
@@ -638,11 +666,11 @@ RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)
 RUN_TEST(test_info_task_stats_fails)
 RUN_TEST(test_resume_suspended)
-RUN_TEST(test_kill_suspended)
 RUN_TEST(test_suspend_sleeping)
 RUN_TEST(test_suspend_channel_call)
 RUN_TEST(test_suspend_port_call)
 RUN_TEST(test_suspend_stops_thread)
+RUN_TEST(test_kill_suspended_thread)
 RUN_TEST(test_noncanonical_rip_address)
 END_TEST_CASE(threads_tests)
 
