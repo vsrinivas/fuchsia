@@ -168,7 +168,7 @@ class OperationBase {
   template <typename... Args>
   friend class Operation;
 
-  // Only OperationContainer is meant to call this before it i.
+  // Only OperationContainer is meant to call this.
   void InvalidateWeakPtrs() { weak_ptr_factory_.InvalidateWeakPtrs(); }
 
   // Only Operation<...> is meant to call this.
@@ -181,7 +181,7 @@ class OperationBase {
       container->Drop(this);
       // Can no longer refer to |this|.
       result_call(std::move(result_args)...);
-      // The result callback may cause the container to be deleted, so we should
+      // The result callback may cause the container to be deleted, so we must
       // check it still exists before telling it to continue.
       if (container) {
         container->Cont();
