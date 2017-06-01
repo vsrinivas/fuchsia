@@ -7,24 +7,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_provider.fidl.dart';
 
-// TODO(rosswang): A note on the badness - Right now the generated package name
-// for the context:debug target is context..debug, and likewise user:scope is
-// user..scope. However, debug.fidl.dart imports user/scope.fidl.dart rather
-// than user..scope/scope.fidl.dart, which are "incompatible". However, fear
-// not -- user/scope.fidl.dart is available by depending on user:user_dart
-// rather than user:scope_dart.
-//
-// The Atom Dart analyzer is displeased in all cases.
-//
-// Per e-mail thread, the fix for this will probably come after FIDL 2. In the
-// meantime a less hacky workaround may be to just not use subtargets for FIDL.
-import 'package:apps.maxwell.services.context..debug/debug.fidl.dart';
-import 'package:apps.maxwell.services.user/scope.fidl.dart';
-
 import 'package:path/path.dart' as path;
+
+import 'src/data_handler.dart';
+import 'src/context.dart';
+import 'src/context_subscribers.dart';
 
 const _configDir = "/system/data/mi_dashboard";
 const _configFilename = "dashboard.config";
@@ -38,95 +27,39 @@ int _port = _defaultPort;
 var _webrootPath = _defaultWebrootPath;
 Directory _webrootDirectory;
 
-// Some Dart FIDL bindings do have toJson methods, but not unions. Since we need
-// to do some converting anyway, might as well also unwrap the more nested FIDL
-// bindings.
-// ignore: non_constant_identifier_names
-final JsonCodec JSON = new JsonCodec(toEncodable: (dynamic object) {
-  if (object is ComponentScope) {
-    switch (object.tag) {
-      case ComponentScopeTag.globalScope:
-        return {"type": "global"};
-      case ComponentScopeTag.moduleScope:
-        return {
-          "type": "module",
-          "url": object.moduleScope.url,
-          "storyId": object.moduleScope.storyId
-        };
-      case ComponentScopeTag.agentScope:
-        return {"type": "agent", "url": object.agentScope.url};
-      default:
-        return {"type": "unknown"};
-    }
-  } else if (object is ContextQuery) {
-    return object.topics;
-  } else {
-    return object.toJson();
-  }
-});
-
 var _activeWebsockets = new List<WebSocket>();
 
-final _contextCache = new Map<String, String>();
-final _contextProvider = new ContextProviderProxy();
-final _contextListener = new ContextListenerImpl((ContextUpdate update) {
-  // Cache all context values that we receive
-  update.values.forEach((String key, String value) {
-    // print("[DASHBOARD UPDATE] ${key}: ${value}");
-    _contextCache[key] = value;
-  });
-
-  // Send updates to all active websockets
+final SendWebSocketMessage _sendMessage = (String message) {
   if (_activeWebsockets.isNotEmpty) {
-    final String message = JSON.encode({"context.update": update.values});
     for (final socket in _activeWebsockets) {
       socket.add(message);
     }
   }
-});
+};
 
-final _contextDebugBinding = new SubscriberListenerBinding();
-
-List<SubscriberUpdate> _contextSubscribersCache = [];
-
-class SubscriberListenerImpl extends SubscriberListener {
-  @override
-  void onUpdate(List<SubscriberUpdate> subscriptions) {
-    _contextSubscribersCache = subscriptions;
-    if (_activeWebsockets.isNotEmpty) {
-      final String message =
-          JSON.encode({"context.subscribers": subscriptions});
-      for (final socket in _activeWebsockets) {
-        socket.add(message);
-      }
-    }
-  }
-}
+final _dataHandlerMap = new Map<String, DataHandler>();
 
 void main(List args) {
-  final contextDebug = new ContextDebugProxy();
-
   final appContext = new ApplicationContext.fromStartupInfo();
-  connectToService(appContext.environmentServices, _contextProvider.ctrl);
-  assert(_contextProvider.ctrl.isBound);
-  connectToService(appContext.environmentServices, contextDebug.ctrl);
-  assert(contextDebug.ctrl.isBound);
+
+  // Assemble the list of DataHandlers
+  addDataHandler(new ContextDataHandler());
+  addDataHandler(new ContextSubscribersDataHandler());
+
+  // Initialize the DataHandlers
+  _dataHandlerMap.forEach((name, handler) {
+    handler.init(appContext, _sendMessage);
+  });
 
   appContext.close();
-
-  // Subscribe to the topics in |_topics|.
-  ContextQuery query = new ContextQuery();
-  query.topics = []; // empty list is the wildcard query
-  _contextProvider.subscribe(query, _contextListener.getHandle());
-
-  // Watch subscription changes.
-  contextDebug.watchSubscribers(
-      _contextDebugBinding.wrap(new SubscriberListenerImpl()));
-  contextDebug.ctrl.close();
 
   // Read the config file from disk
   var configFile = new File(path.join(_configDir, _configFilename));
   configFile.readAsString(encoding: ASCII).then(parseConfigAndStart);
+}
+
+void addDataHandler(DataHandler handler) {
+  _dataHandlerMap[handler.name] = handler;
 }
 
 void parseConfigAndStart(String configString) {
@@ -157,7 +90,10 @@ void handleRequest(HttpRequest request) {
       socket.listen(handleWebsocketRequest, onDone: () {
         handleWebsocketClose(socket);
       });
-      sendAllContextDataToWebsocket(socket);
+      // Alert all DataHandlers
+      _dataHandlerMap.forEach((name, handler) {
+        handler.handleNewWebSocket(socket);
+      });
     });
   } else {
     // Identify requests requiring return of context data
@@ -172,25 +108,11 @@ void handleRequest(HttpRequest request) {
       request.response.headers.contentType =
           new ContentType("application", "json", charset: "utf-8");
 
-      // Figure out what service data to return
-      switch (serviceName) {
-        case "context":
-          //   /data/context/<topic>
-          //     return JSON data from the context service for the given topic
-          var topic = match.group(2);
-          var topicValue = _contextCache[topic];
-          // print("[DASHBOARD] Request for context topic ${topic} with value ${topicValue}");
-          if (topicValue != null) {
-            // Write the data to the response.
-            request.response.write(topicValue);
-            request.response.close();
-            return;
-          }
+      // If an appropriate handler can be found, ask it to respond
+      var handler = _dataHandlerMap[serviceName];
+      if (handler?.handleRequest(match.group(2), request) ?? false)
+        return;
 
-        // TODO(jwnichols): Report data from other intelligence services. E.g.,
-        //   /data/actionlog/...
-        //   /data/suggestions/...
-      }
       // Nothing handled the request, so respond with a 404
       send404(request.response);
     } else {
@@ -260,12 +182,4 @@ void handleWebsocketRequest(String event) {
 void handleWebsocketClose(WebSocket socket) {
   print("[INFO] Websocket closed (${_activeWebsockets.indexOf(socket)})");
   _activeWebsockets.remove(socket);
-}
-
-void sendAllContextDataToWebsocket(WebSocket socket) {
-  String message = JSON.encode({
-    "context.update": _contextCache,
-    "context.subscribers": _contextSubscribersCache
-  });
-  socket.add(message);
 }
