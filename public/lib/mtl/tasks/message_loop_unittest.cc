@@ -529,11 +529,11 @@ TEST(MessageLoop, FDWaiter) {
       });
     auto callback = [&callback_ran, &message_loop](mx_status_t success, uint32_t events) {
       EXPECT_EQ(success, NO_ERROR);
-      EXPECT_EQ(events, static_cast<uint32_t>(EPOLLIN));
+      EXPECT_EQ(events, static_cast<uint32_t>(POLLIN));
       callback_ran = true;
       message_loop.QuitNow();
     };
-    EXPECT_TRUE(waiter.Wait(callback, fd.get(), EPOLLIN));
+    EXPECT_TRUE(waiter.Wait(callback, fd.get(), POLLIN));
     message_loop.Run();
     thread.join();
   }
