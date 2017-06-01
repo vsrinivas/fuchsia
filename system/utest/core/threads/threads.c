@@ -554,12 +554,14 @@ static bool test_noncanonical_rip_address(void) {
     // the syscall.
     ASSERT_EQ(mx_nanosleep(mx_deadline_after(MX_MSEC(10))), NO_ERROR, "");
 
-    mx_handle_t thread_handle = mxr_thread_get_handle(&thread);
-    ASSERT_EQ(mx_task_suspend(thread_handle), NO_ERROR, "");
-
     // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED.
     mx_handle_t eport;
     ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    // suspend the thread
+    mx_handle_t thread_handle = mxr_thread_get_handle(&thread);
+    ASSERT_EQ(mx_task_suspend(thread_handle), NO_ERROR, "");
+
     // Wait for the thread to suspend.
     mx_exception_packet_t packet;
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
