@@ -26,14 +26,6 @@ struct PageSyncContext {
   std::unique_ptr<PageSync> page_sync;
 };
 
-enum class RemoteResponse {
-  FOUND,
-  NOT_FOUND,
-  NETWORK_ERROR,
-  SERVER_ERROR,
-  PARSE_ERROR
-};
-
 // Manages Cloud Sync for a particular ledger.
 class LedgerSync {
  public:
