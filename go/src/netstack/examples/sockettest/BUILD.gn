@@ -15,19 +15,6 @@ executable("sockettest") {
   ]
 }
 
-executable("epolltest") {
-  testonly = true
-
-  sources = [
-    "epolltest.c",
-  ]
-
-  libs = [
-    "mxio",
-    "magenta",
-  ]
-}
-
 executable("mctest") {
   testonly = true
 
