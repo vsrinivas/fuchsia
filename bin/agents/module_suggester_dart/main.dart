@@ -82,10 +82,11 @@ class _AskHandlerImpl extends AskHandler {
     if ((query.text?.length ?? 0) >= 4) {
       Directory systemApps = new Directory('/system/apps/');
       systemApps
-          .listSync(followLinks: false)
+          .listSync(recursive: true, followLinks: false)
           .map((FileSystemEntity fileSystemEntity) => fileSystemEntity.path)
           .where((String path) =>
               Uri.parse(path).pathSegments.last.contains(query.text))
+          .where((String path) => FileSystemEntity.isFileSync(path))
           .forEach((String path) {
         String name = Uri.parse(path).pathSegments.last;
         proposals.add(
