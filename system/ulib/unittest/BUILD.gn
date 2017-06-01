@@ -5,6 +5,8 @@ config("unittest_config") {
 static_library("unittest") {
   sources = [
     "all-tests.c",
+    "crash-handler.c",
+    "crash-list.c",
     "unittest.c",
   ]
   public = [ "include/unittest/unittest.h" ]

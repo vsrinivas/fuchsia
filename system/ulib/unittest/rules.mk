@@ -10,12 +10,14 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/all-tests.c \
+    $(LOCAL_DIR)/crash-handler.c \
+    $(LOCAL_DIR)/crash-list.c \
     $(LOCAL_DIR)/unittest.c \
 
 MODULE_SO_NAME := unittest
 
 # N.B. mxio, and thus launchpad, cannot appear here. See ./README.md.
-MODULE_LIBS := system/ulib/c
+MODULE_LIBS := system/ulib/c system/ulib/magenta
 
 MODULE_STATIC_LIBS := system/ulib/pretty
 

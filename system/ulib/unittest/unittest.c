@@ -12,6 +12,8 @@
 
 #include <pretty/hexdump.h>
 
+#include "crash-handler.h"
+
 /**
  * \brief Default function to dump unit test results
  *
@@ -93,15 +95,28 @@ int unittest_set_verbosity_level(int new_level) {
 void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
                              struct test_info** current_test_info,
-                             bool* all_success) {
+                             bool* all_success, bool enable_crash_handler) {
     if (utest_test_type & test_type) {
         unittest_printf_critical("    %-51s [RUNNING]", name);
-        struct test_info test_info = { .all_ok = true };
+        struct test_info test_info = { .all_ok = true, NULL };
         *current_test_info = &test_info;
+        // The crash handler is disabled by default. To enable, the test should
+        // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
+        if (enable_crash_handler) {
+            test_info.crash_list = crash_list_new();
+            if (!run_test_with_crash_handler(&test_info, test))
+                test_info.all_ok = false;
 
-        if (!test())
+            // Check if there were any processes registered to crash but didn't.
+            bool missing_crash = crash_list_delete(test_info.crash_list);
+            if (missing_crash) {
+                // TODO: display which expected crash did not occur.
+                UNITTEST_TRACEF("Expected crash did not occur\n");
+                test_info.all_ok = false;
+            }
+        } else if (!test()) {
             test_info.all_ok = false;
-
+        }
         // Recheck all_ok in case there was a failure in a C++ destructor
         // after the "return" statement in END_TEST.
         if (test_info.all_ok) {

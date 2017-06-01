@@ -55,6 +55,8 @@
 
 #include <magenta/compiler.h>
 
+#include "../../crash-list.h"
+
 #define PRINT_BUFFER_SIZE (512)
 
 // The following helper function makes the "msg" argument optional in
@@ -179,9 +181,9 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name);
 
-#define RUN_NAMED_TEST_TYPE(name, test, test_type)                     \
-    unittest_run_named_test(name, test, test_type, &current_test_info, \
-                            &all_success);
+#define RUN_NAMED_TEST_TYPE(name, test, test_type, enable_crash_handler) \
+    unittest_run_named_test(name, test, test_type, &current_test_info,   \
+                            &all_success, enable_crash_handler);
 
 #define TEST_CASE_ELEMENT(case_name) &_##case_name##_element
 
@@ -204,14 +206,44 @@ int unittest_set_verbosity_level(int new_level);
  * using other metrics (thresholds, statistical techniques) to identify
  * regressions.
 */
-#define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
-#define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM)
-#define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE)
-#define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE)
+#define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
+#define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM, false)
+#define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE, false)
+#define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE, false)
 
 // "RUN_TEST" implies the test is small
-#define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
-#define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL)
+#define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
+#define RUN_TEST_ENABLE_CRASH_HANDLER(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, true)
+#define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
+
+/**
+ * Registers the process as expected to crash. Tests utilizing this should be run
+ * with RUN_TEST_ENABLE_CRASH_HANDLER. If a crash occurs and matches a
+ * registered process, it is not bubbled up to the crashlogger and the test
+ * continues. If any crash was registered but did not occur, the test fails.
+ * Unregistered crashes will also fail the test.
+ *
+ * A use case could be as follows:
+ *
+ * static bool test_foo_process_expected_crash(void)
+ * {
+ *      BEGIN_TEST;
+ *
+ *      ...create a process...
+ *      mx_handle_t process;
+ *      mx_handle_t vmar;
+ *      ASSERT_EQ(mx_process_create(mx_job_default(), fooName, sizeof(fooName),
+ *                                  0, &process, &vmar),
+ *                MX_OK, ""));
+ *      ...register the process as expected to crash...
+ *      REGISTER_CRASH(process);
+ *      ...trigger the crash...
+ *
+ *      END_TEST;
+ * }
+ */
+#define REGISTER_CRASH(process_handle) \
+    crash_list_register(current_test_info->crash_list, process_handle)
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -248,7 +280,7 @@ int unittest_set_verbosity_level(int new_level);
 // Intentionally shadows the global current_test_info to avoid accidentally
 // leaking dangling stack pointers.
 #define BEGIN_HELPER \
-    struct test_info _ut_helper_test_info = { .all_ok = true }; \
+    struct test_info _ut_helper_test_info = { .all_ok = true, .crash_list = NULL }; \
     struct test_info* current_test_info = &_ut_helper_test_info; \
 // By referring to _ut_helper_test_info, we guarantee that
 // END_HELPER is matched with BEGIN_HELPER.
@@ -464,6 +496,7 @@ struct test_case_element {
  */
 struct test_info {
     bool all_ok;
+    crash_list_t crash_list;
 };
 
 /*
@@ -499,6 +532,6 @@ bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len
 void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
                              struct test_info** current_test_info,
-                             bool* all_success);
+                             bool* all_success, bool enable_crash_handler);
 
 __END_CDECLS
