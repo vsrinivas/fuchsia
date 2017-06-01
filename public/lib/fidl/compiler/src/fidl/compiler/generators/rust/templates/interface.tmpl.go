@@ -157,6 +157,17 @@ impl {{$interface.Server.Name}} {
             version: {{$interface.Name}}_Metadata::VERSION,
         }
     }
+
+    pub fn into_channel(self) -> ::magenta::Channel {
+        self.0
+    }
+}
+
+pub fn {{$interface.Name}}_new_pair() -> ({{$interface.Name}}_Proxy, {{$interface.Server.Name}}) {
+    use ::magenta::HandleBase;
+    let (s1, s2) = ::magenta::Channel::create(::magenta::ChannelOpts::Normal).unwrap();
+    let client = {{$interface.Client.Name}}::from_handle(s1.into_handle());
+    ({{$interface.Name}}_new_Proxy(client), {{$interface.Server.Name}}(s2))
 }
 
 // Enums
