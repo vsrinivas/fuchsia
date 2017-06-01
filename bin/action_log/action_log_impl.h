@@ -37,9 +37,9 @@ class UserActionLogImpl : public UserActionLog {
                               const std::string& method,
                               const std::string& params);
 
-  void ProposeSharingVideo(const std::string& component_url,
-                           const std::string& method,
-                           const std::string& params);
+  void MaybeProposeSharingVideo(const std::string& component_url,
+                                const std::string& method,
+                                const std::string& params);
 
   void LogDummyActionDelayed();
 

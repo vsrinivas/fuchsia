@@ -46,6 +46,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   app::ServiceProviderPtr StartServiceProviderApp(const std::string& url);
   void StartAgent(const std::string& url);
   void StartAgent(const std::string& url, ServiceProviderInitializer services);
+  void StartActionLog(SuggestionEngine* suggestion_engine);
 
   app::ApplicationContext* app_context_;  // Not owned.
 

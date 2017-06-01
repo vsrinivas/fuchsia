@@ -5,6 +5,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "application/lib/app/connect.h"
+#include "apps/maxwell/services/action_log/factory.fidl.h"
 #include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/user/scope.fidl.h"
@@ -79,12 +80,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_->Initialize(Duplicate(story_provider),
                                  Duplicate(focus_provider));
 
-  {
-    app::ServiceProviderPtr action_log_services_ =
-        StartServiceProviderApp("file:///system/apps/action_log");
-    user_action_log_ = app::ConnectToService<maxwell::UserActionLog>(
-        action_log_services_.get());
-  }
+  StartActionLog(suggestion_engine_.get());
 
   resolver_services_ = StartServiceProviderApp("file:///system/apps/resolver");
 
@@ -153,6 +149,20 @@ app::ServiceProviderPtr UserIntelligenceProviderImpl::StartServiceProviderApp(
   launch_info->services = services.NewRequest();
   app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
   return services;
+}
+
+void UserIntelligenceProviderImpl::StartActionLog(
+    SuggestionEngine* suggestion_engine) {
+  std::string url = "file:///system/apps/action_log";
+  app::ServiceProviderPtr action_log_services = StartServiceProviderApp(url);
+  maxwell::UserActionLogFactoryPtr action_log_factory =
+      app::ConnectToService<maxwell::UserActionLogFactory>(
+          action_log_services.get());
+  maxwell::ProposalPublisherPtr proposal_publisher;
+  suggestion_engine->RegisterPublisher(url,
+                                       fidl::GetProxy(&proposal_publisher));
+  action_log_factory->GetUserActionLog(std::move(proposal_publisher),
+                                       fidl::GetProxy(&user_action_log_));
 }
 
 void UserIntelligenceProviderImpl::AddStandardServices(

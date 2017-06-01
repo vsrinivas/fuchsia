@@ -7,11 +7,13 @@ import("//lib/fidl/fidl.gni")
 fidl("action_log") {
   sources = [
     "component.fidl",
+    "factory.fidl",
     "listener.fidl",
     "user.fidl",
   ]
 
   deps = [
     "//apps/maxwell/services/user:scope",
+    "//apps/maxwell/services/suggestion",
   ]
 }
