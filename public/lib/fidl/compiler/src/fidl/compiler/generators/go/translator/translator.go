@@ -129,13 +129,7 @@ func (t *translator) TranslateFidlFile(fileName string) (tmplFile *TmplFile) {
 		t.imports["bindings"] = "fidl/bindings"
 	}
 	if len(tmplFile.Interfaces) > 0 {
-		t.imports["system"] = "fidl/system"
-		if tmplFile.PackageName != "service_describer" {
-			t.imports["service_describer"] = "mojo/public/interfaces/bindings/service_describer"
-		}
-		if tmplFile.PackageName != "fidl_types" {
-			t.imports["fidl_types"] = "mojo/public/interfaces/bindings/fidl_types"
-		}
+		t.imports["mx"] = "syscall/mx"
 	}
 	if len(tmplFile.Structs) > 0 || methodDefined {
 		t.imports["sort"] = "sort"
@@ -149,7 +143,7 @@ func (t *translator) TranslateFidlFile(fileName string) (tmplFile *TmplFile) {
 		t.imports["bytes"] = "bytes"
 		t.imports["ioutil"] = "io/ioutil"
 		if tmplFile.PackageName != "fidl_types" {
-			t.imports["fidl_types"] = "mojo/public/interfaces/bindings/fidl_types"
+			t.imports["fidl_types"] = "fidl/compiler/generated/fidl_types"
 		}
 	}
 

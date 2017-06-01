@@ -66,31 +66,31 @@ func (t *translator) translateStringType(mojomType fidl_types.StringType) (goTyp
 }
 
 func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goType string) {
-	t.imports["system"] = "fidl/system"
+	t.imports["mx"] = "syscall/mx"
 	switch mojomType.Kind {
 	default:
 		panic("Unknown handle type. This should never happen.")
 	case fidl_types.HandleType_Kind_Unspecified:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Channel:
-		goType = "system.ChannelHandle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Vmo:
-		goType = "system.VmoHandle"
+		goType = "mx.VMO"
 	// TODO(vardhan): Fix the following types to not use generic |system.Handle|.
 	case fidl_types.HandleType_Kind_Process:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Thread:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Event:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Port:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Job:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_Socket:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	case fidl_types.HandleType_Kind_EventPair:
-		goType = "system.Handle"
+		goType = "mx.Handle"
 	}
 	if mojomType.Nullable {
 		goType = "*" + goType

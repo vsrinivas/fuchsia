@@ -23,11 +23,6 @@ const interfaceTmplText = `
 {{ template "ServiceDecl" $interface }}
 {{- end}}
 
-{{ template "ServiceDescription" $interface }}
-
-{{- range $enum := $interface.NestedEnums }}
-{{ template "EnumDecl" $enum }}
-{{- end}}
 {{- end -}}
 `
 
@@ -68,20 +63,15 @@ type {{$interface.Name}}_Factory interface {
 	Create(request {{$interface.Name}}_Request)
 }
 
-{{/* TODO(azani) This should only be defined for interfaces that have a ServiceName. */}}
-func (f *{{$interface.Name}}_ServiceFactory) ServiceDescription() {{DescPkg}}ServiceDescription {
-	return &{{$interface.Name}}_ServiceDescription{}
-}
-
-func (f *{{$interface.Name}}_ServiceFactory) Create(messagePipe system.ChannelHandle) {
-	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(messagePipe)}
+func (f *{{$interface.Name}}_ServiceFactory) Create(handle mx.Handle) {
+	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(handle)}
 	f.Delegate.Create(request)
 }
 
-// CreateChannelFor{{$interface.Name}} creates a message pipe for use with the
+// CreateChannelFor{{$interface.Name}} creates a channel for use with the
 // {{$interface.Name}} interface with a {{$interface.Name}}_Request on one end and a {{$interface.Name}}_Pointer on the other.
 func CreateChannelFor{{$interface.Name}}() ({{$interface.Name}}_Request, {{$interface.Name}}_Pointer) {
-        r, p := bindings.CreateChannelForMojoInterface()
+        r, p := bindings.CreateChannelForFidlInterface()
         return {{$interface.Name}}_Request(r), {{$interface.Name}}_Pointer(p)
 }
 
@@ -110,52 +100,6 @@ func New{{$interface.Name}}Stub(r {{$interface.Name}}_Request, impl {{$interface
 	connector := bindings.NewConnector(r.PassChannel(), waiter)
 	return bindings.NewStub(connector, &{{$interface.PrivateName}}_Stub{connector, impl})
 }
-
-func (f *{{$interface.Name}}_Request) ServiceDescription() {{DescPkg}}ServiceDescription {
-	return &{{$interface.Name}}_ServiceDescription{}
-}
-{{- end -}}
-`
-
-const serviceDescriptionTmplText = `
-{{- define "ServiceDescription" -}}
-{{- $interface := . -}}
-type {{$interface.Name}}_ServiceDescription struct{}
-
-{{if not GenTypeInfo}}
-func (sd *{{$interface.Name}}_ServiceDescription) GetTopLevelInterface() (outMojomInterface {{TypesPkg}}MojomInterface, err error) {
-	err = fmt.Errorf("GetTopLevelInterface not implemented")
-	return
-}
-
-func (sd *{{$interface.Name}}_ServiceDescription) GetTypeDefinition(inTypeKey string) (outType {{TypesPkg}}UserDefinedType, err error) {
-	err = fmt.Errorf("GetTypeDefinition not implemented")
-	return
-}
-
-func (sd *{{$interface.Name}}_ServiceDescription) GetAllTypeDefinitions() (outDefinitions *map[string]{{TypesPkg}}UserDefinedType, err error) {
-	err = fmt.Errorf("GetAllTypeDefinitions not implemented")
-	return
-}
-{{else}}
-func (sd *{{$interface.Name}}_ServiceDescription) GetTopLevelInterface() (outMojomInterface {{TypesPkg}}MojomInterface, err error) {
-	interfaceTypeKey := getRuntimeTypeInfo().Services["{{$interface.ServiceName}}"]
-	userDefinedType := getRuntimeTypeInfo().TypeMap[interfaceTypeKey].(*{{TypesPkg}}UserDefinedTypeInterfaceType)
-	return userDefinedType.Value, nil
-}
-
-func (sd *{{$interface.Name}}_ServiceDescription) GetTypeDefinition(inTypeKey string) (outType {{TypesPkg}}UserDefinedType, err error) {
-	if udt, ok := GetAllMojomTypeDefinitions()[inTypeKey]; ok {
-		return udt, nil
-	}
-	return nil, fmt.Errorf("%s_ServiceDescription does not recognize %s", "{{$interface.Name}}", inTypeKey)
-}
-
-func (sd *{{$interface.Name}}_ServiceDescription) GetAllTypeDefinitions() (outDefinitions *map[string]{{TypesPkg}}UserDefinedType, err error) {
-	o := GetAllMojomTypeDefinitions()
-	return &o, nil
-}
-{{end}}
 
 func (s *{{$interface.PrivateName}}_Stub) Accept(message *bindings.Message) (err error) {
 	switch message.Header.Type {
@@ -352,7 +296,6 @@ func initInterfaceTemplates() {
 	template.Must(goFileTmpl.Parse(interfaceDeclTmplText))
 	template.Must(goFileTmpl.Parse(interfaceInterfaceDeclTmplText))
 	template.Must(goFileTmpl.Parse(interfaceOtherDeclTmplText))
-	template.Must(goFileTmpl.Parse(serviceDescriptionTmplText))
 	template.Must(goFileTmpl.Parse(serviceDeclTmplText))
 	template.Must(goFileTmpl.Parse(methodOrdinalsTmplText))
 	template.Must(goFileTmpl.Parse(methodParamsTmplText))
