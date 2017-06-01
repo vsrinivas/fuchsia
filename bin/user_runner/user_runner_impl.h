@@ -17,6 +17,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
@@ -118,6 +119,12 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   // destructor, which must happen before the link storage is destroyed.
   std::unique_ptr<StoryStorageImpl> link_storage_;
   std::unique_ptr<LinkImpl> user_shell_link_;
+
+  AgentControllerPtr home_work_agent_controller_;
+  AgentControllerPtr walking_agent_controller_;
+
+  app::ServiceProviderPtr home_work_agent_services_;
+  app::ServiceProviderPtr walking_agent_services_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
