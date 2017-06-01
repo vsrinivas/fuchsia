@@ -85,8 +85,19 @@ static mx_status_t console_read(void* ctx, void* buf, size_t count, mx_off_t off
     return NO_ERROR;
 }
 
+#define MAX_WRITE_SIZE 256
+
 static mx_status_t console_write(void* ctx, const void* buf, size_t count, mx_off_t off, size_t* actual) {
-    mx_status_t status = mx_debug_write(buf, count);
+    const void* ptr = buf;
+    mx_status_t status = NO_ERROR;
+    while (count > 0) {
+        size_t xfer = (count > MAX_WRITE_SIZE) ? MAX_WRITE_SIZE : count;
+        if ((status = mx_debug_write(ptr, xfer)) < 0) {
+            break;
+        }
+        ptr += xfer;
+        count -= xfer;
+    }
     if (status >= 0) {
         *actual = status;
         status = NO_ERROR;
