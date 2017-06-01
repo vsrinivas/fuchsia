@@ -8,6 +8,7 @@
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
+#include "application/lib/app/service_provider_impl.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/macros.h"
 
@@ -20,14 +21,14 @@ class NetStubResponder {
  public:
   // Constructor. |actual| must outlive this.
   NetStubResponder(TInterface* actual,
-                   std::string service_name,
+                   const std::string& service_name,
                    app::ApplicationContext* application_context)
       : actual_(actual) {
     FTL_DCHECK(actual_);
     FTL_DCHECK(!service_name.empty());
     FTL_DCHECK(application_context);
 
-    application_context->outgoing_services()->AddServiceForName(
+    service_provider_.AddServiceForName(
         [this](mx::channel channel) {
           stubs_.insert(std::shared_ptr<TStub>(
               new TStub(actual_, std::move(channel), this)));
@@ -39,16 +40,19 @@ class NetStubResponder {
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
     fidl::InterfaceHandle<app::ServiceProvider> handle;
-    application_context->outgoing_services()->AddBinding(handle.NewRequest());
+    service_provider_.AddBinding(handle.NewRequest());
     FTL_DCHECK(handle);
 
     connector->RegisterServiceProvider(service_name, std::move(handle));
   }
 
+  ~NetStubResponder() { service_provider_.Close(); }
+
   void ReleaseStub(std::shared_ptr<TStub> stub) { stubs_.erase(stub); }
 
  private:
   TInterface* actual_;
+  app::ServiceProviderImpl service_provider_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);
