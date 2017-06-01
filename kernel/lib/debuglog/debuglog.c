@@ -130,7 +130,13 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     }
     log->head += wiresize;
 
-    event_signal(&log->event, false);
+    // if we happen to be called from within the global thread lock, use a
+    // special version of event signal
+    if (spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num()) {
+        event_signal_thread_locked(&log->event);
+    } else {
+        event_signal(&log->event, false);
+    }
 
     spin_unlock_irqrestore(&log->lock, state);
 
