@@ -35,7 +35,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
         result = NO_ERROR;
         break;
       }
-      FTL_LOG(ERROR) << "SocketUploadElementReader: result=" << result;
+      FTL_VLOG(1) << "SocketUploadElementReader: result=" << result;
       break;
     }
 
@@ -43,7 +43,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
     if (!*os) {
       // TODO(toshik): better result code?
       result = ERR_BUFFER_TOO_SMALL;
-      FTL_LOG(ERROR) << "SocketUploadElementReader: result=" << result;
+      FTL_VLOG(1) << "SocketUploadElementReader: result=" << result;
       break;
     }
   }
@@ -60,7 +60,7 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
   uint64_t remaining;
   mx_status_t result = vmo_.get_size(&remaining);
   if (result != NO_ERROR) {
-    FTL_LOG(ERROR) << "VmoUploadELementReader: result=" << result;
+    FTL_VLOG(1) << "VmoUploadELementReader: result=" << result;
     return result;
   }
 
@@ -69,13 +69,13 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
     size_t num_bytes = buf_.size();
     result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
     if (result != NO_ERROR) {
-      FTL_LOG(ERROR) << "VmoUploadELementReader: result=" << result;
+      FTL_VLOG(1) << "VmoUploadELementReader: result=" << result;
       return result;
     }
 
     os->write(buf_.data(), num_bytes);
     if (!*os) {
-      FTL_LOG(ERROR) << "VmoUploadElementReader: Unable to write to stream.";
+      FTL_VLOG(1) << "VmoUploadElementReader: Unable to write to stream.";
       // TODO(toshik): better result code?
       return ERR_BUFFER_TOO_SMALL;
     }

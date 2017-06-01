@@ -95,7 +95,6 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
   current_url_ = url::GURL(url_str);
   if (!current_url_.is_valid()) {
-    FTL_LOG(ERROR) << "url parse error";
     SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
     return;
   }
@@ -130,14 +129,13 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         redirect = true;
         current_url_ = url::GURL(c.redirect_location_);
         if (!current_url_.is_valid()) {
-          FTL_LOG(ERROR) << "url parse error";
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;
         }
       }
 #else
-      FTL_LOG(INFO) << "https is not built-in. "
-                       "please build with NETWORK_SERVICE_USE_HTTPS";
+      FTL_LOG(WARNING) << "https is not built-in. "
+                          "please build with NETWORK_SERVICE_USE_HTTPS";
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;
 #endif
@@ -160,14 +158,12 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
         redirect = true;
         current_url_ = url::GURL(c.redirect_location_);
         if (!current_url_.is_valid()) {
-          FTL_LOG(ERROR) << "url parse error";
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;
         }
       }
     } else {
       // unknown protocol
-      FTL_LOG(ERROR) << "unknown protocol";
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;
     }
