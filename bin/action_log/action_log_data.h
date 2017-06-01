@@ -9,29 +9,33 @@
 #include <string>
 #include <vector>
 
+#include "apps/maxwell/services/user/scope.fidl.h"
+
 namespace maxwell {
+
+struct ActionData {
+  const std::string story_id;
+  const std::string component_url;
+  const std::string method;
+  const std::string params;
+};
 
 using ActionLogger
   = std::function<void(const std::string& method, const std::string& params)>;
 
-using ActionListener =
-    std::function<void(const std::string& module_url, const std::string& method,
-                       const std::string& params)>;
+using ActionListener = std::function<void(const ActionData& action_data)>;
 
 class ActionLogData {
  public:
   ActionLogData(ActionListener listener);
 
-  ActionLogger GetActionLogger(const std::string& module_url);
+  ActionLogger GetActionLogger(ComponentScopePtr scope);
   // TODO(azani): Make the log readable somehow.
 
-  void Append(
-      const std::string& module_url,
-      const std::string& method,
-      const std::string& json_params);
+  void Append(const ActionData& action_data);
 
  private:
-  std::vector<std::string> log_;
+  std::vector<ActionData> log_;
   ActionListener listener_;
 };
 

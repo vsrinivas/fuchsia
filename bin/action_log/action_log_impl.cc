@@ -20,36 +20,32 @@
 namespace maxwell {
 
 UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
-    : action_log_([this](const std::string& component_url,
-                         const std::string& method, const std::string& params) {
-        BroadcastToSubscribers(component_url, method, params);
-        MaybeProposeSharingVideo(component_url, method, params);
+    : action_log_([this](const ActionData& action_data) {
+        BroadcastToSubscribers(action_data);
+        MaybeProposeSharingVideo(action_data);
       }),
       proposal_publisher_(std::move(proposal_publisher)) {
   // TODO(azani): Remove before production!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   LogDummyActionDelayed();
 }
 
-void UserActionLogImpl::BroadcastToSubscribers(const std::string& component_url,
-                                               const std::string& method,
-                                               const std::string& params) {
+void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
   UserActionPtr action(UserAction::New());
-  action->component_url = component_url;
-  action->method = method;
-  action->parameters = params;
+  action->component_url = action_data.component_url;
+  action->method = action_data.method;
+  action->parameters = action_data.params;
   subscribers_.ForAllPtrs([action = std::move(action)](
       ActionLogListener * listener) { listener->OnAction(action.Clone()); });
 }
 
 void UserActionLogImpl::MaybeProposeSharingVideo(
-    const std::string& component_url, const std::string& method,
-    const std::string& params) {
-  if (method.compare("ViewVideo") != 0) {
+    const ActionData& action_data) {
+  if (action_data.method.compare("ViewVideo") != 0) {
     return;
   }
   // TODO(azani): Put information relevant to the video in the proposal.
   rapidjson::Document doc_params;
-  if (doc_params.Parse(params).HasParseError()) {
+  if (doc_params.Parse(action_data.params).HasParseError()) {
     return;
   }
   rapidjson::Value* vid_value =
@@ -64,17 +60,19 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   ProposalPtr proposal(Proposal::New());
   proposal->id = proposal_id;
 
-  auto create_story = CreateStory::New();
-  create_story->module_id = "file:///system/apps/email/composer";
+  auto add_module = AddModuleToStory::New();
+  add_module->story_id = action_data.story_id;
+  add_module->module_id = "file:///system/apps/email/composer";
+  add_module->link_name = "email-composer-link";
   // TODO(azani): Do something sane.
   std::string initial_data = "{\"email-composer\": {\"message\": {";
   initial_data += "\"subject\": \"Really cool video!!!!1one\",";
   initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
   initial_data += video_id + "\"}}}";
-  create_story->initial_data = initial_data;
+  add_module->initial_data = initial_data;
 
   auto action = Action::New();
-  action->set_create_story(std::move(create_story));
+  action->set_add_module_to_story(std::move(add_module));
   proposal->on_selected.push_back(std::move(action));
 
   auto display = SuggestionDisplay::New();
@@ -93,14 +91,9 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
 void UserActionLogImpl::GetComponentActionLog(
     ComponentScopePtr scope,
     fidl::InterfaceRequest<ComponentActionLog> action_log_request) {
-  std::string component_url;
-  if (scope->is_agent_scope()) {
-    component_url = scope->get_agent_scope()->url;
-  } else if (scope->is_module_scope()) {
-    component_url = scope->get_module_scope()->url;
-  }
   std::unique_ptr<ComponentActionLogImpl> module_action_log_impl(
-      new ComponentActionLogImpl(action_log_.GetActionLogger(component_url)));
+      new ComponentActionLogImpl(
+          action_log_.GetActionLogger(std::move(scope))));
 
   action_log_bindings_.AddBinding(std::move(module_action_log_impl),
                                   std::move(action_log_request));
@@ -117,15 +110,17 @@ void UserActionLogImpl::Subscribe(
       ActionLogListenerPtr::Create(std::move(listener_handle));
   subscribers_.AddInterfacePtr(std::move(listener));
   // TODO(azani): Remove when dummy data is no longer needed.
-  BroadcastToSubscribers("http://example.org", "SpuriousMethod",
-                         "{\"cake_truth\": false}");
+  ActionData dummy_action{"", "http://example.org", "SpuriousMethod",
+                          "{\"cake_truth\": false}"};
+  BroadcastToSubscribers(dummy_action);
 }
 
 void UserActionLogImpl::LogDummyActionDelayed() {
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [this] {
-        action_log_.Append("http://example.org", "SpuriousMethod",
-                           "{\"cake_truth\": false}");
+       ActionData dummy_action{"", "http://example.org", "SpuriousMethod",
+                           "{\"cake_truth\": false}"};
+        action_log_.Append(dummy_action);
         LogDummyActionDelayed();
       },
       ftl::TimeDelta::FromSeconds(5));

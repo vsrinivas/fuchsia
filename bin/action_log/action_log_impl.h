@@ -33,13 +33,9 @@ class UserActionLogImpl : public UserActionLog {
 
   void Duplicate(fidl::InterfaceRequest<UserActionLog> request) override;
 
-  void BroadcastToSubscribers(const std::string& component_url,
-                              const std::string& method,
-                              const std::string& params);
+  void BroadcastToSubscribers(const ActionData& action_data);
 
-  void MaybeProposeSharingVideo(const std::string& component_url,
-                                const std::string& method,
-                                const std::string& params);
+  void MaybeProposeSharingVideo(const ActionData& action_data);
 
   void LogDummyActionDelayed();
 

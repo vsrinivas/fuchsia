@@ -14,33 +14,28 @@ namespace maxwell {
 
 ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
 
-ActionLogger ActionLogData::GetActionLogger(const std::string& module_url) {
-  return [this, module_url](const std::string& method, const std::string& params) {
-    Append(module_url, method, params);
+ActionLogger ActionLogData::GetActionLogger(ComponentScopePtr scope) {
+  std::string component_url;
+  std::string story_id = "";
+  if (scope->is_agent_scope()) {
+    component_url = scope->get_agent_scope()->url;
+  } else if (scope->is_module_scope()) {
+    component_url = scope->get_module_scope()->url;
+    story_id = scope->get_module_scope()->story_id;
+  }
+
+  return [this, story_id, component_url](const std::string& method,
+                                         const std::string& params) {
+    ActionData action{story_id, component_url, method, params};
+    Append(action);
   };
 }
 
-void ActionLogData::Append(
-    const std::string& module_url,
-    const std::string& method,
-    const std::string& json_params) {
-  listener_(module_url, method, json_params);
+void ActionLogData::Append(const ActionData& action_data) {
   rapidjson::Document params;
-  FTL_CHECK(!params.Parse(json_params).HasParseError());
-
-  rapidjson::Document action;
-  action.SetObject();
-  action.AddMember("module",
-                   rapidjson::Value(module_url, action.GetAllocator()),
-                   action.GetAllocator());
-  action.AddMember("method",
-                   rapidjson::Value(method, action.GetAllocator()),
-                   action.GetAllocator());
-  action.AddMember("params", params.GetObject(), action.GetAllocator());
-
-  rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-  action.Accept(writer);
+  FTL_CHECK(!params.Parse(action_data.params).HasParseError());
+  listener_(action_data);
+  log_.push_back(action_data);
 }
 
 }  // namespace maxwell
