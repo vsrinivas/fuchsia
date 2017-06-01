@@ -74,6 +74,8 @@ static launchpad_t invalid_launchpad = {
     .error = ERR_NO_MEMORY,
 };
 
+static const char stack_name[] = "initial-stack";
+
 static mx_status_t lp_error(launchpad_t* lp, mx_status_t error, const char* msg) {
     if (lp->error == NO_ERROR) {
         lp->error = error;
@@ -1118,6 +1120,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             mx_handle_close(*thread);
             return lp_error(lp, status, "cannot create stack vmo");
         }
+        mx_object_set_property(stack_vmo, MX_PROP_NAME, stack_name, strlen(stack_name));
         mx_vaddr_t stack_base;
         status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, stack_size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,

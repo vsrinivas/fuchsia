@@ -4,11 +4,14 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
 #include "pthread_impl.h"
 #include "stdio_impl.h"
+
+static const char mmap_vmo_name[] = "mmap-anonymous";
 
 void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off) {
     if (fd_off & (PAGE_SIZE - 1)) {
@@ -64,6 +67,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
             errno = ENOMEM;
             return MAP_FAILED;
         }
+        _mx_object_set_property(vmo, MX_PROP_NAME, mmap_vmo_name, strlen(mmap_vmo_name));
     } else {
         status = _mmap_file(offset, len, mx_flags, flags, fd, fd_off, &ptr);
         if (status < 0) {
