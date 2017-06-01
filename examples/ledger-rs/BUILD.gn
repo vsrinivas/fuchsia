@@ -6,6 +6,14 @@ import("//build/rust/rust_binary.gni")
 
 rust_binary("ledger_example") {
   deps = [
+    "//application/services:services_rust_library",
+    "//application/services:service_provider_rust_library",
+    "//application/services:service_provider_rust_library",
+    "//apps/ledger/services/public:public_rust_library",
+    "//apps/ledger/services/internal:internal_rust_library",
+    "//lib/fidl/rust/fidl",
     "//rust/magenta-rs:magenta",
+    "//rust/magenta-rs/magenta-sys",
+    "//rust/mxruntime",
   ]
 }
