@@ -4,6 +4,7 @@
 
 source_set("public") {
   sources = [
+    "auth_provider.h",
     "ledger_sync.h",
     "page_sync.h",
     "user_config.h",
@@ -15,7 +16,6 @@ source_set("public") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/storage/public",
-    "//apps/modular/services/auth",
     "//lib/ftl",
   ]
 

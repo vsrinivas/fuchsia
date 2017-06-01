@@ -8,6 +8,8 @@ source_set("test") {
   sources = [
     "page_sync_empty_impl.cc",
     "page_sync_empty_impl.h",
+    "test_auth_provider.cc",
+    "test_auth_provider.h",
   ]
 
   public_deps = [
@@ -16,6 +18,7 @@ source_set("test") {
 
   deps = [
     "//lib/ftl",
+    "//lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

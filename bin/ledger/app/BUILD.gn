@@ -28,6 +28,8 @@ executable("app") {
 
 source_set("lib") {
   sources = [
+    "auth_provider_impl.cc",
+    "auth_provider_impl.h",
     "branch_tracker.cc",
     "branch_tracker.h",
     "constants.cc",
@@ -88,6 +90,7 @@ source_set("lib") {
     "//apps/ledger/src/network",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/modular/services/auth",
     "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

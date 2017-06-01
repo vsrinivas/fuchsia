@@ -5,9 +5,10 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_USER_CONFIG_H_
 
+#include <memory>
 #include <string>
 
-#include "apps/modular/services/auth/token_provider.fidl.h"
+#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 
 namespace cloud_sync {
 
@@ -21,7 +22,7 @@ struct UserConfig {
   // Directory for the user persistent data.
   std::string user_directory;
   // Provider of the auth data for the user.
-  modular::auth::TokenProviderPtr token_provider;
+  std::unique_ptr<AuthProvider> auth_provider;
 };
 
 }  // namespace cloud_sync

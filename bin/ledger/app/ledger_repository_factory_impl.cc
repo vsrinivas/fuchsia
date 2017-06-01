@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
+#include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
@@ -31,6 +32,7 @@ cloud_sync::UserConfig GetUserConfig(
     const fidl::String& server_id,
     ftl::StringView user_id,
     ftl::StringView user_directory,
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
     modular::auth::TokenProviderPtr token_provider) {
   if (!server_id || server_id.size() == 0) {
     cloud_sync::UserConfig user_config;
@@ -43,7 +45,8 @@ cloud_sync::UserConfig GetUserConfig(
   user_config.server_id = server_id.get();
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
-  user_config.token_provider = std::move(token_provider);
+  user_config.auth_provider = std::make_unique<AuthProviderImpl>(
+      task_runner, std::move(token_provider));
   return user_config;
 }
 
@@ -140,7 +143,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       });
     }
     cloud_sync::UserConfig user_config = GetUserConfig(
-        server_id, user_id, sanitized_path, std::move(token_provider_ptr));
+        server_id, user_id, sanitized_path, environment_->main_runner(),
+        std::move(token_provider_ptr));
     if (!user_config.use_sync &&
         config_persistence_ == ConfigPersistence::PERSIST) {
       FTL_LOG(WARNING) << "No sync configuration set, "
