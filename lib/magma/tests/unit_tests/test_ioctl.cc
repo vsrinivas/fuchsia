@@ -5,6 +5,9 @@
 #include "gtest/gtest.h"
 
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
+
+#include <fcntl.h>
+
 #include <magenta/device/display.h>
 #include <mxio/io.h>
 
