@@ -94,7 +94,7 @@ class Service : private mtl::MessageLoopHandler {
           Launch(conn, peer_name);
           Wait();
         },
-        sock_, EPOLLIN);
+        sock_, POLLIN);
   }
 
   void Launch(int conn, const std::string& peer_name) {
