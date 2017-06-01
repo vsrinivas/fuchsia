@@ -18,15 +18,20 @@ static mx_device_t* dmctl_dev;
 
 static mxio_multiloader_t* multiloader;
 
-static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off,
-                               size_t* actual) {
+static mx_status_t dmctl_cmd(const char* cmd, size_t cmdlen, mx_handle_t h) {
     dc_msg_t msg;
     uint32_t msglen;
-    if (dc_msg_pack(&msg, &msglen, buf, count, NULL, NULL) < 0) {
+    if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, NULL, NULL) < 0) {
         return ERR_INVALID_ARGS;
     }
     msg.op = DC_OP_DM_COMMAND;
-    mx_status_t status = dc_msg_rpc(dmctl_dev->rpc, &msg, msglen, NULL, 0);
+    return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen,
+                      &h, (h != MX_HANDLE_INVALID) ? 1 : 0);
+}
+
+static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off,
+                               size_t* actual) {
+    mx_status_t status = dmctl_cmd(buf, count, MX_HANDLE_INVALID);
     if (status >= 0) {
         *actual = status;
         status = NO_ERROR;
@@ -54,6 +59,15 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         memcpy(out_buf, &out_channel, sizeof(mx_handle_t));
         *out_actual = sizeof(mx_handle_t);
         return NO_ERROR;
+    case IOCTL_DMCTL_COMMAND:
+        if (in_len != sizeof(dmctl_cmd_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        dmctl_cmd_t cmd;
+        memcpy(&cmd, in_buf, sizeof(cmd));
+        cmd.name[sizeof(cmd.name) - 1] = 0;
+        *out_actual = 0;
+        return dmctl_cmd(cmd.name, strlen(cmd.name), cmd.h);
     default:
         return ERR_INVALID_ARGS;
     }

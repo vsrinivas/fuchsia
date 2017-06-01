@@ -18,6 +18,8 @@
 #include <magenta/syscalls.h>
 #include <pretty/hexdump.h>
 
+#include <magenta/device/dmctl.h>
+
 int mxc_dump(int argc, char** argv) {
     int fd;
     ssize_t len;
@@ -466,12 +468,36 @@ static int send_dmctl(const char* command, size_t length) {
         return fd;
     }
 
-    int r = write(fd, command, length);
-    close(fd);
+    dmctl_cmd_t cmd;
+    snprintf(cmd.name, sizeof(cmd.name), command);
+    mx_handle_t h;
 
+    if (mx_socket_create(0, &cmd.h, &h) < 0) {
+        return -1;
+    }
+
+    int r = ioctl_dmctl_command(fd, &cmd);
+    close(fd);
     if (r < 0) {
+        mx_handle_close(h);
         return r;
     }
+
+    for (;;) {
+        mx_status_t status;
+        char buf[32768];
+        size_t actual;
+        if ((status = mx_socket_read(h, 0, buf, sizeof(buf), &actual)) < 0) {
+            if (status == ERR_SHOULD_WAIT) {
+                mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
+                                   MX_TIME_INFINITE, NULL);
+                continue;
+            }
+            break;
+        }
+        write(1, buf, actual);
+    }
+    mx_handle_close(h);
 
     return 0;
 }

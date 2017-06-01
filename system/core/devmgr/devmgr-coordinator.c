@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -23,6 +24,24 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static void dc_dump_state(void);
 
+static mx_handle_t dmctl_socket;
+
+static void dmprintf(const char* fmt, ...) {
+    if (dmctl_socket == MX_HANDLE_INVALID) {
+        return;
+    }
+    char buf[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    size_t actual;
+    if (mx_socket_write(dmctl_socket, 0, buf, strlen(buf), &actual) < 0) {
+        mx_handle_close(dmctl_socket);
+        dmctl_socket = MX_HANDLE_INVALID;
+    }
+}
+
 static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if (len == 4) {
         if (!memcmp(cmd, "dump", 4)) {
@@ -30,15 +49,15 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
             return NO_ERROR;
         }
         if (!memcmp(cmd, "help", 4)) {
-            printf("dump        - dump device tree\n"
-                   "poweroff    - power off the system\n"
-                   "shutdown    - power off the system\n"
-                   "reboot      - reboot the system\n"
-                   "kerneldebug - send a command to the kernel\n"
-                   "ktraceoff   - stop kernel tracing\n"
-                   "ktraceon    - start kernel tracing\n"
-                   "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
-                   );
+            dmprintf("dump        - dump device tree\n"
+                     "poweroff    - power off the system\n"
+                     "shutdown    - power off the system\n"
+                     "reboot      - reboot the system\n"
+                     "kerneldebug - send a command to the kernel\n"
+                     "ktraceoff   - stop kernel tracing\n"
+                     "ktraceon    - start kernel tracing\n"
+                     "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
+                     );
             return NO_ERROR;
         }
     }
@@ -71,6 +90,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
+    dmprintf("unknown command\n");
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ERR_NOT_SUPPORTED;
 }
@@ -174,15 +194,15 @@ static void dc_dump_device(device_t* dev, size_t indent) {
         extra[0] = 0;
     }
     if (pid == 0) {
-        printf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
+        dmprintf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
     } else {
-        printf("%*s%c%s%c pid=%zu%s %s\n",
-               (int) (indent * 3), "",
-               dev->flags & DEV_CTX_SHADOW ? '<' : '[',
-               dev->name,
-               dev->flags & DEV_CTX_SHADOW ? '>' : ']',
-               pid, extra,
-               dev->libname ? dev->libname : "");
+        dmprintf("%*s%c%s%c pid=%zu%s %s\n",
+                 (int) (indent * 3), "",
+                 dev->flags & DEV_CTX_SHADOW ? '<' : '[',
+                 dev->name,
+                 dev->flags & DEV_CTX_SHADOW ? '>' : ']',
+                 pid, extra,
+                 dev->libname ? dev->libname : "");
     }
     device_t* child;
     if (dev->shadow) {
@@ -618,9 +638,11 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         return ERR_INTERNAL;
     }
 
-    // Only ADD_DEVICE takes handles.
+    // Only ADD_DEVICE and DM_COMMAND take handles.
     // For all other ops, silently close any passed handles.
-    if ((hcount != 0) && (msg.op != DC_OP_ADD_DEVICE)) {
+    if ((hcount != 0) &&
+        (msg.op != DC_OP_ADD_DEVICE) &&
+        (!((msg.op == DC_OP_DM_COMMAND) && (hcount == 1)))) {
         while (hcount > 0) {
             mx_handle_close(hin[--hcount]);
         }
@@ -650,7 +672,14 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         break;
 
     case DC_OP_DM_COMMAND:
+        if (hcount == 1) {
+            dmctl_socket = hin[0];
+        }
         r = handle_dmctl_write(msg.datalen, data);
+        if (dmctl_socket != MX_HANDLE_INVALID) {
+            mx_handle_close(dmctl_socket);
+            dmctl_socket = MX_HANDLE_INVALID;
+        }
         break;
 
     case DC_OP_STATUS: {
