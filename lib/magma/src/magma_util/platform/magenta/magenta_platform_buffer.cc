@@ -332,10 +332,10 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
 
     if (!paged_vmar_.get()) {
         uintptr_t addr;
-        mx_status_t status = mx::vmar::root_self().allocate(0, size_, MX_VM_FLAG_CAN_MAP_SPECIFIC |
-                                                                          MX_VM_FLAG_CAN_MAP_READ |
-                                                                          MX_VM_FLAG_CAN_MAP_WRITE,
-                                                            &paged_vmar_, &addr);
+        mx_status_t status = mx::vmar::root_self().allocate(
+            0, size_,
+            MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+            &paged_vmar_, &addr);
         if (status != NO_ERROR)
             return DRETF(false, "vmar allocate failed: %d", status);
     }
@@ -394,7 +394,7 @@ bool MagentaPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_
     return true;
 }
 
-std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
+std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name)
 {
     size = magma::round_up(size, PAGE_SIZE);
     if (size == 0)
@@ -404,6 +404,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
     mx_status_t status = mx::vmo::create(size, 0, &vmo);
     if (status != NO_ERROR)
         return DRETP(nullptr, "failed to allocate vmo size %" PRId64 ": %d", size, status);
+    vmo.set_property(MX_PROP_NAME, name, strlen(name));
 
     DLOG("allocated vmo size %ld handle 0x%x", size, vmo.get());
     return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
@@ -425,4 +426,4 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
 
     return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
 }
-}
+} // namespace magma

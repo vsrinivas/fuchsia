@@ -32,8 +32,8 @@ MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> comm
 
     // copy command buffer before validating to avoid tampering after validating
     // TODO(MA-111) use Copy On Write here if possible
-    auto command_buffer_copy =
-        MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(command_buffer->size()));
+    auto command_buffer_copy = MagmaSystemBuffer::Create(
+        magma::PlatformBuffer::Create(command_buffer->size(), "command-buffer-copy"));
     if (!command_buffer_copy)
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR,
                         "ExecuteCommandBuffer: failed to create command buffer copy");

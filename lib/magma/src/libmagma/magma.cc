@@ -62,7 +62,7 @@ void magma_destroy_context(magma_connection_t* connection, uint32_t context_id)
 magma_status_t magma_alloc(magma_connection_t* connection, uint64_t size, uint64_t* size_out,
                            magma_buffer_t* buffer_out)
 {
-    auto platform_buffer = magma::PlatformBuffer::Create(size);
+    auto platform_buffer = magma::PlatformBuffer::Create(size, "magma_alloc");
     if (!platform_buffer)
         return DRET(MAGMA_STATUS_MEMORY_ERROR);
 

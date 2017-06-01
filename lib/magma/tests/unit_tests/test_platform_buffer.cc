@@ -10,7 +10,7 @@ class TestPlatformBuffer {
 public:
     static void Basic(uint64_t size)
     {
-        std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size);
+        std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size, "test");
         if (size == 0) {
             EXPECT_EQ(buffer, nullptr);
             return;
@@ -111,7 +111,7 @@ public:
     {
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-        buffer[0] = magma::PlatformBuffer::Create(1);
+        buffer[0] = magma::PlatformBuffer::Create(1, "test");
         ASSERT_NE(buffer[0], nullptr);
         uint32_t duplicate_handle;
         ASSERT_TRUE(buffer[0]->duplicate_handle(&duplicate_handle));
@@ -136,7 +136,7 @@ public:
     static void PinRanges(uint32_t num_pages)
     {
         std::unique_ptr<magma::PlatformBuffer> buffer =
-            magma::PlatformBuffer::Create(num_pages * PAGE_SIZE);
+            magma::PlatformBuffer::Create(num_pages * PAGE_SIZE, "test");
 
         for (uint32_t i = 0; i < num_pages; i++) {
             uint64_t phys_addr = 0;

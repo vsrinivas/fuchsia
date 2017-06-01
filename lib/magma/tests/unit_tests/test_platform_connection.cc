@@ -27,14 +27,14 @@ public:
 
     void TestImportBuffer()
     {
-        auto buf = magma::PlatformBuffer::Create(1);
+        auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
         EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
     void TestReleaseBuffer()
     {
-        auto buf = magma::PlatformBuffer::Create(1);
+        auto buf = magma::PlatformBuffer::Create(1, "test");
         test_buffer_id = buf->id();
         EXPECT_EQ(ipc_connection_->ImportBuffer(buf.get()), 0);
         EXPECT_EQ(ipc_connection_->ReleaseBuffer(test_buffer_id), 0);

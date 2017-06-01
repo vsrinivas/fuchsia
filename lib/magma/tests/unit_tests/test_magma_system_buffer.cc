@@ -51,7 +51,7 @@ TEST(MagmaSystemBuffer, Create)
     EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
     {
-        auto buf = magma::PlatformBuffer::Create(256);
+        auto buf = magma::PlatformBuffer::Create(256, "test");
 
         uint32_t duplicate_handle;
         ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle));

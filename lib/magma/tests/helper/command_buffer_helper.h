@@ -122,7 +122,8 @@ private:
                                sizeof(magma_system_exec_resource) * kNumResources +
                                sizeof(magma_system_relocation_entry) * (kNumResources - 1);
 
-        buffer_ = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(buffer_size));
+        buffer_ = MagmaSystemBuffer::Create(
+            magma::PlatformBuffer::Create(buffer_size, "command-buffer-backing"));
         DASSERT(buffer_);
 
         DLOG("CommandBuffer backing buffer: %p", buffer_->platform_buffer());
@@ -140,7 +141,8 @@ private:
         // batch buffer
         {
             auto batch_buf = &abi_resources()[0];
-            auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
+            auto buffer = MagmaSystemBuffer::Create(
+                magma::PlatformBuffer::Create(kBufferSize, "command-buffer-batch"));
             DASSERT(buffer);
             uint32_t duplicate_handle;
             success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
@@ -158,13 +160,13 @@ private:
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
                 auto relocation = &abi_relocations()[i];
                 switch (i) {
-                case 0:
-                    // test page boundary
-                    relocation->offset = kBufferSize / 2 - sizeof(uint32_t);
-                    break;
-                default:
-                    relocation->offset =
-                        kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
+                    case 0:
+                        // test page boundary
+                        relocation->offset = kBufferSize / 2 - sizeof(uint32_t);
+                        break;
+                    default:
+                        relocation->offset =
+                            kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
                 }
                 relocation->target_resource_index = i;
                 relocation->target_offset = kBufferSize / 2; // just relocate right to the middle
@@ -176,7 +178,8 @@ private:
         // relocated buffers
         for (uint32_t i = 1; i < kNumResources; i++) {
             auto resource = &abi_resources()[i];
-            auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
+            auto buffer =
+                MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize, "resource"));
             DASSERT(buffer);
             uint32_t duplicate_handle;
             success = buffer->platform_buffer()->duplicate_handle(&duplicate_handle);

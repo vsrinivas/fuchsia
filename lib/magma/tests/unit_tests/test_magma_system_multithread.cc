@@ -71,7 +71,7 @@ public:
         ASSERT_NE(context, nullptr);
 
         for (uint32_t i = 0; i < num_iterations; i++) {
-            auto batch_buffer = magma::PlatformBuffer::Create(PAGE_SIZE);
+            auto batch_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
 
             uint32_t handle;
             EXPECT_TRUE(batch_buffer->duplicate_handle(&handle));
@@ -83,7 +83,7 @@ public:
             if (!InitBatchBuffer(batch_buffer.get()))
                 break; // Abort the test
 
-            auto command_buffer = magma::PlatformBuffer::Create(PAGE_SIZE);
+            auto command_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
 
             EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), id));
 

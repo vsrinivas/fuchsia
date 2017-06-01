@@ -8,7 +8,7 @@
 
 TEST(MsdBuffer, ImportAndDestroy)
 {
-    auto platform_buf = magma::PlatformBuffer::Create(4096);
+    auto platform_buf = magma::PlatformBuffer::Create(4096, "test");
     ASSERT_NE(platform_buf, nullptr);
 
     uint32_t duplicate_handle;

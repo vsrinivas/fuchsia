@@ -390,14 +390,15 @@ static mx_status_t intel_i915_bind(void* ctx, mx_device_t* mx_device, void** coo
 
     device->framebuffer_size = pitch * di->height;
 
-    device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
+    device->console_buffer =
+        magma::PlatformBuffer::Create(device->framebuffer_size, "console-buffer");
 
     if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
         return DRET_MSG(ERR_NO_MEMORY, "Failed to map framebuffer");
 
     // Placeholder is in tiled format
-    device->placeholder_buffer =
-        magma::PlatformBuffer::Create(magma::round_up(pitch, 512) * di->height);
+    device->placeholder_buffer = magma::PlatformBuffer::Create(
+        magma::round_up(pitch, 512) * di->height, "placeholder-buffer");
 
     di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 

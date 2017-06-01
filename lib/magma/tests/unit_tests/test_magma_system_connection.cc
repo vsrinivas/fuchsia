@@ -95,7 +95,7 @@ TEST(MagmaSystemConnection, BufferManagement)
 
     uint64_t test_size = 4096;
 
-    auto buf = magma::PlatformBuffer::Create(test_size);
+    auto buf = magma::PlatformBuffer::Create(test_size, "test");
 
     // assert because if this fails the rest of this is gonna be bogus anyway
     ASSERT_NE(buf, nullptr);
@@ -182,7 +182,7 @@ TEST(MagmaSystemConnection, BufferSharing)
     MagmaSystemConnection connection_1(dev, MsdConnectionUniquePtr(msd_connection),
                                        MAGMA_CAPABILITY_RENDERING);
 
-    auto platform_buf = magma::PlatformBuffer::Create(4096);
+    auto platform_buf = magma::PlatformBuffer::Create(4096, "test");
 
     uint64_t buf_id_0 = 0;
     uint64_t buf_id_1 = 1;
@@ -214,7 +214,7 @@ TEST(MagmaSystemConnection, PageFlip)
     MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
                                      MAGMA_CAPABILITY_DISPLAY);
 
-    auto buf = magma::PlatformBuffer::Create(PAGE_SIZE);
+    auto buf = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
 
     uint64_t imported_id;
     uint32_t handle;

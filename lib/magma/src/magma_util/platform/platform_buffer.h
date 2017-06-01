@@ -12,7 +12,7 @@ namespace magma {
 
 class PlatformBuffer {
 public:
-    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
+    static std::unique_ptr<PlatformBuffer> Create(uint64_t size, const char* name);
     // Import takes ownership of the handle.
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
 
