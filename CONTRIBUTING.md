@@ -9,24 +9,32 @@ details.
 ## Submitting changes
 
 To submit a patch to Fuchsia, you may first need to generate a cookie to
-authenticate you to Gerrit.  To generate a cookie, log into Gerrit and click
+authenticate you to Gerrit. To generate a cookie, log into Gerrit and click
 the "Generate Password" link at the top of https://fuchsia.googlesource.com.
 Then, copy the generated text and execute it in a terminal.
 
-Once authenticated, follow these steps to submit a patch to Fuchsia:
+Once authenticated, follow these steps to submit a patch to a repo in Fuchsia:
 
 ```
 # create a new branch
 git checkout -b branch_name
 
 # write some awesome stuff, commit to branch_name
-vim some_file ...
+# edit some_file ...
+git add some_file
+# if specified in the repo, follow the commit message format
 git commit ...
 
-# upload the patch to gerrit
-jiri upload # Adds default topic - ${USER}-add_feature_foo
+# upload the patch to Gerrit
+# `jiri help upload` lists flags for various features, e.g. adding reviewers
+jiri upload # Adds default topic - ${USER}-branch_name
+# or
+jiri upload -topic="custom_topic"
 # or
 git push origin HEAD:refs/for/master
+
+# at any time, if you'd like to make changes to your patch, use --amend
+git commit --amend
 
 # once the change is landed, clean up the branch
 git branch -d branch_name
@@ -66,22 +74,24 @@ Create branch with same name on all repos and upload the changes
 ```
 # make and commit the first change
 cd fuchsia/bin/fortune
-git checkout -b new add_feature_foo
-vim foo_related_files ...
+git checkout -b add_feature_foo
+* edit foo_related_files ... *
+git add foo_related_files ...
 git commit ...
 
 # make and commit the second change in another repository
 cd fuchsia/build
-git checkout -b new add_feature_foo
-vim more_foo_related_files ...
+git checkout -b add_feature_foo
+* edit more_foo_related_files ... *
+git add more_foo_related_files ...
 git commit ...
 
-# Upload changes
-jiri upload -multipart # default topic would be ${USER}-add_feature_foo
+# Upload all changes with the same branch name across repos
+jiri upload -multipart # Adds default topic - ${USER}-branch_name
 # or
 jiri upload -multipart -topic="custom_topic"
 
-# after the changes are reviewed, approved and submitted, cleanup the local branch
+# after the changes are reviewed, approved and submitted, clean up the local branch
 cd fuchsia/bin/fortune
 git branch -d add_feature_foo
 
@@ -89,24 +99,26 @@ cd fuchsia/build
 git branch -d add_feature_foo
 ```
 
-### Using gerrit commands
+### Using Gerrit commands
 
 ```
 # make and commit the first change, upload it with topic 'add_feature_foo'
 cd fuchsia/bin/fortune
-git checkout -b new add_feature_foo
-vim foo_related_files ...
+git checkout -b add_feature_foo
+* edit foo_related_files ... *
+git add foo_related_files ...
 git commit ...
 git push origin HEAD:refs/for/master%topic=add_feature_foo
 
 # make and commit the second change in another repository
 cd fuchsia/build
-git checkout -b new add_feature_foo
-vim more_foo_related_files ...
+git checkout -b add_feature_foo
+* edit more_foo_related_files ... *
+git add more_foo_related_files ...
 git commit ...
 git push origin HEAD:refs/for/master%topic=add_feature_foo
 
-# after the changes are reviewed, approved and submitted, cleanup the local branch
+# after the changes are reviewed, approved and submitted, clean up the local branch
 cd fuchsia/bin/fortune
 git branch -d add_feature_foo
 
@@ -114,7 +126,34 @@ cd fuchsia/build
 git branch -d add_feature_foo
 ```
 
-Multipart changes are tracked in gerrit via topics, will be tested together,
+Multipart changes are tracked in Gerrit via topics, will be tested together,
 and can be landed in Gerrit at the same time with `Submit Whole Topic`. Topics
 can be edited via the web UI.
 
+## Resolving merge conflicts
+
+```
+# rebase from origin/master, revealing the merge conflict
+git rebase origin/master
+
+# resolve the conflicts and complete the rebase
+* edit files_with_conflicts ... *
+git add files_with_resolved_conflicts ...
+git rebase --continue
+jiri upload
+
+# continue as usual
+git commit --amend
+jiri upload
+```
+
+## Github integration
+
+While Fuchsia's code is hosted at https://fuchsia.googlesource.com, it is also
+mirrored to https://github.com/fuchsia-mirror. To ensure Fuchsia contributions
+are associated with your Github account:
+
+1. [Set your email in Git](https://help.github.com/articles/setting-your-email-in-git/).
+2. [Adding your email address to your GitHub account](https://help.github.com/articles/adding-an-email-address-to-your-github-account/).
+3. Star the project for your contributions to show up in your profile's
+Contribution Activity.

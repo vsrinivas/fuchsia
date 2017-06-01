@@ -18,6 +18,8 @@ This repository contains documentation for Fuchsia.
 
 + [How do I write a flutter module?][flutter_module]
 
++ [How do I contribute changes?][contributing]
+
 # Individual Project Documentation
 
 + [Magenta][magenta]
@@ -38,3 +40,4 @@ This repository contains documentation for Fuchsia.
 [rpi3]: https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md "Rasperry Pi 3"
 [flutter_module]: https://fuchsia.googlesource.com/modular/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [ci_guide]: https://fuchsia.googlesource.com/infra/infra/+/master/docs/guide "Continuous integration guide"
+[contributing]: https://fuchsia.googlesource.com/docs/+/master/CONTRIBUTING.md "Contributing changes"
