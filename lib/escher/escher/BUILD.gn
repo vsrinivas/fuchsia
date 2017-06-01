@@ -131,6 +131,8 @@ static_library("escher") {
     "renderer/renderer.h",
     "renderer/semaphore_wait.cc",
     "renderer/semaphore_wait.h",
+    "renderer/simple_image_factory.cc",
+    "renderer/simple_image_factory.h",
     "renderer/texture.cc",
     "renderer/texture.h",
     "resources/resource.cc",
