@@ -40,8 +40,7 @@ void OperationCollection::Hold(OperationBase* const o) {
   o->Run();
 }
 
-void OperationCollection::Drop(
-    OperationBase* const o) {
+void OperationCollection::Drop(OperationBase* const o) {
   auto it = std::remove_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });

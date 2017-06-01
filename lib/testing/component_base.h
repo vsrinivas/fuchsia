@@ -73,9 +73,9 @@ class ComponentBase : protected SingleServiceApp<Component> {
 
   void DeleteAndQuit(const std::function<void()>& done) {
     Delete([done] {
-        done();
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
-      });
+      done();
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
   }
 
  private:

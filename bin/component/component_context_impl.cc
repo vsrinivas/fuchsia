@@ -31,8 +31,8 @@ ComponentContextImpl::~ComponentContextImpl() = default;
 void ComponentContextImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> request,
     const GetLedgerCallback& result) {
-  ledger_repository_->GetLedger(to_array(component_url_),
-                                std::move(request), result);
+  ledger_repository_->GetLedger(to_array(component_url_), std::move(request),
+                                result);
 }
 
 void ComponentContextImpl::ConnectToAgent(

@@ -13,7 +13,7 @@ import 'package:flutter/widgets.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final GlobalKey<SurfaceLayoutState> _surfaceLayoutKey =
-      new GlobalKey<SurfaceLayoutState>();
+    new GlobalKey<SurfaceLayoutState>();
 
 /// This is used for keeping the reference around.
 StoryShellFactoryImpl _storyShellFactory;
@@ -32,23 +32,25 @@ class SurfaceLayout extends StatefulWidget {
 
 /// Maintains state for the avaialble views to display.
 class SurfaceLayoutState extends State<SurfaceLayout> {
-
   final List<ChildViewConnection> children = <ChildViewConnection>[];
 
   void addChild(InterfaceHandle<ViewOwner> viewHandle) {
     setState(() {
-        children.add(new ChildViewConnection(viewHandle,
-            onUnavailable: (ChildViewConnection c) {
-                setState(() { children.remove(c); });
-        }));
-      });
+      children.add(new ChildViewConnection(viewHandle,
+          onUnavailable: (ChildViewConnection c) {
+        setState(() {
+          children.remove(c);
+        });
+      }));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     List<Widget> childViews = <Widget>[];
     for (ChildViewConnection conn in children) {
-        childViews.add(new Expanded(child: new Container(
+      childViews.add(new Expanded(
+          child: new Container(
               margin: const EdgeInsets.all(20.0),
               child: new ChildView(connection: conn))));
     }

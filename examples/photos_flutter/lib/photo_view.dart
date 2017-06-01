@@ -10,7 +10,9 @@ import 'photo.dart';
 class PhotoView extends StatelessWidget {
   final Photo _photo;
 
-  PhotoView({ Key key, Photo photo}) : this._photo = photo, super(key: key);
+  PhotoView({Key key, Photo photo})
+      : this._photo = photo,
+        super(key: key);
 
   @override
   Widget build(BuildContext context) {

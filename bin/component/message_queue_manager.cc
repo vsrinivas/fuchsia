@@ -364,8 +364,8 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
             return;
           }
 
-	  Cont(flow);
-	});
+          Cont(flow);
+        });
   }
 
   void Cont(FlowToken flow) {
@@ -374,54 +374,50 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
     message_queue_info_.queue_token = GenerateQueueToken();
 
     page_->StartTransaction([](ledger::Status status) {
-	if (status != ledger::Status::OK) {
-	  FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
-	}
-      });
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "Page.StartTransaction() status=" << status;
+      }
+    });
 
-    const std::string message_queue_token_key = MakeMessageQueueTokenKey(
-	message_queue_info_.component_namespace,
-	message_queue_info_.component_instance_id,
-	message_queue_info_.queue_name);
+    const std::string message_queue_token_key =
+        MakeMessageQueueTokenKey(message_queue_info_.component_namespace,
+                                 message_queue_info_.component_instance_id,
+                                 message_queue_info_.queue_name);
 
-    page_->Put(
-	to_array(message_queue_token_key),
-	to_array(message_queue_info_.queue_token),
-	[key = message_queue_token_key](ledger::Status status) {
-	  if (status != ledger::Status::OK) {
-	    FTL_LOG(ERROR)
-	      << "Page.Put() " << key << ", status=" << status;
-	  }
-	});
+    page_->Put(to_array(message_queue_token_key),
+               to_array(message_queue_info_.queue_token),
+               [key = message_queue_token_key](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR)
+                       << "Page.Put() " << key << ", status=" << status;
+                 }
+               });
 
     const std::string message_queue_key =
-      MakeMessageQueueKey(message_queue_info_.queue_token);
+        MakeMessageQueueKey(message_queue_info_.queue_token);
 
     std::string json;
     XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
 
     page_->Put(
-	to_array(message_queue_key),
-	to_array(json),
-	[key = message_queue_key](ledger::Status status) {
-	  if (status != ledger::Status::OK) {
-	    FTL_LOG(ERROR)
-	      << "Page.Put() " << key << ", status=" << status;
-	  }
-	});
+        to_array(message_queue_key),
+        to_array(json), [key = message_queue_key](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "Page.Put() " << key << ", status=" << status;
+          }
+        });
 
-    page_->Commit(
-	[this, flow](ledger::Status status) {
-	  if (status != ledger::Status::OK) {
-	    FTL_LOG(ERROR) << "Page.Commit() status=" << status;
-	    return;
-	  }
+    page_->Commit([this, flow](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "Page.Commit() status=" << status;
+        return;
+      }
 
-	  FTL_LOG(INFO) << "Created message queue: "
-			<< message_queue_info_.queue_token;
+      FTL_LOG(INFO) << "Created message queue: "
+                    << message_queue_info_.queue_token;
 
-	  Finish(flow);
-	});
+      Finish(flow);
+    });
   }
 
   void Finish(FlowToken flow) {

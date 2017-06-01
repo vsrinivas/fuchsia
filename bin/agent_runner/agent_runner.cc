@@ -222,8 +222,10 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
                            token_provider_factory_.get(),
                            user_intelligence_provider_};
 
-  FTL_CHECK(running_agents_.emplace(
-      agent_url, std::make_unique<AgentContextImpl>(info, agent_url)).second);
+  FTL_CHECK(running_agents_
+                .emplace(agent_url,
+                         std::make_unique<AgentContextImpl>(info, agent_url))
+                .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
   if (run_callbacks_it != run_agent_callbacks_.end()) {

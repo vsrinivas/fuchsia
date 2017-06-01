@@ -234,17 +234,15 @@ UserRunnerImpl::UserRunnerImpl(
   // HACK(anwilson): Start some agents directly by user runner that are needed
   // to keep some dimensions of context updated. They will move
   // elsewhere / become configurable eventually.
-  agent_runner_->ConnectToAgent(
-      "file:///system/apps/user_runner",
-      "file:///system/apps/agents/home_work_agent",
-      home_work_agent_services_.NewRequest(),
-      home_work_agent_controller_.NewRequest());
+  agent_runner_->ConnectToAgent("file:///system/apps/user_runner",
+                                "file:///system/apps/agents/home_work_agent",
+                                home_work_agent_services_.NewRequest(),
+                                home_work_agent_controller_.NewRequest());
 
-  agent_runner_->ConnectToAgent(
-      "file:///system/apps/user_runner",
-      "file:///system/apps/agents/walking_agent",
-      walking_agent_services_.NewRequest(),
-      walking_agent_controller_.NewRequest());
+  agent_runner_->ConnectToAgent("file:///system/apps/user_runner",
+                                "file:///system/apps/agents/walking_agent",
+                                walking_agent_services_.NewRequest(),
+                                walking_agent_controller_.NewRequest());
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),

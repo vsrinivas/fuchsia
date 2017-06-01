@@ -92,7 +92,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     _moduleContext.startModule(
         'child',
         'file:///system/apps/example_flutter_counter_child',
-        null,  // Pass our default link to our child.
+        null, // Pass our default link to our child.
         null,
         null,
         moduleControllerPair.passRequest(),

@@ -53,7 +53,7 @@ void Done(const std::function<void()>& ack) {
 void Done() {
   FTL_LOG(WARNING) << "Done() used in a race. Test is flaky."
                    << " Use Done with callback instead.";
-  Done([]{});
+  Done([] {});
 }
 
 void Teardown(const std::function<void()>& ack) {
@@ -73,7 +73,7 @@ void Teardown(const std::function<void()>& ack) {
 void Teardown() {
   FTL_LOG(WARNING) << "Teardown() used in a race. Test is flaky."
                    << " Use Teardown with callback instead.";
-  Teardown([]{});
+  Teardown([] {});
 }
 
 void WillTerminate(double withinSeconds) {

@@ -150,11 +150,11 @@ class _HomeScreenState extends State<_HomeScreen> {
         onKey: _onKey,
         child: new Material(
             color: Colors.blue[200],
-            child: new Column(
-                children: [
-                    new Text('[type and terminate input with <<]'),
-                    new Text('Active input: ${_state.value}'),
-                    new Text('Next input: ${_value}')])));
+            child: new Column(children: [
+              new Text('[type and terminate input with <<]'),
+              new Text('Active input: ${_state.value}'),
+              new Text('Next input: ${_value}')
+            ])));
   }
 
   void _onKey(RawKeyEvent e) {
@@ -164,13 +164,13 @@ class _HomeScreenState extends State<_HomeScreen> {
     // ignore: undefined_getter
     if (e.runtimeType == RawKeyDownEvent && e.data.codePoint != 0) {
       setState(() {
-          // ignore: undefined_getter
-          _value += new String.fromCharCode(e.data.codePoint);
-          if (_value.endsWith('<<')) {
-            _state.sendValue(_value.substring(0, _value.length - 2));
-            _value = '';
-          }
-        });
+        // ignore: undefined_getter
+        _value += new String.fromCharCode(e.data.codePoint);
+        if (_value.endsWith('<<')) {
+          _state.sendValue(_value.substring(0, _value.length - 2));
+          _value = '';
+        }
+      });
     }
   }
 }

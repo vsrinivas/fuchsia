@@ -46,8 +46,8 @@ class TodoModule extends Module {
     _log('TodoModule::initialize()');
 
     LinkProxy link = new LinkProxy();
-    ModuleContextProxy moduleContext =
-        new ModuleContextProxy()..ctrl.bind(moduleContextHandle);
+    ModuleContextProxy moduleContext = new ModuleContextProxy()
+      ..ctrl.bind(moduleContextHandle);
     moduleContext.getLink(null, link.ctrl.request());
     _linkCompleter.complete(link);
   }

@@ -208,8 +208,7 @@ class Operation : public OperationBase {
 
  protected:
   Operation(OperationContainer* const container, ResultCall result_call)
-      : OperationBase(container),
-        result_call_(std::move(result_call)) {}
+      : OperationBase(container), result_call_(std::move(result_call)) {}
 
   // Derived classes call this when they are prepared to be removed from the
   // container. Must be the last thing this instance does, as it results in
@@ -298,7 +297,7 @@ class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
   // The pointers that FlowToken() is constructed with are stored in this
   // std::tuple. They are then extracted and std::move()'d in the |apply()|
   // method.
-  std::tuple<Args* const...> result_; // the values are not owned
+  std::tuple<Args* const...> result_;  // the values are not owned
 };
 
 // Sometimes the asynchronous flow of control that is represented by a FlowToken
@@ -344,7 +343,6 @@ class Operation<Args...>::FlowTokenHolder {
  private:
   std::shared_ptr<std::unique_ptr<FlowToken>> ptr_;
 };
-
 
 // Following is a list of commonly used operations.
 

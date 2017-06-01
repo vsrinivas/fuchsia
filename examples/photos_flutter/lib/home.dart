@@ -17,7 +17,9 @@ void _log(String msg) {
 class Home extends StatefulWidget {
   final PhotoStorage _storage;
 
-  Home({ Key key, PhotoStorage storage}) : _storage = storage, super(key: key);
+  Home({Key key, PhotoStorage storage})
+      : _storage = storage,
+        super(key: key);
 
   @override
   _HomeState createState() => new _HomeState(_storage);
@@ -35,37 +37,31 @@ class _HomeState extends State<Home> {
       return new Text("Click on \"+\" to add photos.");
     }
     return new GridView.count(
-      crossAxisCount: 3,
-      childAspectRatio: 1.0,
-      padding: const EdgeInsets.all(4.0),
-      mainAxisSpacing: 4.0,
-      crossAxisSpacing: 4.0,
-      children: photos.map((Photo photo) {
-        return new GridTile(
-          footer: new GridTileBar(title: new Text(photo.description)),
-          child: new GestureDetector(
-            onTap: () => _showPhoto(context, photo),
-            child: new Image(image: photo.imageProvider)
-          )
-        );
-      }).toList());
+        crossAxisCount: 3,
+        childAspectRatio: 1.0,
+        padding: const EdgeInsets.all(4.0),
+        mainAxisSpacing: 4.0,
+        crossAxisSpacing: 4.0,
+        children: photos.map((Photo photo) {
+          return new GridTile(
+              footer: new GridTileBar(title: new Text(photo.description)),
+              child: new GestureDetector(
+                  onTap: () => _showPhoto(context, photo),
+                  child: new Image(image: photo.imageProvider)));
+        }).toList());
   }
 
   void _showPhoto(BuildContext context, Photo photo) {
     _log("clicked on photo: " + photo.description);
     Navigator.of(context).push(new MaterialPageRoute<Null>(
-      builder: (BuildContext context) => new PhotoView(photo: photo)
-    ));
+        builder: (BuildContext context) => new PhotoView(photo: photo)));
   }
 
   void _onPlusPressed() {
     setState(() {
       _log("clicked on \"+\"");
       int id = _storage.photos.length;
-      _storage.add(new Photo(
-          _storage,
-          "$_imageUrl/?$id",
-          "cat #$id",
+      _storage.add(new Photo(_storage, "$_imageUrl/?$id", "cat #$id",
           new DateTime.now().millisecondsSinceEpoch));
     });
   }
@@ -73,17 +69,15 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     Widget child = new Center(
-            child: new Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildGrid()));
+        child: new Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _buildGrid()));
 
     return new Scaffold(
       appBar: new AppBar(title: new Text('Photos Example')),
       body: child,
       floatingActionButton: new FloatingActionButton(
-        child: new Icon(Icons.add),
-        onPressed: _onPlusPressed
-      ),
+          child: new Icon(Icons.add), onPressed: _onPlusPressed),
     );
   }
 }
