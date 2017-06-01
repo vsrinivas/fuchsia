@@ -86,6 +86,7 @@ void ModuleContextImpl::GetComponentContext(
 void ModuleContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
   auto module_scope = maxwell::ModuleScope::New();
+  module_scope->module_path = module_path_.Clone();
   module_scope->url = module_url_;
   module_scope->story_id = story_impl_->GetStoryId();
   auto scope = maxwell::ComponentScope::New();
