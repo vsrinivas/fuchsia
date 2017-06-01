@@ -516,8 +516,15 @@ static bool test_suspend_stops_thread(void) {
         mx_nanosleep(0);
     }
 
+    // Clean up.
     ASSERT_EQ(mx_task_kill(thread_h), NO_ERROR, "");
+    // Wait for the thread termination to complete.  We should do this so
+    // that any later tests which use set_debugger_exception_port() do not
+    // receive an MX_EXCP_THREAD_EXITING event.
+    ASSERT_EQ(mx_object_wait_one(thread_h, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_h), NO_ERROR, "");
+
     END_TEST;
 }
 
