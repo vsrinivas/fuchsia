@@ -165,7 +165,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
             story_provider_->GetController(story_id,
                                            story_controller.NewRequest());
 
-            story_controller->AddModule(module_id, module_id, link_name);
+            story_controller->AddModule(fidl::Array<fidl::String>::New(0),
+                                        module_id, module_id, link_name);
           } else {
             FTL_LOG(WARNING) << "Unable to add module; no story provider";
           }
