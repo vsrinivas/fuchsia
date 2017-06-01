@@ -11,7 +11,8 @@ public:
     void CreateAndDestroy()
     {
         uint32_t size = PAGE_SIZE;
-        std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(size)));
+        std::unique_ptr<Ringbuffer> ringbuffer(
+            new Ringbuffer(MsdIntelBuffer::Create(size, "test")));
         ASSERT_NE(ringbuffer, nullptr);
         EXPECT_EQ(ringbuffer->size(), size);
     }
@@ -19,7 +20,8 @@ public:
     void Write()
     {
         uint32_t size = PAGE_SIZE;
-        std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(size)));
+        std::unique_ptr<Ringbuffer> ringbuffer(
+            new Ringbuffer(MsdIntelBuffer::Create(size, "test")));
         ASSERT_NE(ringbuffer, nullptr);
         EXPECT_EQ(ringbuffer->size(), size);
 

@@ -14,7 +14,7 @@ public:
         std::shared_ptr<MockAddressSpace> address_space(
             new MockAddressSpace(base, magma::round_up(batch->size(), PAGE_SIZE)));
 
-        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size()));
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size(), "test"));
         ASSERT_NE(buffer, nullptr);
 
         void* addr;

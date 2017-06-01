@@ -31,7 +31,7 @@ public:
             sizeof(uint32_t);
         EXPECT_EQ(expected_size, CacheConfig::InstructionBytesRequired());
 
-        std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+        std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
 
         uint32_t* ptr;
         ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&ptr)));

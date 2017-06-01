@@ -23,7 +23,7 @@ public:
         std::vector<std::shared_ptr<MsdIntelBuffer>> buffers;
 
         for (uint32_t i = 0; i < num_buffers; i++) {
-            auto buffer = MsdIntelBuffer::Create(buffer_size);
+            auto buffer = MsdIntelBuffer::Create(buffer_size, "test");
             ASSERT_NE(buffer, nullptr);
 
             void* vaddr;

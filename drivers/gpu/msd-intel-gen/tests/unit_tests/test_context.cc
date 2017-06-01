@@ -20,11 +20,12 @@ public:
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
         EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
 
-        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(10));
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(10, "test"));
         ASSERT_NE(buffer, nullptr);
         auto expected_buffer = buffer.get();
 
-        std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
+        std::unique_ptr<Ringbuffer> ringbuffer(
+            new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE, "test")));
         ASSERT_NE(ringbuffer, nullptr);
         auto expected_ringbuffer = ringbuffer.get();
 
@@ -41,9 +42,9 @@ public:
         std::weak_ptr<MsdIntelConnection> connection;
         std::unique_ptr<MsdIntelContext> context;
 
-        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
-        std::unique_ptr<Ringbuffer> ringbuffer(
-            new Ringbuffer(std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE))));
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+        std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(
+            std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"))));
 
         std::shared_ptr<AddressSpace> address_space(
             new MockAddressSpace(base, buffer->platform_buffer()->size() + ringbuffer->size()));

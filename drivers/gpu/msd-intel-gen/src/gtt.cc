@@ -68,7 +68,7 @@ bool Gtt::MapGttMmio(magma::PlatformDevice* platform_device)
 
 bool Gtt::InitScratch()
 {
-    scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE);
+    scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE, "gtt-scratch");
 
     if (!scratch_->PinPages(0, 1))
         return DRETF(false, "PinPages failed");

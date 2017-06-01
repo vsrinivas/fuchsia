@@ -56,7 +56,7 @@ std::unique_ptr<PerProcessGtt::PageDirectory> PerProcessGtt::PageDirectory::Crea
 
     const uint32_t kPageCount = magma::round_up(sizeof(PageDirectoryGpu), PAGE_SIZE) / PAGE_SIZE;
 
-    auto buffer = magma::PlatformBuffer::Create(kPageCount * PAGE_SIZE);
+    auto buffer = magma::PlatformBuffer::Create(kPageCount * PAGE_SIZE, "ppgtt-directory");
     if (!buffer)
         return DRETP(nullptr, "couldn't create buffer");
 

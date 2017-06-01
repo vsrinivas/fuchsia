@@ -17,7 +17,7 @@ public:
     TestInstructions()
     {
         ringbuffer_ =
-            std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
+            std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE, "test")));
         address_space_ =
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0x10000, ringbuffer_->size()));
 

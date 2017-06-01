@@ -108,8 +108,8 @@ public:
 
         EXPECT_TRUE(device->WaitIdle());
 
-        auto mapping =
-            AddressSpace::MapBufferGpu(device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE), PAGE_SIZE);
+        auto mapping = AddressSpace::MapBufferGpu(
+            device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "test"), PAGE_SIZE);
         ASSERT_NE(mapping, nullptr);
 
         gpu_addr_t target_gpu_addr = mapping->gpu_addr();
@@ -117,7 +117,8 @@ public:
         void* target_cpu_addr;
         EXPECT_TRUE(mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
 
-        auto batch_buffer = std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE));
+        auto batch_buffer =
+            std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(batch_buffer, nullptr);
 
         void* batch_cpu_addr;

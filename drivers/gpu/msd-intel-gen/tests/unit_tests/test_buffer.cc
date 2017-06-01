@@ -15,14 +15,14 @@ public:
         std::unique_ptr<MsdIntelBuffer> buffer;
         uint64_t size;
 
-        buffer = MsdIntelBuffer::Create(size = 0);
+        buffer = MsdIntelBuffer::Create(size = 0, "test");
         EXPECT_EQ(buffer, nullptr);
 
-        buffer = MsdIntelBuffer::Create(size = 100);
+        buffer = MsdIntelBuffer::Create(size = 100, "test");
         EXPECT_NE(buffer, nullptr);
         EXPECT_GE(buffer->platform_buffer()->size(), size);
 
-        buffer = MsdIntelBuffer::Create(size = 10000);
+        buffer = MsdIntelBuffer::Create(size = 10000, "test");
         EXPECT_NE(buffer, nullptr);
         EXPECT_GE(buffer->platform_buffer()->size(), size);
     }
@@ -34,7 +34,7 @@ public:
 
         std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(base, size));
 
-        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(buffer, nullptr);
 
         auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer), alignment);
@@ -63,7 +63,7 @@ public:
         // Verify Uncached Behavior
         address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, 0);
         {
-            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
+            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
             auto shared_mapping =
                 AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
@@ -79,7 +79,7 @@ public:
         // Basic Caching of a single buffer
         address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
         {
-            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
+            std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
             auto shared_mapping =
                 AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
@@ -95,9 +95,10 @@ public:
         // Buffer Eviction
         address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, kBufferSize);
         {
-            std::shared_ptr<MsdIntelBuffer> buffer0(MsdIntelBuffer::Create(kBufferSize));
-            std::shared_ptr<MsdIntelBuffer> buffer1(MsdIntelBuffer::Create(kBufferSize));
-            std::shared_ptr<MsdIntelBuffer> buffer2(MsdIntelBuffer::Create(2 * kBufferSize));
+            std::shared_ptr<MsdIntelBuffer> buffer0(MsdIntelBuffer::Create(kBufferSize, "test"));
+            std::shared_ptr<MsdIntelBuffer> buffer1(MsdIntelBuffer::Create(kBufferSize, "test"));
+            std::shared_ptr<MsdIntelBuffer> buffer2(
+                MsdIntelBuffer::Create(2 * kBufferSize, "test"));
 
             EXPECT_EQ(buffer0->shared_mapping_count(), 0u);
             EXPECT_EQ(buffer1->shared_mapping_count(), 0u);
@@ -126,7 +127,7 @@ public:
             new MockAddressSpace(0, magma::round_up(size, PAGE_SIZE)));
         ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
 
-        std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(size));
+        std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(size, "test"));
         ASSERT_NE(buffer, nullptr);
 
         std::unique_ptr<GpuMapping> unique_mapping =
@@ -201,7 +202,7 @@ public:
         ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
 
         constexpr uint32_t kBufferSize = PAGE_SIZE * 6;
-        std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize));
+        std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
         ASSERT_NE(buffer, nullptr);
 
         std::shared_ptr<GpuMapping> mapping_low =
@@ -249,7 +250,7 @@ public:
 
     static void WaitRendering()
     {
-        auto buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+        auto buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
         uint32_t val = 0;
 
         buffer->IncrementInflightCounter();

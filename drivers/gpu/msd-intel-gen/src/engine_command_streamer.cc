@@ -10,10 +10,10 @@
 #include "magma_util/sleep.h"
 #include "msd_intel_buffer.h"
 #include "msd_intel_connection.h"
+#include "platform_trace.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
-#include "platform_trace.h"
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base)
@@ -29,11 +29,13 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
     uint32_t context_size = GetContextSize();
     DASSERT(context_size > 0 && magma::is_page_aligned(context_size));
 
-    std::unique_ptr<MsdIntelBuffer> context_buffer(MsdIntelBuffer::Create(context_size));
+    std::unique_ptr<MsdIntelBuffer> context_buffer(
+        MsdIntelBuffer::Create(context_size, "context-buffer"));
     if (!context_buffer)
         return DRETF(false, "couldn't create context buffer");
 
-    std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE)));
+    std::unique_ptr<Ringbuffer> ringbuffer(
+        new Ringbuffer(MsdIntelBuffer::Create(32 * PAGE_SIZE, "ring-buffer")));
 
     if (!InitContextBuffer(context_buffer.get(), ringbuffer.get(),
                            context->exec_address_space().get()))
@@ -484,7 +486,8 @@ bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> co
     DASSERT(init_batch);
     DASSERT(address_space);
 
-    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(init_batch->size()));
+    auto buffer = std::unique_ptr<MsdIntelBuffer>(
+        MsdIntelBuffer::Create(init_batch->size(), "render-init-batch"));
     if (!buffer)
         return DRETF(false, "failed to allocate render init buffer");
 
@@ -535,7 +538,6 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
     SubmitContext(context.get(), tail);
 
-
     batch_submitted(sequence_number);
 
     TRACE_ASYNC_END("magma", "ExecBatch", nonce);
@@ -576,13 +578,12 @@ void RenderEngineCommandStreamer::ScheduleContext()
         // TODO(MA-142) - ExecBatch should not fail.  Scheduler should verify there is
         // sufficient room in the ringbuffer before selecting a context.
         // For now, drop the command buffer and try another context.
-        if (ExecBatch(std::move(mapped_batch))){
+        if (ExecBatch(std::move(mapped_batch))) {
             break;
         }
 
         magma::log(magma::LOG_WARNING, "ExecBatch failed");
     }
-
 }
 
 void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)

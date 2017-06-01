@@ -90,7 +90,7 @@ public:
     static std::shared_ptr<magma::PlatformBuffer> get_scratch_buffer()
     {
         std::shared_ptr<magma::PlatformBuffer> scratch_buffer =
-            magma::PlatformBuffer::Create(PAGE_SIZE);
+            magma::PlatformBuffer::Create(PAGE_SIZE, "test");
         if (!scratch_buffer)
             return nullptr;
         if (!scratch_buffer->PinPages(0, 1))
@@ -128,10 +128,10 @@ public:
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-        buffer[0] = magma::PlatformBuffer::Create(1000);
+        buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         EXPECT_TRUE(ppgtt->Alloc(buffer[0]->size(), 0, &addr[0]));
 
-        buffer[1] = magma::PlatformBuffer::Create(10000);
+        buffer[1] = magma::PlatformBuffer::Create(10000, "test");
         EXPECT_TRUE(ppgtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
         // Try to insert without pinning

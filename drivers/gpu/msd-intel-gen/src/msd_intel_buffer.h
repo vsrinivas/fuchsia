@@ -21,7 +21,7 @@ class AddressSpace;
 class MsdIntelBuffer {
 public:
     static std::unique_ptr<MsdIntelBuffer> Import(uint32_t handle);
-    static std::unique_ptr<MsdIntelBuffer> Create(uint64_t size);
+    static std::unique_ptr<MsdIntelBuffer> Create(uint64_t size, const char* name);
 
     magma::PlatformBuffer* platform_buffer()
     {

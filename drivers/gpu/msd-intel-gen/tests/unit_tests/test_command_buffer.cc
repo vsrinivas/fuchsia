@@ -129,8 +129,8 @@ public:
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
         auto addr_space = exec_address_space();
 
-        auto target_buffer_mapping =
-            AddressSpace::MapBufferGpu(addr_space, MsdIntelBuffer::Create(PAGE_SIZE), PAGE_SIZE);
+        auto target_buffer_mapping = AddressSpace::MapBufferGpu(
+            addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"), PAGE_SIZE);
         ASSERT_NE(target_buffer_mapping, nullptr);
 
         void* target_cpu_addr;

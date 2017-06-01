@@ -22,9 +22,9 @@ std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle)
     return std::unique_ptr<MsdIntelBuffer>(new MsdIntelBuffer(std::move(platform_buf)));
 }
 
-std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(uint64_t size)
+std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(uint64_t size, const char* name)
 {
-    auto platform_buf = magma::PlatformBuffer::Create(size);
+    auto platform_buf = magma::PlatformBuffer::Create(size, name);
     if (!platform_buf)
         return DRETP(nullptr, "MsdIntelBuffer::Create: Could not create platform buffer from size");
 

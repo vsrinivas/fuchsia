@@ -139,11 +139,11 @@ public:
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-        buffer[0] = magma::PlatformBuffer::Create(1000);
+        buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         ret = gtt->Alloc(buffer[0]->size(), 0, &addr[0]);
         EXPECT_EQ(ret, true);
 
-        buffer[1] = magma::PlatformBuffer::Create(10000);
+        buffer[1] = magma::PlatformBuffer::Create(10000, "test");
         ret = gtt->Alloc(buffer[1]->size(), 0, &addr[1]);
         EXPECT_EQ(ret, true);
 

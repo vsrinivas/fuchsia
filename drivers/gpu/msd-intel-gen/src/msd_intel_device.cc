@@ -249,7 +249,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     semaphore_port_ = magma::SemaphorePort::Create();
 
     scratch_buffer_ =
-        std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE));
+        std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE, "scratch"));
 
     if (!scratch_buffer_->PinPages(0, 1))
         return DRETF(false, "failed to pin pages scratch buffer");
@@ -584,8 +584,9 @@ void MsdIntelDevice::SuspectedGpuHang()
     std::string s;
     DumpToString(s);
     uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
-    magma::log(magma::LOG_WARNING, "Suspected GPU hang: last submitted sequence number "
-                                   "0x%x master_interrupt_control 0x%08x\n%s",
+    magma::log(magma::LOG_WARNING,
+               "Suspected GPU hang: last submitted sequence number "
+               "0x%x master_interrupt_control 0x%08x\n%s",
                progress_->last_submitted_sequence_number(), master_interrupt_control, s.c_str());
     RenderEngineReset();
 }
