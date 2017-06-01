@@ -11,7 +11,8 @@ executable("basic_text_listener") {
 
   deps = [
     "//application/lib/app",
-    "//apps/maxwell/services/context:context",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
     "//lib/mtl",
   ]
 }
