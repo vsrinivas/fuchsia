@@ -53,9 +53,15 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
 
 // Get a read-only VMO containing the whole contents of the file.
-// This uses an underlying VMO when possible, falling back to
-// eagerly reading the contents into a freshly-created VMO.
+// This function creates a clone of the underlying VMO when possible, falling
+// back to eagerly reading the contents into a freshly-created VMO.
 mx_status_t mxio_get_vmo(int fd, mx_handle_t* out_vmo);
+
+// Get a read-only handle to the exact VMO used by the file system server to
+// represent the file. This function fails if the server does not have an exact
+// VMO representation of the file (e.g., if mxio_get_vmo would need to copy the
+// data into a new VMO).
+mx_status_t mxio_get_exact_vmo(int fd, mx_handle_t* out_vmo);
 
 // create a fd that is backed by the given range of the vmo.
 // This function takes ownership of the vmo and will close the vmo when the fd

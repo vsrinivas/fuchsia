@@ -20,10 +20,10 @@ int main(void) {
     }
 
     mx_handle_t vdso_vmo;
-    mx_status_t status = mxio_get_vmo(fd, &vdso_vmo);
+    mx_status_t status = mxio_get_exact_vmo(fd, &vdso_vmo);
     close(fd);
     if (status != NO_ERROR) {
-        printf("mxio_get_vmo(%d): %s\n", fd, mx_status_get_string(status));
+        printf("mxio_get_exact_vmo(%d): %s\n", fd, mx_status_get_string(status));
         return status;
     }
 

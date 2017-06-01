@@ -50,11 +50,14 @@ static const char* libpaths[] = {
 };
 
 // Always consumes the fd.
-static mx_handle_t load_object_fd(int fd) {
+static mx_handle_t load_object_fd(int fd, const char* fn) {
     mx_handle_t vmo;
     mx_status_t status = mxio_get_vmo(fd, &vmo);
     close(fd);
-    return status == NO_ERROR ? vmo : status;
+    if (status != NO_ERROR)
+        return status;
+    mx_object_set_property(vmo, MX_PROP_NAME, fn, strlen(fn));
+    return vmo;
 }
 
 static mx_handle_t default_load_object(void* ignored,
@@ -68,7 +71,7 @@ static mx_handle_t default_load_object(void* ignored,
             snprintf(path, sizeof(path), "%s/%s", libpaths[n], fn);
             int fd = open(path, O_RDONLY);
             if (fd >= 0)
-                return load_object_fd(fd);
+                return load_object_fd(fd, fn);
         }
         break;
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
@@ -80,7 +83,7 @@ static mx_handle_t default_load_object(void* ignored,
         }
         int fd = open(fn, O_RDONLY);
         if (fd >= 0)
-            return load_object_fd(fd);
+            return load_object_fd(fd, fn);
         break;
     default:
         __builtin_trap();

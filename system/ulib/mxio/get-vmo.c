@@ -110,26 +110,14 @@ static mx_status_t get_file_vmo(mxio_t* io, mx_handle_t* out_vmo) {
     mx_handle_t vmo;
     size_t offset, len;
     mx_status_t status = io->ops->get_vmo(io, &vmo, &offset, &len);
-    if (status == NO_ERROR) {
-        // If the file spans the whole VMO, just return the original
-        // VMO handle, which is already read-only.  This is more
-        // than an optimization in the case where the specific VMO
-        // is magical like the vDSO VMOs.
-        size_t vmo_size;
-        if (offset == 0 &&
-            mx_vmo_get_size(vmo, &vmo_size) == NO_ERROR &&
-            vmo_size == len) {
-            *out_vmo = vmo;
-        } else {
-            // Clone a private copy of it at the offset/length returned with
-            // the handle.
-            // TODO(mcgrathr): Create a plain read only clone when the feature
-            // is implemented in the VM.
-            status = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, offset, len,
-                                  out_vmo);
-            mx_handle_close(vmo);
-        }
-    }
+    if (status != NO_ERROR)
+        return status;
+    // Clone a private copy of it at the offset/length returned with
+    // the handle.
+    // TODO(mcgrathr): Create a plain read only clone when the feature
+    // is implemented in the VM.
+    status = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, offset, len, out_vmo);
+    mx_handle_close(vmo);
     return status;
 }
 
@@ -145,15 +133,38 @@ mx_status_t mxio_get_vmo(int fd, mx_handle_t* out_vmo) {
     mxio_release(io);
 
     if (status == NO_ERROR) {
-        // Drop unnecessary WRITE rights on the VMO handle.
         status = mx_handle_replace(
             vmo,
             MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
-            MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
+            MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE |
+            MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY,
             out_vmo);
         if (status != NO_ERROR)
             mx_handle_close(vmo);
     }
 
     return status;
+}
+
+mx_status_t mxio_get_exact_vmo(int fd, mx_handle_t* out_vmo) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL)
+        return ERR_BAD_HANDLE;
+
+    mx_handle_t vmo;
+    size_t offset, len;
+    mx_status_t status = io->ops->get_vmo(io, &vmo, &offset, &len);
+    mxio_release(io);
+
+    if (status != NO_ERROR)
+        return status;
+
+    size_t vmo_size;
+    if (offset != 0 || mx_vmo_get_size(vmo, &vmo_size) != NO_ERROR || vmo_size != len) {
+        mx_handle_close(vmo);
+        return ERR_NOT_FOUND;
+     }
+
+    *out_vmo = vmo;
+    return NO_ERROR;
 }
