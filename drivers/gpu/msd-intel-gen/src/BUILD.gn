@@ -43,6 +43,7 @@ source_set("src") {
     "msd_intel_context.h",
     "msd_intel_device.cc",
     "msd_intel_device.h",
+    "msd_intel_device_dump.cc",
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
     "msd_intel_semaphore.cc",
