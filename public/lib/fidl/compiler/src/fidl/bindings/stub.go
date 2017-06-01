@@ -15,8 +15,8 @@ type MessageReceiver interface {
 	Accept(message *Message) error
 }
 
-// Stub is a base implementation of Stub. Stubs receives messages from channel,
-// deserialize the payload and call the appropriate method in the
+// Stub is a base implementation of Stub. Stubs receives messages from message
+// pipe, deserialize the payload and call the appropriate method in the
 // implementation. If the method returns result, the stub serializes the
 // response and sends it back.
 type Stub struct {
@@ -35,8 +35,8 @@ func NewStub(connector *Connector, receiver MessageReceiver) *Stub {
 	}
 }
 
-// ServeRequest synchronously serves one request from the channel: the
-// |Stub| waits on its underlying channel for a message and handles it.
+// ServeRequest synchronously serves one request from the message pipe: the
+// |Stub| waits on its underlying message pipe for a message and handles it.
 // Can be called from multiple goroutines. Each calling goroutine will receive
 // a different message or an error. Closes itself in case of error.
 func (s *Stub) ServeRequest() error {
@@ -52,10 +52,10 @@ func (s *Stub) ServeRequest() error {
 	return err
 }
 
-// Close immediately closes the |Stub| and its underlying channel. If the
-// |Stub| is waiting on its channel handle the wait process is interrupted.
+// Close immediately closes the |Stub| and its underlying message pipe. If the
+// |Stub| is waiting on its message pipe handle the wait process is interrupted.
 // All goroutines trying to serve will start returning errors as the underlying
-// channel becomes invalid.
+// message pipe becomes invalid.
 func (s *Stub) Close() {
 	s.closeOnce.Do(func() {
 		s.connector.Close()

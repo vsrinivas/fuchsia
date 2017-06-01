@@ -7,7 +7,7 @@ package bindings
 import (
 	"sync/atomic"
 
-	"syscall/mx"
+	"fidl/system"
 )
 
 func align(size, alignment int) int {
@@ -20,11 +20,11 @@ func bytesForBits(bits uint64) int {
 	return int((bits + 7) / 8)
 }
 
-// WriteMessage writes a message to a channel.
-func WriteMessage(handle mx.Handle, message *Message) error {
-	err := (&mx.Channel{handle}).Write(message.Bytes, message.Handles, 0)
-	if err != nil {
-		return err
+// WriteMessage writes a message to a message pipe.
+func WriteMessage(handle system.ChannelHandle, message *Message) error {
+	result := handle.WriteMessage(message.Bytes, message.Handles, system.MOJO_WRITE_MESSAGE_FLAG_NONE)
+	if result != system.MOJO_RESULT_OK {
+		return &ConnectionError{result}
 	}
 	return nil
 }

@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"math"
 
-	"syscall/mx"
+	"fidl/system"
 )
 
-// Decoder is a helper to decode fidl complex elements from fidl archive format.
+// Decoder is a helper to decode mojo complex elements from mojo archive format.
 type Decoder struct {
 	// Buffer containing data to decode.
 	buf []byte
@@ -21,7 +21,7 @@ type Decoder struct {
 	end int
 
 	// Array containing handles to decode.
-	handles []mx.Handle
+	handles []system.UntypedHandle
 
 	// The first unclaimed handle index.
 	nextHandle int
@@ -33,7 +33,7 @@ type Decoder struct {
 
 // NewDecoder returns a decoder that will decode structured data from provided
 // byte array and with handles.
-func NewDecoder(bytes []byte, handles []mx.Handle) *Decoder {
+func NewDecoder(bytes []byte, handles []system.UntypedHandle) *Decoder {
 	return &Decoder{buf: bytes, handles: handles}
 }
 
@@ -46,12 +46,12 @@ func (d *Decoder) claimData(size int) error {
 	return nil
 }
 
-func (d *Decoder) claimHandle(index int) (mx.Handle, error) {
+func (d *Decoder) claimHandle(index int) (system.UntypedHandle, error) {
 	if index >= len(d.handles) {
-		return 0, &ValidationError{IllegalHandle, "trying to access non present handle"}
+		return nil, &ValidationError{IllegalHandle, "trying to access non present handle"}
 	}
 	if index < d.nextHandle {
-		return 0, &ValidationError{IllegalHandle, "trying to access handle out of order"}
+		return nil, &ValidationError{IllegalHandle, "trying to access handle out of order"}
 	}
 	d.nextHandle = index + 1
 	return d.handles[index], nil
@@ -362,50 +362,50 @@ func (d *Decoder) ReadPointer() (uint64, error) {
 }
 
 // ReadUntypedHandle reads an untyped handle.
-func (d *Decoder) ReadUntypedHandle() (mx.Handle, error) {
+func (d *Decoder) ReadUntypedHandle() (system.UntypedHandle, error) {
 	handleIndex, err := d.ReadUint32()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	if handleIndex == ^uint32(0) {
-		return 0, nil
+		return &InvalidHandle{}, nil
 	}
 	return d.claimHandle(int(handleIndex))
 }
 
 // ReadHandle reads a handle.
-func (d *Decoder) ReadHandle() (mx.Handle, error) {
+func (d *Decoder) ReadHandle() (system.Handle, error) {
 	return d.ReadUntypedHandle()
 }
 
-// ReadChannelHandle reads a channel handle.
-func (d *Decoder) ReadChannelHandle() (mx.Handle, error) {
+// ReadChannelHandle reads a message pipe handle.
+func (d *Decoder) ReadChannelHandle() (system.ChannelHandle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
-		return 0, err
+		return nil, err
 	} else {
-		return handle, nil
+		return handle.ToChannelHandle(), nil
 	}
 }
 
 // ReadVmoHandle reads a shared buffer handle.
-func (d *Decoder) ReadVmoHandle() (mx.VMO, error) {
+func (d *Decoder) ReadVmoHandle() (system.VmoHandle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
-		return 0, err
+		return nil, err
 	} else {
-		return mx.VMO(handle), nil
+		return handle.ToVmoHandle(), nil
 	}
 }
 
-// ReadInterface reads an encoded interface and returns the channel handle.
+// ReadInterface reads an encoded interface and returns the message pipe handle.
 // The version field is ignored for now.
-func (d *Decoder) ReadInterface() (mx.Handle, error) {
+func (d *Decoder) ReadInterface() (system.ChannelHandle, error) {
 	handle, err := d.ReadChannelHandle()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	d.state().elementsProcessed--
 	if _, err := d.ReadUint32(); err != nil {
-		return 0, err
+		return nil, err
 	}
 	return handle, nil
 }

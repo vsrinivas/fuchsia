@@ -5,20 +5,35 @@
 package bindings
 
 import (
+	"fmt"
 	"sync"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"fidl/system"
 )
 
-var errConnectionClosed = mx.Error{Status: mx.ErrPeerClosed}
+var errConnectionClosed = &ConnectionError{system.MOJO_SYSTEM_RESULT_FAILED_PRECONDITION}
 
-// Connector owns a channel handle. It can read and write messages
-// from the channel waiting on it if necessary. The operation are
+// ConnectionError represents a error caused by an operation on a message pipe.
+type ConnectionError struct {
+	Result system.MojoResult
+}
+
+func (e *ConnectionError) Error() string {
+	return fmt.Sprintf("message pipe error: %v", e.Result)
+}
+
+// Closed returnes true iff the error was caused by an operation on a closed
+// message pipe.
+func (e *ConnectionError) Closed() bool {
+	return e.Result == system.MOJO_SYSTEM_RESULT_FAILED_PRECONDITION
+}
+
+// Connector owns a message pipe handle. It can read and write messages
+// from the message pipe waiting on it if necessary. The operation are
 // thread-safe.
 type Connector struct {
 	mu   sync.RWMutex // protects pipe handle
-	pipe mx.Handle
+	pipe system.ChannelHandle
 
 	done      chan struct{}
 	waitMutex sync.Mutex
@@ -27,8 +42,8 @@ type Connector struct {
 }
 
 // NewStubConnector returns a new |Connector| instance that sends and
-// receives messages from a provided channel handle.
-func NewConnector(pipe mx.Handle, waiter AsyncWaiter) *Connector {
+// receives messages from a provided message pipe handle.
+func NewConnector(pipe system.ChannelHandle, waiter AsyncWaiter) *Connector {
 	return &Connector{
 		pipe:     pipe,
 		waiter:   waiter,
@@ -37,14 +52,14 @@ func NewConnector(pipe mx.Handle, waiter AsyncWaiter) *Connector {
 	}
 }
 
-// ReadMessage reads a message from channel waiting on it if necessary.
+// ReadMessage reads a message from message pipe waiting on it if necessary.
 func (c *Connector) ReadMessage() (*Message, error) {
 	// Make sure that only one goroutine at a time waits a the handle.
-	// We use separate lock so that we can send messages to the channel
+	// We use separate lock so that we can send messages to the message pipe
 	// while waiting on the pipe.
 	//
 	// It is better to acquire this lock first so that a potential queue of
-	// readers will wait while closing the channel in case of Close()
+	// readers will wait while closing the message pipe in case of Close()
 	// call.
 	c.waitMutex.Lock()
 	defer c.waitMutex.Unlock()
@@ -55,31 +70,27 @@ func (c *Connector) ReadMessage() (*Message, error) {
 	if !c.pipe.IsValid() {
 		return nil, errConnectionClosed
 	}
-
 	// Check if we already have a message.
-	// TODO: how big this should this be?
-	bytes := make([]byte, 256)
-	handles := make([]mx.Handle, 16)
-	_, _, err := (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
-	if mxerror.Status(err) == mx.ErrShouldWait {
-		waitId := c.waiter.AsyncWait(c.pipe, mx.SignalChannelReadable, c.waitChan)
+	result, bytes, handles := c.pipe.ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
+	if result == system.MOJO_SYSTEM_RESULT_SHOULD_WAIT {
+		waitId := c.waiter.AsyncWait(c.pipe, system.MOJO_HANDLE_SIGNAL_READABLE, c.waitChan)
 		select {
 		case <-c.waitChan:
-			_, _, err = (&mx.Channel{c.pipe}).Read(bytes, handles, 0)
-			if err != nil {
-				return nil, err
+			result, bytes, handles = c.pipe.ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
+			if result != system.MOJO_RESULT_OK {
+				return nil, &ConnectionError{result}
 			}
 		case <-c.done:
 			c.waiter.CancelWait(waitId)
 			return nil, errConnectionClosed
 		}
-	} else if err != nil {
-		return nil, err
+	} else if result != system.MOJO_RESULT_OK {
+		return nil, &ConnectionError{result}
 	}
 	return ParseMessage(bytes, handles)
 }
 
-// WriteMessage writes a message to the channel.
+// WriteMessage writes a message to the message pipe.
 func (c *Connector) WriteMessage(message *Message) error {
 	// Use read lock to use pipe handle without modifying it.
 	c.mu.RLock()
@@ -90,7 +101,7 @@ func (c *Connector) WriteMessage(message *Message) error {
 	return WriteMessage(c.pipe, message)
 }
 
-// Close closes the channel aborting wait on the channel.
+// Close closes the message pipe aborting wait on the message pipe.
 // Panics if you try to close the |Connector| more than once.
 func (c *Connector) Close() {
 	// Stop waiting to acquire the lock.

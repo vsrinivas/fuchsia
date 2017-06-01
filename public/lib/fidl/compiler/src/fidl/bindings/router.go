@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"fidl/system"
 )
 
 // MessageReadResult contains information returned after reading and parsing
@@ -30,8 +29,8 @@ type routeRequest struct {
 // routerWorker sends messages that require a response and and routes responses
 // to appropriate receivers. The work is done on a separate go routine.
 type routerWorker struct {
-	// The channel handle to send requests and receive responses.
-	handle mx.Handle
+	// The message pipe handle to send requests and receive responses.
+	handle system.ChannelHandle
 	// Map from request id to response channel.
 	responders map[uint64]chan<- MessageReadResult
 	// The channel of incoming requests that require responses.
@@ -45,27 +44,24 @@ type routerWorker struct {
 }
 
 // readOutstandingMessages reads and dispatches available messages in the
-// channel until the messages is empty or there are no waiting responders.
-// If the worker is currently waiting on the channel, returns immediately
+// message pipe until the messages is empty or there are no waiting responders.
+// If the worker is currently waiting on the message pipe, returns immediately
 // without an error.
 func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 	if w.waitId != 0 {
-		// Still waiting for a new message in the channel.
+		// Still waiting for a new message in the message pipe.
 		return nil
 	}
 	for len(w.responders) > 0 {
-		// TODO: how big should this be?
-		bytes := make([]byte, 64*1024)
-		handles := make([]mx.Handle, 16)
-		numBytes, numHandles, err := (&mx.Channel{w.handle}).Read(bytes, handles, 0)
-		if mxerror.Status(err) == mx.ErrShouldWait {
-			w.waitId = w.waiter.AsyncWait(w.handle, mx.SignalChannelReadable, w.waitChan)
+		result, bytes, handles := w.handle.ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
+		if result == system.MOJO_SYSTEM_RESULT_SHOULD_WAIT {
+			w.waitId = w.waiter.AsyncWait(w.handle, system.MOJO_HANDLE_SIGNAL_READABLE, w.waitChan)
 			return nil
 		}
-		if err != nil {
-			return err
+		if result != system.MOJO_RESULT_OK {
+			return &ConnectionError{result}
 		}
-		message, err := ParseMessage(bytes[:numBytes], handles[:numHandles])
+		message, err := ParseMessage(bytes, handles)
 		if err != nil {
 			return err
 		}
@@ -84,15 +80,15 @@ func (w *routerWorker) cancelIfWaiting() {
 }
 
 // runLoop is the main run loop of the worker. It processes incoming requests
-// from Router and waits on a channel for new messages.
+// from Router and waits on a message pipe for new messages.
 // Returns an error describing the cause of stopping.
 func (w *routerWorker) runLoop() error {
 	for {
 		select {
 		case waitResponse := <-w.waitChan:
 			w.waitId = 0
-			if waitResponse.Error != nil {
-				return waitResponse.Error
+			if waitResponse.Result != system.MOJO_RESULT_OK {
+				return &ConnectionError{waitResponse.Result}
 			}
 		case request := <-w.requestChan:
 			if err := WriteMessage(w.handle, request.message); err != nil {
@@ -102,7 +98,7 @@ func (w *routerWorker) runLoop() error {
 				w.responders[request.message.Header.RequestId] = request.responseChan
 			}
 		case <-w.done:
-			return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.routerWoker.runLoop"}
+			return errConnectionClosed
 		}
 		// Returns immediately without an error if still waiting for
 		// a new message.
@@ -112,15 +108,15 @@ func (w *routerWorker) runLoop() error {
 	}
 }
 
-// Router sends messages to a channel and routes responses back to senders
+// Router sends messages to a message pipe and routes responses back to senders
 // of messages with non-zero request ids. The caller should issue unique request
 // ids for each message given to the router.
 type Router struct {
 	// Mutex protecting requestChan from new requests in case the router is
 	// closed and the handle.
 	mu sync.Mutex
-	// The channel handle to send requests and receive responses.
-	handle mx.Handle
+	// The message pipe handle to send requests and receive responses.
+	handle system.ChannelHandle
 	// Channel to communicate with worker.
 	requestChan chan<- routeRequest
 
@@ -131,8 +127,8 @@ type Router struct {
 }
 
 // NewRouter returns a new Router instance that sends and receives messages
-// from a provided channel handle.
-func NewRouter(handle mx.Handle, waiter AsyncWaiter) *Router {
+// from a provided message pipe handle.
+func NewRouter(handle system.ChannelHandle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
 	router := &Router{
@@ -152,7 +148,7 @@ func NewRouter(handle mx.Handle, waiter AsyncWaiter) *Router {
 	return router
 }
 
-// Close closes the router and the underlying channel. All new incoming
+// Close closes the router and the underlying message pipe. All new incoming
 // requests are returned with an error.
 func (r *Router) Close() {
 	r.closeOnce.Do(func() {
@@ -160,7 +156,7 @@ func (r *Router) Close() {
 	})
 }
 
-// Accept sends a message to the channel. The message should have a
+// Accept sends a message to the message pipe. The message should have a
 // zero request id in header.
 func (r *Router) Accept(message *Message) error {
 	if message.Header.RequestId != 0 {
@@ -169,7 +165,7 @@ func (r *Router) Accept(message *Message) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.handle.IsValid() {
-		return mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.Accept"}
+		return errConnectionClosed
 	}
 	r.requestChan <- routeRequest{message, nil}
 	return nil
@@ -180,7 +176,7 @@ func (r *Router) runWorker(worker *routerWorker) {
 	go func() {
 		// Get the reason why the worker stopped. The error means that
 		// either the router is closed or there was an error reading
-		// or writing to a channel. In both cases it will be
+		// or writing to a message pipe. In both cases it will be
 		// the reason why we can't process any more requests.
 		err := worker.runLoop()
 		worker.cancelIfWaiting()
@@ -208,7 +204,7 @@ func (r *Router) runWorker(worker *routerWorker) {
 	}()
 }
 
-// AcceptWithResponse sends a message to the channel and returns a channel
+// AcceptWithResponse sends a message to the message pipe and returns a channel
 // that will stream the result of reading corresponding response. The message
 // should have a non-zero request id in header. It is responsibility of the
 // caller to issue unique request ids for all given messages.
@@ -224,7 +220,7 @@ func (r *Router) AcceptWithResponse(message *Message) <-chan MessageReadResult {
 	// is closed so that we can safely close responseChan once we close the
 	// router.
 	if !r.handle.IsValid() {
-		responseChan <- MessageReadResult{nil, mx.Error{Status: mx.ErrPeerClosed, Text: "bindings.Router.AcceptWithResponse"}}
+		responseChan <- MessageReadResult{nil, errConnectionClosed}
 		return responseChan
 	}
 	r.requestChan <- routeRequest{message, responseChan}

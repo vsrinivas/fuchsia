@@ -7,7 +7,7 @@ package bindings
 import (
 	"fmt"
 
-	"syscall/mx"
+	"fidl/system"
 )
 
 const (
@@ -57,14 +57,14 @@ func (e *ValidationError) Error() string {
 	return e.Message
 }
 
-// Payload is an interface implemented by a fidl struct that can encode/decode
-// itself into fidl archive format.
+// Payload is an interface implemented by a mojo struct that can encode/decode
+// itself into mojo archive format.
 type Payload interface {
 	Encode(encoder *Encoder) error
 	Decode(decoder *Decoder) error
 }
 
-// DataHeader is a header for a fidl complex element.
+// DataHeader is a header for a mojo complex element.
 type DataHeader struct {
 	Size              uint32
 	ElementsOrVersion uint32
@@ -154,16 +154,16 @@ func (h *MessageHeader) version() uint32 {
 	}
 }
 
-// Message is a a raw message to be sent/received from a channel handle
+// Message is a a raw message to be sent/received from a message pipe handle
 // which contains a message header.
 type Message struct {
 	Header  MessageHeader
 	Bytes   []byte
-	Handles []mx.Handle
+	Handles []system.UntypedHandle
 	Payload []byte
 }
 
-func newMessage(header MessageHeader, bytes []byte, handles []mx.Handle) *Message {
+func newMessage(header MessageHeader, bytes []byte, handles []system.UntypedHandle) *Message {
 	return &Message{header, bytes, handles, bytes[header.dataSize()+dataHeaderSize:]}
 }
 
@@ -177,7 +177,7 @@ func (m *Message) DecodePayload(payload Payload) error {
 }
 
 // EncodeMessage returns a message with provided header that has provided
-// payload encoded in fidl archive format.
+// payload encoded in mojo archive format.
 func EncodeMessage(header MessageHeader, payload Payload) (*Message, error) {
 	encoder := NewEncoder()
 	if err := header.Encode(encoder); err != nil {
@@ -195,8 +195,8 @@ func EncodeMessage(header MessageHeader, payload Payload) (*Message, error) {
 
 // ParseMessage parses message header from byte buffer with attached handles
 // and returnes parsed message.
-func ParseMessage(bytes []byte, handles []mx.Handle) (*Message, error) {
-	decoder := NewDecoder(bytes, []mx.Handle{})
+func ParseMessage(bytes []byte, handles []system.UntypedHandle) (*Message, error) {
+	decoder := NewDecoder(bytes, []system.UntypedHandle{})
 	var header MessageHeader
 	if err := header.Decode(decoder); err != nil {
 		return nil, err

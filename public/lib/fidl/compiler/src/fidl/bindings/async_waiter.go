@@ -10,8 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"syscall/mx"
-	"syscall/mx/mxerror"
+	"fidl/system"
 )
 
 var defaultWaiter *asyncWaiterImpl
@@ -32,8 +31,8 @@ type AsyncWaitId uint64
 // finish. It contains the same information as if |Wait()| was called on a
 // handle.
 type WaitResponse struct {
-	Error   error
-	Pending mx.Signals
+	Result system.MojoResult
+	State  system.MojoHandleSignalsState
 }
 
 // AsyncWaiter defines an interface for asynchronously waiting (and cancelling
@@ -46,19 +45,19 @@ type AsyncWaiter interface {
 	//
 	// |handle| must not be closed or transferred until the wait response
 	// is received from |responseChan|.
-	AsyncWait(handle mx.Handle, signals mx.Signals, responseChan chan<- WaitResponse) AsyncWaitId
+	AsyncWait(handle system.Handle, signals system.MojoHandleSignals, responseChan chan<- WaitResponse) AsyncWaitId
 
 	// CancelWait cancels an outstanding async wait (specified by |id|)
-	// initiated by |AsyncWait()|. A response with
-	// |ErrCanceled| is sent to the corresponding |responseChan|.
+	// initiated by |AsyncWait()|. A response with Mojo result
+	// |MOJO_SYSTEM_RESULT_ABORTED| is sent to the corresponding |responseChan|.
 	CancelWait(id AsyncWaitId)
 }
 
 // waitRequest is a struct sent to asyncWaiterWorker to add another handle to
 // the list of waiting handles.
 type waitRequest struct {
-	handle  mx.Handle
-	signals mx.Signals
+	handle  system.Handle
+	signals system.MojoHandleSignals
 
 	// Used for |CancelWait()| calls. The worker should issue IDs so that
 	// you can't cancel the wait until the worker received the wait request.
@@ -71,13 +70,14 @@ type waitRequest struct {
 // asyncWaiterWorker does the actual work, in its own goroutine. It calls
 // |WaitMany()| on all provided handles. New handles a added via |waitChan|
 // and removed via |cancelChan| messages. To wake the worker asyncWaiterImpl
-// sends fidl messages to a dedicated channel, the other end of which has
+// sends mojo messages to a dedicated message pipe, the other end of which has
 // index 0 in all slices of the worker.
 type asyncWaiterWorker struct {
-	// |items| is used to make |WaitMany()| calls directly.
+	// |handles| and |signals| are used to make |WaitMany()| calls directly.
 	// All these arrays should be operated simultaneously; i-th element
 	// of each refers to i-th handle.
-	items      []mx.WaitItem
+	handles      []system.Handle
+	signals      []system.MojoHandleSignals
 	asyncWaitIds []AsyncWaitId
 	responses    []chan<- WaitResponse
 
@@ -94,10 +94,12 @@ type asyncWaiterWorker struct {
 // swapping all information associated with index-th handle with the last one
 // and removing the last one.
 func (w *asyncWaiterWorker) removeHandle(index int) {
-	l := len(w.items) - 1
+	l := len(w.handles) - 1
 	// Swap with the last and remove last.
-	w.items[index] = w.items[l]
-	w.items = w.items[0:l]
+	w.handles[index] = w.handles[l]
+	w.handles = w.handles[0:l]
+	w.signals[index] = w.signals[l]
+	w.signals = w.signals[0:l]
 
 	w.asyncWaitIds[index] = w.asyncWaitIds[l]
 	w.asyncWaitIds = w.asyncWaitIds[0:l]
@@ -107,22 +109,25 @@ func (w *asyncWaiterWorker) removeHandle(index int) {
 
 // sendWaitResponseAndRemove send response to corresponding channel and removes
 // index-th waiting handle.
-func (w *asyncWaiterWorker) sendWaitResponseAndRemove(index int, err error, pending mx.Signals) {
+func (w *asyncWaiterWorker) sendWaitResponseAndRemove(index int, result system.MojoResult, state system.MojoHandleSignalsState) {
 	w.responses[index] <- WaitResponse{
-		err,
-		pending,
+		result,
+		state,
 	}
 	w.removeHandle(index)
 }
 
 // respondToSatisfiedWaits responds to all wait requests that have at least
 // one satisfied signal and removes them.
-func (w *asyncWaiterWorker) respondToSatisfiedWaits() {
-	// Don't touch handle at index 0 as it is the waking channel.
-	for i := 1; i < len(w.items); {
-		if (w.items[i].Pending & w.items[i].WaitFor) != 0 {
+func (w *asyncWaiterWorker) respondToSatisfiedWaits(states []system.MojoHandleSignalsState) {
+	// Don't touch handle at index 0 as it is the waking handle.
+	for i := 1; i < len(states); {
+		if (states[i].SatisfiedSignals & w.signals[i]) != 0 {
 			// Respond and swap i-th with last and remove last.
-			w.sendWaitResponseAndRemove(i, nil, w.items[i].Pending)
+			w.sendWaitResponseAndRemove(i, system.MOJO_RESULT_OK, states[i])
+			// Swap i-th with last and remove last.
+			states[i] = states[len(states)-1]
+			states = states[:len(states)-1]
 		} else {
 			i++
 		}
@@ -135,7 +140,8 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 	for {
 		select {
 		case request := <-w.waitChan:
-			w.items = append(w.items, mx.WaitItem{Handle: request.handle, WaitFor: request.signals})
+			w.handles = append(w.handles, request.handle)
+			w.signals = append(w.signals, request.signals)
 			w.responses = append(w.responses, request.responseChan)
 
 			w.ids++
@@ -143,7 +149,7 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 			w.asyncWaitIds = append(w.asyncWaitIds, id)
 			request.idChan <- id
 		case AsyncWaitId := <-w.cancelChan:
-			// Zero index is reserved for the waking channel handle.
+			// Zero index is reserved for the waking message pipe handle.
 			index := 0
 			for i := 1; i < len(w.asyncWaitIds); i++ {
 				if w.asyncWaitIds[i] == AsyncWaitId {
@@ -154,7 +160,7 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 			// Do nothing if the id was not found as wait response may be
 			// already sent if the async wait was successful.
 			if index > 0 {
-				w.sendWaitResponseAndRemove(index, mx.Error{Status: mx.ErrCanceled, Text: "bindings.CancelWait"}, mx.Signals(0))
+				w.sendWaitResponseAndRemove(index, system.MOJO_SYSTEM_RESULT_ABORTED, system.MojoHandleSignalsState{})
 			}
 		default:
 			return
@@ -163,43 +169,41 @@ func (w *asyncWaiterWorker) processIncomingRequests() {
 }
 
 // runLoop run loop of the asyncWaiterWorker. Blocks on |WaitMany()|. If the
-// wait is interrupted by waking channel (index 0) then it means that the worker
+// wait is interrupted by waking handle (index 0) then it means that the worker
 // was woken by waiterImpl, so the worker processes incoming requests from
 // waiterImpl; otherwise responses to corresponding wait request.
 func (w *asyncWaiterWorker) runLoop() {
-Loop:
 	for {
-		err := mx.WaitMany(w.items, mx.TimensecInfinite)
+		result, index, states := system.GetCore().WaitMany(w.handles, w.signals, system.MOJO_DEADLINE_INDEFINITE)
 		// Set flag to 0, so that the next incoming request to
 		// waiterImpl would explicitly wake worker by sending a message
-		// to waking channel.
+		// to waking message pipe.
 		atomic.StoreInt32(w.isNotified, 0)
-		switch mxerror.Status(err) {
-		case mx.ErrOk, mx.ErrTimedOut:
-			// NOP
-		default:
-			panic(fmt.Sprintf("error waiting on handles: %v", err))
-			break Loop
+		if index == -1 {
+			panic(fmt.Sprintf("error waiting on handles: %v", result))
+			break
 		}
 		// Zero index means that the worker was signaled by asyncWaiterImpl.
-		if (w.items[0].Pending & w.items[0].WaitFor) != 0 {
-			// TODO: how big should this be?
-			dataBuf := make([]byte, 256)
-			(&mx.Channel{w.items[0].Handle}).Read(dataBuf, nil, 0)
-			// TODO: log error
+		if index == 0 {
+			if result != system.MOJO_RESULT_OK {
+				panic(fmt.Sprintf("error waiting on waking handle: %v", result))
+			}
+			w.handles[0].(system.ChannelHandle).ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
 			w.processIncomingRequests()
+		} else if result != system.MOJO_RESULT_OK {
+			w.sendWaitResponseAndRemove(index, result, system.MojoHandleSignalsState{})
 		} else {
-			w.respondToSatisfiedWaits()
+			w.respondToSatisfiedWaits(states)
 		}
 	}
 }
 
 // asyncWaiterImpl is an implementation of |AsyncWaiter| interface.
 // Runs a worker in a separate goroutine and comunicates with it by sending a
-// message to |wakingChannel| to wake worker from |WaitMany()| call and
+// message to |wakingHandle| to wake worker from |WaitMany()| call and
 // sending request via |waitChan| and |cancelChan|.
 type asyncWaiterImpl struct {
-	wakingChannel *mx.Channel
+	wakingHandle system.ChannelHandle
 
 	// Flag shared between waiterImpl and worker that is 1 iff the worker is
 	// already notified by waiterImpl. The worker sets it to 0 as soon as
@@ -210,26 +214,26 @@ type asyncWaiterImpl struct {
 }
 
 func finalizeWorker(worker *asyncWaiterWorker) {
-	// Close waking channel on worker side.
-	worker.items[0].Handle.Close()
+	// Close waking handle on worker side.
+	worker.handles[0].Close()
 }
 
 func finalizeAsyncWaiter(waiter *asyncWaiterImpl) {
-	waiter.wakingChannel.Close()
+	waiter.wakingHandle.Close()
 }
 
 // newAsyncWaiter creates an asyncWaiterImpl and starts its worker goroutine.
 func newAsyncWaiter() *asyncWaiterImpl {
-	c0, c1, err := mx.NewChannel(0)
-	if err != nil {
-		panic(fmt.Sprintf("can't create channel %v", err))
+	result, h0, h1 := system.GetCore().CreateChannel(nil)
+	if result != system.MOJO_RESULT_OK {
+		panic(fmt.Sprintf("can't create message pipe %v", result))
 	}
 	waitChan := make(chan waitRequest, 10)
 	cancelChan := make(chan AsyncWaitId, 10)
 	isNotified := new(int32)
-	item := mx.WaitItem{c1.Handle, mx.SignalChannelReadable, 0}
 	worker := &asyncWaiterWorker{
-		[]mx.WaitItem{item},
+		[]system.Handle{h1},
+		[]system.MojoHandleSignals{system.MOJO_HANDLE_SIGNAL_READABLE},
 		[]AsyncWaitId{0},
 		[]chan<- WaitResponse{make(chan WaitResponse)},
 		isNotified,
@@ -240,7 +244,7 @@ func newAsyncWaiter() *asyncWaiterImpl {
 	runtime.SetFinalizer(worker, finalizeWorker)
 	go worker.runLoop()
 	waiter := &asyncWaiterImpl{
-		wakingChannel:    c0,
+		wakingHandle:     h0,
 		isWorkerNotified: isNotified,
 		waitChan:         waitChan,
 		cancelChan:       cancelChan,
@@ -253,14 +257,14 @@ func newAsyncWaiter() *asyncWaiterImpl {
 // after sending a message to |waitChan| or |cancelChan| to avoid deadlock.
 func (w *asyncWaiterImpl) wakeWorker() {
 	if atomic.CompareAndSwapInt32(w.isWorkerNotified, 0, 1) {
-		err := w.wakingChannel.Write([]byte{0}, nil, 0)
-		if err != nil {
-			panic("can't write to a channel")
+		result := w.wakingHandle.WriteMessage([]byte{0}, nil, system.MOJO_WRITE_MESSAGE_FLAG_NONE)
+		if result != system.MOJO_RESULT_OK {
+			panic("can't write to a message pipe")
 		}
 	}
 }
 
-func (w *asyncWaiterImpl) AsyncWait(handle mx.Handle, signals mx.Signals, responseChan chan<- WaitResponse) AsyncWaitId {
+func (w *asyncWaiterImpl) AsyncWait(handle system.Handle, signals system.MojoHandleSignals, responseChan chan<- WaitResponse) AsyncWaitId {
 	idChan := make(chan AsyncWaitId, 1)
 	w.waitChan <- waitRequest{
 		handle,

@@ -10,7 +10,7 @@ import (
 	"math"
 	"sort"
 
-	"syscall/mx"
+	"fidl/system"
 )
 
 // encodingState has information required to encode/decode a one-level value.
@@ -55,7 +55,7 @@ func (s *encodingState) skipBytes(count int) {
 	s.offset += count
 }
 
-// Encoder is a helper to encode fidl complex elements into fidl archive format.
+// Encoder is a helper to encode mojo complex elements into mojo archive format.
 type Encoder struct {
 	// Buffer containing encoded data.
 	buf []byte
@@ -64,14 +64,14 @@ type Encoder struct {
 	end int
 
 	// Array containing encoded handles.
-	handles []mx.Handle
+	handles []system.UntypedHandle
 
 	// A stack of encoder states matching current one-level value stack
 	// of the encoding data structure.
 	stateStack []encodingState
 
 	// By default encoding is non-deterministic because the encoding of
-	// a fidl map does not specify the order of the keys and values.
+	// a mojom map does not specify the order of the keys and values.
 	// If |deterministic| is true then keys and values will be sorted
 	// in ascending key order.
 	deterministic bool
@@ -143,7 +143,7 @@ func NewEncoder() *Encoder {
 
 // SetDeterministic sets whether or not this encoder is deterministic.
 // By default encoding is non-deterministic because the encoding of
-// a fidl map does not specify the order of the keys and values.
+// a mojom map does not specify the order of the keys and values.
 // If SetDeterministic(true) is invoked then this encoder will, from then on,
 // have the property that keys and values will be sorted in ascending key order.
 // Warning: This causes encoding to be more expensive.
@@ -236,7 +236,7 @@ func (e *Encoder) Finish() error {
 
 // Data returns an encoded message with attached handles.
 // Call this method after finishing encoding of a value.
-func (e *Encoder) Data() ([]byte, []mx.Handle, error) {
+func (e *Encoder) Data() ([]byte, []system.UntypedHandle, error) {
 	if len(e.stateStack) != 0 {
 		return nil, nil, fmt.Errorf("can't return data when encoder has non-empty state stack")
 	}
@@ -377,11 +377,12 @@ func (e *Encoder) WriteInvalidHandle() error {
 }
 
 // WriteHandle writes a handle and invalidates the passed handle object.
-func (e *Encoder) WriteHandle(handle mx.Handle) error {
+func (e *Encoder) WriteHandle(handle system.Handle) error {
 	if !handle.IsValid() {
 		return fmt.Errorf("can't write an invalid handle")
 	}
-	e.handles = append(e.handles, handle)
+	UntypedHandle := handle.ToUntypedHandle()
+	e.handles = append(e.handles, UntypedHandle)
 	return e.WriteUint32(uint32(len(e.handles) - 1))
 }
 
@@ -395,7 +396,7 @@ func (e *Encoder) WriteInvalidInterface() error {
 }
 
 // WriteInterface writes an interface and invalidates the passed handle object.
-func (e *Encoder) WriteInterface(handle mx.Handle) error {
+func (e *Encoder) WriteInterface(handle system.Handle) error {
 	if err := e.WriteHandle(handle); err != nil {
 		return err
 	}
@@ -406,7 +407,7 @@ func (e *Encoder) WriteInterface(handle mx.Handle) error {
 
 // SortMapKeys will sort the slice pointed to by |slicePointer|
 // if |slicePointer| is a pointer to a slice of a type that
-// may be the key of a Fidl map. Otherwise SortMapKeys will do nothing.
+// may be the key of a Mojo map. Otherwise SortMapKeys will do nothing.
 func SortMapKeys(slicePointer interface{}) {
 	switch slicePointer := slicePointer.(type) {
 	case *[]bool:
