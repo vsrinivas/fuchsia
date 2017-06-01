@@ -39,21 +39,13 @@
 #include "vc.h"
 #include "vcdebug.h"
 
-thrd_t g_input_poll_thread;
+static struct list_node g_vc_list = LIST_INITIAL_VALUE(g_vc_list);
+static unsigned g_vc_count = 0;
+static vc_t* g_active_vc;
+static unsigned g_active_vc_index;
+static vc_battery_info_t g_battery_info;
 
-// remember whether the virtual console controls the display
-static int g_vc_owns_display = 1;
-
-mtx_t g_vc_lock = MTX_INIT;
-
-static struct list_node g_vc_list TA_GUARDED(g_vc_lock)
-    = LIST_INITIAL_VALUE(g_vc_list);
-static unsigned g_vc_count TA_GUARDED(g_vc_lock) = 0;
-static vc_t* g_active_vc TA_GUARDED(g_vc_lock);
-static unsigned g_active_vc_index TA_GUARDED(g_vc_lock);
-static vc_battery_info_t g_battery_info TA_GUARDED(g_vc_lock);
-
-static mx_status_t vc_set_active_console(unsigned console) TA_REQ(g_vc_lock);
+static mx_status_t vc_set_active_console(unsigned console);
 
 static void vc_toggle_framebuffer();
 
@@ -61,8 +53,7 @@ static void vc_toggle_framebuffer();
 // Process key sequences that affect the console (scrolling, switching
 // console, etc.) without sending input to the current console.  This
 // returns whether this key press was handled.
-static bool vc_handle_control_keys(uint8_t keycode,
-                                   int modifiers) TA_REQ(g_vc_lock) {
+static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
     switch (keycode) {
     case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
         if (modifiers & MOD_ALT) {
@@ -132,8 +123,7 @@ static bool vc_handle_control_keys(uint8_t keycode,
 // Process key sequences that affect the low-level control of the system
 // (switching display ownership, rebooting).  This returns whether this key press
 // was handled.
-static bool vc_handle_device_control_keys(uint8_t keycode,
-                                          int modifiers) TA_REQ(g_vc_lock) {
+static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers){
     switch (keycode) {
     case HID_USAGE_KEY_DELETE:
         // Provide a CTRL-ALT-DEL reboot sequence
@@ -158,39 +148,7 @@ static bool vc_handle_device_control_keys(uint8_t keycode,
     return false;
 }
 
-static void vc_handle_key_press(uint8_t keycode, int modifiers) {
-    mxtl::AutoLock lock(&g_vc_lock);
-
-    // Handle vc-level control keys
-    if (vc_handle_device_control_keys(keycode, modifiers))
-        return;
-
-    // Handle other keys only if we own the display
-    if (atomic_load(&g_vc_owns_display) == 0)
-        return;
-
-    // Handle other control keys
-    if (vc_handle_control_keys(keycode, modifiers))
-        return;
-
-    vc_t* vc = g_active_vc;
-    char output[4];
-    uint32_t length = hid_key_to_vt100_code(
-        keycode, modifiers, vc->keymap, output, sizeof(output));
-    if (length > 0) {
-        if (vc->client_fd >= 0) {
-            write(vc->client_fd, output, length);
-        }
-        vc_scroll_viewport_bottom(vc);
-    }
-}
-
-static int vc_watch_for_keyboard_devices_thread(void* arg) {
-    vc_watch_for_keyboard_devices(vc_handle_key_press);
-    return -1;
-}
-
-static void __vc_set_active(vc_t* vc, unsigned index) TA_REQ(g_vc_lock) {
+static void __vc_set_active(vc_t* vc, unsigned index) {
     if (g_active_vc)
         g_active_vc->active = false;
     vc->active = true;
@@ -199,7 +157,7 @@ static void __vc_set_active(vc_t* vc, unsigned index) TA_REQ(g_vc_lock) {
     g_active_vc_index = index;
 }
 
-static mx_status_t vc_set_console_to_active(vc_t* to_vc) TA_REQ(g_vc_lock) {
+static mx_status_t vc_set_console_to_active(vc_t* to_vc) {
     if (to_vc == NULL)
         return ERR_INVALID_ARGS;
 
@@ -267,8 +225,6 @@ void vc_get_battery_info(vc_battery_info_t* info) {
 }
 
 static void vc_destroy(vc_t* vc) {
-    mxtl::AutoLock lock(&g_vc_lock);
-
     list_delete(&vc->node);
     g_vc_count -= 1;
 
@@ -305,10 +261,7 @@ static void vc_destroy(vc_t* vc) {
     }
 }
 
-//TODO wire output from vc proc to here
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
-    mxtl::AutoLock lock(&g_vc_lock);
-
     vc->invy0 = vc_rows(vc) + 1;
     vc->invy1 = -1;
     const uint8_t* str = (const uint8_t*)buf;
@@ -336,8 +289,6 @@ int g_fb_fd = -1;
 
 // Create a new vc_t and add it to the console list.
 static mx_status_t vc_create(vc_t** vc_out) {
-    mxtl::AutoLock lock(&g_vc_lock);
-
     mx_status_t status;
     vc_t* vc;
     if ((status = vc_alloc(NULL, g_fb_fd, &vc)) < 0) {
@@ -359,7 +310,62 @@ static mx_status_t vc_create(vc_t** vc_out) {
     return NO_ERROR;
 }
 
-static int vc_log_reader_thread(void* arg) {
+#if BUILD_FOR_TEST
+static void vc_toggle_framebuffer() {
+}
+#else
+
+// The entire vc_*() world is single threaded.
+// All the threads below this point acquire the g_vc_lock
+// before calling into the vc world
+//
+// TODO: convert this pile of threads into a single-threaded,
+// ports-based event handler and remove g_vc_lock entirely.
+
+static mtx_t g_vc_lock = MTX_INIT;
+
+// remember whether the virtual console controls the display
+static bool g_vc_owns_display = true;
+
+static void vc_toggle_framebuffer() {
+    uint32_t n = g_vc_owns_display ? 1 : 0;
+    printf("vc: set owner %d\n", n);
+    ioctl_display_set_owner(g_fb_fd, &n);
+}
+
+static void handle_key_press(uint8_t keycode, int modifiers) {
+    mxtl::AutoLock lock(&g_vc_lock);
+
+    // Handle vc-level control keys
+    if (vc_handle_device_control_keys(keycode, modifiers))
+        return;
+
+    // Handle other keys only if we own the display
+    if (!g_vc_owns_display)
+        return;
+
+    // Handle other control keys
+    if (vc_handle_control_keys(keycode, modifiers))
+        return;
+
+    vc_t* vc = g_active_vc;
+    char output[4];
+    uint32_t length = hid_key_to_vt100_code(
+        keycode, modifiers, vc->keymap, output, sizeof(output));
+    if (length > 0) {
+        if (vc->client_fd >= 0) {
+            write(vc->client_fd, output, length);
+        }
+        vc_scroll_viewport_bottom(vc);
+    }
+}
+
+static int input_watcher_thread(void* arg) {
+    vc_watch_for_keyboard_devices(handle_key_press);
+    return -1;
+}
+
+static int log_reader_thread(void* arg) {
     auto vc = reinterpret_cast<vc_t*>(arg);
     mx_handle_t h;
 
@@ -395,20 +401,25 @@ static int vc_log_reader_thread(void* arg) {
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
                  rec->pid, rec->tid);
-        vc_write(vc, tmp, strlen(tmp), 0);
-        vc_write(vc, rec->data, rec->datalen, 0);
-        if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
-            vc_write(vc, "\n", 1, 0);
+        {
+            mxtl::AutoLock lock(&g_vc_lock);
+            vc_write(vc, tmp, strlen(tmp), 0);
+            vc_write(vc, rec->data, rec->datalen, 0);
+            if ((rec->datalen == 0) ||
+                (rec->data[rec->datalen - 1] != '\n')) {
+                vc_write(vc, "\n", 1, 0);
+            }
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
+    mxtl::AutoLock lock(&g_vc_lock);
     vc_write(vc, oops, strlen(oops), 0);
 
     return 0;
 }
 
-static int vc_battery_poll_thread(void* arg) {
+static int battery_poll_thread(void* arg) {
     int battery_fd = static_cast<int>(reinterpret_cast<uintptr_t>(arg));
     char str[16];
     for (;;) {
@@ -445,7 +456,7 @@ static int vc_battery_poll_thread(void* arg) {
     return 0;
 }
 
-static mx_status_t vc_battery_device_added(int dirfd, int event, const char* fn, void* cookie) {
+static mx_status_t battery_device_added(int dirfd, int event, const char* fn, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
         return NO_ERROR;
     }
@@ -458,8 +469,7 @@ static mx_status_t vc_battery_device_added(int dirfd, int event, const char* fn,
 
     printf("vc: found battery \"%s\"\n", fn);
     thrd_t t;
-    int rc = thrd_create_with_name(
-        &t, vc_battery_poll_thread,
+    int rc = thrd_create_with_name(&t, battery_poll_thread,
         reinterpret_cast<void*>(static_cast<uintptr_t>(battery_fd)),
         "vc-battery-poll");
     if (rc != thrd_success) {
@@ -470,17 +480,16 @@ static mx_status_t vc_battery_device_added(int dirfd, int event, const char* fn,
     return NO_ERROR;
 }
 
-static int vc_battery_dir_poll_thread(void* arg) {
+static int battery_watcher_thread(void* arg) {
     int dirfd;
     if ((dirfd = open("/dev/class/battery", O_DIRECTORY | O_RDONLY)) < 0) {
         return -1;
     }
-    mxio_watch_directory(dirfd, vc_battery_device_added, NULL);
+    mxio_watch_directory(dirfd, battery_device_added, NULL);
     close(dirfd);
     return 0;
 }
 
-#if !BUILD_FOR_TEST
 #include <magenta/device/pty.h>
 
 int mkpty(vc_t* vc, int fd[2]) {
@@ -502,10 +511,13 @@ int mkpty(vc_t* vc, int fd[2]) {
     return 0;
 }
 
-static int vc_shell_thread(void* arg) {
+static int _shell_thread(void* arg, bool make_active) {
     vc_t* vc;
-    if (vc_create(&vc)) {
-        return 0;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        if (vc_create(&vc)) {
+            return 0;
+        }
     }
 
     if ((vc->client_fd = open("/dev/misc/ptmx", O_RDWR)) < 0) {
@@ -515,6 +527,7 @@ static int vc_shell_thread(void* arg) {
     for (;;) {
         int fd[2];
         if (mkpty(vc, fd) < 0) {
+            mxtl::AutoLock lock(&g_vc_lock);
             vc_destroy(vc);
             return 0;
         }
@@ -537,41 +550,69 @@ static int vc_shell_thread(void* arg) {
             goto done;
         }
 
+        if (make_active) {
+            // only do this the first time, not on shell restart
+            make_active = false;
+            mxtl::AutoLock lock(&g_vc_lock);
+            vc_set_console_to_active(vc);
+        }
+
         vc->client_fd = fd[0];
 
         for (;;) {
             char data[8192];
             ssize_t r = read(vc->client_fd, data, sizeof(data));
             if (r <= 0) {
-                printf("< %zd >\n", r);
                 break;
             }
-            vc_write(vc, data, r, 0);
+            {
+                mxtl::AutoLock lock(&g_vc_lock);
+                vc_write(vc, data, r, 0);
+            }
         }
 
-        vc->client_fd = -1;
+        {
+            mxtl::AutoLock lock(&g_vc_lock);
+            vc->client_fd = -1;
+        }
         close(fd[0]);
 
         mx_task_kill(proc);
     }
 
 done:
+    mxtl::AutoLock lock(&g_vc_lock);
     vc_destroy(vc);
     return 0;
 }
 
-static void vc_owns_display(bool acquired) {
-    printf("vc: %s display\n", acquired ? "gained" : "lost");
-    atomic_store(&g_vc_owns_display, acquired ? 1 : 0);
+static int shell_thread(void* arg) {
+    return _shell_thread(arg, false);
 }
 
-static void vc_toggle_framebuffer() {
-    uint32_t n = g_vc_owns_display ? 1 : 0;
-    printf("vc: set owner %d\n", n);
-    ioctl_display_set_owner(g_fb_fd, &n);
+static int shell_thread_1st(void* arg) {
+    return _shell_thread(arg, true);
+}
+
+static void set_owns_display(bool acquired) {
+    mxtl::AutoLock lock(&g_vc_lock);
+    printf("vc: %s display\n", acquired ? "gained" : "lost");
+    g_vc_owns_display = acquired;
+    if (acquired && g_active_vc) {
+        vc_gfx_invalidate_all(g_active_vc);
+    }
 }
 
 int main(int argc, char** argv) {
+    bool keep_log = false;
+    while (argc > 1) {
+        if (!strcmp(argv[1],"--keep-log-active")) {
+            keep_log = true;
+        }
+        argc--;
+        argv++;
+    }
+
     int fd;
     for (;;) {
         if ((fd = open("/dev/class/framebuffer/000/virtcon", O_RDWR)) >= 0) {
@@ -582,30 +623,32 @@ int main(int argc, char** argv) {
 
     g_fb_fd = fd;
 
+    // create initial console for debug log
+    vc_t* vc;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        if (vc_create(&vc) != NO_ERROR) {
+            return -1;
+        }
+    }
+    thrd_t t;
+    thrd_create_with_name(&t, log_reader_thread, vc, "vc-log-reader");
+
     // start a thread to listen for new input devices
-    int ret = thrd_create_with_name(&g_input_poll_thread,
-                                    vc_watch_for_keyboard_devices_thread, NULL,
-                                    "vc-inputdev-poll");
+    int ret = thrd_create_with_name(&t, input_watcher_thread, NULL,
+                                    "vc-input-watcher");
     if (ret != thrd_success) {
         xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
 
-    thrd_t u;
-    thrd_create_with_name(&u, vc_battery_dir_poll_thread, NULL,
-                          "vc-battery-dir-poll");
-
-    vc_t* vc;
-    if (vc_create(&vc) == NO_ERROR) {
-        thrd_t t;
-        thrd_create_with_name(&t, vc_log_reader_thread, vc, "vc-log-reader");
-    }
+    thrd_create_with_name(&t, battery_watcher_thread, NULL,
+                          "vc-battery-watcher");
 
     setenv("TERM", "xterm", 1);
 
-    thrd_t t;
-    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
-    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
-    thrd_create_with_name(&t, vc_shell_thread, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, keep_log ? shell_thread : shell_thread_1st, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
 
     mx_handle_t e;
     ioctl_display_get_ownership_change_event(fd, &e);
@@ -613,10 +656,10 @@ int main(int argc, char** argv) {
     for (;;) {
         if (g_vc_owns_display) {
             mx_object_wait_one(e, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL);
-            vc_owns_display(false);
+            set_owns_display(false);
         } else {
             mx_object_wait_one(e, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
-            vc_owns_display(true);
+            set_owns_display(true);
         }
     }
     return NO_ERROR;

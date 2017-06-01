@@ -135,8 +135,7 @@ static inline void vc_invalidate_lines(vc_t* vc, int y, int h) {
     }
 }
 
-static void vc_tc_invalidate(void* cookie, int x0, int y0,
-                             int w, int h) TA_REQ(g_vc_lock) {
+static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h){
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
     vc_invalidate(cookie, x0, y0, w, h);
     vc_invalidate_lines(vc, y0, h);
@@ -159,7 +158,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     }
 }
 
-static void vc_tc_push_scrollback_line(void* cookie, int y) TA_REQ(g_vc_lock) {
+static void vc_tc_push_scrollback_line(void* cookie, int y) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
 
     unsigned dest_row;
@@ -214,8 +213,7 @@ static void vc_set_cursor_hidden(vc_t* vc, bool hide) {
     vc_invalidate_lines(vc, vc->cursor_y, 1);
 }
 
-static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
-                             int line_count) TA_REQ(g_vc_lock) {
+static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
     if (vc->viewport_y < 0) {
         tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
@@ -249,8 +247,7 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src,
     vc_invalidate_lines(vc, 0, vc_rows(vc));
 }
 
-static void vc_tc_setparam(void* cookie, int param, uint8_t* arg,
-                           size_t arglen) TA_REQ(g_vc_lock) {
+static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
     switch (param) {
     case TC_SET_TITLE:
@@ -387,11 +384,6 @@ void vc_render(vc_t* vc) {
 }
 
 void vc_invalidate_all_for_testing(vc_t* vc) {
-    // This function is called from tests which don't use threading and so
-    // don't need locking.  We claim the following lock just to keep
-    // Clang's thread annotations checker happy.
-    mxtl::AutoLock lock(&g_vc_lock);
-
     vc_clear_gfx(vc);
     int scrollback_lines = vc_get_scrollback_lines(vc);
     vc_invalidate(vc, 0, -scrollback_lines,
@@ -410,8 +402,7 @@ vc_char_t* vc_get_scrollback_line_ptr(vc_t* vc, unsigned row) {
     return &vc->scrollback_buf[row * vc->columns];
 }
 
-static void vc_scroll_viewport_abs(vc_t* vc,
-                                          int vpy) TA_REQ(g_vc_lock) {
+static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
     vpy = MIN(vpy, 0);
     vpy = MAX(vpy, -vc_get_scrollback_lines(vc));
     int diff = vpy - vc->viewport_y;

@@ -507,9 +507,6 @@ bool test_scroll_viewport_by_large_delta() {
     for (int lines = 1; lines < 100; ++lines) {
         tc.PutString("\n");
 
-        // Keep the thread checker happy.
-        mxtl::AutoLock lock(&g_vc_lock);
-
         // Scroll up, to show older lines.
         vc_scroll_viewport_top(tc.vc_dev);
         EXPECT_EQ(tc.vc_dev->viewport_y, -lines, "");
@@ -547,10 +544,8 @@ bool test_viewport_scrolling_follows_scrollback() {
     TextconHelper tc(1, 1);
     // Add 3 lines to the scrollback buffer.
     tc.PutString("\n\n\n");
-    {
-        mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_scroll_viewport(tc.vc_dev, -2);
-    }
+    vc_scroll_viewport(tc.vc_dev, -2);
+
     EXPECT_EQ(tc.vc_dev->viewport_y, -2, "");
     int limit = tc.vc_dev->scrollback_rows_max;
     for (int line = 3; line < limit * 2; ++line) {
@@ -572,10 +567,8 @@ bool test_output_when_viewport_scrolled() {
     // Line 1 will move into the scrollback region.
     tc.PutString("1\n 2\n  3\n   4");
     EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
-    {
-        mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_scroll_viewport_top(tc.vc_dev);
-    }
+    vc_scroll_viewport_top(tc.vc_dev);
+
     EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
     // Check redrawing consistency.
     tc.PutString("");
@@ -607,10 +600,7 @@ bool test_scrolling_when_viewport_scrolled() {
     // Line 1 will move into the scrollback region.
     tc.PutString("1\n 2\n  3\n   4");
     EXPECT_EQ(tc.vc_dev->viewport_y, 0, "");
-    {
-        mxtl::AutoLock lock(&g_vc_lock); // Keep the thread checker happy.
-        vc_scroll_viewport_top(tc.vc_dev);
-    }
+    vc_scroll_viewport_top(tc.vc_dev);
     EXPECT_EQ(tc.vc_dev->viewport_y, -1, "");
     // Check redrawing consistency.
     tc.PutString("");

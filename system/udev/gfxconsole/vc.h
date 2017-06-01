@@ -88,13 +88,11 @@ typedef struct vc {
 #define VC_FLAG_HASOUTPUT   (1 << 0)
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
-extern mtx_t g_vc_lock;
-
 const gfx_font* vc_get_font();
 mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev);
 void vc_free(vc_t* vc);
 
-void vc_get_status_line(char* str, int n) TA_REQ(g_vc_lock);
+void vc_get_status_line(char* str, int n);
 
 enum vc_battery_state {
     UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
@@ -104,18 +102,17 @@ typedef struct vc_battery_info {
     enum vc_battery_state state;
     int pct;
 } vc_battery_info_t;
-void vc_get_battery_info(vc_battery_info_t* info) TA_REQ(g_vc_lock);
+void vc_get_battery_info(vc_battery_info_t* info);
 
-void vc_write_status(vc_t* vc) TA_REQ(g_vc_lock);
-void vc_render(vc_t* vc) TA_REQ(g_vc_lock);
+void vc_write_status(vc_t* vc);
+void vc_render(vc_t* vc);
 void vc_invalidate_all_for_testing(vc_t* vc);
 int vc_get_scrollback_lines(vc_t* vc);
 vc_char_t* vc_get_scrollback_line_ptr(vc_t* vc, unsigned row);
-void vc_scroll_viewport(vc_t* vc, int dir) TA_REQ(g_vc_lock);
-void vc_scroll_viewport_top(vc_t* vc) TA_REQ(g_vc_lock);
-void vc_scroll_viewport_bottom(vc_t* vc) TA_REQ(g_vc_lock);
-void vc_set_fullscreen(vc_t* vc, bool fullscreen)
-    TA_REQ(g_vc_lock);
+void vc_scroll_viewport(vc_t* vc, int dir);
+void vc_scroll_viewport_top(vc_t* vc);
+void vc_scroll_viewport_bottom(vc_t* vc);
+void vc_set_fullscreen(vc_t* vc, bool fullscreen);
 
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count,
                         mx_off_t off);
