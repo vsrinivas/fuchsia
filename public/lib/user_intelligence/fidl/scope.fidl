@@ -21,6 +21,7 @@ struct GlobalScope {};
 struct ModuleScope {
   string url;
   string story_id;
+  array<string> module_path;
 };
 
 struct AgentScope {
