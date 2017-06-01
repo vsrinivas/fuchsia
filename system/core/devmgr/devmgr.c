@@ -266,9 +266,11 @@ int service_starter(void* arg) {
     // create a directory for sevice rendezvous
     mkdir("/svc", 0755);
 
-    const char* virtcon = "/boot/bin/gfxconsole";
-    devmgr_launch(svcs_job_handle, "virtual-console",
-                  1, &virtcon, NULL, -1, NULL, NULL, 0);
+    {
+        const char* args[] = { "/boot/bin/gfxconsole", "--keep-log-active" };
+        devmgr_launch(svcs_job_handle, "virtual-console",
+                      switch_to_first_vc() ? 1 : 2, args, NULL, -1, NULL, NULL, 0);
+    }
 
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
