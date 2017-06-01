@@ -179,7 +179,7 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_ATTR_DEF
 #define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
 #define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver_info__
-#define MAGENTA_DRIVER_REC mx_driver_rec_t* __magenta_driver_rec__;
+#define MAGENTA_DRIVER_REC mx_driver_rec_t* __magenta_driver_rec__ __EXPORT;
 
 #define MAGENTA_DRIVER_DEF(Driver,Ops) \
 mx_driver_t MAGENTA_DRIVER_PASTE(_driver_,Driver) = {\
