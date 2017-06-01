@@ -202,7 +202,7 @@ static void AddProgbits(elf::Reader* elf,
       if (err == -pte_bad_image)
         continue;
       if (err < 0) {
-        fprintf(stderr, "reading prog code at %lx:%lx from %s: %s (%s): %d\n",
+        fprintf(stderr, "reading prog code at %llx:%llx from %s: %s (%s): %d\n",
                 phdr.p_vaddr, phdr.p_filesz, file_name,
                 pt_errstr(pt_errcode(err)), errno ? strerror(errno) : "", err);
         return;
