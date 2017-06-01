@@ -1,4 +1,4 @@
-# mx_status_t bad_syscall(uint64_t num)
+// mx_status_t bad_syscall(uint64_t num)
 .global bad_syscall
 .type bad_syscall, STT_FUNC
 bad_syscall:
