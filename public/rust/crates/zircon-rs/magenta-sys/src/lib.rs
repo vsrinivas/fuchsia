@@ -94,6 +94,10 @@ bitflags! {
         const MX_USER_SIGNAL_6            = 1 << 30,
         const MX_USER_SIGNAL_7            = 1 << 31,
 
+        const MX_OBJECT_READABLE          = MX_OBJECT_SIGNAL_0.bits,
+        const MX_OBJECT_WRITABLE          = MX_OBJECT_SIGNAL_1.bits,
+        const MX_OBJECT_PEER_CLOSED       = MX_OBJECT_SIGNAL_2.bits,
+
         // Event
         const MX_EVENT_SIGNALED           = MX_OBJECT_SIGNAL_3.bits,
 
@@ -113,6 +117,37 @@ bitflags! {
         const MX_SOCKET_READABLE          = MX_OBJECT_SIGNAL_0.bits,
         const MX_SOCKET_WRITABLE          = MX_OBJECT_SIGNAL_1.bits,
         const MX_SOCKET_PEER_CLOSED       = MX_OBJECT_SIGNAL_2.bits,
+
+        // Port
+        const MX_PORT_READABLE            = MX_OBJECT_READABLE.bits,
+
+        // Resource
+        const MX_RESOURCE_DESTROYED       = MX_OBJECT_SIGNAL_3.bits,
+        const MX_RESOURCE_READABLE        = MX_OBJECT_READABLE.bits,
+        const MX_RESOURCE_WRITABLE        = MX_OBJECT_WRITABLE.bits,
+        const MX_RESOURCE_CHILD_ADDED     = MX_OBJECT_SIGNAL_4.bits,
+
+        // Fifo
+        const MX_FIFO_READABLE            = MX_OBJECT_READABLE.bits,
+        const MX_FIFO_WRITABLE            = MX_OBJECT_WRITABLE.bits,
+        const MX_FIFO_PEER_CLOSED         = MX_OBJECT_PEER_CLOSED.bits,
+
+        // Job
+        const MX_JOB_NO_PROCESSES         = MX_OBJECT_SIGNAL_3.bits,
+        const MX_JOB_NO_JOBS              = MX_OBJECT_SIGNAL_4.bits,
+
+        // Process
+        const MX_PROCESS_TERMINATED       = MX_OBJECT_SIGNAL_3.bits,
+
+        // Thread
+        const MX_THREAD_TERMINATED        = MX_OBJECT_SIGNAL_3.bits,
+
+        // Log
+        const MX_LOG_READABLE             = MX_OBJECT_READABLE.bits,
+        const MX_LOG_WRITABLE             = MX_OBJECT_WRITABLE.bits,
+
+        // Timer
+        const MX_TIMER_SIGNALED           = MX_OBJECT_SIGNAL_3.bits,
     }
 }
 
@@ -172,6 +207,13 @@ pub struct mx_wait_item_t {
 }
 
 #[repr(C)]
+pub struct mx_waitset_result_t {
+    pub cookie: u64,
+    pub status: mx_status_t,
+    pub observed: mx_signals_t,
+}
+
+#[repr(C)]
 pub struct mx_channel_call_args_t {
     pub wr_bytes: *const u8,
     pub wr_handles: *const mx_handle_t,
@@ -212,7 +254,7 @@ pub struct mx_ecam_window_t {
 }
 
 #[repr(C)]
-pub struct mx_pcie_get_nth_info_t {
+pub struct mx_pcie_device_info_t {
     pub vendor_id: u16,
     pub device_id: u16,
     pub base_class: u8,
@@ -222,6 +264,14 @@ pub struct mx_pcie_get_nth_info_t {
     pub bus_id: u8,
     pub dev_id: u8,
     pub func_id: u8,
+}
+
+#[repr(C)]
+pub struct mx_pci_resource_t {
+    pub type_: u32,
+    pub size: usize,
+    // TODO: Actually a union
+    pub pio_addr: usize,
 }
 
 // TODO: Actually a union

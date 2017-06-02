@@ -323,6 +323,30 @@ extern {
         requeue_count: u32
         ) -> mx_status_t;
 
+    pub fn mx_waitset_create(
+        options: u32,
+        out: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_waitset_add(
+        waitset_handle: mx_handle_t,
+        cookie: u64,
+        handle: mx_handle_t,
+        signals: mx_signals_t
+        ) -> mx_status_t;
+
+    pub fn mx_waitset_remove(
+        waitset_handle: mx_handle_t,
+        cookie: u64
+        ) -> mx_status_t;
+
+    pub fn mx_waitset_wait(
+        waitset_handle: mx_handle_t,
+        deadline: mx_time_t,
+        results: *mut mx_waitset_result_t,
+        count: *mut u32
+        ) -> mx_status_t;
+
     pub fn mx_port_create(
         options: u32,
         out: *mut mx_handle_t
@@ -352,6 +376,23 @@ extern {
         handle: mx_handle_t,
         source: mx_handle_t,
         key: u64
+        ) -> mx_status_t;
+
+    pub fn mx_timer_create(
+        options: u32,
+        clock_id: u32,
+        out: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_timer_start(
+        handle: mx_handle_t,
+        deadline: mx_time_t,
+        period: mx_duration_t,
+        slack: mx_duration_t
+        ) -> mx_status_t;
+
+    pub fn mx_timer_cancel(
+        handle: mx_handle_t
         ) -> mx_status_t;
 
     pub fn mx_vmo_create(
@@ -401,6 +442,11 @@ extern {
         offset: u64,
         size: u64,
         out: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_vmo_set_cache_policy(
+        handle: mx_handle_t,
+        cache_policy: u32
         ) -> mx_status_t;
 
     pub fn mx_vmar_allocate(
@@ -638,7 +684,7 @@ extern {
     pub fn mx_pci_get_nth_device(
         handle: mx_handle_t,
         index: u32,
-        out_info: *mut mx_pcie_get_nth_info_t
+        out_info: *mut mx_pcie_device_info_t
         ) -> mx_handle_t;
 
     pub fn mx_pci_claim_device(
@@ -664,6 +710,17 @@ extern {
         bar_num: u32,
         cache_policy: mx_cache_policy_t,
         out_handle: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_pci_get_bar(
+        handle: mx_handle_t,
+        bar_num: u32,
+        out_bar: *mut mx_pci_resource_t
+        ) -> mx_status_t;
+
+    pub fn mx_pci_get_config(
+        handle: mx_handle_t,
+        out_config: *mut mx_pci_resource_t
         ) -> mx_status_t;
 
     pub fn mx_pci_io_write(
@@ -778,30 +835,35 @@ extern {
         result_len: u32
         ) -> mx_status_t;
 
+    pub fn mx_system_mexec(
+        kernel: mx_handle_t,
+        bootimage: mx_handle_t
+        ) -> mx_status_t;
+
     pub fn mx_syscall_test_0(
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_1(
         a: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_2(
         a: isize,
         b: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_3(
         a: isize,
         b: isize,
         c: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_4(
         a: isize,
         b: isize,
         c: isize,
         d: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_5(
         a: isize,
@@ -809,7 +871,7 @@ extern {
         c: isize,
         d: isize,
         e: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_6(
         a: isize,
@@ -818,7 +880,7 @@ extern {
         d: isize,
         e: isize,
         f: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_7(
         a: isize,
@@ -828,7 +890,7 @@ extern {
         e: isize,
         f: isize,
         g: isize
-        ) -> isize;
+        ) -> mx_status_t;
 
     pub fn mx_syscall_test_8(
         a: isize,
@@ -839,7 +901,13 @@ extern {
         f: isize,
         g: isize,
         h: isize
-        ) -> isize;
+        ) -> mx_status_t;
+
+    pub fn mx_syscall_test_wrapper(
+        a: isize,
+        b: isize,
+        c: isize
+        ) -> mx_status_t;
 
 
 }
