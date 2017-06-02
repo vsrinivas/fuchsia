@@ -98,10 +98,16 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
         unittest_printf_critical("    %-51s [RUNNING]", name);
         struct test_info test_info;
         *current_test_info = &test_info;
-        if (!test()) {
-            *all_success = false;
-        } else {
+
+        if (!test())
+            test_info.all_ok = false;
+
+        // Recheck all_ok in case there was a failure in a C++ destructor
+        // after the "return" statement in END_TEST.
+        if (test_info.all_ok) {
             unittest_printf_critical(" [PASSED] \n");
+        } else {
+            *all_success = false;
         }
         current_test_info = NULL;
     } else {
