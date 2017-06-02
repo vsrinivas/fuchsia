@@ -88,9 +88,6 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
     /* set the tss SP0 value to point at the top of our stack */
     x86_set_tss_sp(newthread->stack_top);
 
-    /* set the kernel sp in our per cpu gs: structure */
-    x86_set_percpu_kernel_sp(newthread->stack_top);
-
     /* user and kernel gs have been swapped, so unswap them when loading
      * from the msrs
      */
