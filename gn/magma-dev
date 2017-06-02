@@ -63,7 +63,7 @@
     "drivers": [
         {
             "binary": "libmsd-intel-gen-test.so",
-            "bootfs_path": "lib/driver/libmsd-intel-gen-test.so"
+            "bootfs_path": "driver/libmsd-intel-gen-test.so"
         }
     ]
 }

@@ -11,15 +11,15 @@
     "drivers": [
         {
             "binary": "libihda-controller.so",
-            "bootfs_path": "lib/driver/ihda-controller.so"
+            "bootfs_path": "driver/ihda-controller.so"
         },
         {
             "binary": "libqemu-ihda-codec.so",
-            "bootfs_path": "lib/driver/qemu-ihda-codec.so"
+            "bootfs_path": "driver/qemu-ihda-codec.so"
         },
         {
             "binary": "librealtek-ihda-codec.so",
-            "bootfs_path": "lib/driver/realtek-ihda-codec.so"
+            "bootfs_path": "driver/realtek-ihda-codec.so"
         },
         {
             "binary": "libaudio-dispatcher-pool.so",

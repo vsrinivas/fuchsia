@@ -6,7 +6,7 @@
     "drivers": [
         {
             "binary": "rt5370.so",
-            "bootfs_path": "lib/driver/rt5370.so"
+            "bootfs_path": "driver/rt5370.so"
         },
         {
             "binary": "rt2870.bin",
@@ -14,7 +14,7 @@
         },
         {
             "binary": "wlan.so",
-            "bootfs_path": "lib/driver/wlan.so"
+            "bootfs_path": "driver/wlan.so"
         }
     ],
     "gopaths": [
