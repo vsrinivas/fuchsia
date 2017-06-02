@@ -20,7 +20,7 @@ Which processes are using all of the memory?
 Use the `ps` tool:
 
 ```
-magenta$ ps
+$ ps
 TASK           PSS PRIVATE  SHARED NAME
 j:1028                             root
   p:1041   1390.7k   1388k     32k bin/devmgr
@@ -58,6 +58,21 @@ one other process. Note that this does not account for shared VMOs that are not
 mapped. It also does not indicate how many processes share the memory: it could
 be 2, it could be 50.
 
+### Visualize memory usage
+
+If you have a Fuchsia build, you can use treemap to visualize memory usage by
+the system.
+
+ 1. On your host machine, source the `env.sh` script into your shell.
+ 2. Also on your host machine, run the following command from the root of your
+    Fuchsia checkout:
+
+    ```fcmd ps --json | ./scripts/memory/treemap.py > mem.html```
+ 3. Open `mem.html` in a browser.
+
+The `--json` flag instructs `ps` to produce output in JSON, which is then
+parsed by the `treemap.py` script.
+
 ### Dump a process's detailed memory maps
 
 If you want to see why a specific process uses so much memory, you can run the
@@ -66,7 +81,7 @@ into the tea leaves. (The memory ranges don't have good names yet, but if you
 squint you can see dynamic libraries, heap, stack etc.)
 
 ```
-magenta$ vmaps help
+$ vmaps help
 Usage: vmaps <process-koid>
 
 Dumps a process's memory maps to stdout.
@@ -89,7 +104,7 @@ Size columns, all in bytes:
     acceessable by this process) or shared by multiple processes.
 
 ```
-magenta$ vmaps 3020
+$ vmaps 3020
 /A ________01000000-00007ffffffff000      128.0T:sz              unnamed
 /R ________01000000-00007ffffffff000      128.0T:sz              root
 ...
@@ -137,7 +152,7 @@ It also shows whether a given VMO is a clone, along with its parent's koid.
 > NOTE: This is a kernel command, and will print to the kernel console.
 
 ```
-magenta$ k mx vmos 1102
+$ k mx vmos 1102
 process [1102]:
 Handles to VMOs:
       handle rights  koid parent #chld #map #shr    size   alloc name
