@@ -70,6 +70,14 @@ void LedgerRepositoryImpl::Duplicate(
   callback(Status::OK);
 }
 
+void LedgerRepositoryImpl::SetSyncStateWatcher(
+    fidl::InterfaceHandle<SyncWatcher> watcher,
+    const SetSyncStateWatcherCallback& callback) {
+  FTL_NOTIMPLEMENTED()
+      << "LedgerRepository::SetSyncStateWatcher is not implemented";
+  callback(Status::UNKNOWN_ERROR);
+}
+
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;

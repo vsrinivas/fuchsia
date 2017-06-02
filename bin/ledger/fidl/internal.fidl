@@ -50,4 +50,9 @@ interface LedgerRepository {
 
   // Binds a new LedgerRepository handle to this repository.
   Duplicate(LedgerRepository& request) => (Status status);
+
+  // Sets a watcher to track the synchronization state of a user's Ledger. The
+  // current state is immediately sent to the watcher when this method is
+  // called.
+  SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
 };

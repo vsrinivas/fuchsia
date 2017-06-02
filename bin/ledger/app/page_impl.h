@@ -58,6 +58,10 @@ class PageImpl : public Page {
 
   void Rollback(const RollbackCallback& callback) override;
 
+  void SetSyncStateWatcher(
+      fidl::InterfaceHandle<SyncWatcher> watcher,
+      const SetSyncStateWatcherCallback& callback) override;
+
   PageDelegate* delegate_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);

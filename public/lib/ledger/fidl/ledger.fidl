@@ -151,6 +151,11 @@ interface Page {
   StartTransaction() => (Status status);
   Commit() => (Status status);
   Rollback() => (Status status);
+
+  // Sets a watcher to track the synchronisation state of this page. The
+  // current state is immediately sent to the watcher when this method is
+  // called.
+  SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
 };
 
 // The synchronization priority of a reference.
@@ -383,4 +388,19 @@ interface ConflictResolver {
   // of differences, i.e. conflicting keys, between the two versions.
   Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
           MergeResultProvider result_provider);
+};
+
+// Synchronization state.
+enum SyncState {
+  IDLE = 0,
+  PENDING,
+  IN_PROGRESS,
+};
+
+// Watcher interface to be implemented by clients who wish to follow the
+// synchronization status of their ledger. SyncStateChanged callback must be
+// called for new state change calls to be sent.
+interface SyncWatcher {
+  SyncStateChanged(SyncState download_status,
+      SyncState upload_status) => ();
 };

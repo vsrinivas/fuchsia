@@ -39,6 +39,9 @@ class LedgerRepositoryImpl : public LedgerRepository {
                  const GetLedgerCallback& callback) override;
   void Duplicate(fidl::InterfaceRequest<LedgerRepository> request,
                  const DuplicateCallback& callback) override;
+  void SetSyncStateWatcher(
+      fidl::InterfaceHandle<SyncWatcher> watcher,
+      const SetSyncStateWatcherCallback& callback) override;
 
   void CheckEmpty();
 
