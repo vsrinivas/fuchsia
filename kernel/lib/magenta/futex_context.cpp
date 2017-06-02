@@ -118,31 +118,29 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
     if (futex_key % sizeof(int))
         return ERR_INVALID_ARGS;
 
-    {
-        AutoLock lock(&lock_);
+    AutoLock lock(&lock_);
 
-        FutexNode* node = futex_table_.erase(futex_key);
-        if (!node) {
-            // nothing blocked on this futex if we can't find it
-            return NO_ERROR;
-        }
-        DEBUG_ASSERT(node->GetKey() == futex_key);
-
-        FutexNode* wake_head = node;
-        node = FutexNode::RemoveFromHead(node, count, futex_key, 0u);
-        // node is now the new blocked thread list head
-
-        if (node != nullptr) {
-            DEBUG_ASSERT(node->GetKey() == futex_key);
-            futex_table_.insert(node);
-        }
-
-        // Traversing this list of threads must be done while holding the
-        // lock, because any of these threads might wake up from a timeout
-        // and call FutexWait(), which would clobber the "next" pointer in
-        // the thread's FutexNode.
-        FutexNode::WakeThreads(wake_head);
+    FutexNode* node = futex_table_.erase(futex_key);
+    if (!node) {
+        // nothing blocked on this futex if we can't find it
+        return NO_ERROR;
     }
+    DEBUG_ASSERT(node->GetKey() == futex_key);
+
+    FutexNode* wake_head = node;
+    node = FutexNode::RemoveFromHead(node, count, futex_key, 0u);
+    // node is now the new blocked thread list head
+
+    if (node != nullptr) {
+        DEBUG_ASSERT(node->GetKey() == futex_key);
+        futex_table_.insert(node);
+    }
+
+    // Traversing this list of threads must be done while holding the
+    // lock, because any of these threads might wake up from a timeout
+    // and call FutexWait(), which would clobber the "next" pointer in
+    // the thread's FutexNode.
+    FutexNode::WakeThreads(wake_head);
 
     return NO_ERROR;
 }
