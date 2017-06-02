@@ -31,6 +31,7 @@ PROJECT_DEPENDENCIES = [
     'apps/modules/common',
     'apps/modules/dashboard',
     'apps/mondrian',
+    'apps/xi',
     'third_party/dart-pkg',
 ]
 
