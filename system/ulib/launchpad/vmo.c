@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <launchpad/vmo.h>
+#include <magenta/syscalls.h>
 #include <mxio/io.h>
 
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 
 // TODO(mcgrathr): Drop this interface altogether, since mxio_get_vmo
@@ -23,5 +25,14 @@ mx_handle_t launchpad_vmo_from_file(const char* filename) {
         return ERR_IO;
     mx_handle_t vmo = launchpad_vmo_from_fd(fd);
     close(fd);
+
+    if (strlen(filename) >= MX_MAX_NAME_LEN) {
+        const char* p = strrchr(filename, '/');
+        if (p != NULL) {
+            filename = p + 1;
+        }
+    }
+
+    mx_object_set_property(vmo, MX_PROP_NAME, filename, strlen(filename));
     return vmo;
 }
