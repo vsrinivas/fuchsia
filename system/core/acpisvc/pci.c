@@ -347,6 +347,7 @@ fail:
 struct report_current_resources_ctx {
     mx_handle_t pci_handle;
     bool device_is_root_bridge;
+    bool add_pass;
 };
 
 static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void* _ctx) {
@@ -392,6 +393,9 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         base = addr.minimum;
         len = addr.maximum - base + 1;
 
+        // PCI root bridges report downstream resources via _CRS.  Since we're
+        // gathering data on acceptable ranges for PCI to use for MMIO, consider
+        // non-consume-only address resources to be valid for PCI MMIO.
         if (ctx->device_is_root_bridge && !addr.consumed_only) {
             add_range = true;
         }
@@ -409,17 +413,16 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         return AE_OK;
     }
 
-    // Ignore empty regions that are reported, and don't try adding regions.
-    // Skipping adds is a conservative choice to protect against regions that
-    // are under PCIe, but are fixed reservations for other things (e.g. the low
-    // memory graphics window that is decoded by ISA).
-    //
-    // If we decide to process adds in the future, it should be done in two
-    // passes.  First adding in adds we find, then subtracting out things that
-    // are being consumed elsewhere.  This will force an ordering on the
-    // operations, and be a conservative protection against inconsistent
-    // information in the _CRS tables.
-    if (len == 0 || add_range == true) {
+    // Ignore empty regions that are reported, and skip any resources that
+    // aren't for the pass we're doing.
+    if (len == 0 || add_range != ctx->add_pass) {
+        return AE_OK;
+    }
+
+    if (add_range && is_mmio && base < 1024 * 1024) {
+        // The PC platform defines many legacy regions below 1MB that we do not
+        // want PCIe to try to map onto.
+        xprintf("Skipping adding MMIO range, due to being below 1MB\n");
         return AE_OK;
     }
 
@@ -429,8 +432,12 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     mx_status_t status = mx_pci_add_subtract_io_range(
             ctx->pci_handle, is_mmio, base, len, add_range);
     if (status != NO_ERROR) {
-        // If we are subtracting a range and fail, abort.  This is bad.
-        return AE_ERROR;
+        if (add_range) {
+            xprintf("Failed to add range: %d\n", status);
+        } else {
+            // If we are subtracting a range and fail, abort.  This is bad.
+            return AE_ERROR;
+        }
     }
     return AE_OK;
 }
@@ -448,7 +455,6 @@ static ACPI_STATUS report_current_resources_device_cb(
     ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
     ACPI_FREE(info);
-
 
     status = AcpiWalkResources(object, (char*)"_CRS", report_current_resources_resource_cb, ctx);
     if (status == AE_NOT_FOUND || status == AE_OK) {
@@ -468,17 +474,34 @@ static ACPI_STATUS report_current_resources_device_cb(
  * @return NO_ERROR on success
  */
 mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
+    // First we search for resources to add, then we subtract out things that
+    // are being consumed elsewhere.  This forces an ordering on the
+    // operations so that it should be consistent, and should protect against
+    // inconistencies in the _CRS methods.
+
+    // Walk the device tree and add to the PCIe IO ranges any resources
+    // "produced" by the PCI root in the ACPI namespace.
     struct report_current_resources_ctx ctx = {
         .pci_handle = root_resource_handle,
         .device_is_root_bridge = false,
+        .add_pass = true,
     };
-
-    // Walk the device tree and integrate found resources into the PCIe IO
-    // ranges (in particular, removing ones found to be in use).
     ACPI_STATUS status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
     if (status != AE_OK) {
         return ERR_INTERNAL;
     }
+
+    // Removes resources we believe are in use by other parts of the platform
+    ctx = (struct report_current_resources_ctx){
+        .pci_handle = root_resource_handle,
+        .device_is_root_bridge = false,
+        .add_pass = false,
+    };
+    status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
+    if (status != AE_OK) {
+        return ERR_INTERNAL;
+    }
+
 
     return NO_ERROR;
 }
