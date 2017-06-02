@@ -384,7 +384,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
         }
 
         if (!addr.min_address_fixed || !addr.max_address_fixed || addr.maximum < addr.minimum) {
-            printf("WARNING: ACPI found bad _CRS entry\n");
+            printf("WARNING: ACPI found bad _CRS address entry\n");
             return AE_OK;
         }
 
@@ -402,8 +402,13 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     } else if (resource_is_io(res)) {
         resource_io_t io;
         mx_status_t status = resource_parse_io(res, &io);
-        if (status != NO_ERROR || io.minimum != io.maximum) {
+        if (status != NO_ERROR) {
             return AE_ERROR;
+        }
+
+        if (io.minimum != io.maximum) {
+            printf("WARNING: ACPI found bad _CRS IO entry\n");
+            return AE_OK;
         }
 
         is_mmio = false;
