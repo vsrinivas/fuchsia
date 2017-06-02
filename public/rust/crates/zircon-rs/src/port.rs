@@ -13,6 +13,7 @@ use {sys, into_result};
 /// [port](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/port.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Port(Handle);
 
 impl HandleBase for Port {

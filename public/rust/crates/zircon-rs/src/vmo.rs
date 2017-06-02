@@ -12,6 +12,7 @@ use std::{mem, ptr};
 /// [virtual memory object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Vmo(Handle);
 
 impl HandleBase for Vmo {

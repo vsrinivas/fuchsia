@@ -10,6 +10,7 @@ use {sys, into_result};
 /// An object representing a Magenta fifo.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Fifo(Handle);
 
 impl HandleBase for Fifo {

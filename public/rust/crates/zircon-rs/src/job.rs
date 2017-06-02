@@ -9,6 +9,7 @@ use {HandleBase, Handle, HandleRef};
 /// An object representing a Magenta job.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Job(Handle);
 
 impl HandleBase for Job {

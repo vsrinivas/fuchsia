@@ -9,6 +9,7 @@ use {HandleBase, Handle, HandleRef};
 /// An object representing a Magenta thread.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Thread(Handle);
 
 impl HandleBase for Thread {

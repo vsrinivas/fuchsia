@@ -9,6 +9,7 @@ use {HandleBase, Handle, HandleRef};
 /// An object representing a Magenta process.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Process(Handle);
 
 impl HandleBase for Process {

@@ -11,6 +11,7 @@ use {sys, into_result};
 /// [event object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/event.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Event(Handle);
 
 impl HandleBase for Event {

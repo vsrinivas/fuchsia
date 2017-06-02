@@ -11,6 +11,7 @@ use {sys, into_result};
 /// [event pair](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Other-IPC_Events_Event-Pairs_and-User-Signals).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct EventPair(Handle);
 
 impl HandleBase for EventPair {

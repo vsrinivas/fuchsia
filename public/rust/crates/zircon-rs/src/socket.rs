@@ -13,6 +13,7 @@ use std::ptr;
 /// [socket](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Message-Passing_Sockets-and-Channels).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Socket(Handle);
 
 impl HandleBase for Socket {

@@ -13,6 +13,7 @@ use std::mem;
 /// [channel](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Channel(Handle);
 
 impl HandleBase for Channel {
