@@ -63,16 +63,19 @@ bool PortObserver::OnStateChange(mx_signals_t new_state) {
 }
 
 bool PortObserver::OnCancel(Handle* handle) {
-    if (handle_ == handle)
+    if (handle_ == handle) {
         remove_ = true;
-    return false;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
     if ((key_ != key) || (handle_ != handle) || (port_.get() != port))
         return false;
     remove_ = true;
-    return false;
+    return true;
 }
 
 void PortObserver::OnRemoved() {
@@ -212,7 +215,7 @@ bool PortDispatcherV2::CanReap(PortObserver* observer, PortPacket* port_packet) 
     AutoLock al(&lock_);
     if (!port_packet->InContainer())
         return true;
-    // The destruction will happen when the packet is dequeued.
+    // The destruction will happen when the packet is dequeued or in CancelQueued()
     DEBUG_ASSERT(port_packet->observer == nullptr);
     port_packet->observer = observer;
     return false;
@@ -239,4 +242,53 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
 
     dispatcher->add_observer(observer);
     return NO_ERROR;
+}
+
+bool PortDispatcherV2::CancelQueued(const void* handle, uint64_t key) {
+    canary_.Assert();
+
+    AutoLock al(&lock_);
+
+    // This loop can take a while if there are many items.
+    // In practice, the number of pending signal packets is
+    // approximately the number of signaled _and_ watched
+    // objects plus the number of pending user-queued
+    // packets.
+    //
+    // There are two strategies to deal with too much
+    // looping here if that is seen in practice.
+    //
+    // 1. Swap the |packets_| list for an empty list and
+    //    release the lock. New arriving packets are
+    //    added to the empty list while the loop happens.
+    //    Readers will be blocked but the watched objects
+    //    will be fully operational. Once processing
+    //    is done the lists are appended.
+    //
+    // 2. Segregate user packets from signal packets
+    //    and deliver them in order via timestamps or
+    //    a side structure.
+
+    bool packet_removed = false;
+
+    for (auto it = packets_.begin(); it != packets_.end();) {
+        if (it->observer == nullptr) {
+            ++it;
+            continue;
+        }
+
+        auto ob_handle = it->observer->handle();
+        auto ob_key = it->observer->key();
+
+        if ((ob_handle == handle) && (ob_key == key)) {
+            auto to_remove = it;
+            ++it;
+            delete packets_.erase(to_remove)->observer;
+            packet_removed = true;
+        } else {
+            ++it;
+        }
+    }
+
+    return packet_removed;
 }

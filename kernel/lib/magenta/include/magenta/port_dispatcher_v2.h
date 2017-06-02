@@ -23,7 +23,7 @@
 
 // Important pointers diagram for PortObserver
 //
-// The diagrams below show the *relevant* pointers on diferent
+// The diagrams below show the *relevant* pointers on different
 // states of the system. The pure header view is really the
 // union of all these pointer which can be confusing.
 //
@@ -51,7 +51,7 @@
 //   to the port via |w| --> observer --> |rc| calls.
 //
 // 2) Situation after the packet is queued in the one-shot case on
-//    signal match or the wait is cancelled.
+//    signal match or the wait is canceled.
 //
 //  +----------+                            +--------+
 //  | object   |                            |  Port  |
@@ -70,7 +70,7 @@
 //   but the observer still owns the port via |rc|.
 //
 //   For repeating ports |w| is always valid until the wait is
-//   cancelled.
+//   canceled.
 //
 //   The |o1| pointer is used to destroy the port observer only
 //   when cancelation happens and the port still owns the packet.
@@ -98,6 +98,11 @@ public:
     PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcherV2> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
+
+    // Returns void pointer because this method can only be used for comparing
+    // values. Calling a method on the handle will very likely cause a deadlock.
+    const void* handle() const { return handle_; }
+    uint64_t key() const { return key_; }
 
 private:
     PortObserver(const PortObserver&) = delete;
@@ -145,6 +150,10 @@ public:
     // Called under the handle table lock.
     mx_status_t MakeObservers(uint32_t options, Handle* handle,
                               uint64_t key, mx_signals_t signals);
+
+    // Called under the handle table lock. Returns true if at least one packet was
+    // removed from the queue.
+    bool CancelQueued(const void* handle, uint64_t key);
 
 private:
     PortDispatcherV2(uint32_t options);

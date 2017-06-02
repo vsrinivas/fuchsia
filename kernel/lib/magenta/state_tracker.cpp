@@ -12,15 +12,15 @@
 namespace {
 
 template <typename Func>
-void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
-    bool awoke_threads = false;
+bool CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
+    bool observer_found = false;
 
     StateTracker::ObserverList obs_to_remove;
 
     {
         AutoLock lock(observer_lock);
         for (auto it = observers->begin(); it != observers->end();) {
-            awoke_threads = f(it.CopyPointer()) || awoke_threads;
+            observer_found = f(it.CopyPointer()) || observer_found;
             if (it->remove()) {
                 auto to_remove = it;
                 ++it;
@@ -35,9 +35,9 @@ void CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock,
         obs_to_remove.pop_front()->OnRemoved();
     }
 
-    if (awoke_threads)
-        thread_reschedule();
+    return observer_found;
 }
+
 }  // namespace
 
 void StateTracker::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
@@ -64,18 +64,18 @@ void StateTracker::RemoveObserver(StateObserver* observer) {
     observers_.erase(*observer);
 }
 
-void StateTracker::Cancel(Handle* handle) {
+bool StateTracker::Cancel(Handle* handle) {
     canary_.Assert();
 
-    CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
+    return CancelWithFunc(&observers_, &lock_, [handle](StateObserver* obs) {
         return obs->OnCancel(handle);
     });
 }
 
-void StateTracker::CancelByKey(Handle* handle, const void* port, uint64_t key) {
+bool StateTracker::CancelByKey(Handle* handle, const void* port, uint64_t key) {
     canary_.Assert();
 
-    CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
+    return CancelWithFunc(&observers_, &lock_, [handle, port, key](StateObserver* obs) {
         return obs->OnCancelByKey(handle, port, key);
     });
 }

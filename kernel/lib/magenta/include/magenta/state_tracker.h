@@ -39,11 +39,11 @@ public:
 
     // Called when observers of the handle's state (e.g., waits on the handle) should be
     // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
-    // destroyed or transferred.
-    void Cancel(Handle* handle);
+    // destroyed or transferred. Returns true if at least one observer was found.
+    bool Cancel(Handle* handle);
 
     // Like Cancel() but issued via via mx_port_cancel().
-    void CancelByKey(Handle* handle, const void* port, uint64_t key);
+    bool CancelByKey(Handle* handle, const void* port, uint64_t key);
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)

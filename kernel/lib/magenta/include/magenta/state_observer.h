@@ -19,7 +19,7 @@ public:
     // Optional initial counts. Each object might have a different idea of them
     // and currently we assume at most two. The state observers will iterate on
     // the entries and might fire if |signal| matches one of their trigger signals
-    // so each entry should be assocaited with a unique signal or with 0 if not
+    // so each entry should be associated with a unique signal or with 0 if not
     // applicable.
     struct CountInfo {
         struct {
@@ -42,12 +42,14 @@ public:
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
-    // also be destroyed shortly afterwards.) Returns true if a thread was awoken.
+    // also be destroyed shortly afterwards.) Returns true if |this| observer handled the call
+    // which normally means it was bound to |handle|.
     // WARNING: This is called under StateTracker's mutex.
     virtual bool OnCancel(Handle* handle) = 0;
 
     // Called when the client wants to cancel an outstanding object_wait_aysnc(..key..). In this
-    // case the object might not be destroyed. Returns true if a thread was awoken.
+    // case the object might not be destroyed. Returns true if |this| observer handled the call
+    // which normally means it was bound to |handle| and |key|.
     // WARNING: This is called under StateTracker's mutex.
     virtual bool OnCancelByKey(Handle* handle, const void* port, uint64_t key) { return false; }
 

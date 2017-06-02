@@ -194,18 +194,18 @@ mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key
 
     {
         AutoLock lock(up->handle_table_lock());
-        Handle* handle = up->GetHandleLocked(source);
-        if (!handle)
+        Handle* watched = up->GetHandleLocked(source);
+        if (!watched)
             return ERR_BAD_HANDLE;
-        if (!magenta_rights_check(handle, MX_RIGHT_WRITE))
+        if (!magenta_rights_check(watched, MX_RIGHT_READ))
             return ERR_ACCESS_DENIED;
 
-        auto state_tracker = handle->dispatcher()->get_state_tracker();
+        auto state_tracker = watched->dispatcher()->get_state_tracker();
         if (!state_tracker)
             return ERR_NOT_SUPPORTED;
 
-        state_tracker->CancelByKey(handle, port.get(), key);
+        bool had_observer = state_tracker->CancelByKey(watched, port.get(), key);
+        bool packet_removed = port->CancelQueued(watched, key);
+        return (had_observer || packet_removed) ? NO_ERROR : ERR_NOT_FOUND;
     }
-
-    return NO_ERROR;
 }

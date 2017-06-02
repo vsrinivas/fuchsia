@@ -377,6 +377,7 @@ static bool cancel_event(uint32_t wait_mode) {
             ev, port, keys[ix], MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
     }
 
+    // We cancel before it is signaled so no packets from |13| are seen.
     EXPECT_EQ(mx_port_cancel(port, ev, 13u), NO_ERROR, "");
 
     for (int ix = 0; ix != 2; ++ix) {
@@ -398,6 +399,11 @@ static bool cancel_event(uint32_t wait_mode) {
         EXPECT_EQ(out.signal.observed, MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "");
     }
 
+    if (wait_mode == MX_WAIT_ASYNC_ONCE) {
+        // We cancel after the packet has been delivered.
+        EXPECT_EQ(mx_port_cancel(port, ev, 128u), ERR_NOT_FOUND, "");
+    }
+
     EXPECT_EQ(wait_count, 2, "");
     EXPECT_EQ(key_sum, keys[0] + keys[2], "");
 
@@ -412,6 +418,65 @@ static bool cancel_event_key_once() {
 
 static bool cancel_event_key_repeat() {
     return cancel_event(MX_WAIT_ASYNC_REPEATING);
+}
+
+static bool cancel_event_after(uint32_t wait_mode) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    mx_handle_t port;
+
+    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
+
+    mx_handle_t ev[3];
+    const uint64_t keys[] = {128u, 3u, 3u};
+
+    for (uint32_t ix = 0; ix != countof(keys); ++ix) {
+
+        EXPECT_EQ(mx_event_create(0u, &ev[ix]), NO_ERROR, "");
+        EXPECT_EQ(mx_object_wait_async(
+            ev[ix], port, keys[ix], MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
+    }
+
+    EXPECT_EQ(mx_object_signal(ev[0], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+    EXPECT_EQ(mx_object_signal(ev[1], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+
+    // We cancel after the first two signals and before the third. So it should
+    // test both cases with queued packets and no-yet-fired packets.
+    EXPECT_EQ(mx_port_cancel(port, ev[1], 3u), NO_ERROR, "");
+    EXPECT_EQ(mx_port_cancel(port, ev[2], 3u), NO_ERROR, "");
+
+    EXPECT_EQ(mx_object_signal(ev[2], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+
+    mx_port_packet_t out = {};
+    int wait_count = 0;
+    uint64_t key_sum = 0;
+
+    while (true) {
+        status = mx_port_wait(port, 0ull, &out, 0u);
+        if (status != NO_ERROR)
+            break;
+        wait_count++;
+        key_sum += out.key;
+        EXPECT_EQ(out.signal.trigger, MX_EVENT_SIGNALED, "");
+        EXPECT_EQ(out.signal.observed, MX_EVENT_SIGNALED | MX_SIGNAL_LAST_HANDLE, "");
+    }
+
+    EXPECT_EQ(wait_count, 1, "");
+    EXPECT_EQ(key_sum, keys[0], "");
+
+    EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(ev[0]), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(ev[1]), NO_ERROR, "");
+    END_TEST;
+}
+
+static bool cancel_event_key_once_after() {
+    return cancel_event_after(MX_WAIT_ASYNC_ONCE);
+}
+
+static bool cancel_event_key_repeat_after() {
+    return cancel_event_after(MX_WAIT_ASYNC_REPEATING);
 }
 
 struct test_context {
@@ -493,6 +558,8 @@ RUN_TEST(channel_pre_writes_once)
 RUN_TEST(channel_pre_writes_repeat)
 RUN_TEST(cancel_event_key_once)
 RUN_TEST(cancel_event_key_repeat)
+RUN_TEST(cancel_event_key_once_after)
+RUN_TEST(cancel_event_key_repeat_after)
 RUN_TEST(threads_event_once)
 RUN_TEST(threads_event_repeat)
 END_TEST_CASE(port_tests)

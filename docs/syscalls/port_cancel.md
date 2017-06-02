@@ -20,11 +20,14 @@ mx_status_t mx_port_cancel(mx_handle_t port,
 pending **object_wait_async**() calls done with *handle* and *key*.
 
 When this call succeeds no new packets from the object pointed by
-*handle* with *key* will be delivered to *port*.
+*handle* with *key* will be delivered to *port*, and pending queued
+packets that match *source* and *key* are removed from the port.
 
 ## RETURN VALUE
 
-**mx_port_cancel**() returns **NO_ERROR** if cancellation succeeded.
+**mx_port_cancel**() returns **NO_ERROR** if cancellation succeeded and
+either queued packets were removed or pending **object_wait_async**() were
+canceled.
 
 ## ERRORS
 
@@ -35,6 +38,9 @@ When this call succeeds no new packets from the object pointed by
 **ERR_ACCESS_DENIED**  *handle* or *port* does not have **MX_RIGHT_WRITE**.
 
 **ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on.
+
+**ERR_NOT_FOUND** if either no pending packets or pending
+**object_wait_async** calls with *source* and *key* were found.
 
 ## SEE ALSO
 
