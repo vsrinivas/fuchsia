@@ -21,6 +21,7 @@ mod job;
 mod port;
 mod process;
 mod socket;
+mod timer;
 mod thread;
 mod vmo;
 
@@ -32,6 +33,7 @@ pub use job::Job;
 pub use port::{Packet, PacketContents, Port, PortOpts, SignalPacket, UserPacket, WaitAsyncOpts};
 pub use process::Process;
 pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
+pub use timer::{Timer, TimerOpts};
 pub use thread::Thread;
 pub use vmo::{Vmo, VmoCloneOpts, VmoOp, VmoOpts};
 
@@ -201,6 +203,9 @@ pub use magenta_sys::{
         MX_SOCKET_READABLE,
         MX_SOCKET_WRITABLE,
         MX_SOCKET_PEER_CLOSED,
+
+        // Timer
+        MX_TIMER_SIGNALED,
 };
 
 /// A "wait item" containing a handle reference and information about what signals
@@ -440,6 +445,7 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
 /// enforced in the type system; attempting to use them will result in errors
 /// returned by the kernel. These conversions don't change the underlying
 /// representation, but do change the type and thus what operations are available.
+#[derive(Debug, Eq, PartialEq)]
 pub struct Handle(sys::mx_handle_t);
 
 impl HandleBase for Handle {
