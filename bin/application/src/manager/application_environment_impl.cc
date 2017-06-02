@@ -119,6 +119,8 @@ mx::process Launch(const mx::job& job,
     handles.push_back(flat->handle[i]);
   }
 
+  data.set_property(MX_PROP_NAME, label.data(), label.size());
+
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
