@@ -42,31 +42,16 @@ KERNEL_DEFINES += \
 	ARM_ISA_ARMV8=1 \
 	ARM_ISA_ARMV8A=1
 
-# if its requested we build with SMP, arm generically supports 4 cpus
-
-ifeq ($(call TOBOOL,$(WITH_SMP)),true)
-
 # unless otherwise specified, limit to 2 clusters and 8 CPUs per cluster
 SMP_CPU_MAX_CLUSTERS ?= 2
 SMP_CPU_MAX_CLUSTER_CPUS ?= 8
 
 SMP_MAX_CPUS ?= 16
-SMP_WITH_SMP ?= 1
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mp.cpp
 
-else
-
-SMP_CPU_MAX_CLUSTERS ?= 1
-SMP_CPU_MAX_CLUSTER_CPUS ?= 1
-SMP_MAX_CPUS ?= 1
-SMP_WITH_SMP ?= 0
-
-endif
-
 KERNEL_DEFINES += \
-    WITH_SMP=$(SMP_WITH_SMP) \
     SMP_MAX_CPUS=$(SMP_MAX_CPUS) \
     SMP_CPU_MAX_CLUSTERS=$(SMP_CPU_MAX_CLUSTERS) \
     SMP_CPU_MAX_CLUSTER_CPUS=$(SMP_CPU_MAX_CLUSTER_CPUS) \

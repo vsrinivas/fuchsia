@@ -37,7 +37,6 @@ typedef enum {
 
 #define MAX_IPI (3)
 
-#ifdef WITH_SMP
 void mp_init(void);
 
 void mp_reschedule(mp_cpu_mask_t target, uint flags);
@@ -138,41 +137,5 @@ static inline mp_cpu_mask_t mp_get_realtime_mask(void)
 {
     return mp.realtime_cpus;
 }
-#else
-static inline void mp_init(void) {}
-static inline void mp_reschedule(mp_cpu_mask_t target, uint flags) {}
-static inline void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
-{
-    if (target != MP_CPU_ALL &&
-        (!(target & 0x1) || target == MP_CPU_ALL_BUT_LOCAL)) return;
-    spin_lock_saved_state_t irqstate;
-    arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
-    task(context);
-    arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
-}
-static inline void mp_set_curr_cpu_active(bool active) {}
-static inline void mp_set_curr_cpu_online(bool online) {}
-
-static inline enum handler_return mp_mbx_reschedule_irq(void) { return INT_NO_RESCHEDULE; }
-static inline enum handler_return mp_mbx_generic_irq(void) { return INT_NO_RESCHEDULE; }
-
-// only one cpu exists in UP and if you're calling these functions, it's active...
-static inline int mp_is_cpu_active(uint cpu) { return 1; }
-static inline int mp_is_cpu_idle(uint cpu) { return (get_current_thread()->flags & THREAD_FLAG_IDLE) != 0; }
-static inline int mp_is_cpu_online(uint cpu) { return 1; }
-
-static inline void mp_set_cpu_idle(uint cpu) {}
-static inline void mp_set_cpu_busy(uint cpu) {}
-
-static inline mp_cpu_mask_t mp_get_idle_mask(void) { return 0; }
-
-static inline void mp_set_cpu_realtime(uint cpu) {}
-static inline void mp_set_cpu_non_realtime(uint cpu) {}
-
-static inline mp_cpu_mask_t mp_get_realtime_mask(void) { return 0; }
-
-static inline mp_cpu_mask_t mp_get_active_mask(void) { return 1; }
-static inline mp_cpu_mask_t mp_get_online_mask(void) { return 1; }
-#endif
 
 __END_CDECLS;

@@ -23,7 +23,6 @@
 
 #define LOCAL_TRACE 0
 
-#if WITH_SMP
 /* a global state structure, aligned on cpu cache line to minimize aliasing */
 struct mp_state mp __CPU_ALIGN = {
     .hotplug_lock = MUTEX_INITIAL_VALUE(mp.hotplug_lock),
@@ -387,5 +386,3 @@ __WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return ERR_NOT_SUPPORTED; }
 __WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
 __WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) { return arch_mp_prep_cpu_unplug(cpu_id); }
 __WEAK status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
-
-#endif

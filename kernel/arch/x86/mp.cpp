@@ -210,9 +210,7 @@ __NO_SAFESTACK uintptr_t x86_init_percpu(uint cpu_num, uintptr_t unsafe_sp)
         write_msr(0x1fc, power_ctl_msr & ~0x2);
     }
 
-#if WITH_SMP
     mp_set_curr_cpu_online(true);
-#endif
 
     return bp_percpu.stack_guard;
 }
@@ -238,7 +236,6 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id)
     return -1;
 }
 
-#if WITH_SMP
 status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
 {
     uint8_t vector = 0;
@@ -380,5 +377,3 @@ void arch_flush_state_and_halt(event_t *flush_done)
         __asm__ volatile("cli; hlt" : : : "memory");
     }
 }
-
-#endif

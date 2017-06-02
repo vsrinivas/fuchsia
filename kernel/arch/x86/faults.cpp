@@ -407,7 +407,6 @@ void x86_exception_handler(x86_iframe_t *frame)
             apic_issue_eoi();
             break;
         }
-#if WITH_SMP
         case X86_INT_IPI_GENERIC: {
             ret = x86_ipi_generic_handler();
             apic_issue_eoi();
@@ -423,7 +422,6 @@ void x86_exception_handler(x86_iframe_t *frame)
             /* no return */
             break;
         }
-#endif
         /* pass all other non-Intel defined irq vectors to the platform */
         case X86_INT_PLATFORM_BASE  ... X86_INT_PLATFORM_MAX: {
             THREAD_STATS_INC(interrupts);

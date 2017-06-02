@@ -32,7 +32,6 @@ FUNCTION(x86_64_context_switch)
 
     retq
 
-#if WITH_SMP
 #include <arch/x86/mp.h>
 
 /* void arch_spin_lock(unsigned long *lock) */
@@ -67,7 +66,6 @@ FUNCTION(arch_spin_unlock)
     mov $0, %rax
     xchg %rax, (%rdi)
     ret
-#endif // WITH_SMP
 
 /* rep stos version of page zero */
 FUNCTION(arch_zero_page)

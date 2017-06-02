@@ -11,9 +11,6 @@ MODULE := $(LOCAL_DIR)
 
 CPU := generic
 
-MODULE_DEPS += \
-    kernel/lib/cbuf \
-
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.cpp \
     $(LOCAL_DIR)/console.cpp \
@@ -32,6 +29,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
     third_party/lib/acpica \
+    kernel/lib/cbuf \
     kernel/lib/gfxconsole \
     kernel/lib/fixed_point \
     kernel/lib/memory_limit \
@@ -43,7 +41,6 @@ MODULE_DEPS += \
 KERNEL_DEFINES += \
     PLATFORM_SUPPORTS_PANIC_SHELL=1
 
-WITH_SMP ?= 1
 SMP_MAX_CPUS ?= 8
 
 include make/module.mk

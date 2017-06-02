@@ -105,7 +105,6 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
     __UNREACHABLE;
 }
 
-#if WITH_SMP
 #include <arch/x86/apic.h>
 __NO_SAFESTACK __NO_RETURN
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
@@ -177,7 +176,6 @@ fail:
       x86_hlt();
     }
 }
-#endif
 
 static int cmd_cpu(int argc, const cmd_args *argv, uint32_t flags)
 {
@@ -199,20 +197,14 @@ usage:
             printf("specify a cpu_id\n");
             goto usage;
         }
-        status_t status = ERR_NOT_SUPPORTED;
-#if WITH_SMP
-        status = mp_unplug_cpu((uint)argv[2].u);
-#endif
+        status_t status = mp_unplug_cpu((uint)argv[2].u);
         printf("CPU %lu unplugged: %d\n", argv[2].u, status);
     } else if (!strcmp(argv[1].str, "hotplug")) {
         if (argc < 3) {
             printf("specify a cpu_id\n");
             goto usage;
         }
-        status_t status = ERR_NOT_SUPPORTED;
-#if WITH_SMP
-        status = mp_hotplug_cpu((uint)argv[2].u);
-#endif
+        status_t status = mp_hotplug_cpu((uint)argv[2].u);
         printf("CPU %lu hotplugged: %d\n", argv[2].u, status);
     } else {
         printf("unknown command\n");

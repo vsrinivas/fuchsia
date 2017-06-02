@@ -32,7 +32,6 @@ static void reboot(void) {
 static volatile int panic_started;
 
 static void halt_other_cpus(void) {
-#if WITH_SMP
     static volatile int halted = 0;
 
     if (atomic_swap(&halted, 1) == 0) {
@@ -46,7 +45,6 @@ static void halt_other_cpus(void) {
             __asm volatile ("nop");
         }
     }
-#endif
 }
 
 void platform_panic_start(void) {

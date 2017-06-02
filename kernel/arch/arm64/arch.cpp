@@ -57,13 +57,11 @@ static_assert(TP_OFFSET(stack_guard) == MX_TLS_STACK_GUARD_OFFSET, "");
 static_assert(TP_OFFSET(unsafe_sp) == MX_TLS_UNSAFE_SP_OFFSET, "");
 #undef TP_OFFSET
 
-#if WITH_SMP
 /* smp boot lock */
 static spin_lock_t arm_boot_cpu_lock = 1;
 static volatile int secondaries_to_init = 0;
 static thread_t _init_thread[SMP_MAX_CPUS - 1];
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
-#endif
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
@@ -74,7 +72,6 @@ uint64_t arm64_get_boot_el(void)
     return arch_boot_el >> 2;
 }
 
-#if WITH_SMP
 status_t arm64_set_secondary_sp(uint cluster, uint cpu,
                                 void* sp, void* unsafe_sp) {
     uint64_t mpid = ARM64_MPID(cluster, cpu);
@@ -98,7 +95,6 @@ status_t arm64_set_secondary_sp(uint cluster, uint cpu,
 
     return NO_ERROR;
 }
-#endif
 
 static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {
     desc->write_through = BIT(ccsid, 31) > 0;
@@ -270,7 +266,6 @@ static void print_midr()
 
 void arch_init(void)
 {
-#if WITH_SMP
     arch_mp_init_percpu();
 
     print_midr();
@@ -293,7 +288,6 @@ void arch_init(void)
 
     /* flush the release of the lock, since the secondary cpus are running without cache on */
     arch_clean_cache_range((addr_t)&arm_boot_cpu_lock, sizeof(arm_boot_cpu_lock));
-#endif
 }
 
 void arch_quiesce(void)
@@ -333,7 +327,6 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
     __UNREACHABLE;
 }
 
-#if WITH_SMP
 /* called from assembly */
 extern "C" void arm64_secondary_entry(void)
 {
@@ -354,4 +347,3 @@ extern "C" void arm64_secondary_entry(void)
 
     lk_secondary_cpu_entry();
 }
-#endif

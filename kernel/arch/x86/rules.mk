@@ -84,20 +84,13 @@ MODULE_DEPS += \
 
 include $(LOCAL_DIR)/toolchain.mk
 
-# enable more if smp is requested
-ifeq ($(call TOBOOL,$(WITH_SMP)),true)
-
-SMP_MAX_CPUS ?= 16
-KERNEL_DEFINES += \
-	WITH_SMP=1
 MODULE_SRCS += \
 	$(SUBARCH_DIR)/bootstrap16.cpp \
 	$(SUBARCH_DIR)/smp.cpp \
 	$(SUBARCH_DIR)/start16.S
 
-endif
-
-# always set this to something
+# default to 16 cpu max support
+SMP_MAX_CPUS ?= 16
 KERNEL_DEFINES += \
 	SMP_MAX_CPUS=$(SMP_MAX_CPUS)
 

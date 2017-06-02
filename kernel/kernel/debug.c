@@ -80,9 +80,7 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
         printf("\ttotal busy time: %" PRIu64 "\n",
                current_time() - thread_stats[i].idle_time);
         printf("\treschedules: %lu\n", thread_stats[i].reschedules);
-#if WITH_SMP
         printf("\treschedule_ipis: %lu\n", thread_stats[i].reschedule_ipis);
-#endif
         printf("\tcontext_switches: %lu\n", thread_stats[i].context_switches);
         printf("\tpreempts: %lu\n", thread_stats[i].preempts);
         printf("\tyields: %lu\n", thread_stats[i].yields);
@@ -104,9 +102,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
             " excep"
             "  sysc"
             " ints (hw  tmr tmr_cb)"
-#if WITH_SMP
             " ipi (rs  gen)\n"
-#endif
             );
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         /* dont display time for inactive cpus */
@@ -131,9 +127,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                " %6lu"
                " %5lu"
                " %8lu %4lu %6lu"
-#if WITH_SMP
                " %8lu %4lu"
-#endif
                "\n",
                i,
                busypercent / 100, busypercent % 100,
@@ -145,12 +139,9 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                thread_stats[i].syscalls - old_stats[i].syscalls,
                thread_stats[i].interrupts - old_stats[i].interrupts,
                thread_stats[i].timer_ints - old_stats[i].timer_ints,
-               thread_stats[i].timers - old_stats[i].timers
-#if WITH_SMP
-               ,
+               thread_stats[i].timers - old_stats[i].timers,
                thread_stats[i].reschedule_ipis - old_stats[i].reschedule_ipis,
                thread_stats[i].generic_ipis - old_stats[i].generic_ipis
-#endif
                );
 
         old_stats[i] = thread_stats[i];

@@ -382,7 +382,6 @@ void platform_early_init(void)
     platform_preserve_ramdisk();
 }
 
-#if WITH_SMP
 static void platform_init_smp(void)
 {
     uint32_t num_cpus = 0;
@@ -489,8 +488,6 @@ status_t platform_mp_prep_cpu_unplug(uint cpu_id)
     return arch_mp_prep_cpu_unplug(cpu_id);
 }
 
-#endif
-
 void platform_init(void)
 {
     platform_init_debug();
@@ -501,7 +498,5 @@ void platform_init(void)
     platform_init_keyboard(&console_input_buf);
 #endif
 
-#if WITH_SMP
     platform_init_smp();
-#endif
 }

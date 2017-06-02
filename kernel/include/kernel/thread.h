@@ -83,10 +83,8 @@ typedef struct thread {
     int base_priority;
     int priority_boost;
 
-#if WITH_SMP
     uint last_cpu; /* last/current cpu the thread is running on */
     int pinned_cpu; /* only run on pinned_cpu if >= 0 */
-#endif
 
     /* pointer to the kernel address space this thread is associated with */
     vmm_aspace_t *aspace;
@@ -143,17 +141,11 @@ typedef struct thread {
 #endif
 } thread_t;
 
-#if WITH_SMP
+/* TODO: make real inline functions */
 #define thread_last_cpu(t) ((t)->last_cpu)
 #define thread_pinned_cpu(t) ((t)->pinned_cpu)
 #define thread_set_last_cpu(t,c) ((t)->last_cpu = (c))
 #define thread_set_pinned_cpu(t, c) ((t)->pinned_cpu = (c))
-#else
-#define thread_last_cpu(t) (0)
-#define thread_pinned_cpu(t) (-1)
-#define thread_set_last_cpu(t,c) do {} while(0)
-#define thread_set_pinned_cpu(t, c) do {} while(0)
-#endif
 
 /* thread priority */
 #define NUM_PRIORITIES (32)
@@ -304,11 +296,9 @@ struct thread_stats {
     ulong exceptions; /* exceptions such as page fault or undefined opcode */
     ulong syscalls;
 
-#if WITH_SMP
     /* inter-processor interrupts */
     ulong reschedule_ipis;
     ulong generic_ipis;
-#endif
 };
 
 extern struct thread_stats thread_stats[SMP_MAX_CPUS];

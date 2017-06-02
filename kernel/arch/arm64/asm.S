@@ -134,7 +134,6 @@ FUNCTION(arm64_elX_to_el1)
     ret
 END(arm64_elX_to_el1)
 
-#if WITH_SMP
 FUNCTION(arm64_get_secondary_sp)
     mrs     x9, mpidr_el1
     and     x9, x9, #0xffff             /* only use id/cluster */
@@ -159,4 +158,3 @@ FUNCTION(arm64_get_secondary_sp)
     ret
 
 END(arm64_get_secondary_sp)
-#endif

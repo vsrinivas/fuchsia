@@ -40,13 +40,8 @@ static int timer_do_one_thread(void* arg)
     return 0;
 }
 
-#if WITH_SMP
 static thread_t _timer_threads[SMP_MAX_CPUS];
 #define timer_threads(cpu) (&_timer_threads[cpu])
-#else
-static thread_t _timer_thread;
-#define timer_threads(cpu) (&_timer_thread)
-#endif
 
 static void timer_test_all_cpus(void)
 {

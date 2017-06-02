@@ -95,7 +95,6 @@ static volatile int panic_started;
 
 static void halt_other_cpus(void)
 {
-#if WITH_SMP
     static volatile int halted = 0;
 
     if (atomic_swap(&halted, 1) == 0) {
@@ -109,7 +108,6 @@ static void halt_other_cpus(void)
             __asm volatile ("nop");
         }
     }
-#endif
 }
 
 void platform_panic_start(void)
@@ -227,7 +225,6 @@ void* platform_get_ramdisk(size_t *size) {
     }
 }
 
-#if WITH_SMP
 static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
     mdi_node_ref_t  clusters;
 
@@ -408,7 +405,6 @@ static void platform_cpu_init(void) {
         }
     }
 }
-#endif // WITH_SMP
 
 static inline bool is_bootdata_container(void* addr) {
     DEBUG_ASSERT(addr);
@@ -450,9 +446,7 @@ static void platform_mdi_init(const bootdata_t* section) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
     }
 
-#if WITH_SMP
     platform_cpu_early_init(&cpu_map);
-#endif
 
     pdev_init(&kernel_drivers);
 }
@@ -579,9 +573,7 @@ void platform_early_init(void)
 
 void platform_init(void)
 {
-#if WITH_SMP
     platform_cpu_init();
-#endif
 }
 
 void platform_dputs(const char* str, size_t len)

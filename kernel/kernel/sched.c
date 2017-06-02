@@ -130,9 +130,9 @@ static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask)
 /* find a cpu to wake up */
 static mp_cpu_mask_t find_cpu(thread_t *t)
 {
-#if BROADCAST_RESCHEDULE
-    return MP_CPU_ALL_BUT_LOCAL;
-#elif WITH_SMP
+    if (BROADCAST_RESCHEDULE)
+        return MP_CPU_ALL_BUT_LOCAL;
+
     /* get the last cpu the thread ran on */
     mp_cpu_mask_t last_ran_cpu_mask = (1u << thread_last_cpu(t));
 
@@ -165,10 +165,6 @@ static mp_cpu_mask_t find_cpu(thread_t *t)
         /* pick the last cpu it ran on */
         return last_ran_cpu_mask;
     }
-#else /* !WITH_SMP */
-    /* no smp, dont send an IPI */
-    return 0;
-#endif
 }
 
 /* run queue manipulation */
@@ -203,10 +199,7 @@ thread_t *sched_get_top_thread(uint cpu)
                           - (sizeof(run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
 
         list_for_every_entry(&run_queue[next_queue], newthread, thread_t, queue_node) {
-#if WITH_SMP
-            if (likely(newthread->pinned_cpu < 0) || (uint)newthread->pinned_cpu == cpu)
-#endif
-            {
+            if (likely(newthread->pinned_cpu < 0) || (uint)newthread->pinned_cpu == cpu) {
                 list_delete(&newthread->queue_node);
 
                 if (list_is_empty(&run_queue[next_queue]))

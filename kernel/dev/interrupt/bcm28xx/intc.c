@@ -186,7 +186,6 @@ decoded:
     // dispatch the irq
     enum handler_return ret = INT_NO_RESCHEDULE;
 
-#if WITH_SMP
     if (vector == INTERRUPT_ARM_LOCAL_MAILBOX0) {
         pend = *REG32(INTC_LOCAL_MAILBOX0_CLR0 + 0x10 * cpu);
         LTRACEF("mailbox0 clr 0x%x\n", pend);
@@ -200,9 +199,7 @@ decoded:
         if (pend & (1 << MP_IPI_RESCHEDULE)) {
             ret = mp_mbx_reschedule_irq();
         }
-    } else
-#endif // WITH_SMP
-    if (vector == 0xffffffff) {
+    } else if (vector == 0xffffffff) {
         ret = INT_NO_RESCHEDULE;
     } else {
         struct int_handler_struct* handler = pdev_get_int_handler(vector);

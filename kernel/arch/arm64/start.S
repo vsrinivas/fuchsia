@@ -71,11 +71,9 @@ FUNCTION(arm_reset)
     /* Calculate pagetable physical addresses */
     adr_global page_table0, tt_trampoline
 
-#if WITH_SMP
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lmmu_enable_secondary
-#endif
 
     mov     tmp, #0
 
@@ -282,7 +280,6 @@ FUNCTION(arm_reset)
 
     str     tmp2, [page_table0, tmp, lsl #3]     /* tt_trampoline[paddr index] = pt entry */
 
-#if WITH_SMP
     adr_global tmp, page_tables_not_ready
     str     wzr, [tmp]
     b       .Lpage_tables_ready
@@ -293,7 +290,6 @@ FUNCTION(arm_reset)
     ldr     wtmp2, [tmp]
     cbnz    wtmp2, .Lpage_tables_not_ready
 .Lpage_tables_ready:
-#endif
 
     /* set up the mmu */
 
@@ -346,9 +342,7 @@ FUNCTION(arm_reset)
     tlbi    vmalle1
     isb
 
-#if WITH_SMP
     cbnz    cpuid, .Lsecondary_boot
-#endif
 
     // Clear out the bss excluding the kernel translation table ("prebss").
     // NOTE: Relies on __post_prebss_bss_start and __bss_end
@@ -386,7 +380,6 @@ FUNCTION(arm_reset)
     bl  lk_main
     b   .
 
-#if WITH_SMP
 .Lsecondary_boot:
     bl      arm64_get_secondary_sp
     cbz     x0, .Lunsupported_cpu_trap
@@ -398,7 +391,6 @@ FUNCTION(arm_reset)
 .Lunsupported_cpu_trap:
     wfe
     b       .Lunsupported_cpu_trap
-#endif
 END(arm_reset)
 
 .ltorg
@@ -414,11 +406,9 @@ DATA(boot_structure_paddr)
     .quad 0x00ff00ffdeadbeef
 END(boot_structure_paddr)
 
-#if WITH_SMP
 DATA(page_tables_not_ready)
     .long       1
 END(page_tables_not_ready)
-#endif
 
     .balign 8
 LOCAL_DATA(boot_cpu_fake_arch_thread)

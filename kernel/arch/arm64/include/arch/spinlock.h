@@ -20,31 +20,9 @@ typedef unsigned long spin_lock_t;
 typedef unsigned int spin_lock_saved_state_t;
 typedef unsigned int spin_lock_save_flags_t;
 
-#if WITH_SMP
 void arch_spin_lock(spin_lock_t *lock);
 int arch_spin_trylock(spin_lock_t *lock);
 void arch_spin_unlock(spin_lock_t *lock);
-#else
-static inline void arch_spin_lock(spin_lock_t *lock)
-{
-    *lock = 1;
-}
-
-static inline int arch_spin_trylock(spin_lock_t *lock)
-{
-    if (*lock)
-        return 1;
-
-    *lock = 1;
-    return 0;
-}
-
-static inline void arch_spin_unlock(spin_lock_t *lock)
-{
-    *lock = 0;
-}
-
-#endif
 
 static inline void arch_spin_lock_init(spin_lock_t *lock)
 {

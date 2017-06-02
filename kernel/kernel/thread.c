@@ -1284,13 +1284,10 @@ void dump_thread(thread_t *t, bool full_dump)
 
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
-#if WITH_SMP
-        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %d, priority %d:%d, remaining time slice %" PRIu64 "\n",
-                thread_state_to_str(t->state), t->last_cpu, t->pinned_cpu, t->base_priority, t->priority_boost, t->remaining_time_slice);
-#else
-        dprintf(INFO, "\tstate %s, priority %d:%d, remaining time slice %" PRIu64 "\n",
-                thread_state_to_str(t->state), t->base_priority, t->priority_boost, t->remaining_time_slice);
-#endif
+        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %d, priority %d:%d, "
+                "remaining time slice %" PRIu64 "\n",
+                thread_state_to_str(t->state), t->last_cpu, t->pinned_cpu, t->base_priority,
+                t->priority_boost, t->remaining_time_slice);
         dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
                 runtime, runtime / 1000000000);
         dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
@@ -1309,7 +1306,8 @@ void dump_thread(thread_t *t, bool full_dump)
         arch_dump_thread(t);
     } else {
         printf("thr %p st %4s pri %2d:%d pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
-               t, thread_state_to_str(t->state), t->base_priority, t->priority_boost, t->user_pid, t->user_tid, oname, t->name);
+               t, thread_state_to_str(t->state), t->base_priority, t->priority_boost, t->user_pid,
+               t->user_tid, oname, t->name);
     }
 }
 
