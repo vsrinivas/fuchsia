@@ -121,7 +121,7 @@ class StoryProviderImpl : StoryProvider, PageClient {
   const Scope* const user_scope_;
 
   // Unique ID generated for this user/device combination.
-  std::string device_id_;
+  const std::string device_id_;
 
   // Story provider writes story records to the root page, and creates
   // new pages for stories.
