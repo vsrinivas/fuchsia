@@ -10,6 +10,7 @@
 #include <mx/eventpair.h>
 #include <mx/handle.h>
 #include <mx/port.h>
+#include <mx/process.h>
 #include <mx/socket.h>
 #include <mx/time.h>
 #include <mx/vmar.h>
@@ -182,6 +183,43 @@ static bool time_test() {
     END_TEST;
 }
 
+template <typename T>
+static bool reference_thing(const T& p) {
+    BEGIN_HELPER;
+    ASSERT_TRUE(static_cast<bool>(p), "invalid handle");
+    END_HELPER;
+}
+
+static bool process_self_test() {
+    BEGIN_TEST;
+
+    mx_handle_t raw = mx_process_self();
+    ASSERT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    EXPECT_TRUE(reference_thing<mx::process>(mx::process::self()), "");
+    EXPECT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    // This does not compile:
+    //const mx::process self = mx::process::self();
+
+    END_TEST;
+}
+
+static bool vmar_root_self_test() {
+    BEGIN_TEST;
+
+    mx_handle_t raw = mx_vmar_root_self();
+    ASSERT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    EXPECT_TRUE(reference_thing<mx::vmar>(mx::vmar::root_self()), "");
+    EXPECT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    // This does not compile:
+    //const mx::vmar root_self = mx::vmar::root_self();
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libmx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -196,6 +234,8 @@ RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
 RUN_TEST(port_v2_test)
 RUN_TEST(time_test)
+RUN_TEST(process_self_test)
+RUN_TEST(vmar_root_self_test)
 END_TEST_CASE(libmx_tests)
 
 int main(int argc, char** argv) {

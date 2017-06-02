@@ -195,4 +195,28 @@ template <typename T> bool operator!=(const object<T>& a, mx_handle_t b) {
     return !(a == b);
 }
 
+namespace internal {
+
+// This is an object that represents a handle but does not own it.
+// All unowned_handle<T> objects are const.  They can be used or
+// passed as a const T&.  This is used for the various "self" handles
+// that are global state accessed via a C API.
+template <typename T>
+class unowned_handle final : public T {
+public:
+    unowned_handle(unowned_handle&& other) : T(other.release()) {}
+
+    ~unowned_handle() {
+        mx_handle_t h = this->release();
+        static_cast<void>(h);
+    }
+
+private:
+    friend T;
+
+    explicit unowned_handle(mx_handle_t h) : T(h) {}
+};
+
+} // namespace internal
+
 } // namespace mx

@@ -6,12 +6,9 @@
 
 #include <mx/object.h>
 #include <mx/vmo.h>
+#include <magenta/process.h>
 
 namespace mx {
-
-namespace internal {
-extern "C" mx_handle_t __magenta_vmar_root_self;
-}
 
 // A wrapper for handles to VMARs.  Note that vmar::~vmar() does not execute
 // vmar::destroy(), it just closes the handle.
@@ -30,10 +27,6 @@ public:
     vmar& operator=(vmar&& other) {
         reset(other.release());
         return *this;
-    }
-
-    static inline const vmar& root_self() {
-        return *reinterpret_cast<vmar*>(&internal::__magenta_vmar_root_self);
     }
 
     mx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset,
@@ -55,6 +48,10 @@ public:
 
     mx_status_t allocate(size_t offset, size_t size, uint32_t flags,
                          vmar* child, uintptr_t* child_addr) const;
+
+    static inline const internal::unowned_handle<vmar> root_self() {
+        return internal::unowned_handle<vmar>(mx_vmar_root_self());
+    }
 };
 
 } // namespace mx
