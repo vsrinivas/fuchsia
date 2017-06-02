@@ -113,53 +113,29 @@ bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
 
 bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
   // Find the parent and child nodes.
-  auto parent_node = resources_.FindResource<Node>(op->node_id);
-  if (!parent_node) {
-    error_reporter_->ERROR() << "composer::Session::ApplyAddChildOp(): cannot "
-                                "find parent node with ID "
-                             << op->node_id;
-    return false;
+  if (auto parent_node = resources_.FindResource<Node>(op->node_id)) {
+    if (auto child_node = resources_.FindResource<Node>(op->child_id)) {
+      return parent_node->AddChild(std::move(child_node));
+    }
   }
-  auto child_node = resources_.FindResource<Node>(op->child_id);
-  if (!child_node) {
-    error_reporter_->ERROR() << "composer::Session::ApplyAddChildOp(): cannot "
-                                "find child node with ID "
-                             << op->child_id;
-    return false;
-  }
-
-  return parent_node->AddChild(std::move(child_node));
+  return false;
 }
 
 bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
   // Find the parent and part nodes.
-  auto parent_node = resources_.FindResource<Node>(op->node_id);
-  if (!parent_node) {
-    error_reporter_->ERROR() << "composer::Session::ApplyAddPartOp(): cannot "
-                                "find parent node with ID "
-                             << op->node_id;
-    return false;
+  if (auto parent_node = resources_.FindResource<Node>(op->node_id)) {
+    if (auto part_node = resources_.FindResource<Node>(op->part_id)) {
+      return parent_node->AddPart(std::move(part_node));
+    }
   }
-  auto part_node = resources_.FindResource<Node>(op->part_id);
-  if (!part_node) {
-    error_reporter_->ERROR()
-        << "composer::Session::ApplyAddPartOp(): cannot find part node with ID "
-        << op->part_id;
-    return false;
-  }
-
-  return parent_node->AddPart(std::move(part_node));
+  return false;
 }
 
 bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
-  auto node = resources_.FindResource<Node>(op->node_id);
-  if (!node) {
-    error_reporter_->ERROR()
-        << "composer::Session::ApplyDetachOp(): cannot find node with ID "
-        << op->node_id;
-    return false;
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    return Node::Detach(node);
   }
-  return Node::Detach(node);
+  return false;
 }
 
 bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
@@ -169,52 +145,31 @@ bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
 }
 
 bool Session::ApplySetTransformOp(const mozart2::SetTransformOpPtr& op) {
-  auto node = resources_.FindResource<Node>(op->node_id);
-  if (!node) {
-    error_reporter_->ERROR() << "composer::Session::ApplySetTransformOp(): "
-                                "could not find Node with ID "
-                             << op->node_id;
-    return false;
+  if (auto node = resources_.FindResource<Node>(op->node_id)) {
+    node->SetTransform(Unwrap(op->transform));
+    return true;
   }
-  return node->SetTransform(Unwrap(op->transform));
+  return false;
 }
 
 bool Session::ApplySetShapeOp(const mozart2::SetShapeOpPtr& op) {
-  auto node = resources_.FindResource<ShapeNode>(op->node_id);
-  if (!node) {
-    error_reporter_->ERROR() << "composer::Session::ApplySetMaterialOp(): "
-                                "could not find ShapeNode with ID "
-                             << op->node_id;
-    return false;
+  if (auto node = resources_.FindResource<ShapeNode>(op->node_id)) {
+    if (auto shape = resources_.FindResource<Shape>(op->shape_id)) {
+      node->SetShape(std::move(shape));
+      return true;
+    }
   }
-  auto shape = resources_.FindResource<Shape>(op->shape_id);
-  if (!shape) {
-    error_reporter_->ERROR() << "composer::Session::ApplySetMaterialOp(): "
-                                "could not find Shape with ID "
-                             << op->shape_id;
-    return false;
-  }
-  node->SetShape(std::move(shape));
-  return true;
+  return false;
 }
 
 bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
-  auto node = resources_.FindResource<ShapeNode>(op->node_id);
-  if (!node) {
-    error_reporter_->ERROR() << "composer::Session::ApplySetMaterialOp(): "
-                                "could not find ShapeNode with ID "
-                             << op->node_id;
-    return false;
+  if (auto node = resources_.FindResource<ShapeNode>(op->node_id)) {
+    if (auto material = resources_.FindResource<Material>(op->material_id)) {
+      node->SetMaterial(std::move(material));
+      return true;
+    }
   }
-  auto material = resources_.FindResource<Material>(op->material_id);
-  if (!material) {
-    error_reporter_->ERROR() << "composer::Session::ApplySetMaterialOp(): "
-                                "could not find Material with ID "
-                             << op->material_id;
-    return false;
-  }
-  node->SetMaterial(std::move(material));
-  return true;
+  return false;
 }
 
 bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
@@ -229,15 +184,13 @@ bool Session::ApplyCreateMemory(ResourceId id, const mozart2::MemoryPtr& args) {
 }
 
 bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
-  auto memory = resources_.FindResource<Memory>(args->memory_id);
-  if (!memory) {
-    error_reporter_->ERROR() << "composer::Session::ApplyCreateImage(): "
-                                "could not find Memory with ID "
-                             << args->memory_id;
-    return false;
+  if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
+    if (auto image = CreateImage(id, memory, args)) {
+      return resources_.AddResource(id, std::move(image));
+    }
   }
-  auto image = CreateImage(id, memory, args);
-  return image ? resources_.AddResource(id, std::move(image)) : false;
+
+  return false;
 }
 
 bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
@@ -299,10 +252,6 @@ bool Session::ApplyCreateMaterial(ResourceId id,
   if (args->texture_id != 0) {
     image = resources_.FindResource<Image>(args->texture_id);
     if (!image) {
-      error_reporter_->ERROR()
-          << "composer::Session::ApplyCreateMaterial(): cannot "
-             "find texture with ID "
-          << args->texture_id;
       return false;
     }
   }
