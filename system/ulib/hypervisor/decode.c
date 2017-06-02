@@ -169,6 +169,15 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
+    // Move (16-bit) with zero-extend r/m to r.
+    case 0xb70f:
+        if (inst_len != disp_size + 3u)
+            return ERR_OUT_OF_RANGE;
+        inst->read = true;
+        inst->mem = 2;
+        inst->imm = 0;
+        inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
+        return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
     default:
         return ERR_NOT_SUPPORTED;
     }
