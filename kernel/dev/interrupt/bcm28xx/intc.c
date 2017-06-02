@@ -10,7 +10,7 @@
 #include <err.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
-#include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <dev/bcm28xx.h>
 #include <trace.h>
 #include <arch/arm64.h>

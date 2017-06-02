@@ -14,6 +14,7 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/descriptor.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <platform.h>
 
 #include <mxtl/auto_call.h>

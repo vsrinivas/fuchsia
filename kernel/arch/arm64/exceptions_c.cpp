@@ -14,6 +14,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/exceptions.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <platform.h>
 
 #if WITH_LIB_MAGENTA

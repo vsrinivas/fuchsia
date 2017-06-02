@@ -19,6 +19,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
+#include <kernel/stats.h>
 #include <kernel/timer.h>
 
 #define LOCAL_TRACE 0

@@ -36,6 +36,8 @@
 #error "define CACHE_LINE for the specific core"
 #endif
 
+#define MAX_CACHE_LINE 64
+
 #ifndef ASSEMBLY
 #define BM(base, count, val) (((val) & ((1UL << (count)) - 1)) << (base))
 #else

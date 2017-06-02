@@ -16,6 +16,7 @@
 #include <dev/interrupt/arm_gicv2m.h>
 #include <reg.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <lk/init.h>
 #include <dev/interrupt.h>
 #include <arch/ops.h>

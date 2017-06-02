@@ -15,6 +15,7 @@
 #include <err.h>
 #include <lib/ktrace.h>
 #include <kernel/mp.h>
+#include <kernel/percpu.h>
 #include <kernel/thread.h>
 
 /* legacy implementation that just broadcast ipis for every reschedule */
@@ -214,7 +215,7 @@ thread_t *sched_get_top_thread(uint cpu)
         local_run_queue_bitmap &= ~(1<<next_queue);
     }
     /* no threads to run, select the idle thread for this cpu */
-    return &idle_threads[cpu];
+    return &percpu[cpu].idle_thread;
 }
 
 void sched_block(void)

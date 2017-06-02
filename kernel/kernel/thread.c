@@ -23,7 +23,9 @@
 #include <string.h>
 #include <printf.h>
 #include <err.h>
+#include <kernel/percpu.h>
 #include <kernel/sched.h>
+#include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/mp.h>
@@ -37,8 +39,6 @@
 #if WITH_LIB_MAGENTA
 #include <magenta/c_user_thread.h>
 #endif
-
-struct thread_stats thread_stats[SMP_MAX_CPUS];
 
 #define STACK_DEBUG_BYTE (0x99)
 #define STACK_DEBUG_WORD (0x99999999)
@@ -57,20 +57,10 @@ static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 /* master thread spinlock */
 spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 
-/* the idle thread(s) (statically allocated) */
-thread_t idle_threads[SMP_MAX_CPUS];
-
 /* local routines */
 static int idle_thread_routine(void *) __NO_RETURN;
 static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
-
-/* scheduler */
-
-#if PLATFORM_HAS_DYNAMIC_TIMER
-/* preemption timer */
-static timer_t preempt_timer[SMP_MAX_CPUS];
-#endif
 
 static void init_thread_struct(thread_t *t, const char *name)
 {
@@ -261,7 +251,7 @@ status_t thread_set_real_time(thread_t *t)
 #if PLATFORM_HAS_DYNAMIC_TIMER
     if (t == get_current_thread()) {
         /* if we're currently running, cancel the preemption timer. */
-        timer_cancel(&preempt_timer[arch_curr_cpu_num()]);
+        timer_cancel(&percpu[arch_curr_cpu_num()].preempt_timer);
     }
 #endif
     t->flags |= THREAD_FLAG_REAL_TIME;
@@ -768,10 +758,10 @@ void _thread_resched_internal(void)
     THREAD_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
-        thread_stats[cpu].idle_time += now - thread_stats[cpu].last_idle_timestamp;
+        percpu[cpu].thread_stats.idle_time += now - percpu[cpu].thread_stats.last_idle_timestamp;
     }
     if (thread_is_idle(newthread)) {
-        thread_stats[cpu].last_idle_timestamp = now;
+        percpu[cpu].thread_stats.last_idle_timestamp = now;
     }
 
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
@@ -784,14 +774,14 @@ void _thread_resched_internal(void)
              * the preemption timer. */
             TRACE_CONTEXT_SWITCH("stop preempt, cpu %u, old %p (%s), new %p (%s)\n",
                     cpu, oldthread, oldthread->name, newthread, newthread->name);
-            timer_cancel(&preempt_timer[cpu]);
+            timer_cancel(&percpu[cpu].preempt_timer);
         }
     } else if (thread_is_real_time_or_idle(oldthread)) {
         /* if we're switching from a real time (or idle thread) to a regular one,
          * set up a periodic timer to run our preemption tick. */
         TRACE_CONTEXT_SWITCH("start preempt, cpu %u, old %p (%s), new %p (%s)\n",
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
-        timer_set_periodic(&preempt_timer[cpu], THREAD_TICK_RATE, (timer_callback)thread_timer_tick, NULL);
+        timer_set_periodic(&percpu[cpu].preempt_timer, THREAD_TICK_RATE, (timer_callback)thread_timer_tick, NULL);
     }
 #endif
 
@@ -1088,7 +1078,7 @@ void thread_init_early(void)
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
     /* create a thread to cover the current running state */
-    thread_t *t = &idle_threads[0];
+    thread_t *t = &percpu[0].idle_thread;
     thread_construct_first(t, "bootstrap");
 
     sched_init_early();
@@ -1103,7 +1093,7 @@ void thread_init(void)
 {
 #if PLATFORM_HAS_DYNAMIC_TIMER
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        timer_initialize(&preempt_timer[i]);
+        timer_initialize(&percpu[i].preempt_timer);
     }
 #endif
 }
@@ -1213,13 +1203,13 @@ thread_t *thread_create_idle_thread(uint cpu_num)
     DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
     /* Shouldn't be initialized yet */
-    DEBUG_ASSERT(idle_threads[cpu_num].magic != THREAD_MAGIC);
+    DEBUG_ASSERT(percpu[cpu_num].idle_thread.magic != THREAD_MAGIC);
 
     char name[16];
     snprintf(name, sizeof(name), "idle %u", cpu_num);
 
     thread_t *t = thread_create_etc(
-            &idle_threads[cpu_num], name,
+            &percpu[cpu_num].idle_thread, name,
             idle_thread_routine, NULL,
             IDLE_PRIORITY,
             NULL, NULL, DEFAULT_STACK_SIZE,

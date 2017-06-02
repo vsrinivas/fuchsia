@@ -6,6 +6,7 @@
 
 #include <err.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <lib/ktrace.h>
 #include <lib/vdso.h>
 #include <magenta/mx-syscall-numbers.h>

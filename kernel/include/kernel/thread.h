@@ -19,7 +19,7 @@
 #include <kernel/vm.h>
 #include <debug.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* debug-enable runtime checks */
 #if LK_DEBUGLEVEL > 1
@@ -265,9 +265,6 @@ enum handler_return thread_timer_tick(void);
 thread_t *get_current_thread(void);
 void set_current_thread(thread_t *);
 
-/* the idle thread(s) (statically allocated) */
-extern thread_t idle_threads[SMP_MAX_CPUS];
-
 /* scheduler lock */
 extern spin_lock_t thread_lock;
 
@@ -279,32 +276,6 @@ static inline bool thread_lock_held(void)
     return spin_lock_held(&thread_lock);
 }
 
-/* thread/cpu level statistics */
-struct thread_stats {
-    lk_time_t idle_time;
-    lk_time_t last_idle_timestamp;
-    ulong reschedules;
-    ulong context_switches;
-    ulong irq_preempts;
-    ulong preempts;
-    ulong yields;
-
-    /* cpu level interrupts and exceptions */
-    ulong interrupts; /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
-    ulong timer_ints; /* timer interrupts */
-    ulong timers; /* timer callbacks */
-    ulong exceptions; /* exceptions such as page fault or undefined opcode */
-    ulong syscalls;
-
-    /* inter-processor interrupts */
-    ulong reschedule_ipis;
-    ulong generic_ipis;
-};
-
-extern struct thread_stats thread_stats[SMP_MAX_CPUS];
-
-#define THREAD_STATS_INC(name) do { __atomic_fetch_add(&thread_stats[arch_curr_cpu_num()].name, 1u, __ATOMIC_RELAXED); } while(0)
-
-__END_CDECLS;
+__END_CDECLS
 
 #endif

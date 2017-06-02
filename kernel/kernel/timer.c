@@ -23,7 +23,9 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/percpu.h>
 #include <kernel/spinlock.h>
+#include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <list.h>
@@ -33,13 +35,7 @@
 
 #define LOCAL_TRACE 0
 
-spin_lock_t timer_lock;
-
-struct timer_state {
-    struct list_node timer_queue;
-} __CPU_ALIGN;
-
-static struct timer_state timers[SMP_MAX_CPUS];
+static spin_lock_t timer_lock;
 
 static enum handler_return timer_tick(void *arg, lk_time_t now);
 
@@ -59,7 +55,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer)
 
     LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 ", periodic %" PRIu64 "\n", timer, cpu, timer->scheduled_time, timer->period);
 
-    list_for_every_entry(&timers[cpu].timer_queue, entry, timer_t, node) {
+    list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
         if (TIME_GT(entry->scheduled_time, timer->scheduled_time)) {
             list_add_before(&entry->node, &timer->node);
             return;
@@ -67,7 +63,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer)
     }
 
     /* walked off the end of the list */
-    list_add_tail(&timers[cpu].timer_queue, &timer->node);
+    list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
 static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, timer_callback callback, void *arg)
@@ -106,7 +102,7 @@ static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, time
     insert_timer_in_queue(cpu, timer);
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
-    if (list_peek_head_type(&timers[cpu].timer_queue, timer_t, node) == timer) {
+    if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
         platform_set_oneshot_timer(timer_tick, NULL, deadline);
@@ -200,7 +196,7 @@ bool timer_cancel(timer_t *timer)
         callback_not_running = true;
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
-        timer_t *oldhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+        timer_t *oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 #endif
 
         /* remove it from the queue */
@@ -209,7 +205,7 @@ bool timer_cancel(timer_t *timer)
 #if PLATFORM_HAS_DYNAMIC_TIMER
         /* see if we've just modified the head of this cpu's timer queue */
         /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
-        timer_t *newhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+        timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
         if (newhead == NULL) {
             LTRACEF("clearing old hw timer, nothing in the queue\n");
             platform_stop_timer();
@@ -255,7 +251,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
     for (;;) {
         /* see if there's an event to process */
-        timer = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+        timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
         if (likely(timer == 0))
             break;
         LTRACEF("next item on timer queue %p at %" PRIu64 " now %" PRIu64 " (%p, arg %p)\n", timer, timer->scheduled_time, now, timer->callback, timer->arg);
@@ -313,7 +309,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
     /* reset the timer to the next event */
-    timer = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (timer) {
         /* has to be the case or it would have fired already */
         DEBUG_ASSERT(TIME_GT(timer->scheduled_time, now));
@@ -362,17 +358,17 @@ void timer_transition_off_cpu(uint old_cpu)
     spin_lock_irqsave(&timer_lock, state);
     uint cpu = arch_curr_cpu_num();
 
-    timer_t *old_head = list_peek_head_type(&timers[old_cpu].timer_queue, timer_t, node);
+    timer_t *old_head = list_peek_head_type(&percpu[old_cpu].timer_queue, timer_t, node);
 
     timer_t *entry = NULL, *tmp_entry = NULL;
     /* Move all timers from old_cpu to this cpu */
-    list_for_every_entry_safe(&timers[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
+    list_for_every_entry_safe(&percpu[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
         list_delete(&entry->node);
         insert_timer_in_queue(cpu, entry);
     }
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
-    timer_t *new_head = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    timer_t *new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (new_head != NULL && new_head != old_head) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
@@ -393,7 +389,7 @@ void timer_thaw_percpu(void)
 
     uint cpu = arch_curr_cpu_num();
 
-    timer_t *t = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    timer_t *t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (t) {
         LTRACEF("rescheduling timer for %" PRIu64 " nsecs\n", t->scheduled_time);
         platform_set_oneshot_timer(timer_tick, NULL, t->scheduled_time);
@@ -407,7 +403,7 @@ void timer_init(void)
 {
     timer_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        list_initialize(&timers[i].timer_queue);
+        list_initialize(&percpu[i].timer_queue);
     }
 #if !PLATFORM_HAS_DYNAMIC_TIMER
     #warning "Platform does not have dynamic timer. Timer has 10ms resolution"

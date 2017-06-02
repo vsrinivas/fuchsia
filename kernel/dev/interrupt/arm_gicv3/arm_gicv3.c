@@ -11,6 +11,7 @@
 #include <string.h>
 #include <dev/interrupt/arm_gic.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <kernel/vm.h>
 #include <lk/init.h>
 #include <dev/interrupt.h>
@@ -83,7 +84,7 @@ static void gic_set_enable(uint vector, bool enable)
 }
 
 static void gic_init_percpu_early(void)
-{   
+{
     uint cpu = arch_curr_cpu_num();
 
     // configure sgi/ppi as non-secure group 1
