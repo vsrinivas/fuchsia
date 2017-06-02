@@ -12,6 +12,8 @@
 
 #include "channels.h"
 
+constexpr int MULTI_PROCESS_WRITE_BATCH_SIZE = 10000;
+
 class Channel : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
@@ -151,10 +153,25 @@ int channel_write(uint32_t num_bytes) {
   }
 
   std::vector<char> buffer(num_bytes);
+  mx_signals_t signals;
   mx_status_t status;
   do {
-    status = mx_channel_write(channel, 0, buffer.data(), buffer.size(), nullptr,
-                              0);
+    for (int i = 0; i < MULTI_PROCESS_WRITE_BATCH_SIZE; i++) {
+      status = mx_channel_write(channel, 0, buffer.data(), buffer.size(),
+                                nullptr, 0);
+      if (status != NO_ERROR) {
+        return -1;
+      }
+    }
+    status = mx_object_wait_one(channel,
+                                MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+                                MX_TIME_INFINITE, &signals);
+    if (status != NO_ERROR) {
+      return -1;
+    } else if (signals & MX_CHANNEL_PEER_CLOSED) {
+      return 0;
+    }
+    status = mx_object_signal(channel, MX_USER_SIGNAL_0, 0);
   } while(status == NO_ERROR);
   return -1;
 }
@@ -223,6 +240,11 @@ BENCHMARK_DEFINE_F(ChannelMultiProcess, Read)(benchmark::State& state) {
   uint64_t bytes_processed = 0;
   while (state.KeepRunning()) {
     state.PauseTiming();
+    int iteration = state.iterations() - 1;  // state.iterations starts at 1.
+    if (iteration > 0 && (iteration % MULTI_PROCESS_WRITE_BATCH_SIZE == 0)) {
+      // Signal the process to continue writing.
+      mx_object_signal_peer(channel, 0, MX_USER_SIGNAL_0);
+    }
     status = mx_object_wait_one(channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE,
                                 nullptr);
     if (status != NO_ERROR) {
