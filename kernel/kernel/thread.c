@@ -346,6 +346,9 @@ status_t thread_suspend(thread_t *t)
             break;
         case THREAD_RUNNING:
             /* thread is running (on another cpu) */
+            /* The following call is not essential.  It just makes the
+             * thread suspension happen sooner rather than at the next
+             * timer interrupt or syscall. */
             mp_reschedule(1u << thread_last_cpu(t), 0);
             break;
         case THREAD_SUSPENDED:
@@ -580,6 +583,9 @@ void thread_kill(thread_t *t, bool block)
             break;
         case THREAD_RUNNING:
             /* thread is running (on another cpu) */
+            /* The following call is not essential.  It just makes the
+             * thread termination happen sooner rather than at the next
+             * timer interrupt or syscall. */
             mp_reschedule(1u << thread_last_cpu(t), 0);
             break;
         case THREAD_SUSPENDED:
