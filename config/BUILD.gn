@@ -97,7 +97,7 @@ config("debug_prefix_map") {
 config("debug") {
   cflags = [
     "-g",
-    "-O0",
+    "-Og",
   ]
 }
 
