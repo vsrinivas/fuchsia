@@ -12,6 +12,7 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/story_runner/story_impl.h"
+#include "apps/modular/src/user_runner/focus.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -196,7 +197,8 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
 // 1. Create a page for the new story.
 // 2. Create a new StoryData structure pointing to this new page and save it
 //    to the root page.
-// 3. Returns the Story ID of the newly created story.
+// 3. Write a copy of the current context to the story page.
+// 4. Returns the Story ID of the newly created story.
 class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
  public:
   CreateStoryCall(OperationContainer* const container,
@@ -252,19 +254,24 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 
             new WriteStoryDataCall(&operation_queue_, root_page_,
                                    std::move(story_data_),
-                                   [this, flow] { Cont(flow); });
+                                   [this, flow] { Cont1(flow); });
           });
         });
   }
 
-  void Cont(FlowToken flow) {
+  void Cont1(FlowToken flow) {
     controller_ = std::make_unique<StoryImpl>(story_id_, std::move(story_page_),
                                               story_provider_impl_);
-
-    // We ensure that root data has been written before this operation is
-    // done.
     controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
-                              [flow] {});
+                              [this, flow] { Cont2(flow); });
+  }
+
+  void Cont2(FlowToken flow) {
+    controller_->Log(story_provider_impl_->MakeLogEntry(StorySignal::CREATED));
+
+    // We ensure that everything has been written to the story page before this
+    // operation is done.
+    controller_->Sync([flow] {});
   }
 
   ledger::Ledger* const ledger_;                  // not owned
@@ -561,6 +568,8 @@ StoryProviderImpl::StoryProviderImpl(
     ledger::Page* const root_page,
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
+    FocusProviderPtr focus_provider,
+    maxwell::IntelligenceServices* const intelligence_services,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : PageClient("StoryProviderImpl", root_page, kStoryKeyPrefix),
       user_scope_(user_scope),
@@ -569,7 +578,12 @@ StoryProviderImpl::StoryProviderImpl(
       root_page_(root_page),
       story_shell_(std::move(story_shell)),
       component_context_info_(component_context_info),
-      user_intelligence_provider_(user_intelligence_provider) {}
+      user_intelligence_provider_(user_intelligence_provider),
+      context_handler_(intelligence_services),
+      focus_provider_(std::move(focus_provider)),
+      focus_watcher_binding_(this) {
+  focus_provider_->Watch(focus_watcher_binding_.NewBinding());
+}
 
 StoryProviderImpl::~StoryProviderImpl() = default;
 
@@ -712,5 +726,35 @@ void StoryProviderImpl::OnDelete(const std::string& key) {
                       component_context_info_.message_queue_manager,
                       true /* already_deleted */, [] {});
 }
+
+// |FocusWatcher|
+void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
+  if (info->device_id.get() != device_id_) {
+    return;
+  }
+
+  if (info->focused_story_id.is_null()) {
+    return;
+  }
+
+  auto i = story_controllers_.find(info->focused_story_id.get());
+  if (i == story_controllers_.end()) {
+    FTL_LOG(ERROR) << "Story controller not found for focused story "
+                   << info->focused_story_id;
+    return;
+  }
+
+  i->second->Log(MakeLogEntry(StorySignal::FOCUSED));
+}
+
+StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {
+  auto log_entry = StoryContextLog::New();
+  log_entry->context = context_handler_.values().Clone();
+  log_entry->device_id = device_id_;
+  log_entry->time = mx_time_get(MX_CLOCK_UTC);
+  log_entry->signal = signal;
+
+  return log_entry;
+};
 
 }  // namespace modular

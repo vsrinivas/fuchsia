@@ -10,6 +10,7 @@
 #include <string>
 
 #include "apps/modular/services/module/module_data.fidl.h"
+#include "apps/modular/services/story/story_data.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
 
@@ -31,6 +32,7 @@ constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 // 4. Story pages (one per story) contain the story state expressed as link and
 //    module data.
 
+
 // Keys in these pages are constructed as follows:
 //
 // 1. A prefix indicates the kind of information stored under the key. The
@@ -51,6 +53,7 @@ constexpr char kTriggerKeyPrefix[] = "Trigger/";
 constexpr char kLinkKeyPrefix[] = "Link/";
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
+constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of
@@ -59,6 +62,7 @@ constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 std::string MakeStoryKey(const fidl::String& story_id);
 std::string MakeDeviceKey(const fidl::String& device_name);
 std::string MakePerDeviceKey(const fidl::String& device_name);
+std::string MakeStoryContextLogKey(StorySignal signal, uint64_t time);
 std::string MakeFocusKey(const fidl::String& device_name);
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,

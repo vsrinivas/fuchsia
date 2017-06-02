@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/page_client.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
+#include "apps/modular/services/story/story_data.fidl.h"
 
 namespace modular {
 
@@ -55,6 +56,7 @@ class StoryStorageImpl : public PageClient {
                  LinkImpl* impl,
                  const DataCallback& watcher);
   void DropWatcher(LinkImpl* impl);
+  void Log(StoryContextLogPtr log_entry);
   void Sync(const SyncCallback& callback);
 
  private:
@@ -85,6 +87,7 @@ class StoryStorageImpl : public PageClient {
   class WriteModuleDataCall;
   class ReadDeviceDataCall;
   class WriteDeviceDataCall;
+  class StoryContextLogCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

@@ -4,6 +4,7 @@
 
 #include "apps/modular/lib/ledger/storage.h"
 
+#include <string>
 #include <vector>
 
 #include "apps/modular/lib/util/string_escape.h"
@@ -24,6 +25,29 @@ std::string MakeDeviceKey(const fidl::String& device_name) {
 std::string MakePerDeviceKey(const fidl::String& device_name) {
   // Not escaped, because only one component after the prefix.
   return kPerDeviceKeyPrefix + device_name.get();
+}
+
+std::string MakeStoryContextLogKey(const StorySignal signal, const uint64_t time) {
+  // We use the time as the prefix because that's enough to create mostly unique
+  // entries. If there is a collison from two devices, we could resolve the
+  // conflict, but as long as we don't its alright, because we only lose one log
+  // record of many.
+  //
+  // The signal is part of the key because we sometimes would like to only read
+  // the CREATED log record.
+  std::string key{kStoryContextLogKeyPrefix};
+  switch (signal) {
+    case StorySignal::CREATED:
+      key.append("C");
+      key.append(kSeparator);
+      break;
+    case StorySignal::FOCUSED:
+      key.append("F");
+      key.append(kSeparator);
+      break;
+  }
+  key.append(StringEscape(std::to_string(time), kSeparator, kEscaper));
+  return key;
 }
 
 std::string MakeFocusKey(const fidl::String& device_name) {

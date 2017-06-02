@@ -828,6 +828,14 @@ StoryState StoryImpl::GetStoryState() const {
   return state_;
 }
 
+void StoryImpl::Log(StoryContextLogPtr log_entry) {
+  story_storage_impl_->Log(std::move(log_entry));
+}
+
+void StoryImpl::Sync(const std::function<void()>& done) {
+  story_storage_impl_->Sync(done);
+}
+
 void StoryImpl::StopForDelete(const StopCallback& done) {
   new DeleteCall(&operation_queue_, this, done);
 }

@@ -11,6 +11,7 @@ source_set("storage") {
   deps = [
     "//apps/modular/lib/util",
     "//apps/modular/services/module:module_data",
+    "//apps/modular/services/story:private",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]

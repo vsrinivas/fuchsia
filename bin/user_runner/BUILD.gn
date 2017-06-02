@@ -15,8 +15,6 @@ executable("user_runner") {
     "conflict_resolver_impl.h",
     "device_map_impl.cc",
     "device_map_impl.h",
-    "focus.cc",
-    "focus.h",
     "remote_invoker_impl.cc",
     "remote_invoker_impl.h",
     "user_runner.cc",
@@ -25,6 +23,7 @@ executable("user_runner") {
   ]
 
   deps = [
+    ":focus",
     "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
@@ -78,5 +77,26 @@ executable("dev_user_shell") {
     "//lib/ftl",
     "//lib/mtl",
     "//lib/mtl/tasks",
+  ]
+}
+
+source_set("focus") {
+  sources = [
+    "focus.cc",
+    "focus.h",
+  ]
+
+  deps = [
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:json_xdr",
+    "//apps/modular/lib/fidl:ledger",
+    "//apps/modular/lib/fidl:operation",
+    "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/rapidjson",
+    "//apps/modular/services/user:private",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
   ]
 }

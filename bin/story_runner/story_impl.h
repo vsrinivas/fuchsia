@@ -92,6 +92,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
 
   // Called by StoryProviderImpl.
   StoryState GetStoryState() const;
+  void Log(StoryContextLogPtr log_entry);
+  void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl
   void FocusModule(const fidl::Array<fidl::String>& module_path);

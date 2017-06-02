@@ -11,6 +11,8 @@ group("all") {
 
 source_set("story_runner") {
   sources = [
+    "context_handler.cc",
+    "context_handler.h",
     "link_impl.cc",
     "link_impl.h",
     "module_context_impl.cc",
@@ -29,6 +31,7 @@ source_set("story_runner") {
     "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
+    "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:bottleneck",
@@ -43,7 +46,9 @@ source_set("story_runner") {
     "//apps/modular/services/config",
     "//apps/modular/services/module",
     "//apps/modular/services/story:private",
+    "//apps/modular/services/user:focus",
     "//apps/modular/src/agent_runner:public",
+    "//apps/modular/src/user_runner:focus",
     "//apps/modular/src/component",
     "//apps/mozart/services/views",
     "//lib/fidl/cpp/bindings",

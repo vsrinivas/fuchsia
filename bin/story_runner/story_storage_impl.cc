@@ -9,6 +9,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/ledger/storage.h"
+#include "apps/modular/services/story/story_data.fidl.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
@@ -32,6 +33,13 @@ void XdrPerDeviceStoryInfo(XdrContext* const xdr,
   xdr->Field("id", &info->story_id);
   xdr->Field("time", &info->timestamp);
   xdr->Field("state", &info->state);
+}
+
+void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
+  xdr->Field("context", &data->context);
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("time", &data->time);
+  xdr->Field("signal", &data->signal);
 }
 
 }  // namespace
@@ -210,10 +218,11 @@ class StoryStorageImpl::ReadAllModuleDataCall
   void Run() override {
     FlowToken flow{this, &data_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+    page_->GetSnapshot(page_snapshot_.NewRequest(),
+                       to_array(kModuleKeyPrefix), nullptr,
                        [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "ReadModuleDataCall() "
+                           FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
                                           << "Page.GetSnapshot() " << status;
                            return;
                          }
@@ -223,7 +232,7 @@ class StoryStorageImpl::ReadAllModuleDataCall
   }
 
   void Cont1(FlowToken flow) {
-    GetEntries(page_snapshot_.get(), kModuleKeyPrefix, &entries_,
+    GetEntries(page_snapshot_.get(), nullptr, &entries_,
                nullptr /* next_token */, [this, flow](ledger::Status status) {
                  if (status != ledger::Status::OK) {
                    FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
@@ -356,6 +365,42 @@ class StoryStorageImpl::WriteDeviceDataCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteDeviceDataCall);
 };
 
+class StoryStorageImpl::StoryContextLogCall : Operation<> {
+ public:
+  StoryContextLogCall(OperationContainer* const container,
+                      ledger::Page* const page,
+                      StoryContextLogPtr log_entry)
+      : Operation(container, [] {}),
+        page_(page),
+        log_entry_(std::move(log_entry)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // We write the current context when the story was created.
+    std::string json;
+    XdrWrite(&json, &log_entry_, XdrStoryContextLog);
+
+    page_->PutWithPriority(
+        to_array(MakeStoryContextLogKey(log_entry_->signal, log_entry_->time)),
+        to_array(json),
+        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "StoryContextLogCall"
+                           << " Page.PutWithPriority() " << status;
+          }
+        });
+  }
+
+  ledger::Page* const page_;  // not owned
+  StoryContextLogPtr log_entry_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryContextLogCall);
+};
+
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
       story_page_(story_page) {}
@@ -413,6 +458,10 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
                                        const SyncCallback& callback) {
   new WriteDeviceDataCall(&operation_queue_, story_page_, story_id, device_id,
                           state, callback);
+}
+
+void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
+  new StoryContextLogCall(&operation_queue_, story_page_, std::move(log_entry));
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {

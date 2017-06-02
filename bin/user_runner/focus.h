@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/page_client.h"

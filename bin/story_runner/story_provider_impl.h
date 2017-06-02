@@ -17,9 +17,11 @@
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "apps/modular/src/component/message_queue_manager.h"
+#include "apps/modular/src/story_runner/context_handler.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -32,7 +34,7 @@ namespace modular {
 class Resolver;
 class StoryImpl;
 
-class StoryProviderImpl : StoryProvider, PageClient {
+class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
   StoryProviderImpl(
       const Scope* user_scope,
@@ -41,6 +43,8 @@ class StoryProviderImpl : StoryProvider, PageClient {
       ledger::Page* root_page,
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
+      FocusProviderPtr focus_provider,
+      maxwell::IntelligenceServices* intelligence_services,
       maxwell::UserIntelligenceProvider* user_intelligence_provider);
 
   ~StoryProviderImpl() override;
@@ -118,6 +122,11 @@ class StoryProviderImpl : StoryProvider, PageClient {
   // |PageClient|
   void OnDelete(const std::string& key) override;
 
+  // |FocusWatcher|
+  void OnFocusChange(FocusInfoPtr info) override;
+
+  StoryContextLogPtr MakeLogEntry(const StorySignal signal);
+
   const Scope* const user_scope_;
 
   // Unique ID generated for this user/device combination.
@@ -142,6 +151,13 @@ class StoryProviderImpl : StoryProvider, PageClient {
 
   maxwell::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
+
+  // When a story gets created, or when it gets focused on this device, we write
+  // a record of the current context in the story page. So we need to watch the
+  // context and the focus.
+  ContextHandler context_handler_;
+  FocusProviderPtr focus_provider_;
+  fidl::Binding<FocusWatcher> focus_watcher_binding_;
 
   // This is a container of all operations that are currently enqueued to run in
   // a FIFO manner. All operations exposed via |StoryProvider| interface are

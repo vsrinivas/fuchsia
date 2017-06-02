@@ -280,14 +280,20 @@ UserRunnerImpl::UserRunnerImpl(
                 user_intelligence_provider_.get(), std::placeholders::_1));
   // End init maxwell.
 
+  fidl::InterfacePtr<FocusProvider> focus_provider_2;
+  auto focus_provider_request_2 = focus_provider_2.NewRequest();
+
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, device_id, ledger_.get(), root_page_.get(),
       std::move(story_shell), component_context_info,
+      std::move(focus_provider_2),
+      intelligence_services_.get(),
       user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   focus_handler_.reset(new FocusHandler(device_id, root_page_.get()));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request));
+  focus_handler_->AddProviderBinding(std::move(focus_provider_request_2));
 
   visible_stories_handler_.reset(new VisibleStoriesHandler);
   visible_stories_handler_->AddProviderBinding(
