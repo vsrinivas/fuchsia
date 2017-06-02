@@ -200,7 +200,7 @@ bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
 }
 
 bool Session::ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args) {
-  auto link = context_->CreateLink(this, id, args);
+  auto link = CreateLink(id, args);
   return link ? resources_.AddResource(id, std::move(link)) : false;
 }
 
