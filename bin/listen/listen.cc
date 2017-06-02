@@ -125,7 +125,10 @@ class Service : private mtl::MessageLoopHandler {
 
     mx_status_t status = launchpad_go(lp, &proc, &errmsg);
     if (status < 0) {
-      FTL_LOG(FATAL) << "error from launchpad_go: " << errmsg;
+      shutdown(conn, SHUT_RDWR);
+      close(conn);
+      FTL_LOG(ERROR) << "error from launchpad_go: " << errmsg;
+      return;
     }
 
     auto handler_key = mtl::MessageLoop::GetCurrent()->AddHandler(
