@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "application/src/manager/command_listener.h"
 #include "application/src/manager/config.h"
 #include "application/src/manager/root_environment_host.h"
 #include "lib/ftl/command_line.h"
@@ -63,13 +62,6 @@ int main(int argc, char** argv) {
         root.environment()->CreateApplication(std::move(launch_info), nullptr);
       }
     });
-  }
-
-  std::unique_ptr<app::CommandListener> command_listener;
-  mx::channel command_channel(mx_get_startup_handle(PA_APP_LAUNCHER));
-  if (command_channel) {
-    command_listener.reset(new app::CommandListener(
-        root.environment(), std::move(command_channel)));
   }
 
   message_loop.Run();

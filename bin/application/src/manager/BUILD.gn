@@ -14,8 +14,6 @@ executable("manager") {
     "application_environment_impl.h",
     "application_runner_holder.cc",
     "application_runner_holder.h",
-    "command_listener.cc",
-    "command_listener.h",
     "config.cc",
     "config.h",
     "main.cc",
