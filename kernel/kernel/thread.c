@@ -621,6 +621,13 @@ static void thread_do_suspend(void)
 
     THREAD_LOCK(state);
 
+    // make sure we haven't been killed while the lock was dropped for the user callback
+    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+        THREAD_UNLOCK(state);
+        thread_exit(0);
+        /* unreachable */
+    }
+
     // Make sure the suspend signal wasn't cleared while we were running the
     // callback.
     if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
