@@ -39,9 +39,6 @@ void Fail(const std::string& log_msg);
 // noticed first by the test runner, it terminates the test as failed.
 void Done(const std::function<void()>& ack);
 
-// Deprecated. This variant of the function suffers from a race condition.
-void Done();
-
 // A test may call Teardown() to finish the test run and tear down the service.
 // Unless Fail() is called, the TestRunner will consider the test run as having
 // passed successfully.
@@ -52,9 +49,6 @@ void Done();
 // to the application controller. If the close of the application controller is
 // noticed first by the test runner, it terminates the test as failed.
 void Teardown(const std::function<void()>& ack);
-
-// Deprecated. This variant of the function suffers from a race condition.
-void Teardown();
 
 // Signals that this process expects to be terminated within the time specified.
 // If it is not killed that is a failure. A test that calls this should not call

@@ -50,12 +50,6 @@ void Done(const std::function<void()>& ack) {
     g_test_runner_store.reset();
 }
 
-void Done() {
-  FTL_LOG(WARNING) << "Done() used in a race. Test is flaky."
-                   << " Use Done with callback instead.";
-  Done([] {});
-}
-
 void Teardown(const std::function<void()>& ack) {
   if (g_test_runner.is_bound()) {
     g_test_runner->Teardown([ack] {
@@ -68,12 +62,6 @@ void Teardown(const std::function<void()>& ack) {
 
   if (g_test_runner_store.is_bound())
     g_test_runner_store.reset();
-}
-
-void Teardown() {
-  FTL_LOG(WARNING) << "Teardown() used in a race. Test is flaky."
-                   << " Use Teardown with callback instead.";
-  Teardown([] {});
 }
 
 void WillTerminate(double withinSeconds) {

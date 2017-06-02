@@ -510,11 +510,10 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
 
     delete this;
 
-    modular::testing::Done();
-
-    done();
-
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    modular::testing::Done([done] {
+        done();
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
   }
 
   void TeardownStoryController() {
