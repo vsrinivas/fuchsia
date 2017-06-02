@@ -29,7 +29,6 @@ const int ERR_BUFFER_TOO_SMALL = -15;
 const int ERR_BAD_STATE = -20;
 const int ERR_TIMED_OUT = -21;
 const int ERR_SHOULD_WAIT = -22;
-const int ERR_HANDLE_CLOSED = -23;
 const int ERR_CANCELED = -23;
 const int ERR_PEER_CLOSED = -24;
 const int ERR_NOT_FOUND = -25;
