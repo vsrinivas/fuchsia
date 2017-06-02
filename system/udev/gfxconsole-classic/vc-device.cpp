@@ -511,6 +511,8 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if ((mx_vmo_create(sz, 0, &device->gfx_vmo)) < 0)
         goto fail;
 
+    mx_object_set_property(device->gfx_vmo, MX_PROP_NAME, "virtcon-framebuffer", 19);
+
     uintptr_t ptr;
     if (mx_vmar_map(mx_vmar_root_self(), 0, device->gfx_vmo, 0, sz,
                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr) < 0) {
