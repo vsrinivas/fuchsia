@@ -67,7 +67,7 @@ public:
         // Calls a Locked method of the parent, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
-    status_t CloneCOW(uint64_t offset, uint64_t size,
+    status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
                       mxtl::RefPtr<VmObject>* clone_vmo) override
         // Calls a Locked method of the child, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;

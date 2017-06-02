@@ -47,6 +47,15 @@ public:
         return NO_ERROR;
     }
 
+    Name& operator=(const Name<Size>& other) {
+        if (this != &other) {
+            char buffer[Size];
+            other.get(Size, buffer);
+            set(buffer, Size);
+        }
+        return *this;
+    }
+
 private:
     // These Names are often included for diagnostic purposes, and
     // access to the Name might be made under various other locks or

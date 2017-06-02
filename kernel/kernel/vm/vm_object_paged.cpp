@@ -76,7 +76,7 @@ mxtl::RefPtr<VmObject> VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t 
     return vmo;
 }
 
-status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, mxtl::RefPtr<VmObject>* clone_vmo) {
+status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
@@ -100,6 +100,9 @@ status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, mxtl::RefPtr<Vm
     status = vmo->SetParentOffsetLocked(offset);
     if (status != NO_ERROR)
         return status;
+
+    if (copy_name)
+        vmo->name_ = name_;
 
     *clone_vmo = mxtl::move(vmo);
 

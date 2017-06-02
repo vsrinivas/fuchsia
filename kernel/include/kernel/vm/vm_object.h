@@ -140,7 +140,8 @@ public:
 
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
-    virtual status_t CloneCOW(uint64_t offset, uint64_t size, mxtl::RefPtr<VmObject>* clone_vmo) {
+    virtual status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
+                              mxtl::RefPtr<VmObject>* clone_vmo) {
         return ERR_NOT_SUPPORTED;
     }
 

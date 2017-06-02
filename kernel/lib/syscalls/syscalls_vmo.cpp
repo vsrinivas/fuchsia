@@ -241,7 +241,7 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
             return status;
 
         // clone the vmo into a new one
-        status = vmo->Clone(options, offset, size, &clone_vmo);
+        status = vmo->Clone(options, offset, size, in_rights & MX_RIGHT_GET_PROPERTY,  &clone_vmo);
         if (status != NO_ERROR)
             return status;
 

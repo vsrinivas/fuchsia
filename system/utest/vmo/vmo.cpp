@@ -622,11 +622,15 @@ bool vmo_clone_test_1() {
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
     EXPECT_EQ(NO_ERROR, mx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_EQ(NO_ERROR, mx_object_set_property(vmo, MX_PROP_NAME, "test1", 5), "mx_object_set_property");
 
     // clone it
     clone_vmo[0] = MX_HANDLE_INVALID;
     EXPECT_EQ(NO_ERROR, mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NEQ(MX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
+    char name[MX_MAX_NAME_LEN];
+    EXPECT_EQ(NO_ERROR, mx_object_get_property(clone_vmo[0], MX_PROP_NAME, name, MX_MAX_NAME_LEN), "mx_object_get_property");
+    EXPECT_TRUE(!strcmp(name, "test1"), "get_name");
 
     // clone it a second time
     clone_vmo[1] = MX_HANDLE_INVALID;

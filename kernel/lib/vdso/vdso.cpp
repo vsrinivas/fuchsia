@@ -283,7 +283,7 @@ void VDso::CreateVariant(Variant variant) {
 
     mxtl::RefPtr<VmObject> new_vmo;
     mx_status_t status = vmo()->Clone(MX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
-                                      &new_vmo);
+                                      false, &new_vmo);
     ASSERT(status == NO_ERROR);
 
     VDsoDynSymWindow dynsym_window(new_vmo);

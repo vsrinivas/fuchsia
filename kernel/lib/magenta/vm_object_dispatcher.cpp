@@ -143,14 +143,14 @@ mx_status_t VmObjectDispatcher::SetMappingCachePolicy(uint32_t cache_policy) {
 }
 
 mx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_t size,
-        mxtl::RefPtr<VmObject>* clone_vmo) {
+        bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo) {
     canary_.Assert();
 
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",
             options, offset, size);
 
     if (options & MX_VMO_CLONE_COPY_ON_WRITE) {
-        return vmo_->CloneCOW(offset, size, clone_vmo);
+        return vmo_->CloneCOW(offset, size, copy_name, clone_vmo);
     } else {
         return ERR_INVALID_ARGS;
     }
