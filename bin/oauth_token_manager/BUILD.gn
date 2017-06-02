@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 group("all") {
   deps = [
     ":oauth_token_manager",
+  ]
+}
+
+flatbuffer("credentials") {
+  sources = [
+    "credentials.fbs",
   ]
 }
 
@@ -14,6 +22,7 @@ executable("oauth_token_manager") {
   ]
 
   deps = [
+    ":credentials",
     "//application/lib/app",
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/rapidjson",

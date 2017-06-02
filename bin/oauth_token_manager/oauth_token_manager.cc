@@ -8,6 +8,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <memory>
 
 #include "application/lib/app/application_context.h"
@@ -16,6 +17,7 @@
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
+#include "apps/modular/src/oauth_token_manager/credentials_generated.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -52,7 +54,7 @@ constexpr char kClientId[] =
 constexpr char kGoogleOAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
-constexpr char kCredentialsFile[] = "/data/modular/device/v1/creds.db";
+constexpr char kCredentialsFile[] = "/data/modular/device/v2/creds.db";
 constexpr char kWebViewUrl[] = "file:///system/apps/web_view";
 
 constexpr auto kScopes = {"openid",
@@ -89,6 +91,60 @@ std::string UrlEncode(const std::string& value) {
   }
 
   return escaped.str();
+}
+
+// Returns |::auth::CredentialStore| after parsing credentials from
+// |kCredentialsFile|.
+const ::auth::CredentialStore* ParseCredsFile() {
+  // Reserialize existing users.
+  if (!files::IsFile(kCredentialsFile)) {
+    return nullptr;
+  }
+
+  std::string serialized_creds;
+  if (!files::ReadFileToString(kCredentialsFile, &serialized_creds)) {
+    // Unable to read file. Bailing out.
+    FTL_LOG(ERROR) << "Unable to read user configuration file at: "
+                   << kCredentialsFile;
+    return nullptr;
+  }
+
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(serialized_creds.data()),
+      serialized_creds.size());
+  if (!::auth::VerifyCredentialStoreBuffer(verifier)) {
+    FTL_LOG(ERROR) << "Unable to verify credentials buffer:"
+                   << serialized_creds.data();
+    return nullptr;
+  }
+
+  return ::auth::GetCredentialStore(serialized_creds.data());
+}
+
+// Serializes |::auth::CredentialStore| to the |kCredentialsFIle| on disk.
+bool WriteCredsFile(const std::string& serialized_creds) {
+  // verify file before saving
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(serialized_creds.data()),
+      serialized_creds.size());
+  if (!::auth::VerifyCredentialStoreBuffer(verifier)) {
+    FTL_LOG(ERROR) << "Unable to verify credentials buffer:"
+                   << serialized_creds.data();
+    return false;
+  }
+
+  if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
+    FTL_LOG(ERROR) << "Unable to create directory for " << kCredentialsFile;
+    return false;
+  }
+
+  if (!files::WriteFile(kCredentialsFile, serialized_creds.data(),
+                        serialized_creds.size())) {
+    FTL_LOG(ERROR) << "Unable to write file " << kCredentialsFile;
+    return false;
+  }
+
+  return true;
 }
 
 // Exactly one of success_callback and failure_callback is ever invoked.
@@ -203,14 +259,18 @@ class OAuthTokenManagerApp : AccountProvider {
   // from |kCredentialsFile| on Initialize.
   // TODO(ukode): Replace rapidjson with a dedicated data structure for storing
   // user credentials.
-  rapidjson::Document user_creds_;
+  const ::auth::CredentialStore* creds_ = nullptr;
 
   // In-memory cache for short lived oauth tokens that resets on system reboots.
   // Tokens are cached based on the expiration time set by the Identity
   // provider.
-  // TODO(ukode): Replace rapidjson with a dedicated data structure for storing
-  // oauth tokens.
-  rapidjson::Document oauth_tokens_;
+  struct ShortLivedToken {
+    uint64_t creation_ts;
+    uint64_t expires_in;
+    std::string access_token;
+    std::string id_token;
+  };
+  std::map<std::string, ShortLivedToken> oauth_tokens_;
 
   // We are using operations here not to guard state across asynchronous calls
   // but rather to clean up state after an 'operation' is done.
@@ -245,24 +305,11 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
 
   // |TokenProvider|
   void GetAccessToken(const GetAccessTokenCallback& callback) override {
-    if (!app_->user_creds_.IsObject() ||
-        !app_->user_creds_.HasMember(account_id_)) {
-      FTL_VLOG(1) << "User not found";
-      callback(nullptr);
-      return;
-    }
     app_->RefreshToken(account_id_, false, callback);
   }
 
   // |TokenProvider|
   void GetIdToken(const GetIdTokenCallback& callback) override {
-    if (!app_->user_creds_.IsObject() ||
-        !app_->user_creds_.HasMember(account_id_)) {
-      FTL_VLOG(1) << "User not found";
-      callback(nullptr);
-      return;
-    }
-
     app_->RefreshToken(account_id_, true, callback);
   }
 
@@ -299,33 +346,22 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
     FlowToken flow{this, &result_};
 
     FTL_LOG(INFO) << "Fetching tokens for Account_ID:" << account_id_;
-    FTL_LOG(INFO) << "User Creds:"
-                  << modular::JsonValueToPrettyString(app_->user_creds_);
 
-    if (!app_->user_creds_.HasMember(account_id_)) {
-      Failure(flow, "User not found");
-      return;
-    }
-
-    const std::string refresh_token =
-        app_->user_creds_[account_id_].GetString();
+    const std::string refresh_token = GetRefreshToken();
     if (refresh_token.empty()) {
-      Failure(flow, "Credentials are empty");
+      Failure(flow, "User not found");
       return;
     }
 
     // TODO(ukode): Change logs to verbose mode once they are supported.
     FTL_LOG(INFO) << "RT:" << refresh_token;
-    FTL_LOG(INFO) << "Cached OAuth Tokens:"
-                  << modular::JsonValueToPrettyString(app_->oauth_tokens_);
 
     // Check for existing expiry time before fetching it from server.
-    if (app_->oauth_tokens_.HasMember(account_id_)) {
+    auto token_it = app_->oauth_tokens_.find(account_id_);
+    if (token_it != app_->oauth_tokens_.end()) {
       uint64_t current_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
-      uint64_t creation_ts =
-          app_->oauth_tokens_[account_id_]["creation_ts"].GetUint64();
-      uint64_t token_expiry =
-          app_->oauth_tokens_[account_id_]["expires_in"].GetUint64();
+      uint64_t creation_ts = token_it->second.creation_ts;
+      uint64_t token_expiry = token_it->second.expires_in;
 
       if ((current_ts - creation_ts) < token_expiry) {
         // access/id token is still valid.
@@ -364,7 +400,32 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
          });
   }
 
-  // Parses access and idtokens from token endpoint response and saves it to
+  // Read saved user's refresh token from Credential store. If account is not
+  // found, an empty token is returned.
+  std::string GetRefreshToken() {
+    // TODO(ukode): Check if app_->creds_ is valid before parsing.
+    const ::auth::CredentialStore* credentials_storage = ParseCredsFile();
+    if (credentials_storage == nullptr) {
+      FTL_DCHECK(false) << "Failed to parse credentials.";
+      return "";
+    }
+
+    for (const auto* credential : *credentials_storage->creds()) {
+      if (credential->account_id()->str() == account_id_) {
+        for (const auto* token : *credential->tokens()) {
+          switch (token->identity_provider()) {
+            case ::auth::IdentityProvider_GOOGLE:
+              return token->refresh_token()->str();
+            default:
+              FTL_DCHECK(false) << "Unrecognized IdentityProvider"
+                                << token->identity_provider();
+          }
+        }
+      }
+    }
+    return "";
+  }
+
   // local token in-memory cache.
   bool GetShortLivedTokens(rapidjson::Document tokens) {
     if (!tokens.HasMember("access_token")) {
@@ -381,30 +442,20 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall : Operation<fidl::String> {
       return false;
     }
 
-    auto& allocator = app_->oauth_tokens_.GetAllocator();
-
-    if (app_->oauth_tokens_.HasMember(account_id_)) {
-      app_->oauth_tokens_.RemoveMember(account_id_);
-    }
-
     // Add the token generation timestamp to |tokens| for caching.
-    std::string ts_key_name("creation_ts");
-    rapidjson::Value creation_ts_key(ts_key_name.c_str(), ts_key_name.size(),
-                                     tokens.GetAllocator());
     uint64_t creation_ts = ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
-    tokens.AddMember(creation_ts_key, creation_ts, tokens.GetAllocator());
-
-    app_->oauth_tokens_.AddMember(rapidjson::Value(account_id_, allocator),
-                                  tokens, allocator);
+    app_->oauth_tokens_[account_id_] = {
+        creation_ts, tokens["expires_in"].GetUint64(),
+        tokens["access_token"].GetString(), tokens["id_token"].GetString()};
 
     return true;
   }
 
   void Success(FlowToken flow) {
     if (!refresh_id_token_) {
-      result_ = app_->oauth_tokens_[account_id_]["access_token"].GetString();
+      result_ = app_->oauth_tokens_[account_id_].access_token;
     } else {
-      result_ = app_->oauth_tokens_[account_id_]["id_token"].GetString();
+      result_ = app_->oauth_tokens_[account_id_].id_token;
     }
   }
 
@@ -443,8 +494,8 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
  private:
   // |Operation|
   void Run() override {
-    // No FlowToken used here; calling Done() directly is more suitable, because
-    // of the flow of control through web_view::WebRequestDelegate.
+    // No FlowToken used here; calling Done() directly is more suitable,
+    // because of the flow of control through web_view::WebRequestDelegate.
 
     auto view_owner = SetupWebView();
 
@@ -513,35 +564,54 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
       return false;
     };
 
-    auto& account_id = account_->id;
-    auto& allocator = app_->user_creds_.GetAllocator();
+    flatbuffers::FlatBufferBuilder builder;
+    std::vector<flatbuffers::Offset<::auth::UserCredential>> creds;
 
-    // Remove any existing tokens for this account_id.
-    if (app_->user_creds_.HasMember(account_id)) {
-      app_->user_creds_.RemoveMember(account_id);
+    // Reserialize existing users.
+    if (app_->creds_) {
+      FTL_DCHECK(app_->creds_->creds());
+      for (const auto* cred : *app_->creds_->creds()) {
+        if (cred->account_id()->str() == account_->id) {
+          // Update existing credentials
+          continue;
+        }
+
+        std::vector<flatbuffers::Offset<::auth::IdpCredential>> idp_creds;
+        for (const auto* idp_cred : *cred->tokens()) {
+          idp_creds.push_back(::auth::CreateIdpCredential(
+              builder, idp_cred->identity_provider(),
+              builder.CreateString(idp_cred->refresh_token())));
+        }
+
+        creds.push_back(::auth::CreateUserCredential(
+            builder, builder.CreateString(cred->account_id()),
+            builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
+                std::move(idp_creds))));
+      }
     }
 
-    rapidjson::Value rt_val;
-    rt_val.SetString(tokens["refresh_token"].GetString(), allocator);
-    app_->user_creds_.AddMember(rapidjson::Value(account_id, allocator), rt_val,
-                                allocator);
+    // add the new credential for |account_->id|.
+    std::vector<flatbuffers::Offset<::auth::IdpCredential>> new_idp_creds;
+    new_idp_creds.push_back(::auth::CreateIdpCredential(
+        builder, ::auth::IdentityProvider_GOOGLE,
+        builder.CreateString(std::move(tokens["refresh_token"].GetString()))));
 
-    // Save credentials to disk.
-    if (!files::CreateDirectory(files::GetDirectoryName(kCredentialsFile))) {
-      FTL_DCHECK(false) << "Unable to create directory for "
-                        << kCredentialsFile;
-      return false;
-    }
-    auto serialized_tokens = modular::JsonValueToString(app_->user_creds_);
-    FTL_VLOG(1) << "Tokens:" << serialized_tokens.data();
+    creds.push_back(::auth::CreateUserCredential(
+        builder, builder.CreateString(account_->id),
+        builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
+            std::move(new_idp_creds))));
 
-    if (!files::WriteFile(kCredentialsFile, serialized_tokens.data(),
-                          serialized_tokens.size())) {
-      FTL_DCHECK(false) << "Unable to write file " << kCredentialsFile;
-      return false;
-    }
+    builder.Finish(::auth::CreateCredentialStore(
+        builder, builder.CreateVector(std::move(creds))));
 
-    return true;
+    std::string new_serialized_creds = std::string(
+        reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+        builder.GetSize());
+
+    // Add new credentials to in-memory cache |creds_|.
+    app_->creds_ = ::auth::GetCredentialStore(new_serialized_creds.data());
+
+    return WriteCredsFile(new_serialized_creds);
   }
 
   void Success() {
@@ -611,30 +681,13 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
         binding_.Bind(std::move(request));
       });
 
-  if (files::IsFile(kCredentialsFile)) {
-    std::string serialized_tokens;
-    if (!files::ReadFileToString(kCredentialsFile, &serialized_tokens)) {
-      FTL_DCHECK(false) << "Unable to read file " << kCredentialsFile;
-      files::DeletePath(kCredentialsFile, false);
-      user_creds_.SetObject();
-    } else {
-      rapidjson::ParseResult result = user_creds_.Parse(serialized_tokens);
-      if (!user_creds_.HasParseError() || !user_creds_.IsObject()) {
-        FTL_LOG(WARNING) << "Credentials file got corrupted with error: "
-                         << rapidjson::GetParseError_En(result.Code())
-                         << ", deleting previous user records: "
-                         << serialized_tokens;
-        files::DeletePath(kCredentialsFile, false);
-        user_creds_.SetObject();
-      }
-    }
-  } else {
-    // Create an empty DOM.
-    user_creds_.SetObject();
+  // Reserialize existing users.
+  creds_ = ParseCredsFile();
+  if (creds_ == nullptr) {
+    FTL_LOG(ERROR) << "Unable to parse user credentials file at: "
+                   << kCredentialsFile;
+    return;
   }
-
-  // Create an empty DOM for token cache.
-  oauth_tokens_.SetObject();
 }
 
 void OAuthTokenManagerApp::Initialize(
