@@ -31,12 +31,12 @@ const fsck_options_t test_fsck_options = {
     .force = true,
 };
 
-int setup_fs_test(void) {
+void setup_fs_test(void) {
     test_root_path = MOUNT_PATH;
     int r = mkdir(test_root_path, 0755);
     if ((r < 0) && errno != EEXIST) {
         fprintf(stderr, "Could not create mount point for test filesystem\n");
-        return -1;
+        exit(-1);
     }
 
     if (!use_real_disk) {
@@ -54,10 +54,9 @@ int setup_fs_test(void) {
         fprintf(stderr, "[FAILED]: Error mounting filesystem\n");
         exit(-1);
     }
-    return 0;
 }
 
-int teardown_fs_test(void) {
+void teardown_fs_test(void) {
     if (test_info->unmount(test_root_path)) {
         fprintf(stderr, "[FAILED]: Error unmounting filesystem\n");
         exit(-1);
@@ -74,8 +73,6 @@ int teardown_fs_test(void) {
             exit(-1);
         }
     }
-
-    return 0;
 }
 
 // FS-specific functionality:

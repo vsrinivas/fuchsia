@@ -46,8 +46,8 @@ extern const fsck_options_t test_fsck_options;
 #define NUM_FILESYSTEMS 3
 extern fs_info_t FILESYSTEMS[NUM_FILESYSTEMS];
 
-int setup_fs_test(void);
-int teardown_fs_test(void);
+void setup_fs_test(void);
+void teardown_fs_test(void);
 
 // As a small optimization, avoid even creating a ramdisk
 // for filesystem tests when "utest_test_type" is not at
