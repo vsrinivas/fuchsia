@@ -1,4 +1,8 @@
 ///bin/true ; exec /usr/bin/env go run "$0" "$@"
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package main
 
 import (
@@ -17,6 +21,7 @@ var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain librarie
 var sysroot = flag.Bool("sysroot", true, "Include sysroot")
 var kernelImg = flag.Bool("kernel-img", true, "Include kernel image")
 var kernelDebugObjs = flag.Bool("kernel-dbg", true, "Include kernel objects with debug symbols")
+var bootdata = flag.Bool("bootdata", true, "Include bootdata")
 var qemu = flag.Bool("qemu", true, "Include QEMU binary")
 var tools = flag.Bool("tools", true, "Include additional tools")
 var verbose = flag.Bool("v", false, "Verbose output")
@@ -55,8 +60,8 @@ var components = []component{
 	},
 	{
 		sysroot,
-		"out/sysroot",
-		"sysroot",
+		"out/release-x86-64/sysroot",
+		"sysroot/x86_64-fuchsia",
 		dir,
 		nil,
 	},
@@ -73,6 +78,13 @@ var components = []component{
 		"kernel/debug",
 		custom,
 		copyKernelDebugObjs,
+	},
+	{
+		bootdata,
+		"out/release-x86-64/user.bootfs",
+		"bootdata.bin",
+		file,
+		nil,
 	},
 	{
 		qemu,
@@ -157,6 +169,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, `Usage: ./makesdk.go [flags] /path/to/fuchsia/root
 
 This script creates a Fuchsia SDK containing the specified features and places it into a tarball.
+
+To use, first build a release mode Fuchsia build with the 'runtime' module configured as the
+only module.
 `)
 		flag.PrintDefaults()
 	}
