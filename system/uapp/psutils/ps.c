@@ -19,6 +19,25 @@
 #define MAX_STATE_LEN (7 + 1) // +1 for trailing NUL
 #define MAX_KOID_LEN sizeof("18446744073709551616") // 1<<64 + NUL
 
+static const char kJSONSchema[] =
+    "{\n"
+    "    \"type\": \"array\",\n"
+    "    \"items\": {\n"
+    "        \"type\": \"object\",\n"
+    "        \"required\": [\"type\", \"koid\", \"parent\", \"name\" ],\n"
+    "        \"properties\": {\n"
+    "            \"type\": { \"type\": \"string\" },\n"
+    "            \"koid\": { \"type\": \"integer\" },\n"
+    "            \"parent\": { \"type\": \"integer\" },\n"
+    "            \"name\": { \"type\": \"string\" },\n"
+    "            \"private_bytes\": { \"type\": \"integer\" },\n"
+    "            \"shared_bytes\": { \"type\": \"integer\" },\n"
+    "            \"pss_bytes\": { \"type\": \"integer\" },\n"
+    "            \"state\": { \"type\": \"string\" }\n"
+    "        }\n"
+    "    }\n"
+    "}\n";
+
 // A single task (job or process).
 typedef struct {
     char type;                                     // 'j' (job), 'p' (process), or 't' (thread)
@@ -203,6 +222,7 @@ static void print_table(task_table_t* table, bool with_threads) {
     print_header(id_w, with_threads);
 }
 
+// Update kJSONSchema if you change the output format.
 static void print_json(task_table_t* table) {
     printf("[\n");
 
@@ -266,8 +286,9 @@ static void print_help(FILE* f) {
     fprintf(f, "Usage: ps [options]\n");
     fprintf(f, "Options:\n");
     // -T for compatibility with linux ps
-    fprintf(f, " -T      Include threads in the output\n");
-    fprintf(f, " --json  Print output in JSON\n");
+    fprintf(f, " -T             Include threads in the output\n");
+    fprintf(f, " --json         Print output in JSON\n");
+    fprintf(f, " --json-schema  Print a scheme for the JSON output format\n");
 }
 
 int main(int argc, char** argv) {
@@ -277,6 +298,10 @@ int main(int argc, char** argv) {
         const char* arg = argv[i];
         if (!strcmp(arg, "--help")) {
             print_help(stdout);
+            return 0;
+        }
+        if (!strcmp(arg, "--json-schema")) {
+            printf(kJSONSchema);
             return 0;
         }
         if (!strcmp(arg, "-T")) {
