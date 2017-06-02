@@ -11,6 +11,8 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
+#include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/app_client.h"
@@ -64,17 +66,20 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void Terminate(const TerminateCallback& done) override;
 
   // |UserShellContext|
-  void GetDeviceName(const GetDeviceNameCallback& callback) override;
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
+  void GetContextProvider(
+      fidl::InterfaceRequest<maxwell::ContextProvider> request) override;
+  void GetContextPublisher(
+      fidl::InterfaceRequest<maxwell::ContextPublisher> request) override;
+  void GetDeviceName(const GetDeviceNameCallback& callback) override;
+  void GetFocusController(fidl::InterfaceRequest<FocusController> request) override;
+  void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
+  void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
-  void GetFocusController(
-      fidl::InterfaceRequest<FocusController> request) override;
-  void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
-  void GetLink(fidl::InterfaceRequest<Link> request) override;
 
   app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   app::ServiceProviderPtr GetServiceProvider(const std::string& url);
@@ -105,8 +110,13 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<ComponentContextImpl> maxwell_component_context_impl_;
   std::unique_ptr<fidl::Binding<ComponentContext>>
       maxwell_component_context_binding_;
+
+  // Service provider interfaces for maxwell services. They are created with the
+  // component context above as parameters.
   fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
+  fidl::InterfacePtr<maxwell::IntelligenceServices>
+      intelligence_services_;
 
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;

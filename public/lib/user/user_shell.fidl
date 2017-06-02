@@ -4,6 +4,8 @@
 
 module modular;
 
+import "apps/maxwell/services/context/context_provider.fidl";
+import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
 import "apps/modular/services/agent/agent_provider.fidl";
 import "apps/modular/services/story/link.fidl";
@@ -24,12 +26,14 @@ interface UserShell {
 };
 
 interface UserShellContext {
-  GetDeviceName() => (string device_name);
   GetAgentProvider(AgentProvider& request);
-  GetStoryProvider(StoryProvider& request);
-  GetSuggestionProvider(maxwell.SuggestionProvider& request);
-  GetVisibleStoriesController(VisibleStoriesController& request);
+  GetContextProvider(maxwell.ContextProvider& request);
+  GetContextPublisher(maxwell.ContextPublisher& request);
+  GetDeviceName() => (string device_name);
   GetFocusController(FocusController& request);
   GetFocusProvider(FocusProvider& request);
   GetLink(Link& request);
+  GetStoryProvider(StoryProvider& request);
+  GetSuggestionProvider(maxwell.SuggestionProvider& request);
+  GetVisibleStoriesController(VisibleStoriesController& request);
 };

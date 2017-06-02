@@ -270,6 +270,11 @@ UserRunnerImpl::UserRunnerImpl(
       std::move(visible_stories_provider),
       std::move(intelligence_provider_request));
 
+  auto component_scope = maxwell::ComponentScope::New();
+  component_scope->set_global_scope(maxwell::GlobalScope::New());
+  user_intelligence_provider_->GetComponentIntelligenceServices(
+      std::move(component_scope), intelligence_services_.NewRequest());
+
   user_scope_.AddService<resolver::Resolver>(
       std::bind(&maxwell::UserIntelligenceProvider::GetResolver,
                 user_intelligence_provider_.get(), std::placeholders::_1));
@@ -317,28 +322,23 @@ void UserRunnerImpl::Terminate(const TerminateCallback& done) {
   });
 }
 
-void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
-  callback(device_name_);
-}
-
 void UserRunnerImpl::GetAgentProvider(
     fidl::InterfaceRequest<AgentProvider> request) {
   agent_runner_->Connect(std::move(request));
 }
 
-void UserRunnerImpl::GetStoryProvider(
-    fidl::InterfaceRequest<StoryProvider> request) {
-  story_provider_impl_->Connect(std::move(request));
+void UserRunnerImpl::GetContextProvider(
+    fidl::InterfaceRequest<maxwell::ContextProvider> request) {
+  intelligence_services_->GetContextProvider(std::move(request));
 }
 
-void UserRunnerImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
-  user_intelligence_provider_->GetSuggestionProvider(std::move(request));
+void UserRunnerImpl::GetContextPublisher(
+    fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
+  intelligence_services_->GetContextPublisher(std::move(request));
 }
 
-void UserRunnerImpl::GetVisibleStoriesController(
-    fidl::InterfaceRequest<VisibleStoriesController> request) {
-  visible_stories_handler_->AddControllerBinding(std::move(request));
+void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
+  callback(device_name_);
 }
 
 void UserRunnerImpl::GetFocusController(
@@ -363,6 +363,21 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path->link_name = kUserShellLinkName;
   user_shell_link_.reset(new LinkImpl(link_storage_.get(), link_path));
   user_shell_link_->Connect(std::move(request));
+}
+
+void UserRunnerImpl::GetStoryProvider(
+    fidl::InterfaceRequest<StoryProvider> request) {
+  story_provider_impl_->Connect(std::move(request));
+}
+
+void UserRunnerImpl::GetSuggestionProvider(
+    fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
+  user_intelligence_provider_->GetSuggestionProvider(std::move(request));
+}
+
+void UserRunnerImpl::GetVisibleStoriesController(
+    fidl::InterfaceRequest<VisibleStoriesController> request) {
+  visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
 }  // namespace modular

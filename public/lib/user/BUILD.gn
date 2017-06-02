@@ -20,6 +20,7 @@ fidl("user") {
   ]
 
   deps = [
+    "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion:suggestion_provider",
     "//apps/mozart/services/views",
   ]
