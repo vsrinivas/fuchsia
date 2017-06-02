@@ -73,7 +73,7 @@ void Renderer::Visitor::Visit(ShapeNode* r) {
   if (!shape || !material)
     return;
 
-  if (shape->type_info().IsKindOf(CircleShape::kTypeInfo)) {
+  if (shape->IsKindOf<CircleShape>()) {
     auto circle = static_cast<CircleShape*>(shape.get());
     auto& transform = r->GetGlobalTransform();
 

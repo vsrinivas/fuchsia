@@ -38,6 +38,25 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   // Used by ResourceVisitor to visit a tree of Resources.
   virtual void Accept(class ResourceVisitor* visitor) = 0;
 
+  // Return true if the specified type is identical or a base type of this
+  // TypedReffable; return false otherwise.
+  // TODO: Move this to a separate class we inherit from.
+  template <typename TypedReffableT>
+  bool IsKindOf() const {
+    return type_info().IsKindOf(TypedReffableT::kTypeInfo);
+  }
+
+  // Downcasts the reference to the specified subclass. Throws an exception
+  // in debug mode if the type of the object does not match.
+  //
+  // Example usage: ftl::RefPtr<Subclass> = object.As<Subclass>();
+  // TODO: Move this to a separate class we inherit from.
+  template <typename T>
+  ftl::RefPtr<T> As() {
+    FTL_DCHECK(this->IsKindOf<T>());
+    return ftl::RefPtr<T>(static_cast<T*>(this));
+  }
+
  protected:
   Resource(Session* session, const ResourceTypeInfo& type_info);
 

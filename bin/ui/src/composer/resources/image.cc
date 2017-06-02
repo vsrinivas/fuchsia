@@ -57,9 +57,8 @@ ImagePtr Image::New(Session* session,
   }
 
   // Create from host memory.
-  if (memory->type_info().IsKindOf(HostMemory::kTypeInfo)) {
-    // TODO: is there a prettier way to do this?
-    auto host_memory = HostMemoryPtr(static_cast<HostMemory*>(memory.get()));
+  if (memory->IsKindOf<HostMemory>()) {
+    auto host_memory = memory->As<HostMemory>();
 
     if (args->info->tiling != mozart2::ImageInfo::Tiling::LINEAR) {
       error_reporter->ERROR()
@@ -75,9 +74,8 @@ ImagePtr Image::New(Session* session,
     return ftl::AdoptRef(new Image(session, escher_image, host_memory));
 
     // Create from GPU memory.
-  } else if (memory->type_info().IsKindOf(GpuMemory::kTypeInfo)) {
-    // TODO: is there a prettier way to do this?
-    auto gpu_memory = GpuMemoryPtr(static_cast<GpuMemory*>(memory.get()));
+  } else if (memory->IsKindOf<GpuMemory>()) {
+    auto gpu_memory = memory->As<GpuMemory>();
 
     escher::ImageInfo info;
     info.format = pixel_format;
