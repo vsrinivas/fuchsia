@@ -22,6 +22,7 @@
 #include <magenta/compiler.h>
 #include <magenta/device/dmctl.h>
 #include <magenta/processargs.h>
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <magenta/threads.h>
 #include <magenta/types.h>
@@ -106,7 +107,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
         // This is the normal error for the other end going away,
         // which happens when the process dies.
         if (r != ERR_PEER_CLOSED)
-            fprintf(stderr, "dlsvc: msg read error %d\n", r);
+            fprintf(stderr, "dlsvc: msg read error %d: %s\n", r, mx_status_get_string(r));
         return r;
     }
     if ((sz <= sizeof(mx_loader_svc_msg_t))) {
@@ -144,7 +145,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     msg->reserved1 = 0;
     if ((r = mx_channel_write(h, 0, msg, sizeof(mx_loader_svc_msg_t),
                               &handle, handle > 0 ? 1 : 0)) < 0) {
-        fprintf(stderr, "dlsvc: msg write error: %d\n", r);
+        fprintf(stderr, "dlsvc: msg write error: %d: %s\n", r, mx_status_get_string(r));
         return r;
     }
     return NO_ERROR;
@@ -165,7 +166,7 @@ static int loader_service_thread(void* arg) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
             if (r != ERR_BAD_STATE)
-                fprintf(stderr, "dlsvc: wait error %d\n", r);
+                fprintf(stderr, "dlsvc: wait error %d: %s\n", r, mx_status_get_string(r));
             break;
         }
         if ((r = handle_loader_rpc(h, loader, loader_arg, sys_log)) < 0) {
@@ -309,8 +310,9 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     }
 
     mx_handle_t sys_log = MX_HANDLE_INVALID;
-    if (mx_log_create(0u, &sys_log) < 0)
-        fprintf(stderr, "dlsvc: log creation failed: error %d\n", sys_log);
+    if ((r = mx_log_create(0u, &sys_log)) < 0)
+        fprintf(stderr, "dlsvc: log creation failed: error %d: %s\n", r,
+                mx_status_get_string(r));
 
     startup->loader = loader;
     startup->loader_arg = loader_arg;
