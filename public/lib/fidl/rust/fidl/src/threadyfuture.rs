@@ -166,14 +166,16 @@ impl<T: Send + 'static, E: Send + 'static> Future<T, E> {
             Future::Err(err) => Err(err),
             Future::NotReady(promise) => {
                 loop {
-                    let mut state = promise.0.lock().unwrap();
-                    match mem::replace(&mut *state, PromiseState::Done) {
-                        PromiseState::Start | PromiseState::Parked(_) => (),
-                        PromiseState::Ok(value) => return Ok(value),
-                        PromiseState::Err(err) => return Err(err),
-                        _ => panic!("double get, can't happen")
-                    }
-                    *state = PromiseState::Parked(thread::current());
+                    {
+                        let mut state = promise.0.lock().unwrap();
+                        match mem::replace(&mut *state, PromiseState::Done) {
+                            PromiseState::Start | PromiseState::Parked(_) => (),
+                            PromiseState::Ok(value) => return Ok(value),
+                            PromiseState::Err(err) => return Err(err),
+                            _ => panic!("double get, can't happen")
+                        }
+                        *state = PromiseState::Parked(thread::current());
+                    } // ensure lock isn't held while parked
                     thread::park();
                 }
             }
