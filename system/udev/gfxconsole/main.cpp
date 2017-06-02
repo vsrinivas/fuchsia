@@ -329,7 +329,6 @@ static bool g_vc_owns_display = true;
 
 static void vc_toggle_framebuffer() {
     uint32_t n = g_vc_owns_display ? 1 : 0;
-    printf("vc: set owner %d\n", n);
     ioctl_display_set_owner(g_fb_fd, &n);
 }
 
@@ -596,7 +595,6 @@ static int shell_thread_1st(void* arg) {
 
 static void set_owns_display(bool acquired) {
     mxtl::AutoLock lock(&g_vc_lock);
-    printf("vc: %s display\n", acquired ? "gained" : "lost");
     g_vc_owns_display = acquired;
     if (acquired && g_active_vc) {
         vc_gfx_invalidate_all(g_active_vc);
@@ -650,18 +648,30 @@ int main(int argc, char** argv) {
     thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
     thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
 
-    mx_handle_t e;
+    mx_handle_t e = MX_HANDLE_INVALID;
     ioctl_display_get_ownership_change_event(fd, &e);
 
     for (;;) {
+        mx_status_t r;
         if (g_vc_owns_display) {
-            mx_object_wait_one(e, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL);
+            if ((r = mx_object_wait_one(e, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL)) < 0) {
+                if (r != ERR_TIMED_OUT) {
+                    break;
+                }
+            }
             set_owns_display(false);
         } else {
-            mx_object_wait_one(e, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+            if ((r = mx_object_wait_one(e, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL)) < 0) {
+                if (r != ERR_TIMED_OUT) {
+                    break;
+                }
+            }
             set_owns_display(true);
         }
     }
-    return NO_ERROR;
+
+    //TODO: wait for and acquire a new display
+    printf("vc: DISCONNECT\n");
+    return 0;
 }
 #endif

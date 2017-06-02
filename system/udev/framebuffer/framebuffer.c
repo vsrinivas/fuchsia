@@ -26,6 +26,7 @@ typedef struct fb fb_t;
 
 struct fb {
     mx_device_t* mxdev;
+    mx_device_t* dpydev;
     mx_display_protocol_t* dpy;
     mx_display_info_t info;
     size_t bufsz;
@@ -43,6 +44,15 @@ struct fb {
     fbi_t* fullscreen;
 };
 
+#define FB_HAS_GPU(fb) (fb->dpy->acquire_or_release_display != NULL)
+#define FB_ACQUIRE(fb) (fb->dpy->acquire_or_release_display(fb->dpydev, true))
+#define FB_RELEASE(fb) (fb->dpy->acquire_or_release_display(fb->dpydev, false))
+static inline void FB_FLUSH(fb_t* fb) {
+    if (fb->dpy->flush) {
+        fb->dpy->flush(fb->dpydev);
+    }
+}
+
 struct fbi {
     mx_device_t* mxdev;
     fb_t* fb;
@@ -50,6 +60,19 @@ struct fbi {
     mx_handle_t vmo;
     uint32_t group;
 };
+
+void fb_callback(bool acquired, void* cookie) {
+    fb_t* fb = cookie;
+    mtx_lock(&fb->lock);
+    if (acquired) {
+        fb->active = GROUP_VIRTCON;
+        mx_object_signal(fb->event, MX_USER_SIGNAL_1, MX_USER_SIGNAL_0);
+    } else {
+        fb->active = GROUP_FULLSCREEN;
+        mx_object_signal(fb->event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
+    }
+    mtx_unlock(&fb->lock);
+}
 
 static mx_status_t fbi_get_vmo(fbi_t* fbi, mx_handle_t* vmo) {
     mtx_lock(&fbi->fb->lock);
@@ -107,6 +130,7 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
         mtx_lock(&fb->lock);
         if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
             memcpy(fb->buffer + y * linesize, fbi->buffer + y * linesize, h * linesize);
+            FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
         return NO_ERROR;
@@ -115,11 +139,17 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
         mtx_lock(&fb->lock);
         if ((fb->active == fbi->group) && (fbi->buffer != NULL)) {
             memcpy(fb->buffer, fbi->buffer, fb->bufsz);
+            FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
         return NO_ERROR;
 
     case IOCTL_DISPLAY_GET_FB: {
+        if ((fbi->group == GROUP_FULLSCREEN) && FB_HAS_GPU(fb)) {
+            printf("fb: fullscreen soft framebuffer not supported (GPU)\n");
+            return ERR_NOT_SUPPORTED;
+        }
+
         if (out_len < sizeof(ioctl_display_get_fb_t)) {
             return ERR_BUFFER_TOO_SMALL;
         }
@@ -146,6 +176,16 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             return ERR_ACCESS_DENIED;
         }
         const uint32_t* n = (const uint32_t*) in_buf;
+        if (FB_HAS_GPU(fb)) {
+            if (*n != fb->active) {
+                if (*n == GROUP_VIRTCON) {
+                    FB_ACQUIRE(fb);
+                } else {
+                    FB_RELEASE(fb);
+                }
+            }
+            return NO_ERROR;
+        }
         mtx_lock(&fb->lock);
         if ((*n == GROUP_VIRTCON) || (fb->fullscreen == NULL)) {
             fb->active = GROUP_VIRTCON;
@@ -158,6 +198,7 @@ static mx_status_t fbi_ioctl(void* ctx, uint32_t op,
             } else {
                 memset(fb->buffer, 0, fb->bufsz);
             }
+            FB_FLUSH(fb);
         }
         mtx_unlock(&fb->lock);
         return NO_ERROR;
@@ -225,17 +266,19 @@ mx_protocol_device_t fbi_ops = {
 static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
     fb_t* fb = ctx;
 
+    uint32_t group;
+    if (!strcmp(path, "virtcon")) {
+        group = GROUP_VIRTCON;
+    } else {
+        group = GROUP_FULLSCREEN;
+    }
+
     fbi_t* fbi;
     if ((fbi = calloc(1, sizeof(fbi_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     fbi->fb = fb;
-
-    if (!strcmp(path, "virtcon")) {
-        fbi->group = GROUP_VIRTCON;
-    } else {
-        fbi->group = GROUP_FULLSCREEN;
-    }
+    fbi->group = group;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -246,21 +289,23 @@ static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, ui
         .flags = DEVICE_ADD_INSTANCE,
     };
 
-    // if we are a new fullscreen client,
+    // if we are a new fullscreen client (against a non-GPU display),
     // fail if there's already a fullscreen client
     // otherwise the fullscreen client becomes active
-    mtx_lock(&fb->lock);
-    if (fbi->group == GROUP_FULLSCREEN) {
-        if (fb->fullscreen != NULL) {
-            mtx_unlock(&fb->lock);
-            free(fbi);
-            return ERR_ALREADY_BOUND;
+    if (!FB_HAS_GPU(fb)) {
+        mtx_lock(&fb->lock);
+        if (fbi->group == GROUP_FULLSCREEN) {
+            if (fb->fullscreen != NULL) {
+                mtx_unlock(&fb->lock);
+                free(fbi);
+                return ERR_ALREADY_BOUND;
+            }
+            fb->fullscreen = fbi;
+            fb->active = GROUP_FULLSCREEN;
+            mx_object_signal(fb->event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
         }
-        fb->fullscreen = fbi;
-        fb->active = GROUP_FULLSCREEN;
-        mx_object_signal(fb->event, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1);
+        mtx_unlock(&fb->lock);
     }
-    mtx_unlock(&fb->lock);
 
     mx_status_t r;
     if ((r = device_add(fb->mxdev, &args, &fbi->mxdev)) < 0) {
@@ -314,6 +359,8 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
     mx_object_signal(fb->event, 0, MX_USER_SIGNAL_0);
 
+    fb->dpydev = dev;
+
     // Our display drivers do not initialize pixelsize
     // Determine it based on pixel format
     switch (fb->info.format) {
@@ -336,11 +383,13 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    fb->bufsz = fb->info.pixelsize * fb->info.stride * fb->info.width;
+    fb->bufsz = fb->info.pixelsize * fb->info.stride * fb->info.height;
 
-    printf("fb: %u x %u (stride=%u pxlsz=%u format=%u): %zu bytes\n",
+    printf("fb: %u x %u (stride=%u pxlsz=%u format=%u): %zu bytes @ %p%s\n",
            fb->info.width, fb->info.height,
-           fb->info.stride, fb->info.pixelsize, fb->info.format, fb->bufsz);
+           fb->info.stride, fb->info.pixelsize, fb->info.format, fb->bufsz,
+           fb->buffer,
+           FB_HAS_GPU(fb) ? " GPU" : " SW");
 
     mtx_init(&fb->lock, mtx_plain);
 
@@ -354,6 +403,11 @@ static mx_status_t fb_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     if ((r = device_add(dev, &args, &fb->mxdev)) < 0) {
         goto fail;
+    }
+
+    if (FB_HAS_GPU(fb)) {
+        fb->dpy->set_ownership_change_callback(fb->dpydev, fb_callback, fb);
+        FB_ACQUIRE(fb);
     }
     return NO_ERROR;
 
