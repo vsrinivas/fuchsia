@@ -66,7 +66,7 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     // RSDP. ACPI 1.0.
     ACPI_RSDP_COMMON* rsdp = (ACPI_RSDP_COMMON*)(addr + acpi_off);
     ACPI_MAKE_RSDP_SIG(rsdp->Signature);
-    memcpy(rsdp->OemId, "MX_HYP", ACPI_OEM_ID_SIZE);
+    memcpy(rsdp->OemId, "MX", 2);
     rsdp->RsdtPhysicalAddress = acpi_off + sizeof(ACPI_RSDP_COMMON);
     rsdp->Checksum = acpi_checksum(rsdp, ACPI_RSDP_CHECKSUM_LENGTH);
 
