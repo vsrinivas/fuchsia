@@ -76,16 +76,20 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
         return NO_ERROR;
     }
 
+    // The following happens if we hit the deadline (ERR_TIMED_OUT) or if
+    // the thread was killed (ERR_INTERRUPTED) or suspended
+    // (ERR_INTERRUPTED_RETRY).
+    //
+    // We need to ensure that the thread's node is removed from the wait
+    // queue, because FutexWake() probably didn't do that.
     AutoLock lock(&lock_);
-    // If we hit the deadline, we need to remove the thread's node from the
-    // wait queue, since FutexWake() didn't do that.
     if (UnqueueNodeLocked(node)) {
-        return ERR_TIMED_OUT;
+        return result;
     }
     // The current thread was not found on the wait queue.  This means
-    // that, although we hit the deadline, we were *also* woken by FutexWake()
-    // (which removed the thread from the wait queue) -- the two raced
-    // together.
+    // that, although we hit the deadline (or were suspended/killed), we
+    // were *also* woken by FutexWake() (which removed the thread from the
+    // wait queue) -- the two raced together.
     //
     // In this case, we want to return a success status.  This preserves
     // the property that if FutexWake() is called with wake_count=1 and
