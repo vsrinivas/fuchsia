@@ -95,7 +95,7 @@ bool _playNext() {
   return true;
 }
 
-void _playLeafAsset(Asset asset) {
+void _playLeafAsset(Asset asset ) {
   assert(asset.type != AssetType.playlist);
 
   _leafAssetToPlay = asset;
@@ -190,7 +190,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
   Widget build(BuildContext context) {
     List<Widget> columnChildren = new List<Widget>();
 
-    columnChildren.add(new Expanded(child: new MediaPlayer(_controller)));
+    columnChildren.add(new MediaPlayer(_controller));
 
     MediaMetadata metadata = _controller.metadata;
     if (metadata != null) {
@@ -208,10 +208,13 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
       color: Colors.black,
       child: new Stack(
         children: <Widget>[
-          new Positioned.fill(
+          new Positioned(
+            left: 0.0,
+            right: 0.0,
+            top: 0.0,
             child: new Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: columnChildren,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: columnChildren,
             ),
           ),
           new Positioned(
