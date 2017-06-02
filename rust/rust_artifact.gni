@@ -105,6 +105,8 @@ template("rust_artifact") {
 
     inputs = [
       "${source_dir}/Cargo.toml",
+      # This will trigger rebuilds whenever third-party crates are updated.
+      "//third_party/rust-crates/.vendor-update.stamp",
     ]
 
     outputs = [

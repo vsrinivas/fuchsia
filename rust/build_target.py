@@ -214,6 +214,13 @@ def main():
     else:
         build_command = "build"
 
+    # Remove any existing Cargo.lock file since it may need to be generated
+    # again if third-party crates have been updated.
+    try:
+        os.remove(os.path.join(args.gen_dir, "Cargo.lock"))
+    except OSError:
+        pass
+
     call_args = [
         args.cargo,
         build_command,
