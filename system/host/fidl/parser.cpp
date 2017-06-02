@@ -7,7 +7,6 @@
 namespace fidl {
 
 #define TOKEN_PRIMITIVE_TYPE_CASES \
-    case Token::Kind::String:      \
     case Token::Kind::Bool:        \
     case Token::Kind::Int8:        \
     case Token::Kind::Int16:       \
@@ -23,6 +22,9 @@ namespace fidl {
 #define TOKEN_TYPE_CASES          \
     TOKEN_PRIMITIVE_TYPE_CASES:   \
     case Token::Kind::Identifier: \
+    case Token::Kind::Array:      \
+    case Token::Kind::Vector:     \
+    case Token::Kind::String:     \
     case Token::Kind::Handle:     \
     case Token::Kind::Request
 
@@ -168,8 +170,7 @@ std::unique_ptr<Using> Parser::ParseUsing() {
         return Fail();
 
     std::unique_ptr<Identifier> maybe_alias;
-    if (PeekFor(Token::Kind::As)) {
-        ConsumeToken(Token::Kind::As);
+    if (MaybeConsumeToken(Token::Kind::As)) {
         if (!Ok())
             return Fail();
         maybe_alias = ParseIdentifier();
@@ -180,35 +181,174 @@ std::unique_ptr<Using> Parser::ParseUsing() {
     return std::make_unique<Using>(std::move(using_path), std::move(maybe_alias));
 }
 
+std::unique_ptr<ArrayType> Parser::ParseArrayType() {
+    ConsumeToken(Token::Kind::Array);
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::LeftAngle);
+    if (!Ok())
+        return Fail();
+    auto element_type = ParseType();
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::RightAngle);
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::Colon);
+    if (!Ok())
+        return Fail();
+    auto element_count = ParseConstant();
+    if (!Ok())
+        return Fail();
+
+    return std::make_unique<ArrayType>(std::move(element_type), std::move(element_count));
+}
+
+std::unique_ptr<VectorType> Parser::ParseVectorType() {
+    ConsumeToken(Token::Kind::Vector);
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::LeftAngle);
+    if (!Ok())
+        return Fail();
+    auto element_type = ParseType();
+    if (!Ok())
+        return Fail();
+    ConsumeToken(Token::Kind::RightAngle);
+    if (!Ok())
+        return Fail();
+
+    std::unique_ptr<Constant> maybe_element_count;
+    if (MaybeConsumeToken(Token::Kind::Colon)) {
+        if (!Ok())
+            return Fail();
+        maybe_element_count = ParseConstant();
+        if (!Ok())
+            return Fail();
+    }
+
+    auto nullability = Nullability::Nonnullable;
+    if (MaybeConsumeToken(Token::Kind::Question)) {
+        nullability = Nullability::Nullable;
+    }
+
+    return std::make_unique<VectorType>(std::move(element_type), std::move(maybe_element_count), nullability);
+}
+
+std::unique_ptr<StringType> Parser::ParseStringType() {
+    ConsumeToken(Token::Kind::String);
+    if (!Ok())
+        return Fail();
+
+    std::unique_ptr<Constant> maybe_element_count;
+    if (MaybeConsumeToken(Token::Kind::Colon)) {
+        if (!Ok())
+            return Fail();
+        maybe_element_count = ParseConstant();
+        if (!Ok())
+            return Fail();
+    }
+
+    auto nullability = Nullability::Nonnullable;
+    if (MaybeConsumeToken(Token::Kind::Question)) {
+        nullability = Nullability::Nullable;
+    }
+
+    return std::make_unique<StringType>(std::move(maybe_element_count), nullability);
+}
+
 std::unique_ptr<HandleType> Parser::ParseHandleType() {
     ConsumeToken(Token::Kind::Handle);
     if (!Ok())
         return Fail();
 
-    std::unique_ptr<Identifier> identifier;
+    auto subtype = HandleType::Subtype::Handle;
 
-    if (PeekFor(Token::Kind::LeftAngle)) {
-        ConsumeToken(Token::Kind::LeftAngle);
+    if (MaybeConsumeToken(Token::Kind::LeftAngle)) {
         if (!Ok())
             return Fail();
-        identifier = ParseIdentifier();
+        switch (Peek()) {
+        case Token::Kind::Process:
+            subtype = HandleType::Subtype::Process;
+            break;
+        case Token::Kind::Thread:
+            subtype = HandleType::Subtype::Thread;
+            break;
+        case Token::Kind::Vmo:
+            subtype = HandleType::Subtype::Vmo;
+            break;
+        case Token::Kind::Channel:
+            subtype = HandleType::Subtype::Channel;
+            break;
+        case Token::Kind::Event:
+            subtype = HandleType::Subtype::Event;
+            break;
+        case Token::Kind::Port:
+            subtype = HandleType::Subtype::Port;
+            break;
+        case Token::Kind::Interrupt:
+            subtype = HandleType::Subtype::Interrupt;
+            break;
+        case Token::Kind::Iomap:
+            subtype = HandleType::Subtype::Iomap;
+            break;
+        case Token::Kind::Pci:
+            subtype = HandleType::Subtype::Pci;
+            break;
+        case Token::Kind::Log:
+            subtype = HandleType::Subtype::Log;
+            break;
+        case Token::Kind::Socket:
+            subtype = HandleType::Subtype::Socket;
+            break;
+        case Token::Kind::Resource:
+            subtype = HandleType::Subtype::Resource;
+            break;
+        case Token::Kind::Eventpair:
+            subtype = HandleType::Subtype::Eventpair;
+            break;
+        case Token::Kind::Job:
+            subtype = HandleType::Subtype::Job;
+            break;
+        case Token::Kind::Vmar:
+            subtype = HandleType::Subtype::Vmar;
+            break;
+        case Token::Kind::Fifo:
+            subtype = HandleType::Subtype::Fifo;
+            break;
+        case Token::Kind::Hypervisor:
+            subtype = HandleType::Subtype::Hypervisor;
+            break;
+        case Token::Kind::Guest:
+            subtype = HandleType::Subtype::Guest;
+            break;
+        case Token::Kind::Timer:
+            subtype = HandleType::Subtype::Timer;
+            break;
+        default:
+            return Fail();
+        }
+        Consume();
         if (!Ok())
             return Fail();
+
         ConsumeToken(Token::Kind::RightAngle);
         if (!Ok())
             return Fail();
     }
 
-    return std::make_unique<HandleType>(std::move(identifier));
+    auto nullability = Nullability::Nonnullable;
+    if (MaybeConsumeToken(Token::Kind::Question)) {
+        nullability = Nullability::Nullable;
+    }
+
+    return std::make_unique<HandleType>(subtype, nullability);
 }
 
 std::unique_ptr<PrimitiveType> Parser::ParsePrimitiveType() {
     PrimitiveType::TypeKind type_kind;
 
     switch (Peek()) {
-    case Token::Kind::String:
-        type_kind = PrimitiveType::TypeKind::String;
-        break;
     case Token::Kind::Bool:
         type_kind = PrimitiveType::TypeKind::Bool;
         break;
@@ -266,7 +406,12 @@ std::unique_ptr<RequestType> Parser::ParseRequestType() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<RequestType>(std::move(identifier));
+    auto nullability = Nullability::Nonnullable;
+    if (MaybeConsumeToken(Token::Kind::Question)) {
+        nullability = Nullability::Nullable;
+    }
+
+    return std::make_unique<RequestType>(std::move(identifier), nullability);
 }
 
 std::unique_ptr<Type> Parser::ParseType() {
@@ -275,7 +420,34 @@ std::unique_ptr<Type> Parser::ParseType() {
         auto identifier = ParseCompoundIdentifier();
         if (!Ok())
             return Fail();
-        return std::make_unique<IdentifierType>(std::move(identifier));
+        auto nullability = Nullability::Nonnullable;
+        if (MaybeConsumeToken(Token::Kind::Question)) {
+            if (!Ok())
+                return Fail();
+            nullability = Nullability::Nullable;
+        }
+        return std::make_unique<IdentifierType>(std::move(identifier), nullability);
+    }
+
+    case Token::Kind::Array: {
+        auto type = ParseArrayType();
+        if (!Ok())
+            return Fail();
+        return type;
+    }
+
+    case Token::Kind::Vector: {
+        auto type = ParseVectorType();
+        if (!Ok())
+            return Fail();
+        return type;
+    }
+
+    case Token::Kind::String: {
+        auto type = ParseStringType();
+        if (!Ok())
+            return Fail();
+        return type;
     }
 
     case Token::Kind::Handle: {
@@ -333,8 +505,7 @@ std::unique_ptr<EnumMember> Parser::ParseEnumMember() {
 
     std::unique_ptr<EnumMemberValue> member_value;
 
-    if (PeekFor(Token::Kind::Equal)) {
-        ConsumeToken(Token::Kind::Equal);
+    if (MaybeConsumeToken(Token::Kind::Equal)) {
         if (!Ok())
             return Fail();
 
@@ -374,8 +545,7 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
     if (!Ok())
         return Fail();
     std::unique_ptr<PrimitiveType> subtype;
-    if (PeekFor(Token::Kind::Colon)) {
-        ConsumeToken(Token::Kind::Colon);
+    if (MaybeConsumeToken(Token::Kind::Colon)) {
         if (!Ok())
             return Fail();
         subtype = ParsePrimitiveType();
@@ -475,8 +645,7 @@ std::unique_ptr<InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
         return Fail();
 
     std::unique_ptr<ParameterList> maybe_response;
-    if (PeekFor(Token::Kind::Arrow)) {
-        ConsumeToken(Token::Kind::Arrow);
+    if (MaybeConsumeToken(Token::Kind::Arrow)) {
         if (!Ok())
             return Fail();
         ConsumeToken(Token::Kind::LeftParen);
@@ -554,8 +723,7 @@ std::unique_ptr<StructMember> Parser::ParseStructMember() {
         return Fail();
 
     std::unique_ptr<Constant> maybe_default_value;
-    if (PeekFor(Token::Kind::Equal)) {
-        ConsumeToken(Token::Kind::Equal);
+    if (MaybeConsumeToken(Token::Kind::Equal)) {
         if (!Ok())
             return Fail();
         maybe_default_value = ParseConstant();

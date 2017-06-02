@@ -35,10 +35,6 @@ private:
         return last_token_.kind();
     }
 
-    bool PeekFor(Token::Kind kind) {
-        return Peek() == kind;
-    }
-
     Token Consume() {
         auto token = last_token_;
         last_token_ = Lex();
@@ -50,6 +46,16 @@ private:
         if (token.kind() != kind)
             Fail();
         return token;
+    }
+
+    bool MaybeConsumeToken(Token::Kind kind) {
+        if (Peek() == kind) {
+            auto token = Consume();
+            assert(token.kind() == kind);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     decltype(nullptr) Fail() {
@@ -71,6 +77,9 @@ private:
 
     std::unique_ptr<Using> ParseUsing();
 
+    std::unique_ptr<ArrayType> ParseArrayType();
+    std::unique_ptr<VectorType> ParseVectorType();
+    std::unique_ptr<StringType> ParseStringType();
     std::unique_ptr<HandleType> ParseHandleType();
     std::unique_ptr<PrimitiveType> ParsePrimitiveType();
     std::unique_ptr<RequestType> ParseRequestType();

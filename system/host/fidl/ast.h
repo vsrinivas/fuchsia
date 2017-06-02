@@ -12,6 +12,11 @@
 
 namespace fidl {
 
+enum struct Nullability {
+    Nullable,
+    Nonnullable,
+};
+
 struct Identifier {
     Identifier(Token identifier)
         : identifier(identifier) {}
@@ -52,33 +57,113 @@ struct FalseLiteral : public Literal {
 struct DefaultLiteral : public Literal {
 };
 
-struct Type {
+struct Constant {
 };
 
-struct HandleType : public Type {
-    HandleType(std::unique_ptr<Identifier> maybe_subtype)
-        : maybe_subtype(std::move(maybe_subtype)) {}
-
-    std::unique_ptr<Identifier> maybe_subtype;
-};
-
-struct RequestType : public Type {
-    RequestType(std::unique_ptr<CompoundIdentifier> subtype)
-        : subtype(std::move(subtype)) {}
-
-    std::unique_ptr<CompoundIdentifier> subtype;
-};
-
-struct IdentifierType : public Type {
-    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier)
+struct IdentifierConstant : Constant {
+    IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
         : identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
 };
 
+struct LiteralConstant : Constant {
+    LiteralConstant(std::unique_ptr<Literal> literal)
+        : literal(std::move(literal)) {}
+
+    std::unique_ptr<Literal> literal;
+};
+
+struct Type {
+};
+
+struct ArrayType : public Type {
+    ArrayType(std::unique_ptr<Type> element_type,
+              std::unique_ptr<Constant> element_count)
+        : element_type(std::move(element_type)),
+          element_count(std::move(element_count)) {}
+
+    std::unique_ptr<Type> element_type;
+    std::unique_ptr<Constant> element_count;
+};
+
+struct VectorType : public Type {
+    VectorType(std::unique_ptr<Type> element_type,
+               std::unique_ptr<Constant> maybe_element_count,
+               Nullability nullability)
+        : element_type(std::move(element_type)),
+          maybe_element_count(std::move(maybe_element_count)),
+          nullability(nullability) {}
+
+    std::unique_ptr<Type> element_type;
+    std::unique_ptr<Constant> maybe_element_count;
+    Nullability nullability;
+};
+
+struct StringType : public Type {
+    StringType(std::unique_ptr<Constant> maybe_element_count,
+               Nullability nullability)
+        : maybe_element_count(std::move(maybe_element_count)),
+          nullability(nullability) {}
+
+    std::unique_ptr<Constant> maybe_element_count;
+    Nullability nullability;
+};
+
+struct HandleType : public Type {
+    enum struct Subtype {
+        Handle,
+        Process,
+        Thread,
+        Vmo,
+        Channel,
+        Event,
+        Port,
+        Interrupt,
+        Iomap,
+        Pci,
+        Log,
+        Socket,
+        Resource,
+        Eventpair,
+        Job,
+        Vmar,
+        Fifo,
+        Hypervisor,
+        Guest,
+        Timer,
+    };
+
+    HandleType(Subtype subtype, Nullability nullability)
+        : subtype(subtype),
+          nullability(nullability) {}
+
+    Subtype subtype;
+    Nullability nullability;
+};
+
+struct RequestType : public Type {
+    RequestType(std::unique_ptr<CompoundIdentifier> subtype,
+                Nullability nullability)
+        : subtype(std::move(subtype)),
+          nullability(nullability) {}
+
+    std::unique_ptr<CompoundIdentifier> subtype;
+    Nullability nullability;
+};
+
+struct IdentifierType : public Type {
+    IdentifierType(std::unique_ptr<CompoundIdentifier> identifier,
+                   Nullability nullability)
+        : identifier(std::move(identifier)),
+          nullability(nullability) {}
+
+    std::unique_ptr<CompoundIdentifier> identifier;
+    Nullability nullability;
+};
+
 struct PrimitiveType : public Type {
     enum struct TypeKind {
-        String,
         Bool,
         Int8,
         Int16,
@@ -96,23 +181,6 @@ struct PrimitiveType : public Type {
         : type_kind(type_kind) {}
 
     TypeKind type_kind;
-};
-
-struct Constant {
-};
-
-struct IdentifierConstant : Constant {
-    IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
-        : identifier(std::move(identifier)) {}
-
-    std::unique_ptr<CompoundIdentifier> identifier;
-};
-
-struct LiteralConstant : Constant {
-    LiteralConstant(std::unique_ptr<Literal> literal)
-        : literal(std::move(literal)) {}
-
-    std::unique_ptr<Literal> literal;
 };
 
 struct Using {
