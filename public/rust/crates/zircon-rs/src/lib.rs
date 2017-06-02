@@ -438,7 +438,7 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
     let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
     let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
     let status = unsafe { sys::mx_object_wait_many( items_ptr, len, deadline) };
-    if status == sys::ERR_HANDLE_CLOSED {
+    if status == sys::ERR_CANCELED {
         return Ok((true))
     }
     into_result(status, || false)
