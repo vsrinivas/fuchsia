@@ -778,7 +778,7 @@ function fcp() {
   local host="$(netaddr --fuchsia)"
 
   fsftp -q -b - "[${host}]" > /dev/null << EOF
-! rm -f ${dst}
+- rm ${dst}
 put ${src} ${dst}
 EOF
 }
