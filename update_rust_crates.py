@@ -105,6 +105,14 @@ members = [%s]
         print("Some licenses are missing!")
         return 1
 
+    update_file = os.path.join(paths.FUCHSIA_ROOT, "third_party", "rust-crates",
+                               ".vendor-update.stamp")
+    # Write the timestamp file.
+    # This file is necessary in order to trigger rebuilds of Rust artifacts
+    # whenever third-party dependencies are updated.
+    with open(update_file, "a"):
+        os.utime(update_file, None)
+
     print("Vendor directory updated at %s" % vendor_dir)
 
 
