@@ -609,6 +609,24 @@ done:
     THREAD_UNLOCK(state);
 }
 
+// thread_lock must be held when calling this function.  This function will
+// not return if it decides to kill the thread.
+static void check_kill_signal(thread_t *current_thread,
+                              spin_lock_saved_state_t state)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+        // Ensure we don't recurse into thread_exit.
+        DEBUG_ASSERT(current_thread->state != THREAD_DEATH);
+
+        THREAD_UNLOCK(state);
+        thread_exit(0);
+        // Unreachable.
+    }
+}
+
 /* finish suspending the current thread */
 static void thread_do_suspend(void)
 {
@@ -620,11 +638,7 @@ static void thread_do_suspend(void)
     THREAD_LOCK(state);
 
     // make sure we haven't been killed while the lock was dropped for the user callback
-    if (current_thread->signals & THREAD_SIGNAL_KILL) {
-        THREAD_UNLOCK(state);
-        thread_exit(0);
-        /* unreachable */
-    }
+    check_kill_signal(current_thread, state);
 
     // Make sure the suspend signal wasn't cleared while we were running the
     // callback.
@@ -639,11 +653,7 @@ static void thread_do_suspend(void)
         // shouldn't call user_callback() with THREAD_USER_STATE_RESUME in
         // this case, because there might not have been any request to
         // resume the thread.
-        if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            THREAD_UNLOCK(state);
-            thread_exit(0);
-            /* unreachable */
-        }
+        check_kill_signal(current_thread, state);
     }
 
     THREAD_UNLOCK(state);
@@ -663,13 +673,9 @@ void thread_process_pending_signals(void)
     /* grab the thread lock so we can safely look at the signal mask */
     THREAD_LOCK(state);
 
-    if (current_thread->signals & THREAD_SIGNAL_KILL) {
-        // Ensure we don't recurse into thread_exit.
-        DEBUG_ASSERT(current_thread->state != THREAD_DEATH);
-        THREAD_UNLOCK(state);
-        thread_exit(0);
-        /* unreachable */
-    } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
+    check_kill_signal(current_thread, state);
+
+    if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
         /* transition the thread to the suspended state */
         DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
         THREAD_UNLOCK(state);
