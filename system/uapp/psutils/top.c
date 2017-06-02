@@ -76,7 +76,7 @@ static const char* state_string(const mx_info_thread_t* info) {
     }
 }
 
-static mx_status_t process_callback(int depth, mx_handle_t proc, mx_koid_t koid) {
+static mx_status_t process_callback(int depth, mx_handle_t proc, mx_koid_t koid, mx_koid_t parent_koid) {
     last_process_scanned = koid;
 
     mx_status_t status =
@@ -85,7 +85,7 @@ static mx_status_t process_callback(int depth, mx_handle_t proc, mx_koid_t koid)
 }
 
 // Adds a thread's information to the thread_list
-static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid) {
+static mx_status_t thread_callback(int depth, mx_handle_t thread, mx_koid_t koid, mx_koid_t parent_koid) {
     thread_info_t e = {};
 
     e.koid = koid;

@@ -11,7 +11,7 @@
 
 mx_koid_t task_id;
 
-mx_status_t callback(int depth, mx_handle_t handle, mx_koid_t koid) {
+mx_status_t callback(int depth, mx_handle_t handle, mx_koid_t koid, mx_koid_t parent_koid) {
     if (koid == task_id) {
         mx_task_kill(handle);
         // found and killed the task - abort the search

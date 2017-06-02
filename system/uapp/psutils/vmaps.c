@@ -159,7 +159,7 @@ mx_status_t print_maps(mx_info_maps_t* maps, size_t count, size_t avail) {
 mx_koid_t desired_koid;
 mx_handle_t found_handle;
 
-mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid) {
+mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid, mx_koid_t parent_koid) {
     if (koid == desired_koid) {
         fprintf(stderr,
                 "ERROR: koid %" PRIu64 " is a job, not a process\n", koid);
@@ -168,7 +168,7 @@ mx_status_t job_callback(int depth, mx_handle_t job, mx_koid_t koid) {
     return NO_ERROR;
 }
 
-mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid) {
+mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid, mx_koid_t parent_koid) {
     if (koid == desired_koid) {
         mx_status_t s =
             mx_handle_duplicate(process, MX_RIGHT_SAME_RIGHTS, &found_handle);

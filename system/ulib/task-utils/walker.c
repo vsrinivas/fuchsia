@@ -112,7 +112,7 @@ static mx_status_t do_threads_worker(
         if (status == NO_ERROR) {
             // call the thread_callback if supplied
             if (thread_callback) {
-                status = (thread_callback)(depth, child, koids->entries[n]);
+                status = (thread_callback)(depth, child, koids->entries[n], process_koid);
                 // abort on failure
                 if (status != NO_ERROR) {
                     return status;
@@ -160,7 +160,7 @@ static mx_status_t do_processes_worker(
         if (status == NO_ERROR) {
             // call the process_callback if supplied
             if (process_callback) {
-                status = (process_callback)(depth, child, koids->entries[n]);
+                status = (process_callback)(depth, child, koids->entries[n], job_koid);
                 // abort on failure
                 if (status != NO_ERROR) {
                     return status;
@@ -219,7 +219,7 @@ static mx_status_t do_jobs_worker(
         if (status == NO_ERROR) {
             // call the job_callback if supplied
             if (job_callback) {
-                status = (job_callback)(depth, child, koids->entries[n]);
+                status = (job_callback)(depth, child, koids->entries[n], job_koid);
                 // abort on failure
                 if (status != NO_ERROR) {
                     return status;
@@ -291,7 +291,7 @@ mx_status_t walk_job_tree(mx_handle_t root_job,
     // Else keep going with a koid of zero.
 
     if (job_callback) {
-        status = (job_callback)(/* depth */ 0, root_job, root_job_koid);
+        status = (job_callback)(/* depth */ 0, root_job, root_job_koid, 0);
         if (status != NO_ERROR) {
             return status;
         }

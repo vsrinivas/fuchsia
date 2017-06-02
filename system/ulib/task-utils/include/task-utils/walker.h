@@ -17,12 +17,15 @@ __BEGIN_CDECLS
 //     after the callback returns, so callers should duplicate the handle
 //     if they want to use it later.
 // koid: The koid of the task that the handle points to.
+// parent_koid: The koid of the parent task (e.g., the process the contains the
+//     thread, the job that contains the process, or the job that contains the
+//     job).
 //
 // If the callback returns a value other than NO_ERROR, the job tree walk will
 // terminate without visiting any other node, and the mx_status_t value will be
 // returned by walk_job_tree().
 typedef mx_status_t(task_callback_t)(
-    int depth, mx_handle_t task, mx_koid_t koid);
+    int depth, mx_handle_t task, mx_koid_t koid, mx_koid_t parent_koid);
 
 // Walks the job/process/task tree rooted in root_job. Visits tasks in
 // depth-first pre order. Any callback arg may be NULL.

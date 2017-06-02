@@ -14,7 +14,7 @@
 const char* kill_name;
 int killed = 0;
 
-mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid) {
+mx_status_t process_callback(int depth, mx_handle_t process, mx_koid_t koid, mx_koid_t parent_koid) {
     char name[MX_MAX_NAME_LEN];
     mx_status_t status = mx_object_get_property(process, MX_PROP_NAME, name, sizeof(name));
     if (status != NO_ERROR) {
