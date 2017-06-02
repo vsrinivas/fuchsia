@@ -169,6 +169,7 @@ static mx_status_t finish_load_segment(
     mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
     if (status != NO_ERROR)
         return status;
+    mx_object_set_property(bss_vmo, MX_PROP_NAME, "bss", 3);
 
     // The final partial page of initialized data falls into the
     // region backed by bss_vmo rather than (the file) vmo.  We need
