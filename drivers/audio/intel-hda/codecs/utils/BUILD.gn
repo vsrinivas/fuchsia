@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-shared_library("ihda-codec-utils") {
+source_set("ihda-codec-utils") {
     public = [
         "codec-driver-base.h",
         "stream-base.h",
@@ -26,9 +26,5 @@ shared_library("ihda-codec-utils") {
 
     libs = [
         "driver",
-    ]
-
-    configs -= [
-        "//build/config:symbol_visibility_hidden",
     ]
 }
