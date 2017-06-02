@@ -26,6 +26,7 @@
 #ifndef ASSEMBLY
 
 #include <arch/spinlock.h>
+#include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <assert.h>
@@ -65,11 +66,11 @@ struct x86_percpu {
     uint32_t cpu_num;
 
     /* This CPU's default TSS */
-    tss_t __ALIGNED(16) default_tss;
+    tss_t default_tss __ALIGNED(16);
 
     /* Reserved space for interrupt stacks */
-    uint8_t interrupt_stacks[NUM_ASSIGNED_IST_ENTRIES][PAGE_SIZE];
-};
+    uint8_t interrupt_stacks[NUM_ASSIGNED_IST_ENTRIES][PAGE_SIZE] __ALIGNED(16);
+} __CPU_MAX_ALIGN;
 
 static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");

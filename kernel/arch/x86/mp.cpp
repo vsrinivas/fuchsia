@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <err.h>
 #include <stdio.h>
+#include <string.h>
 #include <trace.h>
 
 #include <arch/mp.h>
@@ -50,10 +51,12 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     }
 
     if (cpu_count > 1) {
-        ap_percpus = (x86_percpu *)calloc(sizeof(*ap_percpus), cpu_count - 1);
+        size_t len = sizeof(*ap_percpus) * (cpu_count - 1);
+        ap_percpus = (x86_percpu *)memalign(MAX_CACHE_LINE, len);
         if (ap_percpus == NULL) {
             return ERR_NO_MEMORY;
         }
+        memset(ap_percpus, 0, len);
     }
 
     uint32_t bootstrap_ap = apic_local_id();
