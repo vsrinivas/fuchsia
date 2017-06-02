@@ -60,12 +60,14 @@ class StoryImpl::AddModuleCall : Operation<> {
  public:
   AddModuleCall(OperationContainer* const container,
                 StoryImpl* const story_impl,
+                fidl::Array<fidl::String> parent_module_path,
                 const fidl::String& module_name,
                 const fidl::String& module_url,
                 const fidl::String& link_name,
                 const ResultCall& done)
       : Operation(container, done),
         story_impl_(story_impl),
+        parent_module_path_(std::move(parent_module_path)),
         module_name_(module_name),
         module_url_(module_url),
         link_name_(link_name) {
@@ -76,23 +78,24 @@ class StoryImpl::AddModuleCall : Operation<> {
   void Run() {
     FlowToken flow{this};
 
-    // There is no parent module; this is a root module.
-    auto module_path = fidl::Array<fidl::String>::New(1);
-    module_path[0] = module_name_;
-    // There is no module path; this link exists outside the scope of a module.
+    auto module_path = parent_module_path_.Clone();
+    module_path.push_back(module_name_);
     auto link_path = LinkPath::New();
-    link_path->module_path = fidl::Array<fidl::String>::New(0);
+    link_path->module_path = parent_module_path_.Clone();
     link_path->link_name = link_name_;
 
     story_impl_->story_storage_impl_->WriteModuleData(
         module_path, module_url_, link_path, [this, flow] {
           if (story_impl_->IsRunning()) {
-            story_impl_->StartRootModule(module_name_, module_url_, link_name_);
+            story_impl_->StartModuleInShell(
+                parent_module_path_, module_name_, module_url_, link_name_,
+                nullptr, nullptr, nullptr, SurfaceRelation::New());
           }
         });
   };
 
   StoryImpl* const story_impl_;
+  const fidl::Array<fidl::String> parent_module_path_;
   const fidl::String module_name_;
   const fidl::String module_url_;
   const fidl::String link_name_;
@@ -166,8 +169,8 @@ class StoryImpl::AddForCreateCall : Operation<> {
 
     auto module_path = fidl::Array<fidl::String>::New(1);
     module_path[0] = module_name_;
-
-    new AddModuleCall(&operation_collection_, story_impl_, module_name_,
+    new AddModuleCall(&operation_collection_, story_impl_,
+                      fidl::Array<fidl::String>::New(0), module_name_,
                       module_url_, link_name_, [flow] {});
   }
 
@@ -219,11 +222,15 @@ class StoryImpl::StartCall : Operation<> {
                          0)
                   << "root module should not be started with a module-owned "
                      "link";
-              // TODO(vardhan): Make StartRootModule take a LinkPath so that it
-              // can start non-root links.
-              story_impl_->StartRootModule(
+              // TODO(vardhan): We should be able to supply a module_path for
+              // the link, not just the name, so we can start a module on any
+              // link in the story. The story crafting API in StoryController
+              // would use this.
+              story_impl_->StartModuleInShell(
+                  fidl::Array<fidl::String>::New(0),
                   module_data->module_path[0], module_data->url,
-                  module_data->default_link_path->link_name);
+                  module_data->default_link_path->link_name, nullptr, nullptr,
+                  nullptr, nullptr);
             }
           }
 
@@ -577,11 +584,12 @@ void StoryImpl::AddForCreate(const fidl::String& module_name,
 }
 
 // |StoryController|
-void StoryImpl::AddModule(const fidl::String& module_name,
+void StoryImpl::AddModule(fidl::Array<fidl::String> module_path,
+                          const fidl::String& module_name,
                           const fidl::String& module_url,
                           const fidl::String& link_name) {
-  new AddModuleCall(&operation_queue_, this, module_name, module_url, link_name,
-                    [] {});
+  new AddModuleCall(&operation_queue_, this, std::move(module_path),
+                    module_name, module_url, link_name, [] {});
 }
 
 // |StoryController|
@@ -618,20 +626,6 @@ void StoryImpl::StartStoryShell(
 
   story_shell_factory->Create(story_context_binding_.NewBinding(),
                               story_shell_.NewRequest());
-}
-
-void StoryImpl::StartRootModule(const fidl::String& module_name,
-                                const fidl::String& url,
-                                const fidl::String& link_name) {
-  ModuleControllerPtr module_controller;
-  StartModuleInShell(fidl::Array<fidl::String>::New(0), module_name, url,
-                     link_name, nullptr, nullptr,
-                     module_controller.NewRequest(), nullptr);
-
-  // TODO(mesch): Watch all root modules and compute story state from that.
-  if (module_name == kRootModuleName) {
-    module_controller->Watch(module_watcher_bindings_.AddBinding(this));
-  }
 }
 
 // |StoryController|
@@ -687,10 +681,11 @@ void StoryImpl::NotifyStateChange() {
       story_id_, story_provider_impl_->device_id(), state_, [] {});
 }
 
-void StoryImpl::GetLink(const fidl::String& name,
+void StoryImpl::GetLink(fidl::Array<fidl::String> module_path,
+                        const fidl::String& name,
                         fidl::InterfaceRequest<Link> request) {
   auto link_path = LinkPath::New();
-  link_path->module_path = fidl::Array<fidl::String>::New(0);
+  link_path->module_path = std::move(module_path);
   link_path->link_name = name;
   GetLinkPath(std::move(link_path), std::move(request));
 }
@@ -777,10 +772,18 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation) {
   mozart::ViewOwnerPtr view_owner;
+  if (parent_module_path.empty() && module_name == kRootModuleName) {
+    // HACK(alangardner, mesch): For the root module, module_controller_request
+    // is always null.
+    ModuleControllerPtr module_controller;
+    module_controller_request = module_controller.NewRequest();
+    module_controller->Watch(module_watcher_bindings_.AddBinding(this));
+  }
   fidl::String id = StartModule(
       parent_module_path, module_name, module_url, link_name,
       std::move(outgoing_services), std::move(incoming_services),
       std::move(module_controller_request), view_owner.NewRequest());
+
   // If this is called during Stop(), story_shell_ might already
   // have been reset. TODO(mesch): Then the whole operation should
   // fail.

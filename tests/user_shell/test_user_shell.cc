@@ -332,7 +332,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
   // Totally tentative use of the root module link: Tell the root module under
   // what user shell it's running.
   void TestStory1_SetRootLink() {
-    story_controller_->GetLink("root", root_.NewRequest());
+    story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
+                               root_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
     root_->Set(
@@ -348,7 +349,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     if (!story_controller_) {
       story_provider_->GetController(story_info_->id,
                                      story_controller_.NewRequest());
-      story_controller_->GetLink("root", root_.NewRequest());
+      story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
+                                 root_.NewRequest());
     }
 
     link_watcher_.Watch(&root_);
@@ -372,7 +374,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     view_->ConnectView(std::move(story_view));
 
     if (round == 0) {
-      story_controller_->AddModule("second", settings_.second_module, "root2");
+      story_controller_->AddModule(fidl::Array<fidl::String>::New(0), "second",
+                                   settings_.second_module, "root2");
     }
   }
 
@@ -511,8 +514,8 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     delete this;
 
     modular::testing::Done([done] {
-        done();
-        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      done();
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
     });
   }
 

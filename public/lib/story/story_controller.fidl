@@ -34,8 +34,10 @@ interface StoryController {
   // Gets a connection to the named Link in the story. The name of the
   // root link is "root", and it's implicitly created when the story
   // is created. Any other link, if it doesn't exist yet, is
-  // implicitly created.
-  GetLink(string name, Link& link);
+  // implicitly created. The module_path identifies the module that created
+  // the link. For the links leading to top level modules (specifically for the
+  // "root" link to the "root" module), this path is empty.
+  GetLink(array<string> module_path, string name, Link& link);
 
   // Stops this story if it is running, else does nothing. Returns
   // when the story is stopped.
@@ -44,19 +46,23 @@ interface StoryController {
   // Registers a listener for changes of the story state.
   Watch(StoryWatcher watcher);
 
-  // Adds and starts a top level module to the story. The view of this
-  // module is sent to the story shell. The module |name| is used to
-  // reinflate component message queues and Links on subsequent runs
-  // of the story. The Link to be used for the module is identified by
-  // its name as used in calls to GetNamedLink(); using that method,
-  // the link can be configured with data before running the module.
-  // The implicit name of the link obtained from GetLink() is "root".
-  // This |link_name| is scoped to the story controller, and not the
-  // module. TODO(mesch): Some form of ModuleController might be
-  // useful here, e.g. for status notifications.
-  AddModule(string name, string url, string link_name);
+  // Adds and starts a module to the story. The view of this module is sent to
+  // the story shell. The absolute module path (the concatenation of the
+  // |module_path| and module |name|) is used to reinflate component
+  // message queues and Links on subsequent runs of the story.
+  // The module_path specifies the module instance to make this module a
+  // child of. If empty it will be added as a root module. The Link to be
+  // used for the module is identified by its name as used in calls to GetLink()
+  // using that method, the link can be configured with data before running the
+  // module. This |link_name| is scoped to the module_path provided.
+  // TODO(mesch): The link name should really be a link path, so that a module
+  // can be attached to any link in the story.
+  // TODO(mesch): Some form of ModuleController might be useful here, e.g. for
+  // status notifications.
+  AddModule(array<string> module_path, string name, string url,
+            string link_name);
 
-  // Get all of the modules in the story.
+  // Gets all of the modules in the story.
   GetModules() => (array<ModuleData> module_data);
 };
 

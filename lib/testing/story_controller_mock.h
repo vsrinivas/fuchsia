@@ -33,7 +33,8 @@ class StoryControllerMock : public StoryController {
                     const SetInfoExtraCallback& callback) override {}
 
   // |StoryController|
-  void AddModule(const fidl::String& module_name,
+  void AddModule(fidl::Array<fidl::String> module_path,
+                 const fidl::String& module_name,
                  const fidl::String& module_url,
                  const fidl::String& link_name) override {
     last_added_module_ = module_url;
@@ -43,7 +44,8 @@ class StoryControllerMock : public StoryController {
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override {}
 
   // |StoryController|
-  void GetLink(const fidl::String& name,
+  void GetLink(fidl::Array<fidl::String> module_path,
+               const fidl::String& name,
                fidl::InterfaceRequest<Link> request) override {}
 
   // |StoryController|
