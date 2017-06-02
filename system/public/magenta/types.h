@@ -279,26 +279,6 @@ typedef enum {
     MX_CACHE_POLICY_MASK            = 0x3,
 } mx_cache_policy_t;
 
-// Fifo state
-typedef struct {
-    uint64_t head;
-    uint64_t tail;
-} mx_fifo_state_t;
-
-// Fifo ops
-typedef enum {
-    MX_FIFO_OP_READ_STATE         = 0,
-    MX_FIFO_OP_ADVANCE_HEAD       = 1,
-    MX_FIFO_OP_ADVANCE_TAIL       = 2,
-    MX_FIFO_OP_PRODUCER_EXCEPTION = 3,
-    MX_FIFO_OP_CONSUMER_EXCEPTION = 4,
-} mx_fifo_op_t;
-
-#define MX_FIFO_PRODUCER_RIGHTS \
-    (MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_FIFO_PRODUCER)
-#define MX_FIFO_CONSUMER_RIGHTS \
-    (MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_FIFO_CONSUMER)
-
 // Flag bits for mx_cache_flush.
 #define MX_CACHE_FLUSH_INSN       (1u << 0)
 #define MX_CACHE_FLUSH_DATA       (1u << 1)
