@@ -74,9 +74,6 @@
 // and has a closed remote end will return ERR_PEER_CLOSED.
 #define ERR_SHOULD_WAIT (-22)
 
-// deprecated: ERR_HANDLE_CLOSED: a handle being waited on was closed
-// bug MG-585 tracks the cleanup.
-#define ERR_HANDLE_CLOSED (-23)
 // ERR_CANCELED: The in-progress operation (e.g. a wait) has been
 // canceled.
 #define ERR_CANCELED (-23)
