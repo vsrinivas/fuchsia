@@ -29,6 +29,7 @@ source_set("mlme") {
     "packet.h",
     "scanner.cpp",
     "scanner.h",
+    "wlan.h",
   ]
 
   deps = [

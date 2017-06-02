@@ -4,6 +4,7 @@
 
 #include "device.h"
 #include "logging.h"
+#include "wlan.h"
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
@@ -21,6 +22,13 @@
 
 
 namespace wlan {
+
+namespace {
+enum class DevicePacket : uint64_t {
+    kShutdown,
+    kPacketQueued,
+};
+}  // namespace
 
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_ops)
   : WlanBaseDevice("wlan"),
@@ -84,8 +92,12 @@ mx_status_t Device::QueuePacket(const void* data, size_t length, Packet::Source 
     {
         std::lock_guard<std::mutex> lock(packet_queue_lock_);
         packet_queue_.push_front(std::move(packet));
-        LoopMessage msg(kPacketQueued);
-        mx_status_t status = port_.queue(&msg, 0);
+
+        mx_port_packet_t pkt = {};
+        pkt.key = to_u64(PortKey::kDevice);
+        pkt.type = MX_PKT_TYPE_USER;
+        pkt.user.u64[0] = to_u64(DevicePacket::kPacketQueued);
+        mx_status_t status = port_.queue(&pkt, 0);
         if (status != NO_ERROR) {
             warnf("could not send packet queued msg err=%d\n", status);
             packet_queue_.pop_front();
@@ -180,16 +192,9 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
     }
 }
 
-Device::LoopMessage::LoopMessage(MsgKey key, uint32_t extra) {
-    debugf("LoopMessage key=%" PRIu64 ", extra=%u\n", key, extra);
-    hdr.key = key;
-    hdr.extra = extra;
-}
-
 void Device::MainLoop() {
     infof("starting MainLoop\n");
     mx_port_packet_t pkt;
-    uint64_t this_key = reinterpret_cast<uint64_t>(this);
     mx_time_t timeout = mx::deadline_after(MX_SEC(5));
     bool running = true;
     while (running) {
@@ -214,26 +219,29 @@ void Device::MainLoop() {
         bool todo = false;
         switch (pkt.type) {
         case MX_PKT_TYPE_USER:
-            switch (pkt.key) {
-            case kShutdown:
+            MX_DEBUG_ASSERT(pkt.key == to_u64(PortKey::kDevice));
+            switch (pkt.user.u64[0]) {
+            case to_u64(DevicePacket::kShutdown):
                 running = false;
                 continue;
-            case kPacketQueued:
+            case to_u64(DevicePacket::kPacketQueued):
                 todo = true;
                 break;
             default:
-                errorf("unknown user port key: %" PRIu64 "\n", pkt.key);
+                errorf("unknown device port key subtype: %" PRIu64 "\n", pkt.user.u64[0]);
                 break;
             }
             break;
-        case MX_PKT_TYPE_SIGNAL_ONE:
-            if (pkt.key != this_key) {
-                errorf("unknown signal key: %" PRIu64 ", this_key=%" PRIu64 "\n",
-                        pkt.key, this_key);
+        case MX_PKT_TYPE_SIGNAL_REP:
+            switch (pkt.key) {
+            case to_u64(PortKey::kService):
+                if (ProcessChannelPacketLocked(pkt)) {
+                    todo = true;
+                }
                 break;
-            }
-            if (ProcessChannelPacketLocked(pkt)) {
-                todo = true;
+            default:
+                errorf("unknown port key: %" PRIu64 "\n", pkt.key);
+                break;
             }
             break;
         default:
@@ -297,26 +305,25 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
             packet_queue_.push_front(std::move(packet));
         }
         packet_queued = true;
-
-        status = RegisterChannelWaitLocked();
-        if (status != NO_ERROR) {
-            errorf("could not wait on channel: %d\n", status);
-            ResetChannelLocked();
-        }
     }
     return packet_queued;
 }
 
 mx_status_t Device::RegisterChannelWaitLocked() {
     mx_signals_t sigs = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
-    return channel_.wait_async(port_, reinterpret_cast<uintptr_t>(this),
-            sigs, MX_WAIT_ASYNC_ONCE);
+    // TODO(tkilbourn): MX_WAIT_ASYNC_REPEATING can go horribly wrong with multiple threads waiting
+    // on the port. If we ever go to a multi-threaded event loop, fix the channel wait.
+    return channel_.wait_async(port_, to_u64(PortKey::kService),
+            sigs, MX_WAIT_ASYNC_REPEATING);
 }
 
 mx_status_t Device::SendShutdown() {
     debugfn();
-    LoopMessage msg(kShutdown);
-    return port_.queue(&msg, 0);
+    mx_port_packet_t pkt = {};
+    pkt.key = to_u64(PortKey::kDevice);
+    pkt.type = MX_PKT_TYPE_USER;
+    pkt.user.u64[0] = to_u64(DevicePacket::kShutdown);
+    return port_.queue(&pkt, 0);
 }
 
 mx_status_t Device::GetChannel(mx::channel* out) {

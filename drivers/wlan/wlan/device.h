@@ -12,7 +12,6 @@
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/wlan.h>
 #include <magenta/compiler.h>
-#include <magenta/syscalls/port.h>
 #include <mx/channel.h>
 #include <mx/port.h>
 #include <mxtl/intrusive_double_list.h>
@@ -21,6 +20,8 @@
 
 #include <mutex>
 #include <thread>
+
+typedef struct mx_port_packet mx_port_packet_t;
 
 namespace wlan {
 
@@ -50,22 +51,6 @@ class Device : public WlanBaseDevice,
     void EthmacSend(uint32_t options, void* data, size_t length);
 
   private:
-    enum MsgKey : uint64_t {
-        kShutdown = 1,
-        kPacketQueued,
-    };
-
-    struct LoopMessage {
-        explicit LoopMessage(MsgKey key, uint32_t extra = 0);
-
-        mx_packet_header_t hdr;
-        mx_packet_user_t data;
-    };
-    static_assert(std::is_standard_layout<LoopMessage>::value,
-            "wlan::Device::LoopMessage must have standard layout");
-    static_assert(sizeof(LoopMessage) <= sizeof(mx_port_packet_t),
-            "wlan::Device::LoopMessage must fit in an mx_port_packet_t");
-
     mx_status_t QueuePacket(const void* data, size_t length, Packet::Source src)
         __TA_EXCLUDES(packet_queue_lock_);
 
