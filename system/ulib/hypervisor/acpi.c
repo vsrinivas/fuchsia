@@ -76,9 +76,9 @@ mx_status_t guest_create_acpi_table(uintptr_t addr, size_t size, uintptr_t acpi_
     const uintptr_t dsdt_off = fadt_off + sizeof(ACPI_TABLE_FADT);
     fadt->Dsdt = dsdt_off;
     fadt->Pm1aEventBlock = PM1_EVENT_PORT;
-    fadt->Pm1EventLength = ACPI_PM1_REGISTER_WIDTH * 2 /* enable and status registers */;
+    fadt->Pm1EventLength = (ACPI_PM1_REGISTER_WIDTH / 8) * 2 /* enable and status registers */;
     fadt->Pm1aControlBlock = PM1_CONTROL_PORT;
-    fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH;
+    fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH / 8;
     acpi_header(&fadt->Header, ACPI_SIG_FADT, sizeof(ACPI_TABLE_FADT));
 
     // DSDT.
