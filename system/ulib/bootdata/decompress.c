@@ -208,14 +208,14 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
         *err = "mx_vmar_map failed on bootfs vmo";
         return status;
     }
-    addr += align_shift;
+    uintptr_t bootdata_addr = addr + align_shift;
 
-    const bootdata_t* hdr = (bootdata_t*)addr;
+    const bootdata_t* hdr = (bootdata_t*)bootdata_addr;
     switch (hdr->type) {
     case BOOTDATA_BOOTFS_BOOT:
     case BOOTDATA_BOOTFS_SYSTEM:
         if (hdr->flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED) {
-            status = decompress_bootfs_vmo(vmar, (const uint8_t*)addr, out, err);
+            status = decompress_bootfs_vmo(vmar, (const uint8_t*)bootdata_addr, out, err);
         }
         break;
     default:
@@ -223,7 +223,12 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
         status = ERR_NOT_SUPPORTED;
         break;
     }
-    mx_vmar_unmap(vmar, addr, length);
+
+    mx_status_t s = mx_vmar_unmap(vmar, addr, length);
+    if (s < 0) {
+        *err = "mx_vmar_unmap failed on bootfs vmo";
+        return s;
+    }
 
     return status;
 }

@@ -273,7 +273,7 @@ static void setup_bootfs(void) {
                                              off, bootdata.length + sizeof(bootdata),
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
-                    printf("devmgr: failed to decompress bootdata\n");
+                    printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
                 } else {
                     setup_bootfs_vmo(idx++, bootdata.type, bootfs_vmo);
                 }
