@@ -2,12 +2,5 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "apps/mozart/services/scene/session.fidl.h"
-
-namespace mozart {
-
-typedef uint32_t ResourceId;
-
-}  // namespace mozart
+// This is a placeholder file, because BUILD.gn needs at least one target.
+module mozart;

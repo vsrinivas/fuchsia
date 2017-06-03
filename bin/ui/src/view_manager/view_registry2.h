@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/composer/composer.fidl.h"
+#include "apps/mozart/services/scene/composer.fidl.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 
 namespace view_manager {

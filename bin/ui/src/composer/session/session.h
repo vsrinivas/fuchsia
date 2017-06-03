@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/mozart/services/composer/session.fidl.h"
+#include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/composer/resources/memory.h"
 #include "apps/mozart/src/composer/resources/resource_map.h"
 #include "apps/mozart/src/composer/session/session_context.h"

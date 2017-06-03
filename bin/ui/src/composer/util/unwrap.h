@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/composer/types.fidl.h"
+#include "apps/mozart/services/scene/types.fidl.h"
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace mozart {

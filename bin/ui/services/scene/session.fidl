@@ -8,7 +8,7 @@
 
 module mozart2;
 
-import "apps/mozart/services/composer/ops.fidl";
+import "apps/mozart/services/scene/ops.fidl";
 
 interface Session {
   // Enqueue a list of operations, which will not take effect until Present() is

@@ -4,7 +4,7 @@
 
 module mozart2;
 
-import "apps/mozart/services/composer/session.fidl";
+import "apps/mozart/services/scene/session.fidl";
 
 [ServiceName="mozart2::Composer"]
 interface Composer {

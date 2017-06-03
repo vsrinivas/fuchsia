@@ -4,7 +4,7 @@
 
 module mozart2;
 
-import "apps/mozart/services/composer/types.fidl";
+import "apps/mozart/services/scene/types.fidl";
 import "apps/mozart/services/geometry/geometry.fidl";
 
 // The shapes defined in this file can be used to define the rendered shape of

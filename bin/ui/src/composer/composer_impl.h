@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/composer/composer.fidl.h"
-#include "apps/mozart/services/composer/session.fidl.h"
+#include "apps/mozart/services/scene/composer.fidl.h"
+#include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/composer/resources/link.h"
 #include "apps/mozart/src/composer/session/session.h"
 #include "apps/mozart/src/composer/session/session_handler.h"

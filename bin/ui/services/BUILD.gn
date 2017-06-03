@@ -6,7 +6,6 @@ group("services") {
   deps = [
     "buffers",
     "buffers/cpp",
-    "composer",
     "composition",
     "composition/cpp",
     "geometry",
@@ -15,6 +14,7 @@ group("services") {
     "input",
     "input/cpp",
     "presentation",
+    "scene",
     "views",
     "views/cpp",
   ]

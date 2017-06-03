@@ -6,7 +6,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/services/composer/composer.fidl.h"
+#include "apps/mozart/services/scene/composer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 
