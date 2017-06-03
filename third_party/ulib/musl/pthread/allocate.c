@@ -1,4 +1,5 @@
 #include "libc.h"
+#include "magenta_impl.h"
 #include "pthread_impl.h"
 
 #include <magenta/process.h>

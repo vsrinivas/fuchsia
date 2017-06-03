@@ -1,6 +1,7 @@
 #include "futex_impl.h"
 #include "libc.h"
 #include "pthread_impl.h"
+#include "magenta_impl.h"
 #include "stdio_impl.h"
 
 #include <magenta/process.h>

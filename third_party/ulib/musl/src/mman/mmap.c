@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include "magenta_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
 
