@@ -12,7 +12,7 @@ executable("hello_composer") {
     "//application/lib/app",
     "//apps/mozart/lib/composer:session_helpers",
     "//apps/mozart/services/buffers/cpp",
-    "//apps/mozart/services/composer",
+    "//apps/mozart/services/scene",
     "//lib/escher/escher",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
@@ -27,8 +27,8 @@ executable("hello_composer_service") {
 
   deps = [
     "//application/lib/app",
-    "//apps/mozart/services/composer",
-    "//apps/mozart/src/composer:common",
+    "//apps/mozart/services/scene",
+    "//apps/mozart/src/scene:common",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
     "//lib/fidl/cpp/bindings",

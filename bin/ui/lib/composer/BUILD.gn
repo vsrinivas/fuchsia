@@ -10,6 +10,6 @@ source_set("session_helpers") {
     "session_helpers.h",
   ]
   deps = [
-    "//apps/mozart/services/composer",
+    "//apps/mozart/services/scene",
   ]
 }

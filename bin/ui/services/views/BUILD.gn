@@ -20,9 +20,9 @@ fidl("views") {
     ":view_token",
     "//application/services:service_provider",
     "//apps/mozart/services/composition",
-    "//apps/mozart/services/composer",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/input",
+    "//apps/mozart/services/scene",
   ]
 }
 

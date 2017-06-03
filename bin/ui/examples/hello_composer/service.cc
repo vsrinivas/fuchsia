@@ -7,8 +7,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/services/scene/composer.fidl.h"
-#include "apps/mozart/src/composer/composer_impl.h"
-#include "apps/mozart/src/composer/renderer/renderer.h"
+#include "apps/mozart/src/scene/composer_impl.h"
+#include "apps/mozart/src/scene/renderer/renderer.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
 #include "escher/geometry/types.h"
