@@ -4,16 +4,16 @@
 
 #include "lib/ftl/files/path.h"
 
-#include <functional>
-#include <list>
-#include <memory>
-
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <functional>
+#include <list>
+#include <memory>
 
 #include "lib/ftl/files/directory.h"
 
