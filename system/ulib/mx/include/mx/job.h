@@ -5,6 +5,7 @@
 #pragma once
 
 #include <mx/task.h>
+#include <magenta/process.h>
 
 namespace mx {
 
@@ -14,7 +15,10 @@ public:
 
     job() = default;
 
+    explicit job(mx_handle_t value) : task(value) {}
+
     explicit job(handle&& h) : task(h.release()) {}
+
     job(job&& other) : task(other.release()) {}
 
     job& operator=(job&& other) {
@@ -25,6 +29,12 @@ public:
     static mx_status_t create(mx_handle_t parent_job, uint32_t options, job* result);
 
     mx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count);
+
+    // Ideally this would be called mx::job::default(), but default is a
+    // C++ keyword and cannot be used as a function name.
+    static inline const internal::unowned_handle<job> default_job() {
+        return internal::unowned_handle<job>(mx_job_default());
+    }
 };
 
 } // namespace mx

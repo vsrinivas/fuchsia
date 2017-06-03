@@ -9,6 +9,7 @@
 #include <mx/event.h>
 #include <mx/eventpair.h>
 #include <mx/handle.h>
+#include <mx/job.h>
 #include <mx/port.h>
 #include <mx/process.h>
 #include <mx/socket.h>
@@ -220,6 +221,21 @@ static bool vmar_root_self_test() {
     END_TEST;
 }
 
+static bool job_default_test() {
+    BEGIN_TEST;
+
+    mx_handle_t raw = mx_job_default();
+    ASSERT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    EXPECT_TRUE(reference_thing<mx::job>(mx::job::default_job()), "");
+    EXPECT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    // This does not compile:
+    //const mx::job default_job = mx::job::default_job();
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libmx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -236,6 +252,7 @@ RUN_TEST(port_v2_test)
 RUN_TEST(time_test)
 RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
+RUN_TEST(job_default_test)
 END_TEST_CASE(libmx_tests)
 
 int main(int argc, char** argv) {
