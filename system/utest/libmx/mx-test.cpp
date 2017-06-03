@@ -13,6 +13,7 @@
 #include <mx/port.h>
 #include <mx/process.h>
 #include <mx/socket.h>
+#include <mx/thread.h>
 #include <mx/time.h>
 #include <mx/vmar.h>
 
@@ -191,6 +192,21 @@ static bool reference_thing(const T& p) {
     END_HELPER;
 }
 
+static bool thread_self_test() {
+    BEGIN_TEST;
+
+    mx_handle_t raw = mx_thread_self();
+    ASSERT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    EXPECT_TRUE(reference_thing<mx::thread>(mx::thread::self()), "");
+    EXPECT_EQ(validate_handle(raw), NO_ERROR, "");
+
+    // This does not compile:
+    //const mx::thread self = mx::thread::self();
+
+    END_TEST;
+}
+
 static bool process_self_test() {
     BEGIN_TEST;
 
@@ -250,6 +266,7 @@ RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
 RUN_TEST(port_v2_test)
 RUN_TEST(time_test)
+RUN_TEST(thread_self_test)
 RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
 RUN_TEST(job_default_test)

@@ -17,6 +17,9 @@ __BEGIN_CDECLS
 // |hnd_info| is a value returned by MX_HND_INFO().
 mx_handle_t mx_get_startup_handle(uint32_t hnd_info);
 
+mx_handle_t _mx_thread_self(void);
+mx_handle_t mx_thread_self(void);
+
 mx_handle_t _mx_process_self(void);
 mx_handle_t mx_process_self(void);
 

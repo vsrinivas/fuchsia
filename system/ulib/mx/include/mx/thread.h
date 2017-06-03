@@ -6,6 +6,7 @@
 
 #include <mx/object.h>
 #include <mx/task.h>
+#include <magenta/process.h>
 
 namespace mx {
 class process;
@@ -41,6 +42,10 @@ public:
 
     // TODO(abarth): mx_thread_read_state
     // TODO(abarth): mx_thread_write_state
+
+    static inline const internal::unowned_handle<thread> self() {
+        return internal::unowned_handle<thread>(mx_thread_self());
+    }
 };
 
 } // namespace mx
