@@ -53,7 +53,6 @@ private:
     }
 
     decltype(nullptr) Fail() {
-        __builtin_trap();
         ok_ = false;
         return nullptr;
     }
