@@ -57,6 +57,14 @@
 // Content: bootdata_swfb_t
 #define BOOTDATA_FRAMEBUFFER      (0x42465753) // SWFB
 
+// Debug Serial Port
+// Content: bootdata_uart_t
+#define BOOTDATA_DEBUG_UART       (0x54524155) // UART
+
+// Memory which will persist across warm boots
+// Content bootdata_lastlog_nvram_t
+#define BOOTDATA_LASTLOG_NVRAM    (0x4c4c5643) // NVLL
+
 // E820 Memory Table
 // Content: e820entry[]
 #define BOOTDATA_E820_TABLE       (0x30323845) // E820
@@ -121,6 +129,18 @@ typedef struct {
     bootdata_kernel_t data_kernel;
 } magenta_kernel_t;
 
+typedef struct {
+    uint64_t base;
+    uint64_t length;
+} bootdata_lastlog_nvram_t;
+
+#define BOOTDATA_UART_PC_PORT 1
+#define BOOTDATA_UART_PC_MMIO 2
+typedef struct {
+    uint64_t base;
+    uint32_t type;
+    uint32_t reserved;
+} bootdata_uart_t;
 
 /* EFI Variable for Crash Log */
 #define MAGENTA_VENDOR_GUID \
