@@ -340,18 +340,17 @@ typedef struct unitest_testcase_registration {
 #define UNITTEST(_name, _fn) \
     { .name = _name, .fn = _fn },
 
-#define UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup)           \
-    };  /* __unittest_table_##_global_id */                                        \
-    extern const unittest_testcase_registration_t __unittest_case_##_global_id;    \
-    const unittest_testcase_registration_t __unittest_case_##_global_id            \
-    __ALIGNED(sizeof(void *)) __SECTION("unittest_testcases") =                    \
-    {                                                                              \
-        .name = _name,                                                             \
-        .desc = _desc,                                                             \
-        .init = _init,                                                             \
-        .cleanup = _cleanup,                                                       \
-        .tests =  __unittest_table_##_global_id,                                   \
-        .test_cnt =  countof(__unittest_table_##_global_id),                       \
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc, _init, _cleanup) \
+    };  /* __unittest_table_##_global_id */                             \
+    __ALIGNED(sizeof(void *)) __USED __SECTION("unittest_testcases")    \
+    static const unittest_testcase_registration_t __unittest_case_##_global_id = \
+    {                                                                   \
+        .name = _name,                                                  \
+        .desc = _desc,                                                  \
+        .init = _init,                                                  \
+        .cleanup = _cleanup,                                            \
+        .tests = __unittest_table_##_global_id,                         \
+        .test_cnt = countof(__unittest_table_##_global_id),             \
     }
 #else   // WITH_LIB_UNITTEST
 #define UNITTEST_START_TESTCASE(_global_id)

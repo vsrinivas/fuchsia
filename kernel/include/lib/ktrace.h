@@ -30,17 +30,19 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
         data[0] = a; data[1] = b; data[2] = c; data[3] = d;
     }
 }
-#define ktrace_probe0(_name) { \
-    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { .name = _name }; \
-    ktrace_open(TAG_PROBE_16(info.num)); \
+#define ktrace_probe0(_name) {                                  \
+    __USED __SECTION("ktrace_probe")                            \
+    static ktrace_probe_info_t info = { .name = _name };        \
+    ktrace_open(TAG_PROBE_16(info.num));                        \
 }
-#define ktrace_probe2(_name,arg0,arg1) { \
-    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { .name = _name }; \
-    uint32_t* args = ktrace_open(TAG_PROBE_24(info.num)); \
-    if (args) { \
-        args[0] = arg0; \
-        args[1] = arg1; \
-    } \
+#define ktrace_probe2(_name,arg0,arg1) {                     \
+    __USED __SECTION("ktrace_probe")                         \
+    static ktrace_probe_info_t info = { .name = _name };     \
+    uint32_t* args = ktrace_open(TAG_PROBE_24(info.num));    \
+    if (args) {                                              \
+      args[0] = arg0;                                        \
+      args[1] = arg1;                                        \
+    }                                                        \
 }
 void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name);
 int ktrace_read_user(void* ptr, uint32_t off, uint32_t len);

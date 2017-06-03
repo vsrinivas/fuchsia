@@ -63,13 +63,13 @@ struct lk_init_struct {
     const char *name;
 };
 
-#define LK_INIT_HOOK_FLAGS(_name, _hook, _level, _flags) \
-    extern const struct lk_init_struct _init_struct_##_name; \
-    const struct lk_init_struct _init_struct_##_name __ALIGNED(sizeof(void *)) __SECTION("lk_init") = { \
-        .level = _level, \
-        .flags = _flags, \
-        .hook = _hook, \
-        .name = #_name, \
+#define LK_INIT_HOOK_FLAGS(_name, _hook, _level, _flags)        \
+    __ALIGNED(sizeof(void *)) __USED __SECTION("lk_init")       \
+    static const struct lk_init_struct _init_struct_##_name = { \
+        .level = _level,                                        \
+        .flags = _flags,                                        \
+        .hook = _hook,                                          \
+        .name = #_name,                                         \
     };
 
 #define LK_INIT_HOOK(_name, _hook, _level) \

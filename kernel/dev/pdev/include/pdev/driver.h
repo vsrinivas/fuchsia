@@ -24,9 +24,8 @@ struct lk_pdev_init_struct {
 };
 
 #define LK_PDEV_INIT(_name, _id, _hook, _level) \
-    extern const struct lk_pdev_init_struct _dev_init_struct_##_name; \
-    const struct lk_pdev_init_struct _dev_init_struct_##_name __ALIGNED(sizeof(void *)) \
-    __SECTION("lk_pdev_init") = { \
+    __ALIGNED(sizeof(void *)) __USED __SECTION("lk_pdev_init") \
+    static const struct lk_pdev_init_struct _dev_init_struct_##_name = { \
         .id = _id, \
         .hook = _hook, \
         .level = _level, \
