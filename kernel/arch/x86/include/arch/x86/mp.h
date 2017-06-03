@@ -83,11 +83,12 @@ static_assert(__offsetof(struct x86_percpu, cpu_num) == PERCPU_CPU_NUM_OFFSET, "
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss.rsp0) == PERCPU_KERNEL_SP_OFFSET, "");
 
+extern struct x86_percpu bp_percpu;
+extern struct x86_percpu *ap_percpus;
+
 // This needs to be run very early in the boot process from start.S and as
-// each CPU is brought up.  It returns the global stack_guard value, for
-// secondary CPUs.  On the initial CPU, it returns zero because the
-// stack_guard value has not been initialized yet.
-uintptr_t x86_init_percpu(uint cpu_num, uintptr_t unsafe_sp);
+// each CPU is brought up.
+void x86_init_percpu(uint cpu_num);
 
 /* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);

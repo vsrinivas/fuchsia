@@ -30,7 +30,7 @@ static int initialized = 0;
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info);
 
-__NO_SAFESTACK void x86_feature_init(void)
+void x86_feature_init(void)
 {
     if (atomic_swap(&initialized, 1)) {
         return;

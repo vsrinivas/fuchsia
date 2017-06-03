@@ -66,7 +66,7 @@ static inline void idt_set_type(
     entry->w1 = (entry->w1 & ~(0xf << 8)) | ((uint32_t)typ << 8);
 }
 
-__NO_SAFESTACK void idt_set_vector(
+void idt_set_vector(
         struct idt *idt,
         uint8_t vec,
         uint16_t code_segment_sel,
@@ -90,7 +90,7 @@ void idt_set_ist_index(struct idt *idt, uint8_t vec, uint8_t ist_idx)
     entry->w1 = (entry->w1 & ~0x7) | ist_idx;
 }
 
-__NO_SAFESTACK void idt_setup(struct idt *idt)
+void idt_setup(struct idt *idt)
 {
     extern uintptr_t const _isr_table[];
 

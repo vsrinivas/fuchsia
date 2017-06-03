@@ -53,6 +53,7 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/uspace_entry.S \
 \
 	$(LOCAL_DIR)/arch.cpp \
+	$(LOCAL_DIR)/bp_percpu.c \
 	$(LOCAL_DIR)/cache.cpp \
 	$(LOCAL_DIR)/cpu_topology.cpp \
 	$(LOCAL_DIR)/debugger.cpp \

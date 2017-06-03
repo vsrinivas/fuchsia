@@ -174,6 +174,15 @@ high_entry:
     /* reload the gdtr */
     lgdt _gdtr
 
+    // Set %gs.base to &bp_percpu.  It's statically initialized
+    // with kernel_unsafe_sp set, so after this it's safe to call
+    // into C code that might use safe-stack and/or stack-protector.
+    lea bp_percpu(%rip), %rax
+    mov %rax, %rdx
+    shr $32, %rdx
+    mov $X86_MSR_IA32_GS_BASE, %ecx
+    wrmsr
+
     /* set up the idt */
     mov $_idt_startup, %rdi
     call idt_setup

@@ -19,6 +19,7 @@
 #include <arch/ops.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
+#include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
@@ -103,32 +104,8 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
     __UNREACHABLE;
 }
 
-#include <arch/x86/apic.h>
-__NO_SAFESTACK __NO_RETURN
-void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
-{
-    // Would prefer this to be in init_percpu, but there is a dependency on a
-    // page mapping existing, and the BP calls that before the VM subsystem is
-    // initialized.
-    apic_local_init();
-
-    uint32_t local_apic_id = apic_local_id();
-    int cpu_num = x86_apic_id_to_cpu_num(local_apic_id);
-    if (cpu_num < 0) {
-        // If we could not find our CPU number, do not proceed further
-        arch_disable_ints();
-        while (1) {
-            x86_hlt();
-        }
-    }
-
-    DEBUG_ASSERT(cpu_num > 0);
-    uintptr_t unsafe_sp = 0;
-#if __has_feature(safe_stack)
-    unsafe_sp =
-        ROUNDDOWN((uintptr_t)thread->unsafe_stack + thread->stack_size, 16);
-#endif
-    uintptr_t stack_guard = x86_init_percpu((uint)cpu_num, unsafe_sp);
+[[noreturn, gnu::noinline]] static void finish_secondary_entry(
+    volatile int *aps_still_booting, thread_t *thread, uint cpu_num) {
 
     // Signal that this CPU is initialized.  It is important that after this
     // operation, we do not touch any resources associated with bootstrap
@@ -158,12 +135,6 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
     // when we exit into the scheduler.
     thread->flags |= THREAD_FLAG_FREE_STRUCT;
 
-    // Install the stack-guard value.  This is safe to do here even if this
-    // function itself does stack-guard checking, because this function
-    // never returns and so never runs the epilogue code where the checking
-    // would be done.
-    x86_write_gs_offset64(MX_TLS_STACK_GUARD_OFFSET, stack_guard);
-
     lk_secondary_cpu_entry();
 
     // lk_secondary_cpu_entry only returns on an error, halt the core in this
@@ -173,6 +144,54 @@ fail:
     while (1) {
       x86_hlt();
     }
+}
+
+// This is called from assembly, before any other C code.
+// The %gs.base is not set up yet, so we have to trust that
+// this function is simple enough that the compiler won't
+// want to generate stack-protector prologue/epilogue code,
+// which would use %gs.
+__NO_SAFESTACK __NO_RETURN
+void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
+{
+    // Would prefer this to be in init_percpu, but there is a dependency on a
+    // page mapping existing, and the BP calls that before the VM subsystem is
+    // initialized.
+    apic_local_init();
+
+    uint32_t local_apic_id = apic_local_id();
+    int cpu_num = x86_apic_id_to_cpu_num(local_apic_id);
+    if (cpu_num < 0) {
+        // If we could not find our CPU number, do not proceed further
+        arch_disable_ints();
+        while (1) {
+            x86_hlt();
+        }
+    }
+
+    DEBUG_ASSERT(cpu_num > 0);
+
+    // Set %gs.base to our percpu struct.  This has to be done before
+    // calling x86_init_percpu, which initializes most of that struct, so
+    // that x86_init_percpu can use safe-stack and/or stack-protector code.
+    struct x86_percpu *const percpu = &ap_percpus[cpu_num - 1];
+    write_msr(X86_MSR_IA32_GS_BASE, (uintptr_t)percpu);
+
+    // Copy the stack-guard value from the boot CPU's perpcu.
+    percpu->stack_guard = bp_percpu.stack_guard;
+
+#if __has_feature(safe_stack)
+    // Set up the initial unsafe stack pointer.
+    x86_write_gs_offset64(
+        MX_TLS_UNSAFE_SP_OFFSET,
+        ROUNDDOWN((uintptr_t)thread->unsafe_stack + thread->stack_size, 16));
+#endif
+
+    x86_init_percpu((uint)cpu_num);
+
+    // Now do the rest of the work, in a function that is free to
+    // use %gs in its code.
+    finish_secondary_entry(aps_still_booting, thread, cpu_num);
 }
 
 static int cmd_cpu(int argc, const cmd_args *argv, uint32_t flags)
