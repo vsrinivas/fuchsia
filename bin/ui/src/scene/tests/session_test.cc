@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/tests/session_test.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
 void SessionTest::SetUp() {
@@ -58,5 +58,5 @@ LinkPtr SessionTest::CreateLink(Session* session,
 void SessionTest::OnSessionTearDown(Session* session) {}
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

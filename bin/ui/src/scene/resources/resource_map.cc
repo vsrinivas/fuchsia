@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/resource_map.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 ResourceMap::ResourceMap(ErrorReporter* error_reporter)
     : error_reporter_(error_reporter) {}
@@ -22,7 +22,7 @@ bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {
     error_reporter_->ERROR()
-        << "composer::ResourceMap::AddResource(): resource with ID " << id
+        << "scene::ResourceMap::AddResource(): resource with ID " << id
         << " already exists.";
     return false;
   }
@@ -33,12 +33,12 @@ bool ResourceMap::RemoveResource(ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
     error_reporter_->ERROR()
-        << "composer::ResourceMap::RemoveResource(): no resource with ID "
+        << "scene::ResourceMap::RemoveResource(): no resource with ID "
         << id;
     return false;
   }
   return true;
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

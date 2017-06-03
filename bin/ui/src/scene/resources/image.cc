@@ -10,7 +10,7 @@
 #include "escher/util/image_utils.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo Image::kTypeInfo = {ResourceType::kImage, "Image"};
 
@@ -95,5 +95,5 @@ ImagePtr Image::New(Session* session,
   }
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

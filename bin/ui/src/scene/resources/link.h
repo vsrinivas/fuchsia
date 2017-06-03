@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Link final : public Node {
  public:
@@ -20,5 +20,5 @@ class Link final : public Node {
 
 typedef ftl::RefPtr<Link> LinkPtr;
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

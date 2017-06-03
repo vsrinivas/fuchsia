@@ -8,7 +8,7 @@
 #include "lib/escher/escher/geometry/types.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Shape : public Resource {
  public:
@@ -25,5 +25,5 @@ class Shape : public Resource {
 
 typedef ftl::RefPtr<Shape> ShapePtr;
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

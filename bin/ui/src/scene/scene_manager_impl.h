@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/scene/composer.fidl.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/scene/resources/link.h"
 #include "apps/mozart/src/scene/session/session.h"
@@ -17,18 +17,18 @@
 #include "lib/mtl/threading/thread.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Renderer;
 
-class ComposerImpl : public mozart2::Composer, public SessionContext {
+class SceneManagerImpl : public mozart2::Composer, public SessionContext {
  public:
-  ComposerImpl(vk::Device vk_device,
-               escher::ResourceLifePreserver* life_preserver,
-               escher::GpuAllocator* allocator,
-               escher::impl::GpuUploader* uploader);
-  ComposerImpl();
-  ~ComposerImpl() override;
+  SceneManagerImpl(vk::Device vk_device,
+                   escher::ResourceLifePreserver* life_preserver,
+                   escher::GpuAllocator* allocator,
+                   escher::impl::GpuUploader* uploader);
+  SceneManagerImpl();
+  ~SceneManagerImpl() override;
 
   // mozart2::Composer interface methods.
   void CreateSession(
@@ -91,5 +91,5 @@ class ComposerImpl : public mozart2::Composer, public SessionContext {
   SessionId next_session_id_ = 1;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

@@ -9,7 +9,7 @@
 #include "lib/ftl/macros.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class TagNode final : public Node {
  public:
@@ -35,5 +35,5 @@ class TagNode final : public Node {
   FTL_DISALLOW_COPY_AND_ASSIGN(TagNode);
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

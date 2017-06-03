@@ -8,5 +8,5 @@
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return mozart::test::RunTestsWithMessageLoopAndTestRunner(
-      "mozart_composer_tests", [](auto) { return RUN_ALL_TESTS(); });
+      "mozart_scene_tests", [](auto) { return RUN_ALL_TESTS(); });
 }

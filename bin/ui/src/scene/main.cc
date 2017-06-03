@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "apps/mozart/src/scene/composer_app.h"
+#include "apps/mozart/src/scene/scene_manager_app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
@@ -12,19 +12,18 @@
 
 int main(int argc, const char** argv) {
   using namespace mozart;
-  using namespace mozart::composer;
+  using namespace mozart::scene;
 
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   if (!ftl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  ComposerApp::Params params;
+  SceneManagerApp::Params params;
   if (!params.Setup(command_line))
     return 1;
 
   mtl::MessageLoop loop;
-  ComposerApp app(&params);
-
+  SceneManagerApp app(&params);
   loop.Run();
   return 0;
 }

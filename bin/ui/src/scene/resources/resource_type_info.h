@@ -7,7 +7,7 @@
 #include <cstdint>
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 // All subclasses of Resource are represented here.
 enum ResourceType {
@@ -52,5 +52,5 @@ struct ResourceTypeInfo {
   }
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

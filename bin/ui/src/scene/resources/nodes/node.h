@@ -10,13 +10,13 @@
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Node;
 typedef ftl::RefPtr<Node> NodePtr;
 
 // Node is an abstract base class for all the concrete node types listed in
-// composer/services/nodes.fidl.
+// scene/services/nodes.fidl.
 class Node : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
@@ -86,5 +86,5 @@ inline const escher::mat4& Node::GetGlobalTransform() const {
   return global_transform_;
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

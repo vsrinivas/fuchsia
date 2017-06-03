@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/scene/composer.fidl.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 
 namespace view_manager {
@@ -22,7 +22,7 @@ class ViewRegistry2 : public ViewRegistry {
                                    ViewState* view_state) override;
   std::unique_ptr<ViewImpl> CreateViewImpl() override;
 
-  mozart2::ComposerPtr composer_;
+  mozart2::ComposerPtr scene_manager_;
 };
 
 }  // namespace view_manager

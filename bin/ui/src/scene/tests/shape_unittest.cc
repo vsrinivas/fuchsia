@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/composer/session_helpers.h"
+#include "apps/mozart/lib/scene/session_helpers.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene/tests/session_test.h"
 
 #include "gtest/gtest.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
 typedef SessionTest ShapeTest;
@@ -23,5 +23,5 @@ TEST_F(ShapeTest, CircleCreation) {
 }
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

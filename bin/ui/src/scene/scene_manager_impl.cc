@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene/composer_impl.h"
+#include "apps/mozart/src/scene/scene_manager_impl.h"
 
 #include "apps/mozart/src/scene/renderer/renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
-ComposerImpl::ComposerImpl(vk::Device vk_device,
-                           escher::ResourceLifePreserver* life_preserver,
-                           escher::GpuAllocator* allocator,
-                           escher::impl::GpuUploader* uploader)
+SceneManagerImpl::SceneManagerImpl(
+    vk::Device vk_device,
+    escher::ResourceLifePreserver* life_preserver,
+    escher::GpuAllocator* allocator,
+    escher::impl::GpuUploader* uploader)
     : session_count_(0),
       vk_device_(vk_device),
       life_preserver_(life_preserver),
@@ -23,12 +24,12 @@ ComposerImpl::ComposerImpl(vk::Device vk_device,
       gpu_uploader_(uploader),
       renderer_(std::make_unique<Renderer>()) {}
 
-ComposerImpl::ComposerImpl()
-    : ComposerImpl(nullptr, nullptr, nullptr, nullptr) {}
+SceneManagerImpl::SceneManagerImpl()
+    : SceneManagerImpl(nullptr, nullptr, nullptr, nullptr) {}
 
-ComposerImpl::~ComposerImpl() {}
+SceneManagerImpl::~SceneManagerImpl() {}
 
-void ComposerImpl::CreateSession(
+void SceneManagerImpl::CreateSession(
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
   SessionId session_id = next_session_id_++;
@@ -39,7 +40,7 @@ void ComposerImpl::CreateSession(
   ++session_count_;
 }
 
-std::unique_ptr<SessionHandler> ComposerImpl::CreateSessionHandler(
+std::unique_ptr<SessionHandler> SceneManagerImpl::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
@@ -47,7 +48,7 @@ std::unique_ptr<SessionHandler> ComposerImpl::CreateSessionHandler(
                                           std::move(listener));
 }
 
-SessionHandler* ComposerImpl::FindSession(SessionId id) {
+SessionHandler* SceneManagerImpl::FindSession(SessionId id) {
   auto it = sessions_.find(id);
   if (it != sessions_.end()) {
     return it->second.get();
@@ -55,12 +56,13 @@ SessionHandler* ComposerImpl::FindSession(SessionId id) {
   return nullptr;
 }
 
-void ComposerImpl::ApplySessionUpdate(std::unique_ptr<SessionUpdate> update) {
+void SceneManagerImpl::ApplySessionUpdate(
+    std::unique_ptr<SessionUpdate> update) {
   auto& session = update->session;
   if (session->is_valid()) {
     for (auto& op : update->ops) {
       if (!session->ApplyOp(op)) {
-        FTL_LOG(WARNING) << "mozart::Compositor::ComposerImpl::"
+        FTL_LOG(WARNING) << "mozart::Compositor::SceneManagerImpl::"
                             "ApplySessionUpdate() initiating teardown";
         TearDownSession(session->id());
         return;
@@ -69,7 +71,7 @@ void ComposerImpl::ApplySessionUpdate(std::unique_ptr<SessionUpdate> update) {
   }
 }
 
-void ComposerImpl::TearDownSession(SessionId id) {
+void SceneManagerImpl::TearDownSession(SessionId id) {
   auto it = sessions_.find(id);
   FTL_DCHECK(it != sessions_.end());
   if (it != sessions_.end()) {
@@ -85,9 +87,9 @@ void ComposerImpl::TearDownSession(SessionId id) {
   }
 }
 
-LinkPtr ComposerImpl::CreateLink(Session* session,
-                                 ResourceId node_id,
-                                 const mozart2::LinkPtr& args) {
+LinkPtr SceneManagerImpl::CreateLink(Session* session,
+                                     ResourceId node_id,
+                                     const mozart2::LinkPtr& args) {
   // TODO: Create a LinkHolder class that takes args.token and destroys
   // links if that gets signalled
 
@@ -102,7 +104,7 @@ LinkPtr ComposerImpl::CreateLink(Session* session,
   return link;
 }
 
-void ComposerImpl::OnSessionTearDown(Session* session) {
+void SceneManagerImpl::OnSessionTearDown(Session* session) {
   auto predicate = [session](const LinkPtr& l) {
     return l->session() == session;
   };
@@ -111,5 +113,5 @@ void ComposerImpl::OnSessionTearDown(Session* session) {
                links_.end());
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

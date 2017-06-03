@@ -12,7 +12,7 @@
 #include "lib/mtl/vmo/shared_vmo.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class HostMemory;
 typedef ftl::RefPtr<HostMemory> HostMemoryPtr;
@@ -42,5 +42,5 @@ class HostMemory : public Memory {
   std::unique_ptr<mtl::SharedVmo> shared_vmo_ = nullptr;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

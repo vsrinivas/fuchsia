@@ -11,8 +11,9 @@
 namespace view_manager {
 
 ViewRegistry2::ViewRegistry2(app::ApplicationContext* application_context,
-                             mozart2::ComposerPtr composer)
-    : ViewRegistry(application_context), composer_(std::move(composer)) {}
+                             mozart2::ComposerPtr scene_manager)
+    : ViewRegistry(application_context),
+      scene_manager_(std::move(scene_manager)) {}
 
 void ViewRegistry2::CreateScene(ViewState* view_state,
                                 fidl::InterfaceRequest<mozart::Scene> scene) {
@@ -29,7 +30,7 @@ void ViewRegistry2::AttachResolvedViewAndNotify(ViewStub* view_stub,
 
 std::unique_ptr<ViewImpl> ViewRegistry2::CreateViewImpl() {
   mozart2::SessionPtr session;
-  composer_->CreateSession(session.NewRequest(), nullptr);
+  scene_manager_->CreateSession(session.NewRequest(), nullptr);
 
   return std::make_unique<ViewImpl2>(this, std::move(session));
 }

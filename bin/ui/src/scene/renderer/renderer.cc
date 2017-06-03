@@ -13,7 +13,7 @@
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 Renderer::Renderer() {}
 
@@ -104,5 +104,5 @@ void Renderer::Visitor::Visit(Material* r) {
   FTL_CHECK(false);
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

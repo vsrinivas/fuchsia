@@ -6,11 +6,11 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
-#include "apps/mozart/lib/composer/session_helpers.h"
-#include "apps/mozart/lib/composer/types.h"
+#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scene/types.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
-#include "apps/mozart/services/scene/composer.fidl.h"
 #include "apps/mozart/services/scene/ops.fidl.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/services/scene/session.fidl.h"
 #include "escher/util/image_utils.h"
 #include "lib/ftl/command_line.h"
@@ -21,24 +21,24 @@
 
 using namespace mozart;
 
-class HelloComposerApp {
+class HelloSceneManagerApp {
  public:
-  HelloComposerApp()
+  HelloSceneManagerApp()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         loop_(mtl::MessageLoop::GetCurrent()) {
-    // Launch composer.
+    // Launch SceneManager.
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "file://system/apps/hello_composer_service";
     launch_info->services = services_.NewRequest();
     application_context_->launcher()->CreateApplication(
         std::move(launch_info), controller_.NewRequest());
     controller_.set_connection_error_handler([this] {
-      FTL_LOG(INFO) << "Hello Composer service terminated.";
+      FTL_LOG(INFO) << "Hello SceneManager service terminated.";
       loop_->QuitNow();
     });
 
-    // Connect to the composer service.
-    app::ConnectToService(services_.get(), composer_.NewRequest());
+    // Connect to the SceneManager service.
+    app::ConnectToService(services_.get(), scene_manager_.NewRequest());
   }
 
   ResourceId NewResourceId() { return ++resource_id_counter_; }
@@ -141,7 +141,7 @@ class HelloComposerApp {
     FTL_LOG(INFO) << "Creating new Session";
     mozart2::SessionPtr session;
     // TODO: set up SessionListener.
-    composer_->CreateSession(session.NewRequest(), nullptr);
+    scene_manager_->CreateSession(session.NewRequest(), nullptr);
 
     auto ops = CreateLinkAndSampleScene();
 
@@ -172,7 +172,7 @@ class HelloComposerApp {
   std::unique_ptr<app::ApplicationContext> application_context_;
   app::ApplicationControllerPtr controller_;
   app::ServiceProviderPtr services_;
-  mozart2::ComposerPtr composer_;
+  mozart2::ComposerPtr scene_manager_;
   mtl::MessageLoop* loop_;
   ResourceId resource_id_counter_ = 0;
 };
@@ -183,7 +183,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   mtl::MessageLoop loop;
-  HelloComposerApp app;
+  HelloSceneManagerApp app;
   loop.task_runner()->PostDelayedTask([&app] { app.Update(); },
                                       ftl::TimeDelta::FromSeconds(5));
   loop.task_runner()->PostDelayedTask(

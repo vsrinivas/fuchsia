@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/resources/nodes/tag_node.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo TagNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kTagNode, "TagNode"};
@@ -50,5 +50,5 @@ bool TagNode::HitTestVisitNode(const Node& child_node,
   return true;
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

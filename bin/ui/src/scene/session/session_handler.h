@@ -12,9 +12,9 @@
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
-class ComposerImpl;
+class SceneManagerImpl;
 
 // Implements the Session FIDL interface.  For now, does nothing but buffer
 // operations from Enqueue() before passing them all to |session_| when Commit()
@@ -22,13 +22,13 @@ class ComposerImpl;
 // suggests to.
 class SessionHandler : public mozart2::Session, private ErrorReporter {
  public:
-  SessionHandler(ComposerImpl* composer,
+  SessionHandler(SceneManagerImpl* scene_manager,
                  SessionId session_id,
                  ::fidl::InterfaceRequest<mozart2::Session> request,
                  ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
   ~SessionHandler() override;
 
-  composer::Session* session() const { return session_.get(); }
+  scene::Session* session() const { return session_.get(); }
 
  protected:
   // mozart2::Session interface methods.
@@ -40,7 +40,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
  private:
-  friend class ComposerImpl;
+  friend class SceneManagerImpl;
 
   // Called by |binding_| when the connection closes, or by the SessionHandler
   // itself when there is a validation error while applying operations.  Must be
@@ -53,8 +53,8 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
 
   void TearDown();
 
-  ComposerImpl* const composer_;
-  composer::SessionPtr session_;
+  SceneManagerImpl* const scene_manager_;
+  scene::SessionPtr session_;
 
   ::fidl::BindingSet<mozart2::Session> bindings_;
   ::fidl::InterfacePtrSet<mozart2::SessionListener> listeners_;
@@ -62,5 +62,5 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

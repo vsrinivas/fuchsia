@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/composer/session_helpers.h"
+#include "apps/mozart/lib/scene/session_helpers.h"
 #include "apps/mozart/src/scene/resources/material.h"
 #include "apps/mozart/src/scene/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
 TEST_F(SessionTest, ResourceIdAlreadyUsed) {
@@ -20,7 +20,7 @@ TEST_F(SessionTest, ResourceIdAlreadyUsed) {
   ExpectLastReportedError(nullptr);
   EXPECT_FALSE(Apply(NewCreateShapeNodeOp(2)));
   ExpectLastReportedError(
-      "composer::ResourceMap::AddResource(): resource with ID 2 already "
+      "scene::ResourceMap::AddResource(): resource with ID 2 already "
       "exists.");
 }
 
@@ -63,5 +63,5 @@ TEST_F(SessionTest, CreateLink) {
 // - test that FindResource() cannot return resources that have the wrong type.
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

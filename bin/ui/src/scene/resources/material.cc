@@ -8,7 +8,7 @@
 #include "apps/mozart/src/scene/session/session.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
@@ -46,5 +46,5 @@ Material::Material(Session* session,
   escher_material_->set_color(escher::vec3(red, green, blue));
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

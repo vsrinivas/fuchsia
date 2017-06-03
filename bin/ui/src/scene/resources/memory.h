@@ -12,7 +12,7 @@
 #include "lib/mtl/vmo/shared_vmo.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 // Base class for Resource objects that wrap memory. Subclassed by GpuMemory
 // and HostMemory.
@@ -26,5 +26,5 @@ class Memory : public Resource {
 
 typedef ftl::RefPtr<Memory> MemoryPtr;
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/shapes/circle_shape.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
@@ -17,5 +17,5 @@ bool CircleShape::ContainsPoint(const escher::vec2& point) const {
   return point.x * point.x + point.y * point.y <= radius_ * radius_;
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

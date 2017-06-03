@@ -16,7 +16,7 @@
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 void GpuMemory::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
@@ -58,5 +58,5 @@ void Material::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

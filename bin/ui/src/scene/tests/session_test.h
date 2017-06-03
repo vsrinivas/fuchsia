@@ -10,12 +10,12 @@
 #include "gtest/gtest.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
 class SessionTest : public ::testing::Test,
-                    public composer::SessionContext,
-                    public composer::ErrorReporter {
+                    public scene::SessionContext,
+                    public scene::ErrorReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -62,5 +62,5 @@ class SessionTest : public ::testing::Test,
 };
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

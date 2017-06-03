@@ -2,46 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene/tests/composer_test.h"
+#include "apps/mozart/src/scene/tests/scene_manager_test.h"
 
 #include "gtest/gtest.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
-void ComposerTest::SetUp() {
+void SceneManagerTest::SetUp() {
   mozart::test::TestWithMessageLoop::SetUp();
 
-  composer_impl_ = std::make_unique<ComposerImplForTest>();
-  composer_binding_ =
-      std::make_unique<fidl::Binding<mozart2::Composer>>(composer_impl_.get());
+  manager_impl_ = std::make_unique<SceneManagerImplForTest>();
+  manager_binding_ =
+      std::make_unique<fidl::Binding<mozart2::Composer>>(manager_impl_.get());
 
   thread_ = std::make_unique<mtl::Thread>();
   thread_->Run();
 
-  auto interface_request = composer_.NewRequest();
+  auto interface_request = manager_.NewRequest();
 
   ftl::ManualResetWaitableEvent wait;
   thread_->TaskRunner()->PostTask([this, &interface_request, &wait]() {
-    this->composer_binding_->Bind(std::move(interface_request));
-    this->composer_binding_->set_connection_error_handler(
-        [this]() { this->composer_impl_.reset(); });
+    this->manager_binding_->Bind(std::move(interface_request));
+    this->manager_binding_->set_connection_error_handler(
+        [this]() { this->manager_impl_.reset(); });
     wait.Signal();
   });
   wait.Wait();
 }
 
-void ComposerTest::TearDown() {
-  composer_ = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_ != nullptr);
+void SceneManagerTest::TearDown() {
+  manager_ = nullptr;
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_ != nullptr);
   thread_->TaskRunner()->PostTask(
       []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   thread_->Join();
 }
 
 SessionHandlerForTest::SessionHandlerForTest(
-    ComposerImpl* composer,
+    SceneManagerImpl* composer,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
@@ -71,7 +71,7 @@ void SessionHandlerForTest::Connect(
   ++connect_count_;
 }
 
-std::unique_ptr<SessionHandler> ComposerImplForTest::CreateSessionHandler(
+std::unique_ptr<SessionHandler> SceneManagerImplForTest::CreateSessionHandler(
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
@@ -80,5 +80,5 @@ std::unique_ptr<SessionHandler> ComposerImplForTest::CreateSessionHandler(
 }
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "apps/mozart/lib/composer/types.h"
+#include "apps/mozart/lib/scene/types.h"
 #include "apps/mozart/src/scene/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class ErrorReporter;
 class Session;
@@ -67,5 +67,5 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
 typedef ftl::RefPtr<Resource> ResourcePtr;
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

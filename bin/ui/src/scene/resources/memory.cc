@@ -5,12 +5,12 @@
 #include "apps/mozart/src/scene/resources/memory.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
 Memory::Memory(Session* session, const ResourceTypeInfo& type_info)
     : Resource(session, type_info) {}
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

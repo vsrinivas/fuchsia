@@ -5,19 +5,19 @@
 #pragma once
 
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
-#include "apps/mozart/src/scene/composer_impl.h"
+#include "apps/mozart/src/scene/scene_manager_impl.h"
 
 #include "gtest/gtest.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
 // Subclass SessionHandler to make testing easier.
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      ComposerImpl* composer,
+      SceneManagerImpl* manager,
       SessionId session_id,
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
@@ -42,12 +42,12 @@ class SessionHandlerForTest : public SessionHandler {
   std::atomic<uint32_t> connect_count_;
 };
 
-// Subclass ComposerImpl to make testing easier.
-class ComposerImplForTest : public ComposerImpl {
+// Subclass SceneManagerImpl to make testing easier.
+class SceneManagerImplForTest : public SceneManagerImpl {
  public:
-  ComposerImplForTest() = default;
+  SceneManagerImplForTest() = default;
 
-  using ComposerImpl::FindSession;
+  using SceneManagerImpl::FindSession;
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
@@ -56,7 +56,7 @@ class ComposerImplForTest : public ComposerImpl {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 };
 
-class ComposerTest : public mozart::test::TestWithMessageLoop {
+class SceneManagerTest : public mozart::test::TestWithMessageLoop {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -67,12 +67,12 @@ class ComposerTest : public mozart::test::TestWithMessageLoop {
   SessionPtr NewSession();
 
  protected:
-  mozart2::ComposerPtr composer_;
-  std::unique_ptr<fidl::Binding<mozart2::Composer>> composer_binding_;
-  std::unique_ptr<ComposerImplForTest> composer_impl_;
+  mozart2::ComposerPtr manager_;
+  std::unique_ptr<fidl::Binding<mozart2::Composer>> manager_binding_;
+  std::unique_ptr<SceneManagerImplForTest> manager_impl_;
   std::unique_ptr<mtl::Thread> thread_;
 };
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

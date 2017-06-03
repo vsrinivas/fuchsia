@@ -8,7 +8,7 @@
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 inline escher::vec2 Unwrap(const mozart2::vec2Ptr& args) {
   return {args->x, args->y};
@@ -31,5 +31,5 @@ inline escher::Transform Unwrap(const mozart2::TransformPtr& args) {
           Unwrap(args->rotation), Unwrap(args->anchor)};
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

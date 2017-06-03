@@ -10,7 +10,7 @@
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class ShapeNode final : public Node {
  public:
@@ -33,5 +33,5 @@ class ShapeNode final : public Node {
   ShapePtr shape_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

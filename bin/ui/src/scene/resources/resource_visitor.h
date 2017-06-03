@@ -5,7 +5,7 @@
 #pragma once
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class GpuMemory;
 class HostMemory;
@@ -32,5 +32,5 @@ class ResourceVisitor {
   virtual void Visit(Material* r) = 0;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

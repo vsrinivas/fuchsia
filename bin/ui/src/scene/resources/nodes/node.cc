@@ -8,7 +8,7 @@
 #include "lib/escher/escher/geometry/types.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 namespace {
 
@@ -36,7 +36,7 @@ Node::~Node() = default;
 
 bool Node::AddChild(NodePtr child_node) {
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR() << "composer::Node::AddChild(): node of type "
+    error_reporter()->ERROR() << "scene::Node::AddChild(): node of type "
                               << type_name() << " cannot have children.";
     return false;
   }
@@ -64,7 +64,7 @@ bool Node::AddChild(NodePtr child_node) {
 
 bool Node::AddPart(NodePtr part_node) {
   if (!(type_flags() & kHasParts)) {
-    error_reporter()->ERROR() << "composer::Node::AddPart(): node of type "
+    error_reporter()->ERROR() << "scene::Node::AddPart(): node of type "
                               << type_name() << " cannot have parts.";
     return false;
   }
@@ -109,7 +109,7 @@ bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
 
 bool Node::SetTransform(const escher::Transform& transform) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "composer::Node::SetTransform(): node of type "
+    error_reporter()->ERROR() << "scene::Node::SetTransform(): node of type "
                               << type_name() << " cannot have transform set.";
     return false;
   }
@@ -180,5 +180,5 @@ void Node::ApplyOnDescendants(std::function<bool(const Node&)> applier) const {
   }
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

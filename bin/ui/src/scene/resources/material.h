@@ -8,7 +8,7 @@
 #include "escher/material/material.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Image;
 typedef ftl::RefPtr<Image> ImagePtr;
@@ -52,5 +52,5 @@ class Material : public Resource {
   ImagePtr texture_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

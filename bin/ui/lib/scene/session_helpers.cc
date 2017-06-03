@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/composer/session_helpers.h"
+#include "apps/mozart/lib/scene/session_helpers.h"
 
 namespace mozart {
 

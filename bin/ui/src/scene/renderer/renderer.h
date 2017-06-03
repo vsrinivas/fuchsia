@@ -11,7 +11,7 @@
 #include "escher/scene/object.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 // Placeholder Renderer. Doesn't deal with framerate, framebuffer, etc. yet.
 class Renderer {
@@ -43,5 +43,5 @@ class Renderer {
   };
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

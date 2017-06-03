@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/resources/shapes/shape.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class CircleShape final : public Shape {
  public:
@@ -25,5 +25,5 @@ class CircleShape final : public Shape {
   float radius_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

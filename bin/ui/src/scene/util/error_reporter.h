@@ -10,7 +10,7 @@
 #include "lib/ftl/logging.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 // Flexible error reporting with an ostream-like interface.  Subclasses must
 // implement ReportError().
@@ -58,5 +58,5 @@ class ErrorReporter {
                            std::string error_string) = 0;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

@@ -4,27 +4,27 @@
 
 #include "apps/mozart/src/scene/session/session_handler.h"
 
-#include "apps/mozart/src/scene/composer_impl.h"
+#include "apps/mozart/src/scene/scene_manager_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 SessionHandler::SessionHandler(
-    ComposerImpl* composer,
+    SceneManagerImpl* scene_manager,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : composer_(composer),
-      session_(::ftl::MakeRefCounted<composer::Session>(
+    : scene_manager_(scene_manager),
+      session_(::ftl::MakeRefCounted<scene::Session>(
           session_id,
-          composer,
+          scene_manager,
           static_cast<ErrorReporter*>(this))) {
-  FTL_DCHECK(composer_);
+  FTL_DCHECK(scene_manager_);
 
   bindings_.set_on_empty_set_handler([this]() {
     FTL_DCHECK(session_->is_valid());
-    composer_->TearDownSession(session_->id());
+    scene_manager_->TearDownSession(session_->id());
     FTL_DCHECK(!session_->is_valid());
   });
 
@@ -47,7 +47,7 @@ void SessionHandler::Present(::fidl::Array<mx::event> wait_events,
   auto update = std::make_unique<SessionUpdate>(
       SessionUpdate{session_, std::move(buffered_ops_), std::move(wait_events),
                     std::move(signal_events)});
-  composer_->ApplySessionUpdate(std::move(update));
+  scene_manager_->ApplySessionUpdate(std::move(update));
 }
 
 void SessionHandler::Connect(
@@ -89,5 +89,5 @@ void SessionHandler::TearDown() {
   session_->TearDown();
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

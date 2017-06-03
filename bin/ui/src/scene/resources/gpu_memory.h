@@ -12,7 +12,7 @@
 #include "lib/mtl/vmo/shared_vmo.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class GpuMemory;
 typedef ftl::RefPtr<GpuMemory> GpuMemoryPtr;
@@ -46,5 +46,5 @@ class GpuMemory : public Memory {
   escher::GpuMemPtr mem_ = nullptr;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

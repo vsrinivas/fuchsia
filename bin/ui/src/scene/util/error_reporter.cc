@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/util/error_reporter.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 namespace {
 
@@ -54,5 +54,5 @@ ErrorReporter* ErrorReporter::Default() {
   return &reporter;
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

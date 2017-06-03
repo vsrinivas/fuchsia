@@ -14,7 +14,7 @@
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 typedef uint64_t SessionId;
 
@@ -127,5 +127,5 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool is_valid_ = true;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

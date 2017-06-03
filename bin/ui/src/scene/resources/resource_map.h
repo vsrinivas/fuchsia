@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class ResourceMap {
  public:
@@ -57,5 +57,5 @@ class ResourceMap {
   ErrorReporter* const error_reporter_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

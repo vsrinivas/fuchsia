@@ -10,7 +10,7 @@
 #include "lib/escher/escher/geometry/types.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 struct HitTestResult {
   /// The tag node ID that passed the hit test.
@@ -23,5 +23,5 @@ struct HitTestResult {
 
 using HitTestResults = std::vector<HitTestResult>;
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

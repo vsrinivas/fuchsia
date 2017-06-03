@@ -7,7 +7,7 @@
 #include <utility>
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo ShapeNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kShapeNode, "ShapeNode"};
@@ -31,5 +31,5 @@ bool ShapeNode::ContainsPoint(const escher::vec2& point) const {
   return shape_->ContainsPoint(point);
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

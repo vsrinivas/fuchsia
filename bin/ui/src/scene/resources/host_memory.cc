@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/host_memory.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
@@ -25,5 +25,5 @@ HostMemoryPtr HostMemory::New(Session* session,
                                          vmo_size);
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

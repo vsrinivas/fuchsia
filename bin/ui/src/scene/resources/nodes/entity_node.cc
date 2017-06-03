@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo EntityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
@@ -13,5 +13,5 @@ const ResourceTypeInfo EntityNode::kTypeInfo = {
 EntityNode::EntityNode(Session* session, ResourceId node_id)
     : Node(session, node_id, EntityNode::kTypeInfo) {}
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

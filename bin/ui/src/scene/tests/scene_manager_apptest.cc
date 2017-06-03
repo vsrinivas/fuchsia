@@ -2,43 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/composer/session_helpers.h"
+#include "apps/mozart/lib/scene/session_helpers.h"
 #include "apps/mozart/src/scene/resources/nodes/entity_node.h"
-#include "apps/mozart/src/scene/tests/composer_test.h"
+#include "apps/mozart/src/scene/tests/scene_manager_test.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 namespace test {
 
-TEST_F(ComposerTest, CreateAndDestroySession) {
+TEST_F(SceneManagerTest, CreateAndDestroySession) {
   mozart2::SessionPtr session;
-  EXPECT_EQ(0U, composer_impl_->GetSessionCount());
-  composer_->CreateSession(session.NewRequest(), nullptr);
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 1);
+  EXPECT_EQ(0U, manager_impl_->GetSessionCount());
+  manager_->CreateSession(session.NewRequest(), nullptr);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 1);
   session = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 0);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 0);
 }
 
-TEST_F(ComposerTest, MultipleSessionConnections1) {
+TEST_F(SceneManagerTest, MultipleSessionConnections1) {
   // Tests creating a session, making a second connection to the same session,
   // and verifying that one connection continues to work after closing the other
   // one.  We do this for two pairs of sessions in parallel, to test that it
   // works both when the original connection is closed first, and also when the
   // second connection is closed first.
-  EXPECT_EQ(0U, composer_impl_->GetSessionCount());
+  EXPECT_EQ(0U, manager_impl_->GetSessionCount());
 
   mozart2::SessionPtr sess1a;
   mozart2::SessionPtr sess2a;
-  composer_->CreateSession(sess1a.NewRequest(), nullptr);
-  composer_->CreateSession(sess2a.NewRequest(), nullptr);
+  manager_->CreateSession(sess1a.NewRequest(), nullptr);
+  manager_->CreateSession(sess2a.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 2);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 2);
   auto handler1 =
-      static_cast<SessionHandlerForTest*>(composer_impl_->FindSession(1));
+      static_cast<SessionHandlerForTest*>(manager_impl_->FindSession(1));
   auto handler2 =
-      static_cast<SessionHandlerForTest*>(composer_impl_->FindSession(2));
+      static_cast<SessionHandlerForTest*>(manager_impl_->FindSession(2));
 
   mozart2::SessionPtr sess1b;
   sess1a->Connect(sess1b.NewRequest(), nullptr);
@@ -76,16 +76,16 @@ TEST_F(ComposerTest, MultipleSessionConnections1) {
 
   sess1b = nullptr;
   sess2a = nullptr;
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 0);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 0);
 }
 
-TEST_F(ComposerTest, MultipleSessionConnections2) {
+TEST_F(SceneManagerTest, MultipleSessionConnections2) {
   // Creates multiple connections to a single session, then tests that all
   // are closed when one of them presents an illegal op.
-  EXPECT_EQ(0U, composer_impl_->GetSessionCount());
+  EXPECT_EQ(0U, manager_impl_->GetSessionCount());
 
   mozart2::SessionPtr sess1a;
-  composer_->CreateSession(sess1a.NewRequest(), nullptr);
+  manager_->CreateSession(sess1a.NewRequest(), nullptr);
   mozart2::SessionPtr sess1b;
   sess1a->Connect(sess1b.NewRequest(), nullptr);
   mozart2::SessionPtr sess1c;
@@ -93,9 +93,9 @@ TEST_F(ComposerTest, MultipleSessionConnections2) {
   mozart2::SessionPtr sess1d;
   sess1c->Connect(sess1d.NewRequest(), nullptr);
 
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 1);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 1);
   auto handler =
-      static_cast<SessionHandlerForTest*>(composer_impl_->FindSession(1));
+      static_cast<SessionHandlerForTest*>(manager_impl_->FindSession(1));
 
   // Enqueue ops via sess1a.
   {
@@ -149,7 +149,7 @@ TEST_F(ComposerTest, MultipleSessionConnections2) {
                     ::fidl::Array<mx::event>::New(0));
   }
 
-  RUN_MESSAGE_LOOP_WHILE(composer_impl_->GetSessionCount() != 0);
+  RUN_MESSAGE_LOOP_WHILE(manager_impl_->GetSessionCount() != 0);
 
   // TODO: Test SessionListener.  One good way to do this would be to attach a
   // listener when creating connection 1c, and verifying that the error message
@@ -158,5 +158,5 @@ TEST_F(ComposerTest, MultipleSessionConnections2) {
 }
 
 }  // namespace test
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

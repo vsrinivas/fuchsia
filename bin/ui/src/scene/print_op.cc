@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/print_op.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 using mozart2::Op;
 using mozart2::OpPtr;
@@ -73,5 +73,5 @@ std::ostream& operator<<(std::ostream& stream,
   return stream << ")";
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

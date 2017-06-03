@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/session/session.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
@@ -26,5 +26,5 @@ ErrorReporter* Resource::error_reporter() const {
   return session_->error_reporter();
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

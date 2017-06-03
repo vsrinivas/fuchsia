@@ -6,7 +6,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("scene") {
   sources = [
-    "composer.fidl",
+    "scene_manager.fidl",
     "nodes.fidl",
     "ops.fidl",
     "resources.fidl",

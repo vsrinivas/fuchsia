@@ -16,7 +16,7 @@
 #include "apps/mozart/src/scene/util/unwrap.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 Session::Session(SessionId id,
                  SessionContext* context,
@@ -57,7 +57,7 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetClipOp(op->get_set_clip());
     default:
       error_reporter_->ERROR()
-          << "composer::Session::ApplyOp(): unimplemented op: " << op;
+          << "scene::Session::ApplyOp(): unimplemented op: " << op;
       return false;
   }
 
@@ -68,7 +68,7 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
   const ResourceId id = op->id;
   if (id == 0) {
     error_reporter_->ERROR()
-        << "composer::Session::ApplyCreateResourceOp(): invalid ID: " << op;
+        << "scene::Session::ApplyCreateResourceOp(): invalid ID: " << op;
     return false;
   }
 
@@ -101,7 +101,7 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateTagNode(id, op->resource->get_tag_node());
     default:
       error_reporter_->ERROR()
-          << "composer::Session::ApplyCreateResourceOp(): unsupported resource"
+          << "scene::Session::ApplyCreateResourceOp(): unsupported resource"
           << op;
       return false;
   }
@@ -140,7 +140,7 @@ bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
 
 bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
   error_reporter_->ERROR()
-      << "composer::Session::ApplyDetachChildrenOp(): unimplemented";
+      << "scene::Session::ApplyDetachChildrenOp(): unimplemented";
   return false;
 }
 
@@ -174,7 +174,7 @@ bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
 
 bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
   error_reporter_->ERROR()
-      << "composer::Session::ApplySetClipOp(): unimplemented";
+      << "scene::Session::ApplySetClipOp(): unimplemented";
   return false;
 }
 
@@ -195,7 +195,7 @@ bool Session::ApplyCreateImage(ResourceId id, const mozart2::ImagePtr& args) {
 
 bool Session::ApplyCreateBuffer(ResourceId id, const mozart2::BufferPtr& args) {
   error_reporter_->ERROR()
-      << "composer::Session::ApplyCreateBuffer(): unimplemented";
+      << "scene::Session::ApplyCreateBuffer(): unimplemented";
   return false;
 }
 
@@ -207,7 +207,7 @@ bool Session::ApplyCreateLink(ResourceId id, const mozart2::LinkPtr& args) {
 bool Session::ApplyCreateRectangle(ResourceId id,
                                    const mozart2::RectanglePtr& args) {
   error_reporter_->ERROR()
-      << "composer::Session::ApplyCreateRectangle(): unimplemented";
+      << "scene::Session::ApplyCreateRectangle(): unimplemented";
   return false;
 }
 
@@ -218,11 +218,11 @@ bool Session::ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args) {
     auto circle = CreateCircle(id, initial_radius);
     return circle ? resources_.AddResource(id, std::move(circle)) : false;
   } else if (tag == mozart2::Value::Tag::VARIABLE_ID) {
-    error_reporter_->ERROR() << "composer::Session::ApplyCreateCircle(): "
+    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
                                 "unimplemented: variable radius";
     return false;
   } else {
-    error_reporter_->ERROR() << "composer::Session::ApplyCreateCircle(): "
+    error_reporter_->ERROR() << "scene::Session::ApplyCreateCircle(): "
                                 "radius must be a float or a variable of type "
                                 "float";
     return false;
@@ -231,7 +231,7 @@ bool Session::ApplyCreateCircle(ResourceId id, const mozart2::CirclePtr& args) {
 
 bool Session::ApplyCreateMesh(ResourceId id, const mozart2::MeshPtr& args) {
   error_reporter_->ERROR()
-      << "composer::Session::ApplyCreateMesh(): unimplemented";
+      << "scene::Session::ApplyCreateMesh(): unimplemented";
   return false;
 }
 
@@ -311,7 +311,7 @@ ResourcePtr Session::CreateLink(ResourceId id, const mozart2::LinkPtr& args) {
 
 ResourcePtr Session::CreateClipNode(ResourceId id,
                                     const mozart2::ClipNodePtr& args) {
-  error_reporter_->ERROR() << "composer::Session::CreateClipNode(): "
+  error_reporter_->ERROR() << "scene::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
@@ -323,7 +323,7 @@ ResourcePtr Session::CreateEntityNode(ResourceId id,
 
 ResourcePtr Session::CreateLinkNode(ResourceId id,
                                     const mozart2::LinkNodePtr& args) {
-  error_reporter_->ERROR() << "composer::Session::CreateLinkNode(): "
+  error_reporter_->ERROR() << "scene::Session::CreateLinkNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
@@ -368,5 +368,5 @@ ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

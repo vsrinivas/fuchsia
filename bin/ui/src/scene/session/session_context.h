@@ -11,7 +11,7 @@
 #include "escher/resources/resource_life_preserver.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Session;
 
@@ -34,5 +34,5 @@ class SessionContext {
   virtual escher::impl::GpuUploader* escher_gpu_uploader() = 0;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

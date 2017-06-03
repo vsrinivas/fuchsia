@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/link.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo Link::kTypeInfo = {
     ResourceType::kNode | ResourceType::kLink, "Link"};
@@ -13,5 +13,5 @@ const ResourceTypeInfo Link::kTypeInfo = {
 Link::Link(Session* session, ResourceId node_id)
     : Node(session, node_id, Link::kTypeInfo) {}
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

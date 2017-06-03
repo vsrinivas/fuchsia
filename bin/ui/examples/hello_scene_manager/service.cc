@@ -6,9 +6,9 @@
 #include <memory>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/services/scene/composer.fidl.h"
-#include "apps/mozart/src/scene/composer_impl.h"
+#include "apps/mozart/services/scene/scene_manager.fidl.h"
 #include "apps/mozart/src/scene/renderer/renderer.h"
+#include "apps/mozart/src/scene/scene_manager_impl.h"
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
 #include "escher/geometry/types.h"
@@ -34,39 +34,39 @@ static constexpr float kNear = 24.f;
 static constexpr float kFar = 0.f;
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
-class ComposerImpl;
+class SceneManagerImpl;
 
-class HelloComposerService : public Demo {
+class HelloSceneManagerService : public Demo {
  public:
-  explicit HelloComposerService(DemoHarnessFuchsia* harness)
+  explicit HelloSceneManagerService(DemoHarnessFuchsia* harness)
       : Demo(harness),
         application_context_(harness->application_context()),
         renderer_(escher()->NewPaperRenderer()),
         swapchain_helper_(harness->GetVulkanSwapchain(), renderer_),
-        composer_(
-            std::make_unique<ComposerImpl>(escher()->vulkan_context().device,
-                                           escher()->resource_life_preserver(),
-                                           escher()->gpu_allocator(),
-                                           escher()->gpu_uploader())),
-        binding_(composer_.get()) {
+        scene_manager_(std::make_unique<SceneManagerImpl>(
+            escher()->vulkan_context().device,
+            escher()->resource_life_preserver(),
+            escher()->gpu_allocator(),
+            escher()->gpu_uploader())),
+        binding_(scene_manager_.get()) {
     FTL_DCHECK(application_context_);
 
     AddOutgoingServices();
     InitializeEscherStage();
   }
 
-  ~HelloComposerService() {
-    FTL_LOG(INFO) << "HelloComposerService: shutting down";
+  ~HelloSceneManagerService() {
+    FTL_LOG(INFO) << "HelloSceneManagerService: shutting down";
   }
 
   void DrawFrame() override {
-    Renderer* renderer = composer_->renderer();
+    Renderer* renderer = scene_manager_->renderer();
 
     // For now, just assume the first Link created is the root of the tree.
-    if (composer_->links().size() > 0) {
-      LinkPtr link = composer_->links()[0];
+    if (scene_manager_->links().size() > 0) {
+      LinkPtr link = scene_manager_->links()[0];
 
       escher::Model model(renderer->CreateDisplayList(
           link.get(), escher::vec2(kScreenWidth, kScreenHeight)));
@@ -79,15 +79,16 @@ class HelloComposerService : public Demo {
     application_context_->outgoing_services()->AddService<mozart2::Composer>(
         [this](fidl::InterfaceRequest<mozart2::Composer> request) {
           if (binding_.is_bound()) {
-            FTL_LOG(WARNING)
-                << "HelloComposerService: composer already bound to client";
+            FTL_LOG(WARNING) << "HelloSceneManagerService: SceneManager "
+                                "already bound to client";
           } else {
-            FTL_LOG(INFO) << "HelloComposerService: binding client to composer";
+            FTL_LOG(INFO)
+                << "HelloSceneManagerService: binding client to SceneManager";
             binding_.Bind(std::move(request));
             binding_.set_connection_error_handler([this] {
-              FTL_LOG(INFO)
-                  << "HelloComposerService: connection to client was closed";
-              composer_.reset();
+              FTL_LOG(INFO) << "HelloSceneManagerService: connection to client "
+                               "was closed";
+              scene_manager_.reset();
               mtl::MessageLoop::GetCurrent()->QuitNow();
             });
           }
@@ -108,31 +109,31 @@ class HelloComposerService : public Demo {
   escher::PaperRendererPtr renderer_;
   escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
-  std::unique_ptr<ComposerImpl> composer_;
+  std::unique_ptr<SceneManagerImpl> scene_manager_;
   fidl::Binding<mozart2::Composer> binding_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(HelloComposerService);
+  FTL_DISALLOW_COPY_AND_ASSIGN(HelloSceneManagerService);
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart
 
 int main(int argc, const char** argv) {
-  FTL_LOG(INFO) << "HelloComposerService: entering main()";
+  FTL_LOG(INFO) << "HelloSceneManagerService: entering main()";
 
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   if (!ftl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
   auto harness = DemoHarness::New(
-      DemoHarness::WindowParams{"Mozart Composer Example", kScreenWidth,
+      DemoHarness::WindowParams{"Mozart SceneManager Example", kScreenWidth,
                                 kScreenHeight, 2, false},
       DemoHarness::InstanceParams());
 
   {
-    mozart::composer::HelloComposerService composer_app(
+    mozart::scene::HelloSceneManagerService scene_manager_app(
         static_cast<DemoHarnessFuchsia*>(harness.get()));
-    harness->Run(&composer_app);
+    harness->Run(&scene_manager_app);
   }
   harness->Shutdown();
   return 0;

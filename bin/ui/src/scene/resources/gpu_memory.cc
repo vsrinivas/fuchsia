@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene/resources/gpu_memory.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
@@ -25,7 +25,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 
   if (!device) {
-    error_reporter->ERROR() << "composer::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scene::Session::CreateMemory(): "
                                "Getting VkDevice failed.";
     return nullptr;
   }
@@ -39,7 +39,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   vk::Result err =
       device.importMemoryMAGMA(args->vmo.release(), nullptr, &memory);
   if (err != vk::Result::eSuccess) {
-    error_reporter->ERROR() << "composer::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scene::Session::CreateMemory(): "
                                "vkImportDeviceMemoryMAGMA failed.";
     return nullptr;
   }
@@ -53,5 +53,5 @@ GpuMemoryPtr GpuMemory::New(Session* session,
       vk::DeviceSize(vmo_size), memory_type_index);
 }
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

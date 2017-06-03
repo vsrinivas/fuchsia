@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("hello_composer") {
+executable("hello_scene_manager") {
   sources = [
     "app.cc",
   ]
 
   deps = [
-    ":hello_composer_service",
+    ":hello_scene_manager_service",
     "//application/lib/app",
-    "//apps/mozart/lib/composer:session_helpers",
+    "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/scene",
     "//lib/escher/escher",
@@ -20,7 +20,7 @@ executable("hello_composer") {
   ]
 }
 
-executable("hello_composer_service") {
+executable("hello_scene_manager_service") {
   sources = [
     "service.cc",
   ]

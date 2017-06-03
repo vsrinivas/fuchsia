@@ -13,7 +13,7 @@
 #include "escher/renderer/image.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class Image;
 typedef ftl::RefPtr<Image> ImagePtr;
@@ -67,5 +67,5 @@ class Image : public Resource {
   escher::ImagePtr image_;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart

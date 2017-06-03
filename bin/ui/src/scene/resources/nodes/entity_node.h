@@ -7,7 +7,7 @@
 #include "apps/mozart/src/scene/resources/nodes/node.h"
 
 namespace mozart {
-namespace composer {
+namespace scene {
 
 class EntityNode final : public Node {
  public:
@@ -18,5 +18,5 @@ class EntityNode final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 };
 
-}  // namespace composer
+}  // namespace scene
 }  // namespace mozart
