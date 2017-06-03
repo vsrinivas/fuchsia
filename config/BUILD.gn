@@ -95,10 +95,13 @@ config("debug_prefix_map") {
 }
 
 config("debug") {
-  cflags = [
-    "-g",
-    "-Og",
-  ]
+  cflags = [ "-g" ]
+  if (current_os == "mac") {
+    cflags += [ "-O0" ]
+  } else {
+    cflags += [ "-Og" ]
+  }
+  ldflags = cflags
 }
 
 config("release") {
@@ -156,7 +159,11 @@ config("symbol_visibility_hidden") {
 }
 
 config("symbol_no_undefined") {
-  ldflags = [ "-Wl,--no-undefined" ]
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-undefined,error" ]
+  } else {
+    ldflags = [ "-Wl,--no-undefined" ]
+  }
 }
 
 config("shared_library_config") {
