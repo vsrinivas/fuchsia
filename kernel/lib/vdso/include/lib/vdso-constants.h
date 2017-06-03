@@ -11,6 +11,11 @@
 // environments.  It must use only the basic types so that struct
 // layouts match exactly in both contexts.
 
+#define VDSO_CONSTANTS_SIZE (2 * 4 + 2 * 8)
+#define VDSO_CONSTANTS_ALIGN 8
+
+#ifndef ASSEMBLY
+
 #include <stdint.h>
 
 // This struct contains constants that are initialized by the kernel
@@ -32,3 +37,10 @@ struct vdso_constants {
     // Total amount of physical memory in the system, in bytes.
     uint64_t physmem;
 };
+
+static_assert(VDSO_CONSTANTS_SIZE == sizeof(vdso_constants),
+              "Need to adjust VDSO_CONSTANTS_SIZE");
+static_assert(VDSO_CONSTANTS_ALIGN == alignof(vdso_constants),
+              "Need to adjust VDSO_CONSTANTS_ALIGN");
+
+#endif // ASSEMBLY

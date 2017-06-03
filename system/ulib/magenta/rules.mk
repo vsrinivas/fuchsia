@@ -14,7 +14,7 @@ MODULE_COMPILEFLAGS := -ffreestanding
 MODULE_HEADER_DEPS := kernel/lib/vdso
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/data.cpp \
+    $(LOCAL_DIR)/data.S \
     $(LOCAL_DIR)/mx_cache_flush.cpp \
     $(LOCAL_DIR)/mx_deadline_after.cpp \
     $(LOCAL_DIR)/mx_status_get_string.cpp \
