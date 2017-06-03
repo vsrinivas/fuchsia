@@ -84,16 +84,17 @@ using modular::operator<<;
 
 // Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
-class LinkConnection : modular::LinkWatcher {
+class LinkForwarder : modular::LinkWatcher {
  public:
-  LinkConnection(modular::Link* const src, modular::Link* const dst)
+  LinkForwarder(modular::Link* const src, modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
     src_->Watch(src_binding_.NewBinding());
   }
 
   void Notify(const fidl::String& json) override {
-    // We receive an initial update when the Link initializes. It's empty
-    // if this is a new session, or it has documents if it's a restored session.
+    // We receive an initial update when the Link initializes. It's "null"
+    // (meaning the value of the json string is the four letters n-u-l-l)
+    // if this is a new session, or it has json data if it's a restored session.
     // In either case, it should be ignored, otherwise we can get multiple
     // messages traveling at the same time.
     if (!initial_update_ && json.size() > 0) {
@@ -108,7 +109,7 @@ class LinkConnection : modular::LinkWatcher {
   modular::Link* const dst_;
   bool initial_update_ = true;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkForwarder);
 };
 
 class ModuleMonitor : modular::ModuleWatcher {
@@ -222,16 +223,16 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
         nullptr, module2_.NewRequest(), nullptr);
 
     connections_.emplace_back(
-        new LinkConnection(module1_link_.get(), module2_link_.get()));
+        new LinkForwarder(module1_link_.get(), module2_link_.get()));
     connections_.emplace_back(
-        new LinkConnection(module2_link_.get(), module1_link_.get()));
+        new LinkForwarder(module2_link_.get(), module1_link_.get()));
 
     // Also connect with the root link, to create change notifications
     // the user shell can react on.
     connections_.emplace_back(
-        new LinkConnection(module1_link_.get(), link_.get()));
+        new LinkForwarder(module1_link_.get(), link_.get()));
     connections_.emplace_back(
-        new LinkConnection(module2_link_.get(), link_.get()));
+        new LinkForwarder(module2_link_.get(), link_.get()));
 
     module_monitors_.emplace_back(
         new ModuleMonitor(module1_.get(), module_context_.get()));
@@ -354,7 +355,7 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
   modular::ModuleControllerPtr module2_;
   modular::LinkPtr module2_link_;
 
-  std::vector<std::unique_ptr<LinkConnection>> connections_;
+  std::vector<std::unique_ptr<LinkForwarder>> connections_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
   modular::DeviceMapPtr device_map_;
