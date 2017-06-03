@@ -103,6 +103,11 @@ static inline int mp_is_cpu_online(uint cpu) {
 }
 
 /* must be called with the thread lock held */
+
+/* idle/busy is used to track if the cpu is running anything or has a non empty run queue
+ * idle == (cpu run queue empty & cpu running idle thread)
+ * busy == !idle
+ */
 static inline void mp_set_cpu_idle(uint cpu) {
     mp.idle_cpus |= 1U << cpu;
 }

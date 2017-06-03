@@ -19,6 +19,7 @@
 #include <printf.h>
 #include <string.h>
 #include <target.h>
+#include <trace.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
 
@@ -48,13 +49,6 @@
 
 /* threads get 10ms to run before they use up their time slice and the scheduler is invoked */
 #define THREAD_INITIAL_TIME_SLICE ZX_MSEC(10)
-
-/* the run queue */
-static struct list_node run_queue[NUM_PRIORITIES];
-static uint32_t run_queue_bitmap;
-
-/* make sure the bitmap is large enough to cover our number of priorities */
-static_assert(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * CHAR_BIT, "");
 
 /* compute the effective priority of a thread */
 static int effec_priority(const thread_t* t) {
@@ -137,7 +131,7 @@ static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask) {
 }
 
 /* find a cpu to wake up */
-static mp_cpu_mask_t find_cpu(thread_t* t) {
+static mp_cpu_mask_t find_cpu_mask(thread_t* t) {
     /* get the last cpu the thread ran on */
     mp_cpu_mask_t last_ran_cpu_mask = (1u << thread_last_cpu(t));
 
@@ -173,49 +167,55 @@ static mp_cpu_mask_t find_cpu(thread_t* t) {
 }
 
 /* run queue manipulation */
-static void insert_in_run_queue_head(thread_t* t) {
+static void insert_in_run_queue_head(uint cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     int ep = effec_priority(t);
 
-    list_add_head(&run_queue[ep], &t->queue_node);
-    run_queue_bitmap |= (1u << ep);
+    list_add_head(&percpu[cpu].run_queue[ep], &t->queue_node);
+    percpu[cpu].run_queue_bitmap |= (1u << ep);
+
+    /* mark the cpu as busy since the run queue now has at least one item in it */
+    mp_set_cpu_busy(cpu);
 }
 
-static void insert_in_run_queue_tail(thread_t* t) {
+static void insert_in_run_queue_tail(uint cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     int ep = effec_priority(t);
 
-    list_add_tail(&run_queue[ep], &t->queue_node);
-    run_queue_bitmap |= (1u << ep);
+    list_add_tail(&percpu[cpu].run_queue[ep], &t->queue_node);
+    percpu[cpu].run_queue_bitmap |= (1u << ep);
+
+    /* mark the cpu as busy since the run queue now has at least one item in it */
+    mp_set_cpu_busy(cpu);
 }
 
 static thread_t* sched_get_top_thread(uint cpu) {
-    thread_t* newthread;
-    uint32_t local_run_queue_bitmap = run_queue_bitmap;
+    /* pop the head of the highest priority queue with any threads
+     * queued up on the passed in cpu.
+     */
+    struct percpu* c = &percpu[cpu];
+    if (likely(c->run_queue_bitmap)) {
+        uint highest_queue = HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
+            (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
 
-    while (local_run_queue_bitmap) {
-        /* find the first (remaining) queue with a thread in it */
-        uint next_queue = HIGHEST_PRIORITY - __builtin_clz(local_run_queue_bitmap) - (sizeof(run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
+        thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
-        list_for_every_entry (&run_queue[next_queue], newthread, thread_t, queue_node) {
-            if (likely(newthread->pinned_cpu < 0) || (uint)newthread->pinned_cpu == cpu) {
-                list_delete(&newthread->queue_node);
+        DEBUG_ASSERT(newthread);
+        DEBUG_ASSERT_MSG(newthread->pinned_cpu < 0 || newthread->pinned_cpu == (int)cpu,
+                         "thread %p name %s\n", newthread, newthread->name);
 
-                if (list_is_empty(&run_queue[next_queue]))
-                    run_queue_bitmap &= ~(1 << next_queue);
+        if (list_is_empty(&c->run_queue[highest_queue]))
+            c->run_queue_bitmap &= ~(1u << highest_queue);
 
-                LOCAL_KTRACE2("sched_get_top", newthread->priority_boost, newthread->base_priority);
+        LOCAL_KTRACE2("sched_get_top", newthread->priority_boost, newthread->base_priority);
 
-                return newthread;
-            }
-        }
-
-        local_run_queue_bitmap &= ~(1 << next_queue);
+        return newthread;
     }
+
     /* no threads to run, select the idle thread for this cpu */
-    return &percpu[cpu].idle_thread;
+    return &c->idle_thread;
 }
 
 void sched_block(void) {
@@ -232,7 +232,32 @@ void sched_block(void) {
     sched_resched_internal();
 }
 
-void sched_unblock(thread_t* t) {
+/* find a cpu to run the thread on, put it in the run queue for that cpu, and accumulate a list
+ * of cpus we'll need to reschedule, including the local cpu.
+ */
+static void find_cpu_and_insert(thread_t* t, bool* local_resched, mp_cpu_mask_t *accum_cpu_mask) {
+    if (likely(t->pinned_cpu < 0)) {
+        /* find a core to run it on */
+        mp_cpu_mask_t cpu = find_cpu_mask(t);
+        if (cpu == 0) {
+            insert_in_run_queue_head(arch_curr_cpu_num(), t);
+            *local_resched = true;
+        } else {
+            insert_in_run_queue_head(__builtin_ctz(cpu), t);
+            *accum_cpu_mask |= cpu;
+        }
+    } else {
+        /* it's a pinned thread, always put it in the run queue it's pinned to */
+        if ((uint)t->pinned_cpu == arch_curr_cpu_num()) {
+            *local_resched = true;
+        } else {
+            *accum_cpu_mask |= (1u << t->pinned_cpu);
+        }
+        insert_in_run_queue_head(t->pinned_cpu, t);
+    }
+}
+
+bool sched_unblock(thread_t* t) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -244,18 +269,25 @@ void sched_unblock(thread_t* t) {
 
     /* stuff the new thread in the run queue */
     t->state = THREAD_READY;
-    insert_in_run_queue_head(t);
 
-    mp_reschedule(MP_IPI_TARGET_MASK, find_cpu(t), 0);
+    bool local_resched = false;
+    mp_cpu_mask_t mask = 0;
+    find_cpu_and_insert(t, &local_resched, &mask);
+
+    if (mask)
+        mp_reschedule(MP_IPI_TARGET_MASK, mask, 0);
+    return local_resched;
 }
 
-void sched_unblock_list(struct list_node* list) {
+bool sched_unblock_list(struct list_node* list) {
     DEBUG_ASSERT(list);
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     LOCAL_KTRACE0("sched_unblock_list");
 
     /* pop the list of threads and shove into the scheduler */
+    bool local_resched = false;
+    mp_cpu_mask_t accum_cpu_mask = 0;
     thread_t* t;
     while ((t = list_remove_tail_type(list, thread_t, queue_node))) {
         DEBUG_ASSERT(t->magic == THREAD_MAGIC);
@@ -266,10 +298,13 @@ void sched_unblock_list(struct list_node* list) {
 
         /* stuff the new thread in the run queue */
         t->state = THREAD_READY;
-        insert_in_run_queue_head(t);
-
-        mp_reschedule(MP_IPI_TARGET_MASK, find_cpu(t), 0);
+        find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
     }
+
+    if (accum_cpu_mask)
+        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+
+    return local_resched;
 }
 
 void sched_yield(void) {
@@ -282,10 +317,10 @@ void sched_yield(void) {
 
     current_thread->state = THREAD_READY;
 
-    /* consume the rest of the time slice, deboost ourself, and go to the end of the queue */
+    /* consume the rest of the time slice, deboost ourself, and go to the end of a queue */
     current_thread->remaining_time_slice = 0;
     deboost_thread(current_thread, false);
-    insert_in_run_queue_tail(current_thread);
+    insert_in_run_queue_tail(arch_curr_cpu_num(), current_thread);
 
     sched_resched_internal();
 }
@@ -295,6 +330,7 @@ void sched_preempt(void) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
+    uint curr_cpu = arch_curr_cpu_num();
 
     LOCAL_KTRACE0("sched_preempt");
 
@@ -303,11 +339,11 @@ void sched_preempt(void) {
     /* idle thread doesn't go in the run queue */
     if (likely(!thread_is_idle(current_thread))) {
         if (current_thread->remaining_time_slice > 0) {
-            insert_in_run_queue_head(current_thread);
+            insert_in_run_queue_head(curr_cpu, current_thread);
         } else {
-            /* if we're out of quantum, deboost the thread and put it at the tail of the queue */
+            /* if we're out of quantum, deboost the thread and put it at the tail of a queue */
             deboost_thread(current_thread, true);
-            insert_in_run_queue_tail(current_thread);
+            insert_in_run_queue_tail(curr_cpu, current_thread);
         }
     }
 
@@ -319,6 +355,7 @@ void sched_reschedule(void) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
+    uint curr_cpu = arch_curr_cpu_num();
 
     LOCAL_KTRACE0("sched_reschedule");
 
@@ -331,9 +368,9 @@ void sched_reschedule(void) {
         deboost_thread(current_thread, false);
 
         if (current_thread->remaining_time_slice > 0) {
-            insert_in_run_queue_head(current_thread);
+            insert_in_run_queue_head(curr_cpu, current_thread);
         } else {
-            insert_in_run_queue_tail(current_thread);
+            insert_in_run_queue_tail(curr_cpu, current_thread);
         }
     }
 
@@ -431,11 +468,10 @@ void sched_resched_internal(void) {
     /* mark the cpu ownership of the threads */
     thread_set_last_cpu(newthread, cpu);
 
-    /* set the cpu state based on the new thread we've picked */
+    /* if we selected the idle thread the cpu's run queue must be empty, so mark the
+     * cpu as idle */
     if (thread_is_idle(newthread)) {
         mp_set_cpu_idle(cpu);
-    } else {
-        mp_set_cpu_busy(cpu);
     }
 
     if (thread_is_realtime(newthread)) {
@@ -523,6 +559,7 @@ void sched_resched_internal(void) {
 
 void sched_init_early(void) {
     /* initialize the run queues */
-    for (unsigned int i = 0; i < NUM_PRIORITIES; i++)
-        list_initialize(&run_queue[i]);
+    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++)
+        for (unsigned int i = 0; i < NUM_PRIORITIES; i++)
+            list_initialize(&percpu[cpu].run_queue[i]);
 }

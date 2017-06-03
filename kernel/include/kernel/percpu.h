@@ -22,6 +22,10 @@ struct percpu {
     /* per cpu preemption timer */
     timer_t preempt_timer;
 
+    /* per cpu run queue and bitmap to indicate which queues are non empty */
+    struct list_node run_queue[NUM_PRIORITIES];
+    uint32_t run_queue_bitmap;
+
     /* thread/cpu level statistics */
     struct cpu_stats stats;
 
@@ -31,6 +35,9 @@ struct percpu {
 
 /* the kernel per-cpu structure */
 extern struct percpu percpu[SMP_MAX_CPUS];
+
+/* make sure the bitmap is large enough to cover our number of priorities */
+static_assert(NUM_PRIORITIES <= sizeof(percpu[0].run_queue_bitmap) * CHAR_BIT, "");
 
 static inline struct percpu* get_local_percpu(void) {
     return &percpu[arch_curr_cpu_num()];

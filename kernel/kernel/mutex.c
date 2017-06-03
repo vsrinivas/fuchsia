@@ -156,9 +156,10 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
         panic("bad state in mutex release %p, current thread %p\n", m, ct);
     }
 
-    // put the new thread back in the run queue and optionally reschedule locally
-    sched_unblock(t);
-    if (reschedule)
+    // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
+    // cpu run queue was modified
+    bool local_resched = sched_unblock(t);
+    if (reschedule && local_resched)
         sched_reschedule();
 
     // conditionally THREAD_UNLOCK
