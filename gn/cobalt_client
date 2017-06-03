@@ -1,0 +1,15 @@
+{
+    "imports": [
+        "boringssl_libssl"
+    ],
+    "labels": [
+        "//apps/cobalt_client",
+        "//apps/cobalt_client/src:tests"
+    ],
+    "binaries": [
+        {
+            "binary": "cobalt_unittests",
+            "bootfs_path": "test/cobalt_unittests"
+        }
+    ]
+}
