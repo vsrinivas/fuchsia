@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/sysroot.gni")
+
 config("compiler") {
   cflags_objc = [
     "-Wno-availability",
@@ -10,11 +12,17 @@ config("compiler") {
     "-Wno-missing-method-return-type",
     "-Wno-property-attribute-mismatch",
   ]
-
   cflags_objcc = [
     "-std=c++14",
     "-stdlib=libc++",
   ]
+  configs = [ ":sysroot" ]
+}
+
+config("sysroot") {
+  cflags = [ "--sysroot=$sysroot" ]
+  ldflags = cflags
+  asmflags = cflags
 }
 
 # On Mac, this is used for everything except static libraries.

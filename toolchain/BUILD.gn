@@ -26,15 +26,8 @@ clang_toolchain("host_${host_cpu}") {
   clang_path = "//buildtools/toolchain/$clang_name"
   prefix = rebase_path("$clang_path/bin/", root_build_dir)
 
-  if (host_os == "linux") {
-    cc = "${prefix}clang"
-    cxx = "${prefix}clang++"
-  } else if (host_os == "mac") {
-    cc = "clang"
-    cxx = "clang++"
-  } else {
-    assert(false, "Host OS not supported")
-  }
+  cc = "${prefix}clang"
+  cxx = "${prefix}clang++"
   ld = cxx
   ar = "${prefix}llvm-ar"
 

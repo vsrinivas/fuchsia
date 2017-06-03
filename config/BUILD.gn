@@ -95,12 +95,10 @@ config("debug_prefix_map") {
 }
 
 config("debug") {
-  cflags = [ "-g" ]
-  if (current_os == "mac") {
-    cflags += [ "-O0" ]
-  } else {
-    cflags += [ "-Og" ]
-  }
+  cflags = [
+    "-g",
+    "-Og",
+  ]
   ldflags = cflags
 }
 
