@@ -18,6 +18,13 @@
 
 #define MAX_COLOR 0xf
 
+#if BUILD_FOR_TEST
+mx_status_t vc_init_gfx(gfx_surface* gfx);
+#else
+mx_status_t vc_init_gfx(int fd);
+void vc_free_gfx();
+#endif
+
 typedef struct vc {
     char title[8];
     // vc title, shown in status bar
@@ -25,17 +32,6 @@ typedef struct vc {
     unsigned flags;
 
     mx_handle_t gfx_vmo;
-
-    // TODO make static
-    gfx_surface* gfx;
-    // surface to draw on
-    gfx_surface* st_gfx;
-
-#if BUILD_FOR_TEST
-    gfx_surface* test_gfx;
-#endif
-
-    int fd;
 
     int client_fd;
 
@@ -89,7 +85,7 @@ typedef struct vc {
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
 const gfx_font* vc_get_font();
-mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev);
+mx_status_t vc_alloc(vc_t** out);
 void vc_free(vc_t* vc);
 
 void vc_get_status_line(char* str, int n);
@@ -106,7 +102,7 @@ void vc_get_battery_info(vc_battery_info_t* info);
 
 void vc_write_status(vc_t* vc);
 void vc_render(vc_t* vc);
-void vc_invalidate_all_for_testing(vc_t* vc);
+void vc_full_repaint(vc_t* vc);
 int vc_get_scrollback_lines(vc_t* vc);
 vc_char_t* vc_get_scrollback_line_ptr(vc_t* vc, unsigned row);
 void vc_scroll_viewport(vc_t* vc, int dir);

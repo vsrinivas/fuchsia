@@ -158,6 +158,7 @@ static mx_status_t vc_set_active(int num, vc_t* to_vc) {
             vc->flags &= ~VC_FLAG_HASOUTPUT;
             g_active_vc = vc;
             g_active_vc_index = i;
+            vc_full_repaint(vc);
             vc_render(vc);
             return NO_ERROR;
         }
@@ -205,6 +206,7 @@ static void vc_destroy(vc_t* vc) {
         }
         vc_set_active(g_active_vc_index, NULL);
     } else if (g_active_vc) {
+        vc_full_repaint(g_active_vc);
         vc_render(g_active_vc);
     }
 
@@ -235,13 +237,11 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
     return count;
 }
 
-int g_fb_fd = -1;
-
 // Create a new vc_t and add it to the console list.
 static mx_status_t vc_create(vc_t** vc_out) {
     mx_status_t status;
     vc_t* vc;
-    if ((status = vc_alloc(NULL, g_fb_fd, &vc)) < 0) {
+    if ((status = vc_alloc(&vc)) < 0) {
         return status;
     }
 
@@ -276,6 +276,8 @@ static mtx_t g_vc_lock = MTX_INIT;
 
 // remember whether the virtual console controls the display
 static bool g_vc_owns_display = true;
+
+static int g_fb_fd;
 
 static void vc_toggle_framebuffer() {
     uint32_t n = g_vc_owns_display ? 1 : 0;
@@ -454,8 +456,13 @@ static int _shell_thread(void* arg, bool make_active) {
         }
     }
 
-    if ((vc->client_fd = open("/dev/misc/ptmx", O_RDWR)) < 0) {
-        goto done;
+    // The ptmx device can start later than these threads
+    int retry = 50;
+    while ((vc->client_fd = open("/dev/misc/ptmx", O_RDWR)) < 0) {
+        usleep(100000);
+        if (--retry == 0) {
+            return -1;
+        }
     }
 
     for (;;) {
@@ -580,6 +587,9 @@ int main(int argc, char** argv) {
             break;
         }
         usleep(100000);
+    }
+    if (vc_init_gfx(fd) < 0) {
+        return -1;
     }
 
     g_fb_fd = fd;

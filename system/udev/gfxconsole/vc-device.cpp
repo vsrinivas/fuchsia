@@ -47,12 +47,14 @@ static uint32_t default_palette[] = {
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
 
-static mx_status_t vc_setup(vc_t* vc) {
-    assert(vc->gfx);
+// shared with vc-gfx.cpp
+extern gfx_surface* vc_gfx;
+extern gfx_surface* vc_tb_gfx;
 
+static mx_status_t vc_setup(vc_t* vc) {
     // calculate how many rows/columns we have
-    vc->rows = vc->gfx->height / vc->charh;
-    vc->columns = vc->gfx->width / vc->charw;
+    vc->rows = vc_gfx->height / vc->charh;
+    vc->columns = vc_gfx->width / vc->charw;
     vc->scrollback_rows_max = SCROLLBACK_ROWS;
     vc->scrollback_rows_count = 0;
     vc->scrollback_offset = 0;
@@ -81,6 +83,10 @@ static mx_status_t vc_setup(vc_t* vc) {
 
 static void vc_invalidate(void* cookie, int x0, int y0, int w, int h) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
+
+    if (!vc->active) {
+        return;
+    }
 
     assert(h >= 0);
     int y1 = y0 + h;
@@ -147,7 +153,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
     unsigned old_y = vc->cursor_y;
     vc->cursor_x = x;
     vc->cursor_y = y;
-    if (!vc->hide_cursor) {
+    if (vc->active && !vc->hide_cursor) {
         // Clear the cursor from its old position.
         vc_invalidate(cookie, old_x, old_y, 1, 1);
         vc_invalidate_lines(vc, old_y, 1);
@@ -209,12 +215,15 @@ static void vc_set_cursor_hidden(vc_t* vc, bool hide) {
     if (vc->hide_cursor == hide)
         return;
     vc->hide_cursor = hide;
-    vc_invalidate(vc, vc->cursor_x, vc->cursor_y, 1, 1);
-    vc_invalidate_lines(vc, vc->cursor_y, 1);
+    if (vc->active) {
+        vc_invalidate(vc, vc->cursor_x, vc->cursor_y, 1, 1);
+        vc_invalidate_lines(vc, vc->cursor_y, 1);
+    }
 }
 
 static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count) {
     vc_t* vc = reinterpret_cast<vc_t*>(cookie);
+
     if (vc->viewport_y < 0) {
         tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
 
@@ -231,20 +240,25 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count
     // position where the cursor isn't.  This must be done before the
     // tc_copy_lines() call, otherwise we might render the wrong character.
     bool old_hide_cursor = vc->hide_cursor;
-    vc_set_cursor_hidden(vc, true);
+    if (vc->active) {
+        vc_set_cursor_hidden(vc, true);
+    }
 
     // The next two calls can be done in any order.
     tc_copy_lines(&vc->textcon, y_dest, y_src, line_count);
-    gfx_copyrect(vc->gfx, 0, y_src * vc->charh,
-                 vc->gfx->width, line_count * vc->charh,
-                 0, y_dest * vc->charh);
 
-    // Restore the cursor.
-    vc_set_cursor_hidden(vc, old_hide_cursor);
+    if (vc->active) {
+        gfx_copyrect(vc_gfx, 0, y_src * vc->charh,
+                     vc_gfx->width, line_count * vc->charh,
+                     0, y_dest * vc->charh);
 
-    vc_write_status(vc);
-    vc_gfx_invalidate_status(vc);
-    vc_invalidate_lines(vc, 0, vc_rows(vc));
+        // Restore the cursor.
+        vc_set_cursor_hidden(vc, old_hide_cursor);
+
+        vc_write_status(vc);
+        vc_gfx_invalidate_status(vc);
+        vc_invalidate_lines(vc, 0, vc_rows(vc));
+    }
 }
 
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
@@ -253,8 +267,10 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
     case TC_SET_TITLE:
         strncpy(vc->title, (char*)arg, sizeof(vc->title));
         vc->title[sizeof(vc->title) - 1] = '\0';
-        vc_write_status(vc);
-        vc_gfx_invalidate_status(vc);
+        if (vc->active) {
+            vc_write_status(vc);
+            vc_gfx_invalidate_status(vc);
+        }
         break;
     case TC_SHOW_CURSOR:
         vc_set_cursor_hidden(vc, false);
@@ -268,8 +284,10 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
 
 static void vc_clear_gfx(vc_t* vc) {
     // Fill display with background color
-    gfx_fillrect(vc->gfx, 0, 0, vc->gfx->width, vc->gfx->height,
-                 palette_to_color(vc, vc->back_color));
+    if (vc->active) {
+        gfx_fillrect(vc_gfx, 0, 0, vc_gfx->width, vc_gfx->height,
+                     palette_to_color(vc, vc->back_color));
+    }
 }
 
 static void vc_reset(vc_t* vc) {
@@ -295,8 +313,6 @@ static void vc_reset(vc_t* vc) {
     }
 
     vc_clear_gfx(vc);
-    gfx_flush(vc->gfx);
-
     vc_gfx_invalidate_all(vc);
 }
 
@@ -318,7 +334,7 @@ static void write_status_at(vc_t* vc, const char* str, unsigned offset) {
                 state = ESCAPE;
                 p_num = 0;
             } else {
-                gfx_putchar(vc->st_gfx, vc->font, c, idx++ * vc->charw, 0,
+                gfx_putchar(vc_tb_gfx, vc->font, c, idx++ * vc->charw, 0,
                             palette_to_color(vc, fg), palette_to_color(vc, bg));
             }
         } else if (state == ESCAPE) {
@@ -344,12 +360,16 @@ static void write_status_at(vc_t* vc, const char* str, unsigned offset) {
 }
 
 void vc_write_status(vc_t* vc) {
+    if (!vc->active) {
+        return;
+    }
+
     char str[512];
 
     // draw the tabs
     vc_get_status_line(str, sizeof(str));
     // TODO clean this up with textcon stuff
-    gfx_fillrect(vc->st_gfx, 0, 0, vc->st_gfx->width, vc->st_gfx->height, palette_to_color(vc, STATUS_BG));
+    gfx_fillrect(vc_tb_gfx, 0, 0, vc_tb_gfx->width, vc_tb_gfx->height, palette_to_color(vc, STATUS_BG));
     write_status_at(vc, str, 0);
 
     // draw the battery status
@@ -374,16 +394,16 @@ void vc_write_status(vc_t* vc) {
             break;
     }
     write_status_at(vc, str, vc->columns - 8);
-
-    gfx_flush(vc->st_gfx);
 }
 
 void vc_render(vc_t* vc) {
-    vc_write_status(vc);
-    vc_gfx_invalidate_all(vc);
+    if (vc->active) {
+        vc_write_status(vc);
+        vc_gfx_invalidate_all(vc);
+    }
 }
 
-void vc_invalidate_all_for_testing(vc_t* vc) {
+void vc_full_repaint(vc_t* vc) {
     vc_clear_gfx(vc);
     int scrollback_lines = vc_get_scrollback_lines(vc);
     vc_invalidate(vc, 0, -scrollback_lines,
@@ -411,24 +431,26 @@ static void vc_scroll_viewport_abs(vc_t* vc, int vpy) {
     int diff_abs = ABS(diff);
     vc->viewport_y = vpy;
     int rows = vc_rows(vc);
+    if (!vc->active) {
+        return;
+    }
     if (diff_abs >= rows) {
         // We are scrolling the viewport by a large delta.  Invalidate all
         // of the visible area of the console.
         vc_invalidate(vc, 0, vpy, vc->columns, rows);
     } else {
         if (diff > 0) {
-            gfx_copyrect(vc->gfx, 0, diff_abs * vc->charh,
-                         vc->gfx->width, (rows - diff_abs) * vc->charh, 0, 0);
+            gfx_copyrect(vc_gfx, 0, diff_abs * vc->charh,
+                         vc_gfx->width, (rows - diff_abs) * vc->charh, 0, 0);
             vc_invalidate(vc, 0, vpy + rows - diff_abs, vc->columns,
                                  diff_abs);
         } else {
-            gfx_copyrect(vc->gfx, 0, 0, vc->gfx->width,
+            gfx_copyrect(vc_gfx, 0, 0, vc_gfx->width,
                          (rows - diff_abs) * vc->charh, 0,
                          diff_abs * vc->charh);
             vc_invalidate(vc, 0, vpy, vc->columns, diff_abs);
         }
     }
-    gfx_flush(vc->gfx);
     vc_render(vc);
 }
 
@@ -472,12 +494,12 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
-mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
+mx_status_t vc_alloc(vc_t** out) {
     vc_t* vc =
         reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
-    if (!vc)
+    if (!vc) {
         return ERR_NO_MEMORY;
-    vc->fd = -1;
+    }
     vc->client_fd = -1;
 
     vc->keymap = qwerty_map;
@@ -496,86 +518,16 @@ mx_status_t vc_alloc(gfx_surface* test, int fd, vc_t** out_dev) {
     vc->charw = vc->font->width;
     vc->charh = vc->font->height;
 
-#if BUILD_FOR_TEST
-    // init the status bar
-    vc->st_gfx = gfx_create_surface(NULL, test->width, vc->charh,
-                                        test->stride, test->format, 0);
-    if (!vc->st_gfx)
-        goto fail;
-
-    // init the main surface
-    vc->gfx = gfx_create_surface(NULL, test->width, test->height,
-                                     test->stride, test->format, 0);
-    if (!vc->gfx)
-        goto fail;
-
-    vc->test_gfx = test;
-#else
-    ioctl_display_get_fb_t fb;
-    size_t sz = 0;
-
-    if (fd < 0) {
-        goto fail;
-    }
-    if ((fd = openat(fd, "virtcon", O_RDWR)) < 0) {
-        printf("vc_alloc: cannot obtain fb driver instance\n");
-        goto fail;
-    }
-    if (ioctl_display_get_fb(fd, &fb) != sizeof(fb)) {
-        close(fd);
-        printf("vc_alloc: cannot get fb from driver instance\n");
-        goto fail;
-    }
-    vc->fd = fd;
-    vc->gfx_vmo = fb.vmo;
-
-    sz = fb.info.stride * fb.info.pixelsize * fb.info.height;
-    uintptr_t ptr;
-    if (mx_vmar_map(mx_vmar_root_self(), 0, vc->gfx_vmo, 0, sz,
-                    MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr) < 0) {
-        goto fail;
-    }
-
-    // init the status bar
-    vc->st_gfx = gfx_create_surface((void*) ptr, fb.info.width, vc->charh,
-                                        fb.info.stride, fb.info.format, 0);
-    if (!vc->st_gfx)
-        goto fail;
-
-    // init the main surface
-    ptr += fb.info.stride * vc->charh * fb.info.pixelsize;
-    vc->gfx = gfx_create_surface((void*) ptr, fb.info.width, fb.info.height - vc->charh,
-                                     fb.info.stride, fb.info.format, 0);
-    if (!vc->gfx)
-        goto fail;
-#endif
-
     vc_setup(vc);
     vc_reset(vc);
 
-    *out_dev = vc;
+    *out = vc;
     return NO_ERROR;
-fail:
-    vc_free(vc);
-    return ERR_NO_MEMORY;
 }
 
 void vc_free(vc_t* vc) {
-    //TODO: unmap framebuffer
-    if (vc->fd >= 0) {
-        close(vc->fd);
-    }
     if (vc->client_fd >= 0) {
         close(vc->client_fd);
-    }
-    if (vc->st_gfx) {
-        gfx_surface_destroy(vc->st_gfx);
-    }
-    if (vc->gfx_vmo) {
-        mx_handle_close(vc->gfx_vmo);
-    }
-    if (vc->gfx) {
-        free(vc->gfx);
     }
     free(vc->text_buf);
     free(vc->scrollback_buf);
