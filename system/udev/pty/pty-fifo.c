@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include <pty-core/pty-fifo.h>
+#include "pty-fifo.h"
 
 static_assert((PTY_FIFO_SIZE & (PTY_FIFO_SIZE - 1)) == 0, "fifo size not power of two");
 

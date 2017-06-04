@@ -11,8 +11,9 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 
-#include <pty-core/pty-core.h>
-#include <pty-core/pty-fifo.h>
+#include "pty-core.h"
+#include "pty-fifo.h"
+
 #include <magenta/device/pty.h>
 
 typedef struct pty_server_dev {
@@ -153,7 +154,6 @@ static mx_status_t ptmx_open(void* ctx, mx_device_t** out, uint32_t flags) {
         return status;
     }
 
-    printf("pty srv %p created\n", psd);
     *out = psd->srv.mxdev;
     return NO_ERROR;
 }

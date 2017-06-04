@@ -7,14 +7,14 @@
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <pty-core/pty-core.h>
-#include <pty-core/pty-fifo.h>
+#include "pty-core.h"
+#include "pty-fifo.h"
 
 #include <magenta/errors.h>
 #include <magenta/device/pty.h>
 #include <magenta/device/console.h>
 
-#if 1
+#if 0
 #define xprintf(fmt...) printf(fmt)
 #else
 #define xprintf(fmt...) do {} while (0)

@@ -8,9 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/pty-driver.c
+MODULE_SRCS := $(LOCAL_DIR)/pty-driver.c $(LOCAL_DIR)/pty-core.c $(LOCAL_DIR)/pty-fifo.c
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/pty-core
+MODULE_STATIC_LIBS := system/ulib/ddk
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
