@@ -50,6 +50,7 @@ static uint32_t default_palette[] = {
 // shared with vc-gfx.cpp
 extern gfx_surface* vc_gfx;
 extern gfx_surface* vc_tb_gfx;
+extern const gfx_font* vc_font;
 
 static mx_status_t vc_setup(vc_t* vc) {
     // calculate how many rows/columns we have
@@ -255,8 +256,8 @@ static void vc_tc_copy_lines(void* cookie, int y_dest, int y_src, int line_count
         // Restore the cursor.
         vc_set_cursor_hidden(vc, old_hide_cursor);
 
-        vc_write_status(vc);
-        vc_gfx_invalidate_status(vc);
+        vc_status_update();
+        vc_gfx_invalidate_status();
         vc_invalidate_lines(vc, 0, vc_rows(vc));
     }
 }
@@ -267,10 +268,8 @@ static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen)
     case TC_SET_TITLE:
         strncpy(vc->title, (char*)arg, sizeof(vc->title));
         vc->title[sizeof(vc->title) - 1] = '\0';
-        if (vc->active) {
-            vc_write_status(vc);
-            vc_gfx_invalidate_status(vc);
-        }
+        vc_status_update();
+        vc_gfx_invalidate_status();
         break;
     case TC_SHOW_CURSOR:
         vc_set_cursor_hidden(vc, false);
@@ -316,89 +315,28 @@ static void vc_reset(vc_t* vc) {
     vc_gfx_invalidate_all(vc);
 }
 
-#define STATUS_FG 7
-#define STATUS_BG 0
 
-static void write_status_at(vc_t* vc, const char* str, unsigned offset) {
-    static enum { NORMAL,
-                  ESCAPE } state = NORMAL;
-    uint8_t fg = STATUS_FG;
-    uint8_t bg = STATUS_BG;
-    char c;
-    int idx = offset;
-    int p_num = 0;
-    for (unsigned i = 0; i < strlen(str); i++) {
-        c = str[i];
-        if (state == NORMAL) {
-            if (c == 0x1b) {
-                state = ESCAPE;
-                p_num = 0;
-            } else {
-                gfx_putchar(vc_tb_gfx, vc->font, c, idx++ * vc->charw, 0,
-                            palette_to_color(vc, fg), palette_to_color(vc, bg));
-            }
-        } else if (state == ESCAPE) {
-            if (c >= '0' && c <= '9') {
-                p_num = (p_num * 10) + (c - '0');
-            } else if (c == 'm') {
-                if (p_num >= 30 && p_num <= 37) {
-                    fg = (uint8_t)(p_num - 30);
-                } else if (p_num >= 40 && p_num <= 47) {
-                    bg = (uint8_t)(p_num - 40);
-                } else if (p_num == 1 && fg <= 0x7) {
-                    fg = (uint8_t)(fg + 8);
-                } else if (p_num == 0) {
-                    fg = STATUS_FG;
-                    bg = STATUS_BG;
-                }
-                state = NORMAL;
-            } else {
-                // eat unrecognized escape sequences in status
-            }
-        }
-    }
+void vc_status_clear() {
+    gfx_fillrect(vc_tb_gfx, 0, 0,
+                 vc_tb_gfx->width, vc_tb_gfx->height,
+                 default_palette[STATUS_COLOR_BG]);
 }
 
-void vc_write_status(vc_t* vc) {
-    if (!vc->active) {
-        return;
+void vc_status_write(int x, unsigned color, const char* text) {
+    char c;
+    unsigned fg = default_palette[color];
+    unsigned bg = default_palette[STATUS_COLOR_BG];
+
+    x *= vc_font->width;
+    while ((c = *text++) != 0) {
+        gfx_putchar(vc_tb_gfx, vc_font, c, x, 0, fg, bg);
+        x += vc_font->width;
     }
-
-    char str[512];
-
-    // draw the tabs
-    vc_get_status_line(str, sizeof(str));
-    // TODO clean this up with textcon stuff
-    gfx_fillrect(vc_tb_gfx, 0, 0, vc_tb_gfx->width, vc_tb_gfx->height, palette_to_color(vc, STATUS_BG));
-    write_status_at(vc, str, 0);
-
-    // draw the battery status
-    vc_battery_info_t info;
-    vc_get_battery_info(&info);
-    switch (info.state) {
-        case ERROR:
-            snprintf(str, sizeof(str), "err");
-            break;
-        case CHARGING:
-            snprintf(str, sizeof(str), "\033[33m\033[1mc %d%%", info.pct);
-            break;
-        case NOT_CHARGING:
-            if (info.pct <= 20) {
-                snprintf(str, sizeof(str), "\033[31m\033[1m%d%%", info.pct);
-            } else {
-                snprintf(str, sizeof(str), "%d%%", info.pct);
-            }
-            break;
-        default:
-            str[0] = '\0';
-            break;
-    }
-    write_status_at(vc, str, vc->columns - 8);
 }
 
 void vc_render(vc_t* vc) {
     if (vc->active) {
-        vc_write_status(vc);
+        vc_status_update();
         vc_gfx_invalidate_all(vc);
     }
 }

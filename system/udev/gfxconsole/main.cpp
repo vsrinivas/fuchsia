@@ -45,7 +45,6 @@ static struct list_node g_vc_list = LIST_INITIAL_VALUE(g_vc_list);
 static unsigned g_vc_count = 0;
 static vc_t* g_active_vc;
 static unsigned g_active_vc_index;
-static vc_battery_info_t g_battery_info;
 
 static mx_status_t vc_set_active(int num, vc_t* vc);
 
@@ -153,6 +152,7 @@ static mx_status_t vc_set_active(int num, vc_t* to_vc) {
             }
             if (g_active_vc) {
                 g_active_vc->active = false;
+                g_active_vc->flags &= ~VC_FLAG_HASOUTPUT;
             }
             vc->active = true;
             vc->flags &= ~VC_FLAG_HASOUTPUT;
@@ -167,32 +167,42 @@ static mx_status_t vc_set_active(int num, vc_t* to_vc) {
     return ERR_NOT_FOUND;
 }
 
-void vc_get_status_line(char* str, int n) {
+static int status_width = 0;
+
+void vc_status_update() {
     vc_t* vc = NULL;
-    char* ptr = str;
     unsigned i = 0;
-    // TODO add process name, etc.
+    int x = 0;
+
+    int w = status_width / (g_vc_count + 1);
+    if (w < MIN_TAB_WIDTH) {
+        w = MIN_TAB_WIDTH;
+    } else if (w > MAX_TAB_WIDTH) {
+        w = MAX_TAB_WIDTH;
+    }
+
+    char tmp[w];
+
+    vc_status_clear();
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
-        if (n <= 0) {
-            break;
+        unsigned fg;
+        if (vc->active) {
+            fg = STATUS_COLOR_ACTIVE;
+        } else if (vc->flags & VC_FLAG_HASOUTPUT) {
+            fg = STATUS_COLOR_UPDATED;
+        } else {
+            fg = STATUS_COLOR_DEFAULT;
         }
 
         int lines = vc_get_scrollback_lines(vc);
-        int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
-                             vc->active ? "\033[33m\033[1m" : "",
-                             i,
-                             vc->title,
-                             vc->flags & VC_FLAG_HASOUTPUT ? '*' : ' ',
-                             lines > 0 && -vc->viewport_y < lines ? '<' : ' ',
-                             vc->viewport_y < 0 ? '>' : ' ');
-        ptr += chars;
-        n -= chars;
+        char L = (lines > 0) && (-vc->viewport_y < lines) ? '<' : '[';
+        char R = (vc->viewport_y < 0) ? '>' : ']';
+
+        snprintf(tmp, w, "%c%u%c %s", L, i, R, vc->title);
+        vc_status_write(x, fg, tmp);
+        x += w;
         i++;
     }
-}
-
-void vc_get_battery_info(vc_battery_info_t* info) {
-    memcpy(info, &g_battery_info, sizeof(vc_battery_info_t));
 }
 
 static void vc_destroy(vc_t* vc) {
@@ -229,10 +239,10 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
         vc_gfx_invalidate(vc, 0, invalidate_y0,
                           vc->columns, invalidate_y1 - invalidate_y0);
     }
-    if (!vc->active && !(vc->flags & VC_FLAG_HASOUTPUT)) {
+    if (!(vc->flags & VC_FLAG_HASOUTPUT) && !vc->active) {
         vc->flags |= VC_FLAG_HASOUTPUT;
-        vc_write_status(vc);
-        vc_gfx_invalidate_status(vc);
+        vc_status_update();
+        vc_gfx_invalidate_status();
     }
     return count;
 }
@@ -355,77 +365,6 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     vc_write(log_vc, oops, strlen(oops), 0);
 
     return status;
-}
-
-static int battery_poll_thread(void* arg) {
-    int battery_fd = static_cast<int>(reinterpret_cast<uintptr_t>(arg));
-    char str[16];
-    for (;;) {
-        ssize_t length = read(battery_fd, str, sizeof(str) - 1);
-        {
-            mxtl::AutoLock lock(&g_vc_lock);
-            if (length < 1 || str[0] == 'e') {
-                g_battery_info.state = ERROR;
-                g_battery_info.pct = -1;
-            } else {
-                str[length] = '\0';
-                if (str[0] == 'c') {
-                    g_battery_info.state = CHARGING;
-                    g_battery_info.pct = atoi(&str[1]);
-                } else {
-                    g_battery_info.state = NOT_CHARGING;
-                    g_battery_info.pct = atoi(str);
-                }
-            }
-            if (g_active_vc) {
-                vc_write_status(g_active_vc);
-                vc_gfx_invalidate_status(g_active_vc);
-            }
-        }
-
-        if (length <= 0) {
-            printf("vc: read() on battery vc returned %d\n",
-                   static_cast<int>(length));
-            break;
-        }
-        mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
-    }
-    close(battery_fd);
-    return 0;
-}
-
-static mx_status_t battery_device_added(int dirfd, int event, const char* fn, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
-    }
-
-    int battery_fd = openat(dirfd, fn, O_RDONLY);
-    if (battery_fd < 0) {
-        printf("vc: failed to open battery vc \"%s\"\n", fn);
-        return NO_ERROR;
-    }
-
-    printf("vc: found battery \"%s\"\n", fn);
-    thrd_t t;
-    int rc = thrd_create_with_name(&t, battery_poll_thread,
-        reinterpret_cast<void*>(static_cast<uintptr_t>(battery_fd)),
-        "vc-battery-poll");
-    if (rc != thrd_success) {
-        close(battery_fd);
-        return -1;
-    }
-    thrd_detach(t);
-    return NO_ERROR;
-}
-
-static int battery_watcher_thread(void* arg) {
-    int dirfd;
-    if ((dirfd = open("/dev/class/battery", O_DIRECTORY | O_RDONLY)) < 0) {
-        return -1;
-    }
-    mxio_watch_directory(dirfd, battery_device_added, NULL);
-    close(dirfd);
-    return 0;
 }
 
 int mkpty(vc_t* vc, int fd[2]) {
@@ -598,6 +537,8 @@ int main(int argc, char** argv) {
     if (vc_create(&log_vc) != NO_ERROR) {
         return -1;
     }
+    status_width = log_vc->columns;
+    snprintf(log_vc->title, sizeof(log_vc->title), "debuglog");
 
     // Get our process koid so the log reader can
     // filter out our own debug messages from the log
@@ -624,9 +565,6 @@ int main(int argc, char** argv) {
     if (ret != thrd_success) {
         xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
     }
-
-    thrd_create_with_name(&t, battery_watcher_thread, NULL,
-                          "vc-battery-watcher");
 
     setenv("TERM", "xterm", 1);
 

@@ -25,8 +25,17 @@ mx_status_t vc_init_gfx(int fd);
 void vc_free_gfx();
 #endif
 
+// constraints on status bar tabs
+#define MIN_TAB_WIDTH 16
+#define MAX_TAB_WIDTH 32
+
+#define STATUS_COLOR_BG 0
+#define STATUS_COLOR_DEFAULT 7
+#define STATUS_COLOR_ACTIVE 11
+#define STATUS_COLOR_UPDATED 10
+
 typedef struct vc {
-    char title[8];
+    char title[MAX_TAB_WIDTH];
     // vc title, shown in status bar
     bool active;
     unsigned flags;
@@ -88,19 +97,15 @@ const gfx_font* vc_get_font();
 mx_status_t vc_alloc(vc_t** out);
 void vc_free(vc_t* vc);
 
-void vc_get_status_line(char* str, int n);
 
-enum vc_battery_state {
-    UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
-};
+// called to re-draw the status bar after
+// status-worthy vc or global state has changed
+void vc_status_update();
 
-typedef struct vc_battery_info {
-    enum vc_battery_state state;
-    int pct;
-} vc_battery_info_t;
-void vc_get_battery_info(vc_battery_info_t* info);
+// used by vc_status_invalidate to draw the status bar
+void vc_status_clear();
+void vc_status_write(int x, unsigned color, const char* text);
 
-void vc_write_status(vc_t* vc);
 void vc_render(vc_t* vc);
 void vc_full_repaint(vc_t* vc);
 int vc_get_scrollback_lines(vc_t* vc);
@@ -120,7 +125,7 @@ static inline int vc_rows(vc_t* vc) {
 // drawing:
 
 void vc_gfx_invalidate_all(vc_t* vc);
-void vc_gfx_invalidate_status(vc_t* vc);
+void vc_gfx_invalidate_status();
 // invalidates a region in characters
 void vc_gfx_invalidate(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h);
 // invalidates a region in pixels

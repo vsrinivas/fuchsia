@@ -16,6 +16,8 @@
 gfx_surface* vc_gfx;
 gfx_surface* vc_tb_gfx;
 
+const gfx_font* vc_font;
+
 void vc_gfx_draw_char(vc_t* vc, vc_char_t ch, unsigned x, unsigned y,
                       bool invert) {
     uint8_t fg_color = vc_char_get_fg_color(ch);
@@ -37,6 +39,7 @@ static gfx_surface* vc_test_gfx;
 
 mx_status_t vc_init_gfx(gfx_surface* test) {
     const gfx_font* font = vc_get_font();
+    vc_font = font;
 
     vc_test_gfx = test;
 
@@ -64,7 +67,7 @@ void vc_gfx_invalidate_all(vc_t* vc) {
     gfx_copylines(vc_test_gfx, vc_gfx, 0, vc_tb_gfx->height, vc_gfx->height - vc_tb_gfx->height);
 }
 
-void vc_gfx_invalidate_status(vc_t* vc) {
+void vc_gfx_invalidate_status() {
     gfx_copylines(vc_test_gfx, vc_tb_gfx, 0, 0, vc_tb_gfx->height);
 }
 
@@ -113,9 +116,12 @@ void vc_free_gfx() {
 
 mx_status_t vc_init_gfx(int fd) {
     const gfx_font* font = vc_get_font();
+    vc_font = font;
+
     ioctl_display_get_fb_t fb;
     vc_gfx_fd = fd;
     uintptr_t ptr;
+
 
     mx_status_t r;
     if (ioctl_display_get_fb(fd, &fb) < 0) {
@@ -159,16 +165,14 @@ void vc_gfx_invalidate_all(vc_t* vc) {
     }
 }
 
-void vc_gfx_invalidate_status(vc_t* vc) {
-    if (vc->active) {
-        ioctl_display_region_t r = {
-            .x = 0,
-            .y = 0,
-            .width = vc_gfx->width,
-            .height = vc->charh,
-        };
-        ioctl_display_flush_fb_region(vc_gfx_fd, &r);
-    }
+void vc_gfx_invalidate_status() {
+    ioctl_display_region_t r = {
+        .x = 0,
+        .y = 0,
+        .width = vc_tb_gfx->width,
+        .height = vc_tb_gfx->height,
+    };
+    ioctl_display_flush_fb_region(vc_gfx_fd, &r);
 }
 
 // pixel coords
