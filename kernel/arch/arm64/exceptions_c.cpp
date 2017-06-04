@@ -151,6 +151,8 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
     uint32_t iss = BITS(esr, 24, 0);
     bool is_user = !BIT(ec, 0);
 
+    CPU_STATS_INC(page_faults);
+
     uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
     pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
     /* Check if this was not permission fault */
@@ -171,6 +173,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
 #if WITH_LIB_MAGENTA
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
+        CPU_STATS_INC(exceptions);
         if (call_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
             return;
     }
@@ -204,6 +207,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
 
     uint32_t dfsc = BITS(iss, 5, 0);
     if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
+        CPU_STATS_INC(page_faults);
         arch_enable_ints();
         status_t err = vmm_page_fault_handler(far, pf_flags);
         arch_disable_ints();
@@ -223,6 +227,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
 #if WITH_LIB_MAGENTA
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
+        CPU_STATS_INC(exceptions);
         mx_excp_type_t excp_type = MX_EXCP_FATAL_PAGE_FAULT;
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
             excp_type = MX_EXCP_UNALIGNED_ACCESS;
@@ -272,12 +277,10 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
             break;
         case 0b100000: /* instruction abort from lower level */
         case 0b100001: /* instruction abort from same level */
-            CPU_STATS_INC(exceptions);
             arm64_instruction_abort_handler(iframe, exception_flags, esr);
             break;
         case 0b100100: /* data abort from lower level */
         case 0b100101: /* data abort from same level */
-            CPU_STATS_INC(exceptions);
             arm64_data_abort_handler(iframe, exception_flags, esr);
             break;
         default: {

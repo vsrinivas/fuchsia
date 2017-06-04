@@ -109,6 +109,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
     printf("cpu    load"
             " sched (cs ylds pmpts irq_pmpts)"
             " excep"
+            "    pf"
             "  sysc"
             " ints (hw  tmr tmr_cb)"
             " ipi (rs  gen)\n"
@@ -135,6 +136,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                " %9lu %4lu %5lu %9lu"
                " %6lu"
                " %5lu"
+               " %5lu"
                " %8lu %4lu %6lu"
                " %8lu %4lu"
                "\n",
@@ -145,6 +147,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                percpu[i].stats.preempts - old_stats[i].preempts,
                percpu[i].stats.irq_preempts - old_stats[i].irq_preempts,
                percpu[i].stats.exceptions - old_stats[i].exceptions,
+               percpu[i].stats.page_faults - old_stats[i].page_faults,
                percpu[i].stats.syscalls - old_stats[i].syscalls,
                percpu[i].stats.interrupts - old_stats[i].interrupts,
                percpu[i].stats.timer_ints - old_stats[i].timer_ints,

@@ -10,6 +10,7 @@
 #include <magenta/compiler.h>
 #include <sys/types.h>
 #include <kernel/thread.h>
+#include <kernel/stats.h>
 #include <kernel/timer.h>
 
 __BEGIN_CDECLS
@@ -24,26 +25,7 @@ struct percpu {
 #endif
 
     /* thread/cpu level statistics */
-    struct cpu_stats {
-        lk_time_t idle_time;
-        lk_time_t last_idle_timestamp;
-        ulong reschedules;
-        ulong context_switches;
-        ulong irq_preempts;
-        ulong preempts;
-        ulong yields;
-
-        /* cpu level interrupts and exceptions */
-        ulong interrupts; /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
-        ulong timer_ints; /* timer interrupts */
-        ulong timers; /* timer callbacks */
-        ulong exceptions; /* exceptions such as page fault or undefined opcode */
-        ulong syscalls;
-
-        /* inter-processor interrupts */
-        ulong reschedule_ipis;
-        ulong generic_ipis;
-    } stats;
+    struct cpu_stats stats;
 
     /* per cpu idle thread */
     thread_t idle_thread;

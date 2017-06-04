@@ -303,6 +303,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
 #if WITH_LIB_MAGENTA
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
+        CPU_STATS_INC(exceptions);
         struct arch_exception_context context = { true, frame, va };
         return call_magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT,
                                               &context, frame);
@@ -390,7 +391,7 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
 
         case X86_INT_PAGE_FAULT:
-            CPU_STATS_INC(exceptions);
+            CPU_STATS_INC(page_faults);
             if (x86_pfe_handler(frame) != NO_ERROR)
                 x86_fatal_pfe_handler(frame, x86_get_cr2());
             break;
