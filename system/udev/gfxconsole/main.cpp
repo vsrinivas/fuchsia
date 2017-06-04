@@ -30,6 +30,8 @@
 
 #if !BUILD_FOR_TEST
 #include <launchpad/launchpad.h>
+#include <magenta/device/pty.h>
+#include <port/port.h>
 #endif
 
 #define VCDEBUG 1
@@ -312,35 +314,22 @@ static int input_watcher_thread(void* arg) {
     return -1;
 }
 
-static int log_reader_thread(void* arg) {
-    auto vc = reinterpret_cast<vc_t*>(arg);
-    mx_handle_t h;
+static vc_t* log_vc;
+static mx_koid_t proc_koid;
 
-    mx_koid_t koid = 0;
-    mx_info_handle_basic_t info;
-    if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC, &info,
-                           sizeof(info), NULL, NULL) == NO_ERROR) {
-        koid = info.koid;
-    }
-
-    if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
-        printf("vc log listener: cannot open log\n");
-        return -1;
-    }
-
+static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     char buf[MX_LOG_RECORD_MAX];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
     mx_status_t status;
     for (;;) {
-        if ((status = mx_log_read(h, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
+        if ((status = mx_log_read(ph->handle, MX_LOG_RECORD_MAX, rec, 0)) < 0) {
             if (status == ERR_SHOULD_WAIT) {
-                mx_object_wait_one(h, MX_LOG_READABLE, MX_TIME_INFINITE, NULL);
-                continue;
+                return NO_ERROR;
             }
             break;
         }
         // don't print log messages from ourself
-        if (rec->pid == koid) {
+        if (rec->pid == proc_koid) {
             continue;
         }
         char tmp[64];
@@ -350,20 +339,20 @@ static int log_reader_thread(void* arg) {
                  rec->pid, rec->tid);
         {
             mxtl::AutoLock lock(&g_vc_lock);
-            vc_write(vc, tmp, strlen(tmp), 0);
-            vc_write(vc, rec->data, rec->datalen, 0);
+            vc_write(log_vc, tmp, strlen(tmp), 0);
+            vc_write(log_vc, rec->data, rec->datalen, 0);
             if ((rec->datalen == 0) ||
                 (rec->data[rec->datalen - 1] != '\n')) {
-                vc_write(vc, "\n", 1, 0);
+                vc_write(log_vc, "\n", 1, 0);
             }
         }
     }
 
     const char* oops = "<<LOG ERROR>>\n";
     mxtl::AutoLock lock(&g_vc_lock);
-    vc_write(vc, oops, strlen(oops), 0);
+    vc_write(log_vc, oops, strlen(oops), 0);
 
-    return 0;
+    return status;
 }
 
 static int battery_poll_thread(void* arg) {
@@ -436,8 +425,6 @@ static int battery_watcher_thread(void* arg) {
     close(dirfd);
     return 0;
 }
-
-#include <magenta/device/pty.h>
 
 int mkpty(vc_t* vc, int fd[2]) {
     fd[0] = open("/dev/misc/ptmx", O_RDWR);
@@ -549,6 +536,30 @@ static void set_owns_display(bool acquired) {
     }
 }
 
+static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+    mxtl::AutoLock lock(&g_vc_lock);
+
+    // If we owned it, we've been notified of losing it, or the other way 'round
+    g_vc_owns_display = !g_vc_owns_display;
+
+    // If we've gained it, repaint
+    // In both cases adjust waitfor to wait for the opposite
+    if (g_vc_owns_display) {
+        ph->waitfor = MX_USER_SIGNAL_1;
+        if (g_active_vc) {
+            vc_gfx_invalidate_all(g_active_vc);
+        }
+    } else {
+        ph->waitfor = MX_USER_SIGNAL_0;
+    }
+
+    return NO_ERROR;
+}
+
+static port_t port;
+static port_handler_t ownership_ph;
+static port_handler_t log_ph;
+
 int main(int argc, char** argv) {
     bool keep_log = false;
     while (argc > 1) {
@@ -557,6 +568,10 @@ int main(int argc, char** argv) {
         }
         argc--;
         argv++;
+    }
+
+    if (port_init(&port) < 0) {
+        return -1;
     }
 
     int fd;
@@ -570,17 +585,30 @@ int main(int argc, char** argv) {
     g_fb_fd = fd;
 
     // create initial console for debug log
-    vc_t* vc;
-    {
-        mxtl::AutoLock lock(&g_vc_lock);
-        if (vc_create(&vc) != NO_ERROR) {
-            return -1;
-        }
+    if (vc_create(&log_vc) != NO_ERROR) {
+        return -1;
     }
-    thrd_t t;
-    thrd_create_with_name(&t, log_reader_thread, vc, "vc-log-reader");
+
+    // Get our process koid so the log reader can
+    // filter out our own debug messages from the log
+    mx_info_handle_basic_t info;
+    if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC, &info,
+                           sizeof(info), NULL, NULL) == NO_ERROR) {
+        proc_koid = info.koid;
+    }
+
+    // TODO: receive from launching process
+    if (mx_log_create(MX_LOG_FLAG_READABLE, &log_ph.handle) < 0) {
+        printf("vc log listener: cannot open log\n");
+        return -1;
+    }
+
+    log_ph.func = log_reader_cb;
+    log_ph.waitfor = MX_LOG_READABLE;
+    port_wait(&port, &log_ph);
 
     // start a thread to listen for new input devices
+    thrd_t t;
     int ret = thrd_create_with_name(&t, input_watcher_thread, NULL,
                                     "vc-input-watcher");
     if (ret != thrd_success) {
@@ -592,34 +620,22 @@ int main(int argc, char** argv) {
 
     setenv("TERM", "xterm", 1);
 
-    thrd_create_with_name(&t, keep_log ? shell_thread : shell_thread_1st, vc, "vc-shell-reader");
-    thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
-    thrd_create_with_name(&t, shell_thread, vc, "vc-shell-reader");
+    thrd_create_with_name(&t, keep_log ? shell_thread : shell_thread_1st, NULL, "vc-shell-reader");
+    thrd_create_with_name(&t, shell_thread, NULL, "vc-shell-reader");
+    thrd_create_with_name(&t, shell_thread, NULL, "vc-shell-reader");
 
     mx_handle_t e = MX_HANDLE_INVALID;
     ioctl_display_get_ownership_change_event(fd, &e);
 
-    for (;;) {
-        mx_status_t r;
-        if (g_vc_owns_display) {
-            if ((r = mx_object_wait_one(e, MX_USER_SIGNAL_1, MX_TIME_INFINITE, NULL)) < 0) {
-                if (r != ERR_TIMED_OUT) {
-                    break;
-                }
-            }
-            set_owns_display(false);
-        } else {
-            if ((r = mx_object_wait_one(e, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL)) < 0) {
-                if (r != ERR_TIMED_OUT) {
-                    break;
-                }
-            }
-            set_owns_display(true);
-        }
+    if (e != MX_HANDLE_INVALID) {
+        ownership_ph.func = ownership_ph_cb;
+        ownership_ph.handle = e;
+        ownership_ph.waitfor = MX_USER_SIGNAL_1;
+        port_wait(&port, &ownership_ph);
     }
 
-    //TODO: wait for and acquire a new display
-    printf("vc: DISCONNECT\n");
-    return 0;
+    mx_status_t r = port_dispatch(&port, MX_TIME_INFINITE, false);
+    printf("vc: port failure: %d\n", r);
+    return -1;
 }
 #endif
