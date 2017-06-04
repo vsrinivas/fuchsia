@@ -45,7 +45,7 @@ static vc_t* g_active_vc;
 static unsigned g_active_vc_index;
 static vc_battery_info_t g_battery_info;
 
-static mx_status_t vc_set_active_console(unsigned console);
+static mx_status_t vc_set_active(int num, vc_t* vc);
 
 static void vc_toggle_framebuffer();
 
@@ -57,14 +57,7 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
     switch (keycode) {
     case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
         if (modifiers & MOD_ALT) {
-            vc_set_active_console(keycode - HID_USAGE_KEY_F1);
-            return true;
-        }
-        break;
-
-    case HID_USAGE_KEY_F11:
-        if (g_active_vc && (modifiers & MOD_ALT)) {
-            vc_set_fullscreen(g_active_vc, !(g_active_vc->flags & VC_FLAG_FULLSCREEN));
+            vc_set_active(keycode - HID_USAGE_KEY_F1, NULL);
             return true;
         }
         break;
@@ -72,9 +65,9 @@ static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
     case HID_USAGE_KEY_TAB:
         if (modifiers & MOD_ALT) {
             if (modifiers & MOD_SHIFT) {
-                vc_set_active_console(g_active_vc_index == 0 ? g_vc_count - 1 : g_active_vc_index - 1);
+                vc_set_active(g_active_vc_index == 0 ? g_vc_count - 1 : g_active_vc_index - 1, NULL);
             } else {
-                vc_set_active_console(g_active_vc_index == g_vc_count - 1 ? 0 : g_active_vc_index + 1);
+                vc_set_active(g_active_vc_index == g_vc_count - 1 ? 0 : g_active_vc_index + 1, NULL);
             }
             return true;
         }
@@ -148,52 +141,27 @@ static bool vc_handle_device_control_keys(uint8_t keycode, int modifiers){
     return false;
 }
 
-static void __vc_set_active(vc_t* vc, unsigned index) {
-    if (g_active_vc)
-        g_active_vc->active = false;
-    vc->active = true;
-    g_active_vc = vc;
-    g_active_vc->flags &= ~VC_FLAG_HASOUTPUT;
-    g_active_vc_index = index;
-}
-
-static mx_status_t vc_set_console_to_active(vc_t* to_vc) {
-    if (to_vc == NULL)
-        return ERR_INVALID_ARGS;
-
-    unsigned i = 0;
+static mx_status_t vc_set_active(int num, vc_t* to_vc) {
     vc_t* vc = NULL;
-
+    int i = 0;
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
-        if (to_vc == vc)
-            break;
+        if ((num == i) || (to_vc == vc)) {
+            if (vc == g_active_vc) {
+                return NO_ERROR;
+            }
+            if (g_active_vc) {
+                g_active_vc->active = false;
+            }
+            vc->active = true;
+            vc->flags &= ~VC_FLAG_HASOUTPUT;
+            g_active_vc = vc;
+            g_active_vc_index = i;
+            vc_render(vc);
+            return NO_ERROR;
+        }
         i++;
     }
-    if (i == g_vc_count) {
-        return ERR_INVALID_ARGS;
-    }
-    __vc_set_active(to_vc, i);
-    vc_render(g_active_vc);
-    return NO_ERROR;
-}
-
-static mx_status_t vc_set_active_console(unsigned console) {
-    if (console >= g_vc_count)
-        return ERR_INVALID_ARGS;
-
-    unsigned i = 0;
-    vc_t* vc = NULL;
-    list_for_every_entry (&g_vc_list, vc, vc_t, node) {
-        if (i == console)
-            break;
-        i++;
-    }
-    if (vc == g_active_vc) {
-        return NO_ERROR;
-    }
-    __vc_set_active(vc, console);
-    vc_render(g_active_vc);
-    return NO_ERROR;
+    return ERR_NOT_FOUND;
 }
 
 void vc_get_status_line(char* str, int n) {
@@ -233,32 +201,12 @@ static void vc_destroy(vc_t* vc) {
         if (g_active_vc_index >= g_vc_count) {
             g_active_vc_index = g_vc_count - 1;
         }
-    }
-
-    // need to fixup g_active_vc and g_active_vc_index after deletion
-    vc_t* d = NULL;
-    unsigned i = 0;
-    list_for_every_entry (&g_vc_list, d, vc_t, node) {
-        if (g_active_vc) {
-            if (d == g_active_vc) {
-                g_active_vc_index = i;
-                break;
-            }
-        } else {
-            if (i == g_active_vc_index) {
-                __vc_set_active(d, i);
-                break;
-            }
-        }
-        i++;
+        vc_set_active(g_active_vc_index, NULL);
+    } else if (g_active_vc) {
+        vc_render(g_active_vc);
     }
 
     vc_free(vc);
-
-    // redraw the status line, or the full screen
-    if (g_active_vc) {
-        vc_render(g_active_vc);
-    }
 }
 
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
@@ -301,7 +249,7 @@ static mx_status_t vc_create(vc_t** vc_out) {
 
     // make this the active vc if it's the first one
     if (!g_active_vc) {
-        vc_set_active_console(0);
+        vc_set_active(-1, vc);
     } else {
         vc_render(g_active_vc);
     }
@@ -553,7 +501,7 @@ static int _shell_thread(void* arg, bool make_active) {
             // only do this the first time, not on shell restart
             make_active = false;
             mxtl::AutoLock lock(&g_vc_lock);
-            vc_set_console_to_active(vc);
+            vc_set_active(-1, vc);
         }
 
         vc->client_fd = fd[0];
