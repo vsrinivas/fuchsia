@@ -12,7 +12,7 @@ namespace view_manager {
 class ViewRegistry2 : public ViewRegistry {
  public:
   explicit ViewRegistry2(app::ApplicationContext* application_context,
-                         mozart2::ComposerPtr composer);
+                         mozart2::SceneManagerPtr scene_manager);
 
  private:
   // Implement ViewRegistry pure virtual methods.
@@ -22,7 +22,7 @@ class ViewRegistry2 : public ViewRegistry {
                                    ViewState* view_state) override;
   std::unique_ptr<ViewImpl> CreateViewImpl() override;
 
-  mozart2::ComposerPtr scene_manager_;
+  mozart2::SceneManagerPtr scene_manager_;
 };
 
 }  // namespace view_manager

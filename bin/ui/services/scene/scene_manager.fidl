@@ -6,8 +6,7 @@ module mozart2;
 
 import "apps/mozart/services/scene/session.fidl";
 
-// TODO(jjosh): rename to SceneManager.
-[ServiceName="mozart2::Composer"]
-interface Composer {
+[ServiceName="mozart2::SceneManager"]
+interface SceneManager {
   CreateSession(Session& session, SessionListener? listener);
 };

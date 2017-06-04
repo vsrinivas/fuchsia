@@ -11,7 +11,7 @@
 namespace view_manager {
 
 ViewRegistry2::ViewRegistry2(app::ApplicationContext* application_context,
-                             mozart2::ComposerPtr scene_manager)
+                             mozart2::SceneManagerPtr scene_manager)
     : ViewRegistry(application_context),
       scene_manager_(std::move(scene_manager)) {}
 

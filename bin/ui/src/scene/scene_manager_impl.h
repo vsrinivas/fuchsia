@@ -21,7 +21,7 @@ namespace scene {
 
 class Renderer;
 
-class SceneManagerImpl : public mozart2::Composer, public SessionContext {
+class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
  public:
   SceneManagerImpl(vk::Device vk_device,
                    escher::ResourceLifePreserver* life_preserver,
@@ -30,7 +30,7 @@ class SceneManagerImpl : public mozart2::Composer, public SessionContext {
   SceneManagerImpl();
   ~SceneManagerImpl() override;
 
-  // mozart2::Composer interface methods.
+  // mozart2::SceneManager interface methods.
   void CreateSession(
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;

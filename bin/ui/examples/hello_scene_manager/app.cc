@@ -28,7 +28,7 @@ class HelloSceneManagerApp {
         loop_(mtl::MessageLoop::GetCurrent()) {
     // Launch SceneManager.
     auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = "file://system/apps/hello_composer_service";
+    launch_info->url = "file://system/apps/hello_scene_manager_service";
     launch_info->services = services_.NewRequest();
     application_context_->launcher()->CreateApplication(
         std::move(launch_info), controller_.NewRequest());
@@ -172,7 +172,7 @@ class HelloSceneManagerApp {
   std::unique_ptr<app::ApplicationContext> application_context_;
   app::ApplicationControllerPtr controller_;
   app::ServiceProviderPtr services_;
-  mozart2::ComposerPtr scene_manager_;
+  mozart2::SceneManagerPtr scene_manager_;
   mtl::MessageLoop* loop_;
   ResourceId resource_id_counter_ = 0;
 };

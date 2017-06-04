@@ -15,8 +15,8 @@ SceneManagerApp::SceneManagerApp(Params* params)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   tracing::InitializeTracer(application_context_.get(), {"scene_manager"});
 
-  application_context_->outgoing_services()->AddService<mozart2::Composer>(
-      [this](fidl::InterfaceRequest<mozart2::Composer> request) {
+  application_context_->outgoing_services()->AddService<mozart2::SceneManager>(
+      [this](fidl::InterfaceRequest<mozart2::SceneManager> request) {
         FTL_LOG(INFO) << "Accepting connection to new SceneManagerImpl";
         bindings_.AddBinding(std::make_unique<SceneManagerImpl>(),
                              std::move(request));

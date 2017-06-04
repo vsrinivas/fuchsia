@@ -76,8 +76,10 @@ class HelloSceneManagerService : public Demo {
 
  private:
   void AddOutgoingServices() {
-    application_context_->outgoing_services()->AddService<mozart2::Composer>(
-        [this](fidl::InterfaceRequest<mozart2::Composer> request) {
+    application_context_->outgoing_services()
+        ->AddService<mozart2::SceneManager>([this](fidl::InterfaceRequest<
+                                                   mozart2::SceneManager>
+                                                       request) {
           if (binding_.is_bound()) {
             FTL_LOG(WARNING) << "HelloSceneManagerService: SceneManager "
                                 "already bound to client";
@@ -110,7 +112,7 @@ class HelloSceneManagerService : public Demo {
   escher::VulkanSwapchainHelper swapchain_helper_;
   escher::Stage stage_;
   std::unique_ptr<SceneManagerImpl> scene_manager_;
-  fidl::Binding<mozart2::Composer> binding_;
+  fidl::Binding<mozart2::SceneManager> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloSceneManagerService);
 };

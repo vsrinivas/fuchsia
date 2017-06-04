@@ -67,8 +67,8 @@ class SceneManagerTest : public mozart::test::TestWithMessageLoop {
   SessionPtr NewSession();
 
  protected:
-  mozart2::ComposerPtr manager_;
-  std::unique_ptr<fidl::Binding<mozart2::Composer>> manager_binding_;
+  mozart2::SceneManagerPtr manager_;
+  std::unique_ptr<fidl::Binding<mozart2::SceneManager>> manager_binding_;
   std::unique_ptr<SceneManagerImplForTest> manager_impl_;
   std::unique_ptr<mtl::Thread> thread_;
 };

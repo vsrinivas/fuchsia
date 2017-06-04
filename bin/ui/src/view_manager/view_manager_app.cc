@@ -20,14 +20,14 @@ ViewManagerApp::ViewManagerApp(Params* params)
   tracing::InitializeTracer(application_context_.get(), {"view_manager"});
 
   if (params->use_composer2()) {
-    mozart2::ComposerPtr composer =
-        application_context_->ConnectToEnvironmentService<mozart2::Composer>();
-    composer.set_connection_error_handler([] {
-      FTL_LOG(ERROR) << "Exiting due to composer connection error.";
+    mozart2::SceneManagerPtr scene_manager =
+        application_context_->ConnectToEnvironmentService<mozart2::SceneManager>();
+    scene_manager.set_connection_error_handler([] {
+      FTL_LOG(ERROR) << "Exiting due to SceneManager connection error.";
       exit(1);
     });
     registry_.reset(
-        new ViewRegistry2(application_context_.get(), std::move(composer)));
+        new ViewRegistry2(application_context_.get(), std::move(scene_manager)));
   } else {
     mozart::CompositorPtr compositor =
         application_context_->ConnectToEnvironmentService<mozart::Compositor>();

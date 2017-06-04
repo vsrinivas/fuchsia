@@ -28,7 +28,7 @@ class SceneManagerApp {
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
 
-  fidl::BindingSet<mozart2::Composer, std::unique_ptr<SceneManagerImpl>>
+  fidl::BindingSet<mozart2::SceneManager, std::unique_ptr<SceneManagerImpl>>
       bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
