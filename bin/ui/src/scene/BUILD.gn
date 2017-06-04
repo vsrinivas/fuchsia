@@ -7,28 +7,11 @@ import("//apps/mozart/config.gni")
 group("scene") {
   deps = [
     ":scene_manager_service",
-    ":composer_service",
   ]
 }
 
 executable("scene_manager_service") {
   output_name = "scene_manager_service"
-
-  sources = [
-    "scene_manager_app.cc",
-    "scene_manager_app.h",
-    "main.cc",
-  ]
-
-  deps = [
-    ":common",
-  ]
-}
-
-# TODO(jjosh): This is a placeholder to keep things working until
-# "composer_service" is no longer mentioned in packages/gn/mozart, etc.
-executable("composer_service") {
-  output_name = "composer_service"
 
   sources = [
     "scene_manager_app.cc",
@@ -131,17 +114,7 @@ source_set("testing_common") {
   ]
 }
 
-
-group("apptests") {
-  testonly = true
-
-  deps = [
-    ":doomed_composer_apptests",
-    ":scene_manager_apptests",
-  ]
-}
-
-executable("scene_manager_apptests") {
+executable("apptests") {
   output_name = "scene_manager_apptests"
 
   testonly = true
@@ -157,56 +130,8 @@ executable("scene_manager_apptests") {
   ]
 }
 
-# TODO(jjosh): This is a placeholder to keep things working until
-# "composer_apptests" is no longer mentioned in packages/gn/mozart, etc.
-executable("doomed_composer_apptests") {
-  output_name = "composer_apptests"
-
-  testonly = true
-
-  sources = [
-    "tests/scene_manager_apptest.cc",
-    "tests/scene_manager_test.cc",
-    "tests/scene_manager_test.h",
-  ]
-
-  deps = [
-    ":testing_common",
-  ]
-}
-
-group("unittests") {
-  testonly = true
-
-  deps = [
-    ":doomed_composer_unittests",
-    ":scene_manager_unittests",
-  ]
-}
-
-executable("scene_manager_unittests") {
+executable("unittests") {
   output_name = "scene_manager_unittests"
-
-  testonly = true
-
-  sources = [
-    "tests/node_unittest.cc",
-    "tests/session_test.cc",
-    "tests/session_test.h",
-    "tests/session_unittest.cc",
-    "tests/shape_unittest.cc",
-    "tests/tag_unittest.cc",
-  ]
-
-  deps = [
-    ":testing_common",
-  ]
-}
-
-# TODO(jjosh): This is a placeholder to keep things working until
-# "composer_unittests" is no longer mentioned in packages/gn/mozart, etc.
-executable("doomed_composer_unittests") {
-  output_name = "composer_unittests"
 
   testonly = true
 

@@ -19,20 +19,20 @@
       }
     },
     {
-      "name":"composer_apptests",
-      "exec":"/system/test/composer_apptests",
+      "name":"scene_manager_apptests",
+      "exec":"/system/test/scene_manager_apptests",
       "copy":{
         "/system/test":[
-          "composer_apptests"
+          "scene_manager_apptests"
         ]
       }
     },
     {
-      "name":"composer_unittests",
-      "exec":"/system/test/composer_unittests",
+      "name":"scene_manager_unittests",
+      "exec":"/system/test/scene_manager_unittests",
       "copy":{
         "/system/test":[
-          "composer_unittests"
+          "scene_manager_unittests"
         ]
       }
     },

@@ -41,11 +41,11 @@ void SceneManagerTest::TearDown() {
 }
 
 SessionHandlerForTest::SessionHandlerForTest(
-    SceneManagerImpl* composer,
+    SceneManagerImpl* scene_manager,
     SessionId session_id,
     ::fidl::InterfaceRequest<mozart2::Session> request,
     ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
-    : SessionHandler(composer,
+    : SessionHandler(scene_manager,
                      session_id,
                      std::move(request),
                      std::move(listener)),

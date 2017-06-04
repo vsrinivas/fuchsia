@@ -32,9 +32,9 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
       }
     }
   }
-  // --use-composer2
-  if (command_line.HasOption("use-composer2")) {
-    use_composer2_ = true;
+  // --use-scene-manager / --use-compositor
+  if (command_line.HasOption("use-scene-manager")) {
+    use_scene_manager_ = true;
   }
   return true;
 }

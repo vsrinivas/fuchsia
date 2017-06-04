@@ -23,11 +23,11 @@ class Params {
 
   AssociatesVector TakeAssociates() { return std::move(associates_); }
 
-  bool use_composer2() const { return use_composer2_; }
+  bool use_scene_manager() const { return use_scene_manager_; }
 
  private:
   AssociatesVector associates_;
-  bool use_composer2_ = false;
+  bool use_scene_manager_ = false;
 };
 
 }  // namespace view_manager
