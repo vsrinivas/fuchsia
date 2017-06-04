@@ -47,7 +47,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
             if (status == ERR_NOT_FOUND) {
                 // if there's no root namespace, fail back to the legacy handles
                 add_mxio(lp, handles, types, mxio_clone_root(handles, types));
-                if ((status = mxio_clone_svcroot(handles, types)) == NO_ERROR) {
+                if ((status = mxio_clone_svcroot(handles, types)) > 0) {
                     add_mxio(lp, handles, types, status);
                 }
             } else {
@@ -56,7 +56,7 @@ mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
             }
         }
     }
-    if (what & LP_CLONE_MXIO_CWD && (status = mxio_clone_cwd(handles, types)) == NO_ERROR) {
+    if (what & LP_CLONE_MXIO_CWD && (status = mxio_clone_cwd(handles, types)) > 0) {
         add_mxio(lp, handles, types, status);
     }
     if (what & LP_CLONE_MXIO_STDIO) {
