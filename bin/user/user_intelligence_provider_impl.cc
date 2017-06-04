@@ -95,6 +95,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/module_suggester");
   StartAgent("file:///system/apps/agents/module_suggester.dartx");
   StartAgent("file:///system/apps/concert_agent");
+  StartAgent("file:///system/apps/music_artist_agent");
   StartAgent("file:///system/apps/agents/maxwell_btl");
   StartAgent("file:///system/apps/agents/maxwell_entity_focuser");
   StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
