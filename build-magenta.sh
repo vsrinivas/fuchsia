@@ -33,6 +33,7 @@ build() {
   case "${target}" in
     "x86_64") local magenta_target="magenta-pc-x86-64" ;;
     "aarch64") local magenta_target="magenta-qemu-arm64" ;;
+    "rpi3") local magenta_target="magenta-rpi3-arm64" ;;
     "*") echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 

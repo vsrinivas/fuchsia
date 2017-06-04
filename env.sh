@@ -130,6 +130,7 @@ function mset() {
     rpi3)
       export MAGENTA_PROJECT=magenta-rpi3-arm64
       export MAGENTA_ARCH=arm64
+      export MAGENTA_BUILD_TARGET=rpi3
       ;;
     *)
       mset-usage
