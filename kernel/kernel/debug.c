@@ -77,17 +77,17 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
             continue;
 
         printf("thread stats (cpu %u):\n", i);
-        printf("\ttotal idle time: %" PRIu64 "\n", percpu[i].thread_stats.idle_time);
+        printf("\ttotal idle time: %" PRIu64 "\n", percpu[i].stats.idle_time);
         printf("\ttotal busy time: %" PRIu64 "\n",
-               current_time() - percpu[i].thread_stats.idle_time);
-        printf("\treschedules: %lu\n", percpu[i].thread_stats.reschedules);
-        printf("\treschedule_ipis: %lu\n", percpu[i].thread_stats.reschedule_ipis);
-        printf("\tcontext_switches: %lu\n", percpu[i].thread_stats.context_switches);
-        printf("\tpreempts: %lu\n", percpu[i].thread_stats.preempts);
-        printf("\tyields: %lu\n", percpu[i].thread_stats.yields);
-        printf("\tinterrupts: %lu\n", percpu[i].thread_stats.interrupts);
-        printf("\ttimer interrupts: %lu\n", percpu[i].thread_stats.timer_ints);
-        printf("\ttimers: %lu\n", percpu[i].thread_stats.timers);
+               current_time() - percpu[i].stats.idle_time);
+        printf("\treschedules: %lu\n", percpu[i].stats.reschedules);
+        printf("\treschedule_ipis: %lu\n", percpu[i].stats.reschedule_ipis);
+        printf("\tcontext_switches: %lu\n", percpu[i].stats.context_switches);
+        printf("\tpreempts: %lu\n", percpu[i].stats.preempts);
+        printf("\tyields: %lu\n", percpu[i].stats.yields);
+        printf("\tinterrupts: %lu\n", percpu[i].stats.interrupts);
+        printf("\ttimer interrupts: %lu\n", percpu[i].stats.timer_ints);
+        printf("\ttimers: %lu\n", percpu[i].stats.timers);
     }
 
     return 0;
@@ -95,7 +95,7 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
 
 static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
 {
-    static struct thread_stats old_stats[SMP_MAX_CPUS];
+    static struct cpu_stats old_stats[SMP_MAX_CPUS];
     static lk_time_t last_idle_time[SMP_MAX_CPUS];
 
     printf("cpu    load"
@@ -110,12 +110,12 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         if (!mp_is_cpu_active(i))
             continue;
 
-        lk_time_t idle_time = percpu[i].thread_stats.idle_time;
+        lk_time_t idle_time = percpu[i].stats.idle_time;
 
         /* if the cpu is currently idle, add the time since it went idle up until now to the idle counter */
         bool is_idle = !!mp_is_cpu_idle(i);
         if (is_idle) {
-            idle_time += current_time() - percpu[i].thread_stats.last_idle_timestamp;
+            idle_time += current_time() - percpu[i].stats.last_idle_timestamp;
         }
 
         lk_time_t delta_time = idle_time - last_idle_time[i];
@@ -132,20 +132,20 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                "\n",
                i,
                busypercent / 100, busypercent % 100,
-               percpu[i].thread_stats.context_switches - old_stats[i].context_switches,
-               percpu[i].thread_stats.yields - old_stats[i].yields,
-               percpu[i].thread_stats.preempts - old_stats[i].preempts,
-               percpu[i].thread_stats.irq_preempts - old_stats[i].irq_preempts,
-               percpu[i].thread_stats.exceptions - old_stats[i].exceptions,
-               percpu[i].thread_stats.syscalls - old_stats[i].syscalls,
-               percpu[i].thread_stats.interrupts - old_stats[i].interrupts,
-               percpu[i].thread_stats.timer_ints - old_stats[i].timer_ints,
-               percpu[i].thread_stats.timers - old_stats[i].timers,
-               percpu[i].thread_stats.reschedule_ipis - old_stats[i].reschedule_ipis,
-               percpu[i].thread_stats.generic_ipis - old_stats[i].generic_ipis
+               percpu[i].stats.context_switches - old_stats[i].context_switches,
+               percpu[i].stats.yields - old_stats[i].yields,
+               percpu[i].stats.preempts - old_stats[i].preempts,
+               percpu[i].stats.irq_preempts - old_stats[i].irq_preempts,
+               percpu[i].stats.exceptions - old_stats[i].exceptions,
+               percpu[i].stats.syscalls - old_stats[i].syscalls,
+               percpu[i].stats.interrupts - old_stats[i].interrupts,
+               percpu[i].stats.timer_ints - old_stats[i].timer_ints,
+               percpu[i].stats.timers - old_stats[i].timers,
+               percpu[i].stats.reschedule_ipis - old_stats[i].reschedule_ipis,
+               percpu[i].stats.generic_ipis - old_stats[i].generic_ipis
                );
 
-        old_stats[i] = percpu[i].thread_stats;
+        old_stats[i] = percpu[i].stats;
         last_idle_time[i] = idle_time;
     }
 

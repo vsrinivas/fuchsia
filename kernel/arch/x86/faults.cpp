@@ -343,25 +343,25 @@ void x86_exception_handler(x86_iframe_t *frame)
 
     switch (frame->vector) {
         case X86_INT_DEBUG:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             x86_debug_handler(frame);
             break;
         case X86_INT_NMI:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             x86_nmi_handler(frame);
             break;
         case X86_INT_BREAKPOINT:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             x86_breakpoint_handler(frame);
             break;
 
         case X86_INT_INVALID_OP:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             x86_invop_handler(frame);
             break;
 
         case X86_INT_DEVICE_NA:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             exception_die(frame, "device na fault\n");
             break;
 
@@ -369,7 +369,7 @@ void x86_exception_handler(x86_iframe_t *frame)
             x86_df_handler(frame);
             break;
         case X86_INT_FPU_FP_ERROR: {
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             uint16_t fsw;
             __asm__ __volatile__("fnstsw %0" : "=m" (fsw));
             TRACEF("fsw 0x%hx\n", fsw);
@@ -377,7 +377,7 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
         }
         case X86_INT_SIMD_FP_ERROR: {
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             uint32_t mxcsr;
             __asm__ __volatile__("stmxcsr %0" : "=m" (mxcsr));
             TRACEF("mxcsr 0x%x\n", mxcsr);
@@ -385,12 +385,12 @@ void x86_exception_handler(x86_iframe_t *frame)
             break;
         }
         case X86_INT_GP_FAULT:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             x86_gpf_handler(frame);
             break;
 
         case X86_INT_PAGE_FAULT:
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             if (x86_pfe_handler(frame) != NO_ERROR)
                 x86_fatal_pfe_handler(frame, x86_get_cr2());
             break;
@@ -425,7 +425,7 @@ void x86_exception_handler(x86_iframe_t *frame)
         }
         /* pass all other non-Intel defined irq vectors to the platform */
         case X86_INT_PLATFORM_BASE  ... X86_INT_PLATFORM_MAX: {
-            THREAD_STATS_INC(interrupts);
+            CPU_STATS_INC(interrupts);
             ret = platform_irq(frame);
             break;
         }

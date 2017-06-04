@@ -254,16 +254,16 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
 
     switch (ec) {
         case 0b000000: /* unknown reason */
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             arm64_unknown_handler(iframe, exception_flags, esr);
             break;
         case 0b111000: /* BRK from arm32 */
         case 0b111100: /* BRK from arm64 */
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             arm64_brk_handler(iframe, exception_flags, esr);
             break;
         case 0b000111: /* floating point */
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             arm64_fpu_handler(iframe, exception_flags, esr);
             break;
         case 0b010001: /* syscall from arm32 */
@@ -272,16 +272,16 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
             break;
         case 0b100000: /* instruction abort from lower level */
         case 0b100001: /* instruction abort from same level */
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             arm64_instruction_abort_handler(iframe, exception_flags, esr);
             break;
         case 0b100100: /* data abort from lower level */
         case 0b100101: /* data abort from same level */
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             arm64_data_abort_handler(iframe, exception_flags, esr);
             break;
         default: {
-            THREAD_STATS_INC(exceptions);
+            CPU_STATS_INC(exceptions);
             /* TODO: properly decode more of these */
             if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
                 /* trapped inside the kernel, this is bad */

@@ -66,11 +66,11 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
     ktrace_tiny(TAG_SYSCALL_ENTER, ((uint32_t)syscall_num << 8) | arch_curr_cpu_num());
 
-    THREAD_STATS_INC(syscalls);
+    CPU_STATS_INC(syscalls);
 
     /* re-enable interrupts to maintain kernel preemptiveness
        This must be done after the above ktrace_tiny call, and after the
-       above THREAD_STATS_INC call as it also calls arch_curr_cpu_num. */
+       above CPU_STATS_INC call as it also calls arch_curr_cpu_num. */
     arch_enable_ints();
 
     LTRACEF_LEVEL(2, "num %" PRIu64 "\n", syscall_num);
@@ -107,11 +107,11 @@ inline x86_64_syscall_result do_syscall(uint64_t syscall_num, uint64_t ip,
                                         bool (*valid_pc)(uintptr_t), T make_call) {
     ktrace_tiny(TAG_SYSCALL_ENTER, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
 
-    THREAD_STATS_INC(syscalls);
+    CPU_STATS_INC(syscalls);
 
     /* re-enable interrupts to maintain kernel preemptiveness
        This must be done after the above ktrace_tiny call, and after the
-       above THREAD_STATS_INC call as it also calls arch_curr_cpu_num. */
+       above CPU_STATS_INC call as it also calls arch_curr_cpu_num. */
     arch_enable_ints();
 
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",

@@ -205,7 +205,7 @@ decoded:
         struct int_handler_struct* handler = pdev_get_int_handler(vector);
         if (handler && handler->handler) {
             if (vector < ARM_IRQ_LOCAL_BASE) {
-                THREAD_STATS_INC(interrupts);
+                CPU_STATS_INC(interrupts);
             }
             ret = handler->handler(handler->arg);
         } else {

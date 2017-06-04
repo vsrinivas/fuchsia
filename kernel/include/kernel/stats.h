@@ -7,5 +7,5 @@
 
 #include <kernel/percpu.h>
 
-#define THREAD_STATS_INC(name) do { __atomic_fetch_add(&get_local_percpu()->thread_stats.name, 1u, __ATOMIC_RELAXED); } while(0)
+#define CPU_STATS_INC(name) do { __atomic_fetch_add(&get_local_percpu()->stats.name, 1u, __ATOMIC_RELAXED); } while(0)
 

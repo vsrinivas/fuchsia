@@ -266,7 +266,7 @@ static enum handler_return gic_handle_irq(iframe* frame) {
 
     // tracking external hardware irqs in this variable
     if (vector >= 32)
-        THREAD_STATS_INC(interrupts);
+        CPU_STATS_INC(interrupts);
 
     uint cpu = arch_curr_cpu_num();
 

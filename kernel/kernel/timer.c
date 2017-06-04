@@ -241,7 +241,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
     DEBUG_ASSERT(arch_ints_disabled());
 
-    THREAD_STATS_INC(timer_ints);
+    CPU_STATS_INC(timer_ints);
 
     uint cpu = arch_curr_cpu_num();
 
@@ -274,7 +274,7 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
         LTRACEF("dequeued timer %p, scheduled %" PRIu64 " periodic %" PRIu64 "\n", timer, timer->scheduled_time, timer->period);
 
-        THREAD_STATS_INC(timers);
+        CPU_STATS_INC(timers);
 
         LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
         if (timer->callback(timer, now, timer->arg) == INT_RESCHEDULE)

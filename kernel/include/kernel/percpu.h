@@ -24,7 +24,7 @@ struct percpu {
 #endif
 
     /* thread/cpu level statistics */
-    struct thread_stats {
+    struct cpu_stats {
         lk_time_t idle_time;
         lk_time_t last_idle_timestamp;
         ulong reschedules;
@@ -43,7 +43,7 @@ struct percpu {
         /* inter-processor interrupts */
         ulong reschedule_ipis;
         ulong generic_ipis;
-    } thread_stats;
+    } stats;
 
     /* per cpu idle thread */
     thread_t idle_thread;

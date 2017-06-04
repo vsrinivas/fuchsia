@@ -715,7 +715,7 @@ void _thread_resched_internal(void)
     DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    THREAD_STATS_INC(reschedules);
+    CPU_STATS_INC(reschedules);
 
     /* pick a new thread to run */
     thread_t *newthread = sched_get_top_thread(cpu);
@@ -755,13 +755,13 @@ void _thread_resched_internal(void)
         mp_set_cpu_non_realtime(cpu);
     }
 
-    THREAD_STATS_INC(context_switches);
+    CPU_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
-        percpu[cpu].thread_stats.idle_time += now - percpu[cpu].thread_stats.last_idle_timestamp;
+        percpu[cpu].stats.idle_time += now - percpu[cpu].stats.last_idle_timestamp;
     }
     if (thread_is_idle(newthread)) {
-        percpu[cpu].thread_stats.last_idle_timestamp = now;
+        percpu[cpu].stats.last_idle_timestamp = now;
     }
 
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
@@ -847,7 +847,7 @@ void thread_yield(void)
 
     THREAD_LOCK(state);
 
-    THREAD_STATS_INC(yields);
+    CPU_STATS_INC(yields);
 
     sched_yield();
 
@@ -870,7 +870,7 @@ void thread_preempt(void)
 
     if (!thread_is_idle(current_thread)) {
         /* only track when a meaningful preempt happens */
-        THREAD_STATS_INC(irq_preempts);
+        CPU_STATS_INC(irq_preempts);
     }
 
     THREAD_LOCK(state);
