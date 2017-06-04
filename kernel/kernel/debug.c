@@ -58,9 +58,17 @@ usage:
     if (!strcmp(argv[1].str, "list")) {
         printf("thread list:\n");
         dump_all_threads(false);
+
+        /* reschedule to let debuglog potentially run */
+        if (!(flags & CMD_FLAG_PANIC))
+            thread_reschedule();
     } else if (!strcmp(argv[1].str, "list_full")) {
         printf("thread list:\n");
         dump_all_threads(true);
+
+        /* reschedule to let debuglog potentially run */
+        if (!(flags & CMD_FLAG_PANIC))
+            thread_reschedule();
     } else {
         printf("invalid args\n");
         goto usage;
@@ -149,7 +157,8 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         last_idle_time[i] = idle_time;
     }
 
-    return INT_NO_RESCHEDULE;
+    /* reschedule here to allow the debuglog a chance to run */
+    return INT_RESCHEDULE;
 }
 
 static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
