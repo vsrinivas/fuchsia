@@ -199,21 +199,6 @@ mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
     return NO_ERROR;
 }
 
-void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops) {
-    MX_DEBUG_ASSERT(!(dev->flags & DEV_FLAG_ADDED));
-    dev->protocol_id = proto_id;
-    dev->protocol_ops = proto_ops;
-}
-
-void devhost_device_set_bindable(mx_device_t* dev, bool bindable) {
-    MX_DEBUG_ASSERT(!(dev->flags & DEV_FLAG_ADDED));
-    if (bindable) {
-        dev->flags &= ~DEV_FLAG_UNBINDABLE;
-    } else {
-        dev->flags |= DEV_FLAG_UNBINDABLE;
-    }
-}
-
 #define DEFAULT_IF_NULL(ops,method) \
     if (ops->method == NULL) { \
         ops->method = default_##method; \

@@ -21,10 +21,6 @@
 
 
 // Handle IDs for USER0 handles
-#define ID_HDEVICE 0
-#define ID_HRPC 1
-#define ID_HACPI 2
-#define ID_HLAUNCHER 3
 #define ID_HJOBROOT 4
 
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
@@ -50,15 +46,12 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent,
                                const mx_device_prop_t* props, uint32_t prop_count,
                                const char* businfo, mx_handle_t resource);
 mx_status_t devhost_device_install(mx_device_t* dev);
-mx_status_t devhost_device_add_root(mx_device_t* dev);
 mx_status_t devhost_device_remove(mx_device_t* dev);
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname);
 mx_status_t devhost_device_rebind(mx_device_t* dev);
 mx_status_t devhost_device_create(mx_driver_t* drv, mx_device_t* parent,
                                   const char* name, void* ctx,
                                   mx_protocol_device_t* ops, mx_device_t** out);
-void devhost_device_set_protocol(mx_device_t* dev, uint32_t proto_id, void* proto_ops);
-void devhost_device_set_bindable(mx_device_t* dev, bool bindable);
 mx_status_t devhost_device_open_at(mx_device_t* dev, mx_device_t** out,
                                  const char* path, uint32_t flags);
 mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags);
@@ -86,17 +79,6 @@ mx_status_t devhost_add(mx_device_t* dev, mx_device_t* child,
                         const char* businfo, mx_handle_t resource,
                         const mx_device_prop_t* props, uint32_t prop_count);
 mx_status_t devhost_remove(mx_device_t* dev);
-mx_status_t devhost_add_internal(mx_device_t* parent,
-                                 const char* name, uint32_t protocol_id,
-                                 mx_handle_t* _hdevice, mx_handle_t* _hrpc);
-mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_handle_t hrpc);
-
-extern mxio_dispatcher_t* devhost_rio_dispatcher;
-
-
-// pci plumbing
-int devhost_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did);
-mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index);
 
 
 // device refcounts
@@ -106,8 +88,6 @@ static inline void dev_ref_acquire(mx_device_t* dev) {
 }
 
 mx_handle_t get_root_resource(void);
-mx_handle_t get_sysinfo_job_root(void);
-mx_handle_t get_app_launcher(void);
 
 mx_device_t* device_create_setup(mx_device_t* parent);
 

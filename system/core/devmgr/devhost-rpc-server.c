@@ -33,8 +33,6 @@
 #define CAN_WRITE(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_WRONLY))
 #define CAN_READ(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_RDONLY))
 
-mxio_dispatcher_t* devhost_rio_dispatcher;
-
 devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
     devhost_iostate_t* ios;
     if ((ios = calloc(1, sizeof(devhost_iostate_t))) == NULL) {

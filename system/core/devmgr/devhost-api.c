@@ -46,10 +46,11 @@ static mx_status_t _device_add(mx_driver_t* drv, mx_device_t* parent,
         return r;
     }
     if (args->proto_id) {
-        devhost_device_set_protocol(dev, args->proto_id, args->proto_ops);
+        dev->protocol_id = args->proto_id;
+        dev->protocol_ops = args->proto_ops;
     }
     if (args->flags & DEVICE_ADD_NON_BINDABLE) {
-        devhost_device_set_bindable(dev, false);
+        dev->flags |= DEV_FLAG_UNBINDABLE;
     }
 
     if (args->flags & DEVICE_ADD_BUSDEV) {
