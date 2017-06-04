@@ -17,28 +17,28 @@
             "bootfs_path": "apps/compositor_services_apptests"
         },
         {
-            "binary": "composer_service",
-            "bootfs_path": "apps/composer_service"
+            "binary": "scene_manager_service",
+            "bootfs_path": "apps/scene_manager_service"
         },
         {
-            "binary": "composer_apptests",
-            "bootfs_path": "test/composer_apptests"
+            "binary": "scene_manager_apptests",
+            "bootfs_path": "test/scene_manager_apptests"
         },
         {
-            "binary": "composer_unittests",
-            "bootfs_path": "test/composer_unittests"
+            "binary": "scene_manager_unittests",
+            "bootfs_path": "test/scene_manager_unittests"
         },
         {
             "binary": "geometry_util_unittests",
             "bootfs_path": "test/geometry_util_unittests"
         },
         {
-            "binary": "hello_composer",
-            "bootfs_path": "apps/hello_composer"
+            "binary": "hello_scene_manager",
+            "bootfs_path": "apps/hello_scene_manager"
         },
         {
-            "binary": "hello_composer_service",
-            "bootfs_path": "apps/hello_composer_service"
+            "binary": "hello_scene_manager_service",
+            "bootfs_path": "apps/hello_scene_manager_service"
         },
         {
             "binary": "hello_compositor",
