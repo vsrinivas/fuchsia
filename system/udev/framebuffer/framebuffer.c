@@ -247,18 +247,8 @@ static void fbi_release(void* ctx) {
     free(fbi);
 }
 
-static mx_status_t fb_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags);
-
-// Allow use of openat() to obtain another offscreen framebuffer from
-// an existing framebuffer instance
-static mx_status_t fbi_open_at(void* ctx, mx_device_t** out, const char* path, uint32_t flags) {
-    fbi_t* fbi = ctx;
-    return fb_open_at(fbi->fb, out, path, flags);
-}
-
 mx_protocol_device_t fbi_ops = {
     .version = DEVICE_OPS_VERSION,
-    .open_at = fbi_open_at,
     .ioctl = fbi_ioctl,
     .release = fbi_release,
 };
