@@ -553,7 +553,7 @@ static mx_status_t dc_add_device(device_t* parent,
     dev->ph.handle = handle[0];
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
-    if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
+    if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
         devfs_unpublish(dev);
         free(dev);
         return r;
@@ -895,7 +895,7 @@ static mx_status_t dh_create_device(device_t* dev, devhost_t* dh,
     dev->ph.handle = hrpc;
     dev->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     dev->ph.func = dc_handle_device;
-    if ((r = port_watch(&dc_port, &dev->ph)) < 0) {
+    if ((r = port_wait(&dc_port, &dev->ph)) < 0) {
         goto fail_watch;
     }
     dev->host = dh;
@@ -1136,9 +1136,9 @@ void coordinator(void) {
     for (;;) {
         mx_status_t status;
         if (list_is_empty(&list_pending_work)) {
-            status = port_dispatch(&dc_port, MX_TIME_INFINITE);
+            status = port_dispatch(&dc_port, MX_TIME_INFINITE, true);
         } else {
-            status = port_dispatch(&dc_port, 0);
+            status = port_dispatch(&dc_port, 0, true);
             if (status == ERR_TIMED_OUT) {
                 process_work(list_remove_head_type(&list_pending_work, work_t, node));
                 continue;

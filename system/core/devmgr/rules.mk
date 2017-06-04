@@ -43,6 +43,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
+    system/ulib/port \
     system/ulib/acpisvc-client \
 
 MODULE_LIBS := \
@@ -74,7 +75,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/devhost-rpc-server.c \
     $(LOCAL_DIR)/devhost-shared.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync system/ulib/port
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
@@ -92,7 +93,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/dmctl.c \
 	$(LOCAL_DIR)/devhost-shared.c \
 
-MODULE_STATIC_LIBS := system/ulib/ddk
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 

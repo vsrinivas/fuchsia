@@ -136,7 +136,7 @@ static mx_status_t iostate_create(devnode_t* dn, mx_handle_t h) {
     list_add_tail(&dn->iostate, &ios->node);
 
     mx_status_t r;
-    if ((r = port_watch(&dc_port, &ios->ph)) < 0) {
+    if ((r = port_wait(&dc_port, &ios->ph)) < 0) {
         list_delete(&ios->node);
         free(ios);
     }

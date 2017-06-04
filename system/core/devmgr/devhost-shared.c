@@ -14,12 +14,6 @@
 
 #include "devcoordinator.h"
 
-#if TRACE_PORT_API
-#define zprintf(fmt...) printf(fmt)
-#else
-#define zprintf(fmt...) do {} while (0)
-#endif
-
 mx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,
                         const void* data, size_t datalen,
                         const char* name, const char* args) {
@@ -135,62 +129,4 @@ mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
     }
 
     return rsp.status;
-}
-
-mx_status_t port_init(port_t* port) {
-    mx_status_t r = mx_port_create(MX_PORT_OPT_V2, &port->handle);
-    zprintf("port_init(%p) port=%x\n", port, port->handle);
-    return r;
-}
-
-mx_status_t port_watch(port_t* port, port_handler_t* ph) {
-    zprintf("port_watch(%p, %p) obj=%x port=%x\n",
-            port, ph, ph->handle, port->handle);
-    return mx_object_wait_async(ph->handle, port->handle,
-                                (uint64_t)(uintptr_t)ph,
-                                ph->waitfor, MX_WAIT_ASYNC_ONCE);
-}
-
-mx_status_t port_cancel(port_t* port, port_handler_t* ph) {
-    mx_status_t r = mx_port_cancel(port->handle, ph->handle,
-                                   (uint64_t)(uintptr_t)ph);
-    zprintf("port_cancel(%p, %p) obj=%x port=%x: r = %d\n",
-            port, ph, ph->handle, port->handle, r);
-    return r;
-}
-
-mx_status_t port_queue(port_t* port, port_handler_t* ph, uint32_t evt) {
-    mx_port_packet_t pkt;
-    pkt.key = (uintptr_t)ph;
-    pkt.user.u32[0] = evt;
-    mx_status_t r = mx_port_queue(port->handle, &pkt, 0);
-    zprintf("port_queue(%p, %p) obj=%x port=%x evt=%x: r=%d\n",
-            port, ph, ph->handle, port->handle, r, evt);
-    return r;
-}
-
-mx_status_t port_dispatch(port_t* port, mx_time_t deadline) {
-    for (;;) {
-        mx_port_packet_t pkt;
-        mx_status_t r;
-        if ((r = mx_port_wait(port->handle, deadline, &pkt, 0)) != NO_ERROR) {
-            if (r != ERR_TIMED_OUT) {
-                printf("port_dispatch: port wait failed %d\n", r);
-            }
-            return r;
-        }
-        port_handler_t* ph = (void*) (uintptr_t) pkt.key;
-        if (pkt.type == MX_PKT_TYPE_USER) {
-            zprintf("port_dispatch(%p) port=%x ph=%p func=%p: evt=%x\n",
-                    port, port->handle, ph, ph->func, pkt.user.u32[0]);
-            ph->func(ph, 0, pkt.user.u32[0]);
-        } else {
-            zprintf("port_dispatch(%p) port=%x ph=%p func=%p: signals=%x\n",
-                    port, port->handle, ph, ph->func, pkt.signal.observed);
-            if (ph->func(ph, pkt.signal.observed, 0) == NO_ERROR) {
-                port_watch(port, ph);
-            }
-        }
-        return NO_ERROR;
-    }
 }

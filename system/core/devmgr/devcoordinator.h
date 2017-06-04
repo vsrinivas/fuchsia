@@ -11,23 +11,7 @@
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 
-typedef struct port_handler port_handler_t;
-
-struct port_handler {
-    mx_handle_t handle;
-    mx_signals_t waitfor;
-    mx_status_t (*func)(port_handler_t* ph, mx_signals_t signals, uint32_t evt);
-};
-
-typedef struct {
-    mx_handle_t handle;
-} port_t;
-
-mx_status_t port_init(port_t* port);
-mx_status_t port_watch(port_t* port, port_handler_t* ph);
-mx_status_t port_dispatch(port_t* port, mx_time_t timeout);
-mx_status_t port_cancel(port_t* port, port_handler_t* ph);
-mx_status_t port_queue(port_t* port, port_handler_t* ph, uint32_t evt);
+#include <port/port.h>
 
 typedef struct dc_work work_t;
 typedef struct dc_pending pending_t;
@@ -35,7 +19,6 @@ typedef struct dc_devhost devhost_t;
 typedef struct dc_device device_t;
 typedef struct dc_driver driver_t;
 typedef struct dc_devnode devnode_t;
-
 
 struct dc_work {
     list_node_t node;

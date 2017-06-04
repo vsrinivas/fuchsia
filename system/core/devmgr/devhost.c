@@ -229,7 +229,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         newios->ph.handle = hin[0];
         newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_watch(&dh_port, &newios->ph)) < 0) {
+        if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
             free(newios->dev);
             free(newios);
             break;
@@ -292,7 +292,7 @@ static mx_status_t dh_handle_rpc_read(mx_handle_t h, iostate_t* ios) {
         newios->ph.handle = hin[0];
         newios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         newios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_watch(&dh_port, &newios->ph)) < 0) {
+        if ((r = port_wait(&dh_port, &newios->ph)) < 0) {
             free(newios);
             break;
         }
@@ -465,7 +465,7 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
         ios->ph.handle = hrpc;
         ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         ios->ph.func = dh_handle_dc_rpc;
-        if ((r = port_watch(&dh_port, &ios->ph)) == NO_ERROR) {
+        if ((r = port_wait(&dh_port, &ios->ph)) == NO_ERROR) {
             child->rpc = hrpc;
             child->ios = ios;
             return NO_ERROR;
@@ -553,7 +553,7 @@ mx_status_t devhost_start_iostate(devhost_iostate_t* ios, mx_handle_t h) {
     ios->ph.handle = h;
     ios->ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     ios->ph.func = dh_handle_rio_rpc;
-    return port_watch(&dh_port, &ios->ph);
+    return port_wait(&dh_port, &ios->ph);
 }
 
 int main(int argc, char** argv) {
@@ -579,13 +579,12 @@ int main(int argc, char** argv) {
         log(ERROR, "devhost: could not create port: %d\n", r);
         return -1;
     }
-    if ((r = port_watch(&dh_port, &root_ios.ph)) < 0) {
+    if ((r = port_wait(&dh_port, &root_ios.ph)) < 0) {
         log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
         return -1;
     }
-    do {
-        r = port_dispatch(&dh_port, MX_TIME_INFINITE);
-    } while (r == NO_ERROR);
+
+    r = port_dispatch(&dh_port, MX_TIME_INFINITE, false);
     log(ERROR, "devhost: port dispatch finished: %d\n", r);
 
     return 0;
