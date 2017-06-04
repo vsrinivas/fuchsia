@@ -19,6 +19,22 @@ SECTIONS
     .text : AT(%MEMBASE% + %KERNEL_LOAD_OFFSET%) {
         __code_start = .;
         KEEP(*(.text.boot))
+
+        . = ALIGN(8);
+        buildsig = .;
+        BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
+        BYTE(0x53); BYTE(0x54); BYTE(0x52); BYTE(0x54); /* STRT */
+        /*
+         * The self-pointer gives a local basis to compute the relative
+         * positions of the lk_version_t and .note.gnu.build-id pointers
+         * without already knowing the kernel's virtual address base.
+         */
+        QUAD(buildsig);
+        QUAD(version);
+        QUAD(__build_id_note_start);
+        BYTE(0x42); BYTE(0x53); BYTE(0x49); BYTE(0x47); /* BSIG */
+        BYTE(0x45); BYTE(0x4e); BYTE(0x44); BYTE(0x53); /* ENDS */
+
         KEEP(*(.text.boot.vectab))
         *(.text* .gnu.linkonce.t.*)
     }
