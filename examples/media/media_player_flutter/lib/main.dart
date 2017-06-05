@@ -61,9 +61,28 @@ const List<String> _configFileNames = const <String>[
   '/system/data/media_player_flutter/media_player_flutter.config',
 ];
 
+List<Asset> _assets = <Asset>[];
 Asset _assetToPlay;
 Asset _leafAssetToPlay;
 int _playlistIndex;
+
+Future<Null> _readConfig() async {
+  for (String fileName in _configFileNames) {
+    try {
+      _assets = await readConfig(fileName);
+      return;
+    } on ArgumentError {
+      // File doesn't exist. Continue.
+    } on FormatException catch (e) {
+      print('Failed to parse config $fileName: $e');
+      io.exit(0);
+      return;
+    }
+  }
+
+  print('No config file found');
+  io.exit(0);
+}
 
 /// Plays the specified asset.
 void _play(Asset asset) {
@@ -221,9 +240,16 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
             right: 0.0,
             top: 0.0,
             child: new IconButton(
-              icon: new Icon(Icons.arrow_back),
+              icon: new Icon(
+                _assets.length == 1 ? Icons.close : Icons.arrow_back
+              ),
               iconSize: 60.0,
               onPressed: () {
+                if (_assets.length == 1) {
+                  io.exit(0);
+                  return;
+                }
+
                 _controller.pause();
                 Navigator.of(context).pop();
               },
@@ -245,40 +271,6 @@ class _ChooserScreen extends StatefulWidget {
 }
 
 class _ChooserScreenState extends State<_ChooserScreen> {
-  List<Asset> _assets = <Asset>[];
-
-  @override
-  void initState() {
-    _readConfig();
-    super.initState();
-  }
-
-  Future<Null> _readConfig() async {
-    for (String fileName in _configFileNames) {
-      try {
-        List<Asset> assets = await readConfig(fileName);
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _assets = assets;
-        });
-
-        return;
-      } on ArgumentError {
-        // File doesn't exist. Continue.
-      } on FormatException catch (e) {
-        print('Failed to parse config $fileName: $e');
-        io.exit(0);
-        return;
-      }
-    }
-
-    print('No config file found');
-    io.exit(0);
-  }
-
   Widget _buildChooseButton(Asset asset) {
     IconData iconData;
 
@@ -361,7 +353,7 @@ class _ChooserScreenState extends State<_ChooserScreen> {
   }
 }
 
-void main() {
+Future<Null> main() async {
   _log('Module started');
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
@@ -374,9 +366,20 @@ void main() {
     Module.serviceName,
   );
 
+  await _readConfig();
+
+  if (_assets.length == 0) {
+    print('no assets configured');
+    return;
+  }
+
+  if (_assets.length == 1) {
+    _play(_assets[0]);
+  }
+
   runApp(new MaterialApp(
     title: 'Media Player',
-    home: new _ChooserScreen(),
+    home: _assets.length == 1 ? new _PlaybackScreen() : new _ChooserScreen(),
     routes: <String, WidgetBuilder>{
       '/play': (BuildContext context) => new _PlaybackScreen()
     },
