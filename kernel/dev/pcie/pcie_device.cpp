@@ -161,7 +161,7 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
             return ERR_NO_MEMORY;
         }
 
-        // Unlike BARs, this should always be treated like device memory
+        // Config is always uncached and set by the bus driver.
         cfg_vmo_->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED_DEVICE);
     }
 

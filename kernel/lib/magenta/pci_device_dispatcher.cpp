@@ -139,10 +139,6 @@ status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_->claimed()) {
-        return ERR_BAD_STATE;
-    }
-
     if (!out) {
         return ERR_INVALID_ARGS;
     }

@@ -70,74 +70,6 @@ static mx_status_t pci_map_mmio(mx_device_t* dev,
     return NO_ERROR;
 }
 
-static mx_status_t pci_map_resource(mx_device_t* dev,
-                                mx_pci_resource_t *resource,
-                                mx_cache_policy_t cache_policy,
-                                void** vaddr) {
-    mx_status_t status = NO_ERROR;
-    uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_MAP_RANGE;
-
-    if (!dev || !resource | !vaddr) {
-        return ERR_INVALID_ARGS;
-    }
-
-    // TODO(cja): PIO may be mappable on non-x86 architectures
-    if (resource->type == PCI_RESOURCE_TYPE_PIO) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    // Set a policy if one hasn't already been set by the PCI bus driver
-    status = mx_vmo_set_cache_policy(resource->mmio_handle, cache_policy);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
-    // Check if the handle has write permissions and pass it on to the mapping
-    // if necessary. Config is read-only, BARs are full access.
-    mx_info_handle_basic_t info;
-    status = mx_object_get_info(resource->mmio_handle, MX_INFO_HANDLE_BASIC, &info,
-            sizeof(info), NULL, NULL);
-    if (status != NO_ERROR) {
-        return status;
-    }
-
-    if (info.rights & MX_RIGHT_WRITE) {
-        map_flags |= MX_VM_FLAG_PERM_WRITE;
-    }
-
-    // Map the config/bar passed in. Mappings require PAGE_SIZE alignment for
-    // both base and size
-    status = mx_vmar_map(mx_vmar_root_self(), 0, resource->mmio_handle, 0,
-                            ROUNDUP(resource->size, PAGE_SIZE),
-                            map_flags, (uintptr_t*)vaddr);
-    if (status != NO_ERROR) {
-        *vaddr = NULL;
-    }
-
-    return status;
-}
-
-static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_t* out_handle) {
-    mx_status_t status = NO_ERROR;
-
-    if (!dev || !out_handle) {
-        return ERR_INVALID_ARGS;
-    }
-
-    kpci_device_t* device = dev->ctx;
-    if (device->handle == MX_HANDLE_INVALID) {
-        return ERR_BAD_HANDLE;
-    }
-
-    status = mx_pci_map_interrupt(device->handle, which_irq, out_handle);
-    if (status != NO_ERROR) {
-        *out_handle = MX_HANDLE_INVALID;
-        return status;
-    }
-
-    return NO_ERROR;
-}
-
 // TODO(cja): Figure out how to handle passing PIO privileges to other
 // processes in the future when PCI is moved out of the kernel into
 // userspace.
@@ -164,10 +96,10 @@ static mx_status_t do_resource_bookkeeping(mx_pci_resource_t* res) {
     return status;
 }
 
-static mx_status_t pci_get_bar(mx_device_t* dev, uint32_t bar_num, mx_pci_resource_t* out_bar) {
+static mx_status_t pci_get_resource(mx_device_t* dev, uint32_t res_id, mx_pci_resource_t* out_res) {
     mx_status_t status = NO_ERROR;
 
-    if (!dev || !out_bar) {
+    if (!dev || !out_res || res_id >= PCI_RESOURCE_COUNT) {
         return ERR_INVALID_ARGS;
     }
 
@@ -176,16 +108,90 @@ static mx_status_t pci_get_bar(mx_device_t* dev, uint32_t bar_num, mx_pci_resour
         return ERR_BAD_HANDLE;
     }
 
-    status = mx_pci_get_bar(device->handle, bar_num, out_bar);
+    switch (res_id) {
+        case PCI_RESOURCE_BAR_0:
+        case PCI_RESOURCE_BAR_1:
+        case PCI_RESOURCE_BAR_2:
+        case PCI_RESOURCE_BAR_3:
+        case PCI_RESOURCE_BAR_4:
+        case PCI_RESOURCE_BAR_5:
+            status = mx_pci_get_bar(device->handle, res_id, out_res);
+            break;
+        case PCI_RESOURCE_CONFIG:
+            status = mx_pci_get_config(device->handle, out_res);;
+            break;
+    }
+
     if (status != NO_ERROR) {
         return status;
     }
 
-    return do_resource_bookkeeping(out_bar);
+    return do_resource_bookkeeping(out_res);
 }
 
-static mx_status_t pci_get_config_ex(mx_device_t* dev, mx_pci_resource_t* out_config) {
-    if (!dev || !out_config) {
+// Sanity check the resource enum
+static_assert(PCI_RESOURCE_BAR_0 == 0, "BAR 0's value is not 0");
+static_assert(PCI_RESOURCE_BAR_5 == 5, "BAR 5's value is not 5");
+static_assert(PCI_RESOURCE_CONFIG > PCI_RESOURCE_BAR_5, "resource order in the enum is wrong");
+
+/* Get a resource from the pci bus driver and map for the driver. */
+static mx_status_t pci_map_resource(mx_device_t* dev,
+                                    uint32_t res_id,
+                                    mx_cache_policy_t cache_policy,
+                                    void** vaddr,
+                                    size_t* size,
+                                    mx_handle_t* out_handle) {
+    if (!dev || !vaddr || !size || !out_handle) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mx_pci_resource_t resource;
+    mx_status_t status = pci_get_resource(dev, res_id, &resource);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    // TODO(cja): PIO may be mappable on non-x86 architectures
+    if (resource.type == PCI_RESOURCE_TYPE_PIO) {
+        return ERR_WRONG_TYPE;
+    }
+
+    uint32_t map_flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_MAP_RANGE;
+    if (res_id <= PCI_RESOURCE_BAR_5) {
+        // Writes to bar resources are allowed.
+        map_flags |= MX_VM_FLAG_PERM_WRITE;
+
+        // Bar cache policy can be controlled by the driver.
+        status = mx_vmo_set_cache_policy(resource.mmio_handle, cache_policy);
+        if (status != NO_ERROR) {
+            mx_handle_close(resource.mmio_handle);
+            return status;
+        }
+    }
+
+    // Map the config/bar passed in. Mappings require PAGE_SIZE alignment for
+    // both base and size
+    void* vaddr_tmp;
+    status = mx_vmar_map(mx_vmar_root_self(), 0, resource.mmio_handle, 0,
+                            ROUNDUP(resource.size, PAGE_SIZE),
+                            map_flags, (uintptr_t*)&vaddr_tmp);
+
+    if (status != NO_ERROR) {
+        mx_handle_close(resource.mmio_handle);
+        return status;
+    }
+
+    *size = resource.size;
+    *out_handle = resource.mmio_handle;
+    *vaddr = vaddr_tmp;
+
+    return status;
+}
+
+static mx_status_t pci_map_interrupt(mx_device_t* dev, int which_irq, mx_handle_t* out_handle) {
+    mx_status_t status = NO_ERROR;
+
+    if (!dev || !out_handle) {
         return ERR_INVALID_ARGS;
     }
 
@@ -194,12 +200,13 @@ static mx_status_t pci_get_config_ex(mx_device_t* dev, mx_pci_resource_t* out_co
         return ERR_BAD_HANDLE;
     }
 
-    mx_status_t status = mx_pci_get_config(device->handle, out_config);
+    status = mx_pci_map_interrupt(device->handle, which_irq, out_handle);
     if (status != NO_ERROR) {
+        *out_handle = MX_HANDLE_INVALID;
         return status;
     }
 
-    return do_resource_bookkeeping(out_config);
+    return NO_ERROR;
 }
 
 static mx_status_t pci_get_config(mx_device_t* dev,
@@ -273,8 +280,6 @@ static pci_protocol_t _pci_protocol = {
     .map_resource = pci_map_resource,
     .map_interrupt = pci_map_interrupt,
     .get_config = pci_get_config,
-    .get_config_ex = pci_get_config_ex,
-    .get_bar = pci_get_bar,
     .query_irq_mode_caps = pci_query_irq_mode_caps,
     .set_irq_mode = pci_set_irq_mode,
     .get_device_info = pci_get_device_info,

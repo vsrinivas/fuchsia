@@ -504,7 +504,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
 
     // Get the process context and device dispatcher from the caller device handle
     auto up = ProcessDispatcher::GetCurrent();
-    status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ|MX_RIGHT_WRITE, &pci_device);
+    status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ | MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR) {
         return status;
     }
@@ -513,7 +513,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
     // a size/addr tuple for pio, or a size and vmo for mmio.
     status = pci_device->GetConfig(&pci_config);
     if (status != NO_ERROR) {
-        printf("failed to get config\n");
+        printf("failed to get config: %d\n", status);
         return status;
     }
 
@@ -536,6 +536,8 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
             return status;
         }
 
+        // Drivers are not granted access to write to their own config space. It is
+        // restricted to the bus driver.
         rights &= ~MX_RIGHT_WRITE;
         mmio_handle = HandleOwner(MakeHandle(mxtl::move(dispatcher), rights));
         if (!mmio_handle) {
@@ -555,6 +557,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
 
     // If we created an MMIO handle it needs to be held by the process
     if (pci_config.is_mmio) {
+        pci_device->EnableMmio(true);
         up->AddHandle(mxtl::move(mmio_handle));
     }
 
