@@ -329,8 +329,19 @@ static mx_driver_ops_t i2c_hid_driver_ops = {
     .bind = i2c_hid_bind,
 };
 
-MAGENTA_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(i2c_hid, i2c_hid_driver_ops, "magenta", "0.1", 9)
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
+
+    // Acer12
+    BI_GOTO_IF(NE, BIND_PCI_DID, 0x9d61, 0),
     BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0010),
+
+    BI_LABEL(0),
+    BI_GOTO_IF(NE, BIND_PCI_DID, 0x9d60, 0),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x000A),
+
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d62),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0049),
+
 MAGENTA_DRIVER_END(i2c_hid)

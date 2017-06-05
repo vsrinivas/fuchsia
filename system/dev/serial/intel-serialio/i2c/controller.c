@@ -741,6 +741,19 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
         intel_serialio_i2c_set_bus_frequency(device, 400000);
         intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x0010);
     }
+
+    // more temporary hacks
+    if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID) {
+        intel_serialio_i2c_set_bus_frequency(device, 1000000);
+        intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x000A);
+    }
+    if (pci_config->vendor_id == INTEL_VID &&
+        pci_config->device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID) {
+        intel_serialio_i2c_set_bus_frequency(device, 400000);
+        intel_serialio_i2c_add_slave(device, I2C_7BIT_ADDRESS, 0x0049);
+    }
+
     mx_handle_close(config_handle);
     return MX_OK;
 
