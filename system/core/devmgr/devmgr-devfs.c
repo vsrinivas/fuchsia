@@ -640,13 +640,16 @@ void devmgr_init(mx_handle_t root_job) {
     root_devnode.device->self = &root_devnode;
 
     mx_handle_t h0, h1;
-    if (mx_channel_create(0, &h0, &h1) == NO_ERROR) {
-        if (iostate_create(&root_devnode, h0) == NO_ERROR) {
-            // set the "fs ready" signal
-            mx_object_signal(h1, 0, MX_USER_SIGNAL_0);
-            devfs_mount(h1);
-        }
+    if (mx_channel_create(0, &h0, &h1) != NO_ERROR) {
+        return;
+    } else if (iostate_create(&root_devnode, h0) != NO_ERROR) {
+        mx_handle_close(h0);
+        mx_handle_close(h1);
+        return;
     }
+    // set the "fs ready" signal
+    mx_object_signal(h1, 0, MX_USER_SIGNAL_0);
+    devfs_mount(h1);
 }
 
 void devmgr_handle_messages(void) {
