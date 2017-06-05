@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
 #include "application/lib/app/application_context.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
@@ -13,7 +14,8 @@
 
 namespace bluetoothcli {
 
-class App final : public bluetooth::control::AdapterManagerDelegate {
+class App final : public bluetooth::control::AdapterManagerDelegate,
+                  public bluetooth::control::AdapterDelegate {
  public:
   App();
 
@@ -26,6 +28,9 @@ class App final : public bluetooth::control::AdapterManagerDelegate {
     return command_dispatcher_;
   }
 
+  using DeviceMap = std::unordered_map<std::string, bluetooth::control::RemoteDevicePtr>;
+  const DeviceMap& discovered_devices() const { return discovered_devices_; }
+
  private:
   // bluetooth::control::AdapterManagerDelegate overrides:
   // TODO(armansito): since this tool is single-threaded the delegate callbacks won't run
@@ -35,6 +40,10 @@ class App final : public bluetooth::control::AdapterManagerDelegate {
   void OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) override;
   void OnAdapterRemoved(const ::fidl::String& identifier) override;
 
+  // bluetooth::control::AdapterDelegate overrides:
+  void OnAdapterStateChanged(bluetooth::control::AdapterStatePtr state) override;
+  void OnDeviceDiscovered(bluetooth::control::RemoteDevicePtr device) override;
+
   bluetooth::tools::CommandDispatcher command_dispatcher_;
 
   std::unique_ptr<app::ApplicationContext> context_;
@@ -42,7 +51,12 @@ class App final : public bluetooth::control::AdapterManagerDelegate {
   bluetooth::control::AdapterPtr active_adapter_;
 
   // Local AdapterManagerDelegate binding.
-  fidl::Binding<bluetooth::control::AdapterManagerDelegate> binding_;
+  fidl::Binding<bluetooth::control::AdapterManagerDelegate> manager_delegate_;
+
+  // Local AdapterDelegate binding.
+  fidl::Binding<bluetooth::control::AdapterDelegate> adapter_delegate_;
+
+  DeviceMap discovered_devices_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

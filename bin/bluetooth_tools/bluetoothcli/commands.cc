@@ -67,6 +67,60 @@ bool HandleExit(const App* app, const ftl::CommandLine& cmd_line, const ftl::Clo
   return true;
 }
 
+bool HandleStartDiscovery(const App* app, const ftl::CommandLine& cmd_line,
+                          const ftl::Closure& complete_cb) {
+  if (!app->active_adapter()) {
+    CLI_LOG() << "No default adapter";
+    return false;
+  }
+
+  app->active_adapter()->StartDiscovery([complete_cb](auto status) {
+    if (status->error) {
+      CLI_LOG() << "StartDiscovery failed: " << status->error->description
+                << ", (error = " << ErrorCodeToString(status->error->error_code) << ")";
+    }
+
+    complete_cb();
+  });
+
+  return true;
+}
+
+bool HandleStopDiscovery(const App* app, const ftl::CommandLine& cmd_line,
+                         const ftl::Closure& complete_cb) {
+  if (!app->active_adapter()) {
+    CLI_LOG() << "No default adapter";
+    return false;
+  }
+
+  app->active_adapter()->StopDiscovery([complete_cb](auto status) {
+    if (status->error) {
+      CLI_LOG() << "StopDiscovery failed: " << status->error->description
+                << ", (error = " << ErrorCodeToString(status->error->error_code) << ")";
+    }
+
+    complete_cb();
+  });
+
+  return true;
+}
+
+bool HandleListDevices(const App* app, const ftl::CommandLine& cmd_line,
+                       const ftl::Closure& complete_cb) {
+  if (app->discovered_devices().empty()) {
+    CLI_LOG() << "No devices discovered";
+    return true;
+  }
+
+  for (const auto& iter : app->discovered_devices()) {
+    CLI_LOG() << "Device:";
+    PrintRemoteDevice(iter.second, 1);
+  }
+
+  complete_cb();
+  return true;
+}
+
 }  // namespace
 
 void RegisterCommands(App* app, bluetooth::tools::CommandDispatcher* dispatcher) {
@@ -83,6 +137,11 @@ void RegisterCommands(App* app, bluetooth::tools::CommandDispatcher* dispatcher)
   dispatcher->RegisterHandler("active-adapter",
                               "Print information about the current active adapter",
                               BIND(HandleActiveAdapter));
+  dispatcher->RegisterHandler("start-discovery", "Discover nearby Bluetooth devices",
+                              BIND(HandleStartDiscovery));
+  dispatcher->RegisterHandler("stop-discovery", "End device discovery", BIND(HandleStopDiscovery));
+  dispatcher->RegisterHandler("list-devices", "List discovered Bluetooth devices",
+                              BIND(HandleListDevices));
 
 #undef BIND_HANDLER
 }

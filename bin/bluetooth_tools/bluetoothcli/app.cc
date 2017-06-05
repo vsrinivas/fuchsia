@@ -14,11 +14,15 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "commands.h"
+#include "helpers.h"
 #include "logging.h"
 
 namespace bluetoothcli {
 
-App::App() : context_(app::ApplicationContext::CreateFromStartupInfo()), binding_(this) {
+App::App()
+    : context_(app::ApplicationContext::CreateFromStartupInfo()),
+      manager_delegate_(this),
+      adapter_delegate_(this) {
   FTL_DCHECK(context_);
 
   adapter_manager_ = context_->ConnectToEnvironmentService<bluetooth::control::AdapterManager>();
@@ -35,12 +39,18 @@ App::App() : context_(app::ApplicationContext::CreateFromStartupInfo()), binding
   bluetooth::control::AdapterManagerDelegatePtr delegate;
   fidl::InterfaceRequest<bluetooth::control::AdapterManagerDelegate> delegate_request =
       fidl::GetProxy(&delegate);
-  binding_.Bind(std::move(delegate_request));
+  manager_delegate_.Bind(std::move(delegate_request));
 
   adapter_manager_->SetDelegate(std::move(delegate));
 
   adapter_manager_->IsBluetoothAvailable([this](bool available) {
-    if (available) adapter_manager_->GetActiveAdapter(fidl::GetProxy(&active_adapter_));
+    if (!available) return;
+
+    adapter_manager_->GetActiveAdapter(fidl::GetProxy(&active_adapter_));
+    bluetooth::control::AdapterDelegatePtr delegate;
+    auto request = fidl::GetProxy(&delegate);
+    adapter_delegate_.Bind(std::move(request));
+    active_adapter_->SetDelegate(std::move(delegate));
   });
 }
 
@@ -87,7 +97,12 @@ void App::OnActiveAdapterChanged(bluetooth::control::AdapterInfoPtr active_adapt
   }
 
   CLI_LOG() << "\n>>>> Active adapter: (id=" << active_adapter->identifier << ")\n";
+
   adapter_manager_->GetActiveAdapter(fidl::GetProxy(&active_adapter_));
+  bluetooth::control::AdapterDelegatePtr delegate;
+  fidl::InterfaceRequest<bluetooth::control::AdapterDelegate> request = fidl::GetProxy(&delegate);
+  adapter_delegate_.Bind(std::move(request));
+  active_adapter_->SetDelegate(std::move(delegate));
 }
 
 void App::OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) {
@@ -96,6 +111,14 @@ void App::OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) {
 
 void App::OnAdapterRemoved(const ::fidl::String& identifier) {
   CLI_LOG() << "\n>>>> Adapter removed (id=" << identifier << ")\n";
+}
+
+void App::OnAdapterStateChanged(bluetooth::control::AdapterStatePtr state) {
+  CLI_LOG() << "\n>>>> Active adapter state changed\n";
+}
+
+void App::OnDeviceDiscovered(bluetooth::control::RemoteDevicePtr device) {
+  discovered_devices_[device->identifier] = std::move(device);
 }
 
 }  // namespace bluetoothcli
