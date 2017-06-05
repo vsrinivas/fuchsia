@@ -343,8 +343,6 @@ static mx_status_t mailbox_bind(void* ctx, mx_device_t* parent, void** cookie) {
     return NO_ERROR;
 }
 
-#ifdef RASPBERRY_PI
-
 static mx_driver_ops_t bcm_mailbox_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = mailbox_bind,
@@ -356,5 +354,3 @@ MAGENTA_DRIVER_BEGIN(bcm_mailbox, bcm_mailbox_driver_ops, "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_BROADCOMM_RPI3),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BROADCOMM_MAILBOX),
 MAGENTA_DRIVER_END(bcm_mailbox)
-
-#endif // RASPBERRY_PI

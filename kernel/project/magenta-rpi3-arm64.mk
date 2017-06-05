@@ -5,12 +5,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# main project for qemu-aarch64
-MODULES +=
-
-
-GLOBAL_DEFINES += \
-	RASPBERRY_PI=1
+# main project for rpi3-arm64
 
 ENABLE_BUILD_LISTFILES:=true
 
