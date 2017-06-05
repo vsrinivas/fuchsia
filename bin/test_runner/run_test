@@ -101,7 +101,9 @@ def main(argv):
     else:
       device = args.server
     netaddr = fuchsia_tools.netaddr(device)
-    address = (subprocess.check_output(netaddr).strip(), args.port)
+    host = subprocess.check_output(netaddr).strip()
+    address = socket.getaddrinfo(
+        host, args.port, socket.AF_INET6, socket.SOCK_STREAM)[0][-1]
 
   sock = socket.socket(ip_version)
 
@@ -115,7 +117,8 @@ def main(argv):
     except socket.error:
       failed += 1
       if failed == 3:
-        raise IOError('Failed to connect')
+        print 'Failed to connect. Is test_runner running on Fuchsia?'
+        return 1
       Log.line('connecting', "Couldn't connect, retrying in 3 seconds")
       time.sleep(3)
 
