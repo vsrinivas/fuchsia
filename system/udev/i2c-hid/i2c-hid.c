@@ -204,12 +204,12 @@ static int i2c_hid_irq_thread(void* arg) {
         }
 
         uint16_t report_len = letoh16(*(uint16_t*)buf);
-        if (report_len == 0xffff || report_len == 0x3fff) {
+        if ((report_len == 0xffff) || (report_len == 0x3fff) || (report_len == 0x0)) {
             // nothing to read
             continue;
         }
-        if (actual < report_len) {
-            printf("i2c-hid: short read (%zd < %u)!!!\n", actual, report_len);
+        if ((report_len > actual) || (report_len < 2)) {
+            printf("i2c-hid: bad report len (rlen %hu, bytes read %zd)!!!\n", report_len, actual);
             continue;
         }
         mtx_lock(&dev->lock);
