@@ -18,7 +18,7 @@
 namespace fonts {
 namespace {
 
-constexpr char kFontManifestPath[] = "/system/data/fonts/manifest.json";
+constexpr char kFontManifestPath[] = "/pkg/data/manifest.json";
 constexpr char kFallback[] = "fallback";
 constexpr char kFamilies[] = "families";
 
@@ -48,7 +48,8 @@ bool FontProviderImpl::LoadFontsInternal() {
 
   const auto& fallback = document.FindMember(kFallback);
   if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
-    FTL_LOG(ERROR) << "Font manifest did not contain a valid 'fallback' family.";
+    FTL_LOG(ERROR)
+        << "Font manifest did not contain a valid 'fallback' family.";
     return false;
   }
   fallback_ = fallback->value.GetString();

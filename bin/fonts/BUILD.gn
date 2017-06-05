@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("fonts") {
+import("//packages/package.gni")
+
+executable("font_server") {
   sources = [
     "font_family.cc",
     "font_family.h",
@@ -17,5 +19,143 @@ executable("fonts") {
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",
+  ]
+}
+
+package("fonts") {
+  archive = true
+
+  deps = [
+    ":font_server",
+  ]
+
+  binaries = [
+    {
+      name = "font_server"
+      dest = "app"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//apps/fonts/manifest.json")
+      dest = "manifest.json"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/material/MaterialIcons-Regular.ttf")
+      dest = "fonts/MaterialIcons-Regular.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-BlackItalic.ttf")
+      dest = "fonts/Roboto-BlackItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Black.ttf")
+      dest = "fonts/Roboto-Black.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-BoldItalic.ttf")
+      dest = "fonts/Roboto-BoldItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Bold.ttf")
+      dest = "fonts/Roboto-Bold.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Italic.ttf")
+      dest = "fonts/Roboto-Italic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-LightItalic.ttf")
+      dest = "fonts/Roboto-LightItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Light.ttf")
+      dest = "fonts/Roboto-Light.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-MediumItalic.ttf")
+      dest = "fonts/Roboto-MediumItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Medium.ttf")
+      dest = "fonts/Roboto-Medium.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Regular.ttf")
+      dest = "fonts/Roboto-Regular.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-ThinItalic.ttf")
+      dest = "fonts/Roboto-ThinItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/roboto/Roboto-Thin.ttf")
+      dest = "fonts/Roboto-Thin.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-BoldItalic.ttf")
+      dest = "fonts/RobotoCondensed-BoldItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-Bold.ttf")
+      dest = "fonts/RobotoCondensed-Bold.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-Italic.ttf")
+      dest = "fonts/RobotoCondensed-Italic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-LightItalic.ttf")
+      dest = "fonts/RobotoCondensed-LightItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-Light.ttf")
+      dest = "fonts/RobotoCondensed-Light.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotocondensed/RobotoCondensed-Regular.ttf")
+      dest = "fonts/RobotoCondensed-Regular.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-BoldItalic.ttf")
+      dest = "fonts/RobotoMono-BoldItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Bold.ttf")
+      dest = "fonts/RobotoMono-Bold.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Italic.ttf")
+      dest = "fonts/RobotoMono-Italic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-LightItalic.ttf")
+      dest = "fonts/RobotoMono-LightItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Light.ttf")
+      dest = "fonts/RobotoMono-Light.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-MediumItalic.ttf")
+      dest = "fonts/RobotoMono-MediumItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Medium.ttf")
+      dest = "fonts/RobotoMono-Medium.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Regular.ttf")
+      dest = "fonts/RobotoMono-Regular.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-ThinItalic.ttf")
+      dest = "fonts/RobotoMono-ThinItalic.ttf"
+    },
+    {
+      path = rebase_path("//apps/fonts/third_party/robotomono/RobotoMono-Thin.ttf")
+      dest = "fonts/RobotoMono-Thin.ttf"
+    },
   ]
 }
