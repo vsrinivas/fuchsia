@@ -168,26 +168,28 @@ func main() {
 		EndingLBA:           end,
 	})
 
-	var startingCHS [3]byte
-	startingCHS[0] = byte(efiStart / (16 * 63))
-	startingCHS[1] = byte((efiStart / 63) % 16)
-	startingCHS[2] = byte((efiStart % 63) + 1)
+	if *rpi3 {
+		var startingCHS [3]byte
+		startingCHS[0] = byte(efiStart / (16 * 63))
+		startingCHS[1] = byte((efiStart / 63) % 16)
+		startingCHS[2] = byte((efiStart % 63) + 1)
 
-	efiEnd := end
-	var endingCHS [3]byte
-	endingCHS[0] = byte(efiEnd / (16 * 63))
-	endingCHS[1] = byte((efiEnd / 63) % 16)
-	endingCHS[2] = byte((efiEnd % 63) + 1)
+		efiEnd := end
+		var endingCHS [3]byte
+		endingCHS[0] = byte(efiEnd / (16 * 63))
+		endingCHS[1] = byte((efiEnd / 63) % 16)
+		endingCHS[2] = byte((efiEnd % 63) + 1)
 
-	// Install a "hybrid MBR" hack for the case of bios bootloaders that might
-	// need it (e.g. rpi's binary blob that's stuck in MBR land).
-	g.MBR.PartitionRecord[1] = mbr.PartitionRecord{
-		BootIndicator: 0x80,
-		StartingCHS:   startingCHS,
-		EndingCHS:     endingCHS,
-		OSType:        mbr.FAT32,
-		StartingLBA:   uint32(efiStart),
-		SizeInLBA:     uint32(uint64(*efiSize) / logical),
+		// Install a "hybrid MBR" hack for the case of bios bootloaders that might
+		// need it (e.g. rpi's binary blob that's stuck in MBR land).
+		g.MBR.PartitionRecord[0] = mbr.PartitionRecord{
+			BootIndicator: 0x80,
+			StartingCHS:   startingCHS,
+			EndingCHS:     endingCHS,
+			OSType:        mbr.FAT32,
+			StartingLBA:   uint32(efiStart),
+			SizeInLBA:     uint32(uint64(*efiSize) / logical),
+		}
 	}
 
 	sysStart, end := optimialBlockAlign(end+1, uint64(*sysSize), logical, physical, optimal)
@@ -235,7 +237,6 @@ func main() {
 	log.Printf("BLOB size: %d", *blobSize)
 	log.Printf("DATA size: %d", *dataSize)
 
-
 	log.Printf("Writing GPT")
 
 	f, err = os.OpenFile(disk, os.O_RDWR, 0750)
@@ -247,8 +248,6 @@ func main() {
 	}
 
 	f.Sync()
-	f.Close()
-
 
 	efiStart = efiStart * logical
 	sysStart = sysStart * logical
@@ -270,11 +269,6 @@ func main() {
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.Printf("mkfs-msdosfs failed:\n%s", out)
-		log.Fatal(err)
-	}
-
-	f, err = os.OpenFile(disk, os.O_RDWR, 0750)
-	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -403,6 +397,9 @@ func main() {
 	if err := copyIn(disk, int64(sysStart), *sysSize, path); err != nil {
 		log.Fatal(err)
 	}
+
+	f.Sync()
+	f.Close()
 
 	log.Printf("Done")
 }
