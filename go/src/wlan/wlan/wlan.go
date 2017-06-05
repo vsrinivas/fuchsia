@@ -101,7 +101,7 @@ func (c *Client) Scan() {
 	for {
 		obs, err := c.wlanChan.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
 		switch mxerror.Status(err) {
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			log.Printf("error waiting on handle: %v", err)
 			return
 		case mx.ErrOk:
