@@ -23,13 +23,6 @@
 
 namespace wlan {
 
-namespace {
-enum class DevicePacket : uint64_t {
-    kShutdown,
-    kPacketQueued,
-};
-}  // namespace
-
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
   : WlanBaseDevice(device, "wlan"),
     mlme_(ddk::WlanmacProtocolProxy(wlanmac_proto)),
@@ -63,7 +56,7 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     status = DdkAdd();
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
-        auto shutdown_status = SendShutdown();
+        mx_status_t shutdown_status = QueueDevicePortPacket(DevicePacket::kShutdown);
         if (shutdown_status != MX_OK) {
             MX_PANIC("wlan: could not send shutdown loop message: %d\n", shutdown_status);
         }
@@ -99,11 +92,7 @@ mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
     std::lock_guard<std::mutex> lock(packet_queue_lock_);
     packet_queue_.push_front(std::move(packet));
 
-    mx_port_packet_t pkt = {};
-    pkt.key = to_u64(PortKey::kDevice);
-    pkt.type = MX_PKT_TYPE_USER;
-    pkt.user.u64[0] = to_u64(DevicePacket::kPacketQueued);
-    mx_status_t status = port_.queue(&pkt, 0);
+    mx_status_t status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
     if (status != MX_OK) {
         warnf("could not send packet queued msg err=%d\n", status);
         packet_queue_.pop_front();
@@ -120,7 +109,7 @@ void Device::DdkUnbind() {
 void Device::DdkRelease() {
     debugfn();
     if (port_.is_valid()) {
-        mx_status_t status = SendShutdown();
+        mx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
         if (status != MX_OK) {
             MX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
         }
@@ -223,28 +212,35 @@ void Device::MainLoop() {
             break;
         }
 
-        bool todo = false;
         switch (pkt.type) {
         case MX_PKT_TYPE_USER:
-            MX_DEBUG_ASSERT(pkt.key == to_u64(PortKey::kDevice));
-            switch (pkt.user.u64[0]) {
+            MX_DEBUG_ASSERT(ToPortKeyType(pkt.key) == PortKeyType::kDevice);
+            switch (ToPortKeyId(pkt.key)) {
             case to_u64(DevicePacket::kShutdown):
                 running = false;
                 continue;
-            case to_u64(DevicePacket::kPacketQueued):
-                todo = true;
+            case to_u64(DevicePacket::kPacketQueued): {
+                mxtl::unique_ptr<Packet> packet;
+                {
+                    std::lock_guard<std::mutex> lock(packet_queue_lock_);
+                    packet = packet_queue_.pop_back();
+                    MX_DEBUG_ASSERT(packet != nullptr);
+                }
+                mx_status_t status = mlme_.HandlePacket(packet.get(), &timeout);
+                if (status != MX_OK) {
+                    errorf("could not handle packet err=%d\n", status);
+                }
                 break;
+            }
             default:
                 errorf("unknown device port key subtype: %" PRIu64 "\n", pkt.user.u64[0]);
                 break;
             }
             break;
         case MX_PKT_TYPE_SIGNAL_REP:
-            switch (pkt.key) {
-            case to_u64(PortKey::kService):
-                if (ProcessChannelPacketLocked(pkt)) {
-                    todo = true;
-                }
+            switch (ToPortKeyType(pkt.key)) {
+            case PortKeyType::kService:
+                ProcessChannelPacketLocked(pkt);
                 break;
             default:
                 errorf("unknown port key: %" PRIu64 "\n", pkt.key);
@@ -255,19 +251,6 @@ void Device::MainLoop() {
             errorf("unknown port packet type: %u\n", pkt.type);
             break;
         }
-
-        if (todo) {
-            mxtl::unique_ptr<Packet> packet;
-            {
-                std::lock_guard<std::mutex> lock(packet_queue_lock_);
-                packet = packet_queue_.pop_back();
-                MX_DEBUG_ASSERT(packet != nullptr);
-            }
-            mx_status_t status = mlme_.HandlePacket(packet.get(), &timeout);
-            if (status != MX_OK) {
-                errorf("could not handle packet err=%d\n", status);
-            }
-        }
     }
 
     infof("exiting MainLoop\n");
@@ -277,11 +260,10 @@ void Device::MainLoop() {
     ResetChannelLocked();
 }
 
-bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
-    debugf("%s pkt{key=%" PRIu64 ", type=%u, status=%d\n",
+void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
+    debugf("%s pkt{key=%" PRIu64 ", type=%u, status=%d}\n",
             __func__, pkt.key, pkt.type, pkt.status);
 
-    bool packet_queued = false;
     const auto& sig = pkt.signal;
     debugf("signal trigger=%u observed=%u count=%" PRIu64 "\n", sig.trigger, sig.observed,
             sig.count);
@@ -293,7 +275,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         if (buffer == nullptr) {
             errorf("no free buffers available!\n");
             // TODO: reply on the channel
-            return packet_queued;
+            return;
         }
         uint32_t read = 0;
         mx_status_t status =
@@ -301,7 +283,7 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         if (status != MX_OK) {
             errorf("could not read channel: %d\n", status);
             ResetChannelLocked();
-            return packet_queued;
+            return;
         }
         debugf("read %u bytes from channel_\n", read);
 
@@ -310,26 +292,29 @@ bool Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         {
             std::lock_guard<std::mutex> lock(packet_queue_lock_);
             packet_queue_.push_front(std::move(packet));
+            status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
+            if (status != MX_OK) {
+                warnf("could not send packet queued msg err=%d\n", status);
+                packet_queue_.pop_front();
+                // TODO(tkilbourn): recover as gracefully as possible
+            }
         }
-        packet_queued = true;
     }
-    return packet_queued;
 }
 
 mx_status_t Device::RegisterChannelWaitLocked() {
     mx_signals_t sigs = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     // TODO(tkilbourn): MX_WAIT_ASYNC_REPEATING can go horribly wrong with multiple threads waiting
     // on the port. If we ever go to a multi-threaded event loop, fix the channel wait.
-    return channel_.wait_async(port_, to_u64(PortKey::kService),
+    return channel_.wait_async(port_, ToPortKey(PortKeyType::kService, 0u),
             sigs, MX_WAIT_ASYNC_REPEATING);
 }
 
-mx_status_t Device::SendShutdown() {
+mx_status_t Device::QueueDevicePortPacket(DevicePacket id) {
     debugfn();
     mx_port_packet_t pkt = {};
-    pkt.key = to_u64(PortKey::kDevice);
+    pkt.key = ToPortKey(PortKeyType::kDevice, to_u64(id));
     pkt.type = MX_PKT_TYPE_USER;
-    pkt.user.u64[0] = to_u64(DevicePacket::kShutdown);
     return port_.queue(&pkt, 0);
 }
 

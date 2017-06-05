@@ -51,6 +51,11 @@ class Device : public WlanBaseDevice,
     void EthmacSend(uint32_t options, void* data, size_t length);
 
   private:
+    enum class DevicePacket : uint64_t {
+        kShutdown,
+        kPacketQueued,
+    };
+
     mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src);
     template <typename T>
     mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Source src,
@@ -65,9 +70,9 @@ class Device : public WlanBaseDevice,
     mx_status_t QueuePacket(mxtl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
     void MainLoop();
-    bool ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
+    void ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
     mx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
-    mx_status_t SendShutdown();
+    mx_status_t QueueDevicePortPacket(DevicePacket id);
 
     mx_status_t GetChannel(mx::channel* out) __TA_EXCLUDES(lock_);
     void ResetChannelLocked() __TA_REQUIRES(lock_);
