@@ -231,21 +231,15 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto error_return;
     }
 
-    int bar = -1;
     void* mmio;
     uint64_t mmio_len;
     /*
-     * TODO(cja): according to eXtensible Host Controller Interface revision 1.1, section 5, xhci
+     * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
      */
-    for (size_t i = 0; i < PCI_MAX_BAR_COUNT; i++) {
-        status = pci_proto->map_mmio(dev, i, MX_CACHE_POLICY_UNCACHED_DEVICE, &mmio, &mmio_len, &mmio_handle);
-        if (status == NO_ERROR) {
-            bar = i;
-            break;
-        }
-    }
-    if (bar == -1) {
+    status = pci_proto->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                     &mmio, &mmio_len, &mmio_handle);
+    if (status != NO_ERROR) {
         printf("usb_xhci_bind could not find bar\n");
         status = ERR_INTERNAL;
         goto error_return;
