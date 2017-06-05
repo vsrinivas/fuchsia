@@ -21,10 +21,10 @@ source_set("util") {
 
   public_deps = [
     "//application/lib/app",
+    "//apps/media/lib/flog",
   ]
 
   deps = [
-    "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//lib/ftl",

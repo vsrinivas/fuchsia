@@ -56,7 +56,9 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   class Stream {
    public:
     Stream(size_t stream_index,
+#ifdef FLOG_ENABLED
            flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
+#endif
            const MediaServicePtr& media_service,
            const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,

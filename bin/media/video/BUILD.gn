@@ -8,9 +8,12 @@ source_set("video") {
     "video_frame_source.h",
   ]
 
+  public_deps = [
+    "//apps/media/lib/flog",
+  ]
+
   deps = [
     ":video_converter",
-    "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/lib/transport",
     "//apps/media/services",

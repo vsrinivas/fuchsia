@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Controls whether flog is turned on.
+  enable_flog = false
+}
+
+config("enable_flog") {
+  defines = [ "FLOG_ENABLED" ]
+}
+
 source_set("flog") {
   sources = [
     "flog.cc",
@@ -18,4 +27,8 @@ source_set("flog") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+
+  if (enable_flog) {
+    public_configs = [ ":enable_flog" ]
+  }
 }

@@ -18,8 +18,11 @@ source_set("fidl") {
     "fidl_type_conversions.h",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/media/lib/flog",
+  ]
+
+  deps = [
     "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/media/src/demux",

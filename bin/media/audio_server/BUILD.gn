@@ -26,9 +26,12 @@ executable("audio_server") {
     "platform/usb/usb_output.h",
   ]
 
+  public_deps = [
+    "//apps/media/lib/flog",
+  ]
+
   deps = [
     "//application/lib/app",
-    "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/lib/transport",
     "//apps/media/services",

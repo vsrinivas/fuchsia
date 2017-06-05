@@ -22,10 +22,10 @@ source_set("transport") {
 
   public_deps = [
     "//application/lib/app",
+    "//apps/media/lib/flog",
   ]
 
   deps = [
-    "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",

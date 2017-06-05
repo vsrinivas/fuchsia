@@ -56,9 +56,7 @@ MediaSourceImpl::MediaSourceImpl(
     for (MediaTypePtr& stream_media_type : stream_media_types) {
       streams_.emplace_back(new Stream(
           stream_index,
-#ifdef NDEBUG
-          nullptr,
-#else
+#ifdef FLOG_ENABLED
           log_channel_.get(),
 #endif
           media_service_,
@@ -146,7 +144,9 @@ void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
 
 MediaSourceImpl::Stream::Stream(
     size_t stream_index,
+#ifdef FLOG_ENABLED
     flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
+#endif
     const MediaServicePtr& media_service,
     const ProducerGetter& producer_getter,
     std::unique_ptr<StreamType> stream_type,
@@ -168,6 +168,10 @@ MediaSourceImpl::Stream::Stream(
     callback();
     return;
   }
+
+#ifndef FLOG_ENABLED
+  int log_channel = 0;
+#endif
 
   BuildFidlConversionPipeline(
       media_service, *allowed_stream_types, producer_getter, nullptr,

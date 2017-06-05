@@ -73,9 +73,7 @@ namespace flog {
 // used for identification.
 #define FLOG_ADDRESS(p) reinterpret_cast<uintptr_t>(p)
 
-#if !defined(NDEBUG)
-
-#define FLOG_ENABLED 1
+#ifdef FLOG_ENABLED
 
 // Initializes flog, connecting to the service and creating a new log. |shell|
 // is the application's shell (for connecting to the service), and |label| is
@@ -113,27 +111,6 @@ namespace flog {
 // Gets the numeric channel id from a channel.
 #define FLOG_ID(channel_name) channel_name->flog_channel()->id()
 
-#else
-
-#define FLOG_INITIALIZE(shell, label) ((void)0)
-#define FLOG_DESTROY() ((void)0)
-#define FLOG_CHANNEL_DECL(channel_type, channel_name)
-#define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject)
-#define FLOG(channel_name, call) ((void)0)
-#define FLOG_ID(channel_name) 0
-
-#endif
-
-// Same as FLOG_CHANNEL_WITH_SUBJECT but supplies the address of |this| as
-// the subject address. This is the preferred form for declaring channels that
-// are instance members.
-#define FLOG_INSTANCE_CHANNEL(channel_type, channel_name) \
-  FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, FLOG_ADDRESS(this))
-
-// Same as FLOG_CHANNEL_WITH_SUBJECT but supplies a null subject address.
-#define FLOG_CHANNEL(channel_type, channel_name) \
-  FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, 0)
-
 // The following four macros are used to obtain koids that can be used to
 // unify both ends of a channel used in a fidl connection. FLOG_REQUEST_KOID
 // and FLOG_BINDING_KOID are used at the service end of the connection.
@@ -161,6 +138,16 @@ namespace flog {
 // InterfaceHandle. This value is identical to the value return by
 // FLOG_REQUEST_ID(request) where request was created from the handle.
 #define FLOG_HANDLE_KOID(h) mtl::GetRelatedKoid(h.handle().get())
+
+// Same as FLOG_CHANNEL_WITH_SUBJECT but supplies the address of |this| as
+// the subject address. This is the preferred form for declaring channels that
+// are instance members.
+#define FLOG_INSTANCE_CHANNEL(channel_type, channel_name) \
+  FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, FLOG_ADDRESS(this))
+
+// Same as FLOG_CHANNEL_WITH_SUBJECT but supplies a null subject address.
+#define FLOG_CHANNEL(channel_type, channel_name) \
+  FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, 0)
 
 // Thread-safe logger for all channels in a given process.
 class Flog {
@@ -252,5 +239,22 @@ mx_koid_t GetInterfacePtrRelatedKoid(fidl::InterfacePtr<T>* ptr) {
   ptr->Bind(std::move(handle));
   return result;
 }
+
+#else  // FLOG_ENABLED
+
+#define FLOG_INITIALIZE(shell, label) ((void)0)
+#define FLOG_DESTROY() ((void)0)
+#define FLOG_CHANNEL_DECL(channel_type, channel_name)
+#define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject)
+#define FLOG(channel_name, call) ((void)0)
+#define FLOG_ID(channel_name) 0
+#define FLOG_REQUEST_KOID(request) ((void)request, MX_KOID_INVALID)
+#define FLOG_BINDING_KOID(binding) ((void)binding, MX_KOID_INVALID)
+#define FLOG_PTR_KOID(ptr) ((void)ptr, MX_KOID_INVALID)
+#define FLOG_HANDLE_KOID(h) ((void)h, MX_KOID_INVALID)
+#define FLOG_INSTANCE_CHANNEL(channel_type, channel_name)
+#define FLOG_CHANNEL(channel_type, channel_name)
+
+#endif  // FLOG_ENABLED
 
 }  // namespace flog

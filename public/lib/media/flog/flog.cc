@@ -10,6 +10,8 @@
 
 namespace flog {
 
+#ifdef FLOG_ENABLED
+
 // static
 uint64_t Flog::next_entry_index_ = 0;
 
@@ -103,5 +105,7 @@ bool FlogChannel::AcceptWithResponder(fidl::Message* message,
   FTL_DCHECK(false) << "Flog doesn't support messages with responses";
   abort();
 }
+
+#endif  // FLOG_ENABLED
 
 }  // namespace flog
