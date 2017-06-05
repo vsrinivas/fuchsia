@@ -12,6 +12,10 @@ static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;
 static const uint8_t kModRMRegMask = 0b00111000;
 
+static bool is_h66_prefix(uint8_t prefix) {
+    return prefix == 0x66;
+}
+
 static bool is_rex_prefix(uint8_t prefix) {
     return (prefix >> 4) == 0b0100;
 }
@@ -28,6 +32,16 @@ static uint8_t displacement_size(uint8_t mod_rm) {
         return 4;
     default:
         return (mod_rm & ~kModRMRegMask) == 0b00000101 ? 4 : 0;
+    }
+}
+
+static uint8_t mem_size(bool h66, bool rex_w) {
+    if (rex_w) {
+        return 8;
+    } else if (!h66) {
+        return 4;
+    } else {
+        return 2;
     }
 }
 
@@ -104,11 +118,19 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     if (inst_len > kMaxInstructionLength)
         return ERR_OUT_OF_RANGE;
 
+    // Parse 66H prefix.
+    bool h66 = is_h66_prefix(inst_buf[0]);
+    if (h66) {
+        if (inst_len == 1)
+            return ERR_BAD_STATE;
+        inst_buf++;
+        inst_len--;
+    }
     // Parse REX prefix.
     //
-    // From Intel Volume 2, Appendix 2.2.1.
-    //
-    // TODO(abdulla): Handle more prefixes.
+    // From Intel Volume 2, Appendix 2.2.1: Only one REX prefix is allowed per
+    // instruction. If used, the REX prefix byte must immediately precede the
+    // opcode byte or the escape opcode byte (0FH).
     bool rex_r = false;
     bool rex_w = false;
     if (is_rex_prefix(inst_buf[0])) {
@@ -117,6 +139,9 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         inst_buf++;
         inst_len--;
     }
+    // Technically this is valid, but no sane compiler should emit it.
+    if (h66 && rex_w)
+        return ERR_NOT_SUPPORTED;
 
     uint16_t opcode;
     uint8_t mod_rm;
@@ -133,7 +158,7 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
         inst->read = false;
-        inst->mem = rex_w ? 8 : 4;
+        inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
@@ -142,19 +167,19 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         if (inst_len != disp_size + 2u)
             return ERR_OUT_OF_RANGE;
         inst->read = true;
-        inst->mem = rex_w ? 8 : 4;
+        inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = select_register(guest_gpr, register_id(mod_rm, rex_r));
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move imm to r/m.
     case 0xc7: {
-        const uint8_t imm_size = 4;
+        const uint8_t imm_size = h66 ? 2 : 4;
         if (inst_len != disp_size + imm_size + 2u)
             return ERR_OUT_OF_RANGE;
         if ((mod_rm & kModRMRegMask) != 0)
             return ERR_INVALID_ARGS;
         inst->read = false;
-        inst->mem = rex_w ? 8 : 4;
+        inst->mem = mem_size(h66, rex_w);
         inst->imm = 0;
         inst->reg = NULL;
         memcpy(&inst->imm, inst_buf + disp_size + 2, imm_size);
@@ -162,6 +187,8 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
     }
     // Move (8-bit) with zero-extend r/m to r.
     case 0xb60f:
+        if (h66)
+            return ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
             return ERR_OUT_OF_RANGE;
         inst->read = true;
@@ -171,6 +198,8 @@ mx_status_t decode_instruction(const uint8_t* inst_buf, uint32_t inst_len,
         return inst->reg == NULL ? ERR_NOT_SUPPORTED : NO_ERROR;
     // Move (16-bit) with zero-extend r/m to r.
     case 0xb70f:
+        if (h66)
+            return ERR_BAD_STATE;
         if (inst_len != disp_size + 3u)
             return ERR_OUT_OF_RANGE;
         inst->read = true;

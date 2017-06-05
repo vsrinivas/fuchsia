@@ -33,6 +33,8 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(decode_instruction(bad_disp, 2, NULL, NULL), ERR_OUT_OF_RANGE, "");
     uint8_t has_sib[] = { 0x89, 0b01000100, 0, 0 };
     EXPECT_EQ(decode_instruction(has_sib, 4, NULL, NULL), ERR_NOT_SUPPORTED, "");
+    uint8_t bad_h66[] = { 0x66, 0b01001000, 0x89, 0b00010000 };
+    EXPECT_EQ(decode_instruction(bad_h66, 4, NULL, NULL), ERR_NOT_SUPPORTED, "");
 
     // mov %ecx, (%rax)
     uint8_t mov[] = { 0x89, 0b00001000 };
@@ -76,6 +78,14 @@ static bool decode_mov_89(void) {
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
 
+    // mov %r14w, 0x13(%rax)
+    uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0x89, 0b01110000, 0x13 };
+    EXPECT_EQ(decode_instruction(h66_mov_disp, 5, &guest_gpr, &inst), NO_ERROR, "");
+    EXPECT_FALSE(inst.read, "");
+    EXPECT_EQ(inst.mem, 2u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
+    EXPECT_EQ(inst.reg, &guest_gpr.r14, "");
+
     END_TEST;
 }
 
@@ -88,6 +98,8 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(decode_instruction(bad_disp, 2, NULL, NULL), ERR_OUT_OF_RANGE, "");
     uint8_t has_sib[] = { 0x8b, 0b01000100, 0, 0 };
     EXPECT_EQ(decode_instruction(has_sib, 4, NULL, NULL), ERR_NOT_SUPPORTED, "");
+    uint8_t bad_h66[] = { 0x66, 0b01001000, 0x8b, 0b00010000 };
+    EXPECT_EQ(decode_instruction(bad_h66, 4, NULL, NULL), ERR_NOT_SUPPORTED, "");
 
     // mov (%rax), %ecx
     uint8_t mov[] = { 0x8b, 0b00001000 };
@@ -131,6 +143,14 @@ static bool decode_mov_8b(void) {
     EXPECT_EQ(inst.imm, 0u, "");
     EXPECT_EQ(inst.reg, &guest_gpr.r12, "");
 
+    // mov 0x13(rax), %r14w
+    uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0x8b, 0b01110000, 0x13 };
+    EXPECT_EQ(decode_instruction(h66_mov_disp, 5, &guest_gpr, &inst), NO_ERROR, "");
+    EXPECT_TRUE(inst.read, "");
+    EXPECT_EQ(inst.mem, 2u, "");
+    EXPECT_EQ(inst.imm, 0u, "");
+    EXPECT_EQ(inst.reg, &guest_gpr.r14, "");
+
     END_TEST;
 }
 
@@ -145,6 +165,8 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(decode_instruction(has_sib, 8, NULL, NULL), ERR_NOT_SUPPORTED, "");
     uint8_t bad_mod_rm[] = { 0xc7, 0b00111000, 0x1, 0, 0, 0 };
     EXPECT_EQ(decode_instruction(bad_mod_rm, 6, NULL, NULL), ERR_INVALID_ARGS, "");
+    uint8_t bad_h66[] = { 0x66, 0b01001000, 0xc7, 0, 0, 0, 0, 0x1 };
+    EXPECT_EQ(decode_instruction(bad_h66, 8, NULL, NULL), ERR_NOT_SUPPORTED, "");
 
     // movl 0x1, (%rax)
     uint8_t mov[] = { 0xc7, 0, 0x1, 0, 0, 0 };
@@ -180,12 +202,12 @@ static bool decode_mov_c7(void) {
     EXPECT_EQ(inst.imm, 0x1000000u, "");
     EXPECT_EQ(inst.reg, NULL, "");
 
-    // movq 0x1000000, -0x1(%rax)
-    uint8_t rex_mov_disp[] = { 0b01001100, 0xc7, 0b01000000, 0xff, 0, 0, 0, 0x1 };
-    EXPECT_EQ(decode_instruction(rex_mov_disp, 8, &guest_gpr, &inst), NO_ERROR, "");
+    // movw 0x100, -0x1(%rax)
+    uint8_t h66_mov_disp[] = { 0x66, 0b01000100, 0xc7, 0b01000000, 0xff, 0, 0x1 };
+    EXPECT_EQ(decode_instruction(h66_mov_disp, 7, &guest_gpr, &inst), NO_ERROR, "");
     EXPECT_FALSE(inst.read, "");
-    EXPECT_EQ(inst.mem, 8u, "");
-    EXPECT_EQ(inst.imm, 0x1000000u, "");
+    EXPECT_EQ(inst.mem, 2u, "");
+    EXPECT_EQ(inst.imm, 0x100u, "");
     EXPECT_EQ(inst.reg, NULL, "");
 
     END_TEST;
@@ -200,6 +222,8 @@ static bool decode_movz_0f_b6(void) {
     EXPECT_EQ(decode_instruction(bad_disp, 3, NULL, NULL), ERR_OUT_OF_RANGE, "");
     uint8_t has_sib[] = { 0x0f, 0xb6, 0b01000100, 0, 0 };
     EXPECT_EQ(decode_instruction(has_sib, 5, NULL, NULL), ERR_NOT_SUPPORTED, "");
+    uint8_t has_h66[] = { 0x66, 0x0f, 0xb6, 0b00001000 };
+    EXPECT_EQ(decode_instruction(has_h66, 4, NULL, NULL), ERR_BAD_STATE, "");
 
     // movzb (%rax), %ecx
     uint8_t movz[] = { 0x0f, 0xb6, 0b00001000 };
@@ -255,6 +279,8 @@ static bool decode_movz_0f_b7(void) {
     EXPECT_EQ(decode_instruction(bad_disp, 3, NULL, NULL), ERR_OUT_OF_RANGE, "");
     uint8_t has_sib[] = { 0x0f, 0xb7, 0b01000100, 0, 0 };
     EXPECT_EQ(decode_instruction(has_sib, 5, NULL, NULL), ERR_NOT_SUPPORTED, "");
+    uint8_t has_h66[] = { 0x66, 0x0f, 0xb7, 0b00001000 };
+    EXPECT_EQ(decode_instruction(has_h66, 4, NULL, NULL), ERR_BAD_STATE, "");
 
     // movzw (%rax), %ecx
     uint8_t movz[] = { 0x0f, 0xb7, 0b00001000 };
