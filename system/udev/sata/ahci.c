@@ -715,19 +715,23 @@ static mx_status_t ahci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     // map register window
-    status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)&device->regs, &device->regs_size, &device->regs_handle);
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_5, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                               (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != NO_ERROR) {
         xprintf("ahci: error %d mapping register window\n", status);
         goto fail;
     }
 
     const pci_config_t* config;
+    size_t config_size;
     mx_handle_t config_handle;
-    status = pci->get_config(dev, &config, &config_handle);
+    status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                               (void**)&config, &config_size, &config_handle);
     if (status != NO_ERROR) {
         xprintf("ahci: error %d getting pci config\n", status);
         goto fail;
     }
+
     if (config->sub_class != 0x06 && config->base_class == 0x01) { // SATA
         status = ERR_NOT_SUPPORTED;
         xprintf("ahci: device class 0x%x unsupported!\n", config->sub_class);
