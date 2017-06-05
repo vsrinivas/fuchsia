@@ -124,6 +124,16 @@ class DriverTest(unittest.TestCase):
     self.assertEqual(driver.count, 3)
     self.assertEqual(len(driver.failed), 1)
 
+  def test_no_results(self):
+    log = []
+    Log.print_ = log.append
+    driver = Driver()
+
+    driver.start_test('111', self.TEST)
+    driver.wait_for_teardown(['111 teardown pass'])
+    self.assertEqual(driver.count, 1)
+    self.assertIn('[passed] test', log)
+
   def test_log(self):
     log = []
     Log.print_ = log.append

@@ -175,6 +175,11 @@ class Driver(object):
       Log.full_report(result)
       self.failed.append(result)
 
+  def _on_empty_result(self, failed):
+    self.count += 1
+    status = 'failed' if failed else 'passed'
+    Log.line(status, self.current_test['name'])
+
   def start_test(self, id_, test):
     self.current_id = id_
     self.current_test = test
@@ -183,6 +188,7 @@ class Driver(object):
     return 'run %s %s' % (self.current_id, test['exec'])
 
   def wait_for_teardown(self, iter_messages):
+    any_results = False
     for message in iter_messages:
       return_id, op, data = message.split(' ', 2)
       data = data.strip()
@@ -190,10 +196,14 @@ class Driver(object):
         raise WrongTestId('expected %s got %s' % (self.current_id, return_id))
 
       if op == 'teardown':
-        if data == 'fail':
-          Log.line('failed', self.current_test['name'])
+        if not any_results:
+          # Currently the Modular tests don't report individual results, they
+          # just run an entire command and then send a teardown message. Make
+          # sure something gets displayed and counted in that case.
+          self._on_empty_result(data == 'fail')
         break
       elif op == 'result':
+        any_results = True
         self._on_result(json.loads(data))
       elif op == 'log':
         Log.line('log', data)
