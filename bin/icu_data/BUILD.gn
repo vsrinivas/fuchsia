@@ -25,19 +25,20 @@ executable("icu_data_provider") {
 }
 
 package("icu_data") {
-  app = true
+  archive = true
 
   deps = [ ":icu_data_provider" ]
 
   binaries = [
     {
       name = "icu_data_provider"
+      dest = "app"
     },
   ]
   resources = [
     {
       path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icu_data/icudtl.dat"
+      dest = "icudtl.dat"
     },
   ]
 }

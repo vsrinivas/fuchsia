@@ -7,14 +7,14 @@
 #include <magenta/syscalls.h>
 #include <utility>
 
+#include "apps/icu_data/lib/constants.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/file.h"
-#include "apps/icu_data/lib/constants.h"
 
 namespace icu_data {
 namespace {
 
-constexpr char kICUDataPath[] = "/system/data/icu_data/icudtl.dat";
+constexpr char kICUDataPath[] = "/pkg/data/icudtl.dat";
 constexpr mx_rights_t kICUDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
 
@@ -26,8 +26,9 @@ ICUDataProviderImpl::~ICUDataProviderImpl() = default;
 
 bool ICUDataProviderImpl::LoadData() {
   if (!mtl::VmoFromFilename(kICUDataPath, &icu_data_vmo_)) {
-    FTL_LOG(ERROR) << "Loading ICU data failed: Failed to create VMO from file '"
-                   << kICUDataPath << "'.";
+    FTL_LOG(ERROR)
+        << "Loading ICU data failed: Failed to create VMO from file '"
+        << kICUDataPath << "'.";
     icu_data_vmo_.reset();
     return false;
   }
