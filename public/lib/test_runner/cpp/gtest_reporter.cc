@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <regex>
+
 #include "apps/test_runner/lib/gtest_reporter.h"
 
 #include "application/lib/app/application_context.h"
@@ -10,8 +12,10 @@
 
 namespace test_runner {
 
-GoogleTestReporter::GoogleTestReporter(const std::string& identity)
-    : identity_(identity) {
+GoogleTestReporter::GoogleTestReporter(const std::string& executable) {
+  std::regex file_prefix("^file://");
+  executable_ = std::regex_replace(executable, file_prefix, "");
+
   thread_.Run();
   thread_.TaskRunner()->PostTask([this] { InitOnThread(); });
 }
@@ -31,14 +35,14 @@ void GoogleTestReporter::InitOnThread() {
   application_context_ =
       app::ApplicationContext::CreateFromStartupInfoNotChecked();
   if (application_context_->has_environment_services()) {
-    tracing::InitializeTracer(application_context_.get(), {identity_});
+    tracing::InitializeTracer(application_context_.get(), {executable_});
     test_runner_ = application_context_
                        ->ConnectToEnvironmentService<test_runner::TestRunner>();
     test_runner_.set_connection_error_handler([this]() {
       test_runner_ = nullptr;
       QuitOnThread();
     });
-    test_runner_->Identify(identity_);
+    test_runner_->Identify(executable_);
   }
 }
 
@@ -66,6 +70,13 @@ void GoogleTestReporter::OnTestEnd(const ::testing::TestInfo& info) {
         << part_result.message() << "\n";
     }
   }
+
+  if (failed) {
+    // Show the command to reproduce the failure.
+    stream << "\nTo reproduce failure:\n"
+        << executable_ << " --gtest_filter=" << name << "\n";
+  }
+
   std::string message = stream.str();
 
   thread_.TaskRunner()->PostTask([this, name, elapsed, failed, message] {

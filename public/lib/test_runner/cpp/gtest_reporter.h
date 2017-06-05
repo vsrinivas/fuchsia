@@ -38,7 +38,7 @@ class GoogleTestReporter : public testing::EmptyTestEventListener {
   void OnTestProgramEnd(const ::testing::UnitTest& test) override;
 
  private:
-  const std::string identity_;
+  std::string executable_;
   mtl::Thread thread_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   TestRunnerPtr test_runner_;
