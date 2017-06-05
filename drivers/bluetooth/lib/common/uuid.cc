@@ -50,6 +50,23 @@ constexpr size_t kBaseOffset = 12;
 
 }  // namespace
 
+// static
+bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
+  switch (bytes.GetSize()) {
+    case 2:
+      *out_uuid = UUID(le16toh(*reinterpret_cast<const uint16_t*>(bytes.GetData())));
+      return true;
+    case 4:
+      *out_uuid = UUID(le32toh(*reinterpret_cast<const uint32_t*>(bytes.GetData())));
+      return true;
+    case 16:
+      *out_uuid = UUID(*reinterpret_cast<const UInt128*>(bytes.GetData()));
+      return true;
+  }
+
+  return false;
+}
+
 UUID::UUID(const UInt128& uuid128) : type_(Type::k128Bit), value_(uuid128) {}
 
 UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUUID) {

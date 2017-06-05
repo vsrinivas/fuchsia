@@ -18,6 +18,10 @@ class ByteBuffer;
 // Bluetooth UUID.
 class UUID final {
  public:
+  // Constructs a UUID from |bytes|. |bytes| should contain a 16-, 32-, or 128-bit UUID in
+  // little-endian byte order. Returns false if |bytes| contains an unsupported size.
+  static bool FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid);
+
   explicit UUID(const UInt128& uuid128);
   explicit UUID(uint16_t uuid16);
   explicit UUID(uint32_t uuid32);

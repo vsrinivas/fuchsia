@@ -102,16 +102,16 @@ TEST(UUIDTest, 128Bit) {
 }
 
 TEST(UUIDTest, CompareBytes) {
-  auto uuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
-  auto uuid32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
-  auto uuid128Bytes =
+  auto kUUID16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+  auto kUUID32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
+  auto kUUID128Bytes =
       common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
                                      0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
 
   UUID uuid(kId1As16);
-  EXPECT_TRUE(uuid.CompareBytes(uuid16Bytes));
-  EXPECT_TRUE(uuid.CompareBytes(uuid32Bytes));
-  EXPECT_TRUE(uuid.CompareBytes(uuid128Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUUID16Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUUID32Bytes));
+  EXPECT_TRUE(uuid.CompareBytes(kUUID128Bytes));
 
   common::BufferView empty;
   EXPECT_FALSE(uuid.CompareBytes(empty));
@@ -152,6 +152,31 @@ TEST(UUIDTest, StringToUUID) {
 
   EXPECT_TRUE(StringToUUID(kId3AsString, &uuid));
   EXPECT_EQ(kId3As128, uuid.value());
+}
+
+TEST(UUIDTest, FromBytes) {
+  auto kUUID16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+  auto kUUID32Bytes = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00, 0x00);
+  auto kUUID128Bytes =
+      common::CreateStaticByteBuffer(0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10,
+                                     0x00, 0x00, 0x0d, 0x18, 0x00, 0x00);
+
+  auto kInvalid0 = common::CreateStaticByteBuffer(0x0d);
+  auto kInvalid1 = common::CreateStaticByteBuffer(0x0d, 0x18, 0x00);
+  common::BufferView kInvalid2;
+
+  UUID uuid;
+
+  EXPECT_FALSE(UUID::FromBytes(kInvalid0, &uuid));
+  EXPECT_FALSE(UUID::FromBytes(kInvalid1, &uuid));
+  EXPECT_FALSE(UUID::FromBytes(kInvalid2, &uuid));
+
+  EXPECT_TRUE(UUID::FromBytes(kUUID16Bytes, &uuid));
+  EXPECT_EQ(kId1As16, uuid);
+  EXPECT_TRUE(UUID::FromBytes(kUUID32Bytes, &uuid));
+  EXPECT_EQ(kId1As16, uuid);
+  EXPECT_TRUE(UUID::FromBytes(kUUID128Bytes, &uuid));
+  EXPECT_EQ(kId1As16, uuid);
 }
 
 }  // namespace
