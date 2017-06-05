@@ -195,64 +195,58 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     case IOCTL_DEVICE_BIND: {
         char* drv_libname = in_len > 0 ? (char*)in_buf : NULL;
         if (in_len > PATH_MAX) {
-            r = ERR_BAD_PATH;
-        } else {
-            drv_libname[in_len] = 0;
-            r = device_bind(dev, drv_libname);
+            return ERR_BAD_PATH;
         }
-        break;
+        drv_libname[in_len] = 0;
+        return device_bind(dev, drv_libname);
     }
     case IOCTL_DEVICE_GET_EVENT_HANDLE: {
         if (out_len < sizeof(mx_handle_t)) {
-            r = ERR_BUFFER_TOO_SMALL;
-        } else {
-            mx_handle_t* event = out_buf;
-            r = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ, event);
-            if (r == NO_ERROR) {
-                r = sizeof(mx_handle_t);
-            }
+            return ERR_BUFFER_TOO_SMALL;
         }
-        break;
+        mx_handle_t* event = out_buf;
+        r = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ, event);
+        if (r == NO_ERROR) {
+            r = sizeof(mx_handle_t);
+        }
+        return r;
     }
     case IOCTL_DEVICE_GET_DRIVER_NAME: {
         if (!dev->driver) {
-            r = ERR_NOT_SUPPORTED;
-        } else if (!out_buf) {
-            r = ERR_INVALID_ARGS;
-        } else {
-            const char* name = dev->driver->name;
-            if (name == NULL) {
-                name = "unknown";
-            }
-            r = strlen(name);
-            if (out_len < (size_t)r) {
-                r = ERR_BUFFER_TOO_SMALL;
-            } else {
-                strncpy(out_buf, name, r);
-            }
+            return ERR_NOT_SUPPORTED;
         }
-        break;
+        const char* name = dev->driver->name;
+        if (name == NULL) {
+            name = "unknown";
+        }
+        r = strlen(name);
+        if (out_len < (size_t)r) {
+            r = ERR_BUFFER_TOO_SMALL;
+        } else {
+            strncpy(out_buf, name, r);
+        }
+        return r;
     }
     case IOCTL_DEVICE_GET_DEVICE_NAME: {
-        if (!out_buf) {
-            r = ERR_INVALID_ARGS;
-        } else {
-            r = strlen(dev->name);
-            if (out_len < (size_t)r) {
-                r = ERR_BUFFER_TOO_SMALL;
-            } else {
-                strncpy(out_buf, dev->name, r);
-            }
+        r = strlen(dev->name);
+        if (out_len < (size_t)r) {
+            return ERR_BUFFER_TOO_SMALL;
         }
-        break;
+        strncpy(out_buf, dev->name, r);
+        return r;
+    }
+    case IOCTL_DEVICE_GET_TOPO_PATH: {
+        size_t actual;
+        if ((r = devhost_get_topo_path(dev, out_buf, out_len, &actual)) < 0) {
+            return r;
+        }
+        return actual;
     }
     case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        r = device_op_suspend(dev, 0);
-        break;
+        return device_op_suspend(dev, 0);
     }
     case IOCTL_DEVICE_DEBUG_RESUME: {
-        r = device_op_resume(dev, 0);
-        break;
+        return device_op_resume(dev, 0);
     }
     default: {
         size_t actual = 0;

@@ -354,6 +354,32 @@ static const char* devhost_bin = "/boot/bin/devhost";
 
 mx_handle_t get_service_root(void);
 
+static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
+    char tmp[max];
+    char* path = tmp + max - 1;
+    *path = 0;
+    size_t total = 1;
+
+    while (dev != NULL) {
+        if (dev->flags & DEV_CTX_SHADOW) {
+            dev = dev->parent;
+        }
+        const char* name = dev->parent ? dev->name : "dev";
+        size_t len = strlen(name) + 1;
+        if (len > (max - total)) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        memcpy(path - len + 1, name, len - 1);
+        path -= len;
+        *path = '/';
+        total += len;
+        dev = dev->parent;
+    }
+
+    memcpy(out, path, total);
+    return NO_ERROR;
+}
+
 static mx_status_t dc_launch_devhost(devhost_t* host,
                                      const char* name, mx_handle_t hrpc) {
     launchpad_t* lp;
@@ -776,6 +802,21 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         }
         break;
 
+    case DC_OP_GET_TOPO_PATH: {
+        struct {
+            dc_status_t rsp;
+            char path[DC_PATH_MAX];
+        } reply;
+        if ((r = dc_get_topo_path(dev, reply.path, DC_PATH_MAX)) < 0) {
+            break;
+        }
+        reply.rsp.status = NO_ERROR;
+        reply.rsp.txid = msg.txid;
+        if ((r = mx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), NULL, 0)) < 0) {
+            return r;
+        }
+        return NO_ERROR;
+    }
     case DC_OP_STATUS: {
         // all of these return directly and do not write a
         // reply, since this message is a reply itself

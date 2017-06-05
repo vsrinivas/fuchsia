@@ -100,16 +100,16 @@ mx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
 }
 
 mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
-                       mx_handle_t* handles, size_t hcount) {
-    dc_status_t rsp;
+                       mx_handle_t* handles, size_t hcount,
+                       dc_status_t* rsp, size_t rsplen) {
     mx_channel_call_args_t args = {
         .wr_bytes = msg,
         .wr_handles = handles,
-        .rd_bytes = &rsp,
+        .rd_bytes = rsp,
         .rd_handles = NULL,
         .wr_num_bytes = msglen,
         .wr_num_handles = hcount,
-        .rd_num_bytes = sizeof(rsp),
+        .rd_num_bytes = rsplen,
         .rd_num_handles = 0,
     };
 
@@ -124,9 +124,9 @@ mx_status_t dc_msg_rpc(mx_handle_t h, dc_msg_t* msg, size_t msglen,
         }
         return r;
     }
-    if (args.rd_num_bytes != sizeof(rsp)) {
+    if (args.rd_num_bytes < sizeof(dc_status_t)) {
         return ERR_INTERNAL;
     }
 
-    return rsp.status;
+    return rsp->status;
 }

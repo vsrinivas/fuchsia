@@ -60,6 +60,8 @@ void devhost_device_destroy(mx_device_t* dev);
 mx_status_t devhost_load_firmware(mx_device_t* dev, const char* path,
                                   mx_handle_t* fw, size_t* size);
 
+mx_status_t devhost_get_topo_path(mx_device_t* dev, char* path, size_t max, size_t* actual);
+
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
     mx_device_t* dev;

@@ -457,8 +457,10 @@ mx_status_t devhost_add(mx_device_t* parent, mx_device_t* child,
     }
     handle[1] = resource;
 
+    dc_status_t rsp;
     if ((r = dc_msg_rpc(parent->rpc, &msg, msglen,
-                        handle, (resource != MX_HANDLE_INVALID) ? 2 : 1)) < 0) {
+                        handle, (resource != MX_HANDLE_INVALID) ? 2 : 1,
+                        &rsp, sizeof(rsp))) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
         ios->dev = child;
@@ -484,8 +486,9 @@ fail:
     return r;
 }
 
-static mx_status_t devhost_simple_rpc(mx_device_t* dev, uint32_t op,
-                                      const char* args, const char* opname) {
+static mx_status_t devhost_rpc(mx_device_t* dev, uint32_t op,
+                               const char* args, const char* opname,
+                               dc_status_t* rsp, size_t rsp_len) {
     char buffer[512];
     const char* path = mkdevpath(dev, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] %s args='%s'\n", path, opname, args ? args : "");
@@ -497,7 +500,7 @@ static mx_status_t devhost_simple_rpc(mx_device_t* dev, uint32_t op,
     }
     msg.op = op;
     msg.protocol_id = 0;
-    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0)) < 0) {
+    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0, rsp, rsp_len)) < 0) {
         log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
     }
     return r;
@@ -528,7 +531,8 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     ios->ph.handle = MX_HANDLE_INVALID;
     dev->ios = NULL;
 
-    devhost_simple_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device");
+    dc_status_t rsp;
+    devhost_rpc(dev, DC_OP_REMOVE_DEVICE, NULL, "remove-device", &rsp, sizeof(rsp));
 
     // shut down our rpc channel
     mx_handle_close(dev->rpc);
@@ -540,8 +544,29 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+mx_status_t devhost_get_topo_path(mx_device_t* dev, char* path, size_t max, size_t* actual) {
+    struct {
+        dc_status_t rsp;
+        char path[DC_PATH_MAX];
+    } reply;
+    mx_status_t r;
+    if ((r = devhost_rpc(dev, DC_OP_GET_TOPO_PATH, NULL, "get-topo-path",
+                         &reply.rsp, sizeof(reply))) < 0) {
+        return r;
+    }
+    reply.path[DC_PATH_MAX - 1] = 0;
+    size_t len = strlen(reply.path) + 1;
+    if (len > max) {
+        return ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(path, reply.path, len);
+    *actual = len;
+    return NO_ERROR;
+}
+
 mx_status_t devhost_device_bind(mx_device_t* dev, const char* drv_libname) {
-    return devhost_simple_rpc(dev, DC_OP_BIND_DEVICE, drv_libname, "bind-device");
+    dc_status_t rsp;
+    return devhost_rpc(dev, DC_OP_BIND_DEVICE, drv_libname, "bind-device", &rsp, sizeof(rsp));
 }
 
 extern driver_api_t devhost_api;

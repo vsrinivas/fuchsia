@@ -105,6 +105,10 @@ static int cmd_list_blk(void) {
         ioctl_device_get_device_name(fd, info.devname, sizeof(info.devname));
         ioctl_device_get_driver_name(fd, info.drvname, sizeof(info.drvname));
 
+        char xxx[1024];
+        ioctl_device_get_topo_path(fd, xxx, sizeof(xxx));
+        printf("TOPO: %s\n", xxx);
+
         block_info_t block_info;
         if (ioctl_block_get_info(fd, &block_info) > 0) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr),

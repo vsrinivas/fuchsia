@@ -32,25 +32,31 @@
 #define IOCTL_DEVICE_GET_DEVICE_NAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 3)
 
-// Suspends the device
-// (intended for driver suspend/resume testing)
+// Return device topological path string
 //   in: none
-//   out: none
-#define IOCTL_DEVICE_DEBUG_SUSPEND \
+//   out: null-terminated string
+#define IOCTL_DEVICE_GET_TOPO_PATH \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 4)
-
-// Resumes the device
-// (intended for driver suspend/resume testing)
-//   in: none
-//   out: none
-#define IOCTL_DEVICE_DEBUG_RESUME \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 5)
 
 // Sync the device
 //   in: none
 //   out: none
 #define IOCTL_DEVICE_SYNC \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 6)
+
+// Suspends the device
+// (intended for driver suspend/resume testing)
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_DEBUG_SUSPEND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 7)
+
+// Resumes the device
+// (intended for driver suspend/resume testing)
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_DEBUG_RESUME \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 8)
 
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
@@ -71,6 +77,9 @@ IOCTL_WRAPPER_VAROUT(ioctl_device_get_driver_name, IOCTL_DEVICE_GET_DRIVER_NAME,
 
 // ssize_t ioctl_device_get_device_name(int fd, char* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_device_get_device_name, IOCTL_DEVICE_GET_DEVICE_NAME, char);
+
+// ssize_t ioctl_device_get_device_name(int fd, char* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_device_get_topo_path, IOCTL_DEVICE_GET_TOPO_PATH, char);
 
 // ssize_t ioctl_device_debug_suspend(int fd);
 IOCTL_WRAPPER(ioctl_device_debug_suspend, IOCTL_DEVICE_DEBUG_SUSPEND);

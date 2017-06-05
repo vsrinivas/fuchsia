@@ -25,8 +25,10 @@ static mx_status_t dmctl_cmd(const char* cmd, size_t cmdlen, mx_handle_t h) {
         return ERR_INVALID_ARGS;
     }
     msg.op = DC_OP_DM_COMMAND;
+    dc_status_t rsp;
     return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen,
-                      &h, (h != MX_HANDLE_INVALID) ? 1 : 0);
+                      &h, (h != MX_HANDLE_INVALID) ? 1 : 0,
+                      &rsp, sizeof(rsp));
 }
 
 static mx_status_t dmctl_write(void* ctx, const void* buf, size_t count, mx_off_t off,
