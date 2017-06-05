@@ -55,6 +55,7 @@
   ],
   "resources": [
         {
+            "default": "true",
             "bootfs_path": "data/modules/config.json",
             "file": "apps/modules/common/config.json"
         }
