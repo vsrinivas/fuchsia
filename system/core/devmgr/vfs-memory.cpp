@@ -16,6 +16,7 @@
 #include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -226,10 +227,14 @@ mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, siz
     return r;
 }
 
+constexpr uint64_t kMemfsBlksize = PAGE_SIZE;
+
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR;
     attr->size = length_;
+    attr->blksize = kMemfsBlksize;
+    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -240,6 +245,8 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->size = 0;
+    attr->blksize = kMemfsBlksize;
+    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -250,6 +257,8 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
+    attr->blksize = kMemfsBlksize;
+    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;

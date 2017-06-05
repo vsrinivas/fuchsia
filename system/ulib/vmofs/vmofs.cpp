@@ -90,10 +90,14 @@ ssize_t VnodeFile::Read(void* data, size_t length, size_t offset) {
     return length;
 }
 
+constexpr uint64_t kVmofsBlksize = PAGE_SIZE;
+
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
+    attr->blksize = kVmofsBlksize;
+    attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return NO_ERROR;
 }
@@ -169,6 +173,8 @@ mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, siz
 mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->blksize = kVmofsBlksize;
+    attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return NO_ERROR;
 }

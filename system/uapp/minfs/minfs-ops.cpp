@@ -991,6 +991,8 @@ mx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
     a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic));
     a->inode = ino_;
     a->size = inode_.size;
+    a->blksize = kMinfsBlockSize;
+    a->blkcount = inode_.block_count * (kMinfsBlockSize / VNATTR_BLKSIZE);
     a->nlink = inode_.link_count;
     a->create_time = inode_.create_time;
     a->modify_time = inode_.modify_time;

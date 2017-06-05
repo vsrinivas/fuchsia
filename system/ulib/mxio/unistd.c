@@ -704,6 +704,8 @@ int mxio_stat(mxio_t* io, struct stat* s) {
     s->st_mode = attr.mode;
     s->st_ino = attr.inode;
     s->st_size = attr.size;
+    s->st_blksize = attr.blksize;
+    s->st_blocks = attr.blkcount;
     s->st_nlink = attr.nlink;
     s->st_ctim.tv_sec = attr.create_time / MX_SEC(1);
     s->st_ctim.tv_nsec = attr.create_time % MX_SEC(1);

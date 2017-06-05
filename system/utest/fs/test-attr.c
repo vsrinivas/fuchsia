@@ -13,6 +13,7 @@
 #include <sys/time.h>
 
 #include <magenta/syscalls.h>
+#include <mxio/vfs.h>
 
 #include "filesystems.h"
 
@@ -57,6 +58,36 @@ bool test_attr(void) {
     END_TEST;
 }
 
+bool test_blksize(void) {
+    BEGIN_TEST;
+
+    int fd = open("::file.txt", O_CREAT | O_RDWR, 0644);
+    ASSERT_GT(fd, 0, "");
+
+    struct stat buf;
+    ASSERT_EQ(fstat(fd, &buf), 0, "");
+    ASSERT_GT(buf.st_blksize, 0, "blksize should be greater than zero");
+    ASSERT_EQ(buf.st_blksize % VNATTR_BLKSIZE, 0, "blksize should be a multiple of VNATTR_BLKSIZE");
+    ASSERT_EQ(buf.st_blocks, 0, "Number of allocated blocks should be zero");
+
+    char data = {'a'};
+    ASSERT_EQ(write(fd, &data, 1), 1, "Couldn't write a single byte to file");
+    ASSERT_EQ(fstat(fd, &buf), 0, "");
+    ASSERT_GT(buf.st_blksize, 0, "blksize should be greater than zero");
+    ASSERT_EQ(buf.st_blksize % VNATTR_BLKSIZE, 0, "blksize should be a multiple of VNATTR_BLKSIZE");
+    ASSERT_GT(buf.st_blocks, 0, "Number of allocated blocks should greater than zero");
+    ASSERT_EQ(close(fd), 0, "");
+
+    blkcnt_t nblocks = buf.st_blocks;
+    ASSERT_EQ(stat("::file.txt", &buf), 0, "");
+    ASSERT_EQ(buf.st_blocks, nblocks, "Block count changed when closing file");
+
+    ASSERT_EQ(unlink("::file.txt"), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(attr_tests,
     RUN_TEST_MEDIUM(test_attr)
+    RUN_TEST_MEDIUM(test_blksize)
 )

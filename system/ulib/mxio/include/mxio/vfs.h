@@ -21,11 +21,20 @@ __BEGIN_CDECLS
 #define FS_FD_BLOCKDEVICE 200
 #endif
 
+// POSIX defines st_blocks to be the number of 512 byte blocks allocated
+// to the file. The "blkcnt" field of vnattr attempts to accomplish
+// this same goal, but by indirecting through VNATTR_BLKSIZE, we
+// reserve the right to change this "block size unit" (which is distinct from
+// "blksize", because POSIX) whenever we want.
+#define VNATTR_BLKSIZE 512
+
 typedef struct vnattr {
     uint32_t valid;        // mask of which bits to set for setattr
     uint32_t mode;
     uint64_t inode;
     uint64_t size;
+    uint64_t blksize;      // Block size for filesystem I/O
+    uint64_t blkcount;     // Number of VNATTR_BLKSIZE byte blocks allocated
     uint64_t nlink;
     uint64_t create_time;  // posix time (seconds since epoch)
     uint64_t modify_time;  // posix time
