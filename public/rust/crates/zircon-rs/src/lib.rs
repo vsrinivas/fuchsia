@@ -246,6 +246,16 @@ pub fn time_get(clock_id: ClockId) -> Time {
     unsafe { sys::mx_time_get(clock_id as u32) }
 }
 
+/// Read the number of high-precision timer ticks since boot. These ticks may be processor cycles,
+/// high speed timer, profiling timer, etc. They are not guaranteed to continue advancing when the
+/// system is asleep.
+///
+/// Wraps the
+/// [mx_ticks_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/ticks_get.md)
+/// syscall.
+pub fn ticks_get() -> u64 {
+    unsafe { sys::mx_ticks_get() }
+}
 
 /// Compute a deadline for the time in the future that is the given `Duration` away.
 ///
@@ -263,6 +273,15 @@ pub fn deadline_after(nanos: Duration) -> Time {
 /// syscall.
 pub fn nanosleep(deadline: Time) {
     unsafe { sys::mx_nanosleep(deadline); }
+}
+
+/// Return the number of high-precision timer ticks in a second.
+///
+/// Wraps the
+/// [mx_ticks_per_second](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/ticks_per_second.md)
+/// syscall.
+pub fn ticks_per_second() -> u64 {
+    unsafe { sys::mx_ticks_per_second() }
 }
 
 fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
@@ -483,6 +502,7 @@ mod tests {
     #[test]
     fn monotonic_time_increases() {
         let time1 = time_get(ClockId::Monotonic);
+        nanosleep(deadline_after(1_000));
         let time2 = time_get(ClockId::Monotonic);
         assert!(time2 > time1);
     }
@@ -490,6 +510,7 @@ mod tests {
     #[test]
     fn utc_time_increases() {
         let time1 = time_get(ClockId::UTC);
+        nanosleep(deadline_after(1_000));
         let time2 = time_get(ClockId::UTC);
         assert!(time2 > time1);
     }
@@ -497,8 +518,30 @@ mod tests {
     #[test]
     fn thread_time_increases() {
         let time1 = time_get(ClockId::Thread);
+        nanosleep(deadline_after(1_000));
         let time2 = time_get(ClockId::Thread);
         assert!(time2 > time1);
+    }
+
+    #[test]
+    fn ticks_increases() {
+        let ticks1 = ticks_get();
+        nanosleep(deadline_after(1_000));
+        let ticks2 = ticks_get();
+        assert!(ticks2 > ticks1);
+    }
+
+    #[test]
+    fn tick_length() {
+        let sleep_ns = 1_000_000;  // 1ms
+        let one_second_ns = 1_000_000_000; // 1 second in ns
+        let ticks1 = ticks_get();
+        nanosleep(deadline_after(sleep_ns));
+        let ticks2 = ticks_get();
+        // The number of ticks should have increased by at least 1 ms worth
+        assert!(ticks2 > ticks1 + sleep_ns * ticks_per_second() / one_second_ns);
+        // And not more than 4 ms worth
+        assert!(ticks2 < ticks1 + 4 * sleep_ns * ticks_per_second() / one_second_ns);
     }
 
     #[test]
