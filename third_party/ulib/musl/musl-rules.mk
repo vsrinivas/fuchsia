@@ -1122,6 +1122,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ldso/dlstart.c \
     $(LOCAL_DIR)/ldso/dynlink.c
 
+MODULE_SRCS += \
+    $(LOCAL_DIR)/sanitizers/__asan_early_init.c \
 
 include make/module.mk
 

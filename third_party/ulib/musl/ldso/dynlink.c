@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "dynlink.h"
 #include "libc.h"
+#include "asan_impl.h"
 #include "magenta_impl.h"
 #include "pthread_impl.h"
 #include "stdio_impl.h"
@@ -1728,6 +1729,9 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
 
 // Do sanitizer setup and whatever else must be done before dls3.
 __NO_SAFESTACK NO_ASAN static void early_init(void) {
+#if __has_feature(address_sanitizer)
+    __asan_early_init();
+#endif
 }
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
