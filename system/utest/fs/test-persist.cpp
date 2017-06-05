@@ -26,12 +26,12 @@ bool is_directory(const char* const path) {
 }
 
 bool test_persist_simple(void) {
+    BEGIN_TEST;
+
     if (!test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
-
-    BEGIN_TEST;
 
     const char* const paths[] = {
         "::abc",
@@ -78,12 +78,12 @@ bool test_persist_simple(void) {
 }
 
 bool test_persist_rapid_remount(void) {
+    BEGIN_TEST;
+
     if (!test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
-
-    BEGIN_TEST;
 
     for (size_t i = 0; i < 100; i++) {
         ASSERT_TRUE(check_remount(), "Could not remount filesystem");
@@ -95,12 +95,12 @@ bool test_persist_rapid_remount(void) {
 
 template <size_t BufferSize>
 bool test_persist_with_data(void) {
+    BEGIN_TEST;
+
     if (!test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
-
-    BEGIN_TEST;
 
     const char* const files[] = {
         "::abc",
@@ -177,12 +177,12 @@ constexpr size_t kMaxLoopLength = 26;
 
 template <bool MoveDirectory, size_t LoopLength, size_t Moves>
 bool test_rename_loop(void) {
+    BEGIN_TEST;
+
     if (!test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
-
-    BEGIN_TEST;
 
     static_assert(LoopLength <= kMaxLoopLength, "Loop length too long");
 

@@ -28,10 +28,11 @@ bool check_link_count(const char* path, unsigned count) {
 }
 
 bool test_link_basic(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_hardlinks) {
         return true;
     }
-    BEGIN_TEST;
 
     const char* oldpath = "::a";
     const char* newpath = "::b";
@@ -76,10 +77,11 @@ bool test_link_basic(void) {
 }
 
 bool test_link_count_dirs(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_hardlinks) {
         return true;
     }
-    BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::dira", 0755), 0, "");
     // New directories should have two links:
@@ -138,10 +140,11 @@ bool test_link_count_dirs(void) {
 }
 
 bool test_link_count_rename(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_hardlinks) {
         return true;
     }
-    BEGIN_TEST;
 
     // Check that link count does not change with simple rename
     ASSERT_EQ(mkdir("::dir", 0755), 0, "");
@@ -215,10 +218,11 @@ bool test_link_count_rename(void) {
 }
 
 bool test_link_between_dirs(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_hardlinks) {
         return true;
     }
-    BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::dira", 0755), 0, "");
     // New directories should have two links:
@@ -269,10 +273,11 @@ bool test_link_between_dirs(void) {
 }
 
 bool test_link_errors(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_hardlinks) {
         return true;
     }
-    BEGIN_TEST;
 
     const char* dirpath = "::dir";
     const char* oldpath = "::a";

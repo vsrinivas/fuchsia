@@ -147,12 +147,12 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
 // Repeatedly write to / truncate a file.
 template <size_t BufSize, size_t Iterations, bool Remount>
 bool test_truncate_large(void) {
+    BEGIN_TEST;
+
     if (Remount && !test_info->can_be_mounted) {
         fprintf(stderr, "Filesystem cannot be mounted; cannot test persistence\n");
         return true;
     }
-
-    BEGIN_TEST;
 
     // Fill a test buffer with data
     AllocChecker ac;

@@ -47,10 +47,11 @@ bool check_for_watched(mx_handle_t h, const char* expected, size_t expected_len)
 }
 
 bool test_watcher_basic(void) {
+    BEGIN_TEST;
+
     if (!test_info->supports_watchers) {
         return true;
     }
-    BEGIN_TEST;
 
     ASSERT_EQ(mkdir("::dir", 0666), 0, "");
     DIR* dir = opendir("::dir");
