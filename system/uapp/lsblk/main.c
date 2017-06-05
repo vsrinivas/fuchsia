@@ -71,8 +71,7 @@ static const char* guid_to_type(char* guid) {
 
 typedef struct blkinfo {
     char path[128];
-    char devname[128];
-    char drvname[128];
+    char topo[1024];
     char guid[GPT_GUID_STRLEN];
     char label[40];
     char sizestr[6];
@@ -88,8 +87,8 @@ static int cmd_list_blk(void) {
     blkinfo_t info;
     const char* type;
     int fd;
-    printf("%-3s %-8s %-8s %-4s %-14s %-20s %s\n", "ID", "DEV", "DRV", "SIZE", "TYPE", "LABEL",
-           "FLAGS");
+    printf("%-3s %-4s %-14s %-20s %-6s %s\n",
+           "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");
     while ((de = readdir(dir)) != NULL) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
             continue;
@@ -102,12 +101,9 @@ static int cmd_list_blk(void) {
             printf("Error opening %s\n", info.path);
             goto devdone;
         }
-        ioctl_device_get_device_name(fd, info.devname, sizeof(info.devname));
-        ioctl_device_get_driver_name(fd, info.drvname, sizeof(info.drvname));
-
-        char xxx[1024];
-        ioctl_device_get_topo_path(fd, xxx, sizeof(xxx));
-        printf("TOPO: %s\n", xxx);
+        if (ioctl_device_get_topo_path(fd, info.topo, sizeof(info.topo)) < 0) {
+            strcpy(info.topo, "UNKNOWN");
+        }
 
         block_info_t block_info;
         if (ioctl_block_get_info(fd, &block_info) > 0) {
@@ -127,12 +123,13 @@ static int cmd_list_blk(void) {
             strlcat(flags, "RO ", sizeof(flags));
         }
         if (block_info.flags & BLOCK_FLAG_REMOVABLE) {
-            strlcat(flags, "REMOVABLE ", sizeof(flags));
+            strlcat(flags, "RE ", sizeof(flags));
         }
 devdone:
         close(fd);
-        printf("%-3s %-8s %-8s %4s %-14s %-20s %s\n", de->d_name, info.devname, info.drvname,
-               info.sizestr, type ? type : "", info.label, flags);
+        printf("%-3s %4s %-14s %-20s %-6s %s\n",
+               de->d_name, info.sizestr, type ? type : "",
+               info.label, flags, info.topo);
     }
 out:
     closedir(dir);
