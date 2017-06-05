@@ -303,6 +303,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
     pc->fifo.tail = 0;
     mx_status_t status;
 
+    unsigned num_clients = 0;
     mtx_lock(&ps->lock);
     // require that client ID is unique
     pty_client_t* c;
@@ -312,6 +313,7 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
             free(pc);
             return ERR_INVALID_ARGS;
         }
+        num_clients++;
     }
     list_add_tail(&ps->clients, &pc->node);
     mtx_unlock(&ps->lock);
@@ -344,6 +346,12 @@ static mx_status_t pty_openat(pty_server_t* ps, mx_device_t** out, uint32_t id, 
     xprintf("pty cli %p (id=%u) created (srv %p)\n", pc, pc->id, ps);
 
     mtx_lock(&ps->lock);
+    if (num_clients == 0) {
+        // if there were no clients, make sure we take server
+        // out of HANGUP and READABLE, where it landed if all
+        // its clients had closed
+        device_state_clr(ps->mxdev, DEV_STATE_READABLE | DEV_STATE_HANGUP);
+    }
     pty_adjust_signals_locked(pc);
     mtx_unlock(&ps->lock);
 
