@@ -22,6 +22,8 @@
 #include "log.h"
 #include "memfs-private.h"
 
+extern mx_handle_t virtcon_open;
+
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static void dc_dump_state(void);
@@ -758,16 +760,6 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         return ERR_INTERNAL;
     }
 
-    // Only ADD_DEVICE and DM_COMMAND take handles.
-    // For all other ops, silently close any passed handles.
-    if ((hcount != 0) &&
-        (msg.op != DC_OP_ADD_DEVICE) &&
-        (!((msg.op == DC_OP_DM_COMMAND) && (hcount == 1)))) {
-        while (hcount > 0) {
-            mx_handle_close(hin[--hcount]);
-        }
-    }
-
     dc_status_t dcs;
     dcs.txid = msg.txid;
 
@@ -782,16 +774,25 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         break;
 
     case DC_OP_REMOVE_DEVICE:
+        if (hcount != 0) {
+            goto fail_hcount;
+        }
         log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
         dc_remove_device(dev, false);
         goto disconnect;
 
     case DC_OP_BIND_DEVICE:
+        if (hcount != 0) {
+            goto fail_hcount;
+        }
         log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
         r = dc_bind_device(dev, args);
         break;
 
     case DC_OP_DM_COMMAND:
+        if (hcount > 1) {
+            goto fail_hcount;
+        }
         if (hcount == 1) {
             dmctl_socket = hin[0];
         }
@@ -802,7 +803,20 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         }
         break;
 
+    case DC_OP_DM_OPEN_VIRTCON:
+        if (hcount != 1) {
+            goto fail_hcount;
+        }
+        if (mx_channel_write(virtcon_open, 0, NULL, 0, hin, 1) < 0) {
+            mx_handle_close(hin[0]);
+        }
+        r = NO_ERROR;
+        break;
+
     case DC_OP_GET_TOPO_PATH: {
+        if (hcount != 0) {
+            goto fail_hcount;
+        }
         struct {
             dc_status_t rsp;
             char path[DC_PATH_MAX];
@@ -818,6 +832,9 @@ static mx_status_t dc_handle_device_read(device_t* dev) {
         return NO_ERROR;
     }
     case DC_OP_STATUS: {
+        if (hcount != 0) {
+            goto fail_hcount;
+        }
         // all of these return directly and do not write a
         // reply, since this message is a reply itself
         pending_t* pending = list_remove_tail_type(&dev->pending, pending_t, node);
@@ -855,6 +872,13 @@ disconnect:
     dcs.status = NO_ERROR;
     mx_channel_write(dev->hrpc, 0, &dcs, sizeof(dcs), NULL, 0);
     return ERR_STOP;
+
+fail_hcount:
+    while (hcount > 0) {
+        mx_handle_close(hin[--hcount]);
+    }
+    r = ERR_INVALID_ARGS;
+    goto done;
 }
 
 #define dev_from_ph(ph) containerof(ph, device_t, ph)

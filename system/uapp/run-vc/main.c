@@ -6,7 +6,7 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <limits.h>
-#include <magenta/device/console.h>
+#include <magenta/device/dmctl.h>
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -20,69 +20,69 @@
 #include <string.h>
 #include <unistd.h>
 
-static int g_argc;
-static const char* const* g_argv;
+int main(int argc, char** argv) {
+    int fd;
+    int retry = 30;
 
-static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
+    while ((fd = open("/dev/misc/dmctl", O_RDWR)) < 0) {
+        if (--retry == 0) {
+            fprintf(stderr, "run-vc: could not connect to virtual console\n");
+            return -1;
+        }
     }
 
-    if (strcmp(name, "vc")) {
-        return NO_ERROR;
+    mx_handle_t h0, h1;
+    if (mx_channel_create(0, &h0, &h1) < 0) {
+        return -1;
     }
-
-    int fd = openat(dirfd, name, O_RDWR);
-    if (fd < 0) {
-        printf("Error %d opening a new vc\n", fd);
-        return 1;
+    if (ioctl_dmctl_open_virtcon(fd, &h1) < 0) {
+        return -1;
     }
+    close(fd);
 
-    ioctl_console_set_active_vc(fd);
+    mx_object_wait_one(h0, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                       MX_TIME_INFINITE, NULL);
+
+    uint32_t types[2];
+    mx_handle_t handles[2];
+    uint32_t dcount, hcount;
+    if (mx_channel_read(h0, 0, types, handles, sizeof(types), 2, &dcount, &hcount) < 0) {
+        return -1;
+    }
+    if ((dcount != sizeof(types)) || (hcount != 2)) {
+        return -1;
+    }
+    mx_handle_close(h0);
 
     // start shell if no arguments
-    char pname[128];
-    int pargc;
-    bool shell;
-    const char* pargv[1] = { "/boot/bin/sh" };
-    if ((shell = g_argc == 1)) {
-        strcpy(pname, "sh:vc");
-        pargc = 1;
+    if (argc == 1) {
+        argv[0] = (char*) "/boot/bin/sh";
     } else {
-        char* bname = strrchr(g_argv[1], '/');
-        snprintf(pname, sizeof(pname), "%s:vc", bname ? bname + 1 : g_argv[1]);
-        pargc = g_argc - 1;
+        argv++;
+        argc--;
+    }
+
+    char* pname = strrchr(argv[0], '/');
+    if (pname == NULL) {
+        pname = argv[0];
+    } else {
+        pname++;
     }
 
     launchpad_t* lp;
     launchpad_create(0, pname, &lp);
     launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_ENVIRON);
-    launchpad_clone_fd(lp, fd, 0);
-    launchpad_clone_fd(lp, fd, 1);
-    launchpad_clone_fd(lp, fd, 2);
-    launchpad_set_args(lp, pargc, shell ? pargv : &g_argv[1]);
-    launchpad_load_from_file(lp, shell ? pargv[0] : g_argv[1]);
+    launchpad_add_handles(lp, 2, handles, types);
+    launchpad_set_args(lp, argc, (const char* const*) argv);
+    launchpad_load_from_file(lp, argv[0]);
 
     mx_status_t status;
     const char* errmsg;
     if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
         fprintf(stderr, "error %d launching: %s\n", status, errmsg);
+        return -1;
     }
 
-    close(fd);
-
-    // stop polling
-    return 1;
-}
-
-int main(int argc, const char* const* argv) {
-    g_argc = argc;
-    g_argv = argv;
-
-    int dirfd;
-    if ((dirfd = open("/dev/class/console", O_DIRECTORY|O_RDONLY)) >= 0) {
-        mxio_watch_directory(dirfd, console_device_added, NULL);
-    }
-    close(dirfd);
     return 0;
 }
+

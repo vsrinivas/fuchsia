@@ -43,6 +43,8 @@ static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
 static mx_handle_t fuchsia_job_handle;
 
+mx_handle_t virtcon_open;
+
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
@@ -269,9 +271,13 @@ int service_starter(void* arg) {
     mkdir("/svc", 0755);
 
     {
+        uint32_t type = PA_HND(PA_USER0, 0);
+        mx_handle_t h = MX_HANDLE_INVALID;
+        mx_channel_create(0, &h, &virtcon_open);
         const char* args[] = { "/boot/bin/gfxconsole", "--keep-log-active" };
         devmgr_launch(svcs_job_handle, "virtual-console",
-                      switch_to_first_vc() ? 1 : 2, args, NULL, -1, NULL, NULL, 0);
+                      switch_to_first_vc() ? 1 : 2, args, NULL, -1,
+                      &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1);
     }
 
     if (getenv("netsvc.disable") == NULL) {

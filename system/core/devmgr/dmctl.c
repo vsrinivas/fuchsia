@@ -24,7 +24,7 @@ static mx_status_t dmctl_cmd(const char* cmd, size_t cmdlen, mx_handle_t h) {
     if (dc_msg_pack(&msg, &msglen, cmd, cmdlen, NULL, NULL) < 0) {
         return ERR_INVALID_ARGS;
     }
-    msg.op = DC_OP_DM_COMMAND;
+    msg.op = cmd ? DC_OP_DM_COMMAND : DC_OP_DM_OPEN_VIRTCON;
     dc_status_t rsp;
     return dc_msg_rpc(dmctl_dev->rpc, &msg, msglen,
                       &h, (h != MX_HANDLE_INVALID) ? 1 : 0,
@@ -70,6 +70,11 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         cmd.name[sizeof(cmd.name) - 1] = 0;
         *out_actual = 0;
         return dmctl_cmd(cmd.name, strlen(cmd.name), cmd.h);
+    case IOCTL_DMCTL_OPEN_VIRTCON:
+        if (in_len != sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        return dmctl_cmd(NULL, 0, *((mx_handle_t*) in_buf));
     default:
         return ERR_INVALID_ARGS;
     }

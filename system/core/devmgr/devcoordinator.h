@@ -176,7 +176,7 @@ typedef struct {
 
 // Host->Coord Ops for DmCtl
 #define DC_OP_DM_COMMAND         0x80000020
-
+#define DC_OP_DM_OPEN_VIRTCON    0x80000021
 #define DC_PATH_MAX 1024
 
 mx_status_t dc_msg_pack(dc_msg_t* msg, uint32_t* len_out,

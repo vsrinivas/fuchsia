@@ -32,7 +32,9 @@
 #if !BUILD_FOR_TEST
 #include <launchpad/launchpad.h>
 #include <magenta/device/pty.h>
+#include <magenta/processargs.h>
 #include <port/port.h>
+#include <mxio/util.h>
 #endif
 
 #define VCDEBUG 1
@@ -371,6 +373,7 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
 static port_t port;
 static port_handler_t ownership_ph;
 static port_handler_t log_ph;
+static port_handler_t new_vc_ph;
 
 static mx_status_t launch_shell(vc_t* vc, int fd) {
     const char* args[] = { "/boot/bin/sh" };
@@ -517,6 +520,40 @@ static void start_shell(bool make_active) {
     }
 }
 
+static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+    mx_handle_t h;
+    uint32_t dcount, hcount;
+    if (mx_channel_read(ph->handle, 0, NULL, &h, 0, 1, &dcount, &hcount) < 0) {
+        return NO_ERROR;
+    }
+    if (hcount != 1) {
+        return NO_ERROR;
+    }
+
+    vc_t* vc;
+    int fd;
+    if (session_create(&vc, &fd, true) < 0) {
+        mx_handle_close(h);
+        return NO_ERROR;
+    }
+
+    mx_handle_t handles[MXIO_MAX_HANDLES];
+    uint32_t types[MXIO_MAX_HANDLES];
+    mx_status_t r = mxio_transfer_fd(fd, MXIO_FLAG_USE_FOR_STDIO | 0, handles, types);
+    if ((r != 2) || (mx_channel_write(h, 0, types, 2 * sizeof(uint32_t), handles, 2) < 0)) {
+        for (int n = 0; n < r; n++) {
+            mx_handle_close(handles[n]);
+        }
+        session_destroy(vc);
+    } else {
+        port_wait(&port, &vc->fh.ph);
+    }
+
+    mx_handle_close(h);
+    return NO_ERROR;
+}
+
+
 static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     mxtl::AutoLock lock(&g_vc_lock);
 
@@ -588,6 +625,12 @@ int main(int argc, char** argv) {
     log_ph.func = log_reader_cb;
     log_ph.waitfor = MX_LOG_READABLE;
     port_wait(&port, &log_ph);
+
+    if ((new_vc_ph.handle = mx_get_startup_handle(PA_HND(PA_USER0, 0))) != MX_HANDLE_INVALID) {
+        new_vc_ph.func = new_vc_cb;
+        new_vc_ph.waitfor = MX_CHANNEL_READABLE;
+        port_wait(&port, &new_vc_ph);
+    }
 
     // start a thread to listen for new input devices
     thrd_t t;

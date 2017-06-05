@@ -24,9 +24,19 @@ typedef struct {
 #define IOCTL_DMCTL_COMMAND \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DMCTL, 1)
 
+// Open a new virtual console
+// Pass a channel handle.
+// On success one or two handles will be written back (a remoteio device)
+// On failure the channel will be closed.
+#define IOCTL_DMCTL_OPEN_VIRTCON \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DMCTL, 2)
+
 // ssize_t ioctl_dmctl_get_loader_service_channel(int fd, mx_handle_t* channel_out);
 IOCTL_WRAPPER_OUT(ioctl_dmctl_get_loader_service_channel,
                   IOCTL_DMCTL_GET_LOADER_SERVICE_CHANNEL, mx_handle_t);
 
 // ssize_t ioctl_dmctl_command(int fd, dmctl_cmd_t* cmd);
 IOCTL_WRAPPER_IN(ioctl_dmctl_command, IOCTL_DMCTL_COMMAND, dmctl_cmd_t);
+
+// ssize_t ioctl_dmctl_open_virtcon(int fd, dmctl_cmd_t* cmd);
+IOCTL_WRAPPER_IN(ioctl_dmctl_open_virtcon, IOCTL_DMCTL_OPEN_VIRTCON, mx_handle_t);
