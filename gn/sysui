@@ -1,36 +1,43 @@
 {
-    "labels": [
-        "//apps/sysui",
-        "//apps/sysui:test"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/sysui/armadillo_user_shell/armadillo_user_shell.flx",
-            "bootfs_path": "apps/armadillo_user_shell"
-        },
-        {
-            "binary": "gen/apps/sysui/capybara_user_shell/capybara_user_shell.flx",
-            "bootfs_path": "apps/capybara_user_shell"
-        },
-        {
-            "binary": "gen/apps/sysui/kernel_panic/kernel_panic.flx",
-            "bootfs_path": "apps/kernel_panic"
-        },
-        {
-            "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
-            "bootfs_path": "apps/userpicker_device_shell"
-        },
-        {
-            "binary": "gen/apps/sysui/spinning_cube/spinning_cube.flx",
-            "bootfs_path": "apps/spinning_cube"
-        },
-        {
-          "binary": "home_work_agent.dartx",
-          "bootfs_path": "apps/agents/home_work_agent"
-        },
-        {
-          "binary": "walking_agent.dartx",
-          "bootfs_path": "apps/agents/walking_agent"
-        }
-    ]
+  "binaries": [
+    {
+      "binary": "gen/apps/sysui/armadillo_user_shell/armadillo_user_shell.flx",
+      "bootfs_path": "apps/armadillo_user_shell"
+    },
+    {
+      "binary": "gen/apps/sysui/capybara_user_shell/capybara_user_shell.flx",
+      "bootfs_path": "apps/capybara_user_shell"
+    },
+    {
+      "binary": "gen/apps/sysui/kernel_panic/kernel_panic.flx",
+      "bootfs_path": "apps/kernel_panic"
+    },
+    {
+      "binary": "gen/apps/sysui/userpicker_device_shell/userpicker_device_shell.flx",
+      "bootfs_path": "apps/userpicker_device_shell"
+    },
+    {
+      "binary": "gen/apps/sysui/spinning_cube/spinning_cube.flx",
+      "bootfs_path": "apps/spinning_cube"
+    },
+    {
+      "binary": "home_work_agent.dartx",
+      "bootfs_path": "apps/agents/home_work_agent"
+    },
+    {
+      "binary": "walking_agent.dartx",
+      "bootfs_path": "apps/agents/walking_agent"
+    }
+  ],
+  "labels": [
+    "//apps/sysui",
+    "//apps/sysui:test"
+  ],
+  "resources": [
+    {
+      "bootfs_path": "data/sysui/contextual_config.json",
+      "default": "true",
+      "file": "apps/sysui/armadillo_user_shell/assets/contextual_config.json"
+    }
+  ]
 }
