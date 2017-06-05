@@ -80,12 +80,6 @@ void VnodeMinfs::InodeSync(WriteTxn* txn, uint32_t flags) {
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
 mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
-#ifdef __Fuchsia__
-    auto bbm_id = fs_->block_map_vmoid_;
-#else
-    auto bbm_id = fs_->block_map_.StorageUnsafe()->GetData();
-#endif
-
     bool doSync = false;
 
     // release direct blocks
@@ -93,11 +87,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
         if (inode_.dnum[bno] == 0) {
             continue;
         }
-        fs_->ValidateBno(inode_.dnum[bno]);
-
-        fs_->block_map_.Clear(inode_.dnum[bno], inode_.dnum[bno] + 1);
-        uint32_t bitblock = inode_.dnum[bno] / kMinfsBlockBits;
-        txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
+        fs_->BlockFree(txn, inode_.dnum[bno]);
         inode_.dnum[bno] = 0;
         inode_.block_count--;
         doSync = true;
@@ -141,9 +131,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
                 continue;
             }
 
-            fs_->block_map_.Clear(entry[direct], entry[direct] + 1);
-            uint32_t bitblock = entry[direct] / kMinfsBlockBits;
-            txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
+            fs_->BlockFree(txn, entry[direct]);
             entry[direct] = 0;
             dirty = true;
             inode_.block_count--;
@@ -160,9 +148,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
 
         if (delete_indirect)  {
             // release the direct block itself
-            fs_->block_map_.Clear(inode_.inum[indirect], inode_.inum[indirect] + 1);
-            uint32_t bitblock = inode_.inum[indirect] / kMinfsBlockBits;
-            txn->Enqueue(bbm_id, bitblock, fs_->info_.abm_block + bitblock, 1);
+            fs_->BlockFree(txn, inode_.inum[indirect]);
             inode_.inum[indirect] = 0;
             inode_.block_count--;
             doSync = true;
@@ -1193,11 +1179,17 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
                           size_t out_len) {
     switch (op) {
         case IOCTL_VFS_QUERY_FS: {
-            if (out_len < strlen(kFsName) + 1) {
+            if (out_len < sizeof(vfs_query_info_t)) {
                 return MX_ERR_INVALID_ARGS;
             }
-            strcpy(static_cast<char*>(out_buf), kFsName);
-            return strlen(kFsName);
+
+            vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
+            info->total_bytes = (fs_->info_.block_count - fs_->info_.dat_block) * fs_->info_.block_size;
+            info->used_bytes = fs_->info_.alloc_block_count * fs_->info_.block_size;
+            info->total_nodes = fs_->info_.inode_count;
+            info->used_nodes = fs_->info_.alloc_inode_count;
+            strcpy(info->name, kFsName);
+            return sizeof(*info);
         }
         case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();

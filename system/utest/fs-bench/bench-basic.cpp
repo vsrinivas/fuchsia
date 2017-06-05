@@ -29,12 +29,14 @@ constexpr uint8_t kMagicByte = 0xee;
 // Return "true" if the fs matches the 'banned' criteria.
 template <size_t len>
 bool benchmark_banned(int fd, const char (&banned_fs)[len]) {
-    char out[len];
-    ssize_t r = ioctl_vfs_query_fs(fd, out, sizeof(out));
+    vfs_query_info_t out;
+    ssize_t r = ioctl_vfs_query_fs(fd, &out, sizeof(out));
+    char name[len];
+    strcpy(name, out.name);
     if (r != static_cast<ssize_t>(len - 1)) {
         return false;
     }
-    return strncmp(banned_fs, out, len - 1) == 0;
+    return strncmp(banned_fs, name, len - 1) == 0;
 }
 
 inline void time_end(const char *str, uint64_t start) {

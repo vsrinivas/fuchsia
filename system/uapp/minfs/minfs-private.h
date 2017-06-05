@@ -73,6 +73,9 @@ public:
     // Allocate a new data block.
     mx_status_t BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno);
 
+    // free block in block bitmap
+    mx_status_t BlockFree(WriteTxn* txn, uint32_t bno);
+
     // free ino in inode bitmap, release all blocks held by inode
     mx_status_t InoFree(
 #ifdef __Fuchsia__
@@ -89,17 +92,12 @@ public:
         return dispatcher_.get();
     }
 #endif
-
     void ValidateBno(uint32_t bno) const {
         MX_DEBUG_ASSERT(info_.dat_block <= bno);
         MX_DEBUG_ASSERT(bno < info_.block_count);
     }
 
     mxtl::unique_ptr<Bcache> bc_;
-    RawBitmap block_map_;
-#ifdef __Fuchsia__
-    vmoid_t block_map_vmoid_;
-#endif
     minfs_info_t info_;
 
 private:
@@ -109,17 +107,24 @@ private:
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
     mx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out);
 
+    // Enqueues an update for allocated inode/block counts
+    mx_status_t CountUpdate(WriteTxn* txn);
 #ifdef __Fuchsia__
     mxtl::unique_ptr<fs::Dispatcher> dispatcher_;
 #endif
     uint32_t abmblks_;
     uint32_t ibmblks_;
     RawBitmap inode_map_;
+    RawBitmap block_map_;
 #ifdef __Fuchsia__
     mxtl::unique_ptr<MappedVmo> inode_table_;
+    mxtl::unique_ptr<MappedVmo> info_vmo_;
     vmoid_t inode_map_vmoid_;
+    vmoid_t block_map_vmoid_;
     vmoid_t inode_table_vmoid_;
+    vmoid_t info_vmoid_;
 #endif
+
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
     using HashTable = mxtl::HashTable<uint32_t, VnodeMinfs*>;
@@ -282,6 +287,7 @@ public:
     mx_status_t CheckForUnusedBlocks() const;
     mx_status_t CheckForUnusedInodes() const;
     mx_status_t CheckLinkCounts() const;
+    mx_status_t CheckAllocatedCounts() const;
 
     // "Set once"-style flag to identify if anything nonconforming
     // was found in the underlying filesystem -- even if it was fixed.
@@ -301,6 +307,8 @@ private:
     RawBitmap checked_inodes_;
     RawBitmap checked_blocks_;
 
+    uint32_t alloc_inodes_;
+    uint32_t alloc_blocks_;
     mxtl::Array<int32_t> links_;
 };
 

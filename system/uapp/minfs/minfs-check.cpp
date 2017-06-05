@@ -211,6 +211,7 @@ const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
         return "double-allocated";
     }
     checked_blocks_.Set(bno, bno + 1);
+    alloc_blocks_++;
     return nullptr;
 }
 
@@ -298,8 +299,8 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
     }
 
     links_[ino - 1] -= inode.link_count;
-
     checked_inodes_.Set(ino, ino + 1);
+    alloc_inodes_++;
 
     if (!fs_->inode_map_.Get(ino, ino + 1)) {
        FS_TRACE_WARN("check: ino#%u: not marked in-use\n", ino);
@@ -379,8 +380,23 @@ mx_status_t MinfsChecker::CheckLinkCounts() const {
     return MX_OK;
 }
 
+mx_status_t MinfsChecker::CheckAllocatedCounts() const {
+    mx_status_t status = NO_ERROR;
+    if (alloc_blocks_ != fs_->info_.alloc_block_count) {
+        FS_TRACE_ERROR("check: incorrect allocated block count %u (should be %u)\n", fs_->info_.alloc_block_count, alloc_blocks_);
+        status = ERR_BAD_STATE;
+    }
+
+    if (alloc_inodes_ != fs_->info_.alloc_inode_count) {
+        FS_TRACE_ERROR("check: incorrect allocated inode count %u (should be %u)\n", fs_->info_.alloc_inode_count, alloc_inodes_);
+        status = ERR_BAD_STATE;
+    }
+
+    return status;
+}
+
 MinfsChecker::MinfsChecker()
-    : conforming_(true), fs_(nullptr), links_(){};
+    : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {};
 
 mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
@@ -436,11 +452,14 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
     status |= (status != MX_OK) ? 0 : r;
     r = chk.CheckLinkCounts();
     status |= (status != MX_OK) ? 0 : r;
+    r = chk.CheckAllocatedCounts();
+    status |= (status != MX_OK) ? 0 : r;
 
     //TODO: check allocated inodes that were abandoned
     //TODO: check allocated blocks that were not accounted for
     //TODO: check unallocated inodes where magic != 0
     status |= (status != MX_OK) ? 0 : (chk.conforming_ ? MX_OK : MX_ERR_BAD_STATE);
+
     return status;
 }
 

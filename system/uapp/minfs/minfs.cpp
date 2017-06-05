@@ -26,6 +26,8 @@ namespace minfs {
 void minfs_dump_info(const minfs_info_t* info) {
     FS_TRACE(MINFS, "minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
     FS_TRACE(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
+    FS_TRACE(MINFS, "minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
+    FS_TRACE(MINFS, "minfs: allocated inodes  @ %10u\n", info->alloc_inode_count);
     FS_TRACE(MINFS, "minfs: inode bitmap @ %10u\n", info->ibm_block);
     FS_TRACE(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
     FS_TRACE(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
@@ -40,6 +42,8 @@ void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino) {
 }
 
 mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
+    minfs_dump_info(info);
+
     if ((info->magic0 != kMinfsMagic0) ||
         (info->magic1 != kMinfsMagic1)) {
         FS_TRACE_ERROR("minfs: bad magic\n");
@@ -102,14 +106,14 @@ mx_status_t Minfs::InoFree(
     WriteTxn txn(bc_.get());
 #ifdef __Fuchsia__
     auto ibm_id = inode_map_vmoid_;
-    auto bbm_id = block_map_vmoid_;
 #else
     auto ibm_id = inode_map_.StorageUnsafe()->GetData();
-    auto bbm_id = block_map_.StorageUnsafe()->GetData();
 #endif
 
     // Free the inode bit itself
     inode_map_.Clear(ino, ino + 1);
+    info_.alloc_inode_count--;
+
     uint32_t bitblock = ino / kMinfsBlockBits;
     txn.Enqueue(ibm_id, bitblock, info_.ibm_block + bitblock, 1);
     uint32_t block_count = inode.block_count;
@@ -121,9 +125,7 @@ mx_status_t Minfs::InoFree(
         }
         ValidateBno(inode.dnum[n]);
         block_count--;
-        block_map_.Clear(inode.dnum[n], inode.dnum[n] + 1);
-        uint32_t bitblock = inode.dnum[n] / kMinfsBlockBits;
-        txn.Enqueue(bbm_id, bitblock, info_.abm_block + bitblock, 1);
+        BlockFree(&txn, inode.dnum[n]);
     }
 
     // release all indirect blocks
@@ -145,17 +147,14 @@ mx_status_t Minfs::InoFree(
                 continue;
             }
             block_count--;
-            block_map_.Clear(entry[m], entry[m] + 1);
-            uint32_t bitblock = entry[m] / kMinfsBlockBits;
-            txn.Enqueue(bbm_id, bitblock, info_.abm_block + bitblock, 1);
+            BlockFree(&txn, entry[m]);
         }
         // release the direct block itself
         block_count--;
-        block_map_.Clear(inode.inum[n], inode.inum[n] + 1);
-        uint32_t bitblock = inode.inum[n] / kMinfsBlockBits;
-        txn.Enqueue(bbm_id, bitblock, info_.abm_block + bitblock, 1);
+        BlockFree(&txn, inode.inum[n]);
     }
 
+    CountUpdate(&txn);
     MX_DEBUG_ASSERT(block_count == 0);
     return MX_OK;
 }
@@ -166,8 +165,10 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     if (status != MX_OK) {
         return status;
     }
+
     status = inode_map_.Set(bitoff_start, bitoff_start + 1);
     assert(status == MX_OK);
+    info_.alloc_inode_count++;
     uint32_t ino = static_cast<uint32_t>(bitoff_start);
 
     // locate data and block offset of bitmap
@@ -183,6 +184,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     // Write the inode back
     if ((status = InodeSync(txn, ino, inode)) != MX_OK) {
         inode_map_.Clear(ino, ino + 1);
+        info_.alloc_inode_count--;
         return status;
     }
 
@@ -194,6 +196,7 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
 #endif
     txn->Enqueue(id, ibm_relative_bno, info_.ibm_block + ibm_relative_bno, 1);
 
+    CountUpdate(txn);
     *ino_out = ino;
     return MX_OK;
 }
@@ -257,6 +260,22 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino) {
     return MX_OK;
 }
 
+mx_status_t Minfs::BlockFree(WriteTxn* txn, uint32_t bno) {
+    ValidateBno(bno);
+
+#ifdef __Fuchsia__
+    auto bbm_id = block_map_vmoid_;
+#else
+    auto bbm_id = block_map_.StorageUnsafe()->GetData();
+#endif
+
+    block_map_.Clear(bno, bno + 1);
+    info_.alloc_block_count--;
+    uint32_t bitblock = bno / kMinfsBlockBits;
+    txn->Enqueue(bbm_id, bitblock, info_.abm_block + bitblock, 1);
+    return CountUpdate(txn);
+}
+
 // Allocate a new data block from the block bitmap.
 //
 // If hint is nonzero it indicates which block number to start the search for
@@ -272,6 +291,7 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
 
     status = block_map_.Set(bitoff_start, bitoff_start + 1);
     assert(status == MX_OK);
+    info_.alloc_block_count++;
     uint32_t bno = static_cast<uint32_t>(bitoff_start);
     ValidateBno(bno);
 
@@ -288,7 +308,27 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
 #endif
     ValidateBno(bno);
     *out_bno = bno;
+
+    CountUpdate(txn);
     return MX_OK;
+}
+
+mx_status_t Minfs::CountUpdate(WriteTxn* txn) {
+    mx_status_t status = NO_ERROR;
+
+#ifdef __Fuchsia__
+    void* infodata = info_vmo_->GetData();
+    memcpy(infodata, &info_, sizeof(info_));
+    //TODO(planders): look into delaying this transaction.
+    txn->Enqueue(info_vmoid_, 0, 0, 1);
+#else
+    uint8_t blk[kMinfsBlockSize];
+    memset(blk, 0, sizeof(blk));
+    memcpy(blk, &info_, sizeof(info_));
+    status = bc_->Writeblk(0, blk);
+#endif
+
+    return status;
 }
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
@@ -378,10 +418,22 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
         return status;
     }
 
+    // Create the info vmo
+    if ((status = MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
+                                    &fs->info_vmo_)) != NO_ERROR) {
+        return status;
+    }
+
+    if ((status = fs->bc_->AttachVmo(fs->info_vmo_->GetVmo(),
+                                     &fs->info_vmoid_)) != NO_ERROR) {
+        return status;
+    }
+
     ReadTxn txn(fs->bc_.get());
     txn.Enqueue(fs->block_map_vmoid_, 0, fs->info_.abm_block, fs->abmblks_);
     txn.Enqueue(fs->inode_map_vmoid_, 0, fs->info_.ibm_block, fs->ibmblks_);
     txn.Enqueue(fs->inode_table_vmoid_, 0, fs->info_.ino_block, inoblks);
+    txn.Enqueue(fs->info_vmoid_, 0, 0, 1);
     if ((status = txn.Flush()) != MX_OK) {
         return status;
     }
@@ -414,7 +466,6 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
         return status;
     }
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
-
     minfs_dump_info(info);
 
     Minfs* fs;
@@ -472,6 +523,8 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.inode_size = kMinfsInodeSize;
     info.block_count = blocks;
     info.inode_count = inodes;
+    info.alloc_block_count = 0;
+    info.alloc_inode_count = 0;
     // For now, we are aligning the
     //  - Inode bitmap
     //  - Block bitmap
@@ -516,11 +569,13 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     // update inode bitmap
     ibm.Set(0, 1);
     ibm.Set(kMinfsRootIno, kMinfsRootIno + 1);
+    info.alloc_inode_count++;
 
     // update block bitmap:
     // reserve all blocks before the data storage area
     // reserve the first data block (for root directory)
     abm.Set(0, info.dat_block + 1);
+    info.alloc_block_count++;
 
     // write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {

@@ -25,10 +25,12 @@
 static bool check_mounted_fs(const char* path, const char* fs_name, size_t len) {
     int fd = open(path, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0, "");
-    char out[128];
-    ASSERT_EQ(ioctl_vfs_query_fs(fd, out, sizeof(out)), (ssize_t)len,
-              "Failed to query filesystem");
-    ASSERT_EQ(strncmp(fs_name, out, len), 0, "Unexpected filesystem mounted");
+    vfs_query_info_t out;
+    ASSERT_EQ(ioctl_vfs_query_fs(fd, &out, sizeof(out)), (ssize_t)sizeof(out), "Failed to query filesystem");
+    ASSERT_EQ(strncmp(fs_name, out.name, len), 0, "Unexpected filesystem mounted");
+    ASSERT_LE(out.used_nodes, out.total_nodes, "Used nodes greater than free nodes");
+    ASSERT_LE(out.used_bytes, out.total_bytes, "Used bytes greater than free bytes");
+    //TODO(planders): eventually check that total/used counts are > 0
     ASSERT_EQ(close(fd), 0, "");
     return true;
 }

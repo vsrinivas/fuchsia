@@ -8,6 +8,8 @@
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/types.h>
 
+#define MAX_FS_NAME_LEN 32
+
 #define IOCTL_VFS_MOUNT_FS \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 0)
 // Unmount the filesystem which 'fd' belongs to.
@@ -101,8 +103,17 @@ IOCTL_WRAPPER_OUT(ioctl_vfs_unmount_node, IOCTL_VFS_UNMOUNT_NODE, mx_handle_t);
 // ssize_t ioctl_vfs_mount_bootfs_vmo(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_vfs_mount_bootfs_vmo, IOCTL_VFS_MOUNT_BOOTFS_VMO, mx_handle_t);
 
-// ssize_t ioctl_vfs_query_fs(int fd, char* out, size_t out_len);
-IOCTL_WRAPPER_VAROUT(ioctl_vfs_query_fs, IOCTL_VFS_QUERY_FS, char);
+typedef struct vfs_query_info {
+    // these are the total/used # of data bytes, not # of entire disk bytes
+    uint32_t total_bytes;
+    uint32_t used_bytes;
+    uint32_t total_nodes;
+    uint32_t used_nodes;
+    char name[MAX_FS_NAME_LEN];
+} vfs_query_info_t;
+
+// ssize_t ioctl_vfs_query_fs(int fd, vfs_query_info_t* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_vfs_query_fs, IOCTL_VFS_QUERY_FS, vfs_query_info_t);
 
 // ssize_t ioctl_vfs_get_token(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_vfs_get_token, IOCTL_VFS_GET_TOKEN, mx_handle_t);
