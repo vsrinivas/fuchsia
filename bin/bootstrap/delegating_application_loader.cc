@@ -10,7 +10,7 @@
 namespace bootstrap {
 
 DelegatingApplicationLoader::DelegatingApplicationLoader(
-    Params::ServiceMap delegates,
+    Config::ServiceMap delegates,
     app::ApplicationLauncher* delegate_launcher,
     app::ApplicationLoaderPtr fallback)
     : delegate_launcher_(delegate_launcher), fallback_(std::move(fallback)) {

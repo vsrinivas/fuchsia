@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "apps/modular/src/bootstrap/app.h"
-#include "apps/modular/src/bootstrap/params.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -13,12 +12,8 @@ int main(int argc, const char** argv) {
   if (!ftl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  bootstrap::Params params;
-  if (!params.Setup(command_line))
-    return 1;
-
   mtl::MessageLoop loop;
-  bootstrap::App app(&params);
+  bootstrap::App app;
   loop.Run();
   return 0;
 }

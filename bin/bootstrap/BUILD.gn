@@ -11,8 +11,6 @@ executable("bootstrap") {
     "delegating_application_loader.cc",
     "delegating_application_loader.h",
     "main.cc",
-    "params.cc",
-    "params.h",
   ]
 
   deps = [

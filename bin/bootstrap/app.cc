@@ -8,37 +8,49 @@
 #include <magenta/processargs.h>
 
 #include "application/lib/app/connect.h"
-#include "apps/modular/src/bootstrap/params.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
 namespace bootstrap {
 
-App::App(Params* params)
+constexpr char kServicesConfigFile[] = "/system/data/bootstrap/services.config";
+constexpr char kLoadersConfigFile[] = "/system/data/bootstrap/loaders.config";
+constexpr char kAppsConfigFile[] = "/system/data/bootstrap/apps.config";
+constexpr char kDefaultLabel[] = "boot";
+
+App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       env_host_binding_(this) {
   FTL_DCHECK(application_context_);
+
+  Config config;
+  if (!config.ReadFrom(kServicesConfigFile))
+    FTL_LOG(WARNING) << "Could not parse " << kServicesConfigFile;
+  if (!config.ReadFrom(kLoadersConfigFile))
+    FTL_LOG(WARNING) << "Could not parse " << kLoadersConfigFile;
+  if (!config.ReadFrom(kAppsConfigFile))
+    FTL_LOG(WARNING) << "Could not parse " << kAppsConfigFile;
 
   // Set up environment for the programs we will run.
   app::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
       std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
-      params->label());
+      kDefaultLabel);
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Register services.
-  for (auto& pair : params->TakeServices())
+  for (auto& pair : config.TakeServices())
     RegisterSingleton(pair.first, std::move(pair.second));
 
   // Ordering note: The impl of CreateNestedEnvironment will resolve the
   // delegating app loader. However, since its call back to the env host won't
   // happen until the next (first) message loop iteration, we'll be set up by
   // then.
-  RegisterAppLoaders(params->TakeAppLoaders());
+  RegisterAppLoaders(config.TakeAppLoaders());
 
   // Launch startup applications.
-  for (auto& launch_info : params->TakeApps())
+  for (auto& launch_info : config.TakeApps())
     LaunchApplication(std::move(launch_info));
 }
 
@@ -80,7 +92,7 @@ void App::RegisterSingleton(std::string service_name,
       service_name);
 }
 
-void App::RegisterAppLoaders(Params::ServiceMap app_loaders) {
+void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
   app_loader_ = std::make_unique<DelegatingApplicationLoader>(
       std::move(app_loaders), env_launcher_.get(),
       application_context_

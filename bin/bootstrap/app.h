@@ -14,12 +14,9 @@
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/modular/src/bootstrap/delegating_application_loader.h"
-#include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {
-
-class Params;
 
 // The bootstrap creates a nested environment within which it starts apps
 // and wires up the UI services they require.
@@ -32,7 +29,7 @@ class Params;
 // specified on the command-line.
 class App : public app::ApplicationEnvironmentHost {
  public:
-  explicit App(Params* params);
+  App();
   ~App();
 
  private:
@@ -44,7 +41,7 @@ class App : public app::ApplicationEnvironmentHost {
   void RegisterSingleton(std::string service_name,
                          app::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(Params::ServiceMap app_loaders);
+  void RegisterAppLoaders(Config::ServiceMap app_loaders);
   void LaunchApplication(app::ApplicationLaunchInfoPtr launch_info);
 
   std::unique_ptr<app::ApplicationContext> application_context_;

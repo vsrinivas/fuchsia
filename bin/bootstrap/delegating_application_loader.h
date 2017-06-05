@@ -7,7 +7,7 @@
 
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/application_loader.fidl.h"
-#include "apps/modular/src/bootstrap/params.h"
+#include "apps/modular/src/bootstrap/config.h"
 #include "lib/ftl/macros.h"
 
 namespace bootstrap {
@@ -22,7 +22,7 @@ namespace bootstrap {
 class DelegatingApplicationLoader : public app::ApplicationLoader {
  public:
   explicit DelegatingApplicationLoader(
-      Params::ServiceMap delegates,
+      Config::ServiceMap delegates,
       app::ApplicationLauncher* delegate_launcher,
       app::ApplicationLoaderPtr fallback);
   ~DelegatingApplicationLoader() override;
