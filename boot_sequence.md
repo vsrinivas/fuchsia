@@ -5,15 +5,16 @@ This document describes the boot sequence for Fuchsia from the time the Magenta
 layer hands control over to the Fuchsia layer.  This document is a work in
 progress that will need to be extended as we bring up more of the system
 
-# Layer 1: [application_manager](https://fuchsia.googlesource.com/application/+/master/src/)
+# Layer 1:
+[appmgr](https://fuchsia.googlesource.com/application/+/master/src/manager)
 
-`application_manager`'s job is to host the environment tree and help create
-processes in these environments.  Processes created by `application_manager`
+`appmgr`'s job is to host the environment tree and help create
+processes in these environments.  Processes created by `appmgr`
 have an `mx::channel` back to their environment, which lets them create other
 processes in their environment and to create nested environments.
 
-At startup, `application_manager` creates an empty root environment and creates
-the initial apps listed in `/system/data/application_manager/initial.config` in
+At startup, `appmgr` creates an empty root environment and creates
+the initial apps listed in `/system/data/appmgr/initial.config` in
 that environment. Typically, these applications create environments nested
 directly in the root environment. The default configuration contains one initial
 app: `bootstrap`.
