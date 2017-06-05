@@ -80,7 +80,7 @@ std::string LedgerStatusToString(ledger::Status status) {
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    app::ApplicationEnvironmentPtr application_environment,
+    const app::ApplicationEnvironmentPtr& application_environment,
     const fidl::String& user_id,
     const fidl::String& device_name,
     AppConfigPtr user_shell,
@@ -95,7 +95,7 @@ UserRunnerImpl::UserRunnerImpl(
       user_shell_context_binding_(this),
       ledger_repository_(
           ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository))),
-      user_scope_(std::move(application_environment),
+      user_scope_(application_environment,
                   std::string(kUserScopeLabelPrefix) + user_id.data()),
       user_shell_(user_scope_.GetLauncher(), std::move(user_shell)),
       device_name_(device_name) {

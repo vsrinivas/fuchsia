@@ -48,7 +48,7 @@ class VisibleStoriesHandler;
 class UserRunnerImpl : UserRunner, UserShellContext {
  public:
   UserRunnerImpl(
-      app::ApplicationEnvironmentPtr application_environment,
+      const app::ApplicationEnvironmentPtr& application_environment,
       const fidl::String& user_id,
       const fidl::String& device_name,
       AppConfigPtr user_shell,

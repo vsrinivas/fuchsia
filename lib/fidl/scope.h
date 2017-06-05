@@ -22,17 +22,16 @@ namespace modular {
 // services are delegated to the parent environment.
 class Scope : public app::ApplicationEnvironmentHost {
  public:
-  Scope(app::ApplicationEnvironmentPtr parent_env, const std::string& label)
+  Scope(const app::ApplicationEnvironmentPtr& parent_env,
+        const std::string& label)
       : binding_(this) {
-    InitScope(std::move(parent_env), label);
+    InitScope(parent_env, label);
   }
 
   Scope(const Scope* const parent_scope, const std::string& label)
       : binding_(this) {
     FTL_DCHECK(parent_scope != nullptr);
-    app::ApplicationEnvironmentPtr env;
-    parent_scope->environment()->Duplicate(env.NewRequest());
-    InitScope(std::move(env), label);
+    InitScope(parent_scope->environment(), label);
   }
 
   template <typename Interface>
@@ -59,7 +58,7 @@ class Scope : public app::ApplicationEnvironmentHost {
     service_provider_impl_.AddBinding(std::move(environment_services));
   }
 
-  void InitScope(app::ApplicationEnvironmentPtr parent_env,
+  void InitScope(const app::ApplicationEnvironmentPtr& parent_env,
                  const std::string& label) {
     app::ServiceProviderPtr parent_env_service_provider;
     parent_env->GetServices(parent_env_service_provider.NewRequest());
