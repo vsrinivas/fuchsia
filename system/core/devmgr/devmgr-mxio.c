@@ -68,6 +68,7 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 
 #define USER_MAX_HANDLES 4
 #define MAX_ENVP 16
+#define CHILD_JOB_RIGHTS (MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE)
 
 mx_status_t devmgr_launch(mx_handle_t job, const char* name,
                           int argc, const char* const* argv,
@@ -86,7 +87,7 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
     envp[envn++] = NULL;
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;;
-    mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
+    mx_handle_duplicate(job, CHILD_JOB_RIGHTS, &job_copy);
 
     launchpad_t* lp;
     launchpad_create(job_copy, name, &lp);
@@ -129,7 +130,7 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
 
 static void start_system_init(void) {
     thrd_t t;
-    int r = thrd_create_with_name(&t, devmgr_start_system_init, NULL, "system-init");
+    int r = thrd_create_with_name(&t, devmgr_start_appmgr, NULL, "system-init");
     if (r == thrd_success) {
         thrd_detach(t);
     }

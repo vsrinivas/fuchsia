@@ -25,7 +25,7 @@ void devmgr_launch_devhost(mx_handle_t job,
                            mx_handle_t hdevice, mx_handle_t hrpc);
 ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo);
 bool secondary_bootfs_ready(void);
-int devmgr_start_system_init(void* arg);
+int devmgr_start_appmgr(void* arg);
 
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.

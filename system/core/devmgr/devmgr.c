@@ -41,6 +41,7 @@ mx_handle_t get_service_root(void) {
 static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
+static mx_handle_t fuchsia_job_handle;
 
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
@@ -117,7 +118,7 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             if (st != NO_ERROR) {
                 printf("devmgr: failed to mount /system, retcode = %d\n", st);
             } else {
-                devmgr_start_system_init(NULL);
+                devmgr_start_appmgr(NULL);
             }
 
             return NO_ERROR;
@@ -221,7 +222,7 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
 
 static const char* argv_sh[] = { "/boot/bin/sh" };
 static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
-static const char* argv_init[] = { "/system/bin/init" };
+static const char* argv_appmgr[] = { "/system/bin/appmgr" };
 
 void do_autorun(const char* name, const char* env) {
     char* bin = getenv(env);
@@ -233,26 +234,27 @@ void do_autorun(const char* name, const char* env) {
     }
 }
 
-int devmgr_start_system_init(void* arg) {
-    static bool init_started = false;
+int devmgr_start_appmgr(void* arg) {
+    static bool appmgr_started = false;
     static bool autorun_started = false;
     static mtx_t lock = MTX_INIT;
     mtx_lock(&lock);
     struct stat s;
-    if (!init_started && stat(argv_init[0], &s) == 0) {
-        unsigned int init_hnd_count = 0;
-        mx_handle_t init_hnds[2] = {};
-        uint32_t init_ids[2] = {};
+    if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
+        unsigned int appmgr_hnd_count = 0;
+        mx_handle_t appmgr_hnds[2] = {};
+        uint32_t appmgr_ids[2] = {};
         if (svc_request_handle) {
-            assert(init_hnd_count < countof(init_hnds));
-            init_hnds[init_hnd_count] = svc_request_handle;
-            init_ids[init_hnd_count] = PA_SERVICE_REQUEST;
-            init_hnd_count++;
+            assert(appmgr_hnd_count < countof(appmgr_hnds));
+            appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
+            appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
+            appmgr_hnd_count++;
             svc_request_handle = 0;
         }
-        devmgr_launch(svcs_job_handle, "init", countof(argv_init), argv_init,
-                      NULL, -1, init_hnds, init_ids, init_hnd_count);
-        init_started = true;
+        devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
+                      argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
+                      appmgr_hnd_count);
+        appmgr_started = true;
     }
     if (!autorun_started) {
         do_autorun("autorun:system", "magenta.autorun.system");
@@ -452,6 +454,12 @@ int main(int argc, char** argv) {
     }
     mx_object_set_property(svcs_job_handle, MX_PROP_NAME, "magenta-services", 16);
 
+    status = mx_job_create(root_job_handle, 0u, &fuchsia_job_handle);
+    if (status < 0) {
+        printf("unable to create service job\n");
+    }
+    mx_object_set_property(fuchsia_job_handle, MX_PROP_NAME, "fuchsia", 7);
+
     // Features like Intel Processor Trace need a dump of ld.so activity.
     // The output has a specific format, and will eventually be recorded
     // via a specific mechanism (magenta tracing support), so we use a specific
@@ -488,7 +496,7 @@ int main(int argc, char** argv) {
     start_console_shell();
 
     if (secondary_bootfs_ready()) {
-        devmgr_start_system_init(NULL);
+        devmgr_start_appmgr(NULL);
     }
 
     thrd_t t;
