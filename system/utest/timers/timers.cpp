@@ -28,7 +28,7 @@ static bool basic_test() {
     for (int ix = 0; ix != 10; ++ix) {
         const auto deadline_timer = mx_deadline_after(MX_MSEC(50));
         const auto deadline_wait = mx_deadline_after(MX_SEC(1));
-        // Timer should fire first than the wait.
+        // Timer should fire faster than the wait timeout.
         ASSERT_EQ(mx_timer_start(timer.get(), deadline_timer, 0u, 0u), NO_ERROR, "");
         EXPECT_EQ(timer.wait_one(MX_TIMER_SIGNALED, deadline_wait, &pending), NO_ERROR, "");
         EXPECT_EQ(pending, MX_TIMER_SIGNALED | MX_SIGNAL_LAST_HANDLE, "");
@@ -62,7 +62,42 @@ static bool invalid_calls() {
 
     ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
     ASSERT_EQ(mx_timer_start(timer.get(), 0u, 0u, 0u), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(mx_timer_start(timer.get(), 1u, 0u, 0u), ERR_INVALID_ARGS, "");
 
+    const auto deadline_timer = mx_deadline_after(MX_MSEC(1));
+    ASSERT_EQ(mx_timer_start(timer.get(), deadline_timer, MX_USEC(2), 0u), ERR_NOT_SUPPORTED, "");
+
+    END_TEST;
+}
+
+static bool periodic() {
+    BEGIN_TEST;
+
+    mx::handle timer;
+    ASSERT_EQ(mx_timer_create(0, MX_CLOCK_MONOTONIC, timer.get_address()), NO_ERROR, "");
+
+    const auto deadline_timer = mx_deadline_after(MX_MSEC(1));
+    const auto period = MX_USEC(500);
+
+    ASSERT_EQ(mx_timer_start(timer.get(), deadline_timer, period, 0u), NO_ERROR, "");
+
+    mx_signals_t pending;
+    auto expected_arrival = deadline_timer;
+
+    for (int ix = 0; ix != 100; ++ix) {
+        EXPECT_EQ(timer.wait_one(MX_TIMER_SIGNALED, MX_TIME_INFINITE, &pending), NO_ERROR, "");
+        EXPECT_EQ(pending & MX_TIMER_SIGNALED, MX_TIMER_SIGNALED, "");
+
+        EXPECT_GT(mx_time_get(MX_CLOCK_MONOTONIC), expected_arrival, "");
+        expected_arrival += period;
+
+        // Because the signal is strobed, it is only available at the time of the first wait
+        // not afterwards.
+        EXPECT_EQ(timer.wait_one(MX_TIMER_SIGNALED, 0u, &pending), ERR_TIMED_OUT, "");
+        EXPECT_EQ(pending & MX_TIMER_SIGNALED, 0u, "");
+    }
+
+    EXPECT_EQ(mx_timer_cancel(timer.get()), NO_ERROR, "");
     END_TEST;
 }
 
@@ -70,6 +105,7 @@ BEGIN_TEST_CASE(timers_test)
 RUN_TEST(basic_test)
 RUN_TEST(restart_test)
 RUN_TEST(invalid_calls)
+RUN_TEST(periodic)
 END_TEST_CASE(timers_test)
 
 int main(int argc, char** argv) {

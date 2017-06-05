@@ -26,19 +26,24 @@ public:
     ~TimerDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_TIMER; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
+    void on_zero_handles() final;
 
     // Timer specific ops.
-    mx_status_t SetOneShot(lk_time_t deadline);
-    mx_status_t CancelOneShot();
+    mx_status_t Set(mx_time_t deadline, mx_duration_t period);
+    mx_status_t Cancel();
+
+    // Timer callback.
     void OnTimerFired();
 
 private:
     TimerDispatcher(uint32_t options);
+    void CancelLocked() TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("TIMR")> canary_;
     dpc_t timer_dpc_;
     Mutex lock_;
-    bool active_ TA_GUARDED(lock_);
+    mx_time_t deadline_ TA_GUARDED(lock_);
+    mx_duration_t period_ TA_GUARDED(lock_);
     timer_t timer_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 };

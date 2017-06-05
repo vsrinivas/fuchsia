@@ -19,6 +19,8 @@
 constexpr mx_rights_t kDefaultTimersRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
+constexpr mx_duration_t kMinTimerPeriod = MX_USEC(50);  // 50 microseconds.
+constexpr mx_duration_t kTimerCanceled = 1u;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -46,19 +48,58 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
 
 TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
     : timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
-      active_(false),
+      deadline_(0u), period_(0u),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
 }
 
 TimerDispatcher::~TimerDispatcher() {
-    DEBUG_ASSERT(!active_);
+    DEBUG_ASSERT(deadline_ == 0u);
 }
 
-mx_status_t TimerDispatcher::SetOneShot(lk_time_t deadline) {
+void TimerDispatcher::on_zero_handles() {
+    // The timers can be kept alive indefinitely by the callbacks, so
+    // we need to cancel when there are no more user-mode clients.
+    Cancel();
+}
+
+mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     canary_.Assert();
+
+    // Deadline values 0 and 1 are special.
+    if (deadline <= kTimerCanceled)
+        return ERR_INVALID_ARGS;
+
+    // zero period is valid but other small values are not.
+    if ((period < kMinTimerPeriod) && (period != 0u))
+        return ERR_NOT_SUPPORTED;
+
     AutoLock al(&lock_);
 
-    if (active_) {
+    CancelLocked();
+
+    // The timer is always a one shot timer which in the periodic case
+    // is re-issued in the timer callback.
+    deadline_ = deadline;
+    period_ = period;
+
+    // We need to ref-up because the timer and the dpc don't understand
+    // refcounted objects. The Release() is called either in OnTimerFired()
+    // or in the complicated cancelation path above.
+    AddRef();
+    timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
+    return NO_ERROR;
+}
+
+mx_status_t TimerDispatcher::Cancel() {
+    canary_.Assert();
+    AutoLock al(&lock_);
+    CancelLocked();
+    return NO_ERROR;
+}
+
+void TimerDispatcher::CancelLocked() {
+    if (deadline_) {
+        // The timer is active and needs to be canceled.
         // Refcount is at least 2 because there is a pending timer that we need to cancel.
         if (timer_cancel(&timer_) || dpc_cancel(&timer_dpc_)) {
             // Managed to cancel before OnTimerFired() ran. So we need to decrement the
@@ -67,43 +108,51 @@ mx_status_t TimerDispatcher::SetOneShot(lk_time_t deadline) {
         } else {
             // The DPC thread is about to run the callback! Yet we are
             // holding the lock. We need to let the callback finish.
-            while (active_) {
+            //
+            // The protocol is to zero both period_ and deadline_ members
+            // and wait for deadline to be == 1. The timer callback will
+            // call Release().
+            period_ = 0u;
+            deadline_ = 0u;
+
+            while (deadline_ != kTimerCanceled) {
                 lock_.Release();
                 thread_reschedule();
                 lock_.Acquire();
             }
         }
+
+        deadline_ = 0u;
     }
 
     state_tracker_.UpdateState(MX_TIMER_SIGNALED, 0u);
-
-    // If |deadline| is zero it the timer is being canceled.
-    if (deadline == 0u)
-        return NO_ERROR;
-
-    // We need to ref-up because the timer and the dpc don't understand
-    // refcounted objects. The Release() is called either in OnTimerFired()
-    // or in the complicated cancelation path above.
-    AddRef();
-    active_ = true;
-    timer_set_oneshot(&timer_, deadline, &timer_irq_callback, &timer_dpc_);
-    return NO_ERROR;
-}
-
-mx_status_t TimerDispatcher::CancelOneShot() {
-    return SetOneShot(0u);
 }
 
 void TimerDispatcher::OnTimerFired() {
     canary_.Assert();
+
     {
         AutoLock al(&lock_);
-        active_ = false;
-        state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
+
+        if ((period_ == 0u) && (deadline_ == 0u)) {
+            // The timer is being canceled. Follow the handshake protocol
+            // which requires to set deadline_ and call Release().
+            deadline_ = kTimerCanceled;
+        } else if (period_ != 0) {
+            // The timer is a periodic timer. Re-issue the timer and
+            // don't Release() the reference.
+            state_tracker_.StrobeState(MX_TIMER_SIGNALED);
+            deadline_ += period_;
+            timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
+            return;
+        } else {
+            // The timer is a one-shot timer.
+            state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
+            deadline_ = 0u;
+        }
     }
-    // Unlike SetOneShot(), this could be the last reference so we might need
-    // to destroy ourselves. In Magenta, the 'delete' is called by the holder
-    // of the object, not inside Release().
+    // This could be the last reference so we might need to destroy ourselves.
+    // In Magenta RefPtrs, the 'delete' is called by the holder of the object.
     if (Release())
         delete this;
 }

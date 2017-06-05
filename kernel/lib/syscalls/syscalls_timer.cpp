@@ -57,9 +57,6 @@ mx_status_t sys_timer_start(
         return ERR_INVALID_ARGS;
 
     // TODO(cpu): support timer coalescing (aka slack).
-    // TODO(cpu): support periodic timers.
-    if (period)
-        return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -68,7 +65,7 @@ mx_status_t sys_timer_start(
     if (status != NO_ERROR)
         return status;
 
-    return timer->SetOneShot(deadline);
+    return timer->Set(deadline, period);
 }
 
 mx_status_t sys_timer_cancel(mx_handle_t handle) {
@@ -79,6 +76,6 @@ mx_status_t sys_timer_cancel(mx_handle_t handle) {
     if (status != NO_ERROR)
         return status;
 
-    return timer->CancelOneShot();
+    return timer->Cancel();
 }
 
