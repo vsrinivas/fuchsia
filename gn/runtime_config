@@ -5,7 +5,7 @@
     "resources": [
         {
             "file": "application/src/initial.config",
-            "bootfs_path": "data/application_manager/initial.config"
+            "bootfs_path": "data/appmgr/initial.config"
         },
         {
             "file": "apps/modular/src/bootstrap/services.config",

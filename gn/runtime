@@ -8,8 +8,8 @@
     ],
     "binaries": [
         {
-            "binary": "application_manager",
-            "bootfs_path": "bin/application_manager"
+            "binary": "appmgr",
+            "bootfs_path": "bin/appmgr"
         },
         {
             "binary": "bootstrap",

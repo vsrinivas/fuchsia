@@ -4,7 +4,7 @@
     ],
     "resources": [
         {
-            "bootfs_path": "data/application_manager/startup.config",
+            "bootfs_path": "data/appmgr/startup.config",
             "file": "apps/moterm/startup.config"
         }
     ]
