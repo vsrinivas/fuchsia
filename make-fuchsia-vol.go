@@ -257,6 +257,10 @@ func main() {
 
 	log.Printf("Writing EFI partition and files")
 
+	if _, err := exec.LookPath("mkfs-msdosfs"); err != nil {
+		log.Fatal("Could not find mkfs-msdosfs, you might need to build, or change to $FUCHSIA_ROOT")
+	}
+
 	cmd := exec.Command("mkfs-msdosfs", "-LESP", "-F32",
 		fmt.Sprintf("-@%d", efiStart),
 		fmt.Sprintf("-b%d", logical),
@@ -265,7 +269,7 @@ func main() {
 	)
 
 	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Print(out)
+		log.Printf("mkfs-msdosfs failed:\n%s", out)
 		log.Fatal(err)
 	}
 
