@@ -179,7 +179,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     uint64_t sz;
     mx_handle_t h;
     void* io;
-    r = pci->map_mmio(dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
+    r = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
     if (r != NO_ERROR) {
         printf("eth: cannot map io %d\n", h);
         goto fail;
