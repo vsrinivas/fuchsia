@@ -5,12 +5,17 @@
 #pragma once
 
 #include <memory>
+#include <thread>
 #include <unordered_set>
 
 #include "application/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/threading/create_thread.h"
 
 class FactoryServiceBase {
  public:
@@ -18,6 +23,8 @@ class FactoryServiceBase {
   class ProductBase : public std::enable_shared_from_this<ProductBase> {
    public:
     virtual ~ProductBase();
+
+    void QuitOnDestruct() { quit_on_destruct_ = true; }
 
    protected:
     explicit ProductBase(FactoryServiceBase* owner);
@@ -27,15 +34,14 @@ class FactoryServiceBase {
 
     // Tells the factory service to release this product. This method can only
     // be called after the first shared_ptr to the product is created.
-    void ReleaseFromOwner() {
-      size_t erased = owner_->products_.erase(shared_from_this());
-      FTL_DCHECK(erased);
-    }
+    void ReleaseFromOwner() { owner_->RemoveProduct(shared_from_this()); }
 
    private:
     FactoryServiceBase* owner_;
+    bool quit_on_destruct_ = false;
   };
 
+  // A |ProductBase| that exposes FIDL interface |Interface|.
   template <typename Interface>
   class Product : public ProductBase {
    public:
@@ -89,10 +95,12 @@ class FactoryServiceBase {
 
   virtual ~FactoryServiceBase();
 
+  // Gets the application context.
   app::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
+  // Connects to a service registered with the application environment.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
@@ -101,14 +109,37 @@ class FactoryServiceBase {
   }
 
  protected:
+  // Adds a product to the factory's collection of products. Threadsafe.
   template <typename ProductImpl>
   void AddProduct(std::shared_ptr<ProductImpl> product) {
+    ftl::MutexLocker locker(&mutex_);
     products_.insert(std::static_pointer_cast<ProductBase>(product));
+  }
+
+  // Removes a product from the factory's collection of products. Threadsafe.
+  void RemoveProduct(std::shared_ptr<ProductBase> product);
+
+  // Creates a new product (by calling |product_creator|) on a new thread. The
+  // thread is destroyed when the product is deleted.
+  template <typename ProductImpl>
+  void CreateProductOnNewThread(
+      const std::function<std::shared_ptr<ProductImpl>()>& product_creator) {
+    ftl::RefPtr<ftl::TaskRunner> task_runner;
+    std::thread thread = mtl::CreateThread(&task_runner);
+    task_runner->PostTask([this, product_creator]() {
+      std::shared_ptr<ProductImpl> product = product_creator();
+      product->QuitOnDestruct();
+      AddProduct(product);
+    });
+    thread.detach();
   }
 
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
-  std::unordered_set<std::shared_ptr<ProductBase>> products_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  mutable ftl::Mutex mutex_;
+  std::unordered_set<std::shared_ptr<ProductBase>> products_
+      FTL_GUARDED_BY(mutex_);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);
 };

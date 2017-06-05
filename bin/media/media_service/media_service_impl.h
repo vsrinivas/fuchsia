@@ -12,6 +12,27 @@
 
 namespace media {
 
+// Main media service implementation.
+//
+// |MediaServiceImpl| is a factory for various FIDL media components. Currently,
+// all such components, other than audio renderers, are instantiated in the
+// process in which the singleton instance of this class runs. This will change
+// in the future so that potentially vulnerable components (e.g. decoders) are
+// isolated with minimal privileges and no ability to interfere with components
+// used by other clients.
+//
+// FIDL requires that a given interface implementation commit to a particular
+// thread on which all messages are received and transmitted. The media
+// components created by this class typically operate only on their designated
+// FIDL message thread. For this reason, performance-critical components are
+// instantiated on their own threads, allowing them to run concurrently with
+// respect to other such components.
+//
+// The current assumption is that performance-critical components are those
+// components that are actually in the media pipeline. This includes any
+// component that produces or consumes packets as well as the readers that
+// deliver raw data to the demultiplexer. Other components are instantiated on
+// the same thread as the |MediaServiceImpl| instance.
 class MediaServiceImpl : public FactoryServiceBase, public MediaService {
  public:
   MediaServiceImpl();
