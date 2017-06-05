@@ -13,8 +13,7 @@ Future<List<Asset>> readConfig(String fileName) async {
   File file = new File(fileName);
 
   if (!(await file.exists())) {
-    throw new ArgumentError.value(fileName, 'fileName',
-      'File does not exist');
+    throw new ArgumentError.value(fileName, 'fileName', 'File does not exist');
   }
 
   return _convertAssetList(JSON.decode(await file.readAsString()));
@@ -68,8 +67,7 @@ Asset _convertAsset(dynamic json) {
             break;
           default:
             throw new FormatException(
-              'Config file is malformed: $value is not a valid type'
-            );
+                'Config file is malformed: $value is not a valid type');
         }
         break;
       case 'title':
@@ -110,9 +108,8 @@ Asset _convertAsset(dynamic json) {
 
   if (type == null) {
     throw new FormatException(
-      'Config file is malformed: asset type was not specified and cannot be'
-      ' inferred'
-    );
+        'Config file is malformed: asset type was not specified and cannot be'
+        ' inferred');
   }
 
   switch (type) {
@@ -149,15 +146,12 @@ Asset _convertAsset(dynamic json) {
       _checkNull(type, service, "service name");
       if (children.isEmpty) {
         throw new FormatException(
-          'Config file is malformed: a playlist must have at least one child'
-        );
+            'Config file is malformed: a playlist must have at least one child');
       }
       if (!children.every(
-            (Asset c) => c.type == AssetType.movie || c.type == AssetType.song
-          )) {
+          (Asset c) => c.type == AssetType.movie || c.type == AssetType.song)) {
         throw new FormatException(
-          'Config file is malformed: playlist children must be songs or movies'
-        );
+            'Config file is malformed: playlist children must be songs or movies');
       }
       return new Asset.playlist(
         title: title,
@@ -185,16 +179,14 @@ Asset _convertAsset(dynamic json) {
 void _checkNotNull(AssetType type, Object value, String name) {
   if (value == null) {
     throw new FormatException(
-      'Config file is malformed: a $type must have $name'
-    );
+        'Config file is malformed: a $type must have $name');
   }
 }
 
 void _checkNull(AssetType type, Object value, String name) {
   if (value != null) {
     throw new FormatException(
-      'Config file is malformed: a $type must not have $name'
-    );
+        'Config file is malformed: a $type must not have $name');
   }
 }
 

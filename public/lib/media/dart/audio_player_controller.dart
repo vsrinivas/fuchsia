@@ -39,6 +39,7 @@ class AudioPlayerController {
 
   TimelineFunction _timelineFunction;
   Problem _problem;
+
   MediaMetadata _metadata;
 
   bool _progressBarReady = false;
@@ -83,7 +84,7 @@ class AudioPlayerController {
   }
 
   /// Connects to a remote media player.
-  void connectToRemote({ String device, String service }) {
+  void connectToRemote({String device, String service}) {
     if (device == null) {
       throw new ArgumentError.notNull('device');
     }
@@ -96,10 +97,7 @@ class AudioPlayerController {
     _active = true;
 
     _netMediaService.createNetMediaPlayerProxy(
-      device,
-      service,
-      _netMediaPlayer.ctrl.request()
-    );
+        device, service, _netMediaPlayer.ctrl.request());
 
     _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     updateCallback?.call();
@@ -143,14 +141,14 @@ class AudioPlayerController {
   /// Creates a local player.
   void _createLocalPlayer(Uri uri, String serviceName) {
     InterfacePair<MediaRenderer> audioMediaRenderer =
-      new InterfacePair<MediaRenderer>();
+        new InterfacePair<MediaRenderer>();
     _mediaService.createAudioRenderer(
       _audioRenderer.ctrl.request(),
       audioMediaRenderer.passRequest(),
     );
 
     InterfacePair<mp.MediaPlayer> mediaPlayer =
-      new InterfacePair<mp.MediaPlayer>();
+        new InterfacePair<mp.MediaPlayer>();
     _mediaService.createPlayer(
       null,
       audioMediaRenderer.passHandle(),
@@ -158,8 +156,8 @@ class AudioPlayerController {
       mediaPlayer.passRequest(),
     );
 
-    _netMediaService.createNetMediaPlayer(serviceName,
-      mediaPlayer.passHandle(), _netMediaPlayer.ctrl.request());
+    _netMediaService.createNetMediaPlayer(
+        serviceName, mediaPlayer.passHandle(), _netMediaPlayer.ctrl.request());
 
     _netMediaPlayer.setUrl(uri.toString());
   }
@@ -198,8 +196,8 @@ class AudioPlayerController {
     }
 
     return new Duration(
-      microseconds: _progressNanoseconds.clamp(0, _durationNanoseconds) ~/ 1000
-    );
+        microseconds:
+            _progressNanoseconds.clamp(0, _durationNanoseconds) ~/ 1000);
   }
 
   int get _progressNanoseconds {
@@ -293,8 +291,9 @@ class AudioPlayerController {
         _progressBarReady = false;
       }
 
-      if (_timelineFunction != null && _timelineFunction.referenceTime != 0 &&
-        !_progressBarReady) {
+      if (_timelineFunction != null &&
+          _timelineFunction.referenceTime != 0 &&
+          !_progressBarReady) {
         _prepareProgressBar();
       }
 

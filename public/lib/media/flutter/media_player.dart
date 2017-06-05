@@ -72,8 +72,9 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   /// Determines of the control overlay should be shown.
   bool _shouldShowControlOverlay() {
-    return !widget.controller.hasVideo || !widget.controller.playing ||
-      _hideTimer != null;
+    return !widget.controller.hasVideo ||
+        !widget.controller.playing ||
+        _hideTimer != null;
   }
 
   /// Shows the control overlay for [_kOverlayAutoHideDuration].
@@ -100,9 +101,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
     }
 
     _progressTimer = new Timer.periodic(
-      _kProgressBarUpdateInterval,
-      (Timer timer) => setState(() {})
-    );
+        _kProgressBarUpdateInterval, (Timer timer) => setState(() {}));
   }
 
   /// Ensure that the progress timer is not running.
@@ -126,7 +125,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
     String hoursString = hours == 0 ? '' : '$hours:';
     String minutesString =
-      (hours == 0 || minutes > 9) ? '$minutes:' : '0$minutes:';
+        (hours == 0 || minutes > 9) ? '$minutes:' : '0$minutes:';
     String secondsString = seconds > 9 ? '$seconds' : '0$seconds';
 
     return '$hoursString$minutesString$secondsString';
@@ -152,8 +151,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
     }
 
     widget.controller.seek(new Duration(
-      microseconds: (unitPosition * durationInMicroseconds).round()
-    ));
+        microseconds: (unitPosition * durationInMicroseconds).round()));
   }
 
   /// Gets the desired size of this widget.
@@ -163,7 +161,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
     if (size.width == 0) {
       size = const Size(320.0, 45.0);
     } else {
-      size = size /  MediaQuery.of(context).devicePixelRatio;
+      size = size / MediaQuery.of(context).devicePixelRatio;
     }
 
     return size;
@@ -177,13 +175,13 @@ class _MediaPlayerState extends State<MediaPlayer> {
       children: <Widget>[
         new Center(
           child: new IconButton(
-            icon: widget.controller.problem != null ?
-              new Icon(Icons.error_outline) :
-              widget.controller.loading ?
-                new Icon(Icons.hourglass_empty) :
-                widget.controller.playing ?
-                  new Icon(Icons.pause) :
-                  new Icon(Icons.play_arrow),
+            icon: widget.controller.problem != null
+                ? new Icon(Icons.error_outline)
+                : widget.controller.loading
+                    ? new Icon(Icons.hourglass_empty)
+                    : widget.controller.playing
+                        ? new Icon(Icons.pause)
+                        : new Icon(Icons.play_arrow),
             iconSize: 60.0,
             onPressed: () {
               if (widget.controller.playing) {
@@ -198,7 +196,8 @@ class _MediaPlayerState extends State<MediaPlayer> {
         new Positioned(
           left: 10.0,
           bottom: 9.0,
-          child: new Text(_durationToString(widget.controller.progress),
+          child: new Text(
+            _durationToString(widget.controller.progress),
             style: new TextStyle(color: Colors.white),
           ),
         ),
@@ -207,17 +206,17 @@ class _MediaPlayerState extends State<MediaPlayer> {
           right: 35.0,
           bottom: 0.0,
           child: new Slider(
-            min: 0.0,
-            max: 1.0,
-            activeColor: Colors.red[900],
-            value: _unitProgress,
-            onChanged: (double value) => _unitSeek(value)
-          ),
+              min: 0.0,
+              max: 1.0,
+              activeColor: Colors.red[900],
+              value: _unitProgress,
+              onChanged: (double value) => _unitSeek(value)),
         ),
         new Positioned(
           right: 10.0,
           bottom: 9.0,
-          child: new Text(_durationToString(widget.controller.duration),
+          child: new Text(
+            _durationToString(widget.controller.duration),
             style: new TextStyle(color: Colors.white),
           ),
         ),
@@ -233,8 +232,8 @@ class _MediaPlayerState extends State<MediaPlayer> {
         children: <Widget>[
           new GestureDetector(
             onTap: _brieflyShowControlOverlay,
-            child:
-              new ChildView(connection: widget.controller.videoViewConnection),
+            child: new ChildView(
+                connection: widget.controller.videoViewConnection),
           ),
           new Offstage(
             offstage: !_shouldShowControlOverlay(),
@@ -254,12 +253,12 @@ class _MainLayout extends SingleChildLayoutDelegate {
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-    new BoxConstraints.tight(
-      constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size));
+      new BoxConstraints.tight(
+          constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size));
 
   @override
   Size getSize(BoxConstraints constraints) =>
-    constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size);
+      constraints.constrainSizeAndAttemptToPreserveAspectRatio(_size);
 
   @override
   bool shouldRelayout(_MainLayout oldDelegate) => oldDelegate._size != _size;

@@ -54,10 +54,11 @@ class Asset {
     this.title,
     this.artist,
     this.album,
-  }) : type = AssetType.movie,
-       children = null,
-       device = null,
-       service = null;
+  })
+      : type = AssetType.movie,
+        children = null,
+        device = null,
+        service = null;
 
   /// Constructs an asset describing a song.
   Asset.song({
@@ -65,25 +66,26 @@ class Asset {
     this.title,
     this.artist,
     this.album,
-  }) : type = AssetType.song,
-       children = null,
-       device = null,
-       service = null;
+  })
+      : type = AssetType.song,
+        children = null,
+        device = null,
+        service = null;
 
   /// Constructs an asset describing a playlist.
   Asset.playlist({
     @required this.children,
     this.title,
-  }) : type = AssetType.playlist,
-       uri = null,
-       artist = null,
-       album = null,
-       device = null,
-       service = null {
+  })
+      : type = AssetType.playlist,
+        uri = null,
+        artist = null,
+        album = null,
+        device = null,
+        service = null {
     assert(children.isNotEmpty);
     assert(children.every(
-      (Asset c) => c.type == AssetType.movie || c.type == AssetType.song
-    ));
+        (Asset c) => c.type == AssetType.movie || c.type == AssetType.song));
   }
 
   /// Constructs an asset describing a remote player.
@@ -91,9 +93,10 @@ class Asset {
     @required this.device,
     @required this.service,
     this.title,
-  }) : type = AssetType.remote,
-       uri = null,
-       artist = null,
-       album = null,
-       children = null;
+  })
+      : type = AssetType.remote,
+        uri = null,
+        artist = null,
+        album = null,
+        children = null;
 }

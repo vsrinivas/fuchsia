@@ -95,7 +95,7 @@ bool _playNext() {
   return true;
 }
 
-void _playLeafAsset(Asset asset ) {
+void _playLeafAsset(Asset asset) {
   assert(asset.type != AssetType.playlist);
 
   _leafAssetToPlay = asset;
@@ -213,8 +213,8 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
             right: 0.0,
             top: 0.0,
             child: new Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: columnChildren,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: columnChildren,
             ),
           ),
           new Positioned(

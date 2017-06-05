@@ -17,9 +17,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// Controller for MediaPlayer widgets.
-class MediaPlayerController
-  extends AudioPlayerController
-  implements Listenable {
+class MediaPlayerController extends AudioPlayerController
+    implements Listenable {
   final MediaServiceProxy _mediaService = new MediaServiceProxy();
 
   final List<VoidCallback> _listeners = new List<VoidCallback>();
@@ -51,7 +50,7 @@ class MediaPlayerController
       _videoRenderer.createView(viewOwnerPair.passRequest());
 
       _videoViewConnection =
-        new ChildViewConnection(viewOwnerPair.passHandle());
+          new ChildViewConnection(viewOwnerPair.passHandle());
 
       _handleVideoRendererStatusUpdates(VideoRenderer.kInitialStatus, null);
     }
@@ -60,7 +59,7 @@ class MediaPlayerController
   }
 
   @override
-  void connectToRemote({ String device, String service }) {
+  void connectToRemote({String device, String service}) {
     _close();
     super.connectToRemote(device: device, service: service);
   }
@@ -117,7 +116,7 @@ class MediaPlayerController
   @override
   InterfacePair<MediaRenderer> get videoMediaRenderer {
     InterfacePair<MediaRenderer> videoMediaRenderer =
-      new InterfacePair<MediaRenderer>();
+        new InterfacePair<MediaRenderer>();
 
     _mediaService.createVideoRenderer(
       _videoRenderer.ctrl.request(),
@@ -136,22 +135,18 @@ class MediaPlayerController
   // Handles a status update from the video renderer and requests a new update.
   // Call with kInitialStatus, null to initiate status updates.
   void _handleVideoRendererStatusUpdates(
-    int version,
-    VideoRendererStatus status
-  ) {
+      int version, VideoRendererStatus status) {
     if (!openOrConnected) {
       return;
     }
 
     if (status != null) {
-      double pixelAspectRatio =
-        status.pixelAspectRatio.width.toDouble() /
-        status.pixelAspectRatio.height.toDouble();
+      double pixelAspectRatio = status.pixelAspectRatio.width.toDouble() /
+          status.pixelAspectRatio.height.toDouble();
 
       _videoSize = new Size(
-        status.videoSize.width.toDouble() * pixelAspectRatio,
-        status.videoSize.height.toDouble()
-      );
+          status.videoSize.width.toDouble() * pixelAspectRatio,
+          status.videoSize.height.toDouble());
 
       scheduleMicrotask(() {
         _notifyListeners();
