@@ -6,9 +6,10 @@
 
 #include <magenta/process.h>
 
-mx_handle_t __magenta_process_self ATTR_LIBC_VISIBILITY;
-mx_handle_t __magenta_vmar_root_self ATTR_LIBC_VISIBILITY;
-mx_handle_t __magenta_job_default ATTR_LIBC_VISIBILITY;
+// TODO: add ATTR_LIBC_VISIBILITY to all 3 exports as soon as Rust no longer depends on these
+mx_handle_t __magenta_process_self;
+mx_handle_t __magenta_vmar_root_self;
+mx_handle_t __magenta_job_default;
 
 mx_handle_t _mx_process_self(void) {
     return __magenta_process_self;
