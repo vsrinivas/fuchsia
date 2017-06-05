@@ -17,8 +17,7 @@
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-constexpr char kDefaultConfigPath[] =
-    "/system/data/application_manager/initial.config";
+constexpr char kDefaultConfigPath[] = "/system/data/appmgr/initial.config";
 
 int main(int argc, char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
@@ -45,7 +44,7 @@ int main(int argc, char** argv) {
   }
 
   // TODO(jeffbrown): If there's already a running instance of
-  // application_manager, it might be nice to pass the request over to
+  // appmgr, it might be nice to pass the request over to
   // it instead of starting a whole new instance.  Alternately, we could create
   // a separate command-line program to act as an interface for modifying
   // configuration, starting / stopping applications, listing what's running,

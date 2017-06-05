@@ -23,7 +23,7 @@ namespace app {
 //     "/system/apps"
 //   ],
 //   "include": [
-//     "/system/data/application_manager/startup.config"
+//     "/system/data/appmgr/startup.config"
 //   ]
 // }
 

@@ -22,12 +22,12 @@ constexpr char kInclude[] = "include";
 bool Config::ReadIfExistsFrom(const std::string& config_file) {
   std::string data;
   if (!files::ReadFileToString(config_file, &data)) {
-    fprintf(stderr, "application_manager: Ignoring missing config file: %s\n",
+    fprintf(stderr, "appmgr: Ignoring missing config file: %s\n",
             config_file.c_str());
     return true;
   }
   if (!Parse(data)) {
-    fprintf(stderr, "application_manager: Failed to parse config file: %s\n",
+    fprintf(stderr, "appmgr: Failed to parse config file: %s\n",
             config_file.c_str());
     return false;
   }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 executable("manager") {
-  output_name = "application_manager"
+  output_name = "appmgr"
 
   sources = [
     "application_controller_impl.cc",
