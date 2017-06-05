@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <elf.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -32,7 +33,7 @@ static bool container_is_valid(const bootdata_t* container) {
            container->flags == 0;
 }
 
-static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_ip,
+static mx_status_t load_magenta(const int fd, uintptr_t addr, uintptr_t* guest_ip,
                                 uintptr_t* end_off) {
     uintptr_t header_addr = addr + kKernelOffset;
     int ret = read(fd, (void*)header_addr, sizeof(magenta_kernel_t));
@@ -69,7 +70,7 @@ static mx_status_t load_magenta(int fd, uintptr_t addr, uintptr_t* guest_ip,
     return NO_ERROR;
 }
 
-static mx_status_t load_bootfs(int fd, uintptr_t addr, uintptr_t bootdata_off) {
+static mx_status_t load_bootfs(const int fd, uintptr_t addr, uintptr_t bootdata_off) {
     bootdata_t ramdisk_hdr;
     int ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
     if (ret != sizeof(bootdata_t)) {
@@ -100,13 +101,124 @@ static int vcpu_thread(void* arg) {
     return vcpu_loop((vcpu_context_t*)arg) != NO_ERROR ? thrd_error : thrd_success;
 }
 
+static mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t acpi_off,
+                                 const int fd, const char* bootdata_path, uintptr_t* guest_ip) {
+
+    mx_status_t status = guest_create_bootdata(addr, kVmoSize, acpi_off, kBootdataOffset);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to create bootdata\n");
+        return status;
+    }
+
+    uintptr_t magenta_end_off;
+    status = load_magenta(fd, addr, guest_ip, &magenta_end_off);
+    if (status != NO_ERROR)
+        return status;
+    MX_ASSERT(magenta_end_off <= kBootdataOffset);
+
+    // If we have been provided a BOOTFS image, load it.
+    if (bootdata_path) {
+        int boot_fd = open(bootdata_path, O_RDONLY);
+        if (boot_fd < 0) {
+            fprintf(stderr, "Failed to open BOOTFS image image \"%s\"\n", bootdata_path);
+            return ERR_IO;
+        }
+
+        status = load_bootfs(boot_fd, addr, kBootdataOffset);
+        close(boot_fd);
+        if (status != NO_ERROR)
+            return status;
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t setup_linux(const uintptr_t addr, const int fd, uintptr_t* guest_ip) {
+
+    // The linux kernel is just a happy ELF. We want to unpack the program segments
+    // and drop them where they belong in the VMO.
+    Elf64_Ehdr e_header;
+    int ret = read(fd, &e_header, sizeof(e_header));
+    if (ret != sizeof(e_header)) {
+        fprintf(stderr, "Failed to read linux kernel elf header\n");
+        return ERR_IO;
+    }
+
+    // Load the program headers
+    size_t p_headers_size = sizeof(Elf64_Phdr) * e_header.e_phnum;
+    Elf64_Phdr* p_headers = malloc(p_headers_size);
+    ret = read(fd, p_headers, p_headers_size);
+    if ((size_t)ret != p_headers_size) {
+        fprintf(stderr, "Failed reading linux program headers\n");
+        return ERR_IO;
+    }
+
+    // Load the program segments
+    for (int i = 0; i < e_header.e_phnum; ++i) {
+        Elf64_Phdr* p_header = &p_headers[i];
+
+        if (p_header->p_type != PT_LOAD)
+            continue;
+
+        // Seek to the program segment
+        if (lseek(fd, p_header->p_offset, SEEK_SET) < -1) {
+            fprintf(stderr, "Failed seeking to linux program segment\n");
+            return ERR_IO;
+        }
+        ret = read(fd, (void*)(addr + p_header->p_paddr), p_header->p_filesz);
+        if ((size_t)ret != p_header->p_filesz) {
+            fprintf(stderr, "Failed reading linux program segment\n");
+            return ERR_IO;
+        }
+    }
+    free(p_headers);
+    *guest_ip = e_header.e_entry;
+    return NO_ERROR;
+}
+
+int is_elf(const int fd, bool* result) {
+    // Assume it's an elf file and try to read the header
+    Elf64_Ehdr e_header;
+    int ret = read(fd, &e_header, sizeof(e_header));
+    if (ret != sizeof(e_header)) {
+        fprintf(stderr, "Failed to read header\n");
+        return ERR_IO;
+    }
+
+    // Check ELF magic
+    *result = e_header.e_ident[EI_MAG0] == ELFMAG0 &&
+              e_header.e_ident[EI_MAG1] == ELFMAG1 &&
+              e_header.e_ident[EI_MAG2] == ELFMAG2 &&
+              e_header.e_ident[EI_MAG3] == ELFMAG3;
+
+    if (lseek(fd, 0, SEEK_SET) < -1) {
+        fprintf(stderr, "Failed seeking back to start\n");
+        return ERR_IO;
+    }
+
+    return NO_ERROR;
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: %s kernel.bin [ramdisk.bin]\n", basename(argv[0]));
         return ERR_INVALID_ARGS;
     }
 
-    mx_status_t status;
+    int fd = open(argv[1], O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[1]);
+        return ERR_IO;
+    }
+
+    // For simplicity, we just assume that all elf files are linux
+    // and anything else is magenta.
+    bool is_linux = false;
+    mx_status_t status = is_elf(fd, &is_linux);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "Failed to determine kernel image type\n");
+        return status;
+    }
+
     mx_handle_t hypervisor;
     status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
     if (status != NO_ERROR) {
@@ -153,44 +265,36 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    status = guest_create_bootdata(addr, kVmoSize, pt_end_off, kBootdataOffset);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "Failed to create bootdata\n");
-        return status;
-    }
-
-    int fd = open(argv[1], O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to open Magenta kernel image \"%s\"\n", argv[1]);
-        return ERR_IO;
-    }
-
     uintptr_t guest_ip;
-    uintptr_t magenta_end_off;
-    status = load_magenta(fd, addr, &guest_ip, &magenta_end_off);
-    close(fd);
-    if (status != NO_ERROR)
-        return status;
-    MX_ASSERT(magenta_end_off <= kBootdataOffset);
-
-    // If we have been provided a BOOTFS image, load it.
-    if (argc >= 3) {
-        fd = open(argv[2], O_RDONLY);
-        if (fd < 0) {
-            fprintf(stderr, "Failed to open BOOTFS image image \"%s\"\n", argv[2]);
-            return ERR_IO;
-        }
-
-        status = load_bootfs(fd, addr, kBootdataOffset);
-        close(fd);
-        if (status != NO_ERROR)
+    if (!is_linux) {
+        // magenta
+        status = setup_magenta(addr,
+                               pt_end_off,
+                               fd,
+                               argc >= 3 ? argv[2] : NULL,
+                               &guest_ip);
+        if (status != NO_ERROR) {
+            fprintf(stderr, "Failed to setup magenta\n");
             return status;
+        }
+    } else {
+        // linux
+        status = setup_linux(addr,
+                             fd,
+                             &guest_ip);
+        if (status != NO_ERROR) {
+            fprintf(stderr, "Failed to setup linux\n");
+            return status;
+        }
     }
+    close(fd);
 
     mx_guest_gpr_t guest_gpr;
     memset(&guest_gpr, 0, sizeof(guest_gpr));
 #if __x86_64__
-    guest_gpr.rsi = kBootdataOffset;
+    if (!is_linux) {
+        guest_gpr.rsi = kBootdataOffset;
+    }
 #endif // __x86_64__
     status = mx_hypervisor_op(context.guest, MX_HYPERVISOR_OP_GUEST_SET_GPR,
                               &guest_gpr, sizeof(guest_gpr), NULL, 0);
