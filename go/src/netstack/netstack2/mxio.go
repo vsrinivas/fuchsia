@@ -17,6 +17,7 @@ import (
 	"syscall/mx/mxio"
 	"syscall/mx/mxio/dispatcher"
 	"syscall/mx/mxio/rio"
+	"syscall/mx/mxruntime"
 
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
@@ -43,6 +44,11 @@ const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
 const LOCAL_SIGNAL_CLOSING = mx.SignalUser5
 
 const defaultNIC = 2
+
+// TODO: define these in syscall/mx/mxruntime
+const (
+	handleServicesRequest mxruntime.HandleType = 0x3B
+)
 
 var (
 	ioctlNetcGetIfInfo   = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 0)
@@ -84,21 +90,36 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		next:       1,
 	}
 
-	h, err := devmgrConnect()
+	h1, err := devmgrConnect()
 	if err != nil {
 		return nil, fmt.Errorf("devmgr: %v", err)
 	}
 
-	if err := d.AddHandler(h, rio.ServerHandler(s.mxioHandler), 0); err != nil {
-		h.Close()
+	if err := d.AddHandler(h1, rio.ServerHandler(s.mxioHandler), 0); err != nil {
+		h1.Close()
 		return nil, err
 	}
 
 	// We're ready to serve
 	// TODO(crawshaw): give this signal a name.
-	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
-		h.Close()
+	if err := h1.SignalPeer(0, mx.SignalUser0); err != nil {
+		h1.Close()
 		return nil, err
+	}
+
+	h2 := mxruntime.GetStartupHandle(
+		mxruntime.HandleInfo{Type: handleServicesRequest, Arg: 0})
+
+	if h2 != mx.HANDLE_INVALID {
+		if err := d.AddHandler(h2, rio.ServerHandler(s.mxioHandler), 0); err != nil {
+			h2.Close()
+			return nil, err
+		}
+
+		if err := h2.SignalPeer(0, mx.SignalUser0); err != nil {
+			h2.Close()
+			return nil, err
+		}
 	}
 
 	go d.Serve()
