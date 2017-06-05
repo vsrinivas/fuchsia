@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <memory>
+
+#include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "apps/bluetooth/service/interfaces/control.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
@@ -13,6 +16,7 @@ namespace bluetooth {
 namespace gap {
 
 class Adapter;
+class RemoteDevice;
 
 }  // namespace gap
 }  // namespace bluetooth
@@ -39,11 +43,29 @@ class AdapterFidlImpl : public ::bluetooth::control::Adapter {
   void StartDiscovery(const StartDiscoveryCallback& callback) override;
   void StopDiscovery(const StopDiscoveryCallback& callback) override;
 
+  // Called by |le_discovery_session_| when devices are discovered.
+  void OnDiscoveryResult(const ::bluetooth::gap::RemoteDevice& remote_device);
+
+  // Notifies the delegate that the Adapter's "discovering" state changed.
+  void NotifyDiscoveringChanged();
+
   // The underlying Adapter object.
   ftl::WeakPtr<::bluetooth::gap::Adapter> adapter_;
 
+  // The currently active LE discovery session. This is initialized when a client requests to
+  // perform discovery.
+  bool requesting_discovery_;
+  std::unique_ptr<::bluetooth::gap::LowEnergyDiscoverySession> le_discovery_session_;
+
   // The interface binding that represents the connection to the client application.
   ::fidl::Binding<::bluetooth::control::Adapter> binding_;
+
+  // The delegate that was set via SetDelegate().
+  ::bluetooth::control::AdapterDelegatePtr delegate_;
+
+  // Keep this as the last member to make sure that all weak pointers are invalidated before other
+  // members get destroyed.
+  ftl::WeakPtrFactory<AdapterFidlImpl> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AdapterFidlImpl);
 };

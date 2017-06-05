@@ -4,19 +4,21 @@
 
 #include "adapter_manager_fidl_impl.h"
 
+#include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/logging.h"
 
 #include "app.h"
 #include "fidl_helpers.h"
 
-namespace bt_control = ::bluetooth::control;
-namespace bt_fidl = ::bluetooth;
+// The internal library components and the generated FIDL bindings are both declared under the
+// "bluetooth" namespace. We define an alias here to disambiguate.
+namespace btfidl = ::bluetooth;
 
 namespace bluetooth_service {
 
 AdapterManagerFidlImpl::AdapterManagerFidlImpl(
-    App* app, ::fidl::InterfaceRequest<::bt_control::AdapterManager> request,
+    App* app, ::fidl::InterfaceRequest<::btfidl::control::AdapterManager> request,
     const ConnectionErrorHandler& connection_error_handler)
     : app_(app), binding_(this, std::move(request)) {
   FTL_DCHECK(app_);
@@ -35,20 +37,39 @@ void AdapterManagerFidlImpl::IsBluetoothAvailable(const IsBluetoothAvailableCall
 }
 
 void AdapterManagerFidlImpl::SetDelegate(
-    ::fidl::InterfaceHandle<::bt_control::AdapterManagerDelegate> delegate) {
-  delegate_ = ::bt_control::AdapterManagerDelegatePtr::Create(std::move(delegate));
+    ::fidl::InterfaceHandle<::btfidl::control::AdapterManagerDelegate> delegate) {
+  if (!delegate) {
+    FTL_LOG(ERROR) << "Cannot set a null delegate";
+    return;
+  }
+
+  delegate_ = ::btfidl::control::AdapterManagerDelegatePtr::Create(std::move(delegate));
+  delegate_.set_connection_error_handler([this] {
+    FTL_LOG(INFO) << "AdapterManager delegate disconnected";
+    delegate_ = nullptr;
+  });
+
+  app_->adapter_manager()->ForEachAdapter(
+      [this](auto* adapter) { delegate_->OnAdapterAdded(fidl_helpers::NewAdapterInfo(*adapter)); });
+
+  // Also notify the delegate of the current active adapter, if it exists.
+  auto active_adapter = app_->adapter_manager()->GetActiveAdapter();
+  if (active_adapter) {
+    delegate_->OnActiveAdapterChanged(fidl_helpers::NewAdapterInfo(*active_adapter));
+  }
 }
 
 void AdapterManagerFidlImpl::GetAdapters(const GetAdaptersCallback& callback) {
-  ::fidl::Array<::bt_control::AdapterInfoPtr> adapters;
+  ::fidl::Array<::btfidl::control::AdapterInfoPtr> adapters;
   app_->adapter_manager()->ForEachAdapter(
       [&adapters](auto* adapter) { adapters.push_back(fidl_helpers::NewAdapterInfo(*adapter)); });
 
   callback(std::move(adapters));
 }
 
-void AdapterManagerFidlImpl::GetAdapter(const ::fidl::String& identifier,
-                                        ::fidl::InterfaceRequest<::bt_control::Adapter> request) {
+void AdapterManagerFidlImpl::GetAdapter(
+    const ::fidl::String& identifier,
+    ::fidl::InterfaceRequest<::btfidl::control::Adapter> request) {
   auto adapter = app_->adapter_manager()->GetAdapter(identifier.get());
   if (adapter) {
     CreateAdapterFidlImpl(adapter, std::move(request));
@@ -59,18 +80,18 @@ void AdapterManagerFidlImpl::GetAdapter(const ::fidl::String& identifier,
 
 void AdapterManagerFidlImpl::SetActiveAdapter(const ::fidl::String& identifier,
                                               const SetActiveAdapterCallback& callback) {
-  auto status = bt_fidl::Status::New();
+  auto status = ::btfidl::Status::New();
   auto ac = ftl::MakeAutoCall([&status, &callback] { callback(std::move(status)); });
 
   if (!app_->adapter_manager()->SetActiveAdapter(identifier)) {
-    status->error = bt_fidl::Error::New();
-    status->error->error_code = bt_fidl::ErrorCode::NOT_FOUND;
+    status->error = ::btfidl::Error::New();
+    status->error->error_code = ::btfidl::ErrorCode::NOT_FOUND;
     status->error->description = "Adapter not found";
   }
 }
 
 void AdapterManagerFidlImpl::GetActiveAdapter(
-    ::fidl::InterfaceRequest<::bt_control::Adapter> request) {
+    ::fidl::InterfaceRequest<::btfidl::control::Adapter> request) {
   auto adapter = app_->adapter_manager()->GetActiveAdapter();
   if (adapter) {
     CreateAdapterFidlImpl(adapter, std::move(request));
@@ -82,7 +103,7 @@ void AdapterManagerFidlImpl::GetActiveAdapter(
 void AdapterManagerFidlImpl::OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) {
   if (!delegate_) return;
 
-  ::bt_control::AdapterInfoPtr adapter_info;
+  ::btfidl::control::AdapterInfoPtr adapter_info;
   if (adapter) adapter_info = fidl_helpers::NewAdapterInfo(*adapter);
   delegate_->OnActiveAdapterChanged(std::move(adapter_info));
 }
@@ -98,6 +119,7 @@ void AdapterManagerFidlImpl::OnAdapterRemoved(bluetooth::gap::Adapter* adapter) 
 void AdapterManagerFidlImpl::OnAdapterFidlImplDisconnected(AdapterFidlImpl* adapter_fidl_impl) {
   FTL_DCHECK(adapter_fidl_impl);
 
+  FTL_LOG(INFO) << "AdapterFidlImpl disconnected";
   auto iter = adapter_fidl_impls_.begin();
   for (; iter != adapter_fidl_impls_.end(); ++iter) {
     if (iter->get() == adapter_fidl_impl) break;

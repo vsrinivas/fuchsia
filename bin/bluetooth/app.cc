@@ -49,6 +49,8 @@ void App::OnAdapterManagerRequest(
 void App::OnAdapterManagerFidlImplDisconnected(AdapterManagerFidlImpl* adapter_manager_fidl_impl) {
   FTL_DCHECK(adapter_manager_fidl_impl);
 
+  FTL_LOG(INFO) << "AdapterManagerFidlImpl disconnected";
+
   auto iter = adapter_manager_fidl_impls_.begin();
   for (; iter != adapter_manager_fidl_impls_.end(); ++iter) {
     if (iter->get() == adapter_manager_fidl_impl) break;

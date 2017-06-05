@@ -8,7 +8,9 @@
 #include <string>
 
 #include "apps/bluetooth/lib/gap/adapter_state.h"
+#include "apps/bluetooth/lib/gap/remote_device_cache.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -22,6 +24,8 @@ class Transport;
 }  // namespace hci
 
 namespace gap {
+
+class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All asynchronous callbacks are
 // posted on the MessageLoop on which this Adapter instances is created.
@@ -73,6 +77,15 @@ class Adapter final {
   // Returns a weak pointer to this adapter.
   ftl::WeakPtr<Adapter> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
+  // Returns this Adapter's remote device cache.
+  const RemoteDeviceCache& device_cache() const { return device_cache_; }
+
+  // Returns this Adapter's LE discovery manager.
+  LowEnergyDiscoveryManager* le_discovery_manager() const {
+    FTL_DCHECK(le_discovery_manager_);
+    return le_discovery_manager_.get();
+  }
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the first batch of HCI
   // commands have been sent.
@@ -81,6 +94,10 @@ class Adapter final {
   // Third step of the initialization sequence. Called by InitializeStep2() when the second batch of
   // HCI commands have been sent.
   void InitializeStep3(const InitializeCallback& callback);
+
+  // Fourth step of the initialization sequence. Called by InitializeStep3() when the third batch of
+  // HCI commands have been sent.
+  void InitializeStep4(const InitializeCallback& callback);
 
   // Builds and returns the HCI event mask based on our supported host side features and controller
   // capabilities. This is used to mask events that we do not know how to handle.
@@ -119,6 +136,13 @@ class Adapter final {
 
   // Contains the global adapter state.
   AdapterState state_;
+
+  // Provides access to discovered, connected, and/or bonded remote Bluetooth devices.
+  RemoteDeviceCache device_cache_;
+
+  // Interface for performing BLE scan procedures. This is initialized based on feature support.
+  // Contains nullptr if the controller does not support scanning.
+  std::unique_ptr<LowEnergyDiscoveryManager> le_discovery_manager_;
 
   // This must remain the last member to make sure that all weak pointers are invalidating before
   // other members are destroyed.

@@ -34,6 +34,7 @@ enum class DataType : uint8_t {
   kClassOfDevice                = 0x0D,
   kSSPOOBHash                   = 0x0E,
   kSSPOOBRandomizer             = 0x0F,
+  kAppearance                   = 0x19,
   kManufacturerSpecificData     = 0xFF,
 
   // TODO(armansito): Complete this list.

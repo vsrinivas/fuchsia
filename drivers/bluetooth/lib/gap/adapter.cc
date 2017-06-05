@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include "apps/bluetooth/lib/gap/remote_device.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/device_wrapper.h"
 #include "apps/bluetooth/lib/hci/event_packet.h"
@@ -14,6 +15,8 @@
 #include "apps/bluetooth/lib/hci/util.h"
 #include "lib/ftl/random/uuid.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+#include "low_energy_discovery_manager.h"
 
 namespace bluetooth {
 namespace gap {
@@ -297,14 +300,36 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
   }
 
   init_seq_runner_->RunCommands([callback, this](bool success) {
-    // This completes the initialization sequence.
     if (!success) {
+      FTL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller information (step 3)";
       CleanUp();
-    } else {
-      init_state_ = State::kInitialized;
+      callback(false);
+      return;
     }
-    callback(success);
+
+    InitializeStep4(callback);
   });
+}
+
+void Adapter::InitializeStep4(const InitializeCallback& callback) {
+  // Initialize the scan manager based on current feature support.
+  if (state_.low_energy_state().IsFeatureSupported(
+          hci::LESupportedFeature::kLEExtendedAdvertising)) {
+    FTL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
+    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
+        LowEnergyDiscoveryManager::Mode::kExtended, hci_, task_runner_, &device_cache_);
+  } else if (state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanParameters) &&
+             state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanEnable)) {
+    FTL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
+    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
+        LowEnergyDiscoveryManager::Mode::kLegacy, hci_, task_runner_, &device_cache_);
+  }
+
+  if (!le_discovery_manager_) FTL_LOG(INFO) << "gap: Adapter: LE scan procedures not supported";
+
+  // This completes the initialization sequence.
+  init_state_ = State::kInitialized;
+  callback(true);
 }
 
 uint64_t Adapter::BuildEventMask() {
@@ -322,8 +347,7 @@ uint64_t Adapter::BuildEventMask() {
 uint64_t Adapter::BuildLEEventMask() {
   uint64_t event_mask = 0;
 
-  // TODO(armansito): This only enables events that are relevant to currently supported BLE
-  // features. Update this as we support more features.
+  event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEAdvertisingReport);
 
   return event_mask;
 }
@@ -333,7 +357,10 @@ void Adapter::CleanUp() {
 
   init_state_ = State::kNotInitialized;
   state_ = AdapterState();
-  transport_closed_cb_ = ftl::Closure();
+  transport_closed_cb_ = nullptr;
+
+  // TODO(armansito): This should notify all session clients that they are not scanning any more.
+  le_discovery_manager_ = nullptr;
 
   if (hci_->IsInitialized()) hci_->ShutDown();
 }
