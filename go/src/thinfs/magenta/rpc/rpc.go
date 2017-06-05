@@ -304,6 +304,8 @@ func getTimeShared(msg *rio.Msg) (time.Time, time.Time) {
 	return time.Time{}, mtime
 }
 
+const pageSize = 4096
+
 func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 	r := mxio.Vnattr{}
 	if dir {
@@ -312,6 +314,11 @@ func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 		r.Mode = syscall.S_IFREG
 	}
 	r.Size = uint64(size)
+	// "Blksize" and "Blkcount" are a bit of a lie at the moment, but
+	// they should present realistic-looking values.
+	// TODO(smklein): Plumb actual values through from the underlying filesystem.
+	r.Blksize = pageSize
+	r.Blkcount = (r.Size + mxio.VnattrBlksize - 1) / mxio.VnattrBlksize
 	r.Nlink = 1
 	r.ModifyTime = uint64(mtime.UnixNano())
 	r.CreateTime = r.ModifyTime
