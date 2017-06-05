@@ -64,7 +64,8 @@ typedef struct hid_device {
     size_t hid_report_desc_len;
     uint8_t* hid_report_desc;
 
-#define HID_MAX_REPORT_IDS 16
+    // TODO(johngro, tkilbourn: Do not hardcode this limit!)
+#define HID_MAX_REPORT_IDS 32
     size_t num_reports;
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
@@ -549,9 +550,9 @@ static mx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
             default:
                 break;
             }
-            break;
+            break;  // case HID_ITEM_TYPE_MAIN
         }
-        case HID_ITEM_TYPE_GLOBAL:
+        case HID_ITEM_TYPE_GLOBAL: {
             switch (item.bTag) {
             case HID_ITEM_GLOBAL_TAG_REPORT_SIZE:
                 state.rpt_size = (uint32_t)item.data;
@@ -577,6 +578,8 @@ static mx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
             default:
                 break;
             }
+            break;  // case HID_ITEM_TYPE_GLOBAL
+        }
         default:
             break;
         }
