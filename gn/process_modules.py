@@ -122,6 +122,7 @@ def resolve_imports(import_queue, omit_files, build_root):
                 return None
     return amalgamation
 
+
 def update_gopath(maps, build_root):
     for gopath in maps:
         for src in gopath:
@@ -133,16 +134,15 @@ def update_gopath(maps, build_root):
                 os.remove(target)
             os.symlink(src, target)
 
-def write_manifest(manifest, files, autorun):
+def write_manifest(manifest, files, autorun=None):
     manifest_dir = os.path.dirname(manifest)
     if not os.path.exists(manifest_dir):
         os.makedirs(manifest_dir)
     with open(manifest, "w") as manifest_file:
         for f in files:
             manifest_file.write("%s=%s\n" % (f["bootfs_path"], f["file"]))
-        if autorun != "":
-            manifest_file.write("autorun=%s" % autorun)
-
+        if autorun:
+            manifest_file.write("autorun=%s\n" % autorun)
 
 
 def main():
@@ -165,11 +165,11 @@ def main():
         return 1
 
     if len(amalgamation.boot.files) != 0:
-        write_manifest(args.boot_manifest, amalgamation.boot.files, "")
+        write_manifest(args.boot_manifest, amalgamation.boot.files)
     else:
         if os.path.exists(args.boot_manifest):
             os.remove(args.boot_manifest)
-    write_manifest(args.system_manifest, amalgamation.system.files, args.autorun)
+    write_manifest(args.system_manifest, amalgamation.system.files, autorun=args.autorun)
 
     update_gopath(amalgamation.gopaths, amalgamation.build_root)
 
