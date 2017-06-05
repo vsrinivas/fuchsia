@@ -18,11 +18,6 @@ interface ApplicationEnvironment {
   // Maximum length for an environment label.
   const uint32 kLabelMaxLength = 32;
 
-  // Creates another interface to this environment.
-  // Note: Assigning explicit ordinal index because this method is referenced
-  // manually in programs such as mxsh.
-  Duplicate@0(ApplicationEnvironment& environment);
-
   // Creates a new environment nested inside this environment.
   //
   // When applications are created inside the nested environment using the

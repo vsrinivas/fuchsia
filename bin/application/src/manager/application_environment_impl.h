@@ -56,6 +56,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   // Writes a diagnostic description of the environment to the stream.
   void Describe(std::ostream& out);
 
+  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
+
   // ApplicationEnvironment implementation:
 
   void CreateNestedEnvironment(
@@ -68,9 +70,6 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
       fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
 
   void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
-
-  void Duplicate(
-      fidl::InterfaceRequest<ApplicationEnvironment> environment) override;
 
   // ApplicationLauncher implementation:
 

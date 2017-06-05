@@ -299,6 +299,11 @@ void ApplicationEnvironmentImpl::Describe(std::ostream& out) {
   }
 }
 
+void ApplicationEnvironmentImpl::AddBinding(
+    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+  environment_bindings_.AddBinding(this, std::move(environment));
+}
+
 void ApplicationEnvironmentImpl::CreateNestedEnvironment(
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
@@ -309,7 +314,7 @@ void ApplicationEnvironmentImpl::CreateNestedEnvironment(
       std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host),
                                                    label));
   ApplicationEnvironmentImpl* child = controller->environment();
-  child->Duplicate(std::move(environment));
+  child->AddBinding(std::move(environment));
   children_.emplace(child, std::move(controller));
 
   PublishServicesForFirstNestedEnvironment(child->services_);
@@ -323,11 +328,6 @@ void ApplicationEnvironmentImpl::GetApplicationLauncher(
 void ApplicationEnvironmentImpl::GetServices(
     fidl::InterfaceRequest<ServiceProvider> services) {
   services_.AddBinding(std::move(services));
-}
-
-void ApplicationEnvironmentImpl::Duplicate(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
-  environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void ApplicationEnvironmentImpl::CreateApplication(
