@@ -758,10 +758,7 @@ void _thread_resched_internal(void)
     CPU_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
-        percpu[cpu].stats.idle_time += now - percpu[cpu].stats.last_idle_timestamp;
-    }
-    if (thread_is_idle(newthread)) {
-        percpu[cpu].stats.last_idle_timestamp = now;
+        percpu[cpu].stats.idle_time += now - oldthread->last_started_running;
     }
 
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),

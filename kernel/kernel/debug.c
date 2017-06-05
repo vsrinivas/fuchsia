@@ -124,7 +124,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         /* if the cpu is currently idle, add the time since it went idle up until now to the idle counter */
         bool is_idle = !!mp_is_cpu_idle(i);
         if (is_idle) {
-            idle_time += current_time() - percpu[i].stats.last_idle_timestamp;
+            idle_time += current_time() - percpu[i].idle_thread.last_started_running;
         }
 
         lk_time_t delta_time = idle_time - last_idle_time[i];

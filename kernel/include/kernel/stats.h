@@ -13,7 +13,6 @@ __BEGIN_CDECLS
 /* per cpu kernel level statistics */
 struct cpu_stats {
     lk_time_t idle_time;
-    lk_time_t last_idle_timestamp;
     ulong reschedules;
     ulong context_switches;
     ulong irq_preempts;
