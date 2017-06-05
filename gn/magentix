@@ -3,6 +3,8 @@
         "drivers",
         "magenta_benchmarks",
         "netstack",
+        "openssh",
+        "openssh-keys",
         "sbase",
         "thinfs",
         "vim"
