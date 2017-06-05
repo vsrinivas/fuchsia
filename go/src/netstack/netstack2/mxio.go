@@ -183,7 +183,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
-	case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 		return
 	default:
 		log.Printf("loopSocketWrite: warmup failed: %v", err)
@@ -205,7 +205,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
 				// NOP
-			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("loopSocketWrite: wait failed: %v", err)
@@ -220,7 +220,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 				ios.writeBufFlushed <- struct{}{}
 				return
 			}
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return
 		default:
 			log.Printf("socket read failed: %v", err) // TODO: communicate this
@@ -256,7 +256,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
-	case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 		return
 	default:
 		log.Printf("loopSocketRead: warmup failed: %v", err)
@@ -286,7 +286,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				_, err := dataHandle.Write(nil, MX_SOCKET_HALF_CLOSE)
 				switch mxerror.Status(err) {
 				case mx.ErrOk:
-				case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				default:
 					log.Printf("socket read: send MX_SOCKET_HALF_CLOSE failed: %v", err)
 				}
@@ -318,7 +318,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				switch mxerror.Status(err) {
 				case mx.ErrOk:
 					// NOP
-				case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 					return
 				default:
 					log.Printf("loopSocketRead: wait failed: %v", err)
@@ -330,7 +330,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				case obs&MX_SOCKET_WRITABLE != 0:
 					continue
 				}
-			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("socket write failed: %v", err) // TODO: communicate this
@@ -347,7 +347,7 @@ func (ios *iostate) loopShutdown() {
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return
 		default:
 			log.Printf("shutdown wait failed: %v", err)
@@ -403,7 +403,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		for {
 			err = dataHandle.Write(out, nil, 0)
 			switch mxerror.Status(err) {
-			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			case mx.ErrOk:
 				break writeLoop
@@ -426,12 +426,12 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return
 		case mx.ErrShouldWait:
 			obs, err := dataHandle.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
-			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			case mx.ErrOk:
 				switch {
@@ -675,7 +675,7 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			// Ignore the closure of the origin endpoint here,
 			// as we have accepted a new endpoint and it can be
 			// valid.
@@ -932,7 +932,7 @@ func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) (status mx.Status) {
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
 				continue
-			case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			default:
 				log.Printf("socket signal MXSIO_SIGNAL_INCOMING: %v", err)
@@ -1003,7 +1003,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) (status mx.Status) 
 		switch status := mxerror.Status(err); status {
 		case mx.ErrOk:
 			// NOP
-		case mx.ErrBadHandle, mx.ErrHandleClosed, mx.ErrRemoteClosed:
+		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return status
 		default:
 			log.Printf("connect: signal failed: %v", err)

@@ -201,7 +201,7 @@ func (c *Client) AllocForSend() Buffer {
 
 // Send sends a Buffer to the ethernet driver.
 // Send does not block.
-// If the client is closed, Send returns mx.ErrRemoteClosed.
+// If the client is closed, Send returns mx.ErrPeerClosed.
 func (c *Client) Send(b Buffer) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -266,7 +266,7 @@ func (c *Client) popRecvLocked() Buffer {
 // Recv does not block. If no data is available, this function
 // returns a nil Buffer and mx.ErrShouldWait.
 //
-// If the client is closed, Recv returns mx.ErrRemoteClosed.
+// If the client is closed, Recv returns mx.ErrPeerClosed.
 func (c *Client) Recv() (b Buffer, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
