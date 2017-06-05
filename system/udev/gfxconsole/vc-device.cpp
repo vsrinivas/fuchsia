@@ -438,7 +438,7 @@ mx_status_t vc_alloc(vc_t** out) {
     if (!vc) {
         return ERR_NO_MEMORY;
     }
-    vc->client_fd = -1;
+    vc->fd = -1;
 
     vc->keymap = qwerty_map;
     char* keys = getenv("gfxconsole.keymap");
@@ -464,8 +464,8 @@ mx_status_t vc_alloc(vc_t** out) {
 }
 
 void vc_free(vc_t* vc) {
-    if (vc->client_fd >= 0) {
-        close(vc->client_fd);
+    if (vc->fd >= 0) {
+        close(vc->fd);
     }
     free(vc->text_buf);
     free(vc->scrollback_buf);

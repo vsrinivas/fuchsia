@@ -10,6 +10,7 @@
 #include <magenta/device/console.h>
 #include <magenta/device/display.h>
 #include <magenta/listnode.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -314,8 +315,8 @@ static void handle_key_press(uint8_t keycode, int modifiers) {
     uint32_t length = hid_key_to_vt100_code(
         keycode, modifiers, vc->keymap, output, sizeof(output));
     if (length > 0) {
-        if (vc->client_fd >= 0) {
-            write(vc->client_fd, output, length);
+        if (vc->fd >= 0) {
+            write(vc->fd, output, length);
         }
         vc_scroll_viewport_bottom(vc);
     }
@@ -367,118 +368,152 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     return status;
 }
 
-int mkpty(vc_t* vc, int fd[2]) {
-    fd[0] = open("/dev/misc/ptmx", O_RDWR);
-    if (fd[0] < 0) {
-        return -1;
-    }
-    fd[1] = openat(fd[0], "0", O_RDWR);
-    if (fd[1] < 0) {
-        close(fd[0]);
-        return -1;
-    }
-    pty_window_size_t wsz = {
-        .width = vc->columns,
-        .height = vc->rows,
-    };
-    ioctl_pty_set_window_size(fd[0], &wsz);
+static port_t port;
+static port_handler_t ownership_ph;
+static port_handler_t log_ph;
 
-    return 0;
+static mx_status_t launch_shell(vc_t* vc, int fd) {
+    const char* args[] = { "/boot/bin/sh" };
+
+    launchpad_t* lp;
+    launchpad_create(mx_job_default(), "vc:sh", &lp);
+    launchpad_load_from_file(lp, args[0]);
+    launchpad_set_args(lp, 1, args);
+    launchpad_transfer_fd(lp, fd, MXIO_FLAG_USE_FOR_STDIO | 0);
+    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
+
+    const char* errmsg;
+    mx_status_t r;
+    if ((r = launchpad_go(lp, &vc->proc, &errmsg)) < 0) {
+        printf("vc: cannot spawn shell: %s: %d\n", errmsg, r);
+    }
+    return r;
 }
 
-static int _shell_thread(void* arg, bool make_active) {
-    vc_t* vc;
-    {
-        mxtl::AutoLock lock(&g_vc_lock);
-        if (vc_create(&vc)) {
-            return 0;
-        }
+static void session_destroy(vc_t* vc) {
+    mxtl::AutoLock lock(&g_vc_lock);
+    if (vc->fd >= 0) {
+        port_fd_handler_done(&vc->fh);
+        // vc_destroy() closes the fd
     }
-
-    // The ptmx device can start later than these threads
-    int retry = 50;
-    while ((vc->client_fd = open("/dev/misc/ptmx", O_RDWR)) < 0) {
-        usleep(100000);
-        if (--retry == 0) {
-            return -1;
-        }
+    if (vc->proc != MX_HANDLE_INVALID) {
+        mx_task_kill(vc->proc);
     }
+    vc_destroy(vc);
+}
 
-    for (;;) {
-        int fd[2];
-        if (mkpty(vc, fd) < 0) {
-            mxtl::AutoLock lock(&g_vc_lock);
-            vc_destroy(vc);
-            return 0;
-        }
+static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
+    vc_t* vc = containerof(fh, vc_t, fh);
 
-        const char* args[] = { "/boot/bin/sh" };
-
-        launchpad_t* lp;
-        launchpad_create(mx_job_default(), "vc:sh", &lp);
-        launchpad_load_from_file(lp, args[0]);
-        launchpad_set_args(lp, 1, args);
-        launchpad_transfer_fd(lp, fd[1], MXIO_FLAG_USE_FOR_STDIO | 0);
-        launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
-
-        const char* errmsg;
-        mx_handle_t proc;
-        mx_status_t r;
-        if ((r = launchpad_go(lp, &proc, &errmsg)) < 0) {
-            printf("vc: cannot spawn shell: %s: %d\n", errmsg, r);
-            close(fd[0]);
-            goto done;
-        }
-
-        if (make_active) {
-            // only do this the first time, not on shell restart
-            make_active = false;
-            mxtl::AutoLock lock(&g_vc_lock);
-            vc_set_active(-1, vc);
-        }
-
-        vc->client_fd = fd[0];
-
+    if (pollevt & POLLIN) {
+        size_t count = 0;
         for (;;) {
             char data[8192];
-            ssize_t r = read(vc->client_fd, data, sizeof(data));
+            ssize_t r = read(vc->fd, data, sizeof(data));
             if (r <= 0) {
                 break;
             }
+            count += r;
             {
                 mxtl::AutoLock lock(&g_vc_lock);
                 vc_write(vc, data, r, 0);
             }
         }
-
-        {
-            mxtl::AutoLock lock(&g_vc_lock);
-            vc->client_fd = -1;
+        if (count) {
+            return NO_ERROR;
         }
-        close(fd[0]);
-
-        mx_task_kill(proc);
     }
 
-done:
-    mxtl::AutoLock lock(&g_vc_lock);
-    vc_destroy(vc);
-    return 0;
+    if (pollevt & (POLLRDHUP | POLLHUP)) {
+        // shell sessions get restarted on exit
+        if (vc->is_shell) {
+            mx_task_kill(vc->proc);
+            vc->proc = MX_HANDLE_INVALID;
+
+            int fd = openat(vc->fd, "0", O_RDWR);
+            if (fd < 0) {
+                goto fail;
+            }
+
+            if(launch_shell(vc, fd) < 0) {
+                goto fail;
+            }
+            return NO_ERROR;
+        }
+    }
+
+fail:
+    session_destroy(vc);
+    return ERR_STOP;
 }
 
-static int shell_thread(void* arg) {
-    return _shell_thread(arg, false);
+static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
+    int fd;
+
+    // The ptmx device can start later than these threads
+    int retry = 30;
+    while ((fd = open("/dev/misc/ptmx", O_RDWR | O_NONBLOCK)) < 0) {
+        if (--retry == 0) {
+            return ERR_IO;
+        }
+        usleep(100000);
+    }
+
+    int client_fd = openat(fd, "0", O_RDWR);
+    if (client_fd < 0) {
+        close(fd);
+        return ERR_IO;
+    }
+
+    vc_t* vc;
+    {
+        mxtl::AutoLock lock(&g_vc_lock);
+        if (vc_create(&vc)) {
+            close(fd);
+            close(client_fd);
+            return ERR_INTERNAL;
+        }
+        mx_status_t r;
+        if ((r = port_fd_handler_init(&vc->fh, fd, POLLIN | POLLRDHUP | POLLHUP)) < 0) {
+            vc_destroy(vc);
+            close(fd);
+            close(client_fd);
+            return r;
+        }
+        vc->fd = fd;
+
+        if (make_active) {
+            vc_set_active(-1, vc);
+        }
+    }
+
+    pty_window_size_t wsz = {
+        .width = vc->columns,
+        .height = vc->rows,
+    };
+    ioctl_pty_set_window_size(fd, &wsz);
+
+    vc->fh.func = session_io_cb;
+
+    *out = vc;
+    *out_fd = client_fd;
+    return NO_ERROR;
 }
 
-static int shell_thread_1st(void* arg) {
-    return _shell_thread(arg, true);
-}
+static void start_shell(bool make_active) {
+    vc_t* vc;
+    int fd;
 
-static void set_owns_display(bool acquired) {
-    mxtl::AutoLock lock(&g_vc_lock);
-    g_vc_owns_display = acquired;
-    if (acquired && g_active_vc) {
-        vc_gfx_invalidate_all(g_active_vc);
+    if (session_create(&vc, &fd, make_active) < 0) {
+        return;
+    }
+
+    vc->is_shell = true;
+
+    if (launch_shell(vc, fd) < 0) {
+        session_destroy(vc);
+    } else {
+        port_wait(&port, &vc->fh.ph);
     }
 }
 
@@ -501,10 +536,6 @@ static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uin
 
     return NO_ERROR;
 }
-
-static port_t port;
-static port_handler_t ownership_ph;
-static port_handler_t log_ph;
 
 int main(int argc, char** argv) {
     bool keep_log = false;
@@ -568,9 +599,9 @@ int main(int argc, char** argv) {
 
     setenv("TERM", "xterm", 1);
 
-    thrd_create_with_name(&t, keep_log ? shell_thread : shell_thread_1st, NULL, "vc-shell-reader");
-    thrd_create_with_name(&t, shell_thread, NULL, "vc-shell-reader");
-    thrd_create_with_name(&t, shell_thread, NULL, "vc-shell-reader");
+    start_shell(keep_log ? false : true);
+    start_shell(false);
+    start_shell(false);
 
     mx_handle_t e = MX_HANDLE_INVALID;
     ioctl_display_get_ownership_change_event(fd, &e);

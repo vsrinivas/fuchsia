@@ -21,6 +21,7 @@
 #if BUILD_FOR_TEST
 mx_status_t vc_init_gfx(gfx_surface* gfx);
 #else
+#include <port/port.h>
 mx_status_t vc_init_gfx(int fd);
 void vc_free_gfx();
 #endif
@@ -42,7 +43,7 @@ typedef struct vc {
 
     mx_handle_t gfx_vmo;
 
-    int client_fd;
+    int fd;
 
     // backing store
     const gfx_font* font;
@@ -85,6 +86,12 @@ typedef struct vc {
 
     struct list_node node;
     // for virtual console list
+
+#if !BUILD_FOR_TEST
+    port_fd_handler fh;
+    mx_handle_t proc;
+    bool is_shell;
+#endif
 } vc_t;
 
 // When VC_FLAG_HASOUTPUT is set, this indicates that there was output to
