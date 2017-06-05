@@ -79,8 +79,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  app::ApplicationEnvironmentPtr environment;
-  app_context->environment()->Duplicate(environment.NewRequest());
   launchpad_t* launchpad;
   int stdout_pipe;
   int stderr_pipe;

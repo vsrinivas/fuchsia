@@ -22,15 +22,15 @@ namespace test_runner {
 // services are delegated to the parent environment.
 class Scope : public app::ApplicationEnvironmentHost {
  public:
-  Scope(app::ApplicationEnvironmentPtr parent_env, const std::string& label)
-      : binding_(this), parent_env_(std::move(parent_env)) {
+  Scope(const app::ApplicationEnvironmentPtr& parent_env, const std::string& label)
+      : binding_(this) {
     app::ServiceProviderPtr parent_env_service_provider;
-    parent_env_->GetServices(parent_env_service_provider.NewRequest());
+    parent_env->GetServices(parent_env_service_provider.NewRequest());
     service_provider_impl_.SetDefaultServiceProvider(
         std::move(parent_env_service_provider));
-    parent_env_->CreateNestedEnvironment(binding_.NewBinding(),
-                                         env_.NewRequest(),
-                                         env_controller_.NewRequest(), label);
+    parent_env->CreateNestedEnvironment(binding_.NewBinding(),
+                                        env_.NewRequest(),
+                                        env_controller_.NewRequest(), label);
   }
 
   template <typename Interface>
@@ -58,7 +58,6 @@ class Scope : public app::ApplicationEnvironmentHost {
   }
 
   fidl::Binding<app::ApplicationEnvironmentHost> binding_;
-  app::ApplicationEnvironmentPtr parent_env_;
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationLauncherPtr env_launcher_;
   app::ApplicationEnvironmentControllerPtr env_controller_;

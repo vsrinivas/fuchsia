@@ -159,10 +159,8 @@ TestRunContext::TestRunContext(
     const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
-  app::ApplicationEnvironmentPtr parent_env;
-  app_context->environment()->Duplicate(parent_env.NewRequest());
   child_env_scope_ =
-      std::make_unique<Scope>(std::move(parent_env), "test_runner_env");
+      std::make_unique<Scope>(app_context->environment(), "test_runner_env");
 
   // 1.1 Setup child environment services
   child_env_scope_->AddService<TestRunner>(
