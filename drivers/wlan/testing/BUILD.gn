@@ -34,7 +34,10 @@ driver_module("wlan-testdev") {
     "//magenta/system/ulib/mxtl",
   ]
 
-  libs = [ "ddk" ]
+  libs = [
+    "ddk",
+    "driver",
+  ]
 }
 
 executable("wlan-testutil") {
