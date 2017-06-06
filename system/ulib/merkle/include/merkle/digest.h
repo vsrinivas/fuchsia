@@ -11,10 +11,10 @@
 
 #ifdef USE_LIBCRYPTO
 #include <openssl/sha.h>
-#define MERKLE_DIGEST_LENGTH SHA256_DIGEST_LENGTH;
+#define MERKLE_DIGEST_LENGTH SHA256_DIGEST_LENGTH
 #else // USE_LIBCRYPTO
 #include <lib/crypto/cryptolib.h>
-#define MERKLE_DIGEST_LENGTH clSHA256_DIGEST_SIZE;
+#define MERKLE_DIGEST_LENGTH clSHA256_DIGEST_SIZE
 #endif // USE_LIBCRYPTO
 
 #ifdef __cplusplus
