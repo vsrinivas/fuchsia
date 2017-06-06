@@ -330,11 +330,11 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         internal::CheckMixins<Mixins<D>...>();
         internal::CheckReleasable<D>();
 
-        ddk_device_proto_.release = Release;
+        ddk_device_proto_.release = DdkReleaseThunk;
     }
 
   private:
-    static void Release(void* ctx) {
+    static void DdkReleaseThunk(void* ctx) {
         static_cast<D*>(ctx)->DdkRelease();
     }
 
