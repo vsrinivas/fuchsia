@@ -16,4 +16,5 @@ Documentation for setting up a remote Cloud sync provider:
 Documentation for developing Ledger:
 
  - [Developer Workflow](workflow.md)
+ - [Style Guide](style_guide.md)
  - [Testing](testing.md)
