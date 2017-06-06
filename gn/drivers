@@ -1,7 +1,6 @@
 {
     "imports": [
         "audio",
-        "init",
         "magma",
         "wlan"
     ]

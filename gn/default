@@ -18,7 +18,6 @@
         "gdbserver",
         "go_stdlib_tests",
         "icu_data",
-        "init",
         "install-fuchsia",
         "iperf",
         "latin-ime",
