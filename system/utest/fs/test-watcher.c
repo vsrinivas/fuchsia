@@ -38,11 +38,14 @@ bool check_for_watched(mx_handle_t h, const char* expected, size_t expected_len)
               NO_ERROR, "");
     ASSERT_EQ(observed & MX_CHANNEL_READABLE, MX_CHANNEL_READABLE, "");
     uint32_t actual;
-    char name[NAME_MAX + 1];
-    ASSERT_EQ(mx_channel_read(h, 0, &name, NULL, expected_len, 0, &actual, NULL),
+
+    uint8_t msg[expected_len + 2];
+    ASSERT_EQ(mx_channel_read(h, 0, msg, NULL, expected_len + 2, 0, &actual, NULL),
               NO_ERROR, "");
-    ASSERT_EQ(actual, expected_len, "");
-    ASSERT_EQ(strncmp(name, expected, expected_len), 0, "");
+    ASSERT_EQ(actual, expected_len + 2, "");
+    ASSERT_EQ(msg[0], VFS_WATCH_EVT_ADDED, "");
+    ASSERT_EQ(msg[1], expected_len, "");
+    ASSERT_EQ(memcmp(msg + 2, expected, expected_len), 0, "");
     return true;
 }
 

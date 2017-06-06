@@ -197,11 +197,24 @@ static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
 
 static void devfs_notify(devnode_t* dn, const char* name) {
     watcher_t* w = dn->watchers;
-    watcher_t** wp = &dn->watchers;
+    if (w == NULL) {
+        return;
+    }
+
     size_t len = strlen(name);
+    if (len > VFS_WATCH_NAME_MAX) {
+        return;
+    }
+
+    uint8_t msg[VFS_WATCH_NAME_MAX + 2];
+    msg[0] = VFS_WATCH_EVT_ADDED;
+    msg[1] = len;
+    memcpy(msg + 2, name, len);
+
+    watcher_t** wp = &dn->watchers;
     while (w != NULL) {
         watcher_t* next = w->next;
-        if (mx_channel_write(w->handle, 0, name, len, NULL, 0) < 0) {
+        if (mx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
             *wp = next;
             free(w);
         } else {

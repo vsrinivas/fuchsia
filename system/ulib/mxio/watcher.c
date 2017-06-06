@@ -36,11 +36,11 @@ mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out) {
     return NO_ERROR;
 }
 
-mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENAME + 1]) {
+static mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, uint8_t msg[VFS_WATCH_NAME_MAX + 2]) {
     for (;;) {
         mx_status_t status;
-        uint32_t sz = MXIO_MAX_FILENAME;
-        if ((status = mx_channel_read(watcher->h, 0, name, NULL, sz, 0, &sz, NULL)) < 0) {
+        uint32_t sz = VFS_WATCH_NAME_MAX + 2;
+        if ((status = mx_channel_read(watcher->h, 0, msg, NULL, sz, 0, &sz, NULL)) < 0) {
             if (status != ERR_SHOULD_WAIT) {
                 return status;
             }
@@ -55,7 +55,10 @@ mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENA
             }
             continue;
         }
-        name[sz] = 0;
+        if ((sz < 2) || (sz != (msg[1] + 2u))) {
+            // malformed message
+            return ERR_INTERNAL;
+        }
         return NO_ERROR;
     }
 }
@@ -66,7 +69,6 @@ void mxio_watcher_destroy(mxio_watcher_t* watcher) {
 }
 
 mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
-    char name[MXIO_MAX_FILENAME + 1];
     mxio_watcher_t* watcher;
 
     DIR* dir;
@@ -110,10 +112,15 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, void *cookie) {
     closedir(dir);
 
     do {
-        status = mxio_watcher_wait(watcher, name);
+        // Message Format: { OP, LEN, DATA[LEN] }
+        uint8_t msg[VFS_WATCH_NAME_MAX + 3];
+        status = mxio_watcher_wait(watcher, msg);
         switch (status) {
         case NO_ERROR:
-            status = cb(dirfd, WATCH_EVENT_ADD_FILE, name, cookie);
+            if (msg[0] == VFS_WATCH_EVT_ADDED) {
+                msg[msg[1] + 2] = 0;
+                status = cb(dirfd, WATCH_EVENT_ADD_FILE, (char*) (msg + 2), cookie);
+            }
             break;
         case ERR_SHOULD_WAIT:
             status = cb(dirfd, WATCH_EVENT_WAITING, NULL, cookie);

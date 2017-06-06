@@ -17,11 +17,6 @@ typedef struct mxio_watcher mxio_watcher_t;
 // the watcher will continue to work.
 mx_status_t mxio_watcher_create(int dirfd, mxio_watcher_t** out);
 
-// Wait until a file is added to the directory being
-// watched.  Returns NO_ERROR and the name of the new
-// file on success.
-mx_status_t mxio_watcher_wait(mxio_watcher_t* watcher, char name[MXIO_MAX_FILENAME + 1]);
-
 // Destroy a directory watcher.
 void mxio_watcher_destroy(mxio_watcher_t* watcher);
 

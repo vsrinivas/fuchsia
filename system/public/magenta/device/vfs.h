@@ -29,11 +29,54 @@
 // Watch a directory for changes
 //   in: none
 //   out: handle to channel to get notified on.
-//        Notification messages will be a string child entry name WITHOUT a
-//        null-terminating character; the length of the string should be
-//        determined by the message length during the channel read.
+//        Notification messages are as for V2 but only
+//        ever have a single event per message.
 #define IOCTL_VFS_WATCH_DIR \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_VFS, 7)
+
+
+// Watch a directory for changes
+// in: vfs_watch_dir_t
+//
+// Watch event messages are sent via the provided channel and take the form:
+// { uint8_t event; uint8_t namelen; uint8_t name[namelen]; }
+// Multiple events may arrive in one message, one after another.
+// Names do not include a terminating null.
+//
+// TODO: Once fully deployed, remove IOCTL_VFS_WATCH_DIR
+#define IOCTL_VFS_WATCH_DIR_V2 \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_VFS, 8)
+
+typedef struct {
+    mx_handle_t channel;  // Channel to which watch events will be sent
+    uint32_t mask;        // Bitmask of desired events (1 << WATCH_EVT_*)
+    uint32_t options;     // Options.  Must be zero.
+} vfs_watch_dir_t;
+
+// Indication of file already in directory when watch started
+// An EXISTING event with namelen==0 will be sent to indicate
+// when all existing files have been reported.
+#define VFS_WATCH_EVT_EXISTING 0
+
+// Indication of a file that has been added (created or moved
+// in) to the directory
+#define VFS_WATCH_EVT_ADDED    1
+
+// Indication of a file that has been removed (deleted or moved
+// out) from the directoru
+#define VFS_WATCH_EVT_REMOVED  2
+
+// Indicates that the directory being watched has been deleted.
+// namelen will be 0
+#define VFS_WATCH_EVT_DELETED  3
+
+#define VFS_WATCH_MASK_EXISTING (1u << VFS_WATCH_EVT_EXISTING)
+#define VFS_WATCH_MASK_ADDED    (1u << VFS_WATCH_EVT_ADDED)
+#define VFS_WATCH_MASK_REMOVED  (1u << VFS_WATCH_EVT_REMOVED)
+#define VFS_WATCH_MASK_DELETED  (1u << VFS_WATCH_EVT_DELETED)
+#define VFS_WATCH_MASK_ALL      (15u)
+
+#define VFS_WATCH_NAME_MAX 255
 
 // ssize_t ioctl_vfs_mount_fs(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_vfs_mount_fs, IOCTL_VFS_MOUNT_FS, mx_handle_t);
@@ -55,6 +98,9 @@ IOCTL_WRAPPER_OUT(ioctl_vfs_get_token, IOCTL_VFS_GET_TOKEN, mx_handle_t);
 
 // ssize_t ioctl_vfs_watch_dir(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_vfs_watch_dir, IOCTL_VFS_WATCH_DIR, mx_handle_t);
+
+// ssize_t ioctl_vfs_watch_dir_v2(int fd, vfs_watch_dir_t* in;
+IOCTL_WRAPPER_IN(ioctl_vfs_watch_dir_v2, IOCTL_VFS_WATCH_DIR_V2, vfs_watch_dir_t);
 
 #define MOUNT_MKDIR_FLAG_REPLACE 1
 
