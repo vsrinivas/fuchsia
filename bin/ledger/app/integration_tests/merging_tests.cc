@@ -75,6 +75,11 @@ void AppendChanges(PageChangePtr* base, PageChangePtr changes) {
   }
 }
 
+enum class MergeType {
+  SIMPLE,
+  MULTIPART,
+};
+
 class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
@@ -136,17 +141,38 @@ class ConflictResolverImpl : public ConflictResolver {
           });
     }
 
-    ::testing::AssertionResult Merge(fidl::Array<MergedValuePtr> results) {
+    // Resolves the conflict by sending the given merge results. If
+    // |merge_type| is MULTIPART, the merge will be send in two parts, each
+    // sending half of |results|' elements.
+    ::testing::AssertionResult Merge(fidl::Array<MergedValuePtr> results,
+                                     MergeType merge_type = MergeType::SIMPLE) {
+      FTL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
+      if (merge_type == MergeType::SIMPLE) {
+        ::testing::AssertionResult merge_status =
+            PartialMerge(std::move(results));
+        if (!merge_status) {
+          return merge_status;
+        }
+      } else {
+        size_t part1_size = results.size() / 2;
+        fidl::Array<MergedValuePtr> part2;
+        for (size_t i = part1_size; i < results.size(); ++i) {
+          part2.push_back(std::move(results[i]));
+        }
+        results.resize(part1_size);
+
+        ::testing::AssertionResult merge_status =
+            PartialMerge(std::move(results));
+        if (!merge_status) {
+          return merge_status;
+        }
+        merge_status = PartialMerge(std::move(part2));
+        if (!merge_status) {
+          return merge_status;
+        }
+      }
+
       Status status;
-      result_provider->Merge(std::move(results),
-                             [&status](Status s) { status = s; });
-      if (!result_provider.WaitForIncomingResponse()) {
-        return ::testing::AssertionFailure() << "Merge failed.";
-      }
-      if (status != Status::OK) {
-        return ::testing::AssertionFailure()
-               << "Merge failed with status " << status;
-      }
       result_provider->Done([&status](Status s) { status = s; });
       if (!result_provider.WaitForIncomingResponse()) {
         return ::testing::AssertionFailure() << "Done failed.";
@@ -202,6 +228,21 @@ class ConflictResolverImpl : public ConflictResolver {
                << "Only " << num_queries
                << " partial results were found, but at least " << min_queries
                << " were expected";
+      }
+      return ::testing::AssertionSuccess();
+    }
+
+    ::testing::AssertionResult PartialMerge(
+        fidl::Array<MergedValuePtr> partial_result) {
+      Status status;
+      result_provider->Merge(std::move(partial_result),
+                             [&status](Status s) { status = s; });
+      if (!result_provider.WaitForIncomingResponse()) {
+        return ::testing::AssertionFailure() << "Merge failed.";
+      }
+      if (status != Status::OK) {
+        return ::testing::AssertionFailure()
+               << "Merge failed with status " << status;
       }
       return ::testing::AssertionSuccess();
     }
@@ -840,6 +881,100 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
+TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  // Prepare the merged values
+  fidl::Array<MergedValuePtr> merged_values =
+      fidl::Array<MergedValuePtr>::New(0);
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("name");
+    merged_value->source = ValueSource::RIGHT;
+    merged_values.push_back(std::move(merged_value));
+  }
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("email");
+    merged_value->source = ValueSource::DELETE;
+    merged_values.push_back(std::move(merged_value));
+  }
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("pager");
+    merged_value->source = ValueSource::NEW;
+    BytesOrReferencePtr value = BytesOrReference::New();
+    value->set_bytes(convert::ToArray("pager@example.org"));
+    merged_value->new_value = std::move(value);
+    merged_values.push_back(std::move(merged_value));
+  }
+
+  // Watch for the change.
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(GetProxy(&watcher_ptr),
+                  [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  PageSnapshotPtr snapshot;
+  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
+                                               MergeType::MULTIPART));
+
+  // Wait for the watcher to be called.
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  fidl::Array<EntryPtr> final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
+  ASSERT_EQ(2u, final_entries.size());
+  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
+  EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
+}
+
 TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1019,6 +1154,99 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
+}
+
+TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
+            ->second);
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  // Prepare the merged values
+  fidl::Array<MergedValuePtr> merged_values =
+      fidl::Array<MergedValuePtr>::New(0);
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("city");
+    merged_value->source = ValueSource::RIGHT;
+    merged_values.push_back(std::move(merged_value));
+  }
+  {
+    MergedValuePtr merged_value = MergedValue::New();
+    merged_value->key = convert::ToArray("previous_city");
+    merged_value->source = ValueSource::NEW;
+    merged_value->new_value = BytesOrReference::New();
+    merged_value->new_value->set_bytes(convert::ToArray("San Francisco"));
+    merged_values.push_back(std::move(merged_value));
+  }
+
+  // Watch for the change.
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(GetProxy(&watcher_ptr),
+                  []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  PageSnapshotPtr snapshot;
+  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
+                                               MergeType::MULTIPART));
+
+  // Wait for the watcher to be called.
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  fidl::Array<EntryPtr> final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
+  ASSERT_EQ(3u, final_entries.size());
+  EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
+  EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
+  EXPECT_EQ("previous_city",
+            convert::ExtendedStringView(final_entries[2]->key));
 }
 
 }  // namespace
