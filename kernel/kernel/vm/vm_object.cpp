@@ -65,7 +65,8 @@ status_t VmObject::set_name(const char* name, size_t len) {
 void VmObject::set_user_id(uint64_t user_id) {
     canary_.Assert();
     AutoLock a(&lock_);
-    DEBUG_ASSERT(user_id_ == 0);
+    // TODO(MG-826): Re-enable this once PCI dispatchers are fixed.
+    //DEBUG_ASSERT(user_id_ == 0);
     user_id_ = user_id;
 }
 
