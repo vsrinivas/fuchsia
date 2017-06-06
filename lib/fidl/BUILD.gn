@@ -8,8 +8,11 @@ source_set("app_client") {
     "app_client.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/modular/services/config",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
@@ -81,8 +84,11 @@ source_set("scope") {
     "scope.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]
@@ -122,8 +128,11 @@ source_set("view_host") {
     "view_host.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//lib/ftl",

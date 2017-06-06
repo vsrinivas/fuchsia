@@ -35,9 +35,14 @@ executable("swap_module2") {
 source_set("module") {
   sources = [
     "module.cc",
+    "module.h",
   ]
-  deps = [
+
+  public_deps = [
     "//apps/modular/lib/fidl:single_service_view_app",
+  ]
+
+  deps = [
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
