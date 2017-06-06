@@ -16,7 +16,8 @@ namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                const UserConfig* user_config,
-                               ftl::StringView app_id)
+                               ftl::StringView app_id,
+                               std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
       app_gcs_prefix_(GetGcsPrefixForApp(user_config->user_id, app_id)),
@@ -24,7 +25,9 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
       app_firebase_(std::make_unique<firebase::FirebaseImpl>(
           environment_->network_service(),
           user_config->server_id,
-          app_firebase_path_)) {
+          app_firebase_path_)),
+      user_watcher_(std::move(watcher)),
+      aggregator_(user_watcher_.get()) {
   FTL_DCHECK(user_config->use_sync);
   FTL_DCHECK(!user_config->server_id.empty());
 }
@@ -55,7 +58,8 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage, result->cloud_provider.get(),
       user_config_->auth_provider,
-      std::make_unique<backoff::ExponentialBackoff>(), error_callback);
+      std::make_unique<backoff::ExponentialBackoff>(), error_callback,
+      aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {
     page_sync->EnableUpload();
   }

@@ -12,6 +12,7 @@
 
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/cloud_sync/impl/aggregator.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/local_version_checker.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -24,7 +25,8 @@ class UserSyncImpl : public UserSync {
  public:
   UserSyncImpl(ledger::Environment* environment,
                UserConfig user_config,
-               std::unique_ptr<backoff::Backoff> backoff);
+               std::unique_ptr<backoff::Backoff> backoff,
+               SyncStateWatcher* watcher);
   ~UserSyncImpl() override;
 
   // Starts UserSyncImpl. This method must be called before any other method.
@@ -60,6 +62,10 @@ class UserSyncImpl : public UserSync {
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;
+
+  // Aggregates the synchronization state of multiple ledgers into one
+  // notification stream.
+  Aggregator aggregator_;
 
   // This must be the last member of this class.
   ftl::WeakPtrFactory<UserSyncImpl> weak_ptr_factory_;

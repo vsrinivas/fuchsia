@@ -8,8 +8,10 @@
 #include <memory>
 #include <unordered_set>
 
+#include "apps/ledger/src/cloud_sync/impl/aggregator.h"
 #include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
+#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
@@ -21,7 +23,8 @@ class LedgerSyncImpl : public LedgerSync {
  public:
   LedgerSyncImpl(ledger::Environment* environment,
                  const UserConfig* user_config,
-                 ftl::StringView app_id);
+                 ftl::StringView app_id,
+                 std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl();
 
   std::unique_ptr<PageSyncContext> CreatePageContext(
@@ -49,6 +52,8 @@ class LedgerSyncImpl : public LedgerSync {
   std::unordered_set<PageSyncImpl*> active_page_syncs_;
   // Called on destruction.
   std::function<void()> on_delete_;
+  std::unique_ptr<SyncStateWatcher> user_watcher_;
+  Aggregator aggregator_;
 };
 
 }  // namespace cloud_sync

@@ -14,10 +14,12 @@ namespace cloud_sync {
 
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
-                           std::unique_ptr<backoff::Backoff> backoff)
+                           std::unique_ptr<backoff::Backoff> backoff,
+                           SyncStateWatcher* watcher)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
+      aggregator_(watcher),
       weak_ptr_factory_(this) {}
 
 UserSyncImpl::~UserSyncImpl() {
@@ -100,8 +102,8 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     return nullptr;
   }
 
-  auto result =
-      std::make_unique<LedgerSyncImpl>(environment_, &user_config_, app_id);
+  auto result = std::make_unique<LedgerSyncImpl>(
+      environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
   result->set_on_delete([ this, ledger_sync = result.get() ]() {
     active_ledger_syncs_.erase(ledger_sync);
   });

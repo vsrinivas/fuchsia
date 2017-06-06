@@ -16,6 +16,7 @@
 #include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
 #include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
+#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
@@ -61,7 +62,8 @@ class PageSyncImpl : public PageSync,
                cloud_provider::CloudProvider* cloud_provider,
                AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
-               ftl::Closure on_error);
+               ftl::Closure on_error,
+               std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
 
   // |on_delete| will be called when this class is deleted.
@@ -131,6 +133,12 @@ class PageSyncImpl : public PageSync,
   // |backoff_|, but only if |this| still is valid and |errored_| is not set.
   void Retry(ftl::Closure callable);
 
+  // Notify the state watcher of a change of synchronization state.
+  void NotifyStateWatcher();
+  void SetDownloadState(DownloadSyncState sync_state);
+  void SetUploadState(UploadSyncState sync_state);
+  void SetState(DownloadSyncState download_state, UploadSyncState upload_state);
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
@@ -168,6 +176,12 @@ class PageSyncImpl : public PageSync,
   std::vector<cloud_provider::Record> commits_to_download_;
   // Called on destruction.
   std::function<void()> on_delete_;
+
+  // Watcher of the synchronization state that reports to the LedgerSync object.
+  std::unique_ptr<SyncStateWatcher> ledger_watcher_;
+  // Download & upload states.
+  DownloadSyncState download_state_ = DOWNLOAD_IDLE;
+  UploadSyncState upload_state_ = UPLOAD_IDLE;
 
   // Pending auth token requests to be cancelled when this class goes away.
   callback::CancellableContainer auth_token_requests_;

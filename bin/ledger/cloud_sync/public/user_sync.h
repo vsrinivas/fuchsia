@@ -5,7 +5,10 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_USER_SYNC_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_USER_SYNC_H_
 
+#include <memory>
+
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
+#include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"

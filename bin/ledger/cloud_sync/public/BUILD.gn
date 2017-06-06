@@ -7,6 +7,8 @@ source_set("public") {
     "auth_provider.h",
     "ledger_sync.h",
     "page_sync.h",
+    "sync_state_watcher.cc",
+    "sync_state_watcher.h",
     "user_config.h",
     "user_sync.h",
   ]

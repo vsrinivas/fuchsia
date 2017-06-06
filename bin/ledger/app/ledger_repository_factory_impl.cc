@@ -297,12 +297,13 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       !SaveConfigForDebugging(user_config.user_id, repository_path, temp_dir)) {
     FTL_LOG(WARNING) << "Failed to save the current configuration.";
   }
+  std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
-      std::make_unique<backoff::ExponentialBackoff>());
+      std::make_unique<backoff::ExponentialBackoff>(), watchers.get());
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_path, environment_, std::move(user_sync));
+      repository_path, environment_, std::move(watchers), std::move(user_sync));
   container->SetRepository(Status::OK, std::move(repository));
 }
 

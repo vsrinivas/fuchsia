@@ -14,9 +14,11 @@ namespace ledger {
 LedgerRepositoryImpl::LedgerRepositoryImpl(
     const std::string& base_storage_dir,
     Environment* environment,
+    std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<cloud_sync::UserSync> user_sync)
     : base_storage_dir_(base_storage_dir),
       environment_(environment),
+      watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
@@ -73,11 +75,7 @@ void LedgerRepositoryImpl::Duplicate(
 void LedgerRepositoryImpl::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
     const SetSyncStateWatcherCallback& callback) {
-  FTL_NOTIMPLEMENTED() << "LedgerRepository::SetSyncStateWatcher is not "
-                          "implemented: sending dummy response";
-  SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
-  watcher_ptr->SyncStateChanged(SyncState::IDLE, SyncState::IDLE, [] {});
-  watcher_set_.AddInterfacePtr(std::move(watcher_ptr));
+  watchers_->AddSyncWatcher(std::move(watcher));
   callback(Status::OK);
 }
 

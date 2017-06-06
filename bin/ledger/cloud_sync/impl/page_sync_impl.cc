@@ -21,7 +21,8 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                            cloud_provider::CloudProvider* cloud_provider,
                            AuthProvider* auth_provider,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           ftl::Closure on_error)
+                           ftl::Closure on_error,
+                           std::unique_ptr<SyncStateWatcher> ledger_watcher)
     : task_runner_(task_runner),
       storage_(storage),
       cloud_provider_(cloud_provider),
@@ -29,6 +30,7 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
       backoff_(std::move(backoff)),
       on_error_(on_error),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
+      ledger_watcher_(std::move(ledger_watcher)),
       weak_factory_(this) {
   FTL_DCHECK(storage_);
   FTL_DCHECK(cloud_provider_);
@@ -149,7 +151,7 @@ void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
               std::back_inserter(commits_to_download_));
     return;
   }
-
+  SetDownloadState(REMOTE_COMMIT_DOWNLOAD);
   DownloadBatch(std::move(records), nullptr);
 }
 
@@ -164,6 +166,7 @@ void PageSyncImpl::OnConnectionError() {
 }
 
 void PageSyncImpl::OnMalformedNotification() {
+  SetDownloadState(DOWNLOAD_ERROR);
   HandleError("Received a malformed remote commit notification.");
 }
 
@@ -175,6 +178,7 @@ void PageSyncImpl::StartDownload() {
   // haven't received any remote commits yet. In this case an empty timestamp is
   // the right value.
   if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
+    SetDownloadState(DOWNLOAD_ERROR);
     HandleError("Failed to retrieve the sync metadata.");
     return;
   }
@@ -186,6 +190,8 @@ void PageSyncImpl::StartDownload() {
     FTL_VLOG(1) << log_prefix_ << "starting sync again, "
                 << "retrieving commits uploaded after: " << last_commit_ts;
   }
+
+  SetState(CATCH_UP_DOWNLOAD, WAIT_CATCH_UP_DOWNLOAD);
 
   auto request = auth_provider_->GetFirebaseToken([
     this, last_commit_ts = std::move(last_commit_ts)
@@ -245,6 +251,7 @@ void PageSyncImpl::StartUpload() {
       [this](storage::Status status,
              std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != storage::Status::OK) {
+          SetUploadState(UPLOAD_ERROR);
           HandleError("Failed to retrieve the unsynced commits");
           return;
         }
@@ -268,6 +275,7 @@ void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
         batch_download_.reset();
 
         if (commits_to_download_.empty()) {
+          SetDownloadState(DOWNLOAD_IDLE);
           if (!commits_staged_for_upload_.empty()) {
             HandleLocalCommits(
                 std::vector<std::unique_ptr<const storage::Commit>>());
@@ -279,7 +287,10 @@ void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
         commits_to_download_.clear();
         DownloadBatch(std::move(commits), nullptr);
       },
-      [this] { HandleError("Failed to persist a remote commit in storage"); });
+      [this] {
+        SetDownloadState(DOWNLOAD_ERROR);
+        HandleError("Failed to persist a remote commit in storage");
+      });
   batch_download_->Start();
 }
 
@@ -289,6 +300,7 @@ void PageSyncImpl::SetRemoteWatcher() {
   std::string last_commit_ts;
   auto status = storage_->GetSyncMetadata(kTimestampKey, &last_commit_ts);
   if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
+    download_state_ = DOWNLOAD_ERROR;
     HandleError("Failed to retrieve the sync metadata.");
     return;
   }
@@ -309,12 +321,14 @@ void PageSyncImpl::HandleLocalCommits(
             std::back_inserter(commits_staged_for_upload_));
 
   if (commits_staged_for_upload_.empty()) {
+    SetUploadState(UPLOAD_IDLE);
     return;
   }
 
   if (batch_download_) {
     // If a commit batch is currently being downloaded, don't try to start the
     // upload.
+    SetUploadState(WAIT_REMOTE_DOWNLOAD);
     return;
   }
 
@@ -325,16 +339,19 @@ void PageSyncImpl::HandleLocalCommits(
 
   std::vector<storage::CommitId> heads;
   if (storage_->GetHeadCommitIds(&heads) != storage::Status::OK) {
+    SetUploadState(UPLOAD_ERROR);
     HandleError("Failed to retrieve the current heads");
     return;
   }
   FTL_DCHECK(!heads.empty());
 
   if (heads.size() > 1u) {
+    SetUploadState(WAIT_TOO_MANY_LOCAL_HEADS);
     // Too many local heads.
     return;
   }
 
+  SetUploadState(UPLOAD_IN_PROGRESS);
   UploadStagedCommits();
 }
 
@@ -358,6 +375,7 @@ void PageSyncImpl::UploadStagedCommits() {
             FTL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
+            SetUploadState(UPLOAD_PENDING);
             Retry([this] { batch_upload_->Retry(); });
           });
   commits_staged_for_upload_.clear();
@@ -390,19 +408,44 @@ void PageSyncImpl::HandleError(const char error_description[]) {
 }
 
 void PageSyncImpl::CheckIdle() {
-  if (on_idle_ && IsIdle()) {
-    on_idle_();
+  if (IsIdle()) {
+    if (on_idle_) {
+      on_idle_();
+    }
   }
 }
 
 void PageSyncImpl::BacklogDownloaded() {
   download_list_retrieved_ = true;
+  SetDownloadState(DOWNLOAD_IDLE);
   if (on_backlog_downloaded_) {
     on_backlog_downloaded_();
   }
   SetRemoteWatcher();
   StartUpload();
   CheckIdle();
+}
+
+void PageSyncImpl::SetDownloadState(DownloadSyncState sync_state) {
+  download_state_ = sync_state;
+  NotifyStateWatcher();
+}
+
+void PageSyncImpl::SetUploadState(UploadSyncState sync_state) {
+  upload_state_ = sync_state;
+  NotifyStateWatcher();
+}
+void PageSyncImpl::SetState(DownloadSyncState download_state,
+                            UploadSyncState upload_state) {
+  download_state_ = download_state;
+  upload_state_ = upload_state;
+  NotifyStateWatcher();
+}
+
+void PageSyncImpl::NotifyStateWatcher() {
+  if (ledger_watcher_) {
+    ledger_watcher_->Notify(download_state_, upload_state_);
+  }
 }
 
 }  // namespace cloud_sync

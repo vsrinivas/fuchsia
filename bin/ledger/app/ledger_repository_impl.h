@@ -8,6 +8,7 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_manager.h"
+#include "apps/ledger/src/app/sync_watcher_set.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/cloud_sync/public/user_sync.h"
@@ -23,6 +24,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
  public:
   LedgerRepositoryImpl(const std::string& base_storage_dir,
                        Environment* environment,
+                       std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<cloud_sync::UserSync> user_sync);
   ~LedgerRepositoryImpl() override;
 
@@ -48,8 +50,8 @@ class LedgerRepositoryImpl : public LedgerRepository {
 
   const std::string base_storage_dir_;
   Environment* const environment_;
+  std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<cloud_sync::UserSync> user_sync_;
-  fidl::InterfacePtrSet<SyncWatcher> watcher_set_;
   callback::AutoCleanableMap<std::string,
                              LedgerManager,
                              convert::StringViewComparator>

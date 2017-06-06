@@ -4,6 +4,8 @@
 
 source_set("impl") {
   sources = [
+    "aggregator.cc",
+    "aggregator.h",
     "batch_download.cc",
     "batch_download.h",
     "batch_upload.cc",
@@ -43,6 +45,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "aggregator_unittest.cc",
     "batch_download_unittest.cc",
     "batch_upload_unittest.cc",
     "local_version_checker_unittest.cc",
