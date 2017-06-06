@@ -8,6 +8,10 @@
 #include <inttypes.h>
 #include <trace.h>
 
+#include <kernel/mp.h>
+#include <kernel/stats.h>
+#include <platform.h>
+
 #include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
@@ -409,6 +413,72 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return ERR_INVALID_ARGS;
             if (actual == 0)
                 return ERR_BUFFER_TOO_SMALL;
+            return NO_ERROR;
+        }
+        case MX_INFO_CPU_STATS: {
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ResourceDispatcher> resource;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
+            if (error < 0)
+                return error;
+
+            // TODO: check that this is the root resource
+            // TODO: figure out a better handle to hang this off to and push this copy code into
+            // that dispatcher.
+
+            size_t num_cpus = arch_max_num_cpus();
+            size_t num_space_for = buffer_size / sizeof(mx_info_cpu_stats_t);
+            size_t num_to_copy = MIN(num_cpus, num_space_for);
+
+            // build an alias to the output buffer that is in units of the cpu stat structure
+            user_ptr<mx_info_cpu_stats_t> cpu_buf(static_cast<mx_info_cpu_stats_t *>(_buffer.get()));
+
+            for (unsigned int i = 0; i < static_cast<unsigned int>(num_to_copy); i++) {
+                const auto cpu = &percpu[i];
+
+                // copy the per cpu stats from the kernel percpu structure
+                // NOTE: it's technically racy to read this without grabbing a lock
+                // but since each field is wordwise any sane architecture will not
+                // return a corrupted value.
+                mx_info_cpu_stats_t stats = {};
+                stats.cpu_number = i;
+                stats.flags = mp_is_cpu_online(i) ? MX_INFO_CPU_STATS_FLAG_ONLINE : 0;
+
+                // account for idle time if a cpu is currently idle
+                {
+                    AutoSpinLockIrqSave lock(thread_lock);
+
+                    mx_time_t idle_time = cpu->stats.idle_time;
+                    bool is_idle = mp_is_cpu_idle(i);
+                    if (is_idle) {
+                        idle_time += current_time() - percpu[i].idle_thread.last_started_running;
+                    }
+                    stats.idle_time = idle_time;
+                }
+
+                stats.reschedules = cpu->stats.reschedules;
+                stats.context_switches = cpu->stats.context_switches;
+                stats.irq_preempts = cpu->stats.irq_preempts;
+                stats.preempts = cpu->stats.preempts;
+                stats.yields = cpu->stats.yields;
+                stats.ints = cpu->stats.interrupts;
+                stats.timer_ints = cpu->stats.timer_ints;
+                stats.timers = cpu->stats.timers;
+                stats.page_faults = cpu->stats.page_faults;
+                stats.exceptions = cpu->stats.exceptions;
+                stats.syscalls = cpu->stats.syscalls;
+                stats.reschedule_ipis = cpu->stats.reschedule_ipis;
+                stats.generic_ipis = cpu->stats.generic_ipis;
+
+                // copy out one at a time
+                if (cpu_buf.copy_array_to_user(&stats, 1, i) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+            }
+
+            if (_actual && (_actual.copy_to_user(num_to_copy) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(num_cpus) != NO_ERROR))
+                return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
         default:

@@ -28,6 +28,7 @@ typedef enum {
     MX_INFO_TASK_STATS                 = 12, // mx_info_task_stats_t[1]
     MX_INFO_PROCESS_MAPS               = 13, // mx_info_maps_t[n]
     MX_INFO_THREAD_STATS               = 14, // mx_info_thread_stats_t[1]
+    MX_INFO_CPU_STATS                  = 15, // mx_info_cpu_stats_t[n]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -196,6 +197,34 @@ typedef struct mx_info_maps {
     } u;
 } mx_info_maps_t;
 
+// kernel statistics per cpu
+typedef struct mx_info_cpu_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+
+    mx_time_t idle_time;
+
+    // kernel scheduler counters
+    uint64_t reschedules;
+    uint64_t context_switches;
+    uint64_t irq_preempts;
+    uint64_t preempts;
+    uint64_t yields;
+
+    // cpu level interrupts and exceptions
+    uint64_t ints;          // hardware interrupts, minus timer interrupts or inter-processor interrupts
+    uint64_t timer_ints;    // timer interrupts
+    uint64_t timers;        // timer callbacks
+    uint64_t page_faults;   // page faults
+    uint64_t exceptions;    // exceptions such as undefined opcode
+    uint64_t syscalls;
+
+    // inter-processor interrupts
+    uint64_t reschedule_ipis;
+    uint64_t generic_ipis;
+} mx_info_cpu_stats_t;
+
+#define MX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 
 // Object properties.
 
