@@ -157,7 +157,6 @@ struct mx_proc_args {
 // --- Various ---
 
 // Handle types used by the application model
-#define PA_APP_LAUNCHER          0x41
 #define PA_APP_SERVICES          0x43
 
 // Handle types for one-off use and prototyping
