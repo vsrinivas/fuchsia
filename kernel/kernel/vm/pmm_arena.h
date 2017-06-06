@@ -8,7 +8,7 @@
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
 
-#include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <trace.h>
 
 #define PMM_ENABLE_FREE_FILL 0

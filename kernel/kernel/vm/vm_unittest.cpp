@@ -162,7 +162,7 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
     auto kaspace = VmAspace::kernel_aspace();
     auto err = kaspace->AllocContiguous("test",
                                         alloc_size, &ptr, 0,
-                                        VMM_FLAG_COMMIT, kArchRwFlags);
+                                        VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::AllocContiguous region of memory");
     EXPECT_NEQ(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
 
@@ -252,14 +252,14 @@ static bool vmm_alloc_bad_specific_pointer_fails(void* context) {
     void* ptr = (void*)1;
     status_t err = VmAspace::kernel_aspace()->Alloc(
             "test", 16384, &ptr, 0,
-            VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_COMMIT, kArchRwFlags);
+            VmAspace::VMM_FLAG_VALLOC_SPECIFIC | VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
 
 static bool vmm_alloc_contiguous_missing_flag_commit_fails(void* context) {
     BEGIN_TEST;
-    // should have VMM_FLAG_COMMIT
+    // should have VmAspace::VMM_FLAG_COMMIT
     const uint zero_vmm_flags = 0;
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
@@ -273,7 +273,7 @@ static bool vmm_alloc_contiguous_zero_size_fails(void* context) {
     const size_t zero_size = 0;
     void* ptr;
     status_t err = VmAspace::kernel_aspace()->AllocContiguous(
-            "test", zero_size, &ptr, 0, VMM_FLAG_COMMIT, kArchRwFlags);
+            "test", zero_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ERR_INVALID_ARGS, err, "");
     END_TEST;
 }
@@ -377,7 +377,7 @@ static bool vmo_precommitted_map_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
-                             0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
     // fill with known pattern and test
@@ -421,7 +421,7 @@ static bool vmo_dropped_ref_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObjectInternal(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
-                             0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
     EXPECT_NULL(vmo, "dropped ref to object");
@@ -446,7 +446,7 @@ static bool vmo_remap_test(void* context) {
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
     auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
-                             0, VMM_FLAG_COMMIT, kArchRwFlags);
+                             0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
     // fill with known pattern and test
@@ -458,7 +458,7 @@ static bool vmo_remap_test(void* context) {
 
     // map it again
     ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr,
-                        0, VMM_FLAG_COMMIT, kArchRwFlags);
+                        0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
     // test that the pattern is still valid

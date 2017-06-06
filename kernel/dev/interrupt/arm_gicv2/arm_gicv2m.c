@@ -11,6 +11,7 @@
 #include <dev/interrupt/arm_gic_regs.h>
 #include <err.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <string.h>
 #include <trace.h>
 

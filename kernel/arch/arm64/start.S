@@ -9,7 +9,7 @@
 #include <arch/arm64.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
-#include <kernel/vm.h>
+#include <kernel/vm/initial_map.h>
 #include <magenta/tls.h>
 
 #ifndef __has_feature

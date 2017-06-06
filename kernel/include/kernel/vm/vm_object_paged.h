@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_page_list.h>
 #include <lib/user_copy/user_ptr.h>

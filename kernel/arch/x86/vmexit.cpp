@@ -15,6 +15,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/sched.h>
 #include <kernel/timer.h>
+#include <kernel/vm/pmm.h>
 #include <mxtl/algorithm.h>
 #include <platform/pc/timer.h>
 

@@ -14,6 +14,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <kernel/vm/vm_aspace.h>
 #include <malloc.h>
 #include <string.h>
 
@@ -31,12 +32,8 @@ static void ioport_update_task(void* raw_context) {
     struct ioport_update_context* context =
         (struct ioport_update_context*)raw_context;
 
-    thread_t* t = get_current_thread();
-    if (!t->aspace) {
-        return;
-    }
-
-    struct arch_aspace* as = vmm_get_arch_aspace(t->aspace);
+    VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
+    struct arch_aspace* as = &aspace->arch_aspace();
     if (as != context->aspace) {
         return;
     }
@@ -56,13 +53,8 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
         return ERR_INVALID_ARGS;
 
-    thread_t* t = get_current_thread();
-    DEBUG_ASSERT(t->aspace);
-    if (!t->aspace) {
-        return ERR_INVALID_ARGS;
-    }
-
-    struct arch_aspace* as = vmm_get_arch_aspace(t->aspace);
+    VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
+    struct arch_aspace* as = &aspace->arch_aspace();
 
     mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
     if (!as->io_bitmap) {

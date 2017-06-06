@@ -11,6 +11,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
+#include <kernel/vm/fault.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <mxalloc/new.h>

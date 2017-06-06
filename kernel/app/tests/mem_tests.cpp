@@ -14,6 +14,7 @@
 #include <arch.h>
 #include <arch/ops.h>
 #include <lib/console.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <platform.h>
 #include <debug.h>
@@ -178,7 +179,7 @@ usage:
 
         /* allocate a region to test in */
         status_t err = VmAspace::kernel_aspace()->AllocContiguous(
-                "memtest", len, &ptr, 0, VMM_FLAG_COMMIT,
+                "memtest", len, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
                 ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (err < 0) {
             printf("error %d allocating test region\n", err);

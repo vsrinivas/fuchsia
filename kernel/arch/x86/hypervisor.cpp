@@ -11,6 +11,8 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <kernel/vm/fault.h>
+#include <kernel/vm/pmm.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <mxalloc/new.h>

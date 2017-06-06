@@ -13,6 +13,8 @@
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
+#include <kernel/vm/initial_map.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
 #include <lk/init.h>
@@ -58,7 +60,7 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
         uint flags;
         paddr_t pa;
 
-        status_t err = arch_mmu_query(&vmm_aspace_to_obj(vmm_get_kernel_aspace())->arch_aspace(), va + offset,
+        status_t err = arch_mmu_query(&VmAspace::kernel_aspace()->arch_aspace(), va + offset,
                                       &pa, &flags);
         if (err >= 0) {
             LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR
@@ -254,11 +256,9 @@ void* paddr_to_kvaddr(paddr_t pa) {
 }
 
 paddr_t vaddr_to_paddr(const void* ptr) {
-    vmm_aspace_t* _aspace = vaddr_to_aspace(ptr);
-    if (!_aspace)
+    auto aspace = VmAspace::vaddr_to_aspace(reinterpret_cast<uintptr_t>(ptr));
+    if (!aspace)
         return (paddr_t) nullptr;
-
-    VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
     paddr_t pa;
     status_t rc = arch_mmu_query(&aspace->arch_aspace(), (vaddr_t)ptr, &pa, nullptr);
@@ -266,16 +266,6 @@ paddr_t vaddr_to_paddr(const void* ptr) {
         return (paddr_t) nullptr;
 
     return pa;
-}
-
-vmm_aspace_t* vaddr_to_aspace(const void* ptr) {
-    if (is_kernel_address((vaddr_t)ptr)) {
-        return vmm_get_kernel_aspace();
-    } else if (is_user_address((vaddr_t)ptr)) {
-        return get_current_thread()->aspace;
-    } else {
-        return nullptr;
-    }
 }
 
 static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
@@ -301,13 +291,11 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 3)
             goto notenoughargs;
 
-        vmm_aspace_t* _aspace = vaddr_to_aspace((void*)argv[2].u);
-        if (!_aspace) {
+        VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
+        if (!aspace) {
             printf("ERROR: outside of any address space\n");
             return -1;
         }
-
-        VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
         paddr_t pa;
         uint flags;
@@ -320,13 +308,11 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 6)
             goto notenoughargs;
 
-        vmm_aspace_t* _aspace = vaddr_to_aspace((void*)argv[2].u);
-        if (!_aspace) {
+        VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
+        if (!aspace) {
             printf("ERROR: outside of any address space\n");
             return -1;
         }
-
-        VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
         size_t mapped;
         auto err =
@@ -336,13 +322,11 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 4)
             goto notenoughargs;
 
-        vmm_aspace_t* _aspace = vaddr_to_aspace((void*)argv[2].u);
-        if (!_aspace) {
+        VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
+        if (!aspace) {
             printf("ERROR: outside of any address space\n");
             return -1;
         }
-
-        VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
         size_t unmapped;
         auto err = arch_mmu_unmap(&aspace->arch_aspace(), argv[2].u, (uint)argv[3].u, &unmapped);

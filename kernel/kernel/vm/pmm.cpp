@@ -5,7 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "vm_priv.h"
+#include <kernel/vm/pmm.h>
+
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
@@ -23,6 +24,7 @@
 #include <trace.h>
 
 #include "pmm_arena.h"
+#include "vm_priv.h"
 
 #include <magenta/thread_annotations.h>
 #include <mxcpp/new.h>

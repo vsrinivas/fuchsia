@@ -12,6 +12,7 @@
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <kernel/vm/pmm.h>
 #include <magenta/compiler.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/types.h>
@@ -80,7 +81,7 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     void* identity_address = (void*)pa;
     result = identity_aspace->AllocPhysical("identity mapping", PAGE_SIZE,
                                             &identity_address, 0, pa,
-                                            VMM_FLAG_VALLOC_SPECIFIC,
+                                            VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
     if (result != NO_ERROR)
         return result;

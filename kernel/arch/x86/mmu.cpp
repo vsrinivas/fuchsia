@@ -19,6 +19,7 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 
 #include <bitmap/rle-bitmap.h>
 

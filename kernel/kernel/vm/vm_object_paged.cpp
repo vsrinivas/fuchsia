@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
+#include <kernel/vm/fault.h>
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>

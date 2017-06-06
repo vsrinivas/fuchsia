@@ -61,6 +61,9 @@ public:
     // accessor for singleton kernel address space
     static VmAspace* kernel_aspace() { return kernel_aspace_; }
 
+    // given an address, return either the kernel aspace or the current user one
+    static VmAspace* vaddr_to_aspace(uintptr_t address);
+
     // set the per thread aspace pointer to this
     void AttachToThread(thread_t* t);
 
@@ -108,6 +111,10 @@ public:
     // Convenience method for traversing the tree of VMARs to find the deepest
     // VMAR in the tree that includes *va*.
     mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
+
+    // For region creation routines
+    static const uint VMM_FLAG_VALLOC_SPECIFIC = (1u << 0); // allocate at specific address
+    static const uint VMM_FLAG_COMMIT = (1u << 1);          // commit memory up front (no demand paging)
 
     // legacy functions to assist in the transition to VMARs
     // These all assume a flat VMAR structure in which all VMOs are mapped
@@ -210,3 +217,4 @@ static VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
 static const VmAspace* vmm_aspace_to_obj(const vmm_aspace_t* aspace) {
     return reinterpret_cast<const VmAspace*>(aspace);
 }
+

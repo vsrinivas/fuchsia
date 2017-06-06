@@ -9,6 +9,7 @@
 #include <err.h>
 #include <string.h>
 #include <kernel/mp.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <arch/ops.h>
 

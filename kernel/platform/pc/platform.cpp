@@ -31,6 +31,8 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
+#include <kernel/vm/initial_map.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 
 extern "C" {
@@ -323,7 +325,7 @@ void platform_init_crashlog(void) {
         void* ptr = (void*) 0;
         mx_status_t r = efi_aspace->AllocPhysical("1:1", 16*1024*1024*1024UL, &ptr,
                                                   PAGE_SIZE_SHIFT, 0,
-                                                  VMM_FLAG_VALLOC_SPECIFIC,
+                                                  VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                                   ARCH_MMU_FLAG_PERM_READ |
                                                   ARCH_MMU_FLAG_PERM_WRITE |
                                                   ARCH_MMU_FLAG_PERM_EXECUTE);

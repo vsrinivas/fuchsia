@@ -9,6 +9,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <mxalloc/new.h>
 #include <trace.h>
 

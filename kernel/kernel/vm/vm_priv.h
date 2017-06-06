@@ -120,3 +120,17 @@ static inline bool GetIntersect(O offset1, L len1, O offset2, L len2, O* offset_
 
     return true;
 }
+
+// return a pointer to the zero page
+static inline vm_page_t* vm_get_zero_page(void) {
+    extern vm_page_t* zero_page;
+    return zero_page;
+}
+
+// return the physical address of the zero page
+static inline paddr_t vm_get_zero_page_paddr(void) {
+    extern paddr_t zero_page_paddr;
+
+    return zero_page_paddr;
+}
+

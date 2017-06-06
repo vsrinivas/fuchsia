@@ -13,6 +13,7 @@
 #include <arch/x86/mp.h>
 #include <assert.h>
 #include <err.h>
+#include <kernel/vm/pmm.h>
 #include <mxtl/auto_call.h>
 #include <string.h>
 #include <trace.h>
@@ -83,7 +84,7 @@ status_t x86_bootstrap16_prep(
                 &vaddr,
                 PAGE_SIZE_SHIFT,
                 page_mappings[i].start_paddr,
-                VMM_FLAG_VALLOC_SPECIFIC,
+                VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
         if (status != NO_ERROR) {
             TRACEF("Failed to create wakeup bootstrap aspace\n");

@@ -12,6 +12,8 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/fault.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_address_region.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
@@ -53,7 +55,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     ktrace(TAG_PAGE_FAULT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
 
     // get the address space object this pointer is in
-    VmAspace* aspace = vmm_aspace_to_obj(vaddr_to_aspace((void*)addr));
+    VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
     if (!aspace)
         return ERR_NOT_FOUND;
 

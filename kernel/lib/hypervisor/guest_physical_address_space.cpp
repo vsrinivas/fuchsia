@@ -6,6 +6,7 @@
 
 #include <hypervisor/guest_physical_address_space.h>
 
+#include <kernel/vm/fault.h>
 #include <mxalloc/new.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;

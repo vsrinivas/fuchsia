@@ -6,7 +6,7 @@
 #pragma once
 #include <iovec.h>
 #include <sys/types.h>
-#include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 
 __BEGIN_CDECLS
 

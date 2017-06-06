@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <lib/heap.h>
 #include <rand.h>
 #include <stdlib.h>

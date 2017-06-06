@@ -32,6 +32,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 
+#include <kernel/vm/initial_map.h>
 #include <kernel/vm/vm_aspace.h>
 
 #include <lib/console.h>
@@ -314,7 +315,7 @@ void platform_halt_cpu(void) {
         // the core after it halts.
         result = halt_aspace->AllocPhysical("halt_mapping", PAGE_SIZE,
                                             &base_of_ram, 0, pa,
-                                            VMM_FLAG_VALLOC_SPECIFIC,
+                                            VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
 
         if (result != NO_ERROR) {

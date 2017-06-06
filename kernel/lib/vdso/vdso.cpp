@@ -9,6 +9,7 @@
 
 #include <kernel/cmdline.h>
 #include <kernel/vm.h>
+#include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <mxalloc/new.h>
