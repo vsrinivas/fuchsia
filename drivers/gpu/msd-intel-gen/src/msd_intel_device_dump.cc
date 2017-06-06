@@ -70,7 +70,7 @@ public:
         _3DSTATE_PUSH_CONSTANT_ALLOC_PS = 0x7916,
         PIPE_CONTROL = 0x7a00,
         _3DPRIMITIVE = 0x7b00,
-        SURFACE_BASE_ADDRESS = 0x6101,
+        STATE_BASE_ADDRESS = 0x6101,
         PIPELINE_SELECT = 0x6904,
     };
 
@@ -87,8 +87,8 @@ public:
                 return "PIPE_CONTROL";
             case PIPELINE_SELECT:
                 return "PIPELINE_SELECT";
-            case SURFACE_BASE_ADDRESS:
-                return "SURFACE_BASE_ADDRESS";
+            case STATE_BASE_ADDRESS:
+                return "STATE_BASE_ADDRESS";
             case _3DSTATE_VF_SGVS:
                 return "3DSTATE_VF_SGVS";
             case _3DSTATE_VF_INSTANCING:
@@ -281,7 +281,7 @@ public:
             case _3DSTATE_VERTEX_ELEMENTS:
             case _3DSTATE_WM_HZ_OP:
             case PIPE_CONTROL:
-            case SURFACE_BASE_ADDRESS:
+            case STATE_BASE_ADDRESS:
                 *dword_count_out = (dword & 0xFF) + 2;
                 break;
         }
@@ -380,18 +380,18 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 
             for (auto mapping : cmd_buf->exec_resource_mappings()) {
                 fmt = "    Mapping %p, aspace %p, buffer 0x%lx, gpu addr range [0x%lx, 0x%lx), "
-                      "mapping length 0x%lx\n";
+                      "offset 0x%lx, mapping length 0x%lx\n";
                 gpu_addr_t mapping_start = mapping->gpu_addr();
                 gpu_addr_t mapping_end = mapping->gpu_addr() + mapping->length();
                 size = std::snprintf(nullptr, 0, fmt, mapping.get(),
                                      mapping->address_space().lock().get(),
                                      mapping->buffer()->platform_buffer()->id(), mapping_start,
-                                     mapping_end, mapping->length());
+                                     mapping_end, mapping->offset(), mapping->length());
                 std::vector<char> buf(size + 1);
                 std::snprintf(&buf[0], buf.size(), fmt, mapping.get(),
                               mapping->address_space().lock().get(),
                               mapping->buffer()->platform_buffer()->id(), mapping_start,
-                              mapping_end, mapping->length());
+                              mapping_end, mapping->offset(), mapping->length());
                 dump_out.append(&buf[0]);
                 if (dump_state.fault_gpu_address >= mapping_start &&
                     dump_state.fault_gpu_address < mapping_end) {
