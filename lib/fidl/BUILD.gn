@@ -37,6 +37,16 @@ source_set("bottleneck") {
   ]
 }
 
+source_set("context") {
+  sources = [
+    "context.h",
+  ]
+
+  public_deps = [
+    "//lib/fidl/cpp/bindings",
+  ]
+}
+
 source_set("json_xdr") {
   sources = [
     "json_xdr.cc",

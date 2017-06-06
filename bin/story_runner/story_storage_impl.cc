@@ -401,6 +401,75 @@ class StoryStorageImpl::StoryContextLogCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryContextLogCall);
 };
 
+class StoryStorageImpl::ReadLogCall : Operation<fidl::Array<StoryContextLogPtr>> {
+ public:
+  ReadLogCall(OperationContainer* const container,
+              ledger::Page* const page,
+              ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        page_(page) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &data_};
+
+    page_->GetSnapshot(page_snapshot_.NewRequest(),
+                       to_array(kStoryContextLogKeyPrefix), nullptr,
+                       [this, flow](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "ReadLogCall()"
+                                          << " Page.GetSnapshot() " << status;
+                           return;
+                         }
+
+                         Cont1(flow);
+                       });
+  }
+
+
+  void Cont1(FlowToken flow) {
+    GetEntries(page_snapshot_.get(), nullptr, &entries_,
+               nullptr /* next_token */, [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "ReadLogCall() "
+                                  << "GetEntries() " << status;
+                   return;
+                 }
+
+                 Cont2(flow);
+               });
+  }
+
+  void Cont2(FlowToken flow) {
+    for (auto& entry : entries_) {
+      std::string value_as_string;
+      if (!mtl::StringFromVmo(entry->value, &value_as_string)) {
+        FTL_LOG(ERROR) << "ReadLogCall() "
+                       << "Unable to extract data.";
+        continue;
+      }
+
+      StoryContextLogPtr value;
+      if (!XdrRead(value_as_string, &value, XdrStoryContextLog)) {
+        continue;
+      }
+
+      FTL_DCHECK(!value.is_null());
+
+      data_.push_back(std::move(value));
+    }
+  }
+
+  ledger::Page* const page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
+  std::vector<ledger::EntryPtr> entries_;
+  fidl::Array<StoryContextLogPtr> data_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ReadLogCall);
+};
+
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
       story_page_(story_page) {}
@@ -462,6 +531,10 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
 
 void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
   new StoryContextLogCall(&operation_queue_, story_page_, std::move(log_entry));
+}
+
+void StoryStorageImpl::ReadLog(const LogCallback& callback) {
+  new ReadLogCall(&operation_queue_, story_page_, callback);
 }
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {

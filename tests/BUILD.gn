@@ -12,6 +12,7 @@ group("tests") {
     "queue_persistence",
     "remote",
     "run_modular_tests",
+    "story_importance",
     "suggestion",
     "triggers",
     "user_shell",

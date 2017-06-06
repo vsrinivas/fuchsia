@@ -561,6 +561,35 @@ class StoryProviderImpl::TeardownCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
 };
 
+class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
+ public:
+  GetImportanceCall(OperationContainer* const container,
+                    StoryProviderImpl* const story_provider_impl,
+                    ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        story_provider_impl_(story_provider_impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &importance_};
+
+    for (auto& story : story_provider_impl_->story_controllers_) {
+      story.second->GetImportance(
+          story_provider_impl_->context_handler_.values(),
+          [this, id = story.first, flow](float importance) {
+            importance_[id] = importance;
+          });
+    }
+  }
+
+  StoryProviderImpl* const story_provider_impl_;  // not owned
+  ImportanceMap importance_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
+};
+
 StoryProviderImpl::StoryProviderImpl(
     const Scope* const user_scope,
     const std::string& device_id,
@@ -583,6 +612,8 @@ StoryProviderImpl::StoryProviderImpl(
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this) {
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
+  context_handler_.Watch([this] { OnContextChange(); });
+  context_handler_.Select(kStoryImportanceContext);
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -598,19 +629,6 @@ void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   // pending messgages have been processed.
   bindings_.CloseAllBindings();
   new TeardownCall(&operation_queue_, this, callback);
-}
-
-// |StoryProvider|
-void StoryProviderImpl::Watch(
-    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
-  watchers_.AddInterfacePtr(
-      StoryProviderWatcherPtr::Create(std::move(watcher)));
-}
-
-// |StoryProvider|
-void StoryProviderImpl::Duplicate(
-    fidl::InterfaceRequest<StoryProvider> request) {
-  Connect(std::move(request));
 }
 
 void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
@@ -689,6 +707,37 @@ void StoryProviderImpl::RunningStories(const RunningStoriesCallback& callback) {
   callback(std::move(stories));
 }
 
+// |StoryProvider|
+void StoryProviderImpl::Watch(
+    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
+  watchers_.AddInterfacePtr(
+      StoryProviderWatcherPtr::Create(std::move(watcher)));
+}
+
+// |StoryProvider|
+void StoryProviderImpl::GetImportance(const GetImportanceCallback& callback) {
+  // This is an Operation on the queue mostly so a story controller cannot be
+  // deleted while we wait for it to compute its importance.
+  //
+  // TODO(mesch): Should be cached or precomputed really. For now we happily use
+  // the opportunity to put some load on the ledger, so gather performance
+  // metrics.
+  new GetImportanceCall(&operation_queue_, this, callback);
+}
+
+// |StoryProvider|
+void StoryProviderImpl::WatchImportance(
+    fidl::InterfaceHandle<StoryImportanceWatcher> watcher) {
+  importance_watchers_.AddInterfacePtr(
+      StoryImportanceWatcherPtr::Create(std::move(watcher)));
+}
+
+// |StoryProvider|
+void StoryProviderImpl::Duplicate(
+    fidl::InterfaceRequest<StoryProvider> request) {
+  Connect(std::move(request));
+}
+
 // |PageClient|
 void StoryProviderImpl::OnChange(const std::string& key,
                                  const std::string& value) {
@@ -745,6 +794,15 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
   }
 
   i->second->Log(MakeLogEntry(StorySignal::FOCUSED));
+}
+
+void StoryProviderImpl::OnContextChange() {
+  // We sloppily assume that importance may change on every context change. This
+  // will surely be revised.
+  importance_watchers_.ForAllPtrs(
+      [this](StoryImportanceWatcher* const watcher) {
+        watcher->OnImportanceChange();
+      });
 }
 
 StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {

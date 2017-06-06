@@ -53,6 +53,21 @@ interface StoryProvider {
   // Registers a listener for changes in the story collection.
   Watch(StoryProviderWatcher watcher);
 
+  // Gets the relative importance of stories in the current story collection in
+  // the current context. The map is from story ID to importance. Stories not in
+  // the map have zero importance. To be called initially when setting up the
+  // user shell display of the story collection, and when
+  // StoryImportanceWatcher.OnImportanceChange() is called.
+  //
+  // TODO(mesch): Importance computation is currently confined to those stories
+  // for which the user shell holds a story controller. This will change,
+  // especially as it makes sense that the user shell uses importance to decide
+  // which stories to get a controller for and start.
+  GetImportance() => (map<string, float> importance);
+
+  // Registers a listener for changes in the story collection.
+  WatchImportance(StoryImportanceWatcher watcher);
+
   // Creates a duplicate handle for this StoryProvider.
   Duplicate(StoryProvider& request);
 };
@@ -80,4 +95,11 @@ interface StoryProviderWatcher {
 
   // A Story was deleted.
   OnDelete(string story_id);
+};
+
+// The relative importance of stories in the story collection may have changed,
+// because the context has changed. In order to obtain the changed importance,
+// the client calls StoryProvider.GetImportance().
+interface StoryImportanceWatcher {
+  OnImportanceChange();
 };

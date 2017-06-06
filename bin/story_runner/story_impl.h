@@ -16,6 +16,7 @@
 
 #include "application/services/application_controller.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/context.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/component/component_context.fidl.h"
@@ -47,6 +48,11 @@ class StoryStorageImpl;
 
 constexpr char kRootLink[] = "root";
 constexpr char kRootModuleName[] = "root";
+
+// HACK(mesch): The context topics that influence story importance is hardcoded
+// to a single one right now. This will be generalized, but we cannot simply
+// look at the whole context, because it's too big.
+constexpr char kStoryImportanceContext[] = "/location/home_work";
 
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
@@ -94,6 +100,8 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   StoryState GetStoryState() const;
   void Log(StoryContextLogPtr log_entry);
   void Sync(const std::function<void()>& done);
+  void GetImportance(const ContextState& context_state,
+                     const std::function<void(float)>& result);
 
   // Called by ModuleControllerImpl
   void FocusModule(const fidl::Array<fidl::String>& module_path);
@@ -220,6 +228,7 @@ class StoryImpl : StoryController, StoryContext, ModuleWatcher {
   class StopCall;
   class DeleteCall;
   class GetModulesCall;
+  class GetImportanceCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

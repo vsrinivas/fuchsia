@@ -51,8 +51,8 @@ struct StoryContextLog {
 // Events that cause story context to be captured.
 enum StorySignal {
   // Context is captured when the story is created.
-  CREATED = 0,
+  CREATED = 1,
 
   // Context is captured when the story is focused.
-  FOCUSED = 1,
+  FOCUSED = 2,
 };

@@ -84,6 +84,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
  private:
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+  using ImportanceMap = fidl::Map<fidl::String, float>;
 
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
@@ -114,6 +115,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |StoryProvider|
+  void GetImportance(const GetImportanceCallback& callback) override;
+
+  // |StoryProvider|
+  void WatchImportance(fidl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
+
+  // |StoryProvider|
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
 
   // |PageClient|
@@ -124,6 +131,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // |FocusWatcher|
   void OnFocusChange(FocusInfoPtr info) override;
+
+  // Called by ContextHandler.
+  void OnContextChange();
 
   StoryContextLogPtr MakeLogEntry(const StorySignal signal);
 
@@ -154,10 +164,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the
-  // context and the focus.
+  // context and the focus. This serves to compute relative importance of
+  // stories in the timeline, as determined by the current context.
   ContextHandler context_handler_;
   FocusProviderPtr focus_provider_;
   fidl::Binding<FocusWatcher> focus_watcher_binding_;
+  fidl::InterfacePtrSet<StoryImportanceWatcher> importance_watchers_;
 
   // This is a container of all operations that are currently enqueued to run in
   // a FIFO manner. All operations exposed via |StoryProvider| interface are
@@ -184,6 +196,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class GetControllerCall;
   class PreviousStoriesCall;
   class TeardownCall;
+  class GetImportanceCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

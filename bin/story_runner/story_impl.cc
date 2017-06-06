@@ -522,6 +522,83 @@ class StoryImpl::StartModuleCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
 
+class StoryImpl::GetImportanceCall : Operation<float> {
+ public:
+  GetImportanceCall(OperationContainer* const container,
+                    StoryImpl* const story_impl,
+                    const ContextState& context_state,
+                    ResultCall result_call)
+      : Operation(container, std::move(result_call)),
+        story_impl_(story_impl),
+        context_state_(context_state.Clone()) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this, &result_};
+
+    story_impl_->story_storage_impl_->ReadLog(
+        [this, flow](fidl::Array<StoryContextLogPtr> log) {
+          log_ = std::move(log);
+          Cont(flow);
+        });
+  }
+
+  void Cont(FlowToken flow) {
+    // HACK(mesch): Hardcoded importance computation. Will be delegated
+    // somewhere more flexible eventually.
+    auto i = context_state_.find(kStoryImportanceContext);
+    if (i == context_state_.cend()) {
+      result_ = 1.0;
+      return;
+    }
+
+    const auto& context_value = i.GetValue();
+
+    float create_score = 0.0;
+    float focus_score = 0.0;
+    float focus_count = 0.0;
+
+    for (auto& entry : log_) {
+      auto i = entry->context.find(kStoryImportanceContext);
+      if (i == entry->context.end()) {
+        continue;
+      }
+
+      const auto& log_value = i.GetValue();
+      if (context_value != log_value) {
+        continue;
+      }
+
+      switch (entry->signal) {
+        case StorySignal::CREATED:
+          create_score = 1.0;
+          break;
+
+        case StorySignal::FOCUSED:
+          focus_score += 1.0;
+          focus_count += 1.0;
+          break;
+      }
+    }
+
+    if (focus_count == 0) {
+      result_ = create_score;
+    } else {
+      result_ = 0.5 * create_score + 0.5 * (focus_score / focus_count);
+    }
+  }
+
+  StoryImpl* const story_impl_;  // not owned
+  const ContextState context_state_;
+  fidl::Array<StoryContextLogPtr> log_;
+
+  float result_{0.0};
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
+};
+
 StoryImpl::StoryImpl(const fidl::String& story_id,
                      ledger::PagePtr story_page,
                      StoryProviderImpl* const story_provider_impl)
@@ -834,6 +911,12 @@ void StoryImpl::Log(StoryContextLogPtr log_entry) {
 
 void StoryImpl::Sync(const std::function<void()>& done) {
   story_storage_impl_->Sync(done);
+}
+
+void StoryImpl::GetImportance(
+    const ContextState& context_state,
+    const std::function<void(float)>& result) {
+  new GetImportanceCall(&operation_queue_, this, context_state, result);
 }
 
 void StoryImpl::StopForDelete(const StopCallback& done) {

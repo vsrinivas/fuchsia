@@ -12,17 +12,30 @@ ContextHandler::ContextHandler(
     maxwell::IntelligenceServices* const intelligence_services)
     : binding_(this) {
   intelligence_services->GetContextProvider(context_provider_.NewRequest());
-
-  auto context_query = maxwell::ContextQuery::New();
-  context_query->topics.resize(0);
-
-  context_provider_->Subscribe(std::move(context_query), binding_.NewBinding());
+  query_.topics.resize(0);
 }
 
 ContextHandler::~ContextHandler() = default;
 
+void ContextHandler::Select(const fidl::String& topic) {
+  if (binding_.is_bound()) {
+    binding_.Close();
+  }
+
+  query_.topics.push_back(topic);
+  context_provider_->Subscribe(query_.Clone(), binding_.NewBinding());
+}
+
+void ContextHandler::Watch(const std::function<void()>& watcher) {
+  watchers_.push_back(watcher);
+}
+
 void ContextHandler::OnUpdate(maxwell::ContextUpdatePtr value) {
   value_ = std::move(value);
+
+  for (auto& watcher : watchers_) {
+    watcher();
+  }
 }
 
 }  // namespace modular

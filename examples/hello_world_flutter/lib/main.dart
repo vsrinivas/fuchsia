@@ -44,10 +44,10 @@ class ModuleImpl extends Module {
     // When a handle is bound to a proxy and then the proxy variable is garbage
     // collected before the pipe is properly closed or unbound, the app will
     // crash due to the leaked handle.
+
     _moduleContext.ctrl.bind(moduleContextHandle);
     _moduleContext.getLink(null, _link.ctrl.request());
-
-    // Do something with the story and link services.
+    _moduleContext.ready();
   }
 
   /// Implementation of the Stop() => (); method.

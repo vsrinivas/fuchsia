@@ -503,10 +503,10 @@ class TestUserShellApp : modular::SingleServiceViewApp<modular::UserShell> {
     terminate_.Pass();
 
     // A little acrobatics to allow TestPoints, which are data members of this,
-    // to allow post failure notices to the test runner in their destructors.
+    // to post failure notices to the test runner in their destructors.
     //
     // We respond to done first, then asynchronously delete this, then
-    // asynchronously delete post Teardown() to the test runner, and finally
+    // asynchronously post Teardown() to the test runner, and finally
     // asynchronously stop the message queue.
 
     auto binding = PassBinding();  // To invoke done() after delete this.

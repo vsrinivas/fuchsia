@@ -29,6 +29,7 @@ class StoryStorageImpl : public PageClient {
   using ModuleDataCallback = std::function<void(ModuleDataPtr)>;
   using DeviceDataCallback =
       std::function<void(PerDeviceStoryInfoPtr per_device)>;
+  using LogCallback = std::function<void(fidl::Array<StoryContextLogPtr>)>;
 
   StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
@@ -56,7 +57,10 @@ class StoryStorageImpl : public PageClient {
                  LinkImpl* impl,
                  const DataCallback& watcher);
   void DropWatcher(LinkImpl* impl);
+
   void Log(StoryContextLogPtr log_entry);
+  void ReadLog(const LogCallback& callback);
+
   void Sync(const SyncCallback& callback);
 
  private:
@@ -88,6 +92,7 @@ class StoryStorageImpl : public PageClient {
   class ReadDeviceDataCall;
   class WriteDeviceDataCall;
   class StoryContextLogCall;
+  class ReadLogCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };
