@@ -178,7 +178,7 @@ class ObjectData {
     if (value.size() < kObjectHashSize) {
       return value;
     }
-    return glue::SHA256Hash(value.data(), value.size());
+    return glue::SHA256Hash(value);
   }
 };
 

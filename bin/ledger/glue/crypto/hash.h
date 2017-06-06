@@ -29,7 +29,7 @@ class SHA256StreamingHash {
   FTL_DISALLOW_COPY_AND_ASSIGN(SHA256StreamingHash);
 };
 
-std::string SHA256Hash(const void* input, size_t input_lenght);
+std::string SHA256Hash(ftl::StringView data);
 
 }  // namespace glue
 

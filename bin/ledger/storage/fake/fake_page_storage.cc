@@ -38,7 +38,7 @@ class FakeObject : public Object {
 };
 
 storage::ObjectId ComputeObjectId(ftl::StringView value) {
-  return glue::SHA256Hash(value.data(), value.size());
+  return glue::SHA256Hash(value);
 }
 
 }  // namespace

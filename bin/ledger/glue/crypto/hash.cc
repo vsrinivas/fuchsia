@@ -30,12 +30,12 @@ void SHA256StreamingHash::Finish(std::string* output) {
   SHA256_Final(reinterpret_cast<uint8_t*>(&(*output)[0]), &context_->sha256);
 }
 
-std::string SHA256Hash(const void* input, size_t input_lenght) {
+std::string SHA256Hash(ftl::StringView data) {
   std::string result;
   result.resize(SHA256_DIGEST_LENGTH);
   SHA256_CTX sha256;
   SHA256_Init(&sha256);
-  SHA256_Update(&sha256, input, input_lenght);
+  SHA256_Update(&sha256, data.data(), data.size());
   SHA256_Final(reinterpret_cast<uint8_t*>(&result[0]), &sha256);
   return result;
 }

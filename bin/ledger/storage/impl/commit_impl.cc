@@ -139,7 +139,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
   std::string storage_bytes = SerializeCommit(
       generation, timestamp, root_node_id, std::move(parent_commits));
 
-  CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
+  CommitId id = glue::SHA256Hash(storage_bytes);
 
   return FromStorageBytes(page_storage, std::move(id),
                           std::move(storage_bytes));
