@@ -42,7 +42,7 @@ size_t usb_get_max_transfer_size(mx_device_t* device, uint8_t ep_address);
 iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size);
 
 // sets the frame number in a USB iotxn for scheduling an isochronous transfer
-inline void usb_iotxn_set_frame(iotxn_t* txn, uint64_t frame) {
+static inline void usb_iotxn_set_frame(iotxn_t* txn, uint64_t frame) {
     ((usb_protocol_data_t *)iotxn_pdata(txn, usb_protocol_data_t))->frame = frame;
 }
 
