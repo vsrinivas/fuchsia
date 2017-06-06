@@ -1,34 +1,16 @@
 # Developer Workflow
 
-## Fuchsia setup
+Follow the general [Fuchsia documentation] to obtain a Fuchsia checkout, learn
+how to build the code and how to run Fuchsia under QEMU and on Acer 12.
 
-Follow the general Fuchsia documents to obtain a Fuchsia world checkout and
-learn how to run under qemu:
+Be sure to configure:
 
- - [Fuchsia Manifest](https://fuchsia.googlesource.com/manifest/+/master/README.md)
- - [Magenta Recipes](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)
+ - [persistent file system]
+ - [networking]
 
-### Persistent file system
+See [Testing](testing.md) for how to run Ledger tests locally. Upload the CL for
+review using `git push origin HEAD:refs/for/master`.
 
-Having a persistent block device is handy, and you will probably want one.
-Follow [these
-instructions](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md)
-to create a minfs partition.
-
-### Networking
-
-Networking is handy, and you will definitely want it. Follow [these
-instructions](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Enabling-Networking-under-Qemu-x86_64-only).
-
-You need to do this after each host reboot.
-
-## Tests
-
-To run Ledger tests (both unittests and apptests), run Fuchsia with networking
-enabled in one shell, and in another shell run:
-
-```sh
-tools/ledger test
-```
-
-Test results will appear in the Fuchsia shell.
+[Fuchsia documentation]: https://fuchsia.googlesource.com/docs/+/master/README.md
+[persistent file system]: https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md
+[networking]: https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network

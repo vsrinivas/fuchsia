@@ -13,6 +13,7 @@ Documentation for setting up a remote Cloud sync provider:
 
  - [Firebase](firebase.md)
 
-Documentation for contributing to Ledger:
+Documentation for developing Ledger:
 
  - [Developer Workflow](workflow.md)
+ - [Testing](testing.md)
