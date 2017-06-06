@@ -39,7 +39,7 @@ Sections will be populated over time.
  - Block devices
  - File systems
  - Directory hierarchy
- - Ledger
+ - [Ledger](https://fuchsia.googlesource.com/ledger/+/HEAD/README.md)
  - Document store
  - Application cache
 
