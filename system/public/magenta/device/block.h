@@ -6,8 +6,8 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>
+#include <magenta/device/ioctl.h>
 #include <magenta/types.h>
 
 // Get information about the underlying block device.
@@ -42,15 +42,28 @@
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
+// Allocate a virtual partition with the requested length
+#define IOCTL_BLOCK_FVM_ALLOC \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
+// Extend a virtual partition
+#define IOCTL_BLOCK_FVM_EXTEND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 12)
+// Shink a virtual partition. Returns "success" if ANY slices are
+// freed (if any slices are freed, the driver will attempt to free
+// all provided slices).
+#define IOCTL_BLOCK_FVM_SHRINK \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
+#define IOCTL_BLOCK_FVM_DESTROY \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 14)
 
 // Block Core ioctls (specific to each block device):
 
-#define BLOCK_FLAG_READONLY  0x00000001
+#define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002
 
 typedef struct {
-    uint64_t block_count; // The number of blocks in this block device
-    uint32_t block_size; // The size of a single block
+    uint64_t block_count;       // The number of blocks in this block device
+    uint32_t block_size;        // The size of a single block
     uint32_t max_transfer_size; // Max worst-case size in bytes per transfer, 0 is no maximum
     uint32_t flags;
     uint32_t reserved;
@@ -83,7 +96,7 @@ typedef uint16_t vmoid_t;
 IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, mx_handle_t, vmoid_t);
 
 #define MAX_TXN_MESSAGES 16
-#define MAX_TXN_COUNT    256
+#define MAX_TXN_COUNT 256
 
 typedef uint16_t txnid_t;
 
@@ -95,6 +108,33 @@ IOCTL_WRAPPER_IN(ioctl_block_free_txn, IOCTL_BLOCK_FREE_TXN, txnid_t);
 
 // ssize_t ioctl_block_fifo_close(int fd);
 IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
+
+#define GUID_LEN 16
+#define NAME_LEN 24
+
+typedef struct {
+    size_t slice_count;
+    uint8_t type[GUID_LEN];
+    uint8_t guid[GUID_LEN];
+    char name[NAME_LEN];
+} alloc_req_t;
+
+// ssize_t ioctl_block_fvm_alloc(int fd, const alloc_req_t* req);
+IOCTL_WRAPPER_IN(ioctl_block_fvm_alloc, IOCTL_BLOCK_FVM_ALLOC, alloc_req_t);
+
+typedef struct {
+    size_t offset; // Both in units of "slice". "0" = slice 0, "1" = slice 1, etc...
+    size_t length;
+} extend_request_t;
+
+// ssize_t ioctl_block_fvm_extend(int fd, const extend_request_t* request);
+IOCTL_WRAPPER_IN(ioctl_block_fvm_extend, IOCTL_BLOCK_FVM_EXTEND, extend_request_t);
+
+// ssize_t ioctl_block_fvm_shrink(int fd, const extend_request_t* request);
+IOCTL_WRAPPER_IN(ioctl_block_fvm_shrink, IOCTL_BLOCK_FVM_SHRINK, extend_request_t);
+
+// ssize_t ioctl_block_fvm_destroy(int fd);
+IOCTL_WRAPPER(ioctl_block_fvm_destroy, IOCTL_BLOCK_FVM_DESTROY);
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent
@@ -142,13 +182,13 @@ IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
 // If the transaction is out of range, for example if 'length' is too large or if
 // 'dev_offset' is beyond the end of the device, MX_ERR_OUT_OF_RANGE is returned.
 
-#define BLOCKIO_READ      0x0001 // Reads from the Block device into the VMO
-#define BLOCKIO_WRITE     0x0002 // Writes to the Block device from the VMO
-#define BLOCKIO_SYNC      0x0003 // Unimplemented
+#define BLOCKIO_READ 0x0001      // Reads from the Block device into the VMO
+#define BLOCKIO_WRITE 0x0002     // Writes to the Block device from the VMO
+#define BLOCKIO_SYNC 0x0003      // Unimplemented
 #define BLOCKIO_CLOSE_VMO 0x0004 // Detaches the VMO from the block device; closes the handle to it.
-#define BLOCKIO_OP_MASK   0x00FF
+#define BLOCKIO_OP_MASK 0x00FF
 
-#define BLOCKIO_TXN_END   0x0100 // Expects response after request (and all previous) have completed
+#define BLOCKIO_TXN_END 0x0100 // Expects response after request (and all previous) have completed
 #define BLOCKIO_FLAG_MASK 0xFF00
 
 typedef struct {
@@ -165,7 +205,7 @@ typedef struct {
     txnid_t txnid;
     uint16_t reserved0;
     mx_status_t status;
-    uint32_t count;     // The number of messages in the transaction completed by the block server.
+    uint32_t count; // The number of messages in the transaction completed by the block server.
     uint32_t reserved1;
     uint64_t reserved2;
     uint64_t reserved3;

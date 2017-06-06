@@ -26,6 +26,7 @@ typedef enum disk_format_type {
     DISK_FORMAT_MINFS,
     DISK_FORMAT_FAT,
     DISK_FORMAT_BLOBFS,
+    DISK_FORMAT_FVM,
 } disk_format_t;
 
 disk_format_t detect_disk_format(int fd);

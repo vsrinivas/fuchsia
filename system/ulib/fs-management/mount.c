@@ -35,6 +35,10 @@ static const uint8_t gpt_magic[16] = {
     0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00,
 };
 
+static const uint8_t fvm_magic[8] = {
+    0x46, 0x56, 0x4d, 0x20, 0x50, 0x41, 0x52, 0x54,
+};
+
 disk_format_t detect_disk_format(int fd) {
     uint8_t data[HEADER_SIZE];
     if (read(fd, data, sizeof(data)) != sizeof(data)) {
@@ -42,7 +46,9 @@ disk_format_t detect_disk_format(int fd) {
         return -1;
     }
 
-    if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
+    if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
+        return DISK_FORMAT_FVM;
+    } else if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
         return DISK_FORMAT_GPT;
     } else if (!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
         return DISK_FORMAT_MINFS;
@@ -166,7 +172,7 @@ static mx_status_t mount_mxfs(const char* binary, int devicefd, mountpoint_t* mp
     if (options->verbose_mount) {
         printf("fs_mount: Launching %s\n", binary);
     }
-    const char* argv[] = { binary, "mount" };
+    const char* argv[] = {binary, "mount"};
     return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, mp, root);
 }
 

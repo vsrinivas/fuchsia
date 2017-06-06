@@ -91,9 +91,10 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
     return MX_ERR_INVALID_ARGS;
 }
 
+#define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define GPT_DRIVER_LIB "/boot/driver/gpt.so"
 #define MBR_DRIVER_LIB "/boot/driver/mbr.so"
-#define STRLEN(s) sizeof(s)/sizeof((s)[0])
+#define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 static mx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -113,6 +114,13 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
     disk_format_t df = detect_disk_format(fd);
 
     switch (df) {
+    case DISK_FORMAT_FVM: {
+        printf("devmgr: /dev/class/block/%s: FVM?\n", name);
+        // probe for partition table
+        ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
+        close(fd);
+        return MX_OK;
+    }
     case DISK_FORMAT_GPT: {
         printf("devmgr: %s: GPT?\n", device_path);
         // probe for partition table
@@ -178,7 +186,7 @@ void block_device_watcher(mx_handle_t _job) {
     job = _job;
 
     int dirfd;
-    if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
+    if ((dirfd = open("/dev/class/block", O_DIRECTORY | O_RDONLY)) >= 0) {
         mxio_watch_directory(dirfd, block_device_added, MX_TIME_INFINITE, &job);
     }
     close(dirfd);

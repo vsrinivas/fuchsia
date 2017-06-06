@@ -18,12 +18,25 @@ public:
     virtual ~MappedVmo();
 
     static mx_status_t Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out);
+
+    // Attempts to reduce both the VMO size and VMAR mapping:
+    // From [addr_, addr_ + len_]
+    // To   [addr_ + off, addr_ + off + len]
+    //
+    // Attempting to shrink the mapping to a length of zero or
+    // requesting a "shrink" that would increase the mapping size
+    // returns an error.
+    //
+    // On failure, the Mapping may be partially removed, and should not be used.
+    mx_status_t Shrink(size_t off, size_t len);
+
     mx_handle_t GetVmo(void) const;
     void* GetData(void) const;
+
 private:
     MappedVmo(mx_handle_t vmo, uintptr_t addr, size_t len);
 
-    const mx_handle_t vmo_;
-    const uintptr_t addr_;
-    const size_t len_;
+    mx_handle_t vmo_;
+    uintptr_t addr_;
+    size_t len_;
 };

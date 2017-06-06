@@ -40,11 +40,44 @@ mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<Ma
     return MX_OK;
 }
 
-mx_handle_t MappedVmo::GetVmo(void) const { return vmo_; }
-void* MappedVmo::GetData(void) const { return (void*) addr_; }
+mx_status_t MappedVmo::Shrink(size_t off, size_t len) {
+    if (len == 0 || off + len > len_ || off > len_ || off + len < off) {
+        return MX_ERR_INVALID_ARGS;
+    }
 
-MappedVmo::MappedVmo(mx_handle_t vmo, uintptr_t addr, size_t len) :
-    vmo_(vmo), addr_(addr), len_(len) {}
+    mx_status_t status;
+    mx_handle_t new_vmo;
+    if (off > 0) {
+        // Unmap everything before the offset
+        if ((status = mx_vmar_unmap(mx_vmar_root_self(), addr_, off)) != MX_OK) {
+            return status;
+        }
+    }
+    if (off + len < len_) {
+        // Unmap everything after the offset
+        if ((status = mx_vmar_unmap(mx_vmar_root_self(), addr_ + off + len, len_ - (off + len))) != MX_OK) {
+            return status;
+        }
+    }
+    if ((status = mx_vmo_clone(vmo_, MX_VMO_CLONE_COPY_ON_WRITE, off, len, &new_vmo)) != MX_OK) {
+        return status;
+    }
+    mx_handle_close(vmo_);
+    vmo_ = new_vmo;
+    addr_ = addr_ + off;
+    len_ = len;
+    return MX_OK;
+}
+
+mx_handle_t MappedVmo::GetVmo(void) const {
+    return vmo_;
+}
+void* MappedVmo::GetData(void) const {
+    return (void*)addr_;
+}
+
+MappedVmo::MappedVmo(mx_handle_t vmo, uintptr_t addr, size_t len)
+    : vmo_(vmo), addr_(addr), len_(len) {}
 
 MappedVmo::~MappedVmo() {
     mx_vmar_unmap(mx_vmar_root_self(), addr_, len_);

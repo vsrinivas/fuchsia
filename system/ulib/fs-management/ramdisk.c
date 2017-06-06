@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <magenta/device/block.h>
@@ -28,7 +28,7 @@
 #define BLOCK_EXTENSION "block"
 
 static mx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
-    const char* wanted = *(const char**) cookie;
+    const char* wanted = *(const char**)cookie;
     if (event == WATCH_EVENT_ADD_FILE && strcmp(fn, wanted) == 0) {
         return MX_ERR_STOP;
     }
