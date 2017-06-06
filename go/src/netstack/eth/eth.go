@@ -86,6 +86,9 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 	if m == nil {
 		return nil, fmt.Errorf("eth: no mxio for %s fd: %d", path, f.Fd())
 	}
+
+	IoctlSetClientName(m, []byte("netstack2"))
+
 	info, err := IoctlGetInfo(m)
 	if err != nil {
 		return nil, err

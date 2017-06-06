@@ -39,6 +39,7 @@ const (
 	ioctlOpStop          = 4 // IOCTL_ETHERNET_STOP,            IOCTL_KIND_DEFAULT
 	ioctlOpTXListenStart = 5 // IOCTL_ETHERNET_TX_LISTEN_START, IOCTL_KIND_DEFAULT
 	ioctlOpTXListenStop  = 6 // IOCTL_ETHERNET_TX_LISTEN_STOP,  IOCTL_KIND_DEFAULT
+	ioctlOpSetClientName = 7 // IOCTL_ETHERNET_SET_CLIENT_NAME, IOCTL_KIND_DEFAULT
 )
 
 func IoctlGetInfo(m mxio.MXIO) (info EthInfo, err error) {
@@ -75,6 +76,15 @@ func IoctlSetIobuf(m mxio.MXIO, h mx.Handle) error {
 	err := m.IoctlSetHandle(num, h)
 	if err != nil {
 		return fmt.Errorf("IOCTL_ETHERNET_SET_IOBUF: %v", err)
+	}
+	return nil
+}
+
+func IoctlSetClientName(m mxio.MXIO, name []byte) error {
+	num := mxio.IoctlNum(mxio.IoctlKindDefault, ioctlFamilyETH, ioctlOpSetClientName)
+	_, err := m.Ioctl(num, name, nil)
+	if err != nil {
+		return fmt.Errorf("IOCTL_ETHERNET_SET_CLIENT_NAME: %v", err)
 	}
 	return nil
 }
