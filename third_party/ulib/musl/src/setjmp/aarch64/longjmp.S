@@ -52,6 +52,19 @@ ENTRY(longjmp)
 ALIAS_ENTRY(_longjmp)
 ALIAS_ENTRY(siglongjmp)
 
+    // The sanitizer runtime wants to be informed of non-local exits.
+    // Call __asan_handle_no_return() before doing the actual longjmp.
+#if __has_feature(address_sanitizer)
+    // Save our incoming argument registers and return address on the stack
+    // around calling __asan_handle_no_return.  We save the zero word (xzr)
+    // just to keep the stack aligned correctly as required by the ABI.
+    push_regs x0, x1
+    push_regs x30, xzr
+    bl __asan_handle_no_return
+    pop_regs x30, xzr
+    pop_regs x0, x1
+#endif
+
     // Move the jmp_buf pointer to a temporary register.
     // We'll use x0 as a scratch register since we clobber it on return anyway.
     mov x16, x0
@@ -75,6 +88,8 @@ ALIAS_ENTRY(siglongjmp)
 
     // The next instruction clobbers the state of longjmp's caller.
     // So from here on, we'll use CFI that unwinds to setjmp's caller instead.
+    // Both callers have the same x0 value, which we now have in x16.
+    .cfi_undefined x1
     jb_cfi 19, JB_X(19)
     jb_cfi 20, JB_X(20)
     jb_cfi 21, JB_X(21)

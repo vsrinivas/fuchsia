@@ -32,6 +32,22 @@ ENTRY(longjmp)
 ALIAS_ENTRY(_longjmp)
 ALIAS_ENTRY(siglongjmp)
 
+    // The sanitizer runtime wants to be informed of non-local exits.
+    // Call __asan_handle_no_return() before doing the actual longjmp.
+#if __has_feature(address_sanitizer)
+    // Save our incoming argument registers on the stack around calling
+    // __asan_handle_no_return.  The incoming stack is misaligned by one
+    // word, so we need to move the stack by an odd number of words,
+    // hence the unnecessary save/restore of %rax.
+    push_reg %rax
+    push_reg %rsi
+    push_reg %rdi
+    call __asan_handle_no_return@PLT
+    pop_reg %rdi
+    pop_reg %rsi
+    pop_reg %rax
+#endif
+
     // Calculate return value: %r11d = %esi ?: 1
     mov $1, %r11d
     test %esi, %esi
@@ -39,9 +55,11 @@ ALIAS_ENTRY(siglongjmp)
 
     // Load the mangled values into temporaries.
     mov 8*JB_PC(%rdi), %rax
+    .cfi_undefined %rax
     mov 8*JB_SP(%rdi), %rcx
     mov 8*JB_FP(%rdi), %rdx
     mov 8*JB_USP(%rdi), %rsi
+    .cfi_undefined %rsi
 
     // Demangle each temporary.
     xor __setjmp_manglers+8*JB_PC(%rip), %rax
@@ -51,6 +69,7 @@ ALIAS_ENTRY(siglongjmp)
 
     // The next instruction clobbers the state of longjmp's caller.
     // So from here on, we'll use CFI that unwinds to setjmp's caller instead.
+    // Both callers have the same %rdi value, which we're still using.
     .cfi_register %rip, %rax
     .cfi_register %rsp, %rcx
     .cfi_register %rbp, %rdx
