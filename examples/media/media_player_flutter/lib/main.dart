@@ -99,14 +99,28 @@ void _play(Asset asset) {
   }
 }
 
-/// If [_assetToPlay] is a playlist and hasn't been played through, this method
-/// plays the next asset in [_assetToPlay] and returns true. Returns false
-/// otherwise.
+/// If [_leafAssetToPlay] is looped, this method seeks to the beginning of the
+/// asset and returns true. If [_assetToPlay] is a playlist and hasn't been
+/// played through (or is looped), this method plays the next asset in
+/// [_assetToPlay] and returns true. Returns false otherwise.
 bool _playNext() {
-  if (_assetToPlay == null ||
-      _assetToPlay.children == null ||
-      _assetToPlay.children.length <= ++_playlistIndex) {
+  if (_leafAssetToPlay.loop) {
+    // Looping leaf asset. Seek to the beginning.
+    _controller.seek(Duration.ZERO);
+    return true;
+  }
+
+  if (_assetToPlay == null || _assetToPlay.children == null) {
     return false;
+  }
+
+  if (_assetToPlay.children.length <= ++_playlistIndex) {
+    if (!_assetToPlay.loop) {
+      return false;
+    }
+
+    // Looping playlist. Start over.
+    _playlistIndex = 0;
   }
 
   _playLeafAsset(_assetToPlay.children[_playlistIndex]);
@@ -241,8 +255,7 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
             top: 0.0,
             child: new IconButton(
               icon: new Icon(
-                _assets.length == 1 ? Icons.close : Icons.arrow_back
-              ),
+                  _assets.length == 1 ? Icons.close : Icons.arrow_back),
               iconSize: 60.0,
               onPressed: () {
                 if (_assets.length == 1) {

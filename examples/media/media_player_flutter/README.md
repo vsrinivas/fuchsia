@@ -34,7 +34,8 @@ Here's an example config file:
         "uri": "http://192.168.4.1/policehelicopter.ogg",
         "title": "Police Helicopter",
         "artist": "The Red Hot Chili Peppers",
-        "album": "The Red Hot Chili Peppers"
+        "album": "The Red Hot Chili Peppers",
+        "loop": "true"
       },
       {
         "uri": "http://192.168.4.1/superstition.ogg",
@@ -103,6 +104,11 @@ The name of the artist who created the content. This field is optional.
 ### album
 
 The name of the album on which the content appears. This field is optional.
+
+### loop
+
+Whether the item should be looped. This field is optional and doesn't apply to
+remotes. Playlists can be looped.
 
 ### device
 

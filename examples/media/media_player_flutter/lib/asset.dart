@@ -40,6 +40,9 @@ class Asset {
   /// Children of the playlist asset. Must be null for other asset types.
   final List<Asset> children;
 
+  /// Whether the asset should loop back to the beginning when it ends.
+  bool loop = false;
+
   /// Device on which remote player is running. Required for remotes, must be
   /// null for other asset types.
   final String device;
@@ -54,11 +57,9 @@ class Asset {
     this.title,
     this.artist,
     this.album,
+    this.loop,
   })
-      : type = AssetType.movie,
-        children = null,
-        device = null,
-        service = null;
+      : type = AssetType.movie;
 
   /// Constructs an asset describing a song.
   Asset.song({
@@ -66,23 +67,17 @@ class Asset {
     this.title,
     this.artist,
     this.album,
+    this.loop,
   })
-      : type = AssetType.song,
-        children = null,
-        device = null,
-        service = null;
+      : type = AssetType.song;
 
   /// Constructs an asset describing a playlist.
   Asset.playlist({
     @required this.children,
     this.title,
+    this.loop,
   })
-      : type = AssetType.playlist,
-        uri = null,
-        artist = null,
-        album = null,
-        device = null,
-        service = null {
+      : type = AssetType.playlist {
     assert(children.isNotEmpty);
     assert(children.every(
         (Asset c) => c.type == AssetType.movie || c.type == AssetType.song));
@@ -94,9 +89,5 @@ class Asset {
     @required this.service,
     this.title,
   })
-      : type = AssetType.remote,
-        uri = null,
-        artist = null,
-        album = null,
-        children = null;
+      : type = AssetType.remote;
 }

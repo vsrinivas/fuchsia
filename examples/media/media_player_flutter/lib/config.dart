@@ -27,6 +27,15 @@ String _convertString(dynamic json) {
   return json;
 }
 
+bool _convertBool(dynamic json) {
+  if (json is! String || (json != 'true' && json != 'false')) {
+    throw new FormatException(
+        'Config file is malformed: "true" or "false" expected');
+  }
+
+  return json == 'true';
+}
+
 Asset _convertAsset(dynamic json) {
   if (json is! Map) {
     throw new FormatException('Config file is malformed: object expected');
@@ -38,6 +47,7 @@ Asset _convertAsset(dynamic json) {
   String artist;
   String album;
   List<Asset> children;
+  bool loop = false;
   String device;
   String service;
 
@@ -82,6 +92,9 @@ Asset _convertAsset(dynamic json) {
       case 'children':
         children = _convertAssetList(value);
         break;
+      case 'loop':
+        loop = _convertBool(value);
+        break;
       case 'device':
         device = _convertString(value);
         break;
@@ -123,6 +136,7 @@ Asset _convertAsset(dynamic json) {
         title: title,
         artist: artist,
         album: album,
+        loop: loop,
       );
 
     case AssetType.song:
@@ -135,6 +149,7 @@ Asset _convertAsset(dynamic json) {
         title: title,
         artist: artist,
         album: album,
+        loop: loop,
       );
 
     case AssetType.playlist:
@@ -156,6 +171,7 @@ Asset _convertAsset(dynamic json) {
       return new Asset.playlist(
         title: title,
         children: children,
+        loop: loop,
       );
 
     case AssetType.remote:
