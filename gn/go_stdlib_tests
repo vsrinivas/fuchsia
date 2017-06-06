@@ -1,8 +1,5 @@
 {
-    "labels": [
-        "//third_party/go:go_stdlib_tests"
-    ],
-    "binaries": [
-        {"binary": "go_os_test", "bootfs_path": "test/go_os_test"}
-    ]
+    "packages": {
+        "go_stdlib_tests": "//third_party/go:go_stdlib_tests"
+    }
 }
