@@ -417,6 +417,7 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t alloc_flags, uint64_t data_size)
         } else {
             status = mx_vmo_create(data_size, 0, &txn->vmo_handle);
         }
+        mx_object_set_property(txn->vmo_handle, MX_PROP_NAME, "iotxn", 5);
         if (status != NO_ERROR) {
             xprintf("iotxn_alloc: error %d in mx_vmo_create, flags 0x%x\n", status, alloc_flags);
             free(txn);
