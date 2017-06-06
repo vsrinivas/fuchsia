@@ -134,10 +134,6 @@
             "bootfs_path": "apps/modular_tests/remote_invoker_test"
         },
         {
-            "binary": "run_component",
-            "bootfs_path": "apps/run_component"
-        },
-        {
             "binary": "run_modular_tests",
             "bootfs_path": "test/run_modular_tests"
         },
