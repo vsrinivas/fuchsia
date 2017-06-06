@@ -8,6 +8,8 @@
 #include <mx/event.h>
 #include <mxio/io.h>
 
+#include <poll.h>
+
 #include <string>
 #include <thread>
 #include <vector>
