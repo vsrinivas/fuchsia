@@ -71,6 +71,11 @@ struct TypeInfo {
     return (flags & base_type.flags) == base_type.flags;
   }
 
+  // Return true if the two TypeInfos represent the same type.
+  bool operator==(const TypeInfo<EnumT>& type) const {
+    return flags == type.flags;
+  }
+
  private:
   // Helper function for the TypeInfo constructor.  Flattens type flags by
   // performing a bitwise-or between the first argument, and the result of
