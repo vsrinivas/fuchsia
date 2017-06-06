@@ -730,6 +730,11 @@ status_t VmcsPerCpu::Setup(paddr_t pml4_address, paddr_t apic_access_address,
     }
     vmcs_write(VmcsFieldXX::GUEST_CR4, cr4);
 
+    // For now, the guest can own all of the CR4 bits except VMXE, which it shouldn't touch.
+    // TODO(andymutton): Implement proper CR4 handling.
+    vmcs_write(VmcsFieldXX::CR4_GUEST_HOST_MASK, X86_CR4_VMXE);
+    vmcs_write(VmcsFieldXX::CR4_READ_SHADOW, 0);
+
     vmcs_write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
     vmcs_write(VmcsField64::GUEST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
 

@@ -286,6 +286,8 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+    // From Volume 3, Section 35.1, Table 35-2 (p. 35-13): For now, 0.
+    case X86_MSR_IA32_PLATFORM_ID:
     // From Volume 3, Section 35.1, Table 35-2 (p. 35-11): For now, all
     // misc features to 0.
     case X86_MSR_IA32_MISC_ENABLE:

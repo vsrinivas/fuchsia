@@ -111,6 +111,8 @@ enum class VmcsField32 : uint64_t {
 };
 
 enum class VmcsFieldXX : uint64_t {
+    CR4_GUEST_HOST_MASK             = 0x6002,   /* CR4 guest/host mask */
+    CR4_READ_SHADOW                 = 0x6006,   /* CR4 read shadow */
     EXIT_QUALIFICATION              = 0x6400,   /* Exit qualification */
     GUEST_LINEAR_ADDRESS            = 0x640a,   /* Guest linear address */
     GUEST_CR0                       = 0x6800,   /* Guest CR0 */

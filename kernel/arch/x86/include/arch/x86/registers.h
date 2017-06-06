@@ -29,6 +29,7 @@
 #define X86_EFER_LME                    0x00000100 /* long mode enable */
 #define X86_EFER_LMA                    0x00000400 /* long mode active */
 #define X86_EFER_NXE                    0x00000800 /* to enable execute disable bit */
+#define X86_MSR_IA32_PLATFORM_ID        0x00000017 /* platform id */
 #define X86_MSR_IA32_APIC_BASE          0x0000001b /* APIC base physical address */
 #define X86_MSR_IA32_TSC_ADJUST         0x0000003b /* TSC adjust */
 #define X86_MSR_IA32_BIOS_SIGN_ID       0x0000008b /* BIOS update signature */
