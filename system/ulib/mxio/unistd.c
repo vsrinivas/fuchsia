@@ -1148,7 +1148,7 @@ static int truncateat(int dirfd, const char* path, off_t len) {
     if ((r = __mxio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
         return ERROR(r);
     }
-    r = STATUS(io->ops->misc(io, MXRIO_TRUNCATE, len, 0, NULL, 0));
+    r = io->ops->misc(io, MXRIO_TRUNCATE, len, 0, NULL, 0);
     mxio_close(io);
     mxio_release(io);
     return STATUS(r);
