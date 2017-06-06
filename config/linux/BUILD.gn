@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/sysroot.gni")
+
+config("compiler") {
+  # On linux, we want to statically link against our libc++.a and
+  # libc++abi.a which are shipped as part of the toolchain
+  ldflags = [
+    "-stdlib=libc++",
+    "-static-libstdc++",
+
+    # libc++ and libc++abi are separate in our current toolchain,
+    # so we have to explicitly statically link it
+    "-Wl,-Bstatic",
+    "-lc++abi",
+    "-Wl,-Bdynamic",
+
+    # Set rpath to find dynamically linked libraries placed next to executables in the host
+    # build directory.
+    "-Wl,-rpath=\$ORIGIN/",
+  ]
+  libs = [ "pthread" ]  # libc++ depends on pthreads
+  lib_dirs =
+      [ rebase_path("//buildtools/toolchain/clang+llvm-x86_64-linux/lib") ]
+  configs = [ ":sysroot" ]
+}
+
+config("sysroot") {
+  cflags = [ "--sysroot=$sysroot" ]
+  ldflags = cflags
+  asmflags = cflags
+}

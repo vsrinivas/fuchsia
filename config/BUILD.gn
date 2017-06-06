@@ -34,24 +34,7 @@ config("compiler") {
       "-stdlib=libc++",
     ]
     if (current_os == "linux") {
-      # On linux, we want to statically link against our libc++.a and
-      # libc++abi.a which are shipped as part of the toolchain
-      ldflags += [
-        "-stdlib=libc++",
-        "-static-libstdc++",
-
-        # libc++ and libc++abi are separate in our current toolchain,
-        # so we have to explicitly statically link it
-        "-Wl,-Bstatic",
-        "-lc++abi",
-        "-Wl,-Bdynamic",
-
-        # Set rpath to find dynamically linked libraries placed next to executables in the host
-        # build directory.
-        "-Wl,-rpath=\$ORIGIN/",
-      ]
-
-      libs = [ "pthread" ]  # libc++ depends on pthreads
+      configs += [ "//build/config/linux:compiler" ]
     } else if (current_os == "mac") {
       configs += [ "//build/config/mac:compiler" ]
     }
