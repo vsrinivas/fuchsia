@@ -13,21 +13,18 @@ namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
                      mozart::ViewTokenPtr view_token,
-                     std::unique_ptr<ViewImpl> impl,
                      fidl::InterfaceRequest<mozart::View> view_request,
                      mozart::ViewListenerPtr view_listener,
                      const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),
       label_(label),
-      impl_(std::move(impl)),
+      impl_(new ViewImpl(registry, this)),
       view_binding_(impl_.get(), std::move(view_request)),
       owner_binding_(impl_.get()),
       weak_factory_(this) {
   FTL_DCHECK(view_token_);
   FTL_DCHECK(view_listener_);
-
-  impl_->set_state(this);
 
   view_binding_.set_connection_error_handler([this, registry] {
     registry->OnViewDied(this, "View connection closed");

@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/input/input_connection_impl.h"
@@ -28,7 +28,8 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector, public InputOwner {
  public:
-  explicit ViewRegistry(app::ApplicationContext* application_context);
+  explicit ViewRegistry(app::ApplicationContext* application_context,
+                        mozart::CompositorPtr compositor);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
@@ -56,8 +57,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // Creates a scene for the view, replacing its current scene.
   // Destroys |view_state| if an error occurs.
-  virtual void CreateScene(ViewState* view_state,
-                           fidl::InterfaceRequest<mozart::Scene> scene) = 0;
+  void CreateScene(ViewState* view_state,
+                   fidl::InterfaceRequest<mozart::Scene> scene);
 
   // Invalidates a view.
   // Destroys |view_state| if an error occurs.
@@ -162,14 +163,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void OnInputDispatcherDied(InputDispatcherImpl* dispatcher) override;
 
  private:
-  // Temporary.  Allow access from these two subclasses as we transition from
-  // ViewRegistry1 to ViewRegistry2.
-  friend class ViewRegistry1;
-  friend class ViewRegistry2;
-
   // LIFETIME
 
-  virtual std::unique_ptr<ViewImpl> CreateViewImpl() = 0;
   void UnregisterView(ViewState* view_state);
   void UnregisterViewTree(ViewTreeState* tree_state);
   void UnregisterViewContainer(ViewContainerState* container_state);
@@ -178,8 +173,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // TREE MANIPULATION
 
-  virtual void AttachResolvedViewAndNotify(ViewStub* view_stub,
-                                           ViewState* view_state) = 0;
+  void AttachResolvedViewAndNotify(ViewStub* view_stub, ViewState* view_state);
   void ReleaseUnavailableViewAndNotify(ViewStub* view_stub);
   void HijackView(ViewState* view_state);
   void TransferOrUnregisterViewStub(
@@ -269,6 +263,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   app::ApplicationContext* application_context_;
+  mozart::CompositorPtr compositor_;
 
   uint32_t next_view_token_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;

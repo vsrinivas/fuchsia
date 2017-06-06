@@ -140,8 +140,6 @@ interface View {
   // See also: |Compositor.CreateScene()|.
   CreateScene(Scene& scene);
 
-  CreateSession(mozart2.Session& session, mozart2.SessionListener? listener);
-
   // Gets an interface for managing the view's children.
   GetContainer(ViewContainer& container);
 

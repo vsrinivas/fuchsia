@@ -6,8 +6,6 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/mozart/src/view_manager/view_manager_impl.h"
-#include "apps/mozart/src/view_manager/view_registry1.h"
-#include "apps/mozart/src/view_manager/view_registry2.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
@@ -19,26 +17,15 @@ ViewManagerApp::ViewManagerApp(Params* params)
 
   tracing::InitializeTracer(application_context_.get(), {"view_manager"});
 
-  if (params->use_scene_manager()) {
-    mozart2::SceneManagerPtr scene_manager =
-        application_context_
-            ->ConnectToEnvironmentService<mozart2::SceneManager>();
-    scene_manager.set_connection_error_handler([] {
-      FTL_LOG(ERROR) << "Exiting due to SceneManager connection error.";
-      exit(1);
-    });
-    registry_.reset(new ViewRegistry2(application_context_.get(),
-                                      std::move(scene_manager)));
-  } else {
-    mozart::CompositorPtr compositor =
-        application_context_->ConnectToEnvironmentService<mozart::Compositor>();
-    compositor.set_connection_error_handler([] {
-      FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
-      exit(1);
-    });
-    registry_.reset(
-        new ViewRegistry1(application_context_.get(), std::move(compositor)));
-  }
+  mozart::CompositorPtr compositor =
+      application_context_->ConnectToEnvironmentService<mozart::Compositor>();
+  compositor.set_connection_error_handler([] {
+    FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
+    exit(1);
+  });
+
+  registry_.reset(
+      new ViewRegistry(application_context_.get(), std::move(compositor)));
 
   application_context_->outgoing_services()->AddService<mozart::ViewManager>(
       [this](fidl::InterfaceRequest<mozart::ViewManager> request) {
