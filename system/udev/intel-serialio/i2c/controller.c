@@ -100,9 +100,13 @@ static mx_status_t intel_serialio_i2c_add_slave(
     }
 
     const pci_config_t* pci_config;
+    size_t config_size;
     mx_handle_t config_handle;
-    status = pci->get_config(device->pcidev, &pci_config, &config_handle);
+    pci->claim_device(device->pcidev);
+    status = pci->map_resource(device->pcidev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&pci_config, &config_size, &config_handle);
     if (status != NO_ERROR) {
+        xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail2;
     }
 
@@ -437,16 +441,19 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     device->pcidev = dev;
 
     const pci_config_t* pci_config;
+    size_t config_size;
     mx_handle_t config_handle;
-    status = pci->get_config(dev, &pci_config, &config_handle);
+    status = pci->map_resource(dev, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                               (void**)&pci_config, &config_size, &config_handle);
     if (status != NO_ERROR) {
+        xprintf("i2c: failed to map pci config: %d\n", status);
         goto fail;
     }
 
-    status = pci->map_mmio(
-        dev, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-        (void**)&device->regs, &device->regs_size, &device->regs_handle);
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                               (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != NO_ERROR) {
+        xprintf("i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
     }
 
