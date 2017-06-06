@@ -1,11 +1,5 @@
 {
-    "labels": [
-        "//third_party/iperf:iperf3"
-    ],
-    "binaries": [
-        {
-            "binary": "iperf3",
-            "bootfs_path": "benchmarks/iperf3"
-        }
-    ]
+    "packages": {
+        "iperf": "//third_party/iperf"
+    }
 }
