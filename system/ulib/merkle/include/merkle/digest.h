@@ -11,29 +11,21 @@
 
 #ifdef USE_LIBCRYPTO
 #include <openssl/sha.h>
-#else
-#include <lib/crypto/cryptolib.h>
-#endif // USE_LIBCRYPTO
-
-#ifndef __cplusplus
-#ifdef USE_LIBCRYPTO
 #define MERKLE_DIGEST_LENGTH SHA256_DIGEST_LENGTH;
-#else
+#else // USE_LIBCRYPTO
+#include <lib/crypto/cryptolib.h>
 #define MERKLE_DIGEST_LENGTH clSHA256_DIGEST_SIZE;
 #endif // USE_LIBCRYPTO
-#else
+
+#ifdef __cplusplus
 namespace merkle {
 
 // This class represents a digest produced by a Merkle-Damgard hash algorithm.
 // This class is not thread safe.
 class Digest final {
 public:
-// The length of a digest in bytes; this matches sizeof(this->data).
-#ifdef USE_LIBCRYPTO
-    static constexpr size_t kLength = SHA256_DIGEST_LENGTH;
-#else
-    static constexpr size_t kLength = clSHA256_DIGEST_SIZE;
-#endif // USE_LIBCRYPTO
+    // The length of a digest in bytes; this matches sizeof(this->data).
+    static constexpr size_t kLength = MERKLE_DIGEST_LENGTH;
 
     Digest() : ctx_{}, bytes_{0}, ref_count_(0) {}
     explicit Digest(const Digest& other);
@@ -115,13 +107,11 @@ private:
 };
 
 } // namespace merkle
-#endif // __cplusplus
 
-#ifndef __cplusplus
-typedef struct merkle_digest merkle_digest_t;
-#else
 using merkle_digest_t = merkle::Digest;
 extern "C" {
+#else  // __cplusplus
+typedef struct merkle_digest merkle_digest_t;
 #endif // __cplusplus
 
 // C API for merkle::Digest.  It's called in a similar manner as the
@@ -135,26 +125,25 @@ extern "C" {
 //     }
 //     uint8_t result[MERKLE_DIGEST_LENGTH];
 //     merkle_digest_final(digest, result, sizeof(result));
-//     merkle_digest_free(digest);
 //
 // Then |result| will have the result of the hashing the data.
 
-// C wrapper for |merkle::Digest::Init|.  This function allocates memory and
-// returns it in |out|; it is the caller's responsibility to pass it to
-// |merkle_digest_free| when done.
+// C wrapper for |merkle::Digest::Init|.  On success this function allocates
+// memory and returns it in |out|.  The caller must make a call to
+// |merkle_digest_final| to free this memory.
 mx_status_t merkle_digest_init(merkle_digest_t** out);
 
 // C wrapper for |merkle::Digest::Update|.
 void merkle_digest_update(merkle_digest_t* digest, const void* buf, size_t len);
 
-// C wrapper for |merkle::Digest::Final|.
+// C wrapper for |merkle::Digest::Final|. |out| must point to a buffer with room
+// for at least |MERKLE_DIGEST_LENGTH| bytes.  This method frees |digest|, which
+// must not be used again after this call.
 mx_status_t merkle_digest_final(merkle_digest_t* digest, void* out,
                                 size_t out_len);
 
-// C wrapper to clean up a |merkle::Digest|.
-void merkle_digest_free(merkle_digest_t* digest);
-
-// C wrapper for |merkle::Digest::Hash|.
+// C wrapper for |merkle::Digest::Hash|.  |out| must point to a buffer with room
+// for at least |MERKLE_DIGEST_LENGTH| bytes.
 mx_status_t merkle_digest_hash(const void* buf, size_t len, void* out,
                                size_t out_len);
 #ifdef __cplusplus

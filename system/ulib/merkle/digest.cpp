@@ -157,12 +157,12 @@ bool Digest::operator!=(const uint8_t* rhs) const {
 
 mx_status_t merkle_digest_init(merkle::Digest** out) {
     AllocChecker ac;
-    mxtl::unique_ptr<merkle::Digest> digest(new (&ac) merkle::Digest());
+    mxtl::unique_ptr<merkle::Digest> uptr(new (&ac) merkle::Digest());
     if (!ac.check()) {
         return ERR_NO_MEMORY;
     }
-    digest->Init();
-    *out = digest.release();
+    uptr->Init();
+    *out = uptr.release();
     return NO_ERROR;
 }
 
@@ -172,12 +172,9 @@ void merkle_digest_update(merkle::Digest* digest, const void* buf, size_t len) {
 
 mx_status_t merkle_digest_final(merkle::Digest* digest, void* out,
                                 size_t out_len) {
-    digest->Final();
-    return digest->CopyTo(static_cast<uint8_t*>(out), out_len);
-}
-
-void merkle_digest_free(merkle::Digest* digest) {
-    delete digest;
+    mxtl::unique_ptr<merkle::Digest> uptr(digest);
+    uptr->Final();
+    return uptr->CopyTo(static_cast<uint8_t*>(out), out_len);
 }
 
 mx_status_t merkle_digest_hash(const void* buf, size_t len, void* out,

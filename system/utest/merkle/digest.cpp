@@ -98,7 +98,6 @@ bool DigestCWrappers(void) {
     expected.Hash(buf, sizeof(buf));
     merkle_digest_update(digest, buf, sizeof(buf));
     rc = merkle_digest_final(digest, buf, sizeof(buf));
-    merkle_digest_free(digest);
     ASSERT_EQ(rc, NO_ERROR, mx_status_get_string(rc));
     ASSERT_TRUE(expected == buf, __FUNCTION__);
     END_TEST;
