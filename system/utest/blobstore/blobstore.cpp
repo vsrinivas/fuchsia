@@ -406,6 +406,47 @@ static bool WriteAfterRead(void) {
     END_TEST;
 }
 
+static bool ReadTooLarge(void) {
+    BEGIN_TEST;
+    char ramdisk_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+
+    for (size_t i = 0; i < 16; i++) {
+        mxtl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+
+        int fd;
+        ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
+                             info->data.get(), info->size_data, &fd), "");
+
+        // Verify the contents of the Blob
+        AllocChecker ac;
+        mxtl::unique_ptr<char[]> buf(new (&ac) char[info->size_data]);
+        EXPECT_EQ(ac.check(), true, "");
+
+        // Try read beyond end of blob
+        off_t end_off = info->size_data;
+        ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off, "");
+        ASSERT_EQ(read(fd, &buf[0], 1), 0, "Expected empty read beyond end of file");
+
+        // Try some reads which straddle the end of the blob
+        for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
+            end_off = info->size_data - j;
+            ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off, "");
+            ASSERT_EQ(read(fd, &buf[0], j * 2), j, "Expected to only read one byte at end of file");
+            ASSERT_EQ(memcmp(buf.get(), &info->data[info->size_data - j], j),
+                      0, "Read data, but it was bad");
+        }
+
+        // We should be able to unlink the blob
+        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
+    }
+
+    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    END_TEST;
+}
+
 static bool BadAllocation(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
@@ -1108,6 +1149,7 @@ RUN_TEST_MEDIUM(TestMmap)
 RUN_TEST_MEDIUM(TestReaddir)
 RUN_TEST_MEDIUM(UseAfterUnlink)
 RUN_TEST_MEDIUM(WriteAfterRead)
+RUN_TEST_MEDIUM(ReadTooLarge)
 RUN_TEST_MEDIUM(BadAllocation)
 RUN_TEST_MEDIUM(CorruptedBlob)
 RUN_TEST_MEDIUM(CorruptedDigest)

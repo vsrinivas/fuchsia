@@ -497,6 +497,14 @@ mx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     merkle::Digest d;
     d = ((const uint8_t*) &digest_[0]);
     auto inode = &blobstore_->node_map_[map_index_];
+    if (off >= inode->blob_size) {
+        *actual = 0;
+        return NO_ERROR;
+    }
+    if (len > (inode->blob_size - off)) {
+        len = inode->blob_size - off;
+    }
+
     uint64_t size_merkle = merkle::Tree::GetTreeLength(inode->blob_size);
     const void* merkle_data = (merkle_tree_ != nullptr) ? merkle_tree_->GetData() : nullptr;
     status = mt.Verify(blob_->GetData(), inode->blob_size,
