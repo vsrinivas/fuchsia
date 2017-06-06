@@ -49,6 +49,9 @@ mx_status_t eth_create(int fd, mx_handle_t io_vmo, void* io_mem, eth_client_t** 
         status = r;
         goto fail;
     }
+    if ((r = ioctl_ethernet_set_client_name(fd, "netsvc", 6)) < 0) {
+        fprintf(stderr, "eth_create: failed to set client name: %zd\n", r);
+    }
 
     eth->tx_fifo = fifos.tx_fifo;
     eth->rx_fifo = fifos.rx_fifo;

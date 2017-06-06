@@ -87,6 +87,10 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    if ((r = ioctl_ethernet_set_client_name(fd, "netdump", 7)) < 0) {
+        fprintf(stderr, "netdump: failed to set client name %zd\n", r);
+    }
+
     // assign data chunks to ethbufs
     for (unsigned n = 0; n < count; n++) {
         eth_fifo_entry_t entry = {

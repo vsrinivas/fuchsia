@@ -62,6 +62,9 @@ typedef struct eth_fifos_t {
 #define IOCTL_ETHERNET_TX_LISTEN_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 6)
 
+// Associates a name with an ethernet instance.
+#define IOCTL_ETHERNET_SET_CLIENT_NAME \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 7)
 
 // Operation
 //
@@ -103,7 +106,6 @@ typedef struct eth_fifo_entry {
     void* cookie;
 } eth_fifo_entry_t;
 
-
 // ssize_t ioctl_ethernet_get_info(int fd, eth_info_t* out);
 IOCTL_WRAPPER_OUT(ioctl_ethernet_get_info, IOCTL_ETHERNET_GET_INFO, eth_info_t);
 
@@ -124,3 +126,6 @@ IOCTL_WRAPPER(ioctl_ethernet_tx_listen_start, IOCTL_ETHERNET_TX_LISTEN_START);
 
 // ssize_t ioctl_ethernet_tx_listen_stop(int fd);
 IOCTL_WRAPPER(ioctl_ethernet_tx_listen_stop, IOCTL_ETHERNET_TX_LISTEN_STOP);
+
+// ssize_t ioctl_ethernet_set_client_name(int fd, const char* in, size_t in_len);
+IOCTL_WRAPPER_VARIN(ioctl_ethernet_set_client_name, IOCTL_ETHERNET_SET_CLIENT_NAME, char);
