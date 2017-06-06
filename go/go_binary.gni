@@ -11,7 +11,12 @@ template("go_binary") {
   action(target_name) {
     forward_variables_from(invoker, [ "deps" ])
 
-    out_path = "$root_out_dir/$target_name"
+    output_name = target_name
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    }
+
+    out_path = "$root_out_dir/$output_name"
 
     outputs = [ out_path ]
 
