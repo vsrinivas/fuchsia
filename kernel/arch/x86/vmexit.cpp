@@ -286,6 +286,12 @@ static status_t handle_rdmsr(const ExitInfo& exit_info, GuestState* guest_state)
     case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+    // From Volume 3, Section 35.1, Table 35-2 (p. 35-11): For now, all
+    // misc features to 0.
+    case X86_MSR_IA32_MISC_ENABLE:
+    // From Volume 3, Section 35.1, Table 35-2 (p. 35-5): 0 indicates no
+    // microcode update is loaded.
+    case X86_MSR_IA32_BIOS_SIGN_ID:
         next_rip(exit_info);
         guest_state->rax = 0;
         guest_state->rdx = 0;
@@ -326,6 +332,7 @@ static status_t handle_wrmsr(const ExitInfo& exit_info, GuestState* guest_state,
     case X86_MSR_IA32_MTRR_FIX16K_80000 ... X86_MSR_IA32_MTRR_FIX16K_A0000:
     case X86_MSR_IA32_MTRR_FIX4K_C0000 ... X86_MSR_IA32_MTRR_FIX4K_F8000:
     case X86_MSR_IA32_MTRR_PHYSBASE0 ... X86_MSR_IA32_MTRR_PHYSMASK9:
+    case X86_MSR_IA32_BIOS_SIGN_ID:
         next_rip(exit_info);
         return NO_ERROR;
     case X86_MSR_IA32_TSC_DEADLINE: {
@@ -506,10 +513,10 @@ status_t vmexit_handler(AutoVmcsLoad* vmcs_load, GuestState* guest_state,
     case ExitReason::IO_INSTRUCTION:
         return handle_io_instruction(exit_info, guest_state, ctl_fifo);
     case ExitReason::RDMSR:
-        dprintf(SPEW, "handling RDMSR instruction\n\n");
+        dprintf(SPEW, "handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_rdmsr(exit_info, guest_state);
     case ExitReason::WRMSR:
-        dprintf(SPEW, "handling WRMSR instruction\n\n");
+        dprintf(SPEW, "handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
         return handle_wrmsr(exit_info, guest_state, local_apic_state);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
