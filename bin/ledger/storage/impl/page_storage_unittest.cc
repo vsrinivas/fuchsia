@@ -1158,5 +1158,30 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   EXPECT_EQ(id2, watcher.last_commit_id);
 }
 
+TEST_F(PageStorageTest, NoOpCommit) {
+  std::vector<CommitId> heads;
+  EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
+
+  std::unique_ptr<Journal> journal;
+  storage_->StartCommit(heads[0],  JournalType::EXPLICIT, &journal);
+
+  // Create a key, and delete it.
+  EXPECT_EQ(Status::OK,
+            journal->Put("key", RandomId(kObjectIdSize), KeyPriority::EAGER));
+  EXPECT_EQ(Status::OK, journal->Delete("key"));
+
+  // Commit the journal.
+  Status status;
+  std::unique_ptr<const Commit> commit;
+  journal->Commit(callback::Capture(
+              [this] { message_loop_.PostQuitTask(); }, &status, &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  ASSERT_EQ(Status::OK, status);
+  ASSERT_TRUE(commit);
+  // Expect that the commit id is the same as the original one.
+  EXPECT_EQ(heads[0], commit->GetId());
+}
+
 }  // namespace
 }  // namespace storage
