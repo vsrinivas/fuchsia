@@ -1186,16 +1186,14 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
                           int newdirfd, const char* newpath) {
     char oldname[NAME_MAX + 1];
     mxio_t* io_oldparent;
-    mx_status_t status;
+    mx_status_t status = NO_ERROR;
     if ((status = __mxio_opendir_containing_at(&io_oldparent, olddirfd, oldpath, oldname)) < 0) {
         return ERROR(status);
     }
 
-    int r;
     char newname[NAME_MAX + 1];
     mxio_t* io_newparent;
     if ((status = __mxio_opendir_containing_at(&io_newparent, newdirfd, newpath, newname)) < 0) {
-        r = ERROR(status);
         goto oldparent_open;
     }
 
@@ -1203,7 +1201,6 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
     status = io_newparent->ops->ioctl(io_newparent, IOCTL_VFS_GET_TOKEN,
                                       NULL, 0, &token, sizeof(token));
     if (status < 0) {
-        r = ERROR(status);
         goto newparent_open;
     }
 
@@ -1218,7 +1215,6 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
     name[oldlen + newlen + 1] = '\0';
     status = io_oldparent->ops->misc(io_oldparent, op, token, 0,
                                      (void*)name, oldlen + newlen + 2);
-    r = STATUS(status);
     goto newparent_open;
 newparent_open:
     io_newparent->ops->close(io_newparent);
@@ -1226,7 +1222,7 @@ newparent_open:
 oldparent_open:
     io_oldparent->ops->close(io_oldparent);
     mxio_release(io_oldparent);
-    return r;
+    return STATUS(status);
 }
 
 int renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
