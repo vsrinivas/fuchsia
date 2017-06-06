@@ -1,16 +1,5 @@
 {
-    "labels": [
-        "//third_party/sqlite",
-        "//third_party/sqlite:shell"
-    ],
-    "binaries": [
-      {
-          "binary": "libsqlite.so",
-          "bootfs_path": "lib/libsqlite.so"
-      },
-      {
-          "binary": "sqlite_shell",
-          "bootfs_path": "bin/sqlite_shell"
-      }
-    ]
+    "packages": {
+        "sqlite": "//third_party/sqlite:package"
+    }
 }
