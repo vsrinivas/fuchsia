@@ -98,8 +98,8 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             // map in the mmio space
             // XXX this seems to be broken right now
             uint64_t sz;
-            r = pci->map_mmio(bus_device_, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                              (void**)&bar0_mmio_base_, &sz, &tmp_handle);
+            r = pci->map_resource(bus_device_, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  (void**)&bar0_mmio_base_, &sz, &tmp_handle);
             if (r != NO_ERROR) {
                 VIRTIO_ERROR("cannot mmap io %d\n", r);
                 return r;
@@ -108,6 +108,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
             LTRACEF("bar0_mmio_base_ %p, sz %#" PRIx64 "\n", bar0_mmio_base_, sz);
         } else {
+            // TODO(cja): switch to PIO resource api
             // this is probably PIO
             r = mx_mmap_device_io(get_root_resource(), bar0_pio_base_, bar0_size_);
             if (r != NO_ERROR) {
@@ -147,8 +148,8 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
         // map bar 4
         uint64_t sz;
-        r = pci->map_mmio(bus_device_, 4, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                          (void**)&bar4_mmio_base_, &sz, &tmp_handle);
+        r = pci->map_resource(bus_device_, PCI_RESOURCE_BAR_4, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                              (void**)&bar4_mmio_base_, &sz, &tmp_handle);
         if (r != NO_ERROR) {
             VIRTIO_ERROR("cannot map io %d\n", bar4_mmio_handle_.get());
             return r;
