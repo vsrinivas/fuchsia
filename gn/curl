@@ -3,17 +3,7 @@
         "boringssl_libssl",
         "zlib"
     ],
-    "labels": [
-        "//third_party/curl"
-    ],
-    "binaries": [
-        {
-            "binary": "curl",
-            "bootfs_path": "bin/curl"
-        },
-        {
-            "binary": "libcurl.so",
-            "bootfs_path": "lib/libcurl.so"
-        }
-    ]
+    "packages": {
+        "curl": "//third_party/curl"
+    }
 }
