@@ -1,11 +1,5 @@
 {
-    "labels": [
-        "//third_party/lua"
-    ],
-    "binaries": [
-        {
-            "binary": "lua",
-            "bootfs_path": "bin/lua"
-        }
-    ]
+    "packages": {
+        "lua": "//third_party/lua"
+    }
 }
