@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 group("examples") {
   testonly = true
 
-  deps = [
+  public_deps = [
     "//apps/netstack/examples/sockettest",
     "//apps/netstack/examples/sockettest:closetest",
     "//apps/netstack/examples/sockettest:epolltest",
@@ -18,6 +20,65 @@ group("examples") {
     "//apps/netstack/examples/sockettest:udptest",
     "//apps/netstack/examples/third_party/asio:async_client",
     "//apps/netstack/examples/third_party/asio:async_https",
+  ]
+}
+
+package("netstack_examples") {
+  deps = [
     "//apps/netstack/examples/third_party/openbsd-netcat:nc",
+  ]
+
+  binaries = [ {
+        name = "nc"
+      } ]
+}
+
+package("netstack_tests") {
+  testonly = true
+
+  deps = [
+    ":examples",
+  ]
+
+  binaries = [
+    {
+      name = "closetest"
+    },
+
+    {
+      name = "epolltest"
+    },
+
+    {
+      name = "mctest"
+    },
+
+    {
+      name = "nbiotest"
+    },
+
+    {
+      name = "passfdtest"
+    },
+
+    {
+      name = "polltest"
+    },
+
+    {
+      name = "selecttest"
+    },
+
+    {
+      name = "sockettest"
+    },
+
+    {
+      name = "sockopttest"
+    },
+
+    {
+      name = "udptest"
+    },
   ]
 }
