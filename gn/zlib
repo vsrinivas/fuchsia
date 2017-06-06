@@ -1,5 +1,16 @@
 {
-    "packages": {
-        "zlib": "//third_party/zlib:package"
-    }
+    "labels": [
+        "//third_party/zlib",
+        "//third_party/zlib:minizip"
+    ],
+    "binaries": [
+        {
+            "binary": "libz.so",
+            "bootfs_path": "lib/libz.so"
+        },
+        {
+            "binary": "libminizip.so",
+            "bootfs_path": "lib/libminizip.so"
+        }
+    ]
 }
