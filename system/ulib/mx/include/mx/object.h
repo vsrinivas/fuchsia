@@ -121,7 +121,7 @@ public:
         return mx_object_get_cookie(get(), scope, cookie);
     }
 
-    mx_status_t set_cookie(mx_handle_t scope, uint64_t cookie) {
+    mx_status_t set_cookie(mx_handle_t scope, uint64_t cookie) const {
         return mx_object_set_cookie(get(), scope, cookie);
     }
 

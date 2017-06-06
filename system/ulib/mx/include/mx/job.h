@@ -28,7 +28,9 @@ public:
 
     static mx_status_t create(mx_handle_t parent_job, uint32_t options, job* result);
 
-    mx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count);
+    mx_status_t set_policy(uint32_t options, uint32_t topic, void* policy, uint32_t count) const {
+      return mx_job_set_policy(get(), options, topic, policy, count);
+    }
 
     // Ideally this would be called mx::job::default(), but default is a
     // C++ keyword and cannot be used as a function name.
