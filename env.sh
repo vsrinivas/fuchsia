@@ -496,13 +496,6 @@ function fgen-if-changed() {
 
 ### fsysroot: build sysroot
 
-function fbuild-sysroot-usage() {
-  cat >&2 <<END
-Usage: fbuild-sysroot [extra build-sysroot.sh args...]
-Builds fuchsia system root.
-END
-}
-
 function fbuild-sysroot() {
   echo "Deprecated - just run fbuild"
   mbuild
