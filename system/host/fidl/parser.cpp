@@ -575,6 +575,8 @@ std::unique_ptr<EnumDeclaration> Parser::ParseEnumDeclaration() {
         if (!Ok())
             return Fail();
     }
+    if (!Ok())
+        Fail();
 
     return std::make_unique<EnumDeclaration>(std::move(identifier),
                                              std::move(subtype),
@@ -707,6 +709,8 @@ std::unique_ptr<InterfaceDeclaration> Parser::ParseInterfaceDeclaration() {
         if (!Ok())
             return Fail();
     }
+    if (!Ok())
+        Fail();
 
     return std::make_unique<InterfaceDeclaration>(std::move(identifier),
                                                   std::move(const_members),
@@ -778,6 +782,8 @@ std::unique_ptr<StructDeclaration> Parser::ParseStructDeclaration() {
         if (!Ok())
             return Fail();
     }
+    if (!Ok())
+        Fail();
 
     return std::make_unique<StructDeclaration>(std::move(identifier),
                                                std::move(const_members),
@@ -839,6 +845,8 @@ std::unique_ptr<UnionDeclaration> Parser::ParseUnionDeclaration() {
         if (!Ok())
             return Fail();
     }
+    if (!Ok())
+        Fail();
 
     return std::make_unique<UnionDeclaration>(std::move(identifier),
                                               std::move(const_members),
