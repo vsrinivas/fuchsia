@@ -1,7 +1,9 @@
+#include "asan_impl.h"
+#include "libc.h"
 #include <stdint.h>
 #include <string.h>
 
-void* memset(void* dest, int c, size_t n) {
+NO_ASAN void* memset(void* dest, int c, size_t n) {
     unsigned char* s = dest;
     size_t k;
 
@@ -90,3 +92,6 @@ void* memset(void* dest, int c, size_t n) {
 
     return dest;
 }
+
+__typeof(memset) __unsanitized_memset __attribute__((alias("memset")));
+__asan_weak_alias(memset)

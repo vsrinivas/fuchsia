@@ -1,8 +1,10 @@
+#include "asan_impl.h"
+#include "libc.h"
 #include <endian.h>
 #include <stdint.h>
 #include <string.h>
 
-void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
+NO_ASAN void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
     unsigned char* d = dest;
     const unsigned char* s = src;
 
@@ -149,3 +151,6 @@ void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
         *d++ = *s++;
     return dest;
 }
+
+__typeof(memcpy) __unsanitized_memcpy __attribute__((alias("memcpy")));
+__asan_weak_alias(memcpy)

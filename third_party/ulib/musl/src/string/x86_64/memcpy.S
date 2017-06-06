@@ -8,6 +8,8 @@
 .hidden __memcpy_fwd
 ENTRY(memcpy)
 ALIAS_ENTRY(__memcpy_fwd)
+ALIAS_ENTRY(__unsanitized_memcpy)
+ASAN_ALIAS_ENTRY(memcpy)
 
     // Save return value.
     mov %rdi, %rax
@@ -17,5 +19,7 @@ ALIAS_ENTRY(__memcpy_fwd)
 
     ret
 
+ALIAS_END(__unsanitized_memcpy)
+ASAN_ALIAS_END(memcpy)
 ALIAS_END(__memcpy_fwd)
 END(memcpy)

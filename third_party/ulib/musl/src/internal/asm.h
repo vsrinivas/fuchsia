@@ -24,6 +24,15 @@ name:
     .cfi_endproc; \
     ALIAS_END(name)
 
+// See __asan_weak_alias in asan_impl.h.
+#if __has_feature(address_sanitizer)
+#define ASAN_ALIAS_ENTRY(name) ALIAS_ENTRY(__asan_##name) .weak __asan_##name
+#define ASAN_ALIAS_END(name) ALIAS_END(__asan_##name)
+#else // !__has_feature(address_sanitizer)
+#define ASAN_ALIAS_ENTRY(name) // Don't define __asan_##name.
+#define ASAN_ALIAS_END(name)
+#endif  // __has_feature(address_sanitizer)
+
 #ifdef __aarch64__
 .macro push_regs reg1, reg2
     stp \reg1, \reg2, [sp, #-16]!

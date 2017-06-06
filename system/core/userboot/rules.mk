@@ -32,6 +32,7 @@ MODULE_SO_INSTALL_NAME := -
 userboot-string-functions := memcmp memcpy memset strlen strncmp memmove
 MODULE_SRCS += \
     $(userboot-string-functions:%=third_party/ulib/musl/src/string/%.c)
+MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/src/internal
 
 # Make sure there are never any PLT entries generated.
 MODULE_COMPILEFLAGS += -fvisibility=hidden

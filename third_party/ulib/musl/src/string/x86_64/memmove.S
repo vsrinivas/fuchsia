@@ -1,7 +1,9 @@
-.global memmove
-.type memmove,@function
-memmove:
-	.cfi_startproc
+#include "asm.h"
+
+ENTRY(memmove)
+ALIAS_ENTRY(__unsanitized_memmove)
+ASAN_ALIAS_ENTRY(memmove)
+
 	mov %rdi,%rax
 	sub %rsi,%rax
 	cmp %rdx,%rax
@@ -15,4 +17,7 @@ memmove:
 	cld
 	lea 1(%rdi),%rax
 	ret
-	.cfi_endproc
+
+ASAN_ALIAS_END(memmove)
+ALIAS_END(__unsanitized_memmove)
+END(memmove)
