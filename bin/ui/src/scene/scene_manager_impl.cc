@@ -87,6 +87,19 @@ void SceneManagerImpl::TearDownSession(SessionId id) {
   }
 }
 
+bool SceneManagerImpl::ExportResource(ResourcePtr resource,
+                                      const mozart2::ExportResourceOpPtr& op) {
+  FTL_LOG(FATAL) << "SceneManagerImpl::ExportResource() unimplemented";
+  return false;
+}
+
+ResourcePtr SceneManagerImpl::ImportResource(
+    Session* session,
+    const mozart2::ImportResourceOpPtr& op) {
+  FTL_LOG(FATAL) << "SceneManagerImpl::ImportResource() unimplemented";
+  return ResourcePtr();
+}
+
 LinkPtr SceneManagerImpl::CreateLink(Session* session,
                                      ResourceId node_id,
                                      const mozart2::LinkPtr& args) {

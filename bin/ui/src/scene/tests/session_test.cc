@@ -42,6 +42,19 @@ void SessionTest::ReportError(ftl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
+bool SessionTest::ExportResource(ResourcePtr resource,
+                                 const mozart2::ExportResourceOpPtr& op) {
+  FTL_LOG(FATAL) << "SessionTest::ExportResource() unimplemented";
+  return false;
+}
+
+ResourcePtr SessionTest::ImportResource(
+    Session* session,
+    const mozart2::ImportResourceOpPtr& op) {
+  FTL_LOG(FATAL) << "SessionTest::ImportResource() unimplemented";
+  return ResourcePtr();
+}
+
 LinkPtr SessionTest::CreateLink(Session* session,
                                 ResourceId id,
                                 const mozart2::LinkPtr& args) {

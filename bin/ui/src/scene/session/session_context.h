@@ -22,6 +22,20 @@ class SessionContext {
   SessionContext() = default;
   virtual ~SessionContext() = default;
 
+  // Register a resource so that it can be imported into a different session
+  // via ImportResourceOp.  Return true if successful, and false if the params
+  // are invalid.
+  virtual bool ExportResource(ResourcePtr resource,
+                              const mozart2::ExportResourceOpPtr& op) = 0;
+
+  // Return a new resource in the importing session that acts as a proxy for
+  // a resource that was exported by another session.  Return nullptr if the
+  // params are invalid.
+  virtual ResourcePtr ImportResource(
+      Session* session,
+      const mozart2::ImportResourceOpPtr& op) = 0;
+
+  // TODO: deprecated; use ImportResource() instead.
   virtual LinkPtr CreateLink(Session* session,
                              ResourceId node_id,
                              const mozart2::LinkPtr& args) = 0;

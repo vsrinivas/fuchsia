@@ -131,16 +131,6 @@ mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateLinkNodeOp(uint32_t id, mx::eventpair epair) {
-  auto node = mozart2::LinkNode::New();
-  node->token = std::move(epair);
-
-  auto resource = mozart2::Resource::New();
-  resource->set_link_node(std::move(node));
-
-  return NewCreateResourceOp(id, std::move(resource));
-}
-
 mozart2::OpPtr NewCreateShapeNodeOp(uint32_t id) {
   auto node = mozart2::ShapeNode::New();
 

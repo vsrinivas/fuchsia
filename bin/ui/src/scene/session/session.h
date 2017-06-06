@@ -69,6 +69,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // Operation application functions, called by ApplyOp().
   bool ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op);
   bool ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op);
+  bool ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op);
+  bool ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op);
   bool ApplyAddChildOp(const mozart2::AddChildOpPtr& op);
   bool ApplyAddPartOp(const mozart2::AddPartOpPtr& op);
   bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
@@ -89,7 +91,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateMaterial(ResourceId id, const mozart2::MaterialPtr& args);
   bool ApplyCreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   bool ApplyCreateEntityNode(ResourceId id, const mozart2::EntityNodePtr& args);
-  bool ApplyCreateLinkNode(ResourceId id, const mozart2::LinkNodePtr& args);
   bool ApplyCreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
   bool ApplyCreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
 
@@ -102,7 +103,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateClipNode(ResourceId id, const mozart2::ClipNodePtr& args);
   ResourcePtr CreateEntityNode(ResourceId id,
                                const mozart2::EntityNodePtr& args);
-  ResourcePtr CreateLinkNode(ResourceId id, const mozart2::LinkNodePtr& args);
   ResourcePtr CreateShapeNode(ResourceId id, const mozart2::ShapeNodePtr& args);
   ResourcePtr CreateTagNode(ResourceId id, const mozart2::TagNodePtr& args);
   ResourcePtr CreateCircle(ResourceId id, float initial_radius);

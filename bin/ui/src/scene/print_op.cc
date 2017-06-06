@@ -54,9 +54,6 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::ENTITY_NODE:
       stream << "EntityNode";
       break;
-    case Resource::Tag::LINK_NODE:
-      stream << "LinkNode";
-      break;
     case Resource::Tag::SHAPE_NODE:
       stream << "ShapeNode";
       break;

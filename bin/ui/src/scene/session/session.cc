@@ -39,6 +39,10 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplyCreateResourceOp(op->get_create_resource());
     case mozart2::Op::Tag::RELEASE_RESOURCE:
       return ApplyReleaseResourceOp(op->get_release_resource());
+    case mozart2::Op::Tag::EXPORT_RESOURCE:
+      return ApplyExportResourceOp(op->get_export_resource());
+    case mozart2::Op::Tag::IMPORT_RESOURCE:
+      return ApplyImportResourceOp(op->get_import_resource());
     case mozart2::Op::Tag::ADD_CHILD:
       return ApplyAddChildOp(op->get_add_child());
     case mozart2::Op::Tag::ADD_PART:
@@ -93,8 +97,6 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateClipNode(id, op->resource->get_clip_node());
     case mozart2::Resource::Tag::ENTITY_NODE:
       return ApplyCreateEntityNode(id, op->resource->get_entity_node());
-    case mozart2::Resource::Tag::LINK_NODE:
-      return ApplyCreateLinkNode(id, op->resource->get_link_node());
     case mozart2::Resource::Tag::SHAPE_NODE:
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
     case mozart2::Resource::Tag::TAG_NODE:
@@ -109,6 +111,18 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
 
 bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
   return resources_.RemoveResource(op->id);
+}
+
+bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
+  if (auto resource = resources_.FindResource<Resource>(op->id)) {
+    return context_->ExportResource(std::move(resource), op);
+  }
+  return false;
+}
+
+bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
+  auto resource = context_->ImportResource(this, op);
+  return resource ? resources_.AddResource(op->id, std::move(resource)) : false;
 }
 
 bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
@@ -173,8 +187,7 @@ bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
 }
 
 bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
-  error_reporter_->ERROR()
-      << "scene::Session::ApplySetClipOp(): unimplemented";
+  error_reporter_->ERROR() << "scene::Session::ApplySetClipOp(): unimplemented";
   return false;
 }
 
@@ -271,12 +284,6 @@ bool Session::ApplyCreateEntityNode(ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateLinkNode(ResourceId id,
-                                  const mozart2::LinkNodePtr& args) {
-  auto node = CreateLinkNode(id, args);
-  return node ? resources_.AddResource(id, std::move(node)) : false;
-}
-
 bool Session::ApplyCreateShapeNode(ResourceId id,
                                    const mozart2::ShapeNodePtr& args) {
   auto node = CreateShapeNode(id, args);
@@ -319,13 +326,6 @@ ResourcePtr Session::CreateClipNode(ResourceId id,
 ResourcePtr Session::CreateEntityNode(ResourceId id,
                                       const mozart2::EntityNodePtr& args) {
   return ftl::MakeRefCounted<EntityNode>(this, id);
-}
-
-ResourcePtr Session::CreateLinkNode(ResourceId id,
-                                    const mozart2::LinkNodePtr& args) {
-  error_reporter_->ERROR() << "scene::Session::CreateLinkNode(): "
-                              "unimplemented.";
-  return ResourcePtr();
 }
 
 ResourcePtr Session::CreateShapeNode(ResourceId id,

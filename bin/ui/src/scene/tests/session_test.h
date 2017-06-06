@@ -33,10 +33,13 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // Implement SessionContext.
+  bool ExportResource(ResourcePtr resource,
+                      const mozart2::ExportResourceOpPtr& op) override;
+  ResourcePtr ImportResource(Session* session,
+                             const mozart2::ImportResourceOpPtr& op) override;
   LinkPtr CreateLink(Session* session,
                      ResourceId id,
                      const mozart2::LinkPtr& args) override;
-
   void OnSessionTearDown(Session* session) override;
 
   // Apply the specified Op, and verify that it succeeds.

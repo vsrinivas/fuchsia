@@ -20,9 +20,9 @@ union Resource {
   // Linking to external entities.
   Link link;
 
+  // Nodes.
   ClipNode clip_node;
   EntityNode entity_node;
-  LinkNode link_node;
   ShapeNode shape_node;
   TagNode tag_node;
 
@@ -76,6 +76,7 @@ struct Buffer {
 
 // Represents an external entity which can attach a child |Node| from this
 // |Session|, e.g. the root of a Scene, or a LinkNode from some other session.
+// TODO: deprecated: use Import/ExportResourceOp.
 struct Link {
   handle<eventpair> token;
 };
@@ -92,4 +93,11 @@ struct Material {
 struct Variable {
   ValueType type;
   Value initial_value;  // Must match type.  Must not be a variable_id.
+};
+
+// Describes an exported resource that is to be imported by an ImportResourceOp.
+// NOTE: Currently just an enum of importable resource types, but may later be
+// expanded to express concepts like "meshes with a particular vertex format".
+enum ImportSpec {
+  NODE,
 };

@@ -36,6 +36,10 @@ class SceneManagerImpl : public mozart2::SceneManager, public SessionContext {
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
   // SessionContext interface methods.
+  bool ExportResource(ResourcePtr resource,
+                      const mozart2::ExportResourceOpPtr& op) override;
+  ResourcePtr ImportResource(Session* session,
+                             const mozart2::ImportResourceOpPtr& op) override;
   LinkPtr CreateLink(Session* session,
                      ResourceId node_id,
                      const mozart2::LinkPtr& args) override;
