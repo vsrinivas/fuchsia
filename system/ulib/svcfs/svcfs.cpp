@@ -178,6 +178,17 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
     return true;
 }
 
+bool VnodeDir::RemoveService(const char* name, size_t len) {
+    for (auto& child : services_) {
+        if (child.NameMatch(name, len)) {
+            child.ClearProvider();
+            services_.erase(child);
+            return true;
+        }
+    }
+    return false;
+}
+
 void VnodeDir::RemoveAllServices() {
     for (VnodeSvc& vn : services_) {
         vn.ClearProvider();

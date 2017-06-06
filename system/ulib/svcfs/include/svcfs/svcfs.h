@@ -87,6 +87,8 @@ public:
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     bool AddService(const char* name, size_t len, ServiceProvider* provider);
+    bool RemoveService(const char* name, size_t len);
+
     void RemoveAllServices();
 
 private:
