@@ -355,8 +355,8 @@ static int mbr_bind_thread(void* arg) {
         block_info.block_count = pdev->partition.sector_partition_length;
         memcpy(&pdev->info, &block_info, sizeof(block_info));
 
-        char name[128];
-        snprintf(name, sizeof(name), "%sp%u", device_get_name(dev), partition_count);
+        char name[16];
+        snprintf(name, sizeof(name), "part-%03u",partition_count);
 
         device_add_args_t args = {
             .version = DEVICE_ADD_ARGS_VERSION,

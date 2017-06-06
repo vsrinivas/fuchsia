@@ -409,7 +409,7 @@ static int gpt_bind_thread(void* arg) {
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
 
         char name[128];
-        snprintf(name, sizeof(name), "%sp%u", device_get_name(dev), partitions);
+        snprintf(name, sizeof(name), "part-%03u", partitions);
 
         xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
                 partitions, name, type_guid, partition_guid, pname,
