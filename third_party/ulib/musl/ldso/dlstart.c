@@ -1,11 +1,10 @@
 #include "dynlink.h"
+#include "libc.h"
 #include <magenta/compiler.h>
 #include <stdatomic.h>
 #include <stddef.h>
 
-#define SHARED
-
-__NO_SAFESTACK __attribute__((__visibility__("hidden")))
+__NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden")))
 dl_start_return_t _dl_start(
     void* start_arg, void* vdso) {
     size_t base = (size_t)__ehdr_start;

@@ -34,6 +34,7 @@
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
 
+static void early_init(void);
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
 static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
@@ -138,7 +139,7 @@ __attribute__((__visibility__("hidden"))) extern void (*const __init_array_end)(
 weak_alias(__init_array_start, __init_array_end);
 weak_alias(__fini_array_start, __fini_array_end);
 
-static int dl_strcmp(const char* l, const char* r) {
+NO_ASAN static int dl_strcmp(const char* l, const char* r) {
     for (; *l == *r && *l; l++, r++)
         ;
     return *(unsigned char*)l - *(unsigned char*)r;
@@ -161,7 +162,8 @@ union allocated_types {
 
 static uintptr_t alloc_base, alloc_limit, alloc_ptr;
 
-__NO_SAFESTACK __attribute__((malloc)) static void* dl_alloc(size_t size) {
+__NO_SAFESTACK NO_ASAN __attribute__((malloc))
+static void* dl_alloc(size_t size) {
     // Round the size up so the allocation pointer always stays aligned.
     size = (size + DL_ALLOC_ALIGN - 1) & -DL_ALLOC_ALIGN;
 
@@ -218,7 +220,8 @@ static void dl_alloc_rollback(const struct dl_alloc_checkpoint *state) {
 #define laddr(p, v) (void*)((p)->base + (v))
 #define fpaddr(p, v) ((void (*)(void))laddr(p, v))
 
-__NO_SAFESTACK static void decode_vec(ElfW(Dyn)* v, size_t* a, size_t cnt) {
+__NO_SAFESTACK NO_ASAN
+ static void decode_vec(ElfW(Dyn)* v, size_t* a, size_t cnt) {
     size_t i;
     for (i = 0; i < cnt; i++)
         a[i] = 0;
@@ -229,7 +232,8 @@ __NO_SAFESTACK static void decode_vec(ElfW(Dyn)* v, size_t* a, size_t cnt) {
         }
 }
 
-__NO_SAFESTACK static int search_vec(ElfW(Dyn)* v, size_t* r, size_t key) {
+__NO_SAFESTACK NO_ASAN
+ static int search_vec(ElfW(Dyn)* v, size_t* r, size_t key) {
     for (; v->d_tag != key; v++)
         if (!v->d_tag)
             return 0;
@@ -237,7 +241,7 @@ __NO_SAFESTACK static int search_vec(ElfW(Dyn)* v, size_t* r, size_t key) {
     return 1;
 }
 
-__NO_SAFESTACK static uint32_t sysv_hash(const char* s0) {
+__NO_SAFESTACK NO_ASAN static uint32_t sysv_hash(const char* s0) {
     const unsigned char* s = (void*)s0;
     uint_fast32_t h = 0;
     while (*s) {
@@ -247,7 +251,7 @@ __NO_SAFESTACK static uint32_t sysv_hash(const char* s0) {
     return h & 0xfffffff;
 }
 
-__NO_SAFESTACK static uint32_t gnu_hash(const char* s0) {
+__NO_SAFESTACK NO_ASAN static uint32_t gnu_hash(const char* s0) {
     const unsigned char* s = (void*)s0;
     uint_fast32_t h = 5381;
     for (; *s; s++)
@@ -255,8 +259,8 @@ __NO_SAFESTACK static uint32_t gnu_hash(const char* s0) {
     return h;
 }
 
-__NO_SAFESTACK static Sym* sysv_lookup(const char* s, uint32_t h,
-                                       struct dso* dso) {
+__NO_SAFESTACK NO_ASAN static Sym* sysv_lookup(const char* s, uint32_t h,
+                                               struct dso* dso) {
     size_t i;
     Sym* syms = dso->syms;
     uint32_t* hashtab = dso->hashtab;
@@ -268,8 +272,8 @@ __NO_SAFESTACK static Sym* sysv_lookup(const char* s, uint32_t h,
     return 0;
 }
 
-__NO_SAFESTACK static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab,
-                                      struct dso* dso, const char* s) {
+__NO_SAFESTACK NO_ASAN static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab,
+                                              struct dso* dso, const char* s) {
     uint32_t nbuckets = hashtab[0];
     uint32_t* buckets = hashtab + 4 + hashtab[2] * (sizeof(size_t) / 4);
     uint32_t i = buckets[h1 % nbuckets];
@@ -291,9 +295,10 @@ __NO_SAFESTACK static Sym* gnu_lookup(uint32_t h1, uint32_t* hashtab,
     return 0;
 }
 
-__NO_SAFESTACK static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
-                                               struct dso* dso, const char* s,
-                                               uint32_t fofs, size_t fmask) {
+__NO_SAFESTACK NO_ASAN
+static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
+                                struct dso* dso, const char* s,
+                                uint32_t fofs, size_t fmask) {
     const size_t* bloomwords = (const void*)(hashtab + 4);
     size_t f = bloomwords[fofs & (hashtab[2] - 1)];
     if (!(f & fmask))
@@ -314,8 +319,8 @@ __NO_SAFESTACK static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab,
 #define ARCH_SYM_REJECT_UND(s) 0
 #endif
 
-__NO_SAFESTACK static struct symdef find_sym(struct dso* dso,
-                                             const char* s, int need_def) {
+__NO_SAFESTACK NO_ASAN
+static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
     uint32_t h = 0, gh, gho, *ght;
     size_t ghm = 0;
     struct symdef def = {};
@@ -361,8 +366,8 @@ __NO_SAFESTACK static struct symdef find_sym(struct dso* dso,
 
 __attribute__((__visibility__("hidden"))) ptrdiff_t __tlsdesc_static(void), __tlsdesc_dynamic(void);
 
-__NO_SAFESTACK static void do_relocs(struct dso* dso, size_t* rel,
-                                     size_t rel_size, size_t stride) {
+__NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
+                                             size_t rel_size, size_t stride) {
     unsigned char* base = dso->base;
     Sym* syms = dso->syms;
     char* strings = dso->strings;
@@ -525,8 +530,8 @@ __NO_SAFESTACK static void unmap_library(struct dso* dso) {
     }
 }
 
-__NO_SAFESTACK static mx_status_t map_library(mx_handle_t vmo,
-                                              struct dso* dso) {
+__NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
+                                                      struct dso* dso) {
     struct {
         Ehdr ehdr;
         // A typical ELF file has 7 or 8 phdrs, so in practice
@@ -710,7 +715,7 @@ error:
     return status;
 }
 
-__NO_SAFESTACK static void decode_dyn(struct dso* p) {
+__NO_SAFESTACK NO_ASAN static void decode_dyn(struct dso* p) {
     size_t dyn[DYN_CNT];
     decode_vec(p->dynv, dyn, DYN_CNT);
     p->syms = laddr(p, dyn[DT_SYMTAB]);
@@ -1096,7 +1101,7 @@ __NO_SAFESTACK static void make_global(struct dso* p) {
         p->global = 1;
 }
 
-__NO_SAFESTACK static void do_mips_relocs(struct dso* p, size_t* got) {
+__NO_SAFESTACK NO_ASAN static void do_mips_relocs(struct dso* p, size_t* got) {
     size_t i, j, rel[2];
     unsigned char* base = p->base;
     i = 0;
@@ -1119,7 +1124,7 @@ __NO_SAFESTACK static void do_mips_relocs(struct dso* p, size_t* got) {
     }
 }
 
-__NO_SAFESTACK static void reloc_all(struct dso* p) {
+__NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
     size_t dyn[DYN_CNT];
     for (; p; p = p->next) {
         if (p->relocated)
@@ -1163,7 +1168,7 @@ __NO_SAFESTACK static void reloc_all(struct dso* p) {
     }
 }
 
-__NO_SAFESTACK static void kernel_mapped_dso(struct dso* p) {
+__NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
     size_t min_addr = -1, max_addr = 0, cnt;
     Phdr* ph = p->phdr;
     for (cnt = p->phnum; cnt--; ph = (void*)((char*)ph + p->phentsize)) {
@@ -1324,7 +1329,7 @@ __NO_SAFESTACK static void update_tls_size(void) {
 
 static dl_start_return_t __dls3(void* start_arg);
 
-__NO_SAFESTACK __attribute__((__visibility__("hidden")))
+__NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden")))
 dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
     ldso.base = (unsigned char*)__ehdr_start;
@@ -1599,7 +1604,7 @@ __NO_SAFESTACK static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
     return laddr(&app, ehdr->e_entry);
 }
 
-__NO_SAFESTACK static dl_start_return_t __dls3(void* start_arg) {
+__NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     mx_handle_t bootstrap = (uintptr_t)start_arg;
 
     uint32_t nbytes, nhandles;
@@ -1685,6 +1690,10 @@ __NO_SAFESTACK static dl_start_return_t __dls3(void* start_arg) {
     if (status == NO_ERROR)
         __environ = envp;
 
+    // At this point we can make system calls and have our essential
+    // handles, so things are somewhat normal.
+    early_init();
+
     void* entry = dls3(exec_vmo, procargs->args_num, argv);
 
     // Reset it so there's no dangling pointer to this stack frame.
@@ -1715,6 +1724,10 @@ __NO_SAFESTACK static dl_start_return_t __dls3(void* start_arg) {
     }
 
    return DL_START_RETURN(entry, start_arg);
+}
+
+// Do sanitizer setup and whatever else must be done before dls3.
+__NO_SAFESTACK NO_ASAN static void early_init(void) {
 }
 
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
