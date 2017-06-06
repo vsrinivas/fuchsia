@@ -35,10 +35,13 @@ source_set("user_intelligence_provider") {
     "user_intelligence_provider_impl.h",
   ]
 
+  public_deps = [
+    "//application/lib/app",
+  ]
+
   deps = [
     ":agent_launcher",
     ":intelligence_services",
-    "//application/lib/app",
     "//apps/maxwell/services/action_log",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/context:debug",
@@ -76,8 +79,11 @@ source_set("agent_launcher") {
     "agent_launcher.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/maxwell/src:application_environment_host_impl",
   ]
 }

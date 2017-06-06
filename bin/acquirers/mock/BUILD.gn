@@ -10,8 +10,11 @@ source_set("gps") {
     "mock_gps.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers:gps",

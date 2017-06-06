@@ -21,9 +21,12 @@ source_set("context_engine_test") {
     "context_engine_test.cc",
   ]
 
+  public_deps = [
+    "//application/lib/app",
+  ]
+
   deps = [
     ":context_common",
-    "//application/lib/app",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/context_engine:scope_utils",
@@ -50,10 +53,13 @@ source_set("suggestion_engine_test") {
     "suggestion_engine_test.cc",
   ]
 
+  public_deps = [
+    "//application/lib/app",
+  ]
+
   deps = [
     ":context_common",
     ":test_suggestion_listener",
-    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src/acquirers/mock:gps",
@@ -93,13 +99,13 @@ source_set("common") {
   ]
 
   deps = [
-    "//application/lib/app",
     "//apps/maxwell/src:application_environment_host_impl",
     "//apps/maxwell/src/user:agent_launcher",
     "//lib/mtl",
   ]
 
   public_deps = [
+    "//application/lib/app",
     "//third_party/gtest",
   ]
 }

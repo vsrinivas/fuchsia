@@ -66,12 +66,15 @@ source_set("context_engine_impl") {
     "context_engine_impl.h",
   ]
 
+  public_deps = [
+    "//application/lib/app",
+  ]
+
   deps = [
     ":context_provider_impl",
     ":context_publisher_impl",
     ":context_repository",
     ":debug",
-    "//application/lib/app",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/context_engine/coprocessors:aggregate",
     "//apps/maxwell/src/context_engine/coprocessors:focused_story",
