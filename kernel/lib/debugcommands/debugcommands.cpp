@@ -166,7 +166,7 @@ static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags)
     }
 
     unsigned long address = argv[1].u;
-    unsigned int val = argv[2].u;
+    unsigned long val = argv[2].u;
 
     if ((address & (size - 1)) != 0) {
         printf("unaligned address, cannot modify\n");
@@ -209,7 +209,7 @@ static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags)
     unsigned long address = argv[1].u;
     unsigned long len = argv[2].u;
     unsigned long stop = address + len;
-    unsigned int val = argv[3].u;
+    unsigned long val = argv[3].u;
 
     if ((address & (size - 1)) != 0) {
         printf("unaligned address, cannot modify\n");
@@ -268,7 +268,7 @@ static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags)
     // write out
     printf("writing first pass...");
     for (i = 0; i < len / 4; i++) {
-        ptr[i] = i;
+        ptr[i] = static_cast<uint32_t>(i);
     }
     printf("done\n");
 
@@ -311,10 +311,10 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-static int crash_thread(void *arg)
+static int crash_thread(void *)
 {
     /* should crash */
-    volatile uint32_t *ptr = (void *)1;
+    volatile uint32_t *ptr = (volatile uint32_t *)1u;
     *ptr = 1;
 
     return 0;
@@ -332,9 +332,7 @@ static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags)
         }
     }
 
-    /* should crash */
-    volatile uint32_t *ptr = (void *)1;
-    *ptr = 1;
+    crash_thread(nullptr);
 
     /* if it didn't, panic the system */
     panic("crash");

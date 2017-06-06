@@ -14,6 +14,6 @@ MODULE_DEPS += \
 	kernel/lib/console
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/debugcommands.c
+	$(LOCAL_DIR)/debugcommands.cpp
 
 include make/module.mk
