@@ -38,6 +38,22 @@
       "bootfs_path": "data/sysui/contextual_config.json",
       "default": "true",
       "file": "apps/sysui/armadillo_user_shell/assets/contextual_config.json"
+    },
+    {
+      "bootfs_path": "data/sysui/WallpaperImage_001.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_001.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/WallpaperImage_002.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_002.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/WallpaperImage_003.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_003.jpg"
+    },
+    {
+      "bootfs_path": "data/sysui/WallpaperImage_004.jpg",
+      "file": "apps/sysui/armadillo_user_shell/assets/WallpaperImage_004.jpg"
     }
   ]
 }
