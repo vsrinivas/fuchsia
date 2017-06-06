@@ -200,19 +200,21 @@ static mx_status_t bochs_vbe_bind(void* ctx, mx_device_t* dev, void** cookie) {
         return ERR_NO_MEMORY;
 
     // map register window
-    status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_2, MX_CACHE_POLICY_UNCACHED_DEVICE,
                            &device->regs, &device->regs_size,
                            &device->regs_handle);
     if (status != NO_ERROR) {
+        printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
 
     // map framebuffer window
-    status = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_0,  MX_CACHE_POLICY_WRITE_COMBINING,
                            &device->framebuffer,
                            &device->framebuffer_size,
                            &device->framebuffer_handle);
     if (status != NO_ERROR) {
+        printf("bochs-vbe: failed to map pci config: %d\n", status);
         goto fail;
     }
 
