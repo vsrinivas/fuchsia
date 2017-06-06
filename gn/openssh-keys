@@ -1,19 +1,5 @@
 {
-    "labels": [
-        "//third_party/openssh-portable/fuchsia/developer-keys"
-    ],
-    "binaries": [
-        {
-            "binary": "ssh-keys/authorized_keys",
-            "bootfs_path": "data/ssh/authorized_keys"
-        },
-        {
-            "binary": "ssh-keys/ssh_host_ed25519_key",
-            "bootfs_path": "data/ssh/ssh_host_ed25519_key"
-        },
-        {
-            "binary": "ssh-keys/ssh_host_ed25519_key.pub",
-            "bootfs_path": "data/ssh/ssh_host_ed25519_key.pub"
-        }
-    ]
+    "packages": {
+        "developer-keys": "//third_party/openssh-portable/fuchsia/developer-keys"
+    }
 }

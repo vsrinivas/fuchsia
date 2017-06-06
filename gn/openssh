@@ -7,29 +7,7 @@
         "listen",
         "zlib"
     ],
-    "labels": [
-        "//third_party/openssh-portable"
-    ],
-    "binaries": [
-        {
-            "binary": "scp",
-            "bootfs_path": "bin/scp"
-        },
-        {
-            "binary": "sftp-server",
-            "bootfs_path": "bin/sftp-server"
-        },
-        {
-            "binary": "sshd",
-            "bootfs_path": "bin/sshd"
-        },
-        {
-            "binary": "sshd_config",
-            "bootfs_path": "data/ssh/sshd_config"
-        },
-        {
-            "binary": "ssh-keygen",
-            "bootfs_path": "bin/ssh-keygen"
-        }
-    ]
+    "packages": {
+        "openssh-portable": "//third_party/openssh-portable"
+    }
 }
