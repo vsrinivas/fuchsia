@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/device/console.h>
 #include <magenta/device/display.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -19,22 +18,9 @@
 #include <gfx/gfx.h>
 
 int main(int argc, char* argv[]) {
-    uint32_t fs = 0;
-    const char* fn = "/dev/class/console/vc";
-
-    while (argc > 1) {
-        if (!strcmp(argv[1], "-f")) {
-            fs = 1;
-        } else {
-            fn = argv[1];
-        }
-        argv++;
-        argc--;
-    }
-
-    int vfd = open(fn, O_RDWR);
+    int vfd = open("/dev/class/framebuffer/000", O_RDWR);
     if (vfd < 0) {
-        printf("failed to open fb '%s' (%d)\n", fn, errno);
+        printf("failed to open fb (%d)\n", errno);
         return -1;
     }
     ioctl_display_get_fb_t fb;
@@ -59,10 +45,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     gfx_fillrect(gfx, 0, 0, gfx->width, gfx->height, 0xffffffff);
-
-    ioctl_display_set_fullscreen(vfd, &fs);
-    ioctl_console_set_active_vc(vfd);
-
 
     double a,b, dx, dy, mag, c, ci;
     uint32_t color,iter,x,y;

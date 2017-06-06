@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include <magenta/device/console.h>
 #include <magenta/device/display.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -14,14 +13,9 @@
 #include <gfx/gfx.h>
 
 int main(int argc, char* argv[]) {
-    uint32_t fs = 0;
-    if (argc > 1 && !strcmp(argv[1], "-f")) {
-        fs = 1;
-    }
-
-    int vfd = open("/dev/class/console/vc", O_RDWR);
+    int vfd = open("/dev/class/framebuffer/000", O_RDWR);
     if (vfd < 0) {
-        printf("failed to open virtcon (%d)\n", errno);
+        printf("failed to open fb (%d)\n", errno);
         return -1;
     }
     ioctl_display_get_fb_t fb;
@@ -46,9 +40,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     gfx_fillrect(gfx, 0, 0, gfx->width, gfx->height, 0xffffffff);
-
-    ioctl_display_set_fullscreen(vfd, &fs);
-    ioctl_console_set_active_vc(vfd);
 
     int d = gfx->height / 5;
     int i = 10;
