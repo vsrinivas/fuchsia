@@ -45,7 +45,7 @@ private, sensitive or real in Ledger yet.
 ### Configure
 
 Cloud sync is powered by Firebase. Either [configure](firebase.md) your own
-instance or use an existing correctly configured instance that your have
+instance or use an existing correctly configured instance that you have
 permission to use.
 
 Once you picked the instance to use, add a new Fuchsia user in the device shell,

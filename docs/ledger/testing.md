@@ -33,12 +33,12 @@ running `/system/test/ledger_integration_tests`.
 **application tests** are also written against client-facing FIDL services
 exposed by Ledger, but in this case the test code runs in a separate process,
 and connects to Ledger the same way any other client application would do. This
-is the highest-level way of testing that excercises all of the Ledger stack.
+is the highest-level way of testing that exercises all of the Ledger stack.
 
 Application tests inherit from [LedgerAppTest] and are currently all placed in
 one file at `src/app/ledger_apptests.cc`.
 
-All applicaton tests in the Ledger tree are built into a single
+All application tests in the Ledger tree are built into a single
 `ledger_apptests` binary, that by default can be executed on Fuchsia by running
 `ledger_apptests`.
 

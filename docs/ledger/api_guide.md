@@ -2,8 +2,7 @@
 
 This document describes how to use Ledger for synchronized application storage
 in a client application. The goal of the document is to explain the key concepts
-and the most common operations, not neccessarily to cover all of the API
-surface.
+and the most common operations, not necessarily to cover the entire API surface.
 
 [TOC]
 
@@ -66,7 +65,7 @@ Deciding how to split data into pages has the following implications:
  - atomic changes across multiple values are possible only within one page, so
    if there's data that has to be modified together, it must belong to the
    same page
- - current state of each page is either entirely present or entirely absent on
+ - the current state of each page is either entirely present or entirely absent on
    disk (modulo lazy values, see below), hence splitting data into multiple
    pages allows granular optimization of which data to keep on disk on each
    device
@@ -125,9 +124,9 @@ forward.
 
 ### Writing
 
-Values can be written / modified using mutation methods of the Page interface.
+Values can be written/modified using mutation methods of the Page interface.
 
-There are two ways to write a value into page:
+There are two ways to write a value into a page:
 
  - directly, passing the value in a FIDL message (that's `Put()` and
    `PutWithPriority()` methods). This is handy, but note that the developer
