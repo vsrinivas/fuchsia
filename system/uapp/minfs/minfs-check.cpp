@@ -14,7 +14,7 @@ namespace minfs {
 
 mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
     if (ino >= fs_->info_.inode_count) {
-        error("check: ino %u out of range (>=%u)\n",
+        FS_TRACE_ERROR("check: ino %u out of range (>=%u)\n",
               ino, fs_->info_.inode_count);
         return ERR_OUT_OF_RANGE;
     }
@@ -24,7 +24,7 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
                       bno_of_ino * kMinfsBlockSize + off_of_ino;
     memcpy(inode, reinterpret_cast<void*>(iaddr), kMinfsInodeSize);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
-        error("check: ino %u has bad magic %#x\n", ino, inode->magic);
+        FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
         return ERR_IO_DATA_INTEGRITY;
     }
     return NO_ERROR;
@@ -84,12 +84,12 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         size_t actual;
         status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, off, &actual);
         if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
-            error("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
+            FS_TRACE_ERROR("check: ino#%u: Could not read de[%u] at %zd\n", eno, ino, off);
             if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
                 // So we couldn't read the last direntry, for whatever reason, but our
                 // inode says that we shouldn't have been able to read it anyway.
-                error("check: de count (%u) > inode_dirent_count (%u)\n", eno, inode->dirent_count);
-                error("This directory and its inode disagree; the directory contents indicate\n"
+                FS_TRACE_ERROR("check: de count (%u) > inode_dirent_count (%u)\n", eno, inode->dirent_count);
+                FS_TRACE_ERROR("This directory and its inode disagree; the directory contents indicate\n"
                       "there might be more contents, but the inode says that the last entry\n"
                       "should already be marked as last.\n\n"
                       "Mark the directory as holding [%u] entries? (DEFAULT: y) [y/n] > ",
@@ -99,7 +99,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                     // Mark the 'last' visible direntry as last.
                     status = vn->ReadInternal(data, MINFS_DIRENT_SIZE, prev_off, &actual);
                     if (status != NO_ERROR || actual != MINFS_DIRENT_SIZE) {
-                        error("check: Error trying to update last dirent as 'last': %d.\n"
+                        FS_TRACE_ERROR("check: Error trying to update last dirent as 'last': %d.\n"
                               "Can't read the last dirent even though we just did earlier.\n",
                               status);
                         return status < 0 ? status : ERR_IO;
@@ -121,51 +121,51 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         bool is_last = de->reclen & kMinfsReclenLast;
         if (!is_last && ((rlen < MINFS_DIRENT_SIZE) ||
                          (rlen > kMinfsMaxDirentSize) || (rlen & 3))) {
-            error("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
+            FS_TRACE_ERROR("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
             return ERR_IO_DATA_INTEGRITY;
         }
         if (de->ino == 0) {
             if (flags & CD_DUMP) {
-                info("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
+                FS_TRACE_INFO("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
             }
         } else {
             // Re-read the dirent to acquire the full name
             uint32_t record_full[DirentSize(NAME_MAX)];
             status = vn->ReadInternal(record_full, DirentSize(de->namelen), off, &actual);
             if (status != NO_ERROR || actual != DirentSize(de->namelen)) {
-                error("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
+                FS_TRACE_ERROR("check: Error reading dirent of size: %u\n", DirentSize(de->namelen));
                 return ERR_IO;
             }
             de = reinterpret_cast<minfs_dirent_t*>(record_full);
             bool dot_or_dotdot = false;
 
             if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
-                error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
+                FS_TRACE_ERROR("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
                 return ERR_IO_DATA_INTEGRITY;
             }
             if ((de->namelen == 1) && (de->name[0] == '.')) {
                 if (dot) {
-                    error("check: ino#%u: multiple '.' entries\n", ino);
+                    FS_TRACE_ERROR("check: ino#%u: multiple '.' entries\n", ino);
                 }
                 dot_or_dotdot = true;
                 dot = true;
                 if (de->ino != ino) {
-                    error("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
+                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
                 }
             }
             if ((de->namelen == 2) && (de->name[0] == '.') && (de->name[1] == '.')) {
                 if (dotdot) {
-                    error("check: ino#%u: multiple '..' entries\n", ino);
+                    FS_TRACE_ERROR("check: ino#%u: multiple '..' entries\n", ino);
                 }
                 dot_or_dotdot = true;
                 dotdot = true;
                 if (de->ino != parent) {
-                    error("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
+                    FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
                 }
             }
             //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
             if (flags & CD_DUMP) {
-                info("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n",
+                FS_TRACE_INFO("ino#%u: de[%u]: ino=%u type=%u '%.*s' %s\n",
                      ino, eno, de->ino, de->type, de->namelen, de->name, is_last ? "[last]" : "");
             }
 
@@ -185,14 +185,14 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
         eno++;
     }
     if (dirent_count != inode->dirent_count) {
-        error("check: ino#%u: dirent_count of %u != %u (actual)\n",
+        FS_TRACE_ERROR("check: ino#%u: dirent_count of %u != %u (actual)\n",
               ino, inode->dirent_count, dirent_count);
     }
     if (dot == false) {
-        error("check: ino#%u: directory missing '.'\n", ino);
+        FS_TRACE_ERROR("check: ino#%u: directory missing '.'\n", ino);
     }
     if (dotdot == false) {
-        error("check: ino#%u: directory missing '..'\n", ino);
+        FS_TRACE_ERROR("check: ino#%u: directory missing '..'\n", ino);
     }
     return NO_ERROR;
 }
@@ -215,11 +215,11 @@ const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
 }
 
 mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
-    info("Direct blocks: \n");
+    FS_TRACE_INFO("Direct blocks: \n");
     for (unsigned n = 0; n < kMinfsDirect; n++) {
-        info(" %d,", inode->dnum[n]);
+        FS_TRACE_INFO(" %d,", inode->dnum[n]);
     }
-    info(" ...\n");
+    FS_TRACE_INFO(" ...\n");
 
     uint32_t blocks = 0;
 
@@ -228,7 +228,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
         if (inode->inum[n]) {
             const char* msg;
             if ((msg = CheckDataBlock(inode->inum[n])) != nullptr) {
-                warn("check: ino#%u: indirect block %u(@%u): %s\n",
+               FS_TRACE_WARN("check: ino#%u: indirect block %u(@%u): %s\n",
                      ino, n, inode->inum[n], msg);
                 conforming_ = false;
             }
@@ -253,7 +253,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
             blocks++;
             const char* msg;
             if ((msg = CheckDataBlock(bno)) != nullptr) {
-                warn("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
+               FS_TRACE_WARN("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
                 conforming_ = false;
             }
             blocks_allocated = n + 1;
@@ -262,12 +262,12 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     if (blocks_allocated) {
         unsigned max_blocks = mxtl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
         if (blocks_allocated > max_blocks) {
-            warn("check: ino#%u: filesize too small\n", ino);
+           FS_TRACE_WARN("check: ino#%u: filesize too small\n", ino);
             conforming_ = false;
         }
     }
     if (blocks != inode->block_count) {
-        warn("check: ino#%u: block count %u, actual blocks %u\n",
+       FS_TRACE_WARN("check: ino#%u: block count %u, actual blocks %u\n",
              ino, inode->block_count, blocks);
         conforming_ = false;
     }
@@ -279,14 +279,14 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
     mx_status_t status;
 
     if ((status = GetInode(&inode, ino)) < 0) {
-        error("check: ino#%u: not readable\n", ino);
+        FS_TRACE_ERROR("check: ino#%u: not readable\n", ino);
         return status;
     }
 
     bool prev_checked = checked_inodes_.Get(ino, ino + 1);
 
     if (inode.magic == kMinfsMagicDir && prev_checked && !dot_or_dotdot) {
-        error("check: ino#%u: Multiple hard links to directory (excluding '.' and '..') found\n", ino);
+        FS_TRACE_ERROR("check: ino#%u: Multiple hard links to directory (excluding '.' and '..') found\n", ino);
         return ERR_BAD_STATE;
     }
 
@@ -302,12 +302,12 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
     checked_inodes_.Set(ino, ino + 1);
 
     if (!fs_->inode_map_.Get(ino, ino + 1)) {
-        warn("check: ino#%u: not marked in-use\n", ino);
+       FS_TRACE_WARN("check: ino#%u: not marked in-use\n", ino);
         conforming_ = false;
     }
 
     if (inode.magic == kMinfsMagicDir) {
-        info("ino#%u: DIR blks=%u links=%u\n",
+        FS_TRACE_INFO("ino#%u: DIR blks=%u links=%u\n",
              ino, inode.block_count, inode.link_count);
         if ((status = CheckFile(&inode, ino)) < 0) {
             return status;
@@ -319,7 +319,7 @@ mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_
             return status;
         }
     } else {
-        info("ino#%u: FILE blks=%u links=%u size=%u\n",
+        FS_TRACE_INFO("ino#%u: FILE blks=%u links=%u size=%u\n",
              ino, inode.block_count, inode.link_count, inode.size);
         if ((status = CheckFile(&inode, ino)) < 0) {
             return status;
@@ -338,7 +338,7 @@ mx_status_t MinfsChecker::CheckForUnusedBlocks() const {
         }
     }
     if (missing) {
-        error("check: %u allocated block%s not in use\n",
+        FS_TRACE_ERROR("check: %u allocated block%s not in use\n",
               missing, missing > 1 ? "s" : "");
         return ERR_BAD_STATE;
     }
@@ -355,7 +355,7 @@ mx_status_t MinfsChecker::CheckForUnusedInodes() const {
         }
     }
     if (missing) {
-        error("check: %u allocated inode%s not in use\n",
+        FS_TRACE_ERROR("check: %u allocated inode%s not in use\n",
               missing, missing > 1 ? "s" : "");
         return ERR_BAD_STATE;
     }
@@ -367,12 +367,12 @@ mx_status_t MinfsChecker::CheckLinkCounts() const {
     for (uint32_t n = 0; n < fs_->info_.inode_count; n++) {
         if (links_[n] != 0) {
             error += 1;
-            error("check: inode#%u has incorrect link count %u\n", n + 1, links_[n]);
+            FS_TRACE_ERROR("check: inode#%u has incorrect link count %u\n", n + 1, links_[n]);
             return ERR_BAD_STATE;
         }
     }
     if (error) {
-        error("check: %u inode%s with incorrect link count\n",
+        FS_TRACE_ERROR("check: %u inode%s with incorrect link count\n",
               error, error > 1 ? "s" : "");
         return ERR_BAD_STATE;
     }
@@ -406,7 +406,7 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
 
     char data[kMinfsBlockSize];
     if (bc->Readblk(0, data) < 0) {
-        error("minfs: could not read info block\n");
+        FS_TRACE_ERROR("minfs: could not read info block\n");
         return -1;
     }
     const minfs_info_t* info = reinterpret_cast<const minfs_info_t*>(data);

@@ -190,28 +190,28 @@ mx_status_t VnodeBlob::InitVmos() {
 
     if (merkle_vmo_size != 0) {
         if ((status = MappedVmo::Create(merkle_vmo_size, &merkle_tree_)) != NO_ERROR) {
-            error("Failed to initialize vmo; error: %d\n", status);
+            FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
             goto fail;
         }
 
         for (uint64_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
             uint64_t bno = inode->start_block + n;
             if ((status = vn_fill_block(fd, merkle_tree_->GetVmo(), n, bno)) != NO_ERROR) {
-                error("Failed to fill bno\n");
+                FS_TRACE_ERROR("Failed to fill bno\n");
                 goto fail;
             }
         }
     }
 
     if ((status = MappedVmo::Create(data_vmo_size, &blob_)) != NO_ERROR) {
-        error("Failed to initialize vmo; error: %d\n", status);
+        FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         goto fail;
     }
 
     for (uint64_t n = 0; n < BlobDataBlocks(*inode); n++) {
         uint64_t bno = inode->start_block + n + MerkleTreeBlocks(*inode);
         if ((status = vn_fill_block(fd, blob_->GetVmo(), n, bno)) != NO_ERROR) {
-            error("Failed to fill bno\n");
+            FS_TRACE_ERROR("Failed to fill bno\n");
             goto fail;
         }
     }

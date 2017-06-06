@@ -20,13 +20,13 @@ namespace minfs {
 
 mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
     off_t off = bno * kMinfsBlockSize;
-    trace(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+    FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
-        error("minfs: cannot seek to block %u\n", bno);
+        FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ERR_IO;
     }
     if (read(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
-        error("minfs: cannot read block %u\n", bno);
+        FS_TRACE_ERROR("minfs: cannot read block %u\n", bno);
         return ERR_IO;
     }
     return NO_ERROR;
@@ -34,13 +34,13 @@ mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
 
 mx_status_t Bcache::Writeblk(uint32_t bno, const void* data) {
     off_t off = bno * kMinfsBlockSize;
-    trace(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+    FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
     if (lseek(fd_, off, SEEK_SET) < 0) {
-        error("minfs: cannot seek to block %u\n", bno);
+        FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
         return ERR_IO;
     }
     if (write(fd_, data, kMinfsBlockSize) != kMinfsBlockSize) {
-        error("minfs: cannot write block %u\n", bno);
+        FS_TRACE_ERROR("minfs: cannot write block %u\n", bno);
         return ERR_IO;
     }
     return NO_ERROR;

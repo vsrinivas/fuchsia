@@ -50,7 +50,7 @@ int do_minfs_mount(mxtl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
 
     mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == MX_HANDLE_INVALID) {
-        error("minfs: Could not access startup handle to mount point\n");
+        FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
         return ERR_BAD_STATE;
     }
 
@@ -293,9 +293,9 @@ int main(int argc, char** argv) {
     // handle options
     while (argc > 1) {
         if (!strcmp(argv[1], "-v")) {
-            trace_on(TRACE_SOME);
+            fs_trace_on(FS_TRACE_SOME);
         } else if (!strcmp(argv[1], "-vv")) {
-            trace_on(TRACE_ALL);
+            fs_trace_on(FS_TRACE_ALL);
         } else {
             break;
         }

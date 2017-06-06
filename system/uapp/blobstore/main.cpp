@@ -29,7 +29,7 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     }
     mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == MX_HANDLE_INVALID) {
-        error("blobstore: Could not access startup handle to mount point\n");
+        FS_TRACE_ERROR("blobstore: Could not access startup handle to mount point\n");
         return h;
     }
     vfs_rpc_server(h, vn);

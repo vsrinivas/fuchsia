@@ -69,7 +69,7 @@ VfsDispatcher::~VfsDispatcher() {
     // (ideally, we could close the port and the threads would die on their own)
     // shut down existing handlers (to prevent races)
     if ((status = shutdown_event_.signal(0u, MX_EVENT_SIGNALED)) != NO_ERROR) {
-        error("couldn't send kill signal to thread\n");
+        FS_TRACE_ERROR("couldn't send kill signal to thread\n");
     }
 
     // reap worker threads
@@ -122,7 +122,7 @@ int VfsDispatcher::Loop() {
             r = shutdown_event_.wait_async(ioport_, 0u, MX_EVENT_SIGNALED,
                                            MX_WAIT_ASYNC_ONCE);
             if (r != NO_ERROR) {
-                error("vfs-dispatcher: error, couldn't reset thread event\n");
+                FS_TRACE_ERROR("vfs-dispatcher: error, couldn't reset thread event\n");
             }
             // exit thread
             xprintf("%s: suicide\n", tname);

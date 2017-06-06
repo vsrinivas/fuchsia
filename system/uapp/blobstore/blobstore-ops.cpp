@@ -150,7 +150,7 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
         case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();
             if (status != NO_ERROR) {
-                error("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
+                FS_TRACE_ERROR("blobstore unmount failed to sync; unmounting anyway: %d\n", status);
             }
             return blobstore_->Unmount();
         }

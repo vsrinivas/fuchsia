@@ -24,39 +24,39 @@
 namespace minfs {
 
 void minfs_dump_info(const minfs_info_t* info) {
-    trace(MINFS, "minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
-    trace(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
-    trace(MINFS, "minfs: inode bitmap @ %10u\n", info->ibm_block);
-    trace(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
-    trace(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
-    trace(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
+    FS_TRACE(MINFS, "minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
+    FS_TRACE(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
+    FS_TRACE(MINFS, "minfs: inode bitmap @ %10u\n", info->ibm_block);
+    FS_TRACE(MINFS, "minfs: alloc bitmap @ %10u\n", info->abm_block);
+    FS_TRACE(MINFS, "minfs: inode table  @ %10u\n", info->ino_block);
+    FS_TRACE(MINFS, "minfs: data blocks  @ %10u\n", info->dat_block);
 }
 
 void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino) {
-    trace(MINFS, "inode[%u]: magic:  %10u\n", ino, inode->magic);
-    trace(MINFS, "inode[%u]: size:   %10u\n", ino, inode->size);
-    trace(MINFS, "inode[%u]: blocks: %10u\n", ino, inode->block_count);
-    trace(MINFS, "inode[%u]: links:  %10u\n", ino, inode->link_count);
+    FS_TRACE(MINFS, "inode[%u]: magic:  %10u\n", ino, inode->magic);
+    FS_TRACE(MINFS, "inode[%u]: size:   %10u\n", ino, inode->size);
+    FS_TRACE(MINFS, "inode[%u]: blocks: %10u\n", ino, inode->block_count);
+    FS_TRACE(MINFS, "inode[%u]: links:  %10u\n", ino, inode->link_count);
 }
 
 mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
     if ((info->magic0 != kMinfsMagic0) ||
         (info->magic1 != kMinfsMagic1)) {
-        error("minfs: bad magic\n");
+        FS_TRACE_ERROR("minfs: bad magic\n");
         return ERR_INVALID_ARGS;
     }
     if (info->version != kMinfsVersion) {
-        error("minfs: FS Version: %08x. Driver version: %08x\n", info->version,
+        FS_TRACE_ERROR("minfs: FS Version: %08x. Driver version: %08x\n", info->version,
               kMinfsVersion);
         return ERR_INVALID_ARGS;
     }
     if ((info->block_size != kMinfsBlockSize) ||
         (info->inode_size != kMinfsInodeSize)) {
-        error("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
+        FS_TRACE_ERROR("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
         return ERR_INVALID_ARGS;
     }
     if (info->block_count > max) {
-        error("minfs: too large for device\n");
+        FS_TRACE_ERROR("minfs: too large for device\n");
         return ERR_INVALID_ARGS;
     }
     //TODO: validate layout
@@ -390,13 +390,13 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     for (uint32_t n = 0; n < fs->abmblks_; n++) {
         void* bmdata = GetBlock<const RawBitmap&>(fs->block_map_, n);
         if (fs->bc_->Readblk(fs->info_.abm_block + n, bmdata)) {
-            error("minfs: failed reading alloc bitmap\n");
+            FS_TRACE_ERROR("minfs: failed reading alloc bitmap\n");
         }
     }
     for (uint32_t n = 0; n < fs->ibmblks_; n++) {
         void* bmdata = GetBlock<const RawBitmap&>(fs->inode_map_, n);
         if (fs->bc_->Readblk(fs->info_.ibm_block + n, bmdata)) {
-            error("minfs: failed reading inode bitmap\n");
+            FS_TRACE_ERROR("minfs: failed reading inode bitmap\n");
         }
     }
 #endif
@@ -410,7 +410,7 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
 
     char blk[kMinfsBlockSize];
     if ((status = bc->Readblk(0, &blk)) != NO_ERROR) {
-        error("minfs: could not read info block\n");
+        FS_TRACE_ERROR("minfs: could not read info block\n");
         return status;
     }
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
@@ -419,13 +419,13 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
 
     Minfs* fs;
     if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != NO_ERROR) {
-        error("minfs: mount failed\n");
+        FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }
 
     mxtl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != NO_ERROR) {
-        error("minfs: cannot find root inode\n");
+        FS_TRACE_ERROR("minfs: cannot find root inode\n");
         delete fs;
         return status;
     }
@@ -491,19 +491,19 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     // real block or inode.
     mx_status_t status;
     if ((status = abm.Reset(mxtl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
-        error("mkfs: Failed to allocate block bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
         return status;
     }
     if ((status = ibm.Reset(mxtl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
-        error("mkfs: Failed to allocate inode bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap\n");
         return status;
     }
     if ((status = abm.Shrink(info.block_count)) < 0) {
-        error("mkfs: Failed to shrink block bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to shrink block bitmap\n");
         return status;
     }
     if ((status = ibm.Shrink(info.inode_count)) < 0) {
-        error("mkfs: Failed to shrink inode bitmap\n");
+        FS_TRACE_ERROR("mkfs: Failed to shrink inode bitmap\n");
         return status;
     }
 

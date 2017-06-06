@@ -219,7 +219,7 @@ mx_status_t VnodeMinfs::InitVmo() {
     mx_status_t status;
     if ((status = mx::vmo::create(mxtl::roundup(inode_.size, kMinfsBlockSize),
                                   0, &vmo_)) != NO_ERROR) {
-        error("Failed to initialize vmo; error: %d\n", status);
+        FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
 
@@ -403,15 +403,15 @@ mx_status_t VnodeMinfs::WriteExactInternal(WriteTxn* txn, const void* data,
 static mx_status_t validate_dirent(minfs_dirent_t* de, size_t bytes_read, size_t off) {
     uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
     if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
-        error("vn_dir: Could not read dirent at offset: %zd\n", off);
+        FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
         return ERR_IO;
     } else if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & 3)) {
-        error("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
+        FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
         return ERR_IO;
     } else if (de->ino != 0) {
         if ((de->namelen == 0) ||
             (de->namelen > (reclen - MINFS_DIRENT_SIZE))) {
-            error("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
+            FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
             return ERR_IO;
         }
     }
@@ -467,10 +467,10 @@ mx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
     if (!(de->reclen & kMinfsReclenLast)) {
         size_t len = MINFS_DIRENT_SIZE;
         if ((status = ReadExactInternal(&de_next, len, off_next)) != NO_ERROR) {
-            error("unlink: Failed to read next dirent\n");
+            FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
             return status;
         } else if ((status = validate_dirent(&de_next, len, off_next)) != NO_ERROR) {
-            error("unlink: Read invalid dirent\n");
+            FS_TRACE_ERROR("unlink: Read invalid dirent\n");
             return status;
         }
         if (de_next.ino == 0) {
@@ -482,10 +482,10 @@ mx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
     if (off_prev != off) {
         size_t len = MINFS_DIRENT_SIZE;
         if ((status = ReadExactInternal(&de_prev, len, off_prev)) != NO_ERROR) {
-            error("unlink: Failed to read previous dirent\n");
+            FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
             return status;
         } else if ((status = validate_dirent(&de_prev, len, off_prev)) != NO_ERROR) {
-            error("unlink: Read invalid dirent\n");
+            FS_TRACE_ERROR("unlink: Read invalid dirent\n");
             return status;
         }
         if (de_prev.ino == 0) {
@@ -674,7 +674,7 @@ static mx_status_t cb_dir_append(mxtl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t*
         // filled entry, can we sub-divide?
         uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
         if (size > reclen) {
-            error("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
+            FS_TRACE_ERROR("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
             return ERR_IO;
         }
         uint32_t extra = reclen - size;
@@ -719,7 +719,7 @@ mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
         .off_prev = 0,
     };
     while (offs.off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
-        trace(MINFS, "Reading dirent at offset %zd\n", offs.off);
+        FS_TRACE(MINFS, "Reading dirent at offset %zd\n", offs.off);
         size_t r;
         mx_status_t status = ReadInternal(data, kMinfsMaxDirentSize, offs.off, &r);
         if (status != NO_ERROR) {
@@ -767,7 +767,7 @@ VnodeMinfs::~VnodeMinfs() {
 }
 
 mx_status_t VnodeMinfs::Open(uint32_t flags) {
-    trace(MINFS, "minfs_open() vn=%p(#%u)\n", this, ino_);
+    FS_TRACE(MINFS, "minfs_open() vn=%p(#%u)\n", this, ino_);
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return ERR_NOT_DIR;
     }
@@ -775,7 +775,7 @@ mx_status_t VnodeMinfs::Open(uint32_t flags) {
 }
 
 ssize_t VnodeMinfs::Read(void* data, size_t len, size_t off) {
-    trace(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
+    FS_TRACE(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ERR_NOT_FILE;
     }
@@ -844,7 +844,7 @@ mx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 }
 
 ssize_t VnodeMinfs::Write(const void* data, size_t len, size_t off) {
-    trace(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
+    FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ERR_NOT_FILE;
     }
@@ -950,12 +950,12 @@ done:
 }
 
 mx_status_t VnodeMinfs::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    trace(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
+    FS_TRACE(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
     assert(len <= kMinfsMaxNameSize);
     assert(memchr(name, '/', len) == NULL);
 
     if (!IsDirectory()) {
-        error("not directory\n");
+        FS_TRACE_ERROR("not directory\n");
         return ERR_NOT_SUPPORTED;
     }
 
@@ -987,7 +987,7 @@ mx_status_t VnodeMinfs::LookupInternal(mxtl::RefPtr<fs::Vnode>* out,
 }
 
 mx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
-    trace(MINFS, "minfs_getattr() vn=%p(#%u)\n", this, ino_);
+    FS_TRACE(MINFS, "minfs_getattr() vn=%p(#%u)\n", this, ino_);
     a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic));
     a->inode = ino_;
     a->size = inode_.size;
@@ -1001,7 +1001,7 @@ mx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
 
 mx_status_t VnodeMinfs::Setattr(vnattr_t* a) {
     int dirty = 0;
-    trace(MINFS, "minfs_setattr() vn=%p(#%u)\n", this, ino_);
+    FS_TRACE(MINFS, "minfs_setattr() vn=%p(#%u)\n", this, ino_);
     if ((a->valid & ~(ATTR_CTIME|ATTR_MTIME)) != 0) {
         return ERR_NOT_SUPPORTED;
     }
@@ -1031,7 +1031,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
               "MinFS dircookie too large to fit in IO state");
 
 mx_status_t VnodeMinfs::Readdir(void* cookie, void* dirents, size_t len) {
-    trace(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
+    FS_TRACE(MINFS, "minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, ino_, cookie, len);
     dircookie_t* dc = reinterpret_cast<dircookie_t*>(cookie);
     fs::DirentFiller df(dirents, len);
 
@@ -1130,7 +1130,7 @@ mx_status_t VnodeMinfs::AllocateHollow(Minfs* fs, mxtl::RefPtr<VnodeMinfs>* out)
 }
 
 mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
-    trace(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
+    FS_TRACE(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
           this, ino_, (int)len, name, mode);
     assert(len <= kMinfsMaxNameSize);
     assert(memchr(name, '/', len) == NULL);
@@ -1200,7 +1200,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
         case IOCTL_VFS_UNMOUNT_FS: {
             mx_status_t status = Sync();
             if (status != NO_ERROR) {
-                error("minfs unmount failed to sync; unmounting anyway: %d\n", status);
+                FS_TRACE_ERROR("minfs unmount failed to sync; unmounting anyway: %d\n", status);
             }
             // 'fs_' is deleted after Unmount is called.
             return fs_->Unmount();
@@ -1212,7 +1212,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
 }
 
 mx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
-    trace(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
+    FS_TRACE(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
     assert(len <= kMinfsMaxNameSize);
     assert(memchr(name, '/', len) == NULL);
     if (!IsDirectory()) {
@@ -1351,7 +1351,7 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
                                const char* newname, size_t newlen, bool src_must_be_dir,
                                bool dst_must_be_dir) {
     auto newdir = mxtl::RefPtr<VnodeMinfs>::Downcast(_newdir);
-    trace(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
+    FS_TRACE(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
           this, ino_, newdir.get(), newdir->ino_, (int)oldlen, oldname, (int)newlen, newname);
     assert(oldlen <= kMinfsMaxNameSize);
     assert(memchr(oldname, '/', oldlen) == NULL);
@@ -1436,7 +1436,7 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
 }
 
 mx_status_t VnodeMinfs::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> _target) {
-    trace(MINFS, "minfs_link() vndir=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
+    FS_TRACE(MINFS, "minfs_link() vndir=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
     assert(len <= kMinfsMaxNameSize);
     assert(memchr(name, '/', len) == NULL);
     if (!IsDirectory()) {

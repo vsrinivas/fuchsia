@@ -96,7 +96,7 @@ void RemoteContainer::SetRemote(mx_handle_t remote) {
 
 mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const char* path,
                       const char** pathout, uint32_t flags, uint32_t mode) {
-    trace(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
+    FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
     mx_status_t r;
     if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
         return r;
@@ -160,7 +160,7 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
             return r;
         }
     }
-    trace(VFS, "VfsOpen: vn=%p\n", vn.get());
+    FS_TRACE(VFS, "VfsOpen: vn=%p\n", vn.get());
     *pathout = "";
     *out = vn;
     return NO_ERROR;
