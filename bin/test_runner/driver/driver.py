@@ -165,19 +165,26 @@ class Driver(object):
   def __init__(self):
     self.current_id = None
     self.current_test = None
-    self.failed = []
-    self.count = 0
+    self.passed = 0
+    self.failed = 0
+    self.failed_results = []
 
   def _on_result(self, result):
-    self.count += 1
     Log.test_result(result)
     if result['failed']:
+      self.failed += 1
       Log.full_report(result)
-      self.failed.append(result)
+      self.failed_results.append(result)
+    else:
+      self.passed += 1
 
   def _on_empty_result(self, failed):
-    self.count += 1
-    status = 'failed' if failed else 'passed'
+    if failed:
+      self.failed += 1
+      status = 'failed'
+    else:
+      self.passed += 1
+      status = 'passed'
     Log.line(status, self.current_test['name'])
 
   def start_test(self, id_, test):
@@ -211,10 +218,11 @@ class Driver(object):
         raise BadOpCode(op)
 
   def print_summary(self):
-    Log.print_('\nRan %d total tests: %d passed, %d failed' % (
-        self.count, self.count - len(self.failed), len(self.failed)))
+    Log.print_('')
+    Log.print_('Ran %d total tests: %d passed, %d failed' % (
+        self.passed + self.failed, self.passed, self.failed))
 
     if self.failed:
       Log.print_('Summary of failures:')
-      for result in self.failed:
+      for result in self.failed_results:
         Log.full_report(result)

@@ -98,10 +98,16 @@ class FuchsiaToolsTest(unittest.TestCase):
 class DriverTest(unittest.TestCase):
   TEST = {'name': 'test', 'exec': 'whatever'}
 
+  def fake_log(self):
+    log = []
+    Log.print_ = log.append
+    return log
+
   def result_msg(self, test_id, **result):
     return '%s result %s' % (test_id, json.dumps(result))
 
   def test_run_many(self):
+    log = self.fake_log()
     driver = Driver()
 
     messages = [
@@ -111,9 +117,9 @@ class DriverTest(unittest.TestCase):
     ]
     driver.start_test('111', self.TEST)
     driver.wait_for_teardown(messages)
-    self.assertEqual(driver.count, 2)
-    self.assertEqual(len(driver.failed), 1)
-    self.assertEqual(driver.failed[0]['message'], '!')
+    self.assertEqual(driver.passed, 1)
+    self.assertEqual(driver.failed, 1)
+    self.assertEqual(driver.failed_results[0]['message'], '!')
 
     messages = [
       self.result_msg('222', name='z', elapsed=0, failed=False, message=''),
@@ -121,24 +127,36 @@ class DriverTest(unittest.TestCase):
     ]
     driver.start_test('222', self.TEST)
     driver.wait_for_teardown(messages)
-    self.assertEqual(driver.count, 3)
-    self.assertEqual(len(driver.failed), 1)
+    self.assertEqual(driver.passed, 2)
+    self.assertEqual(driver.failed, 1)
 
-  def test_no_results(self):
-    log = []
-    Log.print_ = log.append
+    driver.print_summary()
+    self.assertIn('Ran 3 total tests: 2 passed, 1 failed', log)
+
+  def test_empty_passed_result(self):
+    log = self.fake_log()
     driver = Driver()
 
     driver.start_test('111', self.TEST)
     driver.wait_for_teardown(['111 teardown pass'])
-    self.assertEqual(driver.count, 1)
+    self.assertEqual(driver.passed, 1)
+    self.assertEqual(driver.failed, 0)
     self.assertIn('[passed] test', log)
 
-  def test_log(self):
-    log = []
-    Log.print_ = log.append
-
+  def test_empty_failed_result(self):
+    log = self.fake_log()
     driver = Driver()
+
+    driver.start_test('111', self.TEST)
+    driver.wait_for_teardown(['111 teardown fail'])
+    self.assertEqual(driver.passed, 0)
+    self.assertEqual(driver.failed, 1)
+    self.assertIn('[failed] test', log)
+
+  def test_log(self):
+    log = self.fake_log()
+    driver = Driver()
+
     driver.start_test('111', self.TEST)
     driver.wait_for_teardown(['111 log hello', '111 teardown pass'])
     self.assertIn('[log] hello', log)
