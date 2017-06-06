@@ -98,7 +98,7 @@ void ViewState::SetServiceProvider(
 }
 
 void ViewState::RebuildFocusChain() {
-  focus_chain_ = mozart::FocusChain::New();
+  focus_chain_ = std::make_unique<FocusChain>();
   // This will come into play with focus chain management API
   focus_chain_->version = 1;
 

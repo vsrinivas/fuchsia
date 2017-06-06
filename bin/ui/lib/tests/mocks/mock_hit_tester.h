@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_HIT_TESTER_H_
-#define APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_HIT_TESTER_H_
+#ifndef APPS_MOZART_LIB_TESTS_MOCK_HIT_TESTER_H_
+#define APPS_MOZART_LIB_TESTS_MOCK_HIT_TESTER_H_
 
 #include <unordered_map>
 
@@ -11,6 +11,7 @@
 #include "lib/ftl/macros.h"
 
 namespace mozart {
+namespace test {
 
 class MockHitTester : public HitTester {
  public:
@@ -30,6 +31,7 @@ class MockHitTester : public HitTester {
   FTL_DISALLOW_COPY_AND_ASSIGN(MockHitTester);
 };
 
+}  // namespace test
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_HIT_TESTER_H_
+#endif  // APPS_MOZART_LIB_TESTS_MOCK_HIT_TESTER_H_

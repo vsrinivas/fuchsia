@@ -12,8 +12,10 @@
 
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "apps/mozart/src/view_manager/input_connection_impl.h"
-#include "apps/mozart/src/view_manager/input_dispatcher_impl.h"
+#include "apps/mozart/src/view_manager/input/input_connection_impl.h"
+#include "apps/mozart/src/view_manager/input/input_dispatcher_impl.h"
+#include "apps/mozart/src/view_manager/internal/input_owner.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "apps/mozart/src/view_manager/view_state.h"
 #include "apps/mozart/src/view_manager/view_stub.h"
@@ -24,7 +26,7 @@ namespace view_manager {
 
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
-class ViewRegistry : public mozart::ViewInspector {
+class ViewRegistry : public ViewInspector, public InputOwner {
  public:
   explicit ViewRegistry(app::ApplicationContext* application_context);
   ~ViewRegistry() override;
@@ -124,7 +126,7 @@ class ViewRegistry : public mozart::ViewInspector {
       fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
       const GetHitTesterCallback& callback) override;
 
-  void ResolveScenes(fidl::Array<mozart::SceneTokenPtr> scene_tokens,
+  void ResolveScenes(std::vector<mozart::SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
 
   void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
@@ -139,22 +141,25 @@ class ViewRegistry : public mozart::ViewInspector {
   void GetImeService(
       mozart::ViewTokenPtr view_token,
       fidl::InterfaceRequest<mozart::ImeService> ime_service) override;
+  void ResolveHits(mozart::HitTestResultPtr hit_test_result,
+                   const ResolvedHitsCallback& callback) override;
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
                     mozart::InputEventPtr event,
-                    OnEventDelivered callback);
+                    ViewInspector::OnEventDelivered callback) override;
 
   // Query view for hit test
-  void ViewHitTest(const mozart::ViewToken* view_token,
-                   mozart::PointFPtr point,
-                   const mozart::ViewHitTester::HitTestCallback& callback);
+  void ViewHitTest(
+      const mozart::ViewToken* view_token,
+      mozart::PointFPtr point,
+      const mozart::ViewHitTester::HitTestCallback& callback) override;
 
   // INPUT CONNECTION CALLBACKS
-  void OnInputConnectionDied(InputConnectionImpl* connection);
+  void OnInputConnectionDied(InputConnectionImpl* connection) override;
 
   // INPUT DISPATCHER CALLBACKS
-  void OnInputDispatcherDied(InputDispatcherImpl* dispatcher);
+  void OnInputDispatcherDied(InputDispatcherImpl* dispatcher) override;
 
  private:
   // Temporary.  Allow access from these two subclasses as we transition from
@@ -227,6 +232,16 @@ class ViewRegistry : public mozart::ViewInspector {
   void CreateInputDispatcher(
       mozart::ViewTreeTokenPtr view_tree_token,
       fidl::InterfaceRequest<mozart::InputDispatcher> request);
+
+  // ResolveHits Helper
+  void ResolveSceneHit(
+      const mozart::SceneHit* scene_hit,
+      ResolvedHits* resolved_hits,
+      std::vector<mozart::SceneTokenPtr>* missing_scene_tokens);
+  void OnScenesResolved(std::unique_ptr<ResolvedHits> resolved_hits,
+                        std::vector<uint32_t> missing_scene_token_values,
+                        const ResolvedHitsCallback& callback,
+                        std::vector<mozart::ViewTokenPtr> view_tokens);
 
   // LOOKUP
 

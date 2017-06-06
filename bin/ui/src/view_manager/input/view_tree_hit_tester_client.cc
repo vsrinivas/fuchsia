@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
+#include "apps/mozart/src/view_manager/input/view_tree_hit_tester_client.h"
 
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
+namespace view_manager {
 
 ViewTreeHitTesterClient::ViewTreeHitTesterClient(
-    const ftl::RefPtr<ViewInspectorClient>& view_inspector_client,
-    ViewTreeTokenPtr view_tree_token)
-    : view_inspector_client_(view_inspector_client),
+    ViewInspector* view_inspector,
+    mozart::ViewTreeTokenPtr view_tree_token)
+    : view_inspector_(view_inspector),
       view_tree_token_(std::move(view_tree_token)),
       weak_factory_(this) {
-  FTL_DCHECK(view_inspector_client_);
+  FTL_DCHECK(view_inspector_);
   FTL_DCHECK(view_tree_token_);
 
   UpdateHitTester();
@@ -23,7 +23,7 @@ ViewTreeHitTesterClient::ViewTreeHitTesterClient(
 
 ViewTreeHitTesterClient::~ViewTreeHitTesterClient() {}
 
-void ViewTreeHitTesterClient::HitTest(PointFPtr point,
+void ViewTreeHitTesterClient::HitTest(mozart::PointFPtr point,
                                       const ResolvedHitsCallback& callback) {
   if (!hit_tester_) {
     callback(nullptr);
@@ -35,24 +35,24 @@ void ViewTreeHitTesterClient::HitTest(PointFPtr point,
   // assumption.
   pending_callbacks_.push(callback);
 
-  hit_tester_->HitTest(std::move(point), [this](HitTestResultPtr result) {
-    OnHitTestResult(std::move(result));
-  });
+  hit_tester_->HitTest(std::move(point),
+                       [this](mozart::HitTestResultPtr result) {
+                         OnHitTestResult(std::move(result));
+                       });
 }
 
-void ViewTreeHitTesterClient::OnHitTestResult(HitTestResultPtr result) {
+void ViewTreeHitTesterClient::OnHitTestResult(mozart::HitTestResultPtr result) {
   FTL_DCHECK(result);
   FTL_DCHECK(!pending_callbacks_.empty());
 
-  view_inspector_client_->ResolveHits(std::move(result),
-                                      pending_callbacks_.front());
+  view_inspector_->ResolveHits(std::move(result), pending_callbacks_.front());
   pending_callbacks_.pop();
 }
 
 void ViewTreeHitTesterClient::UpdateHitTester() {
   FTL_DCHECK(!hit_tester_);
 
-  view_inspector_client_->view_inspector()->GetHitTester(
+  view_inspector_->GetHitTester(
       view_tree_token_.Clone(), hit_tester_.NewRequest(),
       [ this, weak = weak_factory_.GetWeakPtr() ](bool renderer_changed) {
         if (weak)
@@ -88,4 +88,4 @@ void ViewTreeHitTesterClient::OnHitTesterDied() {
     hit_tester_changed_callback_();
 }
 
-}  // namespace mozart
+}  // namespace view_manager

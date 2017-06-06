@@ -22,26 +22,26 @@ class ViewInspectorClientTest : public fidl::test::ApplicationTestBase {
   void SetUp() override {
     fidl::test::ApplicationTestBase::SetUp();
 
-    fidl::InterfaceHandle<mozart::ViewInspector> view_inspector;
+    fidl::InterfaceHandle<ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
     view_inspector_client_ =
-        ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
+        ftl::MakeRefCounted<ViewInspectorClient>(view_inspector.Pass());
   }
 
  protected:
   void ResolveHits(mozart::HitTestResultPtr hit_test_result,
-                   scoped_ptr<mozart::ResolvedHits>* resolved_hits) {
+                   scoped_ptr<ResolvedHits>* resolved_hits) {
     base::RunLoop loop;
     view_inspector_client_->ResolveHits(
         hit_test_result.Pass(),
-        base::Bind(&Capture<scoped_ptr<mozart::ResolvedHits>>,
+        base::Bind(&Capture<scoped_ptr<ResolvedHits>>,
                    loop.QuitClosure(), resolved_hits));
     loop.Run();
   }
 
   mozart::MockViewInspector view_inspector_;
-  fidl::Binding<mozart::ViewInspector> view_inspector_binding_;
-  scoped_refptr<mozart::ViewInspectorClient> view_inspector_client_;
+  fidl::Binding<ViewInspector> view_inspector_binding_;
+  scoped_refptr<ViewInspectorClient> view_inspector_client_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewInspectorClientTest);
@@ -50,7 +50,7 @@ class ViewInspectorClientTest : public fidl::test::ApplicationTestBase {
 TEST_F(ViewInspectorClientTest, EmptyResult) {
   auto hit_test_result = mozart::HitTestResult::New();
 
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   ResolveHits(hit_test_result.Pass(), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -62,7 +62,7 @@ TEST_F(ViewInspectorClientTest, CachingNegativeResult) {
   auto scene_token_1 = MakeDummySceneToken(1u);
 
   // Initial lookup, should miss cache.
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   ResolveHits(MakeSimpleHitTestResult(scene_token_1.Clone()), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -83,7 +83,7 @@ TEST_F(ViewInspectorClientTest, CachingPositiveResult) {
   view_inspector_.SetSceneMapping(scene_token_1->value, view_token_11.Clone());
 
   // Initial lookup, should hit cache.
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   ResolveHits(MakeSimpleHitTestResult(scene_token_1.Clone()), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -132,7 +132,7 @@ TEST_F(ViewInspectorClientTest, CompositeSceneGraph) {
   hit_test_result->root->hits[1]->get_scene()->hits.at(0)->set_node(
       mozart::NodeHit::New());
 
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   ResolveHits(hit_test_result.Pass(), &resolved_hits);
   EXPECT_NE(nullptr, resolved_hits->result());
   EXPECT_EQ(2u, resolved_hits->map().size());

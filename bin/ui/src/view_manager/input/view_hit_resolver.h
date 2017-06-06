@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_VIEW_HIT_RESOLVER_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_VIEW_HIT_RESOLVER_H_
 
 #include <map>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
+#include "apps/mozart/src/view_manager/internal/resolved_hits.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace view_manager {
 
-class ViewRegistry;
+class InputOwner;
 
 struct EventPath {
   mozart::ViewTokenPtr token;
@@ -42,7 +42,7 @@ using OnResolvedCallback =
 
 class ViewHitResolver {
  public:
-  explicit ViewHitResolver(ViewRegistry* registry);
+  explicit ViewHitResolver(InputOwner* owner);
   ~ViewHitResolver();
 
   struct ViewHitNode {
@@ -60,7 +60,7 @@ class ViewHitResolver {
 
   void Resolve(const mozart::SceneHit* root_scene,
                mozart::PointFPtr point,
-               std::unique_ptr<mozart::ResolvedHits> resolved_hits,
+               std::unique_ptr<ResolvedHits> resolved_hits,
                OnResolvedCallback callback);
 
  private:
@@ -92,7 +92,7 @@ class ViewHitResolver {
 
   Resolution* CreateResolution(OnResolvedCallback callback);
 
-  ViewRegistry* const registry_;
+  InputOwner* const owner_;
   std::vector<std::unique_ptr<Resolution>> resolutions_;
 };
 
@@ -103,4 +103,4 @@ std::ostream& operator<<(std::ostream& os,
 
 }  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_HIT_RESOLVER_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_VIEW_HIT_RESOLVER_H_

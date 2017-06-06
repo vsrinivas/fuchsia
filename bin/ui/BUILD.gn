@@ -16,7 +16,6 @@ group("mozart") {
     "examples",
     "lib/input",
     "lib/skia",
-    "lib/view_associate_framework",
     "lib/view_framework",
     "services",
     "src",

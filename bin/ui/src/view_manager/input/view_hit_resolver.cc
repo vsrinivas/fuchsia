@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/view_hit_resolver.h"
+#include "apps/mozart/src/view_manager/input/view_hit_resolver.h"
 
 #include <queue>
 
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/internal/input_owner.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
@@ -45,8 +45,7 @@ bool operator==(const ViewHitResolver::ViewHitNode& lhs,
   return lhs.event_path_->token->value == rhs.event_path_->token->value;
 }
 
-ViewHitResolver::ViewHitResolver(ViewRegistry* registry)
-    : registry_(registry) {}
+ViewHitResolver::ViewHitResolver(InputOwner* owner) : owner_(owner) {}
 
 ViewHitResolver::~ViewHitResolver() {}
 
@@ -63,11 +62,10 @@ ViewHitResolver::Resolution* ViewHitResolver::CreateResolution(
   return ptr;
 }
 
-void ViewHitResolver::Resolve(
-    const mozart::SceneHit* root_scene,
-    mozart::PointFPtr point,
-    std::unique_ptr<mozart::ResolvedHits> resolved_hits,
-    OnResolvedCallback callback) {
+void ViewHitResolver::Resolve(const mozart::SceneHit* root_scene,
+                              mozart::PointFPtr point,
+                              std::unique_ptr<ResolvedHits> resolved_hits,
+                              OnResolvedCallback callback) {
   std::queue<std::pair<const mozart::SceneHit*, ViewHitNode*>> nodes;
   nodes.push(std::make_pair(root_scene, nullptr));
 
@@ -125,7 +123,7 @@ void ViewHitResolver::Resolve(
     p->y = transformed.y;
 
     FTL_VLOG(1) << "ViewHitTesting: " << node;
-    registry_->ViewHitTest(
+    owner_->ViewHitTest(
         node->event_path_->token.get(), std::move(p),
         [node, resolution](bool was_hit,
                            fidl::Array<mozart::ViewTokenPtr> views) mutable {

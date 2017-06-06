@@ -7,13 +7,14 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/views/view_inspector.fidl.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {
+namespace test {
 
-class MockViewInspector : public ViewInspector {
+class MockViewInspector : public view_manager::ViewInspector {
  public:
   MockViewInspector();
   ~MockViewInspector() override;
@@ -40,7 +41,7 @@ class MockViewInspector : public ViewInspector {
   void GetHitTester(ViewTreeTokenPtr view_tree_token,
                     fidl::InterfaceRequest<HitTester> hit_tester_request,
                     const GetHitTesterCallback& callback) override;
-  void ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
+  void ResolveScenes(std::vector<SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
   void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
                          const ResolveFocusChainCallback& callback) override;
@@ -68,6 +69,7 @@ class MockViewInspector : public ViewInspector {
   FTL_DISALLOW_COPY_AND_ASSIGN(MockViewInspector);
 };
 
+}  // namespace test
 }  // namespace mozart
 
 #endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_VIEW_INSPECTOR_H_

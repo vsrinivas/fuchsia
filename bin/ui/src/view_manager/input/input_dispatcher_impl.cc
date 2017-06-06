@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/input_dispatcher_impl.h"
+#include "apps/mozart/src/view_manager/input/input_dispatcher_impl.h"
 
 #include <queue>
 
@@ -10,7 +10,8 @@
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/internal/input_owner.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -37,23 +38,23 @@ int64_t InputEventTimestampNow() {
 }  // namespace
 
 InputDispatcherImpl::InputDispatcherImpl(
-    ViewRegistry* registry,
+    ViewInspector* inspector,
+    InputOwner* owner,
     mozart::ViewTreeTokenPtr view_tree_token,
     fidl::InterfaceRequest<mozart::InputDispatcher> request)
-    : registry_(registry),
+    : inspector_(inspector),
+      owner_(owner),
       view_tree_token_(std::move(view_tree_token)),
-      inspector_(ftl::MakeRefCounted<mozart::ViewInspectorClient>(registry_)),
-      hit_tester_(ftl::MakeRefCounted<mozart::ViewTreeHitTesterClient>(
-          inspector_,
-          view_tree_token_.Clone())),
-      view_hit_resolver_(new ViewHitResolver(registry_)),
+      hit_tester_(
+          new ViewTreeHitTesterClient(inspector_, view_tree_token_.Clone())),
+      view_hit_resolver_(new ViewHitResolver(owner_)),
       binding_(this, std::move(request)),
       weak_factory_(this) {
-  FTL_DCHECK(registry_);
+  FTL_DCHECK(inspector_);
   FTL_DCHECK(view_tree_token_);
 
   binding_.set_connection_error_handler(
-      [this] { registry_->OnInputDispatcherDied(this); });
+      [this] { owner_->OnInputDispatcherDied(this); });
 }
 
 InputDispatcherImpl::~InputDispatcherImpl() {}
@@ -83,7 +84,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
         FTL_VLOG(1) << "HitTest: point=" << point;
         auto hit_result_callback = ftl::MakeCopyable([
           pt = point.Clone(), weak = weak_factory_.GetWeakPtr()
-        ](std::unique_ptr<mozart::ResolvedHits> resolved_hits) mutable {
+        ](std::unique_ptr<ResolvedHits> resolved_hits) mutable {
           if (weak)
             weak->OnHitTestResult(std::move(pt), std::move(resolved_hits));
         });
@@ -91,9 +92,10 @@ void InputDispatcherImpl::ProcessNextEvent() {
         return;
       }
     } else if (event->is_keyboard()) {
-      registry_->ResolveFocusChain(
+      inspector_->ResolveFocusChain(
           view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
-                                        mozart::FocusChainPtr focus_chain) {
+                                        std::unique_ptr<FocusChain>
+                                            focus_chain) {
             if (weak) {
               // Make sure to keep processing events when no focus is defined
               if (focus_chain) {
@@ -122,7 +124,7 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
     mozart::InputEventPtr cloned_event = event.Clone();
     // TODO(jpoichet) once input arena is in place, we won't need the "handled"
     // boolean on the callback anymore.
-    registry_->DeliverEvent(
+    owner_->DeliverEvent(
         event_path->token.get(), std::move(event), ftl::MakeCopyable([
           this, event_path_propagation_id, event_path,
           cloned_event = std::move(cloned_event)
@@ -156,9 +158,10 @@ void InputDispatcherImpl::DeliverEvent(mozart::InputEventPtr event) {
   }
 }
 
-void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
-                                          uint64_t propagation_index,
-                                          mozart::InputEventPtr event) {
+void InputDispatcherImpl::DeliverKeyEvent(
+    std::unique_ptr<FocusChain> focus_chain,
+    uint64_t propagation_index,
+    mozart::InputEventPtr event) {
   FTL_DCHECK(propagation_index < focus_chain->chain.size());
   FTL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "
               << (1 + propagation_index) << "/" << focus_chain->chain.size()
@@ -166,7 +169,7 @@ void InputDispatcherImpl::DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
               << *event;
 
   auto cloned_event = event.Clone();
-  registry_->DeliverEvent(
+  owner_->DeliverEvent(
       focus_chain->chain[propagation_index].get(), std::move(event),
       ftl::MakeCopyable([
         this, focus_chain = std::move(focus_chain), propagation_index,
@@ -212,7 +215,8 @@ void InputDispatcherImpl::PopAndScheduleNextEvent() {
   }
 }
 
-void InputDispatcherImpl::OnFocusResult(mozart::FocusChainPtr focus_chain) {
+void InputDispatcherImpl::OnFocusResult(
+    std::unique_ptr<FocusChain> focus_chain) {
   FTL_VLOG(1) << "OnFocusResult " << focus_chain->version << " "
               << focus_chain->chain.size();
   if (focus_chain->chain.size() > 0) {
@@ -224,7 +228,7 @@ void InputDispatcherImpl::OnFocusResult(mozart::FocusChainPtr focus_chain) {
 
 void InputDispatcherImpl::OnHitTestResult(
     mozart::PointFPtr point,
-    std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
+    std::unique_ptr<ResolvedHits> resolved_hits) {
   FTL_DCHECK(!pending_events_.empty());
   FTL_VLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
 
@@ -239,9 +243,9 @@ void InputDispatcherImpl::OnHitTestResult(
           }
 
           // FIXME(jpoichet) This should be done somewhere else.
-          registry_->ActivateFocusChain(
+          inspector_->ActivateFocusChain(
               views.back()->token->Clone(),
-              [this](mozart::FocusChainPtr new_chain) {
+              [this](std::unique_ptr<FocusChain> new_chain) {
                 if (!active_focus_chain_ ||
                     active_focus_chain_->chain.front()->value !=
                         new_chain->chain.front()->value) {
@@ -253,7 +257,7 @@ void InputDispatcherImpl::OnHitTestResult(
                     focus->event_time = InputEventTimestampNow();
                     focus->focused = false;
                     event->set_focus(std::move(focus));
-                    registry_->DeliverEvent(
+                    owner_->DeliverEvent(
                         active_focus_chain_->chain.front().get(),
                         std::move(event), nullptr);
                   }
@@ -265,8 +269,8 @@ void InputDispatcherImpl::OnHitTestResult(
                   focus->event_time = InputEventTimestampNow();
                   focus->focused = true;
                   event->set_focus(std::move(focus));
-                  registry_->DeliverEvent(new_chain->chain.front().get(),
-                                          std::move(event), nullptr);
+                  owner_->DeliverEvent(new_chain->chain.front().get(),
+                                       std::move(event), nullptr);
 
                   active_focus_chain_ = std::move(new_chain);
                 }

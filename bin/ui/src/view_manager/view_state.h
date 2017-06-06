@@ -9,9 +9,9 @@
 #include <string>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/services/views/view_inspector.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -110,7 +110,7 @@ class ViewState : public ViewContainerState {
   const std::string& label() const { return label_; }
   const std::string& FormattedLabel() const override;
 
-  const mozart::FocusChain* focus_chain() {
+  const FocusChain* focus_chain() {
     // TODO(jpoichet) Focus chain should be built when view tree is modified
     // or by a focus chain management API.
     RebuildFocusChain();
@@ -145,7 +145,7 @@ class ViewState : public ViewContainerState {
 
   uint32_t invalidation_flags_ = 0u;
 
-  mozart::FocusChainPtr focus_chain_;
+  std::unique_ptr<FocusChain> focus_chain_;
   app::ServiceProviderPtr service_provider_;
   fidl::Array<fidl::String> service_names_;
 

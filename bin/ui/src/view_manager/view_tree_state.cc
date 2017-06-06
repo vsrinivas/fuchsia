@@ -57,7 +57,7 @@ ViewStub* ViewTreeState::GetRoot() const {
 
 void ViewTreeState::RequestHitTester(
     fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-    const mozart::ViewInspector::GetHitTesterCallback& callback) {
+    const ViewInspector::GetHitTesterCallback& callback) {
   FTL_DCHECK(hit_tester_request.is_pending());
   if (renderer_)
     renderer_->GetHitTester(std::move(hit_tester_request));
@@ -80,7 +80,7 @@ void ViewTreeState::RequestFocus(ViewStub* child_stub) {
   focused_view_ = child_stub->GetWeakPtr();
 }
 
-const mozart::FocusChain* ViewTreeState::focus_chain() {
+const FocusChain* ViewTreeState::focus_chain() {
   return focused_view_ ? focused_view_->state()->focus_chain() : nullptr;
 }
 

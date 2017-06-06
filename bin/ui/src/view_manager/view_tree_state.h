@@ -11,9 +11,9 @@
 #include <unordered_map>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/services/views/view_inspector.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -78,7 +78,7 @@ class ViewTreeState : public ViewContainerState {
   // The callback will be invoked when the renderer changes.
   void RequestHitTester(
       fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
-      const mozart::ViewInspector::GetHitTesterCallback& callback);
+      const ViewInspector::GetHitTesterCallback& callback);
 
   // Gets or sets flags describing the invalidation state of the view tree.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
@@ -95,7 +95,7 @@ class ViewTreeState : public ViewContainerState {
   const std::string& FormattedLabel() const override;
 
   void RequestFocus(ViewStub* child_stub);
-  const mozart::FocusChain* focus_chain();
+  const FocusChain* focus_chain();
 
  private:
   void ClearHitTesterCallbacks(bool renderer_changed);
@@ -112,7 +112,7 @@ class ViewTreeState : public ViewContainerState {
   mozart::RendererPtr renderer_;
   mozart::FrameSchedulerPtr frame_scheduler_;
 
-  std::vector<mozart::ViewInspector::GetHitTesterCallback>
+  std::vector<ViewInspector::GetHitTesterCallback>
       pending_hit_tester_callbacks_;
 
   uint32_t invalidation_flags_ = 0u;

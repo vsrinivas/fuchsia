@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
+#include "apps/mozart/src/view_manager/input/view_tree_hit_tester_client.h"
 
 #include <utility>
 
-#include "apps/mozart/lib/view_associate_framework/mock_hit_tester.h"
-#include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
-#include "apps/mozart/lib/view_associate_framework/test_helpers.h"
+#include "apps/mozart/lib/tests/mocks/mock_hit_tester.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_inspector.h"
+#include "apps/mozart/src/view_manager/tests/test_helpers.h"
 #include "lib/fidl/cpp/application/application_test_base.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -24,41 +24,41 @@ class ViewTreeHitTesterClientTest : public fidl::test::ApplicationTestBase {
   void SetUp() override {
     fidl::test::ApplicationTestBase::SetUp();
 
-    fidl::InterfaceHandle<mozart::ViewInspector> view_inspector;
+    fidl::InterfaceHandle<ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
     view_inspector_client_ =
-        ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
+        ftl::MakeRefCounted<ViewInspectorClient>(view_inspector.Pass());
 
     view_tree_token_ = mozart::ViewTreeToken::New();
     view_tree_token_->value = 1u;
     view_tree_hit_tester_client_ =
-        ftl::MakeRefCounted<mozart::ViewTreeHitTesterClient>(
+        ftl::MakeRefCounted<ViewTreeHitTesterClient>(
             view_inspector_client_, view_tree_token_.Clone());
   }
 
  protected:
   void HitTest(mozart::PointFPtr point,
-               scoped_ptr<mozart::ResolvedHits>* resolved_hits) {
+               scoped_ptr<ResolvedHits>* resolved_hits) {
     base::RunLoop loop;
     view_tree_hit_tester_client_->HitTest(
-        point.Pass(), base::Bind(&Capture<scoped_ptr<mozart::ResolvedHits>>,
+        point.Pass(), base::Bind(&Capture<scoped_ptr<ResolvedHits>>,
                                  loop.QuitClosure(), resolved_hits));
     loop.Run();
   }
 
   mozart::MockViewInspector view_inspector_;
-  fidl::Binding<mozart::ViewInspector> view_inspector_binding_;
-  ftl::RefPtr<mozart::ViewInspectorClient> view_inspector_client_;
+  fidl::Binding<ViewInspector> view_inspector_binding_;
+  ftl::RefPtr<ViewInspectorClient> view_inspector_client_;
 
   mozart::ViewTreeTokenPtr view_tree_token_;
-  ftl::RefPtr<mozart::ViewTreeHitTesterClient> view_tree_hit_tester_client_;
+  ftl::RefPtr<ViewTreeHitTesterClient> view_tree_hit_tester_client_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClientTest);
 };
 
 TEST_F(ViewTreeHitTesterClientTest, NoHitTester) {
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   HitTest(MakePointF(0.f, 0.f), &resolved_hits);
   EXPECT_EQ(nullptr, resolved_hits.get());
 }
@@ -78,7 +78,7 @@ TEST_F(ViewTreeHitTesterClientTest, HaveHitTester) {
   hit_tester.SetNextResult(
       MakePointF(2.f, 5.f),
       MakeSimpleHitTestResult(scene_token_1.Clone(), transform_111.Clone()));
-  scoped_ptr<mozart::ResolvedHits> resolved_hits;
+  scoped_ptr<ResolvedHits> resolved_hits;
   HitTest(MakePointF(2.f, 5.f), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());

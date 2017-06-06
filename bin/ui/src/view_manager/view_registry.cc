@@ -14,6 +14,7 @@
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/view_manager/view_impl.h"
 #include "apps/mozart/src/view_manager/view_tree_impl.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -60,10 +61,10 @@ std::string SanitizeLabel(const fidl::String& label) {
   return label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
 }
 
-mozart::FocusChainPtr CopyFocusChain(const mozart::FocusChain* chain) {
-  mozart::FocusChainPtr new_chain = nullptr;
+std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
+  std::unique_ptr<FocusChain> new_chain = nullptr;
   if (chain) {
-    new_chain = mozart::FocusChain::New();
+    new_chain = std::make_unique<FocusChain>();
     new_chain->version = chain->version;
     new_chain->chain.resize(chain->chain.size());
     for (size_t index = 0; index < chain->chain.size(); ++index) {
@@ -798,24 +799,21 @@ void ViewRegistry::GetHitTester(
 }
 
 void ViewRegistry::ResolveScenes(
-    fidl::Array<mozart::SceneTokenPtr> scene_tokens,
+    std::vector<mozart::SceneTokenPtr> scene_tokens,
     const ResolveScenesCallback& callback) {
-  FTL_DCHECK(scene_tokens);
+  std::vector<mozart::ViewTokenPtr> result;
 
-  fidl::Array<mozart::ViewTokenPtr> result;
-  result.resize(scene_tokens.size());
-
-  size_t index = 0;
-  for (const auto& scene_token : scene_tokens.storage()) {
+  for (const auto& scene_token : scene_tokens) {
     FTL_DCHECK(scene_token);
     auto it = views_by_scene_token_.find(scene_token->value);
     if (it != views_by_scene_token_.end())
-      result[index] = it->second->view_token()->Clone();
-    index++;
+      result.push_back(it->second->view_token()->Clone());
+    else
+      result.push_back(nullptr);
   }
 
-  FTL_VLOG(1) << "ResolveScenes: scene_tokens=" << scene_tokens
-              << ", result=" << result;
+  // FTL_VLOG(1) << "ResolveScenes: scene_tokens=" << scene_tokens
+  //             << ", result=" << result;
   callback(std::move(result));
 }
 
@@ -847,7 +845,8 @@ void ViewRegistry::ActivateFocusChain(
 
   RequestFocus(view->view_stub()->container(), view->view_stub()->key());
   auto tree_state = view->view_stub()->tree();
-  mozart::FocusChainPtr new_chain = CopyFocusChain(tree_state->focus_chain());
+  std::unique_ptr<FocusChain> new_chain =
+      CopyFocusChain(tree_state->focus_chain());
   callback(std::move(new_chain));
 }
 
@@ -921,6 +920,83 @@ void ViewRegistry::GetImeService(
   }
 }
 
+void ViewRegistry::ResolveHits(mozart::HitTestResultPtr hit_test_result,
+                               const ResolvedHitsCallback& callback) {
+  FTL_DCHECK(hit_test_result);
+
+  std::unique_ptr<ResolvedHits> resolved_hits(
+      new ResolvedHits(std::move(hit_test_result)));
+
+  if (resolved_hits->result()->root) {
+    std::vector<mozart::SceneTokenPtr> missing_scene_tokens;
+    ResolveSceneHit(resolved_hits->result()->root.get(), resolved_hits.get(),
+                    &missing_scene_tokens);
+    if (missing_scene_tokens.size()) {
+      std::vector<uint32_t> missing_scene_token_values;
+      for (const auto& token : missing_scene_tokens)
+        missing_scene_token_values.push_back(token->value);
+
+      std::function<void(std::vector<mozart::ViewTokenPtr>)> resolved_scenes =
+          ftl::MakeCopyable([
+            this, hits = std::move(resolved_hits),
+            token_values = std::move(missing_scene_token_values), callback
+          ](std::vector<mozart::ViewTokenPtr> view_tokens) mutable {
+            OnScenesResolved(std::move(hits), std::move(token_values), callback,
+                             std::move(view_tokens));
+          });
+      ResolveScenes(std::move(missing_scene_tokens), resolved_scenes);
+      return;
+    }
+  }
+
+  callback(std::move(resolved_hits));
+}
+
+// TODO(jpoichet) simplify once we remove the cache
+void ViewRegistry::ResolveSceneHit(
+    const mozart::SceneHit* scene_hit,
+    ResolvedHits* resolved_hits,
+    std::vector<mozart::SceneTokenPtr>* missing_scene_tokens) {
+  FTL_DCHECK(scene_hit);
+  FTL_DCHECK(scene_hit->scene_token);
+  FTL_DCHECK(resolved_hits);
+  FTL_DCHECK(missing_scene_tokens);
+
+  const uint32_t scene_token_value = scene_hit->scene_token->value;
+  if (resolved_hits->map().find(scene_token_value) ==
+      resolved_hits->map().end()) {
+    if (std::none_of(missing_scene_tokens->begin(), missing_scene_tokens->end(),
+                     [scene_token_value](const mozart::SceneTokenPtr& needle) {
+                       return needle->value == scene_token_value;
+                     }))
+      missing_scene_tokens->push_back(scene_hit->scene_token.Clone());
+  }
+
+  for (const auto& hit : scene_hit->hits) {
+    if (hit->is_scene()) {
+      ResolveSceneHit(hit->get_scene().get(), resolved_hits,
+                      missing_scene_tokens);
+    }
+  }
+}
+
+// TODO(jpoichet) simplify once we remove the cache
+void ViewRegistry::OnScenesResolved(
+    std::unique_ptr<ResolvedHits> resolved_hits,
+    std::vector<uint32_t> missing_scene_token_values,
+    const ResolvedHitsCallback& callback,
+    std::vector<mozart::ViewTokenPtr> view_tokens) {
+  FTL_DCHECK(resolved_hits);
+  FTL_DCHECK(missing_scene_token_values.size() == view_tokens.size());
+
+  for (size_t i = 0; i < view_tokens.size(); i++) {
+    const uint32_t scene_token_value = missing_scene_token_values[i];
+    if (view_tokens[i])
+      resolved_hits->AddMapping(scene_token_value, std::move(view_tokens[i]));
+  }
+
+  callback(std::move(resolved_hits));
+}
 // EXTERNAL SIGNALING
 
 void ViewRegistry::SendInvalidation(ViewState* view_state,
@@ -994,7 +1070,7 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
 
 void ViewRegistry::DeliverEvent(const mozart::ViewToken* view_token,
                                 mozart::InputEventPtr event,
-                                OnEventDelivered callback) {
+                                ViewInspector::OnEventDelivered callback) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(event);
   FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
@@ -1044,8 +1120,9 @@ void ViewRegistry::CreateInputConnection(
 
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
-      view_token_value, std::make_unique<InputConnectionImpl>(
-                            this, std::move(view_token), std::move(request)));
+      view_token_value,
+      std::make_unique<InputConnectionImpl>(this, this, std::move(view_token),
+                                            std::move(request)));
 }
 
 void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
@@ -1071,7 +1148,7 @@ void ViewRegistry::CreateInputDispatcher(
   input_dispatchers_by_view_tree_token_.emplace(
       view_tree_token_value,
       std::unique_ptr<InputDispatcherImpl>(new InputDispatcherImpl(
-          this, std::move(view_tree_token), std::move(request))));
+          this, this, std::move(view_tree_token), std::move(request))));
 }
 
 void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {

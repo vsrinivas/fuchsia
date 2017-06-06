@@ -2,28 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/view_manager/input_connection_impl.h"
+#include "apps/mozart/src/view_manager/input/input_connection_impl.h"
 
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/src/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/internal/input_owner.h"
+#include "apps/mozart/src/view_manager/internal/view_inspector.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace view_manager {
 
 InputConnectionImpl::InputConnectionImpl(
-    ViewRegistry* registry,
+    ViewInspector* inspector,
+    InputOwner* owner,
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::InputConnection> request)
-    : registry_(registry),
+    : inspector_(inspector),
+      owner_(owner),
       view_token_(std::move(view_token)),
       binding_(this, std::move(request)),
       editor_binding_(this),
       client_binding_(this) {
-  FTL_DCHECK(registry_);
+  FTL_DCHECK(inspector_);
   FTL_DCHECK(view_token_);
   binding_.set_connection_error_handler(
-      [this] { registry_->OnInputConnectionDied(this); });
+      [this] { owner_->OnInputConnectionDied(this); });
 }
 
 InputConnectionImpl::~InputConnectionImpl() {}
@@ -82,7 +85,7 @@ void InputConnectionImpl::GetInputMethodEditor(
 
   Reset();
 
-  registry_->HasFocus(
+  inspector_->HasFocus(
       view_token_.Clone(), ftl::MakeCopyable([
         this, editor_request = std::move(editor_request),
         client = std::move(client), keyboard_type, action,
@@ -105,8 +108,8 @@ void InputConnectionImpl::GetInputMethodEditor(
                                 std::move(initial_state));
         } else {
           container_.reset();
-          registry_->GetSoftKeyboardContainer(view_token_.Clone(),
-                                              container_.NewRequest());
+          inspector_->GetSoftKeyboardContainer(view_token_.Clone(),
+                                               container_.NewRequest());
           container_.set_connection_error_handler([this] {
             FTL_VLOG(1) << "SoftKeyboardContainer died.";
             // TODO if HW Keyboard available, we should fallback to HW IME
@@ -143,7 +146,7 @@ void InputConnectionImpl::ConnectWithImeService(
               << ", keyboard_type=" << keyboard_type << ", action=" << action
               << ", initial_state=" << *state;
   // Retrieve IME Service from the view tree
-  registry_->GetImeService(view_token_.Clone(), ime_service_.NewRequest());
+  inspector_->GetImeService(view_token_.Clone(), ime_service_.NewRequest());
   ime_service_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "IME Service Died.";
     Reset();

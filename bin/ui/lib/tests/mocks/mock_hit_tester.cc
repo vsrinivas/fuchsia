@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associate_framework/mock_hit_tester.h"
+#include "apps/mozart/lib/tests/mocks/mock_hit_tester.h"
 
 #include "lib/ftl/logging.h"
 
 namespace mozart {
+namespace test {
 
 MockHitTester::MockHitTester() {}
 
@@ -31,4 +32,5 @@ void MockHitTester::HitTest(PointFPtr point, const HitTestCallback& callback) {
   }
 }
 
+}  // namespace test
 }  // namespace mozart

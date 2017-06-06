@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_DISPATCHER_IMPL_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_DISPATCHER_IMPL_H_
 
 #include <queue>
 
-#include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "apps/mozart/src/view_manager/view_hit_resolver.h"
+#include "apps/mozart/src/view_manager/input/view_hit_resolver.h"
+#include "apps/mozart/src/view_manager/input/view_tree_hit_tester_client.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -19,13 +19,15 @@
 
 namespace view_manager {
 
-class ViewRegistry;
+class ViewInspector;
+class InputOwner;
 
 // InputDispatcher implementation.
 // Binds incoming requests to the relevant view token.
 class InputDispatcherImpl : public mozart::InputDispatcher {
  public:
-  InputDispatcherImpl(ViewRegistry* registry,
+  InputDispatcherImpl(ViewInspector* inspector,
+                      InputOwner* owner,
                       mozart::ViewTreeTokenPtr view_tree_token,
                       fidl::InterfaceRequest<mozart::InputDispatcher> request);
   ~InputDispatcherImpl() override;
@@ -46,20 +48,20 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
                     mozart::InputEventPtr event);
   // Used for key events (keyboard)
   // |propagation_index| is the current index in the |focus_chain|
-  void DeliverKeyEvent(mozart::FocusChainPtr focus_chain,
+  void DeliverKeyEvent(std::unique_ptr<FocusChain> focus_chain,
                        uint64_t propagation_index,
                        mozart::InputEventPtr event);
   // Used to post as task and schedule the next call to |DispatchEvent|
   void PopAndScheduleNextEvent();
 
-  void OnFocusResult(mozart::FocusChainPtr focus_chain);
+  void OnFocusResult(std::unique_ptr<FocusChain> focus_chain);
   void OnHitTestResult(mozart::PointFPtr point,
-                       std::unique_ptr<mozart::ResolvedHits> resolved_hits);
+                       std::unique_ptr<ResolvedHits> resolved_hits);
 
-  ViewRegistry* const registry_;
+  ViewInspector* const inspector_;
+  InputOwner* const owner_;
   mozart::ViewTreeTokenPtr view_tree_token_;
-  ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
-  ftl::RefPtr<mozart::ViewTreeHitTesterClient> hit_tester_;
+  ViewTreeHitTesterClient* hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<mozart::InputEventPtr> pending_events_;
@@ -70,7 +72,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
 
   fidl::Binding<mozart::InputDispatcher> binding_;
 
-  mozart::FocusChainPtr active_focus_chain_;
+  std::unique_ptr<FocusChain> active_focus_chain_;
 
   ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 
@@ -79,4 +81,4 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
 
 }  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_DISPATCHER_IMPL_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_DISPATCHER_IMPL_H_

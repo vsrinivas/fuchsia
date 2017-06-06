@@ -23,7 +23,6 @@ executable("input_apptests") {
   deps = [
     "//apps/mozart/lib/tests",
     "//apps/mozart/lib/tests/mocks",
-    "//apps/mozart/lib/view_associate_framework:mocks",
     "//apps/mozart/services/input",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",

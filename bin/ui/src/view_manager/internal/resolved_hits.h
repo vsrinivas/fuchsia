@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_
-#define APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_RESOLVED_HITS_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_RESOLVED_HITS_H_
 
 #include <iosfwd>
 #include <memory>
@@ -13,31 +13,31 @@
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/ftl/macros.h"
 
-namespace mozart {
+namespace view_manager {
 
 using SceneTokenValueToViewTokenMap =
-    std::unordered_map<uint32_t, ViewTokenPtr>;
+    std::unordered_map<uint32_t, mozart::ViewTokenPtr>;
 
 // A hit test result combined with a map explaining how scenes are mapped
 // to views.
 class ResolvedHits {
  public:
-  ResolvedHits(HitTestResultPtr result);
+  ResolvedHits(mozart::HitTestResultPtr result);
   ~ResolvedHits();
 
   // The hit test result, not null unless |TakeResult| was called.
-  const HitTestResult* result() const { return result_.get(); }
-  HitTestResultPtr TakeResult() { return std::move(result_); }
+  const mozart::HitTestResult* result() const { return result_.get(); }
+  mozart::HitTestResultPtr TakeResult() { return std::move(result_); }
 
   // A map from scene token value to view token containing all scenes which
   // could be resolved.
   const SceneTokenValueToViewTokenMap& map() const { return map_; }
 
   // Adds a mapping for the specified scene token value to a view token.
-  void AddMapping(uint32_t scene_token_value, ViewTokenPtr view_token);
+  void AddMapping(uint32_t scene_token_value, mozart::ViewTokenPtr view_token);
 
  private:
-  HitTestResultPtr result_;
+  mozart::HitTestResultPtr result_;
   SceneTokenValueToViewTokenMap map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolvedHits);
@@ -52,6 +52,6 @@ using ResolvedHitsCallback = std::function<void(std::unique_ptr<ResolvedHits>)>;
 std::ostream& operator<<(std::ostream& os, const ResolvedHits& value);
 std::ostream& operator<<(std::ostream& os, const ResolvedHits* value);
 
-}  // namespace mozart
+}  // namespace view_manager
 
-#endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INTERNAL_RESOLVED_HITS_H_

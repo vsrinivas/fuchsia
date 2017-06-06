@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_CONNECTION_IMPL_H_
-#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_CONNECTION_IMPL_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
 #include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
@@ -15,7 +15,8 @@
 
 namespace view_manager {
 
-class ViewRegistry;
+class ViewInspector;
+class InputOwner;
 
 using OnEventDelivered = std::function<void(bool handled)>;
 
@@ -25,7 +26,8 @@ class InputConnectionImpl : public mozart::InputConnection,
                             mozart::InputMethodEditor,
                             mozart::InputMethodEditorClient {
  public:
-  InputConnectionImpl(ViewRegistry* registry,
+  InputConnectionImpl(ViewInspector* inspector,
+                      InputOwner* owner,
                       mozart::ViewTokenPtr view_token,
                       fidl::InterfaceRequest<mozart::InputConnection> request);
   ~InputConnectionImpl() override;
@@ -73,7 +75,8 @@ class InputConnectionImpl : public mozart::InputConnection,
   // TODO(jpoichet) Query to see if it is attached
   bool hardware_keyboard_connected() { return true; }
 
-  ViewRegistry* const registry_;
+  ViewInspector* const inspector_;
+  InputOwner* const owner_;
   mozart::ViewTokenPtr view_token_;
   mozart::InputListenerPtr event_listener_;
   mozart::ViewHitTesterPtr view_hit_listener_;
@@ -96,4 +99,4 @@ class InputConnectionImpl : public mozart::InputConnection,
 
 }  // namespace view_manager
 
-#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_CONNECTION_IMPL_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_

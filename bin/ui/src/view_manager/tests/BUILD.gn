@@ -23,8 +23,8 @@ executable("view_manager_apptests") {
   deps = [
     "//apps/mozart/lib/tests",
     "//apps/mozart/lib/tests/mocks",
-    "//apps/mozart/lib/view_associate_framework:mocks",
     "//apps/mozart/src/view_manager:lib",
+    "//apps/mozart/src/view_manager/input",
     "//lib/fidl/cpp/bindings",
     "//lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",

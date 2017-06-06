@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
+#include "apps/mozart/lib/tests/mocks/mock_view_inspector.h"
 
 #include "lib/ftl/logging.h"
 
 namespace mozart {
+namespace test {
 
 MockViewInspector::MockViewInspector() {}
 
@@ -65,14 +66,11 @@ void MockViewInspector::GetHitTester(
   hit_tester_callbacks_.emplace(view_tree_token->value, callback);
 }
 
-void MockViewInspector::ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
+void MockViewInspector::ResolveScenes(std::vector<SceneTokenPtr> scene_tokens,
                                       const ResolveScenesCallback& callback) {
-  FTL_DCHECK(!scene_tokens.is_null());
-
   scene_lookups_++;
 
-  fidl::Array<ViewTokenPtr> view_tokens;
-  view_tokens.resize(scene_tokens.size());
+  std::vector<ViewTokenPtr> view_tokens;
   for (size_t i = 0; i < scene_tokens.size(); i++) {
     FTL_DCHECK(scene_tokens[i]);
     FTL_DCHECK(scene_tokens[i]->value);
@@ -87,7 +85,8 @@ void MockViewInspector::ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
 void MockViewInspector::ResolveFocusChain(
     mozart::ViewTreeTokenPtr view_tree_token,
     const ResolveFocusChainCallback& callback) {
-  mozart::FocusChainPtr focus_chain = mozart::FocusChain::New();
+  std::unique_ptr<view_manager::FocusChain> focus_chain =
+      std::make_unique<view_manager::FocusChain>();
   callback(std::move(focus_chain));
 }
 
@@ -106,4 +105,5 @@ void MockViewInspector::GetImeService(
     mozart::ViewTokenPtr view_token,
     fidl::InterfaceRequest<mozart::ImeService> ime_service) {}
 
+}  // namespace test
 }  // namespace mozart

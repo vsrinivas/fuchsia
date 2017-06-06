@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associate_framework/resolved_hits.h"
+#include "apps/mozart/src/view_manager/internal/resolved_hits.h"
 
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 
-namespace mozart {
+namespace view_manager {
 
-ResolvedHits::ResolvedHits(HitTestResultPtr result)
+ResolvedHits::ResolvedHits(mozart::HitTestResultPtr result)
     : result_(std::move(result)) {
   FTL_DCHECK(result_);
 }
@@ -18,7 +18,7 @@ ResolvedHits::ResolvedHits(HitTestResultPtr result)
 ResolvedHits::~ResolvedHits() {}
 
 void ResolvedHits::AddMapping(uint32_t scene_token_value,
-                              ViewTokenPtr view_token) {
+                              mozart::ViewTokenPtr view_token) {
   FTL_DCHECK(scene_token_value);
   FTL_DCHECK(view_token);
 
@@ -48,4 +48,4 @@ std::ostream& operator<<(std::ostream& os, const ResolvedHits* value) {
   return value ? os << *value : os << "null";
 }
 
-}  // namespace mozart
+}  // namespace view_manager
