@@ -1,11 +1,5 @@
 {
-    "labels": [
-        "//apps/netstack/examples"
-    ],
-    "binaries": [
-        {
-            "binary": "nc",
-            "bootfs_path": "bin/nc"
-        }
-    ]
+    "packages": {
+        "netstack_examples": "//apps/netstack/examples:netstack_examples"
+    }
 }

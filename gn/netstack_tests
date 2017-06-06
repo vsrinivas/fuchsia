@@ -1,17 +1,5 @@
 {
-    "labels": [
-        "//apps/netstack/examples"
-    ],
-    "binaries": [
-        {"binary": "closetest", "bootfs_path": "bin/closetest"},
-        {"binary": "epolltest", "bootfs_path": "bin/epolltest"},
-        {"binary": "mctest", "bootfs_path": "bin/mctest"},
-        {"binary": "nbiotest", "bootfs_path": "bin/nbiotest"},
-        {"binary": "passfdtest", "bootfs_path": "bin/passfdtest"},
-        {"binary": "polltest", "bootfs_path": "bin/polltest"},
-        {"binary": "selecttest", "bootfs_path": "bin/selecttest"},
-        {"binary": "sockettest", "bootfs_path": "bin/sockettest"},
-        {"binary": "sockopttest", "bootfs_path": "bin/sockopttest"},
-        {"binary": "udptest", "bootfs_path": "bin/udptest"}
-    ]
+    "packages": {
+        "netstack_tests": "//apps/netstack/examples:netstack_tests"
+    }
 }
