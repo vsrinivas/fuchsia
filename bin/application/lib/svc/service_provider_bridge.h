@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPLICATION_SRC_MANAGER_SERVICE_PROXY_H_
-#define APPLICATION_SRC_MANAGER_SERVICE_PROXY_H_
+#ifndef APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
+#define APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
 
 #include <mx/channel.h>
 #include <mxtl/ref_ptr.h>
@@ -82,4 +82,4 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
 
 }  // namespace app
 
-#endif  // APPLICATION_SRC_MANAGER_SERVICE_PROXY_H_
+#endif  // APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_

@@ -21,8 +21,6 @@ executable("manager") {
     "root_application_loader.h",
     "root_environment_host.cc",
     "root_environment_host.h",
-    "service_provider_bridge.cc",
-    "service_provider_bridge.h",
     "url_resolver.cc",
     "url_resolver.h",
   ]

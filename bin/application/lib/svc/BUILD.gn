@@ -6,6 +6,8 @@ source_set("svc") {
   sources = [
     "service_namespace.cc",
     "service_namespace.h",
+    "service_provider_bridge.cc",
+    "service_provider_bridge.h",
   ]
 
   public_deps = [
