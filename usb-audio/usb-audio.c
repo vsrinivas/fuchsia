@@ -27,6 +27,12 @@
     } while (0)
 #endif
 
+extern mx_status_t usb_audio_sink_create(mx_device_t* device, int index,
+                                         usb_interface_descriptor_t* intf,
+                                         usb_endpoint_descriptor_t* ep,
+                                         usb_audio_ac_format_type_i_desc* format_desc);
+
+
 // for list of feature unit descriptors
 typedef struct {
     list_node_t node;
