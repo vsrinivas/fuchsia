@@ -191,8 +191,8 @@ mx_status_t IntelHDAController::SetupPCIDevice(mx_device_t* pci_dev) {
     MX_DEBUG_ASSERT(regs_handle_ == MX_HANDLE_INVALID);
     uint64_t reg_window_size;
     hda_all_registers_t* all_regs;
-    res = pci_proto_->map_mmio(pci_dev_,
-                               0,
+    res = pci_proto_->map_resource(pci_dev_,
+                               PCI_RESOURCE_BAR_0,
                                MX_CACHE_POLICY_UNCACHED_DEVICE,
                                reinterpret_cast<void**>(&all_regs),
                                &reg_window_size,
