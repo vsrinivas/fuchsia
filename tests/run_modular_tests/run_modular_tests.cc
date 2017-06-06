@@ -109,9 +109,13 @@ int main(int argc, char** argv) {
                              ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
     auto url = args.front();
     args.erase(args.begin());
+
+    std::cerr << test_name << " ...\r";
     if (RunTest(app_context, url, args)) {
+      std::cerr << test_name << " OK" << std::endl;
       succeeded.push_back(test_name);
     } else {
+      std::cerr << test_name << " FAIL" << std::endl;
       failed.push_back(test_name);
     }
   }
