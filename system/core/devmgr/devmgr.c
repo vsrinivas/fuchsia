@@ -58,8 +58,6 @@ mx_handle_t get_sysinfo_job_root(void) {
     }
 }
 
-#define VC_DEVICE "/dev/class/console/vc"
-
 static bool switch_to_first_vc(void) {
     char* v = getenv("startup.keep-log-visible");
     if (!v) return true;
@@ -270,7 +268,7 @@ int service_starter(void* arg) {
     // create a directory for sevice rendezvous
     mkdir("/svc", 0755);
 
-    {
+    if (getenv("virtcon.disable") == NULL) {
         uint32_t type = PA_HND(PA_USER0, 0);
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_channel_create(0, &h, &virtcon_open);
@@ -347,46 +345,6 @@ static void start_console_shell(void) {
 #else
 static void start_console_shell(void) {}
 #endif
-
-static void start_vc_shell(int dirfd, const char* name, bool set_as_active) {
-    int fd;
-    if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
-        if (set_as_active) {
-            ioctl_console_set_active_vc(fd);
-        }
-        devmgr_launch(svcs_job_handle, "sh:vc",
-                      countof(argv_sh), argv_sh, NULL, fd, NULL, NULL, 0);
-    } else {
-        printf("devmgr: cannot open vc\n");
-    }
-}
-
-static mx_status_t console_device_added(int dirfd, int event, const char* name, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) {
-        return NO_ERROR;
-    }
-
-    if (strcmp(name, "vc")) {
-        return NO_ERROR;
-    }
-
-    // Start three shells on a virtual consoles
-    start_vc_shell(dirfd, name, switch_to_first_vc());
-    start_vc_shell(dirfd, name, false);
-    start_vc_shell(dirfd, name, false);
-
-    // stop polling
-    return 1;
-}
-
-int virtcon_starter(void* arg) {
-    int dirfd;
-    if ((dirfd = open("/dev/class/console", O_DIRECTORY|O_RDONLY)) >= 0) {
-        mxio_watch_directory(dirfd, console_device_added, NULL);
-    }
-    close(dirfd);
-    return 0;
-}
 
 static void fetch_vdsos(void) {
     for (uint_fast16_t i = 0; true; ++i) {
@@ -508,12 +466,6 @@ int main(int argc, char** argv) {
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {
         thrd_detach(t);
-    }
-    if (getenv("virtcon.disable") == NULL) {
-        if ((thrd_create_with_name(&t, virtcon_starter, NULL,
-                                   "virtcon-starter")) == thrd_success) {
-            thrd_detach(t);
-        }
     }
 
     devmgr_handle_messages();
