@@ -85,6 +85,18 @@ class ServiceNamespace : public svcfs::ServiceProvider,
         service_name);
   }
 
+  // Removes support for the service with the given |service_name|.
+  void RemoveServiceForName(const std::string& service_name);
+
+  // Like |RemoveServiceForName()| (above), but designed so that it can be used
+  // like |RemoveService<Interface>()| or even
+  // |RemoveService<Interface>(service_name)| (to parallel
+  // |AddService<Interface>()|).
+  template <typename Interface>
+  void RemoveService(const std::string& service_name = Interface::Name_) {
+    RemoveServiceForName(service_name);
+  }
+
   // Serves a directory containing these services on the given channel.
   //
   // Returns true on success.

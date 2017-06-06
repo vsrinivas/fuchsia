@@ -16,8 +16,7 @@
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(&dispatcher_))) {
-}
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(&dispatcher_))) {}
 
 ServiceNamespace::ServiceNamespace(
     fidl::InterfaceRequest<app::ServiceProvider> request)
@@ -44,6 +43,13 @@ void ServiceNamespace::AddServiceForName(ServiceConnector connector,
                                          const std::string& service_name) {
   name_to_service_connector_[service_name] = std::move(connector);
   directory_->AddService(service_name.data(), service_name.length(), this);
+}
+
+void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
+  auto it = name_to_service_connector_.find(service_name);
+  if (it != name_to_service_connector_.end())
+    name_to_service_connector_.erase(it);
+  directory_->RemoveService(service_name.data(), service_name.length());
 }
 
 bool ServiceNamespace::ServeDirectory(mx::channel channel) {
@@ -89,7 +95,8 @@ bool ServiceNamespace::MountAtPath(const char* path) {
   return ioctl_vfs_mount_fs(fd.get(), &h) >= 0;
 }
 
-void ServiceNamespace::Connect(const char* name, size_t len,
+void ServiceNamespace::Connect(const char* name,
+                               size_t len,
                                mx::channel channel) {
   ConnectCommon(std::string(name, len), std::move(channel));
 }
