@@ -31,11 +31,15 @@ mx::channel GetServiceRoot() {
 
 ApplicationContext::ApplicationContext(
     mx::channel service_root,
+    mx::channel service_request,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services)
     : outgoing_services_(std::move(outgoing_services)),
       service_root_(std::move(service_root)) {
   ConnectToEnvironmentService(environment_.NewRequest());
   ConnectToEnvironmentService(launcher_.NewRequest());
+
+  if (service_request.is_valid())
+    outgoing_services_.ServeDirectory(std::move(service_request));
 }
 
 ApplicationContext::~ApplicationContext() = default;
@@ -51,9 +55,10 @@ ApplicationContext::CreateFromStartupInfo() {
 
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfoNotChecked() {
+  mx_handle_t service_request = mx_get_startup_handle(PA_SERVICE_REQUEST);
   mx_handle_t services = mx_get_startup_handle(PA_APP_SERVICES);
   return std::make_unique<ApplicationContext>(
-      GetServiceRoot(),
+      GetServiceRoot(), mx::channel(service_request),
       fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
 }
 
@@ -72,7 +77,8 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
   }
 
   return std::make_unique<ApplicationContext>(
-      GetServiceRoot(), std::move(startup_info->launch_info->services));
+      GetServiceRoot(), std::move(startup_info->launch_info->service_request),
+      std::move(startup_info->launch_info->services));
 }
 
 void ApplicationContext::ConnectToEnvironmentService(

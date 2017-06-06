@@ -20,6 +20,11 @@ struct ApplicationLaunchInfo {
   // The arguments to be provided to the application.
   array<string>? arguments;
 
+  // The interface request for a Directory that is passed through to the
+  // application and arrives in the application as its |service_request|
+  // interface request.
+  handle<channel> service_request;
+
   // The interface request for |services| is passed through to the application
   // and arrives in the application as its |outgoing_services| interface
   // request.

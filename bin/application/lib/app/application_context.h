@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "application/lib/app/service_provider_impl.h"
+#include "application/lib/svc/service_namespace.h"
 #include "application/services/application_environment.fidl.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/application_runner.fidl.h"
@@ -23,6 +24,7 @@ class ApplicationContext {
  public:
   // The constructor is normally called by CreateFromStartupInfo().
   ApplicationContext(mx::channel service_root,
+                     mx::channel service_request,
                      fidl::InterfaceRequest<ServiceProvider> outgoing_services);
 
   ~ApplicationContext();
@@ -63,7 +65,7 @@ class ApplicationContext {
 
   // Gets a service provider implementation by which the application can
   // provide outgoing services back to its creator.
-  ServiceProviderImpl* outgoing_services() { return &outgoing_services_; }
+  ServiceNamespace* outgoing_services() { return &outgoing_services_; }
 
   // Connects to a service provided by the application's environment,
   // returning an interface pointer.
@@ -92,7 +94,7 @@ class ApplicationContext {
 
  private:
   ApplicationEnvironmentPtr environment_;
-  ServiceProviderImpl outgoing_services_;
+  ServiceNamespace outgoing_services_;
   mx::channel service_root_;
   ApplicationLauncherPtr launcher_;
 
