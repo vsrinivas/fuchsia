@@ -772,13 +772,17 @@ void StoryImpl::StartModuleInShell(
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation) {
   mozart::ViewOwnerPtr view_owner;
-  if (parent_module_path.empty() && module_name == kRootModuleName) {
-    // HACK(alangardner, mesch): For the root module, module_controller_request
+  if (!module_controller_request.is_pending()) {
+    // HACK(alangardner, mesch): For modules added via
+    // StoryController.AddModule() and then, module_controller_request
     // is always null.
     ModuleControllerPtr module_controller;
     module_controller_request = module_controller.NewRequest();
-    module_controller->Watch(module_watcher_bindings_.AddBinding(this));
+    if (parent_module_path.empty() && module_name == kRootModuleName) {
+      module_controller->Watch(module_watcher_bindings_.AddBinding(this));
+    }
   }
+
   fidl::String id = StartModule(
       parent_module_path, module_name, module_url, link_name,
       std::move(outgoing_services), std::move(incoming_services),

@@ -46,20 +46,21 @@ interface StoryController {
   // Registers a listener for changes of the story state.
   Watch(StoryWatcher watcher);
 
-  // Adds and starts a module to the story. The view of this module is sent to
+  // Adds and starts a module in the story. The view of this module is sent to
   // the story shell. The absolute module path (the concatenation of the
-  // |module_path| and module |name|) is used to reinflate component
+  // |module_path| and |module_name|) is used to reinflate component
   // message queues and Links on subsequent runs of the story.
-  // The module_path specifies the module instance to make this module a
-  // child of. If empty it will be added as a root module. The Link to be
-  // used for the module is identified by its name as used in calls to GetLink()
-  // using that method, the link can be configured with data before running the
-  // module. This |link_name| is scoped to the module_path provided.
+  // |module_path| specifies the module instance to make this module a
+  // child of. If empty it will be added as a root module.
+  // The Link to be used for the module is identified by its name
+  // as used in calls to GetLink() using that method, the link can be configured
+  // with data before running the module. This |link_name| is scoped to the
+  // |module_path| provided.
   // TODO(mesch): The link name should really be a link path, so that a module
   // can be attached to any link in the story.
   // TODO(mesch): Some form of ModuleController might be useful here, e.g. for
   // status notifications.
-  AddModule(array<string> module_path, string name, string url,
+  AddModule(array<string> module_path, string module_name, string url,
             string link_name);
 
   // Gets all of the modules in the story.
