@@ -23,7 +23,7 @@
 #include <magenta/types.h>
 
 #define DEV_INPUT       "/dev/class/input"
-#define VIRTUAL_CONSOLE "/dev/class/console/vc"
+#define FRAMEBUFFER     "/dev/class/framebuffer/000"
 #define CLEAR_BTN_SIZE 50
 #define I2C_HID_DEBUG 0
 
@@ -174,9 +174,9 @@ flush: ;
 }
 
 int main(int argc, char* argv[]) {
-    int vcfd = open(VIRTUAL_CONSOLE, O_RDWR);
+    int vcfd = open(FRAMEBUFFER, O_RDWR);
     if (vcfd < 0) {
-        printf("failed to open %s: %d\n", VIRTUAL_CONSOLE, errno);
+        printf("failed to open %s: %d\n", FRAMEBUFFER, errno);
         return -1;
     }
 
