@@ -19,5 +19,11 @@
             "binary": "x64-shared/libwebkit.so",
             "bootfs_path": "lib/libwebkit.so"
         }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/webkit/Roboto-Regular.ttf",
+            "file": "apps/fonts/third_party/roboto/Roboto-Regular.ttf"
+        }
     ]
 }
