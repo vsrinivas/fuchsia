@@ -87,183 +87,200 @@ declare_args() {
 #         Location the resource will be placed within "data/"
 #
 template("package") {
-  binaries = []
-  libraries = []
-  resources = []
-  package_name = target_name
-  if (defined(invoker.package_name)) {
-    package_name = invoker.package_name
-  }
-  if (defined(invoker.binaries)) {
-    binaries = invoker.binaries
-  }
-  if (defined(invoker.drivers)) {
-    drivers = invoker.drivers
-  }
-  if (defined(invoker.libraries)) {
-    libraries = invoker.libraries
-  }
-  if (defined(invoker.resources)) {
-    resources = invoker.resources
-  }
-  output_base = "$root_build_dir/package/$package_name/"
+  if (current_toolchain == target_toolchain) {
+    binaries = []
+    libraries = []
+    resources = []
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+    if (defined(invoker.binaries)) {
+      binaries = invoker.binaries
+    }
+    if (defined(invoker.drivers)) {
+      drivers = invoker.drivers
+    }
+    if (defined(invoker.libraries)) {
+      libraries = invoker.libraries
+    }
+    if (defined(invoker.resources)) {
+      resources = invoker.resources
+    }
+    output_base = "$root_build_dir/package/$package_name/"
 
-  assert(!defined(invoker.drivers) || !defined(invoker.archive) || !invoker.archive)
+    assert(!defined(invoker.drivers) || !defined(invoker.archive) ||
+           !invoker.archive)
 
-  mkfs_target = target_name + "_mkfs"
-  extract_buildids_target = target_name + "_extract_buildids"
+    mkfs_target = target_name + "_mkfs"
+    extract_buildids_target = target_name + "_extract_buildids"
 
-  # This action assembles an image containing all binaries, drivers, libraries,
-  # and resources defined in the package.
-  action(mkfs_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
+    # This action assembles an image containing all binaries, drivers, libraries,
+    # and resources defined in the package.
+    action(mkfs_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
 
-    package_manifest_empty = true
-    package_manifest_contents = []
-    boot_manifest_empty = true
-    boot_manifest_contents = []
+      package_manifest_empty = true
+      package_manifest_contents = []
+      boot_manifest_empty = true
+      boot_manifest_contents = []
 
-    sources = []
+      sources = []
 
-    foreach(binary, binaries) {
-      if (defined(binary.source)) {
-        source = rebase_path(binary.source)
-        sources += [ root_build_dir + "/" + binary.source ]
-      } else {
-        # Default binary paths are relative to the root of the build dir.
-        source = rebase_path(root_build_dir + "/" + binary.name)
-        sources += [ root_build_dir + "/" + binary.name ]
-      }
-      if (defined(binary.dest)) {
-        dest = "bin/" + binary.dest
-      } else {
-        if (defined(invoker.app) && invoker.app) {
-          dest = "apps/" + binary.name
+      foreach(binary, binaries) {
+        if (defined(binary.source)) {
+          source = rebase_path(binary.source)
+          sources += [ root_build_dir + "/" + binary.source ]
         } else {
-          dest = "bin/" + binary.name
+          # Default binary paths are relative to the root of the build dir.
+          source = rebase_path(root_build_dir + "/" + binary.name)
+          sources += [ root_build_dir + "/" + binary.name ]
         }
+        if (defined(binary.dest)) {
+          dest = "bin/" + binary.dest
+        } else {
+          if (defined(invoker.app) && invoker.app) {
+            dest = "apps/" + binary.name
+          } else {
+            dest = "bin/" + binary.name
+          }
+        }
+        package_manifest_empty = false
+        package_manifest_contents += [ "$dest=$source" ]
       }
-      package_manifest_empty = false
-      package_manifest_contents += [ "$dest=$source" ]
-    }
-    foreach(driver, drivers) {
-      # Driver paths are relative to the root of the build dir.
-      source = rebase_path(root_build_dir + "/" + driver.name)
-      sources += [ root_build_dir + "/" + driver.name ]
-      dest = "driver/" + driver.name
+      foreach(driver, drivers) {
+        # Driver paths are relative to the root of the build dir.
+        source = rebase_path(root_build_dir + "/" + driver.name)
+        sources += [ root_build_dir + "/" + driver.name ]
+        dest = "driver/" + driver.name
 
-      # Drivers go in the boot manifest.
-      # TODO(jamesr): Once devmgr can reliably load drivers off of /system,
-      # unwind this.
-      boot_manifest_empty = false
-      boot_manifest_contents += [ "$dest=$source" ]
-    }
-    foreach(library, libraries) {
-      # Library paths are relative to the root of the build dir.
-      source = rebase_path(root_build_dir + "/" + library.name)
-      sources += [ root_build_dir + "/" + library.name ]
-      dest = "lib/" + library.name
-      package_manifest_empty = false
-      package_manifest_contents += [ "$dest=$source" ]
-    }
-    foreach(resource, resources) {
-      # Resource path are absolute.
-      source = resource.path
-      sources += [ resource.path ]
-      dest = "data/" + resource.dest
-      package_manifest_empty = false
-      package_manifest_contents += [ "$dest=$source" ]
-    }
+        # Drivers go in the boot manifest.
+        # TODO(jamesr): Once devmgr can reliably load drivers off of /system,
+        # unwind this.
+        boot_manifest_empty = false
+        boot_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(library, libraries) {
+        # Library paths are relative to the root of the build dir.
+        source = rebase_path(root_build_dir + "/" + library.name)
+        sources += [ root_build_dir + "/" + library.name ]
+        dest = "lib/" + library.name
+        package_manifest_empty = false
+        package_manifest_contents += [ "$dest=$source" ]
+      }
+      foreach(resource, resources) {
+        # Resource path are absolute.
+        source = resource.path
+        sources += [ resource.path ]
+        dest = "data/" + resource.dest
+        package_manifest_empty = false
+        package_manifest_contents += [ "$dest=$source" ]
+      }
 
-    if (!boot_manifest_empty) {
-      boot_manifest = output_base + "boot_manifest"
-      write_file(boot_manifest, boot_manifest_contents)
-    } else {
-      assert(boot_manifest_contents == [])
-    }
-
-    system_manifest = output_base + "system_manifest"
-
-    if (defined(invoker.archive) && invoker.archive) {
-      assert(boot_manifest_empty)
-      assert(!package_manifest_empty)
-
-      archive_manifest = output_base + "archive_manifest"
-      write_file(archive_manifest, package_manifest_contents)
-
-      deps += [ "//application/src/archiver($host_toolchain)" ]
-
-      far_path = "$root_build_dir/host_$host_cpu/far"
-
-      output = output_base + package_name + ".far"
-
-      script = far_path
-      outputs = [
-        output,
-      ]
-      args = [
-        "create",
-        "--archive=" + rebase_path(output),
-        "--manifest=" + rebase_path(archive_manifest)
-      ]
-
-      write_file(system_manifest, [ "pkgs/$package_name=" + rebase_path(output) ])
-
-    } else {
-      if (!package_manifest_empty) {
-        write_file(system_manifest, package_manifest_contents)
+      if (!boot_manifest_empty) {
+        boot_manifest = output_base + "boot_manifest"
+        write_file(boot_manifest, boot_manifest_contents)
       } else {
-        assert(package_manifest_contents == [])
+        assert(boot_manifest_contents == [])
       }
 
-      # We have to do something in our action
-      script = "/usr/bin/touch"
-      output = output_base + ".stamp"
+      system_manifest = output_base + "system_manifest"
+
+      if (defined(invoker.archive) && invoker.archive) {
+        assert(boot_manifest_empty)
+        assert(!package_manifest_empty)
+
+        archive_manifest = output_base + "archive_manifest"
+        write_file(archive_manifest, package_manifest_contents)
+
+        deps += [ "//application/src/archiver($host_toolchain)" ]
+
+        far_path = "$root_build_dir/host_$host_cpu/far"
+
+        output = output_base + package_name + ".far"
+
+        script = far_path
+        outputs = [
+          output,
+        ]
+        args = [
+          "create",
+          "--archive=" + rebase_path(output),
+          "--manifest=" + rebase_path(archive_manifest),
+        ]
+
+        write_file(system_manifest,
+                   [ "pkgs/$package_name=" + rebase_path(output) ])
+      } else {
+        if (!package_manifest_empty) {
+          write_file(system_manifest, package_manifest_contents)
+        } else {
+          assert(package_manifest_contents == [])
+        }
+
+        # We have to do something in our action
+        script = "/usr/bin/touch"
+        output = output_base + ".stamp"
+        outputs = [
+          output,
+        ]
+        args = [ rebase_path(output) ]
+      }
+    }
+
+    # This action extracts build ids from all binaries and libraries in the
+    # package and writes them into a ids.txt file in a predictable location.
+    action(extract_buildids_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+
+      id_file = output_base + "ids.txt"
+
+      script = "//packages/gn/read_build_ids.py"
       outputs = [
-        output,
+        id_file,
       ]
-      args = [ rebase_path(output) ]
+
+      args = [ rebase_path(id_file) ]
+      foreach(binary, binaries) {
+        args += [ rebase_path(root_build_dir + "/" + binary.name) ]
+      }
+      foreach(driver, drivers) {
+        args += [ rebase_path(root_build_dir + "/" + driver.name) ]
+      }
+      foreach(library, libraries) {
+        args += [ rebase_path(root_build_dir + "/" + library.name) ]
+      }
     }
-  }
 
-  # This action extracts build ids from all binaries and libraries in the
-  # package and writes them into a ids.txt file in a predictable location.
-  action(extract_buildids_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-    id_file = output_base + "ids.txt"
-
-    script = "//packages/gn/read_build_ids.py"
-    outputs = [
-      id_file,
-    ]
-
-    args = [ rebase_path(id_file) ]
-    foreach(binary, binaries) {
-      args += [ rebase_path(root_build_dir + "/" + binary.name) ]
+      deps = [
+        ":" + mkfs_target,
+        ":" + extract_buildids_target,
+      ]
     }
-    foreach(driver, drivers) {
-      args += [ rebase_path(root_build_dir + "/" + driver.name) ]
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "deps",
+                             ])
     }
-    foreach(library, libraries) {
-      args += [ rebase_path(root_build_dir + "/" + library.name) ]
-    }
-  }
 
-  group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    deps = [
-      ":" + mkfs_target,
-      ":" + extract_buildids_target,
-    ]
+    # Suppress unused variable warnings
+    assert(!defined(invoker.package_name) || invoker.package_name != "")
+    assert(!defined(invoker.binaries) || invoker.binaries != [])
+    assert(!defined(invoker.libraries) || invoker.libraries != [])
+    assert(!defined(invoker.resources) || invoker.resources != [])
   }
 }
