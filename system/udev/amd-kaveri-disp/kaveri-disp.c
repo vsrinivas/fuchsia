@@ -106,19 +106,21 @@ static mx_status_t kaveri_disp_bind(void* ctx, mx_device_t* dev, void** cookie) 
 
     // map register window
     // seems to be bar 5
-    status = pci->map_mmio(dev, 5, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                           &device->regs, &device->regs_size, &device->regs_handle);
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_5, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                               &device->regs, &device->regs_size, &device->regs_handle);
     if (status != NO_ERROR) {
+        printf("kaveri: failed to map pci bar 5: %d\n", status);
         goto fail;
     }
 
     // map framebuffer window
     // seems to be bar 0
-    status = pci->map_mmio(dev, 0, MX_CACHE_POLICY_WRITE_COMBINING,
+    status = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_WRITE_COMBINING,
                            &device->framebuffer,
                            &device->framebuffer_size,
                            &device->framebuffer_handle);
     if (status != NO_ERROR) {
+        printf("kaveri-disp: failed to map pci bar 0: %d\n", status);
         goto fail;
     }
 
