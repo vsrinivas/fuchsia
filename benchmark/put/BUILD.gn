@@ -14,8 +14,11 @@ source_set("lib") {
     "put.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/ledger/benchmark/lib",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",

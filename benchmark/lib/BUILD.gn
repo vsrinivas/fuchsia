@@ -15,11 +15,11 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//application/lib/app",
     "//apps/ledger/services/public",
   ]
 
   deps = [
-    "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/src/convert:convert",
     "//lib/ftl/",
