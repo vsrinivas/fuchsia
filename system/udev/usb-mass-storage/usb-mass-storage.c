@@ -566,7 +566,7 @@ static int ums_worker_thread(void* arg) {
     // Add root device, which will contain block devices for logical units
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb-mass-storage",
+        .name = "ums",
         .ctx = ums,
         .ops = &ums_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,

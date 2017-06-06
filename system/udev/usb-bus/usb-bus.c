@@ -130,7 +130,7 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb_bus",
+        .name = "usb",
         .ctx = bus,
         .ops = &usb_bus_device_proto,
         .proto_id = MX_PROTOCOL_USB_BUS,

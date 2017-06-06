@@ -174,7 +174,7 @@ static int xhci_irq_thread(void* arg) {
 
    device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "usb-xhci",
+        .name = "xhci",
         .ctx = xhci,
         .ops = &xhci_device_proto,
         .proto_id = MX_PROTOCOL_USB_HCI,

@@ -388,7 +388,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     dev->config_descs = configs;
 
     char name[16];
-    snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
+    snprintf(name, sizeof(name), "%03d", device_id);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

@@ -280,8 +280,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     start_callback_thread(intf);
 
     char name[20];
-    snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id,
-             interface_desc->bInterfaceNumber);
+    snprintf(name, sizeof(name), "ifc-%03d", interface_desc->bInterfaceNumber);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -359,7 +358,7 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     list_add_head(&device->children, &intf->node);
 
     char name[20];
-    snprintf(name, sizeof(name), "usb-dev-%03d-ia-%d", device->device_id, assoc_desc->iFunction);
+    snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

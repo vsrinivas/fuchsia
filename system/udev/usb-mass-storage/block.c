@@ -149,7 +149,7 @@ mx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
     dev->cb = NULL;
 
     char name[16];
-    snprintf(name, sizeof(name), "ums-lun-%02d", dev->lun);
+    snprintf(name, sizeof(name), "lun-%03d", dev->lun);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
