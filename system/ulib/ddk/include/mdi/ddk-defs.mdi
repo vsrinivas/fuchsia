@@ -1,9 +1,0 @@
-// MDI definitions for the platform bus driver
-
-// platform-bus nodes
-list platform-bus                   3
-list platform-bus.device            10
-string platform-bus.device.name     11
-uint32 platform-bus.device.vid      12
-uint32 platform-bus.device.pid      13
-uint32 platform-bus.device.did      14

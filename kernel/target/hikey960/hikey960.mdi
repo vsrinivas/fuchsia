@@ -1,4 +1,4 @@
-include "kernel/include/mdi/kernel-defs.mdi"
+include "system/public/magenta/mdi/magenta.mdi"
 
 cpu-map = {
     clusters = {

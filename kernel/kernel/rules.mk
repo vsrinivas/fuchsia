@@ -31,6 +31,4 @@ MODULE_SRCS := \
 
 MODULE_DEPS += kernel/kernel/vm
 
-MDI_INCLUDES += kernel/include/mdi/kernel-defs.mdi
-
 include make/module.mk

@@ -319,7 +319,7 @@ SYSROOT_DEPS :=
 MDI_SRCS :=
 
 # MDI source files used to generate the mdi-defs.h header file
-MDI_INCLUDES :=
+MDI_INCLUDES := system/public/magenta/mdi/magenta.mdi
 
 # For now always enable frame pointers so kernel backtraces
 # can work and define WITH_PANIC_BACKTRACE to enable them in panics

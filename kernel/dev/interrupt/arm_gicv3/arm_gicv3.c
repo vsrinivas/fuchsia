@@ -366,7 +366,7 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V3_BASE_VIRT:
+        case MDI_BASE_VIRT:
             got_gic_base_virt = !mdi_node_uint64(&child, &gic_base_virt);
             break;
         case MDI_KERNEL_DRIVERS_ARM_GIC_V3_GICD_OFFSET:

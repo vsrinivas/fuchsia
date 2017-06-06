@@ -20,8 +20,6 @@ MODULE_STATIC_LIBS := system/ulib/pretty system/ulib/sync
 
 MODULE_EXPORT := a
 
-MDI_INCLUDES += system/ulib/ddk/include/mdi/ddk-defs.mdi
-
 include make/module.mk
 
 

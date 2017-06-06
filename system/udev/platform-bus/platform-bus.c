@@ -93,7 +93,7 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
         mdi_node_ref_t  node;
         mdi_each_child(&device_node, &node) {
             switch (mdi_id(&node)) {
-            case MDI_PLATFORM_BUS_DEVICE_NAME:
+            case MDI_NAME:
                 name = mdi_node_string(&node);
                 break;
             case MDI_PLATFORM_BUS_DEVICE_VID:
