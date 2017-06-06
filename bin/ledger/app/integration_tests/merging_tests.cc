@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/src/app/integration_tests/integration_test.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
@@ -19,7 +20,7 @@ namespace ledger {
 namespace integration_tests {
 namespace {
 
-class MergingIntegrationTest : public LedgerApplicationBaseTest {
+class MergingIntegrationTest : public IntegrationTest {
  public:
   MergingIntegrationTest() {}
   ~MergingIntegrationTest() override {}
@@ -199,8 +200,8 @@ class ConflictResolverImpl : public ConflictResolver {
       if (num_queries < min_queries) {
         return ::testing::AssertionFailure()
                << "Only " << num_queries
-               << " partial results were found, but at least "
-               << min_queries << " were expected";
+               << " partial results were found, but at least " << min_queries
+               << " were expected";
       }
       return ::testing::AssertionSuccess();
     }

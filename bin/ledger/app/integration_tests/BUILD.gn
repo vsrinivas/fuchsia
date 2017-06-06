@@ -8,6 +8,8 @@ executable("integration_tests") {
   testonly = true
 
   sources = [
+    "integration_test.cc",
+    "integration_test.h",
     "ledger_repository_tests.cc",
     "merging_tests.cc",
     "page_snapshot_tests.cc",

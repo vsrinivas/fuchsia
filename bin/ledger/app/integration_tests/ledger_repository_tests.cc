@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/src/app/integration_tests/integration_test.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
@@ -10,7 +11,7 @@ namespace ledger {
 namespace integration_tests {
 namespace {
 
-class LedgerRepositoryIntegrationTest : public LedgerApplicationBaseTest {
+class LedgerRepositoryIntegrationTest : public IntegrationTest {
  public:
   LedgerRepositoryIntegrationTest() {}
   ~LedgerRepositoryIntegrationTest() override {}
