@@ -8,8 +8,11 @@ source_set("flog") {
     "flog.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/media/services/flog",
     "//apps/tracing/lib/trace",
     "//lib/ftl",

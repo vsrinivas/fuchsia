@@ -20,8 +20,11 @@ source_set("transport") {
     "shared_buffer_set_allocator.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",

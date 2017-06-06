@@ -19,8 +19,11 @@ source_set("util") {
     "timeline_control_point.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
+  ]
+
+  deps = [
     "//apps/media/lib/flog",
     "//apps/media/lib/timeline",
     "//apps/media/services",
