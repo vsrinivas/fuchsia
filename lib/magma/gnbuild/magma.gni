@@ -9,6 +9,7 @@ declare_args() {
   msd_intel_gen_build_root = "//drivers/gpu/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   magenta_build_root = "//magenta"
+  lib_vulkan_root = "$magma_build_root/vulkan"
 
   magma_python_path = rebase_path("//third_party/mako", root_build_dir)
 

@@ -1,0 +1,44 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+executable("vkcube_image_pipe_swapchain") {
+  sources = [
+    "main.cc",
+  ]
+  deps = [
+    ":vkcube_common",
+  ]
+}
+
+config("test_vk_cube") {
+  include_dirs = [ "." ]
+}
+
+source_set("vkcube_common") {
+  public_configs = [ ":test_vk_cube" ]
+
+  defines = [
+    "VK_USE_PLATFORM_MAGMA_KHR",
+    "CUBE_USE_IMAGE_PIPE",
+  ]
+
+  sources = [
+    "$lib_vulkan_root/third_party/vkcube/cube.cc",
+    "$lib_vulkan_root/third_party/vkcube/cube.h",
+    "test_vk_cube.h",
+  ]
+
+  deps = [
+    "$lib_vulkan_root:vulkan",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "//application/lib/app",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magma/src/display_pipe",
+    "//magma/src/display_pipe/services",
+  ]
+}
