@@ -1,7 +1,4 @@
 {
-    "imports": [
-        "init"
-    ],
     "labels": [
         "//application",
         "//apps/modular/src/bootstrap"
