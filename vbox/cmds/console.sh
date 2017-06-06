@@ -7,5 +7,6 @@
 # think of this as "telneting to the VM console"
 oldtty=$(stty -g)
 trap "stty $oldtty" EXIT
+echo "Connecting to ${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock"
 echo "Use CTRL+Q to exit the serial console"
-socat unix-connect:${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock stdio,raw,echo=0,icanon=0,escape=0x11
+socat stdio,rawer,escape=0x11 unix-connect:${FUCHSIA_OUT_DIR}/vbox/${FUCHSIA_VBOX_NAME}.sock
