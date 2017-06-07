@@ -78,9 +78,13 @@ void parseConfigAndStart(String configString) {
 
   // Start the web server
   print("[INFO] Starting MI Dashboard web server on port ${_port}...");
-  HttpServer.bind(InternetAddress.ANY_IP_V6, _port).then((server) {
-    server.listen(handleRequest);
-  });
+  HttpServer.bind(InternetAddress.ANY_IP_V6, _port)
+    .then((server) {
+      server.listen(handleRequest);
+    })
+    .catchError((error) {
+      print("[WARN] MI Dashboard bind failed...${error.toString()}");
+    });
 }
 
 void handleRequest(HttpRequest request) {
