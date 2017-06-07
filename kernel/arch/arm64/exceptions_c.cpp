@@ -15,6 +15,7 @@
 #include <arch/arm64/exceptions.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
+#include <kernel/vm.h>
 #include <kernel/vm/fault.h>
 #include <platform.h>
 

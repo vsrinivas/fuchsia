@@ -16,6 +16,7 @@ MODULE_DEPS += \
     third_party/lib/cryptolib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/arch_vm_aspace.cpp \
     $(LOCAL_DIR)/bootalloc.cpp \
     $(LOCAL_DIR)/page.cpp \
     $(LOCAL_DIR)/pmm.cpp \

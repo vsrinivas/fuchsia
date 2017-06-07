@@ -8,7 +8,6 @@
 
 #include <magenta/compiler.h>
 #include <dev/interrupt.h>
-#include <kernel/vm.h>
 
 __BEGIN_CDECLS
 

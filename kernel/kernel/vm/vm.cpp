@@ -60,8 +60,7 @@ void MarkPagesInUse(vaddr_t va, size_t len) {
         uint flags;
         paddr_t pa;
 
-        status_t err = arch_mmu_query(&VmAspace::kernel_aspace()->arch_aspace(), va + offset,
-                                      &pa, &flags);
+        status_t err = VmAspace::kernel_aspace()->arch_aspace().Query(va + offset, &pa, &flags);
         if (err >= 0) {
             LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR
                     " runlen %#" PRIxPTR "\n",
@@ -261,7 +260,7 @@ paddr_t vaddr_to_paddr(const void* ptr) {
         return (paddr_t) nullptr;
 
     paddr_t pa;
-    status_t rc = arch_mmu_query(&aspace->arch_aspace(), (vaddr_t)ptr, &pa, nullptr);
+    status_t rc = aspace->arch_aspace().Query((vaddr_t)ptr, &pa, nullptr);
     if (rc)
         return (paddr_t) nullptr;
 
@@ -299,7 +298,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
 
         paddr_t pa;
         uint flags;
-        status_t err = arch_mmu_query(&aspace->arch_aspace(), argv[2].u, &pa, &flags);
+        status_t err = aspace->arch_aspace().Query(argv[2].u, &pa, &flags);
         printf("arch_mmu_query returns %d\n", err);
         if (err >= 0) {
             printf("\tpa %#" PRIxPTR ", flags %#x\n", pa, flags);
@@ -316,7 +315,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
 
         size_t mapped;
         auto err =
-            arch_mmu_map(&aspace->arch_aspace(), argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u, &mapped);
+            aspace->arch_aspace().Map(argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u, &mapped);
         printf("arch_mmu_map returns %d, mapped %zu\n", err, mapped);
     } else if (!strcmp(argv[1].str, "unmap")) {
         if (argc < 4)
@@ -329,7 +328,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
         }
 
         size_t unmapped;
-        auto err = arch_mmu_unmap(&aspace->arch_aspace(), argv[2].u, (uint)argv[3].u, &unmapped);
+        auto err = aspace->arch_aspace().Unmap(argv[2].u, (uint)argv[3].u, &unmapped);
         printf("arch_mmu_unmap returns %d, unmapped %zu\n", err, unmapped);
     } else {
         printf("unknown command\n");

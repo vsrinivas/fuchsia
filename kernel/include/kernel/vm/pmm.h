@@ -11,8 +11,6 @@
 #include <magenta/compiler.h>
 #include <sys/types.h>
 
-__BEGIN_CDECLS
-
 // physical allocator
 typedef struct pmm_arena_info {
     char name[16];
@@ -90,5 +88,3 @@ paddr_t vm_page_to_paddr(const vm_page_t* page);
 
 // paddr to vm_page_t
 vm_page_t* paddr_to_vm_page(paddr_t addr);
-
-__END_CDECLS

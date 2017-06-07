@@ -120,8 +120,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     // If we're changing the whole mapping, just make the change.
     if (base_ == base && size_ == size) {
-        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
-                                           new_arch_mmu_flags);
+        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
         arch_mmu_flags_ = new_arch_mmu_flags;
         return MX_OK;
@@ -138,7 +137,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
             return MX_ERR_NO_MEMORY;
         }
 
-        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
                                            new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
         arch_mmu_flags_ = new_arch_mmu_flags;
@@ -161,7 +160,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
             return MX_ERR_NO_MEMORY;
         }
 
-        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
                                            new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
 
@@ -190,7 +189,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
         return MX_ERR_NO_MEMORY;
     }
 
-    status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+    status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
                                        new_arch_mmu_flags);
     LTRACEF("arch_mmu_protect returns %d\n", status);
 
@@ -257,7 +256,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     // Check if unmapping from one of the ends
     if (base_ == base || base + size == base_ + size_) {
         LTRACEF("unmapping base %#lx size %#zx\n", base, size);
-        status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE, nullptr);
+        status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
         if (status < 0) {
             return status;
         }
@@ -292,7 +291,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
     // Unmap the middle segment
     LTRACEF("unmapping base %#lx size %#zx\n", base, size);
-    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE, nullptr);
+    status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
     if (status < 0) {
         return status;
     }
@@ -362,7 +361,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 " aspace %p\n",
             unmap_base.ValueOrDie(), len_new, aspace_.get());
 
-    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), unmap_base.ValueOrDie(),
+    status_t status = aspace_->arch_aspace().Unmap(unmap_base.ValueOrDie(),
                                      static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
     if (status < 0)
         return status;
@@ -428,7 +427,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
 
         size_t mapped;
-        auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_, &mapped);
+        auto ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
         if (ret < 0) {
             TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
         }
@@ -572,7 +571,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     // this may happen if we are one of multiple threads racing on a single address
     uint page_flags;
     paddr_t pa;
-    status_t err = arch_mmu_query(&aspace_->arch_aspace(), va, &pa, &page_flags);
+    status_t err = aspace_->arch_aspace().Query(va, &pa, &page_flags);
     if (err >= 0) {
         LTRACEF("queried va, page at pa %#" PRIxPTR ", flags %#x is already there\n", pa,
                 page_flags);
@@ -587,7 +586,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
             // same page, different permission
-            status = arch_mmu_protect(&aspace_->arch_aspace(), va, 1, mmu_flags);
+            status = aspace_->arch_aspace().Protect(va, 1, mmu_flags);
             if (status < 0) {
                 TRACEF("failed to modify permissions on existing mapping\n");
                 return MX_ERR_NO_MEMORY;
@@ -602,14 +601,14 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
             DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
             // unmap the old one and put the new one in place
-            status = arch_mmu_unmap(&aspace_->arch_aspace(), va, 1, nullptr);
+            status = aspace_->arch_aspace().Unmap(va, 1, nullptr);
             if (status < 0) {
                 TRACEF("failed to remove old mapping before replacing\n");
                 return MX_ERR_NO_MEMORY;
             }
 
             size_t mapped;
-            status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
+            status = aspace_->arch_aspace().Map(va, new_pa, 1, mmu_flags, &mapped);
             if (status < 0) {
                 TRACEF("failed to map replacement page\n");
                 return MX_ERR_NO_MEMORY;
@@ -627,7 +626,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
         DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
         size_t mapped;
-        status = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, mmu_flags, &mapped);
+        status = aspace_->arch_aspace().Map(va, new_pa, 1, mmu_flags, &mapped);
         if (status < 0) {
             TRACEF("failed to map page\n");
             return MX_ERR_NO_MEMORY;

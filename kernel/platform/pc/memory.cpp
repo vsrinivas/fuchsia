@@ -4,9 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/x86/mmu.h>
 #include <assert.h>
 #include <efi/boot-services.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/vm.h>
 #include <lib/memory_limit.h>
 #include <magenta/boot/multiboot.h>

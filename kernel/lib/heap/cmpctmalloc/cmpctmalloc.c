@@ -16,6 +16,7 @@
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
+#include <kernel/vm.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/heap.h>
 #include <platform.h>

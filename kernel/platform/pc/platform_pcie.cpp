@@ -11,6 +11,7 @@
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
+#include <inttypes.h>
 #include <kernel/mutex.h>
 #include <lk/init.h>
 #include <magenta/syscalls/pci.h>

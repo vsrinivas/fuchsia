@@ -15,6 +15,7 @@
 #include <arch/x86/descriptor.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
+#include <kernel/vm.h>
 #include <kernel/vm/fault.h>
 #include <platform.h>
 

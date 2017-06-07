@@ -258,7 +258,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
     // Give arch-specific tracing a chance to record process creation.
-    arch_trace_process_create(koid, &vmar_dispatcher->vmar()->aspace()->arch_aspace());
+    arch_trace_process_create(koid, &vmar_dispatcher->vmar()->aspace()->arch_aspace().GetInnerAspace());
 
     // Create a handle and attach the dispatcher to it
     HandleOwner proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));

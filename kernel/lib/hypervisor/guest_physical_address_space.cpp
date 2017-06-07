@@ -6,6 +6,8 @@
 
 #include <hypervisor/guest_physical_address_space.h>
 
+#include <arch/mmu.h>
+#include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/fault.h>
 #include <kernel/vm/vm_object_physical.h>
 #include <mxalloc/new.h>

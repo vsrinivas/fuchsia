@@ -14,6 +14,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <malloc.h>
 #include <string.h>
@@ -25,7 +26,7 @@
 /* Task used for updating IO permissions on each CPU */
 struct ioport_update_context {
     // aspace that we're trying to update
-    arch_aspace_t* aspace;
+    ArchVmAspace* aspace;
 };
 static void ioport_update_task(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
@@ -33,18 +34,19 @@ static void ioport_update_task(void* raw_context) {
         (struct ioport_update_context*)raw_context;
 
     VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
-    struct arch_aspace* as = &aspace->arch_aspace();
+    ArchVmAspace *as = &aspace->arch_aspace();
+    arch_aspace& inner_aspace = as->GetInnerAspace();
     if (as != context->aspace) {
         return;
     }
 
-    spin_lock(&as->io_bitmap_lock);
+    spin_lock(&inner_aspace.io_bitmap_lock);
 
     // This is overkill, but it's much simpler to reason about
     x86_reset_tss_io_bitmap();
-    x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(as->io_bitmap));
+    x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(inner_aspace.io_bitmap));
 
-    spin_unlock(&as->io_bitmap_lock);
+    spin_unlock(&inner_aspace.io_bitmap_lock);
 }
 
 int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
@@ -54,10 +56,11 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
         return MX_ERR_INVALID_ARGS;
 
     VmAspace *aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
-    struct arch_aspace* as = &aspace->arch_aspace();
+    ArchVmAspace *as = &aspace->arch_aspace();
+    arch_aspace& inner_aspace = as->GetInnerAspace();
 
     mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
-    if (!as->io_bitmap) {
+    if (!inner_aspace.io_bitmap) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
         // case, when we make the allocation we will use it.
@@ -86,12 +89,12 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
 
     status_t status = MX_OK;
     do {
-        AutoSpinLock guard(as->io_bitmap_lock);
+        AutoSpinLock guard(inner_aspace.io_bitmap_lock);
 
-        if (!as->io_bitmap) {
-            as->io_bitmap = optimistic_bitmap.release();
+        if (!inner_aspace.io_bitmap) {
+            inner_aspace.io_bitmap = optimistic_bitmap.release();
         }
-        auto bitmap = static_cast<bitmap::RleBitmap*>(as->io_bitmap);
+        auto bitmap = static_cast<bitmap::RleBitmap*>(inner_aspace.io_bitmap);
         DEBUG_ASSERT(bitmap);
 
         status = enable ?

@@ -11,11 +11,8 @@
 #include <magenta/compiler.h>
 #include <stdint.h>
 
-#if __cplusplus
+// forward declare
 class VmObject;
-#endif
-
-__BEGIN_CDECLS
 
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
@@ -33,7 +30,6 @@ typedef struct vm_page {
             // in allocated/just freed state, use a linked list to hold the page in a queue
             struct list_node node;
         } free;
-#if __cplusplus
         struct {
             // attached to a vm object
             uint64_t offset; // unused currently
@@ -41,7 +37,6 @@ typedef struct vm_page {
 
             uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
         } object;
-#endif
 
         uint8_t pad[24]; // pad out to 32 bytes
     };
@@ -69,5 +64,3 @@ static inline bool page_is_free(const vm_page_t* page) {
 
 const char* page_state_to_string(unsigned int state);
 void dump_page(const vm_page_t* page);
-
-__END_CDECLS

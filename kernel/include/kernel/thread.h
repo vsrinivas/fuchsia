@@ -16,7 +16,6 @@
 #include <arch/thread.h>
 #include <kernel/wait.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm.h>
 #include <debug.h>
 
 __BEGIN_CDECLS
@@ -69,6 +68,8 @@ typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
 
 #define THREAD_LINEBUFFER_LENGTH 128
 
+struct vmm_aspace;
+
 typedef struct thread {
     int magic;
     struct list_node thread_list_node;
@@ -88,7 +89,7 @@ typedef struct thread {
     int pinned_cpu; /* only run on pinned_cpu if >= 0 */
 
     /* pointer to the kernel address space this thread is associated with */
-    vmm_aspace_t *aspace;
+    struct vmm_aspace *aspace;
 
     /* pointer to user thread if one exists for this thread */
     void *user_thread;

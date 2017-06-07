@@ -27,13 +27,11 @@
 // This file mostly contains C wrappers around the underlying C++ objects, conforming to
 // the older api.
 
-static void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace);
-
 static inline void vmm_context_switch(VmAspace* oldspace, VmAspace* newaspace) {
     DEBUG_ASSERT(thread_lock_held());
 
-    arch_mmu_context_switch(oldspace ? &oldspace->arch_aspace() : nullptr,
-                            newaspace ? &newaspace->arch_aspace() : nullptr);
+    ArchVmAspace::ContextSwitch(oldspace ? &oldspace->arch_aspace() : nullptr,
+                                newaspace ? &newaspace->arch_aspace() : nullptr);
 }
 
 void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
@@ -93,11 +91,6 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace) {
 
 vmm_aspace_t* vmm_get_kernel_aspace(void) {
     return reinterpret_cast<vmm_aspace_t*>(VmAspace::kernel_aspace());
-}
-
-arch_aspace_t* vmm_get_arch_aspace(vmm_aspace_t* aspace) {
-    auto real_aspace = reinterpret_cast<VmAspace*>(aspace);
-    return &real_aspace->arch_aspace();
 }
 
 static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {

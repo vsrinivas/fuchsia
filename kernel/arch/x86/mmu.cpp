@@ -18,6 +18,7 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <kernel/vm.h>
+#include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/pmm.h>
 
 #include <bitmap/rle-bitmap.h>
@@ -1139,7 +1140,7 @@ static status_t mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t cou
     return MX_OK;
 }
 
-status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count,
+status_t arch_internal::arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count,
                         size_t* unmapped) {
     if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         return mmu_unmap<ExtendedPageTable>(aspace, vaddr, count, unmapped);
@@ -1189,7 +1190,7 @@ static status_t mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, con
     return MX_OK;
 }
 
-status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
+status_t arch_internal::arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count,
                       uint mmu_flags, size_t* mapped) {
     if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         if (mmu_flags & ~kValidEptFlags)
@@ -1233,7 +1234,7 @@ static status_t mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, 
     return MX_OK;
 }
 
-status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
+status_t arch_internal::arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint mmu_flags) {
     if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         if (mmu_flags & ~kValidEptFlags)
             return MX_ERR_INVALID_ARGS;
@@ -1272,7 +1273,7 @@ void x86_mmu_init(void) {}
 /*
  * Fill in the high level x86 arch aspace structure and allocating a top level page table.
  */
-status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint mmu_flags) {
+status_t arch_internal::arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint mmu_flags) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic != ARCH_ASPACE_MAGIC);
 
@@ -1363,14 +1364,14 @@ status_t mmu_destroy_aspace(arch_aspace_t* aspace) {
     return MX_OK;
 }
 
-status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
+status_t arch_internal::arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE)
         return mmu_destroy_aspace<ExtendedPageTable>(aspace);
     else
         return mmu_destroy_aspace<PageTable>(aspace);
 }
 
-void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
+void arch_internal::arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
     mp_cpu_mask_t cpu_bit = 1U << arch_curr_cpu_num();
     if (aspace != nullptr) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -1459,7 +1460,7 @@ static status_t mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, 
     return MX_OK;
 }
 
-status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+status_t arch_internal::arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
     if (aspace->flags & ARCH_ASPACE_FLAG_GUEST_PASPACE)
         return mmu_query<ExtendedPageTable>(aspace, vaddr, paddr, mmu_flags, ept_mmu_flags);
     else

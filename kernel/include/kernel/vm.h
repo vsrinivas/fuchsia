@@ -8,9 +8,7 @@
 #pragma once
 
 #include <arch.h>
-#include <arch/mmu.h>
 #include <assert.h>
-#include <kernel/vm/page.h>
 #include <list.h>
 #include <magenta/compiler.h>
 #include <stdint.h>

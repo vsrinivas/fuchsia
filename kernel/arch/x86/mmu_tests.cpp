@@ -8,15 +8,16 @@
 #include <err.h>
 #include <arch/x86/mmu.h>
 #include <arch/mmu.h>
+#include <kernel/vm/arch_vm_aspace.h>
 
 static bool mmu_tests(void* context) {
     BEGIN_TEST;
     unittest_printf("creating large un-aligned vm region, and unmap it without mapping, make sure no leak (MG-315)\n");
     {
-        arch_aspace_t aspace;
+        ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
-        status_t err = arch_mmu_init_aspace(&aspace, 1UL << 20, size, 0);
+        status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, MX_OK, "init aspace");
 
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -31,45 +32,45 @@ static bool mmu_tests(void* context) {
         // Map a single page to force the lower PDP of the target region
         // to be created
         size_t mapped;
-        err = arch_mmu_map(&aspace, va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.Map(va - 3 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
 
         // Map the last page of the region
-        err = arch_mmu_map(&aspace, va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.Map(va + alloc_size - PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map last page");
         EXPECT_EQ(mapped, 1u, "map single page");
 
         paddr_t pa;
         uint flags;
-        err = arch_mmu_query(&aspace, va + alloc_size - PAGE_SIZE, &pa, &flags);
+        err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
         EXPECT_EQ(err, MX_OK, "last entry is mapped");
 
         // Attempt to unmap the target region (analogous to unmapping a demand
         // paged region that has only had its last page touched)
         size_t unmapped;
-        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE, &unmapped);
+        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap unallocated region");
         EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
-        err = arch_mmu_query(&aspace, va + alloc_size - PAGE_SIZE, &pa, &flags);
+        err = aspace.Query(va + alloc_size - PAGE_SIZE, &pa, &flags);
         EXPECT_EQ(err, MX_ERR_NOT_FOUND, "last entry is not mapped anymore");
 
         // Unmap the single page from earlier
-        err = arch_mmu_unmap(&aspace, va - 3 * PAGE_SIZE, 1, &unmapped);
+        err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap single page");
         EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
 
-        err = arch_mmu_destroy_aspace(&aspace);
+        err = aspace.Destroy();
         EXPECT_EQ(err, MX_OK, "destroy aspace");
     }
 
     unittest_printf("creating large un-aligned vm region, and unmap it without mapping (MG-315)\n");
     {
-        arch_aspace_t aspace;
+        ArchVmAspace aspace;
         vaddr_t base = 1UL << 20;
         size_t size = (1UL << 47) - base - (1UL << 20);
-        status_t err = arch_mmu_init_aspace(&aspace, 1UL << 20, size, 0);
+        status_t err = aspace.Init(1UL << 20, size, 0);
         EXPECT_EQ(err, MX_OK, "init aspace");
 
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -84,23 +85,23 @@ static bool mmu_tests(void* context) {
         // Map a single page to force the lower PDP of the target region
         // to be created
         size_t mapped;
-        err = arch_mmu_map(&aspace, va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
+        err = aspace.Map(va - 2 * PAGE_SIZE, 0, 1, arch_rw_flags, &mapped);
         EXPECT_EQ(err, MX_OK, "map single page");
         EXPECT_EQ(mapped, 1u, "map single page");
 
         // Attempt to unmap the target region (analogous to unmapping a demand
         // paged region that has not been touched)
         size_t unmapped;
-        err = arch_mmu_unmap(&aspace, va, alloc_size / PAGE_SIZE, &unmapped);
+        err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap unallocated region");
         EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
         // Unmap the single page from earlier
-        err = arch_mmu_unmap(&aspace, va - 2 * PAGE_SIZE, 1, &unmapped);
+        err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, &unmapped);
         EXPECT_EQ(err, MX_OK, "unmap single page");
         EXPECT_EQ(unmapped, 1u, "unmap single page");
 
-        err = arch_mmu_destroy_aspace(&aspace);
+        err = aspace.Destroy();
         EXPECT_EQ(err, MX_OK, "destroy aspace");
     }
 

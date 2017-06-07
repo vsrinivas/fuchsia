@@ -488,8 +488,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
                               ? next->as_vm_mapping()->arch_mmu_flags()
                               : ARCH_MMU_FLAG_INVALID;
 
-    *pva =
-        arch_mmu_pick_spot(&aspace_->arch_aspace(), real_gap_beg, prev_arch_mmu_flags, real_gap_end,
+    *pva = aspace_->arch_aspace().PickSpot(real_gap_beg, prev_arch_mmu_flags, real_gap_end,
                            next_arch_mmu_flags, align, region_size, arch_mmu_flags);
     if (*pva < real_gap_beg)
         goto not_found; // address wrapped around

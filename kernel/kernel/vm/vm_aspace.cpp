@@ -142,7 +142,7 @@ status_t VmAspace::Init() {
     uint arch_aspace_flags =
         (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL        : 0u) |
         (is_guest       ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
-    status_t status = arch_mmu_init_aspace(&arch_aspace_, base_, size_, arch_aspace_flags);
+    status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
     if (status != MX_OK) {
         return status;
     }
@@ -224,7 +224,7 @@ VmAspace::~VmAspace() {
     // TODO(teisenbe): Move this to Destroy().  Currently can't move since
     // ProcessDispatcher calls Destroy() from the context of a thread in the
     // aspace.
-    arch_mmu_destroy_aspace(&arch_aspace_);
+    arch_aspace_.Destroy();
 }
 
 mxtl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
@@ -370,7 +370,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // lookup how it's already mapped
     uint arch_mmu_flags = 0;
-    auto err = arch_mmu_query(&arch_aspace_, vaddr, nullptr, &arch_mmu_flags);
+    auto err = arch_aspace_.Query(vaddr, nullptr, &arch_mmu_flags);
     if (err) {
         // if it wasn't already mapped, use some sort of strict default
         arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;

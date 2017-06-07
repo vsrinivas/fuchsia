@@ -10,6 +10,7 @@
 #if WITH_DEV_PCIE
 
 #include <arch/x86/feature.h>
+#include <inttypes.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <mxtl/ref_ptr.h>

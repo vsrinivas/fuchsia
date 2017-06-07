@@ -25,6 +25,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/proc_trace.h>
 #include <arch/x86/registers.h>
+#include <inttypes.h>
 #include <magenta/compiler.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>

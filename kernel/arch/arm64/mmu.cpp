@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/mmu.h>
 #include <arch/arm64/mmu.h>
 #include <assert.h>
 #include <debug.h>
@@ -12,6 +13,7 @@
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/pmm.h>
 #include <lib/heap.h>
 #include <rand.h>
@@ -123,7 +125,7 @@ static pte_t mmu_flags_to_pte_attr(uint flags) {
     return attr;
 }
 
-status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* flags) {
+status_t arch_internal::arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, uint* flags) {
     ulong index;
     uint index_shift;
     uint page_size_shift;
@@ -655,7 +657,7 @@ static status_t arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
     return ret;
 }
 
-status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count, uint flags, size_t* mapped) {
+status_t arch_internal::arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const size_t count, uint flags, size_t* mapped) {
     LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
             vaddr, paddr, count, flags);
 
@@ -702,7 +704,7 @@ status_t arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, const
     return (ret < 0) ? (status_t)ret : MX_OK;
 }
 
-status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t* unmapped) {
+status_t arch_internal::arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count, size_t* unmapped) {
     LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
     DEBUG_ASSERT(aspace);
@@ -741,7 +743,7 @@ status_t arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, const size_t count
     return (ret < 0) ? (status_t)ret : 0;
 }
 
-status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
+status_t arch_internal::arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint flags) {
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
@@ -774,7 +776,7 @@ status_t arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, ui
     return ret;
 }
 
-status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint flags) {
+status_t arch_internal::arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, uint flags) {
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             aspace, base, size, flags);
 
@@ -826,7 +828,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
     return MX_OK;
 }
 
-status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
+status_t arch_internal::arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     LTRACEF("aspace %p\n", aspace);
 
     DEBUG_ASSERT(aspace);
@@ -849,7 +851,7 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     return MX_OK;
 }
 
-void arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
+void arch_internal::arch_mmu_context_switch(arch_aspace_t* old_aspace, arch_aspace_t* aspace) {
     if (TRACE_CONTEXT_SWITCH)
         TRACEF("aspace %p\n", aspace);
 

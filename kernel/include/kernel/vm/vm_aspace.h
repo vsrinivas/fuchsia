@@ -11,6 +11,7 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
+#include <kernel/vm/arch_vm_aspace.h>
 #include <lib/crypto/prng.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -46,7 +47,7 @@ public:
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
     const char* name() const { return name_; }
-    arch_aspace_t& arch_aspace() { return arch_aspace_; }
+    ArchVmAspace& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
     bool is_aslr_enabled() const { return aslr_enabled_; }
 
@@ -197,7 +198,7 @@ private:
     uint8_t aslr_seed_[crypto::PRNG::kMinEntropy];
 
     // architecturally specific part of the aspace
-    arch_aspace_t arch_aspace_ = {};
+    ArchVmAspace arch_aspace_;
 
 #if WITH_LIB_VDSO
     mxtl::RefPtr<VmMapping> vdso_code_mapping_;

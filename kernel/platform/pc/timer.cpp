@@ -11,6 +11,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <err.h>
+#include <inttypes.h>
 #include <reg.h>
 #include <trace.h>
 

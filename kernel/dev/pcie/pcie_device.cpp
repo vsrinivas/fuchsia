@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/mmu.h>
 #include <assert.h>
 #include <magenta/compiler.h>
 #include <debug.h>
@@ -16,6 +17,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
+#include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_physical.h>
 #include <list.h>

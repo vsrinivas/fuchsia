@@ -30,6 +30,7 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <list.h>
+#include <malloc.h>
 #include <platform.h>
 #include <platform/timer.h>
 #include <trace.h>
