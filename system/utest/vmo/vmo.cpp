@@ -820,6 +820,25 @@ bool vmo_cache_test() {
     END_TEST;
 }
 
+bool vmo_decommit_misaligned_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    EXPECT_EQ(NO_ERROR, mx_vmo_create(PAGE_SIZE * 2, 0, &vmo), "creation for decommit test");
+
+    mx_status_t status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
+    EXPECT_EQ(NO_ERROR, status, "decommitting uncommitted memory");
+
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0x10, 0x100, NULL, 0);
+    EXPECT_EQ(NO_ERROR, status, "committing memory");
+
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
+    EXPECT_EQ(NO_ERROR, status, "decommitting memory");
+
+    EXPECT_EQ(NO_ERROR, mx_handle_close(vmo), "close handle");
+    END_TEST;
+}
+
 // test set 4: deal with clones with nonzero offsets and offsets that extend beyond the original
 bool vmo_clone_test_4() {
     BEGIN_TEST;
@@ -985,6 +1004,7 @@ RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
+RUN_TEST(vmo_decommit_misaligned_test);
 RUN_TEST(vmo_cache_test);
 RUN_TEST(vmo_zero_page_test);
 RUN_TEST(vmo_clone_test_1);
