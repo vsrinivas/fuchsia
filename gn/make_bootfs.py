@@ -102,8 +102,9 @@ def main():
         if os.path.exists(system_manifest) and os.path.getsize(system_manifest) != 0:
             mkbootfs_cmd += [ "--target=system", system_manifest ]
         ids = os.path.join(package_dir, "ids.txt")
-        with open(ids) as ids_file:
-            buildids.append(ids_file.read())
+        if os.path.exists(ids):
+            with open(ids) as ids_file:
+                buildids.append(ids_file.read())
 
     with open(args.build_id_map, 'w') as build_id_file:
         build_id_file.writelines(buildids)
