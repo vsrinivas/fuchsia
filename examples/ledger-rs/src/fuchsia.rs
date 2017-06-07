@@ -62,7 +62,12 @@ impl Launcher {
         let (services_proxy, services_request) = ServiceProvider_new_pair();
         let (controller_proxy, controller_request) = ApplicationController_new_pair();
 
-        let launch_info = ApplicationLaunchInfo { url, arguments, services: Some(services_request) };
+        let launch_info = ApplicationLaunchInfo {
+            url,
+            arguments,
+            service_request: None,
+            services: Some(services_request)
+        };
         self.proxy.create_application(launch_info, Some(controller_request));
         App { services: services_proxy, controller: controller_proxy }
     }
