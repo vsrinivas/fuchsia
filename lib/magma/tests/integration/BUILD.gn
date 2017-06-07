@@ -7,7 +7,7 @@ import("//magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":magma_integration_tests",
   ]
 }

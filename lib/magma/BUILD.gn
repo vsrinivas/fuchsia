@@ -2,74 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
 import("//magma/gnbuild/magma.gni")
-
-group("magma_service_driver") {
-  if (target_cpu == "x64") {
-    deps = [
-      "$msd_intel_gen_build_root:msd_vendor",
-    ]
-  } else {
-    deps = [ "src/stub:msd_vendor" ]
-  }
-}
-
-group("magma_service_driver_test") {
-  testonly = true
-
-  if (target_cpu == "x64") {
-    deps = [
-      "$msd_intel_gen_build_root:test",
-    ]
-  }
-}
-
-group("libvulkan") {
-  if (target_cpu == "x64") {
-    deps = [
-      "$mesa_build_root:magma_vulkan",
-    ]
-  } else {
-    deps = [ "src/stub:vulkan_vendor" ]
-  }
-}
-
-group("tests") {
-  testonly = true
-  if (target_cpu == "x64") {
-    deps = [
-      "tests",
-      "$mesa_build_root:tests",
-      "$msd_intel_gen_build_root:tests",
-    ]
-  }
-}
-
-# This config allows inclusion of headers via relative paths from src
-config("magma_src_include_config") {
-  include_dirs = [ "src" ]
-}
-
-# This config allows inclusion of headers via relative paths from tests
-config("magma_tests_include_config") {
-  include_dirs = [ "tests" ]
-}
-
-# internal only
-source_set("libmsd") {
-  deps = [
-    "src/sys_driver",
-  ]
-  public_deps = [
-    "include:msd_abi",
-  ]
-}
-
-shared_library("libmagma") {
-  deps = [
-    "src/libmagma($magma_shared_toolchain)",
-  ]
-}
 
 group("vulkan") {
   public_deps = [
@@ -77,7 +11,92 @@ group("vulkan") {
   ]
 }
 
-group("tools") {
-  deps = [ "src/tools" ]
+package("magma-common") {
+  if (target_cpu == "x64") {
+    testonly = true
+    deps = [
+      ":libmagma",
+      ":libvulkan",
+      ":tools",
+      "$mesa_build_root:tests",
+      "$msd_intel_gen_build_root:test",
+      "$msd_intel_gen_build_root:tests",
+      "//magma/tests:tests",
+      "//magma/tests/vkcube",
+    ]
 
+    binaries = [
+      {
+        name = "magma_info"
+      },
+      {
+        name = "vkcube"
+      },
+    ]
+
+    libraries = [
+      {
+        name = "libmagma.so"
+      },
+      {
+        name = "libvulkan_vendor.so"
+      },
+    ]
+
+    resources = [ {
+          path = rebase_path("icd/magma_icd.json")
+          dest = "vulkan/icd.d/magma_icd.json"
+        } ]
+  }
+}
+
+package("magma") {
+  if (target_cpu == "x64") {
+    deps = [
+      "$msd_intel_gen_build_root:msd_vendor",
+    ]
+    drivers = [ {
+          name = "libmsd_vendor.so"
+        } ]
+  }
+}
+
+if (target_cpu == "x64") {
+  group("libvulkan") {
+    public_deps = [
+      "$mesa_build_root:magma_vulkan",
+    ]
+  }
+
+  # This config allows inclusion of headers via relative paths from src
+  config("magma_src_include_config") {
+    include_dirs = [ "src" ]
+  }
+
+  # This config allows inclusion of headers via relative paths from tests
+  config("magma_tests_include_config") {
+    include_dirs = [ "tests" ]
+  }
+
+  # internal only
+  source_set("libmsd") {
+    deps = [
+      "src/sys_driver",
+    ]
+    public_deps = [
+      "include:msd_abi",
+    ]
+  }
+
+  shared_library("libmagma") {
+    deps = [
+      "src/libmagma($magma_shared_toolchain)",
+    ]
+  }
+
+  group("tools") {
+    public_deps = [
+      "src/tools",
+    ]
+  }
 }

@@ -5,7 +5,7 @@
 import("//magma/gnbuild/magma.gni")
 
 group("tools") {
-  deps = [
+  public_deps = [
     ":magma_info",
   ]
 }
