@@ -47,6 +47,7 @@ class ActionLogDataHandler extends ActionLogListener
       request.response.close();
       return true;
     }
+    return false;
   }
 
   @override
