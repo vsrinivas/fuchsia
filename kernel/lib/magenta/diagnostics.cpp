@@ -505,7 +505,8 @@ public:
         available_++;
         if (nelem_ < max_) {
             mx_info_maps_t entry = {};
-            map->vmo()->get_name(entry.name, sizeof(entry.name));
+            auto vmo = map->vmo();
+            vmo->get_name(entry.name, sizeof(entry.name));
             entry.base = map->base();
             entry.size = map->size();
             entry.depth = depth + 1; // The root aspace is depth 0.
@@ -513,7 +514,8 @@ public:
             mx_info_maps_mapping_t* u = &entry.u.mapping;
             u->mmu_flags =
                 arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
-            u->committed_pages = map->vmo()->AllocatedPagesInRange(
+            u->vmo_koid = vmo->user_id();
+            u->committed_pages = vmo->AllocatedPagesInRange(
                 map->object_offset(), map->size());
             if (maps_.copy_array_to_user(&entry, 1, nelem_) != NO_ERROR) {
                 return false;

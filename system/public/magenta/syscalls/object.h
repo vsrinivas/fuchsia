@@ -160,6 +160,8 @@ typedef struct mx_info_maps_mapping {
     // MMU flags for the mapping.
     // Bitwise OR of MX_VM_FLAG_PERM_{READ,WRITE,EXECUTE} values.
     uint32_t mmu_flags;
+    // koid of the mapped VMO.
+    mx_koid_t vmo_koid;
     // The number of PAGE_SIZE pages in the mapped region of the VMO
     // that are backed by physical memory.
     size_t committed_pages;
