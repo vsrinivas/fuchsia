@@ -616,6 +616,9 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
     auto begin = --subregions_.upper_bound(base);
     if (!begin.IsValid()) {
         begin = subregions_.begin();
+    } else if (base >= begin->base() + begin->size()) {
+        // If *base* isn't in this region, ignore it.
+        ++begin;
     }
 
     // Check if we're partially spanning a subregion, or aren't allowed to
