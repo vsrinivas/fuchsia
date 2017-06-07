@@ -1259,6 +1259,49 @@ bool unmap_multiple_test() {
     END_TEST;
 }
 
+// Verify that we can unmap multiple ranges simultaneously
+bool unmap_base_not_mapped_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    uintptr_t mapping_addr;
+
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    const size_t mapping_size = 4 * PAGE_SIZE;
+    ASSERT_EQ(mx_vmo_create(mapping_size, 0, &vmo), NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_unmap(vmar, mapping_addr - PAGE_SIZE, mapping_size + PAGE_SIZE),
+              NO_ERROR, "");
+
+    // Try again, but this time with a mapping below where base is
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr),
+              NO_ERROR, "");
+    for (size_t gap = PAGE_SIZE; gap < 3 * PAGE_SIZE; gap += PAGE_SIZE) {
+        ASSERT_EQ(mx_vmar_map(vmar, mapping_size + gap, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr),
+                  NO_ERROR, "");
+        ASSERT_EQ(mx_vmar_unmap(vmar, mapping_addr - PAGE_SIZE, mapping_size + PAGE_SIZE),
+                  NO_ERROR, "");
+    }
+
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 // Verify that we can overwrite subranges and multiple ranges simultaneously
 bool map_specific_overwrite_test() {
     BEGIN_TEST;
@@ -1612,6 +1655,7 @@ RUN_TEST(nested_region_perms_test);
 RUN_TEST(object_info_test);
 RUN_TEST(unmap_split_test);
 RUN_TEST(unmap_multiple_test);
+RUN_TEST(unmap_base_not_mapped_test);
 RUN_TEST(map_specific_overwrite_test);
 RUN_TEST(protect_split_test);
 RUN_TEST(protect_multiple_test);
