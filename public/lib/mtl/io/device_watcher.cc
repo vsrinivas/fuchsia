@@ -91,14 +91,21 @@ void DeviceWatcher::ListDevices(ftl::WeakPtr<DeviceWatcher> weak, int dir_fd) {
 void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (pending & MX_CHANNEL_READABLE) {
     uint32_t size;
-    char name[MXIO_MAX_FILENAME + 1];
+    uint8_t msg[VFS_WATCH_NAME_MAX + 2];
     mx_status_t status =
-        dir_watch_.read(0, name, MXIO_MAX_FILENAME, &size, nullptr, 0, nullptr);
+        dir_watch_.read(0, msg, sizeof(msg), &size, nullptr, 0, nullptr);
     FTL_CHECK(status == NO_ERROR)
         << "Failed to read from directory watch channel";
 
+    if ((size < 2) || (size != (msg[1] + 2u))) {
+        // invalid message
+        return;
+    }
+
     // Note: Callback may destroy DeviceWatcher before returning.
-    callback_(dir_fd_.get(), std::string(name, size));
+    if (msg[0] == VFS_WATCH_EVT_ADDED) {
+        callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg) + 2, size - 2));
+    }
     return;
   }
 
