@@ -90,11 +90,6 @@ static bool periodic() {
 
         EXPECT_GT(mx_time_get(MX_CLOCK_MONOTONIC), expected_arrival, "");
         expected_arrival += period;
-
-        // Because the signal is strobed, it is only available at the time of the first wait
-        // not afterwards.
-        EXPECT_EQ(timer.wait_one(MX_TIMER_SIGNALED, 0u, &pending), ERR_TIMED_OUT, "");
-        EXPECT_EQ(pending & MX_TIMER_SIGNALED, 0u, "");
     }
 
     EXPECT_EQ(mx_timer_cancel(timer.get()), NO_ERROR, "");
