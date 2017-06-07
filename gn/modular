@@ -170,6 +170,10 @@
             "bootfs_path": "apps/swap_recipe"
         },
         {
+            "binary": "test_story_importance",
+            "bootfs_path": "apps/test_story_importance"
+        },
+        {
             "binary": "test_user_shell",
             "bootfs_path": "apps/test_user_shell"
         },
