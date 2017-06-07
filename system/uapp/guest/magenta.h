@@ -6,6 +6,6 @@
 
 #include <magenta/types.h>
 
-mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t acpi_off,
-                          const int fd, const char* bootdata_path, uintptr_t* guest_ip,
-                          uintptr_t* bootdata_offset);
+mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t first_page,
+                          const uintptr_t acpi_off, const int fd, const char* bootdata_path,
+                          uintptr_t* guest_ip, uintptr_t* bootdata_offset);

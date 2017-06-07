@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <elf.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -29,52 +28,14 @@ static int vcpu_thread(void* arg) {
     return vcpu_loop((vcpu_context_t*)arg) != MX_OK ? thrd_error : thrd_success;
 }
 
-static int is_elf(const int fd, bool* result) {
-    // Assume it's an elf file and try to read the header
-    Elf64_Ehdr e_header;
-    int ret = read(fd, &e_header, sizeof(e_header));
-    if (ret != sizeof(e_header)) {
-        fprintf(stderr, "Failed to read header\n");
-        return MX_ERR_IO;
-    }
-
-    // Check ELF magic
-    *result = e_header.e_ident[EI_MAG0] == ELFMAG0 &&
-              e_header.e_ident[EI_MAG1] == ELFMAG1 &&
-              e_header.e_ident[EI_MAG2] == ELFMAG2 &&
-              e_header.e_ident[EI_MAG3] == ELFMAG3;
-
-    if (lseek(fd, 0, SEEK_SET) < -1) {
-        fprintf(stderr, "Failed seeking back to start\n");
-        return MX_ERR_IO;
-    }
-
-    return MX_OK;
-}
-
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: %s kernel.bin [ramdisk.bin]\n", basename(argv[0]));
         return MX_ERR_INVALID_ARGS;
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[1]);
-        return MX_ERR_IO;
-    }
-
-    // For simplicity, we just assume that all elf files are linux
-    // and anything else is magenta.
-    bool is_linux = false;
-    mx_status_t status = is_elf(fd, &is_linux);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to determine kernel image type\n");
-        return status;
-    }
-
     mx_handle_t hypervisor;
-    status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
+    mx_status_t status = mx_hypervisor_create(MX_HANDLE_INVALID, 0, &hypervisor);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create hypervisor\n");
         return status;
@@ -125,29 +86,45 @@ int main(int argc, char** argv) {
         return status;
     }
 
+    // Prepare the OS image
+    int fd = open(argv[1], O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open kernel image \"%s\"\n", argv[1]);
+        return MX_ERR_IO;
+    }
+
+    // Load the first page in to allow OS detection without requiring
+    // us to seek backwards later.
+    uintptr_t first_page = addr + kVmoSize - PAGE_SIZE;
+    ret = read(fd, (void*)first_page, PAGE_SIZE);
+    if (ret != PAGE_SIZE) {
+        fprintf(stderr, "Failed to read first page of kernel\n");
+        return MX_ERR_IO;
+    }
+
     uintptr_t guest_ip;
     uintptr_t bootdata_offset = 0;
-    if (!is_linux) {
-        // magenta
-        status = setup_magenta(addr,
-                               pt_end_off,
-                               fd,
-                               argc >= 3 ? argv[2] : NULL,
-                               &guest_ip,
-                               &bootdata_offset);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to setup magenta\n");
-            return status;
-        }
-    } else {
-        // linux
+    status = setup_magenta(addr,
+                           first_page,
+                           pt_end_off,
+                           fd,
+                           argc >= 3 ? argv[2] : NULL,
+                           &guest_ip,
+                           &bootdata_offset);
+    if (status == MX_ERR_NOT_SUPPORTED) {
         status = setup_linux(addr,
+                             first_page,
                              fd,
-                             &guest_ip);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to setup linux\n");
-            return status;
-        }
+                             "earlyprintk=serial,ttyS,115200",
+                             &guest_ip,
+                             &bootdata_offset);
+    }
+    if (status == MX_ERR_NOT_SUPPORTED) {
+        fprintf(stderr, "Unknown kernel\n");
+        return status;
+    } else if (status != MX_OK) {
+        fprintf(stderr, "Failed to load kernel\n");
+        return status;
     }
     close(fd);
 

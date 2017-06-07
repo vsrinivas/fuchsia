@@ -43,6 +43,8 @@ typedef struct io_port_state {
     uint8_t i8042_command;
     // State of power management enable register.
     uint16_t pm1_enable;
+    // State of the UART line control register.
+    uint8_t uart_line_control;
 } io_port_state_t;
 
 /* Stores the state of PCI devices across VM exists. */

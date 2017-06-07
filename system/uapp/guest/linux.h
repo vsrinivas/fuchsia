@@ -6,4 +6,5 @@
 
 #include <magenta/types.h>
 
-mx_status_t setup_linux(const uintptr_t addr, const int fd, uintptr_t* guest_ip);
+mx_status_t setup_linux(const uintptr_t addr, const uintptr_t first_page, const int fd,
+                        const char command_line[], uintptr_t* guest_ip, uintptr_t* zero_page);

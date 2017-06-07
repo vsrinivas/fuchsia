@@ -12,7 +12,7 @@ BUILDDIR="$MAGENTADIR/build-magenta-pc-x86-64"
 
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
 BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
-LINUX="${4:-$BUILDDIR/linux-x86/vmlinux}"
+LINUX="${4:-$BUILDDIR/linux-x86/arch/x86_64/boot/bzImage}"
 
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
@@ -22,7 +22,7 @@ data/kernel.bin=$KERNEL
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 
 if [ -f "$LINUX" ]; then
-    echo "data/vmlinux=$LINUX" >> /tmp/guest.manifest
+    echo "data/bzImage=$LINUX" >> /tmp/guest.manifest
 fi
 
 $BUILDDIR/tools/mkbootfs \

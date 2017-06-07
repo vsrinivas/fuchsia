@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <hypervisor/guest.h>
@@ -23,14 +25,12 @@ static bool container_is_valid(const bootdata_t* container) {
            container->flags == 0;
 }
 
-static mx_status_t load_magenta(const int fd, uintptr_t addr, uintptr_t* guest_ip,
-                                uintptr_t* end_off) {
-    uintptr_t header_addr = addr + kKernelOffset;
-    int ret = read(fd, (void*)header_addr, sizeof(magenta_kernel_t));
-    if (ret != sizeof(magenta_kernel_t)) {
-        fprintf(stderr, "Failed to read Magenta kernel header\n");
-        return MX_ERR_IO;
-    }
+static mx_status_t load_magenta(const int fd, uintptr_t addr, const uintptr_t first_page,
+                                uintptr_t* guest_ip, uintptr_t* end_off) {
+    // Move the first page to where magenta would like it to be
+    uintptr_t header_addr = (uintptr_t) memmove((void*)(addr + kKernelOffset),
+                                                (void*)first_page,
+                                                PAGE_SIZE);
 
     magenta_kernel_t* header = (magenta_kernel_t*)header_addr;
     if (!container_is_valid(&header->hdr_file)) {
@@ -46,10 +46,15 @@ static mx_status_t load_magenta(const int fd, uintptr_t addr, uintptr_t* guest_i
         return MX_ERR_IO_DATA_INTEGRITY;
     }
 
-    uintptr_t data_off = kKernelOffset + sizeof(magenta_kernel_t);
+    // We already read a page, now we need the rest...
+    // The rest is the length in the header, minus what we already read, but accounting for
+    // the bootdata_kernel_t portion of magenta_kernel_t that's included in the header length.
+    uintptr_t data_off = kKernelOffset + PAGE_SIZE;
     uintptr_t data_addr = addr + data_off;
-    size_t data_len = header->hdr_kernel.length - sizeof(bootdata_kernel_t);
-    ret = read(fd, (void*)data_addr, data_len);
+    size_t data_len = header->hdr_kernel.length -
+                      (PAGE_SIZE - (sizeof(magenta_kernel_t) - sizeof(bootdata_kernel_t)));
+
+    int ret = read(fd, (void*)data_addr, data_len);
     if (ret < 0 || (size_t)ret != data_len) {
         fprintf(stderr, "Failed to read Magenta kernel data\n");
         return MX_ERR_IO;
@@ -86,9 +91,17 @@ static mx_status_t load_bootfs(const int fd, uintptr_t addr, uintptr_t bootdata_
     return MX_OK;
 }
 
-mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t acpi_off,
-                          const int fd, const char* bootdata_path, uintptr_t* guest_ip,
-                          uintptr_t* bootdata_offset) {
+static bool is_magenta(const uintptr_t first_page) {
+    magenta_kernel_t* header = (magenta_kernel_t*)first_page;
+    return container_is_valid(&header->hdr_file);
+}
+
+mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t first_page,
+                          const uintptr_t acpi_off, const int fd, const char* bootdata_path,
+                          uintptr_t* guest_ip, uintptr_t* bootdata_offset) {
+    if (!is_magenta(first_page)) {
+        return MX_ERR_NOT_SUPPORTED;
+    }
 
     mx_status_t status = guest_create_bootdata(addr, kVmoSize, acpi_off, kBootdataOffset);
     if (status != MX_OK) {
@@ -97,7 +110,7 @@ mx_status_t setup_magenta(const uintptr_t addr, const uintptr_t acpi_off,
     }
 
     uintptr_t magenta_end_off;
-    status = load_magenta(fd, addr, guest_ip, &magenta_end_off);
+    status = load_magenta(fd, addr, first_page, guest_ip, &magenta_end_off);
     if (status != MX_OK)
         return status;
     MX_ASSERT(magenta_end_off <= kBootdataOffset);

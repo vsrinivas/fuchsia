@@ -55,6 +55,7 @@
 
 /* UART configuration flags. */
 #define UART_STATUS_IDLE                        (1u << 6)
+#define UART_STATUS_EMPTY                       (1u << 5)
 
 /* RTC register addresses. */
 #define RTC_REGISTER_SECONDS                    0u
@@ -213,13 +214,17 @@ static mx_status_t handle_port_in(vcpu_context_t* context, const mx_guest_port_i
     mx_status_t status = MX_OK;
     io_port_state_t* io_port_state = &context->guest_state->io_port_state;
     switch (port_in->port) {
-    case UART_RECEIVE_IO_PORT + 4:
+    case UART_LINE_CONTROL_IO_PORT:
+        input_size = 1;
+        packet.port_in_ret.u8 = io_port_state->uart_line_control;
+        break;
+    case UART_MODEM_CONTROL_IO_PORT:
         input_size = 1;
         packet.port_in_ret.u8 = 0;
         break;
-    case UART_STATUS_IO_PORT:
+    case UART_LINE_STATUS_IO_PORT:
         input_size = 1;
-        packet.port_in_ret.u8 = UART_STATUS_IDLE;
+        packet.port_in_ret.u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
         break;
     case RTC_DATA_PORT: {
         input_size = 1;
@@ -286,7 +291,8 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
     case PIC2_PORT ... PIC2_PORT + 2:
     case I8253_CONTROL_PORT:
     case I8042_DATA_PORT:
-    case UART_RECEIVE_IO_PORT + 1 ... UART_RECEIVE_IO_PORT + 5:
+    case UART_RECEIVE_IO_PORT + 1 ... UART_LINE_CONTROL_IO_PORT - 1:
+    case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
         return MX_OK;
     case UART_RECEIVE_IO_PORT:
         for (int i = 0; i < port_out->access_size; i++) {
@@ -296,6 +302,11 @@ static mx_status_t handle_port_out(vcpu_context_t* context, const mx_guest_port_
                 io_port_state->offset = 0;
             }
         }
+        return MX_OK;
+    case UART_LINE_CONTROL_IO_PORT:
+        if (port_out->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        io_port_state->uart_line_control = port_out->u8;
         return MX_OK;
     case RTC_INDEX_PORT:
         if (port_out->access_size != 1)

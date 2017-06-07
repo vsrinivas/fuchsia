@@ -5,8 +5,11 @@
 #pragma once
 
 /* UART ports. */
-#define UART_RECEIVE_IO_PORT    0x3f8
-#define UART_STATUS_IO_PORT     0x3fd
+#define UART_RECEIVE_IO_PORT           0x3f8
+#define UART_LINE_CONTROL_IO_PORT      0x3fb
+#define UART_MODEM_CONTROL_IO_PORT     0x3fc
+#define UART_LINE_STATUS_IO_PORT       0x3fd
+#define UART_SCR_SCRATCH_IO_PORT       0x3ff
 
 /* RTC ports. */
 #define RTC_INDEX_PORT          0x70
