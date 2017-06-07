@@ -10,9 +10,9 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/pretty system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/magenta system/ulib/c
 
-MODULE := $(LOCAL_DIR).ax88772b
+MODULE := $(LOCAL_DIR)
 
-MODULE_SRCS := $(LOCAL_DIR)/asix-88772b.c
+MODULE_SRCS := $(LOCAL_DIR)/asix-88179.c
 
 include make/module.mk
 
