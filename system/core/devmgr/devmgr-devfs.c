@@ -26,6 +26,7 @@ typedef struct dc_iostate iostate_t;
 struct dc_watcher {
     watcher_t* next;
     devnode_t* devnode;
+    uint32_t mask;
     mx_handle_t handle;
 };
 
@@ -191,13 +192,14 @@ static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
 
     watcher->devnode = dn;
     watcher->next = dn->watchers;
+    watcher->mask = VFS_WATCH_MASK_ADDED;
     dn->watchers = watcher;
     return NO_ERROR;
 }
 
-static void devfs_notify(devnode_t* dn, const char* name) {
+static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     watcher_t* w = dn->watchers;
-    if (w == NULL) {
+    if ((w == NULL) || !(w->mask & (1 << op))) {
         return;
     }
 
@@ -207,7 +209,7 @@ static void devfs_notify(devnode_t* dn, const char* name) {
     }
 
     uint8_t msg[VFS_WATCH_NAME_MAX + 2];
-    msg[0] = VFS_WATCH_EVT_ADDED;
+    msg[0] = op;
     msg[1] = len;
     memcpy(msg + 2, name, len);
 
@@ -222,6 +224,30 @@ static void devfs_notify(devnode_t* dn, const char* name) {
         }
         w = next;
     }
+}
+
+static mx_status_t devfs_watch_v2(devnode_t* dn, mx_handle_t h, uint32_t mask) {
+    watcher_t* watcher = calloc(1, sizeof(watcher_t));
+    if (watcher == NULL) {
+        return ERR_NO_MEMORY;
+    }
+
+    watcher->devnode = dn;
+    watcher->next = dn->watchers;
+    watcher->handle = h;
+    watcher->mask = mask;
+    dn->watchers = watcher;
+
+    if (mask & VFS_WATCH_MASK_EXISTING) {
+        devnode_t* child;
+        list_for_every_entry(&dn->children, child, devnode_t, node) {
+            //TODO: send multiple per write
+            devfs_notify(dn, child->name, VFS_WATCH_EVT_EXISTING);
+        }
+        // empty-name event signals that all existing names have been seen
+        devfs_notify(dn, "", VFS_WATCH_EVT_EXISTING);
+    }
+    return NO_ERROR;
 }
 
 // If namelen is nonzero, it is the null-terminator-inclusive length
@@ -318,14 +344,14 @@ got_name:
         // add link node to class directory
         list_add_tail(&dir->children, &dnlink->node);
         dev->link = dnlink;
-        devfs_notify(dir, dnlink->name);
+        devfs_notify(dir, dnlink->name, VFS_WATCH_EVT_ADDED);
     }
 
 done:
     // add self node to parent directory
     list_add_tail(&parent->self->children, &dnself->node);
     dev->self = dnself;
-    devfs_notify(parent->self, dnself->name);
+    devfs_notify(parent->self, dnself->name, VFS_WATCH_EVT_ADDED);
     return NO_ERROR;
 }
 
@@ -352,6 +378,8 @@ static void _devfs_remove(devnode_t* dn) {
         mx_handle_close(ios->ph.handle);
         ios->ph.handle = MX_HANDLE_INVALID;
     }
+
+    devfs_notify(dn, "", VFS_WATCH_EVT_DELETED);
 
     // destroy all watchers
     watcher_t* watcher;
@@ -596,6 +624,20 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
                 }
                 socket_device.hrpc = msg->handle[0];
                 r = NO_ERROR;
+            }
+            if (r != NO_ERROR) {
+                mx_handle_close(msg->handle[0]);
+            }
+            return r;
+        }
+        if (msg->arg2.op == IOCTL_VFS_WATCH_DIR_V2) {
+            vfs_watch_dir_t* wd = (vfs_watch_dir_t*) msg->data;
+            if ((len != sizeof(vfs_watch_dir_t)) ||
+                (wd->options != 0) ||
+                (wd->mask & (~VFS_WATCH_MASK_ALL))) {
+                r = ERR_INVALID_ARGS;
+            } else {
+                r = devfs_watch_v2(dn, msg->handle[0], wd->mask);
             }
             if (r != NO_ERROR) {
                 mx_handle_close(msg->handle[0]);
