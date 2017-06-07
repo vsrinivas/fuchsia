@@ -21,6 +21,10 @@
       "bootfs_path": "apps/spinning_cube"
     },
     {
+      "binary": "gen/apps/sysui/infinite_scroller/infinite_scroller.flx",
+      "bootfs_path": "apps/infinite_scroller"
+    },
+    {
       "binary": "home_work_agent.dartx",
       "bootfs_path": "apps/agents/home_work_agent"
     },
