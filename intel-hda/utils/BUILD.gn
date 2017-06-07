@@ -4,8 +4,6 @@
 
 source_set("ihda-utils") {
     sources = [
-        "audio2-proto.cpp",
-        "audio2-proto.h",
         "codec-caps.cpp",
         "codec-caps.h",
         "codec-commands.h",

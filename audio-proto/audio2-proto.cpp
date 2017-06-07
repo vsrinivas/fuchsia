@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "drivers/audio/intel-hda/utils/audio2-proto.h"
+#include "drivers/audio/audio-proto/audio2-proto.h"
 
 namespace audio {
 namespace audio2_proto {
