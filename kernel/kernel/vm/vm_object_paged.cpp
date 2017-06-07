@@ -514,7 +514,7 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* d
         return NO_ERROR;
 
     // figure the starting and ending page offset
-    uint64_t start = PAGE_ALIGN(offset);
+    uint64_t start = ROUNDDOWN(offset, PAGE_SIZE);
     uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
     DEBUG_ASSERT(end > offset);
     DEBUG_ASSERT(end > start);
