@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
 #include "escher/geometry/types.h"
@@ -22,6 +22,12 @@ class ModelUniformWriter;
 
 class ModelData {
  public:
+  // Vertex attribute locations corresponding to the flags in MeshSpec.
+  static constexpr uint32_t kPositionAttributeLocation = 0;
+  static constexpr uint32_t kPositionOffsetAttributeLocation = 1;
+  static constexpr uint32_t kUVAttributeLocation = 2;
+  static constexpr uint32_t kPerimeterPosAttributeLocation = 3;
+
   // Describes per-model data accessible by shaders.
   struct PerModel {
     // One uniform descriptor, and one texture descriptor.
@@ -81,6 +87,8 @@ class ModelData {
     return per_object_descriptor_set_pool_.layout();
   }
 
+  const MeshShaderBinding& GetMeshShaderBinding(MeshSpec spec);
+
  private:
   // Provide access to statically-allocated layout info for per-model and
   // per-object descriptor-sets.
@@ -93,6 +101,11 @@ class ModelData {
   UniformBufferPool uniform_buffer_pool_;
   DescriptorSetPool per_model_descriptor_set_pool_;
   DescriptorSetPool per_object_descriptor_set_pool_;
+
+  std::unordered_map<MeshSpec,
+                     std::unique_ptr<MeshShaderBinding>,
+                     MeshSpec::Hash>
+      mesh_shader_binding_cache_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModelData);
 };

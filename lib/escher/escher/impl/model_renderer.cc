@@ -9,7 +9,6 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/image_cache.h"
-#include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_display_list.h"
@@ -42,8 +41,8 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
 
   CreateRenderPasses(pre_pass_color_format, lighting_pass_color_format,
                      lighting_pass_sample_count, depth_format);
-  pipeline_cache_ = std::make_unique<impl::ModelPipelineCacheOLD>(
-      device_, depth_prepass_, lighting_pass_, model_data_, mesh_manager_);
+  pipeline_cache_ = std::make_unique<impl::ModelPipelineCache>(
+      model_data_, depth_prepass_, lighting_pass_);
 }
 
 ModelRenderer::~ModelRenderer() {
@@ -92,7 +91,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     for (size_t i = 0; i < objects.size(); ++i) {
       ModelPipelineSpec spec;
       auto& obj = objects[i];
-      spec.mesh_spec = GetMeshForShape(obj.shape())->spec;
+      spec.mesh_spec = GetMeshForShape(obj.shape())->spec();
       spec.shape_modifiers = obj.shape().modifiers();
       pipeline_bins[spec].push_back(i);
     }

@@ -16,65 +16,38 @@
 namespace escher {
 namespace impl {
 
-struct MeshSpecImpl;
 class ModelPipeline;
 
 // TODO: document.
 class ModelPipelineCache {
  public:
-  ModelPipelineCache(vk::Device device,
-                     vk::RenderPass depth_prepass,
-                     vk::RenderPass lighting_pass);
-  virtual ~ModelPipelineCache() {}
-
-  // Get cached pipeline, or return a newly-created one.
-  virtual ModelPipeline* GetPipeline(const ModelPipelineSpec& spec) = 0;
-
- protected:
-  vk::Device device_;
-  vk::RenderPass depth_prepass_;
-  vk::RenderPass lighting_pass_;
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);
-};
-
-// Work in progress, will be killed soon.
-class ModelPipelineCacheOLD : public ModelPipelineCache {
- public:
   // TODO: Vulkan requires an instantiated render-pass and a specific subpass
   // index within it in order to create a pipeline (as opposed to e.g. Metal,
   // which only requires attachment descriptions).  It somehow feels janky to
-  // pass these to the ModelPipelineCache constructor.
-  ModelPipelineCacheOLD(vk::Device device,
-                        vk::RenderPass depth_prepass,
-                        vk::RenderPass lighting_pass,
-                        ModelData* model_data,
-                        MeshManager* mesh_manager);
-  ~ModelPipelineCacheOLD();
+  // pass these to the ModelPipelineCache constructor, but what else can we do?
+  ModelPipelineCache(ModelData* model_data,
+                     vk::RenderPass depth_prepass,
+                     vk::RenderPass lighting_pass);
+  ~ModelPipelineCache();
 
-  // The MeshSpecImpl is used in case a new pipeline needs to be created.
-  // TODO: passing the MeshSpecImpl is kludgy, especially since the caller may
-  // need to look it up in a cache.
-  ModelPipeline* GetPipeline(const ModelPipelineSpec& spec) override;
+  // Get cached pipeline, or return a newly-created one.
+  ModelPipeline* GetPipeline(const ModelPipelineSpec& spec);
 
   GlslToSpirvCompiler* glsl_compiler() { return &compiler_; }
 
  private:
-  std::unique_ptr<ModelPipeline> NewPipeline(
-      const ModelPipelineSpec& spec,
-      const MeshSpecImpl& mesh_spec_impl);
+  std::unique_ptr<ModelPipeline> NewPipeline(const ModelPipelineSpec& spec);
 
   ModelData* const model_data_;
-  MeshManager* const mesh_manager_;
-
+  vk::RenderPass depth_prepass_;
+  vk::RenderPass lighting_pass_;
   std::unordered_map<ModelPipelineSpec,
                      std::unique_ptr<ModelPipeline>,
                      Hash<ModelPipelineSpec>>
       pipelines_;
   GlslToSpirvCompiler compiler_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCacheOLD);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);
 };
 
 }  // namespace impl

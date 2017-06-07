@@ -55,7 +55,8 @@ class SsdoSampler {
   SsdoSampler(ResourceLifePreserver* life_preserver,
               MeshPtr full_screen,
               ImagePtr noise_image,
-              GlslToSpirvCompiler* compiler);
+              GlslToSpirvCompiler* compiler,
+              ModelData* model_data);
   ~SsdoSampler();
 
   // Stochastic sampling to determine obscurance.  The output requires filtering

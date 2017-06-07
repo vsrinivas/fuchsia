@@ -5,9 +5,7 @@
 #include "escher/impl/model_pipeline_cache.h"
 
 #include "escher/geometry/types.h"
-// TODO: move MeshSpecImpl into its own file, then remove this.
-#include "escher/impl/mesh_impl.h"
-#include "escher/impl/mesh_manager.h"
+#include "escher/impl/mesh_shader_binding.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/vulkan_utils.h"
@@ -21,7 +19,7 @@ constexpr char g_vertex_src[] = R"GLSL(
   #version 450
   #extension GL_ARB_separate_shader_objects : enable
 
-  // Attribute locations must match constants in mesh_impl.h
+  // Attribute locations must match constants in model_data.h
   layout(location = 0) in vec2 inPosition;
   layout(location = 2) in vec2 inUV;
 
@@ -47,7 +45,7 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
     #version 450
     #extension GL_ARB_separate_shader_objects : enable
 
-    // Attribute locations must match constants in mesh_impl.h
+    // Attribute locations must match constants in model_data.h
     layout(location = 0) in vec2 inPosition;
     layout(location = 1) in vec2 inPositionOffset;
     layout(location = 2) in vec2 inUV;
@@ -158,35 +156,26 @@ constexpr char g_fragment_src[] = R"GLSL(
 
 }  // namespace
 
-ModelPipelineCache::ModelPipelineCache(vk::Device device,
+ModelPipelineCache::ModelPipelineCache(ModelData* model_data,
                                        vk::RenderPass depth_prepass,
                                        vk::RenderPass lighting_pass)
-    : device_(device),
+    : model_data_(model_data),
       depth_prepass_(depth_prepass),
-      lighting_pass_(lighting_pass) {}
+      lighting_pass_(lighting_pass) {
+  FTL_DCHECK(model_data_);
+}
 
-ModelPipelineCacheOLD::ModelPipelineCacheOLD(vk::Device device,
-                                             vk::RenderPass depth_prepass,
-                                             vk::RenderPass lighting_pass,
-                                             ModelData* model_data,
-                                             MeshManager* mesh_manager)
-    : ModelPipelineCache(device, depth_prepass, lighting_pass),
-      model_data_(model_data),
-      mesh_manager_(mesh_manager) {}
-
-ModelPipelineCacheOLD::~ModelPipelineCacheOLD() {
-  device_.waitIdle();
+ModelPipelineCache::~ModelPipelineCache() {
+  model_data_->device().waitIdle();
   pipelines_.clear();
 }
 
-ModelPipeline* ModelPipelineCacheOLD::GetPipeline(
-    const ModelPipelineSpec& spec) {
+ModelPipeline* ModelPipelineCache::GetPipeline(const ModelPipelineSpec& spec) {
   auto it = pipelines_.find(spec);
   if (it != pipelines_.end()) {
     return it->second.get();
   }
-  auto new_pipeline =
-      NewPipeline(spec, mesh_manager_->GetMeshSpecImpl(spec.mesh_spec));
+  auto new_pipeline = NewPipeline(spec);
   auto new_pipeline_ptr = new_pipeline.get();
   pipelines_[spec] = std::move(new_pipeline);
   return new_pipeline_ptr;
@@ -196,7 +185,7 @@ namespace {
 
 // Creates a new PipelineLayout and Pipeline using only the provided arguments.
 std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
-    vk::Device device,
+    ModelData* model_data,
     vk::ShaderModule vertex_module,
     vk::ShaderModule fragment_module,
     bool enable_depth_write,
@@ -204,8 +193,9 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
     vk::RenderPass render_pass,
     std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
     const ModelPipelineSpec& spec,
-    const MeshSpecImpl& mesh_spec_impl,
     vk::SampleCountFlagBits sample_count) {
+  vk::Device device = model_data->device();
+
   // Depending on configuration, more dynamic states may be added later.
   vk::PipelineDynamicStateCreateInfo dynamic_state_info;
   std::vector<vk::DynamicState> dynamic_states{vk::DynamicState::eViewport,
@@ -225,12 +215,17 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
                                                        fragment_stage_info};
 
   vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-  vertex_input_info.vertexBindingDescriptionCount = 1;
-  vertex_input_info.pVertexBindingDescriptions = &mesh_spec_impl.binding;
-  vertex_input_info.vertexAttributeDescriptionCount =
-      mesh_spec_impl.attributes.size();
-  vertex_input_info.pVertexAttributeDescriptions =
-      mesh_spec_impl.attributes.data();
+  {
+    auto& mesh_shader_binding =
+        model_data->GetMeshShaderBinding(spec.mesh_spec);
+    vertex_input_info.vertexBindingDescriptionCount = 1;
+    vertex_input_info.pVertexBindingDescriptions =
+        mesh_shader_binding.binding();
+    vertex_input_info.vertexAttributeDescriptionCount =
+        mesh_shader_binding.attributes().size();
+    vertex_input_info.pVertexAttributeDescriptions =
+        mesh_shader_binding.attributes().data();
+  }
 
   vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
   input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
@@ -398,9 +393,8 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
 }
 }  // namespace
 
-std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
-    const ModelPipelineSpec& spec,
-    const MeshSpecImpl& mesh_spec_impl) {
+std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
+    const ModelPipelineSpec& spec) {
   // TODO: create customized pipelines for different shapes/materials/etc.
 
   std::future<SpirvData> vertex_spirv_future;
@@ -433,6 +427,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
 
   // Wait for completion of asynchronous shader compilation.
   vk::ShaderModule vertex_module;
+  vk::Device device = model_data_->device();
   {
     SpirvData spirv = vertex_spirv_future.get();
 
@@ -440,7 +435,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
     module_info.pCode = spirv.data();
     vertex_module =
-        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
+        ESCHER_CHECKED_VK_RESULT(device.createShaderModule(module_info));
   }
   vk::ShaderModule fragment_module;
   if (!spec.use_depth_prepass) {
@@ -450,22 +445,22 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
     module_info.pCode = spirv.data();
     fragment_module =
-        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
+        ESCHER_CHECKED_VK_RESULT(device.createShaderModule(module_info));
   }
 
   auto pipeline_and_layout = NewPipelineHelper(
-      device_, vertex_module, fragment_module, enable_depth_write,
+      model_data_, vertex_module, fragment_module, enable_depth_write,
       depth_compare_op, render_pass,
       {model_data_->per_model_layout(), model_data_->per_object_layout()}, spec,
-      mesh_spec_impl, SampleCountFlagBitsFromInt(spec.sample_count));
+      SampleCountFlagBitsFromInt(spec.sample_count));
 
-  device_.destroyShaderModule(vertex_module);
+  device.destroyShaderModule(vertex_module);
   if (fragment_module) {
-    device_.destroyShaderModule(fragment_module);
+    device.destroyShaderModule(fragment_module);
   }
 
   return std::make_unique<ModelPipeline>(
-      spec, device_, pipeline_and_layout.first, pipeline_and_layout.second);
+      spec, device, pipeline_and_layout.first, pipeline_and_layout.second);
 }
 
 }  // namespace impl

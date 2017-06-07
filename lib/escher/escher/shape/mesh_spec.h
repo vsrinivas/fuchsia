@@ -24,6 +24,9 @@ enum class MeshAttribute {
   // float. Parameterization around the perimeter of an shape, which varies from
   // 0 - 1, and allows the vertex shader to know "where it is" on the shape.
   kPerimeterPos = 1 << 3,
+
+  // Pseudo-attribute, used to obtain the vertex stride for the mesh.
+  kStride = 1 << 4,
 };
 
 using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
@@ -31,6 +34,10 @@ using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
 inline MeshAttributes operator|(MeshAttribute bit0, MeshAttribute bit1) {
   return MeshAttributes(bit0) | bit1;
 }
+
+// Return the per-vertex size of the specified attribute, as documented above
+// (e.g. kPosition == sizeof(vec2)).
+size_t GetMeshAttributeSize(MeshAttribute attr);
 
 struct MeshSpec {
   MeshAttributes flags;
@@ -40,6 +47,11 @@ struct MeshSpec {
       return static_cast<std::uint32_t>(spec.flags);
     }
   };
+
+  size_t GetAttributeOffset(MeshAttribute flag) const;
+  size_t GetStride() const {
+    return GetAttributeOffset(MeshAttribute::kStride);
+  }
 };
 
 // Inline function definitions.

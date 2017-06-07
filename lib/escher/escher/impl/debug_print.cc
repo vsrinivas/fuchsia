@@ -72,6 +72,9 @@ std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
     case MeshAttribute::kPerimeterPos:
       str << "kPerimeterPos";
       break;
+    case MeshAttribute::kStride:
+      str << "kStride";
+      break;
   }
   return str;
 }

@@ -5,7 +5,6 @@
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/image_cache.h"
-#include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/renderer/texture.h"

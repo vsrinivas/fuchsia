@@ -4,8 +4,8 @@
 
 #include "escher/geometry/tessellation.h"
 
-#include <algorithm>
 #include <math.h>
+#include <algorithm>
 
 #include "escher/impl/model_data.h"
 #include "escher/shape/mesh_builder.h"
@@ -52,19 +52,19 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
   // values for the circle's center vertex.
   if (spec.flags & MeshAttribute::kPosition) {
     attribute_pointers.pos = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kPosition));
+        vertex + spec.GetAttributeOffset(MeshAttribute::kPosition));
   }
   if (spec.flags & MeshAttribute::kUV) {
     attribute_pointers.uv = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kUV));
+        vertex + spec.GetAttributeOffset(MeshAttribute::kUV));
   }
   if (spec.flags & MeshAttribute::kPositionOffset) {
     attribute_pointers.pos_offset = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kPositionOffset));
+        vertex + spec.GetAttributeOffset(MeshAttribute::kPositionOffset));
   }
   if (spec.flags & MeshAttribute::kPerimeterPos) {
     attribute_pointers.perim = reinterpret_cast<float*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeterPos));
+        vertex + spec.GetAttributeOffset(MeshAttribute::kPerimeterPos));
   }
   return attribute_pointers;
 }
@@ -138,7 +138,7 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
   builder->AddIndex(outer_vertex_count);
 
   auto mesh = builder->Build();
-  FTL_DCHECK(mesh->num_indices == index_count);
+  FTL_DCHECK(mesh->num_indices() == index_count);
   return mesh;
 }
 
@@ -216,7 +216,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
   builder->AddIndex(1);
 
   auto mesh = builder->Build();
-  FTL_DCHECK(mesh->num_indices == index_count);
+  FTL_DCHECK(mesh->num_indices() == index_count);
   return mesh;
 }
 
@@ -307,7 +307,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
   }
 
   auto mesh = builder->Build();
-  FTL_DCHECK(mesh->num_indices == index_count);
+  FTL_DCHECK(mesh->num_indices() == index_count);
   return mesh;
 }
 

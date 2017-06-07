@@ -5,9 +5,10 @@
 #include "escher/impl/command_buffer.h"
 
 #include "escher/impl/descriptor_set_pool.h"
-#include "escher/impl/mesh_impl.h"
+#include "escher/impl/mesh_shader_binding.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
+#include "escher/shape/mesh.h"
 
 #include "ftl/macros.h"
 
@@ -121,15 +122,14 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
   AddWaitSemaphore(mesh->TakeWaitSemaphore(),
                    vk::PipelineStageFlagBits::eVertexInput);
 
-  auto mesh_impl = static_cast<MeshImpl*>(mesh.get());
-  vk::Buffer vbo = mesh_impl->vertex_buffer();
-  vk::DeviceSize vbo_offset = mesh_impl->vertex_buffer_offset();
-  uint32_t vbo_binding = mesh_impl->vertex_buffer_binding();
+  vk::Buffer vbo = mesh->vertex_buffer();
+  vk::DeviceSize vbo_offset = mesh->vertex_buffer_offset();
+  uint32_t vbo_binding = MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
   command_buffer_.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
-  command_buffer_.bindIndexBuffer(mesh_impl->index_buffer(),
-                                  mesh_impl->vertex_buffer_offset(),
+  command_buffer_.bindIndexBuffer(mesh->index_buffer(),
+                                  mesh->index_buffer_offset(),
                                   vk::IndexType::eUint32);
-  command_buffer_.drawIndexed(mesh_impl->num_indices, 1, 0, 0, 0);
+  command_buffer_.drawIndexed(mesh->num_indices(), 1, 0, 0, 0);
 }
 
 void CommandBuffer::CopyImage(const ImagePtr& src_image,

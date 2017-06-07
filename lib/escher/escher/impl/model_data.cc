@@ -5,13 +5,15 @@
 #include "escher/impl/model_data.h"
 
 #include "escher/impl/command_buffer.h"
+#include "escher/impl/mesh_shader_binding.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/gpu_allocator.h"
 
 namespace escher {
 namespace impl {
 
-// DescriptorSetPools allocate new sets as necessary, so these are no big deal.
+// DescriptorSetPools allocate new sets as necessary, so these are no big
+// deal.
 constexpr uint32_t kInitialPerModelDescriptorSetCount = 50;
 constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
 
@@ -75,6 +77,68 @@ ModelData::GetPerObjectDescriptorSetLayoutCreateInfo() {
     info.pBindings = bindings;
     ptr = &info;
   }
+  return *ptr;
+}
+
+const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
+  auto ptr = mesh_shader_binding_cache_[spec].get();
+  if (ptr) {
+    return *ptr;
+  }
+
+  std::vector<vk::VertexInputAttributeDescription> attributes;
+
+  vk::DeviceSize stride = 0;
+  if (spec.flags & MeshAttribute::kPosition) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = kPositionAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttribute::kPositionOffset) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = kPositionOffsetAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttribute::kUV) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = kUVAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttribute::kPerimeterPos) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = kPerimeterPosAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(float);
+    attributes.push_back(attribute);
+  }
+
+  vk::VertexInputBindingDescription binding;
+  binding.binding = 0;
+  binding.stride = stride;
+  binding.inputRate = vk::VertexInputRate::eVertex;
+
+  auto msb = std::make_unique<MeshShaderBinding>(std::move(binding),
+                                                 std::move(attributes));
+  ptr = msb.get();
+  mesh_shader_binding_cache_[spec] = std::move(msb);
   return *ptr;
 }
 

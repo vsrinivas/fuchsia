@@ -23,7 +23,7 @@ Shape::Shape(MeshPtr mesh, ShapeModifiers modifiers)
   if (modifiers_ & ShapeModifier::kWobble) {
     const MeshAttributes required =
         MeshAttribute::kPositionOffset | MeshAttribute::kPerimeterPos;
-    if (required != (mesh_->spec.flags & required)) {
+    if (required != (mesh_->spec().flags & required)) {
       FTL_LOG(ERROR) << "ShapeModifier::kWobble requires both kPositionOffset "
                         "and kPerimeterPos";
       FTL_CHECK(false);

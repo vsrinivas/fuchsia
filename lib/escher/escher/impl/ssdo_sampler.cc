@@ -6,7 +6,8 @@
 
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/glsl_compiler.h"
-#include "escher/impl/mesh_impl.h"
+#include "escher/impl/mesh_shader_binding.h"
+#include "escher/impl/model_data.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/vk/pipeline.h"
 #include "escher/impl/vk/pipeline_spec.h"
@@ -353,7 +354,7 @@ void main() {
 std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
     vk::Device device,
     vk::RenderPass render_pass,
-    const MeshSpecImpl& mesh_spec_impl,
+    const MeshShaderBinding& mesh_shader_binding,
     vk::DescriptorSetLayout descriptor_set_layout,
     GlslToSpirvCompiler* compiler) {
   auto vertex_spirv_future =
@@ -391,11 +392,11 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
 
   vk::PipelineVertexInputStateCreateInfo vertex_input_info;
   vertex_input_info.vertexBindingDescriptionCount = 1;
-  vertex_input_info.pVertexBindingDescriptions = &mesh_spec_impl.binding;
+  vertex_input_info.pVertexBindingDescriptions = mesh_shader_binding.binding();
   vertex_input_info.vertexAttributeDescriptionCount =
-      mesh_spec_impl.attributes.size();
+      mesh_shader_binding.attributes().size();
   vertex_input_info.pVertexAttributeDescriptions =
-      mesh_spec_impl.attributes.data();
+      mesh_shader_binding.attributes().data();
 
   vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
   input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
@@ -613,7 +614,8 @@ vk::RenderPass CreateRenderPass(vk::Device device) {
 SsdoSampler::SsdoSampler(ResourceLifePreserver* life_preserver,
                          MeshPtr full_screen,
                          ImagePtr noise_image,
-                         GlslToSpirvCompiler* compiler)
+                         GlslToSpirvCompiler* compiler,
+                         ModelData* model_data)
     : device_(life_preserver->vulkan_context().device),
       pool_(life_preserver->vulkan_context(),
             GetDescriptorSetLayoutCreateInfo(),
@@ -634,8 +636,12 @@ SsdoSampler::SsdoSampler(ResourceLifePreserver* life_preserver,
   FTL_DCHECK(noise_image->width() == kNoiseSize &&
              noise_image->height() == kNoiseSize);
 
+  FTL_DCHECK(full_screen_->spec() ==
+             MeshSpec{MeshAttribute::kPosition | MeshAttribute::kUV});
+
   auto pipelines =
-      CreatePipelines(device_, render_pass_, full_screen->spec_impl(),
+      CreatePipelines(device_, render_pass_,
+                      model_data->GetMeshShaderBinding(full_screen_->spec()),
                       pool_.layout(), compiler);
   sampler_pipeline_ = pipelines.first;
   filter_pipeline_ = pipelines.second;

@@ -12,6 +12,7 @@ executable("escher_unittests") {
     "hash_unittest.cc",
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
+    "mesh_spec_unittest.cc",
     "run_all_unittests.cc",
     "transform_unittest.cc",
   ]

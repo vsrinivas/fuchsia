@@ -62,7 +62,8 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
                                      impl::SsdoSampler::kNoiseSize,
                                      impl::SsdoSampler::kNoiseSize,
                                      vk::ImageUsageFlagBits::eStorage),
-          escher->glsl_compiler())),
+          escher->glsl_compiler(),
+          model_data_.get())),
       ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
           escher->glsl_compiler(),
           image_cache_,

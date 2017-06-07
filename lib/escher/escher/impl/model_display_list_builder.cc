@@ -136,7 +136,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
   ModelDisplayList::Item item;
   item.descriptor_sets[0] = descriptor_set;
   item.mesh = renderer_->GetMeshForShape(object.shape());
-  pipeline_spec_.mesh_spec = item.mesh->spec;
+  pipeline_spec_.mesh_spec = item.mesh->spec();
   pipeline_spec_.shape_modifiers = object.shape().modifiers();
   pipeline_spec_.is_clippee = is_clippee;
   pipeline_spec_.clipper_state =
@@ -159,7 +159,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
     // Revert the stencil buffer to the previous state.
     // TODO: if we knew that no subsequent children were to be clipped, we
     // could avoid this.
-    pipeline_spec_.mesh_spec = item.mesh->spec;
+    pipeline_spec_.mesh_spec = item.mesh->spec();
     pipeline_spec_.shape_modifiers = object.shape().modifiers();
     pipeline_spec_.is_clippee = is_clippee;
     pipeline_spec_.clipper_state =
