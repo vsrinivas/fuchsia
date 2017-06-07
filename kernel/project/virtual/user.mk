@@ -16,8 +16,9 @@ MODULES += \
     kernel/lib/ktrace \
     kernel/lib/mtrace \
 
-# include all core, uapp, udev, ulib and utest from system/...
+# include all core, dev, uapp, udev, ulib and utest from system/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/core/*/rules.mk))
+MODULES += $(patsubst %/rules.mk,%,$(wildcard system/dev/*/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/uapp/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/udev/*/rules.mk))
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/ulib/*/rules.mk))
