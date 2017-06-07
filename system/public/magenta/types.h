@@ -280,8 +280,12 @@ typedef enum {
 } mx_cache_policy_t;
 
 // Flag bits for mx_cache_flush.
-#define MX_CACHE_FLUSH_INSN       (1u << 0)
-#define MX_CACHE_FLUSH_DATA       (1u << 1)
+#define MX_CACHE_FLUSH_INSN         (1u << 0)
+#define MX_CACHE_FLUSH_DATA         (1u << 1)
+
+// Timer limits.
+#define MX_TIMER_MIN_PERIOD         MX_USEC(50)
+#define MX_TIMER_MIN_DEADLINE       MX_USEC(1)
 
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by

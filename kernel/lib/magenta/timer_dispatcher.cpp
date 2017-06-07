@@ -16,10 +16,13 @@
 #include <magenta/compiler.h>
 #include <mxalloc/new.h>
 
+#include <safeint/safe_math.h>
+
 constexpr mx_rights_t kDefaultTimersRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-constexpr mx_duration_t kMinTimerPeriod = MX_USEC(50);  // 50 microseconds.
+constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
+constexpr mx_time_t     kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;
 constexpr mx_duration_t kTimerCanceled = 1u;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
@@ -66,7 +69,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     canary_.Assert();
 
     // Deadline values 0 and 1 are special.
-    if (deadline <= kTimerCanceled)
+    if (deadline <= kMinTimerDeadline)
         return ERR_INVALID_ARGS;
 
     // zero period is valid but other small values are not.
@@ -142,7 +145,14 @@ void TimerDispatcher::OnTimerFired() {
             // The timer is a periodic timer. Re-issue the timer and
             // don't Release() the reference.
             state_tracker_.StrobeState(MX_TIMER_SIGNALED);
-            deadline_ += period_;
+
+            // Compute the next deadline while guarding for integer overflows.
+            safeint::CheckedNumeric<mx_time_t> next_deadline(deadline_);
+            next_deadline += period_;
+            deadline_ = next_deadline.ValueOrDefault(0u);
+            if (deadline_ == 0u)
+                return;
+
             timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
             return;
         } else {
