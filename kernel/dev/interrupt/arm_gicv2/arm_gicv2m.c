@@ -10,8 +10,6 @@
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gic_regs.h>
 #include <err.h>
-#include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
 #include <string.h>
 #include <trace.h>
 
@@ -28,9 +26,10 @@
 #define MAX_VALID_MSI_SPI (1020)
 
 const paddr_t* g_reg_frames;
+const vaddr_t* g_reg_frames_virt;
 uint           g_reg_frame_count;
 
-void arm_gicv2m_init(const paddr_t* reg_frames, uint reg_frame_count) {
+void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, const uint reg_frame_count) {
     // Protect against double init.
     DEBUG_ASSERT(!g_reg_frames);
     DEBUG_ASSERT(!g_reg_frame_count);
@@ -42,13 +41,13 @@ void arm_gicv2m_init(const paddr_t* reg_frames, uint reg_frame_count) {
 
     // Stash the frame info
     g_reg_frames      = reg_frames;
+    g_reg_frames_virt = reg_frames_virt;
     g_reg_frame_count = reg_frame_count;
 
     // Walk the list of regions, and make sure that all of the controlled SPIs
     // are configured for edge triggered mode.
     for (uint i = 0; i < g_reg_frame_count; ++i) {
-        void*    kvaddr   = paddr_to_kvaddr(g_reg_frames[i]);
-        uint32_t type_reg = REG_RD(kvaddr, MSI_TYPER_OFFSET);
+        uint32_t type_reg = REG_RD(g_reg_frames_virt[i], MSI_TYPER_OFFSET);
         uint     base_spi = (type_reg >> 16) & 0x3FF;
         uint     num_spi  = type_reg & 0x3FF;
 
@@ -70,7 +69,7 @@ void arm_gicv2m_init(const paddr_t* reg_frames, uint reg_frame_count) {
 
 }
 
-status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_info) {
+status_t arm_gicv2m_get_frame_info(const uint frame_ndx, arm_gicv2m_frame_info_t* out_info) {
     if (!out_info)
         return ERR_INVALID_ARGS;
 
@@ -82,8 +81,7 @@ status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_
     if (frame_ndx >= g_reg_frame_count)
         return ERR_NOT_FOUND;
 
-    void*    kvaddr   = paddr_to_kvaddr(g_reg_frames[frame_ndx]);
-    uint32_t type_reg = REG_RD(kvaddr, MSI_TYPER_OFFSET);
+    uint32_t type_reg = REG_RD(g_reg_frames_virt[frame_ndx], MSI_TYPER_OFFSET);
     uint     base_spi = (type_reg >> 16) & 0x3FF;
     uint     num_spi  = type_reg & 0x3FF;
     uint     last_spi = base_spi + num_spi - 1;
@@ -96,7 +94,7 @@ status_t arm_gicv2m_get_frame_info(uint frame_ndx, arm_gicv2m_frame_info_t* out_
     out_info->start_spi_id = base_spi;
     out_info->end_spi_id   = last_spi;
     out_info->doorbell     = g_reg_frames[frame_ndx] + MSI_SETSPI_NS_OFFSET;
-    out_info->iid          = REG_RD(kvaddr, MSI_IIDR_OFFSET);
+    out_info->iid          = REG_RD(g_reg_frames_virt[frame_ndx], MSI_IIDR_OFFSET);
 
     return NO_ERROR;
 }

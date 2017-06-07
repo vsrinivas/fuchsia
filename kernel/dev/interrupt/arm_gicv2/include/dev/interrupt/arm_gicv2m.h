@@ -32,7 +32,7 @@ typedef struct arm_gicv2m_frame_info {
  * array must be alive for the lifetime of the system.
  * @param reg_frame_count The number of entries in the reg_frames array.
  */
-void arm_gicv2m_init(const paddr_t* reg_frames, uint reg_frame_count);
+void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt, uint reg_frame_count);
 
 /**
  * Fetch info about a specific GICv2m register frame

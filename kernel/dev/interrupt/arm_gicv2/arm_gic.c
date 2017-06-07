@@ -45,8 +45,6 @@ static uint32_t ipi_base = 0;
 
 uint max_irqs = 0;
 
-static paddr_t GICV2M_REG_FRAMES[] = { 0 };
-
 static void arm_gic_init(void);
 
 static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd)
@@ -326,6 +324,7 @@ static const struct pdev_interrupt_ops gic_ops = {
 static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     uint64_t gic_base_virt = 0;
     uint64_t msi_frame_phys = 0;
+    uint64_t msi_frame_virt = 0;
 
     bool got_gic_base_virt = false;
     bool got_gicd_offset = false;
@@ -349,6 +348,10 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
             break;
         case MDI_ARM_GIC_V2_MSI_FRAME_PHYS:
             mdi_node_uint64(&child, &msi_frame_phys);
+            break;
+        case MDI_ARM_GIC_V2_MSI_FRAME_VIRT:
+            mdi_node_uint64(&child, &msi_frame_virt);
+            break;
         }
     }
 
@@ -368,13 +371,24 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         printf("arm-gic-v2: ipi_base not defined\n");
         return;
     }
+    if ((msi_frame_phys == 0) != (msi_frame_virt == 0)) {
+        printf("arm-gic-v2: only one of msi_frame_phys or virt is defined\n");
+        return;
+    }
 
     arm_gicv2_gic_base = (uint64_t)(gic_base_virt);
 
     arm_gic_init();
-    if (msi_frame_phys) {
+
+    // pass the list of physical and virtual addresses for the GICv2m register apertures
+    if (msi_frame_phys && msi_frame_virt) {
+        // the following arrays must be static because arm_gicv2m_init stashes the pointer
+        static paddr_t GICV2M_REG_FRAMES[] = { 0 };
+        static vaddr_t GICV2M_REG_FRAMES_VIRT[] = { 0 };
+
         GICV2M_REG_FRAMES[0] = msi_frame_phys;
-        arm_gicv2m_init(GICV2M_REG_FRAMES, countof(GICV2M_REG_FRAMES));
+        GICV2M_REG_FRAMES_VIRT[0] = msi_frame_virt;
+        arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, countof(GICV2M_REG_FRAMES));
     }
     pdev_register_interrupts(&gic_ops);
 

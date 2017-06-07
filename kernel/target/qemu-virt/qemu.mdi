@@ -21,6 +21,7 @@ kernel = {
         gicc-offset = 0x10000
         ipi-base = 13
         msi-frame-phys = 0x08020000
+        msi-frame-virt = 0xffffffffc8020000
     }
     arm-psci = {
         use-hvc = true
