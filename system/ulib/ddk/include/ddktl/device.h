@@ -346,7 +346,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     void AddProtocol(device_add_args_t* args,
                      typename mxtl::enable_if<is_protocol<T>::value, T>::type* dummy = 0) {
         auto dev = static_cast<D*>(this);
-        MX_ASSERT(dev->ddk_proto_id_ > 0 && dev->ddk_proto_ops_ != nullptr);
+        MX_ASSERT(dev->ddk_proto_id_ > 0);
         args->proto_id = dev->ddk_proto_id_;
         args->proto_ops = dev->ddk_proto_ops_;
     }
