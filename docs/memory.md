@@ -95,46 +95,49 @@ First column:
   Indentation indicates parent/child relationship.
 ```
 
-Size columns, all in bytes:
+Column tags:
 
--   `:sz`: The virtual size of the entry. Not all pages are necessarily backed
-    by physical memory.
--   `:res`: The amount of memory "resident" in the entry; i.e., the amount of
-    physical memory that backs the entry. This memory may be private (only
-    acceessable by this process) or shared by multiple processes.
+-   `:sz`: The virtual size of the entry, in bytes. Not all pages are
+    necessarily backed by physical memory.
+-   `:res`: The amount of memory "resident" in the entry, in bytes; i.e., the
+    amount of physical memory that backs the entry. This memory may be private
+    (only acceessable by this process) or shared by multiple processes.
+-   `:vmo`: The `koid` of the VMO mapped into this region.
 
 ```
-$ vmaps 3020
-/A ________01000000-00007ffffffff000      128.0T:sz              unnamed
-/R ________01000000-00007ffffffff000      128.0T:sz              root
+$ vmaps 2470
+/A ________01000000-00007ffffffff000    128.0T:sz                    'unnamed'
+/R ________01000000-00007ffffffff000    128.0T:sz                    'root'
 ...
-# These two 'R' regions are probably loaded ELF files like the main binary or
-# dynamic objects, since they contain a fully-committed r-x mapping with a mix
-# of rw- and r-- mappings.
-R  ________01000000-________01025000        148k:sz              useralloc
- M ________01000000-________01021000 r-x    132k:sz    132k:res  useralloc
- M ________01021000-________01023000 r--      8k:sz      8k:res  useralloc
- M ________01023000-________01024000 rw-      4k:sz      4k:res  useralloc
- M ________01024000-________01025000 rw-      4k:sz      4k:res  useralloc
-R  ________01025000-________0102e000         36k:sz              useralloc
- M ________01025000-________0102c000 r-x     28k:sz     28k:res  useralloc
- M ________0102c000-________0102d000 r--      4k:sz      4k:res  useralloc
- M ________0102d000-________0102e000 rw-      4k:sz      4k:res  useralloc
+# This 'R' region is a dynamic library. The r-x section is .text, the r--
+# section is .rodata, and the rw- section is .data + .bss.
+R  00000187bc867000-00000187bc881000      104k:sz                    'useralloc'
+ M 00000187bc867000-00000187bc87d000 r-x   88k:sz   0B:res  2535:vmo 'libmxio.so'
+ M 00000187bc87e000-00000187bc87f000 r--    4k:sz   4k:res  2537:vmo 'libmxio.so'
+ M 00000187bc87f000-00000187bc881000 rw-    8k:sz   8k:res  2537:vmo 'libmxio.so'
 ...
-# These two regions look like stacks: a big chunk of virtual space with a
+# This 2MB anonymous mapping is probably part of the heap.
+M  0000246812b91000-0000246812d91000 rw-    2M:sz  76k:res  2542:vmo 'mmap-anonymous'
+...
+# This region looks like a stack: a big chunk of virtual space (:sz) with a
 # slightly-smaller mapping inside (accounting for a 4k guard page), and only a
-# small amount actually committed (RES).
-R  ________01048000-________01089000        260k:sz              useralloc
- M ________01049000-________01089000 rw-    256k:sz     16k:res  useralloc
-R  ________01089000-________010ca000        260k:sz              useralloc
- M ________0108a000-________010ca000 rw-    256k:sz      0B:res  useralloc
+# small amount actually committed (:res).
+R  0000358923d92000-0000358923dd3000      260k:sz                    'useralloc'
+ M 0000358923d93000-0000358923dd3000 rw-  256k:sz  16k:res  2538:vmo ''
 ...
-# This collection of rw- mappings could include the heap (possibly the VIRT=2M
-# mapping), along with other arbitrary VMO mappings.
-M  ________010ca000-________012ca000 rw-      2M:sz     32k:res  useralloc
-M  ________012ca000-________012d1000 rw-     28k:sz      4k:res  useralloc
-M  ________012d1000-________012d9000 rw-     32k:sz     20k:res  useralloc
-M  ________012d9000-________012da000 rw-      4k:sz      4k:res  useralloc
+# The stack for the initial thread, which is allocated differently.
+M  0000400cbba84000-0000400cbbac4000 rw-  256k:sz   4k:res  2513:vmo 'initial-stack'
+...
+# The vDSO, which only has .text and .rodata.
+R  000047e1ab874000-000047e1ab87b000       28k:sz                    'useralloc'
+ M 000047e1ab874000-000047e1ab87a000 r--   24k:sz  24k:res  1031:vmo 'vdso/full'
+ M 000047e1ab87a000-000047e1ab87b000 r-x    4k:sz   4k:res  1031:vmo 'vdso/full'
+...
+# The main binary for this process.
+R  000059f5c7068000-000059f5c708d000      148k:sz                    'useralloc'
+ M 000059f5c7068000-000059f5c7088000 r-x  128k:sz   0B:res  2476:vmo '/boot/bin/sh'
+ M 000059f5c7089000-000059f5c708b000 r--    8k:sz   8k:res  2517:vmo '/boot/bin/sh'
+ M 000059f5c708b000-000059f5c708d000 rw-    8k:sz   8k:res  2517:vmo '/boot/bin/sh'
 ...
 ```
 

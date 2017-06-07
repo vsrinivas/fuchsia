@@ -127,25 +127,28 @@ mx_status_t print_maps(mx_info_maps_t* maps, size_t count, size_t avail) {
         printf(" ");
         print_range(e->base, e->size);
 
+        int size_width;
         if (e->type == MX_INFO_MAPS_TYPE_MAPPING) {
             printf(" ");
             print_mmu_flags(e->u.mapping.mmu_flags);
+            size_width = 5;
         } else {
-            printf("    ");
+            size_width = 9;
         }
 
         format_size(size_str, sizeof(size_str), e->size);
-        printf(" %*s:sz", (int)(MAX_FORMAT_SIZE_LEN - 1), size_str);
+        printf(" %*s:sz", size_width, size_str);
         if (e->type == MX_INFO_MAPS_TYPE_MAPPING) {
             const mx_info_maps_mapping_t* u = &e->u.mapping;
             format_size(size_str, sizeof(size_str),
                         u->committed_pages * PAGE_SIZE);
-            printf(" %*s:res", (int)(MAX_FORMAT_SIZE_LEN - 1), size_str);
+            printf(" %4s:res", size_str);
+            printf(" %5" PRIu64 ":vmo", u->vmo_koid);
         } else {
-            printf("%12s", "");
+            printf("%19s", "");
         }
 
-        printf("  '%s'\n", e->name);
+        printf(" '%s'\n", e->name);
     }
     if (avail > count) {
         printf("[%zd entries truncated]\n", avail - count);
