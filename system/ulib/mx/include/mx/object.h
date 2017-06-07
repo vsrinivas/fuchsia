@@ -130,7 +130,7 @@ public:
 
     mx_handle_t get() const { return value_; }
 
-    // Get the address of the underling internal handle storage.
+    // Get the address of the underlying internal handle storage.
     //
     // Note: The intended purpose is to facilitate interactions with C APIs
     // which expect to be provided a pointer to a handle used as an out
