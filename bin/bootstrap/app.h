@@ -5,12 +5,13 @@
 #ifndef APPS_MODULAR_SRC_BOOTSTRAP_APP_H_
 #define APPS_MODULAR_SRC_BOOTSTRAP_APP_H_
 
+#include <map>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/svc/service_namespace.h"
+#include "application/lib/svc/services.h"
 #include "application/services/application_controller.fidl.h"
 #include "application/services/application_environment.fidl.h"
 #include "apps/modular/src/bootstrap/delegating_application_loader.h"
@@ -47,7 +48,7 @@ class App : public app::ApplicationEnvironmentHost {
   std::unique_ptr<app::ApplicationContext> application_context_;
 
   // Keep track of all services, indexed by url.
-  std::unordered_map<std::string, app::ServiceProviderPtr> service_providers_;
+  std::map<std::string, app::Services> services_;
 
   // Nested environment within which the apps started by Bootstrap will run.
   app::ApplicationEnvironmentPtr env_;
