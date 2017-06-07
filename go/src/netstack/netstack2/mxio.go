@@ -33,11 +33,7 @@ import (
 const debug = true
 const debug2 = false
 
-// TODO: replace MX_SOCKET_READABLE with mx.SignalSocketReadable, etc?
 const MX_SOCKET_HALF_CLOSE = 1
-const MX_SOCKET_READABLE = mx.SignalObject0
-const MX_SOCKET_WRITABLE = mx.SignalObject1
-const MX_SOCKET_PEER_CLOSED = mx.SignalObject2
 const MXSIO_SIGNAL_INCOMING = mx.SignalUser0
 const MXSIO_SIGNAL_CONNECTED = mx.SignalUser3
 const MXSIO_SIGNAL_HALFCLOSED = mx.SignalUser4
@@ -179,7 +175,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 	dataHandle := mx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+	_, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
@@ -201,7 +197,7 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		case mx.ErrOk:
 			// NOP
 		case mx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(MX_SOCKET_READABLE|MX_SOCKET_PEER_CLOSED|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
+			obs, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
 				// NOP
@@ -212,9 +208,9 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 				return
 			}
 			switch {
-			case obs&MX_SOCKET_PEER_CLOSED != 0:
+			case obs&mx.SignalSocketPeerClosed != 0:
 				return
-			case obs&MX_SOCKET_READABLE != 0:
+			case obs&mx.SignalSocketReadable != 0:
 				continue
 			case obs&LOCAL_SIGNAL_CLOSING != 0:
 				ios.writeBufFlushed <- struct{}{}
@@ -252,7 +248,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	dataHandle := mx.Socket(ios.dataHandle)
 
 	// Warm up.
-	obs, err := dataHandle.WaitOne(MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED, mx.TimensecInfinite)
+	obs, err := dataHandle.WaitOne(mx.SignalSocketWritable|mx.SignalSocketPeerClosed, mx.TimensecInfinite)
 	switch mxerror.Status(err) {
 	case mx.ErrOk:
 		// NOP
@@ -262,7 +258,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 		log.Printf("loopSocketRead: warmup failed: %v", err)
 	}
 	switch {
-	case obs&MX_SOCKET_PEER_CLOSED != 0:
+	case obs&mx.SignalSocketPeerClosed != 0:
 		return
 	}
 
@@ -312,7 +308,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 					log.Printf("loopSocketRead: gto mx.ErrShouldWait")
 				}
 				obs, err := dataHandle.WaitOne(
-					MX_SOCKET_WRITABLE|MX_SOCKET_PEER_CLOSED,
+					mx.SignalSocketWritable|mx.SignalSocketPeerClosed,
 					mx.TimensecInfinite,
 				)
 				switch mxerror.Status(err) {
@@ -325,9 +321,9 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 					return
 				}
 				switch {
-				case obs&MX_SOCKET_PEER_CLOSED != 0:
+				case obs&mx.SignalSocketPeerClosed != 0:
 					return
-				case obs&MX_SOCKET_WRITABLE != 0:
+				case obs&mx.SignalSocketWritable != 0:
 					continue
 				}
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
@@ -343,7 +339,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 func (ios *iostate) loopShutdown() {
 	defer ios.ep.Close()
 	for {
-		obs, err := ios.dataHandle.WaitOne(MX_SOCKET_PEER_CLOSED|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
+		obs, err := ios.dataHandle.WaitOne(mx.SignalSocketPeerClosed|MXSIO_SIGNAL_HALFCLOSED, mx.TimensecInfinite)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
 			// NOP
@@ -354,7 +350,7 @@ func (ios *iostate) loopShutdown() {
 			return
 		}
 		switch {
-		case obs&MX_SOCKET_PEER_CLOSED != 0:
+		case obs&mx.SignalSocketPeerClosed != 0:
 			return
 		case obs&MXSIO_SIGNAL_HALFCLOSED != 0:
 			err := ios.ep.Shutdown(tcpip.ShutdownRead | tcpip.ShutdownWrite)
@@ -437,7 +433,7 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 				switch {
 				case obs&mx.SignalChannelPeerClosed != 0:
 					return
-				case obs&MX_SOCKET_READABLE != 0:
+				case obs&mx.SignalChannelReadable != 0:
 					continue
 				case obs&LOCAL_SIGNAL_CLOSING != 0:
 					ios.writeBufFlushed <- struct{}{}
