@@ -5,6 +5,7 @@
 package watcher
 
 import (
+	"errors"
 	"os"
 
 	"syscall"
@@ -60,28 +61,36 @@ func (w *Watcher) start() {
 		w.C <- name
 	}
 	for {
-		name, err := w.wait()
+		const opAdded = 1
+		name, op, err := w.wait()
 		if err != nil {
 			w.Err = err
 			w.Stop()
 			return
 		}
-		w.C <- name
+		if op == opAdded {
+			w.C <- name
+		}
 	}
 }
 
-func (w *Watcher) wait() (string, error) {
+func (w *Watcher) wait() (string, uint, error) {
 	_, err := w.h.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, mx.TimensecInfinite)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	const NAME_MAX = 255
-	var name [NAME_MAX]byte
-	n, _, err := w.h.Read(name[:], nil, 0)
+	const MSG_MAX = NAME_MAX + 2
+	var msg [MSG_MAX]byte
+	n, _, err := w.h.Read(msg[:], nil, 0)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return string(name[:n]), nil
+	if (n < 2) || (n != uint32(msg[1] + 2)) {
+		// malformed message
+		return "", 256, errors.New("watcher: malformed message")
+	}
+	return string(msg[2:msg[1]]), uint(msg[0]), nil
 }
 
 type errorString string
