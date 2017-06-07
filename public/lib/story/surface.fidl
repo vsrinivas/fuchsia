@@ -12,7 +12,12 @@ enum SurfaceArrangement {
   NONE,
 
   // Desire to present simultaneously.
-  COPRESENT
+  COPRESENT,
+
+  // The parent prefers to not be presented simultaneously with its child.
+  // (The child may still become part of a simultaneous presentation depending
+  // on the relationships between it and subsequently added surfaces).
+  SEQUENTIAL
 };
 
 // Links surface dismissal.
@@ -31,7 +36,7 @@ struct SurfaceRelation {
   // Advice on arranging these surfaces on the screen together.
   SurfaceArrangement arrangement = NONE;
 
-  // Advice for dismisal of surfaces to be linked.
+  // Advice for dismissal of surfaces to be linked.
   SurfaceDependency dependency = NONE;
 
   // Relative emphasis of the child surface, relative to the parent.
