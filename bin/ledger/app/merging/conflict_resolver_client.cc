@@ -222,9 +222,16 @@ void ConflictResolverClient::Merge(fidl::Array<MergedValuePtr> merged_values,
           }
           if (weak_this->cancelled_ || status != storage::Status::OK) {
             // An eventual error was logged before, no need to do it again here.
+            callback(
+                weak_this->cancelled_
+                    ? Status::INTERNAL_ERROR
+                    // The only not found error that can occur is a key not
+                    // found when processing a MergedValue with
+                    // ValueSource::RIGHT.
+                    : PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND));
+            // Finalize destroys this object; we need to do it after executing
+            // the callback.
             weak_this->Finalize();
-            callback(weak_this->cancelled_ ? Status::INTERNAL_ERROR
-                                           : PageUtils::ConvertStatus(status));
             return;
           }
 

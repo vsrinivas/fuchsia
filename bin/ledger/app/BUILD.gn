@@ -115,7 +115,10 @@ source_set("unittests") {
   sources = [
     "ledger_manager_unittest.cc",
     "merging/common_ancestor_unittest.cc",
+    "merging/conflict_resolver_client_unittest.cc",
     "merging/merge_resolver_unittest.cc",
+    "merging/test_utils.cc",
+    "merging/test_utils.h",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",
   ]
