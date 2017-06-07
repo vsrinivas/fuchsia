@@ -18,3 +18,7 @@ Documentation for developing Ledger:
  - [Developer Workflow](workflow.md)
  - [Style Guide](style_guide.md)
  - [Testing](testing.md)
+
+Design documentation:
+
+ - [Architecture](architecture.md)
