@@ -40,4 +40,6 @@ public:
     }
 };
 
+using unowned_socket = const unowned<socket>;
+
 } // namespace mx

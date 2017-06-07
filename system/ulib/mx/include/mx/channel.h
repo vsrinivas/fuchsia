@@ -51,4 +51,6 @@ public:
     }
 };
 
+using unowned_channel = const unowned<channel>;
+
 } // namespace mx

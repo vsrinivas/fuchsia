@@ -39,4 +39,6 @@ public:
     }
 };
 
+using unowned_timer = const unowned<timer>;
+
 } // namespace mx

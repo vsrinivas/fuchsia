@@ -34,9 +34,11 @@ public:
 
     // Ideally this would be called mx::job::default(), but default is a
     // C++ keyword and cannot be used as a function name.
-    static inline const internal::unowned_handle<job> default_job() {
-        return internal::unowned_handle<job>(mx_job_default());
+    static inline const unowned<job> default_job() {
+        return unowned<job>(mx_job_default());
     }
 };
+
+using unowned_job = const unowned<job>;
 
 } // namespace mx

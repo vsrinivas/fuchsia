@@ -37,4 +37,6 @@ public:
     }
 };
 
+using unowned_log = const unowned<log>;
+
 } // namespace mx

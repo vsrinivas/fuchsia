@@ -38,4 +38,6 @@ public:
     }
 };
 
+using unowned_fifo = const unowned<fifo>;
+
 } // namespace mx

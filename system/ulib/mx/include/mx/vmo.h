@@ -59,4 +59,6 @@ public:
     }
 };
 
+using unowned_vmo = const unowned<vmo>;
+
 } // namespace mx

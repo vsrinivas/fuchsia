@@ -41,9 +41,11 @@ public:
     mx_status_t start(const thread& thread_handle, uintptr_t entry,
                       uintptr_t stack, handle arg_handle, uintptr_t arg2) const;
 
-    static inline const internal::unowned_handle<process> self() {
-        return internal::unowned_handle<process>(mx_process_self());
+    static inline const unowned<process> self() {
+        return unowned<process>(mx_process_self());
     }
 };
+
+using unowned_process = const unowned<process>;
 
 } // namespace mx

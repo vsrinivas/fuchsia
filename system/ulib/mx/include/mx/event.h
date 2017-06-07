@@ -29,4 +29,6 @@ public:
     static mx_status_t create(uint32_t options, event* result);
 };
 
+using unowned_event = const unowned<event>;
+
 } // namespace mx

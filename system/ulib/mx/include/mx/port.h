@@ -46,4 +46,6 @@ public:
     }
 };
 
+using unowned_port = const unowned<port>;
+
 } // namespace mx

@@ -49,9 +49,11 @@ public:
     mx_status_t allocate(size_t offset, size_t size, uint32_t flags,
                          vmar* child, uintptr_t* child_addr) const;
 
-    static inline const internal::unowned_handle<vmar> root_self() {
-        return internal::unowned_handle<vmar>(mx_vmar_root_self());
+    static inline const unowned<vmar> root_self() {
+        return unowned<vmar>(mx_vmar_root_self());
     }
 };
+
+using unowned_vmar = const unowned<vmar>;
 
 } // namespace mx

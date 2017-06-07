@@ -9,5 +9,6 @@
 namespace mx {
 
 using handle = object<void>;
+using unowned_handle = const unowned<handle>;
 
 } // namespace mx

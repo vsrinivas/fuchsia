@@ -30,4 +30,6 @@ public:
                               eventpair* endpoint1);
 };
 
+using unowned_eventpair = const unowned<eventpair>;
+
 } // namespace mx

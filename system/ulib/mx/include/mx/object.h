@@ -12,6 +12,9 @@ namespace mx {
 
 class port;
 
+// Wraps and takes ownership of a handle to an object to provide type-safe
+// access to its operations.  The handle is automatically closed when the
+// wrapper is destroyed.
 template <typename T> class object {
 public:
     object() : value_(MX_HANDLE_INVALID) {}
@@ -195,28 +198,35 @@ template <typename T> bool operator!=(const object<T>& a, mx_handle_t b) {
     return !(a == b);
 }
 
-namespace internal {
-
-// This is an object that represents a handle but does not own it.
-// All unowned_handle<T> objects are const.  They can be used or
-// passed as a const T&.  This is used for the various "self" handles
-// that are global state accessed via a C API.
+// Wraps a handle to an object to provide type-safe access to its operations
+// but does not take ownership of it.  The handle is not closed when the
+// wrapper is destroyed.
+//
+// All instances of unowned<T> must be const.  They cannot be stored, copied,
+// or moved but can be passed by reference in the form of a const T& or used
+// as a temporary.
+//
+// void do_something(const mx::event& event);
+//
+// void example(mx_handle_t event_handle) {
+//     do_something(unowned_event::wrap(event_handle));
+// }
 template <typename T>
-class unowned_handle final : public T {
+class unowned final : public T {
 public:
-    unowned_handle(unowned_handle&& other) : T(other.release()) {}
+    unowned(unowned&& other) : T(other.release()) {}
 
-    ~unowned_handle() {
+    ~unowned() {
         mx_handle_t h = this->release();
         static_cast<void>(h);
     }
 
+    static const unowned wrap(mx_handle_t h) { return unowned(h); }
+
 private:
     friend T;
 
-    explicit unowned_handle(mx_handle_t h) : T(h) {}
+    explicit unowned(mx_handle_t h) : T(h) {}
 };
-
-} // namespace internal
 
 } // namespace mx
