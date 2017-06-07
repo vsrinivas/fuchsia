@@ -8,6 +8,8 @@ source_set("svc") {
     "service_namespace.h",
     "service_provider_bridge.cc",
     "service_provider_bridge.h",
+    "services.cc",
+    "services.h",
   ]
 
   public_deps = [

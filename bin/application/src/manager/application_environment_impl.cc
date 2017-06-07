@@ -105,6 +105,7 @@ mx::process Launch(const mx::job& job,
                    const std::vector<const char*>& argv,
                    mxio_flat_namespace_t* flat,
                    mx::channel app_services,
+                   mx::channel service_request,
                    mx::vmo data) {
   std::vector<uint32_t> ids;
   std::vector<mx_handle_t> handles;
@@ -112,6 +113,11 @@ mx::process Launch(const mx::job& job,
   if (app_services) {
     ids.push_back(PA_APP_SERVICES);
     handles.push_back(app_services.release());
+  }
+
+  if (service_request) {
+    ids.push_back(PA_SERVICE_REQUEST);
+    handles.push_back(service_request.release());
   }
 
   for (size_t i = 0; i < flat->count; ++i) {
@@ -153,6 +159,7 @@ mx::process CreateProcess(const mx::job& job,
   return Launch(job, GetLabelFromURL(launch_info->url),
                 LP_CLONE_MXIO_CWD | LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON,
                 GetArgv(launch_info), flat, TakeAppServices(launch_info),
+                std::move(launch_info->service_request),
                 std::move(package->data));
 }
 
@@ -165,7 +172,8 @@ mx::process CreateSandboxedProcess(const mx::job& job,
 
   return Launch(job, GetLabelFromURL(launch_info->url),
                 LP_CLONE_MXIO_STDIO | LP_CLONE_ENVIRON, GetArgv(launch_info),
-                flat, TakeAppServices(launch_info), std::move(data));
+                flat, TakeAppServices(launch_info),
+                std::move(launch_info->service_request), std::move(data));
 }
 
 LaunchType Classify(const mx::vmo& data, std::string* runner) {
