@@ -638,7 +638,7 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
 // child specified by the provided kernel object id.
 //
 // MX_HANDLE_INVALID is currently treated as a "magic" handle used to
-// object a process from "the system".
+// obtain a process from "the system".
 mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t rights,
                                  user_ptr<mx_handle_t> _out) {
     auto up = ProcessDispatcher::GetCurrent();
