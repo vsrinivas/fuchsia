@@ -43,6 +43,12 @@ class Repo {
         std::move(controller)));
   }
 
+  void SubscribeToInterruptions(
+      fidl::InterfaceHandle<SuggestionListener> listener) {
+    next_channel_.AddInterruptionsSubscriber(
+        std::make_unique<InterruptionsSubscriber>(std::move(listener)));
+  }
+
   void InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                    fidl::InterfaceRequest<AskController> controller);
 

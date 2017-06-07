@@ -35,7 +35,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void SubscribeToInterruptions(
       fidl::InterfaceHandle<SuggestionListener> listener) override {
-    // TODO(rosswang): no interruptions yet
+    repo_->SubscribeToInterruptions(std::move(listener));
   }
 
   void SubscribeToNext(

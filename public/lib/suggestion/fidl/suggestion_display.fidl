@@ -9,6 +9,12 @@ enum SuggestionImageType {
   OTHER
 };
 
+enum AnnoyanceType {
+  NONE,
+  PEEK,
+  INTERRUPT
+};
+
 // TODO(thatguy): This will likely be a union eventually, with different
 // display descriptions for different kinds of Suggestions.
 struct SuggestionDisplay {
@@ -33,4 +39,7 @@ struct SuggestionDisplay {
 
   // Information about the content contained in the image
   SuggestionImageType image_type;
+
+  // How annoying should this suggestion be?
+  AnnoyanceType annoyance;
 };

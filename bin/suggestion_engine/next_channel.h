@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/filter.h"
+#include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 
@@ -19,6 +20,11 @@ class NextChannel : public SuggestionChannel {
     subscribers_.emplace(std::move(subscriber));
   }
 
+  void AddInterruptionsSubscriber(
+      std::unique_ptr<InterruptionsSubscriber> subscriber) {
+    interruptions_subscribers_.emplace(std::move(subscriber));
+  }
+
   void OnAddSuggestion(SuggestionPrototype* prototype) override;
   void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) override;
   void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
@@ -28,16 +34,22 @@ class NextChannel : public SuggestionChannel {
   void DispatchOnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
     for (auto& subscriber : subscribers_)
       subscriber->OnAddSuggestion(ranked_suggestion);
+    for (auto& interruptions_subscriber : interruptions_subscribers_)
+      interruptions_subscriber->OnAddSuggestion(ranked_suggestion);
   }
 
   void DispatchOnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
     for (auto& subscriber : subscribers_)
       subscriber->OnRemoveSuggestion(ranked_suggestion);
+    for (auto& interruptions_subscriber : interruptions_subscribers_)
+      interruptions_subscriber->OnRemoveSuggestion(ranked_suggestion);
   }
 
   ProposalFilter filter_;
 
   maxwell::BoundNonMovableSet<NextSubscriber> subscribers_;
+  maxwell::BoundNonMovableSet<InterruptionsSubscriber>
+      interruptions_subscribers_;
   RankedSuggestions ranked_suggestions_;
 };
 

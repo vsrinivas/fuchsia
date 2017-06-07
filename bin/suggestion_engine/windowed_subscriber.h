@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
+#include "apps/maxwell/src/suggestion_engine/subscriber.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
@@ -13,20 +14,20 @@ namespace maxwell {
 // Manages a single Next or Ask suggestion subscriber, translating raw
 // suggestion lifecycle events into windowed suggestion lists using a vector of
 // ranked suggestions.
-class WindowedSubscriber {
+class WindowedSubscriber : public Subscriber {
  public:
   typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
 
   WindowedSubscriber(const RankedSuggestions* ranked_suggestions,
                      fidl::InterfaceHandle<SuggestionListener> listener)
-      : ranked_suggestions_(ranked_suggestions),
-        listener_(SuggestionListenerPtr::Create(std::move(listener))) {}
+      : Subscriber(std::move(listener)),
+        ranked_suggestions_(ranked_suggestions) {}
 
   virtual ~WindowedSubscriber() = default;
 
   void SetResultCount(int32_t count);
 
-  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
+  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) override {
     if (IncludeSuggestion(ranked_suggestion)) {
       DispatchAdd(ranked_suggestion);
 
@@ -36,7 +37,7 @@ class WindowedSubscriber {
     }
   }
 
-  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
+  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) override {
     if (IncludeSuggestion(ranked_suggestion)) {
       // Shift in if we were full
       if (IsFull())
@@ -49,38 +50,9 @@ class WindowedSubscriber {
   // Notifies the listener that all elements should be updated.
   void Invalidate();
 
-  // FIDL methods, for use with BoundSet without having to expose listener_.
-
-  bool is_bound() const { return listener_.is_bound(); }
-
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
-    listener_.set_connection_error_handler(error_handler);
-  }
-
-  // End FIDL methods.
-
  private:
-  static SuggestionPtr CreateSuggestion(
-      const RankedSuggestion& suggestion_data) {
-    auto suggestion = Suggestion::New();
-    suggestion->uuid = suggestion_data.prototype->suggestion_id;
-    suggestion->rank = suggestion_data.rank;
-    suggestion->display = suggestion_data.prototype->proposal->display->Clone();
-    return suggestion;
-  }
-
   bool IsFull() const {
     return ranked_suggestions_->size() > (size_t)max_results_;
-  }
-
-  void DispatchAdd(const RankedSuggestion& ranked_suggestion) {
-    fidl::Array<SuggestionPtr> batch;
-    batch.push_back(CreateSuggestion(ranked_suggestion));
-    listener_->OnAdd(std::move(batch));
-  }
-
-  void DispatchRemove(const RankedSuggestion& ranked_suggestion) {
-    listener_->OnRemove(ranked_suggestion.prototype->suggestion_id);
   }
 
   bool IncludeSuggestion(const RankedSuggestion& suggestion) const;
@@ -89,7 +61,6 @@ class WindowedSubscriber {
   // given by SetResultCount.
   int32_t max_results_ = 0;
   const RankedSuggestions* const ranked_suggestions_;
-  SuggestionListenerPtr listener_;
 };
 
 // Convenience template baking a controller interface into WindowedSubscriber.

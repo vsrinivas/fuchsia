@@ -20,12 +20,12 @@ void WindowedSubscriber::SetResultCount(int32_t count) {
       for (size_t i = prev; i < target; i++) {
         delta.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
       }
-      listener_->OnAdd(std::move(delta));
+      listener()->OnAdd(std::move(delta));
     } else if (target == 0) {
-      listener_->OnRemoveAll();
+      listener()->OnRemoveAll();
     } else if (target < prev) {
       for (size_t i = prev - 1; i >= target; i--) {
-        listener_->OnRemove(
+        listener()->OnRemove(
             (*ranked_suggestions_)[i]->prototype->suggestion_id);
       }
     }
@@ -35,7 +35,7 @@ void WindowedSubscriber::SetResultCount(int32_t count) {
 }
 
 void WindowedSubscriber::Invalidate() {
-  listener_->OnRemoveAll();
+  listener()->OnRemoveAll();
 
   fidl::Array<SuggestionPtr> window;
   for (int32_t i = 0;
@@ -44,7 +44,7 @@ void WindowedSubscriber::Invalidate() {
   }
 
   if (window)  // after OnRemoveAll, no point in adding if no window
-    listener_->OnAdd(std::move(window));
+    listener()->OnAdd(std::move(window));
 }
 
 // A suggestion should be included if its sorted index (by rank) is less than
