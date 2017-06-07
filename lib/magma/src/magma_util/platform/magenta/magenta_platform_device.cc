@@ -4,6 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
+#include <magenta/process.h>
 
 #include "magenta_platform_device.h"
 #include "magenta_platform_interrupt.h"
@@ -34,6 +35,10 @@ public:
     ~MagentaPlatformMmio()
     {
         DLOG("MagentaPlatformMmio dtor");
+        mx_status_t status = mx_vmar_unmap(mx_vmar_root_self(),
+                                           reinterpret_cast<uintptr_t>(addr()), size());
+        if (status != NO_ERROR)
+            DLOG("error unmapping %p (len %zu): %d\n", addr(), size(), status);
         mx_handle_close(handle_);
     }
 
@@ -56,10 +61,9 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
     uint64_t size;
 
     mx_handle_t handle;
-    status = pci->map_mmio(mx_device(), pci_bar, static_cast<mx_cache_policy_t>(cache_policy),
-                           &addr, &size, &handle);
-    if (status < 0)
-        return DRETP(nullptr, "map_mmio failed");
+    status = pci->map_resource(mx_device(), pci_bar, cache_policy, &addr, &size, &handle);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "map_resource failed");
 
     std::unique_ptr<MagentaPlatformMmio> mmio(new MagentaPlatformMmio(addr, size, handle));
 
