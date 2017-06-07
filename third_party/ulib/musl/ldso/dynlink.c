@@ -43,6 +43,11 @@ static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
 #define MAXP2(a, b) (-(-(a) & -(b)))
 #define ALIGN(x, y) ((x) + (y)-1 & -(y))
 
+#define VMO_NAME_DL_ALLOC "ld.so.1-internal-heap"
+#define VMO_NAME_UNKNOWN "<unknown ELF file>"
+#define VMO_NAME_PREFIX_BSS "bss:"
+#define VMO_NAME_PREFIX_DATA "data:"
+
 // This matches struct r_debug in <link.h>.
 // TODO(mcgrathr): Use the type here.
 struct debug {
@@ -176,6 +181,8 @@ static void* dl_alloc(size_t size) {
         mx_status_t status = _mx_vmo_create(chunk_size, 0, &vmo);
         if (status != NO_ERROR)
             return NULL;
+        _mx_object_set_property(vmo, MX_PROP_NAME,
+                                VMO_NAME_DL_ALLOC, sizeof(VMO_NAME_DL_ALLOC));
         uintptr_t chunk;
         status = _mx_vmar_map(_mx_vmar_root_self(), 0, vmo, 0, chunk_size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
@@ -620,6 +627,12 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
         goto error;
     }
 
+    char vmo_name[MX_MAX_NAME_LEN];
+    if (mx_object_get_property(vmo, MX_PROP_NAME,
+                               vmo_name, sizeof(vmo_name)) != NO_ERROR ||
+        vmo_name[0] == '\0')
+        memcpy(vmo_name, VMO_NAME_UNKNOWN, sizeof(VMO_NAME_UNKNOWN));
+
     dso->map = map = (void*)vmar_base;
     dso->map_len = map_len;
     base = map - addr_min;
@@ -659,6 +672,13 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
             if (data_size == 0) {
                 // This segment is purely zero-fill.
                 status = _mx_vmo_create(map_size, 0, &map_vmo);
+                if (status == NO_ERROR) {
+                    char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
+                    memcpy(&name[sizeof(VMO_NAME_PREFIX_BSS) - 1], vmo_name,
+                           MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
+                    _mx_object_set_property(map_vmo, MX_PROP_NAME,
+                                            name, strlen(name));
+                }
             } else {
                 // Get a writable (lazy) copy of the portion of the file VMO.
                 status = _mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
@@ -672,6 +692,13 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
                         _mx_handle_close(map_vmo);
                         goto error;
                     }
+                }
+                if (status == NO_ERROR) {
+                    char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
+                    memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1], vmo_name,
+                           MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
+                    _mx_object_set_property(map_vmo, MX_PROP_NAME,
+                                            name, strlen(name));
                 }
             }
             if (status != NO_ERROR)
