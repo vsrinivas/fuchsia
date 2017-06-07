@@ -29,6 +29,10 @@
 # error what machine?
 #endif
 
+#define VMO_NAME_UNKNOWN "<unknown ELF file>"
+#define VMO_NAME_PREFIX_BSS "bss:"
+#define VMO_NAME_PREFIX_DATA "data:"
+
 // NOTE!  All code in this file must maintain the invariants that it's
 // purely position-independent and uses no writable memory other than
 // its own stack.
@@ -136,8 +140,8 @@ static mx_status_t choose_load_bias(mx_handle_t root_vmar,
 }
 
 static mx_status_t finish_load_segment(
-    mx_handle_t vmar, mx_handle_t vmo, const elf_phdr_t* ph,
-    size_t start_offset, size_t size,
+    mx_handle_t vmar, mx_handle_t vmo, const char vmo_name[MX_MAX_NAME_LEN],
+    const elf_phdr_t* ph, size_t start_offset, size_t size,
     uintptr_t file_start, uintptr_t file_end, size_t partial_page) {
     const uint32_t flags = MX_VM_FLAG_SPECIFIC |
         ((ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0) |
@@ -169,7 +173,16 @@ static mx_status_t finish_load_segment(
     mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
     if (status != NO_ERROR)
         return status;
-    mx_object_set_property(bss_vmo, MX_PROP_NAME, "bss", 3);
+
+    char bss_vmo_name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_BSS;
+    memcpy(&bss_vmo_name[sizeof(VMO_NAME_PREFIX_BSS) - 1],
+           vmo_name, MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_BSS));
+    status = mx_object_set_property(bss_vmo, MX_PROP_NAME,
+                                    bss_vmo_name, strlen(bss_vmo_name));
+    if (status != NO_ERROR) {
+        mx_handle_close(bss_vmo);
+        return status;
+    }
 
     // The final partial page of initialized data falls into the
     // region backed by bss_vmo rather than (the file) vmo.  We need
@@ -204,7 +217,8 @@ static mx_status_t finish_load_segment(
 }
 
 static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
-                                mx_handle_t vmo, const elf_phdr_t* ph) {
+                                mx_handle_t vmo, const char* vmo_name,
+                                const elf_phdr_t* ph) {
     // The p_vaddr can start in the middle of a page, but the
     // semantics are that all the whole pages containing the
     // p_vaddr+p_filesz range are mapped in.
@@ -230,7 +244,7 @@ static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
 
     // With no writable data, it's the simple case.
     if (!(ph->p_flags & PF_W) || data_size == 0)
-        return finish_load_segment(vmar, vmo, ph, start, size,
+        return finish_load_segment(vmar, vmo, vmo_name, ph, start, size,
                                    file_start, file_end, partial_page);
 
     // For a writable segment, we need a writable VMO.
@@ -238,8 +252,15 @@ static mx_status_t load_segment(mx_handle_t vmar, size_t vmar_offset,
     mx_status_t status = mx_vmo_clone(vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                                       file_start, data_size, &writable_vmo);
     if (status == NO_ERROR) {
-        status = finish_load_segment(vmar, writable_vmo, ph, start, size,
-                                     0, file_end - file_start, partial_page);
+        char name[MX_MAX_NAME_LEN] = VMO_NAME_PREFIX_DATA;
+        memcpy(&name[sizeof(VMO_NAME_PREFIX_DATA) - 1],
+               vmo_name, MX_MAX_NAME_LEN - sizeof(VMO_NAME_PREFIX_DATA));
+        status = mx_object_set_property(writable_vmo, MX_PROP_NAME,
+                                        name, strlen(name));
+        if (status == NO_ERROR)
+            status = finish_load_segment(
+                vmar, writable_vmo, vmo_name, ph, start, size,
+                0, file_end - file_start, partial_page);
         mx_handle_close(writable_vmo);
     }
     return status;
@@ -251,6 +272,12 @@ mx_status_t elf_load_map_segments(mx_handle_t root_vmar,
                                   mx_handle_t vmo,
                                   mx_handle_t* segments_vmar,
                                   mx_vaddr_t* base, mx_vaddr_t* entry) {
+    char vmo_name[MX_MAX_NAME_LEN];
+    if (mx_object_get_property(vmo, MX_PROP_NAME,
+                               vmo_name, sizeof(vmo_name)) != NO_ERROR ||
+        vmo_name[0] == '\0')
+        memcpy(vmo_name, VMO_NAME_UNKNOWN, sizeof(VMO_NAME_UNKNOWN));
+
     uintptr_t vmar_base = 0;
     uintptr_t bias = 0;
     mx_handle_t vmar = MX_HANDLE_INVALID;
@@ -260,7 +287,7 @@ mx_status_t elf_load_map_segments(mx_handle_t root_vmar,
     size_t vmar_offset = bias - vmar_base;
     for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)
-            status = load_segment(vmar, vmar_offset, vmo, &phdrs[i]);
+            status = load_segment(vmar, vmar_offset, vmo, vmo_name, &phdrs[i]);
     }
 
     if (status == NO_ERROR && segments_vmar != NULL)
