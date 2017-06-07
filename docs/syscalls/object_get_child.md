@@ -43,7 +43,7 @@ On success, **NO_ERROR** is returned and a handle to the desired child object is
 
 ## ERRORS
 
-**ERR_HANDLE_INVALID**  *handle* is not a valid handle.
+**ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
 **ERR_WRONG_TYPE**  *handle* is not a *Process*, *Job*, or *Resource*.
 
