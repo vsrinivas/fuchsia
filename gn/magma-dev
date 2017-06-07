@@ -3,71 +3,7 @@
         "magma-common",
         "sbase"
     ],
-    "labels": [
-        "//magma/tests:autorun"
-    ],
-    "binaries": [
-        {
-            "binary": "msd_intel_gen_nonhardware_tests",
-            "bootfs_path": "test/msd_intel_gen_nonhardware_tests"
-        },
-        {
-            "binary": "magma_sys_unit_tests",
-            "bootfs_path": "test/magma_sys_unit_tests"
-        },
-        {
-            "binary": "magma_integration_tests",
-            "bootfs_path": "test/magma_integration_tests"
-        },
-        {
-            "binary": "magma_abi_conformance_tests",
-            "bootfs_path": "test/magma_abi_conformance_tests"
-        },
-        {
-            "binary": "mesa_unit_tests",
-            "bootfs_path": "test/mesa_unit_tests"
-        },
-        {
-            "binary": "vkcube",
-            "bootfs_path": "apps/vkcube"
-        },
-        {
-            "binary": "vkreadback",
-            "bootfs_path": "test/vkreadback"
-        },
-        {
-            "binary": "vk_import_export_readback",
-            "bootfs_path": "test/vk_import_export_readback"
-        },
-        {
-            "binary": "vk_ext_tiling",
-            "bootfs_path": "test/vk_ext_tiling"
-        },
-        {
-            "binary": "test_wsi_magma",
-            "bootfs_path": "test/test_wsi_magma"
-        },
-        {
-            "binary": "state_pool",
-            "bootfs_path": "test/state_pool"
-        },
-        {
-            "binary": "state_pool_free_list_only",
-            "bootfs_path": "test/state_pool_free_list_only"
-        },
-        {
-            "binary": "state_pool_no_free",
-            "bootfs_path": "test/state_pool_no_free"
-        },
-        {
-            "binary": "autorun",
-            "bootfs_path": "bin/magma_autorun"
-        }
-    ],
-    "drivers": [
-        {
-            "binary": "libmsd-intel-gen-test.so",
-            "bootfs_path": "driver/libmsd-intel-gen-test.so"
-        }
-    ]
+    "packages": {
+        "magma-dev": "//magma/tests:magma-dev"
+    }
 }

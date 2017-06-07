@@ -118,10 +118,11 @@ declare_args() {
 template("package") {
   if (current_toolchain == target_toolchain) {
     binaries = []
-    tests = []
+    drivers = []
     libraries = []
-    resources = []
     meta = []
+    resources = []
+    tests = []
     package_name = target_name
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
@@ -318,13 +319,14 @@ template("package") {
     }
 
     # Suppress unused variable warnings
-    assert(!defined(invoker.package_name) || invoker.package_name != "")
-    assert(!defined(invoker.meta) || invoker.meta != [])
-    assert(!defined(invoker.binaries) || invoker.binaries != [])
-    assert(!defined(invoker.tests) || invoker.tests != [])
-    assert(!defined(invoker.libraries) || invoker.libraries != [])
-    assert(!defined(invoker.resources) || invoker.resources != [])
-    assert(!defined(invoker.archive) || invoker.archive != "")
     assert(!defined(invoker.app) || invoker.app != "")
+    assert(!defined(invoker.archive) || invoker.archive != "")
+    assert(!defined(invoker.binaries) || invoker.binaries != [])
+    assert(!defined(invoker.drivers) || invoker.drivers != [])
+    assert(!defined(invoker.libraries) || invoker.libraries != [])
+    assert(!defined(invoker.meta) || invoker.meta != [])
+    assert(!defined(invoker.package_name) || invoker.package_name != "")
+    assert(!defined(invoker.resources) || invoker.resources != [])
+    assert(!defined(invoker.tests) || invoker.tests != [])
   }
 }

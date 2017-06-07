@@ -3,10 +3,7 @@
         "magma-common",
         "vulkan_loader_and_layers"
     ],
-    "drivers": [
-        {
-            "binary": "libmsd_vendor.so",
-            "bootfs_path": "driver/libmsd_vendor.so"
-        }
-    ]
+    "packages": {
+        "magma": "//magma"
+    }
 }

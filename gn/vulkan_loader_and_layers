@@ -1,71 +1,7 @@
 {
-    "labels": [
-        "//third_party/vulkan_loader_and_validation_layers/layers",
-        "//third_party/vulkan_loader_and_validation_layers/loader",
-        "//third_party/vulkan_loader_and_validation_layers/tests"
-    ],
-    "binaries": [
-        {
-            "binary": "libvulkan.so",
-            "bootfs_path": "lib/libvulkan.so"
-        },
-        {
-            "binary": "libVkLayer_object_tracker.so",
-            "bootfs_path": "lib/libVkLayer_object_tracker.so"
-        },
-        {
-            "binary": "libVkLayer_core_validation.so",
-            "bootfs_path": "lib/libVkLayer_core_validation.so"
-        },
-        {
-            "binary": "libVkLayer_threading.so",
-            "bootfs_path": "lib/libVkLayer_threading.so"
-        },
-        {
-            "binary": "libVkLayer_unique_objects.so",
-            "bootfs_path": "lib/libVkLayer_unique_objects.so"
-        },
-        {
-            "binary": "libVkLayer_parameter_validation.so",
-            "bootfs_path": "lib/libVkLayer_parameter_validation.so"
-        },
-        {
-            "binary": "libVkLayer_swapchain.so",
-            "bootfs_path": "lib/libVkLayer_swapchain.so"
-        },
-        {
-           "binary": "loader_validation_tests",
-           "bootfs_path": "test/loader_validation_tests"
-        },
-        {
-           "binary": "layer_validation_tests",
-           "bootfs_path": "test/layer_validation_tests"
-        }
-    ],
-    "resources": [
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_core_validation.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_core_validation.json"
-        },
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_object_tracker.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_object_tracker.json"
-        },
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_parameter_validation.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_parameter_validation.json"
-        },
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_swapchain.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_swapchain.json"
-        },
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_threading.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_threading.json"
-        },
-        {
-            "bootfs_path": "lib/vulkan/explicit_layer.d/VkLayer_unique_objects.json",
-            "file": "third_party/vulkan_loader_and_validation_layers/layers/fuchsia/VkLayer_unique_objects.json"
-        }
-    ]
+    "packages": {
+        "vulkan_loader_and_layers":
+            "//third_party/vulkan_loader_and_validation_layers/layers:vulkan_loader_and_layers",
+        "vulkan_loader_and_layers_tests": "//third_party/vulkan_loader_and_validation_layers/layers:vulkan_loader_and_layers_tests"
+    }
 }

@@ -2,32 +2,7 @@
     "imports": [
         "boringssl_libcrypto"
     ],
-    "labels": [
-        "//magma:libmagma",
-        "//magma:libvulkan",
-        "//magma:magma_service_driver",
-        "//magma:magma_service_driver_test",
-        "//magma:tests",
-        "//magma:tools"
-    ],
-    "binaries": [
-        {
-            "binary": "libmagma.so",
-            "bootfs_path": "lib/libmagma.so"
-        },
-        {
-            "binary": "libvulkan_vendor.so",
-            "bootfs_path": "lib/libvulkan_vendor.so"
-        },
-        {
-            "binary": "magma_info",
-            "bootfs_path": "bin/magma_info"
-        }
-    ],
-    "resources": [
-        {
-            "bootfs_path": "lib/vulkan/icd.d/magma_icd.json",
-            "file": "magma/icd/magma_icd.json"
-        }
-    ]
+    "packages": {
+        "magma-common": "//magma:magma-common"
+    }
 }
