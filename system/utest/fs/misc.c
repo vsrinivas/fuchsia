@@ -19,6 +19,8 @@
 #include "filesystems.h"
 
 bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
+    BEGIN_HELPER;
+
     rewinddir(dir);
     size_t seen = 0;
     while (seen != len) {
@@ -45,30 +47,34 @@ bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
     for (size_t i = 0; i < len; i++) {
         edirents[i].seen = false;
     }
-    return true;
+
+    END_HELPER;
 }
 
 bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len) {
+    BEGIN_HELPER;
     DIR* dir = opendir(dirname);
-    bool ret = fcheck_dir_contents(dir, edirents, len);
+    EXPECT_TRUE(fcheck_dir_contents(dir, edirents, len), "");
     ASSERT_EQ(closedir(dir), 0, "Couldn't close inspected directory");
-    return ret;
+    END_HELPER;
 }
 
 // Check the contents of a file are what we expect
 bool check_file_contents(int fd, const uint8_t* buf, size_t length) {
+    BEGIN_HELPER;
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
     uint8_t* out = malloc(length);
     ASSERT_NEQ(out, NULL, "Failed to allocate checking buffer");
     ASSERT_STREAM_ALL(read, fd, out, length);
     ASSERT_EQ(memcmp(buf, out, length), 0, "");
     free(out);
-    return true;
+    END_HELPER;
 }
 
 bool check_remount(void) {
+    BEGIN_HELPER;
     ASSERT_EQ(test_info->unmount(test_root_path), 0, "");
     ASSERT_EQ(test_info->fsck(test_disk_path), 0, "");
     ASSERT_EQ(test_info->mount(test_disk_path, test_root_path), 0, "");
-    return true;
+    END_HELPER;
 }

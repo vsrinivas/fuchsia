@@ -50,6 +50,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <magenta/compiler.h>
@@ -115,6 +116,21 @@ int unittest_set_verbosity_level(int new_level);
     do {                                                                      \
         unittest_printf_critical(" [FAILED] \n        %s:%d:\n        " str,  \
                                  __PRETTY_FUNCTION__, __LINE__, ##x);         \
+    } while (0)
+
+/*
+ * Internal-only.
+ * Used by macros to check that the test state is set up correctly.
+ */
+#define UT_ASSERT_VALID_TEST_STATE                                \
+    do {                                                          \
+        if (current_test_info == NULL) {                          \
+            unittest_printf_critical(                             \
+                "FATAL: %s:%d: Invalid state for EXPECT/ASSERT: " \
+                "possible missing BEGIN_TEST or BEGIN_HELPER\n",  \
+                __PRETTY_FUNCTION__, __LINE__);                   \
+            exit(101); /* Arbitrary, atypical exit status */      \
+        }                                                         \
     } while (0)
 
 /*
@@ -185,8 +201,17 @@ int unittest_set_verbosity_level(int new_level);
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
  * and that call the EXPECT_ macros.
  */
-#define BEGIN_TEST current_test_info->all_ok = true
-#define END_TEST return current_test_info->all_ok
+#define BEGIN_TEST                        \
+    do {                                  \
+        UT_ASSERT_VALID_TEST_STATE;       \
+        current_test_info->all_ok = true; \
+    } while (0)
+
+#define END_TEST                          \
+    do {                                  \
+        UT_ASSERT_VALID_TEST_STATE;       \
+        return current_test_info->all_ok; \
+    } while (0)
 
 /*
  * BEGIN_HELPER and END_HELPER let helper threads and files use
@@ -208,11 +233,13 @@ int unittest_set_verbosity_level(int new_level);
 // Intentionally shadows the global current_test_info to avoid accidentally
 // leaking dangling stack pointers.
 #define BEGIN_HELPER \
-    struct test_info _test_info; \
-    struct test_info* current_test_info = &_test_info; \
+    struct test_info _ut_helper_test_info; \
+    struct test_info* current_test_info = &_ut_helper_test_info; \
     current_test_info->all_ok = true
+// By referring to _ut_helper_test_info, we guarantee that
+// END_HELPER is matched with BEGIN_HELPER.
 #define END_HELPER \
-    return current_test_info->all_ok
+    return _ut_helper_test_info.all_ok
 
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto
@@ -223,87 +250,113 @@ int unittest_set_verbosity_level(int new_level);
 #define RET_FALSE return false
 #define DONOT_RET
 
-#define UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, ret)              \
-    do {                                                              \
-        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                    \
-        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                    \
-        if (!(_lhs_val op _rhs_val)) {                                \
-            UNITTEST_TRACEF(                                          \
-                "%s:\n"                                               \
-                "        Comparison failed: %s %s %s is false\n"      \
-                "        Specifically, %lld %s %lld is false\n",      \
-                msg, lhs_str, #op, rhs_str, (long long int)_lhs_val,  \
-                #op, (long long int)_rhs_val);                        \
-            current_test_info->all_ok = false;                        \
-            ret;                                                      \
-        }                                                             \
+#define UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, ret)             \
+    do {                                                             \
+        UT_ASSERT_VALID_TEST_STATE;                                  \
+        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                   \
+        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                   \
+        if (!(_lhs_val op _rhs_val)) {                               \
+            UNITTEST_TRACEF(                                         \
+                "%s:\n"                                              \
+                "        Comparison failed: %s %s %s is false\n"     \
+                "        Specifically, %lld %s %lld is false\n",     \
+                msg, lhs_str, #op, rhs_str, (long long int)_lhs_val, \
+                #op, (long long int)_rhs_val);                       \
+            current_test_info->all_ok = false;                       \
+            ret;                                                     \
+        }                                                            \
     } while (0)
 
-#define UT_TRUE(actual, msg, ret)                           \
-    if (!(actual)) {                                        \
-        UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
-        current_test_info->all_ok = false;                  \
-        ret;                                                \
-    }
+#define UT_TRUE(actual, msg, ret)                               \
+    do {                                                        \
+        UT_ASSERT_VALID_TEST_STATE;                             \
+        if (!(actual)) {                                        \
+            UNITTEST_TRACEF("%s: %s is false\n", msg, #actual); \
+            current_test_info->all_ok = false;                  \
+            ret;                                                \
+        }                                                       \
+    } while (0)
 
-#define UT_FALSE(actual, msg, ret)                         \
-    if (actual) {                                          \
-        UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
-        current_test_info->all_ok = false;                 \
-        ret;                                               \
-    }
+#define UT_FALSE(actual, msg, ret)                             \
+    do {                                                       \
+        UT_ASSERT_VALID_TEST_STATE;                            \
+        if (actual) {                                          \
+            UNITTEST_TRACEF("%s: %s is true\n", msg, #actual); \
+            current_test_info->all_ok = false;                 \
+            ret;                                               \
+        }                                                      \
+    } while (0)
 
-#define UT_NULL(actual, msg, ret)                               \
-    if (actual != NULL) {                                       \
-        UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual); \
-        current_test_info->all_ok = false;                      \
-        ret;                                                    \
-    }
+#define UT_NULL(actual, msg, ret)                                   \
+    do {                                                            \
+        UT_ASSERT_VALID_TEST_STATE;                                 \
+        if (actual != NULL) {                                       \
+            UNITTEST_TRACEF("%s: %s is non-null!\n", msg, #actual); \
+            current_test_info->all_ok = false;                      \
+            ret;                                                    \
+        }                                                           \
+    } while (0)
 
-#define UT_NONNULL(actual, msg, ret)                        \
-    if (actual == NULL) {                                   \
-        UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual); \
-        current_test_info->all_ok = false;                  \
-        ret;                                                \
-    }
+#define UT_NONNULL(actual, msg, ret)                            \
+    do {                                                        \
+        UT_ASSERT_VALID_TEST_STATE;                             \
+        if (actual == NULL) {                                   \
+            UNITTEST_TRACEF("%s: %s is null!\n", msg, #actual); \
+            current_test_info->all_ok = false;                  \
+            ret;                                                \
+        }                                                       \
+    } while (0)
 
-#define UT_BYTES_EQ(expected, actual, length, msg, ret)                   \
-    if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
-        current_test_info->all_ok = false;                                \
-        ret;                                                              \
-    }
+#define UT_BYTES_EQ(expected, actual, length, msg, ret)                       \
+    do {                                                                      \
+        UT_ASSERT_VALID_TEST_STATE;                                           \
+        if (!unittest_expect_bytes_eq((expected), (actual), (length), msg)) { \
+            current_test_info->all_ok = false;                                \
+            ret;                                                              \
+        }                                                                     \
+    } while (0)
 
 #define UT_BYTES_NE(bytes1, bytes2, length, msg, ret) \
-    if (!memcmp(bytes1, bytes2, length)) {            \
-        UNITTEST_TRACEF(                              \
-            "%s: %s and %s are the same; "            \
-            "expected different\n",                   \
-            msg, #bytes1, #bytes2);                   \
-        hexdump8(bytes1, length);                     \
-        current_test_info->all_ok = false;            \
-        ret;                                          \
-    }
+    do {                                              \
+        UT_ASSERT_VALID_TEST_STATE;                   \
+        if (!memcmp(bytes1, bytes2, length)) {        \
+            UNITTEST_TRACEF(                          \
+                "%s: %s and %s are the same; "        \
+                "expected different\n",               \
+                msg, #bytes1, #bytes2);               \
+            hexdump8(bytes1, length);                 \
+            current_test_info->all_ok = false;        \
+            ret;                                      \
+        }                                             \
+    } while (0)
 
-#define UT_STR_EQ(expected, actual, length, msg, ret)                   \
-    if (!unittest_expect_str_eq((expected), (actual), (length), msg)) { \
-        current_test_info->all_ok = false;                              \
-        ret;                                                            \
-    }
+#define UT_STR_EQ(expected, actual, length, msg, ret)                       \
+    do {                                                                    \
+        UT_ASSERT_VALID_TEST_STATE;                                         \
+        if (!unittest_expect_str_eq((expected), (actual), (length), msg)) { \
+            current_test_info->all_ok = false;                              \
+            ret;                                                            \
+        }                                                                   \
+    } while (0)
 
 #define UT_STR_NE(str1, str2, length, msg, ret) \
-    if (!strncmp(str1, str2, length)) {         \
-        UNITTEST_TRACEF(                        \
-            "%s: %s and %s are the same; "      \
-            "expected different:\n"             \
-            "        '%s'\n",                   \
-            msg, #str1, #str2, str1);           \
-        current_test_info->all_ok = false;      \
-        ret;                                    \
-    }
+    do {                                        \
+        UT_ASSERT_VALID_TEST_STATE;             \
+        if (!strncmp(str1, str2, length)) {     \
+            UNITTEST_TRACEF(                    \
+                "%s: %s and %s are the same; "  \
+                "expected different:\n"         \
+                "        '%s'\n",               \
+                msg, #str1, #str2, str1);       \
+            current_test_info->all_ok = false;  \
+            ret;                                \
+        }                                       \
+    } while (0)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define UT_EQ_LL(expected, actual, msg, ret)                                  \
     do {                                                                      \
+        UT_ASSERT_VALID_TEST_STATE;                                           \
         const AUTO_TYPE_VAR(expected) _e = (expected);                        \
         const AUTO_TYPE_VAR(actual) _a = (actual);                            \
         if (_e != _a) {                                                       \
@@ -341,11 +394,14 @@ int unittest_set_verbosity_level(int new_level);
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
  * they return on failure.
  */
-#define ASSERT_NOT_NULL(p)                        \
-    if (!p) {                                     \
-        UNITTEST_TRACEF("ERROR: NULL pointer\n"); \
-        return false;                             \
-    }
+#define ASSERT_NOT_NULL(p)                            \
+    do {                                              \
+        UT_ASSERT_VALID_TEST_STATE;                   \
+        if (!p) {                                     \
+            UNITTEST_TRACEF("ERROR: NULL pointer\n"); \
+            return false;                             \
+        }                                             \
+    } while (0)
 
 #define ASSERT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str) UT_CMP(op, msg, lhs, rhs, lhs_str, rhs_str, RET_FALSE)
 

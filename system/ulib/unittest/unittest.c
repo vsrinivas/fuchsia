@@ -109,7 +109,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
         } else {
             *all_success = false;
         }
-        current_test_info = NULL;
+        *current_test_info = NULL;
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);
     }

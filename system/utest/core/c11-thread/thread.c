@@ -67,7 +67,7 @@ bool c11_thread_test(void) {
         mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
 
     thread_entry((void*)(intptr_t)6);
-    ASSERT_TRUE(threads_done[6], "All threads should have completed")
+    ASSERT_TRUE(threads_done[6], "All threads should have completed");
 
     END_TEST;
 }
