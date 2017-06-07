@@ -247,16 +247,10 @@ bool Tokenizer::parse_identifier(Token& token, int ch) {
     string.append(1, ch);
 
     ch = peek_char();
-    // underscores are not allowed to avoid conflicts when converting '-' and '.' to '_'
-    // for symbols in the C header file
-    while (isalnum(ch) || ch == '-') {
+    while (isalnum(ch) || ch == '-' || ch == '_') {
         next_char();
         string.append(1, ch);
         ch = peek_char();
-    }
-    if (ch == '_') {
-        print_err("underscores are not allowed in identifiers\n");
-        return false;
     }
 
     token.type = find_reserved_word(string);
@@ -269,6 +263,7 @@ bool Tokenizer::parse_integer(Token& token, int ch) {
     bool hexadecimal = false;
     uint64_t value = 0;
 
+    token.string_value.clear();
     token.string_value.append(1, ch);
 
     if (ch == '-') {

@@ -156,6 +156,6 @@ static void arm_qemu_pcie_init(mdi_node_ref_t* node, uint level) {
     }
 }
 
-LK_PDEV_INIT(arm_qemu_pcie_init, MDI_KERNEL_QEMU_PCIE, arm_qemu_pcie_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(arm_qemu_pcie_init, MDI_QEMU_PCIE, arm_qemu_pcie_init, LK_INIT_LEVEL_PLATFORM);
 
 #endif  // if WITH_DEV_PCIE

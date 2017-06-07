@@ -53,7 +53,7 @@ At this point the mdigen will process the MDI source code in the file
 ### ID Definitions
 
 ID definitions define the IDs that can be used for nodes in the tree.
-ID definitions consist of a type, one or more dot-separated identifiers, and an integer value.
+ID definitions consist of a type, one or more dot-separated identifiers, a C symbol name and an integer value.
 When the MDI binary is generated, the IDs are written as 32-bit integers containing both the
 ID definition's type and integer value.
 The dot-separated list of identifiers are used to match a paths to nodes in the MDI source file.
@@ -61,9 +61,9 @@ The dot-separated list of identifiers are used to match a paths to nodes in the 
 For example, the following are ID definitions:
 
 ```
-int32  foo          1
-list   bar          2
-string bar.baz      3
+int32  foo      MDI_FOO     1
+list   bar      MDI_BAR     2
+string bar.baz  MDI_BAR_BAZ 3
 ```
 
 IDs of type array must also specify the array element type for the ID:
@@ -72,9 +72,17 @@ IDs of type array must also specify the array element type for the ID:
 array[boolean]  boolean-array   4
 ```
 
-Identifiers can contain alphanumeric characters and the `'-'` character,
-and must start with a letter. Since the MDI tool converts dashes to underscores when generating
-the C header file, underscores are not allowed in identifiers.
+Identifiers can contain alphanumeric characters and the `'-'` and `'_'` characters,
+and must start with a letter.
+
+The mdigen uses the C symbol names to generate a C header file to be included by C/C++ code that
+uses the MDI. The example above will result in the following code in the C header file:
+
+```
+#define MDI_FOO                                            0x00800001
+#define MDI_BAR                                            0x08000002
+#define MDI_BAR_BAZ                                        0x09000003
+```
 
 The purpose of using integer IDs rather than arbitrary string names for nodes is to:
  1. provide build time error checking when compiling MDI files, and
@@ -136,11 +144,8 @@ mdigen can also take the following additional options:
 
  * `-o <path to output MDI binary>`
  * `-h <path to output C header file containing MDI ID definitions>`
- * `-p <prefix>` - prefix for symbols in C header file
- * `-u` - convert symbols in C header file to upper case
 
 When invoking mdigen, you must specify either a `-o` or `-h` option, or both.
-The `-p` and `-u` options are optional.
 
 ## MDI Library
 

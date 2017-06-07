@@ -388,16 +388,16 @@ static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_ARM_TIMER_IRQ_PHYS:
+        case MDI_ARM_TIMER_IRQ_PHYS:
             got_irq_phys = !mdi_node_uint32(&child, &irq);
             break;
-        case MDI_KERNEL_ARM_TIMER_IRQ_VIRT:
+        case MDI_ARM_TIMER_IRQ_VIRT:
             got_irq_virt = !mdi_node_uint32(&child, &irq);
             break;
-        case MDI_KERNEL_ARM_TIMER_IRQ_SPHYS:
+        case MDI_ARM_TIMER_IRQ_SPHYS:
             got_irq_sphys = !mdi_node_uint32(&child, &irq);
             break;
-        case MDI_KERNEL_ARM_TIMER_FREQ_OVERRIDE:
+        case MDI_ARM_TIMER_FREQ_OVERRIDE:
             // freq_override is optional
             mdi_node_uint32(&child, &freq_override);
             break;
@@ -421,5 +421,5 @@ static void arm_generic_timer_pdev_init(mdi_node_ref_t* node, uint level) {
     arm_generic_timer_init(irq, freq_override);
 }
 
-LK_PDEV_INIT(arm_generic_timer_pdev_init, MDI_KERNEL_ARM_TIMER, arm_generic_timer_pdev_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_generic_timer_pdev_init, MDI_ARM_TIMER, arm_generic_timer_pdev_init, LK_INIT_LEVEL_PLATFORM_EARLY);
 #endif // WITH_DEV_PDEV

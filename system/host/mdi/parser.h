@@ -12,4 +12,4 @@ class Node;
 class Tokenizer;
 
 bool process_file(Tokenizer* container, const char* in_path, Node& root);
-bool print_header_file(std::ofstream& os, const char* prefix, bool uppercase);
+bool print_header_file(std::ofstream& os);

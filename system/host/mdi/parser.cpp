@@ -22,6 +22,12 @@ static std::map<std::string, mdi_id_t> id_map;
 // map of ID numbers to identifier names
 static std::map<uint32_t, std::string> id_name_map;
 
+// map of ID numbers to C symbol names
+static std::map<uint32_t, std::string> id_c_name_map;
+
+// map of C symbol names to ID numbers
+static std::map<std::string, uint32_t> c_name_id_map;
+
 static bool find_node_id(Tokenizer& tokenizer, std::string id_name, mdi_id_t& out_id) {
     const char* name_str = id_name.c_str();
 
@@ -117,7 +123,7 @@ static bool parse_id_declaration(Tokenizer& tokenizer, mdi_type_t type) {
         id_name += token.string_value;
 
         // Expecting TOKEN_INT_LITERAL or TOKEN_DOT
-         if (!tokenizer.next_token(token)) {
+        if (!tokenizer.next_token(token)) {
             return false;
         }
         if (token.type == TOKEN_EOF) {
@@ -131,8 +137,31 @@ static bool parse_id_declaration(Tokenizer& tokenizer, mdi_type_t type) {
         }
     }
 
+    if (token.type != TOKEN_IDENTIFIER) {
+        tokenizer.print_err("Expected identifier for C symbol name, got token \"%s\" "
+                            "in ID declaration for \"%s\"\n",
+                            token.string_value.c_str(), id_name.c_str());
+        return false;
+    }
+
+    std::string c_name = token.string_value.c_str();
+    if (c_name_id_map.find(c_name) != c_name_id_map.end()) {
+        tokenizer.print_err("duplicate C symbol %s\n", c_name.c_str());
+        return false;
+    }
+    // the parser will almost verify that c_name is a legal C symbol.
+    // just need to check that it does not contain any dashes.
+    // we are not bothering to check for C/C++ reserved words.
+    if (strchr(c_name.c_str(), '-') != nullptr) {
+        tokenizer.print_err("Illegal C identifier %s\n", c_name.c_str());
+        return false;
+    }
+
+    if (!tokenizer.next_token(token)) {
+        return false;
+    }
     if (token.type != TOKEN_INT_LITERAL) {
-        tokenizer.print_err("expected integer, got token \"%s\" in ID declaration for \"%s\"\n",
+        tokenizer.print_err("expected integer ID, got token \"%s\" in ID declaration for \"%s\"\n",
                             token.string_value.c_str(), id_name.c_str());
         return false;
     }
@@ -162,6 +191,8 @@ static bool parse_id_declaration(Tokenizer& tokenizer, mdi_type_t type) {
     }
     id_map[id_name] = id;
     id_name_map[id_number] = id_name;
+    c_name_id_map[c_name] = id;
+    id_c_name_map[id] = c_name;
 
 #if PRINT_ID_DECLARATIONS
     printf("ID %s : %08X\n", name, id);
@@ -455,21 +486,14 @@ bool generate_file_header(std::ofstream& os) {
     return os.good();
 }
 
-bool print_header_file(std::ofstream& os, const char* prefix, bool uppercase) {
+bool print_header_file(std::ofstream& os) {
     generate_file_header(os);
-    for (auto iter = id_map.begin(); iter != id_map.end(); iter++) {
-        char symbol[1024];
+    for (auto iter = id_c_name_map.begin(); iter != id_c_name_map.end(); iter++) {
+        auto id = iter->first;
+        auto symbol = iter->second.c_str();
         char buffer[1024];
-        snprintf(symbol, sizeof(symbol), "%s%s", prefix, iter->first.c_str());
-        for (int i = 0; symbol[i] != 0; i++) {
-            char ch = symbol[i];
-            if (ch == '-' || ch == '.') {
-                symbol[i] = '_';
-            } else if (uppercase) {
-                symbol[i] = toupper(ch);
-            }
-        }
-        snprintf(buffer, sizeof(buffer), "#define %-50s 0x%08X\n", symbol, iter->second);
+
+        snprintf(buffer, sizeof(buffer), "#define %-50s 0x%08X\n", symbol, id);
         os << buffer;
     }
 

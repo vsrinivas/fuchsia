@@ -30,10 +30,10 @@ static void arm_psci_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_KERNEL_ARM_PSCI_USE_SMC:
+        case MDI_ARM_PSCI_USE_SMC:
             mdi_node_boolean(&child, &use_smc);
             break;
-        case MDI_KERNEL_ARM_PSCI_USE_HVC:
+        case MDI_ARM_PSCI_USE_HVC:
             mdi_node_boolean(&child, &use_hvc);
             break;
         }
@@ -48,5 +48,5 @@ static void arm_psci_init(mdi_node_ref_t* node, uint level) {
     do_psci_call = use_smc ? psci_smc_call : psci_hvc_call;
 }
 
-LK_PDEV_INIT(arm_psci_init, MDI_KERNEL_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_psci_init, MDI_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
 #endif // WITH_DEV_PDEV

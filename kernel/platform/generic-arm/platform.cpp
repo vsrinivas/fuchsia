@@ -229,7 +229,7 @@ void* platform_get_ramdisk(size_t *size) {
 static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
     mdi_node_ref_t  clusters;
 
-    if (mdi_find_node(cpu_map, MDI_CPU_MAP_CLUSTERS, &clusters) != NO_ERROR) {
+    if (mdi_find_node(cpu_map, MDI_CPU_CLUSTERS, &clusters) != NO_ERROR) {
         panic("platform_cpu_early_init couldn't find clusters\n");
         return;
     }
@@ -240,7 +240,7 @@ static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
         mdi_node_ref_t node;
         uint8_t cpu_count;
 
-        if (mdi_find_node(&cluster, MDI_CPU_MAP_CLUSTERS_CPU_COUNT, &node) != NO_ERROR) {
+        if (mdi_find_node(&cluster, MDI_CPU_COUNT, &node) != NO_ERROR) {
             panic("platform_cpu_early_init couldn't find cluster cpu-count\n");
             return;
         }

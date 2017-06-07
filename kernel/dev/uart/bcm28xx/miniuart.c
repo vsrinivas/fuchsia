@@ -166,5 +166,5 @@ static void bcm28xx_uart_init_early(mdi_node_ref_t* node, uint level) {
     pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(bcm28xx_uart_init_early, MDI_KERNEL_BCM28XX_UART, bcm28xx_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
-LK_PDEV_INIT(bcm28xx_uart_init, MDI_KERNEL_BCM28XX_UART, bcm28xx_uart_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(bcm28xx_uart_init_early, MDI_BCM28XX_UART, bcm28xx_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(bcm28xx_uart_init, MDI_BCM28XX_UART, bcm28xx_uart_init, LK_INIT_LEVEL_PLATFORM);

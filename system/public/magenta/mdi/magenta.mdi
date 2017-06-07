@@ -1,37 +1,37 @@
 // MDI definitions for Magenta
 
 // Top level nodes
-list    kernel                                  1
-list    cpu-map                                 2
-list    platform                                3
+list    kernel                            MDI_KERNEL                            1
+list    cpu-map                           MDI_CPU_MAP                           2
+list    platform                          MDI_PLATFORM                          3
 
 // Common definitions
-string  name                                    10
-uint64  base-virt                               11  // virtual base address
-uint64  base-phys                               12  // physical base address
-uint32  irq                                     13  // IRQ number
+string  name                              MDI_NAME                              10
+uint64  base-virt                         MDI_BASE_VIRT                         11  // virtual base address
+uint64  base-phys                         MDI_BASE_PHYS                         12  // physical base address
+uint32  irq                               MDI_IRQ                               13  // IRQ number
 
 // CPU topology
 //string  cpu-map.clusters.name
-list    cpu-map.clusters                        100
-uint8   cpu-map.clusters.cpu-count              101
+list    cpu-map.clusters                  MDI_CPU_CLUSTERS                      100
+uint8   cpu-map.clusters.cpu-count        MDI_CPU_COUNT                         101
 
 // platform-bus nodes
-list    platform.device                         200
+list    platform.device                   MDI_PLATFORM_DEVICE                   200
 //string  platform.device.name
-uint32  platform.device.vid                     201
-uint32  platform.device.pid                     202
-uint32  platform.device.did                     203
+uint32  platform.device.vid               MDI_PLATFORM_DEVICE_VID               201
+uint32  platform.device.pid               MDI_PLATFORM_DEVICE_PID               202
+uint32  platform.device.did               MDI_PLATFORM_DEVICE_DID               203
 
 // Kernel Drivers
 
 // ARM PSCI driver
-list    kernel.arm-psci                         1000
-boolean kernel.arm-psci.use-smc                 1001
-boolean kernel.arm-psci.use-hvc                 1002
+list    kernel.arm-psci                   MDI_ARM_PSCI                          1000
+boolean kernel.arm-psci.use-smc           MDI_ARM_PSCI_USE_SMC                  1001
+boolean kernel.arm-psci.use-hvc           MDI_ARM_PSCI_USE_HVC                  1002
 
 // ARM gic v3 driver
-list    kernel.arm-gic-v3                       1010
+list    kernel.arm-gic-v3                 MDI_ARM_GIC_V3                        1010
 // TODO:(hollande) We use virt since peripherals
 //       should be accessed via a device memory mapping and presently
 //       we do not have mechanisms in kernel for converting phys address
@@ -40,36 +40,36 @@ list    kernel.arm-gic-v3                       1010
 //       the targets rules.mk
 // GIC V3 uses base-virt
 // uint64  kernel.arm-gic-v3.base-virt
-uint64  kernel.arm-gic-v3.gicd-offset           1011
-uint64  kernel.arm-gic-v3.gicr-offset           1012
-uint64  kernel.arm-gic-v3.gicr-stride           1013
-uint32  kernel.arm-gic-v3.ipi-base              1014
-uint64  kernel.arm-gic-v3.base-phys             1015
+// uint64  kernel.arm-gic-v3.base-phys
+uint64  kernel.arm-gic-v3.gicd-offset     MDI_ARM_GIC_V3_GICD_OFFSET            1011
+uint64  kernel.arm-gic-v3.gicr-offset     MDI_ARM_GIC_V3_GICR_OFFSET            1012
+uint64  kernel.arm-gic-v3.gicr-stride     MDI_ARM_GIC_V3_GICR_STRIDE            1013
+uint32  kernel.arm-gic-v3.ipi-base        MDI_ARM_GIC_V3_IPI_BASE               1014
 
 // ARM generic timer driver
-list    kernel.arm-timer                        1030
-uint32  kernel.arm-timer.irq-phys               1031 // for using physical timer
-uint32  kernel.arm-timer.irq-virt               1032 // for using virtual timer
-uint32  kernel.arm-timer.irq-sphys              1033 // for using secure physical timer
-uint32  kernel.arm-timer.freq-override          1034 // optional
+list    kernel.arm-timer                  MDI_ARM_TIMER                         1030
+uint32  kernel.arm-timer.irq-phys         MDI_ARM_TIMER_IRQ_PHYS                1031 // for using physical timer
+uint32  kernel.arm-timer.irq-virt         MDI_ARM_TIMER_IRQ_VIRT                1032 // for using virtual timer
+uint32  kernel.arm-timer.irq-sphys        MDI_ARM_TIMER_IRQ_SPHYS               1033 // for using secure physical timer
+uint32  kernel.arm-timer.freq-override    MDI_ARM_TIMER_FREQ_OVERRIDE           1034 // optional
 
 // bcm28xx drivers
-list    kernel.bcm28xx-interrupt                1040
-list    kernel.bcm28xx-uart                     1041
+list    kernel.bcm28xx-interrupt          MDI_BCM28XX_INTERRUPT                 1040
+list    kernel.bcm28xx-uart               MDI_BCM28XX_UART                      1041
 
 // ARM pl011 uart
-list    kernel.arm-pl011-uart                   1050
+list    kernel.arm-pl011-uart             MDI_ARM_PL011_UART                    1050
 // pl011 driver uses base-virt, base-phys and IRQ
 // TODO:(hollande) See note above re: phys/virt
 
 // qemu drivers
-list    kernel.qemu-pcie                        1060
+list    kernel.qemu-pcie                  MDI_QEMU_PCIE                         1060
 
 // ARM gicv2 driver
-list    kernel.arm-gic-v2                       1070
+list    kernel.arm-gic-v2                 MDI_ARM_GIC_V2                        1070
 // ARM gicv2 also uses base-virt and base-phys
 // TODO:(hollande) See note above re: phys/virt
-uint64  kernel.arm-gic-v2.gicd-offset           1071
-uint64  kernel.arm-gic-v2.gicc-offset           1072
-uint32  kernel.arm-gic-v2.ipi-base              1073
-uint64  kernel.arm-gic-v2.msi-frame-phys        1074
+uint64  kernel.arm-gic-v2.gicd-offset     MDI_ARM_GIC_V2_GICD_OFFSET            1071
+uint64  kernel.arm-gic-v2.gicc-offset     MDI_ARM_GIC_V2_GICC_OFFSET            1072
+uint32  kernel.arm-gic-v2.ipi-base        MDI_ARM_GIC_V2_IPI_BASE               1073
+uint64  kernel.arm-gic-v2.msi-frame-phys  MDI_ARM_GIC_V2_MSI_FRAME_PHYS         1074

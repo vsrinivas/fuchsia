@@ -20,8 +20,7 @@
 #include "tokens.h"
 
 static bool run(std::vector<std::string>& in_paths, const char* out_path,
-               const char* header_path, const char* header_prefix,
-               bool header_uppercase, bool debug) {
+               const char* header_path, bool debug) {
     // root of our tree
     Node    root(mdi_root_id, "");
 
@@ -80,7 +79,7 @@ static bool run(std::vector<std::string>& in_paths, const char* out_path,
             fprintf(stderr, "error: unable to open %s\n", header_path);
             return false;
         }
-        print_header_file(header_file, header_prefix, header_uppercase);
+        print_header_file(header_file);
     }
 
     if (debug) {
@@ -102,8 +101,6 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> in_paths;
     const char* out_path = nullptr;
     const char* header_path = nullptr;
-    const char* header_prefix = "";
-    bool header_uppercase = false;
     bool debug = false;
 
     argc--;
@@ -125,12 +122,6 @@ int main(int argc, char* argv[]) {
             header_path = argv[1];
             argc--;
             argv++;
-        } else if (!strcmp(arg, "-p") && argc >= 2) {
-            header_prefix = argv[1];
-            argc--;
-            argv++;
-        } else if (!strcmp(arg, "-u")) {
-            header_uppercase = true;
         } else if (!strcmp(arg, "-d")) {
             debug = true;
         } else {
@@ -148,6 +139,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    bool result = run(in_paths, out_path, header_path, header_prefix, header_uppercase, debug);
+    bool result = run(in_paths, out_path, header_path, debug);
     return (result ? 0 : -1);
 }

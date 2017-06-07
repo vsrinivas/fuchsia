@@ -279,4 +279,4 @@ static void bcm28xx_intc_init(mdi_node_ref_t* node, uint level) {
     pdev_register_interrupts(&intc_ops);
 }
 
-LK_PDEV_INIT(bcm28xx_intc_init, MDI_KERNEL_BCM28XX_INTERRUPT, bcm28xx_intc_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(bcm28xx_intc_init, MDI_BCM28XX_INTERRUPT, bcm28xx_intc_init, LK_INIT_LEVEL_PLATFORM_EARLY);
