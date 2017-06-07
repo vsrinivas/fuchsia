@@ -1957,19 +1957,18 @@ int dladdr(const void* addr, Dl_info* info) {
     strings = p->strings;
     nsym = count_syms(p);
 
-    if (!best)
-        for (; nsym; nsym--, sym++) {
-            if (sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES) &&
-                (1 << (sym->st_info >> 4) & OK_BINDS)) {
-                void* symaddr = laddr(p, sym->st_value);
-                if (symaddr > addr || symaddr < best)
-                    continue;
-                best = symaddr;
-                bestsym = sym;
-                if (addr == symaddr)
-                    break;
-            }
+    for (; nsym; nsym--, sym++) {
+        if (sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES) &&
+            (1 << (sym->st_info >> 4) & OK_BINDS)) {
+            void* symaddr = laddr(p, sym->st_value);
+            if (symaddr > addr || symaddr < best)
+                continue;
+            best = symaddr;
+            bestsym = sym;
+            if (addr == symaddr)
+                break;
         }
+    }
 
     if (!best)
         return 0;
