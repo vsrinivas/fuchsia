@@ -338,16 +338,16 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         case MDI_BASE_VIRT:
             got_gic_base_virt = !mdi_node_uint64(&child, &gic_base_virt);
             break;
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_GICD_OFFSET:
+        case MDI_KERNEL_ARM_GIC_V2_GICD_OFFSET:
             got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv2_gicd_offset);
             break;
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_GICC_OFFSET:
+        case MDI_KERNEL_ARM_GIC_V2_GICC_OFFSET:
             got_gicc_offset = !mdi_node_uint64(&child, &arm_gicv2_gicc_offset);
             break;
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_IPI_BASE:
+        case MDI_KERNEL_ARM_GIC_V2_IPI_BASE:
             got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
             break;
-        case MDI_KERNEL_DRIVERS_ARM_GIC_V2_MSI_FRAME_PHYS:
+        case MDI_KERNEL_ARM_GIC_V2_MSI_FRAME_PHYS:
             mdi_node_uint64(&child, &msi_frame_phys);
         }
     }
@@ -383,4 +383,4 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
 }
 
-LK_PDEV_INIT(arm_gic_v2_init, MDI_KERNEL_DRIVERS_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_gic_v2_init, MDI_KERNEL_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);

@@ -1,9 +1,9 @@
 // MDI definitions for Magenta
 
 // Top level nodes
-list    kernel-drivers                          1
+list    kernel                                  1
 list    cpu-map                                 2
-list    platform-bus                            3
+list    platform                                3
 
 // Common definitions
 string  name                                    10
@@ -17,21 +17,21 @@ list    cpu-map.clusters                        100
 uint8   cpu-map.clusters.cpu-count              101
 
 // platform-bus nodes
-list    platform-bus.device                     200
-//string  platform-bus.device.name
-uint32  platform-bus.device.vid                 201
-uint32  platform-bus.device.pid                 202
-uint32  platform-bus.device.did                 203
+list    platform.device                         200
+//string  platform.device.name
+uint32  platform.device.vid                     201
+uint32  platform.device.pid                     202
+uint32  platform.device.did                     203
 
 // Kernel Drivers
 
 // ARM PSCI driver
-list    kernel-drivers.arm-psci                 1000
-boolean kernel-drivers.arm-psci.use-smc         1001
-boolean kernel-drivers.arm-psci.use-hvc         1002
+list    kernel.arm-psci                         1000
+boolean kernel.arm-psci.use-smc                 1001
+boolean kernel.arm-psci.use-hvc                 1002
 
 // ARM gic v3 driver
-list    kernel-drivers.arm-gic-v3               1010
+list    kernel.arm-gic-v3                       1010
 // TODO:(hollande) We use virt since peripherals
 //       should be accessed via a device memory mapping and presently
 //       we do not have mechanisms in kernel for converting phys address
@@ -39,37 +39,37 @@ list    kernel-drivers.arm-gic-v3               1010
 //       definition consistent with the PERIPH_BASE_VIRT definition in
 //       the targets rules.mk
 // GIC V3 uses base-virt
-// uint64  kernel-drivers.arm-gic-v3.base-virt
-uint64  kernel-drivers.arm-gic-v3.gicd-offset   1011
-uint64  kernel-drivers.arm-gic-v3.gicr-offset   1012
-uint64  kernel-drivers.arm-gic-v3.gicr-stride   1013
-uint32  kernel-drivers.arm-gic-v3.ipi-base      1014
-uint64  kernel-drivers.arm-gic-v3.base-phys     1015
+// uint64  kernel.arm-gic-v3.base-virt
+uint64  kernel.arm-gic-v3.gicd-offset           1011
+uint64  kernel.arm-gic-v3.gicr-offset           1012
+uint64  kernel.arm-gic-v3.gicr-stride           1013
+uint32  kernel.arm-gic-v3.ipi-base              1014
+uint64  kernel.arm-gic-v3.base-phys             1015
 
 // ARM generic timer driver
-list    kernel-drivers.arm-generic-timer                1030
-uint32  kernel-drivers.arm-generic-timer.irq-phys       1031 // for using physical timer
-uint32  kernel-drivers.arm-generic-timer.irq-virt       1032 // for using virtual timer
-uint32  kernel-drivers.arm-generic-timer.irq-sphys      1033 // for using secure physical timer
-uint32  kernel-drivers.arm-generic-timer.freq-override  1034 // optional
+list    kernel.arm-timer                        1030
+uint32  kernel.arm-timer.irq-phys               1031 // for using physical timer
+uint32  kernel.arm-timer.irq-virt               1032 // for using virtual timer
+uint32  kernel.arm-timer.irq-sphys              1033 // for using secure physical timer
+uint32  kernel.arm-timer.freq-override          1034 // optional
 
 // bcm28xx drivers
-list    kernel-drivers.bcm28xx-interrupt        1040
-list    kernel-drivers.bcm28xx-uart             1041
+list    kernel.bcm28xx-interrupt                1040
+list    kernel.bcm28xx-uart                     1041
 
-// pl011 uart
-list    kernel-drivers.pl011-uart               1050
+// ARM pl011 uart
+list    kernel.arm-pl011-uart                   1050
 // pl011 driver uses base-virt, base-phys and IRQ
 // TODO:(hollande) See note above re: phys/virt
 
 // qemu drivers
-list    kernel-drivers.qemu-pcie                1054
+list    kernel.qemu-pcie                        1060
 
 // ARM gicv2 driver
-list    kernel-drivers.arm-gic-v2               1060
+list    kernel.arm-gic-v2                       1070
 // ARM gicv2 also uses base-virt and base-phys
 // TODO:(hollande) See note above re: phys/virt
-uint64  kernel-drivers.arm-gic-v2.gicd-offset   1061
-uint64  kernel-drivers.arm-gic-v2.gicc-offset   1062
-uint32  kernel-drivers.arm-gic-v2.ipi-base      1063
-uint64  kernel-drivers.arm-gic-v2.msi-frame-phys 1064
+uint64  kernel.arm-gic-v2.gicd-offset           1071
+uint64  kernel.arm-gic-v2.gicc-offset           1072
+uint32  kernel.arm-gic-v2.ipi-base              1073
+uint64  kernel.arm-gic-v2.msi-frame-phys        1074

@@ -443,7 +443,7 @@ static void platform_mdi_init(const bootdata_t* section) {
     if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != NO_ERROR) {
         panic("platform_mdi_init couldn't find cpu-map\n");
     }
-    if (mdi_find_node(&root, MDI_KERNEL_DRIVERS, &kernel_drivers) != NO_ERROR) {
+    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != NO_ERROR) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
     }
 

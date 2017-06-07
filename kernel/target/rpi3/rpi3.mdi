@@ -8,15 +8,15 @@ cpu-map = {
     }
 }
 
-kernel-drivers = {
+kernel = {
     bcm28xx-uart = {}
     bcm28xx-interrupt = {}
-    arm-generic-timer = {
+    arm-timer = {
         irq-virt = 99 // INTERRUPT_ARM_LOCAL_CNTVIRQ
     }
 }
 
-platform-bus = {
+platform = {
     device = {
         name = "mailbox"
         vid = 0xBC

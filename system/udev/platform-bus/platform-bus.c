@@ -82,7 +82,7 @@ static platform_device_protocol_t platform_dev_proto_ops = {
 static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_ref_t* node) {
     mdi_node_ref_t  device_node;
     mdi_each_child(node, &device_node) {
-        if (mdi_id(&device_node) != MDI_PLATFORM_BUS_DEVICE) {
+        if (mdi_id(&device_node) != MDI_PLATFORM_DEVICE) {
             printf("platform_bus_publish_devices: unexpected node %d\n", mdi_id(&device_node));
             continue;
         }
@@ -96,13 +96,13 @@ static mx_status_t platform_bus_publish_devices(platform_bus_t* bus, mdi_node_re
             case MDI_NAME:
                 name = mdi_node_string(&node);
                 break;
-            case MDI_PLATFORM_BUS_DEVICE_VID:
+            case MDI_PLATFORM_DEVICE_VID:
                 mdi_node_uint32(&node, &vid);
                 break;
-            case MDI_PLATFORM_BUS_DEVICE_PID:
+            case MDI_PLATFORM_DEVICE_PID:
                 mdi_node_uint32(&node, &pid);
                 break;
-            case MDI_PLATFORM_BUS_DEVICE_DID:
+            case MDI_PLATFORM_DEVICE_DID:
                 mdi_node_uint32(&node, &did);
                 break;
             default:
@@ -189,8 +189,8 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     }
 
     mdi_node_ref_t  bus_node;
-    if (mdi_find_node(&root_node, MDI_PLATFORM_BUS, &bus_node) != NO_ERROR) {
-        printf("platform_bus_bind: couldn't find MDI_PLATFORM_BUS\n");
+    if (mdi_find_node(&root_node, MDI_PLATFORM, &bus_node) != NO_ERROR) {
+        printf("platform_bus_bind: couldn't find MDI_PLATFORM\n");
         goto fail;
     }
 

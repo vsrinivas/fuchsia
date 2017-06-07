@@ -13,10 +13,10 @@ cpu-map = {
     }
 }
 
-kernel-drivers = {
+kernel = {
     // Keep pll011 uart at top so it is initialized first
     //  (uart6)
-    pl011-uart = {
+    arm-pl011-uart = {
         base-virt = 0xffffffffd7e32000
         base-phys = 0xfff32000
         irq = 111
@@ -33,7 +33,7 @@ kernel-drivers = {
     arm-psci = {
         use-smc = true
     }
-    arm-generic-timer = {
+    arm-timer = {
         irq-virt = 27
     }
 }
