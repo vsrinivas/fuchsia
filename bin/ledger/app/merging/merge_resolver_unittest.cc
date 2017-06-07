@@ -82,8 +82,10 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    journal->Commit(callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &actual_status, &actual_commit));
+    page_storage_->CommitJournal(
+        std::move(journal),
+        callback::Capture([this] { message_loop_.PostQuitTask(); },
+                          &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit->GetId();
@@ -100,8 +102,10 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    journal->Commit(callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &actual_status, &actual_commit));
+    page_storage_->CommitJournal(
+        std::move(journal),
+        callback::Capture([this] { message_loop_.PostQuitTask(); },
+                          &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit->GetId();

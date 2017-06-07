@@ -94,6 +94,17 @@ Status FakePageStorage::StartCommit(const CommitId& commit_id,
   return Status::OK;
 }
 
+void FakePageStorage::CommitJournal(
+    std::unique_ptr<Journal> journal,
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
+  static_cast<FakeJournal*>(journal.get())->Commit(std::move(callback));
+}
+
+Status FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal) {
+  return static_cast<FakeJournal*>(journal.get())->Rollback();
+}
+
 Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }

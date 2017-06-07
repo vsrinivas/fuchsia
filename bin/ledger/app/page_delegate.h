@@ -123,7 +123,6 @@ class PageDelegate {
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer<Status> operation_serializer_;
-  std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
   fidl::InterfacePtrSet<SyncWatcher> watcher_set_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);

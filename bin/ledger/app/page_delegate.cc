@@ -247,7 +247,7 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
         }
-        storage::Status status = journal_->Rollback();
+        storage::Status status = storage_->RollbackJournal(std::move(journal_));
         journal_.reset();
         journal_parent_commit_.clear();
         callback(PageUtils::ConvertStatus(status));
@@ -309,14 +309,14 @@ void PageDelegate::RunInTransaction(
       commit_id, storage::JournalType::IMPLICIT, &journal);
   if (status != storage::Status::OK) {
     callback(PageUtils::ConvertStatus(status));
-    journal->Rollback();
+    storage_->RollbackJournal(std::move(journal));
     branch_tracker_.StopTransaction(nullptr);
     return;
   }
   Status ledger_status = runnable(journal.get());
   if (ledger_status != Status::OK) {
     callback(ledger_status);
-    journal->Rollback();
+    storage_->RollbackJournal(std::move(journal));
     branch_tracker_.StopTransaction(nullptr);
     return;
   }
@@ -334,19 +334,12 @@ void PageDelegate::CommitJournal(
     std::unique_ptr<storage::Journal> journal,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  storage::Journal* journal_ptr = journal.get();
-  in_progress_journals_.push_back(std::move(journal));
-
-  journal_ptr->Commit([this, callback, journal_ptr](
-                          storage::Status status,
-                          std::unique_ptr<const storage::Commit> commit) {
-    in_progress_journals_.erase(std::remove_if(
-        in_progress_journals_.begin(), in_progress_journals_.end(),
-        [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
-          return journal_ptr == journal.get();
-        }));
-    callback(PageUtils::ConvertStatus(status), std::move(commit));
-  });
+  storage_->CommitJournal(
+      std::move(journal),
+      [callback](storage::Status status,
+                 std::unique_ptr<const storage::Commit> commit) {
+        callback(PageUtils::ConvertStatus(status), std::move(commit));
+      });
 }
 
 void PageDelegate::CheckEmpty() {

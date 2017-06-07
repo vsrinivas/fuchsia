@@ -25,6 +25,7 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/constants.h"
 #include "apps/ledger/src/storage/impl/inlined_object_impl.h"
+#include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/tracing/lib/trace/event.h"
@@ -335,6 +336,10 @@ std::unique_ptr<ObjectSourceHandler> ObjectSourceHandler::Create(
       staging_dir, object_dir);
 }
 
+Status RollbackJournalInternal(std::unique_ptr<Journal> journal) {
+  return static_cast<JournalDBImpl*>(journal.get())->Rollback();
+}
+
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
@@ -406,14 +411,15 @@ void PageStorageImpl::Init(std::function<void(Status)> callback) {
       return;
     }
 
-    journal->Commit([status_callback = waiter->NewCallback()](
-        Status status, std::unique_ptr<const Commit>) {
-      if (status != Status::OK) {
-        FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
-                          "previous Ledger execution.";
-      }
-      status_callback(status);
-    });
+    CommitJournal(
+        std::move(journal), [status_callback = waiter->NewCallback()](
+                                Status status, std::unique_ptr<const Commit>) {
+          if (status != Status::OK) {
+            FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
+                              "previous Ledger execution.";
+          }
+          status_callback(status);
+        });
   }
 
   waiter->Finalize(std::move(callback));
@@ -535,6 +541,28 @@ Status PageStorageImpl::StartMergeCommit(const CommitId& left,
                                          const CommitId& right,
                                          std::unique_ptr<Journal>* journal) {
   return db_.CreateMergeJournal(left, right, journal);
+}
+
+void PageStorageImpl::CommitJournal(
+    std::unique_ptr<Journal> journal,
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
+  JournalDBImpl* journal_ptr = static_cast<JournalDBImpl*>(journal.get());
+  // |journal| will now be owned by the Commit callback, making sure that it is
+  // not deleted before the end of the computation.
+  journal_ptr->Commit(ftl::MakeCopyable([
+    journal = std::move(journal), callback = std::move(callback)
+  ](Status status, std::unique_ptr<const storage::Commit> commit) mutable {
+    if (status != Status::OK) {
+      // Commit failed, roll the journal back.
+      RollbackJournalInternal(std::move(journal));
+    }
+    callback(status, std::move(commit));
+  }));
+}
+
+Status PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal) {
+  return RollbackJournalInternal(std::move(journal));
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {

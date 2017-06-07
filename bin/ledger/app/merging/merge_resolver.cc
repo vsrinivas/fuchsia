@@ -152,14 +152,14 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       std::unique_ptr<storage::Journal> journal;
       storage_->StartMergeCommit(commits[0]->GetId(), commits[1]->GetId(),
                                  &journal);
-      auto journal_ptr = journal.get();
-      journal_ptr->Commit(ftl::MakeCopyable([
-        journal = std::move(journal), cleanup = std::move(cleanup)
-      ](storage::Status status, std::unique_ptr<const storage::Commit>) {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to merge identical commits.";
-        }
-      }));
+      storage_->CommitJournal(
+          std::move(journal),
+          ftl::MakeCopyable([cleanup = std::move(cleanup)](
+              storage::Status status, std::unique_ptr<const storage::Commit>) {
+            if (status != storage::Status::OK) {
+              FTL_LOG(ERROR) << "Unable to merge identical commits.";
+            }
+          }));
       return;
     }
 

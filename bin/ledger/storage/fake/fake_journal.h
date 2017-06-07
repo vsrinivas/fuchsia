@@ -22,15 +22,17 @@ class FakeJournal : public Journal {
   explicit FakeJournal(FakeJournalDelegate* delegate);
   ~FakeJournal() override;
 
+  void Commit(
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
+
+  Status Rollback();
+
   // Journal:
   Status Put(convert::ExtendedStringView key,
              ObjectIdView object_id,
              KeyPriority priority) override;
   Status Delete(convert::ExtendedStringView key) override;
-  void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) override;
-  Status Rollback() override;
 
  private:
   FakeJournalDelegate* delegate_;

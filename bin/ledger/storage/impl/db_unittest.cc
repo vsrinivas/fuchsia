@@ -161,10 +161,6 @@ TEST_F(DBTest, Journals) {
             db_.GetImplicitJournal(journal_ids[0], &found_journal));
   EXPECT_EQ(Status::OK, db_.GetImplicitJournalIds(&journal_ids));
   EXPECT_EQ(0u, journal_ids.size());
-
-  EXPECT_EQ(Status::OK, found_journal->Rollback());
-  EXPECT_EQ(Status::OK, implicit_journal->Rollback());
-  EXPECT_EQ(Status::OK, explicit_journal->Rollback());
 }
 
 TEST_F(DBTest, JournalEntries) {
@@ -198,7 +194,6 @@ TEST_F(DBTest, JournalEntries) {
   }
   EXPECT_FALSE(entries->Valid());
   EXPECT_EQ(Status::OK, entries->GetStatus());
-  EXPECT_EQ(Status::OK, implicit_journal->Rollback());
 }
 
 TEST_F(DBTest, UnsyncedCommits) {

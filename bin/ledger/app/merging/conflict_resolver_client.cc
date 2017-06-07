@@ -44,7 +44,7 @@ ConflictResolverClient::ConflictResolverClient(
 
 ConflictResolverClient::~ConflictResolverClient() {
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
   }
 }
 
@@ -135,7 +135,7 @@ void ConflictResolverClient::OnNextMergeResult(
 
 void ConflictResolverClient::Finalize() {
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
     journal_.reset();
   }
   auto on_done = std::move(on_done_);
@@ -260,7 +260,7 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
   FTL_DCHECK(!cancelled_);
   FTL_DCHECK(journal_);
 
-  journal_->Commit([
+  storage_->CommitJournal(std::move(journal_), [
     weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
   ](storage::Status status, std::unique_ptr<const storage::Commit>) {
     if (status != storage::Status::OK) {

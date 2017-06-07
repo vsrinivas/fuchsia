@@ -47,15 +47,22 @@ class JournalDBImpl : public Journal {
   // Returns the id of this journal.
   const JournalId& GetId() const;
 
-  // Journal :
+  // Commits the changes of this |Journal|. Trying to update entries or rollback
+  // will fail after a successful commit. The callback will be called with the
+  // returned status and the new commit.
+  void Commit(
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
+
+  // Rolls back all changes to this |Journal|. Trying to update entries or
+  // commit will fail with an |ILLEGAL_STATE| after a successful rollback.
+  Status Rollback();
+
+  // Journal:
   Status Put(convert::ExtendedStringView key,
              ObjectIdView object_id,
              KeyPriority priority) override;
   Status Delete(convert::ExtendedStringView key) override;
-  void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) override;
-  Status Rollback() override;
 
  private:
   JournalDBImpl(JournalType type,

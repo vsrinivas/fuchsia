@@ -29,17 +29,6 @@ class Journal {
   // on success or the error code otherwise.
   virtual Status Delete(convert::ExtendedStringView key) = 0;
 
-  // Commits the changes of this |Journal|. Trying to update entries or rollback
-  // will fail after a successful commit. The callback will be called with the
-  // returned status and the new commit.
-  virtual void Commit(
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) = 0;
-
-  // Rolls back all changes to this |Journal|. Trying to update entries or
-  // commit will fail with an |ILLEGAL_STATE| after a successful rollback.
-  virtual Status Rollback() = 0;
-
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Journal);
 };

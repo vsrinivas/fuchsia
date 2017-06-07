@@ -263,12 +263,14 @@ class PageStorageTest : public StorageTest {
   }
 
   std::unique_ptr<const Commit> TryCommitJournal(
-      std::unique_ptr<Journal>* journal,
+      std::unique_ptr<Journal> journal,
       Status expected_status) {
     Status status;
     std::unique_ptr<const Commit> commit;
-    (*journal)->Commit(callback::Capture(
-        [this] { message_loop_.PostQuitTask(); }, &status, &commit));
+    storage_->CommitJournal(
+        std::move(journal),
+        callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                          &commit));
 
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(expected_status, status);
@@ -289,11 +291,7 @@ class PageStorageTest : public StorageTest {
     EXPECT_EQ(Status::OK, journal->Delete("key_does_not_exist"));
 
     std::unique_ptr<const Commit> commit =
-        TryCommitJournal(&journal, Status::OK);
-
-    // Commit and Rollback should fail after a successfull commit.
-    TryCommitJournal(&journal, Status::ILLEGAL_STATE);
-    EXPECT_EQ(Status::ILLEGAL_STATE, journal->Rollback());
+        TryCommitJournal(std::move(journal), Status::OK);
 
     // Check the contents.
     std::vector<Entry> entries = GetCommitContents(*commit);
@@ -602,8 +600,8 @@ TEST_F(PageStorageTest, CreateJournals) {
   std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK,
             storage_->StartMergeCommit(left_id, right_id, &journal));
-  EXPECT_EQ(Status::OK, journal->Rollback());
   EXPECT_NE(nullptr, journal);
+  EXPECT_EQ(Status::OK, storage_->RollbackJournal(std::move(journal)));
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
@@ -613,15 +611,14 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // Explicit journals.
   // The first call will fail because FakeDBImpl::AddJournalEntry() returns an
   // error. After a failed call all other Put/Delete/Commit operations should
-  // fail with ILLEGAL_STATE. Rollback should not fail with ILLEGAL_STATE.
+  // fail with ILLEGAL_STATE.
   db.CreateJournal(JournalType::EXPLICIT, RandomId(kCommitIdSize), &journal);
   EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE,
             journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
 
-  TryCommitJournal(&journal, Status::ILLEGAL_STATE);
-  EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
+  TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE);
 
   // Implicit journals.
   // All calls will fail because of FakeDBImpl implementation, not because of
@@ -631,12 +628,12 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   Status put_status = journal->Put("key", "value", KeyPriority::EAGER);
   EXPECT_NE(Status::ILLEGAL_STATE, put_status);
   EXPECT_NE(Status::ILLEGAL_STATE, journal->Delete("key"));
-  journal->Commit([this](Status s, std::unique_ptr<const Commit>) {
-    EXPECT_NE(Status::ILLEGAL_STATE, s);
-    message_loop_.PostQuitTask();
-  });
+  storage_->CommitJournal(std::move(journal),
+                          [this](Status s, std::unique_ptr<const Commit>) {
+                            EXPECT_NE(Status::ILLEGAL_STATE, s);
+                            message_loop_.PostQuitTask();
+                          });
   ASSERT_FALSE(RunLoopWithTimeout());
-  EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
@@ -816,7 +813,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
                                     JournalType::IMPLICIT, &journal));
     EXPECT_EQ(Status::OK, journal->Put(ftl::StringPrintf("key%d", i),
                                        data[i].object_id, KeyPriority::LAZY));
-    TryCommitJournal(&journal, Status::OK);
+    TryCommitJournal(std::move(journal), Status::OK);
     commits.push_back(GetFirstHead()->GetId());
   }
 
@@ -874,7 +871,7 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   EXPECT_EQ(Status::OK,
             journal->Put("key", data.object_id, KeyPriority::EAGER));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
-  TryCommitJournal(&journal, Status::OK);
+  TryCommitJournal(std::move(journal), Status::OK);
   EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
 }
 
@@ -895,7 +892,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_EQ(Status::OK,
             journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
-  TryCommitJournal(&journal, Status::OK);
+  TryCommitJournal(std::move(journal), Status::OK);
   EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[2].object_id));
@@ -914,7 +911,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
             journal->Put("key1", data[2].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
             journal->Put("key3", data[0].object_id, KeyPriority::LAZY));
-  TryCommitJournal(&journal, Status::OK);
+  TryCommitJournal(std::move(journal), Status::OK);
 
   EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
@@ -963,13 +960,15 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
 
   Status status;
   std::unique_ptr<const Commit> commit;
-  journal->Commit(callback::Capture(
-      [this, &watcher] {
-        // We should get the callback before the watchers.
-        EXPECT_EQ(0, watcher.commit_count);
-        message_loop_.PostQuitTask();
-      },
-      &status, &commit));
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(
+                              [this, &watcher] {
+                                // We should get the callback before the
+                                // watchers.
+                                EXPECT_EQ(0, watcher.commit_count);
+                                message_loop_.PostQuitTask();
+                              },
+                              &status, &commit));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
@@ -1075,7 +1074,7 @@ TEST_F(PageStorageTest, Generation) {
             storage_->StartMergeCommit(commit_id1, commit_id2, &journal));
 
   std::unique_ptr<const Commit> commit3 =
-      TryCommitJournal(&journal, Status::OK);
+      TryCommitJournal(std::move(journal), Status::OK);
   EXPECT_EQ(3u, commit3->GetGeneration());
 }
 
@@ -1173,8 +1172,10 @@ TEST_F(PageStorageTest, NoOpCommit) {
   // Commit the journal.
   Status status;
   std::unique_ptr<const Commit> commit;
-  journal->Commit(callback::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &commit));
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &commit));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(Status::OK, status);

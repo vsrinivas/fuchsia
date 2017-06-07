@@ -78,7 +78,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(
 
 AutoMergeStrategy::AutoMerger::~AutoMerger() {
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
   }
 }
 
@@ -228,16 +228,18 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
                     change.entry.priority);
     }
   }
-  journal_->Commit([weak_this = weak_factory_.GetWeakPtr()](
-      storage::Status status, std::unique_ptr<const storage::Commit>) {
-    if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
-    }
-    if (weak_this) {
-      weak_this->journal_.reset();
-      weak_this->Done();
-    }
-  });
+  storage_->CommitJournal(
+      std::move(journal_), [weak_this = weak_factory_.GetWeakPtr()](
+                               storage::Status status,
+                               std::unique_ptr<const storage::Commit>) {
+        if (status != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+        }
+        if (weak_this) {
+          weak_this->journal_.reset();
+          weak_this->Done();
+        }
+      });
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {
@@ -247,7 +249,7 @@ void AutoMergeStrategy::AutoMerger::Cancel() {
 
 void AutoMergeStrategy::AutoMerger::Done() {
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
     journal_.reset();
   }
   delegated_merge_.reset();

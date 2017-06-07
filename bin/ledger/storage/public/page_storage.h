@@ -82,6 +82,14 @@ class PageStorage {
                                   const CommitId& right,
                                   std::unique_ptr<Journal>* journal) = 0;
 
+  // Commits the given |journal| and when finished, returns the success/failure
+  // status and the created Commit object through the given |callback|.
+  virtual void CommitJournal(
+      std::unique_ptr<Journal> journal,
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback) = 0;
+  // Rolls back all changes to the given |Journal|.
+  virtual Status RollbackJournal(std::unique_ptr<Journal> journal) = 0;
   // Registers the given |CommitWatcher| which will be notified on new commits.
   virtual Status AddCommitWatcher(CommitWatcher* watcher) = 0;
   // Unregisters the given CommitWatcher.

@@ -60,7 +60,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
   }
 }
 
@@ -103,7 +103,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
       weak_this->Done();
       return;
     }
-    weak_this->journal_->Commit(
+    weak_this->storage_->CommitJournal(
+        std::move(weak_this->journal_),
         [weak_this](storage::Status s, std::unique_ptr<const storage::Commit>) {
           if (s != storage::Status::OK) {
             FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
@@ -111,6 +112,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
           if (!weak_this) {
             return;
           }
+          weak_this->journal_.reset();
           weak_this->Done();
         });
   };
@@ -121,7 +123,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
   cancelled_ = true;
   if (journal_) {
-    journal_->Rollback();
+    storage_->RollbackJournal(std::move(journal_));
     journal_.reset();
   }
 }
