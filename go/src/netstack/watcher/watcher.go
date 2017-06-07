@@ -86,11 +86,11 @@ func (w *Watcher) wait() (string, uint, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if (n < 2) || (n != uint32(msg[1] + 2)) {
+	if (n < 2) || (n != uint32(msg[1]+2)) {
 		// malformed message
 		return "", 256, errors.New("watcher: malformed message")
 	}
-	return string(msg[2:msg[1]]), uint(msg[0]), nil
+	return string(msg[2 : 2+msg[1]]), uint(msg[0]), nil
 }
 
 type errorString string
