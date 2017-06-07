@@ -88,7 +88,8 @@ static bool abs_then_rel() {
         { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_ALARM },
         { MX_POL_NEW_FIFO, MX_POL_ACTION_DENY } };
 
-    // Addtional absolute policy that don't contractict existing can be added.
+    // An additional absolute policy that doesn't contradict existing
+    // policy can be added.
     EXPECT_EQ(job.set_policy(
         MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, more, countof(more)), NO_ERROR, "");
 
@@ -124,7 +125,7 @@ static bool invalid_calls(uint32_t options) {
     EXPECT_EQ(job.set_policy(
         options, MX_JOB_POL_BASIC, policy3, countof(policy2)), ERR_NOT_SUPPORTED, "");
 
-    // The job still will acept a valid combination:
+    // The job will still accept a valid combination:
     mx_policy_basic_t policy4[] = {
         { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL } };
 
