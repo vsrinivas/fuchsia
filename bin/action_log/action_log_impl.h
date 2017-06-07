@@ -37,8 +37,6 @@ class UserActionLogImpl : public UserActionLog {
 
   void MaybeProposeSharingVideo(const ActionData& action_data);
 
-  void LogDummyActionDelayed();
-
   ActionLogData action_log_;
   ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>

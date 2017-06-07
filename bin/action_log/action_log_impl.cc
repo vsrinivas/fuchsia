@@ -25,8 +25,6 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
         MaybeProposeSharingVideo(action_data);
       }),
       proposal_publisher_(std::move(proposal_publisher)) {
-  // TODO(azani): Remove before production!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  LogDummyActionDelayed();
 }
 
 void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
@@ -109,21 +107,6 @@ void UserActionLogImpl::Subscribe(
   ActionLogListenerPtr listener =
       ActionLogListenerPtr::Create(std::move(listener_handle));
   subscribers_.AddInterfacePtr(std::move(listener));
-  // TODO(azani): Remove when dummy data is no longer needed.
-  ActionData dummy_action{"", "http://example.org", "SpuriousMethod",
-                          "{\"cake_truth\": false}"};
-  BroadcastToSubscribers(dummy_action);
-}
-
-void UserActionLogImpl::LogDummyActionDelayed() {
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] {
-       ActionData dummy_action{"", "http://example.org", "SpuriousMethod",
-                           "{\"cake_truth\": false}"};
-        action_log_.Append(dummy_action);
-        LogDummyActionDelayed();
-      },
-      ftl::TimeDelta::FromSeconds(5));
 }
 
 void ComponentActionLogImpl::LogAction(const fidl::String& method,
