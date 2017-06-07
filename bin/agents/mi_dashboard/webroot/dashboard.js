@@ -42,6 +42,12 @@ function handleWebSocketMessage(evt) {
   if ("context.subscribers" in message) {
     handleContextSubscribers(message["context.subscribers"]);
   }
+  if ("action_log.all" in message) {
+    handleActionLogReset(message["action_log.all"]);
+  }
+  if ("action_log.new_action" in message) {
+    handleActionLogAdd(message["action_log.new_action"]);
+  }
 }
 
 function handleContextUpdate(context) {
@@ -98,6 +104,22 @@ function handleContextSubscribers(subscribers) {
       .append(component)
       .append(queries);
   }));
+}
+
+function handleActionLogReset(actionList) {
+  $("#actionLog").empty();
+
+  actionList.forEach(handleActionLogAdd);
+}
+
+function handleActionLogAdd(action) {
+  var methodElem = $("<td/>").text(action.method);
+  var componentUrlElem = $("<td/>").text(action.component_url);
+  var parametersElem = $("<td/>").text(action.parameters);
+
+  $("#actionLog").prepend($("<tr/>").append(methodElem)
+                                    .append(componentUrlElem)
+                                    .append(parametersElem));
 }
 
 function attemptReconnect() {

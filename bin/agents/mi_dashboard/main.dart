@@ -11,6 +11,7 @@ import 'package:application.lib.app.dart/app.dart';
 import 'package:path/path.dart' as path;
 
 import 'src/data_handler.dart';
+import 'src/action_log.dart';
 import 'src/context.dart';
 import 'src/context_subscribers.dart';
 
@@ -42,6 +43,7 @@ void main(List args) {
   final appContext = new ApplicationContext.fromStartupInfo();
 
   // Assemble the list of DataHandlers
+  addDataHandler(new ActionLogDataHandler());
   addDataHandler(new ContextDataHandler());
   addDataHandler(new ContextSubscribersDataHandler());
 
@@ -97,7 +99,7 @@ void handleRequest(HttpRequest request) {
   } else {
     // Identify requests requiring return of context data
     // Such requests will begin with /data/<service>/...
-    var dataRequestPattern = new RegExp("/data/([^/]+)(/.+)");
+    var dataRequestPattern = new RegExp("/data/([^/]+)(/.*)");
     var match = dataRequestPattern.firstMatch(request.requestedUri.path);
     if (match != null) {
       var serviceName = match.group(1); // first match group is the service name
