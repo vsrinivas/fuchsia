@@ -8,6 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
+MODULE_NAME := platform-bus
+
 MODULE_SRCS := \
     $(LOCAL_DIR)/platform-bus.c \
 
