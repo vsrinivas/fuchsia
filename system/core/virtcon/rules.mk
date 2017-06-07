@@ -17,7 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/textcon.cpp \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl system/ulib/port
+MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl system/ulib/port system/ulib/ddk
 
 MODULE_LIBS := system/ulib/launchpad system/ulib/mxio system/ulib/magenta system/ulib/c
 
@@ -41,7 +41,7 @@ MODULE_SRCS := \
 
 MODULE_NAME := virtual-console-test
 
-MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl
+MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl system/ulib/ddk
 
 MODULE_LIBS := system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 

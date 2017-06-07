@@ -8,9 +8,10 @@
 #include <string.h>
 #include <threads.h>
 
-#include <magenta/device/input.h>
+#include <ddk/protocol/hidbus.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+#include <magenta/device/input.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
 #include <mxio/watcher.h>
@@ -43,11 +44,31 @@ static int modifiers_from_keycode(uint8_t keycode) {
     return 0;
 }
 
+static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
+    // The following bit to set is specified in "Device Class Definition
+    // for Human Interface Devices (HID)", Version 1.11,
+    // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Magenta leaves
+    // USB keyboards in boot mode, so the relevant section is Appendix B,
+    // "Boot Interface Descriptors", "B.1 Protocol 1 (Keyboard)".
+    const int kUsbCapsLockBit = 1 << 1;
+
+    const int kNumBytes = 1;
+    uint8_t msg_buf[sizeof(input_set_report_t) + kNumBytes];
+    auto* msg = reinterpret_cast<input_set_report_t*>(msg_buf);
+    msg->id = 0;
+    msg->type = HID_REPORT_TYPE_OUTPUT;
+    msg->data[0] = caps_lock ? kUsbCapsLockBit : 0;
+    ssize_t result = ioctl_input_set_report(keyboard_fd, msg, sizeof(msg_buf));
+    if (result != kNumBytes) {
+        printf("ioctl_input_set_report() failed (returned %zd)\n", result);
+    }
+}
+
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
                                  int* cur_idx, int* prev_idx,
                                  hid_keys_t* key_pressed,
                                  hid_keys_t* key_released, int* modifiers,
-                                 keypress_handler_t keypress_handler) {
+                                 keypress_handler_t keypress_handler, int fd) {
     // process the key
     uint8_t keycode;
     hid_keys_t key_delta;
@@ -61,6 +82,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
         *modifiers |= modifiers_from_keycode(keycode);
         if (keycode == HID_USAGE_KEY_CAPSLOCK) {
             *modifiers ^= MOD_CAPSLOCK;
+            set_caps_lock_led(fd, *modifiers & MOD_CAPSLOCK);
         }
         keypress_handler(keycode, *modifiers);
     }
@@ -109,9 +131,10 @@ int vc_input_thread(void* arg) {
             // Times out only when need to repeat.
             vc_process_kb_report(previous_report_buf, key_state,
                                  &cur_idx, &prev_idx, NULL, NULL, &modifiers,
-                                 args.keypress_handler);
+                                 args.keypress_handler, args.fd);
             vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx,
-                                 NULL, NULL, &modifiers, args.keypress_handler);
+                                 NULL, NULL, &modifiers, args.keypress_handler,
+                                 args.fd);
             // Accelerate key repeat until reaching the high frequency
             repeat_interval = repeat_interval * 3 / 4;
             repeat_interval = repeat_interval < HIGH_REPEAT_KEY_FREQUENCY_MICRO ? HIGH_REPEAT_KEY_FREQUENCY_MICRO : repeat_interval;
@@ -131,7 +154,7 @@ int vc_input_thread(void* arg) {
         hid_keys_t key_pressed, key_released;
         vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx,
                              &key_pressed, &key_released, &modifiers,
-                             args.keypress_handler);
+                             args.keypress_handler, args.fd);
 
         if (repeat_enabled) {
             // Check if any non modifiers were pressed
