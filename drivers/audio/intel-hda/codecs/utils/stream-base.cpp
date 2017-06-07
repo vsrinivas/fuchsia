@@ -5,9 +5,9 @@
 #include <string.h>
 #include <mxtl/auto_call.h>
 
+#include "drivers/audio/audio-proto/audio2-proto.h"
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
 #include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
-#include "drivers/audio/intel-hda/utils/audio2-proto.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
 #include "debug-logging.h"

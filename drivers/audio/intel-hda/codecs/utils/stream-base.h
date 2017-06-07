@@ -13,8 +13,8 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
+#include "drivers/audio/audio-proto/audio2-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/intel-hda/utils/audio2-proto.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
