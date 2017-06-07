@@ -34,6 +34,7 @@ public:
 
     ~MagentaPlatformMmio()
     {
+        // Clean up the MMIO mapping that was made in the ctor.
         DLOG("MagentaPlatformMmio dtor");
         mx_status_t status = mx_vmar_unmap(mx_vmar_root_self(),
                                            reinterpret_cast<uintptr_t>(addr()), size());
@@ -51,17 +52,10 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
 {
     DLOG("CpuMapPciMmio bar %d", pci_bar);
 
-    void* protocol;
-    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
-    if (status != NO_ERROR)
-        return DRETP(nullptr, "device_op_get_protocol failed");
-
-    auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
     void* addr;
     uint64_t size;
-
     mx_handle_t handle;
-    status = pci->map_resource(mx_device(), pci_bar, cache_policy, &addr, &size, &handle);
+    mx_status_t status = pci()->map_resource(mx_device(), pci_bar, cache_policy, &addr, &size, &handle);
     if (status != NO_ERROR)
         return DRETP(nullptr, "map_resource failed");
 
@@ -75,36 +69,19 @@ MagentaPlatformDevice::CpuMapPciMmio(unsigned int pci_bar, PlatformMmio::CachePo
 
 bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 {
-    void* protocol;
-    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
-    if (status != NO_ERROR)
-        return DRETF(false, "device_op_get_protocol failed");
-
-    auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
-    const pci_config_t* pci_config;
-    mx_handle_t cfg_handle;
-    status = pci->get_config(mx_device(), &pci_config, &cfg_handle);
-    if (status < 0)
-        return DRETF(false, "pci get_config failed");
+    if (!value || addr >= cfg_size_)
+        return DRETF(false, "bad value or addr");
 
     *value =
-        *reinterpret_cast<const uint16_t*>(reinterpret_cast<const uint8_t*>(pci_config) + addr);
+        *reinterpret_cast<const uint16_t*>(reinterpret_cast<const uint8_t*>(pci_config()) + addr);
 
-    mx_handle_close(cfg_handle);
     return true;
 }
 
 std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
 {
-    void* protocol;
-    mx_status_t status = device_op_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
-    if (status != NO_ERROR)
-        return DRETP(nullptr, "device_op_get_protocol failed (%d)", status);
-
-    auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
-
     uint32_t max_irqs;
-    status = pci->query_irq_mode_caps(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+    mx_status_t status = pci()->query_irq_mode_caps(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
     if (status != NO_ERROR)
         return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
 
@@ -112,28 +89,54 @@ std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
         return DRETP(nullptr, "max_irqs is zero");
 
     // Mode must be Disabled before we can request Legacy
-    status = pci->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_DISABLED, 0);
+    status = pci()->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_DISABLED, 0);
     if (status != NO_ERROR)
         return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
 
-    status = pci->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, 1);
+    status = pci()->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, 1);
     if (status != NO_ERROR)
         return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
 
     mx_handle_t interrupt_handle;
-    status = pci->map_interrupt(mx_device(), 0, &interrupt_handle);
+    status = pci()->map_interrupt(mx_device(), 0, &interrupt_handle);
     if (status < 0)
         return DRETP(nullptr, "map_interrupt failed (%d)", status);
 
     return std::make_unique<MagentaPlatformInterrupt>(interrupt_handle);
 }
 
+MagentaPlatformDevice::~MagentaPlatformDevice()
+{
+    // Clean up the pci config mapping that was made in ::Create().
+    mx_status_t status = mx_vmar_unmap(mx_vmar_root_self(), reinterpret_cast<uintptr_t>(cfg_),
+                                       cfg_size_);
+    if (status != NO_ERROR)
+        DLOG("error unmapping %p (len %zu): %d\n", cfg_, cfg_size_, status);
+    mx_handle_close(cfg_handle_);
+}
+
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
 {
     if (!device_handle)
         return DRETP(nullptr, "device_handle is null, cannot create PlatformDevice");
+
+    void* protocol;
+    mx_device_t* mx_device = reinterpret_cast<mx_device_t*>(device_handle);
+    mx_status_t status = device_op_get_protocol(mx_device, MX_PROTOCOL_PCI, &protocol);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "pci protocol is null, cannot create PlatformDevice");
+
+    pci_config_t* cfg;
+    size_t cfg_size;
+    mx_handle_t cfg_handle;
+    pci_protocol_t* pci = reinterpret_cast<pci_protocol_t*>(protocol);
+    status = pci->map_resource(mx_device, PCI_RESOURCE_CONFIG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+            reinterpret_cast<void**>(&cfg), &cfg_size, &cfg_handle);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "failed to map pci config, cannot create PlatformDevice");
+
     return std::unique_ptr<PlatformDevice>(
-        new MagentaPlatformDevice(reinterpret_cast<mx_device_t*>(device_handle)));
+        new MagentaPlatformDevice(mx_device, pci, cfg, cfg_size, cfg_handle));
 }
 
 } // namespace
