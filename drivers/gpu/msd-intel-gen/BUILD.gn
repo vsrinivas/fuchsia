@@ -30,7 +30,7 @@ shared_library("test") {
 
 group("tests") {
   testonly = true
-  deps = [
+  public_deps = [
     "tests/unit_tests:msd_intel_gen_nonhardware_tests",
   ]
 }

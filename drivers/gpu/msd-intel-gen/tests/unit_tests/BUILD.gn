@@ -11,7 +11,7 @@ executable("msd_intel_gen_nonhardware_tests") {
     "main.cc",
   ]
 
-  deps = [
+  public_deps = [
     ":tests_not_requiring_hardware",
     "//third_party/gtest",
   ]

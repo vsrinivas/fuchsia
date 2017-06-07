@@ -9,7 +9,7 @@ group("gtest") {
 
   public_configs = [ "$msd_intel_gen_build_root:msd_tests_include_config" ]
 
-  deps = [
+  public_deps = [
     "unit_tests:tests_not_requiring_hardware",
     "unit_tests:tests_requiring_hardware",
   ]
