@@ -13,6 +13,8 @@ MODULE_CFLAGS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/guest.c \
+    $(LOCAL_DIR)/linux.c \
+    $(LOCAL_DIR)/magenta.c \
     $(LOCAL_DIR)/vcpu.c \
 
 MODULE_NAME := guest
