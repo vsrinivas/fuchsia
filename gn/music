@@ -17,6 +17,10 @@
             "bootfs_path": "apps/concert_event_list"
         },
         {
+            "binary": "gen/apps/modules/music/modules/concert_event_page/concert_event_page.flx",
+            "bootfs_path": "apps/concert_event_page"
+        },
+        {
             "binary": "gen/apps/modules/music/modules/music_album/music_album.flx",
             "bootfs_path": "apps/music_album"
         },
