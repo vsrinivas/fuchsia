@@ -575,14 +575,7 @@ static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uin
 }
 
 int main(int argc, char** argv) {
-    bool keep_log = false;
-    while (argc > 1) {
-        if (!strcmp(argv[1],"--keep-log-active")) {
-            keep_log = true;
-        }
-        argc--;
-        argv++;
-    }
+    bool keep_log = (getenv("virtcon.keep-log-visible") != NULL);
 
     if (port_init(&port) < 0) {
         return -1;

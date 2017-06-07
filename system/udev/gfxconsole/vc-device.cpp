@@ -419,7 +419,7 @@ void vc_set_fullscreen(vc_t* vc, bool fullscreen) {
 }
 
 const gfx_font* vc_get_font() {
-    char* fname = getenv("gfxconsole.font");
+    char* fname = getenv("virtcon.font");
     if (fname) {
         if (!strcmp(fname, "9x16")) {
             return &font9x16;
@@ -441,7 +441,7 @@ mx_status_t vc_alloc(vc_t** out) {
     vc->fd = -1;
 
     vc->keymap = qwerty_map;
-    char* keys = getenv("gfxconsole.keymap");
+    char* keys = getenv("virtcon.keymap");
     if (keys) {
         if (!strcmp(keys, "qwerty")) {
             vc->keymap = qwerty_map;

@@ -81,6 +81,23 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
+## virtcon.disable
+
+Do not launch the virtual console service if this option is present.
+
+## virtcon.keep-log-visible
+
+If this option is present, the virtual console service will keep the
+debug log (vc0) visible instead of switching to the first shell (vc1) at startup.
+
+## virtcon.keymap=\<name>
+
+Specify the keymap for the virtual console.  "qwerty" and "dvorak" are supported.
+
+## virtcon.font=\<name>
+
+Specify the font for the virtual console.  "9x16" and "18x32" are supported.
+
 ## ktrace.bufsize
 
 This option specifies the size of the buffer for ktrace records, in megabytes.

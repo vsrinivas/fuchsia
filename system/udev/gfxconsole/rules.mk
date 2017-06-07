@@ -21,6 +21,8 @@ MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/u
 
 MODULE_LIBS := system/ulib/launchpad system/ulib/mxio system/ulib/magenta system/ulib/c
 
+MODULE_NAME := virtual-console
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).test
@@ -37,7 +39,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/textcon.cpp \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_NAME := gfxconsole-test
+MODULE_NAME := virtual-console-test
 
 MODULE_STATIC_LIBS := system/ulib/gfx system/ulib/hid system/ulib/mxcpp system/ulib/mxtl
 

@@ -58,14 +58,6 @@ mx_handle_t get_sysinfo_job_root(void) {
     }
 }
 
-static bool switch_to_first_vc(void) {
-    char* v = getenv("startup.keep-log-visible");
-    if (!v) return true;
-    // If this flag is disabled, meaning any of the following strcmps returns 0,
-    // then we switch. Otherwise we stay on the kernel logs.
-    return !strcmp(v, "0") || !strcmp(v, "false") || !strcmp(v, "off");
-}
-
 static mx_status_t launch_blobstore(int argc, const char** argv, mx_handle_t* hnd,
                                     uint32_t* ids, size_t len) {
     return devmgr_launch(svcs_job_handle, "blobstore:/blobstore", argc, argv, NULL, -1,
@@ -269,12 +261,23 @@ int service_starter(void* arg) {
     mkdir("/svc", 0755);
 
     if (getenv("virtcon.disable") == NULL) {
+        // pass virtcon.* options along
+        const char* envp[16];
+        unsigned envc = 0;
+        char** e = environ;
+        while (*e && (envc < countof(envp))) {
+            if (!strncmp(*e, "virtcon.", 8)) {
+                envp[envc++] = *e;
+            }
+            e++;
+        }
+        envp[envc] = NULL;
+
         uint32_t type = PA_HND(PA_USER0, 0);
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_channel_create(0, &h, &virtcon_open);
-        const char* args[] = { "/boot/bin/gfxconsole", "--keep-log-active" };
-        devmgr_launch(svcs_job_handle, "virtual-console",
-                      switch_to_first_vc() ? 1 : 2, args, NULL, -1,
+        const char* args[] = { "/boot/bin/virtual-console" };
+        devmgr_launch(svcs_job_handle, "virtual-console", 1, args, envp, -1,
                       &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1);
     }
 
