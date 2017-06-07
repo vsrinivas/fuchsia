@@ -19,6 +19,12 @@ if [[ $OSTYPE != "linux-gnu" ]]; then
   exit 1
 fi
 
+command -v sgdisk > /dev/null 2>&1 || {
+  echo "[format_usb] Requires the sgdisk command"
+  echo "sudo apt-get install gdisk"
+  exit 1
+}
+
 usage(){
   echo "build-bootable-usb-gigaboot.sh [-r] [-m] [-f]"
   echo "-r: use release build files instead of debug"
