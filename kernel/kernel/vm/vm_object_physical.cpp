@@ -144,8 +144,17 @@ status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
         return ERR_INVALID_ARGS;
     }
 
+    // If the cache policy is already configured on this VMO and matches
+    // the requested policy then this is a no-op. This is a common practice
+    // in the serialio and magma drivers, but may change.
+    // TODO: revisit this when we shake out more of the future DDK protocol.
+    if (cache_policy == mapping_cache_flags_) {
+        return NO_ERROR;
+    }
+
     // If this VMO is mapped already it is not safe to allow its caching policy to change
     if (mapping_list_len_ != 0) {
+        LTRACEF("Warning: trying to change cache policy while this vmo is mapped!\n");
         return ERR_BAD_STATE;
     }
 
