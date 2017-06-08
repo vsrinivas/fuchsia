@@ -22,3 +22,4 @@ Documentation for developing Ledger:
 Design documentation:
 
  - [Architecture](architecture.md)
+ - [Conflict Resolution](conflict_resolution.md)
