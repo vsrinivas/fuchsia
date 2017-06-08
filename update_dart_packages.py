@@ -18,6 +18,7 @@ ROOT_PUBSPECS = [
     'dart/pkg/analyzer_cli',
     'dart/pkg/kernel',
     'dart/pkg/typed_mock',
+    'flutter/sky/packages/sky_engine',
     'lib/flutter/examples/flutter_gallery',
     'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
