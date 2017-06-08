@@ -20,7 +20,7 @@
 #include "vcpu.h"
 
 static const size_t kVmoSize = 1u << 30;
-
+static const uintptr_t kPioBase = 0x8000;
 static const uint32_t kMapFlags __UNUSED = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static int vcpu_thread(void* arg) {
@@ -93,6 +93,10 @@ int main(int argc, char** argv) {
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to initialize guest state mutex\n");
         return ERR_INTERNAL;
+    }
+    // Setup each PCI device's BAR 0 register.
+    for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
+        guest_state.pci_device_state[i].bar[0] = kPioBase + (i << 8);
     }
 
     vcpu_context_t context;

@@ -10,6 +10,8 @@
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 #define IO_BUFFER_SIZE              512u
+#define PCI_MAX_DEVICES             2u
+#define PCI_MAX_BARS                1u
 
 /* Stores the local APIC state across VM exits. */
 typedef struct local_apic_state {
@@ -43,10 +45,17 @@ typedef struct io_port_state {
     uint16_t pm1_enable;
 } io_port_state_t;
 
+/* Stores the state of PCI devices across VM exists. */
+typedef struct pci_device_state {
+    // Base address registers.
+    uint32_t bar[PCI_MAX_BARS];
+} pci_device_state_t;
+
 typedef struct guest_state {
     mtx_t mutex;
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;
+    pci_device_state_t pci_device_state[PCI_MAX_DEVICES];
 } guest_state_t;
 
 typedef struct vcpu_context {
