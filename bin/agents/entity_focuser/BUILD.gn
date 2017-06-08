@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("basic_text_listener") {
-  output_name = "agents/basic_text_listener"
+executable("entity_focuser") {
+  output_name = "agents/maxwell_entity_focuser"
 
   sources = [
-    "basic_text_listener.cc",
+    "entity_focuser.cc",
   ]
 
   deps = [

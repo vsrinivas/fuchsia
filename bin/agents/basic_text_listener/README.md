@@ -1,3 +1,3 @@
 # Basic Text Listener
 
-A simple class for listening to context updates.
+A simple agent for listening to context updates and producing entities.

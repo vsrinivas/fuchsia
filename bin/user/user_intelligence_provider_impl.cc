@@ -89,6 +89,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   StartAgent("file:///system/apps/agents/module_suggester.dartx");
   StartAgent("file:///system/apps/concert_agent");
   StartAgent("file:///system/apps/agents/maxwell_btl");
+  StartAgent("file:///system/apps/agents/maxwell_entity_focuser");
+  StartAgent("file:///system/apps/agents/maxwell_proposal_maker");
 
 // Toggle using the "kronk_dev" gn arg (see README).
 // TODO(rosswang): Reenable kronk when it no longer crashes.

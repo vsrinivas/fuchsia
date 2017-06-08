@@ -2,16 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("basic_text_listener") {
-  output_name = "agents/basic_text_listener"
+executable("proposal_maker") {
+  output_name = "agents/maxwell_proposal_maker"
 
   sources = [
-    "basic_text_listener.cc",
+    "proposal_maker.cc",
   ]
 
   deps = [
     "//application/lib/app",
     "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]
