@@ -1,6 +1,8 @@
 {
     "labels": [
-      "//apps/amber:amber"
+        "//apps/amber:amber",
+        "//apps/amber:amber-keys",
+        "//apps/amber:amber-srv-keys"
     ],
     "gopaths": [
         { "apps/amber": "fuchsia.googlesource.com/amber" }
@@ -9,9 +11,13 @@
         {
             "binary": "amber",
             "bootfs_path": "apps/amber"
-        }
+        },
+        {
+            "binary" : "amber-keys",
+            "bootfs_path" : "data/amber/keys"
+	}
     ],
     "imports": [
-      "golibs"
+        "golibs"
     ]
 }
