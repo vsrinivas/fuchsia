@@ -4,6 +4,8 @@
 
 part of bindings;
 
+typedef void VoidCallback();
+
 /// A channel over which messages from interface T can be sent.
 ///
 /// An interface handle holds a [channel] whose peer expects to receive messages
@@ -82,24 +84,24 @@ class InterfaceHandle<T> {
 /// To receive messages sent over the channel, bind the interface handle using
 /// [Binding<T>.bind] on a `TBinding` object, which you typically hold as a
 /// private member variable in a class that implements [T].
-/// 
+///
 /// Example:
-/// 
+///
 /// ```dart
 /// class FooImpl extends Foo {
 ///   final FooBinding _binding = new FooBinding();
-/// 
+///
 ///   void bind(InterfaceRequest<T> request) {
 ///     _binding.bind(request);
 ///   }
-/// 
+///
 ///   @override
 ///   void bar() {
 ///     print('Received bar message.');
 ///   }
 /// }
 /// ```
-/// 
+///
 /// To obtain an interface request to send over a channel, used the
 /// [ProxyController<T>.request] method on the [Proxy<T>.ctrl] property of an
 /// object of type `TProxy`.
@@ -169,6 +171,7 @@ abstract class Binding<T> {
   /// FIDL compiler for a specific interface.
   Binding() {
     _reader.onReadable = _handleReadable;
+    _reader.onError = _handleError;
   }
 
   /// Returns an interface handle whose peer is bound to the given object.
@@ -232,6 +235,9 @@ abstract class Binding<T> {
     }
   }
 
+  /// Called when the channel underneath closes.
+  VoidCallback onConnectionError = null;
+
   /// The implementation of [T] bound using this object.
   ///
   /// If this object is not bound, this property is null.
@@ -263,6 +269,13 @@ abstract class Binding<T> {
                                         result.dataLength,
                                         result.handlesLength);
     handleMessage(new ServiceMessage.fromMessage(message), _sendResponse);
+  }
+
+  /// Always called when the channel underneath closes. If [onConnectionError]
+  /// is set, it is called.
+  void _handleError(core.ChannelReaderError error) {
+    if (onConnectionError != null)
+      onConnectionError();
   }
 
   void _sendResponse(Message response) {
@@ -303,9 +316,9 @@ class ProxyError {
 ///
 /// You typically obtain a [ProxyController<T>] object as the [Proxy<T>.ctrl]
 /// property of a `TProxy` object.
-/// 
+///
 /// Example:
-/// 
+///
 /// ```dart
 /// FooProxy foo = new FooProxy();
 /// fooProvider.getFoo(foo.ctrl.request());
@@ -318,6 +331,7 @@ class ProxyController<T> {
   /// property of a `TProxy` object.
   ProxyController({ this.serviceName }) {
     _reader.onReadable = _handleReadable;
+    _reader.onError = _handleError;
   }
 
   /// The service name associated with [T], if any.
@@ -395,6 +409,9 @@ class ProxyController<T> {
     }
   }
 
+  /// Called when the channel underneath closes.
+  VoidCallback onConnectionError = null;
+
   /// Called whenever this object receives a response on a bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to receive responses to messages.
@@ -443,6 +460,13 @@ class ProxyController<T> {
       proxyError(e.toString());
       close();
     }
+  }
+
+  /// Always called when the channel underneath closes. If [onConnectionError]
+  /// is set, it is called.
+  void _handleError(core.ChannelReaderError error) {
+    if (onConnectionError != null)
+      onConnectionError();
   }
 
   /// Sends the given messages over the bound channel.
