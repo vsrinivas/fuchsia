@@ -395,6 +395,7 @@ enum SyncState {
   IDLE = 0,
   PENDING,
   IN_PROGRESS,
+  ERROR,
 };
 
 // Watcher interface to be implemented by clients who wish to follow the

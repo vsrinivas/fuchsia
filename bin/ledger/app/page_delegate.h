@@ -19,6 +19,7 @@
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
@@ -76,6 +77,9 @@ class PageDelegate {
 
   void Rollback(const Page::RollbackCallback& callback);
 
+  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+                           const Page::SetSyncStateWatcherCallback& callback);
+
  private:
   using StatusCallback = std::function<void(Status)>;
 
@@ -120,6 +124,7 @@ class PageDelegate {
   std::unique_ptr<storage::Journal> journal_;
   callback::OperationSerializer<Status> operation_serializer_;
   std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
+  fidl::InterfacePtrSet<SyncWatcher> watcher_set_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };

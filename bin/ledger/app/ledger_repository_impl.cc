@@ -73,9 +73,12 @@ void LedgerRepositoryImpl::Duplicate(
 void LedgerRepositoryImpl::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
     const SetSyncStateWatcherCallback& callback) {
-  FTL_NOTIMPLEMENTED()
-      << "LedgerRepository::SetSyncStateWatcher is not implemented";
-  callback(Status::UNKNOWN_ERROR);
+  FTL_NOTIMPLEMENTED() << "LedgerRepository::SetSyncStateWatcher is not "
+                          "implemented: sending dummy response";
+  SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
+  watcher_ptr->SyncStateChanged(SyncState::IDLE, SyncState::IDLE, [] {});
+  watcher_set_.AddInterfacePtr(std::move(watcher_ptr));
+  callback(Status::OK);
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {

@@ -14,6 +14,7 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
@@ -48,6 +49,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
   const std::string base_storage_dir_;
   Environment* const environment_;
   std::unique_ptr<cloud_sync::UserSync> user_sync_;
+  fidl::InterfacePtrSet<SyncWatcher> watcher_set_;
   callback::AutoCleanableMap<std::string,
                              LedgerManager,
                              convert::StringViewComparator>

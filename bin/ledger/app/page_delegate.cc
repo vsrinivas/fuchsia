@@ -255,6 +255,17 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
       });
 }
 
+void PageDelegate::SetSyncStateWatcher(
+    fidl::InterfaceHandle<SyncWatcher> watcher,
+    const Page::SetSyncStateWatcherCallback& callback) {
+  FTL_NOTIMPLEMENTED() << "Page::SetSyncStateWatcher is not "
+                          "implemented: sending dummy response";
+  SyncWatcherPtr watcher_ptr = SyncWatcherPtr::Create(std::move(watcher));
+  watcher_ptr->SyncStateChanged(SyncState::IDLE, SyncState::IDLE, [] {});
+  watcher_set_.AddInterfacePtr(std::move(watcher_ptr));
+  callback(Status::OK);
+}
+
 const storage::CommitId& PageDelegate::GetCurrentCommitId() {
   // TODO(etiennej): Commit implicit transactions when we have those.
   if (!journal_) {

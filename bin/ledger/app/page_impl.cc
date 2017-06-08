@@ -121,8 +121,7 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
 void PageImpl::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
     const SetSyncStateWatcherCallback& callback) {
-  FTL_NOTIMPLEMENTED() << "Page::SetSyncStateWatcher is not implemented";
-  callback(Status::UNKNOWN_ERROR);
+  delegate_->SetSyncStateWatcher(std::move(watcher), std::move(callback));
 }
 
 }  // namespace ledger
