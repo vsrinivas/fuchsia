@@ -166,9 +166,11 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                                            story_controller.NewRequest());
             if (!add_module_to_story->initial_data.is_null()) {
               modular::LinkPtr link;
-              story_controller->GetLink(fidl::Array<fidl::String>::New(0),
-                                        link_name, link.NewRequest());
-              link->Set(nullptr, add_module_to_story->initial_data);
+              story_controller->GetLink(
+                  fidl::Array<fidl::String>::New(0)  /* module_path */,
+                  link_name, link.NewRequest());
+              link->Set(nullptr  /* json_path */,
+                        add_module_to_story->initial_data);
             }
 
             story_controller->AddModule(fidl::Array<fidl::String>::New(0),
