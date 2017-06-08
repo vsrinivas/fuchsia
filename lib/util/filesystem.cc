@@ -32,15 +32,15 @@ void WaitForMinfs() {
   while (ftl::TimePoint::Now() - now < kMaxPollingDelay) {
     ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
     if (fd.is_valid()) {
-      char out[128];
-      ssize_t len = ioctl_vfs_query_fs(fd.get(), out, sizeof(out));
+      vfs_query_info_t out;
+      ssize_t len = ioctl_vfs_query_fs(fd.get(), &out, sizeof(out));
       FTL_DCHECK(len >= 0);
-
-      ftl::StringView fs_name(out, len);
+      ftl::StringView fs_name = out.name;
       if (fs_name == kMinFsName) {
         return;
       }
     }
+
     usleep(delay.ToMicroseconds());
     delay = delay * 2;
   }
