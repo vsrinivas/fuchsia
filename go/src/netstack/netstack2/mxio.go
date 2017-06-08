@@ -19,6 +19,8 @@ import (
 	"syscall/mx/mxio/rio"
 	"syscall/mx/mxruntime"
 
+	"apps/netstack/svcfs"
+
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -51,6 +53,8 @@ var (
 	ioctlNetcGetNodename = mxio.IoctlNum(mxio.IoctlKindDefault, mxio.IoctlFamilyNetconfig, 8)
 )
 
+// TODO(abarth): Remove this function once clients access netstack through
+// svcfs.
 func devmgrConnect() (mx.Handle, error) {
 	f, err := os.OpenFile("/dev/socket", O_DIRECTORY|O_RDWR, 0)
 	if err != nil {
@@ -73,17 +77,37 @@ func devmgrConnect() (mx.Handle, error) {
 	return c0.Handle, nil
 }
 
+type app struct {
+	socket socketServer
+}
+
+func (a *app) serviceProvider(name string, h mx.Handle) {
+	if name == "net.Netstack" {
+		if err := a.socket.dispatcher.AddHandler(h, rio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
+			h.Close()
+		}
+
+		if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
+			h.Close()
+		}
+		return
+	}
+	h.Close()
+}
+
 func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		return nil, err
 	}
-	s := &socketServer{
-		dispatcher: d,
-		stack:      stk,
-		dnsClient:  dns.NewClient(stk, 0),
-		io:         make(map[cookie]*iostate),
-		next:       1,
+	a := &app{
+		socket: socketServer{
+			dispatcher: d,
+			stack:      stk,
+			dnsClient:  dns.NewClient(stk, 0),
+			io:         make(map[cookie]*iostate),
+			next:       1,
+		},
 	}
 
 	h1, err := devmgrConnect()
@@ -91,7 +115,7 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		return nil, fmt.Errorf("devmgr: %v", err)
 	}
 
-	if err := d.AddHandler(h1, rio.ServerHandler(s.mxioHandler), 0); err != nil {
+	if err := d.AddHandler(h1, rio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
 		h1.Close()
 		return nil, err
 	}
@@ -107,19 +131,19 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		mxruntime.HandleInfo{Type: handleServicesRequest, Arg: 0})
 
 	if h2 != mx.HANDLE_INVALID {
-		if err := d.AddHandler(h2, rio.ServerHandler(s.mxioHandler), 0); err != nil {
-			h2.Close()
-			return nil, err
+		n := &svcfs.Namespace{
+			Provider:   a.serviceProvider,
+			Dispatcher: d,
 		}
 
-		if err := h2.SignalPeer(0, mx.SignalUser0); err != nil {
+		if err := n.Serve(h2); err != nil {
 			h2.Close()
 			return nil, err
 		}
 	}
 
 	go d.Serve()
-	return s, nil
+	return &a.socket, nil
 }
 
 func (s *socketServer) setNetstack(ns *netstack) {
