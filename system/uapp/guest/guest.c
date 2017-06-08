@@ -20,6 +20,7 @@
 #include "vcpu.h"
 
 static const size_t kVmoSize = 1u << 30;
+static const uint16_t kPioEnable = 1u << 0;
 static const uintptr_t kPioBase = 0x8000;
 static const uint32_t kMapFlags __UNUSED = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
@@ -96,7 +97,9 @@ int main(int argc, char** argv) {
     }
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
-        guest_state.pci_device_state[i].bar[0] = kPioBase + (i << 8);
+        pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];
+        pci_device_state->command = kPioEnable;
+        pci_device_state->bar[0] = kPioBase + (i << 8);
     }
 
     vcpu_context_t context;

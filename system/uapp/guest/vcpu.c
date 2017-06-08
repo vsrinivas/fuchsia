@@ -105,6 +105,9 @@
 #define PCI_REGISTER_CAPABILITIES_PTR           0x34
 #define PCI_REGISTER_INTERRUPT_PIN              0x3d
 
+/* PCI commands. */
+#define PCI_COMMAND_PIO_ENABLE                  (1u << 0)
+
 /* PCI configuration constants. */
 #define PCI_HEADER_TYPE_STANDARD                0x00
 #define PCI_HEADER_TYPE_PCI_BRIDGE              0x01
@@ -361,8 +364,11 @@ static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
     case PCI_REGISTER_COMMAND:
         if (inst->mem != 2u)
             return ERR_NOT_SUPPORTED;
-        if (inst->read)
-            *inst->reg = 0;
+        if (inst->read) {
+            *inst->reg = pci_device_state->command;
+        } else {
+            pci_device_state->command = get_value(inst);
+        }
         return NO_ERROR;
     case PCI_REGISTER_HEADER_TYPE:
         if (!inst->read || inst->mem != 1u)

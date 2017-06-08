@@ -47,6 +47,8 @@ typedef struct io_port_state {
 
 /* Stores the state of PCI devices across VM exists. */
 typedef struct pci_device_state {
+    // Command register.
+    uint16_t command;
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
 } pci_device_state_t;
