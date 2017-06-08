@@ -22,9 +22,10 @@ public:
         switch (device_id) {
             case 0x1916: // Intel(R) HD Graphics 520 (Skylake GT2)
             case 0x191E: // Intel(R) HD Graphics 515 (Skylake GT2)
-            case 0x5916: // Intel(R) HD Graphics 620 (Kabylake GT2)
             case 0x193b: // Intel(R) Iris Pro Graphics 580 (Skylake GT4e)
-                return true;
+            case 0x5916:  // Intel(R) HD Graphics 620 (Kabylake GT2)
+            case 0x591E:  // Intel(R) HD Graphics 615 (Kabylake GT2)
+              return true;
         }
         return false;
     }
