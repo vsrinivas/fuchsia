@@ -81,28 +81,67 @@ args = parser.parse_args()
 dataset = json.load(sys.stdin)
 nodemap = {}
 root_node = None
+root_job = None
 
 for record in dataset:
     record_type = record['type']
-    # Only read processes and jobs.
-    if record_type != 'p' and record_type != 'j':
+    # Only read certain types.
+    if record_type not in ('kernel', 'j', 'p'):
         continue
-    node = lookup(record['koid'])
+    if record['id'] == 'kernel/free':
+        # Don't explicitly show the free space.
+        continue
+    node = lookup(record['id'])
     node.name = record['name']
-    if record_type == 'p':
-        node.area = record[args.field] or 0
-    # The root node has a parent of zero.
-    if record['parent'] == 0:
+    if record_type == 'kernel':
+        node.area = record.get('size_bytes', 0)
+    elif record_type == 'j':
+        if record['parent'].startswith('kernel/'):
+            if root_job:
+                print >> sys.stderr, 'error: Found multiple root jobs'
+                sys.exit(1)
+            root_job = node
+    elif record_type == 'p':
+        node.area = record.get(args.field, 0)
+    # The root node has an empty parent.
+    if record['parent'] == '':
+        if root_node:
+            print >> sys.stderr, 'error: Found multiple root objects'
+            sys.exit(1)
         root_node = node
     else:
         parent_node = lookup(record['parent'])
         parent_node.children.append(node)
 
-if root_node is Node:
+if not root_node:
     print >> sys.stderr, 'error: Did not find root object'
     sys.exit(1)
 
-sum_area(root_node)
+if not root_job:
+    print >> sys.stderr, 'error: Did not find root job'
+    sys.exit(1)
+
+# A better name for physmem.
+lookup('kernel/physmem').name = 'All physical memory'
+
+# Sum up the job tree. Don't touch kernel entries, which already have
+# the correct sizes.
+sum_area(root_job)
+
+# The root job is usually named "root";
+# make it more clear that it's a job.
+root_job.name = 'root job'
+
+# Give users a hint that processes live in the VMO entry.
+vmo_node = lookup('kernel/vmo');
+vmo_node.name = 'VMOs/processes'
+
+# Create a fake entry to cover the portion of kernel/vmo that isn't
+# covered by the job tree.
+node = lookup('kernel/vmo/unknown')
+node.name = 'unknown (kernel & unmapped)'
+node.area = vmo_node.area - root_job.area
+vmo_node.children.append(node)
 
 print '''<!DOCTYPE html>
 <title>Memory usage</title>
@@ -139,6 +178,6 @@ h1 {
 var map = document.getElementById('map');
 appendTreemap(map, kTree);
 </script>''' % {
-    'json': json.dumps(build_tree(root_node)),
+    'json': json.dumps(build_tree(root_node), indent=2),
     'field': args.field
 }
