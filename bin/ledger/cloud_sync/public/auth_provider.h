@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include "apps/ledger/src/callback/cancellable.h"
 #include "lib/ftl/macros.h"
 
 namespace cloud_sync {
@@ -20,7 +21,8 @@ class AuthProvider {
 
   // Retrieves the Firebase ID token suitable to use with Firebase Real-time
   // Database and Firebase Storage.
-  virtual void GetFirebaseToken(std::function<void(std::string)> callback) = 0;
+  virtual ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+      std::function<void(std::string)> callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);

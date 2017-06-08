@@ -22,7 +22,8 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
                    modular::auth::TokenProviderPtr token_provider);
 
   // AuthProvider:
-  void GetFirebaseToken(std::function<void(std::string)> callback);
+  ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+      std::function<void(std::string)> callback);
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

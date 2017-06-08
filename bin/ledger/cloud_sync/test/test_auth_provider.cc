@@ -6,16 +6,23 @@
 
 #include <utility>
 
+#include "apps/ledger/src/callback/cancellable_helper.h"
+#include "lib/ftl/functional/make_copyable.h"
+
 namespace cloud_sync {
 namespace test {
 
 TestAuthProvider::TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
     : task_runner_(task_runner) {}
 
-void TestAuthProvider::GetFirebaseToken(
+ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
     std::function<void(std::string)> callback) {
-  task_runner_->PostTask(
-      [ this, callback = std::move(callback) ] { callback(token_to_return); });
+  auto cancellable = callback::CancellableImpl::Create([] {});
+
+  task_runner_->PostTask([
+    this, callback = cancellable->WrapCallback(callback)
+  ] { callback(token_to_return); });
+  return cancellable;
 }
 
 }  // namespace test

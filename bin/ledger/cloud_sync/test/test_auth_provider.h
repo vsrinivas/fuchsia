@@ -17,7 +17,8 @@ class TestAuthProvider : public AuthProvider {
   TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner);
 
   // AuthProvider:
-  void GetFirebaseToken(std::function<void(std::string)> callback);
+  ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
+      std::function<void(std::string)> callback) override;
 
   std::string token_to_return;
 

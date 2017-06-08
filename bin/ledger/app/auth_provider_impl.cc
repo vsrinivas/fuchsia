@@ -6,6 +6,9 @@
 
 #include <utility>
 
+#include "apps/ledger/src/callback/cancellable_helper.h"
+#include "lib/ftl/functional/make_copyable.h"
+
 namespace ledger {
 
 AuthProviderImpl::AuthProviderImpl(
@@ -13,11 +16,14 @@ AuthProviderImpl::AuthProviderImpl(
     modular::auth::TokenProviderPtr token_provider)
     : task_runner_(task_runner), token_provider_(std::move(token_provider)) {}
 
-void AuthProviderImpl::GetFirebaseToken(
+ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
     std::function<void(std::string)> callback) {
+  auto cancellable = callback::CancellableImpl::Create([] {});
   // TODO(ppi): Request the token from |token_provider_| when support for
   // Firebase tokens is there.
-  task_runner_->PostTask([callback = std::move(callback)] { callback(""); });
+  task_runner_->PostTask(
+      [callback = cancellable->WrapCallback(callback)] { callback(""); });
+  return cancellable;
 }
 
 }  // namespace ledger
