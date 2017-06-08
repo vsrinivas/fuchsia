@@ -16,7 +16,8 @@ GpuMemory::GpuMemory(Session* session,
                      vk::DeviceSize size,
                      uint32_t memory_type_index)
     : Memory(session, GpuMemory::kTypeInfo),
-      mem_(escher::GpuMem::New(device, mem, size, memory_type_index)) {}
+      escher_gpu_mem_(
+          escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
 GpuMemoryPtr GpuMemory::New(Session* session,
                             vk::Device device,

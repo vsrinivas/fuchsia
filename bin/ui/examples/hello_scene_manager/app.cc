@@ -101,8 +101,8 @@ class HelloSceneManagerApp {
       return nullptr;
     }
 
-    ops.push_back(
-        NewCreateMemoryOp(checkerboard_memory_id, std::move(vmo_copy)));
+    ops.push_back(NewCreateMemoryOp(checkerboard_memory_id, std::move(vmo_copy),
+                                    mozart2::Memory::MemoryType::HOST_MEMORY));
 
     // Create an Image to wrap the checkerboard.
     ResourceId checkerboard_image_id = NewResourceId();

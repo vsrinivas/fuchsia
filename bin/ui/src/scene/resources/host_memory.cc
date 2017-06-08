@@ -10,16 +10,17 @@ namespace scene {
 const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
 
-HostMemory::HostMemory(Session* session, mx::vmo vmo, vk::DeviceSize vmo_size)
+HostMemory::HostMemory(Session* session, mx::vmo vmo, uint64_t vmo_size)
     : Memory(session, HostMemory::kTypeInfo),
       shared_vmo_(std::make_unique<mtl::SharedVmo>(std::move(vmo),
-                                                   MX_VM_FLAG_PERM_READ)) {}
+                                                   MX_VM_FLAG_PERM_READ)),
+      size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session,
                               vk::Device device,
                               const mozart2::MemoryPtr& args,
                               ErrorReporter* error_reporter) {
-  size_t vmo_size;
+  uint64_t vmo_size;
   args->vmo.get_size(&vmo_size);
   return ftl::MakeRefCounted<HostMemory>(session, std::move(args->vmo),
                                          vmo_size);

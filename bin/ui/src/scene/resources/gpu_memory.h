@@ -40,10 +40,12 @@ class GpuMemory : public Memory {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  escher::GpuMemPtr gpu_memory() const { return mem_; };
+  escher::GpuMemPtr escher_gpu_mem() const { return escher_gpu_mem_; }
+
+  vk::DeviceSize size() const { return escher_gpu_mem_->size(); }
 
  private:
-  escher::GpuMemPtr mem_ = nullptr;
+  escher::GpuMemPtr escher_gpu_mem_ = nullptr;
 };
 
 }  // namespace scene

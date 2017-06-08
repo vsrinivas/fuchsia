@@ -27,16 +27,18 @@ Image::Image(Session* session,
           session->context()->escher_resource_life_preserver(),
           image_info,
           vk_image,
-          memory->gpu_memory())) {}
+          memory->escher_gpu_mem())) {}
 
 ImagePtr Image::New(Session* session,
                     MemoryPtr memory,
                     const mozart2::ImagePtr& args,
                     ErrorReporter* error_reporter) {
   vk::Format pixel_format = vk::Format::eUndefined;
+  size_t pixel_size;
   switch (args->info->pixel_format) {
     case mozart2::ImageInfo::PixelFormat::BGRA_8:
       pixel_format = vk::Format::eB8G8R8A8Unorm;
+      pixel_size = sizeof(uint8_t);
       break;
   }
   if (args->info->width <= 0) {
@@ -66,6 +68,22 @@ ImagePtr Image::New(Session* session,
           << "created using host memory.";
       return nullptr;
     }
+
+    size_t image_size = pixel_size * args->info->width * args->info->height;
+    if (args->memory_offset >= host_memory->size()) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): the offset of the Image must be "
+          << "within the range of the Memory";
+      return nullptr;
+    }
+
+    if (args->memory_offset + image_size >= host_memory->size()) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): the Image must fit with the size of "
+          << "the Memory";
+      return nullptr;
+    }
+
     auto escher_image = escher::image_utils::NewImageFromPixels(
         session->context()->escher_image_factory(),
         session->context()->escher_gpu_uploader(), pixel_format,
@@ -86,8 +104,30 @@ ImagePtr Image::New(Session* session,
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
     info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-    vk::Image vk_image = escher::image_utils::CreateVkImage(
-        session->context()->vk_device(), info);
+    vk::Device vk_device = session->context()->vk_device();
+    vk::Image vk_image = escher::image_utils::CreateVkImage(vk_device, info);
+
+    // Make sure that the image is within range of its associated memory.
+    vk::MemoryRequirements memory_reqs;
+    vk_device.getImageMemoryRequirements(vk_image, &memory_reqs);
+
+    if (args->memory_offset >= gpu_memory->size()) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): the offset of the Image must be "
+          << "within the range of the Memory";
+      return nullptr;
+    }
+
+    if (args->memory_offset + memory_reqs.size >= gpu_memory->size()) {
+      error_reporter->ERROR()
+          << "Image::CreateFromMemory(): the Image must fit with the size of "
+          << "the Memory";
+      return nullptr;
+    }
+
+    vk::DeviceMemory vk_mem = gpu_memory->escher_gpu_mem()->base();
+    VkDeviceSize offset = args->memory_offset;
+    vk_device.bindImageMemory(vk_image, vk_mem, offset);
     return ftl::AdoptRef(new Image(session, info, vk_image, gpu_memory));
   } else {
     FTL_CHECK(false);
