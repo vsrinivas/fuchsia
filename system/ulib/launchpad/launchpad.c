@@ -13,6 +13,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/loader-service.h>
 #include <mxio/io.h>
+#include <assert.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>

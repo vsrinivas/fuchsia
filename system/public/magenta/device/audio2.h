@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <magenta/compiler.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>

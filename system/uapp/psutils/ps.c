@@ -9,6 +9,7 @@
 #include <pretty/sizes.h>
 #include <task-utils/walker.h>
 
+#include <assert.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>

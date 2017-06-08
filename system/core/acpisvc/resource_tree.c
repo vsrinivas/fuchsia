@@ -9,6 +9,7 @@
 
 #include <acpica/acpi.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/resource.h>
 
 #define MAX_NAMESPACE_DEPTH 100
 

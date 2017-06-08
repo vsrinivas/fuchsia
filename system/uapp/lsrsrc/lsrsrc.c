@@ -9,6 +9,7 @@
 
 #include <magenta/device/sysinfo.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/resource.h>
 
 void dump_resource(mx_handle_t h, mx_rrec_self_t* self, unsigned indent) {
     for (unsigned n = 0; n < indent; n++) {

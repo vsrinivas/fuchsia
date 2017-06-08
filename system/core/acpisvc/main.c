@@ -8,6 +8,7 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/resource.h>
 
 #include "ec.h"
 #include "pci.h"

@@ -8,7 +8,7 @@
 #include <magenta/syscalls/types.h>
 
 #include <magenta/syscalls/pci.h>
-#include <magenta/syscalls/resource.h>
+#include <magenta/syscalls/object.h>
 
 __BEGIN_CDECLS
 
