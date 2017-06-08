@@ -119,10 +119,10 @@ static mx_status_t memstats(mx_handle_t root_resource) {
     const size_t fields[] = {
         stats.total_bytes,
         stats.free_bytes,
-        stats.wired_bytes,
+        stats.vmo_bytes,
         stats.total_heap_bytes - stats.free_heap_bytes,
         stats.free_heap_bytes,
-        stats.vmo_bytes,
+        stats.wired_bytes,
         stats.mmu_overhead_bytes,
         stats.other_bytes,
     };
