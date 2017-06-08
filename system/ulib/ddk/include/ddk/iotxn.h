@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <magenta/listnode.h>
@@ -130,6 +131,10 @@ struct iotxn {
     // by the requestor.
     void (*release_cb)(iotxn_t* txn);
 };
+
+static_assert(offsetof(iotxn_t, phys) == 64, "phys should be at 64");
+static_assert(offsetof(iotxn_t, extra) == 128, "extra should be at 128");
+static_assert(offsetof(iotxn_t, context) == 192, "context should be at 192");
 
 // used to iterate over contiguous buffer ranges in the physical address space
 typedef struct {
