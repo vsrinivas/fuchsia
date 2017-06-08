@@ -199,7 +199,7 @@ static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
 
 static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     watcher_t* w = dn->watchers;
-    if ((w == NULL) || !(w->mask & (1 << op))) {
+    if (w == NULL) {
         return;
     }
 
@@ -213,16 +213,22 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     msg[1] = len;
     memcpy(msg + 2, name, len);
 
-    watcher_t** wp = &dn->watchers;
-    while (w != NULL) {
-        watcher_t* next = w->next;
+    // convert to mask
+    op = (1u << op);
+
+    watcher_t** wp;
+    watcher_t* next;
+    for (wp = &dn->watchers; w != NULL; w = next) {
+        next = w->next;
+        if (!(w->mask & op)) {
+            continue;
+        }
         if (mx_channel_write(w->handle, 0, msg, len + 2, NULL, 0) < 0) {
             *wp = next;
             free(w);
         } else {
             wp = &w->next;
         }
-        w = next;
     }
 }
 
@@ -244,9 +250,13 @@ static mx_status_t devfs_watch_v2(devnode_t* dn, mx_handle_t h, uint32_t mask) {
             //TODO: send multiple per write
             devfs_notify(dn, child->name, VFS_WATCH_EVT_EXISTING);
         }
-        // empty-name event signals that all existing names have been seen
-        devfs_notify(dn, "", VFS_WATCH_EVT_EXISTING);
+        devfs_notify(dn, "", VFS_WATCH_EVT_IDLE);
+
     }
+
+    // Don't send EXISTING or IDLE events from now on...
+    watcher->mask &= ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE);
+
     return NO_ERROR;
 }
 

@@ -53,28 +53,33 @@ typedef struct {
     uint32_t options;     // Options.  Must be zero.
 } vfs_watch_dir_t;
 
-// Indication of file already in directory when watch started
-// An EXISTING event with namelen==0 will be sent to indicate
-// when all existing files have been reported.
-#define VFS_WATCH_EVT_EXISTING 0
+// Indicates that the directory being watched has been deleted.
+// namelen will be 0
+#define VFS_WATCH_EVT_DELETED     0
 
 // Indication of a file that has been added (created or moved
 // in) to the directory
-#define VFS_WATCH_EVT_ADDED    1
+#define VFS_WATCH_EVT_ADDED       1
 
 // Indication of a file that has been removed (deleted or moved
 // out) from the directoru
-#define VFS_WATCH_EVT_REMOVED  2
+#define VFS_WATCH_EVT_REMOVED     2
 
-// Indicates that the directory being watched has been deleted.
+// Indication of file already in directory when watch started
+#define VFS_WATCH_EVT_EXISTING    3
+
+// Indication that no more EXISTING events will be sent (client
+// has been informed of all pre-existing files in this directory)
 // namelen will be 0
-#define VFS_WATCH_EVT_DELETED  3
+#define VFS_WATCH_EVT_IDLE        4
 
-#define VFS_WATCH_MASK_EXISTING (1u << VFS_WATCH_EVT_EXISTING)
+
+#define VFS_WATCH_MASK_DELETED  (1u << VFS_WATCH_EVT_DELETED)
 #define VFS_WATCH_MASK_ADDED    (1u << VFS_WATCH_EVT_ADDED)
 #define VFS_WATCH_MASK_REMOVED  (1u << VFS_WATCH_EVT_REMOVED)
-#define VFS_WATCH_MASK_DELETED  (1u << VFS_WATCH_EVT_DELETED)
-#define VFS_WATCH_MASK_ALL      (15u)
+#define VFS_WATCH_MASK_EXISTING (1u << VFS_WATCH_EVT_EXISTING)
+#define VFS_WATCH_MASK_IDLE     (1u << VFS_WATCH_EVT_IDLE)
+#define VFS_WATCH_MASK_ALL      (0x1Fu)
 
 #define VFS_WATCH_NAME_MAX 255
 

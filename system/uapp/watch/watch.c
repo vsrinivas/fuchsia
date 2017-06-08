@@ -9,13 +9,16 @@
 #include <mxio/watcher.h>
 
 mx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
+    const char* path = cookie;
+
     switch (event) {
-    case WATCH_EVENT_ADD_FILE: {
-        const char* path = cookie;
-        fprintf(stderr, "watch: '%s/%s'\n", path, fn);
+    case WATCH_EVENT_ADD_FILE:
+        fprintf(stderr, "watch: added '%s/%s'\n", path, fn);
         break;
-    }
-    case WATCH_EVENT_WAITING:
+    case WATCH_EVENT_REMOVE_FILE:
+        fprintf(stderr, "watch: removed '%s/%s'\n", path, fn);
+        break;
+    case WATCH_EVENT_IDLE:
         fprintf(stderr, "watch: waiting...\n");
         break;
     }

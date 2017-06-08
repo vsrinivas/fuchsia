@@ -22,14 +22,15 @@ void mxio_watcher_destroy(mxio_watcher_t* watcher);
 
 typedef mx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, void* cookie);
 
-// This event occurs when a file is added, including
+// This event occurs when a file is added or removed, including
 // (for mxio_watch_directory()) files that already exist.
 #define WATCH_EVENT_ADD_FILE 1
+#define WATCH_EVENT_REMOVE_FILE 2
 
 // This event occurs, once, when mxio_watch_directory() runs
 // out of existing files and has to start waiting for new
 // files to be added.
-#define WATCH_EVENT_WAITING 2
+#define WATCH_EVENT_IDLE 3
 
 // Call cb for each file in directory and each time a
 // new file is added to the directory, and also, first,
