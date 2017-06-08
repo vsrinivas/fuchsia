@@ -22,7 +22,7 @@ struct UserConfig {
   // Directory for the user persistent data.
   std::string user_directory;
   // Provider of the auth data for the user.
-  std::unique_ptr<AuthProvider> auth_provider;
+  AuthProvider* auth_provider;
 };
 
 }  // namespace cloud_sync

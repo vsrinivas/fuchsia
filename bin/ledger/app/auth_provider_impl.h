@@ -23,7 +23,9 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
 
   // AuthProvider:
   ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(std::string)> callback);
+      std::function<void(std::string)> callback) override;
+
+  void GetFirebaseUserId(std::function<void(std::string)> callback) override;
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

@@ -14,6 +14,8 @@
 namespace cloud_sync {
 
 // Source of tokens that are used to authenticate with cloud services.
+//
+// Each instance of this class is tied to exactly one user.
 class AuthProvider {
  public:
   AuthProvider() {}
@@ -23,6 +25,9 @@ class AuthProvider {
   // Database and Firebase Storage.
   virtual ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
       std::function<void(std::string)> callback) = 0;
+
+  // Retrieves the Firebase user ID of the user.
+  virtual void GetFirebaseUserId(std::function<void(std::string)> callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);

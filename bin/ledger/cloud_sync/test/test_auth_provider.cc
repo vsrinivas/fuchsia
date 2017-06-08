@@ -25,5 +25,12 @@ ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
   return cancellable;
 }
 
+void TestAuthProvider::GetFirebaseUserId(
+    std::function<void(std::string)> callback) {
+  task_runner_->PostTask([ this, callback = std::move(callback) ] {
+    callback(user_id_to_return);
+  });
+}
+
 }  // namespace test
 }  // namespace cloud_sync

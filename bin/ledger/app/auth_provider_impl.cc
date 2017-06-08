@@ -26,4 +26,11 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
   return cancellable;
 }
 
+void AuthProviderImpl::GetFirebaseUserId(
+    std::function<void(std::string)> callback) {
+  // TODO(ppi): Request the user id from |token_provider_| when support for
+  // Firebase tokens is there.
+  task_runner_->PostTask([callback = std::move(callback)] { callback(""); });
+}
+
 }  // namespace ledger

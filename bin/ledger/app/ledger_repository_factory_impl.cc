@@ -13,6 +13,7 @@
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -27,12 +28,10 @@ ftl::StringView GetStorageDirectoryName(ftl::StringView repository_path) {
   return repository_path.substr(separator + 1);
 }
 
-cloud_sync::UserConfig GetUserConfig(
-    const fidl::String& server_id,
-    ftl::StringView user_id,
-    ftl::StringView user_directory,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    modular::auth::TokenProviderPtr token_provider) {
+cloud_sync::UserConfig GetUserConfig(const fidl::String& server_id,
+                                     ftl::StringView user_id,
+                                     ftl::StringView user_directory,
+                                     cloud_sync::AuthProvider* auth_provider) {
   if (!server_id || server_id.size() == 0) {
     cloud_sync::UserConfig user_config;
     user_config.use_sync = false;
@@ -44,8 +43,7 @@ cloud_sync::UserConfig GetUserConfig(
   user_config.server_id = server_id.get();
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
-  user_config.auth_provider = std::make_unique<AuthProviderImpl>(
-      task_runner, std::move(token_provider));
+  user_config.auth_provider = auth_provider;
   return user_config;
 }
 
@@ -117,7 +115,9 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
 // LedgerManager.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  LedgerRepositoryContainer() : status_(Status::OK) {}
+  LedgerRepositoryContainer(
+      std::unique_ptr<cloud_sync::AuthProvider> auth_provider)
+      : status_(Status::OK), auth_provider_(std::move(auth_provider)) {}
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -175,6 +175,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_;
+  std::unique_ptr<cloud_sync::AuthProvider> auth_provider_;
   std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
                         std::function<void(Status)>>>
       requests_;
@@ -205,11 +206,6 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                               std::move(callback));
     return;
   }
-  auto ret = repositories_.emplace(std::piecewise_construct,
-                                   std::forward_as_tuple(sanitized_path),
-                                   std::forward_as_tuple());
-  LedgerRepositoryContainer* container = &ret.first->second;
-  container->BindRepository(std::move(repository_request), std::move(callback));
 
   auto token_provider_ptr =
       modular::auth::TokenProviderPtr::Create(std::move(token_provider));
@@ -222,13 +218,29 @@ void LedgerRepositoryFactoryImpl::GetRepository(
       repositories_.erase(find_repository);
     });
   }
-  // TODO(ppi): get the user ID from the auth provider.
-  ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
-  cloud_sync::UserConfig user_config =
-      GetUserConfig(server_id, user_id, sanitized_path,
-                    environment_->main_runner(), std::move(token_provider_ptr));
-  CreateRepository(container, std::move(sanitized_path),
-                   std::move(user_config));
+  auto auth_provider = std::make_unique<AuthProviderImpl>(
+      environment_->main_runner(), std::move(token_provider_ptr));
+  cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
+
+  auto ret = repositories_.emplace(
+      std::piecewise_construct, std::forward_as_tuple(sanitized_path),
+      std::forward_as_tuple(std::move(auth_provider)));
+  LedgerRepositoryContainer* container = &ret.first->second;
+  container->BindRepository(std::move(repository_request), std::move(callback));
+
+  auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
+    this, sanitized_path = std::move(sanitized_path),
+    server_id = server_id.get(), auth_provider_ptr, container
+  ](std::string user_id) {
+    if (user_id.empty()) {
+      user_id = GetStorageDirectoryName(sanitized_path).ToString();
+    }
+    cloud_sync::UserConfig user_config =
+        GetUserConfig(server_id, user_id, sanitized_path, auth_provider_ptr);
+    CreateRepository(container, std::move(sanitized_path),
+                     std::move(user_config));
+
+  }));
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(
