@@ -849,7 +849,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
 static bool NoSpace(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    ASSERT_EQ(StartBlobstoreTest(512, 1 << 16, ramdisk_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> last_info = nullptr;
 
@@ -878,7 +878,7 @@ static bool NoSpace(void) {
         ASSERT_EQ(close(fd), 0, "");
         last_info = mxtl::move(info);
 
-        if (++count % 100 == 0) {
+        if (++count % 50 == 0) {
             printf("Allocated %lu blobs\n", count);
         }
     }
