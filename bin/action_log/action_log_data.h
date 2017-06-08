@@ -16,6 +16,7 @@ namespace maxwell {
 struct ActionData {
   const std::string story_id;
   const std::string component_url;
+  const std::vector<std::string> module_path;
   const std::string method;
   const std::string params;
 };

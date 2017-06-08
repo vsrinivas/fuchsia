@@ -38,6 +38,9 @@ void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
 
 void UserActionLogImpl::MaybeProposeSharingVideo(
     const ActionData& action_data) {
+  if (action_data.story_id.empty() || action_data.module_path.empty()) {
+    return;
+  }
   if (action_data.method.compare("ViewVideo") != 0) {
     return;
   }
@@ -61,6 +64,12 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   auto add_module = AddModuleToStory::New();
   add_module->story_id = action_data.story_id;
   add_module->module_id = "file:///system/apps/email/composer";
+
+  for (auto segment = action_data.module_path.begin();
+       segment != action_data.module_path.end(); segment++) {
+    add_module->module_path.push_back(*segment);
+  }
+
   add_module->link_name = "email-composer-link";
   // TODO(azani): Do something sane.
   std::string initial_data = "{\"email-composer\": {\"message\": {";
@@ -69,11 +78,11 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
   initial_data += video_id + "\"}}}";
   add_module->initial_data = initial_data;
 
-  auto action = Action::New();
+  ActionPtr action(Action::New());
   action->set_add_module_to_story(std::move(add_module));
   proposal->on_selected.push_back(std::move(action));
 
-  auto display = SuggestionDisplay::New();
+  SuggestionDisplayPtr display(SuggestionDisplay::New());
   display->headline = proposal_id;
   display->subheadline = "";
   display->details = "";

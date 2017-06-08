@@ -71,10 +71,21 @@ struct FocusStory {
 
 // Adds a module to an existing story
 struct AddModuleToStory {
+  // Story to which the module is to be added.
   string story_id;
+
+  // Module which is to be added.
   string module_id;
+
+  // Name of the link for the added module.
   string link_name;
+
+  // Data to be passed to the added module at startup.
   string? initial_data;
+
+  // Module instance which is already in the story and to which the added module
+  // is to be associated. Leave empty if unknown.
+  array<string> module_path;
 };
 
 // An action that calls back to the proposal publisher to be performed.

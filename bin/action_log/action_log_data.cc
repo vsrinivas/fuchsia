@@ -17,16 +17,20 @@ ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
 ActionLogger ActionLogData::GetActionLogger(ComponentScopePtr scope) {
   std::string component_url;
   std::string story_id = "";
+  std::vector<std::string> module_path;
   if (scope->is_agent_scope()) {
     component_url = scope->get_agent_scope()->url;
   } else if (scope->is_module_scope()) {
     component_url = scope->get_module_scope()->url;
     story_id = scope->get_module_scope()->story_id;
+    module_path.insert(module_path.begin(),
+                       scope->get_module_scope()->module_path.begin(),
+                       scope->get_module_scope()->module_path.end());
   }
 
-  return [this, story_id, component_url](const std::string& method,
-                                         const std::string& params) {
-    ActionData action{story_id, component_url, method, params};
+  return [this, story_id, component_url, module_path](
+             const std::string& method, const std::string& params) {
+    ActionData action{story_id, component_url, module_path, method, params};
     Append(action);
   };
 }
