@@ -135,6 +135,7 @@ TEST(Coroutine, DroppedAsyncCall) {
       [&received_value, &called](CoroutineHandler* handler) {
         EXPECT_TRUE(SyncCall(
             handler, [&called](std::function<void(size_t)> callback) {
+              // |callback| is dropped here.
               called = true;
             },
             &received_value));

@@ -66,8 +66,8 @@ bool SyncCall(CoroutineHandler* handler,
               Args*... parameters) {
   volatile bool sync_state = true;
   volatile bool callback_called = false;
-  // Unblock the coroutine (by having it returns early) if the asynchronous call
-  // drop its callback without ever calling it.
+  // Unblock the coroutine (by having it return early) if the asynchronous call
+  // drops its callback without ever calling it.
   auto unblocker = ftl::MakeAutoCall([&handler, &sync_state] {
     if (sync_state) {
       sync_state = false;
