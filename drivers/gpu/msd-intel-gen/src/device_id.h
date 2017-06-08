@@ -20,7 +20,8 @@ public:
             case 0x1926: // Intel(R) Iris Graphics 540 (Skylake GT3e)
             case 0x193b: // Intel(R) Iris Pro Graphics 580 (Skylake GT4e)
             case 0x5916: // Intel(R) HD Graphics 620 (Kabylake GT2)
-                return true;
+            case 0x591E:  // Intel(R) HD Graphics 615 (Kabylake GT2)
+              return true;
         }
         return false;
     }
