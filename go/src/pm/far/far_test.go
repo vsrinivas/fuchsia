@@ -6,11 +6,15 @@ package far
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -79,6 +83,151 @@ func create(t *testing.T, files []string) string {
 	return d
 }
 
+func TestReader(t *testing.T) {
+	_, err := NewReader(bytes.NewReader(exampleArchive()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	corruptors := []func([]byte){
+		// corrupt magic
+		func(b []byte) { b[0] = 0 },
+		// corrupt index length
+		func(b []byte) { binary.LittleEndian.PutUint64(b[8:], 0) },
+		// corrupt dirindex type
+		func(b []byte) { b[IndexLen] = 255 },
+		// TODO(raggi): corrupt index entry offset
+		// TODO(raggi): remove index entries
+	}
+
+	for i, corrupt := range corruptors {
+		far := exampleArchive()
+		corrupt(far)
+		_, err := NewReader(bytes.NewReader(far))
+		if _, ok := err.(ErrInvalidArchive); !ok {
+			t.Errorf("corrupt archive %d, got unexpected error %v", i, err)
+		}
+	}
+}
+
+func TestListFiles(t *testing.T) {
+	far := exampleArchive()
+	r, err := NewReader(bytes.NewReader(far))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	files := r.List()
+
+	want := []string{"a", "b", "dir/c"}
+
+	if len(files) != len(want) {
+		t.Fatalf("listfiles: got %v, want %v", files, want)
+	}
+
+	sort.Strings(files)
+
+	for i, want := range want {
+		if got := files[i]; got != want {
+			t.Errorf("listfiles: got %q, want %q at %d", got, want, i)
+		}
+	}
+}
+
+func TestReaderOpen(t *testing.T) {
+	far := exampleArchive()
+	r, err := NewReader(bytes.NewReader(far))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := len(r.dirEntries), 3; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	for _, f := range []string{"a", "b", "dir/c"} {
+		ra, err := r.Open(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// buffer past the far content padding to check clamping of the readat range
+		want := make([]byte, 10*1024)
+		copy(want, []byte(f))
+		want[len(f)] = '\n'
+		got := make([]byte, 10*1024)
+
+		n, err := ra.ReadAt(got, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := len(f) + 1; n != want {
+			t.Errorf("got %d, want %d", n, want)
+		}
+		if !bytes.Equal(got, want) {
+			t.Errorf("got %x, want %x", got, want)
+		}
+	}
+
+	ra, err := r.Open("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ensure that negative offsets are rejected
+	n, err := ra.ReadAt(make([]byte, 10), -10)
+	if err != io.EOF || n != 0 {
+		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
+	}
+	// ensure that offsets beyond length are rejected
+	n, err = ra.ReadAt(make([]byte, 10), 10)
+	if err != io.EOF || n != 0 {
+		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
+	}
+}
+
+func TestReadEmpty(t *testing.T) {
+	r, err := NewReader(bytes.NewReader(emptyArchive()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.List()) != 0 {
+		t.Error("empty archive should contain no files")
+	}
+}
+
+func TestIsFAR(t *testing.T) {
+	type args struct {
+		r io.Reader
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "valid magic",
+			args: args{strings.NewReader(Magic)},
+			want: true,
+		},
+		{
+			name: "empty",
+			args: args{strings.NewReader("")},
+			want: false,
+		},
+		{
+			name: "not magic",
+			args: args{strings.NewReader("ohai")},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsFAR(tt.args.r); got != tt.want {
+				t.Errorf("IsFAR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // exampleArchive produces an archive similar to far(1) output
 func exampleArchive() []byte {
 	b := make([]byte, 16384)
@@ -99,4 +248,8 @@ func exampleArchive() []byte {
 	copy(b[8192:], []byte("b\n"))
 	copy(b[12288:], []byte("dir/c\n"))
 	return b
+}
+
+func emptyArchive() []byte {
+	return []byte{0xc8, 0xbf, 0xb, 0x48, 0xad, 0xab, 0xc5, 0x11, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 }
