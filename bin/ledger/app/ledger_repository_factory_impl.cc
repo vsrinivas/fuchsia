@@ -8,7 +8,6 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
-#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -112,6 +111,78 @@ bool CheckSyncConfig(const cloud_sync::UserConfig& user_config,
 
 }  // namespace
 
+// Container for a LedgerRepositoryImpl that keeps tracks of the in-flight FIDL
+// requests and callbacks and fires them when the repository is available.
+// TODO(ppi): LE-224 extract this into a generic class shared with
+// LedgerManager.
+class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
+ public:
+  LedgerRepositoryContainer() : status_(Status::OK) {}
+  ~LedgerRepositoryContainer() {
+    for (const auto& request : requests_) {
+      request.second(Status::INTERNAL_ERROR);
+    }
+  }
+
+  void set_on_empty(const ftl::Closure& on_empty_callback) {
+    on_empty_callback_ = on_empty_callback;
+    if (ledger_repository_) {
+      ledger_repository_->set_on_empty(on_empty_callback);
+    }
+  };
+
+  // Keeps track of |request| and |callback|. Binds |request| and fires
+  // |callback| when the repository is available or an error occurs.
+  void BindRepository(fidl::InterfaceRequest<LedgerRepository> request,
+                      std::function<void(Status)> callback) {
+    if (status_ != Status::OK) {
+      callback(status_);
+      return;
+    }
+    if (ledger_repository_) {
+      ledger_repository_->BindRepository(std::move(request));
+      callback(status_);
+      return;
+    }
+    requests_.push_back(
+        std::make_pair(std::move(request), std::move(callback)));
+  }
+
+  // Sets the implementation or the error status for the container. This
+  // notifies all awaiting callbacks and binds all pages in case of success.
+  void SetRepository(Status status,
+                     std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
+    FTL_DCHECK(!ledger_repository_);
+    FTL_DCHECK(status != Status::OK || ledger_repository);
+    status_ = status;
+    ledger_repository_ = std::move(ledger_repository);
+    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+      if (ledger_repository_) {
+        ledger_repository_->BindRepository(std::move(it->first));
+      }
+      it->second(status_);
+    }
+    requests_.clear();
+    if (on_empty_callback_) {
+      if (ledger_repository_) {
+        ledger_repository_->set_on_empty(on_empty_callback_);
+      } else {
+        on_empty_callback_();
+      }
+    }
+  }
+
+ private:
+  std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
+  Status status_;
+  std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
+                        std::function<void(Status)>>>
+      requests_;
+  ftl::Closure on_empty_callback_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
+};
+
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     ledger::Environment* environment,
     ConfigPersistence config_persistence)
@@ -129,52 +200,64 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   std::string sanitized_path =
       files::SimplifyPath(std::move(repository_path.get()));
   auto it = repositories_.find(sanitized_path);
-  if (it == repositories_.end()) {
-    ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
-    auto token_provider_ptr =
-        modular::auth::TokenProviderPtr::Create(std::move(token_provider));
-    if (token_provider_ptr) {
-      token_provider_ptr.set_connection_error_handler([this, sanitized_path] {
-        FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
-                       << "shutting down the repository.";
-        auto find_repository = repositories_.find(sanitized_path);
-        FTL_DCHECK(find_repository != repositories_.end());
-        repositories_.erase(find_repository);
-      });
-    }
-    cloud_sync::UserConfig user_config = GetUserConfig(
-        server_id, user_id, sanitized_path, environment_->main_runner(),
-        std::move(token_provider_ptr));
-    if (!user_config.use_sync &&
-        config_persistence_ == ConfigPersistence::PERSIST) {
-      FTL_LOG(WARNING) << "No sync configuration set, "
-                       << "Ledger will work locally but won't sync";
-    }
-    const std::string temp_dir =
-        ftl::Concatenate({repository_path.get(), "/tmp"});
-    if (config_persistence_ == ConfigPersistence::PERSIST &&
-        !CheckSyncConfig(user_config, sanitized_path, temp_dir)) {
-      callback(Status::CONFIGURATION_ERROR);
-      return;
-    }
-    // Save debugging data for `ledger_tool`.
-    if (config_persistence_ == ConfigPersistence::PERSIST &&
-        !SaveConfigForDebugging(user_id, repository_path.get(), temp_dir)) {
-      FTL_LOG(WARNING) << "Failed to save the current configuration.";
-    }
-    auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
-        environment_, std::move(user_config),
-        std::make_unique<backoff::ExponentialBackoff>());
-    user_sync->Start();
-    auto result = repositories_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(sanitized_path),
-        std::forward_as_tuple(sanitized_path, environment_,
-                              std::move(user_sync)));
-    FTL_DCHECK(result.second);
-    it = result.first;
+  if (it != repositories_.end()) {
+    it->second.BindRepository(std::move(repository_request),
+                              std::move(callback));
+    return;
   }
-  it->second.BindRepository(std::move(repository_request));
-  callback(Status::OK);
+  auto ret = repositories_.emplace(std::piecewise_construct,
+                                   std::forward_as_tuple(sanitized_path),
+                                   std::forward_as_tuple());
+  LedgerRepositoryContainer* container = &ret.first->second;
+  container->BindRepository(std::move(repository_request), std::move(callback));
+
+  auto token_provider_ptr =
+      modular::auth::TokenProviderPtr::Create(std::move(token_provider));
+  if (token_provider_ptr) {
+    token_provider_ptr.set_connection_error_handler([this, sanitized_path] {
+      FTL_LOG(ERROR) << "Lost connection to TokenProvider, "
+                     << "shutting down the repository.";
+      auto find_repository = repositories_.find(sanitized_path);
+      FTL_DCHECK(find_repository != repositories_.end());
+      repositories_.erase(find_repository);
+    });
+  }
+  // TODO(ppi): get the user ID from the auth provider.
+  ftl::StringView user_id = GetStorageDirectoryName(sanitized_path);
+  cloud_sync::UserConfig user_config =
+      GetUserConfig(server_id, user_id, sanitized_path,
+                    environment_->main_runner(), std::move(token_provider_ptr));
+  CreateRepository(container, std::move(sanitized_path),
+                   std::move(user_config));
+}
+
+void LedgerRepositoryFactoryImpl::CreateRepository(
+    LedgerRepositoryContainer* container,
+    std::string repository_path,
+    cloud_sync::UserConfig user_config) {
+  if (!user_config.use_sync &&
+      config_persistence_ == ConfigPersistence::PERSIST) {
+    FTL_LOG(WARNING) << "No sync configuration set, "
+                     << "Ledger will work locally but won't sync";
+  }
+  const std::string temp_dir = ftl::Concatenate({repository_path, "/tmp"});
+  if (config_persistence_ == ConfigPersistence::PERSIST &&
+      !CheckSyncConfig(user_config, repository_path, temp_dir)) {
+    container->SetRepository(Status::CONFIGURATION_ERROR, nullptr);
+    return;
+  }
+  // Save debugging data for `ledger_tool`.
+  if (config_persistence_ == ConfigPersistence::PERSIST &&
+      !SaveConfigForDebugging(user_config.user_id, repository_path, temp_dir)) {
+    FTL_LOG(WARNING) << "Failed to save the current configuration.";
+  }
+  auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
+      environment_, std::move(user_config),
+      std::make_unique<backoff::ExponentialBackoff>());
+  user_sync->Start();
+  auto repository = std::make_unique<LedgerRepositoryImpl>(
+      repository_path, environment_, std::move(user_sync));
+  container->SetRepository(Status::OK, std::move(repository));
 }
 
 }  // namespace ledger

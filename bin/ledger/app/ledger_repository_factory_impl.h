@@ -11,6 +11,7 @@
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/cloud_sync/public/user_config.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/macros.h"
@@ -25,6 +26,8 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
+  class LedgerRepositoryContainer;
+
   // LedgerRepositoryFactory:
   void GetRepository(
       const fidl::String& repository_path,
@@ -33,9 +36,15 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
 
+  void CreateRepository(LedgerRepositoryContainer* container,
+                        std::string sanitized_path,
+                        cloud_sync::UserConfig user_config);
+
   ledger::Environment* const environment_;
   const ConfigPersistence config_persistence_;
-  callback::AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
+
+  callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
+      repositories_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };
