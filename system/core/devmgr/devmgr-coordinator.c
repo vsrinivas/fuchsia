@@ -1183,7 +1183,9 @@ void coordinator(void) {
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &socket_device);
-    devfs_publish(&root_device, &platform_device);
+    if (platform_device.hrsrc != MX_HANDLE_INVALID) {
+        devfs_publish(&root_device, &platform_device);
+    }
 
     enumerate_drivers();
 
@@ -1193,7 +1195,8 @@ void coordinator(void) {
             dc_attempt_bind(drv, &root_device);
         } else if (is_misc_driver(drv)) {
             dc_attempt_bind(drv, &misc_device);
-        } else if (is_platform_bus_driver(drv)) {
+        } else if (is_platform_bus_driver(drv) &&
+                   (platform_device.hrsrc != MX_HANDLE_INVALID)) {
             dc_attempt_bind(drv, &platform_device);
         }
     }
