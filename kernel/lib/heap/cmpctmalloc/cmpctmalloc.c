@@ -131,6 +131,13 @@ void cmpct_dump(bool panic_time) TA_NO_THREAD_SAFETY_ANALYSIS
         unlock();
 }
 
+void cmpct_get_info(size_t *size_bytes, size_t *free_bytes) {
+    lock();
+    *size_bytes = theheap.size;
+    *free_bytes = theheap.remaining;
+    unlock();
+}
+
 // Operates in sizes that don't include the allocation header.
 static int size_to_index_helper(
     size_t size, size_t *rounded_up_out, int adjust, int increment)

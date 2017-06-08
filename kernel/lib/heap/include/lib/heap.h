@@ -29,4 +29,9 @@ void heap_trim(void);
 void *heap_page_alloc(size_t pages);
 void heap_page_free(void *ptr, size_t pages);
 
+/* Gets stats about the heap.
+ * |size_bytes| is the total size of the heap, |free_bytes| is the free portion.
+ */
+void heap_get_info(size_t *size_bytes, size_t *free_bytes);
+
 __END_CDECLS

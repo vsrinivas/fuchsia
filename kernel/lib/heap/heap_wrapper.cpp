@@ -131,6 +131,10 @@ static void heap_dump(bool panic_time)
     cmpct_dump(panic_time);
 }
 
+void heap_get_info(size_t *size_bytes, size_t *free_bytes) {
+    cmpct_get_info(size_bytes, free_bytes);
+}
+
 static void heap_test(void)
 {
     cmpct_test();
@@ -225,5 +229,3 @@ usage:
 
 #endif
 #endif
-
-
