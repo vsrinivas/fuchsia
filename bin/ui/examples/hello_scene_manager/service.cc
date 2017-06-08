@@ -64,6 +64,8 @@ class HelloSceneManagerService : public Demo {
   void DrawFrame() override {
     Renderer* renderer = scene_manager_->renderer();
 
+    // TODO: propagate dirty flags up the tree, and only render if dirty
+
     // For now, just assume the first Link created is the root of the tree.
     if (scene_manager_->links().size() > 0) {
       LinkPtr link = scene_manager_->links()[0];

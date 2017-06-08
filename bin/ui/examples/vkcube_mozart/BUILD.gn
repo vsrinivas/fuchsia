@@ -1,0 +1,28 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("vkcube_mozart") {
+  include_dirs = [ "//magma/tests/vkcube" ]
+  cflags_cc = [ "-Wno-unused-function" ]
+  defines = [ "NO_SWAPCHAIN" ]
+  sources = [
+    "//magma/third_party/vkcube/cube.cc",
+    "vkcube_app.cc",
+  ]
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/examples/hello_scene_manager:hello_scene_manager_service",
+    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/services/buffers/cpp",
+    "//apps/mozart/services/scene",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/escher/escher",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magma:vulkan",
+    "//magma/src/magma_util",
+    "//magma/src/magma_util/platform:trace",
+  ]
+}

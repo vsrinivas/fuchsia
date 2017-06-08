@@ -5,9 +5,9 @@
 group("examples") {
   deps = [
     "basic_wm",
-    "hello_scene_manager",
     "hello_compositor",
     "hello_material",
+    "hello_scene_manager",
     "jank",
     "noodles",
     "paint",
@@ -15,5 +15,6 @@ group("examples") {
     "shapes",
     "spinning_square",
     "tile",
+    "vkcube_mozart",
   ]
 }
