@@ -157,7 +157,8 @@ Proposal _createProposal({
         ..color = color
         ..iconUrls = const <String>[]
         ..imageType = SuggestionImageType.other
-        ..imageUrl = imageUrl)
+        ..imageUrl = imageUrl
+        ..annoyance = AnnoyanceType.none)
       ..onSelected = <Action>[
         new Action()
           ..createStory = (new CreateStory()
