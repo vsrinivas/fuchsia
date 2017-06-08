@@ -11,6 +11,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -107,7 +108,7 @@ static mx_status_t memstats(mx_handle_t root_resource) {
 
     const int width = 80 / 8 - 1;
     printf("%*s %*s %*s %*s %*s %*s %*s %*s\n",
-           width, "total",
+           width, "mem total",
            width, "free",
            width, "VMOs",
            width, "kheap",
@@ -147,9 +148,10 @@ static mx_status_t memstats(mx_handle_t root_resource) {
 static void print_help(FILE* f) {
     fprintf(f, "Usage: kstats [options]\n");
     fprintf(f, "Options:\n");
-    fprintf(f, " -c              Print system CPU stats (default)\n");
+    fprintf(f, " -c              Print system CPU stats\n");
     fprintf(f, " -m              Print system memory stats\n");
     fprintf(f, " -d <delay>      Delay in seconds (default 1 second)\n");
+    fprintf(f, " -t              Print timestamp for each report\n");
     fprintf(f, "\nCPU stats columns:\n");
     fprintf(f, "\tcpu:  cpu #\n");
     fprintf(f, "\tload: percentage load\n");
@@ -172,37 +174,46 @@ static void print_help(FILE* f) {
 }
 
 int main(int argc, char** argv) {
-    enum {
-        CPU_STATS,
-        MEMORY_STATS,
-    } stats_type = CPU_STATS;
+    bool cpu_stats = false;
+    bool mem_stats = false;
     mx_time_t delay = MX_SEC(1);
-    for (int i = 1; i < argc; ++i) {
-        const char* arg = argv[i];
-        if (!strcmp(arg, "--help") || !strcmp(arg, "-h")) {
-            print_help(stdout);
-            return 0;
-        }
-        if (!strcmp(arg, "-c")) {
-            stats_type = CPU_STATS;
-        } else if (!strcmp(arg, "-m")) {
-            stats_type = MEMORY_STATS;
-        } else if (!strcmp(arg, "-d")) {
-            delay = 0;
-            if (i + 1 < argc) {
-                delay = MX_SEC(atoi(argv[i + 1]));
-            }
-            if (delay == 0) {
-                fprintf(stderr, "Bad delay\n");
+    bool timestamp = false;
+
+
+    char c;
+    while ((c = getopt(argc, argv, "cd:hmt")) > 0) {
+        switch (c) {
+            case 'c':
+                cpu_stats = true;
+                break;
+            case 'd':
+                delay = MX_SEC(atoi(optarg));
+                if (delay == 0) {
+                    fprintf(stderr, "Bad delay\n");
+                    print_help(stderr);
+                    return 1;
+                }
+                break;
+            case 'h':
+                print_help(stdout);
+                return 0;
+            case 'm':
+                mem_stats = true;
+                break;
+            case 't':
+                timestamp = true;
+                break;
+            default:
+                fprintf(stderr, "Unknown option\n");
                 print_help(stderr);
                 return 1;
-            }
-            i++;
-        } else {
-            fprintf(stderr, "Unknown option: %s\n", arg);
-            print_help(stderr);
-            return 1;
         }
+    }
+
+    if (!cpu_stats && !mem_stats) {
+        fprintf(stderr, "No statistics selected\n");
+        print_help(stderr);
+        return 1;
     }
 
     int fd = open("/dev/misc/sysinfo", O_RDWR);
@@ -228,24 +239,21 @@ int main(int argc, char** argv) {
 
         // Print the current UTC time with milliseconds as
         // an ISO 8601 string.
-        struct timespec now;
-        timespec_get(&now, TIME_UTC);
-        struct tm nowtm;
-        gmtime_r(&now.tv_sec, &nowtm);
-        char tbuf[40];
-        strftime(tbuf, sizeof(tbuf), "%FT%T", &nowtm);
-        printf("\n--- %s.%03ldZ ---\n", tbuf, now.tv_nsec / (1000 * 1000));
+        if (timestamp) {
+            struct timespec now;
+            timespec_get(&now, TIME_UTC);
+            struct tm nowtm;
+            gmtime_r(&now.tv_sec, &nowtm);
+            char tbuf[40];
+            strftime(tbuf, sizeof(tbuf), "%FT%T", &nowtm);
+            printf("\n--- %s.%03ldZ ---\n", tbuf, now.tv_nsec / (1000 * 1000));
+        }
 
-        switch (stats_type) {
-        case CPU_STATS:
-            ret = cpustats(root_resource, delay);
-            break;
-        case MEMORY_STATS:
-            ret = memstats(root_resource);
-            break;
-        default:
-            // UNREACHABLE
-            assert(false);
+        if (cpu_stats) {
+            ret |= cpustats(root_resource, delay);
+        }
+        if (mem_stats) {
+            ret |= memstats(root_resource);
         }
 
         if (ret != NO_ERROR)
