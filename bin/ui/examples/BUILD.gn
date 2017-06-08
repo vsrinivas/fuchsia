@@ -11,6 +11,7 @@ group("examples") {
     "jank",
     "noodles",
     "paint",
+    "shadertoy",
     "shapes",
     "spinning_square",
     "tile",
