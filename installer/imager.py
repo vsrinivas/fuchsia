@@ -225,6 +225,7 @@ if os.path.exists(boot_manifest):
 
 with open(package_list) as package_list_file:
     for name in package_list_file:
+        name = name.rstrip()
         package_dir = os.path.join(args.build_dir, "package", name)
         package_system_manifest = os.path.join(package_dir, "system_manifest")
         if os.path.exists(package_system_manifest):
