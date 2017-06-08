@@ -147,6 +147,12 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
     if (size == 0) {
         return 0;
     }
+
+    // map the vmo so that ps will account for it
+    // NOTE: will leak the mapping in case the bootfs is thrown away later
+    uintptr_t address;
+    mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ, &address);
+
     struct callback_data cd = {
         .vmo = vmo,
         .add_file = (type == BOOTDATA_BOOTFS_SYSTEM) ? systemfs_add_file : bootfs_add_file,
