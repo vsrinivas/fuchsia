@@ -32,6 +32,7 @@
 #if !BUILD_FOR_TEST
 #include <launchpad/launchpad.h>
 #include <magenta/device/pty.h>
+#include <magenta/device/vfs.h>
 #include <magenta/processargs.h>
 #include <port/port.h>
 #include <mxio/util.h>
@@ -324,11 +325,6 @@ static void handle_key_press(uint8_t keycode, int modifiers) {
     }
 }
 
-static int input_watcher_thread(void* arg) {
-    vc_watch_for_keyboard_devices(handle_key_press);
-    return -1;
-}
-
 static vc_t* log_vc;
 static mx_koid_t proc_koid;
 
@@ -370,10 +366,11 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     return status;
 }
 
-static port_t port;
+port_t port;
 static port_handler_t ownership_ph;
 static port_handler_t log_ph;
 static port_handler_t new_vc_ph;
+static port_handler_t input_ph;
 
 static mx_status_t launch_shell(vc_t* vc, int fd) {
     const char* args[] = { "/boot/bin/sh" };
@@ -553,6 +550,49 @@ static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t 
     return NO_ERROR;
 }
 
+static int input_dir_fd;
+
+static void input_dir_event(unsigned evt, const char* name) {
+    if ((evt != VFS_WATCH_EVT_EXISTING) && (evt != VFS_WATCH_EVT_ADDED)) {
+        return;
+    }
+
+    printf("vc: new input device /dev/class/input/%s\n", name);
+
+    int fd;
+    if ((fd = openat(input_dir_fd, name, O_RDONLY)) < 0) {
+        return;
+    }
+
+    new_input_device(fd, handle_key_press);
+}
+
+static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
+    if (!(signals & MX_CHANNEL_READABLE)) {
+        return ERR_STOP;
+    }
+
+    uint8_t buf[8192 + 1];
+    uint32_t len;
+    if (mx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
+        return ERR_STOP;
+    }
+
+    uint8_t* msg = buf;
+    while (len >= 2) {
+        uint8_t evt = *msg++;
+        uint8_t nlen = *msg++;
+        if (len < (nlen + 2u)) {
+            break;
+        }
+        uint8_t tmp = msg[nlen];
+        msg[nlen] = 0;
+        input_dir_event(evt, (char*) msg);
+        msg[nlen] = tmp;
+        msg += nlen;
+    }
+    return NO_ERROR;
+}
 
 static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uint32_t evt) {
     mxtl::AutoLock lock(&g_vc_lock);
@@ -625,12 +665,23 @@ int main(int argc, char** argv) {
         port_wait(&port, &new_vc_ph);
     }
 
-    // start a thread to listen for new input devices
-    thrd_t t;
-    int ret = thrd_create_with_name(&t, input_watcher_thread, NULL,
-                                    "vc-input-watcher");
-    if (ret != thrd_success) {
-        xprintf("vc: input polling thread did not start (return value=%d)\n", ret);
+    if ((input_dir_fd = open("/dev/class/input", O_DIRECTORY | O_RDONLY)) >= 0) {
+        vfs_watch_dir_t wd;
+        wd.mask = VFS_WATCH_MASK_ALL;
+        wd.options = 0;
+        if (mx_channel_create(0, &wd.channel, &input_ph.handle) == NO_ERROR) {
+            if ((ioctl_vfs_watch_dir_v2(input_dir_fd, &wd)) == NO_ERROR) {
+                input_ph.waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+                input_ph.func = input_cb;
+                port_wait(&port, &input_ph);
+            } else {
+                mx_handle_close(wd.channel);
+                mx_handle_close(input_ph.handle);
+                close(input_dir_fd);
+            }
+        } else {
+            close(input_dir_fd);
+        }
     }
 
     setenv("TERM", "xterm", 1);

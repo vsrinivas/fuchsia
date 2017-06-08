@@ -4,9 +4,6 @@
 
 #include <hid/hid.h>
 #include <hid/usages.h>
-#include <mxtl/auto_lock.h>
-#include <threads.h>
-#include <unistd.h>
 #include <unittest/unittest.h>
 
 #include "keyboard-vt100.h"
@@ -18,26 +15,17 @@ namespace {
 uint8_t g_keycode;
 int g_modifiers;
 bool g_got_keypress = false;
-mtx_t g_mutex = MTX_INIT;
-cnd_t g_cond = CND_INIT;
 
 void keypress_handler(uint8_t keycode, int modifiers) {
-    mxtl::AutoLock lock(&g_mutex);
-
-    // Overwrite any existing key, in case autorepeat kicked in.
     g_keycode = keycode;
     g_modifiers = modifiers;
     g_got_keypress = true;
-    cnd_signal(&g_cond);
 }
 
 void expect_keypress(uint8_t expected_keycode, int expected_modifiers,
                      uint8_t expected_char) {
-    mxtl::AutoLock lock(&g_mutex);
 
-    // Wait for event.
-    while (!g_got_keypress)
-        cnd_wait(&g_cond, &g_mutex);
+    EXPECT_EQ(g_got_keypress, true, "");
     g_got_keypress = false;
 
     EXPECT_EQ(g_keycode, expected_keycode, "");
@@ -57,29 +45,14 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers,
 class KeyboardInputHelper {
 public:
     KeyboardInputHelper() {
-        int rc = pipe(pipe_fds_);
-        EXPECT_EQ(rc, 0, "");
-
-        auto* args = new vc_input_thread_args;
-        args->fd = pipe_fds_[1];
-        args->keypress_handler = keypress_handler;
-        int ret = thrd_create_with_name(&thread_, vc_input_thread, args,
-                                        "input");
-        EXPECT_EQ(ret, thrd_success, "");
+        EXPECT_EQ(vc_input_create(&vi_, keypress_handler, -1), NO_ERROR, "");
     }
 
     ~KeyboardInputHelper() {
-        int ret = close(pipe_fds_[0]);
-        EXPECT_EQ(ret, 0, "");
-
-        // Test that the keyboard input thread exits properly after it
-        // reads EOF.
-        EXPECT_EQ(thrd_join(thread_, &ret), thrd_success, "");
     }
 
     void WriteReportBuf() {
-        EXPECT_EQ(write(pipe_fds_[0], report_buf_, sizeof(report_buf_)),
-                  sizeof(report_buf_), "");
+        vc_input_process(vi_, report_buf_);
     }
 
     // Byte 0 contains one bit per modifier key.
@@ -88,10 +61,10 @@ public:
     void set_first_keycode(uint8_t value) { report_buf_[2] = value; }
 
 private:
-    int pipe_fds_[2];
-    thrd_t thread_;
     // USB HID key state buffer.
     uint8_t report_buf_[8] = {};
+
+    vc_input_t* vi_;
 };
 
 bool test_keyboard_input_thread() {
@@ -102,10 +75,6 @@ bool test_keyboard_input_thread() {
     // Test pressing keys without any modifiers.
     helper.set_first_keycode(HID_USAGE_KEY_M);
     helper.WriteReportBuf();
-    expect_keypress(HID_USAGE_KEY_M, 0, 'm');
-
-    // Test autorepeat: After some delay, the same key should be reported
-    // again.
     expect_keypress(HID_USAGE_KEY_M, 0, 'm');
 
     helper.set_first_keycode(HID_USAGE_KEY_6);

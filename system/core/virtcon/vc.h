@@ -11,6 +11,7 @@
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 #include <magenta/thread_annotations.h>
+#include <port/port.h>
 #include <stdbool.h>
 #include <threads.h>
 
@@ -21,10 +22,13 @@
 #if BUILD_FOR_TEST
 mx_status_t vc_init_gfx(gfx_surface* gfx);
 #else
-#include <port/port.h>
 mx_status_t vc_init_gfx(int fd);
 void vc_free_gfx();
 #endif
+
+typedef void (*keypress_handler_t)(uint8_t keycode, int modifiers);
+
+mx_status_t new_input_device(int fd, keypress_handler_t handler);
 
 // constraints on status bar tabs
 #define MIN_TAB_WIDTH 16
@@ -104,7 +108,6 @@ const gfx_font* vc_get_font();
 mx_status_t vc_alloc(vc_t** out);
 void vc_free(vc_t* vc);
 
-
 // called to re-draw the status bar after
 // status-worthy vc or global state has changed
 void vc_status_update();
@@ -144,3 +147,6 @@ static inline uint32_t palette_to_color(vc_t* vc, uint8_t color) {
     assert(color <= MAX_COLOR);
     return vc->palette[color];
 }
+
+// Used for all io muxing
+extern port_t port;
