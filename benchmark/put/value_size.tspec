@@ -8,7 +8,7 @@
     "--min-value=100",
     "--max-value=1000",
     "--step=100",
-    "--append-args=--entry-count=500,--transaction-size=1,--key-size=1000"
+    "--append-args=--entry-count=500,--transaction-size=1,--key-size=64"
   ],
   "duration": 600,
   "measure": [

@@ -8,7 +8,7 @@
     "--min-value=2",
     "--max-value=20",
     "--step=1",
-    "--append-args=--entry-count=500,--key-size=1000,--value-size=1000"
+    "--append-args=--entry-count=500,--key-size=64,--value-size=1000"
   ],
   "duration": 600,
   "measure": [
