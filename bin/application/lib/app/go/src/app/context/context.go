@@ -37,7 +37,8 @@ func getServiceRoot() mx.Handle {
 		return mx.HANDLE_INVALID
 	}
 
-	err = rio.ServiceConnect("/svc", c0.Handle)
+	// TODO: Use "/svc" once that actually works.
+	err = rio.ServiceConnect("/svc/.", c0.Handle)
 	if err != nil {
 		return mx.HANDLE_INVALID
 	}
