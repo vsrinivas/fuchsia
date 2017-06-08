@@ -5,8 +5,18 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 namespace wlan {
+
+static inline uint64_t MacToUint64(const uint8_t mac[6]) {
+    uint64_t m = mac[0];
+    for (int i = 1; i < 6; i++) {
+        m <<= 8;
+        m |= mac[i];
+    }
+    return m;
+}
 
 // Port keys
 //
@@ -20,22 +30,22 @@ enum class PortKeyType : uint8_t {
     kMlme,
 };
 
-uint64_t ToPortKey(PortKeyType type, uint64_t id) {
+static inline uint64_t ToPortKey(PortKeyType type, uint64_t id) {
     return (id << 8) | static_cast<uint64_t>(type);
 }
 
-PortKeyType ToPortKeyType(uint64_t key) {
+static inline PortKeyType ToPortKeyType(uint64_t key) {
     return static_cast<PortKeyType>(key & 0xff);
 }
 
-uint64_t ToPortKeyId(uint64_t key) {
+static inline uint64_t ToPortKeyId(uint64_t key) {
     return key >> 8;
 }
 
 // enum class cast helper
 template <typename T>
-constexpr uint64_t to_u64(T t) {
-    return static_cast<uint64_t>(t);
+static constexpr inline typename std::underlying_type<T>::type to_enum_type(T t) {
+    return static_cast<typename std::underlying_type<T>::type>(t);
 }
 
 }  // namespace wlan

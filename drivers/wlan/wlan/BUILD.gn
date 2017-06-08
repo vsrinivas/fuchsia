@@ -23,6 +23,8 @@ source_set("mlme") {
     "packet.h",
     "scanner.cpp",
     "scanner.h",
+    "timer.cpp",
+    "timer.h",
     "wlan.h",
   ]
 

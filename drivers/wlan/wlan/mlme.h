@@ -15,12 +15,13 @@
 namespace wlan {
 
 class Device;
+class DeviceInterface;
 class Packet;
 
 // Mlme is the Mac sub-Layer Management Entity for the wlan driver. It is not thread-safe.
 class Mlme {
   public:
-    explicit Mlme(ddk::WlanmacProtocolProxy wlanmac_proxy);
+    Mlme(DeviceInterface* device, ddk::WlanmacProtocolProxy wlanmac_proxy);
 
     mx_status_t Init();
     mx_status_t Start(mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac, Device* device);
@@ -29,8 +30,8 @@ class Mlme {
 
     void GetDeviceInfo(ethmac_info_t* info);
 
-    mx_status_t HandlePacket(const Packet* packet, mx_time_t* next_timeout);
-    mx_status_t HandleTimeout(mx_time_t* next_timeout);
+    mx_status_t HandlePacket(const Packet* packet);
+    mx_status_t HandlePortPacket(uint64_t key);
 
   private:
     // MAC frame handlers
@@ -45,12 +46,10 @@ class Mlme {
 
     // Scan handlers
     mx_status_t StartScan(const Packet* packet);
-    void HandleScanTimeout(mx_time_t now);
     void HandleScanStatus(Scanner::Status status);
     mx_status_t SendScanResponse();
 
-    void SetNextTimeout(mx_time_t* next_timeout);
-
+    DeviceInterface* device_;
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
@@ -60,8 +59,7 @@ class Mlme {
 
     wlan_channel_t active_channel_ = { 0 };
 
-    SystemClock clock_;
-    Scanner scanner_;
+    mxtl::unique_ptr<Scanner> scanner_;
 };
 
 }  // namespace wlan

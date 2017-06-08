@@ -4,11 +4,12 @@
 
 #include "scanner.h"
 
-#include "clock.h"
 #include "element.h"
 #include "logging.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "timer.h"
+#include "wlan.h"
 
 #include <magenta/assert.h>
 #include <mx/time.h>
@@ -18,21 +19,9 @@
 
 namespace wlan {
 
-namespace {
-// Consider moving this to a utilities lib if we need it in more places
-uint64_t MacToUint64(const uint8_t mac[6]) {
-    uint64_t m = mac[0];
-    for (int i = 1; i < 6; i++) {
-        m <<= 8;
-        m |= mac[i];
-    }
-    return m;
-}
-}  // namespace
-
-Scanner::Scanner(Clock* clock)
-  : clock_(clock) {
-    MX_DEBUG_ASSERT(clock);
+Scanner::Scanner(mxtl::unique_ptr<Timer> timer)
+  : timer_(std::move(timer)) {
+    MX_DEBUG_ASSERT(timer_.get());
 }
 
 mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
@@ -63,14 +52,19 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     resp_->result_code = ResultCodes::SUCCESS;
     req_ = std::move(req);
 
-    channel_start_ = clock_->Now();
+    channel_start_ = timer_->Now();
+    mx_time_t timeout;
     if (req_->scan_type == ScanTypes::PASSIVE) {
-        next_timeout_ = channel_start_ + WLAN_TU(req_->min_channel_time);
+        timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
     } else {
-        next_timeout_ = channel_start_ + WLAN_TU(req_->probe_delay);
+        timeout = channel_start_ + WLAN_TU(req_->probe_delay);
+    }
+    mx_status_t status = timer_->StartTimer(timeout);
+    if (status != MX_OK) {
+        errorf("could not start scan timer: %d\n", status);
     }
 
-    return MX_OK;
+    return status;
 }
 
 void Scanner::Reset() {
@@ -79,7 +73,7 @@ void Scanner::Reset() {
     resp_.reset();
     channel_index_ = 0;
     channel_start_ = 0;
-    next_timeout_ = 0;
+    timer_->CancelTimer();
     bss_descriptors_.clear();
 }
 
@@ -103,10 +97,6 @@ wlan_channel_t Scanner::ScanChannel() const {
     MX_DEBUG_ASSERT(channel_index_ < req_->channel_list.size());
 
     return wlan_channel_t{req_->channel_list[channel_index_]};
-}
-
-mx_time_t Scanner::NextTimeout() const {
-    return next_timeout_;
 }
 
 Scanner::Status Scanner::HandleBeacon(const Packet* packet) {
@@ -266,22 +256,30 @@ done_iter:
     return Status::kContinueScan;
 }
 
-Scanner::Status Scanner::HandleTimeout(mx_time_t now) {
+Scanner::Status Scanner::HandleTimeout() {
     debugfn();
     MX_DEBUG_ASSERT(IsRunning());
+
+    mx_time_t now = timer_->Now();
+    mx_status_t status = MX_OK;
 
     // Reached max channel dwell time
     if (now >= channel_start_ + WLAN_TU(req_->max_channel_time)) {
         debugf("reached max channel time\n");
         if (++channel_index_ >= req_->channel_list.size()) {
-            next_timeout_ = 0;
+            timer_->CancelTimer();
             return Status::kFinishScan;
         } else {
-            channel_start_ = clock_->Now();
+            channel_start_ = timer_->Now();
+            mx_time_t timeout;
             if (req_->scan_type == ScanTypes::PASSIVE) {
-                next_timeout_ = channel_start_ + WLAN_TU(req_->min_channel_time);
+                timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
             } else {
-                next_timeout_ = channel_start_ + WLAN_TU(req_->probe_delay);
+                timeout = channel_start_ + WLAN_TU(req_->probe_delay);
+            }
+            status = timer_->StartTimer(timeout);
+            if (status != MX_OK) {
+                goto timer_fail;
             }
             return Status::kNextChannel;
         }
@@ -295,7 +293,11 @@ Scanner::Status Scanner::HandleTimeout(mx_time_t now) {
         // TODO(tkilbourn): if there was no sign of activity on this channel, skip ahead to the next
         // one
         // For now, just continue the scan.
-        next_timeout_ = channel_start_ + WLAN_TU(req_->max_channel_time);
+        mx_time_t timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
+        status = timer_->StartTimer(timeout);
+        if (status != MX_OK) {
+            goto timer_fail;
+        }
         return Status::kContinueScan;
     }
 
@@ -303,12 +305,21 @@ Scanner::Status Scanner::HandleTimeout(mx_time_t now) {
     if (req_->scan_type == ScanTypes::ACTIVE &&
         now >= channel_start_ + WLAN_TU(req_->probe_delay)) {
         debugf("Reached probe delay\n");
-        next_timeout_ = channel_start_ + WLAN_TU(req_->min_channel_time);
+        mx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
+        status = timer_->StartTimer(timeout);
+        if (status != MX_OK) {
+            goto timer_fail;
+        }
         return Status::kStartActiveScan;
     }
 
     // Haven't reached a timeout yet; continue scanning
     return Status::kContinueScan;
+
+timer_fail:
+    errorf("could not set scan timer: %d\n", status);
+    Reset();
+    return Status::kFinishScan;
 }
 
 mx_status_t Scanner::FillProbeRequest(ProbeRequest* request, size_t len) const {

@@ -9,8 +9,11 @@
 #include "logging.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "timer.h"
+#include "wlan.h"
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
+#include <drivers/wifi/common/bitfield.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <mx/time.h>
@@ -24,16 +27,55 @@
 
 namespace wlan {
 
-constexpr mx_duration_t kDefaultTimeout = MX_SEC(1);
+namespace {
+#define BIT_FIELD(name, offset, len) \
+    void set_##name(uint32_t val) { this->template set_bits<offset, len>(val); } \
+    uint32_t name() const { return this->template get_bits<offset, len>(); }
 
-Mlme::Mlme(ddk::WlanmacProtocolProxy wlanmac_proxy)
-  : wlanmac_proxy_(wlanmac_proxy),
-    scanner_(&clock_) {
+enum class ObjectSubtype : uint8_t {
+    kTimer = 0,
+};
+
+enum class ObjectTarget : uint8_t {
+    kScanner = 0,
+};
+
+// An ObjectId is used as an id in a PortKey. Therefore, only the lower 56 bits may be used.
+class ObjectId : public common::BitField<uint64_t> {
+  public:
+    constexpr explicit ObjectId(uint64_t id) : common::BitField<uint64_t>(id) {}
+    constexpr ObjectId() = default;
+
+    // ObjectSubtype
+    BIT_FIELD(subtype, 0, 4);
+    // ObjectTarget
+    BIT_FIELD(target, 4, 4);
+
+    // For objects with a MAC address
+    BIT_FIELD(mac, 8, 48);
+};
+
+#undef BIT_FIELD
+}  // namespace
+
+Mlme::Mlme(DeviceInterface* device, ddk::WlanmacProtocolProxy wlanmac_proxy)
+  : device_(device),
+    wlanmac_proxy_(wlanmac_proxy) {
     debugfn();
 }
 
 mx_status_t Mlme::Init() {
     debugfn();
+    mxtl::unique_ptr<Timer> timer;
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
+    mx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+    if (status != MX_OK) {
+        errorf("could not create scan timer: %d\n", status);
+        return status;
+    }
+    scanner_.reset(new Scanner(std::move(timer)));
     return wlanmac_proxy_.Query(0, &ethmac_info_);
 }
 
@@ -85,9 +127,8 @@ void DumpPacket(const Packet& packet) {
 }
 }  // namespace
 
-mx_status_t Mlme::HandlePacket(const Packet* packet, mx_time_t* next_timeout) {
+mx_status_t Mlme::HandlePacket(const Packet* packet) {
     debugfn();
-    MX_DEBUG_ASSERT(next_timeout != nullptr);
     MX_DEBUG_ASSERT(packet != nullptr);
     MX_DEBUG_ASSERT(packet->src() != Packet::Source::kUnknown);
     debugf("packet data=%p len=%zu src=%s\n",
@@ -132,18 +173,28 @@ mx_status_t Mlme::HandlePacket(const Packet* packet, mx_time_t* next_timeout) {
         break;
     }
 
-    SetNextTimeout(next_timeout);
     return status;
 }
 
-mx_status_t Mlme::HandleTimeout(mx_time_t* next_timeout) {
-    MX_DEBUG_ASSERT(next_timeout != nullptr);
+mx_status_t Mlme::HandlePortPacket(uint64_t key) {
+    debugfn();
+    MX_DEBUG_ASSERT(ToPortKeyType(key) == PortKeyType::kMlme);
 
-    mx_time_t now = clock_.Now();
-
-    HandleScanTimeout(now);
-
-    SetNextTimeout(next_timeout);
+    ObjectId id(ToPortKeyId(key));
+    switch (id.subtype()) {
+    case to_enum_type(ObjectSubtype::kTimer):
+        switch (id.target()) {
+        case to_enum_type(ObjectTarget::kScanner):
+            HandleScanStatus(scanner_->HandleTimeout());
+            break;
+        default:
+            warnf("unknown MLME timer target: %u\n", id.target());
+            break;
+        }
+        break;
+    default:
+        warnf("unknown MLME event subtype: %u\n", id.subtype());
+    }
     return MX_OK;
 }
 
@@ -204,8 +255,8 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
 mx_status_t Mlme::HandleBeacon(const Packet* packet) {
     debugfn();
 
-    if (scanner_.IsRunning()) {
-        HandleScanStatus(scanner_.HandleBeacon(packet));
+    if (scanner_->IsRunning()) {
+        HandleScanStatus(scanner_->HandleBeacon(packet));
     }
 
     return MX_OK;
@@ -214,8 +265,8 @@ mx_status_t Mlme::HandleBeacon(const Packet* packet) {
 mx_status_t Mlme::HandleProbeResponse(const Packet* packet) {
     debugfn();
 
-    if (scanner_.IsRunning()) {
-        HandleScanStatus(scanner_.HandleProbeResponse(packet));
+    if (scanner_->IsRunning()) {
+        HandleScanStatus(scanner_->HandleProbeResponse(packet));
     }
 
     return MX_OK;
@@ -234,27 +285,20 @@ mx_status_t Mlme::StartScan(const Packet* packet) {
         warnf("could not deserialize ScanRequest\n");
         return MX_ERR_IO;
     }
-    mx_status_t status = scanner_.Start(std::move(req), std::move(resp));
+    mx_status_t status = scanner_->Start(std::move(req), std::move(resp));
     if (status != MX_OK) {
         SendScanResponse();
         return status;
     }
 
-    auto scan_chan = scanner_.ScanChannel();
+    auto scan_chan = scanner_->ScanChannel();
     status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
     if (status != MX_OK) {
         errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
         SendScanResponse();
-        scanner_.Reset();
+        scanner_->Reset();
     }
     return status;
-}
-
-void Mlme::HandleScanTimeout(mx_time_t now) {
-    auto scan_timeout = scanner_.NextTimeout();
-    if (scan_timeout > 0 && scan_timeout < now) {
-        HandleScanStatus(scanner_.HandleTimeout(now));
-    }
 }
 
 void Mlme::HandleScanStatus(Scanner::Status status) {
@@ -264,11 +308,11 @@ void Mlme::HandleScanStatus(Scanner::Status status) {
         break;
     case Scanner::Status::kNextChannel: {
         debugf("scan status: NextChannel\n");
-        auto scan_chan = scanner_.ScanChannel();
+        auto scan_chan = scanner_->ScanChannel();
         mx_status_t status = wlanmac_proxy_.SetChannel(0u, &scan_chan);
         if (status != MX_OK) {
             errorf("could not set channel to %u: %d\n", scan_chan.channel_num, status);
-            scanner_.Reset();
+            scanner_->Reset();
             auto reset_status = wlanmac_proxy_.SetChannel(0u, &active_channel_);
             if (reset_status != MX_OK) {
                 errorf("could not reset to active channel %u: %d\n",
@@ -292,7 +336,7 @@ void Mlme::HandleScanStatus(Scanner::Status status) {
                 // TODO(tkilbourn): reset hw?
             }
         }
-        scanner_.Reset();
+        scanner_->Reset();
         break;
     }
     default:
@@ -301,7 +345,7 @@ void Mlme::HandleScanStatus(Scanner::Status status) {
 }
 
 mx_status_t Mlme::SendScanResponse() {
-    auto resp = scanner_.ScanResults();
+    auto resp = scanner_->ScanResults();
     size_t buf_len = sizeof(Header) + resp->GetSerializedSize();
     mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[buf_len]);
     auto header = FromBytes<Header>(buf.get(), buf_len);
@@ -320,15 +364,6 @@ mx_status_t Mlme::SendScanResponse() {
         }
     }
     return status;
-}
-
-void Mlme::SetNextTimeout(mx_time_t* next_timeout) {
-    *next_timeout = mx::deadline_after(kDefaultTimeout);
-
-    auto scan_timeout = scanner_.NextTimeout();
-    if (scan_timeout > 0 && scan_timeout < *next_timeout) {
-        *next_timeout = scan_timeout;
-    }
 }
 
 }  // namespace wlan

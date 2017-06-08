@@ -7,6 +7,7 @@
 #include "clock.h"
 #include "mac_frame.h"
 #include "packet.h"
+#include "timer.h"
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <cstring>
@@ -25,7 +26,7 @@ const uint8_t kBeacon[] = {
 class ScannerTest : public ::testing::Test {
   public:
     ScannerTest()
-      : scanner_(&clock_), buffer_alloc_(1, true) {
+      : scanner_(mxtl::unique_ptr<Timer>(new TestTimer(1u, &clock_))), buffer_alloc_(1, true) {
         SetupMessages();
     }
 
@@ -109,11 +110,11 @@ TEST_F(ScannerTest, Timeout_MinChannelTime) {
     req_->max_channel_time = 10;
 
     ASSERT_EQ(MX_OK, Start());
-    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.NextTimeout());
+    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    EXPECT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout(clock_.Now()));
-    EXPECT_EQ(WLAN_TU(req_->max_channel_time), scanner_.NextTimeout());
+    EXPECT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout());
+    EXPECT_EQ(WLAN_TU(req_->max_channel_time), scanner_.timer().deadline());
 }
 
 TEST_F(ScannerTest, Timeout_MaxChannelTime) {
@@ -124,10 +125,10 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
     ASSERT_EQ(MX_OK, Start());
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    ASSERT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout(clock_.Now()));
+    ASSERT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout());
 
     clock_.Set(WLAN_TU(req_->max_channel_time));
-    EXPECT_EQ(Scanner::Status::kFinishScan, scanner_.HandleTimeout(clock_.Now()));
+    EXPECT_EQ(Scanner::Status::kFinishScan, scanner_.HandleTimeout());
 }
 
 TEST_F(ScannerTest, Timeout_NextChannel) {
@@ -140,12 +141,12 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     ASSERT_EQ(1u, scanner_.ScanChannel().channel_num);
 
     clock_.Set(WLAN_TU(req_->min_channel_time));
-    ASSERT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout(clock_.Now()));
+    ASSERT_EQ(Scanner::Status::kContinueScan, scanner_.HandleTimeout());
 
     clock_.Set(WLAN_TU(req_->max_channel_time));
-    EXPECT_EQ(Scanner::Status::kNextChannel, scanner_.HandleTimeout(clock_.Now()));
+    EXPECT_EQ(Scanner::Status::kNextChannel, scanner_.HandleTimeout());
     EXPECT_EQ(2u, scanner_.ScanChannel().channel_num);
-    EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.NextTimeout());
+    EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 }
 
 TEST_F(ScannerTest, Timeout_ProbeDelay) {
@@ -155,11 +156,11 @@ TEST_F(ScannerTest, Timeout_ProbeDelay) {
     req_->max_channel_time = 10;
 
     ASSERT_EQ(MX_OK, Start());
-    EXPECT_EQ(WLAN_TU(req_->probe_delay), scanner_.NextTimeout());
+    EXPECT_EQ(WLAN_TU(req_->probe_delay), scanner_.timer().deadline());
 
     clock_.Set(WLAN_TU(req_->probe_delay));
-    EXPECT_EQ(Scanner::Status::kStartActiveScan, scanner_.HandleTimeout(clock_.Now()));
-    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.NextTimeout());
+    EXPECT_EQ(Scanner::Status::kStartActiveScan, scanner_.HandleTimeout());
+    EXPECT_EQ(WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 }
 
 TEST_F(ScannerTest, ScanResponse) {
@@ -180,7 +181,7 @@ TEST_F(ScannerTest, ScanResponse) {
 
     EXPECT_EQ(Scanner::Status::kContinueScan, scanner_.HandleBeacon(&p));
     clock_.Set(1);
-    EXPECT_EQ(Scanner::Status::kFinishScan, scanner_.HandleTimeout(clock_.Now()));
+    EXPECT_EQ(Scanner::Status::kFinishScan, scanner_.HandleTimeout());
 
     auto resp = scanner_.ScanResults();
     ASSERT_NE(nullptr, resp.get());

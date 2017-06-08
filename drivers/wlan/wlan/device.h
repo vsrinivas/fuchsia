@@ -25,12 +25,22 @@ typedef struct mx_port_packet mx_port_packet_t;
 
 namespace wlan {
 
+class Timer;
+
+class DeviceInterface {
+  public:
+    virtual ~DeviceInterface() {}
+
+    virtual mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) = 0;
+};
+
 class Device;
 using WlanBaseDevice = ddk::Device<Device, ddk::Unbindable, ddk::Ioctlable>;
 
 class Device : public WlanBaseDevice,
                public ddk::EthmacProtocol<Device>,
-               public ddk::WlanmacIfc<Device> {
+               public ddk::WlanmacIfc<Device>,
+               public DeviceInterface {
   public:
     Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto);
     ~Device();
@@ -49,6 +59,8 @@ class Device : public WlanBaseDevice,
     mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     void EthmacSend(uint32_t options, void* data, size_t length);
+
+    mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) override final;
 
   private:
     enum class DevicePacket : uint64_t {

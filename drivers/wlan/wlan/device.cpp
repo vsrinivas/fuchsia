@@ -4,6 +4,7 @@
 
 #include "device.h"
 #include "logging.h"
+#include "timer.h"
 #include "wlan.h"
 
 #include <magenta/assert.h>
@@ -25,7 +26,7 @@ namespace wlan {
 
 Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
   : WlanBaseDevice(device, "wlan"),
-    mlme_(ddk::WlanmacProtocolProxy(wlanmac_proto)),
+    mlme_(this, ddk::WlanmacProtocolProxy(wlanmac_proto)),
     buffer_alloc_(kNumSlabs, true) {
     debugfn();
 }
@@ -41,16 +42,18 @@ Device::~Device() {
 mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     debugfn();
 
-    mx_status_t status = mlme_.Init();
-    if (status != MX_OK) {
-        warnf("could not initialize mlme: %d\n", status);
-    }
-
-    status = mx::port::create(MX_PORT_OPT_V2, &port_);
+    mx_status_t status = mx::port::create(MX_PORT_OPT_V2, &port_);
     if (status != MX_OK) {
         errorf("could not create port: %d\n", status);
         return status;
     }
+
+    status = mlme_.Init();
+    if (status != MX_OK) {
+        errorf("could not initialize mlme: %d\n", status);
+        return status;
+    }
+
     work_thread_ = std::thread(&Device::MainLoop, this);
 
     status = DdkAdd();
@@ -188,20 +191,35 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
     }
 }
 
+mx_status_t Device::GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) {
+    MX_DEBUG_ASSERT(timer != nullptr);
+    MX_DEBUG_ASSERT(timer->get() == nullptr);
+    mx::timer t;
+    mx_status_t status = mx::timer::create(0u, MX_CLOCK_MONOTONIC, &t);
+    if (status != MX_OK) {
+        return status;
+    }
+
+    status = t.wait_async(port_, id, MX_TIMER_SIGNALED, MX_WAIT_ASYNC_REPEATING);
+    if (status != MX_OK) {
+        return status;
+    }
+    timer->reset(new SystemTimer(id, std::move(t)));
+
+    return MX_OK;
+}
+
 void Device::MainLoop() {
     infof("starting MainLoop\n");
     mx_port_packet_t pkt;
-    mx_time_t timeout = mx::deadline_after(MX_SEC(5));
     bool running = true;
     while (running) {
+        mx_time_t timeout = mx::deadline_after(MX_SEC(30));
         mx_status_t status = port_.wait(timeout, &pkt, 0);
         std::lock_guard<std::mutex> lock(lock_);
         if (status == MX_ERR_TIMED_OUT) {
-            mx_status_t status = mlme_.HandleTimeout(&timeout);
-            if (status != MX_OK) {
-                errorf("could not handle timeout err=%d\n", status);
-                // TODO: decide whether to continue
-            }
+            // TODO(tkilbourn): more watchdog checks here?
+            MX_DEBUG_ASSERT(running);
             continue;
         } else if (status != MX_OK) {
             if (status == MX_ERR_BAD_HANDLE) {
@@ -216,17 +234,17 @@ void Device::MainLoop() {
         case MX_PKT_TYPE_USER:
             MX_DEBUG_ASSERT(ToPortKeyType(pkt.key) == PortKeyType::kDevice);
             switch (ToPortKeyId(pkt.key)) {
-            case to_u64(DevicePacket::kShutdown):
+            case to_enum_type(DevicePacket::kShutdown):
                 running = false;
                 continue;
-            case to_u64(DevicePacket::kPacketQueued): {
+            case to_enum_type(DevicePacket::kPacketQueued): {
                 mxtl::unique_ptr<Packet> packet;
                 {
                     std::lock_guard<std::mutex> lock(packet_queue_lock_);
                     packet = packet_queue_.pop_back();
                     MX_DEBUG_ASSERT(packet != nullptr);
                 }
-                mx_status_t status = mlme_.HandlePacket(packet.get(), &timeout);
+                mx_status_t status = mlme_.HandlePacket(packet.get());
                 if (status != MX_OK) {
                     errorf("could not handle packet err=%d\n", status);
                 }
@@ -239,6 +257,9 @@ void Device::MainLoop() {
             break;
         case MX_PKT_TYPE_SIGNAL_REP:
             switch (ToPortKeyType(pkt.key)) {
+            case PortKeyType::kMlme:
+                mlme_.HandlePortPacket(pkt.key);
+                break;
             case PortKeyType::kService:
                 ProcessChannelPacketLocked(pkt);
                 break;
@@ -313,7 +334,7 @@ mx_status_t Device::RegisterChannelWaitLocked() {
 mx_status_t Device::QueueDevicePortPacket(DevicePacket id) {
     debugfn();
     mx_port_packet_t pkt = {};
-    pkt.key = ToPortKey(PortKeyType::kDevice, to_u64(id));
+    pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = MX_PKT_TYPE_USER;
     return port_.queue(&pkt, 0);
 }
