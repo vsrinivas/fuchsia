@@ -23,6 +23,7 @@ class FakeFirebase : public firebase::Firebase {
                    const std::function<void(firebase::Status status,
                                             const rapidjson::Value& value)>&
                        callback) override {
+    get_query_params.push_back(query_params);
     rapidjson::Document document;
     if (values.count(key)) {
       document.Parse(values[key]);
@@ -37,6 +38,7 @@ class FakeFirebase : public firebase::Firebase {
       const std::vector<std::string>& query_params,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
+    put_query_params.push_back(query_params);
     rapidjson::Document document;
     document.Parse(data.c_str(), data.size());
     FTL_DCHECK(!document.HasParseError());
@@ -71,6 +73,8 @@ class FakeFirebase : public firebase::Firebase {
 
   firebase::Status returned_status = firebase::Status::OK;
   std::unordered_map<std::string, std::string> values;
+  std::vector<std::vector<std::string>> get_query_params;
+  std::vector<std::vector<std::string>> put_query_params;
 };
 
 class LocalVersionCheckerTest : public ::testing::Test {
@@ -95,7 +99,7 @@ class LocalVersionCheckerTest : public ::testing::Test {
 
     auto result = LocalVersionChecker::Status::NETWORK_ERROR;
     checker.CheckCloudVersion(
-        firebase.get(), local_version_file,
+        auth_token, firebase.get(), local_version_file,
         [&result](auto found_result) { result = found_result; });
     return result;
   }
@@ -109,6 +113,7 @@ class LocalVersionCheckerTest : public ::testing::Test {
   std::unique_ptr<files::ScopedTempDir> tmp_dir;
   std::string local_version_file;
   std::unique_ptr<FakeFirebase> firebase;
+  std::string auth_token;
 };
 
 TEST_F(LocalVersionCheckerTest, NoLocalVersionNoRemoteVersion) {
@@ -158,6 +163,16 @@ TEST_F(LocalVersionCheckerTest, IoErrorOnGet) {
 
   firebase->returned_status = firebase::Status::NETWORK_ERROR;
   EXPECT_EQ(LocalVersionChecker::Status::NETWORK_ERROR, CheckCloudVersion());
+}
+
+TEST_F(LocalVersionCheckerTest, Auth) {
+  auth_token = "some-token";
+  ASSERT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
+  EXPECT_EQ(LocalVersionChecker::Status::OK, CheckCloudVersion());
+  EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
+            firebase->get_query_params);
+  EXPECT_EQ((std::vector<std::vector<std::string>>{{"auth=some-token"}}),
+            firebase->put_query_params);
 }
 
 }  // namespace

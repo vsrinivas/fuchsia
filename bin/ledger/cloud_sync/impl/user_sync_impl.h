@@ -11,6 +11,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/local_version_checker.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -56,6 +57,9 @@ class UserSyncImpl : public UserSync {
   bool upload_enabled_ = false;
   std::unique_ptr<firebase::Firebase> user_firebase_;
   std::unordered_set<LedgerSyncImpl*> active_ledger_syncs_;
+
+  // Pending auth token requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_token_requests_;
 
   // This must be the last member of this class.
   ftl::WeakPtrFactory<UserSyncImpl> weak_ptr_factory_;

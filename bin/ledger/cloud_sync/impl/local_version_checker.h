@@ -24,7 +24,8 @@ class LocalVersionChecker {
   LocalVersionChecker();
   ~LocalVersionChecker();
 
-  void CheckCloudVersion(firebase::Firebase* user_firebase,
+  void CheckCloudVersion(std::string auth_token,
+                         firebase::Firebase* user_firebase,
                          std::string local_version_path,
                          std::function<void(Status)> callback);
 

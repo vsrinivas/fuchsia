@@ -43,40 +43,46 @@ void UserSyncImpl::Start() {
 
 void UserSyncImpl::CheckCloudVersion() {
   FTL_DCHECK(user_firebase_);
+  FTL_DCHECK(user_config_.auth_provider);
 
-  local_version_checker_.CheckCloudVersion(
-      user_firebase_.get(), GetLocalVersionPath(),
-      [this](LocalVersionChecker::Status status) {
-        if (status == LocalVersionChecker::Status::OK) {
-          EnableUpload();
-          return;
-        }
+  auto request = user_config_.auth_provider->GetFirebaseToken(
+      [this](std::string auth_token) {
+        local_version_checker_.CheckCloudVersion(
+            std::move(auth_token), user_firebase_.get(), GetLocalVersionPath(),
+            [this](LocalVersionChecker::Status status) {
+              if (status == LocalVersionChecker::Status::OK) {
+                EnableUpload();
+                return;
+              }
 
-        if (status == LocalVersionChecker::Status::NETWORK_ERROR) {
-          // Retry after some backoff time.
-          environment_->main_runner()->PostDelayedTask(
-              [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-                if (weak_this) {
-                  weak_this->CheckCloudVersion();
-                }
-              },
-              backoff_->GetNext());
-          return;
-        }
+              if (status == LocalVersionChecker::Status::NETWORK_ERROR) {
+                // Retry after some backoff time.
+                environment_->main_runner()->PostDelayedTask(
+                    [weak_this = weak_ptr_factory_.GetWeakPtr()] {
+                      if (weak_this) {
+                        weak_this->CheckCloudVersion();
+                      }
+                    },
+                    backoff_->GetNext());
+                return;
+              }
 
-        if (status == LocalVersionChecker::Status::DISK_ERROR) {
-          FTL_LOG(ERROR) << "Unable to access local version file: "
-                           << GetLocalVersionPath()
-                           << ". Sync upload will be disabled.";
-          return;
-        }
+              if (status == LocalVersionChecker::Status::DISK_ERROR) {
+                FTL_LOG(ERROR) << "Unable to access local version file: "
+                               << GetLocalVersionPath()
+                               << ". Sync upload will be disabled.";
+                return;
+              }
 
-        FTL_DCHECK(status == LocalVersionChecker::Status::INCOMPATIBLE);
-        FTL_LOG(FATAL) << "Version on the cloud is incompatible with local "
-                          "version. Very probably the cloud instance has been "
-                          "cleaned up and the local state is stale. Clean the "
-                          "local state before restarting the Ledger.";
+              FTL_DCHECK(status == LocalVersionChecker::Status::INCOMPATIBLE);
+              FTL_LOG(FATAL)
+                  << "Version on the cloud is incompatible with local "
+                     "version. Very probably the cloud instance has been "
+                     "cleaned up and the local state is stale. Clean the "
+                     "local state before restarting the Ledger.";
+            });
       });
+  auth_token_requests_.emplace(request);
 }
 
 void UserSyncImpl::EnableUpload() {

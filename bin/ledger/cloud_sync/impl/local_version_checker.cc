@@ -25,9 +25,15 @@ LocalVersionChecker::LocalVersionChecker() {}
 LocalVersionChecker::~LocalVersionChecker() {}
 
 void LocalVersionChecker::CheckCloudVersion(
+    std::string auth_token,
     firebase::Firebase* user_firebase,
     std::string local_version_path,
     std::function<void(Status)> callback) {
+  std::vector<std::string> query_params;
+  if (!auth_token.empty()) {
+    query_params.push_back("auth=" + auth_token);
+  }
+
   if (files::IsFile(local_version_path)) {
     // A local version exists. Check if it is compatible with the cloud version.
     std::string local_version;
@@ -39,7 +45,7 @@ void LocalVersionChecker::CheckCloudVersion(
     }
 
     user_firebase->Get(
-        GetMetaDataKey(local_version), {},
+        GetMetaDataKey(local_version), query_params,
         [callback = std::move(callback)](firebase::Status status,
                                          const rapidjson::Value& value) {
           if (status != firebase::Status::OK) {
@@ -66,7 +72,7 @@ void LocalVersionChecker::CheckCloudVersion(
   std::string local_version =
       convert::ToHex(ftl::StringView(local_version_array, kDeviceIdSize));
   std::string firebase_key = GetMetaDataKey(local_version);
-  user_firebase->Put(firebase_key, {}, "true", [
+  user_firebase->Put(firebase_key, query_params, "true", [
     local_version_path = std::move(local_version_path),
     local_version = std::move(local_version), callback = std::move(callback)
   ](firebase::Status status) {
