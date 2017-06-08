@@ -17,6 +17,65 @@ static bool	os_overcommits;
 
 /******************************************************************************/
 
+#ifdef __Fuchsia__
+
+static void* fuchsia_pages_alloc(void* addr, size_t size, bool commit) {
+	void* ret;
+	/*
+	 * We don't use MAP_FIXED here, because it can cause the *replacement*
+	 * of existing mappings, and we only want to create new mappings.
+	 */
+	{
+		int prot = commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
+
+		ret = mmap(addr, size, prot, mmap_flags, -1, 0);
+	}
+	assert(ret != NULL);
+
+	if (ret == MAP_FAILED)
+		ret = NULL;
+	else if (addr != NULL && ret != addr) {
+		/*
+		 * We succeeded in mapping memory, but not in the right place.
+		 */
+		pages_unmap(ret, size);
+		ret = NULL;
+	}
+	return ret;
+}
+
+static int fuchsia_pages_free(void* addr, size_t size) {
+	return munmap(addr, size);
+}
+
+static void* fuchsia_pages_trim(void* ret, void* addr, size_t size, size_t alloc_size, size_t leadsize) {
+	size_t trailsize = alloc_size - leadsize - size;
+
+	if (leadsize != 0)
+		pages_unmap(addr, leadsize);
+	if (trailsize != 0)
+		pages_unmap((void *)((uintptr_t)ret + size), trailsize);
+	return (ret);
+}
+
+static bool fuchsia_pages_commit(void* addr, size_t size, bool commit) {
+	int prot = commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
+	void *result = mmap(addr, size, prot, mmap_flags | MAP_FIXED, -1, 0);
+	if (result == MAP_FAILED)
+		return (true);
+	if (result != addr) {
+		/*
+		 * We succeeded in mapping memory, but not in the right
+		 * place.
+		 */
+		pages_unmap(result, size);
+		return (true);
+	}
+	return (false);
+}
+
+#endif
+
 void *
 pages_map(void *addr, size_t size, bool *commit)
 {
@@ -34,6 +93,8 @@ pages_map(void *addr, size_t size, bool *commit)
 	 */
 	ret = VirtualAlloc(addr, size, MEM_RESERVE | (*commit ? MEM_COMMIT : 0),
 	    PAGE_READWRITE);
+#elif __Fuchsia__
+	ret = fuchsia_pages_alloc(addr, size, *commit);
 #else
 	/*
 	 * We don't use MAP_FIXED here, because it can cause the *replacement*
@@ -66,6 +127,8 @@ pages_unmap(void *addr, size_t size)
 {
 #ifdef _WIN32
 	if (VirtualFree(addr, 0, MEM_RELEASE) == 0)
+#elif __Fuchsia__
+	if (fuchsia_pages_free(addr, size) == -1)
 #else
 	if (munmap(addr, size) == -1)
 #endif
@@ -76,6 +139,8 @@ pages_unmap(void *addr, size_t size)
 		malloc_printf("<jemalloc>: Error in "
 #ifdef _WIN32
 		              "VirtualFree"
+#elif __Fuchsia__
+		              "unmapping jemalloc heap pages"
 #else
 		              "munmap"
 #endif
@@ -104,6 +169,8 @@ pages_trim(void *addr, size_t alloc_size, size_t leadsize, size_t size,
 			pages_unmap(new_addr, size);
 		return (NULL);
 	}
+#elif __Fuchsia__
+	return fuchsia_pages_trim(ret, addr, size, alloc_size, leadsize);
 #else
 	{
 		size_t trailsize = alloc_size - leadsize - size;
@@ -126,6 +193,8 @@ pages_commit_impl(void *addr, size_t size, bool commit)
 #ifdef _WIN32
 	return (commit ? (addr != VirtualAlloc(addr, size, MEM_COMMIT,
 	    PAGE_READWRITE)) : (!VirtualFree(addr, size, MEM_DECOMMIT)));
+#elif __Fuchsia__
+	return fuchsia_pages_commit(addr, size, commit);
 #else
 	{
 		int prot = commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
