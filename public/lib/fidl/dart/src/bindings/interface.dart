@@ -4,8 +4,6 @@
 
 part of bindings;
 
-typedef void VoidCallback();
-
 /// A channel over which messages from interface T can be sent.
 ///
 /// An interface handle holds a [channel] whose peer expects to receive messages
@@ -236,6 +234,7 @@ abstract class Binding<T> {
   }
 
   /// Called when the channel underneath closes.
+  typedef void VoidCallback();
   VoidCallback onConnectionError = null;
 
   /// The implementation of [T] bound using this object.
@@ -410,6 +409,7 @@ class ProxyController<T> {
   }
 
   /// Called when the channel underneath closes.
+  typedef void VoidCallback();
   VoidCallback onConnectionError = null;
 
   /// Called whenever this object receives a response on a bound channel.
