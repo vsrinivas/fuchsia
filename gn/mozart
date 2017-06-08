@@ -37,6 +37,10 @@
             "bootfs_path": "apps/hello_scene_manager"
         },
         {
+            "binary": "vkcube_mozart",
+            "bootfs_path": "apps/vkcube_mozart"
+        },
+        {
             "binary": "hello_scene_manager_service",
             "bootfs_path": "apps/hello_scene_manager_service"
         },
