@@ -17,4 +17,4 @@ bool FromHexString(ftl::StringView hex_string, std::string* result);
 
 }  // namespace tool
 
-#endif  // APPS_LEDGER_SRC_TOOL_CLIENT_H_
+#endif  // APPS_LEDGER_SRC_TOOL_CONVERT_H_
