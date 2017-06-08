@@ -275,8 +275,8 @@ mx_status_t Tree::VerifyRoot(const void* data, size_t root_len,
     }
     const uint8_t* in = static_cast<const uint8_t*>(data);
     Digest actual;
-    // We zero nodes if no data, exactly one node otherwise.
-    DigestInit(&actual, level, (root_len == 0 ? 0 : kNodeSize));
+    // We have up to one node if at tree bottom, exactly one node otherwise.
+    DigestInit(&actual, level, (level == 0 ? root_len : kNodeSize));
     DigestUpdate(&actual, in, 0, root_len);
     DigestFinal(&actual, root_len);
     return (actual == expected ? NO_ERROR : ERR_IO_DATA_INTEGRITY);
