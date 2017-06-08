@@ -290,6 +290,51 @@ Additional errors:
 *   **ERR_BAD_STATE**: If the target process is not currently running, or if
     its address space has been destroyed.
 
+### MX_INFO_KMEM_STATS
+
+*handle* type: **Resource** (Specifically, the root resource)
+
+*buffer* type: **mx_info_kmem_stats_t[1]**
+
+```
+// Information about kernel memory usage.
+// Can be expensive to gather.
+typedef struct mx_info_kmem_stats {
+    // The total amount of physical memory available to the system.
+    size_t total_bytes;
+
+    // The amount of unallocated memory.
+    size_t free_bytes;
+
+    // The amount of memory reserved by and mapped into the kernel for reasons
+    // not covered by other fields in this struct. Typically for readonly data
+    // like the ram disk and kernel image, and for early-boot dynamic memory.
+    size_t wired_bytes;
+
+    // The amount of memory allocated to the kernel heap.
+    size_t total_heap_bytes;
+
+    // The portion of |total_heap_bytes| that is not in use.
+    size_t free_heap_bytes;
+
+    // The amount of memory committed to VMOs, both kernel and user.
+    // A superset of all userspace memory.
+    // Does not include certain VMOs that fall under |wired_bytes|.
+    //
+    // TODO(dbort): Break this into at least two pieces: userspace VMOs that
+    // have koids, and kernel VMOs that don't. Or maybe look at VMOs
+    // mapped into the kernel aspace vs. everything else.
+    size_t vmo_bytes;
+
+    // The amount of memory used for architecture-specific MMU metadata
+    // like page tables.
+    size_t mmu_overhead_bytes;
+
+    // Non-free memory that isn't accounted for in any other field.
+    size_t other_bytes;
+} mx_info_kmem_stats_t;
+```
+
 ## RETURN VALUE
 
 **mx_object_get_info**() returns **NO_ERROR** on success. In the event of

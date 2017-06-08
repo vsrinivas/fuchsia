@@ -29,6 +29,7 @@ typedef enum {
     MX_INFO_PROCESS_MAPS               = 13, // mx_info_maps_t[n]
     MX_INFO_THREAD_STATS               = 14, // mx_info_thread_stats_t[1]
     MX_INFO_CPU_STATS                  = 15, // mx_info_cpu_stats_t[n]
+    MX_INFO_KMEM_STATS                 = 16, // mx_info_kmem_stats_t[1]
     MX_INFO_LAST
 } mx_object_info_topic_t;
 
@@ -225,6 +226,43 @@ typedef struct mx_info_cpu_stats {
     uint64_t reschedule_ipis;
     uint64_t generic_ipis;
 } mx_info_cpu_stats_t;
+
+// Information about kernel memory usage.
+// Can be expensive to gather.
+typedef struct mx_info_kmem_stats {
+    // The total amount of physical memory available to the system.
+    uint64_t total_bytes;
+
+    // The amount of unallocated memory.
+    uint64_t free_bytes;
+
+    // The amount of memory reserved by and mapped into the kernel for reasons
+    // not covered by other fields in this struct. Typically for readonly data
+    // like the ram disk and kernel image, and for early-boot dynamic memory.
+    uint64_t wired_bytes;
+
+    // The amount of memory allocated to the kernel heap.
+    uint64_t total_heap_bytes;
+
+    // The portion of |total_heap_bytes| that is not in use.
+    uint64_t free_heap_bytes;
+
+    // The amount of memory committed to VMOs, both kernel and user.
+    // A superset of all userspace memory.
+    // Does not include certain VMOs that fall under |wired_bytes|.
+    //
+    // TODO(dbort): Break this into at least two pieces: userspace VMOs that
+    // have koids, and kernel VMOs that don't. Or maybe look at VMOs
+    // mapped into the kernel aspace vs. everything else.
+    uint64_t vmo_bytes;
+
+    // The amount of memory used for architecture-specific MMU metadata
+    // like page tables.
+    uint64_t mmu_overhead_bytes;
+
+    // Non-free memory that isn't accounted for in any other field.
+    uint64_t other_bytes;
+} mx_info_kmem_stats_t;
 
 #define MX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 

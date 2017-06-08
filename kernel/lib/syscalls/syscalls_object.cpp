@@ -10,6 +10,8 @@
 
 #include <kernel/mp.h>
 #include <kernel/stats.h>
+#include <kernel/vm/pmm.h>
+#include <lib/heap.h>
 #include <platform.h>
 
 #include <magenta/handle_owner.h>
@@ -479,6 +481,71 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return ERR_INVALID_ARGS;
             if (_avail && (_avail.copy_to_user(num_cpus) != NO_ERROR))
                 return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
+        case MX_INFO_KMEM_STATS: {
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ResourceDispatcher> resource;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
+            if (error < 0)
+                return error;
+
+            // TODO: check that this is the root resource
+            // TODO: figure out a better handle to hang this off to and push this copy code into
+            // that dispatcher.
+
+            size_t actual = (buffer_size < sizeof(mx_info_kmem_stats_t)) ? 0 : 1;
+            size_t avail = 1;
+
+            if (actual > 0) {
+                size_t state_count[_VM_PAGE_STATE_COUNT] = {};
+                pmm_count_total_states(state_count);
+
+                size_t total = 0;
+                for (int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {
+                    total += state_count[i];
+                }
+
+                size_t unused_size = 0;
+                size_t free_heap_bytes = 0;
+                heap_get_info(&unused_size, &free_heap_bytes);
+
+                // Note that this intentionally uses uint64_t instead of
+                // size_t in case we ever have a 32-bit userspace but more
+                // than 4GB physical memory.
+                mx_info_kmem_stats_t stats = {};
+                stats.total_bytes = total * PAGE_SIZE;
+                size_t other_bytes = stats.total_bytes;
+
+                stats.free_bytes = state_count[VM_PAGE_STATE_FREE] * PAGE_SIZE;
+                other_bytes -= stats.free_bytes;
+
+                stats.wired_bytes = state_count[VM_PAGE_STATE_WIRED] * PAGE_SIZE;
+                other_bytes -= stats.wired_bytes;
+
+                stats.total_heap_bytes = state_count[VM_PAGE_STATE_HEAP] * PAGE_SIZE;
+                other_bytes -= stats.total_heap_bytes;
+                stats.free_heap_bytes = free_heap_bytes;
+
+                stats.vmo_bytes = state_count[VM_PAGE_STATE_OBJECT] * PAGE_SIZE;
+                other_bytes -= stats.vmo_bytes;
+
+                stats.mmu_overhead_bytes = state_count[VM_PAGE_STATE_MMU] * PAGE_SIZE;
+                other_bytes -= stats.mmu_overhead_bytes;
+
+                // All other VM_PAGE_STATE_* counts get lumped into other_bytes.
+                stats.other_bytes = other_bytes;
+
+                if (_buffer.copy_array_to_user(&stats, sizeof(stats)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+            }
+
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
             return NO_ERROR;
         }
         default:
