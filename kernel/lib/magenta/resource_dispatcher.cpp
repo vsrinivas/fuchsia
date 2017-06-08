@@ -331,7 +331,7 @@ void ResourceDispatcher::GetSelf(mx_rrec_self_t* self) {
 
     AutoLock lock(&lock_);
     self->child_count = num_children_;
-    self->record_count = num_records_;
+    self->record_count = num_records_ + 1;
 }
 
 ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
@@ -365,7 +365,7 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
     {
         AutoLock lock(&lock_);
         rec.self.child_count = num_children_;
-        rec.self.record_count = num_records_;
+        rec.self.record_count = num_records_ + 1;
 
         // indicate how many we *could* return
         *available = num_records_ + 1;
