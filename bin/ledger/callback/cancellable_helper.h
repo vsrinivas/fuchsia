@@ -16,22 +16,33 @@ namespace callback {
 namespace internal {
 
 template <typename T>
-class LambdaPostRunWrapper {
+class WrappedCancellableCallback {
  public:
-  LambdaPostRunWrapper(T func, ftl::Closure callback)
-      : func_(std::move(func)), callback_(std::move(callback)) {
-    FTL_DCHECK(callback_);
+  WrappedCancellableCallback(T wrapped_callback,
+                             bool* is_done_ptr,
+                             ftl::Closure post_run)
+      : wrapped_callback_(std::move(wrapped_callback)),
+        post_run_(std::move(post_run)),
+        is_done_ptr_(is_done_ptr) {
+    FTL_DCHECK(post_run_);
   }
 
   template <typename... ArgType>
-  auto operator()(ArgType&&... args) const {
-    auto call_on_exit = ftl::MakeAutoCall(std::move(callback_));
-    return func_(std::forward<ArgType>(args)...);
+  void operator()(ArgType&&... args) const {
+    if (*is_done_ptr_) {
+      return;
+    }
+    *is_done_ptr_ = true;
+    auto call_on_exit = ftl::MakeAutoCall(std::move(post_run_));
+    return wrapped_callback_(std::forward<ArgType>(args)...);
   }
 
  private:
-  T func_;
-  ftl::Closure callback_;
+  T wrapped_callback_;
+  ftl::Closure post_run_;
+  // This is safe as long as a refptr to the CancellableImpl is held by
+  // |post_run_| callback.
+  bool* is_done_ptr_;
 };
 
 }  // namespace internal
@@ -39,10 +50,14 @@ class LambdaPostRunWrapper {
 // Implementation of |Cancellable| for services. A service that wants to return
 // a |Cancellable| can return an instance of |CancellableImpl|. It passes to its
 // factory method a callback that will be executed if the client calls the
-// |Cancel| method. It then wrap the client callback with the |WrapCallback|
-// method which will then handle the lifecycle of the |Cancellable| ensuring
-// that the |OnDone| callback is correctly called and that the |IsDone| method
-// is correct.
+// |Cancel| method.
+//
+// A client callback associated with the cancellable request can be wrapped
+// using WrapCallback(). This ensures that:
+//  - the cancellable becomes done automatically when the wrapped callback is
+//    called
+//  - if the wrapped callback is called after the request was cancelled, the
+//    client callback is not called
 class CancellableImpl final : public Cancellable {
  public:
   inline static ftl::RefPtr<CancellableImpl> Create(ftl::Closure on_cancel) {
@@ -50,14 +65,13 @@ class CancellableImpl final : public Cancellable {
   }
 
   template <typename T>
-  internal::LambdaPostRunWrapper<T> WrapCallback(T callback) {
-    return internal::LambdaPostRunWrapper<T>(
-        callback, [ref_ptr = ftl::RefPtr<CancellableImpl>(this)]() {
-          if (ref_ptr->is_done_)
-            return;
-          ref_ptr->is_done_ = true;
-          if (ref_ptr->on_done_)
+  internal::WrappedCancellableCallback<T> WrapCallback(T callback) {
+    return internal::WrappedCancellableCallback<T>(
+        callback, &is_done_, [ref_ptr = ftl::RefPtr<CancellableImpl>(this)] {
+          FTL_DCHECK(ref_ptr->is_done_);
+          if (ref_ptr->on_done_) {
             ref_ptr->on_done_();
+          }
         });
   }
 

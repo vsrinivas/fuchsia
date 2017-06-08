@@ -36,6 +36,19 @@ TEST(CancellableImpl, DoneInvalidateCancellable) {
   EXPECT_TRUE(cancellable->IsDone());
 }
 
+TEST(CancellableImpl, WrappedCallbackNotCalledAfterCancel) {
+  ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
+
+  bool called = false;
+  auto wrapped_callback =
+      cancellable->WrapCallback([&called] { called = true; });
+
+  cancellable->Cancel();
+  wrapped_callback();
+  EXPECT_TRUE(cancellable->IsDone());
+  EXPECT_FALSE(called);
+}
+
 TEST(CancellableImpl, DoneCallsOnDone) {
   ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
   bool is_done = false;
@@ -48,7 +61,7 @@ TEST(CancellableImpl, DoneCallsOnDone) {
   EXPECT_TRUE(is_done);
 }
 
-TEST(CancellableImpl, WrapWithVoidValue) {
+TEST(CancellableImpl, Wrap) {
   ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
 
   bool called = false;
@@ -56,60 +69,25 @@ TEST(CancellableImpl, WrapWithVoidValue) {
   EXPECT_TRUE(called);
 }
 
-TEST(CancellableImpl, WrapWithReturnValue) {
-  ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-
-  bool called = false;
-  EXPECT_EQ(1, cancellable->WrapCallback([&called] {
-    called = true;
-    return 1;
-  })());
-  EXPECT_TRUE(called);
-}
-
 TEST(CancellableImpl, DeleteWrappingCallbackInWrappedCallback) {
-  {
-    ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-    std::unique_ptr<ftl::Closure> callback;
-    callback = std::make_unique<ftl::Closure>(
-        cancellable->WrapCallback([&callback] { callback.reset(); }));
-    cancellable = nullptr;
-    (*callback)();
-    EXPECT_EQ(nullptr, callback);
-  }
-
-  {
-    ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-    std::unique_ptr<std::function<int()>> callback;
-    callback = std::make_unique<std::function<int()>>(
-        cancellable->WrapCallback([&callback] {
-          callback.reset();
-          return 0;
-        }));
-    cancellable = nullptr;
-    (*callback)();
-    EXPECT_EQ(nullptr, callback);
-  }
+  ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
+  std::unique_ptr<ftl::Closure> callback;
+  callback = std::make_unique<ftl::Closure>(
+      cancellable->WrapCallback([&callback] { callback.reset(); }));
+  cancellable = nullptr;
+  (*callback)();
+  EXPECT_EQ(nullptr, callback);
 }
 
 TEST(CancellableImpl, CancelInWrappedCallback) {
-  {
-    ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-    auto callback =
-        cancellable->WrapCallback([cancellable] { cancellable->Cancel(); });
-    cancellable = nullptr;
-    callback();
-  }
-
-  {
-    ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-    auto callback = cancellable->WrapCallback([cancellable] {
-      cancellable->Cancel();
-      return 0;
-    });
-    cancellable = nullptr;
-    callback();
-  }
+  bool on_cancel_called = false;
+  ftl::RefPtr<CancellableImpl> cancellable =
+      CancellableImpl::Create([&on_cancel_called] { on_cancel_called = true; });
+  auto callback =
+      cancellable->WrapCallback([cancellable] { cancellable->Cancel(); });
+  cancellable = nullptr;
+  callback();
+  EXPECT_FALSE(on_cancel_called);
 }
 
 }  //  namespace
