@@ -14,20 +14,6 @@
 
 namespace escher {
 
-Tessellation::Tessellation() {}
-Tessellation::~Tessellation() {}
-
-void Tessellation::SanityCheck() const {
-  FTL_DCHECK(!positions.empty());
-  FTL_DCHECK(normals.empty() || normals.size() == positions.size());
-  FTL_DCHECK(uvs.empty() || uvs.size() == positions.size());
-  FTL_DCHECK(!indices.empty());
-  size_t vertex_count = positions.size();
-  FTL_DCHECK(std::all_of(
-      indices.begin(), indices.end(),
-      [vertex_count](size_t index) { return index < vertex_count; }));
-}
-
 struct VertexAttributePointers {
   vec2* pos = nullptr;
   vec2* uv = nullptr;
