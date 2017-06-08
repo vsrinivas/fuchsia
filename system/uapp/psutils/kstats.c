@@ -21,6 +21,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "resources.h"
+
 // TODO: dynamically compute this based on what it returns
 #define MAX_CPUS 32
 
@@ -216,24 +218,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int fd = open("/dev/misc/sysinfo", O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "cannot open sysinfo: %d\n", errno);
-        return ERR_NOT_FOUND;
-    }
-
     mx_handle_t root_resource;
-    size_t n = ioctl_sysinfo_get_root_resource(fd, &root_resource);
-    close(fd);
-    if (n != sizeof(root_resource)) {
-        fprintf(stderr, "cannot obtain root resource\n");
-        return ERR_NOT_FOUND;
+    mx_status_t ret = get_root_resource(&root_resource);
+    if (ret != NO_ERROR) {
+        return ret;
     }
 
-    // set stdin to non blocking
+    // set stdin to non blocking so we can intercept ctrl-c.
+    // TODO: remove once ctrl-c works in the shell
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
-    mx_status_t ret = NO_ERROR;
     for (;;) {
         mx_time_t next_deadline = mx_deadline_after(delay);
 
