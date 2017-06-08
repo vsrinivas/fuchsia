@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 )
 
+const serverBase = "amber-files"
+
 var (
 	usage  = "usage: amber-serve -d=<directory_path>"
 	srcDir = flag.String("d", os.Getenv("FUCHSIA_BUILD_DIR"), "The path to the file repository to serve.")
@@ -35,7 +37,7 @@ func main() {
 		return
 	}
 
-	repoDir := filepath.Join(*srcDir, "amber-files", "repository")
+	repoDir := filepath.Join(*srcDir, serverBase, "repository")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%q\n", r.RequestURI)

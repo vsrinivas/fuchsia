@@ -24,3 +24,8 @@ copy("amber-keys") {
   sources = [ "keys/root_sig.json" ]
   outputs = [ "$root_out_dir/amber-keys" ]
 }
+
+copy("amber-srv-keys") {
+  sources = [ "keys/root.json","keys/snapshot.json","keys/targets.json","keys/timestamp.json", "keys/root_manifest.json" ]
+  outputs = [ "$root_out_dir/{{source_file_part}}" ]
+}
