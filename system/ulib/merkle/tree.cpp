@@ -51,7 +51,7 @@ void DigestInit(Digest* digest, uint64_t locality, size_t length) {
 // bytes or up to the next node boundary, as determined from |offset|.  Returns
 // the number of bytes hashed.
 size_t DigestUpdate(Digest* digest, const uint8_t* in, size_t offset,
-                      size_t length) {
+                    size_t length) {
     MX_DEBUG_ASSERT(digest);
     // Check if length crosses a node boundary
     length = mxtl::min(length, Tree::kNodeSize - (offset % Tree::kNodeSize));
@@ -267,8 +267,8 @@ mx_status_t Tree::Verify(const void* data, size_t data_len, const void* tree,
     return VerifyRoot(data, root_len, level, root);
 }
 
-mx_status_t Tree::VerifyRoot(const void* data, size_t root_len,
-                             uint64_t level, const Digest& expected) {
+mx_status_t Tree::VerifyRoot(const void* data, size_t root_len, uint64_t level,
+                             const Digest& expected) {
     // Must have data if length isn't 0.  Must have either zero or one node.
     if ((!data && root_len != 0) || root_len > kNodeSize) {
         return ERR_INVALID_ARGS;
@@ -283,8 +283,8 @@ mx_status_t Tree::VerifyRoot(const void* data, size_t root_len,
 }
 
 mx_status_t Tree::VerifyLevel(const void* data, size_t data_len,
-                              const void* tree, size_t offset,
-                              size_t length, uint64_t level) {
+                              const void* tree, size_t offset, size_t length,
+                              uint64_t level) {
     MX_DEBUG_ASSERT(offset + length >= offset);
     // Must have more than one node of data and digests to check against.
     if (!data || data_len <= kNodeSize || !tree) {
@@ -294,9 +294,10 @@ mx_status_t Tree::VerifyLevel(const void* data, size_t data_len,
     if (offset + length > data_len) {
         return ERR_OUT_OF_RANGE;
     }
-    // Align parameters to node boundaries.
+    // Align parameters to node boundaries, but don't exceed data_len
     offset -= offset % kNodeSize;
-    length = mxtl::roundup(offset + length, kNodeSize) - offset;
+    size_t finish = mxtl::roundup(offset + length, kNodeSize);
+    length = mxtl::min(finish, data_len) - offset;
     const uint8_t* in = static_cast<const uint8_t*>(data) + offset;
     // The digests are in the next level up.
     Digest actual;
@@ -394,9 +395,8 @@ mx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree,
 }
 
 mx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree,
-                               size_t tree_len, size_t offset,
-                               size_t length, const void* root,
-                               size_t root_len) {
+                               size_t tree_len, size_t offset, size_t length,
+                               const void* root, size_t root_len) {
     // Must have a complete root digest.
     if (root_len < merkle::Digest::kLength) {
         return ERR_INVALID_ARGS;
