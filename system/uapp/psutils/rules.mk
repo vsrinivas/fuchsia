@@ -110,6 +110,7 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c
 
-MODULE_STATIC_LIBS :=
+MODULE_STATIC_LIBS := \
+    system/ulib/pretty
 
 include make/module.mk

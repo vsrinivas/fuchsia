@@ -235,3 +235,36 @@ None of the process-dumping tools account for:
 **TODO**(dbort): Add commands/APIs to dump and examine kernel memory usage, and
 document them here.
 ***
+
+### Dump system memory arenas and kernel heap usage
+
+Running `kstats -m` will continuously dump information about physical memory
+usage and availability. **NOTE**: Running `kstats` without the `-m` switch
+will dump CPU stats instead.
+
+```
+$ kstats -m
+--- 2017-06-07T05:51:08.021Z ---
+     total       free       VMOs      kheap      kfree      wired        mmu
+   2046.9M    1943.8M      20.7M       1.1M       0.9M      72.6M       7.8M
+
+--- 2017-06-07T05:51:09.021Z ---
+...
+```
+
+Fields:
+
+-   `2017-06-07T05:51:08.021Z`: Timestamp of when the stats were collected, as
+    an ISO 8601 string.
+-   `total`: The total amount of physical memory available to the system.
+-   `free`: The amount of unallocated memory.
+-   `VMOs`: The amount of memory committed to VMOs, both kernel and user. A
+    superset of all userspace memory. Does not include certain VMOs that fall
+    under `wired`.
+-   `kheap`: The amount of kernel heap memory marked as allocated.
+-   `kfree`: The amount of kernel heap memory marked as free.
+-   `wired`: The amount of memory reserved by and mapped into the kernel for
+    reasons not covered by other fields in this struct. Typically for readonly
+    data like the ram disk and kernel image, and for early-boot dynamic memory.
+-   `mmu`: The amount of memory used for architecture-specific MMU metadata like
+    page tables.

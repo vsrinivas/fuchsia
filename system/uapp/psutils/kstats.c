@@ -7,6 +7,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
+#include <pretty/sizes.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -16,15 +17,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 // TODO: dynamically compute this based on what it returns
 #define MAX_CPUS 32
 
-static bool cpu_stats = true;
-static mx_time_t delay = MX_SEC(1);
-
-static mx_status_t cpustats(mx_handle_t root_resource) {
+static mx_status_t cpustats(mx_handle_t root_resource, mx_time_t delay) {
     static mx_time_t last_idle_time[MAX_CPUS];
     static mx_info_cpu_stats_t old_stats[MAX_CPUS];
     mx_info_cpu_stats_t stats[MAX_CPUS];
@@ -87,10 +86,69 @@ static mx_status_t cpustats(mx_handle_t root_resource) {
     return NO_ERROR;
 }
 
+static void print_mem_stat(const char* label, size_t bytes) {
+    char buf[MAX_FORMAT_SIZE_LEN];
+    const char unit = 'M';
+    printf("%15s: %8sB / %10zuB\n",
+           label,
+           format_size_fixed(buf, sizeof(buf), bytes, unit),
+           bytes);
+}
+
+static mx_status_t memstats(mx_handle_t root_resource) {
+    mx_info_kmem_stats_t stats;
+    mx_status_t err = mx_object_get_info(
+        root_resource, MX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
+    if (err != NO_ERROR) {
+        fprintf(stderr, "MX_INFO_KMEM_STATS returns %d (%s)\n",
+                err, mx_status_get_string(err));
+        return err;
+    }
+
+    const int width = 80 / 8 - 1;
+    printf("%*s %*s %*s %*s %*s %*s %*s %*s\n",
+           width, "total",
+           width, "free",
+           width, "VMOs",
+           width, "kheap",
+           width, "kfree",
+           width, "wired",
+           width, "mmu",
+           width, "other");
+
+    const size_t fields[] = {
+        stats.total_bytes,
+        stats.free_bytes,
+        stats.wired_bytes,
+        stats.total_heap_bytes - stats.free_heap_bytes,
+        stats.free_heap_bytes,
+        stats.vmo_bytes,
+        stats.mmu_overhead_bytes,
+        stats.other_bytes,
+    };
+    char line[128] = {};
+    for (unsigned int i = 0; i < countof(fields); i++) {
+        const char unit = 'M';
+        char buf[MAX_FORMAT_SIZE_LEN];
+        format_size_fixed(buf, sizeof(buf), fields[i], unit);
+
+        char stage[MAX_FORMAT_SIZE_LEN + 8];
+        snprintf(stage, sizeof(stage), "%*s ", width, buf);
+
+        strlcat(line, stage, sizeof(line));
+
+        // TODO(dbort): Save some history so we can show deltas over time.
+        // Maybe have a few buckets like 1s, 10s, 1m.
+    }
+    printf("%s\n", line);
+    return NO_ERROR;
+}
+
 static void print_help(FILE* f) {
     fprintf(f, "Usage: kstats [options]\n");
     fprintf(f, "Options:\n");
     fprintf(f, " -c              Print system CPU stats (default)\n");
+    fprintf(f, " -m              Print system memory stats\n");
     fprintf(f, " -d <delay>      Delay in seconds (default 1 second)\n");
     fprintf(f, "\nCPU stats columns:\n");
     fprintf(f, "\tcpu:  cpu #\n");
@@ -114,6 +172,11 @@ static void print_help(FILE* f) {
 }
 
 int main(int argc, char** argv) {
+    enum {
+        CPU_STATS,
+        MEMORY_STATS,
+    } stats_type = CPU_STATS;
+    mx_time_t delay = MX_SEC(1);
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
         if (!strcmp(arg, "--help") || !strcmp(arg, "-h")) {
@@ -121,7 +184,9 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (!strcmp(arg, "-c")) {
-            cpu_stats = true;
+            stats_type = CPU_STATS;
+        } else if (!strcmp(arg, "-m")) {
+            stats_type = MEMORY_STATS;
         } else if (!strcmp(arg, "-d")) {
             delay = 0;
             if (i + 1 < argc) {
@@ -161,7 +226,27 @@ int main(int argc, char** argv) {
     for (;;) {
         mx_time_t next_deadline = mx_deadline_after(delay);
 
-        ret = cpustats(root_resource);
+        // Print the current UTC time with milliseconds as
+        // an ISO 8601 string.
+        struct timespec now;
+        timespec_get(&now, TIME_UTC);
+        struct tm nowtm;
+        gmtime_r(&now.tv_sec, &nowtm);
+        char tbuf[40];
+        strftime(tbuf, sizeof(tbuf), "%FT%T", &nowtm);
+        printf("\n--- %s.%03ldZ ---\n", tbuf, now.tv_nsec / (1000 * 1000));
+
+        switch (stats_type) {
+        case CPU_STATS:
+            ret = cpustats(root_resource, delay);
+            break;
+        case MEMORY_STATS:
+            ret = memstats(root_resource);
+            break;
+        default:
+            // UNREACHABLE
+            assert(false);
+        }
 
         if (ret != NO_ERROR)
             break;
