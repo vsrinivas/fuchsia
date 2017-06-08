@@ -71,24 +71,23 @@ func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goTyp
 	default:
 		panic("Unknown handle type. This should never happen.")
 	case fidl_types.HandleType_Kind_Unspecified:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Channel:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Vmo:
-		goType = "mx.VMO"
-	// TODO(vardhan): Fix the following types to not use generic |system.Handle|.
+		fallthrough
 	case fidl_types.HandleType_Kind_Process:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Thread:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Event:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Port:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Job:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_Socket:
-		goType = "mx.Handle"
+		fallthrough
 	case fidl_types.HandleType_Kind_EventPair:
 		goType = "mx.Handle"
 	}

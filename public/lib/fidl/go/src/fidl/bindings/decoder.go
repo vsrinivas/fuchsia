@@ -388,11 +388,11 @@ func (d *Decoder) ReadChannelHandle() (mx.Handle, error) {
 }
 
 // ReadVmoHandle reads a shared buffer handle.
-func (d *Decoder) ReadVmoHandle() (mx.VMO, error) {
+func (d *Decoder) ReadVmoHandle() (mx.Handle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
 		return 0, err
 	} else {
-		return mx.VMO(handle), nil
+		return handle, nil
 	}
 }
 
