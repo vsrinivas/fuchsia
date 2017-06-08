@@ -103,8 +103,7 @@ const ::auth::CredentialStore* ParseCredsFile() {
 
   std::string serialized_creds;
   if (!files::ReadFileToString(kCredentialsFile, &serialized_creds)) {
-    // Unable to read file. Bailing out.
-    FTL_LOG(ERROR) << "Unable to read user configuration file at: "
+    FTL_LOG(WARNING) << "Unable to read user configuration file at: "
                    << kCredentialsFile;
     return nullptr;
   }
@@ -113,7 +112,7 @@ const ::auth::CredentialStore* ParseCredsFile() {
       reinterpret_cast<const unsigned char*>(serialized_creds.data()),
       serialized_creds.size());
   if (!::auth::VerifyCredentialStoreBuffer(verifier)) {
-    FTL_LOG(ERROR) << "Unable to verify credentials buffer:"
+    FTL_LOG(WARNING) << "Unable to verify credentials buffer:"
                    << serialized_creds.data();
     return nullptr;
   }
@@ -684,9 +683,8 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
   // Reserialize existing users.
   creds_ = ParseCredsFile();
   if (creds_ == nullptr) {
-    FTL_LOG(ERROR) << "Unable to parse user credentials file at: "
-                   << kCredentialsFile;
-    return;
+    FTL_LOG(WARNING) << "user credentials file either missing or corrupted: "
+                                        << kCredentialsFile;
   }
 }
 
