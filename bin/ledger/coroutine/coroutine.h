@@ -8,6 +8,8 @@
 #include <functional>
 
 #include "apps/ledger/src/callback/capture.h"
+#include "lib/ftl/functional/auto_call.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the
@@ -63,14 +65,26 @@ bool SyncCall(CoroutineHandler* handler,
               const A& async_call,
               Args*... parameters) {
   volatile bool sync_state = true;
-  async_call(callback::Capture(
-      [&sync_state, handler] {
+  volatile bool callback_called = false;
+  // Unblock the coroutine (by having it returns early) if the asynchronous call
+  // drop its callback without ever calling it.
+  auto unblocker = ftl::MakeAutoCall([&handler, &sync_state] {
+    if (sync_state) {
+      sync_state = false;
+      return;
+    }
+    handler->Continue(true);
+  });
+  async_call(callback::Capture(ftl::MakeCopyable(
+      [&sync_state, &callback_called, handler, unblocker = std::move(unblocker)] () mutable {
+        unblocker.cancel();
+        callback_called = true;
         if (sync_state) {
           sync_state = false;
           return;
         }
         handler->Continue(false);
-      },
+      }),
       parameters...));
   // If sync_state is still true, the callback was not called. Yield until it
   // is.
@@ -78,7 +92,7 @@ bool SyncCall(CoroutineHandler* handler,
     sync_state = false;
     return handler->Yield();
   }
-  return false;
+  return !callback_called;
 };
 
 }  // namespace coroutine

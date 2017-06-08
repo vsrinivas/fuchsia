@@ -126,6 +126,23 @@ TEST(Coroutine, SynchronousAsyncCall) {
   EXPECT_EQ(1u, received_value);
 }
 
+TEST(Coroutine, DroppedAsyncCall) {
+  CoroutineServiceImpl coroutine_service;
+
+  size_t received_value = 0;
+  bool called = false;
+  coroutine_service.StartCoroutine(
+      [&received_value, &called](CoroutineHandler* handler) {
+        EXPECT_TRUE(SyncCall(
+            handler, [&called](std::function<void(size_t)> callback) {
+              called = true;
+            },
+            &received_value));
+      });
+  EXPECT_EQ(0u, received_value);
+  EXPECT_TRUE(called);
+}
+
 TEST(Coroutine, Interrupt) {
   bool interrupted = false;
 
