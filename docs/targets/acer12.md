@@ -25,15 +25,16 @@ With the machine off, Press and hold Volume Up, then continue to hold while pres
 - USB HDD
 - USB FDD
 - USB CDROM
+- HDD: <MFG> <SERIALNO>
 - Network Boot-IPV4
 - Network Boot-IPV6
-- HDD: <MFG> <SERIALNO>
 - Windows Boot Manager
-10. (Optional)  Go back to the “Security” tab and set the supervisor password back to nothing.
+10. Select the “Main” tab on the left and set the time and date by pressing “[SetTime]” and “[SetDate]” buttons respectfully. This is necessary for proper network operation.
+11. (Optional)  Go back to the “Security” tab and set the supervisor password back to nothing.
 Otherwise you’ll need to enter the password every time you use the BIOS.
 A password is required to modify the secure boot setting, but “disabled” will persist without one.
-11. Select “Exit” from the tabs at the left
-12. Select “Exit Saving Changes”
+12. Select “Exit” from the tabs at the left
+13. Select “Exit Saving Changes”
 
 ## What if you end up in the Windows 10 Setup?
 If you don’t enter the BIOS and haven’t installed another OS, You’ll end up on a blue background “Hi there” screen asking you to select country, language, etc.  
