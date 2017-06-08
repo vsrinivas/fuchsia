@@ -231,6 +231,12 @@ status_t PmmArena::FreePage(vm_page_t* page) {
     return NO_ERROR;
 }
 
+void PmmArena::CountStates(size_t state_count[_VM_PAGE_STATE_COUNT]) const {
+    for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
+        state_count[page_array_[i].state]++;
+    }
+}
+
 void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) {
     char pbuf[16];
     printf("arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) priority %u flags 0x%x\n", this, name(), base(),
@@ -246,9 +252,7 @@ void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) {
 
     /* count the number of pages in every state */
     size_t state_count[_VM_PAGE_STATE_COUNT] = {};
-    for (size_t i = 0; i < size() / PAGE_SIZE; i++) {
-        state_count[page_array_[i].state]++;
-    }
+    CountStates(state_count);
 
     printf("\tpage states:\n");
     for (unsigned int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {

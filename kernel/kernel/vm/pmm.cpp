@@ -353,6 +353,15 @@ size_t pmm_count_total_bytes() {
     return pmm_count_total_bytes_locked();
 }
 
+void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]) {
+    // TODO(MG-833): This is extremely expensive, holding a global lock
+    // and touching every page/arena. We should keep a running count instead.
+    AutoLock al(&arena_lock);
+    for (auto& a : arena_list) {
+        a.CountStates(state_count);
+    }
+}
+
 extern "C" enum handler_return pmm_dump_timer(struct timer* t, lk_time_t, void*) TA_REQ(arena_lock) {
     pmm_dump_free();
     return INT_NO_RESCHEDULE;

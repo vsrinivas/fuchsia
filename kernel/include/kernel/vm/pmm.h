@@ -64,6 +64,11 @@ size_t pmm_count_free_pages(void);
 // Return amount of physical memory in system, in bytes.
 size_t pmm_count_total_bytes(void);
 
+// Counts the number of pages in every state. For every page in every arena,
+// increments the corresponding VM_PAGE_STATE_*-indexed entry of
+// |state_count|. Does not zero out the entries first.
+void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]);
+
 // Allocate a run of pages out of the kernel area and return the pointer in kernel space.
 // If the optional list is passed, append the allocate page structures to the tail of the list.
 // If the optional physical address pointer is passed, return the address.
@@ -87,4 +92,3 @@ paddr_t vm_page_to_paddr(const vm_page_t* page);
 vm_page_t* paddr_to_vm_page(paddr_t addr);
 
 __END_CDECLS
-

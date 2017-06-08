@@ -39,6 +39,11 @@ public:
     unsigned int priority() const { return info_.priority; }
     size_t free_count() const { return free_count_; };
 
+    // Counts the number of pages in every state. For each page in the arena,
+    // increments the corresponding VM_PAGE_STATE_*-indexed entry of
+    // |state_count|. Does not zero out the entries first.
+    void CountStates(size_t state_count[_VM_PAGE_STATE_COUNT]) const;
+
     vm_page_t* get_page(size_t index) { return &page_array_[index]; }
 
     // main allocation routines
