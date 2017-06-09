@@ -38,9 +38,9 @@ public:
 
     // Read from this endpoint's message queue.
     // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum
-    // size and handle count, respectively. On NO_ERROR or ERR_BUFFER_TOO_SMALL, they specify the
+    // size and handle count, respectively. On MX_OK or MX_ERR_BUFFER_TOO_SMALL, they specify the
     // actual size and handle count of the next message. The next message is returned in |*msg| on
-    // NO_ERROR and also on ERR_BUFFER_TOO_SMALL when |may_discard| is set.
+    // MX_OK and also on MX_ERR_BUFFER_TOO_SMALL when |may_discard| is set.
     status_t Read(uint32_t* msg_size,
                   uint32_t* msg_handle_count,
                   mxtl::unique_ptr<MessagePacket>* msg,
@@ -68,7 +68,7 @@ public:
     // See also: comments in ChannelDispatcher::Call()
     class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
     public:
-        MessageWaiter() : txid_(0), status_(ERR_BAD_STATE) {
+        MessageWaiter() : txid_(0), status_(MX_ERR_BAD_STATE) {
         }
 
         ~MessageWaiter() {
@@ -80,15 +80,15 @@ public:
 
         mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid) {
             if (unlikely(channel_ != nullptr)) {
-                return ERR_BAD_STATE;
+                return MX_ERR_BAD_STATE;
             }
             DEBUG_ASSERT(!InContainer());
 
             txid_ = txid;
-            status_ = ERR_TIMED_OUT;
+            status_ = MX_ERR_TIMED_OUT;
             channel_ = mxtl::move(channel);
             event_.Unsignal();
-            return NO_ERROR;
+            return MX_OK;
         }
 
         int Deliver(mxtl::unique_ptr<MessagePacket> msg);

@@ -76,7 +76,7 @@ public:
 
     virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
 
-    virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return ERR_NOT_SUPPORTED; }
+    virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return MX_ERR_NOT_SUPPORTED; }
 
     virtual void on_zero_handles() { }
 
@@ -88,7 +88,7 @@ public:
 
     // set_name() will truncate to MX_MAX_NAME_LEN - 1 and ensure there is a
     // terminating null
-    virtual status_t set_name(const char* name, size_t len) { return ERR_NOT_SUPPORTED; }
+    virtual status_t set_name(const char* name, size_t len) { return MX_ERR_NOT_SUPPORTED; }
 
     // Dispatchers that support get/set cookie must provide
     // a CookieJar for those cookies to be stored in.

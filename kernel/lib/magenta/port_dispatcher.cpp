@@ -53,7 +53,7 @@ IOP_Packet* IOP_Packet::MakeFromUser(const void* data, size_t size) {
     auto status = magenta_copy_from_user(data, header, size);
     header->type = MX_PORT_PKT_TYPE_USER;
 
-    return (status == NO_ERROR) ? pk : nullptr;
+    return (status == MX_OK) ? pk : nullptr;
 }
 
 void IOP_Packet::Delete(IOP_Packet* packet) {
@@ -65,10 +65,10 @@ void IOP_Packet::Delete(IOP_Packet* packet) {
 
 bool IOP_Packet::CopyToUser(void* data, size_t* size) {
     if (*size < data_size)
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     *size = data_size;
     return copy_to_user_unsafe(
-        data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == NO_ERROR;
+        data, reinterpret_cast<char*>(this) + sizeof(IOP_Packet), data_size) == MX_OK;
 }
 
 IOP_Signal::IOP_Signal(uint64_t key, mx_signals_t signal)
@@ -83,11 +83,11 @@ mx_status_t PortDispatcher::Create(uint32_t options,
     AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = kDefaultIOPortRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 PortDispatcher::PortDispatcher(uint32_t /*options*/)
@@ -135,18 +135,18 @@ mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
     canary_.Assert();
 
     int wake_count = 0;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     {
         AutoLock al(&lock_);
         if (no_clients_) {
-            status = ERR_UNAVAILABLE;
+            status = MX_ERR_UNAVAILABLE;
         } else {
             packets_.push_back(packet);
             wake_count = event_signal_etc(&event_, false, status);
         }
     }
 
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         IOP_Packet::Delete(packet);
         return status;
     }
@@ -154,7 +154,7 @@ mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
     if (wake_count)
         thread_reschedule();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
@@ -193,7 +193,7 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
             packets_.push_back(node);
         }
 
-        wake_count = event_signal_etc(&event_, false, NO_ERROR);
+        wake_count = event_signal_etc(&event_, false, MX_OK);
     }
 
     if (wake_count)
@@ -230,7 +230,7 @@ mx_status_t PortDispatcher::Wait(mx_time_t deadline, IOP_Packet** packet) {
                     *packet = signal;
                 }
 
-                return NO_ERROR;
+                return MX_OK;
             } else {
                 // it's empty, unsignal the event
                 event_unsignal(&event_);
@@ -238,7 +238,7 @@ mx_status_t PortDispatcher::Wait(mx_time_t deadline, IOP_Packet** packet) {
         }
 
         status_t st = event_wait_deadline(&event_, deadline, true);
-        if (st != NO_ERROR)
+        if (st != MX_OK)
             return st;
     }
 }

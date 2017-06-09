@@ -114,7 +114,7 @@ public:
     // debugger, thread, process, and system. The kind of the exception port is
     // specified by |eport->type()|.
     // Returns:
-    // NO_ERROR: the exception was handled in some way, and |*out_estatus|
+    // MX_OK: the exception was handled in some way, and |*out_estatus|
     // specifies how.
     // ERR_INTERRUPTED: the thread was killed (probably via mx_task_kill)
     status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
@@ -132,7 +132,7 @@ public:
     bool InExceptionLocked();
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
-    // Returns ERR_BAD_STATE if not in an exception.
+    // Returns MX_ERR_BAD_STATE if not in an exception.
     status_t GetExceptionReport(mx_exception_report_t* report);
 
     // Fetch the state of the thread for userspace tools.

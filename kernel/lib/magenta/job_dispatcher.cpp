@@ -34,22 +34,22 @@ status_t JobDispatcher::Create(uint32_t flags,
                                mx_rights_t* rights) {
     if (parent != nullptr && parent->max_height() == 0) {
         // The parent job cannot have children.
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
 
     AllocChecker ac;
     auto job = new (&ac) JobDispatcher(flags, parent, parent->GetPolicy());
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     if (!parent->AddChildJob(job)) {
         delete job;
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     *rights = kDefaultJobRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(job);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
@@ -218,7 +218,7 @@ status_t JobDispatcher::SetPolicy(
     AutoLock lock(&lock_);
 
     if (!procs_.is_empty() || !jobs_.is_empty())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     pol_cookie_t new_policy;
     auto status = GetSystemPolicyManager()->AddPolicy(
@@ -228,7 +228,7 @@ status_t JobDispatcher::SetPolicy(
         return status;
 
     policy_ = new_policy;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {

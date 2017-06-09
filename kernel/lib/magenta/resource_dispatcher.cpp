@@ -23,9 +23,9 @@ private:
         AllocChecker ac;
         mxtl::unique_ptr<ResourceRecord> record(new (&ac) ResourceRecord());
         if (!ac.check())
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         out = mxtl::move(record);
-        return NO_ERROR;
+        return MX_OK;
     }
     explicit ResourceRecord() {};
 
@@ -50,11 +50,11 @@ mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatc
     AllocChecker ac;
     ResourceDispatcher* disp = new (&ac) ResourceDispatcher(name, subtype);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = kDefaultResourceRights;
     *dispatcher = mxtl::AdoptRef<ResourceDispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
@@ -79,13 +79,13 @@ mx_status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> cli
 
     AutoLock lock(&lock_);
     if (iopc_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if ((client->get_trigger_signals() & (~MX_RESOURCE_CHILD_ADDED)) != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     iopc_ = mxtl::move(client);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::MakeRoot() {
@@ -94,10 +94,10 @@ mx_status_t ResourceDispatcher::MakeRoot() {
     AutoLock lock(&lock_);
 
     if (state_ != State::Created)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     state_ = State::Alive;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::SetParent(ResourceDispatcher* parent) {
@@ -106,13 +106,13 @@ mx_status_t ResourceDispatcher::SetParent(ResourceDispatcher* parent) {
     AutoLock lock(&lock_);
 
     if (state_ != State::Alive)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (parent_ != nullptr)
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
 
     parent_ = parent;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::GetParent(mxtl::RefPtr<ResourceDispatcher>* dispatcher) {
@@ -121,10 +121,10 @@ mx_status_t ResourceDispatcher::GetParent(mxtl::RefPtr<ResourceDispatcher>* disp
     AutoLock lock(&lock_);
 
     if (parent_ == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     *dispatcher = mxtl::RefPtr<ResourceDispatcher>(parent_);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& child) {
@@ -133,16 +133,16 @@ mx_status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>&
     AutoLock lock(&lock_);
 
     if (state_ != State::Alive)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // Currently this should be impossible, as it is only ever
     // called from sys_resource_create on a freshly created child.
     // But let's ensure that we can't ever create loops.
     if (child.get() == this)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mx_status_t status = child->SetParent(this);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     children_.push_back(mxtl::move(child));
@@ -153,27 +153,27 @@ mx_status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>&
 
     state_tracker_.StrobeState(MX_RESOURCE_CHILD_ADDED);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::DestroySelf(ResourceDispatcher* parent) {
     AutoLock lock(&lock_);
 
     if (state_ != State::Alive)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (num_children_ > 0)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (parent != parent_)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     state_ = State::Dead;
     parent_ = nullptr;
 
     state_tracker_.UpdateState(0, MX_RESOURCE_DESTROYED);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::DestroyChild(mxtl::RefPtr<ResourceDispatcher> child) {
@@ -183,7 +183,7 @@ mx_status_t ResourceDispatcher::DestroyChild(mxtl::RefPtr<ResourceDispatcher> ch
 
     mx_status_t status = child->DestroySelf(this);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         children_.erase(*child);
         --num_children_;
     }
@@ -208,7 +208,7 @@ static mx_status_t mmio_create_dispatcher(const mx_rrec_t* rec, uint32_t options
     mxtl::RefPtr<VmObject> vmo = VmObjectPhysical::Create(
         static_cast<mx_paddr_t>(rec->mmio.phys_base), rec->mmio.phys_size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     return VmObjectDispatcher::Create(mxtl::move(vmo), dispatcher, rights);
 }
@@ -229,26 +229,26 @@ static mx_status_t ioport_do_action(const mx_rrec_t* rec, uint32_t action,
     case MX_RACT_ENABLE:
         return x86_set_io_bitmap(rec->ioport.port_base, rec->ioport.port_count, 1);
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
 #endif
 
 static mx_status_t default_create_dispatcher(const mx_rrec_t*, uint32_t,
                                              mxtl::RefPtr<Dispatcher>*, mx_rights_t*) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t default_do_action(const mx_rrec_t*, uint32_t, uint32_t, uint32_t) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t ResourceDispatcher::AddRecordLocked(mxtl::unique_ptr<ResourceRecord> rrec) {
     if (state_ != State::Created)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (num_records_ >= kMaxRecords)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     mx_rrec_t* rec = &rrec->content_;
 
@@ -274,19 +274,19 @@ mx_status_t ResourceDispatcher::AddRecordLocked(mxtl::unique_ptr<ResourceRecord>
         rrec->do_action_ = default_do_action;
         break;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     records_.push_back(mxtl::move(rrec));
     ++num_records_;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::AddRecordLocked(mx_rrec_t* tmpl) {
     status_t status;
     mxtl::unique_ptr<ResourceRecord> rec;
-    if ((status = ResourceRecord::Create(rec)) != NO_ERROR)
+    if ((status = ResourceRecord::Create(rec)) != MX_OK)
         return status;
     memcpy(&rec->content_, tmpl, sizeof(mx_rrec_t));
     return AddRecordLocked(mxtl::move(rec));
@@ -298,24 +298,24 @@ mx_status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, si
     AutoLock lock(&lock_);
 
     if (state_ != State::Created)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     for (uint32_t n = 1; n < count; n++) {
         status_t status;
         mxtl::unique_ptr<ResourceRecord> rec;
-        if ((status = ResourceRecord::Create(rec)) != NO_ERROR)
+        if ((status = ResourceRecord::Create(rec)) != MX_OK)
             return status;
-        if (records.copy_array_from_user(&rec->content_, 1, n) != NO_ERROR) {
-            return ERR_INVALID_ARGS;
+        if (records.copy_array_from_user(&rec->content_, 1, n) != MX_OK) {
+            return MX_ERR_INVALID_ARGS;
         }
-        if ((status = AddRecordLocked(mxtl::move(rec))) != NO_ERROR) {
+        if ((status = AddRecordLocked(mxtl::move(rec))) != MX_OK) {
             return status;
         }
     }
 
     state_ = State::Alive;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void ResourceDispatcher::GetSelf(mx_rrec_self_t* self) {
@@ -354,7 +354,7 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
 
     size_t n = 0;
     *actual = 0;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mx_rrec_t rec = {};
     rec.self.type = MX_RREC_SELF;
@@ -372,8 +372,8 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
 
         // copy our self entry first
         if (n < max) {
-            if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
-                status = ERR_INVALID_ARGS;
+            if (records.copy_array_to_user(&rec, 1, n) != MX_OK) {
+                status = MX_ERR_INVALID_ARGS;
                 goto done;
             }
             n++;
@@ -381,8 +381,8 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
         for (auto& record: records_) {
             if (n == max)
                 break;
-            if (records.copy_array_to_user(&record.content_, 1, n) != NO_ERROR) {
-                status = ERR_INVALID_ARGS;
+            if (records.copy_array_to_user(&record.content_, 1, n) != MX_OK) {
+                status = MX_ERR_INVALID_ARGS;
                 break;
             }
             n++;
@@ -400,7 +400,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
 
     mx_rrec_t rec = {};
     size_t n = 0;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     {
         AutoLock lock(&lock_);
 
@@ -414,8 +414,8 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
             // the parent-child relationship is strictly hierarchical.
             child.GetSelf(&rec.self);
 
-            if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
-                status = ERR_INVALID_ARGS;
+            if (records.copy_array_to_user(&rec, 1, n) != MX_OK) {
+                status = MX_ERR_INVALID_ARGS;
                 break;
             }
             ++n;
@@ -434,7 +434,7 @@ mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t 
 
     ResourceRecord* rec = GetNthRecordLocked(index);
     if (rec == nullptr) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     } else {
         return rec->create_dispatcher_(&rec->content_, options, dispatcher, rights);
     }
@@ -448,7 +448,7 @@ mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
 
     ResourceRecord* rec = GetNthRecordLocked(index);
     if (rec == nullptr) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     } else {
         return rec->do_action_(&rec->content_, action, arg0, arg1);
     }
@@ -460,13 +460,13 @@ mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
     AutoLock lock(&lock_);
 
     if (inbound_)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     inbound_ = mxtl::move(*handle);
 
     state_tracker_.UpdateState(MX_RESOURCE_WRITABLE, MX_RESOURCE_READABLE);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t ResourceDispatcher::Accept(HandleOwner* handle) {
@@ -475,11 +475,11 @@ mx_status_t ResourceDispatcher::Accept(HandleOwner* handle) {
     AutoLock lock(&lock_);
 
     if (!inbound_)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     *handle = mxtl::move(inbound_);
 
     state_tracker_.UpdateState(MX_RESOURCE_READABLE, MX_RESOURCE_WRITABLE);
 
-    return NO_ERROR;
+    return MX_OK;
 }

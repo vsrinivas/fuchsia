@@ -27,20 +27,20 @@ status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                      mx_rights_t*              out_rights) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     auto device = bus_drv->GetNthDevice(index);
     if (device == nullptr)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     AllocChecker ac;
     auto disp = new (&ac) PciDeviceDispatcher(mxtl::move(device), out_info);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     *out_rights     = kDefaultPciDeviceRights;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PcieDevice> device,
@@ -75,13 +75,13 @@ status_t PciDeviceDispatcher::ClaimDevice() {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (device_->claimed()) return ERR_ALREADY_BOUND;  // Are we claimed already?
+    if (device_->claimed()) return MX_ERR_ALREADY_BOUND;  // Are we claimed already?
 
     result = device_->Claim();
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
@@ -90,11 +90,11 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
 
     device_->EnableBusMaster(enable);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciDeviceDispatcher::EnablePio(bool enable) {
@@ -103,11 +103,11 @@ status_t PciDeviceDispatcher::EnablePio(bool enable) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
 
     device_->EnablePio(enable);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciDeviceDispatcher::EnableMmio(bool enable) {
@@ -116,11 +116,11 @@ status_t PciDeviceDispatcher::EnableMmio(bool enable) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_);
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
 
     device_->EnableMmio(enable);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 const pcie_bar_info_t* PciDeviceDispatcher::GetBar(uint32_t bar_num) {
@@ -137,7 +137,7 @@ status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
     DEBUG_ASSERT(device_);
 
     if (!out) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     auto cfg = device_->config();
@@ -149,7 +149,7 @@ status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
         out->vmo = device_->config_vmo();
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciDeviceDispatcher::ResetDevice() {
@@ -158,7 +158,7 @@ status_t PciDeviceDispatcher::ResetDevice() {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
 
     return device_->DoFunctionLevelReset();
 }
@@ -171,9 +171,9 @@ status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    if (!device_->claimed()) return MX_ERR_BAD_STATE;  // Are we not claimed yet?
     if ((which_irq < 0) ||
-        (static_cast<uint32_t>(which_irq) >= irqs_avail_cnt_)) return ERR_INVALID_ARGS;
+        (static_cast<uint32_t>(which_irq) >= irqs_avail_cnt_)) return MX_ERR_INVALID_ARGS;
 
     // Attempt to create the dispatcher.  It will take care of things like checking for
     // duplicate registration.
@@ -204,7 +204,7 @@ status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t*
     status_t ret = device_->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
                                                                &caps);
 
-    *out_max_irqs = (ret == NO_ERROR) ? caps.max_irqs : 0;
+    *out_max_irqs = (ret == MX_OK) ? caps.max_irqs : 0;
     return ret;
 }
 
@@ -216,20 +216,20 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
 
     // Are we not claimed yet?
     if (!device_->claimed())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if (mode == MX_PCIE_IRQ_MODE_DISABLED)
         requested_irq_count = 0;
 
     status_t ret;
     ret = device_->SetIrqMode(static_cast<pcie_irq_mode_t>(mode), requested_irq_count);
-    if (ret == NO_ERROR) {
+    if (ret == MX_OK) {
         pcie_irq_mode_caps_t caps;
         ret = device_->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode), &caps);
 
         // The only way for QueryIrqMode to fail at this point should be for the
         // device to have become unplugged.
-        if (ret == NO_ERROR) {
+        if (ret == MX_OK) {
             irqs_avail_cnt_ = requested_irq_count;
             irqs_maskable_  = caps.per_vector_masking_supported;
         } else {

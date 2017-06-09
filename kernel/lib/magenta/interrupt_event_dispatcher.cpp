@@ -29,13 +29,13 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
 
     // If this is not a valid interrupt vector, fail.
     if (!is_valid_interrupt(vector, 0))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Attempt to construct the dispatcher.
     AllocChecker ac;
     InterruptEventDispatcher* disp = new (&ac) InterruptEventDispatcher(vector);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // Hold a ref while we check to see if someone else owns this vector or not.
     // If things go wrong, this ref will be released and the IED will get
@@ -46,7 +46,7 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
     {
         AutoLock lock(&vectors_lock_);
         if (!vectors_.insert_or_find(disp))
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
     }
 
     // Looks like things went well.  Register our callback and unmask our
@@ -58,7 +58,7 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
     *rights     = kDefaultInterruptRights;
     *dispatcher = mxtl::move(disp_ref);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 InterruptEventDispatcher::~InterruptEventDispatcher() {
@@ -81,7 +81,7 @@ status_t InterruptEventDispatcher::InterruptComplete() {
 
     unsignal();
     unmask_interrupt(vector_);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t InterruptEventDispatcher::UserSignal() {
@@ -89,7 +89,7 @@ status_t InterruptEventDispatcher::UserSignal() {
 
     mask_interrupt(vector_);
     signal(true);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {

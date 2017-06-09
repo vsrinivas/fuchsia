@@ -18,16 +18,16 @@ status_t IoMappingDispatcher::Create(const char* dbg_name,
                                      mxtl::RefPtr<Dispatcher>* out_dispatcher,
                                      mx_rights_t* out_rights) {
     if (!out_dispatcher || !out_rights)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AllocChecker ac;
     IoMappingDispatcher* disp = new (&ac) IoMappingDispatcher();
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     status_t status;
     status = disp->Init(dbg_name, paddr, size, vmm_flags, arch_mmu_flags);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         delete disp;
     } else {
         *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
@@ -73,30 +73,30 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     if (!IS_ALIGNED(paddr, PAGE_SIZE) ||
         !IS_ALIGNED(size,  PAGE_SIZE) ||
         !size)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     aspace_ = ProcessDispatcher::GetCurrent()->aspace();
     DEBUG_ASSERT(aspace_); // This should never fail.
     if (!aspace_)
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
 
     mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, size));
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     paddr_ = paddr;
     size_ = size;
 
     uint vmo_cache_flags = arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK;
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
-    if (vmo->SetMappingCachePolicy(vmo_cache_flags) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (vmo->SetMappingCachePolicy(vmo_cache_flags) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     auto root_vmar = aspace_->RootVmar();
     status_t res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,
                                               mxtl::move(vmo), 0, arch_mmu_flags,
                                               dbg_name, &mapping_);
-    if (res != NO_ERROR)
+    if (res != MX_OK)
         return res;
 
     // Force the entries into the page tables
@@ -108,5 +108,5 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     }
 
     vaddr_ = mapping_->base();
-    return NO_ERROR;
+    return MX_OK;
 }

@@ -44,12 +44,12 @@ mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, 
     AllocChecker ac;
     auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // ExceptionPort's ctor causes the first ref to be adopted,
     // so we should only wrap.
     *out_eport = mxtl::WrapRefPtr<ExceptionPort>(eport);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
@@ -216,12 +216,12 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
             report->header.type, report->context.pid, report->context.tid);
     if (port_ == nullptr) {
         // The port has been unbound.
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
     auto iopk = MakePacket(port_key_, report, sizeof(*report));
     if (!iopk)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     return port_->Queue(iopk);
 }
@@ -259,7 +259,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     memset(&context, 0, sizeof(context));
     UserThread::ExceptionStatus estatus;
     auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
         // killed (status == ERR_INTERRUPTED), the kernel will kill the
@@ -351,7 +351,7 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
     // exchange will return immediately with ERR_INTERRUPTED.
     auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         // Ignore any errors, we still want the thread to continue exiting.
     }
 }

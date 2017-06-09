@@ -301,9 +301,9 @@ mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
 
     AutoLock lock(&system_exception_mutex);
     if (system_exception_port)
-        return ERR_BAD_STATE; // TODO(dje): ?
+        return MX_ERR_BAD_STATE; // TODO(dje): ?
     system_exception_port = eport;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool ResetSystemExceptionPort() {

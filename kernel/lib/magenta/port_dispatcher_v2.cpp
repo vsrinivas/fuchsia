@@ -35,7 +35,7 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
       port_(mxtl::move(port)) {
 
     auto& packet = packet_.packet;
-    packet.status = NO_ERROR;
+    packet.status = MX_OK;
     packet.key = key_;
     packet.type = type_;
     packet.signal.trigger = trigger_;
@@ -103,11 +103,11 @@ mx_status_t PortDispatcherV2::Create(uint32_t options,
     AllocChecker ac;
     auto disp = new (&ac) PortDispatcherV2(options);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = kDefaultIOPortRightsV2;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 PortDispatcherV2::PortDispatcherV2(uint32_t /*options*/)
@@ -125,7 +125,7 @@ void PortDispatcherV2::on_zero_handles() {
         AutoLock al(&lock_);
         zero_handles_ = true;
     }
-    while (DeQueue(0ull, nullptr) == NO_ERROR) {}
+    while (DeQueue(0ull, nullptr) == MX_OK) {}
 }
 
 mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
@@ -134,7 +134,7 @@ mx_status_t PortDispatcherV2::QueueUser(const mx_port_packet_t& packet) {
     AllocChecker ac;
     auto port_packet = new (&ac) PortPacket();
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     port_packet->packet = packet;
     port_packet->packet.type = MX_PKT_TYPE_USER;
@@ -154,11 +154,11 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
     {
         AutoLock al(&lock_);
         if (zero_handles_)
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
 
         if (observed) {
             if (port_packet->InContainer())
-                return NO_ERROR;
+                return MX_OK;
             port_packet->packet.signal.observed = observed;
             port_packet->packet.signal.count = count;
         }
@@ -170,7 +170,7 @@ mx_status_t PortDispatcherV2::Queue(PortPacket* port_packet,
     if (wake_count)
         thread_reschedule();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t PortDispatcherV2::DeQueue(mx_time_t deadline, mx_port_packet_t* packet) {
@@ -193,11 +193,11 @@ mx_status_t PortDispatcherV2::DeQueue(mx_time_t deadline, mx_port_packet_t* pack
             delete observer;
         else if (packet && packet->type == MX_PKT_TYPE_USER)
             delete port_packet;
-        return NO_ERROR;
+        return MX_OK;
 
 wait:
         status_t st = sema_.Wait(deadline);
-        if (st != NO_ERROR)
+        if (st != MX_OK)
             return st;
     }
 }
@@ -229,7 +229,7 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
 
     auto dispatcher = handle->dispatcher();
     if (!dispatcher->get_state_tracker())
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     AllocChecker ac;
     auto type = (options == MX_WAIT_ASYNC_ONCE) ?
@@ -238,10 +238,10 @@ mx_status_t PortDispatcherV2::MakeObservers(uint32_t options, Handle* handle,
     auto observer = new (&ac) PortObserver(type,
             handle, mxtl::RefPtr<PortDispatcherV2>(this), key, signals);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     dispatcher->add_observer(observer);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool PortDispatcherV2::CancelQueued(const void* handle, uint64_t key) {

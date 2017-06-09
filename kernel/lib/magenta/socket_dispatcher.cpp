@@ -54,22 +54,22 @@ status_t SocketDispatcher::Create(uint32_t flags,
     AllocChecker ac;
     auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto socket1 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx_status_t status;
-    if ((status = socket0->Init(socket1)) != NO_ERROR)
+    if ((status = socket0->Init(socket1)) != MX_OK)
         return status;
-    if ((status = socket1->Init(socket0)) != NO_ERROR)
+    if ((status = socket1->Init(socket0)) != MX_OK)
         return status;
 
     *rights = kDefaultSocketRights;
     *dispatcher0 = mxtl::RefPtr<Dispatcher>(socket0.get());
     *dispatcher1 = mxtl::RefPtr<Dispatcher>(socket1.get());
-    return NO_ERROR;
+    return MX_OK;
 }
 
 SocketDispatcher::SocketDispatcher(uint32_t flags)
@@ -94,9 +94,9 @@ mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_T
     other_ = mxtl::move(other);
     peer_koid_ = other_->get_koid();
     if (flags_ != MX_SOCKET_STREAM && flags_ != MX_SOCKET_DATAGRAM) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void SocketDispatcher::on_zero_handles() {
@@ -127,18 +127,18 @@ status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, b
     canary_.Assert();
 
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (!peer) {
         state_tracker_.UpdateState(clear_mask, set_mask);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         other = other_;
     }
 
@@ -158,25 +158,25 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
     }
 
     state_tracker_.UpdateState(clear_mask, set_mask);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
     canary_.Assert();
 
     if ((client->get_trigger_signals() & ~kValidSignalMask) != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AutoLock lock(&lock_);
     if (iopc_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     iopc_ = mxtl::move(client);
 
     if (!is_empty())
         iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t SocketDispatcher::HalfClose() {
@@ -186,9 +186,9 @@ status_t SocketDispatcher::HalfClose() {
     {
         AutoLock lock(&lock_);
         if (half_closed_[0])
-            return NO_ERROR;
+            return MX_OK;
         if (!other_)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         other = other_;
         half_closed_[0] = true;
         state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
@@ -202,7 +202,7 @@ status_t SocketDispatcher::HalfCloseOther() {
     AutoLock lock(&lock_);
     half_closed_[1] = true;
     state_tracker_.UpdateState(0u, MX_SOCKET_PEER_CLOSED);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
@@ -213,18 +213,18 @@ mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         if (half_closed_[0])
-            return ERR_BAD_STATE;
+            return MX_ERR_BAD_STATE;
         other = other_;
     }
 
     if (len == 0) {
         *nwritten = 0;
-        return NO_ERROR;
+        return MX_OK;
     }
     if (len != static_cast<size_t>(static_cast<uint32_t>(len)))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     return other->WriteSelf(src, len, nwritten);
 }
@@ -236,7 +236,7 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     AutoLock lock(&lock_);
 
     if (is_full())
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     bool was_empty = is_empty();
 
@@ -267,7 +267,7 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
 mx_status_t SocketDispatcher::WriteDgramMBufsLocked(user_ptr<const void> src,
                                                     size_t len, size_t* written) {
     if (len + size_ > kSocketSizeMax)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     mxtl::SinglyLinkedList<MBuf*> bufs;
     for (size_t need = 1 + ((len - 1) / kMBufDataSize); need != 0; need--) {
@@ -275,7 +275,7 @@ mx_status_t SocketDispatcher::WriteDgramMBufsLocked(user_ptr<const void> src,
         if (buf == nullptr) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
-            return ERR_SHOULD_WAIT;
+            return MX_ERR_SHOULD_WAIT;
         }
         bufs.push_front(buf);
     }
@@ -283,10 +283,10 @@ mx_status_t SocketDispatcher::WriteDgramMBufsLocked(user_ptr<const void> src,
     size_t pos = 0;
     for (auto& buf : bufs) {
         size_t copy_len = MIN(kMBufDataSize, len - pos);
-        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != NO_ERROR) {
+        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
-            return ERR_INVALID_ARGS; // Bad user buffer.
+            return MX_ERR_INVALID_ARGS; // Bad user buffer.
         }
         pos += copy_len;
         buf.len_ += static_cast<uint32_t>(copy_len);
@@ -307,7 +307,7 @@ mx_status_t SocketDispatcher::WriteDgramMBufsLocked(user_ptr<const void> src,
 
     *written = len;
     size_ += len;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t SocketDispatcher::WriteStreamMBufsLocked(user_ptr<const void> src,
@@ -315,7 +315,7 @@ mx_status_t SocketDispatcher::WriteStreamMBufsLocked(user_ptr<const void> src,
     if (head_ == nullptr) {
         head_ = AllocMBuf();
         if (head_ == nullptr)
-            return ERR_SHOULD_WAIT;
+            return MX_ERR_SHOULD_WAIT;
         tail_.push_front(head_);
     }
 
@@ -335,7 +335,7 @@ mx_status_t SocketDispatcher::WriteStreamMBufsLocked(user_ptr<const void> src,
             if (copy_len == 0)
                 break;
         }
-        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != NO_ERROR)
+        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != MX_OK)
             break;
         pos += copy_len;
         head_->len_ += static_cast<uint32_t>(copy_len);
@@ -343,10 +343,10 @@ mx_status_t SocketDispatcher::WriteStreamMBufsLocked(user_ptr<const void> src,
     }
 
     if (pos == 0)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     *written = pos;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
@@ -358,16 +358,16 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
     // Just query for bytes outstanding.
     if (!dst && len == 0) {
         *nread = size_;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     if (len != (size_t)((uint32_t)len))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     bool closed = half_closed_[1] || !other_;
 
     if (is_empty())
-        return closed ? ERR_PEER_CLOSED : ERR_SHOULD_WAIT;
+        return closed ? MX_ERR_PEER_CLOSED : MX_ERR_SHOULD_WAIT;
 
     if (flags_ == MX_SOCKET_DATAGRAM && len > tail_.front().pkt_len_)
         len = tail_.front().pkt_len_;
@@ -383,7 +383,7 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 size_t SocketDispatcher::ReadMBufsLocked(user_ptr<void> dst, size_t len) {
@@ -392,7 +392,7 @@ size_t SocketDispatcher::ReadMBufsLocked(user_ptr<void> dst, size_t len) {
         MBuf& cur = tail_.front();
         char* src = cur.data_ + cur.off_;
         size_t copy_len = MIN(cur.len_, len - pos);
-        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != NO_ERROR)
+        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != MX_OK)
             return pos;
         pos += copy_len;
         cur.off_ += static_cast<uint32_t>(copy_len);

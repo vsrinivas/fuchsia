@@ -32,7 +32,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
     if (futex_key % sizeof(int))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     FutexNode* node;
 
@@ -46,13 +46,13 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
 
     int value;
     status_t result = value_ptr.copy_from_user(&value);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         lock_.Release();
         return result;
     }
     if (value != current_value) {
         lock_.Release();
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     UserThread* thread = UserThread::GetCurrent();
@@ -64,7 +64,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
 
     // Block current thread.  This releases lock_ and does not reacquire it.
     result = node->BlockThread(&lock_, deadline);
-    if (result == NO_ERROR) {
+    if (result == MX_OK) {
         // Fix/workaround for MG-624:
         // We must re-acquire the lock here to force this thread to wait until
         // the WakeThreads() marks this thread as not in the queue anymore.
@@ -73,12 +73,12 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
         AutoLock lock(&lock_);
         DEBUG_ASSERT(!node->IsInQueue());
         // All the work necessary for removing us from the hash table was done by FutexWake()
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    // The following happens if we hit the deadline (ERR_TIMED_OUT) or if
+    // The following happens if we hit the deadline (MX_ERR_TIMED_OUT) or if
     // the thread was killed (ERR_INTERRUPTED) or suspended
-    // (ERR_INTERRUPTED_RETRY).
+    // (MX_ERR_INTERRUPTED_RETRY).
     //
     // We need to ensure that the thread's node is removed from the wait
     // queue, because FutexWake() probably didn't do that.
@@ -105,25 +105,25 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // FutexWait() call returns a timeout status.  If that happens, and if
     // another thread is waiting on the mutex, then that thread won't get
     // woken -- the wakeup from the FutexWake() call would have got lost.
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
                                  uint32_t count) {
     LTRACE_ENTRY;
 
-    if (count == 0) return NO_ERROR;
+    if (count == 0) return MX_OK;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
     if (futex_key % sizeof(int))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AutoLock lock(&lock_);
 
     FutexNode* node = futex_table_.erase(futex_key);
     if (!node) {
         // nothing blocked on this futex if we can't find it
-        return NO_ERROR;
+        return MX_OK;
     }
     DEBUG_ASSERT(node->GetKey() == futex_key);
 
@@ -142,7 +142,7 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
     // the thread's FutexNode.
     FutexNode::WakeThreads(wake_head);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
@@ -150,20 +150,20 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     LTRACE_ENTRY;
 
     if ((requeue_ptr.get() == nullptr) && requeue_count)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AutoLock lock(&lock_);
 
     int value;
     status_t result = wake_ptr.copy_from_user(&value);
-    if (result != NO_ERROR) return result;
-    if (value != current_value) return ERR_BAD_STATE;
+    if (result != MX_OK) return result;
+    if (value != current_value) return MX_ERR_BAD_STATE;
 
     uintptr_t wake_key = reinterpret_cast<uintptr_t>(wake_ptr.get());
     uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr.get());
-    if (wake_key == requeue_key) return ERR_INVALID_ARGS;
+    if (wake_key == requeue_key) return MX_ERR_INVALID_ARGS;
     if (wake_key % sizeof(int) || requeue_key % sizeof(int))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // This must happen before RemoveFromHead() calls set_hash_key() on
     // nodes below, because operations on futex_table_ look at the GetKey
@@ -171,7 +171,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     FutexNode* node = futex_table_.erase(wake_key);
     if (!node) {
         // nothing blocked on this futex if we can't find it
-        return NO_ERROR;
+        return MX_OK;
     }
 
     FutexNode* wake_head;
@@ -203,7 +203,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     }
 
     FutexNode::WakeThreads(wake_head);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void FutexContext::QueueNodesLocked(FutexNode* head) {

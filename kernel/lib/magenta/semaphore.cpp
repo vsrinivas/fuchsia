@@ -25,7 +25,7 @@ int Semaphore::Post() {
     int ret = 0;
     THREAD_LOCK(state);
     if (unlikely(++count_ <= 0))
-        ret = wait_queue_wake_one(&waitq_, false, NO_ERROR);
+        ret = wait_queue_wake_one(&waitq_, false, MX_OK);
     THREAD_UNLOCK(state);
     return ret;
 }
@@ -35,14 +35,14 @@ status_t Semaphore::Wait(lk_time_t deadline) {
 
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
-    status_t ret = NO_ERROR;
+    status_t ret = MX_OK;
     THREAD_LOCK(state);
     current_thread->interruptable = true;
 
     if (unlikely(--count_ < 0)) {
         ret = wait_queue_block(&waitq_, deadline);
-        if (ret < NO_ERROR) {
-            if ((ret == ERR_TIMED_OUT) || (ret == ERR_INTERRUPTED))
+        if (ret < MX_OK) {
+            if ((ret == MX_ERR_TIMED_OUT) || (ret == ERR_INTERRUPTED))
                 count_++;
         }
     }

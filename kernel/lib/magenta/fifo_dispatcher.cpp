@@ -27,27 +27,27 @@ status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t opti
     if (!count || !elemsize || (count & (count - 1)) ||
         (count > kMaxSizeBytes) || (elemsize > kMaxSizeBytes) ||
         ((count * elemsize) > kMaxSizeBytes)) {
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
     }
     AllocChecker ac;
     auto fifo0 = mxtl::AdoptRef(new (&ac) FifoDispatcher(count, elemsize, options));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto fifo1 = mxtl::AdoptRef(new (&ac) FifoDispatcher(count, elemsize, options));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx_status_t status;
-    if ((status = fifo0->Init(fifo1)) != NO_ERROR)
+    if ((status = fifo0->Init(fifo1)) != MX_OK)
         return status;
-    if ((status = fifo1->Init(fifo0)) != NO_ERROR)
+    if ((status = fifo1->Init(fifo0)) != MX_OK)
         return status;
 
     *rights = kDefaultFifoRights;
     *dispatcher0 = mxtl::RefPtr<Dispatcher>(fifo0.get());
     *dispatcher1 = mxtl::RefPtr<Dispatcher>(fifo1.get());
-    return NO_ERROR;
+    return MX_OK;
 }
 
 FifoDispatcher::FifoDispatcher(uint32_t count, uint32_t elem_size, uint32_t /*options*/)
@@ -66,8 +66,8 @@ mx_status_t FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREA
     other_ = mxtl::move(other);
     peer_koid_ = other_->get_koid();
     if ((data_ = (uint8_t*) calloc(elem_count_, elem_size_)) == nullptr)
-        return ERR_NO_MEMORY;
-    return NO_ERROR;
+        return MX_ERR_NO_MEMORY;
+    return MX_OK;
 }
 
 void FifoDispatcher::on_zero_handles() {
@@ -93,7 +93,7 @@ void FifoDispatcher::OnPeerZeroHandles() {
 mx_status_t FifoDispatcher::Write(const uint8_t* src, size_t len, uint32_t* actual) {
     auto copy_from_fn = [](const uint8_t* src, uint8_t* data, size_t len) -> mx_status_t {
         memcpy(data, src, len);
-        return NO_ERROR;
+        return MX_OK;
     };
     return Write(src, len, actual, copy_from_fn);
 }
@@ -101,7 +101,7 @@ mx_status_t FifoDispatcher::Write(const uint8_t* src, size_t len, uint32_t* actu
 mx_status_t FifoDispatcher::Read(uint8_t* dst, size_t len, uint32_t* actual) {
     auto copy_to_fn = [](uint8_t* dst, const uint8_t* data, size_t len) -> mx_status_t {
         memcpy(dst, data, len);
-        return NO_ERROR;
+        return MX_OK;
     };
     return Read(dst, len, actual, copy_to_fn);
 }
@@ -128,7 +128,7 @@ mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actu
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         other = other_;
     }
 
@@ -141,7 +141,7 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
 
     size_t count = bytelen / elem_size_;
     if (count == 0)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     AutoLock lock(&lock_);
 
@@ -151,7 +151,7 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
     size_t avail = elem_count_ - (head_ - tail_);
 
     if (avail == 0)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     bool was_empty = (avail == elem_count_);
 
@@ -168,10 +168,10 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         size_t to_copy = (count > n) ? n : count;
 
         mx_status_t status = copy_from_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             // roll back, in case this is the second copy
             head_ = old_head;
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         // adjust head and count
@@ -190,7 +190,7 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         other_->state_tracker_.UpdateState(MX_FIFO_WRITABLE, 0u);
 
     *actual = (head_ - old_head);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
@@ -199,7 +199,7 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
 
     size_t count = bytelen / elem_size_;
     if (count == 0)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     AutoLock lock(&lock_);
 
@@ -209,7 +209,7 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
     size_t avail = (head_ - tail_);
 
     if (avail == 0)
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
 
     bool was_full = (avail == elem_count_);
 
@@ -226,10 +226,10 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
         size_t to_copy = (count > n) ? n : count;
 
         mx_status_t status = copy_to_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             // roll back, in case this is the second copy
             tail_ = old_tail;
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         // adjust tail and count
@@ -249,5 +249,5 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
         state_tracker_.UpdateState(MX_FIFO_READABLE, 0u);
 
     *actual = (tail_ - old_tail);
-    return NO_ERROR;
+    return MX_OK;
 }

@@ -18,7 +18,7 @@ status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatc
                                mx_rights_t* rights) {
     AllocChecker ac;
     auto disp = new (&ac) LogDispatcher(flags);
-    if (!ac.check()) return ERR_NO_MEMORY;
+    if (!ac.check()) return MX_ERR_NO_MEMORY;
 
     if (flags & MX_LOG_FLAG_READABLE) {
         dlog_reader_init(&disp->reader_, &LogDispatcher::Notify, disp);
@@ -26,7 +26,7 @@ status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatc
 
     *rights = kDefaultEventRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 LogDispatcher::LogDispatcher(uint32_t flags)
@@ -62,12 +62,12 @@ status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actu
     canary_.Assert();
 
     if (!(flags_ & MX_LOG_FLAG_READABLE))
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     AutoLock lock(&lock_);
 
     mx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
-    if (status == ERR_SHOULD_WAIT) {
+    if (status == MX_ERR_SHOULD_WAIT) {
         state_tracker_.UpdateState(MX_CHANNEL_READABLE, 0);
     }
 

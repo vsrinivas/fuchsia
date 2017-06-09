@@ -20,7 +20,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
         // Unregister our handler.
         __UNUSED status_t ret;
         ret = device_->RegisterIrqHandler(irq_id_, nullptr, nullptr);
-        DEBUG_ASSERT(ret == NO_ERROR);  // This should never fail.
+        DEBUG_ASSERT(ret == MX_OK);  // This should never fail.
 
         // Release our reference to our device.
         device_ = nullptr;
@@ -50,14 +50,14 @@ status_t PciInterruptDispatcher::Create(
         mxtl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
     if (!device || !out_rights || !out_interrupt)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
     auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, maskable);
     mxtl::RefPtr<Dispatcher> dispatcher = mxtl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // Stash reference to the underlying device in the dispatcher we just
     // created, then attempt to register our dispatcher with the bus driver.
@@ -66,7 +66,7 @@ status_t PciInterruptDispatcher::Create(
     status_t result = device->RegisterIrqHandler(irq_id,
                                                            IrqThunk,
                                                            interrupt_dispatcher);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         interrupt_dispatcher->device_ = nullptr;
         return result;
     }
@@ -79,7 +79,7 @@ status_t PciInterruptDispatcher::Create(
     }
     *out_interrupt = mxtl::move(dispatcher);
     *out_rights    = kDefaultPciInterruptRights;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciInterruptDispatcher::InterruptComplete() {
@@ -89,7 +89,7 @@ status_t PciInterruptDispatcher::InterruptComplete() {
     if (maskable_)
         device_->UnmaskIrq(irq_id_);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t PciInterruptDispatcher::UserSignal() {
@@ -100,7 +100,7 @@ status_t PciInterruptDispatcher::UserSignal() {
 
     signal(true);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #endif  // if WITH_DEV_PCIE

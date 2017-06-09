@@ -67,7 +67,7 @@ UserThread::~UserThread() {
         LTRACEF("joining LK thread to clean up state\n");
         __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
         LTRACEF("done joining LK thread\n");
-        DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
+        DEBUG_ASSERT_MSG(ret == MX_OK, "thread_join returned something other than MX_OK\n");
         break;
     }
     case State::INITIAL:
@@ -106,7 +106,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
     if (!stack_vmo) {
         TRACEF("error allocating %s stack for thread\n",
                unsafe ? "unsafe" : "safe");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // create a vmar with enough padding for a page before and after the stack
@@ -120,7 +120,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
         VMAR_FLAG_CAN_MAP_WRITE,
         unsafe ? "unsafe_kstack_vmar" : "kstack_vmar",
         &kstack_vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // destroy the vmar if we early abort
@@ -141,7 +141,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
                                           ARCH_MMU_FLAG_PERM_WRITE,
                                           unsafe ? "unsafe_kstack" : "kstack",
                                           &kstack_mapping);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     LTRACEF("%s stack mapping at %#" PRIxPTR "\n",
@@ -149,7 +149,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
 
     // fault in all the pages so we dont demand fault in the stack
     status = kstack_mapping->MapRange(0, DEFAULT_STACK_SIZE, true);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Cancel the cleanup handler on the vmar since we're about to save a
@@ -157,7 +157,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
     vmar_cleanup.cancel();
     *out_kstack_mapping = mxtl::move(kstack_mapping);
     *out_kstack_vmar = mxtl::move(kstack_vmar);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 };
@@ -185,12 +185,12 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     DEBUG_ASSERT(!!vmar);
 
     auto status = allocate_stack(vmar, false, &kstack_mapping_, &kstack_vmar_);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 #if __has_feature(safe_stack)
     status = allocate_stack(vmar, true,
                             &unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 #endif
 
@@ -207,7 +207,7 @@ status_t UserThread::Initialize(const char* name, size_t len) {
 
     if (!lkthread) {
         TRACEF("error creating thread\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     DEBUG_ASSERT(lkthread == &thread_);
 
@@ -226,7 +226,7 @@ status_t UserThread::Initialize(const char* name, size_t len) {
     // we've entered the initialized state
     SetState(State::INITIALIZED);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t UserThread::set_name(const char* name, size_t len) {
@@ -238,7 +238,7 @@ status_t UserThread::set_name(const char* name, size_t len) {
     AutoSpinLock lock(name_lock_);
     memcpy(thread_.name, name, len);
     memset(thread_.name + len, 0, MX_MAX_NAME_LEN - len);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
@@ -259,7 +259,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
     AutoLock lock(&state_lock_);
 
     if (state_ != State::INITIALIZED)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // save the user space entry state
     user_entry_ = entry;
@@ -279,7 +279,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
     thread_.user_pid = process_->get_koid();
     thread_resume(&thread_);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // called in the context of our thread
@@ -551,12 +551,12 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
     AutoLock state_lock(&state_lock_);
     AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
-        return ERR_NOT_FOUND; // TODO(dje): ?
+        return MX_ERR_NOT_FOUND; // TODO(dje): ?
     if (exception_port_)
-        return ERR_BAD_STATE; // TODO(dje): ?
+        return MX_ERR_BAD_STATE; // TODO(dje): ?
     exception_port_ = eport;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool UserThread::ResetExceptionPort(bool quietly) {
@@ -627,11 +627,11 @@ status_t UserThread::ExceptionHandlerExchange(
         // thread state.
 
         status_t status = eport->SendReport(report);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             LTRACEF("SendReport returned %d\n", status);
             // Treat the exception as unhandled.
             *out_estatus = ExceptionStatus::TRY_NEXT;
-            return NO_ERROR;
+            return MX_OK;
         }
 
         // Mark that we're in an exception.
@@ -655,14 +655,14 @@ status_t UserThread::ExceptionHandlerExchange(
     status_t status;
     do {
         status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
-    } while (status == ERR_INTERRUPTED_RETRY);
+    } while (status == MX_ERR_INTERRUPTED_RETRY);
 
     AutoLock lock(&exception_wait_lock_);
 
-    // Note: If |status| != NO_ERROR, then |exception_status_| is still
+    // Note: If |status| != MX_OK, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
     switch (status) {
-    case NO_ERROR:
+    case MX_OK:
         // It's critical that at this point the event no longer be armed.
         // Otherwise the next time we get an exception we'll fall right through
         // without waiting for an exception response.
@@ -701,7 +701,7 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
 
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     // The thread can be in several states at this point. Alas this is a bit
     // complicated because there is a window in the middle of
@@ -713,11 +713,11 @@ status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
     // To keep things simple we take a first-one-wins approach.
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
     if (exception_status_ != ExceptionStatus::UNPROCESSED)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     exception_status_ = estatus;
     event_signal(&exception_event_, true);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
@@ -848,10 +848,10 @@ status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&exception_wait_lock_);
     if (!InExceptionLocked())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
     *report = *exception_report_;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 uint32_t UserThread::get_num_state_kinds() const {
@@ -875,14 +875,14 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
     AutoLock exception_wait_lock(&exception_wait_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     switch (state_kind)
     {
     case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
         return arch_get_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len);
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -903,14 +903,14 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
     AutoLock exception_wait_lock(&exception_wait_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     switch (state_kind)
     {
     case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
         return arch_set_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len, priv);
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }
 

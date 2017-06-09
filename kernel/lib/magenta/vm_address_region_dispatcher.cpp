@@ -75,11 +75,11 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
     }
 
     if (flags != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     *vmar_flags = vmar;
     *arch_mmu_flags = mmu_flags;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 } // namespace
@@ -107,11 +107,11 @@ status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
     AllocChecker ac;
     auto disp = new (&ac) VmAddressRegionDispatcher(mxtl::move(vmar));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = vmar_rights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmAddressRegionDispatcher::VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegion> vmar)
@@ -129,30 +129,30 @@ mx_status_t VmAddressRegionDispatcher::Allocate(
     uint32_t vmar_flags;
     uint arch_mmu_flags;
     mx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Check if any MMU-related flags were requested (USER is always implied)
     if (arch_mmu_flags != ARCH_MMU_FLAG_PERM_USER) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mxtl::RefPtr<VmAddressRegion> new_vmar;
     status = vmar_->CreateSubVmar(offset, size, /* align_pow2 */ 0 , vmar_flags,
                                   "useralloc", &new_vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Create the dispatcher.
     mxtl::RefPtr<Dispatcher> dispatcher;
     status = VmAddressRegionDispatcher::Create(mxtl::move(new_vmar),
                                                &dispatcher, new_rights);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     *new_dispatcher =
         DownCastDispatcher<VmAddressRegionDispatcher>(&dispatcher);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VmAddressRegionDispatcher::Destroy() {
@@ -167,13 +167,13 @@ mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, mxtl::RefPtr<VmOb
     canary_.Assert();
 
     if (!is_valid_mapping_protection(flags))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Split flags into vmar_flags and arch_mmu_flags
     uint32_t vmar_flags;
     uint arch_mmu_flags;
     mx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mxtl::RefPtr<VmMapping> result(nullptr);
@@ -181,33 +181,33 @@ mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, mxtl::RefPtr<VmOb
                                     vmar_flags, mxtl::move(vmo), vmo_offset,
                                     arch_mmu_flags, "useralloc",
                                     &result);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
     *out = mxtl::move(result);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_t flags) {
     canary_.Assert();
 
     if (!IS_PAGE_ALIGNED(base)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (!is_valid_mapping_protection(flags))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     uint32_t vmar_flags;
     uint arch_mmu_flags;
     mx_status_t status = split_syscall_flags(flags, &vmar_flags, &arch_mmu_flags);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // This request does not allow any VMAR flags to be set
     if (vmar_flags)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     return vmar_->Protect(base, len, arch_mmu_flags);
 }
@@ -216,7 +216,7 @@ mx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
     canary_.Assert();
 
     if (!IS_PAGE_ALIGNED(base)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     return vmar_->Unmap(base, len);

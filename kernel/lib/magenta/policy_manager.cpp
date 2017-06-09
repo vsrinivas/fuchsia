@@ -81,7 +81,7 @@ mx_status_t PolicyManager::AddPolicy(
 
     // Don't allow overlong policies.
     if (policy_count > MX_POL_MAX)
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     uint64_t partials[MX_POL_MAX] = {0};
 
@@ -102,13 +102,13 @@ mx_status_t PolicyManager::AddPolicy(
     //
     // Which means "deny all object creation except for channel".
 
-    mx_status_t res = NO_ERROR;
+    mx_status_t res = MX_OK;
 
     for (size_t ix = 0; ix != policy_count; ++ix) {
         const auto& in = policy_input[ix];
 
         if (in.condition >= MX_POL_MAX)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
 
         if (in.condition == MX_POL_NEW_ANY) {
             // loop over all MX_POL_NEW_xxxx conditions.
@@ -130,7 +130,7 @@ mx_status_t PolicyManager::AddPolicy(
     }
 
     *new_policy = existing_policy;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition) {
@@ -172,7 +172,7 @@ bool PolicyManager::CanSetEntry(uint64_t existing, uint32_t new_action) {
             resultant = in_pol & Encoding::kActionBits;                 \
             resultant |= Encoding::kExplicitBit;                        \
         } else if (mode == MX_JOB_POL_ABSOLUTE) {                       \
-            return ERR_ALREADY_EXISTS;                                  \
+            return MX_ERR_ALREADY_EXISTS;                                  \
         }                                                               \
     } while (0)
 
@@ -182,7 +182,7 @@ mx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
     Encoding result = {0};
 
     if (policy & ~kPolicyActionValidBits)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     switch (condition) {
     case MX_POL_BAD_HANDLE:
@@ -216,11 +216,11 @@ mx_status_t PolicyManager::AddPartial(uint32_t mode, pol_cookie_t existing_polic
         POLMAN_SET_ENTRY(mode, existing.new_fifo, policy, result.new_fifo);
         break;
     default:
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     };
 
     *partial = result.encoded;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 #undef POLMAN_SET_ENTRY

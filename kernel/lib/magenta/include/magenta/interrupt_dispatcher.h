@@ -40,7 +40,7 @@ public:
 
     virtual void on_zero_handles() final {
         // Ensure any waiters stop waiting
-        event_signal_etc(&event_, false, ERR_CANCELED);
+        event_signal_etc(&event_, false, MX_ERR_CANCELED);
     }
 
 protected:

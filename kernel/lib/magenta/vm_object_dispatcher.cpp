@@ -34,12 +34,12 @@ status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
     AllocChecker ac;
     auto disp = new (&ac) VmObjectDispatcher(mxtl::move(vmo));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     disp->vmo()->set_user_id(disp->get_koid());
     *rights = kDefaultVmoRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
@@ -90,7 +90,7 @@ mx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
 
     *size = vmo_->size();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
@@ -115,11 +115,11 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
         case MX_VMO_OP_LOCK:
         case MX_VMO_OP_UNLOCK:
             // TODO: handle
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
         case MX_VMO_OP_LOOKUP:
             // we will be using the user pointer
             if (!buffer)
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
 
             // make sure that mx_paddr_t doesn't drift from paddr_t, which the VM uses internally
             static_assert(sizeof(mx_paddr_t) == sizeof(paddr_t), "");
@@ -134,7 +134,7 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
         case MX_VMO_OP_CACHE_CLEAN_INVALIDATE:
             return vmo_->CleanInvalidateCache(offset, size);
         default:
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 }
 
@@ -152,6 +152,6 @@ mx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_
     if (options & MX_VMO_CLONE_COPY_ON_WRITE) {
         return vmo_->CloneCOW(offset, size, copy_name, clone_vmo);
     } else {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 }

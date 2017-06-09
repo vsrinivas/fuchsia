@@ -118,12 +118,12 @@ public:
                                        mx_rights_t* out_rights) {
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return ERR_WRONG_TYPE;
-        return NO_ERROR;
+            return MX_ERR_WRONG_TYPE;
+        return MX_OK;
     }
 
     // Get the dispatcher corresponding to this handle value, after
@@ -139,12 +139,12 @@ public:
                                                       desired_rights,
                                                       &generic_dispatcher,
                                                       out_rights);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
-            return ERR_WRONG_TYPE;
-        return NO_ERROR;
+            return MX_ERR_WRONG_TYPE;
+        return MX_OK;
     }
 
     // Get the dispatcher corresponding to this handle value, after
@@ -213,7 +213,7 @@ public:
     // Checks the |condition| against the parent job's policy.
     //
     // Must be called by syscalls before performing an action represented by an
-    // MX_POL_xxxxx condition. If the return value is NO_ERROR the action can
+    // MX_POL_xxxxx condition. If the return value is MX_OK the action can
     // proceed; otherwise, the process is not allowed to perform the action,
     // and the status value should be returned to the usermode caller.
     //
@@ -221,7 +221,7 @@ public:
     //
     //     auto up = ProcessDispatcher::GetCurrent();
     //     mx_status_t res = up->QueryPolicy(MX_POL_NEW_CHANNEL);
-    //     if (res != NO_ERROR) {
+    //     if (res != MX_OK) {
     //         // Channel creation denied by the calling process's
     //         // parent job's policy.
     //         return res;

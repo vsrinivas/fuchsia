@@ -21,7 +21,7 @@ mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
     if (!hypervisor) {
         mxtl::unique_ptr<HypervisorContext> context;
         mx_status_t status = arch_hypervisor_create(&context);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         // TODO(abdulla): We call AdoptRef to create a long-lived singleton.
@@ -31,12 +31,12 @@ mx_status_t HypervisorDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher,
         AllocChecker ac;
         hypervisor = mxtl::AdoptRef(new (&ac) HypervisorDispatcher(mxtl::move(context)));
         if (!ac.check())
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
     }
 
     *rights = kDefaultHypervisorRights;
     *dispatcher = mxtl::RefPtr<Dispatcher>(hypervisor);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 HypervisorDispatcher::HypervisorDispatcher(mxtl::unique_ptr<HypervisorContext> context)

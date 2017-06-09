@@ -134,7 +134,7 @@ void FutexNode::WakeThreads(FutexNode* head) {
     do {
         FutexNode* next = node->queue_next_;
         THREAD_LOCK(state);
-        wait_queue_wake_one(&node->wait_queue_, true, NO_ERROR);
+        wait_queue_wake_one(&node->wait_queue_, true, MX_OK);
         THREAD_UNLOCK(state);
         node->MarkAsNotInQueue();
         node = next;

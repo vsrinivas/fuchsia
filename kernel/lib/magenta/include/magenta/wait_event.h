@@ -29,8 +29,8 @@ public:
     WaitEvent& operator=(const WaitEvent&) = delete;
 
     // Returns:
-    // NO_ERROR - signaled
-    // ERR_TIMED_OUT - time out expired
+    // MX_OK - signaled
+    // MX_ERR_TIMED_OUT - time out expired
     // ERR_INTERRUPTED - thread killed
     // Or the |status| which the caller specified in WaitEvent::Signal(status)
     status_t Wait(lk_time_t deadline) {
@@ -38,7 +38,7 @@ public:
     }
 
     // returns number of ready threads
-    int Signal(status_t status = NO_ERROR) {
+    int Signal(status_t status = MX_OK) {
         return event_signal_etc(&event_, false, status);
     }
 

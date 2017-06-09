@@ -31,10 +31,10 @@ status_t WaitSetDispatcher::Entry::Create(mx_signals_t watched_signals,
     AllocChecker ac;
     Entry* e = new (&ac) Entry (watched_signals, cookie);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     entry->reset(e);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 WaitSetDispatcher::Entry::~Entry() {}
@@ -186,11 +186,11 @@ status_t WaitSetDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher, mx_righ
     AllocChecker ac;
     Dispatcher* d = new (&ac) WaitSetDispatcher();
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *dispatcher = mxtl::AdoptRef(d);
     *rights = kDefaultWaitSetRights;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 WaitSetDispatcher::~WaitSetDispatcher() {
@@ -228,14 +228,14 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
     canary_.Assert();
 
     if (!handle->dispatcher()->get_state_tracker())
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     auto e = entry.get();
     {
         AutoLock lock(&mutex_);
 
         if (!entries_.insert_or_find(mxtl::move(entry)))
-            return ERR_ALREADY_EXISTS;
+            return MX_ERR_ALREADY_EXISTS;
 
         e->InitLocked(this, handle);
     }
@@ -246,12 +246,12 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
 
     // We need to call this outside the lock.
     __UNUSED auto status = handle->dispatcher()->add_observer(e);
-    DEBUG_ASSERT(status == NO_ERROR);
+    DEBUG_ASSERT(status == MX_OK);
 
     // add_observer() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
     // That state change means that RemoveEntry() may actually call RemoveObserver(), so we must not
     // do any work after calling add_observer()!
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
@@ -264,7 +264,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
 
         entry = entries_.erase(cookie);
         if (!entry)
-            return ERR_NOT_FOUND;
+            return MX_ERR_NOT_FOUND;
 
         if (entry->IsTriggeredLocked()) {
             DEBUG_ASSERT(entry->InTriggeredEntriesListLocked());
@@ -279,7 +279,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
             // We're *in* AddEntry() on another thread! Just put it back and pretend it hasn't been
             // added yet.
             entries_.insert(mxtl::move(entry));
-            return NO_ERROR;
+            return MX_OK;
         }
         DEBUG_ASSERT(state == Entry::State::ADDED);
         entry->SetStateLocked(Entry::State::REMOVED);
@@ -288,7 +288,7 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
     if (dispatcher)
         dispatcher->get_state_tracker()->RemoveObserver(entry.get());
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t WaitSetDispatcher::Wait(mx_time_t deadline,
@@ -299,7 +299,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t deadline,
 
     status_t result = event_wait_deadline(&event_, deadline, true);
 
-    if (result != NO_ERROR && result != ERR_TIMED_OUT) {
+    if (result != MX_OK && result != MX_ERR_TIMED_OUT) {
         DEBUG_ASSERT(result == ERR_INTERRUPTED);
         return result;
     }
@@ -308,7 +308,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t deadline,
 
     // Always prefer to give results over timed out, but prefer "cancelled" over everything.
     if (cancelled_)
-        return ERR_CANCELED;
+        return MX_ERR_CANCELED;
 
     if (!num_triggered_entries_) {
         // It's *possible* that we woke due to something triggering
@@ -329,11 +329,11 @@ status_t WaitSetDispatcher::Wait(mx_time_t deadline,
         results[i].cookie = it->GetKey();
         if (it->GetHandleLocked()) {
             // Not cancelled
-            results[i].status = NO_ERROR;
+            results[i].status = MX_OK;
             results[i].observed = it->GetSignalsStateLocked();
         } else {
             // Cancelled.
-            results[i].status = ERR_CANCELED;
+            results[i].status = MX_ERR_CANCELED;
             results[i].observed = 0;
         }
     }

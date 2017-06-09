@@ -163,46 +163,46 @@ void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
 
 mx_status_t StateTracker::SetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t cookie) {
     if (cookiejar == nullptr)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
     if (cookiejar->scope_ == MX_KOID_INVALID) {
         cookiejar->scope_ = scope;
         cookiejar->cookie_ = cookie;
-        return NO_ERROR;
+        return MX_OK;
     }
 
     if (cookiejar->scope_ == scope) {
         cookiejar->cookie_ = cookie;
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    return ERR_ACCESS_DENIED;
+    return MX_ERR_ACCESS_DENIED;
 }
 
 mx_status_t StateTracker::GetCookie(CookieJar* cookiejar, mx_koid_t scope, uint64_t* cookie) {
     if (cookiejar == nullptr)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
     if (cookiejar->scope_ == scope) {
         *cookie = cookiejar->cookie_;
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    return ERR_ACCESS_DENIED;
+    return MX_ERR_ACCESS_DENIED;
 }
 
 mx_status_t StateTracker::InvalidateCookie(CookieJar* cookiejar) {
     if (cookiejar == nullptr)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     AutoLock lock(&lock_);
 
     cookiejar->scope_ = MX_KOID_KERNEL;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 bool StateTracker::UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) {

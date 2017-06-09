@@ -24,12 +24,12 @@ status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
     AllocChecker ac;
     auto disp0 = new (&ac) EventPairDispatcher();
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto disp1 = new (&ac) EventPairDispatcher();
     if (!ac.check()) {
         delete disp0;
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     *rights = kDefaultEventPairRights;
@@ -39,7 +39,7 @@ status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
     disp0->Init(disp1);
     disp1->Init(disp0);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 EventPairDispatcher::~EventPairDispatcher() {}
@@ -59,19 +59,19 @@ status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
     canary_.Assert();
 
     if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (!peer) {
         state_tracker_.UpdateState(clear_mask, set_mask);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     other_->state_tracker_.UpdateState(clear_mask, set_mask);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 EventPairDispatcher::EventPairDispatcher()

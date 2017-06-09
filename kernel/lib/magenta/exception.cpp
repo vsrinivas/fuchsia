@@ -68,7 +68,7 @@ static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
                                       const arch_exception_context_t* arch_context,
                                       UserThread::ExceptionStatus* estatus) {
     if (!eport)
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
 
     DEBUG_ASSERT(eport->type() == expected_type);
     auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
@@ -118,10 +118,10 @@ static status_t try_system_exception_handler(UserThread* thread,
 
 // exception handler from low level architecturally-specific code
 //
-// If we return NO_ERROR, the caller is expected to resume the thread "as if"
+// If we return MX_OK, the caller is expected to resume the thread "as if"
 // nothing happened, the handler is expected to have modified state such that
 // resumption is possible.
-// Otherwise, if we return, the result is ERR_BAD_STATE meaning the thread is
+// Otherwise, if we return, the result is MX_ERR_BAD_STATE meaning the thread is
 // not a magenta thread.
 //
 // TODO(dje): Support unwinding from this exception and introducing a
@@ -135,7 +135,7 @@ status_t magenta_exception_handler(uint exception_type,
     UserThread* thread = UserThread::GetCurrent();
     if (unlikely(!thread)) {
         // we're not in magenta thread context, bail
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     typedef status_t (Handler)(UserThread* thread,
@@ -165,15 +165,15 @@ status_t magenta_exception_handler(uint exception_type,
             // thread was killed, probably with mx_task_kill
             thread->Exit();
             __UNREACHABLE;
-        case ERR_NOT_FOUND:
+        case MX_ERR_NOT_FOUND:
             continue;
-        case NO_ERROR:
+        case MX_OK:
             switch (estatus) {
             case UserThread::ExceptionStatus::TRY_NEXT:
                 processed = true;
                 break;
             case UserThread::ExceptionStatus::RESUME:
-                return NO_ERROR;
+                return MX_OK;
             default:
                 ASSERT_MSG(0, "invalid exception status %d",
                            static_cast<int>(estatus));
@@ -212,5 +212,5 @@ status_t magenta_exception_handler(uint exception_type,
     // should not get here
     panic("arch_exception_handler: fell out of thread exit somehow!\n");
 
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }

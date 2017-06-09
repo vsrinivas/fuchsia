@@ -21,11 +21,11 @@ status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dis
     AllocChecker ac;
     auto disp = new (&ac) EventDispatcher(options);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = kDefaultEventRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 EventDispatcher::EventDispatcher(uint32_t options)
@@ -37,11 +37,11 @@ status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bo
     canary_.Assert();
 
     if (peer)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     state_tracker_.UpdateState(clear_mask, set_mask);
-    return NO_ERROR;
+    return MX_OK;
 }

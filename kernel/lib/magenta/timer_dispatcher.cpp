@@ -42,11 +42,11 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
     AllocChecker ac;
     auto disp = new (&ac) TimerDispatcher(options);
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     *rights = kDefaultTimersRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
@@ -70,11 +70,11 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
 
     // Deadline values 0 and 1 are special.
     if (deadline <= kMinTimerDeadline)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // zero period is valid but other small values are not.
     if ((period < kMinTimerPeriod) && (period != 0u))
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     AutoLock al(&lock_);
 
@@ -90,14 +90,14 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     // or in the complicated cancelation path above.
     AddRef();
     timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t TimerDispatcher::Cancel() {
     canary_.Assert();
     AutoLock al(&lock_);
     CancelLocked();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void TimerDispatcher::CancelLocked() {

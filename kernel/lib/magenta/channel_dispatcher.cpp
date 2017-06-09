@@ -36,11 +36,11 @@ status_t ChannelDispatcher::Create(uint32_t flags,
     AllocChecker ac;
     auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto ch1 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     ch0->Init(ch1);
     ch1->Init(ch0);
@@ -48,7 +48,7 @@ status_t ChannelDispatcher::Create(uint32_t flags,
     *rights = kDefaultChannelRights;
     *dispatcher0 = mxtl::move(ch0);
     *dispatcher1 = mxtl::move(ch1);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 ChannelDispatcher::ChannelDispatcher(uint32_t flags)
@@ -80,7 +80,7 @@ mx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
     StateObserver::CountInfo cinfo =
         {{{messages_.size_slow(), MX_CHANNEL_READABLE}, {0u, 0u}}};
     state_tracker_.AddObserver(observer, &cinfo);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
@@ -109,7 +109,7 @@ void ChannelDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
         // Remove waiter from list.
         while (!waiters_.is_empty()) {
             auto waiter = waiters_.pop_front();
-            waiter->Cancel(ERR_CANCELED);
+            waiter->Cancel(MX_ERR_CANCELED);
         }
     }
 
@@ -133,7 +133,7 @@ void ChannelDispatcher::OnPeerZeroHandles() {
     // Remove waiter from list.
     while (!waiters_.is_empty()) {
         auto waiter = waiters_.pop_front();
-        waiter->Cancel(ERR_PEER_CLOSED);
+        waiter->Cancel(MX_ERR_PEER_CLOSED);
     }
 }
 
@@ -149,15 +149,15 @@ status_t ChannelDispatcher::Read(uint32_t* msg_size,
     AutoLock lock(&lock_);
 
     if (messages_.is_empty())
-        return other_ ? ERR_SHOULD_WAIT : ERR_PEER_CLOSED;
+        return other_ ? MX_ERR_SHOULD_WAIT : MX_ERR_PEER_CLOSED;
 
     *msg_size = messages_.front().data_size();
     *msg_handle_count = messages_.front().num_handles();
-    status_t rv = NO_ERROR;
+    status_t rv = MX_OK;
     if (*msg_size > max_size || *msg_handle_count > max_handle_count) {
         if (!may_discard)
-            return ERR_BUFFER_TOO_SMALL;
-        rv = ERR_BUFFER_TOO_SMALL;
+            return MX_ERR_BUFFER_TOO_SMALL;
+        rv = MX_ERR_BUFFER_TOO_SMALL;
     }
 
     *msg = messages_.pop_front();
@@ -178,7 +178,7 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
             // |msg| will be destroyed but we want to keep the handles alive since
             // the caller should put them back into the process table.
             msg->set_owns_handles(false);
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         }
         other = other_;
     }
@@ -186,7 +186,7 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
     if (other->WriteSelf(mxtl::move(msg)) > 0)
         thread_reschedule();
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
@@ -196,10 +196,10 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
     canary_.Assert();
 
     auto waiter = UserThread::GetCurrent()->GetMessageWaiter();
-    if (unlikely(waiter->BeginWait(mxtl::WrapRefPtr(this), msg->get_txid()) != NO_ERROR)) {
+    if (unlikely(waiter->BeginWait(mxtl::WrapRefPtr(this), msg->get_txid()) != MX_OK)) {
         // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
         // channel calls has been violated.  Shoot the misbehaving thread.
-        ProcessDispatcher::GetCurrent()->Exit(ERR_BAD_STATE);
+        ProcessDispatcher::GetCurrent()->Exit(MX_ERR_BAD_STATE);
     }
 
     mxtl::RefPtr<ChannelDispatcher> other;
@@ -211,7 +211,7 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
             msg->set_owns_handles(false);
             *return_handles = true;
             waiter->EndWait(reply);
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         }
         other = other_;
 
@@ -237,7 +237,7 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
     // (2) Wait for notification via waiter's event or for the
     // deadline to hit.
     mx_status_t status = waiter->Wait(deadline);
-    if (status == ERR_INTERRUPTED_RETRY) {
+    if (status == MX_ERR_INTERRUPTED_RETRY) {
         // If we got interrupted, return out to usermode, but
         // do not clear the waiter.
         return status;
@@ -255,9 +255,9 @@ status_t ChannelDispatcher::ResumeInterruptedCall(mx_time_t deadline,
         // (4) If any of (3A), (3B), or (3C) have occured,
         // we were removed from the waiters list already
         // and get_msg() returns a non-TIMED_OUT status.
-        // Otherwise, the status is ERR_TIMED_OUT and it
+        // Otherwise, the status is MX_ERR_TIMED_OUT and it
         // is our job to remove the waiter from the list.
-        if ((status = waiter->EndWait(reply)) == ERR_TIMED_OUT)
+        if ((status = waiter->EndWait(reply)) == MX_ERR_TIMED_OUT)
             waiters_.erase(*waiter);
     }
 
@@ -298,10 +298,10 @@ status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client)
 
     AutoLock lock(&lock_);
     if (iopc_)
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
 
     if ((client->get_trigger_signals() & ~(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) != 0)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     iopc_ = mxtl::move(client);
 
@@ -310,25 +310,25 @@ status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client)
         iopc_->Signal(MX_CHANNEL_READABLE, msg.data_size(), &lock_);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     canary_.Assert();
 
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     if (!peer) {
         state_tracker_.UpdateState(clear_mask, set_mask);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mxtl::RefPtr<ChannelDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
-            return ERR_PEER_CLOSED;
+            return MX_ERR_PEER_CLOSED;
         other = other_;
     }
 
@@ -349,7 +349,7 @@ status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
     }
 
     state_tracker_.UpdateState(clear_mask, set_mask);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
@@ -358,6 +358,6 @@ int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> ms
 
     txid_ = msg->get_txid();
     msg_ = mxtl::move(msg);
-    status_ = NO_ERROR;
-    return event_.Signal(NO_ERROR);
+    status_ = MX_OK;
+    return event_.Signal(MX_OK);
 }
