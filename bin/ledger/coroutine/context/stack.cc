@@ -29,12 +29,12 @@ void AllocateStack(const mx::vmo& vmo,
       MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
           MX_VM_FLAG_CAN_MAP_SPECIFIC,
       vmar, &allocate_address);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
 
   status = vmar->map(
       kStackGuardSize, vmo, vmo_offset, stack_size,
       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC, addr);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
 }
 }  // namespace
 
@@ -42,7 +42,7 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FTL_DCHECK(stack_size_);
 
   mx_status_t status = mx::vmo::create(2 * stack_size_, 0, &vmo_);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
   AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_,
@@ -60,7 +60,7 @@ Stack::~Stack() {
 void Stack::Release() {
   mx_status_t status =
       vmo_.op_range(MX_VMO_OP_DECOMMIT, 0, 2 * stack_size_, nullptr, 0);
-  FTL_DCHECK(status == NO_ERROR);
+  FTL_DCHECK(status == MX_OK);
 }
 
 }  // namespace context

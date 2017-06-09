@@ -59,7 +59,7 @@ class VmoDataChunk : public DataSource::DataChunk {
     mx_status_t status = mx::vmar::root_self().allocate(
         0, ToFullPages(vmo_size_), MX_VM_FLAG_CAN_MAP_READ, &vmar_,
         &allocate_address);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       return status;
     }
 
@@ -87,7 +87,7 @@ class VmoDataSource : public DataSource {
   VmoDataSource(mx::vmo value) : vmo_(std::move(value)) {
     FTL_DCHECK(vmo_);
     mx_status_t status = vmo_.get_size(&vmo_size_);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
       vmo_.reset();
     }
   }
@@ -106,7 +106,7 @@ class VmoDataSource : public DataSource {
       return;
     }
     auto data = std::make_unique<VmoDataChunk>(std::move(vmo_), vmo_size_);
-    if (data->Init() != NO_ERROR) {
+    if (data->Init() != MX_OK) {
       callback(nullptr, Status::ERROR);
       return;
     }

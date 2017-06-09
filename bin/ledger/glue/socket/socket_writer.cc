@@ -45,16 +45,16 @@ void SocketWriter::GetData() {
 }
 
 void SocketWriter::WriteData(ftl::StringView data) {
-  mx_status_t status = NO_ERROR;
-  while (status == NO_ERROR && !data.empty()) {
+  mx_status_t status = MX_OK;
+  while (status == MX_OK && !data.empty()) {
     size_t written;
     status = destination_.write(0u, data.data(), data.size(), &written);
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
       data = data.substr(written);
     }
   }
 
-  if (status == NO_ERROR) {
+  if (status == MX_OK) {
     FTL_DCHECK(data.empty());
     data_.clear();
     data_view_ = "";
@@ -64,12 +64,12 @@ void SocketWriter::WriteData(ftl::StringView data) {
 
   FTL_DCHECK(!data.empty());
 
-  if (status == ERR_PEER_CLOSED) {
+  if (status == MX_ERR_PEER_CLOSED) {
     Done();
     return;
   }
 
-  if (status == ERR_SHOULD_WAIT) {
+  if (status == MX_ERR_SHOULD_WAIT) {
     if (data_.empty()) {
       data_ = data.ToString();
       data_view_ = data_;

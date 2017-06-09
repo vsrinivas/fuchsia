@@ -99,8 +99,8 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
     EXPECT_EQ(i, chunks.size());
 
     size_t actual = 0;
-    EXPECT_EQ(NO_ERROR, socket_pair.socket1.write(0, value.c_str(),
-                                                  value.size(), &actual));
+    EXPECT_EQ(MX_OK, socket_pair.socket1.write(0, value.c_str(), value.size(),
+                                               &actual));
     EXPECT_EQ(value.size(), actual);
 
     EXPECT_FALSE(RunLoopWithTimeout());

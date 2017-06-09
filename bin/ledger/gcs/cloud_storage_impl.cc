@@ -91,7 +91,7 @@ void CloudStorageImpl::UploadObject(
 
   uint64_t data_size;
   mx_status_t status = data.get_size(&data_size);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
     callback(Status::INTERNAL_ERROR);
     return;

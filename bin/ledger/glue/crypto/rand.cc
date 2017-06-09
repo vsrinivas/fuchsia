@@ -19,7 +19,7 @@ namespace {
 
 void InitEntropy() {
   auto current_time = mx_time_get(MX_CLOCK_UTC);
-  if (mx_cprng_add_entropy(&current_time, sizeof(current_time)) != NO_ERROR) {
+  if (mx_cprng_add_entropy(&current_time, sizeof(current_time)) != MX_OK) {
     FTL_LOG(WARNING)
         << "Unable to add entropy to the kernel. No additional entropy added.";
     return;

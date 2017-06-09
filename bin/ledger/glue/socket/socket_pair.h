@@ -25,7 +25,7 @@ class SocketPair {
 };
 
 inline SocketPair::SocketPair() {
-  FTL_CHECK(mx::socket::create(0u, &socket1, &socket2) == NO_ERROR);
+  FTL_CHECK(mx::socket::create(0u, &socket1, &socket2) == MX_OK);
 }
 
 inline SocketPair::~SocketPair() {}
