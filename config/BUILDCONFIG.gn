@@ -76,6 +76,7 @@ _shared_binary_target_configs = [
   "//build/config:default_warnings",
   "//build/config:no_exceptions",
   "//build/config:no_rtti",
+  "//build/config:symbol_visibility_hidden",
 ]
 
 if (is_debug) {
@@ -99,7 +100,6 @@ if (use_lto) {
 
 _shared_library_target_configs = _shared_binary_target_configs + [
                                    "//build/config:shared_library_config",
-                                   "//build/config:symbol_visibility_hidden",
                                    "//build/config:symbol_no_undefined",
                                  ]
 _executable_target_configs = _shared_binary_target_configs + [
