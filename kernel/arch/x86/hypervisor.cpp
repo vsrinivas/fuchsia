@@ -234,12 +234,12 @@ status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     return MX_OK;
 }
 
-paddr_t VmxPage::PhysicalAddress() {
+paddr_t VmxPage::PhysicalAddress() const {
     DEBUG_ASSERT(pa_ != 0);
     return pa_;
 }
 
-void* VmxPage::VirtualAddress() {
+void* VmxPage::VirtualAddress() const {
     DEBUG_ASSERT(pa_ != 0);
     return paddr_to_kvaddr(pa_);
 }
@@ -254,7 +254,7 @@ status_t PerCpu::Init(const VmxInfo& info) {
     return MX_OK;
 }
 
-AutoVmcsLoad::AutoVmcsLoad(VmxPage* page)
+AutoVmcsLoad::AutoVmcsLoad(const VmxPage* page)
     : page_(page) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
@@ -873,11 +873,20 @@ void gpr_copy(Out* out, const In& in) {
 
 status_t VmcsPerCpu::SetGpr(const mx_guest_gpr_t& guest_gpr) {
     gpr_copy(&vmx_state_.guest_state, guest_gpr);
+    AutoVmcsLoad vmcs_load(&page_);
+    vmcs_write(VmcsFieldXX::GUEST_RSP, guest_gpr.rsp);
+    if (guest_gpr.flags & X86_FLAGS_RESERVED_ONES) {
+        const uint64_t rflags = vmcs_read(VmcsFieldXX::GUEST_RFLAGS);
+        vmcs_write(VmcsFieldXX::GUEST_RFLAGS, (rflags & ~UINT8_MAX) | guest_gpr.flags);
+    }
     return MX_OK;
 }
 
 status_t VmcsPerCpu::GetGpr(mx_guest_gpr_t* guest_gpr) const {
     gpr_copy(guest_gpr, vmx_state_.guest_state);
+    AutoVmcsLoad vmcs_load(&page_);
+    guest_gpr->rsp = vmcs_read(VmcsFieldXX::GUEST_RSP);
+    guest_gpr->flags = vmcs_read(VmcsFieldXX::GUEST_RFLAGS) & UINT8_MAX;
     return MX_OK;
 }
 
@@ -1020,14 +1029,29 @@ status_t VmcsContext::MemTrap(vaddr_t guest_paddr, size_t size) {
     return gpas_->UnmapRange(guest_paddr, size);
 }
 
+struct gpr_args {
+    VmcsContext* context;
+    mx_guest_gpr_t* guest_gpr;
+};
+
+static int vmcs_setgpr(void* arg) {
+    gpr_args* args = static_cast<gpr_args*>(arg);
+    return args->context->PerCpu()->SetGpr(*args->guest_gpr);
+}
+
 status_t VmcsContext::SetGpr(const mx_guest_gpr_t& guest_gpr) {
-    // TODO(abdulla): Update this when we move to an external VCPU model.
-    return per_cpus_[0].SetGpr(guest_gpr);
+    gpr_args args = { this, const_cast<mx_guest_gpr_t*>(&guest_gpr) };
+    return percpu_exec(vmcs_setgpr, &args);
+}
+
+static int vmcs_getgpr(void* arg) {
+    gpr_args* args = static_cast<gpr_args*>(arg);
+    return args->context->PerCpu()->GetGpr(args->guest_gpr);
 }
 
 status_t VmcsContext::GetGpr(mx_guest_gpr_t* guest_gpr) const {
-    // TODO(abdulla): Update this when we move to an external VCPU model.
-    return per_cpus_[0].GetGpr(guest_gpr);
+    gpr_args args = { const_cast<VmcsContext*>(this), guest_gpr };
+    return percpu_exec(vmcs_getgpr, &args);
 }
 
 status_t VmcsContext::SetApicMem(mxtl::RefPtr<VmObject> apic_mem) {

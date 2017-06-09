@@ -251,13 +251,13 @@ private:
 
 class AutoVmcsLoad {
 public:
-    AutoVmcsLoad(VmxPage* page);
+    AutoVmcsLoad(const VmxPage* page);
     ~AutoVmcsLoad();
 
     void reload();
 
 private:
-    VmxPage* page_;
+    const VmxPage* page_;
 };
 
 /* Stores the local APIC state across VM exits. */

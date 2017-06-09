@@ -62,9 +62,7 @@ static uint64_t* select_register(mx_guest_gpr_t* guest_gpr, uint8_t register_id)
     case 3:
         return &guest_gpr->rbx;
     case 4:
-        // RSP is specially handled by the VMCS.
-    default:
-        return NULL;
+        return &guest_gpr->rsp;
     case 5:
         return &guest_gpr->rbp;
     case 6:
@@ -87,6 +85,8 @@ static uint64_t* select_register(mx_guest_gpr_t* guest_gpr, uint8_t register_id)
         return &guest_gpr->r14;
     case 15:
         return &guest_gpr->r15;
+    default:
+        return NULL;
     }
 }
 

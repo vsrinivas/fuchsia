@@ -26,15 +26,15 @@ public:
     ~VmxPage();
 
     status_t Alloc(const VmxInfo& info, uint8_t fill);
-    paddr_t PhysicalAddress();
-    void* VirtualAddress();
+    paddr_t PhysicalAddress() const;
+    void* VirtualAddress() const;
 
     template<typename T>
-    T* VirtualAddress() {
+    T* VirtualAddress() const {
         return static_cast<T*>(VirtualAddress());
     }
 
-    bool IsAllocated() { return pa_ != 0; }
+    bool IsAllocated() const { return pa_ != 0; }
 
 private:
     paddr_t pa_ = 0;
