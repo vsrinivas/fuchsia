@@ -56,16 +56,16 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
                                          ? MX_TIME_INFINITE
                                          : mx::deadline_after(timeout.ToNanoseconds()),
                                      &pending);
-  if (rv == ERR_SHOULD_WAIT || rv == ERR_TIMED_OUT)
+  if (rv == MX_ERR_SHOULD_WAIT || rv == MX_ERR_TIMED_OUT)
     return false;
-  if (rv != NO_ERROR) {
+  if (rv != MX_OK) {
     NotifyError();
     return false;
   }
   if (pending & MX_CHANNEL_READABLE) {
     bool ok = ReadSingleMessage(&rv);
     FTL_ALLOW_UNUSED_LOCAL(ok);
-    return (rv == NO_ERROR);
+    return (rv == MX_OK);
   }
 
   FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
@@ -90,12 +90,12 @@ bool Connector::Accept(Message* message) {
                      static_cast<uint32_t>(message->mutable_handles()->size()));
 
   switch (rv) {
-    case NO_ERROR:
+    case MX_OK:
       // The handles were successfully transferred, so we don't need the message
       // to track their lifetime any longer.
       message->mutable_handles()->clear();
       break;
-    case ERR_BAD_STATE:
+    case MX_ERR_BAD_STATE:
       // There's no point in continuing to write to this channel since the other
       // end is gone. Avoid writing any future messages. Hide write failures
       // from the caller since we'd like them to continue consuming any backlog
@@ -121,7 +121,7 @@ void Connector::CallOnHandleReady(mx_status_t result,
 void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
   FTL_CHECK(async_wait_id_ != 0);
   async_wait_id_ = 0;
-  if (result != NO_ERROR) {
+  if (result != MX_OK) {
     NotifyError();
     return;
   }
@@ -136,9 +136,9 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
     if (!ReadSingleMessage(&rv))
       return;
 
-    // If we get ERR_PEER_CLOSED (or another error), we'll already have
+    // If we get MX_ERR_PEER_CLOSED (or another error), we'll already have
     // notified the error and likely been destroyed.
-    FTL_DCHECK(rv == NO_ERROR || rv == ERR_SHOULD_WAIT);
+    FTL_DCHECK(rv == MX_OK || rv == MX_ERR_SHOULD_WAIT);
     WaitToReadMore();
 
   } else if (pending & MX_CHANNEL_PEER_CLOSED) {
@@ -177,10 +177,10 @@ bool Connector::ReadSingleMessage(mx_status_t* read_result) {
   }
   destroyed_flag_ = previous_destroyed_flag;
 
-  if (rv == ERR_SHOULD_WAIT)
+  if (rv == MX_ERR_SHOULD_WAIT)
     return true;
 
-  if (rv != NO_ERROR ||
+  if (rv != MX_OK ||
       (enforce_errors_from_incoming_receiver_ && !receiver_result)) {
     NotifyError();
     return false;

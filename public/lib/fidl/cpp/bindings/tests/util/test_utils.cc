@@ -18,7 +18,7 @@ bool WriteTextMessage(const mx::channel& handle,
   mx_status_t rv =
       handle.write(0, text.data(), static_cast<uint32_t>(text.size()),
                       nullptr, 0u);
-  return rv == NO_ERROR;
+  return rv == MX_OK;
 }
 
 bool ReadTextMessage(const mx::channel& handle, std::string* text) {
@@ -29,7 +29,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
   uint32_t num_handles = 0u;
   for (;;) {
     rv = handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
-    if (rv == ERR_SHOULD_WAIT) {
+    if (rv == MX_ERR_SHOULD_WAIT) {
       if (did_wait) {
         FTL_DCHECK(false);  // Looping endlessly!?
         return false;
@@ -37,7 +37,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
       rv = mx_object_wait_one(handle.get(),
                               MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_TIME_INFINITE, nullptr);
-      if (rv != NO_ERROR)
+      if (rv != MX_OK)
         return false;
       did_wait = true;
     } else {
@@ -49,13 +49,13 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
   text->resize(num_bytes);
   rv = handle.read(0, &text->at(0), num_bytes, &num_bytes,
                    nullptr, num_handles, &num_handles);
-  return rv == NO_ERROR;
+  return rv == MX_OK;
 }
 
 bool DiscardMessage(const mx::channel& handle) {
   mx_status_t rv = handle.read(MX_CHANNEL_READ_MAY_DISCARD,
                                nullptr, 0, nullptr, nullptr, 0, nullptr);
-  return rv == NO_ERROR;
+  return rv == MX_OK;
 }
 
 }  // namespace test

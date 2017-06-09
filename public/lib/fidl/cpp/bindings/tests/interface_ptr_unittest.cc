@@ -269,7 +269,7 @@ TEST_F(InterfacePtrTest, Resettable) {
   EXPECT_FALSE(a.internal_state()->router_for_testing());
 
   // Test that handle was closed.
-  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle));
 }
 
 TEST_F(InterfacePtrTest, BindInvalidHandle) {

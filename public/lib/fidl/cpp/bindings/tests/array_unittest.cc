@@ -115,8 +115,8 @@ TEST(ArrayTest, HandlesAreClosed) {
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle0_val));
-  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle1.get()));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle0_val));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle1.get()));
 }
 
 TEST(ArrayTest, Clone) {

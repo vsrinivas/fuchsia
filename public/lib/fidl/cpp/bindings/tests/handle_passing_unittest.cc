@@ -231,8 +231,8 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle0_value));
-  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle1_value));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle0_value));
+  EXPECT_EQ(MX_ERR_BAD_HANDLE, mx_handle_close(handle1_value));
 }
 
 TEST_F(HandlePassingTest, CreateNamedObject) {

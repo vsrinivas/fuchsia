@@ -72,8 +72,8 @@ class Connector : public MessageReceiver {
   // |timeout| elapses, or an error happens. Returns |true| if a message has
   // been delivered, |false| otherwise.
   // When returning |false| closes the channel, unless the reason for
-  // for returning |false| was |ERR_SHOULD_WAIT| or
-  // |ERR_TIMED_OUT|.
+  // for returning |false| was |MX_ERR_SHOULD_WAIT| or
+  // |MX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
   bool WaitForIncomingMessage(ftl::TimeDelta timeout);
 

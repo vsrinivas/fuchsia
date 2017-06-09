@@ -78,7 +78,7 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
   uint32_t num_handles = 0;
   mx_status_t rv =
       handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
-  if (rv != ERR_BUFFER_TOO_SMALL)
+  if (rv != MX_ERR_BUFFER_TOO_SMALL)
     return rv;
 
   message->AllocUninitializedData(num_bytes);
@@ -104,7 +104,7 @@ mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
                                    bool* receiver_result) {
   Message message;
   mx_status_t rv = ReadMessage(handle, &message);
-  if (receiver && rv == NO_ERROR)
+  if (receiver && rv == MX_OK)
     *receiver_result = receiver->Accept(&message);
 
   return rv;

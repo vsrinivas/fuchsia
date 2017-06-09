@@ -59,8 +59,8 @@ class Router : public MessageReceiverWithResponder {
   // Blocks the current thread until the first incoming method call, i.e.,
   // either a call to a client method or a callback method, or |timeout|.
   // When returning |false| closes the channel, unless the reason for
-  // for returning |false| was |ERR_SHOULD_WAIT| or
-  // |ERR_TIMED_OUT|.
+  // for returning |false| was |MX_ERR_SHOULD_WAIT| or
+  // |MX_ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
   bool WaitForIncomingMessage(ftl::TimeDelta timeout) {
     return connector_.WaitForIncomingMessage(timeout);

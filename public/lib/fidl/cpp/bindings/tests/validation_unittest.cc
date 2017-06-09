@@ -116,7 +116,7 @@ class ValidationIntegrationTest : public testing::Test {
 
   void SetUp() override {
     mx::channel tester_endpoint;
-    ASSERT_EQ(NO_ERROR,
+    ASSERT_EQ(MX_OK,
               CreateMessagePipe(nullptr, &tester_endpoint, &testee_endpoint_));
     test_message_receiver_ =
         new TestMessageReceiver(this, tester_endpoint.Pass());
