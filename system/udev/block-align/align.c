@@ -49,7 +49,7 @@ static void aligned_read_complete(iotxn_t* txn_aligned, void* cookie) {
     iotxn_t* txn = cookie;
     mx_status_t status = txn_aligned->status;
     mx_off_t actual = 0;
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         goto done;
     } else if (txn->opcode == IOTXN_OP_READ) {
         // Copy the result from the aligned read into the original txn
@@ -99,7 +99,7 @@ static void align_iotxn_queue(void* ctx, iotxn_t* txn) {
 
     // Prevent overflows from mx_off_t to size_t conversions
     if ((length_aligned > SIZE_MAX) || (blksize > SIZE_MAX)) {
-        iotxn_complete(txn, ERR_INVALID_ARGS, 0);
+        iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
         return;
     }
 
@@ -112,7 +112,7 @@ static void align_iotxn_queue(void* ctx, iotxn_t* txn) {
     // Allocates a larger iotxn, capable of containing the aligned length.
     iotxn_t* txn_aligned;
     mx_status_t status = iotxn_alloc(&txn_aligned, IOTXN_ALLOC_CONTIGUOUS | IOTXN_ALLOC_POOL, length_aligned);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         iotxn_complete(txn, status, 0);
         return;
     }
@@ -152,7 +152,7 @@ static mx_protocol_device_t align_proto = {
 static mx_status_t align_bind(void* ctx, mx_device_t* dev, void** cookie) {
     align_device_t* device = calloc(1, sizeof(align_device_t));
     if (!device) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     device->parent = dev;
 
@@ -164,7 +164,7 @@ static mx_status_t align_bind(void* ctx, mx_device_t* dev, void** cookie) {
         free(device);
         return rc;
     } else if (actual != sizeof(info)) {
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     device->blksize = info.block_size;
 
@@ -180,11 +180,11 @@ static mx_status_t align_bind(void* ctx, mx_device_t* dev, void** cookie) {
     };
 
     mx_status_t status;
-    if ((status = device_add(dev, &args, &device->mxdev)) != NO_ERROR) {
+    if ((status = device_add(dev, &args, &device->mxdev)) != MX_OK) {
         free(device);
         return status;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t align_driver_ops = {
