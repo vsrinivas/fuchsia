@@ -5,7 +5,6 @@
 #pragma once
 
 #include <queue>
-#include <thread>
 #include <vector>
 
 #include <mx/channel.h>
@@ -15,6 +14,7 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/mtl/tasks/fd_waiter.h"
 
 namespace netconnector {
 
@@ -57,15 +57,15 @@ If either party receives a malformed packet, it must close the connection.
 // Abstract base class that shuttles data-only messages between a channel and
 // a TCP socket.
 //
-// MessageTransciever is not thread-safe. All methods calls must be serialized.
+// MessageTransceiver is not thread-safe. All methods calls must be serialized.
 // All overridables will be called on the same thread on which the transceiver
 // was constructed.
-class MessageTransciever {
+class MessageTransceiver {
  public:
-  virtual ~MessageTransciever();
+  virtual ~MessageTransceiver();
 
  protected:
-  MessageTransciever(ftl::UniqueFD socket_fd);
+  MessageTransceiver(ftl::UniqueFD socket_fd);
 
   // Sets the channel that the transceiver should use to forward messages.
   void SetChannel(mx::channel channel);
@@ -119,17 +119,31 @@ class MessageTransciever {
   // Sends a version packet.
   void SendVersionPacket();
 
+  // Queues up a task that calls |SendPacket| to be run when the socket is
+  // ready.
+  void PostSendTask(std::function<void()> task);
+
+  // Waits (using |fd_send_waiter_|) for the socket to be ready to send if there
+  // are send tasks pending.
+  void MaybeWaitToSend();
+
   // Sends a packet. Must be called in the send thread.
   void SendPacket(PacketType type, const void* payload, size_t payload_size);
 
-  // Worker for the receive thread.
-  void ReceiveWorker();
+  // Waits (using |fd_recv_waiter_|) for an inbound message.
+  void WaitToReceive();
+
+  // Receives a message.
+  void ReceiveMessage();
 
   // Parses |byte_count| received bytes from |receive_buffer_|.
   void ParseReceivedBytes(size_t byte_count);
 
   // Called when a complete packet has been received.
   void OnReceivedPacketComplete();
+
+  // Cancels any waiters that are currently waiting.
+  void CancelWaiters();
 
   // Copies received bytes.
   // |*bytes| points to the received bytes and is increased to reflect the
@@ -163,16 +177,20 @@ class MessageTransciever {
 
   uint32_t version_ = kNullVersion;
 
-  std::thread receive_thread_;
+  mtl::FDWaiter fd_recv_waiter_;
+  bool fd_recv_waiter_waiting_ = false;
   std::vector<uint8_t> receive_buffer_;
   size_t receive_packet_offset_ = 0;
   PacketHeader receive_packet_header_;
   std::vector<uint8_t> receive_packet_payload_;
 
-  std::thread send_thread_;
-  ftl::RefPtr<ftl::TaskRunner> send_task_runner_;
+  // In general, |fd_send_waiter_| is waiting if and only if |send_tasks_| isn't
+  // empty. The only exception to this is in the code that actually does the
+  // sending (the waiter callback, |SendPacket| and the send tasks).
+  mtl::FDWaiter fd_send_waiter_;
+  std::queue<std::function<void()>> send_tasks_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(MessageTransciever);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MessageTransceiver);
 };
 
 }  // namespace netconnector

@@ -14,7 +14,7 @@ namespace netconnector {
 
 class NetConnectorImpl;
 
-class ServiceAgent : public MessageTransciever {
+class ServiceAgent : public MessageTransceiver {
  public:
   static std::unique_ptr<ServiceAgent> Create(ftl::UniqueFD socket_fd,
                                               NetConnectorImpl* owner);
@@ -22,7 +22,7 @@ class ServiceAgent : public MessageTransciever {
   ~ServiceAgent();
 
  protected:
-  // MessageTransciever overrides.
+  // MessageTransceiver overrides.
   void OnVersionReceived(uint32_t version) override;
 
   void OnServiceNameReceived(const std::string& service_name) override;

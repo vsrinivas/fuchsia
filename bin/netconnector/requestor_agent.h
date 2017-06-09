@@ -16,7 +16,7 @@ namespace netconnector {
 
 class NetConnectorImpl;
 
-class RequestorAgent : public MessageTransciever {
+class RequestorAgent : public MessageTransceiver {
  public:
   static std::unique_ptr<RequestorAgent> Create(const SocketAddress& address,
                                                 const std::string& service_name,
@@ -26,7 +26,7 @@ class RequestorAgent : public MessageTransciever {
   ~RequestorAgent() override;
 
  protected:
-  // MessageTransciever overrides.
+  // MessageTransceiver overrides.
   void OnVersionReceived(uint32_t version) override;
 
   void OnServiceNameReceived(const std::string& service_name) override;

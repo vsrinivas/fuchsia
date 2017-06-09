@@ -17,7 +17,7 @@ std::unique_ptr<ServiceAgent> ServiceAgent::Create(ftl::UniqueFD socket_fd,
 }
 
 ServiceAgent::ServiceAgent(ftl::UniqueFD socket_fd, NetConnectorImpl* owner)
-    : MessageTransciever(std::move(socket_fd)), owner_(owner) {
+    : MessageTransceiver(std::move(socket_fd)), owner_(owner) {
   FTL_DCHECK(owner != nullptr);
 }
 

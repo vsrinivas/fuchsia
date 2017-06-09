@@ -43,7 +43,7 @@ RequestorAgent::RequestorAgent(ftl::UniqueFD socket_fd,
                                const std::string& service_name,
                                mx::channel local_channel,
                                NetConnectorImpl* owner)
-    : MessageTransciever(std::move(socket_fd)),
+    : MessageTransceiver(std::move(socket_fd)),
       service_name_(service_name),
       local_channel_(std::move(local_channel)),
       owner_(owner) {

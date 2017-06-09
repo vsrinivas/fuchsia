@@ -6,47 +6,39 @@
 
 #include <errno.h>
 #include <netdb.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/threading/create_thread.h"
 
 namespace netconnector {
 
-MessageTransciever::MessageTransciever(ftl::UniqueFD socket_fd)
+MessageTransceiver::MessageTransceiver(ftl::UniqueFD socket_fd)
     : socket_fd_(std::move(socket_fd)),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       receive_buffer_(kRecvBufferSize) {
   FTL_DCHECK(socket_fd_.is_valid());
   FTL_DCHECK(task_runner_);
 
-  message_relay_.SetMessageReceivedCallback([this](
-      std::vector<uint8_t> message) { SendMessage(std::move(message)); });
+  message_relay_.SetMessageReceivedCallback(
+      [this](std::vector<uint8_t> message) {
+        SendMessage(std::move(message));
+      });
 
   message_relay_.SetChannelClosedCallback([this]() { CloseConnection(); });
 
-  receive_thread_ = std::thread([this]() { ReceiveWorker(); });
-  send_thread_ = mtl::CreateThread(&send_task_runner_);
-
   SendVersionPacket();
+
+  WaitToReceive();
 }
 
-MessageTransciever::~MessageTransciever() {
-  send_task_runner_->PostTask(
-      []() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  if (receive_thread_.joinable()) {
-    receive_thread_.join();
-  }
-
-  if (send_thread_.joinable()) {
-    send_thread_.join();
-  }
+MessageTransceiver::~MessageTransceiver() {
+  CancelWaiters();
 }
 
-void MessageTransciever::SetChannel(mx::channel channel) {
+void MessageTransceiver::SetChannel(mx::channel channel) {
   FTL_DCHECK(channel);
 
   if (!socket_fd_.is_valid()) {
@@ -63,31 +55,32 @@ void MessageTransciever::SetChannel(mx::channel channel) {
   }
 }
 
-void MessageTransciever::SendServiceName(const std::string& service_name) {
+void MessageTransceiver::SendServiceName(const std::string& service_name) {
   if (!socket_fd_.is_valid()) {
     FTL_LOG(WARNING) << "SendServiceName called with closed connection";
     return;
   }
 
-  send_task_runner_->PostTask([ this, service_name = service_name ]() {
+  PostSendTask([ this, service_name = service_name ]() {
     SendPacket(PacketType::kServiceName, service_name.data(),
                service_name.size());
   });
 }
 
-void MessageTransciever::SendMessage(std::vector<uint8_t> message) {
+void MessageTransceiver::SendMessage(std::vector<uint8_t> message) {
   if (!socket_fd_.is_valid()) {
     FTL_LOG(WARNING) << "SendMessage called with closed connection";
     return;
   }
 
-  send_task_runner_->PostTask([ this, m = std::move(message) ]() {
+  PostSendTask([ this, m = std::move(message) ]() {
     SendPacket(PacketType::kMessage, m.data(), m.size());
   });
 }
 
-void MessageTransciever::CloseConnection() {
+void MessageTransceiver::CloseConnection() {
   if (socket_fd_.is_valid()) {
+    CancelWaiters();
     socket_fd_.reset();
     task_runner_->PostTask([this]() {
       channel_.reset();
@@ -97,20 +90,50 @@ void MessageTransciever::CloseConnection() {
   }
 }
 
-void MessageTransciever::OnMessageReceived(std::vector<uint8_t> message) {
+void MessageTransceiver::OnMessageReceived(std::vector<uint8_t> message) {
   message_relay_.SendMessage(std::move(message));
 }
 
-void MessageTransciever::OnConnectionClosed() {}
+void MessageTransceiver::OnConnectionClosed() {}
 
-void MessageTransciever::SendVersionPacket() {
-  send_task_runner_->PostTask([this]() {
+void MessageTransceiver::SendVersionPacket() {
+  PostSendTask([this]() {
     uint32_t version = htonl(kVersion);
     SendPacket(PacketType::kVersion, &version, sizeof(version));
   });
 }
 
-void MessageTransciever::SendPacket(PacketType type,
+void MessageTransceiver::PostSendTask(std::function<void()> task) {
+  FTL_DCHECK(socket_fd_.is_valid()) << "PostSendTask with invalid socket.";
+  send_tasks_.push(task);
+  if (send_tasks_.size() == 1) {
+    MaybeWaitToSend();
+  }
+}
+
+void MessageTransceiver::MaybeWaitToSend() {
+  if (send_tasks_.empty()) {
+    return;
+  }
+
+  if (!fd_send_waiter_.Wait(
+          [this](mx_status_t status, uint32_t events) {
+            FTL_DCHECK(!send_tasks_.empty());
+            auto task = send_tasks_.front();
+            send_tasks_.pop();
+            task();
+          },
+          socket_fd_.get(), EPOLLOUT)) {
+    // Wait failed because the fd is no longer valid. We need to clear
+    // |send_tasks_| before we proceeed, because a non-empty send_tasks_
+    // implies the need to cancel the wait.
+    std::queue<std::function<void()>> doomed;
+    send_tasks_.swap(doomed);
+    CloseConnection();
+  }
+}
+
+void MessageTransceiver::SendPacket(PacketType type,
                                     const void* payload,
                                     size_t payload_size) {
   FTL_DCHECK(payload_size == 0 || payload != nullptr);
@@ -132,6 +155,7 @@ void MessageTransciever::SendPacket(PacketType type,
   FTL_DCHECK(result == static_cast<int>(sizeof(packet_header)));
 
   if (payload_size == 0) {
+    MaybeWaitToSend();
     return;
   }
 
@@ -143,31 +167,44 @@ void MessageTransciever::SendPacket(PacketType type,
   }
 
   FTL_DCHECK(result == static_cast<int>(payload_size));
+  MaybeWaitToSend();
 }
 
-void MessageTransciever::ReceiveWorker() {
-  while (true) {
-    int result = recv(socket_fd_.get(), receive_buffer_.data(),
-                      receive_buffer_.size(), 0);
-    if (result == -1) {
-      // If we got EIO and socket_fd_ isn't valid, recv failed because the
-      // socket was closed locally.
-      if (errno != EIO || socket_fd_.is_valid()) {
-        FTL_LOG(ERROR) << "Failed to receive, errno " << errno;
-      }
-
-      CloseConnection();
-      break;
-    }
-
-    if (result == 0) {
-      // The remote party closed the connection.
-      CloseConnection();
-      break;
-    }
-
-    ParseReceivedBytes(result);
+void MessageTransceiver::WaitToReceive() {
+  fd_recv_waiter_waiting_ = true;
+  if (!fd_recv_waiter_.Wait(
+          [this](mx_status_t status, uint32_t events) {
+            fd_recv_waiter_waiting_ = false;
+            ReceiveMessage();
+          },
+          socket_fd_.get(), EPOLLIN)) {
+    fd_recv_waiter_waiting_ = false;
+    CloseConnection();
   }
+}
+
+void MessageTransceiver::ReceiveMessage() {
+  int result =
+      recv(socket_fd_.get(), receive_buffer_.data(), receive_buffer_.size(), 0);
+  if (result == -1) {
+    // If we got EIO and socket_fd_ isn't valid, recv failed because the
+    // socket was closed locally.
+    if (errno != EIO || socket_fd_.is_valid()) {
+      FTL_LOG(ERROR) << "Failed to receive, errno " << errno;
+    }
+
+    CloseConnection();
+    return;
+  }
+
+  if (result == 0) {
+    // The remote party closed the connection.
+    CloseConnection();
+    return;
+  }
+
+  ParseReceivedBytes(result);
+  WaitToReceive();
 }
 
 // Determines whether the indicated field in the packet header has been
@@ -178,7 +215,7 @@ void MessageTransciever::ReceiveWorker() {
     reinterpret_cast<uint8_t*>(&receive_packet_header_)) +      \
        sizeof(receive_packet_header_.field))
 
-void MessageTransciever::ParseReceivedBytes(size_t byte_count) {
+void MessageTransceiver::ParseReceivedBytes(size_t byte_count) {
   uint8_t* bytes = receive_buffer_.data();
 
   while (byte_count != 0) {
@@ -238,7 +275,7 @@ void MessageTransciever::ParseReceivedBytes(size_t byte_count) {
   }
 }
 
-bool MessageTransciever::CopyReceivedBytes(uint8_t** bytes,
+bool MessageTransceiver::CopyReceivedBytes(uint8_t** bytes,
                                            size_t* byte_count,
                                            uint8_t* dest,
                                            size_t dest_size,
@@ -266,7 +303,7 @@ bool MessageTransciever::CopyReceivedBytes(uint8_t** bytes,
   return dest_offset == dest_size;
 }
 
-void MessageTransciever::OnReceivedPacketComplete() {
+void MessageTransceiver::OnReceivedPacketComplete() {
   switch (receive_packet_header_.type_) {
     case PacketType::kVersion:
       if (version_ != kNullVersion) {
@@ -345,7 +382,7 @@ void MessageTransciever::OnReceivedPacketComplete() {
   }
 }
 
-uint32_t MessageTransciever::ParsePayloadUint32() {
+uint32_t MessageTransceiver::ParsePayloadUint32() {
   uint32_t net_byte_order_result;
   FTL_DCHECK(receive_packet_payload_.size() == sizeof(net_byte_order_result));
   std::memcpy(&net_byte_order_result, receive_packet_payload_.data(),
@@ -353,9 +390,22 @@ uint32_t MessageTransciever::ParsePayloadUint32() {
   return ntohl(net_byte_order_result);
 }
 
-std::string MessageTransciever::ParsePayloadString() {
+std::string MessageTransceiver::ParsePayloadString() {
   return std::string(reinterpret_cast<char*>(receive_packet_payload_.data()),
                      receive_packet_payload_.size());
+}
+
+void MessageTransceiver::CancelWaiters() {
+  if (!send_tasks_.empty()) {
+    fd_send_waiter_.Cancel();
+    std::queue<std::function<void()>> doomed;
+    send_tasks_.swap(doomed);
+  }
+
+  if (fd_recv_waiter_waiting_) {
+    fd_recv_waiter_.Cancel();
+    fd_recv_waiter_waiting_ = false;
+  }
 }
 
 }  // namespace netconnector
