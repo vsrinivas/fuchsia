@@ -34,15 +34,15 @@ mx_status_t sys_resource_create(mx_handle_t handle,
 
     // Disallow no records (self is required) or excessive number
     if ((count < 1) || (count > ResourceDispatcher::kMaxRecords))
-        return ERR_OUT_OF_RANGE;
+        return MX_ERR_OUT_OF_RANGE;
 
     mx_rrec_t rec;
-    if (_records.copy_array_from_user(&rec, 1, 0) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_records.copy_array_from_user(&rec, 1, 0) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     if ((rec.self.type != MX_RREC_SELF) ||
         (rec.self.subtype != MX_RREC_SELF_GENERIC))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // Ensure name is terminated
     rec.self.name[MX_MAX_NAME_LEN - 1] = 0;
@@ -51,30 +51,30 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     mx_rights_t rights;
     mxtl::RefPtr<ResourceDispatcher> child;
     result = ResourceDispatcher::Create(&child, &rights, rec.self.name, rec.self.subtype);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Add Records to the child, completing its creation
     result = child->AddRecords(_records, count);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Add child to the parent
     result = parent->AddChild(child);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Create a handle for the child
     HandleOwner child_h(MakeHandle(mxtl::RefPtr<Dispatcher>(child.get()), rights));
     if (!child_h)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_rsrc_out.copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_rsrc_out.copy_to_user(up->MapHandleToValue(child_h)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(child_h));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_resource_destroy(mx_handle_t handle) {
@@ -88,7 +88,7 @@ mx_status_t sys_resource_destroy(mx_handle_t handle) {
 
     // Obtain the parent Resource
     mxtl::RefPtr<ResourceDispatcher> parent;
-    if ((result = resource->GetParent(&parent)) != NO_ERROR)
+    if ((result = resource->GetParent(&parent)) != MX_OK)
         return result;
 
     return parent->DestroyChild(mxtl::move(resource));
@@ -116,14 +116,14 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
 
     HandleOwner out_h(MakeHandle(mxtl::move(dispatcher), rights));
     if (!out_h)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_out.copy_to_user(up->MapHandleToValue(out_h)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(up->MapHandleToValue(out_h)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(out_h));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // Given a resource handle, perform an action that is specific to that
@@ -158,18 +158,18 @@ mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel_hv) {
     HandleOwner channel = up->RemoveHandle(channel_hv);
 
     if (!channel) {
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
     } else if (channel->dispatcher()->get_type() != MX_OBJ_TYPE_CHANNEL) {
-        result = ERR_WRONG_TYPE;
+        result = MX_ERR_WRONG_TYPE;
     } else if (!magenta_rights_check(channel.get(), MX_RIGHT_TRANSFER)) {
-        result = ERR_ACCESS_DENIED;
+        result = MX_ERR_ACCESS_DENIED;
     } else {
         result = resource->Connect(&channel);
     }
 
     // If we did not succeed, we must return the channel handle
     // to the caller's handle table
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         up->AddHandle(mxtl::move(channel));
     }
 
@@ -192,10 +192,10 @@ mx_status_t sys_resource_accept(mx_handle_t handle, user_ptr<mx_handle_t> _out) 
     if (result)
         return result;
 
-    if (_out.copy_to_user(up->MapHandleToValue(channel)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(up->MapHandleToValue(channel)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(channel));
 
-    return NO_ERROR;
+    return MX_OK;
 }

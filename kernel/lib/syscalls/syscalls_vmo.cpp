@@ -30,7 +30,7 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
     LTRACEF("size %#" PRIx64 "\n", size);
 
     if (options)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_VMO);
@@ -40,26 +40,26 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
     // create a vm object
     mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // create a Vm Object dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
@@ -72,7 +72,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Force map the range, even if it crosses multiple mappings.
@@ -83,13 +83,13 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
         auto int_data = _data.reinterpret<uint8_t>();
         for (size_t i = 0; i < len; i += PAGE_SIZE) {
             status = int_data.copy_array_to_user(&byte, 1, i);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 return status;
             }
         }
         if (len > 0) {
             status = int_data.copy_array_to_user(&byte, 1, len - 1);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 return status;
             }
         }
@@ -98,7 +98,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
     // do the read operation
     size_t nread;
     status = vmo->Read(_data, len, offset, &nread);
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = _actual.copy_to_user(nread);
 
     return status;
@@ -114,7 +114,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Force map the range, even if it crosses multiple mappings.
@@ -125,13 +125,13 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
         auto int_data = _data.reinterpret<const uint8_t>();
         for (size_t i = 0; i < len; i += PAGE_SIZE) {
             status = int_data.copy_array_from_user(&byte, 1, i);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 return status;
             }
         }
         if (len > 0) {
             status = int_data.copy_array_from_user(&byte, 1, len - 1);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 return status;
             }
         }
@@ -140,7 +140,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
     // do the write operation
     size_t nwritten;
     status = vmo->Write(_data, len, offset, &nwritten);
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = _actual.copy_to_user(nwritten);
 
     return status;
@@ -154,7 +154,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcher(handle, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // no rights check, anyone should be able to get the size
@@ -164,8 +164,8 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
     status = vmo->GetSize(&size);
 
     // copy the size back, even if it failed
-    if (_size.copy_to_user(size) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_size.copy_to_user(size) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     return status;
 }
@@ -178,7 +178,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // do the operation
@@ -197,7 +197,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
     // TODO: test rights
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcher(handle, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return vmo->RangeOp(op, offset, size, _buffer, buffer_size);
@@ -205,17 +205,17 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
 
 mx_status_t sys_vmo_set_cache_policy(mx_handle_t handle, uint32_t cache_policy) {
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     auto up = ProcessDispatcher::GetCurrent();
 
     // Sanity check the cache policy.
     if (cache_policy & ~MX_CACHE_POLICY_MASK) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // lookup the dispatcher from handle.
     status = up->GetDispatcherWithRights(handle, MX_RIGHT_MAP, &vmo);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -237,12 +237,12 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
         // lookup the dispatcher from handle, save a copy of the rights for later
         mxtl::RefPtr<VmObjectDispatcher> vmo;
         status = up->GetDispatcherWithRights(handle, MX_RIGHT_DUPLICATE | MX_RIGHT_READ, &vmo, &in_rights);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         // clone the vmo into a new one
         status = vmo->Clone(options, offset, size, in_rights & MX_RIGHT_GET_PROPERTY,  &clone_vmo);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         DEBUG_ASSERT(clone_vmo);
@@ -252,7 +252,7 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t default_rights;
     mx_status_t result = VmObjectDispatcher::Create(mxtl::move(clone_vmo), &dispatcher, &default_rights);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Set the rights to the new handle to no greater than the input
@@ -269,12 +269,12 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
     // create a handle and attach the dispatcher to it
     HandleOwner clone_handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!clone_handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_out_handle.copy_to_user(up->MapHandleToValue(clone_handle)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out_handle.copy_to_user(up->MapHandleToValue(clone_handle)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(clone_handle));
 
-    return NO_ERROR;
+    return MX_OK;
 }

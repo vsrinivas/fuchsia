@@ -23,8 +23,8 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     HandleOwner handle(up->RemoveHandle(handle_value));
     if (!handle)
-        return ERR_BAD_HANDLE;
-    return NO_ERROR;
+        return MX_ERR_BAD_HANDLE;
+    return MX_OK;
 }
 
 static mx_status_t handle_dup_replace(
@@ -37,25 +37,25 @@ static mx_status_t handle_dup_replace(
         AutoLock lock(up->handle_table_lock());
         auto source = up->GetHandleLocked(handle_value);
         if (!source)
-            return ERR_BAD_HANDLE;
+            return MX_ERR_BAD_HANDLE;
 
         if (!is_replace) {
             if (!magenta_rights_check(source, MX_RIGHT_DUPLICATE))
-                return ERR_ACCESS_DENIED;
+                return MX_ERR_ACCESS_DENIED;
         }
 
         if (rights == MX_RIGHT_SAME_RIGHTS) {
             rights = source->rights();
         } else if ((source->rights() & rights) != rights) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         HandleOwner dest(DupHandle(source, rights, is_replace));
         if (!dest)
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
 
-        if (_out.copy_to_user(up->MapHandleToValue(dest)) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_out.copy_to_user(up->MapHandleToValue(dest)) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
 
         if (is_replace)
             up->RemoveHandleLocked(handle_value);
@@ -63,7 +63,7 @@ static mx_status_t handle_dup_replace(
         up->AddHandleLocked(mxtl::move(dest));
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_handle_duplicate(

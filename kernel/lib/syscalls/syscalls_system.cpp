@@ -61,7 +61,7 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     // be the physical/virtual address of our identity mapped page.
     paddr_t pa;
     if (pmm_alloc_page(0, &pa) == nullptr) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // The kernel address space may be in high memory which cannot be identity
@@ -71,7 +71,7 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     mxtl::RefPtr<VmAspace> identity_aspace =
             VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
     if (!identity_aspace)
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
 
     // Create a new allocation in the new address space that identity maps the
     // target page.
@@ -83,14 +83,14 @@ static mx_status_t identity_page_allocate(void** result_addr) {
                                             &identity_address, 0, pa,
                                             VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
                                             perm_flags_rwx);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(identity_aspace.get()));
 
     *result_addr = identity_address;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /* Migrates the current thread to the CPU identified by target_cpuid. */
@@ -140,16 +140,16 @@ static int park_cpu_thread(void* arg) {
  */
 static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t* size) {
     DEBUG_ASSERT(addr);
-    if (!addr) return ERR_INVALID_ARGS;
+    if (!addr) return MX_ERR_INVALID_ARGS;
 
     DEBUG_ASSERT(size);
-    if (!size) return ERR_INVALID_ARGS;
+    if (!size) return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
     mx_status_t st =
         up->GetDispatcherWithRights(vmo_hdl, MX_RIGHT_READ, &vmo_dispatcher);
-    if (st != NO_ERROR)
+    if (st != MX_OK)
         return st;
 
     mxtl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
@@ -160,7 +160,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
     const size_t allocated = pmm_alloc_contiguous(num_pages, PMM_ALLOC_FLAG_ANY,
                                                   0, &base_addr, nullptr);
     if (allocated < num_pages)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     for (size_t page_offset = 0; page_offset < num_pages; ++page_offset) {
         const off_t byte_offset = page_offset * PAGE_SIZE;
@@ -171,8 +171,8 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
 
         size_t bytes_read;
         st = vmo->Read(virtual_addr, byte_offset, PAGE_SIZE, &bytes_read);
-        if (st != NO_ERROR || bytes_read != PAGE_SIZE) {
-            return ERR_INTERNAL;
+        if (st != MX_OK || bytes_read != PAGE_SIZE) {
+            return MX_ERR_INTERNAL;
         }
 
         vmo->CleanInvalidateCache(byte_offset, PAGE_SIZE);
@@ -182,7 +182,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
     *size = (num_pages * PAGE_SIZE);
     *addr = base_addr;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static inline bool intervals_intersect(const void* start1, const size_t len1,
@@ -216,7 +216,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
     result = vmo_coalesce_pages(kernel_vmo, &new_kernel_addr, &new_kernel_len);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("Failed to coalesce vmo kernel pages, retcode = %d\n", result);
         return result;
     }
@@ -224,7 +224,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     paddr_t new_bootimage_addr;
     size_t new_bootimage_len;
     result = vmo_coalesce_pages(bootimage_vmo, &new_bootimage_addr, &new_bootimage_len);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         printf("Failed to coalesce vmo bootimage pages ,retcode = %d\n", result);
         return result;
     }
@@ -235,7 +235,7 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     // secondary cores and there is no trivial way to bring both of these back.
     void* id_page_addr = 0x0;
     result = identity_page_allocate(&id_page_addr);
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         panic("Unable to allocate identity page");
     }
 
@@ -331,5 +331,5 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     mexec_assembly((uintptr_t)dst_addr, 0, 0, 0, ops, (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
 
     panic("Execution should never reach here\n");
-    return NO_ERROR;
+    return MX_OK;
 }

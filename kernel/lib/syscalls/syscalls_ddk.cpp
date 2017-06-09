@@ -59,7 +59,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
@@ -76,7 +76,7 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return interrupt->InterruptComplete();
@@ -88,7 +88,7 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return interrupt->WaitForInterrupt();
@@ -100,7 +100,7 @@ mx_status_t sys_interrupt_signal(mx_handle_t handle_value) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return interrupt->UserSignal();
@@ -119,7 +119,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     }
 
     if (!_out_vaddr)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
@@ -140,16 +140,16 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         vmo_cache_policy = ARCH_MMU_FLAG_WRITE_COMBINING;
         break;
     default:
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, len));
     if (!vmo) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
-    if (vmo->SetMappingCachePolicy(vmo_cache_policy) != NO_ERROR) {
-        return ERR_INVALID_ARGS;
+    if (vmo->SetMappingCachePolicy(vmo_cache_policy) != MX_OK) {
+        return MX_ERR_INVALID_ARGS;
     }
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
@@ -160,7 +160,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
                                          mxtl::move(vmo), 0, arch_mmu_flags, "user_mmio",
                                          &mapping);
 
-    if (res != NO_ERROR) {
+    if (res != MX_OK) {
         return res;
     }
 
@@ -172,12 +172,12 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     }
 
     if (_out_vaddr.copy_to_user(
-        reinterpret_cast<uintptr_t>(mapping->base())) != NO_ERROR) {
+        reinterpret_cast<uintptr_t>(mapping->base())) != MX_OK) {
         mapping->Destroy();
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
@@ -185,13 +185,13 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
                                       user_ptr<mx_handle_t> _out) {
     LTRACEF("size 0x%zu\n", size);
 
-    if (size == 0) return ERR_INVALID_ARGS;
+    if (size == 0) return MX_ERR_INVALID_ARGS;
     if (alignment_log2 == 0)
         alignment_log2 = PAGE_SIZE_SHIFT;
     // catch obviously wrong values
     if (alignment_log2 < PAGE_SIZE_SHIFT ||
             alignment_log2 >= (8 * sizeof(uint64_t)))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // TODO: finer grained validation
     mx_status_t status;
@@ -203,7 +203,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     // create a vm object
     mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
     if (!vmo)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     // always immediately commit memory to the object
     uint64_t committed;
@@ -213,28 +213,28 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     if (status < 0 || (size_t)committed < size) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                 (size_t)committed / PAGE_SIZE);
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     // create a Vm Object dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (_out.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint32_t> width, user_ptr<uint32_t> height, user_ptr<uint32_t> stride) {
@@ -244,12 +244,12 @@ mx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint3
             width.copy_to_user(bootloader.fb_width) ||
             height.copy_to_user(bootloader.fb_height) ||
             stride.copy_to_user(bootloader.fb_stride)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     } else {
-        return NO_ERROR;
+        return MX_OK;
     }
 #else
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif
 }
 
@@ -272,7 +272,7 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, user_ptr<void> vaddr, uint32_
     di.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
     udisplay_set_display_info(&di);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
@@ -285,11 +285,11 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     status = up->GetDispatcher(vmo_handle, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     status = udisplay_set_framebuffer_vmo(vmo->vmo());
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     struct display_info di;
@@ -301,7 +301,7 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
     di.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
     udisplay_set_display_info(&di);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 /**
@@ -316,26 +316,26 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
     LTRACEF("handle %d\n", handle);
 
     if (!_out_vaddr || !_out_size)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<IoMappingDispatcher> io_mapping;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &io_mapping);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // If we do not have read rights, or we are calling from a different address
     // space than the one that this mapping exists in, refuse to tell the user
     // the vaddr/len of the mapping.
     if (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace())
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
 
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_mapping->vaddr());
     uint64_t  size  = io_mapping->size();
 
     status = _out_vaddr.copy_to_user(vaddr);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return _out_size.copy_to_user(size);
@@ -359,7 +359,7 @@ mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len
 #else
 mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
     // doesn't make sense on non-x86
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 #endif
 
@@ -387,8 +387,8 @@ mx_status_t sys_acpi_cache_flush(mx_handle_t hrsrc) {
     // like poweroff and (more importantly) sleep.
 #if ARCH_X86
     __asm__ volatile ("wbinvd");
-    return NO_ERROR;
+    return MX_OK;
 #else
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 #endif
 }

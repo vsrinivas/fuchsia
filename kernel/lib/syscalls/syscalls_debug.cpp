@@ -53,7 +53,7 @@ mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
 
         if (c == '\r')
             c = '\n';
-        if (copy_to_user_u8_unsafe(uptr, static_cast<uint8_t>(c)) != NO_ERROR)
+        if (copy_to_user_u8_unsafe(uptr, static_cast<uint8_t>(c)) != MX_OK)
             break;
     }
     // TODO: fix this cast, which can overflow.
@@ -67,8 +67,8 @@ mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
         len = kMaxDebugWriteSize;
 
     char buf[kMaxDebugWriteSize];
-    if (magenta_copy_from_user(ptr, buf, len) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (magenta_copy_from_user(ptr, buf, len) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     platform_dputs(buf, len);
     return len;
@@ -84,11 +84,11 @@ mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t
     }
 
     if (len > kMaxDebugWriteSize)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     char buf[kMaxDebugWriteSize + 2];
-    if (magenta_copy_from_user(ptr, buf, len) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (magenta_copy_from_user(ptr, buf, len) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     buf[len] = '\n';
     buf[len + 1] = 0;
@@ -101,16 +101,16 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     mxtl::RefPtr<ProcessDispatcher> process;
     mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
                                                      &process);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Disallow this call on self.
     if (process.get() == up)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     HandleOwner handle = up->RemoveHandle(src_handle);
     if (!handle)
-        return ERR_BAD_HANDLE;
+        return MX_ERR_BAD_HANDLE;
 
     auto dest_hv = process->MapHandleToValue(handle);
     process->AddHandle(mxtl::move(handle));
@@ -144,8 +144,8 @@ mx_status_t sys_ktrace_control(
     switch (action) {
     case KTRACE_ACTION_NEW_PROBE: {
         char name[MX_MAX_NAME_LEN];
-        if (_ptr.copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_ptr.copy_array_from_user(name, sizeof(name) - 1) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
         name[sizeof(name) - 1] = 0;
         return ktrace_control(action, options, name);
     }
@@ -162,18 +162,18 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
     }
 
     if (event_id > 0x7FF) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uint32_t* args = static_cast<uint32_t*>(ktrace_open(TAG_PROBE_24(event_id)));
     if (!args) {
         //  There is not a single reason for failure. Assume it reached the end.
-        return ERR_UNAVAILABLE;
+        return MX_ERR_UNAVAILABLE;
     }
 
     args[0] = arg0;
     args[1] = arg1;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_mtrace_control(mx_handle_t handle,

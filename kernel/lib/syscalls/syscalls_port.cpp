@@ -30,7 +30,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
 
     // Currently, the only allowed option is to switch on PortsV2.
     if (options & ~MX_PORT_OPT_V2)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_PORT);
@@ -44,23 +44,23 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
         PortDispatcherV2::Create(options, &dispatcher, &rights):
         PortDispatcher::Create(options, &dispatcher, &rights);
 
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (_out.copy_to_user(hv) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(hv) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t sys_port_queue2(mx_handle_t handle, user_ptr<const void> _packet) {
@@ -68,12 +68,12 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, user_ptr<const void> _pac
 
     mxtl::RefPtr<PortDispatcherV2> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_port_packet_t packet;
-    if (_packet.copy_array_from_user(&packet, sizeof(packet)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_packet.copy_array_from_user(&packet, sizeof(packet)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     return port->QueueUser(packet);
 }
@@ -82,23 +82,23 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return (size == 0u) ? sys_port_queue2(handle, _packet) : status;
     }
 
     if (size < sizeof(mx_packet_header_t))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // TODO(andymutton): Change MakeFromUser to accept a user_ptr
     auto iopk = IOP_Packet::MakeFromUser(_packet.get(), size);
     if (!iopk)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     ktrace(TAG_PORT_QUEUE, (uint32_t)port->get_koid(), (uint32_t)size, 0, 0);
 
@@ -110,17 +110,17 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t deadline, user_ptr<void
 
     mxtl::RefPtr<PortDispatcherV2> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mx_port_packet_t pp;
     mx_status_t st = port->DeQueue(deadline, &pp);
-    if (st != NO_ERROR)
+    if (st != MX_OK)
         return st;
 
-    if (_packet.copy_array_to_user(&pp, sizeof(pp)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-    return NO_ERROR;
+    if (_packet.copy_array_to_user(&pp, sizeof(pp)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+    return MX_OK;
 }
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
@@ -128,13 +128,13 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
     LTRACEF("handle %d\n", handle);
 
     if (!_packet)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &port);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return (size == 0u) ? sys_port_wait2(handle, deadline, _packet) : status;
     }
 
@@ -149,10 +149,10 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
 
     // TODO(andymutton): Change CopyToUser to use a user_ptr
     if (!iopk->CopyToUser(_packet.get(), &size))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     IOP_Packet::Delete(iopk);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
@@ -160,26 +160,26 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
     LTRACEF("handle %d source %d\n", handle, source);
 
     if (!signals)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mxtl::RefPtr<Dispatcher> source_disp;
 
     status = up->GetDispatcherWithRights(source, MX_RIGHT_READ, &source_disp);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     AllocChecker ac;
     mxtl::unique_ptr<PortClient> client(
         new (&ac) PortClient(mxtl::move(port), key, signals));
     if (!ac.check())
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     return source_disp->set_port_client(mxtl::move(client));
 }
@@ -189,23 +189,23 @@ mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key
 
     mxtl::RefPtr<PortDispatcherV2> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     {
         AutoLock lock(up->handle_table_lock());
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
-            return ERR_BAD_HANDLE;
+            return MX_ERR_BAD_HANDLE;
         if (!magenta_rights_check(watched, MX_RIGHT_READ))
-            return ERR_ACCESS_DENIED;
+            return MX_ERR_ACCESS_DENIED;
 
         auto state_tracker = watched->dispatcher()->get_state_tracker();
         if (!state_tracker)
-            return ERR_NOT_SUPPORTED;
+            return MX_ERR_NOT_SUPPORTED;
 
         bool had_observer = state_tracker->CancelByKey(watched, port.get(), key);
         bool packet_removed = port->CancelQueued(watched, key);
-        return (had_observer || packet_removed) ? NO_ERROR : ERR_NOT_FOUND;
+        return (had_observer || packet_removed) ? MX_OK : MX_ERR_NOT_FOUND;
     }
 }

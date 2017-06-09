@@ -26,7 +26,7 @@ int sys_invalid_syscall(uint64_t num, uint64_t pc,
                         uintptr_t vdso_code_address) {
     LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n",
             num, pc, vdso_code_address);
-    return ERR_BAD_SYSCALL;
+    return MX_ERR_BAD_SYSCALL;
 }
 
 inline uint64_t invoke_syscall(
@@ -48,7 +48,7 @@ inline uint64_t invoke_syscall(
     switch (syscall_num) {
 #include <magenta/syscall-invocation-cases.inc>
     default:
-        return ERR_BAD_SYSCALL;
+        return MX_ERR_BAD_SYSCALL;
     }
 
     return ret;
@@ -144,7 +144,7 @@ x86_64_syscall_result unknown_syscall(uint64_t syscall_num, uint64_t ip) {
                       [](uintptr_t) { return false; },
                       [&]() {
                           __builtin_unreachable();
-                          return ERR_INTERNAL;
+                          return MX_ERR_INTERNAL;
                       });
 }
 

@@ -28,36 +28,36 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     if (obj_handle == MX_HANDLE_INVALID) {
         //TODO: handle for system exception
         if (debugger || quietly)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         return ResetSystemExceptionPort()
-                   ? NO_ERROR
-                   : ERR_BAD_STATE;  // No port was bound.
+                   ? MX_OK
+                   : MX_ERR_BAD_STATE;  // No port was bound.
     }
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(obj_handle, &dispatcher);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
         return process->ResetExceptionPort(debugger, quietly)
-                   ? NO_ERROR
-                   : ERR_BAD_STATE;  // No port was bound.
+                   ? MX_OK
+                   : MX_ERR_BAD_STATE;  // No port was bound.
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         return thread->ResetExceptionPort(quietly)
-                   ? NO_ERROR
-                   : ERR_BAD_STATE;  // No port was bound.
+                   ? MX_OK
+                   : MX_ERR_BAD_STATE;  // No port was bound.
     }
 
-    return ERR_WRONG_TYPE;
+    return MX_ERR_WRONG_TYPE;
 }
 
 static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger) {
@@ -66,7 +66,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
 
     mxtl::RefPtr<PortDispatcher> ioport;
     mx_status_t status = up->GetDispatcher(eport_handle, &ioport);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     mxtl::RefPtr<ExceptionPort> eport;
@@ -74,22 +74,22 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     if (obj_handle == MX_HANDLE_INVALID) {
         //TODO: handle for system exception
         if (debugger)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::SYSTEM,
                                        mxtl::move(ioport), key, &eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         status = SetSystemExceptionPort(eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         eport->SetSystemTarget();
-        return NO_ERROR;
+        return MX_OK;
     }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     status = up->GetDispatcher(obj_handle, &dispatcher);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
@@ -100,33 +100,33 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
         else
             type = ExceptionPort::Type::PROCESS;
         status = ExceptionPort::Create(type, mxtl::move(ioport), key, &eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         status = process->SetExceptionPort(eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         eport->SetTarget(process);
-        return NO_ERROR;
+        return MX_OK;
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::THREAD,
                                        mxtl::move(ioport), key, &eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
         status = thread->SetExceptionPort(eport);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             return status;
 
         eport->SetTarget(thread);
-        return NO_ERROR;
+        return MX_OK;
     }
 
-    return ERR_WRONG_TYPE;
+    return MX_ERR_WRONG_TYPE;
 }
 
 mx_status_t sys_task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle,
@@ -135,10 +135,10 @@ mx_status_t sys_task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t epo
 
     if (eport_handle == MX_HANDLE_INVALID) {
         if (options & ~(MX_EXCEPTION_PORT_DEBUGGER + MX_EXCEPTION_PORT_UNBIND_QUIETLY))
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     } else {
         if (options & ~MX_EXCEPTION_PORT_DEBUGGER)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
     bool debugger = (options & MX_EXCEPTION_PORT_DEBUGGER) != 0;
@@ -155,11 +155,11 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
     if (options & ~(MX_RESUME_EXCEPTION | MX_RESUME_TRY_NEXT))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (!(options & MX_RESUME_EXCEPTION)) {
         // These options are only valid with MX_RESUME_EXCEPTION.
         if (options & MX_RESUME_TRY_NEXT)
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
     }
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -167,12 +167,12 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     // TODO(dje/teisenbe): Rights checking here
     mxtl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (!thread)
-        return ERR_WRONG_TYPE;
+        return MX_ERR_WRONG_TYPE;
 
     if (options & MX_RESUME_EXCEPTION) {
         UserThread::ExceptionStatus estatus;
@@ -184,7 +184,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
         return thread->thread()->MarkExceptionHandled(estatus);
     } else {
         if (options != 0) {
-            return ERR_INVALID_ARGS;
+            return MX_ERR_INVALID_ARGS;
         }
 
         return thread->Resume();

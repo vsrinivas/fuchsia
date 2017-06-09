@@ -23,30 +23,30 @@
 
 mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_handle_t> _out) {
     if (options != 0u)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     if (clock_id != MX_CLOCK_MONOTONIC)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
     mx_status_t result = TimerDispatcher::Create(options, &dispatcher, &rights);
 
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle);
 
-    if (_out.copy_to_user(hv) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out.copy_to_user(hv) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_timer_start(
@@ -54,7 +54,7 @@ mx_status_t sys_timer_start(
     // TODO(cpu): we might want to support a 0 deadline. It would mean "signal now"
     // but this might cause problems if the object is understood as marking trusted time.
     if (deadline == 0u)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     // TODO(cpu): support timer coalescing (aka slack).
 
@@ -62,7 +62,7 @@ mx_status_t sys_timer_start(
 
     mxtl::RefPtr<TimerDispatcher> timer;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return timer->Set(deadline, period);
@@ -73,7 +73,7 @@ mx_status_t sys_timer_cancel(mx_handle_t handle) {
 
     mxtl::RefPtr<TimerDispatcher> timer;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return timer->Cancel();

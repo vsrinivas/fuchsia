@@ -46,14 +46,14 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcherWithRights(parent_vmar_handle, vmar_rights, &vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Create the new VMAR
     mxtl::RefPtr<VmAddressRegionDispatcher> new_vmar;
     mx_rights_t new_rights;
     status = vmar->Allocate(offset, size, map_flags, &new_vmar, &new_rights);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup a handler to destroy the new VMAR if the syscall is unsuccessful.
@@ -63,20 +63,20 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         new_vmar->Destroy();
     });
 
-    if (_child_addr.copy_to_user(new_vmar->vmar()->base()) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_child_addr.copy_to_user(new_vmar->vmar()->base()) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     // Create a handle and attach the dispatcher to it
     HandleOwner handle(MakeHandle(mxtl::move(new_vmar), new_rights));
     if (!handle)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
     cleanup_handler.cancel();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
@@ -85,7 +85,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return vmar->Destroy();
@@ -100,22 +100,22 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
     mx_status_t status = up->GetDispatcherAndRights(vmar_handle, &vmar, &vmar_rights);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // lookup the VMO dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_rights_t vmo_rights;
     status = up->GetDispatcherAndRights(vmo_handle, &vmo, &vmo_rights);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // test to see if we should even be able to map this
     if (!(vmo_rights & MX_RIGHT_MAP))
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
 
     if (!VmAddressRegionDispatcher::is_valid_mapping_protection(map_flags))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     bool do_map_range = false;
     if (map_flags & MX_VM_FLAG_MAP_RANGE) {
@@ -126,7 +126,7 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     // Usermode is not allowed to specify these flags on mappings, though we may
     // set them below.
     if (map_flags & (MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE | MX_VM_FLAG_CAN_MAP_EXECUTE)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Permissions allowed by both the VMO and the VMAR
@@ -136,11 +136,11 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
 
     // test to see if the requested mapping protections are allowed
     if ((map_flags & MX_VM_FLAG_PERM_READ) && !can_read)
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     if ((map_flags & MX_VM_FLAG_PERM_WRITE) && !can_write)
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
     if ((map_flags & MX_VM_FLAG_PERM_EXECUTE) && !can_exec)
-        return ERR_ACCESS_DENIED;
+        return MX_ERR_ACCESS_DENIED;
 
     // If a permission is allowed by both the VMO and the VMAR, add it to the
     // flags for the new mapping, so that the VMO's rights as of now can be used
@@ -154,7 +154,7 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
 
     mxtl::RefPtr<VmMapping> vm_mapping;
     status = vmar->Map(vmar_offset, vmo->vmo(), vmo_offset, len, map_flags, &vm_mapping);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     // Setup a handler to destroy the new mapping if the syscall is unsuccessful.
@@ -164,16 +164,16 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
 
     if (do_map_range) {
         status = vm_mapping->MapRange(vmo_offset, len, false);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             return status;
         }
     }
 
-    if (_mapped_addr.copy_to_user(vm_mapping->base()) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_mapped_addr.copy_to_user(vm_mapping->base()) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     cleanup_handler.cancel();
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) {
@@ -182,7 +182,7 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     return vmar->Unmap(addr, len);
@@ -202,11 +202,11 @@ mx_status_t sys_vmar_protect(mx_handle_t vmar_handle, uintptr_t addr, size_t len
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcherWithRights(vmar_handle, vmar_rights, &vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return status;
 
     if (!VmAddressRegionDispatcher::is_valid_mapping_protection(prot))
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     return vmar->Protect(addr, len, prot);
 }

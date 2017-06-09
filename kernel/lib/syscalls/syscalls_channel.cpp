@@ -33,7 +33,7 @@ mx_status_t sys_channel_create(
     LTRACEF("out_handles %p,%p\n", _out0.get(), _out1.get());
 
     if (options != 0u)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_CHANNEL);
@@ -43,7 +43,7 @@ mx_status_t sys_channel_create(
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
     status_t result = ChannelDispatcher::Create(options, &mpd0, &mpd1, &rights);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     uint64_t id0 = mpd0->get_koid();
@@ -51,22 +51,22 @@ mx_status_t sys_channel_create(
 
     HandleOwner h0(MakeHandle(mxtl::move(mpd0), rights));
     if (!h0)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     HandleOwner h1(MakeHandle(mxtl::move(mpd1), rights));
     if (!h1)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
-    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_out0.copy_to_user(up->MapHandleToValue(h0)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
+    if (_out1.copy_to_user(up->MapHandleToValue(h1)) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
     up->AddHandle(mxtl::move(h1));
 
     ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
@@ -100,35 +100,35 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
 
     mxtl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_READ, &channel);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Currently MAY_DISCARD is the only allowable option.
     if (options & ~MX_CHANNEL_READ_MAY_DISCARD)
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
 
     mxtl::unique_ptr<MessagePacket> msg;
     result = channel->Read(&num_bytes, &num_handles, &msg,
                            options & MX_CHANNEL_READ_MAY_DISCARD);
-    if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
+    if (result != MX_OK && result != MX_ERR_BUFFER_TOO_SMALL)
         return result;
 
-    // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
+    // On MX_ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
     // unconsumed, unless |options| has MX_CHANNEL_READ_MAY_DISCARD set).
     if (_num_bytes) {
-        if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_num_bytes.copy_to_user(num_bytes) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
     }
     if (_num_handles) {
-        if (_num_handles.copy_to_user(num_handles) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_num_handles.copy_to_user(num_handles) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
     }
-    if (result == ERR_BUFFER_TOO_SMALL)
+    if (result == MX_ERR_BUFFER_TOO_SMALL)
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
     }
 
     // The documented public API states that that writing to the handles buffer
@@ -145,8 +145,8 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
                                    user_ptr<const mx_handle_t> _handles, uint32_t num_handles,
                                    Dispatcher* channel) {
 
-    if (_handles.copy_array_from_user(handles, num_handles) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_handles.copy_array_from_user(handles, num_handles) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     {
         // Loop twice, first we collect and validate handles, the second pass
@@ -156,16 +156,16 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandleLocked(handles[ix]);
             if (!handle)
-                return ERR_BAD_HANDLE;
+                return MX_ERR_BAD_HANDLE;
 
             if (handle->dispatcher().get() == channel) {
                 // You may not write a channel endpoint handle
                 // into that channel endpoint
-                return ERR_NOT_SUPPORTED;
+                return MX_ERR_NOT_SUPPORTED;
             }
 
             if (!magenta_rights_check(handle, MX_RIGHT_TRANSFER))
-                return ERR_ACCESS_DENIED;
+                return MX_ERR_ACCESS_DENIED;
 
             msg->mutable_handles()[ix] = handle;
         }
@@ -180,14 +180,14 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
                     up->UndoRemoveHandleLocked(handles[idx]);
                 }
                 // TODO: more specific error?
-                return ERR_INVALID_ARGS;
+                return MX_ERR_INVALID_ARGS;
             }
         }
     }
 
     // On success, the MessagePacket owns the handles.
     msg->set_owns_handles(true);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
@@ -197,24 +197,24 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
             handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, options);
 
     if (options)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
 
     mxtl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(num_bytes, num_handles, &msg);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
     }
 
     mx_handle_t handles[kMaxMessageHandles];
@@ -226,7 +226,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
     }
 
     result = channel->Write(mxtl::move(msg));
-    if (result != NO_ERROR) {
+    if (result != MX_OK) {
         // Write failed, put back the handles into this process.
         AutoLock lock(up->handle_table_lock());
         for (size_t ix = 0; ix != num_handles; ++ix) {
@@ -245,11 +245,11 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     mx_channel_call_args_t args;
 
 
-    if (_args.copy_from_user(&args) != NO_ERROR)
-        return ERR_INVALID_ARGS;
+    if (_args.copy_from_user(&args) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     if (options)
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
 
     uint32_t num_bytes = args.wr_num_bytes;
     uint32_t num_handles = args.wr_num_handles;
@@ -258,18 +258,18 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
 
     mxtl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     // Prepare a MessagePacket for writing
     mxtl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(num_bytes, num_handles, &msg);
-    if (result != NO_ERROR)
+    if (result != MX_OK)
         return result;
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(args.wr_bytes).copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
-            return ERR_INVALID_ARGS;
+        if (make_user_ptr(args.wr_bytes).copy_array_from_user(msg->mutable_data(), num_bytes) != MX_OK)
+            return MX_ERR_INVALID_ARGS;
     }
 
     mx_handle_t handles[kMaxMessageHandles];
@@ -284,7 +284,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     // Write message and wait for reply, deadline, or cancelation
     bool return_handles = false;
     mxtl::unique_ptr<MessagePacket> reply;
-    if ((result = channel->Call(mxtl::move(msg), deadline, &return_handles, &reply)) != NO_ERROR) {
+    if ((result = channel->Call(mxtl::move(msg), deadline, &return_handles, &reply)) != MX_OK) {
         if (return_handles) {
             // Write phase failed:
             // 1. Put back the handles into this process.
@@ -302,15 +302,15 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
         // it.  Then retry the wait-and-read after resuming.
         // TODO(teisenbe): Get rid of this check when we move retries to the
         // VDSO.
-        while (result == ERR_INTERRUPTED_RETRY) {
+        while (result == MX_ERR_INTERRUPTED_RETRY) {
             thread_process_pending_signals();
             result = channel->ResumeInterruptedCall(deadline, &reply);
         }
 
         // Timeout is always returned directly.
-        if (result == ERR_TIMED_OUT) {
+        if (result == MX_ERR_TIMED_OUT) {
             return result;
-        } else if (result != NO_ERROR) {
+        } else if (result != MX_OK) {
             // Read phase failed:
             // Return error via read_status
             goto read_failed;
@@ -322,22 +322,22 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     num_handles = reply->num_handles();
 
     if ((args.rd_num_bytes < num_bytes) || (args.rd_num_handles < num_handles)) {
-        result = ERR_BUFFER_TOO_SMALL;
+        result = MX_ERR_BUFFER_TOO_SMALL;
         goto read_failed;
     }
 
-    if (actual_bytes.copy_to_user(num_bytes) != NO_ERROR) {
-        result = ERR_INVALID_ARGS;
+    if (actual_bytes.copy_to_user(num_bytes) != MX_OK) {
+        result = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }
-    if (actual_handles.copy_to_user(num_handles) != NO_ERROR) {
-        result = ERR_INVALID_ARGS;
+    if (actual_handles.copy_to_user(num_handles) != MX_OK) {
+        result = MX_ERR_INVALID_ARGS;
         goto read_failed;
     }
 
     if (num_bytes > 0u) {
-        if (make_user_ptr(args.rd_bytes).copy_array_to_user(reply->data(), num_bytes) != NO_ERROR) {
-            result = ERR_INVALID_ARGS;
+        if (make_user_ptr(args.rd_bytes).copy_array_to_user(reply->data(), num_bytes) != MX_OK) {
+            result = MX_ERR_INVALID_ARGS;
             goto read_failed;
         }
     }
@@ -345,11 +345,11 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t options,
     if (num_handles > 0u) {
         msg_get_handles(up, reply.get(), make_user_ptr(args.rd_handles), num_handles);
     }
-    return NO_ERROR;
+    return MX_OK;
 
 read_failed:
-    DEBUG_ASSERT(result != ERR_INTERRUPTED_RETRY);
+    DEBUG_ASSERT(result != MX_ERR_INTERRUPTED_RETRY);
     if (read_status)
         read_status.copy_to_user(result);
-    return ERR_CALL_FAILED;
+    return MX_ERR_CALL_FAILED;
 }
