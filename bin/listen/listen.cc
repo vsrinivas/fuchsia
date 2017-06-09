@@ -55,11 +55,11 @@ class Service : private mtl::MessageLoopHandler {
       FTL_LOG(FATAL) << "Failed to listen:" << strerror(errno);
     }
 
-    FTL_CHECK(mx::job::create(mx_job_default(), 0, &job_) == NO_ERROR);
+    FTL_CHECK(mx::job::create(mx_job_default(), 0, &job_) == MX_OK);
     std::string job_name = ftl::StringPrintf("tcp:%d", port);
     FTL_CHECK(job_.set_property(MX_PROP_NAME, job_name.data(),
-                                job_name.size()) == NO_ERROR);
-    FTL_CHECK(job_.replace(kChildJobRights, &job_) == NO_ERROR);
+                                job_name.size()) == MX_OK);
+    FTL_CHECK(job_.replace(kChildJobRights, &job_) == MX_OK);
 
     Wait();
   }
@@ -68,8 +68,8 @@ class Service : private mtl::MessageLoopHandler {
     for (auto iter = process_handler_key_.begin(); iter != process_handler_key_.end(); iter++) {
       process_handler_key_.erase(iter);
       mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
-      FTL_CHECK(mx_task_kill(iter->first) == NO_ERROR);
-      FTL_CHECK(mx_handle_close(iter->first) == NO_ERROR);
+      FTL_CHECK(mx_task_kill(iter->first) == MX_OK);
+      FTL_CHECK(mx_handle_close(iter->first) == MX_OK);
     }
   }
 
@@ -100,10 +100,10 @@ class Service : private mtl::MessageLoopHandler {
   void Launch(int conn, const std::string& peer_name) {
     // Create a new job to run the child in.
     mx::job child_job;
-    FTL_CHECK(mx::job::create(job_.get(), 0, &child_job) == NO_ERROR);
+    FTL_CHECK(mx::job::create(job_.get(), 0, &child_job) == MX_OK);
     FTL_CHECK(child_job.set_property(MX_PROP_NAME, peer_name.data(),
-                                peer_name.size()) == NO_ERROR);
-    FTL_CHECK(child_job.replace(kChildJobRights, &child_job) == NO_ERROR);
+                                peer_name.size()) == MX_OK);
+    FTL_CHECK(child_job.replace(kChildJobRights, &child_job) == MX_OK);
 
     launchpad_t* lp;
     launchpad_create(child_job.get(), argv_[0], &lp);
@@ -144,8 +144,8 @@ class Service : private mtl::MessageLoopHandler {
     FTL_CHECK(iter != process_handler_key_.end());
     process_handler_key_.erase(iter);
     mtl::MessageLoop::GetCurrent()->RemoveHandler(iter->second);
-    FTL_CHECK(mx_task_kill(handle) == NO_ERROR);
-    FTL_CHECK(mx_handle_close(handle) == NO_ERROR);
+    FTL_CHECK(mx_task_kill(handle) == MX_OK);
+    FTL_CHECK(mx_handle_close(handle) == MX_OK);
   }
 
   int port_;
