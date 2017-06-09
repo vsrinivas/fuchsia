@@ -10,7 +10,7 @@ namespace modular {
 
 ContextHandler::ContextHandler(
     maxwell::IntelligenceServices* const intelligence_services)
-    : binding_(this) {
+    : value_(maxwell::ContextUpdate::New()), binding_(this) {
   intelligence_services->GetContextProvider(context_provider_.NewRequest());
   query_.topics.resize(0);
 }
