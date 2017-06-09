@@ -74,7 +74,7 @@ static mx_handle_t reserve_low_address_space(mx_handle_t log,
     check(log, status,
           "mx_vmar_allocate failed for low address space reservation\n");
     if (addr != info.base)
-        fail(log, ERR_BAD_STATE, "mx_vmar_allocate gave wrong address?!?\n");
+        fail(log, MX_ERR_BAD_STATE, "mx_vmar_allocate gave wrong address?!?\n");
     return vmar;
 }
 
@@ -115,12 +115,12 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // We're adding some extra handles, so we have to rearrange the
     // incoming message buffer to make space for their info slots.
     if (pargs->args_off != 0 || pargs->args_num != 0) {
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "unexpected bootstrap message layout: args\n");
     }
     if (pargs->environ_off != (pargs->handle_info_off +
                                nhandles * sizeof(uint32_t))) {
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "unexpected bootstrap message layout: environ\n");
     }
     const size_t environ_size = nbytes - pargs->environ_off;
@@ -181,17 +181,17 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         }
     }
     if (vdso_vmo == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
+        fail(log, MX_ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
     if (resource_root == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "no resource handle in bootstrap message\n");
     if (job == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no job handle in bootstrap message\n");
+        fail(log, MX_ERR_INVALID_ARGS, "no job handle in bootstrap message\n");
     if (vmar_root_handle_loc == NULL)
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "no vmar root handle in bootstrap message\n");
     if (bootdata_vmo == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no bootdata VMO in bootstrap message\n");
+        fail(log, MX_ERR_INVALID_ARGS, "no bootdata VMO in bootstrap message\n");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.

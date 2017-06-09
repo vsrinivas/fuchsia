@@ -13,7 +13,7 @@ _Noreturn void fail(mx_handle_t log, mx_status_t status, const char* msg);
 
 static inline void check(mx_handle_t log,
                          mx_status_t status, const char* msg) {
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         fail(log, status, msg);
 }
 

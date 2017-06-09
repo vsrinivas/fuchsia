@@ -24,7 +24,7 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                                          off, sizeof(bootdata), &actual);
         check(log, status, "mx_vmo_read failed on bootdata VMO\n");
         if (actual != sizeof(bootdata))
-            fail(log, ERR_INVALID_ARGS, "short read on bootdata VMO\n");
+            fail(log, MX_ERR_INVALID_ARGS, "short read on bootdata VMO\n");
 
         switch (bootdata.type) {
         case BOOTDATA_CONTAINER:
@@ -32,7 +32,7 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                 // Quietly skip container header.
                 bootdata.length = 0;
             } else {
-                fail(log, ERR_INVALID_ARGS,
+                fail(log, MX_ERR_INVALID_ARGS,
                      "container in the middle of bootdata\n");
             }
             break;
@@ -58,5 +58,5 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
         off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
     }
 
-    fail(log, ERR_INVALID_ARGS, "no '/boot' bootfs in bootstrap message\n");
+    fail(log, MX_ERR_INVALID_ARGS, "no '/boot' bootfs in bootstrap message\n");
 }

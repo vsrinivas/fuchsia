@@ -39,7 +39,7 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
 
     // This is the normal error for the other end going away,
     // which happens when the process dies.
-    if (status == ERR_PEER_CLOSED) {
+    if (status == MX_ERR_PEER_CLOSED) {
         print(log, "loader-service channel peer closed on read\n", NULL);
         return false;
     }
@@ -47,7 +47,7 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
     check(log, status, "mx_channel_read on loader-service channel failed\n");
 
     if (size < sizeof(msgbuf.msg))
-        fail(log, ERR_OUT_OF_RANGE,
+        fail(log, MX_ERR_OUT_OF_RANGE,
              "loader-service request message too small\n");
 
     // Forcibly null-terminate the message data argument.
@@ -68,19 +68,19 @@ static bool handle_loader_rpc(mx_handle_t log, struct bootfs* bootfs,
         break;
 
     case LOADER_SVC_OP_LOAD_SCRIPT_INTERP:
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "loader-service received LOAD_SCRIPT_INTERP request\n");
         break;
 
     default:
-        fail(log, ERR_INVALID_ARGS,
+        fail(log, MX_ERR_INVALID_ARGS,
              "loader-service received invalid opcode\n");
         break;
     }
 
     // txid returned as received from the client.
     msgbuf.msg.opcode = LOADER_SVC_OP_STATUS;
-    msgbuf.msg.arg = NO_ERROR;
+    msgbuf.msg.arg = MX_OK;
     msgbuf.msg.reserved0 = 0;
     msgbuf.msg.reserved1 = 0;
     status = mx_channel_write(channel, 0, &msgbuf.msg, sizeof(msgbuf.msg),
@@ -98,7 +98,7 @@ void loader_service(mx_handle_t log, struct bootfs* bootfs,
         mx_status_t status = mx_object_wait_one(
             channel, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
             MX_TIME_INFINITE, &signals);
-        if (status == ERR_BAD_STATE) {
+        if (status == MX_ERR_BAD_STATE) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
             break;
@@ -110,7 +110,7 @@ void loader_service(mx_handle_t log, struct bootfs* bootfs,
             break;
         }
         if (!(signals & MX_CHANNEL_READABLE)) {
-            fail(log, ERR_BAD_STATE,
+            fail(log, MX_ERR_BAD_STATE,
                  "unexpected signal state on loader-service channel\n");
         }
     } while (handle_loader_rpc(log, bootfs, channel));

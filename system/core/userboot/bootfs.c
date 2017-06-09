@@ -57,10 +57,10 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
     static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
     size_t magic_size = sizeof(bootdata_t);
     if (fs->len < sizeof(struct bootfs_magic))
-        fail(log, ERR_INVALID_ARGS, "bootfs image too small!\n");
+        fail(log, MX_ERR_INVALID_ARGS, "bootfs image too small!\n");
     struct bootfs_magic* magic = (struct bootfs_magic*)fs->contents;
     if (magic->boothdr.type != BOOTDATA_BOOTFS_BOOT)
-        fail(log, ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
+        fail(log, MX_ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
     // This field is obsolete, so we can skip it if it doesn't exist.
     if (!memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC))) {
         magic_size = sizeof(struct bootfs_magic);
@@ -79,7 +79,7 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
             break;
 
         if (header.namelen > left)
-            fail(log, ERR_INVALID_ARGS,
+            fail(log, MX_ERR_INVALID_ARGS,
                  "bootfs has bogus namelen in header\n");
 
         const char* name = (const void*)p;
@@ -100,11 +100,11 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
 
     struct bootfs_file file = bootfs_search(log, fs, filename);
     if (file.offset == 0 && file.size == 0)
-        fail(log, ERR_INVALID_ARGS, "file not found\n");
+        fail(log, MX_ERR_INVALID_ARGS, "file not found\n");
     if (file.offset > fs->len)
-        fail(log, ERR_INVALID_ARGS, "bogus offset in bootfs header!\n");
+        fail(log, MX_ERR_INVALID_ARGS, "bogus offset in bootfs header!\n");
     if (fs->len - file.offset < file.size)
-        fail(log, ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
+        fail(log, MX_ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
 
     // Clone a private copy of the file's subset of the bootfs VMO.
     // TODO(mcgrathr): Create a plain read-only clone when the feature
@@ -112,11 +112,11 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
     mx_handle_t vmo;
     mx_status_t status = mx_vmo_clone(fs->vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                                       file.offset, file.size, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         fail(log, status, "mx_vmo_clone failed\n");
     status = mx_object_set_property(vmo, MX_PROP_NAME,
                                     filename, strlen(filename));
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         fail(log, status, "mx_object_set_property failed for VMO name\n");
     // Drop unnecessary MX_RIGHT_WRITE rights.
     // TODO(mcgrathr): Should be superfluous with read-only mx_vmo_clone.
@@ -125,7 +125,7 @@ mx_handle_t bootfs_open(mx_handle_t log, const char* purpose,
         MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP |
         MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_GET_PROPERTY,
         &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         fail(log, status, "mx_handle_replace failed\n");
 
     return vmo;

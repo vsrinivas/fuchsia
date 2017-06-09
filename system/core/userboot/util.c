@@ -43,7 +43,7 @@ void print(mx_handle_t log, const char* s, ...) {
         mx_debug_write(buffer, p - buffer);
     } else {
         mx_status_t status = mx_log_write(log, p - buffer, buffer, 0);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             mx_debug_write(LOG_WRITE_FAIL, strlen(LOG_WRITE_FAIL));
     }
 }
