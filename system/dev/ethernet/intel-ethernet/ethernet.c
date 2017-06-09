@@ -55,7 +55,7 @@ static int irq_thread(void* arg) {
             void* data;
             size_t len;
 
-            while (eth_rx(&edev->eth, &data, &len) == NO_ERROR) {
+            while (eth_rx(&edev->eth, &data, &len) == MX_OK) {
                 if (edev->ifc) {
                     edev->ifc->recv(edev->cookie, data, len, 0);
                 }
@@ -74,14 +74,14 @@ static mx_status_t eth_query(mx_device_t* dev, uint32_t options, ethmac_info_t* 
     ethernet_device_t* edev = dev->ctx;
 
     if (options) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = ETH_RXBUF_SIZE; //TODO: not actually the mtu!
     memcpy(info->mac, edev->eth.mac, sizeof(edev->eth.mac));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void eth_stop(mx_device_t* dev) {
@@ -93,11 +93,11 @@ static void eth_stop(mx_device_t* dev) {
 
 static mx_status_t eth_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
     ethernet_device_t* edev = dev->ctx;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&edev->lock);
     if (edev->ifc) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     } else {
         edev->ifc = ifc;
         edev->cookie = cookie;
@@ -136,7 +136,7 @@ static mx_protocol_device_t device_ops = {
 static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     ethernet_device_t* edev;
     if ((edev = calloc(1, sizeof(ethernet_device_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     mtx_init(&edev->lock, mtx_plain);
     mtx_init(&edev->eth.send_lock, mtx_plain);
@@ -156,12 +156,12 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     // Query whether we have MSI or Legacy interrupts.
     uint32_t irq_cnt = 0;
-    if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == NO_ERROR) &&
-        (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1) == NO_ERROR)) {
+    if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == MX_OK) &&
+        (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1) == MX_OK)) {
         edev->edge_triggered_irq = true;
         printf("eth: using MSI mode\n");
-    } else if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == NO_ERROR) &&
-               (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1) == NO_ERROR)) {
+    } else if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == MX_OK) &&
+               (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1) == MX_OK)) {
         edev->edge_triggered_irq = false;
         printf("eth: using legacy irq mode\n");
     } else {
@@ -170,7 +170,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     r = pci->map_interrupt(dev, 0, &edev->irqh);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         printf("eth: failed to map irq\n");
         goto fail;
     }
@@ -180,7 +180,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_handle_t h;
     void* io;
     r = pci->map_resource(dev, PCI_RESOURCE_BAR_0, MX_CACHE_POLICY_UNCACHED_DEVICE, &io, &sz, &h);
-    if (r != NO_ERROR) {
+    if (r != MX_OK) {
         printf("eth: cannot map io %d\n", h);
         goto fail;
     }
@@ -223,7 +223,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     printf("eth: intel-ethernet online\n");
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     io_buffer_release(&edev->buffer);
@@ -233,7 +233,7 @@ fail:
         mx_handle_close(edev->ioh);
     }
     free(edev);
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_driver_ops_t intel_ethernet_driver_ops = {

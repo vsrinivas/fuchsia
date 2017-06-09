@@ -154,7 +154,7 @@ static mx_status_t ax88179_configure_bulk_in(ax88179_t* eth, uint8_t plsr) {
     uint8_t usb_mode = plsr & AX88179_PLSR_USB_MASK;
     if (usb_mode & (usb_mode-1)) {
         printf("ax88179: invalid usb mode: %#x\n", usb_mode);
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     uint8_t speed = plsr & AX88179_PLSR_EPHY_MASK;
@@ -182,7 +182,7 @@ static mx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
     xprintf("ax88179 medium mode: %#x\n", mode);
     if (mode == 4 || mode > 5) {
         printf("ax88179 mode invalid\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     status = ax88179_write_mac(eth, AX88179_MAC_MSR, 2, ax88179_media_mode[mode]);
     if (status < 0) {
@@ -206,7 +206,7 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
 
     if (request->actual < 4) {
         printf("ax88179_recv short packet\n");
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 
     uint8_t* read_data = NULL;
@@ -217,7 +217,7 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
     xprintf("rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
     if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
         printf("%s bad packet\n", __func__);
-        return ERR_IO_DATA_INTEGRITY;
+        return MX_ERR_IO_DATA_INTEGRITY;
     }
 
     size_t offset = 0;
@@ -230,18 +230,18 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
         if ((uintptr_t)pkt_hdr >= (uintptr_t)rxhdr) {
             printf("%s packet header out of bounds, packet header=%p rx header=%p\n",
                     __func__, pkt_hdr, rxhdr);
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         }
         uint16_t pkt_len = le16toh((*pkt_hdr & AX88179_RX_PKTLEN) >> 16);
         xprintf("pkt_hdr: %0#x pkt_len: %u\n", *pkt_hdr, pkt_len);
         if (pkt_len < 2) {
             printf("%s short packet (len=%u)\n", __func__,  pkt_len);
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         }
         if (offset + pkt_len > rxhdr->pkt_hdr_off) {
             printf("%s invalid packet length %u > %lu bytes remaining\n",
                     __func__, pkt_len, rxhdr->pkt_hdr_off - offset);
-            return ERR_IO_DATA_INTEGRITY;
+            return MX_ERR_IO_DATA_INTEGRITY;
         }
 
         bool drop = false;
@@ -271,19 +271,19 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
         offset = ALIGN(offset, 8);
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == NO_ERROR) && eth->ifc) {
+    if ((request->status == MX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
 
@@ -298,7 +298,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
 static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     ax88179_t* eth = (ax88179_t*)cookie;
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -315,7 +315,7 @@ static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
 
 static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
+    if (request->status == MX_OK && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
         iotxn_copyfrom(request, status, sizeof(status), 0);
@@ -415,14 +415,14 @@ static mx_status_t ax88179_query(mx_device_t* dev, uint32_t options, ethmac_info
     ax88179_t* eth = get_ax88179(dev);
 
     if (options) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = 1500;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void ax88179_stop(mx_device_t* dev) {
@@ -434,11 +434,11 @@ static void ax88179_stop(mx_device_t* dev) {
 
 static mx_status_t ax88179_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
     ax88179_t* eth = get_ax88179(dev);
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
     if (eth->ifc) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
@@ -617,7 +617,7 @@ static int ax88179_thread(void* arg) {
         completion_reset(&eth->completion);
         iotxn_queue(eth->usb_device, txn);
         completion_wait(&eth->completion, MX_TIME_INFINITE);
-        if (txn->status != NO_ERROR) {
+        if (txn->status != MX_OK) {
             break;
         }
         count++;
@@ -644,7 +644,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 3) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t bulk_in_addr = 0;
@@ -670,13 +670,13 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("ax88179_bind could not find endpoints\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     ax88179_t* eth = calloc(1, sizeof(ax88179_t));
     if (!eth) {
         printf("Not enough memory for ax88179_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&eth->free_read_reqs);
@@ -684,11 +684,11 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     eth->usb_device = device;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -699,7 +699,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -709,7 +709,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     }
     iotxn_t* int_req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
     if (!int_req) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto fail;
     }
     int_req->length = INTR_REQ_SIZE;
@@ -721,7 +721,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     status = usb_set_configuration(device, 1);
     if (status < 0) {
         printf("aax88179_bind could not set configuration: %d\n", status);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     */
 
@@ -729,7 +729,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     if (ret != thrd_success) {
         goto fail;
     }
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     printf("ax88179_bind failed: %d\n", status);

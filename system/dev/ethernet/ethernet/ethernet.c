@@ -108,7 +108,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
 
     // TODO: read multiple and cache locally to reduce syscalls
     if ((status = mx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
                 printf("eth [%s]: no rx buffers available (%u times)\n",
                     edev->name, edev->fail_rx_read);
@@ -135,7 +135,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
     }
 
     if ((status = mx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
-        if (status == ERR_SHOULD_WAIT) {
+        if (status == MX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
                 printf("eth [%s]: no rx_fifo space available (%u times)\n",
                        edev->name, edev->fail_rx_write);
@@ -208,7 +208,7 @@ static mx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static int eth_tx_thread(void* arg) {
@@ -220,11 +220,11 @@ static int eth_tx_thread(void* arg) {
 
     for (;;) {
         if ((status = mx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
-            if (status == ERR_SHOULD_WAIT) {
+            if (status == MX_ERR_SHOULD_WAIT) {
                 if ((status = mx_object_wait_one(edev->tx_fifo,
                                                  MX_FIFO_READABLE | MX_FIFO_PEER_CLOSED,
                                                  MX_TIME_INFINITE, NULL)) < 0) {
-                    if (status != ERR_CANCELED) {
+                    if (status != MX_ERR_CANCELED) {
                         printf("eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
                     }
                     break;
@@ -250,7 +250,7 @@ static int eth_tx_thread(void* arg) {
         }
 
         if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
-            if (status == ERR_SHOULD_WAIT) {
+            if (status == MX_ERR_SHOULD_WAIT) {
                 if ((edev->fail_tx_write++ % FAIL_REPORT_RATE) == 0) {
                     printf("eth [%s]: no tx_fifo space available (%u times)\n",
                            edev->name, edev->fail_tx_write);
@@ -272,10 +272,10 @@ static int eth_tx_thread(void* arg) {
 static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t out_len,
                                     size_t* out_actual) {
     if (out_len < sizeof(eth_fifos_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (edev->tx_fifo != MX_HANDLE_INVALID) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
 
     eth_fifos_t* fifos = out_buf;
@@ -299,15 +299,15 @@ static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t ou
     fifos->rx_depth = FIFO_DEPTH;
 
     *out_actual = sizeof(*fifos);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
     if (in_len < sizeof(mx_handle_t)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     if (edev->io_vmo != MX_HANDLE_INVALID) {
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
 
     mx_handle_t vmo = *((mx_handle_t*) in_buf);
@@ -330,7 +330,7 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
     edev->io_vmo = vmo;
     edev->io_size = size;
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     mx_handle_close(vmo);
@@ -344,11 +344,11 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
     if ((edev->io_vmo == MX_HANDLE_INVALID) ||
         (edev->tx_fifo == MX_HANDLE_INVALID) ||
         (edev->rx_fifo == MX_HANDLE_INVALID)) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     if (edev->state & ETHDEV_RUNNING) {
-        return NO_ERROR;
+        return MX_OK;
     }
 
     if (!(edev->state & ETHDEV_TX_THREAD)) {
@@ -356,7 +356,7 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
                                       edev, "eth-tx-thread");
         if (r != thrd_success) {
             printf("eth [%s]: failed to start tx thread: %d\n", edev->name, r);
-            return ERR_INTERNAL;
+            return MX_ERR_INTERNAL;
         }
         edev->state |= ETHDEV_TX_THREAD;
     }
@@ -365,10 +365,10 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
     if (list_is_empty(&edev0->list_active)) {
         status = edev0->macops->start(edev0->mac, &ethmac_ifc, edev0);
     } else {
-        status = NO_ERROR;
+        status = MX_OK;
     }
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         edev->state |= ETHDEV_RUNNING;
         list_delete(&edev->node);
         list_add_tail(&edev0->list_active, &edev->node);
@@ -393,7 +393,7 @@ static mx_status_t eth_stop_locked(ethdev_t* edev) {
         }
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in_len) {
@@ -402,7 +402,7 @@ static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in
     }
     memcpy(edev->name, in_buf, in_len);
     edev->name[DEVICE_NAME_LEN - 1] = '\0';
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t eth_ioctl(void* ctx, uint32_t op,
@@ -413,14 +413,14 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
     mtx_lock(&edev->edev0->lock);
     mx_status_t status;
     if (edev->state & ETHDEV_DEAD) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
         goto done;
     }
 
     switch (op) {
     case IOCTL_ETHERNET_GET_INFO: {
         if (out_len < sizeof(eth_info_t)) {
-            status = ERR_BUFFER_TOO_SMALL;
+            status = MX_ERR_BUFFER_TOO_SMALL;
         } else {
             eth_info_t* info = out_buf;
             memset(info, 0, sizeof(*info));
@@ -430,7 +430,7 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
             }
             info->mtu = edev->edev0->info.mtu;
             *out_actual = sizeof(*info);
-            status = NO_ERROR;
+            status = MX_OK;
         }
         break;
     }
@@ -523,7 +523,7 @@ static mx_status_t eth_close(void* ctx, uint32_t flags) {
     list_delete(&edev->node);
     mtx_unlock(&edev->edev0->lock);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_protocol_device_t ethdev_ops = {
@@ -538,7 +538,7 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
 
     ethdev_t* edev;
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     edev->edev0 = edev0;
 
@@ -562,7 +562,7 @@ static mx_status_t eth0_open(void* ctx, mx_device_t** out, uint32_t flags) {
     mtx_unlock(&edev0->lock);
 
     *out = edev->mxdev;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void eth0_unbind(void* ctx) {
@@ -603,13 +603,13 @@ static mx_protocol_device_t ethdev0_ops = {
 static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     ethdev0_t* edev0;
     if ((edev0 = calloc(1, sizeof(ethdev0_t))) == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t status;
     if (device_op_get_protocol(dev, MX_PROTOCOL_ETHERMAC, (void**)&edev0->macops)) {
         printf("eth: bind: no ethermac protocol\n");
-        status = ERR_INTERNAL;
+        status = MX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -621,7 +621,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
     if (edev0->info.features & BAD_FEATURES) {
         printf("eth: bind: ethermac requires unsupported features: %08x\n",
                edev0->info.features & BAD_FEATURES);
-        status = ERR_NOT_SUPPORTED;
+        status = MX_ERR_NOT_SUPPORTED;
         goto fail;
     }
 
@@ -643,7 +643,7 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
         goto fail;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     free(edev0);

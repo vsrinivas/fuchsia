@@ -50,7 +50,7 @@ status_t eth_rx(ethdev_t* eth, void** data, size_t* len) {
     uint64_t info = eth->rxd[n].info;
 
     if (!(info & IE_RXD_DONE)) {
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     }
 
     // copy out packet
@@ -59,7 +59,7 @@ status_t eth_rx(ethdev_t* eth, void** data, size_t* len) {
     *data = eth->rxb + ETH_RXBUF_SIZE * n;
     *len = r;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void eth_rx_ack(ethdev_t* eth) {
@@ -74,10 +74,10 @@ void eth_rx_ack(ethdev_t* eth) {
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->send_lock);
 
@@ -102,7 +102,7 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
     // obtain buffer, copy into it, setup descriptor
     framebuf_t *frame = list_remove_head_type(&eth->free_frames, framebuf_t, node);
     if (frame == NULL) {
-        status = ERR_NO_MEMORY;
+        status = MX_ERR_NO_MEMORY;
         goto out;
     }
 
@@ -139,11 +139,11 @@ status_t eth_reset_hw(ethdev_t* eth) {
 
     if (readl(IE_CTRL) & IE_CTRL_RST) {
         printf("eth: reset failed\n");
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     writel(IE_CTRL_ASDE | IE_CTRL_SLU, IE_CTRL);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 void eth_init_hw(ethdev_t* eth) {

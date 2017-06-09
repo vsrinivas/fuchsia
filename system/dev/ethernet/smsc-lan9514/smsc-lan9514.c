@@ -101,9 +101,9 @@ static mx_status_t lan9514_mdio_wait_not_busy_locked(lan9514_t* eth) {
         if (status < 0)
             return status;
         if ((mx_time_get(MX_CLOCK_MONOTONIC) - timecheck) > MX_SEC(1))
-            return ERR_TIMED_OUT;
+            return MX_ERR_TIMED_OUT;
     } while (retval & LAN9514_MII_ACCESS_MIIBZY);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t lan9514_mdio_read(lan9514_t* eth, uint8_t idx, uint16_t* retval) {
@@ -256,7 +256,7 @@ mx_status_t lan9514_read_mac_address(lan9514_t* eth) {
     eth->mac_addr[2] = (holder_lo >> 16) & 0xff;
     eth->mac_addr[1] = (holder_lo >> 8) & 0xff;
     eth->mac_addr[0] = (holder_lo >> 0) & 0xff;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void queue_interrupt_requests_locked(lan9514_t* eth) {
@@ -270,7 +270,7 @@ static void queue_interrupt_requests_locked(lan9514_t* eth) {
 mx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
     if (eth->dead) {
         printf("lan9514_recv dead\n");
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
     size_t len = request->actual;
@@ -279,7 +279,7 @@ mx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
 
     uint32_t rx_status;
     if (len < sizeof(rx_status)) {
-        return ERR_IO;
+        return MX_ERR_IO;
     }
     memcpy(&rx_status, pkt, sizeof(rx_status));
 
@@ -287,15 +287,15 @@ mx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
 
     if (rx_status & LAN9514_RXSTATUS_ERROR_MASK) {
         printf("invalid header: 0x%08x\n", rx_status);
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
     if (frame_len > (len - sizeof(rx_status))) {
         printf("LAN9514 recv - buffer too small\n)");
-        return ERR_BUFFER_TOO_SMALL;
+        return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     eth->ifc->recv(eth->cookie, pkt + sizeof(rx_status), frame_len, 0);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
@@ -303,13 +303,13 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     //printf("lan9514 read complete\n");
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == NO_ERROR) && eth->ifc) {
+    if ((request->status == MX_OK) && eth->ifc) {
         lan9514_recv(eth, request);
     }
 
@@ -323,7 +323,7 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
 
 static void lan9514_write_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -335,13 +335,13 @@ static void lan9514_write_complete(iotxn_t* request, void* cookie) {
 
 static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
-    if ((request->status == ERR_PEER_CLOSED) || (request->status == ERR_IO)) { // ERR_IO = NACK (no status change)
+    if ((request->status == MX_ERR_PEER_CLOSED) || (request->status == MX_ERR_IO)) { // MX_ERR_IO = NACK (no status change)
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
+    if (request->status == MX_OK && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
         iotxn_copyfrom(request, status, sizeof(status), 0);
         memcpy(eth->status, status, sizeof(eth->status));
@@ -358,22 +358,22 @@ mx_status_t _lan9514_send(mx_device_t* device, const void* buffer, size_t length
     lan9514_t* eth = get_lan9514(device);
 
     if (eth->dead) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
-        status = ERR_BUFFER_TOO_SMALL;
+        status = MX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     iotxn_t* request = containerof(node, iotxn_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
-        status = ERR_INVALID_ARGS;
+        status = MX_ERR_INVALID_ARGS;
         goto out;
     }
 
@@ -482,14 +482,14 @@ static mx_status_t lan9514_query(mx_device_t* dev, uint32_t options, ethmac_info
     lan9514_t* eth = get_lan9514(dev);
 
     if (options) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void lan9514_stop(mx_device_t* dev) {
@@ -501,11 +501,11 @@ static void lan9514_stop(mx_device_t* dev) {
 
 static mx_status_t lan9514_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
     lan9514_t* eth = get_lan9514(dev);
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
     if (eth->ifc) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
@@ -552,12 +552,12 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
     mx_device_t* busdev = NULL;
     bcm_bus_protocol_t* bus_proto = NULL;
     while (pdev && platform_device_find_protocol(pdev, MX_PROTOCOL_BCM_BUS, &busdev,
-                                                 (void**)&bus_proto) != NO_ERROR) {
+                                                 (void**)&bus_proto) != MX_OK) {
         pdev = device_get_parent(pdev);
     }
     if (busdev && bus_proto) {
         uint8_t temp_mac[6];
-        if (bus_proto->get_macid(busdev, temp_mac) == NO_ERROR) {
+        if (bus_proto->get_macid(busdev, temp_mac) == MX_OK) {
             uint32_t macword = (temp_mac[5] << 8) + temp_mac[4];
             if (lan9514_write_register(eth, LAN9514_ADDR_HI_REG, macword) < 0)
                 goto fail;
@@ -627,7 +627,7 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
     lan9514_mdio_read(eth, MII_PHY_BMCR_REG, &bcr);
 
     printf("LAN9514 Initialized! bmcr=%04x  bsr=%04x\n", bcr, inval);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     lan9514_free(eth);
@@ -665,7 +665,7 @@ static int lan9514_start_thread(void* arg) {
     while (true) {
         uint16_t temp;
         status = completion_wait(&eth->phy_state_completion, MX_MSEC(500)); //MX_TIME_INFINITE);
-        if (status == ERR_TIMED_OUT) {
+        if (status == MX_ERR_TIMED_OUT) {
             // do background maintenance and statistics work here
         } else {
             // do interrupt servicing here
@@ -693,7 +693,7 @@ static int lan9514_start_thread(void* arg) {
                     lan9514_mdio_read(eth, MII_PHY_BSR_REG, &temp);
                     mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
                     if ((mx_time_get(MX_CLOCK_MONOTONIC - timecheck) > MX_SEC(1))) {
-                        status = ERR_TIMED_OUT;
+                        status = MX_ERR_TIMED_OUT;
                         goto teardown;
                     }
                 }
@@ -735,7 +735,7 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     printf("lan9514 returned %d endpoints\n", intf->bNumEndpoints);
     if (!intf || intf->bNumEndpoints != 3) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t bulk_in_addr = 0;
@@ -764,14 +764,14 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("lan9514_bind could not find endpoints\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     lan9514_t* eth = calloc(1, sizeof(lan9514_t));
     if (!eth) {
         printf("Not enough memory for lan9514_t\n");
         printf("lan9514_bind failed!\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&eth->free_read_reqs);
@@ -780,11 +780,11 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     eth->usb_device = device;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -795,7 +795,7 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -807,7 +807,7 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = INTR_REQ_SIZE;
@@ -818,7 +818,7 @@ static mx_status_t lan9514_bind(void* ctx, mx_device_t* device, void** cookie) {
     thrd_t thread;
     thrd_create_with_name(&thread, lan9514_start_thread, eth, "lan9514_start_thread");
     thrd_detach(thread);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     printf("lan9514_bind failed: %d\n", status);

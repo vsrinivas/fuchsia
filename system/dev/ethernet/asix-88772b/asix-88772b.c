@@ -74,7 +74,7 @@ static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t value) {
@@ -97,7 +97,7 @@ static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
@@ -110,12 +110,12 @@ static mx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
             return status;
         }
         if (bmsr)
-            return NO_ERROR;
+            return MX_OK;
         usleep(50);
     }
 
     printf("ax88772b_wait_for_phy timeout\n");
-    return ERR_TIMED_OUT;
+    return MX_ERR_TIMED_OUT;
 }
 
 static void queue_interrupt_requests_locked(ax88772b_t* eth) {
@@ -164,13 +164,13 @@ static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
 static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->status == NO_ERROR) && eth->ifc) {
+    if ((request->status == MX_OK) && eth->ifc) {
         ax88772b_recv(eth, request);
     }
 
@@ -185,7 +185,7 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
@@ -198,13 +198,13 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
 static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
-    if (request->status == ERR_PEER_CLOSED) {
+    if (request->status == MX_ERR_PEER_CLOSED) {
         iotxn_release(request);
         return;
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR && request->actual == sizeof(eth->status)) {
+    if (request->status == MX_OK && request->actual == sizeof(eth->status)) {
         uint8_t status[INTR_REQ_SIZE];
 
         iotxn_copyfrom(request, status, sizeof(status), 0);
@@ -241,23 +241,23 @@ static mx_status_t _ax88772b_send(mx_device_t* device, const void* buffer, size_
     ax88772b_t* eth = get_ax88772b(device);
 
     if (eth->dead) {
-        return ERR_PEER_CLOSED;
+        return MX_ERR_PEER_CLOSED;
     }
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
         //TODO: block
-        status = ERR_BUFFER_TOO_SMALL;
+        status = MX_ERR_BUFFER_TOO_SMALL;
         goto out;
     }
     iotxn_t* request = containerof(node, iotxn_t, node);
 
     if (length + ETH_HEADER_SIZE > USB_BUF_SIZE) {
-        status = ERR_INVALID_ARGS;
+        status = MX_ERR_INVALID_ARGS;
         goto out;
     }
 
@@ -320,14 +320,14 @@ static mx_status_t ax88772b_query(mx_device_t* dev, uint32_t options, ethmac_inf
     ax88772b_t* eth = get_ax88772b(dev);
 
     if (options) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     memset(info, 0, sizeof(*info));
     info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
     memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void ax88772b_stop(mx_device_t* dev) {
@@ -339,11 +339,11 @@ static void ax88772b_stop(mx_device_t* dev) {
 
 static mx_status_t ax88772b_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
     ax88772b_t* eth = get_ax88772b(dev);
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     mtx_lock(&eth->mutex);
     if (eth->ifc) {
-        status = ERR_BAD_STATE;
+        status = MX_ERR_BAD_STATE;
     } else {
         eth->ifc = ifc;
         eth->cookie = cookie;
@@ -468,7 +468,7 @@ static int ax88772b_start_thread(void* arg) {
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     ax88772b_free(eth);
@@ -484,7 +484,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 3) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t bulk_in_addr = 0;
@@ -510,13 +510,13 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("ax88772b_bind could not find endpoints\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     ax88772b_t* eth = calloc(1, sizeof(ax88772b_t));
     if (!eth) {
         printf("Not enough memory for ax88772b_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&eth->free_read_reqs);
@@ -525,11 +525,11 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
 
     eth->usb_device = device;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_in_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -540,7 +540,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(bulk_out_addr, USB_BUF_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = USB_BUF_SIZE;
@@ -551,7 +551,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     for (int i = 0; i < INTR_REQ_COUNT; i++) {
         iotxn_t* req = usb_alloc_iotxn(intr_addr, INTR_REQ_SIZE);
         if (!req) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         req->length = INTR_REQ_SIZE;
@@ -564,7 +564,7 @@ static mx_status_t ax88772b_bind(void* ctx, mx_device_t* device, void** cookie) 
     thrd_create_with_name(&thread, ax88772b_start_thread, eth, "ax88772b_start_thread");
     thrd_detach(thread);
 
-    return NO_ERROR;
+    return MX_OK;
 
 fail:
     printf("ax88772b_bind failed: %d\n", status);
