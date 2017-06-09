@@ -26,13 +26,13 @@ uintptr_t GetDataFromVMO(const mx::vmo& vmo, size_t* size_out) {
     return 0u;
   uint64_t data_size = 0u;
   mx_status_t status = vmo.get_size(&data_size);
-  if (status != NO_ERROR || data_size > std::numeric_limits<size_t>::max())
+  if (status != MX_OK || data_size > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
   status = mx::vmar::root_self().map(0, vmo, 0, static_cast<size_t>(data_size),
                                      MX_VM_FLAG_PERM_READ, &data);
-  if (status == NO_ERROR) {
+  if (status == MX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
   }
@@ -98,7 +98,7 @@ bool Release() {
         mx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
     g_icu_data_size = 0;
-    return status == NO_ERROR;
+    return status == MX_OK;
   } else {
     return false;
   }
