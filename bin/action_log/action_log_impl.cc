@@ -70,6 +70,17 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
     add_module->module_path.push_back(*segment);
   }
 
+  // HACK(alhaad): There is an issue that the root youtube module (A) actually
+  // embeds 2 other modules (B and C) and it's an embeded module (B) that
+  // produces this action log.
+  // Story shell freaks out when we try to add a new module (D) parented at (B)
+  // because it does not know about it (B). So instead we use some domain
+  // specific information to parent new module (D) at (A) instead.
+  size_t module_path_size = add_module->module_path.size();
+  if (module_path_size > 0) {
+    add_module->module_path.resize(module_path_size - 1);
+  }
+
   add_module->link_name = "email-composer-link";
   // TODO(azani): Do something sane.
   std::string initial_data = "{\"email-composer\": {\"message\": {";
