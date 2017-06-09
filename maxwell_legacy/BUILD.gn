@@ -9,8 +9,8 @@ group("maxwell") {
     "src/agents",
     "src/context_engine",
     "src/modules",
-    "src/user",
     "src/resolver",
     "src/suggestion_engine",
+    "src/user",
   ]
 }

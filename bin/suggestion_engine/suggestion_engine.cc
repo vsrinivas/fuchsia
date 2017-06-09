@@ -167,10 +167,9 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                                            story_controller.NewRequest());
             if (!add_module_to_story->initial_data.is_null()) {
               modular::LinkPtr link;
-              story_controller->GetLink(
-                  module_path.Clone(),
-                  link_name, link.NewRequest());
-              link->Set(nullptr  /* json_path */,
+              story_controller->GetLink(module_path.Clone(), link_name,
+                                        link.NewRequest());
+              link->Set(nullptr /* json_path */,
                         add_module_to_story->initial_data);
             }
 

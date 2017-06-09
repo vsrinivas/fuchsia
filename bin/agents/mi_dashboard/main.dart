@@ -78,13 +78,11 @@ void parseConfigAndStart(String configString) {
 
   // Start the web server
   print("[INFO] Starting MI Dashboard web server on port ${_port}...");
-  HttpServer.bind(InternetAddress.ANY_IP_V6, _port)
-    .then((server) {
-      server.listen(handleRequest);
-    })
-    .catchError((error) {
-      print("[WARN] MI Dashboard bind failed...${error.toString()}");
-    });
+  HttpServer.bind(InternetAddress.ANY_IP_V6, _port).then((server) {
+    server.listen(handleRequest);
+  }).catchError((error) {
+    print("[WARN] MI Dashboard bind failed...${error.toString()}");
+  });
 }
 
 void handleRequest(HttpRequest request) {
@@ -115,8 +113,7 @@ void handleRequest(HttpRequest request) {
 
       // If an appropriate handler can be found, ask it to respond
       var handler = _dataHandlerMap[serviceName];
-      if (handler?.handleRequest(match.group(2), request) ?? false)
-        return;
+      if (handler?.handleRequest(match.group(2), request) ?? false) return;
 
       // Nothing handled the request, so respond with a 404
       send404(request.response);

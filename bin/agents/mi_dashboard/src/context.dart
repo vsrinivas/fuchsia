@@ -60,9 +60,7 @@ class ContextDataHandler extends DataHandler {
   @override
   void handleNewWebSocket(WebSocket socket) {
     // send all cached context data to the socket
-    String message = JSON.encode({
-      "context.update": _contextCache
-    });
+    String message = JSON.encode({"context.update": _contextCache});
     socket.add(message);
   }
 

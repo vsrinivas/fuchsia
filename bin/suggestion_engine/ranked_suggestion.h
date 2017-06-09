@@ -13,4 +13,4 @@ struct RankedSuggestion {
   float rank;
 };
 
-}  // maxwell
+}  // namespace maxwell

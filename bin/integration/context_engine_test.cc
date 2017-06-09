@@ -4,8 +4,8 @@
 
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/context_engine/scope_utils.h"
+#include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
@@ -155,8 +155,8 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
   TestListener listener;
   // 81736358b1645103ae83247b10c5f82af641ddfc is the SHA1 of "url".
   const char kSha1OfUrl[] = "81736358b1645103ae83247b10c5f82af641ddfc";
-  const std::string kTopicString = MakeModuleScopeTopic(
-      "story_id", kSha1OfUrl, "explicit/topic");
+  const std::string kTopicString =
+      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic");
   provider_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
   listener.WaitForUpdate();
 

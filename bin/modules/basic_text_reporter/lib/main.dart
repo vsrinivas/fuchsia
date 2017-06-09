@@ -35,8 +35,7 @@ class ModuleImpl extends Module {
 
   final ContextPublisherProxy _publisher = new ContextPublisherProxy();
   final IntelligenceServicesProxy _intelligenceServices =
-    new IntelligenceServicesProxy();
-
+      new IntelligenceServicesProxy();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -124,20 +123,17 @@ void main() {
     _module.publishSelection(selectionStart, selectionEnd);
   });
 
-  runApp(
-    new MaterialApp(
-        title : "Basic Text Reporter",
-        home : new Scaffold(
-            appBar : new AppBar(
-              title : new Text("Basic Text Reporter"),
-            ),
-            body : new TextField(
-                controller : _controller,
-                decoration : new InputDecoration(
-                    hintText : 'Type something',
-                ),
-            ),
-        )
-    )
-  );
+  runApp(new MaterialApp(
+      title: "Basic Text Reporter",
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: new Text("Basic Text Reporter"),
+        ),
+        body: new TextField(
+          controller: _controller,
+          decoration: new InputDecoration(
+            hintText: 'Type something',
+          ),
+        ),
+      )));
 }

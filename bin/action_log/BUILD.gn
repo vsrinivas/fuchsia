@@ -4,11 +4,11 @@
 
 executable("action_log") {
   sources = [
-    "action_log_main.cc",
-    "action_log_impl.h",
-    "action_log_impl.cc",
-    "action_log_data.h",
     "action_log_data.cc",
+    "action_log_data.h",
+    "action_log_impl.cc",
+    "action_log_impl.h",
+    "action_log_main.cc",
   ]
 
   deps = [

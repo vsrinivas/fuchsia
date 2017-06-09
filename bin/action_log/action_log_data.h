@@ -21,8 +21,8 @@ struct ActionData {
   const std::string params;
 };
 
-using ActionLogger
-  = std::function<void(const std::string& method, const std::string& params)>;
+using ActionLogger =
+    std::function<void(const std::string& method, const std::string& params)>;
 
 using ActionListener = std::function<void(const ActionData& action_data)>;
 

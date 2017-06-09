@@ -63,7 +63,7 @@ class UserActionLogFactoryApp {
   FTL_DISALLOW_COPY_AND_ASSIGN(UserActionLogFactoryApp);
 };
 
-} // namespace
+}  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;

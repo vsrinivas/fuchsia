@@ -17,8 +17,8 @@ class ContextEngineTestBase : public MaxwellTestBase {
 
  protected:
   void StartContextAgent(const std::string& url) {
-    auto agent_host = std::make_unique<ApplicationEnvironmentHostImpl>(
-        root_environment);
+    auto agent_host =
+        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment);
     agent_host->AddService<ContextPublisher>(
         [this, url](fidl::InterfaceRequest<ContextPublisher> request) {
           auto scope = ComponentScope::New();

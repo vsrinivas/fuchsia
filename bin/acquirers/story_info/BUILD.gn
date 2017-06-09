@@ -8,8 +8,8 @@ executable("story_info") {
   output_name = "acquirers/story_info_main"
 
   sources = [
-    "story_info.h",
     "story_info.cc",
+    "story_info.h",
     "story_info_main.cc",
   ]
 
@@ -19,8 +19,8 @@ executable("story_info") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:json_xdr",
-    "//apps/modular/services/user",
     "//apps/modular/services/agent",
+    "//apps/modular/services/user",
     "//lib/mtl",
     "//third_party/rapidjson",
   ]

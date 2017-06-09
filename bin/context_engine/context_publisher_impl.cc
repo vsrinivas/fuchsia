@@ -9,10 +9,7 @@
 
 namespace maxwell {
 
-namespace {
-
-
-}  // namespace
+namespace {}  // namespace
 
 ContextPublisherImpl::ContextPublisherImpl(ComponentScopePtr scope,
                                            ContextRepository* repository)

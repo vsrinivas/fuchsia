@@ -9,4 +9,3 @@ fidl("resolver") {
     "resolver.fidl",
   ]
 }
-

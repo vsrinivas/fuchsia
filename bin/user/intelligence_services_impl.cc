@@ -12,8 +12,10 @@
 namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
-    ComponentScopePtr scope, ContextEngine* context_engine,
-    SuggestionEngine* suggestion_engine, UserActionLog* user_action_log)
+    ComponentScopePtr scope,
+    ContextEngine* context_engine,
+    SuggestionEngine* suggestion_engine,
+    UserActionLog* user_action_log)
     : scope_(std::move(scope)),
       context_engine_(context_engine),
       suggestion_engine_(suggestion_engine),

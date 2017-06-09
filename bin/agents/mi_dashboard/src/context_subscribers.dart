@@ -25,7 +25,7 @@ import 'package:apps.maxwell.services.user/scope.fidl.dart';
 import 'data_handler.dart';
 
 class ContextSubscribersDataHandler extends SubscriberListener
-                                       with DataHandler {
+    with DataHandler {
   @override
   String get name => "context_subscribers";
 
@@ -74,8 +74,7 @@ class ContextSubscribersDataHandler extends SubscriberListener
     assert(contextDebug.ctrl.isBound);
 
     // Watch subscription changes.
-    contextDebug.watchSubscribers(
-        _contextDebugBinding.wrap(this));
+    contextDebug.watchSubscribers(_contextDebugBinding.wrap(this));
     contextDebug.ctrl.close();
   }
 
@@ -87,17 +86,15 @@ class ContextSubscribersDataHandler extends SubscriberListener
   @override
   void handleNewWebSocket(WebSocket socket) {
     // send all cached context data to the socket
-    String message = JSON.encode({
-        "context.subscribers": _contextSubscribersCache
-    });
+    String message =
+        JSON.encode({"context.subscribers": _contextSubscribersCache});
     socket.add(message);
   }
 
   @override
   void onUpdate(List<SubscriberUpdate> subscriptions) {
     _contextSubscribersCache = subscriptions;
-    final String message =
-        JSON.encode({"context.subscribers": subscriptions});
+    final String message = JSON.encode({"context.subscribers": subscriptions});
     this._sendMessage(message);
   }
 }

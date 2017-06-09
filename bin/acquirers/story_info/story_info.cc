@@ -8,8 +8,8 @@
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
-#include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 namespace maxwell {
 
@@ -126,7 +126,8 @@ void StoryInfoAcquirer::Initialize(
 
 void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
   std::string value;
-  modular::XdrWrite(&value, &info->focused_story_id, modular::XdrFilter<fidl::String>);
+  modular::XdrWrite(&value, &info->focused_story_id,
+                    modular::XdrFilter<fidl::String>);
   context_publisher_->Publish(CreateKey("focused_id"), value);
 }
 
@@ -134,7 +135,8 @@ void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
   std::string array_value;
   modular::XdrWrite(&array_value, &ids, modular::XdrFilter<fidl::String>);
   context_publisher_->Publish(CreateKey("visible_ids"), array_value);
-  context_publisher_->Publish(CreateKey("visible_count"), std::to_string(ids.size()));
+  context_publisher_->Publish(CreateKey("visible_count"),
+                              std::to_string(ids.size()));
 }
 
 void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,

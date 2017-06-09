@@ -13,8 +13,7 @@ class ContextRepository;
 
 class ContextPublisherImpl : public ContextPublisher {
  public:
-  ContextPublisherImpl(ComponentScopePtr scope,
-                       ContextRepository* repository);
+  ContextPublisherImpl(ComponentScopePtr scope, ContextRepository* repository);
   ~ContextPublisherImpl() override;
 
  private:

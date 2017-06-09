@@ -11,9 +11,8 @@
 namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
-class ApplicationEnvironmentHostImpl
-    : public app::ApplicationEnvironmentHost,
-      public app::ServiceProviderImpl {
+class ApplicationEnvironmentHostImpl : public app::ApplicationEnvironmentHost,
+                                       public app::ServiceProviderImpl {
  public:
   ApplicationEnvironmentHostImpl(app::ApplicationEnvironment* parent_env);
   void GetApplicationEnvironmentServices(

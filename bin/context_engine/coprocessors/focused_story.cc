@@ -29,7 +29,8 @@ std::string GetFocusedStoryId(const ContextRepository* repository) {
     return "";
   }
 
-  if (d.IsNull()) return "";
+  if (d.IsNull())
+    return "";
 
   if (!d.IsString()) {
     FTL_LOG(WARNING) << "JSON from context topic " << kFocusedStoryTopic
@@ -84,7 +85,8 @@ void FocusedStoryCoprocessor::ProcessTopicUpdate(
   if (focused_story_changed) {  // (a)
     // Step 1: remove all existing values.
     std::vector<std::string> topics;
-    repository->GetAllTopicsWithPrefix(MakeFocusedStoryScopeTopic("/"), &topics);
+    repository->GetAllTopicsWithPrefix(MakeFocusedStoryScopeTopic("/"),
+                                       &topics);
     for (const auto& topic : topics) {
       (*out)[topic] = kJsonNull;
     }

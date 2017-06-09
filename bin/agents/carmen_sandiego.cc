@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/context/context_provider.fidl.h"
+#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -20,8 +20,7 @@ class CarmenSandiegoApp : public ContextListener {
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         publisher_(
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
-        provider_(
-            app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this) {
     auto query = ContextQuery::New();
     query->topics.push_back(acquirers::GpsAcquirer::kLabel);

@@ -96,8 +96,8 @@ source_set("debug") {
 
 source_set("scope_utils") {
   sources = [
-    "scope_utils.h",
     "scope_utils.cc",
+    "scope_utils.h",
   ]
 
   deps = [

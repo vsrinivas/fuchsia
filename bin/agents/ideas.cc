@@ -20,8 +20,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        provider_(
-            app_context_->ConnectToEnvironmentService<ContextProvider>()),
+        provider_(app_context_->ConnectToEnvironmentService<ContextProvider>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
     auto query = ContextQuery::New();

@@ -18,7 +18,9 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
  public:
   TimelineStoriesWatcher(modular::StoryProviderPtr* story_provider);
 
-  const std::unordered_set<std::string>& StoryUrls() const { return story_urls_; }
+  const std::unordered_set<std::string>& StoryUrls() const {
+    return story_urls_;
+  }
 
   void SetWatcher(std::function<void()> watcher) { watcher_ = watcher; }
 

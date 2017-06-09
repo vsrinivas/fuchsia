@@ -97,7 +97,8 @@ TEST_F(FocusedStoryTest, All) {
   Run({topic1_1});
   ASSERT_EQ(0lu, output().size());
 
-  // Set the focused story to an ID that has no values. We should still see nothing.
+  // Set the focused story to an ID that has no values. We should still see
+  // nothing.
   const auto focused_id = Set("/story/focused_id", "\"no_exist\"");
   Run({focused_id});
   ASSERT_EQ(0lu, output().size());

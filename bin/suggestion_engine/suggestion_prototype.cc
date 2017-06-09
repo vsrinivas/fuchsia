@@ -15,4 +15,4 @@ std::string short_proposal_str(const SuggestionPrototype& prototype) {
   return str.str();
 }
 
-}  // maxwell
+}  // namespace maxwell

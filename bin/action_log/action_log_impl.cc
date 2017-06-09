@@ -24,8 +24,7 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
         BroadcastToSubscribers(action_data);
         MaybeProposeSharingVideo(action_data);
       }),
-      proposal_publisher_(std::move(proposal_publisher)) {
-}
+      proposal_publisher_(std::move(proposal_publisher)) {}
 
 void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
   UserActionPtr action(UserAction::New());

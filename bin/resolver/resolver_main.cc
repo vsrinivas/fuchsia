@@ -21,8 +21,7 @@ using namespace resolver;
 
 class ResolverApp {
  public:
-  ResolverApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  ResolverApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     // TODO(azani): Switch to using environment services.
     auto launch_info = app::ApplicationLaunchInfo::New();
     app::ServiceProviderPtr child_services;
@@ -35,17 +34,18 @@ class ResolverApp {
         std::move(launch_info), component_index_controller_.NewRequest());
 
     app::ConnectToService(child_services.get(),
-                              fidl::GetProxy(&component_index));
+                          fidl::GetProxy(&component_index));
 
     std::unique_ptr<ResolverImpl> resolver_impl(
         new ResolverImpl(std::move(component_index)));
     resolver_impl_.swap(resolver_impl);
 
     // Singleton service
-    context_->outgoing_services()->AddService<Resolver>([this](
-        fidl::InterfaceRequest<Resolver> request) {
-      resolver_bindings_.AddBinding(resolver_impl_.get(), std::move(request));
-    });
+    context_->outgoing_services()->AddService<Resolver>(
+        [this](fidl::InterfaceRequest<Resolver> request) {
+          resolver_bindings_.AddBinding(resolver_impl_.get(),
+                                        std::move(request));
+        });
   }
 
  private:

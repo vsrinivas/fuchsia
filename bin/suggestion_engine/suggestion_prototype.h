@@ -30,4 +30,4 @@ struct SuggestionPrototype {
 
 std::string short_proposal_str(const SuggestionPrototype& prototype);
 
-}  // maxwell
+}  // namespace maxwell

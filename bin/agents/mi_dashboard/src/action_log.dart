@@ -11,8 +11,7 @@ import 'package:apps.maxwell.services.action_log/user.fidl.dart';
 
 import 'data_handler.dart';
 
-class ActionLogDataHandler extends ActionLogListener
-                              with DataHandler {
+class ActionLogDataHandler extends ActionLogListener with DataHandler {
   @override
   String get name => "action_log";
 
@@ -53,9 +52,7 @@ class ActionLogDataHandler extends ActionLogListener
   @override
   void handleNewWebSocket(WebSocket socket) {
     // send all cached data to the socket
-    String message = JSON.encode({
-      "action_log.all": _actionLogCache
-    });
+    String message = JSON.encode({"action_log.all": _actionLogCache});
     socket.add(message);
   }
 

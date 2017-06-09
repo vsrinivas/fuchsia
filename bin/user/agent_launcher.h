@@ -14,9 +14,8 @@ class AgentLauncher {
  public:
   AgentLauncher(app::ApplicationEnvironment* environment)
       : environment_(environment) {}
-  void StartAgent(
-      const std::string& url,
-      std::unique_ptr<app::ApplicationEnvironmentHost> env_host);
+  void StartAgent(const std::string& url,
+                  std::unique_ptr<app::ApplicationEnvironmentHost> env_host);
 
  private:
   app::ApplicationEnvironment* environment_;
