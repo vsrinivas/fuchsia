@@ -81,11 +81,11 @@ escher::Model* WobblyOceanScene::Update(const escher::Stopwatch& stopwatch,
   std::vector<Object> objects;
 
   vec3 ring_pos(screenWidth * 0.5, screenHeight * 0.5, 10.f);
-  Object ring1(ring_mesh1_, ring_pos + vec3(0, 0, 4.f), color4_);
+  Object ring1(ring_pos + vec3(0, 0, 4.f), ring_mesh1_, color4_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring2(ring_mesh2_, ring_pos + vec3(75., 0, 12.f), color1_);
+  Object ring2(ring_pos + vec3(75., 0, 12.f), ring_mesh2_, color1_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring3(ring_mesh3_, ring_pos + vec3(-125.0, 0, 24.f), color3_);
+  Object ring3(ring_pos + vec3(-125.0, 0, 24.f), ring_mesh3_, color3_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   constexpr float TWO_PI = 6.28318530718f;
@@ -112,7 +112,7 @@ escher::Model* WobblyOceanScene::Update(const escher::Stopwatch& stopwatch,
        {-.5f * TWO_PI, .1f, 16.f * TWO_PI}}};
 
   // Create a wobbly rectangle
-  Object ocean_rect1(wobbly_ocean_mesh_, vec3(0.f, screenHeight * 0.65f, 2.f),
+  Object ocean_rect1(vec3(0.f, screenHeight * 0.65f, 2.f), wobbly_ocean_mesh_,
                      checkerboard_material_);
   ocean_rect1.set_shape_modifiers(ShapeModifier::kWobble);
   ocean_rect1.set_shape_modifier_data(ocean_wobble_data);
@@ -127,8 +127,8 @@ escher::Model* WobblyOceanScene::Update(const escher::Stopwatch& stopwatch,
   float circle1_elevation =
       (sin(current_time_sec * 0.85f + 0.5f) * 0.5f + 0.5f) * elevationRange +
       minElevation;
-  Object circle1(Object::NewCircle(vec2(circle1_x_pos, circle1_y_pos), 60.f,
-                                   circle1_elevation, color2_));
+  Object circle1(Object::NewCircle(
+      vec3(circle1_x_pos, circle1_y_pos, circle1_elevation), 60.f, color2_));
   objects.push_back(circle1);
 
   // Create our background plane

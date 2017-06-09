@@ -96,7 +96,7 @@ escher::Model* Page::GetModel(const escher::Stopwatch& stopwatch,
       auto& stroke = pair.second;
       if (auto& mesh = stroke->mesh()) {
         material_index = (material_index + material_step) % kStrokeColorCount;
-        objects.emplace_back(mesh, vec3(0, 0, height),
+        objects.emplace_back(vec3(0, 0, height), mesh,
                              stroke_materials_[material_index]);
 
         constexpr float PI = 3.14159265359f;

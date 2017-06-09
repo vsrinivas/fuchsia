@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 
+#include "escher/geometry/transform.h"
 #include "escher/material/material.h"
 #include "escher/scene/shape.h"
 
@@ -18,41 +19,35 @@ class Object {
   ~Object();
 
   // Constructors.
-  Object(MeshPtr mesh,
-         const vec3& position,
-         MaterialPtr material,
-         vec2 scale = vec2(1.f, 1.f));
-  Object(const Object& other);
-  Object(Object&& other);
-  static Object NewRect(const vec2& position,
+  Object(const Transform& transform, MeshPtr mesh, MaterialPtr material);
+  Object(const mat4& transform, MeshPtr mesh, MaterialPtr material);
+  Object(const vec3& position, MeshPtr mesh, MaterialPtr material);
+  Object(const Object& other) = default;
+  Object(Object&& other) = default;
+  static Object NewRect(const vec2& top_left_position,
                         const vec2& size,
                         float z,
                         MaterialPtr material);
-  static Object NewCircle(const vec2& center,
+  static Object NewRect(const vec3& top_left_position,
+                        const vec2& size,
+                        MaterialPtr material);
+  static Object NewRect(const Transform& transform, MaterialPtr material);
+  static Object NewCircle(const vec2& center_position,
                           float radius,
                           float z,
                           MaterialPtr material);
+  static Object NewCircle(const vec3& center_position,
+                          float radius,
+                          MaterialPtr material);
+
+  // Return the object's 4x4 transformation matrix.
+  const mat4& transform() const { return transform_; }
 
   // The shape to draw.
   const Shape& shape() const { return shape_; }
 
   // The material with which to fill the shape.
   const MaterialPtr& material() const { return material_; }
-
-  const vec3& position() const { return position_; }
-
-  // For circles and rects: width and height of this object
-  // For objects created from a Mesh: scale factor of this object in x/y
-  // dimensions
-  float width() const { return size_.x; }
-  float height() const { return size_.y; }
-  float rotation() const { return rotation_; }
-  const vec2& rotation_point() const { return rotation_point_; }
-
-  void set_rotation(float rotation) { rotation_ = rotation; }
-  void set_rotation_point(const vec2& rotation_point) {
-    rotation_point_ = rotation_point;
-  }
 
   Object& set_shape_modifiers(ShapeModifiers modifiers) {
     shape_.set_modifiers(modifiers);
@@ -81,14 +76,14 @@ class Object {
   }
 
  private:
-  Object(const Shape& shape, const MaterialPtr& material);
+  Object(mat4 transform, Shape shape, MaterialPtr material)
+      : transform_(transform),
+        shape_(std::move(shape)),
+        material_(std::move(material)) {}
 
+  mat4 transform_;
   Shape shape_;
   MaterialPtr material_;
-  vec3 position_;
-  vec2 size_;
-  float rotation_;
-  vec2 rotation_point_;
   std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
   std::vector<Object> clipped_children_;
 };

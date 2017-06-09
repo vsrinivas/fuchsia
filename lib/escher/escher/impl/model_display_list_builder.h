@@ -50,8 +50,9 @@ class ModelDisplayListBuilder {
 
   const ViewingVolume volume_;
 
-  // Scale object coordinates relative to the size of the stage.
-  const vec3 stage_scale_;
+  // Global camera projection matrix, adjusted to meet the needs of this
+  // particular display list.
+  const mat4 adjusted_camera_transform_;
 
   // If this is false, use |default_white_texture_| instead of a material's
   // existing texture (e.g. to save bandwidth during depth-only passes).

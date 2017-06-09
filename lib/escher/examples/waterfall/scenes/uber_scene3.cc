@@ -5,6 +5,7 @@
 #include "examples/waterfall/scenes/uber_scene3.h"
 
 #include "escher/geometry/tessellation.h"
+#include "escher/geometry/transform.h"
 #include "escher/geometry/types.h"
 #include "escher/material/material.h"
 #include "escher/renderer/image.h"
@@ -20,6 +21,7 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::Transform;
 
 UberScene3::UberScene3(Demo* demo) : Scene(demo) {}
 
@@ -107,14 +109,14 @@ escher::Model* UberScene3::Update(const escher::Stopwatch& stopwatch,
       }
 
       Object circle(Object::NewCircle(
-          vec2(hex_current_x_pos, hex_current_y_pos),
-          hex_circle_radius * circle_scale, circle_elevation, color2_));
+          vec3(hex_current_x_pos, hex_current_y_pos, circle_elevation),
+          hex_circle_radius * circle_scale, color2_));
       objects.push_back(circle);
 
-      Object circle_bg(
-          ring_mesh_,
-          vec3(hex_current_x_pos, hex_current_y_pos, circle_elevation - 4.f),
-          color1_, vec2(circle_scale_alt, circle_scale_alt));
+      Object circle_bg(Transform(vec3(hex_current_x_pos, hex_current_y_pos,
+                                      circle_elevation - 4.f),
+                                 vec3(circle_scale_alt, circle_scale_alt, 1.f)),
+                       ring_mesh_, color1_);
       circle_bg.set_shape_modifiers(ShapeModifier::kWobble);
       escher::ModifierWobble wobble_data{
           {{-0.3f * TWO_PI, 0.1f, 7.f * TWO_PI},

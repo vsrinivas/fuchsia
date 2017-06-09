@@ -28,8 +28,8 @@ struct Transform {
   }
 
   Transform(vec3 translation,
-            vec3 scale,
-            quat rotation,
+            vec3 scale = vec3(1, 1, 1),
+            quat rotation = quat(),
             vec3 anchor = vec3(0, 0, 0))
       : translation(translation),
         scale(scale),

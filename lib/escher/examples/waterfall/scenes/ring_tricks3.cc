@@ -64,15 +64,15 @@ escher::Model* RingTricks3::Update(const escher::Stopwatch& stopwatch,
   float circle1_elevation =
       (sin(2. * current_time_sec) * 0.5 + 0.5) * elevation_range + min_height;
 
-  Object circle1(Object::NewCircle(vec2(circle1_x_pos, circle1_y_pos), 120.f,
-                                   circle1_elevation, color1_));
+  Object circle1(Object::NewCircle(
+      vec3(circle1_x_pos, circle1_y_pos, circle1_elevation), 120.f, color1_));
   objects.push_back(circle1);
 
   // Create the ring that will do the fancy trick
   // vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f,
   //                     (elevation_range * 0.75 + min_height));
   vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, 30.f);
-  Object inner_ring(ring_mesh1_, inner_ring_pos, color2_);
+  Object inner_ring(inner_ring_pos, ring_mesh1_, color2_);
   inner_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(inner_ring);
 

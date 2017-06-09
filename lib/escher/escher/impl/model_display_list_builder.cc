@@ -23,6 +23,27 @@ constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
 constexpr float kStageFloorFudgeFactor = 0.0008f;
 }  // namespace
 
+static mat4 GenerateStageScaleTransform(const Stage& stage, vec2 scale) {
+  auto& volume = stage.viewing_volume();
+
+  // Convert "height above the stage" into "distance from the camera",
+  // normalized to the range (0,1).  This is passed unaltered through the
+  // vertex shader.  See the note above, where we set the viewport min/max
+  // depth.
+  FTL_DCHECK(volume.far() == 0);
+  vec3 pre_scale(1, 1, -(1 - kStageFloorFudgeFactor));
+  vec3 pre_translate(0, 0, volume.depth_range());
+  mat4 pre_translate_and_scale_mat =
+      glm::translate(pre_translate) * glm::scale(pre_scale);
+
+  mat4 scale_mat = glm::scale(
+      vec3(scale.x * 2.f / volume.width(), scale.y * 2.f / volume.height(),
+           1.f / (volume.depth_range() + kStageFloorFudgeFactor)));
+
+  return glm::translate(vec3(-1, -1, 0)) * scale_mat *
+         pre_translate_and_scale_mat;
+}
+
 ModelDisplayListBuilder::ModelDisplayListBuilder(
     vk::Device device,
     const Stage& stage,
@@ -38,10 +59,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     bool use_depth_prepass)
     : device_(device),
       volume_(stage.viewing_volume()),
-      stage_scale_(
-          vec3(scale.x * 2.f / volume_.width(),
-               scale.y * 2.f / volume_.height(),
-               1.f / (volume_.depth_range() + kStageFloorFudgeFactor))),
+      adjusted_camera_transform_(GenerateStageScaleTransform(stage, scale)),
       use_material_textures_(use_material_textures),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture
@@ -180,43 +198,10 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   auto per_object = reinterpret_cast<ModelData::PerObject*>(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   *per_object = ModelData::PerObject();  // initialize with default values
-  auto& transform = per_object->transform;
-  auto& scale_x = transform[0][0];
-  auto& scale_y = transform[1][1];
-  auto& translate_x = transform[3][0];
-  auto& translate_y = transform[3][1];
-  auto& translate_z = transform[3][2];
-  auto& color = per_object->color;
 
   // Push uniforms for scale/translation and color.
-  scale_x = object.width() * stage_scale_.x;
-  scale_y = object.height() * stage_scale_.y;
-  translate_x = object.position().x * stage_scale_.x - 1.f;
-  translate_y = object.position().y * stage_scale_.y - 1.f;
-  // Convert "height above the stage" into "distance from the camera",
-  // normalized to the range (0,1).  This is passed unaltered through the
-  // vertex shader.  See the note above, where we set the viewport min/max
-  // depth.
-  translate_z =
-      1.f - (object.position().z + kStageFloorFudgeFactor) * stage_scale_.z;
-
-  if (object.rotation() != 0.f) {
-    float pre_rot_translation_x = -object.rotation_point().x;
-    float pre_rot_translation_y = -object.rotation_point().y;
-
-    transform = glm::translate(
-        transform,
-        glm::vec3(-pre_rot_translation_x, -pre_rot_translation_y, 0.f));
-
-    transform =
-        glm::rotate(transform, object.rotation(), glm::vec3(0.f, 0.f, 1.f));
-
-    transform = glm::translate(
-        transform,
-        glm::vec3(pre_rot_translation_x, pre_rot_translation_y, 0.f));
-  }
-
-  color = vec4(object.material()->color(), 1.f);  // always opaque
+  per_object->transform = adjusted_camera_transform_ * object.transform();
+  per_object->color = vec4(object.material()->color(), 1.f);  // always opaque
 
   // Find the texture to use, either the object's material's texture, or
   // the default texture if the material doesn't have one.

@@ -100,11 +100,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float y_pos_offset = sin(current_time_sec) * 100.;
   vec3 ring_pos(center + vec2(x_pos_offset, y_pos_offset), 0);
 
-  Object ring1(ring_mesh1_, ring_pos + vec3(0, 0, 4.f), ring1_color_);
+  Object ring1(ring_pos + vec3(0, 0, 4.f), ring_mesh1_, ring1_color_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring2(ring_mesh2_, ring_pos + vec3(0, 0, 12.f), ring2_color_);
+  Object ring2(ring_pos + vec3(0, 0, 12.f), ring_mesh2_, ring2_color_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring3(ring_mesh3_, ring_pos + vec3(0, 0, 24.f), ring3_color_);
+  Object ring3(ring_pos + vec3(0, 0, 24.f), ring_mesh3_, ring3_color_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   constexpr float TWO_PI = 6.28318530718f;

@@ -5,6 +5,7 @@
 #include "examples/waterfall/scenes/ring_tricks1.h"
 
 #include "escher/geometry/tessellation.h"
+#include "escher/geometry/transform.h"
 #include "escher/geometry/types.h"
 #include "escher/material/material.h"
 #include "escher/renderer/image.h"
@@ -20,6 +21,7 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::Transform;
 
 RingTricks1::RingTricks1(Demo* demo) : Scene(demo) {}
 
@@ -65,21 +67,23 @@ escher::Model* RingTricks1::Update(const escher::Stopwatch& stopwatch,
 
   // Create the ring that will do the fancy trick
   vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, 15.f);
-  Object inner_ring(ring_mesh1_, inner_ring_pos, color1_);
+  Object inner_ring(inner_ring_pos, ring_mesh1_, color1_);
   inner_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(inner_ring);
 
   // Create the ring that will do the fancy trick
   vec3 outer_ring_pos(screen_width * 0.5f, screen_height * 0.5f,
                       circle_elevation);
-  Object outer_ring(ring_mesh1_, outer_ring_pos, color2_,
-                    vec2(outer_ring_scale, outer_ring_scale));
+  Object outer_ring(
+      Transform(outer_ring_pos,
+                vec3(outer_ring_scale, outer_ring_scale, outer_ring_scale)),
+      ring_mesh1_, color2_);
   outer_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(outer_ring);
 
   // Create our background plane
-  Object bg_plane(Object::NewRect(vec2(0.f, 0.f),
-                                  vec2(screen_width, screen_height), 0.f, bg_));
+  Object bg_plane(Object::NewRect(vec3(0.f, 0.f, 0.f),
+                                  vec2(screen_width, screen_height), bg_));
 
   objects.push_back(bg_plane);
 

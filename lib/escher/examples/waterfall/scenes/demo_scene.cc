@@ -5,6 +5,7 @@
 #include "examples/waterfall/scenes/demo_scene.h"
 
 #include "escher/geometry/tessellation.h"
+#include "escher/geometry/transform.h"
 #include "escher/geometry/types.h"
 #include "escher/material/material.h"
 #include "escher/renderer/image.h"
@@ -21,6 +22,7 @@ using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 using escher::TexturePtr;
+using escher::Transform;
 
 DemoScene::DemoScene(Demo* demo) : Scene(demo) {}
 
@@ -40,11 +42,10 @@ escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
   stage->set_clear_color(vec3(0.f, 0.f, 0.f));
   float current_time_sec = stopwatch.GetElapsedSeconds();
   float t = sin(current_time_sec);
-  vec2 rect_size = vec2(abs(800.f * t), abs(800.f * t));
-  Object rectangle(
-      Object::NewRect(vec2(112.f + 100 * t, 112.f), rect_size, 8.f, purple_));
-  rectangle.set_rotation(current_time_sec * 0.5);
-  rectangle.set_rotation_point(vec2(0.5f, 0.5f));
+  vec3 rect_scale(abs(800.f * t), abs(800.f * t), 1);
+  Transform transform(vec3(112.f + 100 * t, 112.f, 8.f), rect_scale,
+                      current_time_sec * 0.5, vec3(0, 0, 1), vec3(0.5, 0.5, 0));
+  Object rectangle(Object::NewRect(transform, purple_));
   std::vector<Object> objects{rectangle};
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
   model_->set_time(stopwatch.GetElapsedSeconds());

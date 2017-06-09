@@ -79,7 +79,7 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
 
   // Create the ring that will do the fancy trick
   vec3 inner_ring_pos(screen_width * 0.5f, screen_height * 0.5f, 30.f);
-  Object inner_ring(ring_mesh1_, inner_ring_pos, color2_);
+  Object inner_ring(inner_ring_pos, ring_mesh1_, color2_);
   inner_ring.set_shape_modifiers(ShapeModifier::kWobble);
   objects.push_back(inner_ring);
 

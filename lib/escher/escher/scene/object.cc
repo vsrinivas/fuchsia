@@ -6,63 +6,60 @@
 
 namespace escher {
 
-Object::Object(MeshPtr mesh,
-               const vec3& position,
-               MaterialPtr material,
-               vec2 scale)
-    : shape_(std::move(mesh)),
-      material_(std::move(material)),
-      position_(position),
-      size_(scale),
-      rotation_(0.f),
-      rotation_point_(vec2(0.f, 0.f)) {}
+Object::Object(const Transform& transform, MeshPtr mesh, MaterialPtr material)
+    : Object(static_cast<mat4>(transform),
+             std::move(mesh),
+             std::move(material)) {}
 
-Object::Object(const Object& other)
-    : shape_(other.shape_),
-      material_(other.material_),
-      position_(other.position_),
-      size_(other.size_),
-      rotation_(other.rotation_),
-      rotation_point_(other.rotation_point_),
-      shape_modifier_data_(other.shape_modifier_data_),
-      clipped_children_(other.clipped_children_) {}
+Object::Object(const mat4& transform, MeshPtr mesh, MaterialPtr material)
+    : Object(transform, Shape(std::move(mesh)), std::move(material)) {}
 
-Object::Object(Object&& other)
-    : shape_(std::move(other.shape_)),
-      material_(std::move(other.material_)),
-      position_(other.position_),
-      size_(other.size_),
-      rotation_(other.rotation_),
-      rotation_point_(other.rotation_point_),
-      shape_modifier_data_(std::move(other.shape_modifier_data_)),
-      clipped_children_(std::move(other.clipped_children_)) {}
-
-Object::Object(const Shape& shape, const MaterialPtr& material)
-    : shape_(shape),
-      material_(material),
-      rotation_(0.f),
-      rotation_point_(vec2(0.f, 0.f)) {}
+Object::Object(const vec3& position, MeshPtr mesh, MaterialPtr material)
+    : Object(glm::translate(position), std::move(mesh), std::move(material)) {}
 
 Object::~Object() {}
 
-Object Object::NewRect(const vec2& position,
+Object Object::NewRect(const vec2& top_left_position,
                        const vec2& size,
                        float z,
                        MaterialPtr material) {
-  Object obj(Shape(Shape::Type::kRect), std::move(material));
-  obj.position_ = vec3(position, z);
-  obj.size_ = size;
-  return obj;
+  return NewRect(vec3(top_left_position, z), size, std::move(material));
 }
 
-Object Object::NewCircle(const vec2& center,
+Object Object::NewRect(const vec3& top_left_position,
+                       const vec2& size,
+                       MaterialPtr material) {
+  mat4 transform(1);
+  transform[0][0] = size.x;
+  transform[1][1] = size.y;
+  transform[3][0] = top_left_position.x;
+  transform[3][1] = top_left_position.y;
+  transform[3][2] = top_left_position.z;
+  return Object(transform, Shape(Shape::Type::kRect), std::move(material));
+}
+
+Object Object::NewRect(const Transform& transform, MaterialPtr material) {
+  return Object(static_cast<mat4>(transform), Shape(Shape::Type::kRect),
+                std::move(material));
+}
+
+Object Object::NewCircle(const vec2& center_position,
                          float radius,
                          float z,
                          MaterialPtr material) {
-  Object obj(Shape(Shape::Type::kCircle), std::move(material));
-  obj.position_ = vec3(center.x - radius, center.y - radius, z);
-  obj.size_ = vec2(radius * 2.f, radius * 2.f);
-  return obj;
+  return NewCircle(vec3(center_position, z), radius, std::move(material));
+}
+
+Object Object::NewCircle(const vec3& center_position,
+                         float radius,
+                         MaterialPtr material) {
+  mat4 transform(1);
+  transform[0][0] = radius;
+  transform[1][1] = radius;
+  transform[3][0] = center_position.x;
+  transform[3][1] = center_position.y;
+  transform[3][2] = center_position.z;
+  return Object(transform, Shape(Shape::Type::kCircle), std::move(material));
 }
 
 }  // namespace escher
