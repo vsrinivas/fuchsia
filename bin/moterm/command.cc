@@ -19,10 +19,10 @@ mx_status_t AddRedirectedSocket(
   mtl::StartupHandle startup_handle;
   mx_status_t status =
       mtl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
-  if (status != NO_ERROR)
+  if (status != MX_OK)
     return status;
   startup_handles->push_back(std::move(startup_handle));
-  return NO_ERROR;
+  return MX_OK;
 }
 
 std::vector<const char*> GetArgv(const std::vector<std::string>& command) {
@@ -85,7 +85,7 @@ bool Command::Start(std::vector<std::string> command,
   mx_handle_t proc;
   const char* errmsg;
   status = launchpad_go(lp, &proc, &errmsg);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Cannot run executable " << command[0] << " due to error "
                    << status << " (" << mx_status_get_string(status)
                    << "): " << errmsg;
@@ -116,11 +116,11 @@ void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     size_t len;
 
     if (handle == stdout_.get()) {
-      if (stdout_.read(0, buffer, sizeof(buffer), &len) != NO_ERROR) {
+      if (stdout_.read(0, buffer, sizeof(buffer), &len) != MX_OK) {
         return;
       }
     } else if (handle == stderr_.get()) {
-      if (stderr_.read(0, buffer, sizeof(buffer), &len) != NO_ERROR) {
+      if (stderr_.read(0, buffer, sizeof(buffer), &len) != MX_OK) {
         return;
       }
     } else {
@@ -132,7 +132,7 @@ void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 
 void Command::SendData(const void* bytes, size_t num_bytes) {
   size_t len;
-  if (stdin_.write(0, bytes, num_bytes, &len) != NO_ERROR) {
+  if (stdin_.write(0, bytes, num_bytes, &len) != MX_OK) {
     // TODO: Deal with the socket being full.
     FTL_LOG(ERROR) << "Failed to send";
   }

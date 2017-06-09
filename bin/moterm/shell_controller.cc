@@ -52,7 +52,7 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
 
   mx::channel shell_handle;
   mx_status_t status = mx::channel::create(0, &channel_, &shell_handle);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR) << "Failed to create an mx::channel for the shell, status: "
                    << status;
     return {};
@@ -85,7 +85,7 @@ void ShellController::OnRemoteEntry(const std::string& entry) {
   std::string command = kAddRemoteEntryCommand + entry;
   mx_status_t status =
       channel_.write(0, command.data(), command.size(), nullptr, 0);
-  if (status != NO_ERROR && status != ERR_NO_MEMORY) {
+  if (status != MX_OK && status != MX_ERR_NO_MEMORY) {
     FTL_LOG(ERROR) << "Failed to write a " << kAddRemoteEntryCommand
                    << " command, status: " << status;
   }
@@ -104,7 +104,7 @@ bool ShellController::SendBackHistory(std::vector<std::string> entries) {
   const std::string command = "";
   mx_status_t status =
       channel_.write(0, command.data(), command.size(), handles, 1);
-  if (status != NO_ERROR) {
+  if (status != MX_OK) {
     FTL_LOG(ERROR)
         << "Failed to write the terminal history response to channel.";
     mx_handle_close(handles[0]);
@@ -125,7 +125,7 @@ void ShellController::ReadCommand() {
   mx_status_t rv =
       channel_.read(MX_CHANNEL_READ_MAY_DISCARD, buffer, sizeof(buffer),
                     &num_bytes, nullptr, 0, nullptr);
-  if (rv == NO_ERROR) {
+  if (rv == MX_OK) {
     const std::string command = std::string(buffer, num_bytes);
     if (command == kGetHistoryCommand) {
       history_->ReadInitialEntries([this](std::vector<std::string> entries) {
@@ -140,12 +140,12 @@ void ShellController::ReadCommand() {
     }
 
     WaitForShell();
-  } else if (rv == ERR_SHOULD_WAIT) {
+  } else if (rv == MX_ERR_SHOULD_WAIT) {
     WaitForShell();
-  } else if (rv == ERR_BUFFER_TOO_SMALL) {
+  } else if (rv == MX_ERR_BUFFER_TOO_SMALL) {
     // Ignore the command.
     FTL_LOG(WARNING) << "The command sent by shell didn't fit in the buffer.";
-  } else if (rv == ERR_PEER_CLOSED) {
+  } else if (rv == MX_ERR_PEER_CLOSED) {
     channel_.reset();
     return;
   } else {
