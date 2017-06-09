@@ -18,20 +18,23 @@ namespace cloud_sync {
 BatchUpload::BatchUpload(
     storage::PageStorage* storage,
     cloud_provider::CloudProvider* cloud_provider,
+    AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
     ftl::Closure on_done,
     ftl::Closure on_error,
     unsigned int max_concurrent_uploads)
     : storage_(storage),
       cloud_provider_(cloud_provider),
+      auth_provider_(auth_provider),
       commits_(std::move(commits)),
       on_done_(on_done),
       on_error_(on_error),
       max_concurrent_uploads_(max_concurrent_uploads) {
   TRACE_ASYNC_BEGIN("ledger", "batch_upload",
                     reinterpret_cast<uintptr_t>(this));
-  FTL_DCHECK(storage);
-  FTL_DCHECK(cloud_provider);
+  FTL_DCHECK(storage_);
+  FTL_DCHECK(cloud_provider_);
+  FTL_DCHECK(auth_provider_);
 }
 
 BatchUpload::~BatchUpload() {
@@ -42,23 +45,24 @@ void BatchUpload::Start() {
   FTL_DCHECK(!started_);
   FTL_DCHECK(!errored_);
   started_ = true;
-
-  storage_->GetAllUnsyncedObjectIds(
-      [this](storage::Status status,
-             std::vector<storage::ObjectId> object_ids) {
-        FTL_DCHECK(status == storage::Status::OK);
-        for (auto& object_id : object_ids) {
-          remaining_object_ids_.push(std::move(object_id));
-        }
-        StartObjectUpload();
-      });
+  RefreshAuthToken([this] {
+    storage_->GetAllUnsyncedObjectIds(
+        [this](storage::Status status,
+               std::vector<storage::ObjectId> object_ids) {
+          FTL_DCHECK(status == storage::Status::OK);
+          for (auto& object_id : object_ids) {
+            remaining_object_ids_.push(std::move(object_id));
+          }
+          StartObjectUpload();
+        });
+  });
 }
 
 void BatchUpload::Retry() {
   FTL_DCHECK(started_);
   FTL_DCHECK(errored_);
   errored_ = false;
-  StartObjectUpload();
+  RefreshAuthToken([this] { StartObjectUpload(); });
 }
 
 void BatchUpload::StartObjectUpload() {
@@ -103,7 +107,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(
-      "", object->GetId(), std::move(data),
+      auth_token_, object->GetId(), std::move(data),
       [ this, id = std::move(id) ](cloud_provider::Status status) {
         FTL_DCHECK(current_uploads_ > 0);
         current_uploads_--;
@@ -184,7 +188,7 @@ void BatchUpload::UploadCommits() {
     ids.push_back(std::move(id));
   }
   cloud_provider_->AddCommits(
-      "", std::move(commits),
+      auth_token_, std::move(commits),
       [ this, commit_ids = std::move(ids) ](cloud_provider::Status status) {
         // UploadCommit() is called as a last step of a so-far-successful upload
         // attempt, so we couldn't have failed before.
@@ -202,6 +206,14 @@ void BatchUpload::UploadCommits() {
         // anything after the call.
         on_done_();
       });
+}
+
+void BatchUpload::RefreshAuthToken(ftl::Closure on_refreshed) {
+  auth_token_requests_.emplace(auth_provider_->GetFirebaseToken(
+      [ this, on_refreshed = std::move(on_refreshed) ](std::string auth_token) {
+        auth_token_ = std::move(auth_token);
+        on_refreshed();
+      }));
 }
 
 }  // namespace cloud_sync

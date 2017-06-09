@@ -54,6 +54,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
       result->firebase.get(), result->cloud_storage.get());
   auto page_sync = std::make_unique<PageSyncImpl>(
       environment_->main_runner(), page_storage, result->cloud_provider.get(),
+      user_config_->auth_provider,
       std::make_unique<backoff::ExponentialBackoff>(), error_callback);
   if (upload_enabled_) {
     page_sync->EnableUpload();

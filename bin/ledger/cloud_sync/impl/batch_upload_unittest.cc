@@ -10,6 +10,7 @@
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
+#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -151,6 +152,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
     add_commits_calls++;
+    received_commit_tokens.push_back(auth_token);
     if (commit_status_to_return == cloud_provider::Status::OK) {
       std::move(commits.begin(), commits.end(),
                 std::back_inserter(received_commits));
@@ -165,6 +167,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
       mx::vmo data,
       std::function<void(cloud_provider::Status)> callback) override {
     add_object_calls++;
+    received_object_tokens.push_back(auth_token);
     std::string received_data;
     ASSERT_TRUE(mtl::StringFromVmo(std::move(data), &received_data));
     received_objects.insert(
@@ -174,9 +177,9 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
       callback(status);
     };
     if (delay_add_object_callbacks) {
-      pending_add_object_callbacks.push_back(report_result);
+      pending_add_object_callbacks.push_back(std::move(report_result));
     } else {
-      message_loop_->task_runner()->PostTask(report_result);
+      message_loop_->task_runner()->PostTask(std::move(report_result));
     }
 
     if (reset_object_status_after_call) {
@@ -198,21 +201,26 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
   unsigned int add_object_calls = 0u;
   unsigned int add_commits_calls = 0u;
+  std::vector<std::string> received_commit_tokens;
   std::vector<cloud_provider::Commit> received_commits;
+  std::vector<std::string> received_object_tokens;
   std::map<cloud_provider::ObjectId, std::string> received_objects;
 
  private:
   mtl::MessageLoop* message_loop_;
 };
 
-class BatchUploadTest : public test::TestWithMessageLoop {
+class BatchUploadTest : public ::test::TestWithMessageLoop {
  public:
-  BatchUploadTest() : cloud_provider_(&message_loop_) {}
+  BatchUploadTest()
+      : cloud_provider_(&message_loop_),
+        auth_provider_(message_loop_.task_runner()) {}
   ~BatchUploadTest() override {}
 
  protected:
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
+  test::TestAuthProvider auth_provider_;
 
   unsigned int done_calls_ = 0u;
   unsigned int error_calls_ = 0u;
@@ -221,7 +229,7 @@ class BatchUploadTest : public test::TestWithMessageLoop {
       std::vector<std::unique_ptr<const storage::Commit>> commits,
       unsigned int max_concurrent_uploads = 10) {
     return std::make_unique<BatchUpload>(&storage_, &cloud_provider_,
-                                         std::move(commits),
+                                         &auth_provider_, std::move(commits),
                                          [this] {
                                            done_calls_++;
                                            message_loop_.PostQuitTask();
@@ -320,6 +328,28 @@ TEST_F(BatchUploadTest, SingleCommitWithObjects) {
   EXPECT_EQ(1u, storage_.objects_marked_as_synced.count("obj_id2"));
 }
 
+// Verifies that auth tokens from auth provider are correctly passed to
+// cloud provider.
+TEST_F(BatchUploadTest, AuthTokens) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content"));
+
+  storage_.unsynced_objects_to_return["obj_id1"] =
+      std::make_unique<TestObject>("obj_id1", "obj_data1");
+  storage_.unsynced_objects_to_return["obj_id2"] =
+      std::make_unique<TestObject>("obj_id2", "obj_data2");
+
+  auth_provider_.token_to_return = "some-token";
+
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+  batch_upload->Start();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ((std::vector<std::string>{"some-token", "some-token"}),
+            cloud_provider_.received_object_tokens);
+  EXPECT_EQ(std::vector<std::string>{"some-token"},
+            cloud_provider_.received_commit_tokens);
+}
+
 // Verifies that the number of concurrent object uploads is limited to
 // |max_concurrent_uploads|.
 TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
@@ -336,14 +366,19 @@ TEST_F(BatchUploadTest, ThrottleConcurrentUploads) {
   // Create the commit upload with |max_concurrent_uploads| = 2.
   auto batch_upload = MakeBatchUpload(std::move(commits), 2);
 
+  cloud_provider_.delay_add_object_callbacks = true;
   batch_upload->Start();
+  // TODO(ppi): how to avoid the wait?
+  EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(50)));
+  // Verify that only two object uploads are in progress.
   EXPECT_EQ(2u, cloud_provider_.add_object_calls);
+
+  cloud_provider_.delay_add_object_callbacks = false;
   cloud_provider_.RunPendingCallbacks();
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, done_calls_);
   EXPECT_EQ(0u, error_calls_);
   EXPECT_EQ(3u, cloud_provider_.add_object_calls);
-
   EXPECT_EQ(3u, cloud_provider_.received_objects.size());
   EXPECT_EQ("obj_data0", cloud_provider_.received_objects["obj_id0"]);
   EXPECT_EQ("obj_data1", cloud_provider_.received_objects["obj_id1"]);

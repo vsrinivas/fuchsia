@@ -9,7 +9,9 @@
 #include <memory>
 #include <queue>
 
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
@@ -41,6 +43,7 @@ class BatchUpload {
  public:
   BatchUpload(storage::PageStorage* storage,
               cloud_provider::CloudProvider* cloud_provider,
+              AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               ftl::Closure on_done,
               ftl::Closure on_error,
@@ -69,12 +72,19 @@ class BatchUpload {
   // Uploads the commit.
   void UploadCommits();
 
-  storage::PageStorage* storage_;
-  cloud_provider::CloudProvider* cloud_provider_;
+  void RefreshAuthToken(ftl::Closure on_refreshed);
+
+  storage::PageStorage* const storage_;
+  cloud_provider::CloudProvider* const cloud_provider_;
+  AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   ftl::Closure on_done_;
   ftl::Closure on_error_;
   const unsigned int max_concurrent_uploads_;
+
+  // Auth token to be used for uploading the objects and the commit. It is
+  // refreshed each time Start() or Retry() is called.
+  std::string auth_token_;
 
   // All remaining object ids to be uploaded along with this batch of commits.
   std::queue<storage::ObjectId> remaining_object_ids_;
@@ -84,6 +94,9 @@ class BatchUpload {
 
   bool started_ = false;
   bool errored_ = false;
+
+  // Pending auth token requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_token_requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
 };

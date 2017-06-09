@@ -19,17 +19,20 @@ namespace cloud_sync {
 PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                            storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
+                           AuthProvider* auth_provider,
                            std::unique_ptr<backoff::Backoff> backoff,
                            ftl::Closure on_error)
     : task_runner_(task_runner),
       storage_(storage),
       cloud_provider_(cloud_provider),
+      auth_provider_(auth_provider),
       backoff_(std::move(backoff)),
       on_error_(on_error),
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       weak_factory_(this) {
-  FTL_DCHECK(storage);
-  FTL_DCHECK(cloud_provider);
+  FTL_DCHECK(storage_);
+  FTL_DCHECK(cloud_provider_);
+  FTL_DCHECK(auth_provider_);
 }
 
 PageSyncImpl::~PageSyncImpl() {
@@ -102,28 +105,35 @@ void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
     std::function<void(storage::Status status, uint64_t size, mx::socket data)>
         callback) {
-  cloud_provider_->GetObject("", object_id, [
-    this, object_id = object_id.ToString(), callback
-  ](cloud_provider::Status status, uint64_t size, mx::socket data) {
-    if (status == cloud_provider::Status::NETWORK_ERROR) {
-      FTL_LOG(WARNING)
-          << "GetObject() failed due to a connection error, retrying.";
-      Retry([
-        this, object_id = std::move(object_id), callback = std::move(callback)
-      ] { GetObject(object_id, callback); });
-      return;
-    }
+  auto request =
+      auth_provider_->GetFirebaseToken([
+        this, object_id = object_id.ToString(), callback = std::move(callback)
+      ](std::string auth_token) {
+        cloud_provider_->GetObject(std::move(auth_token), object_id, [
+          this, object_id = std::move(object_id), callback = std::move(callback)
+        ](cloud_provider::Status status, uint64_t size, mx::socket data) {
+          if (status == cloud_provider::Status::NETWORK_ERROR) {
+            FTL_LOG(WARNING)
+                << "GetObject() failed due to a connection error, retrying.";
+            Retry([
+              this, object_id = std::move(object_id),
+              callback = std::move(callback)
+            ] { GetObject(object_id, callback); });
+            return;
+          }
 
-    backoff_->Reset();
-    if (status != cloud_provider::Status::OK) {
-      FTL_LOG(WARNING) << "Fetching remote object failed with status: "
-                       << status;
-      callback(storage::Status::IO_ERROR, 0, mx::socket());
-      return;
-    }
+          backoff_->Reset();
+          if (status != cloud_provider::Status::OK) {
+            FTL_LOG(WARNING)
+                << "Fetching remote object failed with status: " << status;
+            callback(storage::Status::IO_ERROR, 0, mx::socket());
+            return;
+          }
 
-    callback(storage::Status::OK, size, std::move(data));
-  });
+          callback(storage::Status::OK, size, std::move(data));
+        });
+      });
+  auth_token_requests_.emplace(request);
 }
 
 void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
@@ -177,41 +187,46 @@ void PageSyncImpl::StartDownload() {
                 << "retrieving commits uploaded after: " << last_commit_ts;
   }
 
-  // TODO(ppi): handle pagination when the response is huge.
-  cloud_provider_->GetCommits(
-      "", std::move(last_commit_ts),
-      [this](cloud_provider::Status cloud_status,
-             std::vector<cloud_provider::Record> records) {
-        if (cloud_status != cloud_provider::Status::OK) {
-          // Fetching the remote commits failed, schedule a retry.
-          FTL_LOG(WARNING) << log_prefix_
-                           << "fetching the remote commits failed due to a "
-                           << "connection error, status: " << cloud_status
-                           << ", retrying.";
-          Retry([this] { StartDownload(); });
-          return;
-        }
-        backoff_->Reset();
+  auto request = auth_provider_->GetFirebaseToken([
+    this, last_commit_ts = std::move(last_commit_ts)
+  ](std::string auth_token) {
+    // TODO(ppi): handle pagination when the response is huge.
+    cloud_provider_->GetCommits(
+        std::move(auth_token), std::move(last_commit_ts),
+        [this](cloud_provider::Status cloud_status,
+               std::vector<cloud_provider::Record> records) {
+          if (cloud_status != cloud_provider::Status::OK) {
+            // Fetching the remote commits failed, schedule a retry.
+            FTL_LOG(WARNING)
+                << log_prefix_ << "fetching the remote commits failed due to a "
+                << "connection error, status: " << cloud_status
+                << ", retrying.";
+            Retry([this] { StartDownload(); });
+            return;
+          }
+          backoff_->Reset();
 
-        if (records.empty()) {
-          // If there is no remote commits to add, announce that we're done.
-          FTL_VLOG(1) << log_prefix_
-                      << "initial sync finished, no new remote commits";
-          BacklogDownloaded();
-        } else {
-          FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
-                      << " (possibly) new remote commits, "
-                      << "adding them to storage.";
-          // If not, fire the backlog download callback when the remote commits
-          // are downloaded.
-          const auto record_count = records.size();
-          DownloadBatch(std::move(records), [this, record_count] {
-            FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
-                        << record_count << " remote commits.";
+          if (records.empty()) {
+            // If there is no remote commits to add, announce that we're done.
+            FTL_VLOG(1) << log_prefix_
+                        << "initial sync finished, no new remote commits";
             BacklogDownloaded();
-          });
-        }
-      });
+          } else {
+            FTL_VLOG(1) << log_prefix_ << "retrieved " << records.size()
+                        << " (possibly) new remote commits, "
+                        << "adding them to storage.";
+            // If not, fire the backlog download callback when the remote
+            // commits are downloaded.
+            const auto record_count = records.size();
+            DownloadBatch(std::move(records), [this, record_count] {
+              FTL_VLOG(1) << log_prefix_ << "initial sync finished, added "
+                          << record_count << " remote commits.";
+              BacklogDownloaded();
+            });
+          }
+        });
+  });
+  auth_token_requests_.emplace(request);
 }
 
 void PageSyncImpl::StartUpload() {
@@ -278,8 +293,13 @@ void PageSyncImpl::SetRemoteWatcher() {
     return;
   }
 
-  cloud_provider_->WatchCommits("", last_commit_ts, this);
-  remote_watch_set_ = true;
+  auto request = auth_provider_->GetFirebaseToken([
+    this, last_commit_ts = std::move(last_commit_ts)
+  ](std::string auth_token) {
+    cloud_provider_->WatchCommits(std::move(auth_token), last_commit_ts, this);
+    remote_watch_set_ = true;
+  });
+  auth_token_requests_.emplace(request);
 }
 
 void PageSyncImpl::HandleLocalCommits(
@@ -324,7 +344,8 @@ void PageSyncImpl::UploadStagedCommits() {
 
   batch_upload_ =
       std::make_unique<BatchUpload>(
-          storage_, cloud_provider_, std::move(commits_staged_for_upload_),
+          storage_, cloud_provider_, auth_provider_,
+          std::move(commits_staged_for_upload_),
           [this] {
             // Upload succeeded, reset the backoff delay.
             backoff_->Reset();

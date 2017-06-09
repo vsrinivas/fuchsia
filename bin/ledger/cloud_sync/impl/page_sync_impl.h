@@ -9,10 +9,12 @@
 #include <queue>
 
 #include "apps/ledger/src/backoff/backoff.h"
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
+#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -57,6 +59,7 @@ class PageSyncImpl : public PageSync,
   PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
+               AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
                ftl::Closure on_error);
   ~PageSyncImpl() override;
@@ -131,6 +134,7 @@ class PageSyncImpl : public PageSync,
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
+  AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const ftl::Closure on_error_;
   const std::string log_prefix_;
@@ -165,6 +169,8 @@ class PageSyncImpl : public PageSync,
   // Called on destruction.
   std::function<void()> on_delete_;
 
+  // Pending auth token requests to be cancelled when this class goes away.
+  callback::CancellableContainer auth_token_requests_;
   // Must be the last member field.
   ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;
 };

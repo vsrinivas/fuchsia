@@ -13,6 +13,7 @@
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
+#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
@@ -238,6 +239,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   void WatchCommits(const std::string& auth_token,
                     const std::string& min_timestamp,
                     cloud_provider::CommitWatcher* watcher) override {
+    watch_commits_auth_tokens.push_back(auth_token);
     watch_call_min_timestamps.push_back(min_timestamp);
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
@@ -261,6 +263,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
                                      std::vector<cloud_provider::Record>)>
                       callback) override {
     get_commits_calls++;
+    get_commits_auth_tokens.push_back(auth_token);
     if (should_fail_get_commits) {
       message_loop_->task_runner()->PostTask([callback]() {
         callback(cloud_provider::Status::NETWORK_ERROR, {});
@@ -279,6 +282,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
                                     uint64_t size,
                                     mx::socket data)> callback) override {
     get_object_calls++;
+    get_object_auth_tokens.push_back(auth_token);
     if (should_fail_get_object) {
       message_loop_->task_runner()->PostTask([callback]() {
         callback(cloud_provider::Status::NETWORK_ERROR, 0, mx::socket());
@@ -301,10 +305,13 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
   std::unordered_map<std::string, std::string> objects_to_return;
 
+  std::vector<std::string> watch_commits_auth_tokens;
   std::vector<std::string> watch_call_min_timestamps;
   unsigned int add_commits_calls = 0u;
   unsigned int get_commits_calls = 0u;
+  std::vector<std::string> get_commits_auth_tokens;
   unsigned int get_object_calls = 0u;
+  std::vector<std::string> get_object_auth_tokens;
   std::vector<cloud_provider::Commit> received_commits;
   bool watcher_removed = false;
 
@@ -329,14 +336,16 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class PageSyncImplTest : public test::TestWithMessageLoop {
+class PageSyncImplTest : public ::test::TestWithMessageLoop {
  public:
   PageSyncImplTest()
       : storage_(&message_loop_),
         cloud_provider_(&message_loop_),
+        auth_provider_(message_loop_.task_runner()),
         page_sync_(message_loop_.task_runner(),
                    &storage_,
                    &cloud_provider_,
+                   &auth_provider_,
                    std::make_unique<TestBackoff>(&backoff_get_next_calls_),
                    [this] {
                      EXPECT_FALSE(error_callback_called_);
@@ -358,6 +367,7 @@ class PageSyncImplTest : public test::TestWithMessageLoop {
 
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
+  test::TestAuthProvider auth_provider_;
   int backoff_get_next_calls_ = 0;
   PageSyncImpl page_sync_;
   bool error_callback_called_ = false;
@@ -422,11 +432,13 @@ TEST_F(PageSyncImplTest, UploadBacklogOnlyOnSingleHead) {
   EXPECT_EQ(1u, storage_.commits_marked_as_synced.count("id2"));
 }
 
-// Verifies that sync pause uploading commits when it is downloading a commit.
+// Verifies that sync pauses uploading commits when it is downloading a commit.
 TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
+  page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
+  EXPECT_FALSE(RunLoopWithTimeout());
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(cloud_provider::Commit("id1", "content1", {}));
   page_sync_.OnRemoteCommits(std::move(commits), "44");
@@ -438,6 +450,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
 
   storage_.delayed_add_commit_confirmations.front()();
 
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(cloud_provider_.received_commits.empty());
 }
 
@@ -615,25 +628,15 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
   storage_.NewCommit("id1", "content1");
   storage_.NewCommit("id2", "content2");
 
-  page_sync_.SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  page_sync_.SetOnIdle([this, &on_idle_calls] {
+    on_idle_calls++;
+    message_loop_.PostQuitTask();
+  });
   StartPageSync();
 
-  // Stop the message loop when the cloud receives the last commit (before
-  // cloud sync receives the async confirmation), and verify that the idle
-  // callback is not yet called.
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.received_commits.size() == 2u) {
-      message_loop_.QuitNow();
-    }
-  });
+  // Verify that the idle callback is called once both commits are uploaded.
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(0, on_idle_calls);
-  EXPECT_FALSE(page_sync_.IsIdle());
-
-  // Let the confirmation be delivered and verify that the idle callback was
-  // called.
-  message_loop_.PostQuitTask();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 
@@ -643,17 +646,8 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
   page_sync_.OnNewCommits(storage_.NewCommit("id3", "content3")->AsList(),
                           storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_.IsIdle());
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.received_commits.size() == 3u) {
-      message_loop_.QuitNow();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1, on_idle_calls);
-  EXPECT_FALSE(page_sync_.IsIdle());
-
-  message_loop_.PostQuitTask();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(3u, cloud_provider_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 }
@@ -686,15 +680,13 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       cloud_provider::Commit("id2", "content2", {}), "43"));
 
   int on_backlog_downloaded_calls = 0;
-  page_sync_.SetOnBacklogDownloaded(
-      [&on_backlog_downloaded_calls] { on_backlog_downloaded_calls++; });
+  page_sync_.SetOnBacklogDownloaded([this, &on_backlog_downloaded_calls] {
+    on_backlog_downloaded_calls++;
+    message_loop_.PostQuitTask();
+  });
+  auth_provider_.token_to_return = "some-token";
   StartPageSync();
 
-  message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() != 0u) {
-      message_loop_.QuitNow();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, storage_.received_commits.size());
@@ -702,6 +694,8 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
   EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
   EXPECT_EQ(1, on_backlog_downloaded_calls);
+  EXPECT_EQ(std::vector<std::string>{"some-token"},
+            cloud_provider_.get_commits_auth_tokens);
 }
 
 // Verifies that callbacks are correctly run after downloading an empty backlog
@@ -728,10 +722,13 @@ TEST_F(PageSyncImplTest, RegisterWatcher) {
       cloud_provider::Commit("id1", "content1", {}), "42"));
   cloud_provider_.records_to_return.push_back(cloud_provider::Record(
       cloud_provider::Commit("id2", "content2", {}), "43"));
+  auth_provider_.token_to_return = "some-token";
 
   page_sync_.SetOnIdle([this] { message_loop_.PostQuitTask(); });
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(std::vector<std::string>{"some-token"},
+            cloud_provider_.watch_commits_auth_tokens);
   ASSERT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
   EXPECT_EQ("43", cloud_provider_.watch_call_min_timestamps.front());
 }
@@ -895,18 +892,16 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
       cloud_provider::Commit("id2", "content2", {}), "43"));
 
   int on_idle_calls = 0;
-  page_sync_.SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  page_sync_.SetOnIdle([this, &on_idle_calls] {
+    on_idle_calls++;
+    message_loop_.PostQuitTask();
+  });
   StartPageSync();
   EXPECT_EQ(0, on_idle_calls);
   EXPECT_FALSE(page_sync_.IsIdle());
 
   // Run the message loop and verify that the sync is idle after all remote
   // commits are added to storage.
-  message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 2u) {
-      message_loop_.PostQuitTask();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
@@ -916,13 +911,8 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(cloud_provider::Commit("id3", "content3", {}));
   page_sync_.OnRemoteCommits(std::move(commits), "44");
-  EXPECT_FALSE(page_sync_.IsIdle());
-  message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 3u) {
-      message_loop_.PostQuitTask();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 }
@@ -930,6 +920,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageSyncImplTest, GetObject) {
   cloud_provider_.objects_to_return["object_id"] = "content";
+  auth_provider_.token_to_return = "some-token";
   StartPageSync();
 
   storage::Status status;
@@ -942,6 +933,8 @@ TEST_F(PageSyncImplTest, GetObject) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(std::vector<std::string>{"some-token"},
+            cloud_provider_.get_object_auth_tokens);
   EXPECT_EQ(7u, size);
   std::string content;
   EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
