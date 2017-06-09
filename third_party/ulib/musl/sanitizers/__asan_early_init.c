@@ -12,6 +12,8 @@
 
 #define ASAN_SHADOW_SHIFT 3
 
+#define SHADOW_VMO_NAME "asan-shadow"
+
 #if __has_feature(address_sanitizer)
 
 __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
@@ -64,6 +66,7 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     status = _mx_vmo_create(shadow_used_size, 0, &vmo);
     if (status != MX_OK)
         __builtin_trap();
+    _mx_object_set_property(vmo, MX_PROP_NAME, SHADOW_VMO_NAME, sizeof(SHADOW_VMO_NAME) - 1);
 
     status = _mx_vmar_map(
         shadow_vmar, shadow_shadow_size - info.base, vmo, 0, shadow_used_size,
