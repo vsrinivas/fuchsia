@@ -248,12 +248,10 @@ status_t thread_set_real_time(thread_t *t)
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
-#if PLATFORM_HAS_DYNAMIC_TIMER
     if (t == get_current_thread()) {
         /* if we're currently running, cancel the preemption timer. */
         timer_cancel(&percpu[arch_curr_cpu_num()].preempt_timer);
     }
-#endif
     t->flags |= THREAD_FLAG_REAL_TIME;
     THREAD_UNLOCK(state);
 
@@ -770,7 +768,6 @@ void _thread_resched_internal(void)
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
            (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     if (thread_is_real_time_or_idle(newthread)) {
         if (!thread_is_real_time_or_idle(oldthread)) {
             /* if we're switching from a non real time to a real time, cancel
@@ -786,7 +783,6 @@ void _thread_resched_internal(void)
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
         timer_set_periodic(&percpu[cpu].preempt_timer, THREAD_TICK_RATE, (timer_callback)thread_timer_tick, NULL);
     }
-#endif
 
     /* set some optional target debug leds */
     target_set_debug_led(0, !thread_is_idle(newthread));
@@ -1094,11 +1090,9 @@ void thread_init_early(void)
  */
 void thread_init(void)
 {
-#if PLATFORM_HAS_DYNAMIC_TIMER
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         timer_initialize(&percpu[i].preempt_timer);
     }
-#endif
 }
 
 /**

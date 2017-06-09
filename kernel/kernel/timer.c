@@ -101,13 +101,11 @@ static void timer_set(timer_t *timer, lk_time_t deadline, lk_time_t period, time
 
     insert_timer_in_queue(cpu, timer);
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
         platform_set_oneshot_timer(timer_tick, NULL, deadline);
     }
-#endif
 
 out:
     spin_unlock_irqrestore(&timer_lock, state);
@@ -195,14 +193,11 @@ bool timer_cancel(timer_t *timer)
     if (list_in_list(&timer->node)) {
         callback_not_running = true;
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
         timer_t *oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
-#endif
 
         /* remove it from the queue */
         list_delete(&timer->node);
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
         /* see if we've just modified the head of this cpu's timer queue */
         /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
         timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
@@ -213,7 +208,6 @@ bool timer_cancel(timer_t *timer)
             LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
             platform_set_oneshot_timer(timer_tick, NULL, newhead->scheduled_time);
         }
-#endif
     } else {
         callback_not_running = false;
     }
@@ -307,7 +301,6 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         }
     }
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     /* reset the timer to the next event */
     timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (timer) {
@@ -321,15 +314,6 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
     /* we're done manipulating the timer queue */
     spin_unlock(&timer_lock);
-#else
-    /* release the timer lock before calling the tick handler */
-    spin_unlock(&timer_lock);
-
-    /* let the scheduler have a shot to do quantum expiration, etc */
-    /* in case of dynamic timer, the scheduler will set up a periodic timer */
-    if (thread_timer_tick() == INT_RESCHEDULE)
-        ret = INT_RESCHEDULE;
-#endif
 
     return ret;
 }
@@ -367,14 +351,12 @@ void timer_transition_off_cpu(uint old_cpu)
         insert_timer_in_queue(cpu, entry);
     }
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     timer_t *new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (new_head != NULL && new_head != old_head) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
         platform_set_oneshot_timer(timer_tick, NULL, new_head->scheduled_time);
     }
-#endif
 
     spin_unlock_irqrestore(&timer_lock, state);
 }
@@ -383,7 +365,6 @@ void timer_transition_off_cpu(uint old_cpu)
  * had timers still on it, in order to restart hardware timers. */
 void timer_thaw_percpu(void)
 {
-#if PLATFORM_HAS_DYNAMIC_TIMER
     DEBUG_ASSERT(arch_ints_disabled());
     spin_lock(&timer_lock);
 
@@ -396,7 +377,6 @@ void timer_thaw_percpu(void)
     }
 
     spin_unlock(&timer_lock);
-#endif
 }
 
 void timer_init(void)
@@ -405,9 +385,4 @@ void timer_init(void)
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         list_initialize(&percpu[i].timer_queue);
     }
-#if !PLATFORM_HAS_DYNAMIC_TIMER
-    #warning "Platform does not have dynamic timer. Timer has 10ms resolution"
-    /* register for a periodic timer tick */
-    platform_set_periodic_timer(timer_tick, NULL, LK_MSEC(10)); /* 10ms */
-#endif
 }

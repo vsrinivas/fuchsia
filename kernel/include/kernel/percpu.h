@@ -19,10 +19,8 @@ struct percpu {
     /* per cpu timer queue */
     struct list_node timer_queue;
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     /* per cpu preemption timer */
     timer_t preempt_timer;
-#endif
 
     /* thread/cpu level statistics */
     struct cpu_stats stats;
