@@ -12,6 +12,7 @@
 #include <magenta/device/wlan.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
+#include <mx/thread.h>
 #include <mx/time.h>
 
 #include <cinttypes>
@@ -227,6 +228,9 @@ mx_status_t Device::GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) {
 
 void Device::MainLoop() {
     infof("starting MainLoop\n");
+    const char kThreadName[] = "wlan-mainloop";
+    mx::thread::self().set_property(MX_PROP_NAME, kThreadName, sizeof(kThreadName));
+
     mx_port_packet_t pkt;
     bool running = true;
     while (running) {
