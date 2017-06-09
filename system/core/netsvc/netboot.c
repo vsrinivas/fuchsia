@@ -45,7 +45,7 @@ static nbfilecontainer_t nbbootdata;
 static nbfile* active;
 
 mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
-    mx_status_t st = NO_ERROR;
+    mx_status_t st = MX_OK;
 
     assert(target);
 
@@ -59,7 +59,7 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
 
         // Unmap the vmo from the address space.
         st = mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)target->file.data, target->file.size);
-        if (st != NO_ERROR) {
+        if (st != MX_OK) {
             printf("netbootloader: failed to unmap existing vmo, st = %d\n", st);
             return st;
         }
@@ -73,7 +73,7 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
 
     size = PAGE_ROUNDUP(size);
     st = mx_vmo_create(size, 0, &target->data);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         printf("netbootloader: Could not create a netboot vmo of size = %lu "
                "retcode = %d\n", size, st);
         return st;
@@ -82,7 +82,7 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
     uintptr_t buffer;
     st = mx_vmar_map(mx_vmar_root_self(), 0, target->data, 0, size,
                      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &buffer);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         printf("netbootloader: failed to map data vmo for buffer, st = %d\n", st);
         mx_handle_close(target->data);
         return st;
@@ -92,11 +92,11 @@ mx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
     target->file.size = size;
     target->file.data = (uint8_t*)buffer;
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
-    mx_status_t st = NO_ERROR;
+    mx_status_t st = MX_OK;
     nbfilecontainer_t* result;
 
     if (!strncmp(name, "kernel.bin", 11)) {
@@ -108,7 +108,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     }
 
     st = nbfilecontainer_init(size, result);
-    if (st != NO_ERROR) {
+    if (st != MX_OK) {
         printf("netbootloader: failed to initialize file container for "
                "file = '%s', retcode = %d\n", name, st);
         return NULL;
