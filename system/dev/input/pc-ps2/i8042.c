@@ -505,7 +505,7 @@ static int i8042_irq_thread(void* arg) {
 
     for (;;) {
         status = mx_interrupt_wait(device->irq);
-        if (status == NO_ERROR) {
+        if (status == MX_OK) {
             // ack IRQ so we don't lose any IRQs that arrive while processing
             // (as this is an edge-triggered IRQ)
             mx_interrupt_complete(device->irq);
@@ -584,7 +584,7 @@ static mx_status_t i8042_setup(uint8_t* ctr) {
             return -1;
         }
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void i8042_identify(int (*cmd)(uint8_t* param, int command)) {
@@ -616,7 +616,7 @@ static mx_status_t i8042_query(mx_device_t* dev, uint32_t options, hid_info_t* i
     info->dev_num = i8042->type;  // use the type for the device number for now
     info->dev_class = i8042->type;
     info->boot_device = true;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i8042_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
@@ -624,12 +624,12 @@ static mx_status_t i8042_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie
     mtx_lock(&i8042->lock);
     if (i8042->ifc != NULL) {
         mtx_unlock(&i8042->lock);
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
     i8042->ifc = ifc;
     i8042->cookie = cookie;
     mtx_unlock(&i8042->lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void i8042_stop(mx_device_t* dev) {
@@ -643,7 +643,7 @@ static void i8042_stop(mx_device_t* dev) {
 static mx_status_t i8042_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         void** data, size_t* len) {
     if (desc_type != HID_DESC_TYPE_REPORT) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     i8042_device_t* device = dev->ctx;
@@ -656,39 +656,39 @@ static mx_status_t i8042_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         buf = (void*)&mouse_hid_report_desc;
         buflen = sizeof(mouse_hid_report_desc);
     } else {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     *data = malloc(buflen);
     *len = buflen;
     memcpy(*data, buf, buflen);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i8042_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i8042_set_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i8042_get_idle(mx_device_t* dev, uint8_t rpt_type, uint8_t* duration) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i8042_set_idle(mx_device_t* dev, uint8_t rpt_type, uint8_t duration) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i8042_get_protocol(mx_device_t* dev, uint8_t* protocol) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i8042_set_protocol(mx_device_t* dev, uint8_t protocol) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static hidbus_protocol_t hidbus_ops = {
@@ -741,7 +741,7 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_devi
         "i8042-kbd-irq" : "i8042-mouse-irq";
     int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, tname);
     if (ret != thrd_success) {
-        return ERR_BAD_STATE;
+        return MX_ERR_BAD_STATE;
     }
 
     device_add_args_t args = {
@@ -760,7 +760,7 @@ static int i8042_init_thread(void* arg) {
     mx_device_t* parent = arg;
     uint8_t ctr = 0;
     mx_status_t status = i8042_setup(&ctr);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         return status;
     }
 
@@ -783,12 +783,12 @@ static int i8042_init_thread(void* arg) {
     // create keyboard device
     i8042_device_t* kbd_device = calloc(1, sizeof(i8042_device_t));
     if (!kbd_device)
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
 
     mtx_init(&kbd_device->lock, mtx_plain);
     kbd_device->type = INPUT_PROTO_KBD;
     status = i8042_dev_init(kbd_device, "i8042-keyboard", parent);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         free(kbd_device);
     }
 
@@ -800,7 +800,7 @@ static int i8042_init_thread(void* arg) {
             mtx_init(&mouse_device->lock, mtx_plain);
             mouse_device->type = INPUT_PROTO_MOUSE;
             status = i8042_dev_init(mouse_device, "i8042-mouse", parent);
-            if (status != NO_ERROR) {
+            if (status != MX_OK) {
                 free(mouse_device);
             }
         }
@@ -808,7 +808,7 @@ static int i8042_init_thread(void* arg) {
 
     xprintf("initialized i8042 driver\n");
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i8042_bind(void* ctx, mx_device_t* parent, void** cookie) {

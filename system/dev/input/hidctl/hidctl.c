@@ -32,37 +32,37 @@ typedef struct hidctl_root {
 
 mx_status_t hidctl_get_descriptor(mx_hid_device_t* dev, uint8_t desc_type, void** data, size_t* len) {
     if (desc_type != HID_DESC_TYPE_REPORT) {
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     hidctl_instance_t* inst = from_hid_device(dev);
     *data = malloc(inst->hid_report_desc_len);
     memcpy(*data, inst->hid_report_desc, inst->hid_report_desc_len);
     *len = inst->hid_report_desc_len;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t hidctl_get_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t hidctl_set_report(mx_hid_device_t* dev, uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t hidctl_get_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t hidctl_set_idle(mx_hid_device_t* dev, uint8_t rpt_id, uint8_t duration) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 mx_status_t hidctl_get_protocol(mx_hid_device_t* dev, uint8_t* protocol) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 mx_status_t hidctl_set_protocol(mx_hid_device_t* dev, uint8_t protocol) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static hid_bus_ops_t hidctl_hid_ops = {
@@ -78,11 +78,11 @@ static hid_bus_ops_t hidctl_hid_ops = {
 static ssize_t hidctl_set_config(hidctl_instance_t* dev, const void* in_buf, size_t in_len) {
     const hid_ioctl_config_t* cfg = in_buf;
     if (in_len < sizeof(hid_ioctl_config_t) || in_len != sizeof(hid_ioctl_config_t) + cfg->rpt_desc_len) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (cfg->dev_class > HID_DEV_CLASS_LAST) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
 
     hid_init_device(&dev->hiddev, &hidctl_hid_ops, cfg->dev_num, cfg->boot_device, cfg->dev_class);
@@ -92,7 +92,7 @@ static ssize_t hidctl_set_config(hidctl_instance_t* dev, const void* in_buf, siz
     memcpy(dev->hid_report_desc, cfg->rpt_desc, cfg->rpt_desc_len);
 
     mx_status_t status = hid_add_device(&_driver_hidctl, &dev->hiddev, dev->parent);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         hid_release_device(&dev->hiddev);
         free(dev->hid_report_desc);
         dev->hid_report_desc = NULL;
@@ -120,7 +120,7 @@ static ssize_t hidctl_ioctl(void* ctx, uint32_t op,
         return hidctl_set_config(inst, in_buf, in_len);
         break;
     }
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static void hidctl_release(void* ctx) {
@@ -144,7 +144,7 @@ static mx_status_t hidctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags)
     hidctl_root_t* root = ctx;
     hidctl_instance_t* inst = calloc(1, sizeof(hidctl_instance_t));
     if (inst == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     inst->parent = root->mxdev;
 
@@ -156,14 +156,14 @@ static mx_status_t hidctl_open(void* ctx, mx_device_t** dev_out, uint32_t flags)
     }
 
     status = device_add_instance(inst->mxdev, root->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("hidctl: could not open instance: %d\n", status);
         device_destroy(inst->mxdev);
         free(inst);
         return status;
     }
     *dev_out = inst->mxdev;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void hidctl_root_release(void* ctx) {
@@ -180,7 +180,7 @@ static mx_protocol_device_t hidctl_device_proto = {
 static mx_status_t hidctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     hidctl_root_t* root = calloc(1, sizeof(hidctl_root_t));
     if (!root) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     mx_status_t status;
@@ -194,7 +194,7 @@ static mx_status_t hidctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
         return status;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t hidctl_driver_ops = {

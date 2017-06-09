@@ -51,10 +51,10 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
 
     bool requeue = true;
     switch (txn->status) {
-    case ERR_PEER_CLOSED:
+    case MX_ERR_PEER_CLOSED:
         requeue = false;
         break;
-    case NO_ERROR:
+    case MX_OK:
         mtx_lock(&hid->lock);
         if (hid->ifc) {
             hid->ifc->io_queue(hid->cookie, buffer, txn->actual);
@@ -73,13 +73,13 @@ static void usb_interrupt_callback(iotxn_t* txn, void* cookie) {
 
 static mx_status_t usb_hid_query(mx_device_t* dev, uint32_t options, hid_info_t* info) {
     if (!info) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     usb_hid_device_t* hid = dev->ctx;
     info->dev_num = hid->info.dev_num;
     info->dev_class = hid->info.dev_class;
     info->boot_device = hid->info.boot_device;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
@@ -87,12 +87,12 @@ static mx_status_t usb_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cook
     mtx_lock(&hid->lock);
     if (hid->ifc) {
         mtx_unlock(&hid->lock);
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
     hid->ifc = ifc;
     hid->cookie = cookie;
     mtx_unlock(&hid->lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void usb_hid_stop(mx_device_t* dev) {
@@ -114,7 +114,7 @@ static mx_status_t usb_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         }
     }
     if (desc_idx < 0) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
@@ -129,7 +129,7 @@ static mx_status_t usb_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         *data = desc_buf;
         *len = desc_len;
     }
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t usb_hid_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
@@ -157,7 +157,7 @@ static mx_status_t usb_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t du
     usb_hid_device_t* hid = dev->ctx;
     status = usb_control(hid->usbdev, (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
             USB_HID_SET_IDLE, (duration << 8) | rpt_id, hid->interface, NULL, 0);
-    if (status == ERR_IO_REFUSED) {
+    if (status == MX_ERR_IO_REFUSED) {
         // The SET_IDLE command is optional, so this may stall.
         // If that occurs, reset the endpoint and ignore the error
         status = usb_reset_endpoint(hid->usbdev, 0);
@@ -215,7 +215,7 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
      if (!intf) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // One usb-hid device per HID interface
@@ -252,7 +252,7 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         usb_hid_device_t* usbhid = calloc(1, sizeof(usb_hid_device_t));
         if (usbhid == NULL) {
             usb_desc_iter_release(&iter);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
 
         usbhid->usbdev = dev;
@@ -271,7 +271,7 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         if (usbhid->txn == NULL) {
             usb_desc_iter_release(&iter);
             free(usbhid);
-            return ERR_NO_MEMORY;
+            return MX_ERR_NO_MEMORY;
         }
         usbhid->txn->length = usb_ep_max_packet(endpt);
         usbhid->txn->complete_cb = usb_interrupt_callback;
@@ -287,7 +287,7 @@ static mx_status_t usb_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         };
 
         mx_status_t status = device_add(dev, &args, &usbhid->mxdev);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             usb_desc_iter_release(&iter);
             iotxn_release(usbhid->txn);
             free(usbhid);
@@ -305,7 +305,7 @@ next_interface:
     }
     usb_desc_iter_release(&iter);
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t usb_hid_driver_ops = {

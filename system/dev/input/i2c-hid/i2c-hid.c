@@ -68,12 +68,12 @@ static uint8_t* i2c_hid_prepare_write_read_buffer(uint8_t* buf, int wlen, int rl
 
 static mx_status_t i2c_hid_query(mx_device_t* dev, uint32_t options, hid_info_t* info) {
     if (!info) {
-        return ERR_INVALID_ARGS;
+        return MX_ERR_INVALID_ARGS;
     }
     info->dev_num = 0;
     info->dev_class = HID_DEV_CLASS_OTHER;
     info->boot_device = false;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i2c_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cookie) {
@@ -81,12 +81,12 @@ static mx_status_t i2c_hid_start(mx_device_t* dev, hidbus_ifc_t* ifc, void* cook
     mtx_lock(&hid->lock);
     if (hid->ifc) {
         mtx_unlock(&hid->lock);
-        return ERR_ALREADY_BOUND;
+        return MX_ERR_ALREADY_BOUND;
     }
     hid->ifc = ifc;
     hid->cookie = cookie;
     mtx_unlock(&hid->lock);
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static void i2c_hid_stop(mx_device_t* dev) {
@@ -100,7 +100,7 @@ static void i2c_hid_stop(mx_device_t* dev) {
 static mx_status_t i2c_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
         void** data, size_t* len) {
     if (desc_type != HID_DESC_TYPE_REPORT) {
-        return ERR_NOT_FOUND;
+        return MX_ERR_NOT_FOUND;
     }
 
     i2c_hid_device_t* hid = dev->ctx;
@@ -114,7 +114,7 @@ static mx_status_t i2c_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
 
     uint8_t* out = malloc(desc_len);
     if (out == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     size_t actual = 0;
     mx_status_t status = device_op_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
@@ -122,39 +122,39 @@ static mx_status_t i2c_hid_get_descriptor(mx_device_t* dev, uint8_t desc_type,
     if (status < 0) {
         printf("i2c-hid: could not read HID report descriptor: %d\n", status);
         free(out);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     *data = out;
     *len = actual;
-    return NO_ERROR;
+    return MX_OK;
 }
 
 // TODO: implement the rest of the HID protocol
 static mx_status_t i2c_hid_get_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i2c_hid_set_report(mx_device_t* dev, uint8_t rpt_type, uint8_t rpt_id,
         void* data, size_t len) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i2c_hid_get_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t* duration) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i2c_hid_set_idle(mx_device_t* dev, uint8_t rpt_id, uint8_t duration) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_status_t i2c_hid_get_protocol(mx_device_t* dev, uint8_t* protocol) {
-    return ERR_NOT_SUPPORTED;
+    return MX_ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t i2c_hid_set_protocol(mx_device_t* dev, uint8_t protocol) {
-    return NO_ERROR;
+    return MX_OK;
 }
 
 
@@ -247,14 +247,14 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     mx_status_t ret = device_op_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
     if (ret < 0 || actual != sizeof(out)) {
         printf("i2c-hid: could not read HID descriptor: %d\n", ret);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
     i2c_hid_desc_t* i2c_hid_desc_hdr = (i2c_hid_desc_t*)out;
     uint16_t desc_len = letoh16(i2c_hid_desc_hdr->wHIDDescLength);
 
     i2c_hid_device_t* i2chid = calloc(1, sizeof(i2c_hid_device_t));
     if (i2chid == NULL) {
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
     i2chid->i2cdev = dev;
     i2chid->hiddesc = malloc(desc_len);
@@ -266,7 +266,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         printf("i2c-hid: could not read HID descriptor: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
 #if I2C_HID_DEBUG
@@ -294,7 +294,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     };
 
     mx_status_t status = device_add(i2chid->i2cdev, &args, &i2chid->mxdev);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         printf("i2c-hid: could not add device: %d\n", status);
         free(i2chid->hiddesc);
         free(i2chid);
@@ -306,11 +306,11 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
         printf("i2c-hid: could not create irq thread: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
-        // TODO: map thrd_* status codes to ERR_* status codes
-        return ERR_INTERNAL;
+        // TODO: map thrd_* status codes to MX_ERR_* status codes
+        return MX_ERR_INTERNAL;
     }
 
-    return NO_ERROR;
+    return MX_OK;
 }
 
 static mx_driver_ops_t i2c_hid_driver_ops = {
