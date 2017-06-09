@@ -65,7 +65,7 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     } randoms;
     static_assert(sizeof(randoms) <= MX_CPRNG_DRAW_MAX_LEN, "");
     mx_status_t status = _mx_cprng_draw(&randoms, sizeof(randoms), &actual);
-    if (status != NO_ERROR || actual != sizeof(randoms))
+    if (status != MX_OK || actual != sizeof(randoms))
         __builtin_trap();
     __stack_chk_guard = randoms.stack_guard;
     __setjmp_manglers = randoms.setjmp_manglers;
@@ -81,20 +81,20 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     struct start_params p = { .main = main };
     uint32_t nbytes;
     status = mxr_message_size(bootstrap, &nbytes, &p.nhandles);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         nbytes = p.nhandles = 0;
 
     MXR_PROCESSARGS_BUFFER(buffer, nbytes);
     mx_handle_t handles[p.nhandles];
     p.handles = handles;
     mx_proc_args_t* procargs = NULL;
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = mxr_processargs_read(bootstrap, buffer, nbytes,
                                       handles, p.nhandles,
                                       &procargs, &p.handle_info);
 
     uint32_t envc = 0;
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         p.argc = procargs->args_num;
         envc = procargs->environ_num;
         p.namec = procargs->names_num;
@@ -116,9 +116,9 @@ __NO_SAFESTACK _Noreturn void __libc_start_main(
     char* names[p.namec + 1];
     p.names = names;
 
-    if (status == NO_ERROR)
+    if (status == MX_OK)
         status = mxr_processargs_strings(buffer, nbytes, p.argv, __environ, p.names);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         p.argc = 0;
         p.argv = __environ = NULL;
         p.namec = 0;

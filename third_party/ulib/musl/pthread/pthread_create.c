@@ -47,7 +47,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     mx_status_t status =
         mxr_thread_create(_mx_process_self(), name, attr._a_detach,
                           &new->mxr_thread);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         goto fail_after_alloc;
 
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
@@ -60,7 +60,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
 
-    if (status == NO_ERROR) {
+    if (status == MX_OK) {
         *res = new;
         return 0;
     }
@@ -70,7 +70,7 @@ fail_after_alloc:
     deallocate_region(&new->safe_stack_region);
     deallocate_region(&new->unsafe_stack_region);
     deallocate_region(&new->tcb_region);
-    return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
+    return status == MX_ERR_ACCESS_DENIED ? EPERM : EAGAIN;
 }
 
 static _Noreturn void final_exit(pthread_t self)

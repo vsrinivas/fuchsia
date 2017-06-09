@@ -27,17 +27,17 @@ int __timedwait(atomic_int* futex, int val, clockid_t clk, const struct timespec
         deadline = _mx_deadline_after(to.tv_sec * NS_PER_S + to.tv_nsec);
     }
 
-    // mx_futex_wait will return ERR_BAD_STATE if someone modifying *addr
+    // mx_futex_wait will return MX_ERR_BAD_STATE if someone modifying *addr
     // races with this call. But this is indistinguishable from
     // otherwise being woken up just before someone else changes the
     // value. Therefore this functions returns 0 in that case.
     switch (_mx_futex_wait(futex, val, deadline)) {
-    case NO_ERROR:
-    case ERR_BAD_STATE:
+    case MX_OK:
+    case MX_ERR_BAD_STATE:
         return 0;
-    case ERR_TIMED_OUT:
+    case MX_ERR_TIMED_OUT:
         return ETIMEDOUT;
-    case ERR_INVALID_ARGS:
+    case MX_ERR_INVALID_ARGS:
     default:
         __builtin_trap();
     }

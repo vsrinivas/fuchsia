@@ -12,7 +12,7 @@ int mtx_timedlock(mtx_t* restrict m, const struct timespec* restrict ts) {
         return thrd_error;
     case 0:
         return thrd_success;
-    case ERR_TIMED_OUT:
+    case MX_ERR_TIMED_OUT:
         return thrd_timedout;
     }
 }

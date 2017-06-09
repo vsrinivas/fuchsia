@@ -19,7 +19,7 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     mx_status_t status = _mx_object_get_info(__magenta_vmar_root_self,
                                              MX_INFO_VMAR, &info, sizeof(info),
                                              NULL, NULL);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 
     // Find the top of the accessible address space.
@@ -48,7 +48,7 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
         MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_CAN_MAP_SPECIFIC |
         MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
         &shadow_vmar, &shadow_addr);
-    if (status != NO_ERROR || shadow_addr != info.base)
+    if (status != MX_OK || shadow_addr != info.base)
         __builtin_trap();
 
     // The actual shadow that needs to be mapped starts at the top of
@@ -62,24 +62,24 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
     // Now we're ready to allocate and map the actual shadow.
     mx_handle_t vmo;
     status = _mx_vmo_create(shadow_used_size, 0, &vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 
     status = _mx_vmar_map(
         shadow_vmar, shadow_shadow_size - info.base, vmo, 0, shadow_used_size,
         MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
         &shadow_addr);
-    if (status != NO_ERROR || shadow_addr != shadow_shadow_size)
+    if (status != MX_OK || shadow_addr != shadow_shadow_size)
         __builtin_trap();
 
     status = _mx_handle_close(vmo);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 
     // Drop the VMAR handle.
     // The mappings in the shadow region can never be changed.
     status = _mx_handle_close(shadow_vmar);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         __builtin_trap();
 
     // There's nothing here that the compiler should think it could move

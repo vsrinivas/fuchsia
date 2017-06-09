@@ -8,7 +8,7 @@ int mtx_trylock(mtx_t* m) {
         return thrd_error;
     case 0:
         return thrd_success;
-    case ERR_BAD_STATE:
+    case MX_ERR_BAD_STATE:
         return thrd_busy;
     }
 }

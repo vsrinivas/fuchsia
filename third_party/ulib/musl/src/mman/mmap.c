@@ -48,7 +48,7 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
     mx_flags |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
 
     size_t offset = 0;
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
     if (flags & MAP_FIXED) {
         mx_flags |= MX_VM_FLAG_SPECIFIC;
 
@@ -88,20 +88,20 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
 
 fail:
     switch(status) {
-    case ERR_BAD_HANDLE:
+    case MX_ERR_BAD_HANDLE:
         errno = EBADF;
         break;
-    case ERR_NOT_SUPPORTED:
+    case MX_ERR_NOT_SUPPORTED:
         errno = ENODEV;
         break;
-    case ERR_ACCESS_DENIED:
+    case MX_ERR_ACCESS_DENIED:
         errno = EACCES;
         break;
-    case ERR_NO_MEMORY:
+    case MX_ERR_NO_MEMORY:
         errno = ENOMEM;
         break;
-    case ERR_INVALID_ARGS:
-    case ERR_BAD_STATE:
+    case MX_ERR_INVALID_ARGS:
+    case MX_ERR_BAD_STATE:
     default:
         errno = EINVAL;
     }

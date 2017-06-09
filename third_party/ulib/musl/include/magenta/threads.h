@@ -18,16 +18,16 @@ mx_handle_t thrd_get_mx_handle(thrd_t t);
 static inline mx_status_t __PURE thrd_status_to_mx_status(int thrd_status) {
     switch (thrd_status) {
     case thrd_success:
-        return NO_ERROR;
+        return MX_OK;
     case thrd_nomem:
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     case thrd_timedout:
-        return ERR_TIMED_OUT;
+        return MX_ERR_TIMED_OUT;
     case thrd_busy:
-        return ERR_SHOULD_WAIT;
+        return MX_ERR_SHOULD_WAIT;
     default:
     case thrd_error:
-        return ERR_INTERNAL;
+        return MX_ERR_INTERNAL;
     }
 }
 

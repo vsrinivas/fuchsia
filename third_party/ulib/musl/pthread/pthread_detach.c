@@ -5,9 +5,9 @@
 
 static int __pthread_detach(pthread_t t) {
     switch (mxr_thread_detach(&t->mxr_thread)) {
-    case NO_ERROR:
+    case MX_OK:
         return 0;
-    case ERR_BAD_STATE:
+    case MX_ERR_BAD_STATE:
         // It already died before it knew to deallocate itself.
         _mx_vmar_unmap(_mx_vmar_root_self(),
                        (uintptr_t)t->tcb_region.iov_base,

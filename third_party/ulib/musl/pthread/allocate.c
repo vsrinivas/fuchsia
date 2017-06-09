@@ -79,19 +79,19 @@ __NO_SAFESTACK static bool map_block(mx_handle_t parent_vmar,
                                            MX_VM_FLAG_CAN_MAP_WRITE |
                                            MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                            &vmar, &addr);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         return true;
     region->iov_base = (void*)addr;
     status = _mx_vmar_map(vmar, before, vmo, vmo_offset, size,
                           MX_VM_FLAG_PERM_READ |
                           MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &addr);
-    if (status != NO_ERROR)
+    if (status != MX_OK)
         _mx_vmar_destroy(vmar);
     _mx_handle_close(vmar);
     mapping->iov_base = (void*)addr;
     mapping->iov_len = size;
-    return status != NO_ERROR;
+    return status != MX_OK;
 }
 
 // This allocates all the per-thread memory for a new thread about to
@@ -126,7 +126,7 @@ __NO_SAFESTACK pthread_t __allocate_thread(const pthread_attr_t* attr) {
     const size_t vmo_size = tcb_size + stack_size * 2;
     mx_handle_t vmo;
     mx_status_t status = _mx_vmo_create(vmo_size, 0, &vmo);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         __thread_allocation_release();
         return NULL;
     }
