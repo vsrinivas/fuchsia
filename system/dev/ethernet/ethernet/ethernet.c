@@ -20,7 +20,7 @@
 
 #define FIFO_DEPTH 256
 #define FIFO_ESIZE sizeof(eth_fifo_entry_t)
-#define DEVICE_NAME_LEN 8
+#define DEVICE_NAME_LEN 16
 
 #define TRACE 0
 
@@ -401,7 +401,7 @@ static ssize_t eth_set_client_name(ethdev_t* edev, const void* in_buf, size_t in
         in_len = DEVICE_NAME_LEN - 1;
     }
     memcpy(edev->name, in_buf, in_len);
-    edev->name[DEVICE_NAME_LEN - 1] = '\0';
+    edev->name[in_len] = '\0';
     return MX_OK;
 }
 
