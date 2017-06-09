@@ -124,7 +124,7 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
     if (hci->cmd_channel == MX_HANDLE_INVALID && hci->snoop_channel == MX_HANDLE_INVALID)
         goto out2;
 
-    if (txn->status == NO_ERROR) {
+    if (txn->status == MX_OK) {
         uint8_t* buffer;
         iotxn_mmap(txn, (void **)&buffer);
         size_t length = txn->actual;
@@ -188,14 +188,14 @@ static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
 
     mtx_lock(&hci->mutex);
 
-    if (txn->status == NO_ERROR) {
+    if (txn->status == MX_OK) {
         void* buffer;
         iotxn_mmap(txn, &buffer);
 
         // The channel handle could be invalid here (e.g. if no process called
         // the ioctl or they closed their endpoint). Instead of explicitly
-        // checking we let mx_channel_write fail with ERR_BAD_HANDLE or
-        // ERR_PEER_CLOSED.
+        // checking we let mx_channel_write fail with MX_ERR_BAD_HANDLE or
+        // MX_ERR_PEER_CLOSED.
         mx_status_t status = mx_channel_write(hci->acl_channel, 0, buffer, txn->actual, NULL, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write: %s\n", mx_status_get_string(status));
@@ -392,7 +392,7 @@ done:
 
 static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                             void* out_buf, size_t out_len, size_t* out_actual) {
-    ssize_t result = ERR_NOT_SUPPORTED;
+    ssize_t result = MX_ERR_NOT_SUPPORTED;
     hci_t* hci = ctx;
 
     mtx_lock(&hci->mutex);
@@ -400,12 +400,12 @@ static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
     if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
         mx_handle_t* reply = out_buf;
         if (out_len < sizeof(*reply)) {
-            result = ERR_BUFFER_TOO_SMALL;
+            result = MX_ERR_BUFFER_TOO_SMALL;
             goto done;
         }
 
         if (hci->cmd_channel != MX_HANDLE_INVALID) {
-            result = ERR_ALREADY_BOUND;
+            result = MX_ERR_ALREADY_BOUND;
             goto done;
         }
 
@@ -414,22 +414,22 @@ static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
         if (status < 0) {
             printf("hci_ioctl: Failed to create command channel: %s\n",
                    mx_status_get_string(status));
-            result = ERR_INTERNAL;
+            result = MX_ERR_INTERNAL;
             goto done;
         }
 
         *reply = remote_end;
         *out_actual = sizeof(*reply);
-        result = NO_ERROR;
+        result = MX_OK;
     } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
         mx_handle_t* reply = out_buf;
         if (out_len < sizeof(*reply)) {
-            result = ERR_BUFFER_TOO_SMALL;
+            result = MX_ERR_BUFFER_TOO_SMALL;
             goto done;
         }
 
         if (hci->acl_channel != MX_HANDLE_INVALID) {
-            result = ERR_ALREADY_BOUND;
+            result = MX_ERR_ALREADY_BOUND;
             goto done;
         }
 
@@ -438,22 +438,22 @@ static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
         if (status < 0) {
             printf("hci_ioctl: Failed to create ACL data channel: %s\n",
                    mx_status_get_string(status));
-            result = ERR_INTERNAL;
+            result = MX_ERR_INTERNAL;
             goto done;
         }
 
         *reply = remote_end;
         *out_actual = sizeof(*reply);
-        result = NO_ERROR;
+        result = MX_OK;
     } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
         mx_handle_t* reply = out_buf;
         if (out_len < sizeof(*reply)) {
-            result = ERR_BUFFER_TOO_SMALL;
+            result = MX_ERR_BUFFER_TOO_SMALL;
             goto done;
         }
 
         if (hci->snoop_channel != MX_HANDLE_INVALID) {
-            result = ERR_ALREADY_BOUND;
+            result = MX_ERR_ALREADY_BOUND;
             goto done;
         }
 
@@ -462,19 +462,19 @@ static mx_status_t hci_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t 
         if (status < 0) {
             printf("hci_ioctl: Failed to create snoop channel: %s\n",
                    mx_status_get_string(status));
-            result = ERR_INTERNAL;
+            result = MX_ERR_INTERNAL;
             goto done;
         }
 
         *reply = remote_end;
         *out_actual = sizeof(*reply);
-        result = NO_ERROR;
+        result = MX_OK;
     }
 
     hci_build_read_wait_items_locked(hci);
 
     // Kick off the hci_read_thread if it's not already running.
-    if (result == NO_ERROR && !hci->read_thread_running) {
+    if (result == MX_OK && !hci->read_thread_running) {
         thrd_t read_thread;
         thrd_create_with_name(&read_thread, hci_read_thread, hci, "hci_read_thread");
         hci->read_thread_running = true;
@@ -538,7 +538,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     if (!intf || intf->bNumEndpoints != 3) {
         usb_desc_iter_release(&iter);
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     uint8_t bulk_in_addr = 0;
@@ -566,13 +566,13 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
         printf("hci_bind could not find endpoints\n");
-        return ERR_NOT_SUPPORTED;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     hci_t* hci = calloc(1, sizeof(hci_t));
     if (!hci) {
         printf("Not enough memory for hci_t\n");
-        return ERR_NO_MEMORY;
+        return MX_ERR_NO_MEMORY;
     }
 
     list_initialize(&hci->free_event_reqs);
@@ -583,12 +583,12 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
 
     hci->usb_mxdev = device;
 
-    mx_status_t status = NO_ERROR;
+    mx_status_t status = MX_OK;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet);
         if (!txn) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         txn->length = intr_max_packet;
@@ -599,7 +599,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(bulk_in_addr, BT_HCI_MAX_FRAME_SIZE);
         if (!txn) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         txn->length = BT_HCI_MAX_FRAME_SIZE;
@@ -610,7 +610,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(bulk_out_addr, BT_HCI_MAX_FRAME_SIZE);
         if (!txn) {
-            status = ERR_NO_MEMORY;
+            status = MX_ERR_NO_MEMORY;
             goto fail;
         }
         txn->length = BT_HCI_MAX_FRAME_SIZE;
@@ -633,7 +633,7 @@ static mx_status_t hci_bind(void* ctx, mx_device_t* device, void** cookie) {
     };
 
     status = device_add(device, &args, &hci->mxdev);
-    if (status == NO_ERROR) return NO_ERROR;
+    if (status == MX_OK) return MX_OK;
 
 fail:
     printf("hci_bind failed: %s\n", mx_status_get_string(status));
