@@ -22,7 +22,7 @@ import (
 
 func main() {
 	log.SetFlags(0)
-	log.SetPrefix("netstack2: ")
+	log.SetPrefix("netstack: ")
 	log.Print("started")
 
 	stk := stack.New([]string{

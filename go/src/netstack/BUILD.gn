@@ -18,5 +18,5 @@ package("netstack") {
 go_binary("netstack_bin") {
   output_name = "netstack"
 
-  gopackage = "apps/netstack/netstack2"
+  gopackage = "apps/netstack"
 }

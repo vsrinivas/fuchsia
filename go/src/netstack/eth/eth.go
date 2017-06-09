@@ -77,7 +77,7 @@ type Client struct {
 
 // NewClient creates a new ethernet Client, connecting to the driver
 // described by path.
-func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error) {
+func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*Client, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("eth: client open: %v", err)
@@ -87,7 +87,7 @@ func NewClient(path string, arena *Arena, stateFunc func(State)) (*Client, error
 		return nil, fmt.Errorf("eth: no mxio for %s fd: %d", path, f.Fd())
 	}
 
-	IoctlSetClientName(m, []byte("netstack2"))
+	IoctlSetClientName(m, []byte(clientName))
 
 	info, err := IoctlGetInfo(m)
 	if err != nil {

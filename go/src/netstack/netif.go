@@ -190,7 +190,7 @@ func (ns *netstack) addEth(path string) error {
 		cancel: cancel,
 	}
 
-	client, err := eth.NewClient(path, ns.arena, nif.stateChange)
+	client, err := eth.NewClient("netstack", path, ns.arena, nif.stateChange)
 	if err != nil {
 		return err
 	}
