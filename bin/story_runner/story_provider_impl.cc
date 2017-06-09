@@ -578,7 +578,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
     for (auto& story : story_provider_impl_->story_controllers_) {
       story.second->GetImportance(
           story_provider_impl_->context_handler_.values(),
-          [this, id = story.first, flow](float importance) {
+          [ this, id = story.first, flow ](float importance) {
             importance_[id] = importance;
           });
     }

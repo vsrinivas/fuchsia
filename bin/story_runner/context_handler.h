@@ -38,9 +38,7 @@ class ContextHandler : maxwell::ContextListener {
 
   void Watch(const std::function<void()>& watcher);
 
-  const ContextState& values() const {
-    return value_->values;
-  }
+  const ContextState& values() const { return value_->values; }
 
  private:
   // |ContextListener|

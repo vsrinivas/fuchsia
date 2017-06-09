@@ -218,9 +218,8 @@ class StoryStorageImpl::ReadAllModuleDataCall
   void Run() override {
     FlowToken flow{this, &data_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(),
-                       to_array(kModuleKeyPrefix), nullptr,
-                       [this, flow](ledger::Status status) {
+    page_->GetSnapshot(page_snapshot_.NewRequest(), to_array(kModuleKeyPrefix),
+                       nullptr, [this, flow](ledger::Status status) {
                          if (status != ledger::Status::OK) {
                            FTL_LOG(ERROR) << "ReadAllModuleDataCall() "
                                           << "Page.GetSnapshot() " << status;
@@ -386,8 +385,8 @@ class StoryStorageImpl::StoryContextLogCall : Operation<> {
 
     page_->PutWithPriority(
         to_array(MakeStoryContextLogKey(log_entry_->signal, log_entry_->time)),
-        to_array(json),
-        ledger::Priority::EAGER, [this, flow](ledger::Status status) {
+        to_array(json), ledger::Priority::EAGER,
+        [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "StoryContextLogCall"
                            << " Page.PutWithPriority() " << status;
@@ -401,13 +400,13 @@ class StoryStorageImpl::StoryContextLogCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryContextLogCall);
 };
 
-class StoryStorageImpl::ReadLogCall : Operation<fidl::Array<StoryContextLogPtr>> {
+class StoryStorageImpl::ReadLogCall
+    : Operation<fidl::Array<StoryContextLogPtr>> {
  public:
   ReadLogCall(OperationContainer* const container,
               ledger::Page* const page,
               ResultCall result_call)
-      : Operation(container, std::move(result_call)),
-        page_(page) {
+      : Operation(container, std::move(result_call)), page_(page) {
     Ready();
   }
 
@@ -427,7 +426,6 @@ class StoryStorageImpl::ReadLogCall : Operation<fidl::Array<StoryContextLogPtr>>
                          Cont1(flow);
                        });
   }
-
 
   void Cont1(FlowToken flow) {
     GetEntries(page_snapshot_.get(), nullptr, &entries_,

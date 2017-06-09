@@ -27,7 +27,8 @@ std::string MakePerDeviceKey(const fidl::String& device_name) {
   return kPerDeviceKeyPrefix + device_name.get();
 }
 
-std::string MakeStoryContextLogKey(const StorySignal signal, const uint64_t time) {
+std::string MakeStoryContextLogKey(const StorySignal signal,
+                                   const uint64_t time) {
   // We use the time as the prefix because that's enough to create mostly unique
   // entries. If there is a collison from two devices, we could resolve the
   // conflict, but as long as we don't its alright, because we only lose one log

@@ -220,7 +220,7 @@ void AgentContextImpl::Done() {}
 
 void AgentContextImpl::MaybeStopAgent() {
   new StopCall(&operation_queue_, false /* is agent runner terminating? */,
-               this, [this] (bool stopped) {
+               this, [this](bool stopped) {
                  if (stopped) {
                    agent_runner_->RemoveAgent(url_);
                    // |this| is no longer valid at this point.
@@ -230,7 +230,7 @@ void AgentContextImpl::MaybeStopAgent() {
 
 void AgentContextImpl::StopForTeardown() {
   new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
-               [this] (bool stopped) {
+               [this](bool stopped) {
                  FTL_DCHECK(stopped);
                  agent_runner_->RemoveAgent(url_);
                  // |this| is no longer valid at this point.

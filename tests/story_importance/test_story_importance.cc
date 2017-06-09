@@ -84,7 +84,8 @@ class StoryWatcherImpl : modular::StoryWatcher {
   // Deregisters itself from the watched story.
   void Reset() { binding_.Close(); }
 
-  // Sets the function where to continue when the story is observed to be running.
+  // Sets the function where to continue when the story is observed to be
+  // running.
   void Continue(std::function<void()> at) { continue_ = at; }
 
  private:
@@ -125,9 +126,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 
   using Handler = std::function<void(fidl::String, fidl::String)>;
 
-  void Handle(const Handler& handler) {
-    handler_ = handler;
-  }
+  void Handle(const Handler& handler) { handler_ = handler; }
 
   // Deregisters itself from the watched story provider.
   void Reset() { binding_.Close(); }
@@ -164,9 +163,7 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   }
 
  private:
-  TestApp() {
-    modular::testing::Init(application_context(), __FILE__);
-  }
+  TestApp() { modular::testing::Init(application_context(), __FILE__); }
 
   ~TestApp() override = default;
 
@@ -209,9 +206,10 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint set_context_home_{"SetContextHome()"};
 
   void SetContextHome() {
-    context_listener_.Handle([this](const fidl::String& key, const fidl::String& value) {
-        GetContextHome(key, value);
-      });
+    context_listener_.Handle(
+        [this](const fidl::String& key, const fidl::String& value) {
+          GetContextHome(key, value);
+        });
     context_publisher_->Publish(kTopic, "\"home\"");
     set_context_home_.Pass();
   }
@@ -241,14 +239,13 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint start_story1_{"StartStory1()"};
 
   void StartStory1() {
-    story_provider_->GetController(story1_id_,
-                                   story1_controller_.NewRequest());
+    story_provider_->GetController(story1_id_, story1_controller_.NewRequest());
 
     story1_watcher_.Watch(story1_controller_.get());
     story1_watcher_.Continue([this] {
-        start_story1_.Pass();
-        SetContextWork();
-      });
+      start_story1_.Pass();
+      SetContextWork();
+    });
 
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
@@ -259,9 +256,10 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint set_context_work_{"SetContextWork()"};
 
   void SetContextWork() {
-    context_listener_.Handle([this](const fidl::String& key, const fidl::String& value) {
-        GetContextWork(key, value);
-      });
+    context_listener_.Handle(
+        [this](const fidl::String& key, const fidl::String& value) {
+          GetContextWork(key, value);
+        });
     context_publisher_->Publish(kTopic, "\"work\"");
     set_context_work_.Pass();
   }
@@ -290,14 +288,13 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint start_story2_{"StartStory2()"};
 
   void StartStory2() {
-    story_provider_->GetController(story2_id_,
-                                   story2_controller_.NewRequest());
+    story_provider_->GetController(story2_id_, story2_controller_.NewRequest());
 
     story2_watcher_.Watch(story2_controller_.get());
     story2_watcher_.Continue([this] {
-        start_story2_.Pass();
-        GetImportance();
-      });
+      start_story2_.Pass();
+      GetImportance();
+    });
 
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
@@ -308,31 +305,34 @@ class TestApp : modular::SingleServiceViewApp<modular::UserShell> {
   TestPoint get_importance_{"GetImportance()"};
 
   void GetImportance() {
-    story_provider_->GetImportance([this](fidl::Map<fidl::String, float> importance) {
-        get_importance_.Pass();
+    story_provider_->GetImportance(
+        [this](fidl::Map<fidl::String, float> importance) {
+          get_importance_.Pass();
 
-        if (importance.find(story1_id_) == importance.end()) {
-          modular::testing::Fail("No importance for story1");
-        } else {
-          FTL_LOG(INFO) << "Story1 importance " << importance[story1_id_];
-        }
+          if (importance.find(story1_id_) == importance.end()) {
+            modular::testing::Fail("No importance for story1");
+          } else {
+            FTL_LOG(INFO) << "Story1 importance " << importance[story1_id_];
+          }
 
-        if (importance.find(story2_id_) == importance.end()) {
-          modular::testing::Fail("No importance for story2");
-        } else {
-          FTL_LOG(INFO) << "Story2 importance " << importance[story2_id_];
-        }
+          if (importance.find(story2_id_) == importance.end()) {
+            modular::testing::Fail("No importance for story2");
+          } else {
+            FTL_LOG(INFO) << "Story2 importance " << importance[story2_id_];
+          }
 
-        if (importance[story1_id_] > 0.1f) {
-          modular::testing::Fail("Wrong importance for story1 " + std::to_string(importance[story1_id_]));
-        };
+          if (importance[story1_id_] > 0.1f) {
+            modular::testing::Fail("Wrong importance for story1 " +
+                                   std::to_string(importance[story1_id_]));
+          };
 
-        if (importance[story2_id_] < 0.9f) {
-          modular::testing::Fail("Wrong importance for story2 " + std::to_string(importance[story2_id_]));
-        };
+          if (importance[story2_id_] < 0.9f) {
+            modular::testing::Fail("Wrong importance for story2 " +
+                                   std::to_string(importance[story2_id_]));
+          };
 
-        user_context_->Logout();
-      });
+          user_context_->Logout();
+        });
   }
 
   TestPoint terminate_{"Terminate()"};

@@ -11,8 +11,8 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
-#include "lib/mtl/tasks/message_loop.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {

@@ -32,7 +32,6 @@ constexpr char kAgentRunnerPageId[] = "AgentRunnerPage_";  // 16 chars
 // 4. Story pages (one per story) contain the story state expressed as link and
 //    module data.
 
-
 // Keys in these pages are constructed as follows:
 //
 // 1. A prefix indicates the kind of information stored under the key. The

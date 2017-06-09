@@ -118,7 +118,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void GetImportance(const GetImportanceCallback& callback) override;
 
   // |StoryProvider|
-  void WatchImportance(fidl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
+  void WatchImportance(
+      fidl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
 
   // |StoryProvider|
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;

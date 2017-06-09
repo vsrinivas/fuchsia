@@ -913,9 +913,8 @@ void StoryImpl::Sync(const std::function<void()>& done) {
   story_storage_impl_->Sync(done);
 }
 
-void StoryImpl::GetImportance(
-    const ContextState& context_state,
-    const std::function<void(float)>& result) {
+void StoryImpl::GetImportance(const ContextState& context_state,
+                              const std::function<void(float)>& result) {
   new GetImportanceCall(&operation_queue_, this, context_state, result);
 }
 

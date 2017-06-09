@@ -39,12 +39,12 @@ class UserRunnerApp : UserRunnerFactory {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     // Deleted in UserRunnerImpl::Terminate().
-    new UserRunnerImpl(
-        application_context_->environment(), user_id, device_name,
-        std::move(user_shell), std::move(story_shell),
-        std::move(ledger_repository), std::move(token_provider_factory),
-        std::move(user_context), std::move(view_owner_request),
-        std::move(user_runner_request));
+    new UserRunnerImpl(application_context_->environment(), user_id,
+                       device_name, std::move(user_shell),
+                       std::move(story_shell), std::move(ledger_repository),
+                       std::move(token_provider_factory),
+                       std::move(user_context), std::move(view_owner_request),
+                       std::move(user_runner_request));
   }
 
   std::shared_ptr<app::ApplicationContext> application_context_;

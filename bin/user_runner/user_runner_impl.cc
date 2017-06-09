@@ -286,8 +286,7 @@ UserRunnerImpl::UserRunnerImpl(
   story_provider_impl_.reset(new StoryProviderImpl(
       &user_scope_, device_id, ledger_.get(), root_page_.get(),
       std::move(story_shell), component_context_info,
-      std::move(focus_provider_2),
-      intelligence_services_.get(),
+      std::move(focus_provider_2), intelligence_services_.get(),
       user_intelligence_provider_.get()));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
