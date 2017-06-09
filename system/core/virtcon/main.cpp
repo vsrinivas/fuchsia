@@ -572,7 +572,10 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
         return ERR_STOP;
     }
 
-    uint8_t buf[8192 + 1];
+    // Buffer contains events { Opcode, Len, Name[Len] }
+    // See magenta/device/vfs.h for more detail
+    // extra byte is for temporary NUL
+    uint8_t buf[VFS_WATCH_MSG_MAX + 1];
     uint32_t len;
     if (mx_channel_read(ph->handle, 0, buf, NULL, sizeof(buf) - 1, 0, &len, NULL) < 0) {
         return ERR_STOP;
@@ -580,16 +583,18 @@ static mx_status_t input_cb(port_handler_t* ph, mx_signals_t signals, uint32_t e
 
     uint8_t* msg = buf;
     while (len >= 2) {
-        uint8_t evt = *msg++;
-        uint8_t nlen = *msg++;
-        if (len < (nlen + 2u)) {
+        uint8_t event = *msg++;
+        uint8_t namelen = *msg++;
+        if (len < (namelen + 2u)) {
             break;
         }
-        uint8_t tmp = msg[nlen];
-        msg[nlen] = 0;
-        input_dir_event(evt, (char*) msg);
-        msg[nlen] = tmp;
-        msg += nlen;
+        // add temporary nul
+        uint8_t tmp = msg[namelen];
+        msg[namelen] = 0;
+        input_dir_event(event, (char*) msg);
+        msg[namelen] = tmp;
+        msg += namelen;
+        len -= namelen;
     }
     return NO_ERROR;
 }
