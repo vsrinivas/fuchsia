@@ -17,20 +17,20 @@ static bool handle_info_test(void) {
     ASSERT_EQ(mx_event_create(0u, &event), 0, "");
     mx_handle_t duped;
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &duped);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), NO_ERROR,
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), MX_OK,
               "handle should be valid");
-    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close the handle");
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), ERR_BAD_HANDLE,
+    ASSERT_EQ(mx_handle_close(event), MX_OK, "failed to close the handle");
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), MX_ERR_BAD_HANDLE,
               "handle should be valid");
 
     mx_info_handle_basic_t info = {};
     ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, &info, 4u, NULL, NULL),
-              ERR_BUFFER_TOO_SMALL, "bad struct size validation");
+              MX_ERR_BUFFER_TOO_SMALL, "bad struct size validation");
 
     status = mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "handle should be valid");
+    ASSERT_EQ(status, MX_OK, "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;
@@ -55,24 +55,24 @@ static bool handle_related_koid_test(void) {
 
     mx_status_t status = mx_object_get_info(
         mx_job_default(), MX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_object_get_info(
         mx_process_self(), MX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     EXPECT_EQ(info0.type, (uint32_t)MX_OBJ_TYPE_JOB, "");
     EXPECT_EQ(info1.type, (uint32_t)MX_OBJ_TYPE_PROCESS, "");
 
     mx_handle_t thread;
     status = mx_thread_create(mx_process_self(), "hitr", 4, 0u, &thread);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     mx_info_handle_basic_t info2 = {};
 
     status = mx_object_get_info(
         thread, MX_INFO_HANDLE_BASIC, &info2, sizeof(info2), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     EXPECT_EQ(info2.type, (uint32_t)MX_OBJ_TYPE_THREAD, "");
 
@@ -86,15 +86,15 @@ static bool handle_related_koid_test(void) {
 
     mx_handle_t sock0, sock1;
     status = mx_socket_create(0u, &sock0, &sock1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_object_get_info(
         sock0, MX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_object_get_info(
         sock1, MX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     EXPECT_EQ(info0.type, (uint32_t)MX_OBJ_TYPE_SOCKET, "");
     EXPECT_EQ(info1.type, (uint32_t)MX_OBJ_TYPE_SOCKET, "");
@@ -115,31 +115,31 @@ static bool handle_rights_test(void) {
     ASSERT_EQ(mx_event_create(0u, &event), 0, "");
     mx_handle_t duped_ro;
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_READ, &duped_ro);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     mx_info_handle_basic_t info = {};
     status = mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "handle should be valid");
+    ASSERT_EQ(status, MX_OK, "handle should be valid");
 
     ASSERT_EQ(info.rights, MX_RIGHT_READ, "wrong set of rights");
 
     mx_handle_t h;
     status = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);
-    ASSERT_EQ(status, ERR_ACCESS_DENIED, "should fail rights check");
+    ASSERT_EQ(status, MX_ERR_ACCESS_DENIED, "should fail rights check");
 
     status = mx_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ, &h);
-    ASSERT_EQ(status, ERR_INVALID_ARGS, "cannot upgrade rights");
+    ASSERT_EQ(status, MX_ERR_INVALID_ARGS, "cannot upgrade rights");
 
-    ASSERT_EQ(mx_handle_replace(duped_ro, MX_RIGHT_EXECUTE | MX_RIGHT_READ, &h), ERR_INVALID_ARGS,
+    ASSERT_EQ(mx_handle_replace(duped_ro, MX_RIGHT_EXECUTE | MX_RIGHT_READ, &h), MX_ERR_INVALID_ARGS,
               "cannot upgrade rights");
 
     status = mx_handle_replace(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);
-    ASSERT_EQ(status, NO_ERROR, "should be able to replace handle");
+    ASSERT_EQ(status, MX_OK, "should be able to replace handle");
     // duped_ro should now be invalid.
 
-    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close original handle");
-    ASSERT_EQ(mx_handle_close(duped_ro), ERR_BAD_HANDLE, "replaced handle should be invalid");
-    ASSERT_EQ(mx_handle_close(h), NO_ERROR, "failed to close replacement handle");
+    ASSERT_EQ(mx_handle_close(event), MX_OK, "failed to close original handle");
+    ASSERT_EQ(mx_handle_close(duped_ro), MX_ERR_BAD_HANDLE, "replaced handle should be invalid");
+    ASSERT_EQ(mx_handle_close(h), MX_OK, "failed to close replacement handle");
 
     END_TEST;
 }

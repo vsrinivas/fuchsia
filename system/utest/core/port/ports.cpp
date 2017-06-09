@@ -28,13 +28,13 @@ static bool basic_test(void) {
     mx_port_packet_t out = {};
 
     status = mx_port_queue(port, nullptr, 0u);
-    EXPECT_EQ(status, ERR_INVALID_ARGS, "");
+    EXPECT_EQ(status, MX_ERR_INVALID_ARGS, "");
 
     status = mx_port_queue(port, &in, 0u);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_port_wait(port, MX_TIME_INFINITE, &out, 0u);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     EXPECT_EQ(out.key, 12u, "");
     EXPECT_EQ(out.type, MX_PKT_TYPE_USER, "");
@@ -43,7 +43,7 @@ static bool basic_test(void) {
     EXPECT_EQ(memcmp(&in.user, &out.user, sizeof(mx_port_packet_t::user)), 0, "");
 
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -54,11 +54,11 @@ static bool queue_and_close_test(void) {
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "could not create port v2");
+    EXPECT_EQ(status, MX_OK, "could not create port v2");
 
     mx_port_packet_t out0 = {};
     status = mx_port_wait(port, mx_deadline_after(MX_USEC(1)), &out0, 0u);
-    EXPECT_EQ(status, ERR_TIMED_OUT, "");
+    EXPECT_EQ(status, MX_ERR_TIMED_OUT, "");
 
     const mx_port_packet_t in = {
         1ull,
@@ -68,10 +68,10 @@ static bool queue_and_close_test(void) {
     };
 
     status = mx_port_queue(port, &in, 0u);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -84,25 +84,25 @@ static bool async_wait_channel_test(void) {
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ch[2];
     status = mx_channel_create(0u, &ch[0], &ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     for (int ix = 0; ix != 5; ++ix) {
         mx_port_packet_t out = {};
         status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, MX_WAIT_ASYNC_ONCE);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
 
         status = mx_port_wait(port, mx_deadline_after(MX_USEC(200)), &out, 0u);
-        EXPECT_EQ(status, ERR_TIMED_OUT, "");
+        EXPECT_EQ(status, MX_ERR_TIMED_OUT, "");
 
         status = mx_channel_write(ch[0], 0u, "here", 4, nullptr, 0u);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
 
         status = mx_port_wait(port, MX_TIME_INFINITE, &out, 0u);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
 
         EXPECT_EQ(out.key, key0, "");
         EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL_ONE, "");
@@ -113,25 +113,25 @@ static bool async_wait_channel_test(void) {
 
         status = mx_channel_read(ch[1], MX_CHANNEL_READ_MAY_DISCARD,
                                  nullptr, nullptr, 0u, 0, nullptr, nullptr);
-        EXPECT_EQ(status, ERR_BUFFER_TOO_SMALL, "");
+        EXPECT_EQ(status, MX_ERR_BUFFER_TOO_SMALL, "");
     }
 
     mx_port_packet_t out1 = {};
 
     status = mx_port_wait(port, mx_deadline_after(MX_USEC(200)), &out1, 0u);
-    EXPECT_EQ(status, ERR_TIMED_OUT, "");
+    EXPECT_EQ(status, MX_ERR_TIMED_OUT, "");
 
     status = mx_object_wait_async(ch[1], port, key0, MX_CHANNEL_READABLE, MX_WAIT_ASYNC_ONCE);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(ch[0]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -144,15 +144,15 @@ static bool async_wait_close_order(const int order[3], uint32_t wait_option) {
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ch[2];
     status = mx_channel_create(0u, &ch[0], &ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_object_wait_async(ch[1], port, key0,
         MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, wait_option);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     for (int ix = 0; ix != 3; ++ix) {
         switch (order[ix]) {
@@ -160,7 +160,7 @@ static bool async_wait_close_order(const int order[3], uint32_t wait_option) {
         case 1: status = mx_handle_close(ch[0]); break;
         case 2: status = mx_handle_close(port); break;
         }
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
     }
 
     END_TEST;
@@ -208,29 +208,29 @@ static bool async_wait_event_test_single(void) {
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ev;
     status = mx_event_create(0u, &ev);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     const uint32_t kNumAwaits = 7;
 
     for (uint32_t ix = 0; ix != kNumAwaits; ++ix) {
         status = mx_object_wait_async(ev, port, ix, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
     }
 
     status = mx_object_signal(ev, 0u, MX_EVENT_SIGNALED);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_port_packet_t out = {};
     uint64_t key_sum = 0u;
 
     for (uint32_t ix = 0; ix != (kNumAwaits - 2); ++ix) {
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
         status = mx_port_wait(port, MX_TIME_INFINITE, &out, 0u);
-        EXPECT_EQ(status, NO_ERROR, "");
+        EXPECT_EQ(status, MX_OK, "");
         key_sum += out.key;
         EXPECT_EQ(out.type, MX_PKT_TYPE_SIGNAL_ONE, "");
         EXPECT_EQ(out.signal.count, 1u, "");
@@ -240,10 +240,10 @@ static bool async_wait_event_test_single(void) {
 
     // The port has packets left in it.
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(ev);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -254,27 +254,27 @@ static bool async_wait_event_test_repeat(void) {
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t ev;
     status = mx_event_create(0u, &ev);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     const uint64_t key0 = 1122ull;
 
     status = mx_object_wait_async(ev, port, key0,
         MX_EVENT_SIGNALED | MX_USER_SIGNAL_2, MX_WAIT_ASYNC_REPEATING);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_port_packet_t out = {};
     uint64_t count[3] = {};
 
     for (int ix = 0; ix != 24; ++ix) {
         uint32_t ub = (ix % 2) ? 0u : MX_USER_SIGNAL_2;
-        EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | ub), NO_ERROR, "");
-        EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED | ub, 0u), NO_ERROR, "");
+        EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | ub), MX_OK, "");
+        EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED | ub, 0u), MX_OK, "");
 
-        ASSERT_EQ(mx_port_wait(port, 0ull, &out, 0u), NO_ERROR, "");
+        ASSERT_EQ(mx_port_wait(port, 0ull, &out, 0u), MX_OK, "");
         ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP, "");
         ASSERT_EQ(out.signal.count, 1u, "");
         count[0] += (out.signal.observed & MX_EVENT_SIGNALED) ? 1 : 0;
@@ -288,13 +288,13 @@ static bool async_wait_event_test_repeat(void) {
     EXPECT_EQ(count[2], 0u, "");
 
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | MX_USER_SIGNAL_2);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(ev);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -307,22 +307,22 @@ static bool pre_writes_channel_test(uint32_t mode) {
 
     mx_handle_t ch[2];
     status = mx_channel_create(0u, &ch[0], &ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     for (int ix = 0; ix != 5; ++ix) {
-        EXPECT_EQ(mx_channel_write(ch[0], 0u, "123456", 6, nullptr, 0u), NO_ERROR, "");
+        EXPECT_EQ(mx_channel_write(ch[0], 0u, "123456", 6, nullptr, 0u), MX_OK, "");
     }
 
     status = mx_handle_close(ch[0]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_handle_t port;
     status = mx_port_create(MX_PORT_OPT_V2, &port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_object_wait_async(ch[1], port, key0,
         MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, mode);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     mx_port_packet_t out = {};
     int wait_count = 0;
@@ -330,7 +330,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
 
     while (true) {
         status = mx_port_wait(port, 0ull, &out, 0u);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             break;
         wait_count++;
         if (out.signal.trigger != MX_CHANNEL_PEER_CLOSED)
@@ -343,10 +343,10 @@ static bool pre_writes_channel_test(uint32_t mode) {
     EXPECT_EQ(read_count, 5u, "");
 
     status = mx_handle_close(port);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     status = mx_handle_close(ch[1]);
-    EXPECT_EQ(status, NO_ERROR, "");
+    EXPECT_EQ(status, MX_OK, "");
 
     END_TEST;
 }
@@ -366,23 +366,23 @@ static bool cancel_event(uint32_t wait_mode) {
     mx_handle_t port;
     mx_handle_t ev;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
-    EXPECT_EQ(mx_event_create(0u, &ev), NO_ERROR, "");
+    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    EXPECT_EQ(mx_event_create(0u, &ev), MX_OK, "");
 
     // Notice repeated key below.
     const uint64_t keys[] = {128u, 13u, 7u, 13u};
 
     for (uint32_t ix = 0; ix != countof(keys); ++ix) {
         EXPECT_EQ(mx_object_wait_async(
-            ev, port, keys[ix], MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
+            ev, port, keys[ix], MX_EVENT_SIGNALED, wait_mode), MX_OK, "");
     }
 
     // We cancel before it is signaled so no packets from |13| are seen.
-    EXPECT_EQ(mx_port_cancel(port, ev, 13u), NO_ERROR, "");
+    EXPECT_EQ(mx_port_cancel(port, ev, 13u), MX_OK, "");
 
     for (int ix = 0; ix != 2; ++ix) {
-        EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
-        EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED, 0u), NO_ERROR, "");
+        EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), MX_OK, "");
+        EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED, 0u), MX_OK, "");
     }
 
     mx_port_packet_t out = {};
@@ -391,7 +391,7 @@ static bool cancel_event(uint32_t wait_mode) {
 
     while (true) {
         status = mx_port_wait(port, 0ull, &out, 0u);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             break;
         wait_count++;
         key_sum += out.key;
@@ -401,14 +401,14 @@ static bool cancel_event(uint32_t wait_mode) {
 
     if (wait_mode == MX_WAIT_ASYNC_ONCE) {
         // We cancel after the packet has been delivered.
-        EXPECT_EQ(mx_port_cancel(port, ev, 128u), ERR_NOT_FOUND, "");
+        EXPECT_EQ(mx_port_cancel(port, ev, 128u), MX_ERR_NOT_FOUND, "");
     }
 
     EXPECT_EQ(wait_count, 2, "");
     EXPECT_EQ(key_sum, keys[0] + keys[2], "");
 
-    EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(ev), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(port), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(ev), MX_OK, "");
     END_TEST;
 }
 
@@ -426,27 +426,27 @@ static bool cancel_event_after(uint32_t wait_mode) {
     mx_status_t status;
     mx_handle_t port;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
+    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
 
     mx_handle_t ev[3];
     const uint64_t keys[] = {128u, 3u, 3u};
 
     for (uint32_t ix = 0; ix != countof(keys); ++ix) {
 
-        EXPECT_EQ(mx_event_create(0u, &ev[ix]), NO_ERROR, "");
+        EXPECT_EQ(mx_event_create(0u, &ev[ix]), MX_OK, "");
         EXPECT_EQ(mx_object_wait_async(
-            ev[ix], port, keys[ix], MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
+            ev[ix], port, keys[ix], MX_EVENT_SIGNALED, wait_mode), MX_OK, "");
     }
 
-    EXPECT_EQ(mx_object_signal(ev[0], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
-    EXPECT_EQ(mx_object_signal(ev[1], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+    EXPECT_EQ(mx_object_signal(ev[0], 0u, MX_EVENT_SIGNALED), MX_OK, "");
+    EXPECT_EQ(mx_object_signal(ev[1], 0u, MX_EVENT_SIGNALED), MX_OK, "");
 
     // We cancel after the first two signals and before the third. So it should
     // test both cases with queued packets and no-yet-fired packets.
-    EXPECT_EQ(mx_port_cancel(port, ev[1], 3u), NO_ERROR, "");
-    EXPECT_EQ(mx_port_cancel(port, ev[2], 3u), NO_ERROR, "");
+    EXPECT_EQ(mx_port_cancel(port, ev[1], 3u), MX_OK, "");
+    EXPECT_EQ(mx_port_cancel(port, ev[2], 3u), MX_OK, "");
 
-    EXPECT_EQ(mx_object_signal(ev[2], 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+    EXPECT_EQ(mx_object_signal(ev[2], 0u, MX_EVENT_SIGNALED), MX_OK, "");
 
     mx_port_packet_t out = {};
     int wait_count = 0;
@@ -454,7 +454,7 @@ static bool cancel_event_after(uint32_t wait_mode) {
 
     while (true) {
         status = mx_port_wait(port, 0ull, &out, 0u);
-        if (status != NO_ERROR)
+        if (status != MX_OK)
             break;
         wait_count++;
         key_sum += out.key;
@@ -465,9 +465,9 @@ static bool cancel_event_after(uint32_t wait_mode) {
     EXPECT_EQ(wait_count, 1, "");
     EXPECT_EQ(key_sum, keys[0], "");
 
-    EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(ev[0]), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(ev[1]), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(port), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(ev[0]), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(ev[1]), MX_OK, "");
     END_TEST;
 }
 
@@ -503,8 +503,8 @@ static bool threads_event(uint32_t wait_mode) {
     mx_handle_t port;
     mx_handle_t ev;
 
-    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), NO_ERROR, "");
-    EXPECT_EQ(mx_event_create(0u, &ev), NO_ERROR, "");
+    EXPECT_EQ(mx_port_create(MX_PORT_OPT_V2, &port), MX_OK, "");
+    EXPECT_EQ(mx_event_create(0u, &ev), MX_OK, "");
 
     thrd_t threads[3];
     test_context ctx[3];
@@ -514,12 +514,12 @@ static bool threads_event(uint32_t wait_mode) {
         ctx[ix] = { port, 1u };
 
         EXPECT_EQ(mx_object_wait_async(
-                  ev, port, (500u + ix), MX_EVENT_SIGNALED, wait_mode), NO_ERROR, "");
+                  ev, port, (500u + ix), MX_EVENT_SIGNALED, wait_mode), MX_OK, "");
         EXPECT_EQ(thrd_create(&threads[ix], port_reader_thread, &ctx[ix]),
                   thrd_success, "");
     }
 
-    EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), NO_ERROR, "");
+    EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), MX_OK, "");
 
     for (size_t ix = 0; ix != countof(threads); ++ix) {
         int res;
@@ -528,8 +528,8 @@ static bool threads_event(uint32_t wait_mode) {
         EXPECT_EQ(ctx[ix].count, 1u, "");
     }
 
-    EXPECT_EQ(mx_handle_close(port), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(ev), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(port), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(ev), MX_OK, "");
 
     END_TEST;
 }

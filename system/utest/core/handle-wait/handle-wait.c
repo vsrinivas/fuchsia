@@ -63,7 +63,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     mx_time_t deadline = MX_TIME_INFINITE;
     mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
-    if (status == ERR_CANCELED) {
+    if (status == MX_ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
@@ -82,7 +82,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t signals = MX_EVENT_SIGNALED;
     mx_time_t deadline = MX_TIME_INFINITE;
     mx_status_t status = mx_object_wait_one(handle, signals, deadline, &pending);
-    if (status == ERR_CANCELED) {
+    if (status == MX_ERR_CANCELED) {
         *result = WAIT_CANCELLED;
         return true;
     }
@@ -227,9 +227,9 @@ bool handle_wait_test(void) {
 
     mx_handle_t event_handle_dup;
     mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_GE(event_handle_dup, 0, "handle duplication failed");
-    ASSERT_EQ(mx_handle_close(event_handle), NO_ERROR, "handle close failed");
+    ASSERT_EQ(mx_handle_close(event_handle), MX_OK, "handle close failed");
 
     ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");
     ASSERT_EQ(msg, (enum message)MSG_WAIT_EVENT_CANCELLED,
@@ -239,7 +239,7 @@ bool handle_wait_test(void) {
     send_msg(thread2_channel[0], MSG_EXIT);
     EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
     EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
-    EXPECT_EQ(mx_handle_close(event_handle_dup), NO_ERROR, "handle close failed");
+    EXPECT_EQ(mx_handle_close(event_handle_dup), MX_OK, "handle close failed");
     END_TEST;
 }
 

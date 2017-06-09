@@ -34,7 +34,7 @@ bool address_space_limits_test() {
 #if defined(__x86_64__)
     size_t page_size = getpagesize();
     mx_handle_t vmo;
-    EXPECT_EQ(mx_vmo_create(page_size, 0, &vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_vmo_create(page_size, 0, &vmo), MX_OK, "");
     EXPECT_LT(0, vmo, "vm_object_create");
 
     // This is the lowest non-canonical address on x86-64.  We want to
@@ -48,7 +48,7 @@ bool address_space_limits_test() {
     mx_status_t status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR,
                                             &vmar_info, sizeof(vmar_info),
                                             NULL, NULL);
-    EXPECT_EQ(NO_ERROR, status, "get_info");
+    EXPECT_EQ(MX_OK, status, "get_info");
 
     // Check that we cannot map a page ending at |noncanon_addr|.
     size_t offset = noncanon_addr - page_size - vmar_info.base;
@@ -57,7 +57,7 @@ bool address_space_limits_test() {
         mx_vmar_root_self(), offset, vmo, 0, page_size,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "vm_map");
+    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "vm_map");
 
     // Check that we can map at the next address down.  This helps to
     // verify that the previous check didn't fail for some unexpected
@@ -67,7 +67,7 @@ bool address_space_limits_test() {
         mx_vmar_root_self(), offset, vmo, 0, page_size,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_EQ(MX_OK, status, "vm_map");
 
     // Check that MX_VM_FLAG_SPECIFIC fails on already-mapped locations.
     // Otherwise, the previous mapping could have overwritten
@@ -76,13 +76,13 @@ bool address_space_limits_test() {
         mx_vmar_root_self(), offset, vmo, 0, page_size,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
         &addr);
-    EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
+    EXPECT_EQ(MX_ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.
     status = mx_vmar_unmap(mx_vmar_root_self(), addr, page_size);
-    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
     status = mx_handle_close(vmo);
-    EXPECT_EQ(NO_ERROR, status, "handle_close");
+    EXPECT_EQ(MX_OK, status, "handle_close");
 #endif
 
     END_TEST;

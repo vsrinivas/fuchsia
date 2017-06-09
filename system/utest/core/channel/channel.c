@@ -50,18 +50,18 @@ static int reader_thread(void* arg) {
     items[1].waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     do {
         status = mx_object_wait_many(items, 2, MX_TIME_INFINITE);
-        assert(status == NO_ERROR);
+        assert(status == MX_OK);
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
         if (items[0].pending & MX_CHANNEL_READABLE) {
             status = mx_channel_read(channel[0], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == NO_ERROR);
+            assert(status == MX_OK);
             packets[0] += 1;
         } else if (items[1].pending & MX_CHANNEL_READABLE) {
             status = mx_channel_read(channel[1], 0u, &data, NULL,
                                      num_bytes, 0, &num_bytes, NULL);
-            assert(status == NO_ERROR);
+            assert(status == MX_OK);
             packets[1] += 1;
         } else {
             if (items[0].pending & MX_CHANNEL_PEER_CLOSED)
@@ -78,7 +78,7 @@ static int reader_thread(void* arg) {
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
     mx_signals_t pending = 0;
     __UNUSED mx_status_t status = mx_object_wait_one(handle, 0u, 0u, &pending);
-    assert(status == ERR_TIMED_OUT);
+    assert(status == MX_ERR_TIMED_OUT);
     return pending;
 }
 
@@ -89,7 +89,7 @@ static bool channel_test(void) {
 
     mx_handle_t h[2];
     status = mx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, NO_ERROR, "error in channel create");
+    ASSERT_EQ(status, MX_OK, "error in channel create");
 
     ASSERT_EQ(get_satisfied_signals(h[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
     ASSERT_EQ(get_satisfied_signals(h[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
@@ -99,14 +99,14 @@ static bool channel_test(void) {
 
     static const uint32_t write_data = 0xdeadbeef;
     status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(status, MX_OK, "error in message write");
     ASSERT_EQ(get_satisfied_signals(
         _channel[0]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
     ASSERT_EQ(get_satisfied_signals(
         _channel[2]), MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, NO_ERROR, "error in channel create");
+    ASSERT_EQ(status, MX_OK, "error in channel create");
 
     _channel[1] = h[0];
     _channel[3] = h[1];
@@ -115,20 +115,20 @@ static bool channel_test(void) {
     ASSERT_EQ(thrd_create(&thread, reader_thread, NULL), thrd_success, "error in thread create");
 
     status = mx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(status, MX_OK, "error in message write");
 
     usleep(1);
 
     status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(status, MX_OK, "error in message write");
 
     status = mx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(status, MX_OK, "error in message write");
 
     usleep(1);
 
     status = mx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "error in message write");
+    ASSERT_EQ(status, MX_OK, "error in message write");
 
     mx_handle_close(_channel[1]);
     // The reader thread is reading from _channel[3], so we may or may not have "readable".
@@ -154,15 +154,15 @@ static bool channel_read_error_test(void) {
     BEGIN_TEST;
     mx_handle_t channel[2];
     mx_status_t status = mx_channel_create(0, &channel[0], &channel[1]);
-    ASSERT_EQ(status, NO_ERROR, "error in channel create");
+    ASSERT_EQ(status, MX_OK, "error in channel create");
 
     // Read from an empty channel.
     status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
-    ASSERT_EQ(status, ERR_SHOULD_WAIT, "read on empty non-closed channel produced incorrect error");
+    ASSERT_EQ(status, MX_ERR_SHOULD_WAIT, "read on empty non-closed channel produced incorrect error");
 
     char data = 'x';
     status = mx_channel_write(channel[1], 0u, &data, 1u, NULL, 0u);
-    ASSERT_EQ(status, NO_ERROR, "write failed");
+    ASSERT_EQ(status, MX_OK, "write failed");
 
     mx_handle_close(channel[1]);
 
@@ -171,13 +171,13 @@ static bool channel_read_error_test(void) {
     uint32_t read_data_size = 1u;
     status = mx_channel_read(channel[0], 0u, &read_data, NULL,
                              read_data_size, 0, &read_data_size, NULL);
-    ASSERT_EQ(status, NO_ERROR, "read failed with peer closed but message in the channel");
+    ASSERT_EQ(status, MX_OK, "read failed with peer closed but message in the channel");
     ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
     ASSERT_EQ(read_data, 'x', "read returned incorrect data");
 
     // Read from an empty channel with a closed peer, should yield a channel closed error.
     status = mx_channel_read(channel[0], 0u, NULL, NULL, 0, 0, NULL, NULL);
-    ASSERT_EQ(status, ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
+    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
 
     END_TEST;
 }
@@ -187,45 +187,45 @@ static bool channel_close_test(void) {
     mx_handle_t channel[2];
 
     // Channels should gain PEER_CLOSED (and lose WRITABLE) if their peer is closed
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(channel[1]), MX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
         channel[0]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
-    ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel[0]), MX_OK, "");
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
     mx_handle_t channel1[2];
-    ASSERT_EQ(mx_channel_create(0, &channel1[0], &channel1[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel1[0], &channel1[1]), MX_OK, "");
     mx_handle_t channel2[2];
-    ASSERT_EQ(mx_channel_create(0, &channel2[0], &channel2[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel2[0], &channel2[1]), MX_OK, "");
 
     // Write channel1[0] to channel[0] (to be received by channel[1])
     // and channel2[0] to channel[1] (to be received by channel[0]).
-    ASSERT_EQ(mx_channel_write(channel[0], 0u, NULL, 0u, &channel1[0], 1u), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_write(channel[0], 0u, NULL, 0u, &channel1[0], 1u), MX_OK, "");
     channel1[0] = MX_HANDLE_INVALID;
-    ASSERT_EQ(mx_channel_write(channel[1], 0u, NULL, 0u, &channel2[0], 1u), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_write(channel[1], 0u, NULL, 0u, &channel2[0], 1u), MX_OK, "");
     channel2[0] = MX_HANDLE_INVALID;
 
     // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have
     // peer closed.
-    ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel[1]), MX_OK, "");
     channel[1] = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_object_wait_one(
-        channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+        channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
     ASSERT_EQ(get_satisfied_signals(
         channel2[1]), MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     // Close channel[0]; the former channel2[0] should be closed, so channel2[1]
     // should have peer closed.
-    ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel[0]), MX_OK, "");
     channel[0] = MX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(
         channel1[1]), MX_CHANNEL_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
     ASSERT_EQ(mx_object_wait_one(
-        channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+        channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
 
-    ASSERT_EQ(mx_handle_close(channel1[1]), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(channel2[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel1[1]), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(channel2[1]), MX_OK, "");
 
     END_TEST;
 }
@@ -234,14 +234,14 @@ static bool channel_non_transferable(void) {
     BEGIN_TEST;
 
     mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
     mx_info_handle_basic_t event_handle_info;
 
     mx_status_t status = mx_object_get_info(event, MX_INFO_HANDLE_BASIC, &event_handle_info,
                                             sizeof(event_handle_info), NULL, NULL);
-    ASSERT_EQ(status, NO_ERROR, "failed to get event info");
+    ASSERT_EQ(status, MX_OK, "failed to get event info");
     mx_rights_t initial_event_rights = event_handle_info.rights;
     mx_handle_t non_transferable_event;
     mx_handle_duplicate(
@@ -249,10 +249,10 @@ static bool channel_non_transferable(void) {
 
     mx_status_t write_result = mx_channel_write(
         channel[0], 0u, NULL, 0, &non_transferable_event, 1u);
-    EXPECT_EQ(write_result, ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
+    EXPECT_EQ(write_result, MX_ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
 
     mx_status_t close_result = mx_handle_close(non_transferable_event);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
 
     END_TEST;
 }
@@ -261,21 +261,21 @@ static bool channel_duplicate_handles(void) {
     BEGIN_TEST;
 
     mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
 
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
 
     mx_handle_t dup_handles[2] = { event, event };
     mx_status_t write_result = mx_channel_write(channel[0], 0u, NULL, 0, dup_handles, 2u);
-    EXPECT_EQ(write_result, ERR_INVALID_ARGS, "message_write should fail with ERR_INVALID_ARGS");
+    EXPECT_EQ(write_result, MX_ERR_INVALID_ARGS, "message_write should fail with MX_ERR_INVALID_ARGS");
 
     mx_status_t close_result = mx_handle_close(event);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
     close_result = mx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
     close_result = mx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
 
     END_TEST;
 }
@@ -293,7 +293,7 @@ static int multithread_reader(void* arg) {
         uint32_t msg_size = sizeof(msg);
         mx_status_t status = mx_channel_read(_channel[0], 0u, &msg, NULL,
                                              msg_size, 0, &msg_size, NULL);
-        if (status != NO_ERROR) {
+        if (status != MX_OK) {
             ((uint32_t*)arg)[i] = MSG_READ_FAILED;
             break;
         }
@@ -316,10 +316,10 @@ static bool channel_multithread_read(void) {
 
     // We'll write from channel[0] and read from channel[1].
     mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
 
     for (uint32_t i = 0; i < multithread_read_num_messages; i++)
-        ASSERT_EQ(mx_channel_write(channel[0], 0, &i, sizeof(i), NULL, 0), NO_ERROR, "");
+        ASSERT_EQ(mx_channel_write(channel[0], 0, &i, sizeof(i), NULL, 0), MX_OK, "");
 
     _channel[0] = channel[1];
 
@@ -340,8 +340,8 @@ static bool channel_multithread_read(void) {
     EXPECT_EQ(thrd_join(reader0, NULL), thrd_success, "");
     EXPECT_EQ(thrd_join(reader1, NULL), thrd_success, "");
 
-    EXPECT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
 
     // Check data.
     bool* received_flags = calloc(multithread_read_num_messages, sizeof(bool));
@@ -385,29 +385,29 @@ static void write_test_message(mx_handle_t channel,
 
     for (uint32_t i = 0; i < num_handles; i++) {
         mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_TRANSFER, &handles[i]);
-        assert(status == NO_ERROR);
+        assert(status == MX_OK);
     }
 
     __UNUSED mx_status_t status = mx_channel_write(channel, 0u, data, size, handles, num_handles);
-    assert(status == NO_ERROR);
+    assert(status == MX_OK);
 }
 
 static bool channel_may_discard(void) {
     BEGIN_TEST;
 
     mx_handle_t channel[2];
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
 
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
 
     write_test_message(channel[0], event, 10u, 0u);
     EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, NULL, NULL, 0, 0, NULL, NULL),
-              ERR_BUFFER_TOO_SMALL, "");
+              MX_ERR_BUFFER_TOO_SMALL, "");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
 
     char data[1000];
     uint32_t size;
@@ -415,10 +415,10 @@ static bool channel_may_discard(void) {
     write_test_message(channel[0], event, 100u, 0u);
     size = 10u;
     EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, NULL, size, 0, &size, NULL),
-              ERR_BUFFER_TOO_SMALL, "");
+              MX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
 
     mx_handle_t handles[10];
     uint32_t num_handles;
@@ -428,29 +428,29 @@ static bool channel_may_discard(void) {
     num_handles = 1u;
     EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
                               size, num_handles, &size, &num_handles),
-              ERR_BUFFER_TOO_SMALL, "");
+              MX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 0u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
 
     write_test_message(channel[0], event, 100u, 5u);
     size = 10u;
     num_handles = 1u;
     EXPECT_EQ(mx_channel_read(channel[1], MX_CHANNEL_READ_MAY_DISCARD, data, handles,
                               size, num_handles, &size, &num_handles),
-              ERR_BUFFER_TOO_SMALL, "");
+              MX_ERR_BUFFER_TOO_SMALL, "");
     EXPECT_EQ(size, 100u, "wrong size");
     EXPECT_EQ(num_handles, 5u, "wrong number of handles");
 
-    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
+    EXPECT_EQ(mx_object_wait_one(channel[1], MX_CHANNEL_READABLE, 0u, NULL), MX_ERR_TIMED_OUT, "");
 
     mx_status_t close_result = mx_handle_close(event);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
     close_result = mx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
     close_result = mx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, NO_ERROR, "");
+    EXPECT_EQ(close_result, MX_OK, "");
 
     END_TEST;
 }
@@ -493,7 +493,7 @@ static int call_client(void* _args) {
 
     mx_status_t r;
     if (ccargs->action & CLI_SEND_HANDLE) {
-        if ((r = mx_event_create(0, &txhandle)) != NO_ERROR) {
+        if ((r = mx_event_create(0, &txhandle)) != MX_OK) {
             ccargs->err = "failed to create event";
             goto done;
         }
@@ -513,7 +513,7 @@ static int call_client(void* _args) {
 
     mx_time_t deadline = (ccargs->action & CLI_SHORT_WAIT) ? mx_deadline_after(MX_MSEC(250)) :
             MX_TIME_INFINITE;
-    mx_status_t rs = NO_ERROR;
+    mx_status_t rs = MX_OK;
     if ((r = mx_channel_call(ccargs->h, 0, deadline, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
         ccargs->err = "channel call returned";
         ccargs->val = r;
@@ -524,13 +524,13 @@ static int call_client(void* _args) {
     if (rxhandle) {
         mx_handle_close(rxhandle);
     }
-    if (r == ERR_CALL_FAILED) {
+    if (r == MX_ERR_CALL_FAILED) {
         if (ccargs->expect_rs && (ccargs->expect_rs != rs)) {
             ccargs->err = "read_status not what was expected";
             ccargs->val = ccargs->expect_rs;
         }
     }
-    if (r == NO_ERROR) {
+    if (r == MX_OK) {
         if (act_bytes != sizeof(data)) {
             ccargs->err = "expected 8 bytes";
             ccargs->val = act_bytes;
@@ -557,13 +557,13 @@ static ccargs_t ccargs[] = {
     {
         .name = "too large reply",
         .action = SRV_SEND_DATA,
-        .expect = ERR_CALL_FAILED,
-        .expect_rs = ERR_BUFFER_TOO_SMALL,
+        .expect = MX_ERR_CALL_FAILED,
+        .expect_rs = MX_ERR_BUFFER_TOO_SMALL,
     },
     {
         .name = "no reply",
         .action = SRV_DISCARD | CLI_SHORT_WAIT,
-        .expect = ERR_TIMED_OUT,
+        .expect = MX_ERR_TIMED_OUT,
     },
     {
         .name = "reply handle",
@@ -572,8 +572,8 @@ static ccargs_t ccargs[] = {
     {
         .name = "unwanted reply handle",
         .action = SRV_SEND_HANDLE,
-        .expect = ERR_CALL_FAILED,
-        .expect_rs = ERR_BUFFER_TOO_SMALL,
+        .expect = MX_ERR_CALL_FAILED,
+        .expect_rs = MX_ERR_BUFFER_TOO_SMALL,
     },
     {
         .name = "send-handle",
@@ -610,7 +610,7 @@ static int call_server(void* ptr) {
         uint32_t bytes = sizeof(msg[0]);
         uint32_t handles = 1;
         mx_handle_t handle = 0;
-        if (mx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != NO_ERROR) {
+        if (mx_channel_read(h, 0, &msg[n], &handle, bytes, handles, &bytes, &handles) != MX_OK) {
             fprintf(stderr, "call_server() read failed\n");
             break;
         }
@@ -639,7 +639,7 @@ static int call_server(void* ptr) {
         if (handles) {
             mx_event_create(0, &handle);
         }
-        if (mx_channel_write(h, 0, data, bytes, &handle, handles) != NO_ERROR) {
+        if (mx_channel_write(h, 0, data, bytes, &handle, handles) != MX_OK) {
             fprintf(stderr, "call_server() write failed\n");
             break;
         }
@@ -654,7 +654,7 @@ static bool channel_call(void) {
     cnd_init(&call_test_cvar);
 
     mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
 
     // start test server
     thrd_t srvt;
@@ -711,14 +711,14 @@ static bool create_and_nest(mx_handle_t out, mx_handle_t* end, size_t n) {
 
     mx_handle_t channel[2];
     if (n == 1) {
-        ASSERT_EQ(mx_channel_create(0, &channel[0], end), NO_ERROR, "");
-        ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 1u), NO_ERROR, "");
+        ASSERT_EQ(mx_channel_create(0, &channel[0], end), MX_OK, "");
+        ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 1u), MX_OK, "");
         return true;
     }
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
     ASSERT_TRUE(create_and_nest(channel[0], end, n - 1), "");
-    ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 2u), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 2u), MX_OK, "");
 
     END_TEST;
 }
@@ -734,7 +734,7 @@ static bool channel_call2(void) {
     BEGIN_TEST;
 
     mx_handle_t cli, srv;
-    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), MX_OK, "");
 
     thrd_t t;
     ASSERT_EQ(thrd_create(&t, call_server2, (void*) (uintptr_t) srv), thrd_success, "");
@@ -754,14 +754,14 @@ static bool channel_call2(void) {
     uint32_t act_bytes = 0xffffffff;
     uint32_t act_handles = 0xffffffff;
 
-    mx_status_t rs = NO_ERROR;
+    mx_status_t rs = MX_OK;
     mx_status_t r = mx_channel_call(cli, 0, mx_deadline_after(MX_MSEC(1000)), &args, &act_bytes,
                                     &act_handles, &rs);
 
     mx_handle_close(cli);
 
-    EXPECT_EQ(r, ERR_CALL_FAILED, "");
-    EXPECT_EQ(rs, ERR_PEER_CLOSED, "");
+    EXPECT_EQ(r, MX_ERR_CALL_FAILED, "");
+    EXPECT_EQ(rs, MX_ERR_PEER_CLOSED, "");
 
     END_TEST;
 }
@@ -770,17 +770,17 @@ static bool channel_nest(void) {
     BEGIN_TEST;
     mx_handle_t channel[2];
 
-    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), MX_OK, "");
 
     mx_handle_t end;
     ASSERT_TRUE(create_and_nest(channel[0], &end, 10), "");
-    EXPECT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
-    EXPECT_EQ(mx_object_wait_one(channel[0], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(channel[1]), MX_OK, "");
+    EXPECT_EQ(mx_object_wait_one(channel[0], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
 
-    EXPECT_EQ(mx_object_wait_one(end, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
-    EXPECT_EQ(mx_handle_close(end), NO_ERROR, "");
+    EXPECT_EQ(mx_object_wait_one(end, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(end), MX_OK, "");
 
-    EXPECT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(channel[0]), MX_OK, "");
 
     END_TEST;
 }

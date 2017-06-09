@@ -30,10 +30,10 @@ bool bad_access_test(void) {
 
 bool bad_syscall_num_test(void) {
     BEGIN_TEST;
-    EXPECT_EQ(bad_syscall(MX_SYS_COUNT), ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0x80000000ull), ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0xff00ff0000000000ull), ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0xff00ff0000000010ull), ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(MX_SYS_COUNT), MX_ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0x80000000ull), MX_ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0xff00ff0000000000ull), MX_ERR_BAD_SYSCALL, "");
+    EXPECT_EQ(bad_syscall(0xff00ff0000000010ull), MX_ERR_BAD_SYSCALL, "");
     END_TEST;
 }
 

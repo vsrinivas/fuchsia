@@ -21,7 +21,7 @@ bool wait_for_readable(mx_handle_t handle) {
     mx_signals_t pending;
     mx_status_t wait_status = mx_object_wait_one(handle, signals, MX_TIME_INFINITE,
                                                        &pending);
-    if (wait_status != NO_ERROR) {
+    if (wait_status != MX_OK) {
         return false;
     }
     if (!(pending & MX_CHANNEL_READABLE)) {
@@ -37,12 +37,12 @@ bool serve_echo_request(mx_handle_t handle) {
     // First, figure out size.
     uint32_t in_msg_size = 0u;
     mx_status_t read_status = mx_channel_read(handle, 0u, NULL, NULL, 0, 0, &in_msg_size, NULL);
-    ASSERT_NEQ(read_status, ERR_NO_MEMORY, "unexpected sizing read status");
+    ASSERT_NEQ(read_status, MX_ERR_NO_MEMORY, "unexpected sizing read status");
 
     unittest_printf("reading message of size %u\n", in_msg_size);
     void* in_msg_buf = calloc(in_msg_size, 1u);
     read_status = mx_channel_read(handle, 0u, in_msg_buf, NULL, in_msg_size, 0, &in_msg_size, NULL);
-    ASSERT_EQ(read_status, NO_ERROR, "read failed with status");
+    ASSERT_EQ(read_status, MX_OK, "read failed with status");
 
     // Try to parse message data.
     ASSERT_TRUE(mojo_validate_struct_header(in_msg_buf, in_msg_size),
@@ -108,7 +108,7 @@ bool serve_echo_request(mx_handle_t handle) {
         mx_channel_write(handle, 0u, out_msg_buf, out_msg_size, NULL, 0u);
     free(out_msg_buf);
 
-    ASSERT_EQ(write_status, NO_ERROR, "Error while message writing");
+    ASSERT_EQ(write_status, MX_OK, "Error while message writing");
 
     unittest_printf("served request!\n\n");
     return true;
@@ -133,7 +133,7 @@ bool echo_test(void) {
             0x42424143, // array contents: 'CABB'
         };
         mx_handle_t status = mx_channel_write(handles[1], 0u, (void*)buf, sizeof(buf), NULL, 0u);
-        ASSERT_EQ(status, NO_ERROR, "could not write echo request");
+        ASSERT_EQ(status, MX_OK, "could not write echo request");
 
         ASSERT_TRUE(serve_echo_request(handles[0]), "serve_echo_request failed");
     }

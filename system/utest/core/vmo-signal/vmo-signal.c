@@ -15,21 +15,21 @@ bool vmo_signal_test(void) {
     BEGIN_TEST;
 
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(4096, 0, &vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_create(4096, 0, &vmo), MX_OK, "");
     ASSERT_GT(vmo, 0, "mx_vmo_create() failed");
 
     mx_signals_t out_signals = 0;
     ASSERT_EQ(mx_object_wait_one(vmo, MX_USER_SIGNAL_0, mx_deadline_after(1), &out_signals),
-              ERR_TIMED_OUT, "");
+              MX_ERR_TIMED_OUT, "");
     ASSERT_EQ(out_signals, MX_SIGNAL_LAST_HANDLE, "out_signals not zero after wait timed out");
-    ASSERT_EQ(mx_object_signal(vmo, 0, MX_USER_SIGNAL_0), NO_ERROR, "");
+    ASSERT_EQ(mx_object_signal(vmo, 0, MX_USER_SIGNAL_0), MX_OK, "");
     ASSERT_EQ(
-        mx_object_wait_one(vmo, MX_USER_SIGNAL_0, MX_TIME_INFINITE, &out_signals), NO_ERROR, "");
+        mx_object_wait_one(vmo, MX_USER_SIGNAL_0, MX_TIME_INFINITE, &out_signals), MX_OK, "");
     ASSERT_EQ(
         out_signals, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE,
         "MX_USER_SIGNAL_0 not set after successful wait");
 
-    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
 
     END_TEST;
 }

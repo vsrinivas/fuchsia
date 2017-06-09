@@ -32,30 +32,30 @@ bool handle_transfer_test(void) {
 
     status = mx_channel_write(A[0], 0u, "1", 1u, NULL, 0u);
     snprintf(msg, sizeof(msg), "failed to write message \"1\" into A0: %u\n", status);
-    EXPECT_EQ(status, NO_ERROR, msg);
+    EXPECT_EQ(status, MX_OK, msg);
 
     status = mx_channel_write(B[0], 0u, NULL, 0u, &A[1], 1u);
     snprintf(msg, sizeof(msg), "failed to write message with handle A[1]: %u\n", status);
-    EXPECT_EQ(status, NO_ERROR, msg);
+    EXPECT_EQ(status, MX_OK, msg);
 
     A[1] = MX_HANDLE_INVALID;
     status = mx_channel_write(A[0], 0u, "2", 1u, NULL, 0u);
     snprintf(msg, sizeof(msg), "failed to write message \"2\" into A0: %u\n", status);
-    EXPECT_EQ(status, NO_ERROR, msg);
+    EXPECT_EQ(status, MX_OK, msg);
 
     mx_handle_t H;
     uint32_t num_bytes = 0u;
     uint32_t num_handles = 1u;
     status = mx_channel_read(B[1], 0u, NULL, &H, 0, num_handles, &num_bytes, &num_handles);
     snprintf(msg, sizeof(msg), "failed to read message from B1: %u\n", status);
-    EXPECT_EQ(status, NO_ERROR, msg);
+    EXPECT_EQ(status, MX_OK, msg);
 
     snprintf(msg, sizeof(msg), "failed to read actual handle value from B1\n");
     EXPECT_FALSE((num_handles != 1u || H == MX_HANDLE_INVALID), msg);
 
     status = mx_channel_write(A[0], 0u, "3", 1u, NULL, 0u);
     snprintf(msg, sizeof(msg), "failed to write message \"3\" into A0: %u\n", status);
-    EXPECT_EQ(status, NO_ERROR, msg);
+    EXPECT_EQ(status, MX_OK, msg);
 
     for (int i = 0; i < 3; ++i) {
         char buf[1];
@@ -63,7 +63,7 @@ bool handle_transfer_test(void) {
         num_handles = 0u;
         status = mx_channel_read(H, 0u, buf, NULL, num_bytes, 0, &num_bytes, &num_handles);
         snprintf(msg, sizeof(msg), "failed to read message from H: %u\n", status);
-        EXPECT_EQ(status, NO_ERROR, msg);
+        EXPECT_EQ(status, MX_OK, msg);
         unittest_printf("read message: %c\n", buf[0]);
     }
 
@@ -89,7 +89,7 @@ static int thread(void* arg) {
     mx_handle_t* A = (mx_handle_t*)arg;
     mx_handle_t* B = A + 2;
     mx_status_t status = mx_channel_write(B[1], 0, NULL, 0u, &A[0], 1);
-    if (status != NO_ERROR) {
+    if (status != MX_OK) {
         UNITTEST_TRACEF("failed to write message with handle A0 to B1: %d\n", status);
         goto thread_exit;
     }
@@ -98,7 +98,7 @@ static int thread(void* arg) {
     mx_handle_t H;
     uint32_t num_handles = 1;
     status = mx_channel_read(B[0], 0, NULL, &H, 0, num_handles, NULL, &num_handles);
-    if (status != NO_ERROR || num_handles < 1) {
+    if (status != MX_OK || num_handles < 1) {
         UNITTEST_TRACEF("failed to read message handle H from B0: %d\n", status);
     }
 
@@ -130,7 +130,7 @@ bool handle_transfer_cancel_wait_test(void) {
 
     mx_signals_t signals = MX_CHANNEL_PEER_CLOSED;
     status = mx_object_wait_one(A[0], signals, mx_deadline_after(MX_SEC(1)), NULL);
-    EXPECT_NEQ(ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
+    EXPECT_NEQ(MX_ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
     thrd_join(thr, NULL);
     mx_handle_close(B[1]);

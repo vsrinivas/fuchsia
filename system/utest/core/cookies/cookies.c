@@ -17,48 +17,48 @@ static bool test_cookie_actions(void) {
 
     // create some objects
     mx_handle_t scope1, scope2, token;
-    ASSERT_EQ(mx_event_create(0, &scope1), NO_ERROR, "");
-    ASSERT_EQ(mx_event_create(0, &scope2), NO_ERROR, "");
-    ASSERT_EQ(mx_event_create(0, &token), NO_ERROR, "");
+    ASSERT_EQ(mx_event_create(0, &scope1), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0, &scope2), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0, &token), MX_OK, "");
 
     // cookies are not readable before being set
     uint64_t cookie;
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
 
     // cookies may be read back using the scope they were set with
-    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic1), NO_ERROR, "");
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), NO_ERROR, "");
+    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic1), MX_OK, "");
+    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_OK, "");
     ASSERT_EQ(cookie, magic1, "");
 
     // pointers must be valid
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, NULL), ERR_INVALID_ARGS, "");
+    ASSERT_EQ(mx_object_get_cookie(token, scope1, NULL), MX_ERR_INVALID_ARGS, "");
 
     // cookies are only settable on objects that support them
-    ASSERT_EQ(mx_object_set_cookie(mx_process_self(), scope1, magic1), ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(mx_object_set_cookie(mx_process_self(), scope1, magic1), MX_ERR_NOT_SUPPORTED, "");
 
     // cookies are only gettable on objects that support them
-    ASSERT_EQ(mx_object_get_cookie(mx_process_self(), scope1, &cookie), ERR_NOT_SUPPORTED, "");
+    ASSERT_EQ(mx_object_get_cookie(mx_process_self(), scope1, &cookie), MX_ERR_NOT_SUPPORTED, "");
 
     // cookies are not readable with a different scope
-    ASSERT_EQ(mx_object_get_cookie(token, scope2, &cookie), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(mx_object_get_cookie(token, scope2, &cookie), MX_ERR_ACCESS_DENIED, "");
 
     // cookies are not writeable with a different scope
-    ASSERT_EQ(mx_object_set_cookie(token, scope2, magic1), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(mx_object_set_cookie(token, scope2, magic1), MX_ERR_ACCESS_DENIED, "");
 
     // cookies are modifyable with the original scope
-    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic2), NO_ERROR, "");
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), NO_ERROR, "");
+    ASSERT_EQ(mx_object_set_cookie(token, scope1, magic2), MX_OK, "");
+    ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_OK, "");
     ASSERT_EQ(cookie, magic2, "");
 
     // bogus handles
-    ASSERT_EQ(mx_object_get_cookie(token, MX_HANDLE_INVALID, &cookie), ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_get_cookie(MX_HANDLE_INVALID, scope1, &cookie), ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_set_cookie(token, MX_HANDLE_INVALID, magic1), ERR_BAD_HANDLE, "");
-    ASSERT_EQ(mx_object_set_cookie(MX_HANDLE_INVALID, scope1, magic1), ERR_BAD_HANDLE, "");
+    ASSERT_EQ(mx_object_get_cookie(token, MX_HANDLE_INVALID, &cookie), MX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(mx_object_get_cookie(MX_HANDLE_INVALID, scope1, &cookie), MX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(mx_object_set_cookie(token, MX_HANDLE_INVALID, magic1), MX_ERR_BAD_HANDLE, "");
+    ASSERT_EQ(mx_object_set_cookie(MX_HANDLE_INVALID, scope1, magic1), MX_ERR_BAD_HANDLE, "");
 
-    ASSERT_EQ(mx_handle_close(token), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(scope1), NO_ERROR, "");
-    ASSERT_EQ(mx_handle_close(scope2), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(token), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(scope1), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(scope2), MX_OK, "");
 
     END_TEST;
 }
@@ -73,26 +73,26 @@ static bool test_cookie_eventpair(void) {
     // create some objects
     mx_handle_t scope1, side1, side2;
 
-    ASSERT_EQ(mx_event_create(0, &scope1), NO_ERROR, "");
-    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), NO_ERROR, "");
+    ASSERT_EQ(mx_event_create(0, &scope1), MX_OK, "");
+    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), MX_OK, "");
 
     uint64_t cookie;
-    ASSERT_EQ(mx_object_set_cookie(side1, scope1, magic1), NO_ERROR, "");
-    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), NO_ERROR, "");
+    ASSERT_EQ(mx_object_set_cookie(side1, scope1, magic1), MX_OK, "");
+    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), MX_OK, "");
     ASSERT_EQ(cookie, magic1, "");
 
     mx_handle_close(side2);
-    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(mx_object_get_cookie(side1, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
     mx_handle_close(side1);
 
     // Make sure it works from both sides.
-    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), NO_ERROR, "");
-    ASSERT_EQ(mx_object_set_cookie(side2, scope1, magic2), NO_ERROR, "");
-    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), NO_ERROR, "");
+    ASSERT_EQ(mx_eventpair_create(0, &side1, &side2), MX_OK, "");
+    ASSERT_EQ(mx_object_set_cookie(side2, scope1, magic2), MX_OK, "");
+    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), MX_OK, "");
     ASSERT_EQ(cookie, magic2, "");
 
     mx_handle_close(side1);
-    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(mx_object_get_cookie(side2, scope1, &cookie), MX_ERR_ACCESS_DENIED, "");
     mx_handle_close(side2);
 
     END_TEST;

@@ -19,7 +19,7 @@ static completion_t completion = COMPLETION_INIT;
 static int completion_thread_wait(void* arg) {
     for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
         mx_status_t status = completion_wait(&completion, MX_TIME_INFINITE);
-        ASSERT_EQ(status, NO_ERROR, "completion wait failed!");
+        ASSERT_EQ(status, MX_OK, "completion wait failed!");
     }
 
     return 0;
@@ -70,7 +70,7 @@ static bool test_timeout(void) {
     for (int iteration = 0; iteration < 1000; iteration++) {
         timeout += 2000u;
         mx_status_t status = completion_wait(&completion, timeout);
-        ASSERT_EQ(status, ERR_TIMED_OUT, "wait returned spuriously!");
+        ASSERT_EQ(status, MX_ERR_TIMED_OUT, "wait returned spuriously!");
     }
     END_TEST;
 }

@@ -26,37 +26,37 @@ static bool socket_basic(void) {
     uint32_t read_data[] = { 0, 0 };
 
     status = mx_socket_create(0, h, h + 1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_socket_read(h[0], 0u, read_data, sizeof(read_data), &count);
-    ASSERT_EQ(status, ERR_SHOULD_WAIT, "");
+    ASSERT_EQ(status, MX_ERR_SHOULD_WAIT, "");
 
     static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
     status = mx_socket_write(h[0], 0u, &write_data[0], sizeof(write_data[0]), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(write_data[0]), "");
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(write_data[1]), "");
 
     status = mx_socket_read(h[1], 0u, read_data, sizeof(read_data), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(read_data), "");
     ASSERT_EQ(read_data[0], write_data[0], "");
     ASSERT_EQ(read_data[1], write_data[1], "");
 
     status = mx_socket_write(h[0], 0u, write_data, sizeof(write_data), NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     memset(read_data, 0, sizeof(read_data));
     status = mx_socket_read(h[1], 0u, read_data, sizeof(read_data), NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(read_data[0], write_data[0], "");
     ASSERT_EQ(read_data[1], write_data[1], "");
 
     mx_handle_close(h[1]);
 
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
+    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "");
 
     mx_handle_close(h[0]);
     END_TEST;
@@ -70,7 +70,7 @@ static bool socket_signals(void) {
 
     mx_handle_t h0, h1;
     status = mx_socket_create(0, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     mx_signals_t signals0 = get_satisfied_signals(h0);
     mx_signals_t signals1 = get_satisfied_signals(h1);
@@ -85,7 +85,7 @@ static bool socket_signals(void) {
     memset(big_buf, 0x66, kAllSize);
 
     status = mx_socket_write(h0, 0u, big_buf, kAllSize / 16, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, kAllSize / 16, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -95,7 +95,7 @@ static bool socket_signals(void) {
     ASSERT_EQ(signals1, MX_SOCKET_READABLE | MX_SOCKET_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_read(h1, 0u, big_buf, kAllSize, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, kAllSize / 16, "");
 
     signals0 = get_satisfied_signals(h0);
@@ -105,10 +105,10 @@ static bool socket_signals(void) {
     ASSERT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_object_signal_peer(h0, MX_SOCKET_WRITABLE, 0u);
-    ASSERT_EQ(status, ERR_INVALID_ARGS, "");
+    ASSERT_EQ(status, MX_ERR_INVALID_ARGS, "");
 
     status = mx_object_signal_peer(h0, 0u, MX_USER_SIGNAL_1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
@@ -136,7 +136,7 @@ static bool socket_half_close(void) {
 
     mx_handle_t h0, h1;
     status = mx_socket_create(0, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
@@ -145,11 +145,11 @@ static bool socket_half_close(void) {
     ASSERT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h1, 0u, "12345", 5u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
 
     status = mx_socket_write(h1, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
@@ -160,30 +160,30 @@ static bool socket_half_close(void) {
     ASSERT_EQ(signals1, MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h0, 0u, "abcde", 5u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
 
     signals1 = get_satisfied_signals(h1);
     ASSERT_EQ(signals1, MX_SOCKET_READABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h1, 0u, "fghij", 5u, &count);
-    ASSERT_EQ(status, ERR_BAD_STATE, "");
+    ASSERT_EQ(status, MX_ERR_BAD_STATE, "");
 
     char rbuf[10] = {0};
 
     status = mx_socket_read(h0, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     ASSERT_EQ(memcmp(rbuf, "12345", 5), 0, "");
 
     status = mx_socket_read(h0, 0u, rbuf, 1u, &count);
-    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
+    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
     ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     ASSERT_EQ(memcmp(rbuf, "abcde", 5), 0, "");
 
@@ -203,17 +203,17 @@ static bool socket_bytes_outstanding(void) {
     uint32_t read_data[] = { 0, 0 };
 
     status = mx_socket_create(0, h, h + 1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_socket_read(h[0], 0u, read_data, sizeof(read_data), &count);
-    ASSERT_EQ(status, ERR_SHOULD_WAIT, "");
+    ASSERT_EQ(status, MX_ERR_SHOULD_WAIT, "");
 
     static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
     status = mx_socket_write(h[0], 0u, &write_data[0], sizeof(write_data[0]), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(write_data[0]), "");
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(write_data[1]), "");
 
     // Check the number of bytes outstanding.
@@ -223,7 +223,7 @@ static bool socket_bytes_outstanding(void) {
 
     // Check that the prior mx_socket_read call didn't disturb the pending data.
     status = mx_socket_read(h[1], 0u, read_data, sizeof(read_data), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(read_data), "");
     ASSERT_EQ(read_data[0], write_data[0], "");
     ASSERT_EQ(read_data[1], write_data[1], "");
@@ -231,7 +231,7 @@ static bool socket_bytes_outstanding(void) {
     mx_handle_close(h[1]);
 
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);
-    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
+    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "");
 
     mx_handle_close(h[0]);
 
@@ -247,7 +247,7 @@ static bool socket_bytes_outstanding_half_close(void) {
 
     mx_handle_t h0, h1;
     status = mx_socket_create(0, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
@@ -256,11 +256,11 @@ static bool socket_bytes_outstanding_half_close(void) {
     ASSERT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h1, 0u, "12345", 5u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
 
     status = mx_socket_write(h1, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
@@ -271,35 +271,35 @@ static bool socket_bytes_outstanding_half_close(void) {
     ASSERT_EQ(signals1, MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h0, 0u, "abcde", 5u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
 
     signals1 = get_satisfied_signals(h1);
     ASSERT_EQ(signals1, MX_SOCKET_READABLE | MX_SIGNAL_LAST_HANDLE | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_write(h1, 0u, "fghij", 5u, &count);
-    ASSERT_EQ(status, ERR_BAD_STATE, "");
+    ASSERT_EQ(status, MX_ERR_BAD_STATE, "");
 
     char rbuf[10] = {0};
 
     status = mx_socket_read(h0, 0u, NULL, 0, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     count = 0;
 
     status = mx_socket_read(h0, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     ASSERT_EQ(memcmp(rbuf, "12345", 5), 0, "");
 
     status = mx_socket_read(h0, 0u, rbuf, 1u, &count);
-    ASSERT_EQ(status, ERR_PEER_CLOSED, "");
+    ASSERT_EQ(status, MX_ERR_PEER_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
     ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED | MX_SIGNAL_LAST_HANDLE, "");
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     ASSERT_EQ(memcmp(rbuf, "abcde", 5), 0, "");
 
@@ -316,7 +316,7 @@ static bool socket_short_write(void) {
 
     mx_handle_t h0, h1;
     status = mx_socket_create(0, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;
@@ -341,14 +341,14 @@ static bool socket_datagram(void) {
     unsigned char rbuf[4096] = {0}; // bigger than an mbuf
 
     status = mx_socket_create(MX_SOCKET_DATAGRAM, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     status = mx_socket_write(h0, 0u, "packet1", 8u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 8u, "");
 
     status = mx_socket_write(h0, 0u, "pkt2", 5u, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
 
     rbuf[0] = 'a';
@@ -358,33 +358,33 @@ static bool socket_datagram(void) {
     rbuf[4000] = 'e';
     rbuf[4095] = 'f';
     status = mx_socket_write(h0, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(rbuf), "");
 
     status = mx_socket_read(h1, 0u, NULL, 0, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(rbuf) + 8u + 5u, "");
     count = 0;
 
     bzero(rbuf, sizeof(rbuf));
     status = mx_socket_read(h1, 0u, rbuf, 3, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 3u, "");
     ASSERT_EQ(memcmp(rbuf, "pac", 4), 0, ""); // short read "packet1"
     count = 0;
 
     status = mx_socket_read(h1, 0u, NULL, 0, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(rbuf) + 5u, "");
     count = 0;
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 5u, "");
     ASSERT_EQ(memcmp(rbuf, "pkt2", 5), 0, "");
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, sizeof(rbuf), "");
     ASSERT_EQ(rbuf[0], 'a', "");
     ASSERT_EQ(rbuf[1000], 'b', "");
@@ -394,7 +394,7 @@ static bool socket_datagram(void) {
     ASSERT_EQ(rbuf[4095], 'f', "");
 
     status = mx_socket_read(h1, 0u, NULL, 0, &count);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
     ASSERT_EQ(count, 0u, "");
 
     END_TEST;
@@ -407,7 +407,7 @@ static bool socket_datagram_no_short_write(void) {
 
     mx_handle_t h0, h1;
     status = mx_socket_create(MX_SOCKET_DATAGRAM, &h0, &h1);
-    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(status, MX_OK, "");
 
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;

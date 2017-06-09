@@ -176,11 +176,11 @@ static int test_timeout_helper(void* ctx) {
     timeout_args* args = ctx;
     ASSERT_EQ(mtx_lock(&args->mutex), thrd_success, "f to lock");
     // Inform the main thread that we have acquired the lock.
-    ASSERT_EQ(mx_object_signal(args->start_event, 0, MX_EVENT_SIGNALED), NO_ERROR,
+    ASSERT_EQ(mx_object_signal(args->start_event, 0, MX_EVENT_SIGNALED), MX_OK,
               "failed to signal");
     // Wait until the main thread has completed its test.
     ASSERT_EQ(mx_object_wait_one(args->done_event, MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL),
-              NO_ERROR, "failed to wait");
+              MX_OK, "failed to wait");
     ASSERT_EQ(mtx_unlock(&args->mutex), thrd_success, "failed to unlock");
     return 0;
 }
@@ -196,14 +196,14 @@ static bool test_timeout_elapsed(void) {
 
     timeout_args args;
     ASSERT_EQ(thrd_success, mtx_init(&args.mutex, mtx_plain), "could not create mutex");
-    ASSERT_EQ(mx_event_create(0, &args.start_event), NO_ERROR, "could not create event");
-    ASSERT_EQ(mx_event_create(0, &args.done_event), NO_ERROR, "could not create event");
+    ASSERT_EQ(mx_event_create(0, &args.start_event), MX_OK, "could not create event");
+    ASSERT_EQ(mx_event_create(0, &args.done_event), MX_OK, "could not create event");
 
     thrd_t helper;
     ASSERT_EQ(thrd_create(&helper, test_timeout_helper, &args), thrd_success, "");
     // Wait for the helper thread to acquire the lock.
     ASSERT_EQ(mx_object_wait_one(args.start_event, MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL),
-              NO_ERROR, "failed to wait");
+              MX_OK, "failed to wait");
 
     for (int i = 0; i < 5; ++i) {
         mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
@@ -229,12 +229,12 @@ static bool test_timeout_elapsed(void) {
 
     // Inform the helper thread that we are done.
     ASSERT_EQ(mx_object_signal(args.done_event, 0, MX_EVENT_SIGNALED),
-              NO_ERROR, "failed to signal");
+              MX_OK, "failed to signal");
     ASSERT_EQ(thrd_join(helper, NULL), thrd_success, "failed to join");
 
     mtx_destroy(&args.mutex);
-    ASSERT_EQ(mx_handle_close(args.start_event), NO_ERROR, "failed to close event");
-    ASSERT_EQ(mx_handle_close(args.done_event), NO_ERROR, "failed to close event");
+    ASSERT_EQ(mx_handle_close(args.start_event), MX_OK, "failed to close event");
+    ASSERT_EQ(mx_handle_close(args.done_event), MX_OK, "failed to close event");
 
     END_TEST;
 }

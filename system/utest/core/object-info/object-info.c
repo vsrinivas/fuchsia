@@ -28,7 +28,7 @@ bool info_task_stats_smoke(void) {
     mx_info_task_stats_t info;
     ASSERT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_TASK_STATS,
                                  &info, sizeof(info), NULL, NULL),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_GT(info.mem_private_bytes, 0u, "");
     ASSERT_GT(info.mem_shared_bytes, 0u, "");
     ASSERT_GE(info.mem_mapped_bytes,
@@ -69,8 +69,8 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         // that it can give to the new process (which will take ownership).
         mx_handle_t event;
         mx_status_t s = mx_event_create(0u, &event);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_event_create"); // Poison the test.
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_event_create"); // Poison the test.
             return MX_HANDLE_INVALID;
         }
 
@@ -82,8 +82,8 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         static const char pname[] = "object-info-minipr";
         s = mx_process_create(mx_job_default(), pname, sizeof(pname),
                               /* options */ 0u, &process, &vmar);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_process_create");
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_process_create");
             return MX_HANDLE_INVALID;
         }
 
@@ -91,8 +91,8 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         static const char tname[] = "object-info-minith";
         s = mx_thread_create(process, tname, sizeof(tname),
                              /* options */ 0u, &thread);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_thread_create");
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_thread_create");
             return MX_HANDLE_INVALID;
         }
 
@@ -100,8 +100,8 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
         // Start the process before we mess with the VMAR,
         // so we don't step on the mapping done by start_mini_process_etc.
         s = start_mini_process_etc(process, thread, vmar, event, &minip_channel);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "start_mini_process_etc");
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "start_mini_process_etc");
             return MX_HANDLE_INVALID;
         }
 
@@ -132,15 +132,15 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
                                  MX_VM_FLAG_CAN_MAP_WRITE |
                                  MX_VM_FLAG_CAN_MAP_EXECUTE,
                              &sub_vmar, &ti->vmar_base);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_vmar_allocate");
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_vmar_allocate");
             return MX_HANDLE_INVALID;
         }
 
         mx_handle_t vmo;
         s = mx_vmo_create(PAGE_SIZE * kNumMappings, /* options */ 0u, &vmo);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_vmo_create");
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_vmo_create");
             return MX_HANDLE_INVALID;
         }
 
@@ -165,10 +165,10 @@ mx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
                             /* len */ PAGE_SIZE,
                             m->flags,
                             &m->base);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 char msg[32];
                 snprintf(msg, sizeof(msg), "mx_vmar_map: [%zd]", i);
-                EXPECT_EQ(s, NO_ERROR, msg);
+                EXPECT_EQ(s, MX_OK, msg);
                 return MX_HANDLE_INVALID;
             }
         }
@@ -203,7 +203,7 @@ bool info_process_maps_smoke(void) {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_MAPS,
                                  maps, bufsize,
                                  &actual, &avail),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(actual, avail, "Should have read all entries");
 
     // The first two entries should always be the ASpace and root VMAR.
@@ -286,7 +286,7 @@ bool info_process_maps_smoke(void) {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_MAPS,
                                  maps2, bufsize2,
                                  &actual2, &avail2),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_LT(actual2, avail2, "");
     // mini-process is very simple, and won't have modified its own memory
     // maps since the previous dump. Its "committed_pages" values could be
@@ -327,7 +327,7 @@ bool info_process_maps_self_fails(void) {
     // lives inside the address space that's being examined.
     EXPECT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_PROCESS_MAPS,
                                  maps, sizeof(maps), &actual, &avail),
-              ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED, "");
     END_TEST;
 }
 
@@ -339,7 +339,7 @@ bool info_process_maps_invalid_handle_fails(void) {
     // Passing MX_HANDLE_INVALID should fail.
     EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, MX_INFO_PROCESS_MAPS,
                                  maps, sizeof(maps), &actual, &avail),
-              ERR_BAD_HANDLE, "");
+              MX_ERR_BAD_HANDLE, "");
     END_TEST;
 }
 
@@ -351,7 +351,7 @@ bool info_process_maps_non_process_handle_fails(void) {
     // Passing a job handle should fail.
     EXPECT_EQ(mx_object_get_info(mx_job_default(), MX_INFO_PROCESS_MAPS,
                                  maps, sizeof(maps), &actual, &avail),
-              ERR_WRONG_TYPE, "");
+              MX_ERR_WRONG_TYPE, "");
     END_TEST;
 }
 
@@ -362,7 +362,7 @@ bool info_process_maps_missing_rights_fails(void) {
     mx_info_handle_basic_t hi;
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_HANDLE_BASIC,
                                  &hi, sizeof(hi), NULL, NULL),
-              NO_ERROR, "");
+              MX_OK, "");
     char msg[32];
     snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
     EXPECT_EQ(hi.rights & MX_RIGHT_READ, MX_RIGHT_READ, msg);
@@ -371,7 +371,7 @@ bool info_process_maps_missing_rights_fails(void) {
     mx_handle_t handle;
     ASSERT_EQ(mx_handle_duplicate(get_test_process(),
                                   hi.rights & ~MX_RIGHT_READ, &handle),
-              NO_ERROR, "");
+              MX_OK, "");
 
     // Read should fail.
     mx_info_maps_t maps[2];
@@ -379,7 +379,7 @@ bool info_process_maps_missing_rights_fails(void) {
     size_t avail;
     EXPECT_EQ(mx_object_get_info(handle, MX_INFO_PROCESS_MAPS,
                                  maps, sizeof(maps), &actual, &avail),
-              ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED, "");
 
     mx_handle_close(handle);
     END_TEST;
@@ -394,7 +394,7 @@ bool info_process_maps_zero_buffer_succeeds(void) {
                                  NULL, // buffer
                                  0,    // len
                                  &actual, &avail),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(0u, actual, "");
     EXPECT_GT(avail, 0u, "");
     END_TEST;
@@ -407,7 +407,7 @@ bool info_process_maps_null_avail_actual_succeeds(void) {
                                  maps, sizeof(maps),
                                  NULL,  // actual
                                  NULL), // avail
-              NO_ERROR, "");
+              MX_OK, "");
     END_TEST;
 }
 
@@ -420,7 +420,7 @@ bool info_process_maps_bad_buffer_fails(void) {
                                  (mx_info_maps_t*)1,
                                  sizeof(mx_info_maps_t),
                                  &actual, &avail),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -437,11 +437,11 @@ bool info_process_maps_partially_unmapped_buffer_fails(void) {
                                    MX_VM_FLAG_CAN_MAP_WRITE |
                                    MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &vmar, &vmar_addr),
-              NO_ERROR, "");
+              MX_OK, "");
 
     // Create a one-page VMO.
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), MX_OK, "");
 
     // Map the first page of the VMAR.
     uintptr_t vmo_addr;
@@ -450,7 +450,7 @@ bool info_process_maps_partially_unmapped_buffer_fails(void) {
                               MX_VM_FLAG_PERM_READ |
                               MX_VM_FLAG_PERM_WRITE,
                           &vmo_addr),
-              NO_ERROR, "");
+              MX_OK, "");
     ASSERT_EQ(vmar_addr, vmo_addr, "");
 
     // Point to a spot in the mapped page just before the unmapped region.
@@ -461,8 +461,8 @@ bool info_process_maps_partially_unmapped_buffer_fails(void) {
     EXPECT_EQ(mx_object_get_info(get_test_process(), MX_INFO_PROCESS_MAPS,
                                  maps, sizeof(mx_info_maps_t) * 4,
                                  &actual, &avail),
-              // Bad user buffer should return ERR_INVALID_ARGS.
-              ERR_INVALID_ARGS, "");
+              // Bad user buffer should return MX_ERR_INVALID_ARGS.
+              MX_ERR_INVALID_ARGS, "");
 
     mx_vmar_destroy(vmar);
     mx_handle_close(vmar);
@@ -479,7 +479,7 @@ bool info_process_maps_bad_actual_fails(void) {
                                  // Bad actual pointer value.
                                  (size_t*)1,
                                  &avail),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -491,7 +491,7 @@ bool info_process_maps_bad_avail_fails(void) {
                                  maps, sizeof(maps), &actual,
                                  // Bad available pointer value.
                                  (size_t*)1),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -517,15 +517,15 @@ static mx_handle_t get_test_job(void) {
         char msg[64];
         mx_handle_t root;
         mx_status_t s = mx_job_create(mx_job_default(), 0, &root);
-        if (s != NO_ERROR) {
-            EXPECT_EQ(s, NO_ERROR, "mx_job_create"); // Poison the test.
+        if (s != MX_OK) {
+            EXPECT_EQ(s, MX_OK, "mx_job_create"); // Poison the test.
             return MX_HANDLE_INVALID;
         }
         for (size_t i = 0; i < kTestJobChildProcs; i++) {
             mx_handle_t proc;
             mx_handle_t vmar;
             s = mx_process_create(root, "child", 6, 0, &proc, &vmar);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 snprintf(msg, sizeof(msg), "mx_process_create(child %zu)", i);
                 goto fail;
             }
@@ -533,20 +533,20 @@ static mx_handle_t get_test_job(void) {
         for (size_t i = 0; i < kTestJobChildJobs; i++) {
             mx_handle_t job;
             s = mx_job_create(root, 0, &job);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 snprintf(msg, sizeof(msg), "mx_job_create(child %zu)", i);
                 goto fail;
             }
             mx_handle_t proc;
             mx_handle_t vmar;
             s = mx_process_create(job, "grandchild", 6, 0, &proc, &vmar);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 snprintf(msg, sizeof(msg), "mx_process_create(grandchild)");
                 goto fail;
             }
             mx_handle_t subjob;
             s = mx_job_create(job, 0, &subjob);
-            if (s != NO_ERROR) {
+            if (s != MX_OK) {
                 snprintf(msg, sizeof(msg), "mx_job_create(grandchild)");
                 goto fail;
             }
@@ -554,7 +554,7 @@ static mx_handle_t get_test_job(void) {
 
         if (false) {
         fail:
-            EXPECT_EQ(s, NO_ERROR, msg); // Poison the test
+            EXPECT_EQ(s, MX_OK, msg); // Poison the test
             mx_task_kill(root);          // Clean up all tasks; leaks handles
             return MX_HANDLE_INVALID;
         }
@@ -573,7 +573,7 @@ bool jobch_helper_smoke(uint32_t topic, size_t expected_count) {
     size_t avail;
     EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
                                  koids, sizeof(koids), &actual, &avail),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(expected_count, actual, "");
     EXPECT_EQ(expected_count, avail, "");
 
@@ -585,7 +585,7 @@ bool jobch_helper_smoke(uint32_t topic, size_t expected_count) {
         mx_handle_t h = MX_HANDLE_INVALID;
         EXPECT_EQ(mx_object_get_child(get_test_job(), koids[i],
                                       MX_RIGHT_SAME_RIGHTS, &h),
-                  NO_ERROR, msg);
+                  MX_OK, msg);
         mx_handle_close(h);
     }
     END_TEST;
@@ -607,7 +607,7 @@ bool jobch_helper_invalid_handle_fails(uint32_t topic) {
     // Passing MX_HANDLE_INVALID should fail.
     EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, topic,
                                  koids, sizeof(koids), &actual, &avail),
-              ERR_BAD_HANDLE, "");
+              MX_ERR_BAD_HANDLE, "");
     END_TEST;
 }
 
@@ -627,7 +627,7 @@ bool jobch_helper_non_job_handle_fails(uint32_t topic) {
     // Passing a process handle should fail.
     EXPECT_EQ(mx_object_get_info(mx_process_self(), topic, koids, sizeof(koids),
                                  &actual, &avail),
-              ERR_WRONG_TYPE, "");
+              MX_ERR_WRONG_TYPE, "");
     END_TEST;
 }
 
@@ -645,7 +645,7 @@ bool jobch_helper_missing_rights_fails(uint32_t topic) {
     mx_info_handle_basic_t hi;
     ASSERT_EQ(mx_object_get_info(get_test_job(), MX_INFO_HANDLE_BASIC,
                                  &hi, sizeof(hi), NULL, NULL),
-              NO_ERROR, "");
+              MX_OK, "");
     char msg[32];
     snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
     EXPECT_EQ(hi.rights & MX_RIGHT_ENUMERATE, MX_RIGHT_ENUMERATE, msg);
@@ -654,7 +654,7 @@ bool jobch_helper_missing_rights_fails(uint32_t topic) {
     mx_handle_t handle;
     ASSERT_EQ(mx_handle_duplicate(get_test_job(),
                                   hi.rights & ~MX_RIGHT_ENUMERATE, &handle),
-              NO_ERROR, "");
+              MX_OK, "");
 
     // Call should fail.
     mx_koid_t koids[2];
@@ -662,7 +662,7 @@ bool jobch_helper_missing_rights_fails(uint32_t topic) {
     size_t avail;
     EXPECT_EQ(mx_object_get_info(handle, topic, koids, sizeof(koids),
                                  &actual, &avail),
-              ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED, "");
 
     mx_handle_close(handle);
     END_TEST;
@@ -685,7 +685,7 @@ bool jobch_helper_zero_buffer_succeeds(uint32_t topic, size_t expected_count) {
                                  NULL, // buffer
                                  0,    // len
                                  &actual, &avail),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(0u, actual, "");
     EXPECT_EQ(expected_count, avail, "");
     END_TEST;
@@ -712,7 +712,7 @@ bool jobch_helper_short_buffer_succeeds(uint32_t topic,
                                  koids,
                                  sizeof(koids),
                                  &actual, &avail),
-              NO_ERROR, "");
+              MX_OK, "");
     EXPECT_EQ(1u, actual, "");
     EXPECT_EQ(expected_count, avail, "");
     END_TEST;
@@ -735,7 +735,7 @@ bool jobch_helper_null_avail_actual_succeeds(uint32_t topic) {
                                  koids, sizeof(koids),
                                  NULL,  // actual
                                  NULL), // avail
-              NO_ERROR, "");
+              MX_OK, "");
     END_TEST;
 }
 
@@ -756,7 +756,7 @@ bool jobch_helper_bad_buffer_fails(uint32_t topic) {
                                  (mx_koid_t*)1,
                                  sizeof(mx_koid_t),
                                  &actual, &avail),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -777,7 +777,7 @@ bool jobch_helper_bad_actual_fails(uint32_t topic) {
                                  // Bad actual pointer value.
                                  (size_t*)1,
                                  &avail),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 
@@ -797,7 +797,7 @@ bool jobch_helper_bad_avail_fails(uint32_t topic) {
                                  koids, sizeof(koids), &actual,
                                  // Bad available pointer value.
                                  (size_t*)1),
-              ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS, "");
     END_TEST;
 }
 

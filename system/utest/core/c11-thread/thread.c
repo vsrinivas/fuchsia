@@ -55,7 +55,7 @@ bool c11_thread_test(void) {
 
     ret = thrd_join(thread, &return_value);
     ASSERT_EQ(ret, thrd_success, "Error while thread join");
-    ASSERT_EQ(mx_handle_close(dup_handle), NO_ERROR, "failed to close duplicate handle");
+    ASSERT_EQ(mx_handle_close(dup_handle), MX_OK, "failed to close duplicate handle");
     ASSERT_EQ(return_value, 4, "Incorrect return from thread");
 
     ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)5, NULL);
