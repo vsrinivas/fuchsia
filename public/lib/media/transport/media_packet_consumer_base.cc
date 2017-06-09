@@ -44,13 +44,17 @@ MediaPacketConsumerBase::MediaPacketConsumerBase() : binding_(this) {
 }
 
 MediaPacketConsumerBase::~MediaPacketConsumerBase() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  // The destructor may be called on an arbitrary thread so long as Reset has
+  // been called first on the creation thread.
+  if (!is_reset_) {
+    FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  // Prevent the counter from calling us back.
-  counter_->Detach();
+    // Prevent the counter from calling us back.
+    counter_->Detach();
 
-  if (binding_.is_bound()) {
-    binding_.Close();
+    if (binding_.is_bound()) {
+      binding_.Close();
+    }
   }
 }
 
@@ -59,6 +63,7 @@ void MediaPacketConsumerBase::Bind(
   FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
   binding_.set_connection_error_handler([this]() { Reset(); });
+  is_reset_ = false;
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
 
@@ -67,6 +72,8 @@ void MediaPacketConsumerBase::Bind(
   FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(handle);
   binding_.set_connection_error_handler([this]() { Reset(); });
+  is_reset_ = false;
+  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
 
 bool MediaPacketConsumerBase::is_bound() {
@@ -123,6 +130,8 @@ void MediaPacketConsumerBase::Reset() {
   if (unbind) {
     OnUnbind();
   }
+
+  is_reset_ = true;
 }
 
 void MediaPacketConsumerBase::Fail() {

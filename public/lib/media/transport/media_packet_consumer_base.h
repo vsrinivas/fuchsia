@@ -197,6 +197,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   TimelineRate pts_rate_ = TimelineRate::Zero;  // Zero means do not adjust.
   uint64_t prev_packet_label_ = 0;
   bool flush_pending_ = false;
+  bool is_reset_ = true;
 
   FTL_DECLARE_THREAD_CHECKER(thread_checker_);
 
