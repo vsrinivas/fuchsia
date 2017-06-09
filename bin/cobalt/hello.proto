@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package test;
+
+option optimize_for = LITE_RUNTIME;
+
+message Person {
+  string name = 1;
+}
